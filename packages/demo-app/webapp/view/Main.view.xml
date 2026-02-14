@@ -1,0 +1,63 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="ui5.hotkeys Demo — Main View" id="mainPage">
+        <headerContent>
+            <Button text="Navigate to Detail" press=".onNavToDetail" type="Emphasized" />
+        </headerContent>
+        <content>
+            <Panel headerText="Status" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Platform:" class="sapUiSmallMarginEnd" />
+                        <Text text="{state>/platform}" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Active Scope:" class="sapUiSmallMarginEnd" />
+                        <Text text="{state>/activeScope}" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Action:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/lastAction}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Registered Shortcuts" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="{state>/saveLabel}" class="sapUiSmallMarginEnd" design="Bold" />
+                        <Text text="Save (global — works in inputs too)" />
+                    </HBox>
+                    <HBox>
+                        <Label text="{state>/escapeLabel}" class="sapUiSmallMarginEnd" design="Bold" />
+                        <Text text="Cancel / Close (global — works in inputs too)" />
+                    </HBox>
+                    <HBox>
+                        <Label text="{state>/f5Label}" class="sapUiSmallMarginEnd" design="Bold" />
+                        <Text text="Refresh (Main view scope — overrides browser refresh)" />
+                    </HBox>
+                    <HBox>
+                        <Label text="{state>/navLabel}" class="sapUiSmallMarginEnd" design="Bold" />
+                        <Text text="Navigate to Detail (Main view scope)" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Input Field Test" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Type in the field below. Single-key shortcuts are suppressed, but Ctrl/Cmd combos still work." />
+                    <Input placeholder="Try typing, then press Ctrl+S or Escape..." class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Dialog Test" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Open a dialog to test scope switching. The dialog registers its own F5 handler." />
+                    <Button text="Open Dialog" press=".onOpenDialog" type="Emphasized" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>

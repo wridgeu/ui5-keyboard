@@ -1,0 +1,48 @@
+{
+  "_version": "2.0.0",
+  "sap.app": {
+    "id": "ui5.hotkeys",
+    "type": "library",
+    "embeds": [],
+    "applicationVersion": {
+      "version": "${version}"
+    },
+    "title": "UI5 Hotkeys",
+    "description": "Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications",
+    "resources": "resources.json",
+    "offline": true
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "supportedThemes": [],
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.144.0",
+      "libs": {
+        "sap.ui.core": {
+          "minVersion": "1.144.0"
+        }
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "library": {
+      "i18n": false,
+      "css": false,
+      "content": {
+        "controls": [],
+        "elements": [],
+        "types": ["ui5.hotkeys.ConflictBehavior", "ui5.hotkeys.UnhandledReason", "ui5.hotkeys.Platform"],
+        "interfaces": []
+      }
+    }
+  }
+}

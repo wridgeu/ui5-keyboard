@@ -1,0 +1,79 @@
+import type { CanonicalModifier, Platform } from "./types";
+
+interface NavigatorUAData {
+  platform: string;
+}
+
+let cachedPlatform: Platform | null = null;
+
+/**
+ * Detect the current platform.
+ *
+ * Detection order:
+ * 1. `navigator.userAgentData.platform` (modern Chromium API)
+ * 2. `navigator.platform` (legacy, widely supported)
+ * 3. `navigator.userAgent` (fallback)
+ *
+ * Defaults to `"linux"` in SSR/non-browser environments.
+ * Result is cached after first call.
+ */
+export function detectPlatform(): Platform {
+  if (cachedPlatform !== null) {
+    return cachedPlatform;
+  }
+
+  if (typeof navigator === "undefined") {
+    cachedPlatform = "linux";
+    return cachedPlatform;
+  }
+
+  // Modern API (Chromium-based browsers)
+  const uaData = (navigator as Navigator & { userAgentData?: NavigatorUAData }).userAgentData;
+  if (uaData?.platform) {
+    const uaPlatform = uaData.platform.toLowerCase();
+    cachedPlatform = resolvePlatformString(uaPlatform);
+    return cachedPlatform;
+  }
+
+  // Legacy API
+  const platform = navigator.platform?.toLowerCase() ?? "";
+  if (platform) {
+    cachedPlatform = resolvePlatformString(platform);
+    return cachedPlatform;
+  }
+
+  // User-Agent fallback
+  const ua = navigator.userAgent?.toLowerCase() ?? "";
+  cachedPlatform = resolvePlatformString(ua);
+  return cachedPlatform;
+}
+
+function resolvePlatformString(value: string): Platform {
+  if (value.includes("mac")) return "mac";
+  if (value.includes("win")) return "windows";
+  return "linux";
+}
+
+/**
+ * Resolve the `"Mod"` pseudo-modifier to the platform-appropriate canonical modifier.
+ *
+ * - macOS: `"Mod"` -> `"Meta"` (Command key)
+ * - Windows/Linux: `"Mod"` -> `"Control"` (Ctrl key)
+ *
+ * Non-Mod modifiers are returned unchanged.
+ */
+export function resolveModifier(modifier: CanonicalModifier | "Mod", platform?: Platform): CanonicalModifier {
+  if (modifier === "Mod") {
+    const p = platform ?? detectPlatform();
+    return p === "mac" ? "Meta" : "Control";
+  }
+  return modifier;
+}
+
+/**
+ * Reset the cached platform. For testing only.
+ * @internal
+ */
+export function _resetPlatformCache(): void {
+  cachedPlatform = null;
+}

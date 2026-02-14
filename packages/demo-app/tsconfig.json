@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "baseUrl": ".",
+    "paths": {
+      "demo/hotkeys/*": ["./webapp/*"],
+      "ui5/hotkeys/*": ["../lib/src/*"]
+    },
+    "types": ["@openui5/types"],
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["webapp/**/*.ts", "../lib/src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

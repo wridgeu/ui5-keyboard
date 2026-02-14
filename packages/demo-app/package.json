@@ -1,0 +1,19 @@
+{
+  "name": "demo-hotkeys-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "ui5 serve --port 8080 -o index.html",
+    "build": "ui5 build --clean-dest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ui5-lib-hotkeys": "*"
+  },
+  "devDependencies": {
+    "@ui5/cli": "^4.0.0",
+    "ui5-middleware-livereload": "^3.0.0",
+    "ui5-tooling-transpile": "^3.9.0"
+  }
+}

@@ -1,0 +1,189 @@
+import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
+import { fireKey } from "./test-helpers";
+
+QUnit.module("HotkeyRecorder", {
+  afterEach() {
+    // Safety cleanup — any recorder left active would leak listeners
+  },
+});
+
+QUnit.test("Start enables recording", (assert) => {
+  const recorder = new HotkeyRecorder({ onRecord: () => {} });
+  assert.notOk(recorder.isRecording, "Not recording initially");
+
+  recorder.start();
+  assert.ok(recorder.isRecording, "Recording after start()");
+
+  recorder.stop();
+  assert.notOk(recorder.isRecording, "Not recording after stop()");
+});
+
+QUnit.test("Records simple key", (assert) => {
+  const done = assert.async();
+
+  const recorder = new HotkeyRecorder({
+    onRecord: (hotkey) => {
+      assert.strictEqual(hotkey, "F5", "Recorded F5");
+      assert.notOk(recorder.isRecording, "Auto-stopped after recording");
+      done();
+    },
+  });
+
+  recorder.start();
+  fireKey("F5");
+});
+
+QUnit.test("Records modifier combo", (assert) => {
+  const done = assert.async();
+
+  const recorder = new HotkeyRecorder({
+    onRecord: (hotkey) => {
+      assert.ok(hotkey.includes("Control"), "Hotkey includes Control modifier");
+      assert.ok(hotkey.includes("S"), "Hotkey includes S key");
+      done();
+    },
+  });
+
+  recorder.start();
+  fireKey("s", { ctrlKey: true });
+});
+
+QUnit.test("Escape cancels recording", (assert) => {
+  const done = assert.async();
+  let recordCalled = false;
+
+  const recorder = new HotkeyRecorder({
+    onRecord: () => {
+      recordCalled = true;
+    },
+    onCancel: () => {
+      assert.notOk(recordCalled, "onRecord was not called");
+      assert.notOk(recorder.isRecording, "Recording stopped");
+      done();
+    },
+  });
+
+  recorder.start();
+  fireKey("Escape");
+});
+
+QUnit.test("Backspace clears (records empty string)", (assert) => {
+  const done = assert.async();
+
+  const recorder = new HotkeyRecorder({
+    onRecord: (hotkey) => {
+      assert.strictEqual(hotkey, "", "Backspace records empty string (clear)");
+      done();
+    },
+  });
+
+  recorder.start();
+  fireKey("Backspace");
+});
+
+QUnit.test("Delete clears (records empty string)", (assert) => {
+  const done = assert.async();
+
+  const recorder = new HotkeyRecorder({
+    onRecord: (hotkey) => {
+      assert.strictEqual(hotkey, "", "Delete records empty string (clear)");
+      done();
+    },
+  });
+
+  recorder.start();
+  fireKey("Delete");
+});
+
+QUnit.test("Modifier-only waits for action key", (assert) => {
+  const done = assert.async();
+  let recorded: string | null = null;
+
+  const recorder = new HotkeyRecorder({
+    onRecord: (hotkey) => {
+      recorded = hotkey;
+    },
+  });
+
+  recorder.start();
+
+  // Press just Control — should not record
+  fireKey("Control", { ctrlKey: true });
+
+  setTimeout(() => {
+    assert.strictEqual(recorded, null, "Control alone was not recorded");
+    assert.ok(recorder.isRecording, "Still recording after modifier-only press");
+
+    // Now press S with Ctrl — should record
+    fireKey("s", { ctrlKey: true });
+
+    setTimeout(() => {
+      assert.ok(recorded !== null, "Recorded after action key");
+      done();
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("Auto-stops after recording", (assert) => {
+  const done = assert.async();
+  let recordCount = 0;
+
+  const recorder = new HotkeyRecorder({
+    onRecord: () => {
+      recordCount++;
+    },
+  });
+
+  recorder.start();
+  fireKey("F5");
+
+  // Second key should not be captured
+  setTimeout(() => {
+    fireKey("F6");
+
+    setTimeout(() => {
+      assert.strictEqual(recordCount, 1, "Only one key recorded (auto-stopped)");
+      done();
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("Modifier+Backspace records as hotkey (not clear)", (assert) => {
+  const done = assert.async();
+
+  const recorder = new HotkeyRecorder({
+    onRecord: (hotkey) => {
+      assert.ok(hotkey.includes("Control"), "Hotkey includes Control modifier");
+      assert.ok(hotkey.includes("Backspace"), "Hotkey includes Backspace");
+      done();
+    },
+  });
+
+  recorder.start();
+  fireKey("Backspace", { ctrlKey: true });
+});
+
+QUnit.test("stop() is silent (no callbacks)", (assert) => {
+  let recordCalled = false;
+  let cancelCalled = false;
+
+  const recorder = new HotkeyRecorder({
+    onRecord: () => {
+      recordCalled = true;
+    },
+    onCancel: () => {
+      cancelCalled = true;
+    },
+  });
+
+  recorder.start();
+  recorder.stop();
+
+  const done = assert.async();
+  setTimeout(() => {
+    assert.notOk(recordCalled, "onRecord not called on stop");
+    assert.notOk(cancelCalled, "onCancel not called on stop");
+    assert.notOk(recorder.isRecording, "Not recording after stop");
+    done();
+  }, 50);
+});

@@ -1,0 +1,37 @@
+{
+  "name": "ui5-lib-hotkeys",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "npm run build -w packages/lib",
+    "start": "npm run start -w packages/demo-app",
+    "lint": "oxlint packages/",
+    "lint:fix": "oxlint --fix packages/",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "typecheck": "tsc -b && npm run typecheck -w packages/demo-app",
+    "check": "npm run fmt:check && npm run lint && npm run typecheck",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@openui5/types": "1.144.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "oxfmt": "^0.32.0",
+    "oxlint": "^1.47.0",
+    "typescript": "~5.9.3"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "oxfmt",
+      "oxlint --fix"
+    ],
+    "*.{json,yaml,yml,md,html,xml,css}": "oxfmt"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<library xmlns="http://www.sap.com/sap.ui.library.xsd">
+    <name>ui5.hotkeys</name>
+    <vendor>Marco</vendor>
+    <version>${version}</version>
+    <copyright></copyright>
+    <title>UI5 Hotkeys</title>
+    <documentation>Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications</documentation>
+    <dependencies>
+        <dependency>
+            <libraryName>sap.ui.core</libraryName>
+        </dependency>
+    </dependencies>
+</library>

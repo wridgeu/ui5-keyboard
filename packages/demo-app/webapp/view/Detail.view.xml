@@ -1,0 +1,29 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.Detail"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="ui5.hotkeys Demo — Detail View" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <Panel headerText="Status" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Active Scope:" class="sapUiSmallMarginEnd" />
+                        <Text text="{state>/activeScope}" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Action:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/lastAction}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Detail View Shortcuts" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="F5 here triggers 'Refresh (Detail View)' — different from Main View." />
+                    <Text text="Ctrl+S / Cmd+S still works (global scope)." />
+                    <Text text="Press the back button or Mod+B to return to Main." />
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>

@@ -1,0 +1,83 @@
+{
+  "_version": "2.0.0",
+  "sap.app": {
+    "id": "demo.hotkeys",
+    "type": "application",
+    "title": "ui5.hotkeys Demo",
+    "applicationVersion": {
+      "version": "0.1.0"
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "dependencies": {
+      "minUI5Version": "1.144.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.ui.layout": {},
+        "ui5.hotkeys": {}
+      }
+    },
+    "rootView": {
+      "viewName": "demo.hotkeys.view.App",
+      "type": "XML",
+      "id": "app"
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "type": "View",
+        "viewType": "XML",
+        "path": "demo.hotkeys.view",
+        "controlId": "appControl",
+        "controlAggregation": "pages"
+      },
+      "routes": [
+        {
+          "name": "main",
+          "pattern": "",
+          "target": "main"
+        },
+        {
+          "name": "detail",
+          "pattern": "detail",
+          "target": "detail"
+        }
+      ],
+      "targets": {
+        "main": {
+          "id": "main",
+          "name": "Main"
+        },
+        "detail": {
+          "id": "detail",
+          "name": "Detail"
+        }
+      }
+    },
+    "models": {
+      "state": {
+        "type": "sap.ui.model.json.JSONModel",
+        "settings": {
+          "data": {
+            "lastAction": "None",
+            "activeScope": "__global__",
+            "platform": ""
+          }
+        }
+      }
+    }
+  }
+}

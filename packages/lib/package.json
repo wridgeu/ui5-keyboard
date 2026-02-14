@@ -1,0 +1,19 @@
+{
+  "name": "ui5-lib-hotkeys",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "types": "dist/resources/ui5/hotkeys/HotkeyManager.d.ts",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && ui5 build --clean-dest",
+    "start": "ui5 serve --port 8081 -o test-resources/ui5/hotkeys/qunit/testsuite.qunit.html",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/qunit": "^2.19.13",
+    "@ui5/cli": "^4.0.0",
+    "rimraf": "^6.0.0",
+    "ui5-tooling-transpile": "^3.9.0"
+  }
+}

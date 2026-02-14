@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import", "unicorn"],
+  "categories": {
+    "correctness": "warn",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "eqeqeq": "warn",
+    "no-console": "warn",
+    "@typescript-eslint/no-explicit-any": "error",
+    "unicorn/no-null": "off",
+    "unicorn/prefer-event-target": "off",
+    "unicorn/prefer-top-level-await": "off",
+    "unicorn/no-static-only-class": "off",
+    "unicorn/prefer-global-this": "off",
+    "unicorn/consistent-function-scoping": "off"
+  },
+  "overrides": [
+    {
+      "files": ["*.test.ts", "*.spec.ts", "*.qunit.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/", "node_modules/", "**/*.js"]
+}
