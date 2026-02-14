@@ -6,7 +6,7 @@
   "types": "dist/resources/ui5/hotkeys/HotkeyManager.d.ts",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "npm run clean && ui5 build --clean-dest",
+    "build": "npm run clean && ui5 build --clean-dest && node -e \"import{cp}from'node:fs/promises';cp('../../LICENSE','dist/LICENSE');\"",
     "start": "ui5 serve --port 8081 -o test-resources/ui5/hotkeys/qunit/testsuite.qunit.html",
     "typecheck": "tsc --noEmit"
   },
