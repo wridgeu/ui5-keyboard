@@ -1,6 +1,8 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
+// Side-effect import: ensures Lib.init() runs when this module is loaded (required for lazy library loading)
+import "./library";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement } from "./dom";
 import { matchesKeyboardEvent } from "./match";

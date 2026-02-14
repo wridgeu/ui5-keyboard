@@ -1,5 +1,7 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
+// Side-effect import: ensures Lib.init() runs when this module is loaded (required for lazy library loading)
+import "./library";
 import HotkeyManager from "./HotkeyManager";
 import { GLOBAL_SCOPE } from "./constants";
 import { matchesKeyboardEvent } from "./match";

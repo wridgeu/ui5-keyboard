@@ -91,6 +91,8 @@ Add the library to your application's `manifest.json`:
 }
 ```
 
+Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unnecessary — the library is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
+
 ---
 
 ## Quick Start
