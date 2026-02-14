@@ -257,13 +257,14 @@ manager.resetToGlobalScope();
 // Now pressing Escape calls closeApp()
 ```
 
-**Scope fallthrough**: If the active scope has no handler for a key, the global scope handler fires:
-
-```ts
-manager.register("Mod+S", () => save()); // global
-manager.pushScope("editor");
-// Mod+S still fires — no editor-scoped Mod+S shadows it
-```
+> [!NOTE]
+> **Scope fallthrough**: If the active scope has no handler for a key, the global scope handler fires.
+>
+> ```ts
+> manager.register("Mod+S", () => save()); // global
+> manager.pushScope("editor");
+> // Mod+S still fires — no editor-scoped Mod+S shadows it
+> ```
 
 ### Router Integration
 
@@ -294,7 +295,8 @@ manager.register("F5", () => this.onRefreshDetail(), {
 
 When the user navigates from `main` to `detail`, the router handler automatically resets to global scope and pushes `"detail"`. The correct F5 handler fires based on which route is active.
 
-Dialog scopes still require manual `pushScope`/`popScope` since they're not route-based.
+> [!IMPORTANT]
+> Dialog scopes still require manual `pushScope`/`popScope` since they're not route-based.
 
 ### Debug Mode
 
@@ -395,7 +397,8 @@ seq.destroy();
 
 **Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `true` — suppresses in text fields).
 
-Uses HotkeyManager's scope stack — sequences respect the active scope.
+> [!NOTE]
+> Uses HotkeyManager's scope stack — sequences respect the active scope.
 
 ---
 
@@ -425,7 +428,8 @@ tracker.setChangeCallback((keys) => {
 tracker.destroy();
 ```
 
-Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
+> [!NOTE]
+> Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
 
 ---
 
@@ -461,7 +465,8 @@ recorder.start();
 recorder.stop();
 ```
 
-Not a singleton — create one per settings row if needed.
+> [!TIP]
+> Not a singleton — create one per settings row if needed.
 
 ---
 
@@ -495,7 +500,8 @@ assertValidHotkey(""); // throws Error
 
 **SAP blocklist** (~12 entries): Ctrl+S (Save), Ctrl+E (Edit), Ctrl+D (Delete), F6, etc.
 
-Validation warnings are also automatically logged when calling `manager.register()`.
+> [!TIP]
+> Validation warnings are also automatically logged when calling `manager.register()`.
 
 ---
 
