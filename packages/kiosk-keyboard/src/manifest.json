@@ -39,6 +39,7 @@
     },
     "library": {
       "i18n": false,
+      "css": true,
       "content": {
         "controls": ["ui5.kiosk.KioskKeyboard"],
         "elements": [],

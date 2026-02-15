@@ -8,16 +8,11 @@
       src="../../../../resources/sap-ui-core.js"
       data-sap-ui-theme="sap_horizon"
       data-sap-ui-libs="sap.m, ui5.kiosk"
-      data-sap-ui-compatVersion="edge"
-      data-sap-ui-resourceroots='{"ui5.kiosk": "../../../../resources/ui5/kiosk/"}'
+      data-sap-ui-compat-version="edge"
+      data-sap-ui-resource-roots='{"ui5.kiosk": "../../../../resources/ui5/kiosk/", "visual": "./"}'
       data-sap-ui-async="true"
-      data-sap-ui-onInit="module:visual/init"
+      data-sap-ui-on-init="module:visual/init"
     ></script>
-    <script>
-      sap.ui.loader.config({
-        paths: { visual: "./" },
-      });
-    </script>
     <style>
       body {
         margin: 0;
@@ -101,6 +96,17 @@
     <div class="section">
       <h2>10. Inside Popover (consumption scenario)</h2>
       <div id="popover-trigger"></div>
+    </div>
+
+    <div class="section">
+      <h2>11. Shift / CapsLock State</h2>
+      <div id="input-shift" style="margin-bottom: 12px"></div>
+      <div class="keyboard-container" id="kb-shift"></div>
+    </div>
+
+    <div class="section">
+      <h2>12. Special Characters Layout</h2>
+      <div class="keyboard-container" id="kb-special"></div>
     </div>
   </body>
 </html>

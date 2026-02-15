@@ -4,7 +4,7 @@ import type Router from "sap/ui/core/routing/Router";
 // Side-effect import: ensures Lib.init() runs when this module is loaded (required for lazy library loading)
 import "./library";
 import { GLOBAL_SCOPE } from "./constants";
-import { getEventTarget, isInputElement } from "./dom";
+import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { keyboardEventToHotkey, parseHotkey } from "./parse";
@@ -22,6 +22,8 @@ import type {
   UnhandledCallback,
   UnhandledReason,
 } from "./types";
+
+type ValidateModule = typeof import("./validate");
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
@@ -65,7 +67,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
  */
 interface SkipInfo {
   reason: UnhandledReason;
-  registration: HotkeyRegistration;
+  registration?: HotkeyRegistration;
 }
 
 /**
@@ -520,27 +522,13 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Shared guard for all keydown listeners (document + target elements).
-   * Tracks AltGr state and filters out IME composition, modifier-only presses,
-   * and AltGr character input on Windows.
+   * Tracks AltGr state and delegates to the shared pure function.
    */
   private _shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
-    // Track Alt location for AltGr detection — must happen BEFORE modifier-only guard returns
     if (event.key === "Alt") {
       this._lastAltLocation = event.location;
     }
-
-    // IME composition — not a hotkey attempt
-    if (event.isComposing || event.keyCode === 229) return true;
-
-    // Pure modifier key press — not a hotkey attempt
-    const key = event.key;
-    if (key === "Control" || key === "Shift" || key === "Alt" || key === "Meta") return true;
-
-    // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.
-    // When the last Alt was right-side (location=2), this is AltGr character input.
-    if (this._platform === "windows" && event.ctrlKey && event.altKey && this._lastAltLocation === 2) return true;
-
-    return false;
+    return shouldIgnoreKeyEvent(event, this._platform, this._lastAltLocation);
   }
 
   /**
@@ -560,7 +548,7 @@ export default class HotkeyManager extends BaseObject {
     const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
 
     // Collect skip info for the unhandled callback
-    const skipInfo: SkipInfo | null = this._unhandledCallback ? { reason: "no_match", registration: null! } : null;
+    const skipInfo: SkipInfo | null = this._unhandledCallback ? { reason: "no_match" } : null;
 
     // Two-pass matching: active scope first, then global.
     // This ensures scoped handlers always take priority over global ones.
@@ -741,7 +729,7 @@ export default class HotkeyManager extends BaseObject {
     }
 
     // Check external conflicts (lazy import to avoid circular deps at module level)
-    const validate = sap.ui.require("ui5/hotkeys/validate");
+    const validate = sap.ui.require("ui5/hotkeys/validate") as ValidateModule | undefined;
     if (validate) {
       const normalized = keyboardEventToHotkey(event);
       if (normalized) {
@@ -760,7 +748,7 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   private _logValidationWarnings(normalizedHotkey: string): void {
-    const validate = sap.ui.require("ui5/hotkeys/validate");
+    const validate = sap.ui.require("ui5/hotkeys/validate") as ValidateModule | undefined;
     if (!validate) return;
 
     const browserConflict = validate.BROWSER_SHORTCUTS.get(normalizedHotkey);

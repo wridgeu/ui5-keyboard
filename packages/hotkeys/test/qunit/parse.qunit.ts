@@ -63,6 +63,16 @@ QUnit.test("Literal plus key: Ctrl++", (assert) => {
   assert.strictEqual(parsed.ctrl, true);
 });
 
+QUnit.test("Standalone plus key", (assert) => {
+  const parsed = parseHotkey("+", "windows");
+  assert.strictEqual(parsed.key, "+");
+  assert.strictEqual(parsed.ctrl, false);
+  assert.strictEqual(parsed.shift, false);
+  assert.strictEqual(parsed.alt, false);
+  assert.strictEqual(parsed.meta, false);
+  assert.deepEqual(parsed.modifiers, []);
+});
+
 QUnit.test("Key alias resolution", (assert) => {
   const parsed = parseHotkey("Ctrl+Esc", "windows");
   assert.strictEqual(parsed.key, "Escape");

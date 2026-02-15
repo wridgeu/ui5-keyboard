@@ -1,3 +1,6 @@
+import { MODIFIER_KEYS } from "./constants";
+import type { Platform } from "./types";
+
 /**
  * Set of `<input>` types that are considered editable text fields.
  * Button-like inputs (button, submit, reset) and non-text inputs
@@ -63,6 +66,31 @@ export function isInputElement(target: EventTarget | null): boolean {
   if (target.isContentEditable) {
     return true;
   }
+
+  return false;
+}
+
+/**
+ * Determine whether a keyboard event should be ignored entirely by hotkey/sequence managers.
+ *
+ * Filters out:
+ * - IME composition events (not a hotkey attempt)
+ * - Pure modifier-only key presses (not a hotkey attempt)
+ * - AltGr character input on Windows (Ctrl+Alt with right-side Alt)
+ *
+ * Callers must track `lastAltLocation` themselves and pass it in, since
+ * it needs to persist across events within each manager instance.
+ */
+export function shouldIgnoreKeyEvent(event: KeyboardEvent, platform: Platform, lastAltLocation: number): boolean {
+  // IME composition — not a hotkey attempt
+  if (event.isComposing || event.keyCode === 229) return true;
+
+  // Pure modifier key press — not a hotkey attempt
+  if (MODIFIER_KEYS.has(event.key)) return true;
+
+  // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.
+  // When the last Alt was right-side (location=2), this is AltGr character input.
+  if (platform === "windows" && event.ctrlKey && event.altKey && lastAltLocation === 2) return true;
 
   return false;
 }

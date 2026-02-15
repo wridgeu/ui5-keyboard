@@ -1,3 +1,4 @@
+import { MODIFIER_KEYS } from "./constants";
 import { keyboardEventToHotkey } from "./parse";
 
 /**
@@ -88,7 +89,7 @@ export default class HotkeyRecorder {
     }
 
     // Modifier-only → wait for action key
-    if (key === "Control" || key === "Shift" || key === "Alt" || key === "Meta") {
+    if (MODIFIER_KEYS.has(key)) {
       return;
     }
 

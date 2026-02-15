@@ -1,3 +1,4 @@
+// Plain JS: not processed by ui5-tooling-transpile (test files outside src/)
 sap.ui.define(
   ["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/TextArea", "sap/m/Button", "sap/m/Popover", "sap/m/VBox"],
   function (KioskKeyboard, Input, TextArea, Button, Popover, VBox) {
@@ -64,5 +65,15 @@ sap.ui.define(
       },
     });
     openBtn.placeAt("popover-trigger");
+
+    // 11. Shift / CapsLock state
+    var shiftInput = new Input({ value: "Test shift", width: "300px" });
+    shiftInput.placeAt("input-shift");
+    var kbShift = new KioskKeyboard({ targetInput: shiftInput });
+    kbShift.placeAt("kb-shift");
+
+    // 12. Special characters layout
+    var kbSpecial = new KioskKeyboard({ layout: "special" });
+    kbSpecial.placeAt("kb-special");
   },
 );

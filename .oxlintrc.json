@@ -27,7 +27,9 @@
       "files": [
         "packages/hotkeys/src/HotkeyManager.ts",
         "packages/hotkeys/src/SequenceManager.ts",
-        "packages/kiosk-keyboard/src/KioskKeyboard.ts"
+        "packages/hotkeys/src/library.ts",
+        "packages/kiosk-keyboard/src/KioskKeyboard.ts",
+        "packages/kiosk-keyboard/src/library.ts"
       ],
       "rules": {
         "import/no-unassigned-import": "off"

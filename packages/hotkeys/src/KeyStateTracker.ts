@@ -1,7 +1,6 @@
+import { MODIFIER_KEYS } from "./constants";
 import { detectPlatform } from "./platform";
 import type { Platform } from "./types";
-
-const MODIFIER_KEYS = new Set(["Control", "Shift", "Alt", "Meta"]);
 
 let instance: KeyStateTracker | null = null;
 

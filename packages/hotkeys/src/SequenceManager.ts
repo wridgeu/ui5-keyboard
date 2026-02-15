@@ -4,7 +4,7 @@ import Log from "sap/base/Log";
 import "./library";
 import HotkeyManager from "./HotkeyManager";
 import { GLOBAL_SCOPE } from "./constants";
-import { getEventTarget, isInputElement } from "./dom";
+import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
@@ -212,26 +212,13 @@ export default class SequenceManager extends BaseObject {
 
   /**
    * Returns true if the event should be ignored entirely (IME, modifier-only, AltGr).
+   * Tracks AltGr state and delegates to the shared pure function.
    */
   private _shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
-    // IME guard
-    if (event.isComposing || event.keyCode === 229) return true;
-
-    const key = event.key;
-
-    // Track Alt key location for AltGr detection (Windows international keyboards).
-    // AltGr fires as Ctrl+Alt where the Alt has location === DOM_KEY_LOCATION_RIGHT (2).
-    if (key === "Alt") {
+    if (event.key === "Alt") {
       this._lastAltLocation = event.location;
     }
-
-    // Modifier-only guard
-    if (key === "Control" || key === "Shift" || key === "Alt" || key === "Meta") return true;
-
-    // AltGr guard — the character key that follows the Ctrl+Alt pair should be ignored
-    if (event.ctrlKey && event.altKey && this._lastAltLocation === 2) return true;
-
-    return false;
+    return shouldIgnoreKeyEvent(event, this._platform, this._lastAltLocation);
   }
 
   private _onKeyDown(event: KeyboardEvent): void {
@@ -262,14 +249,14 @@ export default class SequenceManager extends BaseObject {
           fullMatch = { registration: reg, event };
         } else {
           // Mid-sequence — advance
-          const timerId = setTimeout(() => {
-            this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
-          }, reg.timeout);
           const newMatch: ActiveMatch = {
             registration: reg,
             stepIndex: match.stepIndex + 1,
-            timerId,
+            timerId: -1 as unknown as ReturnType<typeof setTimeout>,
           };
+          newMatch.timerId = setTimeout(() => {
+            this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
+          }, reg.timeout);
           newActiveMatches.push(newMatch);
         }
       }
@@ -329,14 +316,14 @@ export default class SequenceManager extends BaseObject {
       if (!matchesKeyboardEvent(event, firstStep)) continue;
       if (reg.parsedSteps.length === 1) continue;
 
-      const timerId = setTimeout(() => {
-        this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
-      }, reg.timeout);
       const newMatch: ActiveMatch = {
         registration: reg,
         stepIndex: 1,
-        timerId,
+        timerId: -1 as unknown as ReturnType<typeof setTimeout>,
       };
+      newMatch.timerId = setTimeout(() => {
+        this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
+      }, reg.timeout);
       this._activeMatches.push(newMatch);
 
       this._firePendingCallback(reg, 1);

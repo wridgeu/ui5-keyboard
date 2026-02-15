@@ -533,7 +533,7 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
 
   private _onDocumentFocusIn(event: FocusEvent): void {
-    if (!this.getDocked()) return;
+    if (!this.getDocked() || !this.getEnabled()) return;
 
     const target = event.target as HTMLElement;
 
@@ -559,7 +559,7 @@ export default class KioskKeyboard extends Control {
   }
 
   private _onDocumentFocusOut(_event: FocusEvent): void {
-    if (!this.getDocked() || !this._open) return;
+    if (!this.getDocked() || !this._open || !this.getEnabled()) return;
 
     // Delay close — focus might be moving to another input or the keyboard
     this._closeTimer = setTimeout(() => {

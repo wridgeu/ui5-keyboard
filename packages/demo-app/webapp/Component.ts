@@ -14,6 +14,7 @@ export default class Component extends UIComponent {
 
   private _hotkeyManager!: HotkeyManager;
   private _handles!: HotkeyRegistrationHandle[];
+  private _routeMatchedHandler!: () => void;
 
   init(): void {
     super.init();
@@ -31,9 +32,10 @@ export default class Component extends UIComponent {
     // Keep the state model's activeScope in sync with route changes.
     // enableRouterIntegration handles scope push/pop; this listener mirrors it to the model.
     const stateModel = this.getModel("state") as JSONModel;
-    this.getRouter().attachRouteMatched(() => {
+    this._routeMatchedHandler = () => {
       stateModel.setProperty("/activeScope", this._hotkeyManager.getActiveScope());
-    });
+    };
+    this.getRouter().attachRouteMatched(this._routeMatchedHandler, this);
     const platform = this._hotkeyManager.getPlatform();
     stateModel.setProperty("/platform", platform);
     stateModel.setProperty("/saveLabel", formatForDisplay("Mod+S", platform));
@@ -82,6 +84,7 @@ export default class Component extends UIComponent {
   }
 
   destroy(): void {
+    this.getRouter().detachRouteMatched(this._routeMatchedHandler, this);
     this._handles.forEach((h) => h.unregister());
     this._handles = [];
     this._hotkeyManager.destroy();

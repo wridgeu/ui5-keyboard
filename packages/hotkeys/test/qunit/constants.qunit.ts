@@ -31,6 +31,17 @@ QUnit.test("Function keys are normalized", (assert) => {
   assert.strictEqual(normalizeKeyName("F1"), "F1");
 });
 
+QUnit.test("Function key boundary validation (F1-F24 only)", (assert) => {
+  assert.strictEqual(normalizeKeyName("F1"), "F1", "F1 normalizes");
+  assert.strictEqual(normalizeKeyName("f1"), "F1", "f1 normalizes");
+  assert.strictEqual(normalizeKeyName("F24"), "F24", "F24 normalizes");
+  assert.strictEqual(normalizeKeyName("f24"), "F24", "f24 normalizes");
+  assert.strictEqual(normalizeKeyName("F0"), "F0", "F0 passes through unchanged");
+  assert.strictEqual(normalizeKeyName("f0"), "f0", "f0 passes through unchanged");
+  assert.strictEqual(normalizeKeyName("F25"), "F25", "F25 passes through unchanged");
+  assert.strictEqual(normalizeKeyName("F99"), "F99", "F99 passes through unchanged");
+});
+
 QUnit.test("Unknown keys are returned as-is", (assert) => {
   assert.strictEqual(normalizeKeyName("Escape"), "Escape");
   assert.strictEqual(normalizeKeyName("Enter"), "Enter");

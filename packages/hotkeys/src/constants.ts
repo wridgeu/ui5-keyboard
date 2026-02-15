@@ -7,6 +7,12 @@ import type { CanonicalModifier } from "./types";
 export const GLOBAL_SCOPE = "__global__";
 
 /**
+ * Set of the four modifier key names as reported by `KeyboardEvent.key`.
+ * Used to filter out modifier-only presses in event guards.
+ */
+export const MODIFIER_KEYS: ReadonlySet<string> = new Set(["Control", "Shift", "Alt", "Meta"]);
+
+/**
  * Canonical modifier order for normalization: Control, Alt, Shift, Meta.
  */
 export const MODIFIER_ORDER: readonly CanonicalModifier[] = ["Control", "Alt", "Shift", "Meta"] as const;
@@ -129,7 +135,7 @@ export function normalizeKeyName(key: string): string {
   }
 
   // Function keys: normalize casing (f5 -> F5)
-  const fnMatch = /^[fF](\d{1,2})$/.exec(key);
+  const fnMatch = /^[fF]([1-9]|1\d|2[0-4])$/.exec(key);
   if (fnMatch) {
     return `F${fnMatch[1]}`;
   }
