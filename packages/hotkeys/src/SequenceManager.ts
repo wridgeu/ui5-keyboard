@@ -4,21 +4,18 @@ import Log from "sap/base/Log";
 import "./library";
 import HotkeyManager from "./HotkeyManager";
 import { GLOBAL_SCOPE } from "./constants";
+import { getEventTarget, isInputElement } from "./dom";
+import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { detectPlatform } from "./platform";
-import { getEventTarget, isInputElement } from "./dom";
 import type { HotkeyCallback, ParsedHotkey, Platform } from "./types";
 
 const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
 
 let instance: SequenceManager | null = null;
-let nextId = 0;
-
-function generateId(): string {
-  return `seq_${++nextId}`;
-}
+const idGen = createIdGenerator("seq_");
 
 /**
  * Options for registering a key sequence.
@@ -130,7 +127,7 @@ export default class SequenceManager extends BaseObject {
       throw new Error("A sequence must have at least 2 steps");
     }
 
-    const id = generateId();
+    const id = idGen.next();
     const parsedSteps = sequence.map((s) => parseHotkey(s, this._platform));
 
     const registration: SequenceRegistration = {
@@ -201,7 +198,7 @@ export default class SequenceManager extends BaseObject {
     this._pendingCallback = null;
     this._lastAltLocation = 0;
     instance = null;
-    nextId = 0;
+    idGen.reset();
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
     super.destroy();

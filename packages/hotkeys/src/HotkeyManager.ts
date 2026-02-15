@@ -5,6 +5,7 @@ import type Router from "sap/ui/core/routing/Router";
 import "./library";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement } from "./dom";
+import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { keyboardEventToHotkey, parseHotkey } from "./parse";
 import { detectPlatform } from "./platform";
@@ -25,11 +26,7 @@ import type {
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 let instance: HotkeyManager | null = null;
-let nextId = 0;
-
-function generateId(): string {
-  return `hk_${++nextId}`;
-}
+const idGen = createIdGenerator("hk_");
 
 /**
  * Resolve the `ignoreInputs` option for a given hotkey.
@@ -181,7 +178,7 @@ export default class HotkeyManager extends BaseObject {
     const resolved = resolveOptions(options);
     const parsedHotkey = parseHotkey(hotkey, this._platform);
     const normalizedHotkey = [...parsedHotkey.modifiers, parsedHotkey.key].join("+");
-    const id = generateId();
+    const id = idGen.next();
 
     // Conflict detection within the same scope
     this._handleConflict(normalizedHotkey, resolved.scope, resolved.conflictBehavior);
@@ -497,7 +494,7 @@ export default class HotkeyManager extends BaseObject {
     this._debugMode = false;
     this._lastAltLocation = 0;
     instance = null;
-    nextId = 0;
+    idGen.reset();
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
 

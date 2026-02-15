@@ -1,7 +1,6 @@
-import Controller from "sap/ui/core/mvc/Controller";
 import MessageToast from "sap/m/MessageToast";
-import JSONModel from "sap/ui/model/json/JSONModel";
-import type Component from "../Component";
+import { Scope } from "../constants";
+import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
 
@@ -14,27 +13,26 @@ import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
  *
  * @name demo.hotkeys.controller.Detail
  */
-export default class Detail extends Controller {
+export default class Detail extends BaseController {
   private _manager!: HotkeyManager;
   private _handles!: HotkeyRegistrationHandle[];
 
   onInit(): void {
     this._handles = [];
 
-    const component = this.getOwnerComponent() as Component;
-    this._manager = component.getHotkeyManager();
-    const stateModel = component.getModel("state") as JSONModel;
+    this._manager = this.getTypedComponent().getHotkeyManager();
+    const stateModel = this.getStateModel();
 
     // Scope "detail" matches the route name — auto-activated by router integration
     this._handles.push(
       this._manager.register(
         "F5",
-        (_event) => {
+        () => {
           stateModel.setProperty("/lastAction", "Refresh (Detail View)");
           MessageToast.show("F5: Refresh from Detail View");
         },
         {
-          scope: "detail",
+          scope: Scope.Detail,
           description: "Refresh (Detail View)",
         },
       ),
@@ -43,11 +41,11 @@ export default class Detail extends Controller {
     this._handles.push(
       this._manager.register(
         "Mod+B",
-        (_event) => {
+        () => {
           this._navBack();
         },
         {
-          scope: "detail",
+          scope: Scope.Detail,
           description: "Navigate Back",
         },
       ),
@@ -64,6 +62,6 @@ export default class Detail extends Controller {
   }
 
   private _navBack(): void {
-    (this.getOwnerComponent() as Component).getRouter().navTo("main");
+    this.getTypedComponent().getRouter().navTo(Scope.Main);
   }
 }

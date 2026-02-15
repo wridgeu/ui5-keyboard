@@ -51,7 +51,6 @@ sap.ui.define(
     var popover = new Popover({
       title: "Kiosk Input",
       contentWidth: "360px",
-      placement: "Bottom",
       content: [
         new VBox({
           items: [popoverInput, popoverKb],
