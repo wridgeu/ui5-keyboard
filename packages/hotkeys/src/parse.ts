@@ -142,10 +142,7 @@ export function convertToModFormat(hotkey: string, platform?: Platform): string 
   const otherMod: CanonicalModifier = p === "mac" ? "Control" : "Meta";
 
   // Only convert if the platform modifier is present and the other is not
-  const hasPlatformMod = parsed.modifiers.includes(platformMod);
-  const hasOtherMod = parsed.modifiers.includes(otherMod);
-
-  if (!hasPlatformMod || hasOtherMod) {
+  if (!parsed.modifiers.includes(platformMod) || parsed.modifiers.includes(otherMod)) {
     return hotkey;
   }
 

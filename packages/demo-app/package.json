@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ui5-lib-hotkeys": "*"
+    "ui5-lib-hotkeys": "*",
+    "ui5-lib-kiosk-keyboard": "*"
   },
   "devDependencies": {
     "@ui5/cli": "^4.0.0",

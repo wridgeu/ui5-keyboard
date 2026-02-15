@@ -67,6 +67,10 @@ export default class Main extends Controller {
     this._navToDetail();
   }
 
+  onNavToKiosk(): void {
+    (this.getOwnerComponent() as Component).getRouter().navTo("kiosk");
+  }
+
   onOpenDialog(): void {
     const stateModel = (this.getOwnerComponent() as Component).getModel("state") as JSONModel;
 
@@ -131,15 +135,10 @@ export default class Main extends Controller {
   }
 
   onExit(): void {
-    for (const handle of this._handles) {
-      handle.unregister();
-    }
+    this._handles.forEach((h) => h.unregister());
     this._handles = [];
-
-    if (this._dialog) {
-      this._dialog.destroy();
-      this._dialog = null;
-    }
+    this._dialog?.destroy();
+    this._dialog = null;
   }
 
   private _navToDetail(): void {
@@ -147,9 +146,7 @@ export default class Main extends Controller {
   }
 
   private _closeDialog(stateModel: JSONModel): void {
-    for (const handle of this._dialogHandles) {
-      handle.unregister();
-    }
+    this._dialogHandles.forEach((h) => h.unregister());
     this._dialogHandles = [];
 
     try {
@@ -159,11 +156,8 @@ export default class Main extends Controller {
     }
 
     stateModel.setProperty("/activeScope", this._manager.getActiveScope());
-
-    if (this._dialog) {
-      this._dialog.close();
-      this._dialog.destroy();
-      this._dialog = null;
-    }
+    this._dialog?.close();
+    this._dialog?.destroy();
+    this._dialog = null;
   }
 }

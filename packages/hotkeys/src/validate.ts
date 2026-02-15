@@ -122,7 +122,7 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!hotkey || !hotkey.trim()) {
+  if (!hotkey?.trim()) {
     return { valid: false, errors: ["Hotkey string must not be empty"], warnings };
   }
 

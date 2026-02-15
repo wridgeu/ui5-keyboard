@@ -24,7 +24,11 @@
       }
     },
     {
-      "files": ["packages/lib/src/HotkeyManager.ts", "packages/lib/src/SequenceManager.ts"],
+      "files": [
+        "packages/hotkeys/src/HotkeyManager.ts",
+        "packages/hotkeys/src/SequenceManager.ts",
+        "packages/kiosk-keyboard/src/KioskKeyboard.ts"
+      ],
       "rules": {
         "import/no-unassigned-import": "off"
       }

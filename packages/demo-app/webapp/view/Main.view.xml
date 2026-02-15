@@ -5,6 +5,7 @@
     <Page title="ui5.hotkeys Demo — Main View" id="mainPage">
         <headerContent>
             <Button text="Navigate to Detail" press=".onNavToDetail" type="Emphasized" />
+            <Button text="Kiosk Keyboard" press=".onNavToKiosk" />
         </headerContent>
         <content>
             <Panel headerText="Status" class="sapUiMediumMargin">

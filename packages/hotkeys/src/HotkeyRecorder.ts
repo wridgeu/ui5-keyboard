@@ -81,17 +81,9 @@ export default class HotkeyRecorder {
     }
 
     // Backspace/Delete with no modifiers → clear
-    if (
-      (key === "Backspace" || key === "Delete") &&
-      !event.ctrlKey &&
-      !event.altKey &&
-      !event.shiftKey &&
-      !event.metaKey
-    ) {
-      // Remove listener BEFORE callback (TanStack pattern — prevents race conditions)
-      this._recording = false;
-      document.removeEventListener("keydown", this._keydownHandler, true);
-      this._options.onRecord("");
+    const noModifiers = !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey;
+    if ((key === "Backspace" || key === "Delete") && noModifiers) {
+      this._stopAndRecord("");
       return;
     }
 
@@ -103,10 +95,14 @@ export default class HotkeyRecorder {
     // Valid combo — convert to hotkey string
     const hotkey = keyboardEventToHotkey(event);
     if (hotkey !== null) {
-      // Remove listener BEFORE callback (TanStack pattern)
-      this._recording = false;
-      document.removeEventListener("keydown", this._keydownHandler, true);
-      this._options.onRecord(hotkey);
+      this._stopAndRecord(hotkey);
     }
+  }
+
+  /** Remove listener BEFORE callback (TanStack pattern — prevents race conditions). */
+  private _stopAndRecord(hotkey: string): void {
+    this._recording = false;
+    document.removeEventListener("keydown", this._keydownHandler, true);
+    this._options.onRecord(hotkey);
   }
 }

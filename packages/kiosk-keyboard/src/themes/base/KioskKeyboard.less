@@ -1,0 +1,227 @@
+/* ============================= */
+/* KioskKeyboard base styles     */
+/* ============================= */
+
+@_ui5KioskKeyGap: 0.375rem;
+@_ui5KioskKeyHeight: 2.75rem;
+@_ui5KioskKeyBorderRadius: 0.5rem;
+@_ui5KioskKeyFontSize: 1rem;
+
+.ui5KioskKeyboard {
+  display: flex;
+  flex-direction: column;
+  gap: @_ui5KioskKeyGap;
+  padding: 0.75rem;
+  background: @sapUiGroupContentBackground;
+  border: 1px solid @sapUiGroupTitleBorderColor;
+  border-radius: 0.75rem;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  /* Default: shrink-wrap to content for inline keyboards */
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ui5KioskRow {
+  display: flex;
+  gap: @_ui5KioskKeyGap;
+  justify-content: center;
+}
+
+/* Key base — flex-based sizing for responsive layouts */
+.ui5KioskKey {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* flex: <grow> <shrink> 0 — keys share space proportionally */
+  flex: 1 1 0;
+  min-width: 0;
+  height: @_ui5KioskKeyHeight;
+  padding: 0 0.25rem;
+  border: 1px solid @sapUiButtonBorderColor;
+  border-radius: @_ui5KioskKeyBorderRadius;
+  background: @sapUiButtonBackground;
+  color: @sapUiButtonTextColor;
+  font-family: @sapUiFontFamily;
+  font-size: @_ui5KioskKeyFontSize;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    background 0.1s ease,
+    transform 0.05s ease;
+  /* Prevent text overflow on small screens */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui5KioskKey:hover {
+  background: @sapUiButtonHoverBackground;
+  border-color: @sapUiButtonHoverBorderColor;
+}
+
+.ui5KioskKey:active,
+.ui5KioskKey--pressed {
+  background: @sapUiButtonActiveBackground;
+  color: @sapUiButtonActiveTextColor;
+  border-color: @sapUiButtonActiveBorderColor;
+  transform: scale(0.96);
+}
+
+.ui5KioskKey:focus-visible {
+  outline: 2px solid @sapUiContentFocusColor;
+  outline-offset: 1px;
+}
+
+/* Width classes: proportional flex grow */
+.ui5KioskKey--w1-25 {
+  flex: 1.25 1 0;
+}
+
+.ui5KioskKey--w1-5 {
+  flex: 1.5 1 0;
+}
+
+.ui5KioskKey--w1-75 {
+  flex: 1.75 1 0;
+}
+
+.ui5KioskKey--w2 {
+  flex: 2 1 0;
+}
+
+.ui5KioskKey--w2-25 {
+  flex: 2.25 1 0;
+}
+
+.ui5KioskKey--w2-75 {
+  flex: 2.75 1 0;
+}
+
+/* Spacebar */
+.ui5KioskKey--space {
+  flex: 6 1 0;
+}
+
+/* Modifier keys — subdued (Shift, layout switches) */
+.ui5KioskKey--modifier {
+  background: @sapUiButtonLiteBackground;
+  color: @sapUiButtonLiteTextColor;
+  border-color: @sapUiButtonLiteBorderColor;
+  font-size: 0.8125rem;
+}
+
+.ui5KioskKey--modifier:hover {
+  background: @sapUiButtonLiteHoverBackground;
+  border-color: @sapUiButtonLiteHoverBorderColor;
+}
+
+.ui5KioskKey--modifier:active,
+.ui5KioskKey--modifier.ui5KioskKey--pressed {
+  background: @sapUiButtonLiteActiveBackground;
+  color: @sapUiButtonActiveTextColor;
+  border-color: @sapUiButtonLiteActiveBorderColor;
+}
+
+/* Action keys — prominent (Enter, Backspace) */
+.ui5KioskKey--action {
+  background: @sapUiButtonEmphasizedBackground;
+  color: @sapUiButtonEmphasizedTextColor;
+  border-color: @sapUiButtonEmphasizedBorderColor;
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+.ui5KioskKey--action:hover {
+  background: @sapUiButtonEmphasizedHoverBackground;
+  border-color: @sapUiButtonEmphasizedHoverBorderColor;
+}
+
+.ui5KioskKey--action:active,
+.ui5KioskKey--action.ui5KioskKey--pressed {
+  background: @sapUiButtonEmphasizedActiveBackground;
+  color: @sapUiButtonEmphasizedActiveTextColor;
+  border-color: @sapUiButtonEmphasizedActiveBorderColor;
+}
+
+/* Active Shift / Caps indicator */
+.ui5KioskKey--active {
+  background: @sapUiButtonEmphasizedBackground;
+  color: @sapUiButtonEmphasizedTextColor;
+  border-color: @sapUiButtonEmphasizedBorderColor;
+}
+
+.ui5KioskKey--active:hover {
+  background: @sapUiButtonEmphasizedHoverBackground;
+  border-color: @sapUiButtonEmphasizedHoverBorderColor;
+}
+
+/* Icon inside key */
+.ui5KioskKey .sapUiIcon {
+  font-size: 1rem;
+}
+
+/* ============================= */
+/* Docked mode                   */
+/* ============================= */
+
+.ui5KioskKeyboard--docked {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  /* Override fit-content — fill the viewport */
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0.75rem 0.75rem 0 0;
+  border-bottom: none;
+  box-shadow: 0 -4px 20px fade(@sapUiContentShadowColor, 20%);
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ui5KioskKeyboard--closed {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+/* ============================= */
+/* Compact mode                  */
+/* ============================= */
+
+.sapUiSizeCompact .ui5KioskKeyboard {
+  padding: 0.5rem;
+  gap: 0.25rem;
+}
+
+.sapUiSizeCompact .ui5KioskRow {
+  gap: 0.25rem;
+}
+
+.sapUiSizeCompact .ui5KioskKey {
+  height: 2.25rem;
+  font-size: 0.875rem;
+  padding: 0 0.25rem;
+}
+
+/* Disabled state */
+.ui5KioskKeyboard--disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* RTL support */
+.sapUiRtl .ui5KioskKeyboard {
+  direction: rtl;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .ui5KioskKey,
+  .ui5KioskKeyboard--docked {
+    transition: none;
+  }
+}

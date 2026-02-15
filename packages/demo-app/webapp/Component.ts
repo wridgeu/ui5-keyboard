@@ -82,15 +82,9 @@ export default class Component extends UIComponent {
   }
 
   destroy(): void {
-    // Unregister all component-level hotkeys
-    for (const handle of this._handles) {
-      handle.unregister();
-    }
+    this._handles.forEach((h) => h.unregister());
     this._handles = [];
-
-    // Destroy the manager singleton (removes all listeners + router integration)
     this._hotkeyManager.destroy();
-
     super.destroy();
   }
 }

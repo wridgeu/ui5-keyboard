@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "packages/lib" }]
+  "references": [{ "path": "packages/hotkeys" }, { "path": "packages/kiosk-keyboard" }]
 }

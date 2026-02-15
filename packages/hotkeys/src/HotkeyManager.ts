@@ -39,19 +39,9 @@ function generateId(): string {
  * - Single keys and Alt/Shift-only combos → `true` (suppress in inputs)
  */
 function resolveIgnoreInputs(option: boolean | "auto", ctrl: boolean, meta: boolean, key: string): boolean {
-  if (option !== "auto") {
-    return option;
-  }
-  // Ctrl/Meta combos should work in inputs (e.g., Mod+S for save)
-  if (ctrl || meta) {
-    return false;
-  }
-  // Escape should work in inputs (close/cancel)
-  if (key === "Escape") {
-    return false;
-  }
-  // Everything else is suppressed in inputs
-  return true;
+  if (option !== "auto") return option;
+  // Ctrl/Meta combos and Escape should work in inputs; everything else is suppressed
+  return !(ctrl || meta || key === "Escape");
 }
 
 /**

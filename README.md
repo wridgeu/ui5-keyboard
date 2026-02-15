@@ -1,10 +1,11 @@
-# ui5-lib-hotkeys
+# ui5-keyboard
 
-Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
+A monorepo of UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications.
 
-A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard shortcuts with scope-based activation, cross-platform modifier normalization, multi-key sequences, hotkey recording, and proper UI5 lifecycle integration.
-
-For the full API reference and detailed documentation, see the [library README](packages/lib/README.md).
+| Library                                            | npm                      | Description                                                                                                                                            |
+| -------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [ui5-lib-hotkeys](packages/hotkeys/README.md)      | `ui5-lib-hotkeys`        | Declarative keyboard shortcut management with scope-based activation, cross-platform modifier normalization, multi-key sequences, and hotkey recording |
+| [ui5-lib-kiosk-keyboard](packages/kiosk-keyboard/) | `ui5-lib-kiosk-keyboard` | On-screen virtual keyboard control with SAP theme integration, touch support, and multiple layouts                                                     |
 
 ## Quick Start
 
@@ -62,8 +63,8 @@ npm run check
 # Start the demo app
 npm start
 
-# Start the library test runner
-npm run start -w packages/lib
+# Start the hotkeys library test runner
+npm run start:lib
 # Opens at http://localhost:8081/test-resources/ui5/hotkeys/qunit/testsuite.qunit.html
 
 # Build the library
@@ -97,25 +98,15 @@ npm run typecheck    # TypeScript type checking
 ## Project Structure
 
 ```
-ui5-lib-hotkeys/
+ui5-keyboard/
 ├── packages/
-│   ├── lib/                           # ui5.hotkeys library
+│   ├── hotkeys/                       # ui5.hotkeys library (keyboard shortcuts)
 │   │   ├── src/
-│   │   │   ├── library.ts            # Lib.init(), enum registration, GLOBAL_SCOPE
-│   │   │   ├── HotkeyManager.ts      # Singleton manager (core)
-│   │   │   ├── SequenceManager.ts     # Multi-key sequence matching
-│   │   │   ├── KeyStateTracker.ts     # Held-key state tracking
-│   │   │   ├── HotkeyRecorder.ts      # Keyboard shortcut recorder
-│   │   │   ├── validate.ts           # Validation + browser/SAP blocklists
-│   │   │   ├── types.ts              # TypeScript interfaces, types, Hotkey union
-│   │   │   ├── constants.ts          # Key aliases, modifier maps, display symbols
-│   │   │   ├── platform.ts           # Platform detection, Mod resolution
-│   │   │   ├── parse.ts              # Hotkey string parsing + conversion
-│   │   │   ├── match.ts              # KeyboardEvent matching
-│   │   │   ├── dom.ts                # Input element detection
-│   │   │   └── format.ts             # Platform-aware display formatting
 │   │   └── test/qunit/               # 14 QUnit test suites
-│   └── demo-app/                      # Demo application with routing and dialogs
+│   ├── kiosk-keyboard/                # ui5.kiosk library (on-screen keyboard)
+│   │   ├── src/
+│   │   └── test/qunit/
+│   └── demo-app/                      # Demo application for both libraries
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   └── SEQUENCES.md

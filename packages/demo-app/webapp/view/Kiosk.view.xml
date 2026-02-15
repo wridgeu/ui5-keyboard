@@ -1,0 +1,70 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.Kiosk"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:kiosk="ui5.kiosk"
+    xmlns:l="sap.ui.layout">
+    <Page title="Kiosk Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <Panel headerText="Docked Keyboard (tap any input)" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Tap an input field below. The keyboard slides up from the bottom of the screen." />
+                    <Label text="Full Name" labelFor="nameInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="nameInput"
+                        placeholder="John Doe"
+                        width="100%" />
+                    <Label text="Email" labelFor="emailInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="emailInput"
+                        placeholder="john@example.com"
+                        width="100%" />
+                    <Label text="Notes" labelFor="notesInput" class="sapUiSmallMarginTop" />
+                    <TextArea
+                        id="notesInput"
+                        placeholder="Additional notes..."
+                        rows="3"
+                        width="100%" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Inline Numpad" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="A compact numeric keypad rendered inline (not docked)." />
+                    <Input
+                        id="numpadInput"
+                        placeholder="Numeric input..."
+                        class="sapUiSmallMarginTop"
+                        width="12rem" />
+                    <kiosk:KioskKeyboard
+                        id="numpadKeyboard"
+                        keyboardType="Numpad"
+                        targetInput="numpadInput"
+                        ariaLabel="Numeric Keypad"
+                        class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Event Log" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Active Layout:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskLayout}" state="Success" />
+                    </HBox>
+                </VBox>
+            </Panel>
+            <!-- Docked keyboard: rendered in content but position:fixed
+                 handles viewport-bottom anchoring. Slides in when any input is focused. -->
+            <kiosk:KioskKeyboard
+                id="dockedKeyboard"
+                docked="true"
+                autoShow="true"
+                keyPress=".onKeyPress"
+                layoutChange=".onLayoutChange" />
+        </content>
+    </Page>
+</mvc:View>

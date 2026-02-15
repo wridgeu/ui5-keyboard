@@ -27,7 +27,8 @@
         "sap.m": {},
         "sap.ui.core": {},
         "sap.ui.layout": {},
-        "ui5.hotkeys": {}
+        "ui5.hotkeys": {},
+        "ui5.kiosk": {}
       }
     },
     "rootView": {
@@ -54,6 +55,11 @@
           "name": "detail",
           "pattern": "detail",
           "target": "detail"
+        },
+        {
+          "name": "kiosk",
+          "pattern": "kiosk",
+          "target": "kiosk"
         }
       ],
       "targets": {
@@ -64,6 +70,10 @@
         "detail": {
           "id": "detail",
           "name": "Detail"
+        },
+        "kiosk": {
+          "id": "kiosk",
+          "name": "Kiosk"
         }
       }
     },

@@ -1,0 +1,626 @@
+import Control from "sap/ui/core/Control";
+import Element from "sap/ui/core/Element";
+import type { LayoutDefinition, KeyDefinition } from "./types";
+import layouts from "./layouts/index";
+import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
+import "./library"; // side-effect: ensures Lib.init() runs
+
+/**
+ * On-screen virtual keyboard control for kiosk and touch applications.
+ *
+ * Renders an interactive keyboard that types into a target UI5 input control.
+ * Supports multiple layouts (QWERTY, numeric, special characters, numpad),
+ * Shift/Caps Lock toggle, and integrates with SAP theming.
+ *
+ * In **docked mode** (`docked="true"`), the keyboard anchors to the bottom
+ * of the viewport and slides in/out. Use `show()` / `close()` to control
+ * visibility manually, or set `autoShow="true"` for automatic
+ * focus-based show/close behavior.
+ *
+ * @namespace ui5.kiosk
+ * @extends sap.ui.core.Control
+ * @public
+ */
+export default class KioskKeyboard extends Control {
+  // ── ManagedObject field trap: declare strips these from Babel output ──
+  declare private _shiftActive: boolean;
+  declare private _capsLock: boolean;
+  declare private _lastFocusedKeyId: string | null;
+  declare private _open: boolean;
+  declare private _closeTimer: ReturnType<typeof setTimeout> | null;
+  declare private _boundFocusIn: (e: FocusEvent) => void;
+  declare private _boundFocusOut: (e: FocusEvent) => void;
+  declare private _autoShowActive: boolean;
+
+  // ── Metadata-generated accessors (created at runtime by ManagedObject) ──
+  declare getLayout: () => string;
+  declare setLayout: (layout: string) => this;
+  declare getKeyboardType: () => string;
+  declare setKeyboardType: (keyboardType: string) => this;
+  declare getEnabled: () => boolean;
+  declare setEnabled: (enabled: boolean) => this;
+  declare getAriaLabel: () => string;
+  declare setAriaLabel: (label: string) => this;
+  declare getTargetInput: () => string;
+  declare getDocked: () => boolean;
+  declare getAutoShow: () => boolean;
+
+  static readonly metadata = {
+    library: "ui5.kiosk" as const,
+    properties: {
+      /** Active layout name. Only effective when keyboardType is "full". */
+      layout: {
+        type: "string",
+        defaultValue: "qwerty",
+        group: "Behavior",
+      },
+      /**
+       * Keyboard display type.
+       * "full" renders the active layout. "numeric" and "numpad" render
+       * compact number-oriented layouts regardless of the layout property.
+       */
+      keyboardType: {
+        type: "ui5.kiosk.KeyboardType",
+        defaultValue: "Full",
+        group: "Appearance",
+      },
+      /** Whether the keyboard is interactive. */
+      enabled: {
+        type: "boolean",
+        defaultValue: true,
+        group: "Behavior",
+      },
+      /** Accessible label for the keyboard group. */
+      ariaLabel: {
+        type: "string",
+        defaultValue: "Virtual Keyboard",
+        group: "Accessibility",
+      },
+      /**
+       * When true, the keyboard anchors to the bottom of the viewport
+       * and slides in/out. Use show()/close() to control visibility
+       * manually, or set autoShow to true for automatic behavior.
+       */
+      docked: {
+        type: "boolean",
+        defaultValue: false,
+        group: "Behavior",
+      },
+      /**
+       * When true, the docked keyboard automatically opens when any
+       * `<input>` or `<textarea>` receives focus, and closes when
+       * focus leaves. Requires `docked="true"`.
+       */
+      autoShow: {
+        type: "boolean",
+        defaultValue: false,
+        group: "Behavior",
+      },
+    },
+    associations: {
+      /** The input control to type into (e.g. sap.m.Input, sap.m.TextArea). */
+      targetInput: { type: "sap.ui.core.Control", multiple: false },
+    },
+    events: {
+      /** Fired when a virtual key is pressed. Call preventDefault() to skip the default input action. */
+      keyPress: {
+        allowPreventDefault: true,
+        parameters: {
+          key: { type: "string" },
+          shiftKey: { type: "boolean" },
+        },
+      },
+      /** Fired when the active layout changes. */
+      layoutChange: {
+        parameters: {
+          layout: { type: "string" },
+        },
+      },
+      /** Fired after the docked keyboard has opened. */
+      afterOpen: {},
+      /** Fired after the docked keyboard has closed. */
+      afterClose: {},
+    },
+  };
+
+  static readonly renderer = KioskKeyboardRenderer;
+
+  init(): void {
+    this._shiftActive = false;
+    this._capsLock = false;
+    this._lastFocusedKeyId = null;
+    this._open = false;
+    this._closeTimer = null;
+    this._autoShowActive = false;
+    this._boundFocusIn = this._onDocumentFocusIn.bind(this);
+    this._boundFocusOut = this._onDocumentFocusOut.bind(this);
+    this.attachBrowserEvent("pointerdown", this._onPointerDown);
+  }
+
+  onAfterRendering(): void {
+    if (!this.getDocked()) return;
+    // Sync the open/closed CSS class (renderer sets initial state,
+    // but show()/close() bypass re-render for smooth animation)
+    this.getDomRef()?.classList.toggle("ui5KioskKeyboard--closed", !this._open);
+
+    // Activate auto-show listeners if the property was set declaratively
+    // (e.g. via XML) before the control was rendered.
+    if (this.getAutoShow() && !this._autoShowActive) {
+      this.enableAutoShow();
+    }
+  }
+
+  exit(): void {
+    this.detachBrowserEvent("pointerdown", this._onPointerDown);
+    this.disableAutoShow();
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // Public API — Target & Docked Mode
+  // ──────────────────────────────────────────────
+
+  /**
+   * Sets the target input association without triggering a re-render,
+   * since the association does not affect the keyboard's visual output.
+   */
+  setTargetInput(target: string | Control): this {
+    this.setAssociation("targetInput", target, true);
+    return this;
+  }
+
+  /**
+   * Custom setter for autoShow — activates or deactivates the
+   * auto-show document listeners via enableAutoShow/disableAutoShow.
+   */
+  setAutoShow(bAutoShow: boolean): this {
+    this.setProperty("autoShow", bAutoShow);
+    if (bAutoShow) {
+      this.enableAutoShow();
+    } else {
+      this.disableAutoShow();
+    }
+    return this;
+  }
+
+  /**
+   * Custom setter for docked — manages CSS on the existing DOM
+   * rather than re-rendering (which would disrupt transitions).
+   */
+  setDocked(bDocked: boolean): this {
+    if (!this.getDocked() && bDocked) {
+      this._open = false;
+    }
+    return this.setProperty("docked", bDocked);
+  }
+
+  /** Opens the keyboard (docked mode). Slides it into view. */
+  show(): this {
+    if (this._open) return this;
+    this._open = true;
+    const dom = this.getDomRef();
+    if (dom) {
+      dom.classList.remove("ui5KioskKeyboard--closed");
+    }
+    this.fireEvent("afterOpen");
+    return this;
+  }
+
+  /** Closes the keyboard (docked mode). Slides it out of view. */
+  close(): this {
+    if (!this._open) return this;
+    this._open = false;
+    const dom = this.getDomRef();
+    if (dom) {
+      dom.classList.add("ui5KioskKeyboard--closed");
+    }
+    this.fireEvent("afterClose");
+    return this;
+  }
+
+  /** Whether the docked keyboard is currently open. */
+  isOpen(): boolean {
+    return this._open;
+  }
+
+  /**
+   * Enables auto-show: the keyboard automatically opens when any
+   * `<input>` or `<textarea>` on the page receives focus, setting it
+   * as the target. Closes when focus moves away from all inputs.
+   */
+  enableAutoShow(): this {
+    if (this._autoShowActive) return this;
+    this._autoShowActive = true;
+    document.addEventListener("focusin", this._boundFocusIn, true);
+    document.addEventListener("focusout", this._boundFocusOut, true);
+    return this;
+  }
+
+  /** Disables auto-show listeners. */
+  disableAutoShow(): this {
+    if (!this._autoShowActive) return this;
+    this._autoShowActive = false;
+    document.removeEventListener("focusin", this._boundFocusIn, true);
+    document.removeEventListener("focusout", this._boundFocusOut, true);
+    return this;
+  }
+
+  // ──────────────────────────────────────────────
+  // Focus Management
+  // ──────────────────────────────────────────────
+
+  getFocusDomRef(): globalThis.Element | null {
+    return (
+      (this._lastFocusedKeyId && document.getElementById(this._lastFocusedKeyId)) ||
+      this.getDomRef()?.querySelector(".ui5KioskKey") ||
+      null
+    );
+  }
+
+  getFocusInfo(): object {
+    return { lastFocusedKeyId: this._lastFocusedKeyId };
+  }
+
+  applyFocusInfo(oFocusInfo: { preventScroll?: boolean; lastFocusedKeyId?: string }): this {
+    if (oFocusInfo.lastFocusedKeyId) {
+      const el = document.getElementById(oFocusInfo.lastFocusedKeyId);
+      if (el) {
+        el.setAttribute("tabindex", "0");
+        el.focus();
+        return this;
+      }
+    }
+    return this;
+  }
+
+  // ──────────────────────────────────────────────
+  // Accessibility
+  // ──────────────────────────────────────────────
+
+  getAccessibilityInfo(): {
+    role: string;
+    type: string;
+    description: string;
+    focusable: boolean;
+    enabled: boolean;
+  } {
+    return {
+      role: "group",
+      type: "Virtual Keyboard",
+      description: this.getAriaLabel(),
+      focusable: true,
+      enabled: this.getEnabled(),
+    };
+  }
+
+  // ──────────────────────────────────────────────
+  // Public API (used by renderer)
+  // ──────────────────────────────────────────────
+
+  isShiftActive(): boolean {
+    return this._shiftActive || this._capsLock;
+  }
+
+  isCapsLock(): boolean {
+    return this._capsLock;
+  }
+
+  getResolvedLayout(): LayoutDefinition {
+    const kbType = this.getKeyboardType();
+    if (kbType === "Numpad") return layouts.numpad;
+    if (kbType === "Numeric") return layouts.numeric;
+    return layouts[this.getLayout()] ?? layouts.qwerty;
+  }
+
+  /** The display label for a key (may be empty for icon-only keys). */
+  getKeyLabel(key: KeyDefinition): string {
+    const shift = this.isShiftActive();
+    if (shift && key.shiftLabel) return key.shiftLabel;
+    const base = key.label ?? key.value;
+    return shift && key.value.length === 1 ? base.toUpperCase() : base;
+  }
+
+  /** Human-readable map for special key values used in ARIA labels. */
+  private static readonly _SPECIAL_KEY_LABELS: Record<string, string> = {
+    "{backspace}": "Backspace",
+    "{enter}": "Enter",
+    "{shift}": "Shift",
+    " ": "Space",
+  };
+
+  /**
+   * Accessible label for a key — always non-empty.
+   * For icon-only keys (label=""), resolves to a human-readable name.
+   */
+  getKeyAriaLabel(key: KeyDefinition): string {
+    const display = this.getKeyLabel(key);
+    if (display) return display;
+
+    // Icon-only key with empty display label — resolve from value
+    return KioskKeyboard._SPECIAL_KEY_LABELS[key.value] ?? key.value;
+  }
+
+  // ──────────────────────────────────────────────
+  // UI5 Event Delegation
+  // ──────────────────────────────────────────────
+
+  ontap(event: Event): void {
+    if (!this.getEnabled()) return;
+
+    const el = (event.target as HTMLElement).closest(".ui5KioskKey") as HTMLElement | null;
+    if (!el) return;
+
+    const keyValue = el.dataset.key;
+    if (!keyValue) return;
+
+    this._lastFocusedKeyId = el.id;
+    this._handleKeyAction(keyValue, el);
+  }
+
+  onkeydown(event: KeyboardEvent): void {
+    if (!this.getEnabled()) return;
+
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains("ui5KioskKey")) return;
+
+    switch (event.key) {
+      case "Enter":
+      case " ": {
+        event.preventDefault();
+        const keyValue = target.dataset.key;
+        if (keyValue) this._handleKeyAction(keyValue, target);
+        break;
+      }
+      case "ArrowLeft":
+        event.preventDefault();
+        this._moveFocus(target, 0, -1);
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        this._moveFocus(target, 0, 1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        this._moveFocus(target, -1, 0);
+        break;
+      case "ArrowDown":
+        event.preventDefault();
+        this._moveFocus(target, 1, 0);
+        break;
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // Private — Auto-show
+  // ──────────────────────────────────────────────
+
+  private _onDocumentFocusIn(event: FocusEvent): void {
+    if (!this.getDocked()) return;
+
+    const target = event.target as HTMLElement;
+
+    // Ignore focus on the keyboard itself
+    const myDom = this.getDomRef();
+    if (myDom && myDom.contains(target)) return;
+
+    // Check if focus went to an input/textarea
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      // Cancel any pending close
+      if (this._closeTimer) {
+        clearTimeout(this._closeTimer);
+        this._closeTimer = null;
+      }
+
+      // Resolve the UI5 control that owns this DOM element
+      const ui5Control = Element.closestTo(target);
+      if (ui5Control instanceof Control) {
+        this.setTargetInput(ui5Control);
+      }
+      this.show();
+    }
+  }
+
+  private _onDocumentFocusOut(_event: FocusEvent): void {
+    if (!this.getDocked() || !this._open) return;
+
+    // Delay close — focus might be moving to another input or the keyboard
+    this._closeTimer = setTimeout(() => {
+      this._closeTimer = null;
+      const active = document.activeElement as HTMLElement | null;
+
+      // Don't close if focus is on the keyboard
+      const myDom = this.getDomRef();
+      if (myDom && active && myDom.contains(active)) return;
+
+      // Don't close if focus moved to another input
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+
+      this.close();
+    }, 200);
+  }
+
+  // ──────────────────────────────────────────────
+  // Private — Pointer & Key Actions
+  // ──────────────────────────────────────────────
+
+  private _onPointerDown(event: PointerEvent): void {
+    if ((event.target as HTMLElement).closest(".ui5KioskKey")) {
+      event.preventDefault();
+    }
+  }
+
+  private _handleKeyAction(keyValue: string, el: HTMLElement): void {
+    const shift = this.isShiftActive();
+
+    if (keyValue === "{shift}") {
+      this._toggleShift();
+      return;
+    }
+
+    if (keyValue === "{backspace}") {
+      if (this.fireEvent("keyPress", { key: "Backspace", shiftKey: shift }, true)) {
+        this._handleBackspace();
+      }
+      return;
+    }
+
+    if (keyValue === "{enter}") {
+      if (this.fireEvent("keyPress", { key: "Enter", shiftKey: shift }, true)) {
+        this._handleEnter();
+      }
+      return;
+    }
+
+    if (keyValue.startsWith("{layout:")) {
+      if (this.getKeyboardType() === "Full") {
+        const name = keyValue.slice(8, -1);
+        this.setLayout(name);
+        this.fireEvent("layoutChange", { layout: name });
+      }
+      return;
+    }
+
+    // Regular character — resolve shift value
+    let effective = keyValue;
+    if (shift) {
+      const shiftValue = el.dataset.shiftValue;
+      if (shiftValue) {
+        effective = shiftValue;
+      } else if (keyValue.length === 1) {
+        effective = keyValue.toUpperCase();
+      }
+    }
+
+    if (this.fireEvent("keyPress", { key: effective, shiftKey: shift }, true)) {
+      this._insertText(effective);
+    }
+
+    // Auto-release shift (not caps lock)
+    if (this._shiftActive && !this._capsLock) {
+      this._shiftActive = false;
+      this.invalidate();
+    }
+  }
+
+  private _toggleShift(): void {
+    if (this._capsLock) {
+      this._capsLock = false;
+      this._shiftActive = false;
+    } else if (this._shiftActive) {
+      this._capsLock = true;
+    } else {
+      this._shiftActive = true;
+    }
+    this.invalidate();
+  }
+
+  /**
+   * Returns the target input's inner DOM element, ensuring it is focused
+   * with the cursor at the end of its value if it wasn't already active.
+   *
+   * Real virtual keyboards always operate at the cursor position. When the
+   * target input hasn't been focused yet (e.g. set programmatically via
+   * `setTargetInput`), `selectionStart` defaults to 0. Without this guard
+   * every operation would happen at the beginning instead of the end.
+   */
+  private _getTargetDomRef(): HTMLInputElement | HTMLTextAreaElement | null {
+    const id = this.getTargetInput();
+    if (!id) return null;
+
+    const control = Element.getElementById(id);
+    if (!control) return null;
+
+    const dom = control.getFocusDomRef();
+    if (!(dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement)) {
+      return null;
+    }
+
+    // Ensure cursor is positioned — if the input isn't the active element,
+    // focus it and place the cursor at the end of the existing value.
+    if (document.activeElement !== dom) {
+      dom.focus();
+      dom.setSelectionRange(dom.value.length, dom.value.length);
+    }
+
+    return dom;
+  }
+
+  private _insertText(text: string): void {
+    const dom = this._getTargetDomRef();
+    if (!dom) return;
+
+    const start = dom.selectionStart ?? dom.value.length;
+    const end = dom.selectionEnd ?? start;
+    const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
+    const newPos = start + text.length;
+
+    this._setTargetValue(newValue);
+    dom.setSelectionRange(newPos, newPos);
+  }
+
+  private _handleBackspace(): void {
+    const dom = this._getTargetDomRef();
+    if (!dom) return;
+
+    const start = dom.selectionStart ?? dom.value.length;
+    const end = dom.selectionEnd ?? start;
+
+    let newValue: string;
+    let newPos: number;
+
+    if (start !== end) {
+      newValue = dom.value.slice(0, start) + dom.value.slice(end);
+      newPos = start;
+    } else if (start > 0) {
+      newValue = dom.value.slice(0, start - 1) + dom.value.slice(start);
+      newPos = start - 1;
+    } else {
+      return;
+    }
+
+    this._setTargetValue(newValue);
+    dom.setSelectionRange(newPos, newPos);
+  }
+
+  private _handleEnter(): void {
+    const dom = this._getTargetDomRef();
+    if (dom instanceof HTMLTextAreaElement) {
+      this._insertText("\n");
+    }
+  }
+
+  private _setTargetValue(newValue: string): void {
+    const id = this.getTargetInput();
+    if (!id) return;
+
+    const control = Element.getElementById(id) as unknown as Record<string, unknown> | null;
+    if (!control) return;
+
+    if (typeof control.setValue === "function") {
+      (control.setValue as (v: string) => void).call(control, newValue);
+    }
+    if (typeof control.fireLiveChange === "function") {
+      (control.fireLiveChange as (p: { value: string }) => void).call(control, { value: newValue });
+    }
+  }
+
+  private _moveFocus(current: HTMLElement, dRow: number, dCol: number): void {
+    const match = current.id.match(/-key-(\d+)-(\d+)$/);
+    if (!match) return;
+
+    const row = Number.parseInt(match[1], 10) + dRow;
+    const col = Number.parseInt(match[2], 10) + dCol;
+    const sId = this.getId();
+
+    const next = document.getElementById(`${sId}-key-${row}-${col}`);
+    if (next) {
+      current.setAttribute("tabindex", "-1");
+      next.setAttribute("tabindex", "0");
+      next.focus();
+      this._lastFocusedKeyId = next.id;
+    }
+  }
+}

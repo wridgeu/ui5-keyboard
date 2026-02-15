@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "demo/hotkeys/*": ["./webapp/*"],
-      "ui5/hotkeys/*": ["../lib/src/*"]
+      "ui5/hotkeys/*": ["../hotkeys/src/*"],
+      "ui5/kiosk/*": ["../kiosk-keyboard/src/*"]
     },
     "types": ["@openui5/types"],
     "noEmit": true,
@@ -13,6 +14,6 @@
     "declaration": false,
     "declarationMap": false
   },
-  "include": ["webapp/**/*.ts", "../lib/src/**/*.ts"],
+  "include": ["webapp/**/*.ts", "../hotkeys/src/**/*.ts", "../kiosk-keyboard/src/**/*.ts"],
   "exclude": ["node_modules"]
 }

@@ -6,8 +6,9 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "npm run build -w packages/lib",
+    "build": "npm run build -w packages/hotkeys",
     "start": "npm run start -w packages/demo-app",
+    "start:lib": "npm run start -w packages/hotkeys",
     "lint": "oxlint packages/",
     "lint:fix": "oxlint --fix packages/",
     "fmt": "oxfmt .",

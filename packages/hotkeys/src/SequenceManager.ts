@@ -168,11 +168,8 @@ export default class SequenceManager extends BaseObject {
         this._registrations.delete(id);
         // Clear any active matches for this registration
         this._activeMatches = this._activeMatches.filter((m) => {
-          if (m.registration.id === id) {
-            clearTimeout(m.timerId);
-            return false;
-          }
-          return true;
+          if (m.registration.id === id) clearTimeout(m.timerId);
+          return m.registration.id !== id;
         });
         Log.debug(`Unregistered sequence (id: ${id})`, undefined, LOG_COMPONENT);
       },
@@ -315,15 +312,8 @@ export default class SequenceManager extends BaseObject {
     }
 
     // Fire pending callback for advanced matches (those that progressed from an existing active match)
-    if (this._pendingCallback) {
-      for (const match of newActiveMatches) {
-        this._pendingCallback({
-          sequence: match.registration.sequence,
-          completedSteps: match.stepIndex,
-          totalSteps: match.registration.parsedSteps.length,
-          nextKey: match.registration.sequence[match.stepIndex],
-        });
-      }
+    for (const match of newActiveMatches) {
+      this._firePendingCallback(match.registration, match.stepIndex);
     }
   }
 
@@ -352,14 +342,16 @@ export default class SequenceManager extends BaseObject {
       };
       this._activeMatches.push(newMatch);
 
-      if (this._pendingCallback) {
-        this._pendingCallback({
-          sequence: reg.sequence,
-          completedSteps: 1,
-          totalSteps: reg.parsedSteps.length,
-          nextKey: reg.sequence[1],
-        });
-      }
+      this._firePendingCallback(reg, 1);
     }
+  }
+
+  private _firePendingCallback(reg: SequenceRegistration, stepIndex: number): void {
+    this._pendingCallback?.({
+      sequence: reg.sequence,
+      completedSteps: stepIndex,
+      totalSteps: reg.parsedSteps.length,
+      nextKey: reg.sequence[stepIndex],
+    });
   }
 }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<library xmlns="http://www.sap.com/sap.ui.library.xsd">
+    <name>ui5.kiosk</name>
+    <vendor>Marco</vendor>
+    <version>${version}</version>
+    <copyright></copyright>
+    <title>UI5 Kiosk Keyboard</title>
+    <documentation>On-screen virtual keyboard control for SAPUI5/OpenUI5 applications</documentation>
+    <dependencies>
+        <dependency>
+            <libraryName>sap.ui.core</libraryName>
+        </dependency>
+        <dependency>
+            <libraryName>sap.m</libraryName>
+        </dependency>
+    </dependencies>
+</library>

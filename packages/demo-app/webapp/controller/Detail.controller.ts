@@ -59,9 +59,7 @@ export default class Detail extends Controller {
   }
 
   onExit(): void {
-    for (const handle of this._handles) {
-      handle.unregister();
-    }
+    this._handles.forEach((h) => h.unregister());
     this._handles = [];
   }
 
