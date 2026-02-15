@@ -276,7 +276,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 ## Project Layout
 
 ```
-packages/lib/
+packages/hotkeys/
   src/
     library.ts          UI5 Lib.init() entry point, apiVersion 2
     HotkeyManager.ts    Core singleton, event listener, scope stack, dispatch loop
@@ -302,10 +302,12 @@ packages/demo-app/
     controller/
       Main.controller.ts    View-scoped + dialog-scoped shortcuts
       Detail.controller.ts  Same-hotkey-different-scope demonstration
+      Kiosk.controller.ts   Kiosk keyboard demo
     view/
       App.view.xml          Root shell container
       Main.view.xml         Status panel, shortcut list, input test, dialog test
       Detail.view.xml       Detail view with scope override
+      Kiosk.view.xml        Kiosk keyboard showcase
 ```
 
 ## Additional Modules

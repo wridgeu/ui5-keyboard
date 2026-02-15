@@ -1,6 +1,8 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
+import Popover from "sap/m/Popover";
+import VBox from "sap/m/VBox";
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -20,10 +22,17 @@ function tapKey(keyboard: KioskKeyboard, keyValue: string): void {
   const keyEl = dom.querySelector(`[data-key="${keyValue}"]`) as HTMLElement | null;
   if (!keyEl) throw new Error(`Key "${keyValue}" not found`);
 
-  // Simulate UI5 event delegation: call ontap with a synthetic event
-  const event = new MouseEvent("tap", { bubbles: true });
-  Object.defineProperty(event, "target", { value: keyEl, writable: false });
-  keyboard.ontap(event);
+  simulateTap(keyboard, keyEl);
+}
+
+function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
+  const start = new Event("saptouchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: el, writable: false });
+  kb.onsaptouchstart(start);
+
+  const end = new Event("saptouchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: el, writable: false });
+  kb.onsaptouchend(end);
 }
 
 function tapShiftInternally(kb: KioskKeyboard): void {
@@ -32,9 +41,7 @@ function tapShiftInternally(kb: KioskKeyboard): void {
   fakeShiftEl.dataset.key = "{shift}";
   fakeShiftEl.id = "fake-shift";
 
-  const event = new MouseEvent("tap", { bubbles: true });
-  Object.defineProperty(event, "target", { value: fakeShiftEl, writable: false });
-  kb.ontap(event);
+  simulateTap(kb, fakeShiftEl);
 }
 
 function getKeyElements(keyboard: KioskKeyboard): NodeListOf<HTMLElement> {
@@ -157,6 +164,9 @@ QUnit.test("KeyboardType 'Numpad' renders numpad layout", async (assert) => {
   kb.setKeyboardType("Numpad");
   await placeAndWait(kb);
 
+  const dom = kb.getDomRef()!;
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--numpad"), "Has numpad CSS class");
+
   const keys = getKeyElements(kb);
   assert.ok(keys.length > 0, "Numpad keys rendered");
 
@@ -177,6 +187,29 @@ QUnit.test("Layout property switches full keyboard layout", async (assert) => {
   assert.strictEqual(layout[0][0].value, "1", "Numeric layout starts with 1");
   const allValues = layout.flat().map((k) => k.value);
   assert.notOk(allValues.includes("q"), "Numeric layout has no alphabetic keys");
+
+  kb.destroy();
+});
+
+QUnit.test("KeyboardType 'Numeric' has numeric CSS class", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setKeyboardType("Numeric");
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--numeric"), "Has numeric CSS class");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--numpad"), "No numpad class");
+
+  kb.destroy();
+});
+
+QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--numpad"), "No numpad class on Full");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--numeric"), "No numeric class on Full");
 
   kb.destroy();
 });
@@ -525,9 +558,7 @@ QUnit.test("Layout switch ignored when keyboardType is Numpad", async (assert) =
   fakeEl.dataset.key = "{layout:numeric}";
   fakeEl.id = "fake-layout";
 
-  const event = new MouseEvent("tap", { bubbles: true });
-  Object.defineProperty(event, "target", { value: fakeEl, writable: false });
-  kb.ontap(event);
+  simulateTap(kb, fakeEl);
 
   assert.notOk(layoutChanged, "Layout switch ignored in Numpad mode");
 
@@ -553,9 +584,7 @@ QUnit.test("Disabled keyboard ignores tap events", async (assert) => {
   fakeEl.dataset.key = "a";
   fakeEl.id = "fake-key";
 
-  const event = new MouseEvent("tap", { bubbles: true });
-  Object.defineProperty(event, "target", { value: fakeEl, writable: false });
-  kb.ontap(event);
+  simulateTap(kb, fakeEl);
 
   assert.notOk(keyPressed, "No keyPress event when disabled");
 
@@ -864,4 +893,540 @@ QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
   document.body.removeChild(input);
 
   assert.ok(true, "No errors after destroy with auto-show enabled");
+});
+
+// ──────────────────────────────────────────────
+// Task 1: fireLiveChange parameters
+// ──────────────────────────────────────────────
+
+QUnit.test("fireLiveChange receives value and newValue parameters", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const done = assert.async();
+  input.attachLiveChange((event: { getParameter(name: string): unknown }) => {
+    assert.strictEqual(event.getParameter("value"), "a", "value parameter is correct");
+    assert.strictEqual(event.getParameter("newValue"), "a", "newValue parameter is correct");
+    done();
+  });
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  tapKey(kb, "a");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Task 2: Enter fires change on single-line Input
+// ──────────────────────────────────────────────
+
+QUnit.test("Enter key fires change event on target sap.m.Input", async (assert) => {
+  const input = new Input({ value: "hello" });
+  input.placeAt("qunit-fixture");
+
+  const done = assert.async();
+  input.attachChange((event: { getParameter(name: string): unknown }) => {
+    assert.strictEqual(event.getParameter("value"), "hello", "change fired with correct value");
+    done();
+  });
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  tapKey(kb, "{enter}");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Enter key does not fire change on TextArea (inserts newline instead)", async (assert) => {
+  const textarea = new TextArea({ value: "line1" });
+  textarea.placeAt("qunit-fixture");
+
+  let changeFired = false;
+  textarea.attachChange(() => {
+    changeFired = true;
+  });
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(textarea);
+  await placeAndWait(kb);
+
+  tapKey(kb, "{enter}");
+  assert.strictEqual(textarea.getValue(), "line1\n", "Newline inserted");
+  assert.notOk(changeFired, "change event not fired on TextArea");
+
+  textarea.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Task 3: Home/End key support
+// ──────────────────────────────────────────────
+
+QUnit.test("Home key moves focus to first key in row", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const rows = dom.querySelectorAll(".ui5KioskRow");
+  const firstRow = rows[0];
+  const keys = firstRow.querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const lastKeyInRow = keys[keys.length - 1];
+  const firstKeyInRow = keys[0];
+
+  // Focus the last key in first row
+  lastKeyInRow.setAttribute("tabindex", "0");
+  lastKeyInRow.focus();
+
+  const event = new KeyboardEvent("keydown", { key: "Home", bubbles: true });
+  Object.defineProperty(event, "target", { value: lastKeyInRow, writable: false });
+  kb.onkeydown(event);
+
+  assert.strictEqual(document.activeElement, firstKeyInRow, "Focus moved to first key in row");
+  assert.strictEqual(firstKeyInRow.getAttribute("tabindex"), "0", "First key has tabindex=0");
+  assert.strictEqual(lastKeyInRow.getAttribute("tabindex"), "-1", "Previous key has tabindex=-1");
+
+  kb.destroy();
+});
+
+QUnit.test("End key moves focus to last key in row", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const rows = dom.querySelectorAll(".ui5KioskRow");
+  const firstRow = rows[0];
+  const keys = firstRow.querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const firstKeyInRow = keys[0];
+  const lastKeyInRow = keys[keys.length - 1];
+
+  // Focus the first key
+  firstKeyInRow.setAttribute("tabindex", "0");
+  firstKeyInRow.focus();
+
+  const event = new KeyboardEvent("keydown", { key: "End", bubbles: true });
+  Object.defineProperty(event, "target", { value: firstKeyInRow, writable: false });
+  kb.onkeydown(event);
+
+  assert.strictEqual(document.activeElement, lastKeyInRow, "Focus moved to last key in row");
+  assert.strictEqual(lastKeyInRow.getAttribute("tabindex"), "0", "Last key has tabindex=0");
+  assert.strictEqual(firstKeyInRow.getAttribute("tabindex"), "-1", "Previous key has tabindex=-1");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Task 4: Arrow wrapping
+// ──────────────────────────────────────────────
+
+QUnit.test("ArrowRight at end of row wraps to next row", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const rows = dom.querySelectorAll(".ui5KioskRow");
+  const firstRowKeys = rows[0].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const lastKeyFirstRow = firstRowKeys[firstRowKeys.length - 1];
+  const secondRowKeys = rows[1].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const firstKeySecondRow = secondRowKeys[0];
+
+  // Focus the last key in first row
+  lastKeyFirstRow.setAttribute("tabindex", "0");
+  lastKeyFirstRow.focus();
+
+  const event = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true });
+  Object.defineProperty(event, "target", { value: lastKeyFirstRow, writable: false });
+  kb.onkeydown(event);
+
+  assert.strictEqual(document.activeElement, firstKeySecondRow, "Focus wrapped to first key of next row");
+
+  kb.destroy();
+});
+
+QUnit.test("ArrowLeft at start of row wraps to previous row", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const rows = dom.querySelectorAll(".ui5KioskRow");
+  const secondRowKeys = rows[1].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const firstKeySecondRow = secondRowKeys[0];
+  const firstRowKeys = rows[0].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const lastKeyFirstRow = firstRowKeys[firstRowKeys.length - 1];
+
+  // Focus the first key in second row
+  firstKeySecondRow.setAttribute("tabindex", "0");
+  firstKeySecondRow.focus();
+
+  const event = new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true });
+  Object.defineProperty(event, "target", { value: firstKeySecondRow, writable: false });
+  kb.onkeydown(event);
+
+  assert.strictEqual(document.activeElement, lastKeyFirstRow, "Focus wrapped to last key of previous row");
+
+  kb.destroy();
+});
+
+QUnit.test("ArrowDown with column overflow clamps to last key", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setKeyboardType("Numpad");
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const rows = dom.querySelectorAll(".ui5KioskRow");
+  // Numpad: rows may have different key counts
+  // Find a key in a row that has more columns than a later row
+  const firstRowKeys = rows[0].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const lastCol = firstRowKeys.length - 1;
+  const lastKeyFirstRow = firstRowKeys[lastCol];
+
+  // Focus the last key in first row
+  lastKeyFirstRow.setAttribute("tabindex", "0");
+  lastKeyFirstRow.focus();
+
+  const event = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true });
+  Object.defineProperty(event, "target", { value: lastKeyFirstRow, writable: false });
+  kb.onkeydown(event);
+
+  // Should land on a key in the second row (clamped if column doesn't exist)
+  const secondRowKeys = rows[1].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const expectedTarget = secondRowKeys[Math.min(lastCol, secondRowKeys.length - 1)];
+  assert.strictEqual(document.activeElement, expectedTarget, "Focus clamped to last key in target row");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Task 5: Modified arrow keys not intercepted
+// ──────────────────────────────────────────────
+
+QUnit.test("Alt+Arrow keys are not intercepted", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const firstKey = dom.querySelector<HTMLElement>(".ui5KioskKey")!;
+  firstKey.setAttribute("tabindex", "0");
+  firstKey.focus();
+
+  const event = new KeyboardEvent("keydown", { key: "ArrowRight", altKey: true, bubbles: true });
+  Object.defineProperty(event, "target", { value: firstKey, writable: false });
+
+  // Should not throw and focus should stay
+  kb.onkeydown(event);
+  assert.strictEqual(document.activeElement, firstKey, "Focus unchanged with Alt+Arrow");
+
+  kb.destroy();
+});
+
+QUnit.test("Meta+Arrow keys are not intercepted", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const firstKey = dom.querySelector<HTMLElement>(".ui5KioskKey")!;
+  firstKey.setAttribute("tabindex", "0");
+  firstKey.focus();
+
+  const event = new KeyboardEvent("keydown", { key: "ArrowRight", metaKey: true, bubbles: true });
+  Object.defineProperty(event, "target", { value: firstKey, writable: false });
+
+  kb.onkeydown(event);
+  assert.strictEqual(document.activeElement, firstKey, "Focus unchanged with Meta+Arrow");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Task 6: inputIds multi-input targeting
+// ──────────────────────────────────────────────
+
+QUnit.test("inputIds resolves controls and registers focus delegation", async (assert) => {
+  const input1 = new Input("test-input-1");
+  const input2 = new Input("test-input-2");
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    inputIds: ["test-input-1", "test-input-2"],
+  });
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getInputIds().length, 2, "inputIds property has 2 entries");
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Focusing a registered input sets it as target", async (assert) => {
+  const input1 = new Input("target-input-a");
+  const input2 = new Input("target-input-b");
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    inputIds: ["target-input-a", "target-input-b"],
+  });
+  await placeAndWait(kb);
+
+  // Focus input2 — should become the target
+  const dom2 = input2.getFocusDomRef() as HTMLElement;
+  dom2.focus();
+  // Wait for delegation to propagate
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switched to focused input");
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
+QUnit.test("exit() cleans up inputIds delegates", async (assert) => {
+  const input = new Input("cleanup-input");
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    inputIds: ["cleanup-input"],
+  });
+  await placeAndWait(kb);
+
+  kb.destroy();
+
+  // If cleanup failed, focusing would throw. Focus and verify no errors.
+  const dom = input.getFocusDomRef() as HTMLElement;
+  dom.focus();
+  dom.blur();
+
+  assert.ok(true, "No errors after destroy with inputIds");
+
+  input.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Task 7: Physical keyboard highlighting
+// ──────────────────────────────────────────────
+
+QUnit.test("Physical keydown adds highlight class to matching key", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const qKey = dom.querySelector('[data-key="q"]')!;
+  assert.notOk(qKey.classList.contains("ui5KioskKey--highlight"), "No highlight initially");
+
+  // Simulate physical keydown on the target input via delegation
+  // The delegation uses onkeydown which is called by UI5's event delegation
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
+
+  // Allow event delegation to process
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.ok(qKey.classList.contains("ui5KioskKey--highlight"), "Highlight class added on keydown");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Physical keyup removes highlight class", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const qKey = dom.querySelector('[data-key="q"]')!;
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.ok(qKey.classList.contains("ui5KioskKey--highlight"), "Highlight present after keydown");
+
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "q", bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.notOk(qKey.classList.contains("ui5KioskKey--highlight"), "Highlight removed after keyup");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Changing target input moves highlight delegation", async (assert) => {
+  const input1 = new Input({ value: "" });
+  const input2 = new Input({ value: "" });
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input1);
+  await placeAndWait(kb);
+
+  // Switch target to input2
+  kb.setTargetInput(input2);
+
+  const dom = kb.getDomRef()!;
+  const qKey = dom.querySelector('[data-key="q"]')!;
+
+  // Keydown on input1 should NOT highlight (delegation removed)
+  const inputDom1 = input1.getFocusDomRef() as HTMLElement;
+  inputDom1.focus();
+  inputDom1.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.notOk(qKey.classList.contains("ui5KioskKey--highlight"), "Old target keydown does not highlight");
+
+  // Keydown on input2 SHOULD highlight
+  const inputDom2 = input2.getFocusDomRef() as HTMLElement;
+  inputDom2.focus();
+  inputDom2.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.ok(qKey.classList.contains("ui5KioskKey--highlight"), "New target keydown does highlight");
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Popover integration (consumption scenario)
+// ──────────────────────────────────────────────
+
+QUnit.test("Keyboard renders inside a Popover", async (assert) => {
+  const trigger = document.createElement("button");
+  trigger.id = "popover-trigger";
+  document.getElementById("qunit-fixture")!.appendChild(trigger);
+
+  const input = new Input({ value: "" });
+  const kb = new KioskKeyboard({ targetInput: input });
+  const popover = new Popover({
+    title: "Kiosk Input",
+    contentWidth: "360px",
+    content: [new VBox({ items: [input, kb] })],
+  });
+
+  popover.openBy(trigger);
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.ok(popover.isOpen(), "Popover is open");
+  assert.ok(kb.getDomRef(), "Keyboard is rendered inside popover");
+
+  const keys = getKeyElements(kb);
+  assert.ok(keys.length > 0, "Keyboard keys are rendered");
+
+  popover.close();
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  popover.destroy();
+});
+
+QUnit.test("Typing into input inside a Popover", async (assert) => {
+  const trigger = document.createElement("button");
+  trigger.id = "popover-trigger-typing";
+  document.getElementById("qunit-fixture")!.appendChild(trigger);
+
+  const input = new Input({ value: "" });
+  const kb = new KioskKeyboard({ targetInput: input });
+  const popover = new Popover({
+    title: "Kiosk Input",
+    contentWidth: "360px",
+    content: [new VBox({ items: [input, kb] })],
+  });
+
+  popover.openBy(trigger);
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  tapKey(kb, "h");
+  tapKey(kb, "i");
+  assert.strictEqual(input.getValue(), "hi", "Typing works inside popover");
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "a");
+  assert.strictEqual(input.getValue(), "hiA", "Shift works inside popover");
+
+  tapKey(kb, "{backspace}");
+  assert.strictEqual(input.getValue(), "hi", "Backspace works inside popover");
+
+  popover.close();
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  popover.destroy();
+});
+
+QUnit.test("Popover stays open while interacting with keyboard", async (assert) => {
+  const trigger = document.createElement("button");
+  trigger.id = "popover-trigger-focus";
+  document.getElementById("qunit-fixture")!.appendChild(trigger);
+
+  const input = new Input({ value: "" });
+  const kb = new KioskKeyboard({ targetInput: input });
+  const popover = new Popover({
+    title: "Kiosk Input",
+    contentWidth: "360px",
+    content: [new VBox({ items: [input, kb] })],
+  });
+
+  popover.openBy(trigger);
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  // Tap several keys — popover should remain open
+  tapKey(kb, "a");
+  tapKey(kb, "b");
+  tapKey(kb, "c");
+
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.ok(popover.isOpen(), "Popover stays open during keyboard interaction");
+  assert.strictEqual(input.getValue(), "abc", "Input value accumulated correctly");
+
+  popover.close();
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  popover.destroy();
+});
+
+QUnit.test("Layout switching works inside a Popover", async (assert) => {
+  const trigger = document.createElement("button");
+  trigger.id = "popover-trigger-layout";
+  document.getElementById("qunit-fixture")!.appendChild(trigger);
+
+  const input = new Input({ value: "" });
+  const kb = new KioskKeyboard({ targetInput: input });
+  const popover = new Popover({
+    title: "Kiosk Input",
+    contentWidth: "360px",
+    content: [new VBox({ items: [input, kb] })],
+  });
+
+  popover.openBy(trigger);
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  // Verify QWERTY is active
+  let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.ok(keys.includes("q"), "QWERTY layout initially");
+
+  // Switch to numeric
+  tapKey(kb, "{layout:numeric}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.notOk(keys.includes("q"), "Numeric layout after switch");
+  assert.ok(popover.isOpen(), "Popover still open after layout switch");
+
+  popover.close();
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  popover.destroy();
 });

@@ -1,5 +1,6 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
+import ManagedObject from "sap/ui/base/ManagedObject";
 import type { LayoutDefinition, KeyDefinition } from "./types";
 import layouts from "./layouts/index";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
@@ -22,6 +23,14 @@ import "./library"; // side-effect: ensures Lib.init() runs
  * @public
  */
 export default class KioskKeyboard extends Control {
+  // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures
+  constructor(idOrSettings?: string | $KioskKeyboardSettings);
+  constructor(id?: string, settings?: $KioskKeyboardSettings);
+  // oxlint-disable-next-line no-useless-constructor -- required by @ui5/ts-interface-generator overloads
+  constructor(id?: string, settings?: $KioskKeyboardSettings) {
+    super(id, settings);
+  }
+
   // ── ManagedObject field trap: declare strips these from Babel output ──
   declare private _shiftActive: boolean;
   declare private _capsLock: boolean;
@@ -31,19 +40,14 @@ export default class KioskKeyboard extends Control {
   declare private _boundFocusIn: (e: FocusEvent) => void;
   declare private _boundFocusOut: (e: FocusEvent) => void;
   declare private _autoShowActive: boolean;
-
-  // ── Metadata-generated accessors (created at runtime by ManagedObject) ──
-  declare getLayout: () => string;
-  declare setLayout: (layout: string) => this;
-  declare getKeyboardType: () => string;
-  declare setKeyboardType: (keyboardType: string) => this;
-  declare getEnabled: () => boolean;
-  declare setEnabled: (enabled: boolean) => this;
-  declare getAriaLabel: () => string;
-  declare setAriaLabel: (label: string) => this;
-  declare getTargetInput: () => string;
-  declare getDocked: () => boolean;
-  declare getAutoShow: () => boolean;
+  declare private _inputFocusDelegation: { onfocusin: () => void };
+  declare private _registeredInputIds: Set<string>;
+  declare private _keyHighlightDelegation: {
+    onkeydown: (event: KeyboardEvent) => void;
+    onkeyup: (event: KeyboardEvent) => void;
+  };
+  declare private _highlightTargetId: string | null;
+  declare private _pressedKeyEl: HTMLElement | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -96,6 +100,16 @@ export default class KioskKeyboard extends Control {
         defaultValue: false,
         group: "Behavior",
       },
+      /**
+       * List of input control IDs to target. When set, attaches focus
+       * delegation to each resolved control so the keyboard auto-targets
+       * whichever input last received focus.
+       */
+      inputIds: {
+        type: "string[]",
+        defaultValue: [],
+        group: "Data",
+      },
     },
     associations: {
       /** The input control to type into (e.g. sap.m.Input, sap.m.TextArea). */
@@ -134,25 +148,43 @@ export default class KioskKeyboard extends Control {
     this._autoShowActive = false;
     this._boundFocusIn = this._onDocumentFocusIn.bind(this);
     this._boundFocusOut = this._onDocumentFocusOut.bind(this);
-    this.attachBrowserEvent("pointerdown", this._onPointerDown);
+    this._registeredInputIds = new Set();
+    this._inputFocusDelegation = {
+      onfocusin: () => {
+        const delegateTarget = Element.getActiveElement();
+        if (delegateTarget instanceof Control) {
+          this.setTargetInput(delegateTarget);
+        }
+      },
+    };
+    this._keyHighlightDelegation = {
+      onkeydown: (event: KeyboardEvent) => this._highlightKey(event.key, true),
+      onkeyup: (event: KeyboardEvent) => this._highlightKey(event.key, false),
+    };
+    this._highlightTargetId = null;
+    this._pressedKeyEl = null;
   }
 
   onAfterRendering(): void {
-    if (!this.getDocked()) return;
-    // Sync the open/closed CSS class (renderer sets initial state,
-    // but show()/close() bypass re-render for smooth animation)
-    this.getDomRef()?.classList.toggle("ui5KioskKeyboard--closed", !this._open);
+    if (this.getDocked()) {
+      // Sync the open/closed CSS class (renderer sets initial state,
+      // but show()/close() bypass re-render for smooth animation)
+      this.getDomRef()?.classList.toggle("ui5KioskKeyboard--closed", !this._open);
 
-    // Activate auto-show listeners if the property was set declaratively
-    // (e.g. via XML) before the control was rendered.
-    if (this.getAutoShow() && !this._autoShowActive) {
-      this.enableAutoShow();
+      // Activate auto-show listeners if the property was set declaratively
+      // (e.g. via XML) before the control was rendered.
+      if (this.getAutoShow() && !this._autoShowActive) {
+        this.enableAutoShow();
+      }
     }
+
+    this._setupInputIds();
   }
 
   exit(): void {
-    this.detachBrowserEvent("pointerdown", this._onPointerDown);
     this.disableAutoShow();
+    this._teardownInputIds();
+    this._removeHighlightDelegation();
     if (this._closeTimer) {
       clearTimeout(this._closeTimer);
       this._closeTimer = null;
@@ -166,9 +198,23 @@ export default class KioskKeyboard extends Control {
   /**
    * Sets the target input association without triggering a re-render,
    * since the association does not affect the keyboard's visual output.
+   * Also moves the physical keyboard highlight delegation to the new target.
    */
   setTargetInput(target: string | Control): this {
+    // Remove highlight delegation from previous target
+    this._removeHighlightDelegation();
+
     this.setAssociation("targetInput", target, true);
+
+    // Add highlight delegation to new target
+    const newId = this.getTargetInput();
+    if (newId) {
+      const next = Element.getElementById(newId);
+      if (next) {
+        next.addEventDelegate(this._keyHighlightDelegation);
+        this._highlightTargetId = newId;
+      }
+    }
     return this;
   }
 
@@ -246,6 +292,46 @@ export default class KioskKeyboard extends Control {
     document.removeEventListener("focusin", this._boundFocusIn, true);
     document.removeEventListener("focusout", this._boundFocusOut, true);
     return this;
+  }
+
+  // ──────────────────────────────────────────────
+  // Private — inputIds delegation
+  // ──────────────────────────────────────────────
+
+  private _setupInputIds(): void {
+    const ids = this.getInputIds();
+    if (!ids?.length) return;
+
+    for (const inputId of ids) {
+      if (this._registeredInputIds.has(inputId)) continue;
+      const control = this._findControlById(inputId);
+      if (!control) continue;
+      control.addEventDelegate(this._inputFocusDelegation);
+      this._registeredInputIds.add(inputId);
+    }
+  }
+
+  private _teardownInputIds(): void {
+    for (const inputId of this._registeredInputIds) {
+      const control = this._findControlById(inputId);
+      if (control) control.removeEventDelegate(this._inputFocusDelegation);
+    }
+    this._registeredInputIds.clear();
+  }
+
+  private _findControlById(targetId: string): Control | null {
+    // Try global first
+    const global = Element.getElementById(targetId);
+    if (global instanceof Control) return global;
+
+    // Walk up to find parent View for view-local IDs
+    for (let parent: ManagedObject | null = this.getParent(); parent; parent = parent.getParent()) {
+      if (typeof (parent as unknown as Record<string, unknown>).byId === "function") {
+        const found = (parent as unknown as { byId: (id: string) => Element | undefined }).byId(targetId);
+        if (found instanceof Control) return found;
+      }
+    }
+    return null;
   }
 
   // ──────────────────────────────────────────────
@@ -347,21 +433,55 @@ export default class KioskKeyboard extends Control {
   // UI5 Event Delegation
   // ──────────────────────────────────────────────
 
-  ontap(event: Event): void {
-    if (!this.getEnabled()) return;
+  /**
+   * Prevents focus from leaving the target input when a key is pressed.
+   *
+   * Uses UI5's unified saptouchstart (fires for both mouse and touch)
+   * instead of raw pointerdown. preventDefault() on the underlying
+   * mousedown/touchstart prevents focus transfer to the key div without
+   * suppressing the click/tap chain — unlike pointerdown's preventDefault()
+   * which suppresses all compatibility mouse events per the Pointer Events spec.
+   */
+  onsaptouchstart(event: Event): void {
+    const el = (event.target as HTMLElement).closest(".ui5KioskKey") as HTMLElement | null;
+    if (el) {
+      event.preventDefault();
+      this._pressedKeyEl = el;
+      el.classList.add("ui5KioskKey--pressed");
+    }
+  }
+
+  /**
+   * Activates the key on touch/mouse release.
+   *
+   * Only fires if the release target matches the press target (basic
+   * tap detection — drag-away cancels). Replaces ontap which couldn't
+   * fire because pointerdown's preventDefault() suppressed the click
+   * event that jQuery's tap plugin depends on.
+   */
+  onsaptouchend(event: Event): void {
+    const pressed = this._pressedKeyEl;
+    this._pressedKeyEl = null;
+    if (pressed) {
+      pressed.classList.remove("ui5KioskKey--pressed");
+    }
+
+    if (!this.getEnabled() || !pressed) return;
 
     const el = (event.target as HTMLElement).closest(".ui5KioskKey") as HTMLElement | null;
-    if (!el) return;
+    if (el !== pressed) return;
 
-    const keyValue = el.dataset.key;
+    const keyValue = pressed.dataset.key;
     if (!keyValue) return;
 
-    this._lastFocusedKeyId = el.id;
-    this._handleKeyAction(keyValue, el);
+    this._lastFocusedKeyId = pressed.id;
+    this._handleKeyAction(keyValue, pressed);
   }
 
   onkeydown(event: KeyboardEvent): void {
     if (!this.getEnabled()) return;
+    // Don't intercept browser shortcuts (Alt+Arrow = history, Meta+Arrow = OS)
+    if (event.altKey || event.metaKey) return;
 
     const target = event.target as HTMLElement;
     if (!target.classList.contains("ui5KioskKey")) return;
@@ -390,6 +510,21 @@ export default class KioskKeyboard extends Control {
         event.preventDefault();
         this._moveFocus(target, 1, 0);
         break;
+      case "Home": {
+        event.preventDefault();
+        const row = target.closest(".ui5KioskRow");
+        const first = row?.querySelector(".ui5KioskKey") as HTMLElement | null;
+        if (first && first !== target) this._transferFocus(target, first);
+        break;
+      }
+      case "End": {
+        event.preventDefault();
+        const row = target.closest(".ui5KioskRow");
+        const keys = row?.querySelectorAll(".ui5KioskKey");
+        const last = keys?.[keys.length - 1] as HTMLElement | undefined;
+        if (last && last !== target) this._transferFocus(target, last);
+        break;
+      }
     }
   }
 
@@ -445,12 +580,6 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
   // Private — Pointer & Key Actions
   // ──────────────────────────────────────────────
-
-  private _onPointerDown(event: PointerEvent): void {
-    if ((event.target as HTMLElement).closest(".ui5KioskKey")) {
-      event.preventDefault();
-    }
-  }
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
     const shift = this.isShiftActive();
@@ -589,6 +718,23 @@ export default class KioskKeyboard extends Control {
     const dom = this._getTargetDomRef();
     if (dom instanceof HTMLTextAreaElement) {
       this._insertText("\n");
+      return;
+    }
+    // Single-line input: fire change event (matches physical Enter behavior)
+    if (dom instanceof HTMLInputElement) {
+      this._fireTargetChange(dom.value);
+    }
+  }
+
+  private _fireTargetChange(value: string): void {
+    const id = this.getTargetInput();
+    if (!id) return;
+
+    const control = Element.getElementById(id) as unknown as Record<string, unknown> | null;
+    if (!control) return;
+
+    if (typeof control.fireChange === "function") {
+      (control.fireChange as (p: { value: string }) => void).call(control, { value });
     }
   }
 
@@ -603,7 +749,10 @@ export default class KioskKeyboard extends Control {
       (control.setValue as (v: string) => void).call(control, newValue);
     }
     if (typeof control.fireLiveChange === "function") {
-      (control.fireLiveChange as (p: { value: string }) => void).call(control, { value: newValue });
+      (control.fireLiveChange as (p: { value: string; newValue: string }) => void).call(control, {
+        value: newValue,
+        newValue,
+      });
     }
   }
 
@@ -615,12 +764,58 @@ export default class KioskKeyboard extends Control {
     const col = Number.parseInt(match[2], 10) + dCol;
     const sId = this.getId();
 
-    const next = document.getElementById(`${sId}-key-${row}-${col}`);
-    if (next) {
-      current.setAttribute("tabindex", "-1");
-      next.setAttribute("tabindex", "0");
-      next.focus();
-      this._lastFocusedKeyId = next.id;
+    // Try exact coordinate first
+    let next: HTMLElement | null = document.getElementById(`${sId}-key-${row}-${col}`);
+
+    if (!next) {
+      if (dCol !== 0 && dRow === 0) {
+        // Horizontal wrapping: move to adjacent row
+        const currentRow = current.closest(".ui5KioskRow");
+        const adjacentRow = dCol > 0 ? currentRow?.nextElementSibling : currentRow?.previousElementSibling;
+        if (adjacentRow) {
+          const keys = adjacentRow.querySelectorAll(".ui5KioskKey");
+          next = (dCol > 0 ? keys[0] : keys[keys.length - 1]) as HTMLElement | null;
+        }
+      } else if (dRow !== 0) {
+        // Vertical fallback: clamp to last key in target row
+        const targetRow = this.getDomRef()?.querySelectorAll(".ui5KioskRow")[row];
+        if (targetRow) {
+          const keys = targetRow.querySelectorAll(".ui5KioskKey");
+          next = keys[Math.min(col, keys.length - 1)] as HTMLElement | null;
+        }
+      }
     }
+
+    if (next) {
+      this._transferFocus(current, next);
+    }
+  }
+
+  private _transferFocus(current: HTMLElement, next: HTMLElement): void {
+    current.setAttribute("tabindex", "-1");
+    next.setAttribute("tabindex", "0");
+    next.focus();
+    this._lastFocusedKeyId = next.id;
+  }
+
+  // ──────────────────────────────────────────────
+  // Private — Physical keyboard highlighting
+  // ──────────────────────────────────────────────
+
+  private _highlightKey(key: string, add: boolean): void {
+    const dom = this.getDomRef();
+    if (!dom) return;
+
+    const el =
+      dom.querySelector(`[data-key="${CSS.escape(key)}"]`) ??
+      (key.length === 1 ? dom.querySelector(`[data-key="${CSS.escape(key.toLowerCase())}"]`) : null);
+    el?.classList.toggle("ui5KioskKey--highlight", add);
+  }
+
+  private _removeHighlightDelegation(): void {
+    if (!this._highlightTargetId) return;
+    const prev = Element.getElementById(this._highlightTargetId);
+    if (prev) prev.removeEventDelegate(this._keyHighlightDelegation);
+    this._highlightTargetId = null;
   }
 }

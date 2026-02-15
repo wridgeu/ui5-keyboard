@@ -23,6 +23,11 @@ const KioskKeyboardRenderer = {
     // Root
     rm.openStart("div", oControl);
     rm.class("ui5KioskKeyboard");
+    // Keyboard type class for type-specific styling (numpad, numeric)
+    const sType = oControl.getKeyboardType().toLowerCase();
+    if (sType !== "full") {
+      rm.class(`ui5KioskKeyboard--${sType}`);
+    }
     if (bDocked) {
       rm.class("ui5KioskKeyboard--docked");
       // Start closed; onAfterRendering syncs with _open state
