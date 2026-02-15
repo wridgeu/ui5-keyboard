@@ -656,13 +656,10 @@ export default class KioskKeyboard extends Control {
    * every operation would happen at the beginning instead of the end.
    */
   private _getTargetDomRef(): HTMLInputElement | HTMLTextAreaElement | null {
-    const id = this.getTargetInput();
-    if (!id) return null;
+    const element = this._getTargetElement();
+    if (!element) return null;
 
-    const control = Element.getElementById(id);
-    if (!control) return null;
-
-    const dom = control.getFocusDomRef();
+    const dom = element.getFocusDomRef();
     if (!(dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement)) {
       return null;
     }
@@ -726,33 +723,35 @@ export default class KioskKeyboard extends Control {
     }
   }
 
-  private _fireTargetChange(value: string): void {
+  /**
+   * Resolve the target input association to a UI5 Element.
+   * Uses Element registry (the standard UI5 association resolution pattern).
+   */
+  private _getTargetElement(): Element | null {
     const id = this.getTargetInput();
-    if (!id) return;
+    if (!id) return null;
+    return Element.getElementById(id) ?? null;
+  }
 
-    const control = Element.getElementById(id) as unknown as Record<string, unknown> | null;
-    if (!control) return;
+  private _fireTargetChange(value: string): void {
+    const element = this._getTargetElement();
+    if (!element) return;
 
-    if (typeof control.fireChange === "function") {
-      (control.fireChange as (p: { value: string }) => void).call(control, { value });
+    if (element.getMetadata().hasEvent("change")) {
+      element.fireEvent("change", { value });
     }
   }
 
   private _setTargetValue(newValue: string): void {
-    const id = this.getTargetInput();
-    if (!id) return;
+    const element = this._getTargetElement();
+    if (!element) return;
 
-    const control = Element.getElementById(id) as unknown as Record<string, unknown> | null;
-    if (!control) return;
-
-    if (typeof control.setValue === "function") {
-      (control.setValue as (v: string) => void).call(control, newValue);
+    const metadata = element.getMetadata();
+    if (metadata.hasProperty("value")) {
+      element.setProperty("value", newValue);
     }
-    if (typeof control.fireLiveChange === "function") {
-      (control.fireLiveChange as (p: { value: string; newValue: string }) => void).call(control, {
-        value: newValue,
-        newValue,
-      });
+    if (metadata.hasEvent("liveChange")) {
+      element.fireEvent("liveChange", { value: newValue, newValue });
     }
   }
 
