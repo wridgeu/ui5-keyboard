@@ -17,6 +17,16 @@ function getDom(kb: KioskKeyboard): HTMLElement {
   return dom as HTMLElement;
 }
 
+function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
+  const start = new Event("saptouchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: el, writable: false });
+  kb.onsaptouchstart(start);
+
+  const end = new Event("saptouchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: el, writable: false });
+  kb.onsaptouchend(end);
+}
+
 // ──────────────────────────────────────────────
 // Module
 // ──────────────────────────────────────────────
@@ -355,6 +365,184 @@ QUnit.test("Custom ariaLabel is rendered", async (assert) => {
   const dom = getDom(kb);
 
   assert.strictEqual(dom.getAttribute("aria-label"), "Kiosk Input Keyboard", "Custom aria-label rendered");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Caps Lock Visual State
+// ──────────────────────────────────────────────
+
+QUnit.test("Caps Lock: shift key gets capsLock class and lock icon", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Double-tap shift for caps lock
+  const shiftEl = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  simulateTap(kb, shiftEl);
+  simulateTap(kb, shiftEl);
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  const dom = getDom(kb);
+  const updatedShift = dom.querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  assert.ok(updatedShift.classList.contains("ui5KioskKey--active"), "Has active class");
+  assert.ok(updatedShift.classList.contains("ui5KioskKey--capsLock"), "Has capsLock class");
+  assert.strictEqual(updatedShift.getAttribute("aria-label"), "Caps Lock", "aria-label is Caps Lock");
+
+  const icon = updatedShift.querySelector(".sapUiIcon");
+  assert.ok(icon, "Lock icon rendered");
+
+  kb.destroy();
+});
+
+QUnit.test("Single shift: no capsLock class, text label", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const shiftEl = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  simulateTap(kb, shiftEl);
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  const dom = getDom(kb);
+  const updatedShift = dom.querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  assert.ok(updatedShift.classList.contains("ui5KioskKey--active"), "Has active class");
+  assert.notOk(updatedShift.classList.contains("ui5KioskKey--capsLock"), "No capsLock class");
+  assert.strictEqual(updatedShift.getAttribute("aria-label"), "Shift", "aria-label is Shift");
+
+  const icon = updatedShift.querySelector(".sapUiIcon");
+  assert.notOk(icon, "No lock icon for single shift");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// QWERTZ-DE Layout Visual Structure
+// ──────────────────────────────────────────────
+
+QUnit.test("QWERTZ-DE: has 5 rows with correct structure", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
+  const dom = getDom(kb);
+
+  const rows = dom.querySelectorAll<HTMLElement>(":scope > .ui5KioskRow");
+  assert.strictEqual(rows.length, 5, "5 rows rendered");
+
+  // Row 2: should have z and \u00FC
+  const row2Keys = Array.from(rows[1].querySelectorAll<HTMLElement>(".ui5KioskKey")).map((k) => k.dataset.key);
+  assert.ok(row2Keys.includes("z"), "Row 2 has z (QWERTZ)");
+  assert.ok(row2Keys.includes("\u00FC"), "Row 2 has \u00FC");
+
+  // Row 3: should have \u00F6 and \u00E4
+  const row3Keys = Array.from(rows[2].querySelectorAll<HTMLElement>(".ui5KioskKey")).map((k) => k.dataset.key);
+  assert.ok(row3Keys.includes("\u00F6"), "Row 3 has \u00F6");
+  assert.ok(row3Keys.includes("\u00E4"), "Row 3 has \u00E4");
+
+  // Row 4: should have y, \u00DF, shift, enter
+  const row4Keys = Array.from(rows[3].querySelectorAll<HTMLElement>(".ui5KioskKey")).map((k) => k.dataset.key);
+  assert.ok(row4Keys.includes("y"), "Row 4 has y");
+  assert.ok(row4Keys.includes("\u00DF"), "Row 4 has \u00DF");
+  assert.ok(row4Keys.includes("{shift}"), "Row 4 has shift");
+  assert.ok(row4Keys.includes("{enter}"), "Row 4 has enter");
+
+  kb.destroy();
+});
+
+QUnit.test("QWERTZ-DE: Umlaute display uppercase when shifted", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
+
+  // Activate shift
+  const shiftEl = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  simulateTap(kb, shiftEl);
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  const dom = getDom(kb);
+  const ueKey = dom.querySelector<HTMLElement>('[data-key="\u00FC"]');
+  assert.ok(ueKey, "\u00FC key exists");
+  assert.strictEqual(ueKey!.textContent!.trim(), "\u00DC", "\u00FC shows \u00DC when shifted");
+
+  const oeKey = dom.querySelector<HTMLElement>('[data-key="\u00F6"]');
+  assert.strictEqual(oeKey!.textContent!.trim(), "\u00D6", "\u00F6 shows \u00D6 when shifted");
+
+  const aeKey = dom.querySelector<HTMLElement>('[data-key="\u00E4"]');
+  assert.strictEqual(aeKey!.textContent!.trim(), "\u00C4", "\u00E4 shows \u00C4 when shifted");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// E2E Workflow: Complete typing session
+// ──────────────────────────────────────────────
+
+QUnit.test("E2E: full typing workflow with shift, caps, backspace, layout switch", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Verify initial state
+  assert.notOk(kb.isShiftActive(), "No shift initially");
+  assert.notOk(kb.isCapsLock(), "No caps initially");
+  assert.strictEqual(kb.getLayout(), "qwerty", "QWERTY layout initially");
+
+  // 1. Tap a key
+  const dom = getDom(kb);
+  const qKey = dom.querySelector<HTMLElement>('[data-key="q"]')!;
+  simulateTap(kb, qKey);
+  assert.notOk(kb.isShiftActive(), "Still no shift after character");
+
+  // 2. Activate shift, verify visual change
+  const shiftEl = dom.querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  simulateTap(kb, shiftEl);
+  assert.ok(kb.isShiftActive(), "Shift active after tap");
+
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  let updatedShift = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  assert.ok(updatedShift.classList.contains("ui5KioskKey--active"), "Shift key highlighted");
+
+  // 3. Tap character — shift auto-releases
+  const wKey = getDom(kb).querySelector<HTMLElement>('[data-key="w"]')!;
+  simulateTap(kb, wKey);
+  assert.notOk(kb.isShiftActive(), "Shift auto-released after character");
+
+  // 4. Double-tap shift for caps lock
+  const shiftEl2 = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  simulateTap(kb, shiftEl2);
+
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  const shiftEl3 = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  simulateTap(kb, shiftEl3);
+  assert.ok(kb.isCapsLock(), "Caps lock on after double-tap");
+
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  updatedShift = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  assert.ok(updatedShift.classList.contains("ui5KioskKey--capsLock"), "Caps lock CSS class present");
+
+  // 5. Tap character — caps lock persists
+  const eKey = getDom(kb).querySelector<HTMLElement>('[data-key="e"]')!;
+  simulateTap(kb, eKey);
+  assert.ok(kb.isCapsLock(), "Caps lock still on after character");
+
+  // 6. Triple-tap shift to turn off
+  const shiftEl4 = getDom(kb).querySelector<HTMLElement>('[data-key="{shift}"]')!;
+  simulateTap(kb, shiftEl4);
+  assert.notOk(kb.isShiftActive(), "Everything off after third tap");
+
+  // 7. Switch layout
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  const numKey = getDom(kb).querySelector<HTMLElement>('[data-key="{layout:numeric}"]')!;
+  simulateTap(kb, numKey);
+  assert.strictEqual(kb.getLayout(), "numeric", "Switched to numeric");
+
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  // 8. Switch back
+  const backKey = getDom(kb).querySelector<HTMLElement>('[data-key="{layout:base}"]')!;
+  simulateTap(kb, backKey);
+  assert.strictEqual(kb.getLayout(), "qwerty", "Returned to qwerty");
 
   kb.destroy();
 });

@@ -15,6 +15,8 @@ import "sap/m/library"; // resolve dependency before Lib.init()
 export const KeyboardLayout = Object.freeze({
   /** Standard QWERTY layout. */
   Qwerty: "Qwerty",
+  /** German QWERTZ layout with Umlaute (\u00E4, \u00F6, \u00FC, \u00DF). */
+  QwertzDe: "QwertzDe",
   /** Numeric layout with number pad and basic operators. */
   Numeric: "Numeric",
   /** Special characters layout. */

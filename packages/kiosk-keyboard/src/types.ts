@@ -1,29 +1,203 @@
+/** Default layout used as fallback when no base layout is configured. @internal */
+export const DEFAULT_LAYOUT = "qwerty" as const;
+
+/** Layouts that serve as secondary views (not base alphabetic layouts). @internal */
+export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special"]);
+
+/**
+ * Valid width values for keys.
+ *
+ * - Numeric values (`"1.25"`, `"1.5"`, etc.) set proportional flex-grow.
+ *   A key with `"2"` is twice as wide as a standard key.
+ * - `"space"` gives the spacebar extra-wide flex (6x).
+ * - `undefined` (default) gives a standard 1x flex-grow.
+ *
+ * Each numeric value maps to a CSS class (e.g. `"1.5"` → `.ui5KioskKey--w1-5`).
+ *
+ * @public
+ */
+export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space";
+
+/**
+ * Key type determines the visual styling of the key.
+ *
+ * - `"default"` — Standard key (letter, number, symbol). Uses `@sapUiButton*` tokens.
+ * - `"modifier"` — Subdued style for Shift, layout switches, etc. Uses `@sapUiButtonLite*` tokens.
+ * - `"action"` — Prominent style for Enter, Backspace, etc. Uses `@sapUiButtonEmphasized*` tokens.
+ * - `"space"` — Spacebar. Visually same as default but semantically distinct.
+ *
+ * @public
+ */
+export type KeyType = "default" | "modifier" | "action" | "space";
+
+/**
+ * Special action values that trigger built-in behavior instead of
+ * inserting text. Use these as the `value` property of a {@link KeyDefinition}.
+ *
+ * | Value                  | Behavior                                      |
+ * | ---------------------- | --------------------------------------------- |
+ * | `{backspace}`          | Deletes the character before the cursor        |
+ * | `{enter}`              | Inserts newline (TextArea) or fires change     |
+ * | `{shift}`              | Toggles Shift / Caps Lock state                |
+ * | `{layout:<name>}`      | Switches to the named layout (e.g. `numeric`)  |
+ * | `{layout:base}`        | Returns to the base (alphabetic) layout        |
+ *
+ * Any other string is treated as a literal character to insert.
+ *
+ * @public
+ */
+export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:${string}}`;
+
 /**
  * Describes a single key on the keyboard.
+ *
+ * @example Character key
+ * ```ts
+ * { value: "a" }
+ * ```
+ *
+ * @example Character key with shift variant
+ * ```ts
+ * { value: "1", shiftLabel: "!", shiftValue: "!" }
+ * ```
+ *
+ * @example Action key with icon
+ * ```ts
+ * {
+ *   value: "{backspace}",
+ *   label: "",
+ *   icon: "sap-icon://arrow-left",
+ *   width: "2",
+ *   type: "action",
+ * }
+ * ```
+ *
+ * @example Layout switch key
+ * ```ts
+ * {
+ *   value: "{layout:numeric}",
+ *   label: "123",
+ *   width: "1.5",
+ *   type: "modifier",
+ * }
+ * ```
+ *
+ * @public
  */
 export interface KeyDefinition {
-  /** The character or action this key produces. */
+  /**
+   * The character or action this key produces.
+   *
+   * For regular characters, use the lowercase letter or symbol (e.g. `"a"`, `"1"`, `","`).
+   * For special actions, use a `{action}` syntax — see {@link SpecialKeyValue}.
+   */
   value: string;
-  /** Display label (defaults to value). */
+
+  /**
+   * Display label shown on the key face. Defaults to `value`.
+   *
+   * Set to `""` (empty string) for icon-only keys.
+   * The renderer will use the key's `icon` property for display and
+   * fall back to a built-in aria-label for accessibility.
+   */
   label?: string;
-  /** Label to show when Shift is active. */
+
+  /**
+   * Label to show when Shift is active.
+   *
+   * For single-character keys without `shiftLabel`, the renderer
+   * automatically uppercases the display. Use `shiftLabel` only when
+   * the shifted symbol is different from the uppercase (e.g. `"!"` for `"1"`).
+   */
   shiftLabel?: string;
-  /** Value to produce when Shift is active (defaults to label/value uppercased). */
+
+  /**
+   * Value to produce when Shift is active.
+   *
+   * Defaults to `value.toUpperCase()` for single-character keys.
+   * Set this for keys whose shifted output differs from simple uppercasing
+   * (e.g. `"1"` → `"!"`).
+   *
+   * This value is also stored as `data-shift-value` in the DOM, enabling
+   * physical-keyboard highlight to find the matching key.
+   */
   shiftValue?: string;
-  /** CSS width class: "1u" (default), "1.5u", "2u", "2.25u", "space", etc. */
-  width?: string;
-  /** Key type for styling: "default", "modifier", "action", "space". */
-  type?: "default" | "modifier" | "action" | "space";
-  /** UI5 icon URI for icon-only keys (e.g. "sap-icon://arrow-left"). */
+
+  /**
+   * Proportional width of the key.
+   *
+   * Controls the key's flex-grow factor relative to standard keys.
+   * A key with `"2"` is twice as wide. `"space"` gives the spacebar 6x width.
+   * Omit for standard (1x) width.
+   *
+   * Available values: `"1.25"`, `"1.5"`, `"1.75"`, `"2"`, `"2.25"`, `"2.75"`, `"space"`.
+   *
+   * @see {@link KeyWidth}
+   */
+  width?: KeyWidth;
+
+  /**
+   * Visual style category.
+   *
+   * - `"modifier"` — Subdued (Shift, layout switches). Uses SAP Lite Button tokens.
+   * - `"action"` — Prominent (Enter, Backspace). Uses SAP Emphasized Button tokens.
+   * - `"space"` — Spacebar. Visually like default.
+   * - `"default"` or omitted — Standard key. Uses SAP Button tokens.
+   *
+   * @see {@link KeyType}
+   */
+  type?: KeyType;
+
+  /**
+   * SAP icon URI for icon-only keys.
+   *
+   * When set, the key renders the icon instead of text. Set `label` to `""`
+   * to suppress text alongside the icon. The icon receives `aria-hidden="true"`;
+   * the key's accessibility is handled by the `aria-label` attribute.
+   *
+   * @example "sap-icon://arrow-left"
+   */
   icon?: string;
 }
 
 /**
- * A row of keys on the keyboard.
+ * A single row of keys on the keyboard.
+ *
+ * Keys in a row share the available width proportionally based on their
+ * `width` property (flex-grow). Rows are rendered as flex containers with
+ * `justify-content: center`.
+ *
+ * @public
  */
 export type KeyRow = KeyDefinition[];
 
 /**
- * Complete layout definition — an array of rows.
+ * Complete layout definition — an ordered array of rows.
+ *
+ * Each entry is a row of keys rendered top-to-bottom. Use this type
+ * with {@link KioskKeyboard.registerLayout} to register custom layouts.
+ *
+ * @example Minimal custom layout
+ * ```ts
+ * import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+ * import type { LayoutDefinition } from "ui5/kiosk/types";
+ *
+ * const pinpad: LayoutDefinition = [
+ *   [{ value: "1" }, { value: "2" }, { value: "3" }],
+ *   [{ value: "4" }, { value: "5" }, { value: "6" }],
+ *   [{ value: "7" }, { value: "8" }, { value: "9" }],
+ *   [
+ *     { value: "{backspace}", label: "", icon: "sap-icon://arrow-left", type: "action" },
+ *     { value: "0" },
+ *     { value: "{enter}", label: "OK", type: "action" },
+ *   ],
+ * ];
+ *
+ * KioskKeyboard.registerLayout("pinpad", pinpad);
+ * ```
+ *
+ * Then in XML: `<kiosk:KioskKeyboard layout="pinpad" />`
+ *
+ * @public
  */
 export type LayoutDefinition = KeyRow[];

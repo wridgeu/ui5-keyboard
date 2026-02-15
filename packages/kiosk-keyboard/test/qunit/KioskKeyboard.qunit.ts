@@ -1397,10 +1397,245 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   popover.destroy();
 });
 
+// ──────────────────────────────────────────────
+// Caps Lock visual indicator
+// ──────────────────────────────────────────────
+
+QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Double-tap shift for caps lock
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{shift}");
+  assert.ok(kb.isCapsLock(), "Caps lock is on");
+
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]')!;
+  assert.ok(shiftKey.classList.contains("ui5KioskKey--capsLock"), "Shift key has capsLock CSS class");
+  assert.ok(shiftKey.classList.contains("ui5KioskKey--active"), "Shift key also has active CSS class");
+
+  // Should render a lock icon (sapUiIcon element)
+  const icon = shiftKey.querySelector(".sapUiIcon");
+  assert.ok(icon, "Lock icon is rendered inside shift key");
+
+  // Aria-label should indicate Caps Lock
+  assert.strictEqual(shiftKey.getAttribute("aria-label"), "Caps Lock", "Aria-label is Caps Lock");
+
+  kb.destroy();
+});
+
+QUnit.test("Single Shift does NOT show capsLock class or icon", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  tapKey(kb, "{shift}");
+  assert.ok(kb.isShiftActive(), "Shift is active");
+  assert.notOk(kb.isCapsLock(), "Caps lock is NOT on");
+
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]')!;
+  assert.ok(shiftKey.classList.contains("ui5KioskKey--active"), "Has active class");
+  assert.notOk(shiftKey.classList.contains("ui5KioskKey--capsLock"), "No capsLock class");
+
+  // Should render text "Shift", not an icon
+  const icon = shiftKey.querySelector(".sapUiIcon");
+  assert.notOk(icon, "No lock icon for single shift");
+  assert.strictEqual(shiftKey.getAttribute("aria-label"), "Shift", "Aria-label is Shift");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// German QWERTZ layout
+// ──────────────────────────────────────────────
+
+QUnit.test("QWERTZ-DE layout resolves correctly", (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+
+  const layout = kb.getResolvedLayout();
+  assert.strictEqual(layout.length, 5, "QWERTZ-DE has 5 rows");
+
+  // Row 2 should have Z instead of Y (QWERTZ)
+  const row2Values = layout[1].map((k) => k.value);
+  assert.ok(row2Values.includes("z"), "Row 2 contains 'z' (QWERTZ arrangement)");
+  assert.notOk(row2Values.includes("y"), "Row 2 does not contain 'y'");
+
+  // Umlaute present
+  assert.ok(row2Values.includes("\u00FC"), "Row 2 contains \u00FC");
+  const row3Values = layout[2].map((k) => k.value);
+  assert.ok(row3Values.includes("\u00F6"), "Row 3 contains \u00F6");
+  assert.ok(row3Values.includes("\u00E4"), "Row 3 contains \u00E4");
+
+  // \u00DF present in row 4
+  const row4Values = layout[3].map((k) => k.value);
+  assert.ok(row4Values.includes("\u00DF"), "Row 4 contains \u00DF");
+
+  kb.destroy();
+});
+
+QUnit.test("QWERTZ-DE renders correctly", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
+
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.ok(keys.includes("z"), "Has z key");
+  assert.ok(keys.includes("\u00FC"), "Has \u00FC key");
+  assert.ok(keys.includes("\u00F6"), "Has \u00F6 key");
+  assert.ok(keys.includes("\u00E4"), "Has \u00E4 key");
+  assert.ok(keys.includes("\u00DF"), "Has \u00DF key");
+  assert.notOk(keys.includes("y") && keys.indexOf("y") < keys.indexOf("z"), "Y not before Z (QWERTZ)");
+
+  kb.destroy();
+});
+
+QUnit.test("QWERTZ-DE German number row shift symbols", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
+
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  kb.setTargetInput(input);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Shift+2 should produce " (double quote) in German layout
+  tapKey(kb, "{shift}");
+
+  const done = assert.async();
+  kb.attachEvent("keyPress", (event: { getParameter(name: string): unknown }) => {
+    assert.strictEqual(event.getParameter("key"), '"', 'Shift+2 produces " in German layout');
+    done();
+  });
+
+  tapKey(kb, "2");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Base layout tracking ({layout:base})
+// ──────────────────────────────────────────────
+
+QUnit.test("Switching to numeric and back returns to base layout", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
+
+  // Switch to numeric
+  tapKey(kb, "{layout:numeric}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.strictEqual(kb.getLayout(), "numeric", "Layout is now numeric");
+
+  // Switch back via ABC (which uses {layout:base})
+  tapKey(kb, "{layout:base}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "Layout returned to qwertz-de (not qwerty)");
+
+  // Verify QWERTZ keys are present
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.ok(keys.includes("z"), "QWERTZ z key is back");
+  assert.ok(keys.includes("\u00FC"), "\u00FC is back");
+
+  kb.destroy();
+});
+
+QUnit.test("Base layout defaults to qwerty", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Switch to numeric
+  tapKey(kb, "{layout:numeric}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  // Switch back via ABC ({layout:base})
+  tapKey(kb, "{layout:base}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.strictEqual(kb.getLayout(), "qwerty", "Default base layout is qwerty");
+
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.ok(keys.includes("q"), "QWERTY q key is present");
+
+  kb.destroy();
+});
+
+QUnit.test("Base layout roundtrip: qwertz-de -> numeric -> special -> base", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
+
+  // Go to numeric
+  tapKey(kb, "{layout:numeric}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  // Go to special from numeric
+  tapKey(kb, "{layout:special}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.strictEqual(kb.getLayout(), "special", "Now on special layout");
+
+  // Go back via ABC ({layout:base})
+  tapKey(kb, "{layout:base}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "Returned to qwertz-de after special");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Highlight fix for shifted characters
+// ──────────────────────────────────────────────
+
+QUnit.test("Physical Shift+1 highlights the '1' key via data-shift-value", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const oneKey = dom.querySelector('[data-key="1"]')!;
+  assert.notOk(oneKey.classList.contains("ui5KioskKey--highlight"), "No highlight initially");
+
+  // Simulate typing "!" (Shift+1) on physical keyboard
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "!", bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.ok(oneKey.classList.contains("ui5KioskKey--highlight"), "'1' key highlighted when '!' typed");
+
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "!", bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.notOk(oneKey.classList.contains("ui5KioskKey--highlight"), "Highlight removed on keyup");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Popover integration (continued)
+// ──────────────────────────────────────────────
+
 QUnit.test("Layout switching works inside a Popover", async (assert) => {
+  // Trigger must be visible on-screen so the Popover can reposition after
+  // the layout switch changes the keyboard's content height.
+  // (Offscreen triggers cause _applyPosition to close the Popover.)
   const trigger = document.createElement("button");
   trigger.id = "popover-trigger-layout";
-  document.getElementById("qunit-fixture")!.appendChild(trigger);
+  trigger.style.cssText = "position:fixed;top:50px;left:50px";
+  document.body.appendChild(trigger);
 
   const input = new Input({ value: "" });
   const kb = new KioskKeyboard({ targetInput: input });
@@ -1429,4 +1664,81 @@ QUnit.test("Layout switching works inside a Popover", async (assert) => {
   await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
 
   popover.destroy();
+  trigger.remove();
+});
+
+// ──────────────────────────────────────────────
+// Custom layout registration (registerLayout)
+// ──────────────────────────────────────────────
+
+QUnit.test("registerLayout registers a custom layout usable by name", async (assert) => {
+  // Register a minimal custom layout
+  KioskKeyboard.registerLayout("test-custom", [[{ value: "x" }, { value: "y" }, { value: "z" }]]);
+
+  const kb = new KioskKeyboard();
+  kb.setLayout("test-custom");
+  await placeAndWait(kb);
+
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.deepEqual(keys, ["x", "y", "z"], "Custom layout keys rendered");
+
+  kb.destroy();
+});
+
+QUnit.test("getRegisteredLayout retrieves a registered layout", (assert) => {
+  const custom = [[{ value: "a" }, { value: "b" }]];
+  KioskKeyboard.registerLayout("test-retrieve", custom);
+
+  const retrieved = KioskKeyboard.getRegisteredLayout("test-retrieve");
+  assert.deepEqual(retrieved, custom, "Retrieved layout matches registered definition");
+
+  assert.strictEqual(
+    KioskKeyboard.getRegisteredLayout("nonexistent"),
+    undefined,
+    "Returns undefined for unregistered layout",
+  );
+});
+
+QUnit.test("Custom layout works as base layout for {layout:base} roundtrip", async (assert) => {
+  KioskKeyboard.registerLayout("test-roundtrip", [
+    [
+      { value: "m" },
+      { value: "n" },
+      {
+        value: "{layout:numeric}",
+        label: "123",
+        type: "modifier",
+      },
+    ],
+  ]);
+
+  const kb = new KioskKeyboard();
+  kb.setLayout("test-roundtrip");
+  await placeAndWait(kb);
+
+  // Switch to numeric
+  tapKey(kb, "{layout:numeric}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.strictEqual(kb.getLayout(), "numeric", "On numeric now");
+
+  // Switch back via {layout:base}
+  tapKey(kb, "{layout:base}");
+  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+
+  assert.strictEqual(kb.getLayout(), "test-roundtrip", "Returned to custom layout");
+
+  kb.destroy();
+});
+
+QUnit.test("registerLayout rejects overwrite of built-in layout", (assert) => {
+  const original = KioskKeyboard.getRegisteredLayout("qwerty");
+  assert.ok(original, "qwerty exists before overwrite attempt");
+
+  // Attempt to overwrite built-in
+  KioskKeyboard.registerLayout("qwerty", [[{ value: "HACKED" }]]);
+
+  // Should still be the original
+  const after = KioskKeyboard.getRegisteredLayout("qwerty");
+  assert.deepEqual(after, original, "Built-in qwerty layout was NOT overwritten");
 });

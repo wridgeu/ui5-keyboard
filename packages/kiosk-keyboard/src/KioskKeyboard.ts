@@ -1,8 +1,10 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
 import ManagedObject from "sap/ui/base/ManagedObject";
+import { DEFAULT_LAYOUT, SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
 import layouts from "./layouts/index";
+import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import "./library"; // side-effect: ensures Lib.init() runs
 
@@ -48,6 +50,7 @@ export default class KioskKeyboard extends Control {
   };
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
+  declare private _baseLayout: string;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -139,6 +142,68 @@ export default class KioskKeyboard extends Control {
 
   static readonly renderer = KioskKeyboardRenderer;
 
+  /** Built-in layout names that cannot be overwritten by registerLayout. */
+  private static readonly _BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(Object.keys(layouts));
+
+  /**
+   * Registers a custom keyboard layout that can then be used via
+   * `setLayout(name)` or declaratively as `layout="name"` in XML views.
+   *
+   * Built-in layouts (qwerty, qwertz-de, numeric, special, numpad)
+   * cannot be overwritten. Attempting to do so logs a warning and is
+   * ignored.
+   *
+   * @param sName Layout identifier (lowercase, e.g. "azerty-fr")
+   * @param oDefinition Array of rows, each containing key definitions
+   * @public
+   * @static
+   */
+  static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
+    if (KioskKeyboard._BUILTIN_LAYOUTS.has(sName)) {
+      Log.warning(
+        `Cannot overwrite built-in layout "${sName}". Use a different name for custom layouts.`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+      return;
+    }
+    layouts[sName] = oDefinition;
+  }
+
+  /**
+   * Returns the layout definition for the given name, or undefined
+   * if no such layout is registered.
+   *
+   * @param sName Layout identifier
+   * @public
+   * @static
+   */
+  static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
+    return layouts[sName];
+  }
+
+  /**
+   * Returns the names of all registered layouts (built-in + custom).
+   *
+   * @public
+   * @static
+   */
+  static getRegisteredLayoutNames(): string[] {
+    return Object.keys(layouts);
+  }
+
+  /**
+   * Returns whether the given layout name is a built-in layout.
+   * Custom layouts registered via `registerLayout` return false.
+   *
+   * @param sName Layout identifier
+   * @public
+   * @static
+   */
+  static isBuiltInLayout(sName: string): boolean {
+    return KioskKeyboard._BUILTIN_LAYOUTS.has(sName);
+  }
+
   init(): void {
     this._shiftActive = false;
     this._capsLock = false;
@@ -163,6 +228,7 @@ export default class KioskKeyboard extends Control {
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
+    this._baseLayout = DEFAULT_LAYOUT;
   }
 
   onAfterRendering(): void {
@@ -194,6 +260,17 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
   // Public API — Target & Docked Mode
   // ──────────────────────────────────────────────
+
+  /**
+   * Custom setter for layout — tracks the base (alphabetic) layout so
+   * that `{layout:base}` in numeric/special layouts can return to it.
+   */
+  setLayout(sLayout: string): this {
+    if (!SECONDARY_LAYOUTS.has(sLayout)) {
+      this._baseLayout = sLayout;
+    }
+    return this.setProperty("layout", sLayout);
+  }
 
   /**
    * Sets the target input association without triggering a re-render,
@@ -359,6 +436,14 @@ export default class KioskKeyboard extends Control {
         return this;
       }
     }
+    // Fallback: focus the first key (e.g. after layout switch where the
+    // previously focused key no longer exists). This prevents Popover
+    // auto-close when the keyboard re-renders inside one.
+    const first = this.getDomRef()?.querySelector(".ui5KioskKey") as HTMLElement | null;
+    if (first) {
+      first.setAttribute("tabindex", "0");
+      first.focus();
+    }
     return this;
   }
 
@@ -398,7 +483,7 @@ export default class KioskKeyboard extends Control {
     const kbType = this.getKeyboardType();
     if (kbType === "Numpad") return layouts.numpad;
     if (kbType === "Numeric") return layouts.numeric;
-    return layouts[this.getLayout()] ?? layouts.qwerty;
+    return layouts[this.getLayout()] ?? layouts[DEFAULT_LAYOUT];
   }
 
   /** The display label for a key (may be empty for icon-only keys). */
@@ -605,7 +690,8 @@ export default class KioskKeyboard extends Control {
 
     if (keyValue.startsWith("{layout:")) {
       if (this.getKeyboardType() === "Full") {
-        const name = keyValue.slice(8, -1);
+        const raw = keyValue.slice(8, -1);
+        const name = raw === "base" ? this._baseLayout : raw;
         this.setLayout(name);
         this.fireEvent("layoutChange", { layout: name });
       }
@@ -748,7 +834,17 @@ export default class KioskKeyboard extends Control {
 
     const metadata = element.getMetadata();
     if (metadata.hasProperty("value")) {
-      element.setProperty("value", newValue);
+      // Use the typed setter (e.g. InputBase.setValue) which updates both
+      // the ManagedObject property AND the DOM value synchronously.
+      // Direct setProperty() only updates the property bag — but
+      // InputBase.getValue() reads from the DOM when rendered, causing a
+      // desync where the property is updated but getValue() returns stale data.
+      const ctrl = element as unknown as Record<string, unknown>;
+      if (typeof ctrl.setValue === "function") {
+        (ctrl.setValue as (v: string) => unknown).call(element, newValue);
+      } else {
+        element.setProperty("value", newValue);
+      }
     }
     if (metadata.hasEvent("liveChange")) {
       element.fireEvent("liveChange", { value: newValue, newValue });
@@ -807,7 +903,8 @@ export default class KioskKeyboard extends Control {
 
     const el =
       dom.querySelector(`[data-key="${CSS.escape(key)}"]`) ??
-      (key.length === 1 ? dom.querySelector(`[data-key="${CSS.escape(key.toLowerCase())}"]`) : null);
+      (key.length === 1 ? dom.querySelector(`[data-key="${CSS.escape(key.toLowerCase())}"]`) : null) ??
+      dom.querySelector(`[data-shift-value="${CSS.escape(key)}"]`);
     el?.classList.toggle("ui5KioskKey--highlight", add);
   }
 

@@ -51,7 +51,7 @@ const numeric: LayoutDefinition = [
   // Row 4: bottom
   [
     {
-      value: "{layout:qwerty}",
+      value: "{layout:base}",
       label: "ABC",
       width: "1.5",
       type: "modifier",

@@ -17,6 +17,7 @@ const KioskKeyboardRenderer = {
     const layout = oControl.getResolvedLayout();
     const sId = oControl.getId();
     const bShift = oControl.isShiftActive();
+    const bCapsLock = oControl.isCapsLock();
     const bEnabled = oControl.getEnabled();
     const bDocked = oControl.getDocked();
 
@@ -48,7 +49,7 @@ const KioskKeyboardRenderer = {
       rm.openEnd();
 
       row.forEach((key, ci) => {
-        this.renderKey(rm, oControl, key, ri, ci, sId, bShift);
+        this.renderKey(rm, oControl, key, ri, ci, sId, bShift, bCapsLock);
       });
 
       rm.close("div");
@@ -65,9 +66,11 @@ const KioskKeyboardRenderer = {
     ci: number,
     sId: string,
     bShift: boolean,
+    bCapsLock: boolean,
   ): void {
     const label = oControl.getKeyLabel(key);
     const ariaLabel = oControl.getKeyAriaLabel(key);
+    const bIsShiftKey = key.value === "{shift}";
 
     rm.openStart("div", `${sId}-key-${ri}-${ci}`);
     rm.class("ui5KioskKey");
@@ -86,15 +89,18 @@ const KioskKeyboardRenderer = {
       rm.class("ui5KioskKey--action");
     }
 
-    // Active shift indicator
-    if (key.value === "{shift}" && bShift) {
+    // Active shift / caps lock indicator
+    if (bIsShiftKey && bShift) {
       rm.class("ui5KioskKey--active");
+      if (bCapsLock) {
+        rm.class("ui5KioskKey--capsLock");
+      }
     }
 
     rm.attr("role", "button");
 
     // Toggle state for shift key (aria-pressed for screen readers)
-    if (key.value === "{shift}") {
+    if (bIsShiftKey) {
       rm.attr("aria-pressed", bShift ? "true" : "false");
     }
     rm.attr("tabindex", ri === 0 && ci === 0 ? "0" : "-1");
@@ -108,11 +114,13 @@ const KioskKeyboardRenderer = {
       rm.attr("data-shift-value", key.shiftValue);
     }
 
-    rm.attr("aria-label", ariaLabel);
+    rm.attr("aria-label", bIsShiftKey && bCapsLock ? "Caps Lock" : ariaLabel);
     rm.openEnd();
 
-    // Key content: icon or text
-    if (key.icon) {
+    // Key content: icon, caps lock icon, or text
+    if (bIsShiftKey && bCapsLock) {
+      rm.icon("sap-icon://locked", ["sapUiIcon"], { "aria-hidden": "true" });
+    } else if (key.icon) {
       rm.icon(key.icon, ["sapUiIcon"], { "aria-hidden": "true" });
     } else {
       rm.text(label);

@@ -156,7 +156,7 @@
   border-color: @sapUiButtonEmphasizedActiveBorderColor;
 }
 
-/* Active Shift / Caps indicator */
+/* Active Shift indicator */
 .ui5KioskKey--active {
   background: @sapUiButtonEmphasizedBackground;
   color: @sapUiButtonEmphasizedTextColor;
@@ -166,6 +166,11 @@
 .ui5KioskKey--active:hover {
   background: @sapUiButtonEmphasizedHoverBackground;
   border-color: @sapUiButtonEmphasizedHoverBorderColor;
+}
+
+/* Caps Lock indicator — pulsing border to distinguish from Shift */
+.ui5KioskKey--capsLock {
+  box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
 }
 
 /* Icon inside key */
