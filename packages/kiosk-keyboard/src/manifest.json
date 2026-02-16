@@ -38,7 +38,7 @@
       "cozy": true
     },
     "library": {
-      "i18n": false,
+      "i18n": "i18n/messagebundle.properties",
       "css": true,
       "content": {
         "controls": ["ui5.kiosk.KioskKeyboard"],

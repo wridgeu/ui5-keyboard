@@ -175,6 +175,7 @@ ui5-keyboard/
 │   │   └── test/qunit/                # 14 QUnit test suites
 │   ├── kiosk-keyboard/                 # ui5.kiosk library (on-screen keyboard)
 │   │   ├── src/
+│   │   │   ├── i18n/                   # Internationalization (messagebundle)
 │   │   │   ├── layouts/                # QWERTY, QWERTZ-DE, numeric, special, numpad
 │   │   │   └── themes/                 # SAP LESS theming (base + sap_horizon)
 │   │   └── test/qunit/

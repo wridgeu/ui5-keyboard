@@ -1,6 +1,13 @@
 import type RenderManager from "sap/ui/core/RenderManager";
+import Lib from "sap/ui/core/Lib";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition } from "./types";
+
+function getText(sKey: string, sDefault: string): string {
+  const bundle = Lib.getResourceBundleFor("ui5.kiosk");
+  if (!bundle) return sDefault;
+  return bundle.getText(sKey, undefined, true) ?? sDefault;
+}
 
 /**
  * Renderer for the KioskKeyboard control.
@@ -39,7 +46,7 @@ const KioskKeyboardRenderer = {
       rm.attr("aria-disabled", "true");
     }
     rm.attr("role", "group");
-    rm.attr("aria-label", oControl.getAriaLabel());
+    rm.attr("aria-label", oControl.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"));
     rm.attr("data-sap-ui-fastnavgroup", "true");
     rm.openEnd();
 
@@ -62,9 +69,9 @@ const KioskKeyboardRenderer = {
     rm.attr("aria-live", "polite");
     rm.openEnd();
     if (bCapsLock) {
-      rm.text("Caps Lock on");
+      rm.text(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
     } else if (bShift) {
-      rm.text("Shift on");
+      rm.text(getText("ARIA_SHIFT_ON", "Shift on"));
     }
     rm.close("span");
 
@@ -127,7 +134,7 @@ const KioskKeyboardRenderer = {
       rm.attr("data-shift-value", key.shiftValue);
     }
 
-    rm.attr("aria-label", bIsShiftKey && bCapsLock ? "Caps Lock" : ariaLabel);
+    rm.attr("aria-label", bIsShiftKey && bCapsLock ? getText("ARIA_CAPS_LOCK", "Caps Lock") : ariaLabel);
     rm.openEnd();
 
     // Key content: icon, caps lock icon, or text

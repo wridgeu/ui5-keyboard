@@ -1,5 +1,6 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
+import Lib from "sap/ui/core/Lib";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
@@ -86,7 +87,7 @@ export default class KioskKeyboard extends Control {
       /** Accessible label for the keyboard group. */
       ariaLabel: {
         type: "string",
-        defaultValue: "Virtual Keyboard",
+        defaultValue: "",
         group: "Accessibility",
       },
       /**
@@ -419,6 +420,12 @@ export default class KioskKeyboard extends Control {
     // Remove highlight delegation from previous target
     this._removeHighlightDelegation();
 
+    // If the keyboard is open, restore the old target's inputmode
+    // before switching so it's not left suppressed.
+    if (this._open) {
+      this._restoreNativeKeyboard();
+    }
+
     this.setAssociation("targetInput", target, true);
 
     // Add highlight delegation to new target
@@ -430,6 +437,12 @@ export default class KioskKeyboard extends Control {
         this._highlightTargetId = newId;
       }
     }
+
+    // If the keyboard is open, suppress the new target's native keyboard.
+    if (this._open) {
+      this._suppressNativeKeyboard();
+    }
+
     return this;
   }
 
@@ -609,8 +622,8 @@ export default class KioskKeyboard extends Control {
   } {
     return {
       role: "group",
-      type: "Virtual Keyboard",
-      description: this.getAriaLabel(),
+      type: KioskKeyboard._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
+      description: this.getAriaLabel() || KioskKeyboard._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
       focusable: true,
       enabled: this.getEnabled(),
     };
@@ -636,21 +649,30 @@ export default class KioskKeyboard extends Control {
     return layouts[name] ?? layouts[name.toLowerCase()] ?? layouts[DEFAULT_LAYOUT];
   }
 
+  /** Map from special key value to [i18nKey, fallback]. */
+  private static readonly _SPECIAL_KEY_I18N: Record<string, [string, string]> = {
+    "{backspace}": ["KEY_BACKSPACE", "Backspace"],
+    "{enter}": ["KEY_ENTER", "Enter"],
+    "{shift}": ["KEY_SHIFT", "Shift"],
+    " ": ["KEY_SPACE", "Space"],
+  };
+
+  /** Resolves an i18n key from the library resource bundle. */
+  static _getText(sKey: string, sDefault: string): string {
+    const bundle = Lib.getResourceBundleFor("ui5.kiosk");
+    if (!bundle) return sDefault;
+    return bundle.getText(sKey, undefined, true) ?? sDefault;
+  }
+
   /** The display label for a key (may be empty for icon-only keys). */
   getKeyLabel(key: KeyDefinition): string {
     const shift = this.isShiftActive();
     if (shift && key.shiftLabel) return key.shiftLabel;
-    const base = key.label ?? key.value;
+    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
+    const base = entry ? KioskKeyboard._getText(entry[0], entry[1]) : (key.label ?? key.value);
+    if (!base) return "";
     return shift && key.value.length === 1 ? base.toUpperCase() : base;
   }
-
-  /** Human-readable map for special key values used in ARIA labels. */
-  private static readonly _SPECIAL_KEY_LABELS: Record<string, string> = {
-    "{backspace}": "Backspace",
-    "{enter}": "Enter",
-    "{shift}": "Shift",
-    " ": "Space",
-  };
 
   /**
    * Accessible label for a key — always non-empty.
@@ -661,7 +683,8 @@ export default class KioskKeyboard extends Control {
     if (display) return display;
 
     // Icon-only key with empty display label — resolve from value
-    return KioskKeyboard._SPECIAL_KEY_LABELS[key.value] ?? key.value;
+    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
+    return entry ? KioskKeyboard._getText(entry[0], entry[1]) : key.value;
   }
 
   // ──────────────────────────────────────────────

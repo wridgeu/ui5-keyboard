@@ -11,6 +11,9 @@ KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
+i18n/
+  messagebundle.properties    Default (English) key/ARIA labels
+  messagebundle_de.properties German translations
 layouts/
   index.ts                Layout registry (Record<string, LayoutDefinition>)
   qwerty.ts               Standard QWERTY with number row and shift symbols
