@@ -863,6 +863,9 @@ export default class HotkeyManager extends BaseObject {
           `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}).`,
         );
       case "replace":
+        if (conflicting.options.target) {
+          this._detachTargetListener(conflicting.options.target);
+        }
         this._registrations.delete(conflicting.id);
         Log.debug(
           `Replaced existing hotkey "${normalizedHotkey}" (id: ${conflicting.id}) in scope "${scope}"`,

@@ -427,17 +427,18 @@ export default class KioskKeyboard extends Control {
    * that `{layout:base}` in numeric/special layouts can return to it.
    */
   setLayout(sLayout: string): this {
-    if (!SECONDARY_LAYOUTS.has(sLayout)) {
-      this._baseLayout = sLayout;
+    const name = sLayout.toLowerCase();
+    if (!SECONDARY_LAYOUTS.has(name)) {
+      this._baseLayout = name;
     }
-    if (!layouts[sLayout] && !layouts[sLayout.toLowerCase()]) {
+    if (!layouts[name]) {
       Log.warning(
-        `Layout "${sLayout}" is not registered. The keyboard will fall back to "${DEFAULT_LAYOUT}".`,
+        `Layout "${name}" is not registered. The keyboard will fall back to "${DEFAULT_LAYOUT}".`,
         undefined,
         "ui5.kiosk.KioskKeyboard",
       );
     }
-    return this.setProperty("layout", sLayout);
+    return this.setProperty("layout", name);
   }
 
   /**
@@ -675,7 +676,7 @@ export default class KioskKeyboard extends Control {
     if (kbType === "Numpad") return layouts.numpad;
     if (kbType === "Numeric") return layouts.numeric;
     const name = this.getLayout();
-    return layouts[name] ?? layouts[name.toLowerCase()] ?? layouts[DEFAULT_LAYOUT];
+    return layouts[name] ?? layouts[DEFAULT_LAYOUT];
   }
 
   /** Map from special key value to [i18nKey, fallback]. */
@@ -880,7 +881,7 @@ export default class KioskKeyboard extends Control {
     // Delay close — focus might be moving to another input or the keyboard
     this._closeTimer = setTimeout(() => {
       this._closeTimer = null;
-      const active = document.activeElement as HTMLElement | null;
+      const active = document.activeElement;
 
       // Don't close if focus is on the keyboard
       const myDom = this.getDomRef();
@@ -1223,7 +1224,7 @@ export default class KioskKeyboard extends Control {
     const mode = this.getMobileKeyboard();
     if (mode === "Custom") return false;
     if (mode === "Native") return true;
-    // "Auto": custom on desktop, native on mobile
+    // "Auto": kiosk keyboard on desktop, native on mobile
     return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
   }
 

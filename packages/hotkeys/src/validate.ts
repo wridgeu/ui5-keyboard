@@ -1,4 +1,4 @@
-import { parseHotkey, normalizeHotkey } from "./parse";
+import { parseHotkey } from "./parse";
 import type { Platform } from "./types";
 
 /**
@@ -134,15 +134,15 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
     return { valid: false, errors: ["Hotkey string must not be empty"], warnings };
   }
 
-  let normalized: string;
+  let parsed;
   try {
-    normalized = normalizeHotkey(hotkey, platform);
+    parsed = parseHotkey(hotkey, platform);
   } catch (e) {
     return { valid: false, errors: [(e as Error).message], warnings };
   }
 
-  // Parse succeeded — check the key against known keys
-  const parsed = parseHotkey(hotkey, platform);
+  const normalized = [...parsed.modifiers, parsed.key].join("+");
+
   if (!KNOWN_KEYS.has(parsed.key)) {
     warnings.push(`Unknown key "${parsed.key}" — may not match keyboard events correctly`);
   }

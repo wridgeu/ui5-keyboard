@@ -52,9 +52,9 @@ export const KeyboardType = Object.freeze({
 export const MobileKeyboard = Object.freeze({
   /** Always use KioskKeyboard, suppress native keyboard. Default for kiosk use cases. */
   Custom: "Custom",
-  /** On mobile/touch devices, defer to the native keyboard entirely. */
+  /** Always defer to the native keyboard — KioskKeyboard will not open. */
   Native: "Native",
-  /** Auto-detect: desktop/kiosk uses custom keyboard, phone/tablet uses native. */
+  /** Auto-detect: desktop/kiosk uses KioskKeyboard, phone/tablet defers to native. */
   Auto: "Auto",
 } as const);
 

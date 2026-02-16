@@ -2205,7 +2205,7 @@ QUnit.test("exit() restores inputmode if keyboard was open", async (assert) => {
   input.destroy();
 });
 
-QUnit.test("Native/Auto mode still opens on desktop (not phone/tablet)", async (assert) => {
+QUnit.test("Native mode always defers to native keyboard", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
 
@@ -2219,9 +2219,8 @@ QUnit.test("Native/Auto mode still opens on desktop (not phone/tablet)", async (
   (input.getFocusDomRef() as HTMLElement).focus();
   await new Promise((resolve) => setTimeout(resolve, 300));
 
-  // On the desktop test runner, Device.system.phone and tablet are false,
-  // so _shouldDeferToNative() returns false → keyboard still opens
-  assert.ok(kb.isOpen(), "mobileKeyboard=Native still opens on desktop");
+  // "Native" always defers — the kiosk keyboard should NOT auto-show
+  assert.notOk(kb.isOpen(), "mobileKeyboard=Native defers even on desktop");
 
   input.destroy();
   kb.destroy();

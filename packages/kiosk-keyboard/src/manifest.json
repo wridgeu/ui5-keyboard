@@ -38,7 +38,11 @@
       "cozy": true
     },
     "library": {
-      "i18n": "i18n/messagebundle.properties",
+      "i18n": {
+        "bundleUrl": "i18n/messagebundle.properties",
+        "fallbackLocale": "",
+        "supportedLocales": ["", "de"]
+      },
       "css": true,
       "content": {
         "controls": ["ui5.kiosk.KioskKeyboard"],

@@ -1392,3 +1392,60 @@ QUnit.test("Target element: unregister removes listener", (assert) => {
     done();
   }, 50);
 });
+
+QUnit.test("Target element: replace cleans up old target listener", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let oldCalled = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  document.body.appendChild(div);
+
+  // Register on target element — this adds a capture listener on div
+  manager.register(
+    "F10",
+    () => {
+      oldCalled = true;
+    },
+    { target: div },
+  );
+
+  // Replace with a new target registration on the same element
+  let newCalled = false;
+  const newHandle = manager.register(
+    "F10",
+    () => {
+      newCalled = true;
+    },
+    { target: div, conflictBehavior: "replace" },
+  );
+
+  // The target listener is ref-counted. After replace with cleanup:
+  //   attach(div) → count=1, detach(div) → count=0 (removed), attach(div) → count=1
+  // Without cleanup (the bug):
+  //   attach(div) → count=1, (no detach), attach(div) → count=2
+  // Verify only the new handler fires
+  const event = new KeyboardEvent("keydown", {
+    key: "F10",
+    bubbles: true,
+    cancelable: true,
+  });
+  div.dispatchEvent(event);
+
+  const done = assert.async();
+  setTimeout(() => {
+    assert.notOk(oldCalled, "Old target registration was replaced and does not fire");
+    assert.ok(newCalled, "New target registration fires");
+
+    // Now unregister the new one — ref count should go to 0, removing the listener.
+    // Without the fix, ref count would go to 1 (leaked), and the listener would remain.
+    newHandle.unregister();
+
+    // Verify the target listener Map is cleaned up (ref count reached 0)
+    const targetListeners = (manager as any)._targetListeners as Map<EventTarget, unknown>;
+    assert.strictEqual(targetListeners.size, 0, "Target listener removed after all registrations unregistered");
+
+    document.body.removeChild(div);
+    done();
+  }, 50);
+});
