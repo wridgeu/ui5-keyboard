@@ -216,12 +216,12 @@ The `_handleMouseToTouchEvent()` function constructs synthetic touch objects wit
 
 ### Touch-to-Mouse Simulation (touch devices)
 
-| Native Touch Event | Simulated Mouse Events                           |
-| ------------------ | ------------------------------------------------ |
-| `touchstart`       | `mousedown`                                      |
-| `touchmove`        | `mousemove` (if movement > 10px)                 |
-| `touchend`         | `mouseup` + `click` (if no significant movement) |
-| `touchcancel`      | `mouseup`                                        |
+| Native Touch Event | Simulated Mouse Events                                             |
+| ------------------ | ------------------------------------------------------------------ |
+| `touchstart`       | `mousedown`                                                        |
+| `touchmove`        | `mousemove` (if movement exceeds `jQuery.vmouse`'s move threshold) |
+| `touchend`         | `mouseup` + `click` (if no significant movement)                   |
+| `touchcancel`      | `mouseup`                                                          |
 
 ### Why KioskKeyboard Uses onsaptouchstart / onsaptouchend
 
@@ -311,7 +311,7 @@ UI5's official mechanism for application-level keyboard shortcuts.
 
 ### Critical Limitation: Focus Dependency
 
-**CommandExecution requires focus on a tabbable element.** If no element has focus, the shortcut is NOT intercepted and the browser's default action fires.
+**CommandExecution requires focus on a tabbable element.** The shortcut listener is registered by `ShortcutHelper` on the nearest `UIArea` root; if no tabbable element within that UIArea has focus, the shortcut is NOT intercepted and the browser's default action fires.
 
 From [GitHub Issue #2788](https://github.com/SAP/openui5/issues/2788):
 
@@ -321,12 +321,14 @@ From [GitHub Issue #2788](https://github.com/SAP/openui5/issues/2788):
 
 ### Shortcut Validation
 
-The `Shortcut` module validates key combinations using a regex:
+The `Shortcut` module validates key combinations using two regexes — one for the full shortcut string format and one for the key part alone:
 
 ```
-/^([a-z0-9\.,\-\*\/=]|Plus|Tab|Space|Enter|Backspace|Home|Delete|End|
-Pageup|Pagedown|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Escape|
-F[1-9]|F1[0-2])$/i
+// Full shortcut string (e.g. "Ctrl+Shift+S"):
+/^((Ctrl|Shift|Alt)\+){0,3}([a-z0-9\.,\-\*\/=]|Plus|Tab|Space|Enter|Backspace|Home|Delete|End|Pageup|Pagedown|Escape|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|F[1-9]|F1[0-2])$/i
+
+// Key part only (spec object validation):
+/^([a-z0-9\.,\-\*\/= +]|Tab|Enter|Backspace|Home|Delete|End|Pageup|Pagedown|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Escape|F[1-9]|F1[0-2])$/i
 ```
 
 Platform adaptation: `Ctrl` → `Cmd` on macOS.
@@ -362,8 +364,9 @@ These shortcuts are **blocked by UI5's CommandExecution** and should also be war
 | ------------------ | ------------------------------- |
 | `Ctrl+Alt+Shift+P` | UI5 Technical Info Dialog       |
 | `Ctrl+Alt+Shift+S` | UI5 Support Popup (Diagnostics) |
-| `Ctrl+Alt+Shift+T` | UI5 Test Recorder               |
 | `F6`               | F6-based group navigation       |
+
+> **Note:** `Ctrl+Alt+Shift+T` (UI5 Test Recorder) is handled by the framework at runtime but is **not** in `ShortcutHelper.js`'s `mDisallowedShortcuts` map, so CommandExecution does not block it during validation.
 
 ### Browser Functional (Overridable But Confusing)
 
@@ -460,14 +463,14 @@ UI5 handles devices supporting both mouse and touch input simultaneously.
 touchstart → touchend → mousedown → mouseup → click
 ```
 
-UI5 flags emulated mouse events with `_sapui_delayedMouseEvent` to prevent duplicate handling.
+UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery's `.isMarked()` API) to prevent duplicate handling.
 
 ### Rules for Control Developers
 
 1. **Do NOT implement both `onmouse*` and `ontouch*`** — use `onsaptouchstart`/`onsaptouchend` instead
-2. For explicit `addEventListener()` registrations, check the delayed mouse event flag:
+2. For explicit `addEventListener()` registrations, check the delayed mouse event marker:
    ```js
-   if (oEvent._sapui_delayedMouseEvent) return; // Skip emulated event
+   if (oEvent.isMarked("delayedMouseEvent")) return; // Skip emulated event
    ```
 3. UI5 auto-manages the simulation: `ontouch*` and `ontap*` fire for BOTH mouse and touch
 
@@ -481,7 +484,7 @@ UI5 flags emulated mouse events with `_sapui_delayedMouseEvent` to prevent dupli
 | ------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Document-level capture listener | **Correct**            | Operates below UIArea, independent of focus — solves CommandExecution's focus limitation |
 | F6 conflict                     | **Should warn**        | F6 is reserved for fast navigation. Registering F6 as a hotkey breaks accessibility      |
-| UI5 tool shortcuts              | **Should warn**        | Ctrl+Alt+Shift+P/S/T are framework-reserved                                              |
+| UI5 tool shortcuts              | **Should warn**        | Ctrl+Alt+Shift+P/S are disallowed; Ctrl+Alt+Shift+T is handled at runtime                |
 | Browser-reserved shortcuts      | **Should warn**        | Ctrl+N/T/W etc. cannot be intercepted in Chrome                                          |
 | Fiori Elements conflict         | **Consider warning**   | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard                                           |
 | `keypress` event                | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`              |
@@ -489,13 +492,13 @@ UI5 flags emulated mouse events with `_sapui_delayedMouseEvent` to prevent dupli
 
 ### KioskKeyboard (`ui5.kiosk`)
 
-| Aspect                            | Status                      | Notes                                                                                   |
-| --------------------------------- | --------------------------- | --------------------------------------------------------------------------------------- |
-| `onsaptouchstart`/`onsaptouchend` | **Correct, not deprecated** | Unified mouse+touch via EventSimulation, proper UI5 pattern                             |
-| `apiVersion: 4` renderer          | **Verify**                  | Linter doesn't recognize 4; may need to be 2                                            |
-| Focus handling                    | **Correct**                 | Implements `getFocusInfo()`/`applyFocusInfo()`                                          |
-| Roving tabindex                   | **Correct**                 | Custom impl (not ItemNavigation) — appropriate for variable-width rows                  |
-| F6 group                          | **Missing**                 | Consider `data-sap-ui-fastnavgroup="true"` so F6 navigation can skip over/into keyboard |
+| Aspect                            | Status                      | Notes                                                                          |
+| --------------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
+| `onsaptouchstart`/`onsaptouchend` | **Correct, not deprecated** | Unified mouse+touch via EventSimulation, proper UI5 pattern                    |
+| `apiVersion: 4` renderer          | **Correct**                 | Semantic rendering — output depends only on control's own properties and state |
+| Focus handling                    | **Correct**                 | Implements `getFocusInfo()`/`applyFocusInfo()`                                 |
+| Roving tabindex                   | **Correct**                 | Custom impl (not ItemNavigation) — appropriate for variable-width rows         |
+| F6 group                          | **Correct**                 | Renderer sets `data-sap-ui-fastnavgroup="true"` on the root element            |
 
 ### Deprecated API Avoidance (OpenUI5 2.x readiness)
 
