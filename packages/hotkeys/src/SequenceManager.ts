@@ -268,7 +268,7 @@ export default class SequenceManager extends BaseObject {
       // If doesn't match, the active match is dropped (not re-added)
     }
 
-    this._activeMatches = newActiveMatches;
+    this._activeMatches = [...newActiveMatches];
 
     // If we got a full match, fire it and clear all tracking
     if (fullMatch) {
