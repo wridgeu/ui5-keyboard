@@ -9,5 +9,6 @@
     "types": ["@openui5/types", "@types/qunit"],
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["test/e2e/**/*.ts"]
 }

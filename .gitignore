@@ -3,6 +3,7 @@ dist/
 .ui5/
 *.tsbuildinfo
 coverage/
+__screenshots__/
 
 # IDE
 .idea/
