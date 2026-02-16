@@ -2,6 +2,24 @@
   "name": "ui5-lib-hotkeys",
   "version": "0.1.0",
   "private": true,
+  "description": "Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications",
+  "keywords": [
+    "hotkeys",
+    "keybindings",
+    "keyboard-shortcuts",
+    "openui5",
+    "sapui5",
+    "ui5"
+  ],
+  "homepage": "https://github.com/wridgeu/ui5-lib-keyboard/tree/main/packages/hotkeys",
+  "bugs": "https://github.com/wridgeu/ui5-lib-keyboard/issues",
+  "license": "MIT",
+  "author": "Marco Beier",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wridgeu/ui5-lib-keyboard.git",
+    "directory": "packages/hotkeys"
+  },
   "type": "module",
   "types": "dist/resources/ui5/hotkeys/HotkeyManager.d.ts",
   "scripts": {

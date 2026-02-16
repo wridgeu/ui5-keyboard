@@ -2,7 +2,27 @@
   "name": "ui5-lib-kiosk-keyboard",
   "version": "0.1.0",
   "private": true,
+  "description": "On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applications",
+  "keywords": [
+    "kiosk",
+    "on-screen-keyboard",
+    "openui5",
+    "sapui5",
+    "touchscreen",
+    "ui5",
+    "virtual-keyboard"
+  ],
+  "homepage": "https://github.com/wridgeu/ui5-lib-keyboard/tree/main/packages/kiosk-keyboard",
+  "bugs": "https://github.com/wridgeu/ui5-lib-keyboard/issues",
+  "license": "MIT",
+  "author": "Marco Beier",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wridgeu/ui5-lib-keyboard.git",
+    "directory": "packages/kiosk-keyboard"
+  },
   "type": "module",
+  "types": "dist/resources/ui5/kiosk/KioskKeyboard.d.ts",
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && ui5 build --clean-dest && node -e \"import{cp}from'node:fs/promises';cp('../../LICENSE','dist/LICENSE');\"",
