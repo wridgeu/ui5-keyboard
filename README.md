@@ -171,7 +171,7 @@ npm run typecheck    # TypeScript type checking
 ui5-keyboard/
 ├── packages/
 │   ├── hotkeys/                        # ui5.hotkeys library (keyboard shortcuts)
-│   │   ├── src/                        # 13 TypeScript modules
+│   │   ├── src/                        # 14 TypeScript modules
 │   │   └── test/qunit/                # 14 QUnit test suites
 │   ├── kiosk-keyboard/                 # ui5.kiosk library (on-screen keyboard)
 │   │   ├── src/
