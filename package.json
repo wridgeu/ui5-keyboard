@@ -22,6 +22,7 @@
     "start": "npm run start -w packages/demo-app",
     "start:hotkeys": "npm run start -w packages/hotkeys",
     "start:kiosk": "npm run start -w packages/kiosk-keyboard",
+    "start:kiosk:visual": "npm run start:visual -w packages/kiosk-keyboard",
     "lint": "oxlint packages/",
     "lint:fix": "oxlint --fix packages/",
     "fmt": "oxfmt .",
