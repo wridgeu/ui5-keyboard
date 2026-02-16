@@ -65,10 +65,14 @@ npm run build -w packages/kiosk-keyboard
 
 ### Kiosk Keyboard Library (`ui5.kiosk`)
 
-- **KioskKeyboard** — Pure UI5 `Control` (flat DOM, event delegation, not a wrapper). Uses `KioskKeyboardRenderer` with `apiVersion: 2`.
+- **KioskKeyboard** — Pure UI5 `Control` (flat DOM, event delegation, not a wrapper). Uses `KioskKeyboardRenderer` with `apiVersion: 4`.
 - **Theming** — SAP LESS with `base/` and `sap_horizon/` theme folders. `noLibraryCSS: false` (requires CSS — this is why it's a separate library from hotkeys).
-- **Layouts** — QWERTY, numeric, numpad, special. Custom layouts supported via `LayoutDefinition` type.
+- **Layouts** — QWERTY, QWERTZ-DE, numeric, numpad, special. Custom layouts supported via `LayoutDefinition` type.
+- **Locale detection** — Auto-selects layout from UI5 locale via `Localization.getLanguageTag()`. Extensible via `registerLocaleLayout()`.
+- **Auto-type** — When `autoType="true"`, auto-switches between Full/Numpad based on focused input metadata (UI5 type, control name, DOM inputmode, HTML type).
+- **Mobile keyboard** — `mobileKeyboard` enum (`Custom`/`Native`/`Auto`) controls native keyboard suppression via `inputmode="none"`.
 - **Target input** — Associated via `targetInput` association. Duck-types `setValue`/`fireLiveChange` (no `any`).
+- **Instance isolation** — Static `_instances` set prevents multiple keyboards from claiming the same input during auto-show.
 
 ### Demo App (`demo.hotkeys`)
 

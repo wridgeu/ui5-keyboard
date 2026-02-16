@@ -16,9 +16,13 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Associations](#associations)
   - [Events](#events)
   - [Public Methods](#public-methods)
+  - [Static Methods](#static-methods)
 - [Layouts](#layouts)
+- [Locale-Based Default Layout](#locale-based-default-layout)
 - [Docked Mode](#docked-mode)
 - [Auto-Show](#auto-show)
+- [Auto-Type](#auto-type)
+- [Mobile Keyboard Detection](#mobile-keyboard-detection)
 - [Shift & Caps Lock](#shift--caps-lock)
 - [Accessibility](#accessibility)
 - [Theming](#theming)
@@ -38,16 +42,24 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 **Layouts**
 
-- Built-in layouts: QWERTY, numeric, special characters, numpad
+- Built-in layouts: QWERTY, QWERTZ-DE, numeric, special characters, numpad
+- Locale-based default layout (auto-detects from UI5 language setting)
 - Runtime layout switching via `{layout:name}` keys
 - `keyboardType` property for quick switching between Full, Numeric, and Numpad modes
 - Extensible layout definition format (`LayoutDefinition` type)
+- Custom layout registration via `registerLayout()`
 
 **Docked Mode**
 
 - Bottom-of-viewport positioning with slide-in/out animation
 - `show()` / `close()` API for programmatic control
 - Auto-show: opens when any `<input>` or `<textarea>` receives focus, closes when focus leaves
+
+**Smart Context Detection**
+
+- Auto-type: automatically switches to numpad for Number/Tel inputs and StepInput
+- Mobile keyboard detection: suppress native keyboard or defer to it on phones/tablets
+- Native keyboard suppression via `inputmode="none"` with proper save/restore
 
 **Integration**
 
@@ -126,14 +138,17 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 
 ### Properties
 
-| Property       | Type                     | Default              | Description                                                                |
-| -------------- | ------------------------ | -------------------- | -------------------------------------------------------------------------- |
-| `layout`       | `string`                 | `"qwerty"`           | Active layout name. Only effective when `keyboardType` is `"Full"`.        |
-| `keyboardType` | `ui5.kiosk.KeyboardType` | `"Full"`             | Display type: `Full`, `Numeric`, or `Numpad`.                              |
-| `enabled`      | `boolean`                | `true`               | Whether the keyboard is interactive.                                       |
-| `ariaLabel`    | `string`                 | `"Virtual Keyboard"` | Accessible label for the keyboard group.                                   |
-| `docked`       | `boolean`                | `false`              | Anchor to the bottom of the viewport with slide animation.                 |
-| `autoShow`     | `boolean`                | `false`              | Auto-open on input focus, auto-close when focus leaves. Requires `docked`. |
+| Property         | Type                       | Default              | Description                                                                                 |
+| ---------------- | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
+| `layout`         | `string`                   | `"qwerty"`           | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`. |
+| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`             | Display type: `Full`, `Numeric`, or `Numpad`.                                               |
+| `enabled`        | `boolean`                  | `true`               | Whether the keyboard is interactive.                                                        |
+| `ariaLabel`      | `string`                   | `"Virtual Keyboard"` | Accessible label for the keyboard group.                                                    |
+| `docked`         | `boolean`                  | `false`              | Anchor to the bottom of the viewport with slide animation.                                  |
+| `autoShow`       | `boolean`                  | `false`              | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                  |
+| `autoType`       | `boolean`                  | `false`              | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.           |
+| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"`           | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).     |
+| `inputIds`       | `string[]`                 | `[]`                 | Input control IDs for focus delegation targeting.                                           |
 
 ### Associations
 
@@ -164,18 +179,30 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 | `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                   |
 | `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.           |
 
+### Static Methods
+
+| Method                                 | Returns             | Description                                                                  |
+| -------------------------------------- | ------------------- | ---------------------------------------------------------------------------- |
+| `registerLayout(name, definition)`     | `void`              | Register a custom layout. Built-in layouts cannot be overwritten.            |
+| `getRegisteredLayout(name)`            | `LayoutDefinition?` | Get the definition for a layout name, or `undefined`.                        |
+| `getRegisteredLayoutNames()`           | `string[]`          | List all registered layout names (built-in + custom).                        |
+| `isBuiltInLayout(name)`                | `boolean`           | Whether the given name is a built-in layout.                                 |
+| `getLocaleLayout()`                    | `string`            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`. |
+| `registerLocaleLayout(locale, layout)` | `void`              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.        |
+
 ---
 
 ## Layouts
 
-The library ships with four built-in layouts:
+The library ships with five built-in layouts:
 
-| Layout    | Description                         | Rows |
-| --------- | ----------------------------------- | ---- |
-| `qwerty`  | Standard QWERTY with number row     | 5    |
-| `numeric` | Numbers with basic operators        | 4    |
-| `special` | Special characters and symbols      | 4    |
-| `numpad`  | Compact numeric keypad (calculator) | 4    |
+| Layout      | Description                             | Rows |
+| ----------- | --------------------------------------- | ---- |
+| `qwerty`    | Standard QWERTY with number row         | 5    |
+| `qwertz-de` | German QWERTZ with Umlaute (ä, ö, ü, ß) | 5    |
+| `numeric`   | Numbers with basic operators            | 4    |
+| `special`   | Special characters and symbols          | 4    |
+| `numpad`    | Compact numeric keypad (calculator)     | 4    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -222,6 +249,44 @@ const myLayout: LayoutDefinition = [
 
 ---
 
+## Locale-Based Default Layout
+
+When no explicit `layout` is provided, the keyboard auto-detects the appropriate layout from the UI5 locale. This uses `Localization.getLanguageTag()` from `sap/base/i18n/Localization`, which resolves from all UI5 language sources (URL `sap-ui-language` param, bootstrap config, browser settings).
+
+**Resolution order:**
+
+1. Exact BCP-47 match (e.g. `"de-at"`)
+2. Language prefix (e.g. `"de"`)
+3. Fallback to `"qwerty"`
+
+**Built-in mappings:**
+
+| Language | Layout      |
+| -------- | ----------- |
+| `de`     | `qwertz-de` |
+
+Additional mappings can be registered at runtime:
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+
+// Register before creating any keyboard instances
+KioskKeyboard.registerLocaleLayout("fr", "azerty-fr");
+KioskKeyboard.registerLocaleLayout("pt-br", "custom-pt-br");
+```
+
+An explicit `layout` property always takes priority over locale detection:
+
+```xml
+<!-- Uses QWERTY regardless of locale -->
+<kiosk:KioskKeyboard layout="qwerty" />
+
+<!-- Uses locale-detected layout (e.g. QWERTZ-DE for German) -->
+<kiosk:KioskKeyboard />
+```
+
+---
+
 ## Docked Mode
 
 When `docked="true"`, the keyboard anchors to the bottom of the viewport with a slide-in/out transition:
@@ -254,6 +319,50 @@ When `autoShow="true"` (requires `docked="true"`), the keyboard automatically:
 ```
 
 The auto-show listeners use document-level `focusin`/`focusout` in the capture phase. They are automatically cleaned up on `destroy()`.
+
+---
+
+## Auto-Type
+
+When `autoType="true"` (requires `autoShow="true"`), the keyboard inspects the focused input's metadata and automatically switches between Full and Numpad keyboard types.
+
+```xml
+<kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" />
+```
+
+**Detection order** (first match wins):
+
+1. UI5 control `getType()` — `"Number"` or `"Tel"` → Numpad
+2. UI5 control name — `sap.m.StepInput` → Numpad
+3. DOM `inputmode` attribute — `"numeric"`, `"decimal"`, or `"tel"` → Numpad
+4. HTML `type` attribute — `"number"` or `"tel"` → Numpad
+5. Fallback → Full
+
+When the user tabs from a numeric input to a text input, the keyboard switches back to Full automatically.
+
+**Explicit override:** Setting `keyboardType` explicitly (via XML, constructor, or `setKeyboardType()`) disables auto-type detection. The keyboard respects the explicit type and never overrides it.
+
+---
+
+## Mobile Keyboard Detection
+
+The `mobileKeyboard` property controls how the keyboard interacts with native virtual keyboards on mobile/touch devices.
+
+| Value      | Behavior                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.**     |
+| `"Native"` | On phones and tablets, defer to the native keyboard entirely (KioskKeyboard does not show). |
+| `"Auto"`   | Desktop/kiosk → use KioskKeyboard. Phone/tablet → defer to native.                          |
+
+```xml
+<!-- Suppress native keyboard on all devices (kiosk use case) -->
+<kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Custom" />
+
+<!-- Let mobile devices use their native keyboard -->
+<kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
+```
+
+When `mobileKeyboard` is `"Custom"`, the keyboard sets `inputmode="none"` on the focused input's DOM element when it opens, and restores the original `inputmode` when it closes. This suppression is transparent and does not affect the input's value or behavior.
 
 ---
 
@@ -309,17 +418,23 @@ Both `compact` and `cozy` content densities are supported with adjusted key heig
 The library registers proper UI5 enums via `DataType.registerEnum()`:
 
 ```ts
-import { KeyboardLayout, KeyboardType } from "ui5/kiosk/library";
+import { KeyboardLayout, KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 
 // KeyboardLayout — built-in layout identifiers
-KeyboardLayout.Qwerty; // "Qwerty"
-KeyboardLayout.Numeric; // "Numeric"
-KeyboardLayout.Special; // "Special"
+KeyboardLayout.Qwerty; // "qwerty"
+KeyboardLayout.QwertzDe; // "qwertz-de"
+KeyboardLayout.Numeric; // "numeric"
+KeyboardLayout.Special; // "special"
 
 // KeyboardType — keyboard display type
 KeyboardType.Full; // "Full"
 KeyboardType.Numeric; // "Numeric"
 KeyboardType.Numpad; // "Numpad"
+
+// MobileKeyboard — native keyboard behavior
+MobileKeyboard.Custom; // "Custom"
+MobileKeyboard.Native; // "Native"
+MobileKeyboard.Auto; // "Auto"
 ```
 
 ---
@@ -332,14 +447,14 @@ KeyboardType.Numpad; // "Numpad"
 
 ## When NOT to Use This Library
 
-| Scenario                            | Use Instead                                    |
-| ----------------------------------- | ---------------------------------------------- |
-| Desktop-only application            | Physical keyboard (no virtual keyboard needed) |
-| Mobile browser with native keyboard | The browser's built-in virtual keyboard        |
-| Complex IME input (CJK)             | Native OS input methods                        |
-| Rich text editing                   | Dedicated rich text editor controls            |
+| Scenario                            | Use Instead                                                           |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| Desktop-only application            | Physical keyboard (no virtual keyboard needed)                        |
+| Mobile browser with native keyboard | Set `mobileKeyboard="Auto"` to defer to the native keyboard on mobile |
+| Complex IME input (CJK)             | Native OS input methods                                               |
+| Rich text editing                   | Dedicated rich text editor controls                                   |
 
-This library is designed for **kiosk terminals**, **industrial touchscreens**, and **point-of-sale** applications where the OS does not provide a virtual keyboard or where a controlled input experience is required.
+This library is designed for **kiosk terminals**, **industrial touchscreens**, and **point-of-sale** applications where the OS does not provide a virtual keyboard or where a controlled input experience is required. For mixed desktop/mobile use, set `mobileKeyboard="Auto"` to let mobile devices use their native keyboard.
 
 ---
 

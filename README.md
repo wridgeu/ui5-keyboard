@@ -161,9 +161,9 @@ npm run typecheck    # TypeScript type checking
 
 **ui5-lib-kiosk-keyboard** (`npm run start:kiosk`)
 
-| Suite           | Tests                                                                                                                                     |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `KioskKeyboard` | Properties, rendering, layout resolution, shift/caps toggle, key events, target input, layout switching, docked, auto-show, accessibility |
+| Suite           | Tests                                                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KioskKeyboard` | Properties, rendering, layout resolution, shift/caps toggle, key events, target input, layout switching, docked, auto-show, accessibility, locale detection, auto-type, mobile keyboard, instance isolation |
 
 ## Project Structure
 
@@ -175,7 +175,7 @@ ui5-keyboard/
 │   │   └── test/qunit/                # 14 QUnit test suites
 │   ├── kiosk-keyboard/                 # ui5.kiosk library (on-screen keyboard)
 │   │   ├── src/
-│   │   │   ├── layouts/                # QWERTY, numeric, special, numpad
+│   │   │   ├── layouts/                # QWERTY, QWERTZ-DE, numeric, special, numpad
 │   │   │   └── themes/                 # SAP LESS theming (base + sap_horizon)
 │   │   └── test/qunit/
 │   └── demo-app/                       # Demo application for both libraries
