@@ -3,6 +3,12 @@ import Lib from "sap/ui/core/Lib";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition } from "./types";
 
+/** Default icons for special keys — used when the key has no explicit icon */
+const SPECIAL_KEY_ICONS: Record<string, string> = {
+  "{shift}": "sap-icon://arrow-top",
+  "{enter}": "sap-icon://accept",
+};
+
 function getText(sKey: string, sDefault: string): string {
   const bundle = Lib.getResourceBundleFor("ui5.kiosk");
   if (!bundle) return sDefault;
@@ -138,10 +144,12 @@ const KioskKeyboardRenderer = {
     rm.openEnd();
 
     // Key content: icon, caps lock icon, or text
+    const icon = key.icon || SPECIAL_KEY_ICONS[key.value];
+
     if (bIsShiftKey && bCapsLock) {
       rm.icon("sap-icon://locked", ["sapUiIcon"], { "aria-hidden": "true" });
-    } else if (key.icon) {
-      rm.icon(key.icon, ["sapUiIcon"], { "aria-hidden": "true" });
+    } else if (icon) {
+      rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
     } else {
       rm.text(label);
     }

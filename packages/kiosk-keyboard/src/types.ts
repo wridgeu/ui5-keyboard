@@ -151,9 +151,17 @@ export interface KeyDefinition {
   /**
    * SAP icon URI for icon-only keys.
    *
-   * When set, the key renders the icon instead of text. Set `label` to `""`
-   * to suppress text alongside the icon. The icon receives `aria-hidden="true"`;
-   * the key's accessibility is handled by the `aria-label` attribute.
+   * When set, the key renders the icon instead of text. The icon receives
+   * `aria-hidden="true"`; the key's accessibility is handled by the
+   * `aria-label` attribute.
+   *
+   * The following special keys render built-in icons by default (no need to
+   * set this property):
+   * - `{shift}` — `sap-icon://arrow-top` (Caps Lock uses `sap-icon://locked`)
+   * - `{enter}` — `sap-icon://accept`
+   * - `{backspace}` — set explicitly in built-in layouts as `sap-icon://arrow-left`
+   *
+   * To override a default icon, set this property to a different icon URI.
    *
    * @example "sap-icon://arrow-left"
    */

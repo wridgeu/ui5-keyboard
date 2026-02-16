@@ -1428,7 +1428,7 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Single Shift does NOT show capsLock class or icon", async (assert) => {
+QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -1442,9 +1442,10 @@ QUnit.test("Single Shift does NOT show capsLock class or icon", async (assert) =
   assert.ok(shiftKey.classList.contains("ui5KioskKey--active"), "Has active class");
   assert.notOk(shiftKey.classList.contains("ui5KioskKey--capsLock"), "No capsLock class");
 
-  // Should render text "Shift", not an icon
+  // Should render arrow-top icon, not the lock icon used for caps lock
   const icon = shiftKey.querySelector(".sapUiIcon");
-  assert.notOk(icon, "No lock icon for single shift");
+  assert.ok(icon, "Shift icon is rendered");
+  assert.strictEqual(icon!.getAttribute("aria-label"), "arrow-top", "Shows arrow icon, not lock icon");
   assert.strictEqual(shiftKey.getAttribute("aria-label"), "Shift", "Aria-label is Shift");
 
   kb.destroy();
