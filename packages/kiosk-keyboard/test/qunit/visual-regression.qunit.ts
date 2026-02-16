@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType } from "ui5/kiosk/library";
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -150,7 +151,7 @@ QUnit.test("QWERTY: space key has space width class", async (assert) => {
 
 QUnit.test("Numpad: has type-specific CSS class", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setKeyboardType("Numpad" as any);
+  kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
   const dom = getDom(kb);
 
@@ -162,7 +163,7 @@ QUnit.test("Numpad: has type-specific CSS class", async (assert) => {
 
 QUnit.test("Numeric: has type-specific CSS class", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setKeyboardType("Numeric" as any);
+  kb.setKeyboardType(KeyboardType.Numeric);
   await placeAndWait(kb);
   const dom = getDom(kb);
 

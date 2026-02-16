@@ -1,5 +1,6 @@
 import Event from "sap/ui/base/Event";
-import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
+import { KeyboardType } from "ui5/kiosk/library";
+import { MobileKeyboard } from "ui5/kiosk/library";
 import Control from "sap/ui/core/Control";
 import { PropertyBindingInfo } from "sap/ui/base/ManagedObject";
 import { $ControlSettings } from "sap/ui/core/Control";
@@ -48,14 +49,17 @@ declare module "./KioskKeyboard" {
     /**
          * When true and autoShow is active, the keyboard inspects the
         focused input's type metadata and automatically switches between
-        Full and Numpad keyboard types.
+        Full and Numpad keyboard types. Has no effect when keyboardType
+        is set explicitly.
          */
     autoType?: boolean | PropertyBindingInfo | `{${string}}`;
 
     /**
          * Controls native keyboard behavior on mobile/touch devices.
-        "Custom" always uses this keyboard, "Native" defers to native
-        on mobile, "Auto" auto-detects.
+        "Custom" (default) always uses this keyboard and suppresses
+        the native one. "Native" defers to the native keyboard on
+        phones and tablets. "Auto" uses custom on desktop, native
+        on mobile.
          */
     mobileKeyboard?: MobileKeyboard | PropertyBindingInfo | `{${string}}`;
 
@@ -179,7 +183,7 @@ declare module "./KioskKeyboard" {
      *
      * Accessible label for the keyboard group.
      *
-     * Default value is: "Virtual Keyboard"
+     * Default value is: ""
      * @returns Value of property "ariaLabel"
      */
     getAriaLabel(): string;
@@ -191,8 +195,8 @@ declare module "./KioskKeyboard" {
      *
      * When called with a value of "null" or "undefined", the default value of the property will be restored.
      *
-     * Default value is: "Virtual Keyboard"
-     * @param [ariaLabel="Virtual Keyboard"] New value for property "ariaLabel"
+     * Default value is: ""
+     * @param [ariaLabel=""] New value for property "ariaLabel"
      * @returns Reference to "this" in order to allow method chaining
      */
     setAriaLabel(ariaLabel: string): this;
@@ -258,48 +262,65 @@ declare module "./KioskKeyboard" {
     // property: autoType
 
     /**
-     * Gets current value of property "autoType".
-     *
-     * When true and autoShow is active, the keyboard inspects the focused input's
-     * type metadata and automatically switches between Full and Numpad keyboard types.
-     *
-     * Default value is: false
-     * @returns Value of property "autoType"
-     */
+         * Gets current value of property "autoType".
+         *
+         * When true and autoShow is active, the keyboard inspects the
+        focused input's type metadata and automatically switches between
+        Full and Numpad keyboard types. Has no effect when keyboardType
+        is set explicitly.
+         *
+         * Default value is: false
+         * @returns Value of property "autoType"
+         */
     getAutoType(): boolean;
 
     /**
-     * Sets a new value for property "autoType".
-     *
-     * When called with a value of "null" or "undefined", the default value of the property will be restored.
-     *
-     * Default value is: false
-     * @param [autoType=false] New value for property "autoType"
-     * @returns Reference to "this" in order to allow method chaining
-     */
+         * Sets a new value for property "autoType".
+         *
+         * When true and autoShow is active, the keyboard inspects the
+        focused input's type metadata and automatically switches between
+        Full and Numpad keyboard types. Has no effect when keyboardType
+        is set explicitly.
+         *
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * Default value is: false
+         * @param [autoType=false] New value for property "autoType"
+         * @returns Reference to "this" in order to allow method chaining
+         */
     setAutoType(autoType: boolean): this;
 
     // property: mobileKeyboard
 
     /**
-     * Gets current value of property "mobileKeyboard".
-     *
-     * Controls native keyboard behavior on mobile/touch devices.
-     *
-     * Default value is: "Custom"
-     * @returns Value of property "mobileKeyboard"
-     */
+         * Gets current value of property "mobileKeyboard".
+         *
+         * Controls native keyboard behavior on mobile/touch devices.
+        "Custom" (default) always uses this keyboard and suppresses
+        the native one. "Native" defers to the native keyboard on
+        phones and tablets. "Auto" uses custom on desktop, native
+        on mobile.
+         *
+         * Default value is: "Custom"
+         * @returns Value of property "mobileKeyboard"
+         */
     getMobileKeyboard(): MobileKeyboard;
 
     /**
-     * Sets a new value for property "mobileKeyboard".
-     *
-     * When called with a value of "null" or "undefined", the default value of the property will be restored.
-     *
-     * Default value is: "Custom"
-     * @param [mobileKeyboard="Custom"] New value for property "mobileKeyboard"
-     * @returns Reference to "this" in order to allow method chaining
-     */
+         * Sets a new value for property "mobileKeyboard".
+         *
+         * Controls native keyboard behavior on mobile/touch devices.
+        "Custom" (default) always uses this keyboard and suppresses
+        the native one. "Native" defers to the native keyboard on
+        phones and tablets. "Auto" uses custom on desktop, native
+        on mobile.
+         *
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * Default value is: "Custom"
+         * @param [mobileKeyboard="Custom"] New value for property "mobileKeyboard"
+         * @returns Reference to "this" in order to allow method chaining
+         */
     setMobileKeyboard(mobileKeyboard: MobileKeyboard): this;
 
     // property: inputIds

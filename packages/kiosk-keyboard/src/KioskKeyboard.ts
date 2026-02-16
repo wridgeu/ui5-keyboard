@@ -193,9 +193,11 @@ export default class KioskKeyboard extends Control {
    * @static
    */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
-    if (KioskKeyboard._BUILTIN_LAYOUTS.has(sName)) {
+    const name = sName.toLowerCase();
+
+    if (KioskKeyboard._BUILTIN_LAYOUTS.has(name)) {
       Log.warning(
-        `Cannot overwrite built-in layout "${sName}". Use a different name for custom layouts.`,
+        `Cannot overwrite built-in layout "${name}". Use a different name for custom layouts.`,
         undefined,
         "ui5.kiosk.KioskKeyboard",
       );
@@ -213,14 +215,14 @@ export default class KioskKeyboard extends Control {
       )
     ) {
       Log.warning(
-        `Invalid layout "${sName}": must be a non-empty array of non-empty rows where each key has a string "value".`,
+        `Invalid layout "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
         undefined,
         "ui5.kiosk.KioskKeyboard",
       );
       return;
     }
 
-    layouts[sName] = oDefinition;
+    layouts[name] = oDefinition;
   }
 
   /**
@@ -428,6 +430,13 @@ export default class KioskKeyboard extends Control {
     if (!SECONDARY_LAYOUTS.has(sLayout)) {
       this._baseLayout = sLayout;
     }
+    if (!layouts[sLayout] && !layouts[sLayout.toLowerCase()]) {
+      Log.warning(
+        `Layout "${sLayout}" is not registered. The keyboard will fall back to "${DEFAULT_LAYOUT}".`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+    }
     return this.setProperty("layout", sLayout);
   }
 
@@ -605,7 +614,7 @@ export default class KioskKeyboard extends Control {
     );
   }
 
-  getFocusInfo(): object {
+  getFocusInfo(): { lastFocusedKeyId: string | null } {
     return { lastFocusedKeyId: this._lastFocusedKeyId };
   }
 
@@ -829,7 +838,7 @@ export default class KioskKeyboard extends Control {
 
     // Check if focus went to an input/textarea
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-      // Feature 3: defer to native keyboard on mobile
+      // Defer to native keyboard on mobile when configured
       if (this._shouldDeferToNative()) return;
 
       // Resolve the UI5 control that owns this DOM element
@@ -849,7 +858,7 @@ export default class KioskKeyboard extends Control {
       if (ui5Control instanceof Control) {
         this.setTargetInput(ui5Control);
 
-        // Feature 2: auto-detect keyboard type from input metadata
+        // Auto-detect keyboard type from input metadata
         if (this.getAutoType() && !this._keyboardTypeExplicit) {
           const detected = this._detectKeyboardType(ui5Control);
           this.setProperty("keyboardType", detected);
@@ -1154,7 +1163,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private — Auto-type detection (Feature 2)
+  // Private — Auto-type detection
   // ──────────────────────────────────────────────
 
   /** Numeric input types that map to Numpad keyboard. */
@@ -1202,7 +1211,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private — Mobile detection (Feature 3)
+  // Private — Mobile detection
   // ──────────────────────────────────────────────
 
   /**
@@ -1213,7 +1222,8 @@ export default class KioskKeyboard extends Control {
   private _shouldDeferToNative(): boolean {
     const mode = this.getMobileKeyboard();
     if (mode === "Custom") return false;
-    // "Native" and "Auto" both check device type
+    if (mode === "Native") return true;
+    // "Auto": custom on desktop, native on mobile
     return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
   }
 
