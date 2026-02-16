@@ -49,7 +49,9 @@
             <Panel headerText="Input Field Test" class="sapUiMediumMargin">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Type in the field below. Single-key shortcuts are suppressed, but Ctrl/Cmd combos still work." />
-                    <Input placeholder="Try typing, then press Ctrl+S or Escape..." class="sapUiSmallMarginTop" />
+                    <Input id="testInput" placeholder="Try typing, then press Ctrl+S or Escape..." class="sapUiSmallMarginTop"
+                        ariaLabelledBy="testInputLabel" />
+                    <core:InvisibleText id="testInputLabel" text="Test input for keyboard shortcuts" xmlns:core="sap.ui.core" />
                 </VBox>
             </Panel>
 

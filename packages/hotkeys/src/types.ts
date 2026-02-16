@@ -129,7 +129,7 @@ export interface ParsedHotkey {
   /** Whether Meta is required. */
   meta: boolean;
   /** Ordered list of active canonical modifiers. */
-  modifiers: CanonicalModifier[];
+  readonly modifiers: readonly CanonicalModifier[];
 }
 
 /**

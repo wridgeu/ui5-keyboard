@@ -84,10 +84,10 @@ export default class Component extends UIComponent {
   }
 
   destroy(): void {
-    this.getRouter().detachRouteMatched(this._routeMatchedHandler, this);
     this._handles.forEach((h) => h.unregister());
     this._handles = [];
     this._hotkeyManager.destroy();
+    this.getRouter().detachRouteMatched(this._routeMatchedHandler, this);
     super.destroy();
   }
 }

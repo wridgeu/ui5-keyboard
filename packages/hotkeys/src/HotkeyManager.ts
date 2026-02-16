@@ -82,13 +82,13 @@ interface DebugSkipEntry {
  * Higher number = more specific/useful reason. When multiple registrations
  * are skipped, the most informative reason is reported.
  */
-const SKIP_PRIORITY: Record<UnhandledReason, number> = {
+const SKIP_PRIORITY = {
   no_match: 0,
   repeat_ignored: 1,
   input_suppressed: 2,
   dialog_suppressed: 3,
   disabled: 4,
-};
+} satisfies Record<UnhandledReason, number>;
 
 /**
  * Singleton keyboard shortcut manager for UI5 applications.
@@ -141,7 +141,7 @@ export default class HotkeyManager extends BaseObject {
   private _lastAltLocation = 0;
 
   // Target element listeners (Feature 13) — ref-counted per EventTarget
-  private _targetListeners: Map<EventTarget, { handler: (e: KeyboardEvent) => void; count: number }> = new Map();
+  private _targetListeners: Map<EventTarget, { handler: EventListener; count: number }> = new Map();
 
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
@@ -299,7 +299,7 @@ export default class HotkeyManager extends BaseObject {
    * Get the currently active scope (top of stack).
    */
   getActiveScope(): string {
-    return this._scopeStack[this._scopeStack.length - 1];
+    return this._scopeStack.at(-1) ?? GLOBAL_SCOPE;
   }
 
   /**
@@ -485,7 +485,7 @@ export default class HotkeyManager extends BaseObject {
 
     // Clean up all target listeners (Feature 13)
     for (const [target, entry] of this._targetListeners) {
-      target.removeEventListener("keydown", entry.handler as EventListener, true);
+      target.removeEventListener("keydown", entry.handler, true);
     }
     this._targetListeners.clear();
 
@@ -800,12 +800,15 @@ export default class HotkeyManager extends BaseObject {
       return;
     }
 
-    const handler = (e: KeyboardEvent) => {
-      if (this._shouldIgnoreKeyEvent(e)) return;
-      this._processKeyEvent(e, target);
+    // Cast at the boundary: "keydown" always dispatches KeyboardEvent,
+    // but EventTarget.addEventListener types the callback as EventListener (Event → void).
+    const handler: EventListener = (e) => {
+      const ke = e as KeyboardEvent;
+      if (this._shouldIgnoreKeyEvent(ke)) return;
+      this._processKeyEvent(ke, target);
     };
 
-    target.addEventListener("keydown", handler as EventListener, true);
+    target.addEventListener("keydown", handler, true);
     this._targetListeners.set(target, { handler, count: 1 });
   }
 
@@ -815,7 +818,7 @@ export default class HotkeyManager extends BaseObject {
 
     existing.count--;
     if (existing.count <= 0) {
-      target.removeEventListener("keydown", existing.handler as EventListener, true);
+      target.removeEventListener("keydown", existing.handler, true);
       this._targetListeners.delete(target);
     }
   }

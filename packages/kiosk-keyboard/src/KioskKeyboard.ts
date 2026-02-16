@@ -1,6 +1,7 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
 import ManagedObject from "sap/ui/base/ManagedObject";
+import View from "sap/ui/core/mvc/View";
 import { DEFAULT_LAYOUT, SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
 import layouts from "./layouts/index";
@@ -403,8 +404,8 @@ export default class KioskKeyboard extends Control {
 
     // Walk up to find parent View for view-local IDs
     for (let parent: ManagedObject | null = this.getParent(); parent; parent = parent.getParent()) {
-      if (typeof (parent as unknown as Record<string, unknown>).byId === "function") {
-        const found = (parent as unknown as { byId: (id: string) => Element | undefined }).byId(targetId);
+      if (parent instanceof View) {
+        const found = parent.byId(targetId);
         if (found instanceof Control) return found;
       }
     }
@@ -646,6 +647,11 @@ export default class KioskKeyboard extends Control {
   private _onDocumentFocusOut(_event: FocusEvent): void {
     if (!this.getDocked() || !this._open || !this.getEnabled()) return;
 
+    // Clear any pending close timer before setting a new one
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+    }
+
     // Delay close — focus might be moving to another input or the keyboard
     this._closeTimer = setTimeout(() => {
       this._closeTimer = null;
@@ -770,7 +776,11 @@ export default class KioskKeyboard extends Control {
     const newPos = start + text.length;
 
     this._setTargetValue(newValue);
-    dom.setSelectionRange(newPos, newPos);
+    try {
+      dom.setSelectionRange(newPos, newPos);
+    } catch {
+      // May throw on certain input types (e.g. type="number")
+    }
   }
 
   private _handleBackspace(): void {
@@ -794,7 +804,11 @@ export default class KioskKeyboard extends Control {
     }
 
     this._setTargetValue(newValue);
-    dom.setSelectionRange(newPos, newPos);
+    try {
+      dom.setSelectionRange(newPos, newPos);
+    } catch {
+      // May throw on certain input types (e.g. type="number")
+    }
   }
 
   private _handleEnter(): void {
@@ -869,14 +883,18 @@ export default class KioskKeyboard extends Control {
         const adjacentRow = dCol > 0 ? currentRow?.nextElementSibling : currentRow?.previousElementSibling;
         if (adjacentRow) {
           const keys = adjacentRow.querySelectorAll(".ui5KioskKey");
-          next = (dCol > 0 ? keys[0] : keys[keys.length - 1]) as HTMLElement | null;
+          if (keys.length > 0) {
+            next = (dCol > 0 ? keys[0] : keys[keys.length - 1]) as HTMLElement;
+          }
         }
       } else if (dRow !== 0) {
         // Vertical fallback: clamp to last key in target row
         const targetRow = this.getDomRef()?.querySelectorAll(".ui5KioskRow")[row];
         if (targetRow) {
           const keys = targetRow.querySelectorAll(".ui5KioskKey");
-          next = keys[Math.min(col, keys.length - 1)] as HTMLElement | null;
+          if (keys.length > 0) {
+            next = keys[Math.min(col, keys.length - 1)] as HTMLElement;
+          }
         }
       }
     }

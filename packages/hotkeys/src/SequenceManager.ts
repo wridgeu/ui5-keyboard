@@ -94,6 +94,7 @@ export default class SequenceManager extends BaseObject {
   private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
   private _lastAltLocation = 0;
+  private _destroyed = false;
 
   private readonly _keydownHandler = this._onKeyDown.bind(this);
 
@@ -188,6 +189,7 @@ export default class SequenceManager extends BaseObject {
   }
 
   destroy(): void {
+    this._destroyed = true;
     document.removeEventListener("keydown", this._keydownHandler, true);
 
     for (const match of this._activeMatches) {
@@ -226,7 +228,7 @@ export default class SequenceManager extends BaseObject {
 
     const activeScope = this._getActiveScope();
     const target = getEventTarget(event);
-    const isInput = target !== null && isInputElement(target);
+    const isInput = isInputElement(target);
 
     // 1. Advance or reset existing active matches
     const newActiveMatches: ActiveMatch[] = [];
@@ -255,6 +257,7 @@ export default class SequenceManager extends BaseObject {
             timerId: -1 as unknown as ReturnType<typeof setTimeout>,
           };
           newMatch.timerId = setTimeout(() => {
+            if (this._destroyed) return;
             this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
           }, reg.timeout);
           newActiveMatches.push(newMatch);
@@ -322,6 +325,7 @@ export default class SequenceManager extends BaseObject {
         timerId: -1 as unknown as ReturnType<typeof setTimeout>,
       };
       newMatch.timerId = setTimeout(() => {
+        if (this._destroyed) return;
         this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
       }, reg.timeout);
       this._activeMatches.push(newMatch);

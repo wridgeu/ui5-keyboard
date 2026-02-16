@@ -84,7 +84,13 @@
           "data": {
             "lastAction": "None",
             "activeScope": "__global__",
-            "platform": ""
+            "platform": "",
+            "saveLabel": "",
+            "escapeLabel": "",
+            "f5Label": "",
+            "navLabel": "",
+            "kioskLastKey": "None",
+            "kioskLayout": "qwerty"
           }
         }
       }

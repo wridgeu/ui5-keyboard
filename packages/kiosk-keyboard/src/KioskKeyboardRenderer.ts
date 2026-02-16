@@ -55,6 +55,19 @@ const KioskKeyboardRenderer = {
       rm.close("div");
     });
 
+    // ARIA live region — announces shift/caps state changes to screen readers
+    rm.openStart("span", `${sId}-liveState`);
+    rm.class("sapUiInvisibleText");
+    rm.attr("role", "status");
+    rm.attr("aria-live", "polite");
+    rm.openEnd();
+    if (bCapsLock) {
+      rm.text("Caps Lock on");
+    } else if (bShift) {
+      rm.text("Shift on");
+    }
+    rm.close("span");
+
     rm.close("div");
   },
 

@@ -70,6 +70,9 @@ export default class Main extends BaseController {
   }
 
   onOpenDialog(): void {
+    // Guard against opening multiple dialogs
+    if (this._dialog) return;
+
     const stateModel = this.getStateModel();
 
     this._dialog = new Dialog({
@@ -156,8 +159,12 @@ export default class Main extends BaseController {
       this._manager.popScope(Scope.Dialog);
     }
 
-    this._dialog?.close();
-    this._dialog?.destroy();
-    this._dialog = null;
+    if (this._dialog) {
+      if (this._dialog.isOpen()) {
+        this._dialog.close();
+      }
+      this._dialog.destroy();
+      this._dialog = null;
+    }
   }
 }

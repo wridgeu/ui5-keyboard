@@ -42,6 +42,10 @@ export const BROWSER_SHORTCUTS: ReadonlyMap<string, string> = new Map([
   ["Meta+N", "New window (Mac)"],
   ["Meta+T", "New tab (Mac)"],
   ["Meta+W", "Close tab (Mac)"],
+  // Additional browser-reserved from ShortcutHelper.js
+  ["Control+Q", "Quit browser (Mac/Linux)"],
+  ["Control+PageUp", "Previous tab"],
+  ["Control+PageDown", "Next tab"],
 ]);
 
 /**
@@ -61,6 +65,10 @@ export const SAP_SHORTCUTS: ReadonlyMap<string, string> = new Map([
   ["Meta+S", "Save (Fiori, Mac)"],
   ["Meta+E", "Edit (Fiori, Mac)"],
   ["Meta+D", "Delete (Fiori, Mac)"],
+  // UI5 technical tool shortcuts (ShortcutHelper.js mDisallowedShortcuts)
+  ["Control+Alt+Shift+P", "UI5 Technical Information"],
+  ["Control+Alt+Shift+S", "UI5 Support Tool"],
+  ["Control+Alt+Shift+T", "UI5 Test Recorder"],
 ]);
 
 /**
