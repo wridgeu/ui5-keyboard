@@ -175,7 +175,7 @@ export function assertValidHotkey(hotkey: string, platform?: Platform): string {
   if (!result.valid) {
     throw new Error(`Invalid hotkey "${hotkey}": ${result.errors.join("; ")}`);
   }
-  // normalizedHotkey is always set when valid===true (see validateHotkey return at line 154)
+  // normalizedHotkey is always set when valid===true (see validateHotkey return at line 162)
   return result.normalizedHotkey as string;
 }
 

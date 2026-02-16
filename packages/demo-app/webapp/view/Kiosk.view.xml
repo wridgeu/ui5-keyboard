@@ -2,13 +2,12 @@
     controllerName="demo.hotkeys.controller.Kiosk"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:kiosk="ui5.kiosk"
-    xmlns:l="sap.ui.layout">
+    xmlns:kiosk="ui5.kiosk">
     <Page title="Kiosk Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
         <content>
             <Panel headerText="Docked Keyboard (tap any input)" class="sapUiMediumMargin">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="Tap an input field below. The keyboard slides up from the bottom of the screen." />
+                    <Text text="Tap an input field below. The keyboard slides up and auto-detects numpad for Number/Tel inputs." />
                     <Label text="Full Name" labelFor="nameInput" class="sapUiSmallMarginTop" />
                     <Input
                         id="nameInput"
@@ -18,6 +17,18 @@
                     <Input
                         id="emailInput"
                         placeholder="john@example.com"
+                        width="100%" />
+                    <Label text="Age" labelFor="ageInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="ageInput"
+                        type="Number"
+                        placeholder="25"
+                        width="100%" />
+                    <Label text="Phone" labelFor="phoneInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="phoneInput"
+                        type="Tel"
+                        placeholder="+49 123 456789"
                         width="100%" />
                     <Label text="Notes" labelFor="notesInput" class="sapUiSmallMarginTop" />
                     <TextArea
@@ -63,6 +74,7 @@
                 id="dockedKeyboard"
                 docked="true"
                 autoShow="true"
+                autoType="true"
                 keyPress=".onKeyPress"
                 layoutChange=".onLayoutChange" />
         </content>

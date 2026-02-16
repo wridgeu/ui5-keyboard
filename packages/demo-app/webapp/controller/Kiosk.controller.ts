@@ -31,6 +31,8 @@ export default class Kiosk extends BaseController {
     this.getStateModel().setProperty("/kioskLayout", layout);
   }
 
+  onExit(): void {}
+
   onNavBack(): void {
     this.getTypedComponent().getRouter().navTo(Scope.Main);
   }

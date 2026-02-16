@@ -18,13 +18,13 @@ function getDom(kb: KioskKeyboard): HTMLElement {
 }
 
 function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
-  const start = new Event("saptouchstart", { bubbles: true });
+  const start = new Event("touchstart", { bubbles: true });
   Object.defineProperty(start, "target", { value: el, writable: false });
-  kb.onsaptouchstart(start);
+  kb.ontouchstart(start);
 
-  const end = new Event("saptouchend", { bubbles: true });
+  const end = new Event("touchend", { bubbles: true });
   Object.defineProperty(end, "target", { value: el, writable: false });
-  kb.onsaptouchend(end);
+  kb.ontouchend(end);
 }
 
 // ──────────────────────────────────────────────
@@ -267,12 +267,12 @@ QUnit.test("Shift key gets active class when shift is toggled", async (assert) =
 
   // Toggle shift
   const shiftEl = dom.querySelector<HTMLElement>('[data-key="{shift}"]')!;
-  const start = new Event("saptouchstart", { bubbles: true });
+  const start = new Event("touchstart", { bubbles: true });
   Object.defineProperty(start, "target", { value: shiftEl, writable: false });
-  kb.onsaptouchstart(start);
-  const end = new Event("saptouchend", { bubbles: true });
+  kb.ontouchstart(start);
+  const end = new Event("touchend", { bubbles: true });
   Object.defineProperty(end, "target", { value: shiftEl, writable: false });
-  kb.onsaptouchend(end);
+  kb.ontouchend(end);
 
   await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
 
@@ -298,12 +298,12 @@ QUnit.test("Key labels show lowercase by default, uppercase when shifted", async
 
   // Activate shift
   const shiftEl = dom.querySelector<HTMLElement>('[data-key="{shift}"]')!;
-  const start = new Event("saptouchstart", { bubbles: true });
+  const start = new Event("touchstart", { bubbles: true });
   Object.defineProperty(start, "target", { value: shiftEl, writable: false });
-  kb.onsaptouchstart(start);
-  const end = new Event("saptouchend", { bubbles: true });
+  kb.ontouchstart(start);
+  const end = new Event("touchend", { bubbles: true });
   Object.defineProperty(end, "target", { value: shiftEl, writable: false });
-  kb.onsaptouchend(end);
+  kb.ontouchend(end);
 
   await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
 
@@ -324,12 +324,12 @@ QUnit.test("Number keys show shift symbols when shifted", async (assert) => {
 
   // Activate shift
   const shiftEl = dom.querySelector<HTMLElement>('[data-key="{shift}"]')!;
-  const start = new Event("saptouchstart", { bubbles: true });
+  const start = new Event("touchstart", { bubbles: true });
   Object.defineProperty(start, "target", { value: shiftEl, writable: false });
-  kb.onsaptouchstart(start);
-  const end = new Event("saptouchend", { bubbles: true });
+  kb.ontouchstart(start);
+  const end = new Event("touchend", { bubbles: true });
   Object.defineProperty(end, "target", { value: shiftEl, writable: false });
-  kb.onsaptouchend(end);
+  kb.ontouchend(end);
 
   await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
 

@@ -223,12 +223,12 @@ The `_handleMouseToTouchEvent()` function constructs synthetic touch objects wit
 | `touchend`         | `mouseup` + `click` (if no significant movement)                   |
 | `touchcancel`      | `mouseup`                                                          |
 
-### Why KioskKeyboard Uses onsaptouchstart / onsaptouchend
+### Why KioskKeyboard Uses ontouchstart / ontouchend
 
-1. **Unified mouse+touch**: Fires for both input types without dual handlers
+1. **Unified mouse+touch**: EventSimulation ensures these fire for both input types without dual handlers
 2. **Proper UI5 integration**: Works with UIArea event delegation
 3. **No pointerdown preventDefault trap**: `preventDefault()` on `pointerdown` suppresses ALL compatibility mouse events per the Pointer Events spec, breaking jQuery's `tap` → `vmousedown` → `ontap` chain
-4. **Framework-blessed**: Used by UI5 core controls (e.g., `sap.m.RatingIndicator`)
+4. **Framework-blessed**: The standard pattern used by all `sap.m` controls (Button, Slider, Switch, ListItemBase, etc.)
 
 ### What NOT to do
 
@@ -240,9 +240,9 @@ this.attachBrowserEvent("pointerdown", handler);
 ontouchstart(e) { handle(e); }
 onmousedown(e) { handle(e); }  // Fires TWICE on touch devices
 
-// GOOD: Unified approach
-onsaptouchstart(e) { handle(e); }  // Works for both mouse and touch
-onsaptouchend(e) { handle(e); }
+// GOOD: Unified approach (same as sap.m controls)
+ontouchstart(e) { handle(e); }  // Works for both mouse and touch via EventSimulation
+ontouchend(e) { handle(e); }
 ```
 
 ---
@@ -467,7 +467,7 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### Rules for Control Developers
 
-1. **Do NOT implement both `onmouse*` and `ontouch*`** — use `onsaptouchstart`/`onsaptouchend` instead
+1. **Do NOT implement both `onmouse*` and `ontouch*`** — use `ontouchstart`/`ontouchend` instead (EventSimulation handles both)
 2. For explicit `addEventListener()` registrations, check the delayed mouse event marker:
    ```js
    if (oEvent.isMarked("delayedMouseEvent")) return; // Skip emulated event
@@ -492,13 +492,13 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### KioskKeyboard (`ui5.kiosk`)
 
-| Aspect                            | Status                      | Notes                                                                          |
-| --------------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
-| `onsaptouchstart`/`onsaptouchend` | **Correct, not deprecated** | Unified mouse+touch via EventSimulation, proper UI5 pattern                    |
-| `apiVersion: 4` renderer          | **Correct**                 | Semantic rendering — output depends only on control's own properties and state |
-| Focus handling                    | **Correct**                 | Implements `getFocusInfo()`/`applyFocusInfo()`                                 |
-| Roving tabindex                   | **Correct**                 | Custom impl (not ItemNavigation) — appropriate for variable-width rows         |
-| F6 group                          | **Correct**                 | Renderer sets `data-sap-ui-fastnavgroup="true"` on the root element            |
+| Aspect                      | Status                      | Notes                                                                          |
+| --------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
+| `ontouchstart`/`ontouchend` | **Correct, not deprecated** | Unified mouse+touch via EventSimulation, matches sap.m control pattern         |
+| `apiVersion: 4` renderer    | **Correct**                 | Semantic rendering — output depends only on control's own properties and state |
+| Focus handling              | **Correct**                 | Implements `getFocusInfo()`/`applyFocusInfo()`                                 |
+| Roving tabindex             | **Correct**                 | Custom impl (not ItemNavigation) — appropriate for variable-width rows         |
+| F6 group                    | **Correct**                 | Renderer sets `data-sap-ui-fastnavgroup="true"` on the root element            |
 
 ### Deprecated API Avoidance (OpenUI5 2.x readiness)
 

@@ -1,5 +1,5 @@
 import Event from "sap/ui/base/Event";
-import { KeyboardType } from "ui5/kiosk/library";
+import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 import Control from "sap/ui/core/Control";
 import { PropertyBindingInfo } from "sap/ui/base/ManagedObject";
 import { $ControlSettings } from "sap/ui/core/Control";
@@ -44,6 +44,20 @@ declare module "./KioskKeyboard" {
         focus leaves. Requires `docked="true"`.
          */
     autoShow?: boolean | PropertyBindingInfo | `{${string}}`;
+
+    /**
+         * When true and autoShow is active, the keyboard inspects the
+        focused input's type metadata and automatically switches between
+        Full and Numpad keyboard types.
+         */
+    autoType?: boolean | PropertyBindingInfo | `{${string}}`;
+
+    /**
+         * Controls native keyboard behavior on mobile/touch devices.
+        "Custom" always uses this keyboard, "Native" defers to native
+        on mobile, "Auto" auto-detects.
+         */
+    mobileKeyboard?: MobileKeyboard | PropertyBindingInfo | `{${string}}`;
 
     /**
          * List of input control IDs to target. When set, attaches focus
@@ -240,6 +254,53 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
     setAutoShow(autoShow: boolean): this;
+
+    // property: autoType
+
+    /**
+     * Gets current value of property "autoType".
+     *
+     * When true and autoShow is active, the keyboard inspects the focused input's
+     * type metadata and automatically switches between Full and Numpad keyboard types.
+     *
+     * Default value is: false
+     * @returns Value of property "autoType"
+     */
+    getAutoType(): boolean;
+
+    /**
+     * Sets a new value for property "autoType".
+     *
+     * When called with a value of "null" or "undefined", the default value of the property will be restored.
+     *
+     * Default value is: false
+     * @param [autoType=false] New value for property "autoType"
+     * @returns Reference to "this" in order to allow method chaining
+     */
+    setAutoType(autoType: boolean): this;
+
+    // property: mobileKeyboard
+
+    /**
+     * Gets current value of property "mobileKeyboard".
+     *
+     * Controls native keyboard behavior on mobile/touch devices.
+     *
+     * Default value is: "Custom"
+     * @returns Value of property "mobileKeyboard"
+     */
+    getMobileKeyboard(): MobileKeyboard;
+
+    /**
+     * Sets a new value for property "mobileKeyboard".
+     *
+     * When called with a value of "null" or "undefined", the default value of the property will be restored.
+     *
+     * Default value is: "Custom"
+     * @param [mobileKeyboard="Custom"] New value for property "mobileKeyboard"
+     * @returns Reference to "this" in order to allow method chaining
+     */
+    setMobileKeyboard(mobileKeyboard: MobileKeyboard): this;
 
     // property: inputIds
 

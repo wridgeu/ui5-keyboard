@@ -286,6 +286,15 @@ export default class HotkeyManager extends BaseObject {
       throw new Error("Cannot pop the global scope");
     }
 
+    if (scopeId === undefined) {
+      Log.debug(
+        `popScope() called without scopeId — popping "${this._scopeStack[this._scopeStack.length - 1]}". ` +
+          "Pass the scope name explicitly to catch mismatched push/pop pairs.",
+        undefined,
+        LOG_COMPONENT,
+      );
+    }
+
     const top = this._scopeStack[this._scopeStack.length - 1];
     if (scopeId !== undefined && top !== scopeId) {
       throw new Error(`Scope mismatch: expected "${scopeId}" but top of stack is "${top}"`);

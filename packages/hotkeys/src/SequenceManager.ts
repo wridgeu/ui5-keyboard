@@ -73,7 +73,7 @@ interface SequenceRegistration {
 interface ActiveMatch {
   registration: SequenceRegistration;
   stepIndex: number;
-  timerId: ReturnType<typeof setTimeout>;
+  timerId: ReturnType<typeof setTimeout> | null;
 }
 
 /**
@@ -166,7 +166,9 @@ export default class SequenceManager extends BaseObject {
         this._registrations.delete(id);
         // Clear any active matches for this registration
         this._activeMatches = this._activeMatches.filter((m) => {
-          if (m.registration.id === id) clearTimeout(m.timerId);
+          if (m.registration.id === id) {
+            if (m.timerId !== null) clearTimeout(m.timerId);
+          }
           return m.registration.id !== id;
         });
         Log.debug(`Unregistered sequence (id: ${id})`, undefined, LOG_COMPONENT);
@@ -193,7 +195,7 @@ export default class SequenceManager extends BaseObject {
     document.removeEventListener("keydown", this._keydownHandler, true);
 
     for (const match of this._activeMatches) {
-      clearTimeout(match.timerId);
+      if (match.timerId !== null) clearTimeout(match.timerId);
     }
     this._activeMatches = [];
     this._registrations.clear();
@@ -235,7 +237,7 @@ export default class SequenceManager extends BaseObject {
     let fullMatch: { registration: SequenceRegistration; event: KeyboardEvent } | null = null;
 
     for (const match of this._activeMatches) {
-      clearTimeout(match.timerId);
+      if (match.timerId !== null) clearTimeout(match.timerId);
 
       const reg = match.registration;
 
@@ -254,7 +256,7 @@ export default class SequenceManager extends BaseObject {
           const newMatch: ActiveMatch = {
             registration: reg,
             stepIndex: match.stepIndex + 1,
-            timerId: -1 as unknown as ReturnType<typeof setTimeout>,
+            timerId: null,
           };
           newMatch.timerId = setTimeout(() => {
             if (this._destroyed) return;
@@ -271,7 +273,7 @@ export default class SequenceManager extends BaseObject {
     // If we got a full match, fire it and clear all tracking
     if (fullMatch) {
       for (const m of this._activeMatches) {
-        clearTimeout(m.timerId);
+        if (m.timerId !== null) clearTimeout(m.timerId);
       }
       this._activeMatches = [];
 

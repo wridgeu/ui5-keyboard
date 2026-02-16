@@ -2,6 +2,8 @@ import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
+import Device from "sap/ui/Device";
+import Localization from "sap/base/i18n/Localization";
 import { DEFAULT_LAYOUT, SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
 import layouts from "./layouts/index";
@@ -52,6 +54,9 @@ export default class KioskKeyboard extends Control {
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
   declare private _baseLayout: string;
+  declare private _keyboardTypeExplicit: boolean;
+  declare private _originalInputMode: string | null;
+  declare private _suppressedInputEl: HTMLInputElement | HTMLTextAreaElement | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -105,6 +110,29 @@ export default class KioskKeyboard extends Control {
         group: "Behavior",
       },
       /**
+       * When true and autoShow is active, the keyboard inspects the
+       * focused input's type metadata and automatically switches between
+       * Full and Numpad keyboard types. Has no effect when keyboardType
+       * is set explicitly.
+       */
+      autoType: {
+        type: "boolean",
+        defaultValue: false,
+        group: "Behavior",
+      },
+      /**
+       * Controls native keyboard behavior on mobile/touch devices.
+       * "Custom" (default) always uses this keyboard and suppresses
+       * the native one. "Native" defers to the native keyboard on
+       * phones and tablets. "Auto" uses custom on desktop, native
+       * on mobile.
+       */
+      mobileKeyboard: {
+        type: "ui5.kiosk.MobileKeyboard",
+        defaultValue: "Custom",
+        group: "Behavior",
+      },
+      /**
        * List of input control IDs to target. When set, attaches focus
        * delegation to each resolved control so the keyboard auto-targets
        * whichever input last received focus.
@@ -146,6 +174,9 @@ export default class KioskKeyboard extends Control {
   /** Built-in layout names that cannot be overwritten by registerLayout. */
   private static readonly _BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(Object.keys(layouts));
 
+  /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
+  private static readonly _instances = new Set<KioskKeyboard>();
+
   /**
    * Registers a custom keyboard layout that can then be used via
    * `setLayout(name)` or declaratively as `layout="name"` in XML views.
@@ -168,6 +199,25 @@ export default class KioskKeyboard extends Control {
       );
       return;
     }
+
+    if (
+      !Array.isArray(oDefinition) ||
+      oDefinition.length === 0 ||
+      !oDefinition.every(
+        (row) =>
+          Array.isArray(row) &&
+          row.length > 0 &&
+          row.every((key) => key !== null && typeof key === "object" && typeof key.value === "string"),
+      )
+    ) {
+      Log.warning(
+        `Invalid layout "${sName}": must be a non-empty array of non-empty rows where each key has a string "value".`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+      return;
+    }
+
     layouts[sName] = oDefinition;
   }
 
@@ -205,7 +255,77 @@ export default class KioskKeyboard extends Control {
     return KioskKeyboard._BUILTIN_LAYOUTS.has(sName);
   }
 
+  // ──────────────────────────────────────────────
+  // Locale → Layout Mapping
+  // ──────────────────────────────────────────────
+
+  /** BCP-47 language prefix → layout name. Checked after exact match. */
+  private static _LOCALE_LAYOUT_MAP: Record<string, string> = {
+    de: "qwertz-de",
+  };
+
+  /**
+   * Registers a mapping from a BCP-47 language tag (or prefix) to a
+   * layout name. When no explicit `layout` is provided, the keyboard
+   * uses this map to select a locale-appropriate default.
+   *
+   * @param sLocale Language tag or prefix (e.g. "fr", "es", "pt-br")
+   * @param sLayout Layout name (must be registered via `registerLayout`)
+   * @public
+   * @static
+   */
+  static registerLocaleLayout(sLocale: string, sLayout: string): void {
+    KioskKeyboard._LOCALE_LAYOUT_MAP[sLocale.toLowerCase()] = sLayout;
+  }
+
+  /**
+   * Returns the layout name appropriate for the current UI5 locale.
+   *
+   * Resolution order:
+   * 1. Exact BCP-47 match (e.g. "de-at")
+   * 2. Language prefix (e.g. "de")
+   * 3. {@link DEFAULT_LAYOUT} fallback ("qwerty")
+   *
+   * Uses `sap/base/i18n/Localization.getLanguageTag()` which already
+   * resolves from all UI5 language sources (URL params, bootstrap
+   * config, browser settings).
+   *
+   * @public
+   * @static
+   */
+  static getLocaleLayout(): string {
+    const tag = Localization.getLanguageTag();
+    const lang = tag.language; // lowercase ISO639, e.g. "de"
+    const region = tag.region; // uppercase ISO3166 or null, e.g. "AT"
+
+    const map = KioskKeyboard._LOCALE_LAYOUT_MAP;
+
+    // Exact match: "de-at", "pt-br", etc.
+    if (region) {
+      const exact = map[`${lang}-${region.toLowerCase()}`];
+      if (exact) return exact;
+    }
+
+    // Language prefix: "de", "fr", etc.
+    const prefix = map[lang];
+    if (prefix) return prefix;
+
+    return DEFAULT_LAYOUT;
+  }
+
+  /**
+   * Injects the locale-detected layout when no explicit `layout` was
+   * provided in the constructor settings.
+   */
+  applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
+    if (mSettings && !("layout" in mSettings)) {
+      mSettings.layout = KioskKeyboard.getLocaleLayout();
+    }
+    return super.applySettings(mSettings, oScope);
+  }
+
   init(): void {
+    KioskKeyboard._instances.add(this);
     this._shiftActive = false;
     this._capsLock = false;
     this._lastFocusedKeyId = null;
@@ -230,6 +350,9 @@ export default class KioskKeyboard extends Control {
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
     this._baseLayout = DEFAULT_LAYOUT;
+    this._keyboardTypeExplicit = false;
+    this._originalInputMode = null;
+    this._suppressedInputEl = null;
   }
 
   onAfterRendering(): void {
@@ -249,9 +372,11 @@ export default class KioskKeyboard extends Control {
   }
 
   exit(): void {
+    KioskKeyboard._instances.delete(this);
     this.disableAutoShow();
     this._teardownInputIds();
     this._removeHighlightDelegation();
+    this._restoreNativeKeyboard();
     if (this._closeTimer) {
       clearTimeout(this._closeTimer);
       this._closeTimer = null;
@@ -311,6 +436,15 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Custom setter for keyboardType — marks the type as explicitly set,
+   * which disables auto-type detection.
+   */
+  setKeyboardType(sType: string): this {
+    this._keyboardTypeExplicit = true;
+    return this.setProperty("keyboardType", sType);
+  }
+
+  /**
    * Custom setter for docked — manages CSS on the existing DOM
    * rather than re-rendering (which would disrupt transitions).
    */
@@ -325,6 +459,7 @@ export default class KioskKeyboard extends Control {
   show(): this {
     if (this._open) return this;
     this._open = true;
+    this._suppressNativeKeyboard();
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.remove("ui5KioskKeyboard--closed");
@@ -337,6 +472,7 @@ export default class KioskKeyboard extends Control {
   close(): this {
     if (!this._open) return this;
     this._open = false;
+    this._restoreNativeKeyboard();
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.add("ui5KioskKeyboard--closed");
@@ -484,7 +620,8 @@ export default class KioskKeyboard extends Control {
     const kbType = this.getKeyboardType();
     if (kbType === "Numpad") return layouts.numpad;
     if (kbType === "Numeric") return layouts.numeric;
-    return layouts[this.getLayout()] ?? layouts[DEFAULT_LAYOUT];
+    const name = this.getLayout();
+    return layouts[name] ?? layouts[name.toLowerCase()] ?? layouts[DEFAULT_LAYOUT];
   }
 
   /** The display label for a key (may be empty for icon-only keys). */
@@ -522,13 +659,13 @@ export default class KioskKeyboard extends Control {
   /**
    * Prevents focus from leaving the target input when a key is pressed.
    *
-   * Uses UI5's unified saptouchstart (fires for both mouse and touch)
+   * Uses UI5's EventSimulation touchstart (fires for both mouse and touch)
    * instead of raw pointerdown. preventDefault() on the underlying
    * mousedown/touchstart prevents focus transfer to the key div without
    * suppressing the click/tap chain — unlike pointerdown's preventDefault()
    * which suppresses all compatibility mouse events per the Pointer Events spec.
    */
-  onsaptouchstart(event: Event): void {
+  ontouchstart(event: Event): void {
     const el = (event.target as HTMLElement).closest(".ui5KioskKey") as HTMLElement | null;
     if (el) {
       event.preventDefault();
@@ -545,7 +682,7 @@ export default class KioskKeyboard extends Control {
    * fire because pointerdown's preventDefault() suppressed the click
    * event that jQuery's tap plugin depends on.
    */
-  onsaptouchend(event: Event): void {
+  ontouchend(event: Event): void {
     const pressed = this._pressedKeyEl;
     this._pressedKeyEl = null;
     if (pressed) {
@@ -618,6 +755,14 @@ export default class KioskKeyboard extends Control {
   // Private — Auto-show
   // ──────────────────────────────────────────────
 
+  /** Returns true if any other KioskKeyboard instance already targets this input. */
+  private static _isTargetOfOther(self: KioskKeyboard, inputId: string): boolean {
+    for (const other of KioskKeyboard._instances) {
+      if (other !== self && other.getTargetInput() === inputId) return true;
+    }
+    return false;
+  }
+
   private _onDocumentFocusIn(event: FocusEvent): void {
     if (!this.getDocked() || !this.getEnabled()) return;
 
@@ -629,18 +774,34 @@ export default class KioskKeyboard extends Control {
 
     // Check if focus went to an input/textarea
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      // Feature 3: defer to native keyboard on mobile
+      if (this._shouldDeferToNative()) return;
+
+      // Resolve the UI5 control that owns this DOM element
+      const ui5Control = Element.closestTo(target);
+
+      // Skip if this input is already targeted by another keyboard instance.
+      // Check BEFORE cancelling the close timer so the keyboard still closes
+      // normally when focus moves from an unclaimed input to a claimed one.
+      if (ui5Control instanceof Control && KioskKeyboard._isTargetOfOther(this, ui5Control.getId())) return;
+
       // Cancel any pending close
       if (this._closeTimer) {
         clearTimeout(this._closeTimer);
         this._closeTimer = null;
       }
 
-      // Resolve the UI5 control that owns this DOM element
-      const ui5Control = Element.closestTo(target);
       if (ui5Control instanceof Control) {
         this.setTargetInput(ui5Control);
+
+        // Feature 2: auto-detect keyboard type from input metadata
+        if (this.getAutoType() && !this._keyboardTypeExplicit) {
+          const detected = this._detectKeyboardType(ui5Control);
+          this.setProperty("keyboardType", detected);
+        }
       }
-      this.show();
+
+      this.show(); // show() calls _suppressNativeKeyboard() internally
     }
   }
 
@@ -931,5 +1092,105 @@ export default class KioskKeyboard extends Control {
     const prev = Element.getElementById(this._highlightTargetId);
     if (prev) prev.removeEventDelegate(this._keyHighlightDelegation);
     this._highlightTargetId = null;
+  }
+
+  // ──────────────────────────────────────────────
+  // Private — Auto-type detection (Feature 2)
+  // ──────────────────────────────────────────────
+
+  /** Numeric input types that map to Numpad keyboard. */
+  private static readonly _NUMPAD_CONTROL_TYPES: ReadonlySet<string> = new Set(["Number", "Tel"]);
+  private static readonly _NUMPAD_CONTROL_NAMES: ReadonlySet<string> = new Set(["sap.m.StepInput"]);
+  private static readonly _NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "tel"]);
+  private static readonly _NUMPAD_HTML_TYPES: ReadonlySet<string> = new Set(["number", "tel"]);
+
+  /**
+   * Detects whether the target control should use a Numpad or Full
+   * keyboard type. Checks UI5 control type, control name, DOM
+   * inputmode, and HTML type in order.
+   */
+  private _detectKeyboardType(control: Control): string {
+    // 1. UI5 getType() — e.g. sap.m.Input type="Number"
+    const ctrl = control as unknown as Record<string, unknown>;
+    if (typeof ctrl.getType === "function") {
+      const type = ctrl.getType() as string;
+      if (KioskKeyboard._NUMPAD_CONTROL_TYPES.has(type)) return "Numpad";
+    }
+
+    // 2. Control name — e.g. sap.m.StepInput
+    const name = control.getMetadata().getName();
+    if (KioskKeyboard._NUMPAD_CONTROL_NAMES.has(name)) return "Numpad";
+
+    // 3. DOM inputmode attribute
+    const dom = control.getFocusDomRef();
+    if (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) {
+      const inputmode = dom.getAttribute("inputmode");
+      if (inputmode && KioskKeyboard._NUMPAD_INPUT_MODES.has(inputmode)) return "Numpad";
+
+      // 4. HTML type attribute
+      if (dom instanceof HTMLInputElement && KioskKeyboard._NUMPAD_HTML_TYPES.has(dom.type)) {
+        return "Numpad";
+      }
+    }
+
+    return "Full";
+  }
+
+  // ──────────────────────────────────────────────
+  // Private — Mobile detection (Feature 3)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Returns true when the native keyboard should be used instead of
+   * this control. Checks the `mobileKeyboard` property against
+   * the current device type.
+   */
+  private _shouldDeferToNative(): boolean {
+    const mode = this.getMobileKeyboard();
+    if (mode === "Custom") return false;
+    // "Native" and "Auto" both check device type
+    return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
+  }
+
+  /**
+   * Suppresses the native virtual keyboard by setting
+   * `inputmode="none"` on the target input's DOM element.
+   */
+  private _suppressNativeKeyboard(): void {
+    if (this._shouldDeferToNative()) return;
+
+    const el = this._getTargetElement();
+    if (!el) return;
+
+    const dom = el.getFocusDomRef();
+    if (!(dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement)) return;
+
+    // Already suppressing this element
+    if (this._suppressedInputEl === dom) return;
+
+    // Restore previous if different
+    this._restoreNativeKeyboard();
+
+    this._originalInputMode = dom.getAttribute("inputmode");
+    this._suppressedInputEl = dom;
+    dom.setAttribute("inputmode", "none");
+  }
+
+  /**
+   * Restores the original `inputmode` on the previously suppressed
+   * input element.
+   */
+  private _restoreNativeKeyboard(): void {
+    const dom = this._suppressedInputEl;
+    if (!dom) return;
+
+    if (this._originalInputMode !== null) {
+      dom.setAttribute("inputmode", this._originalInputMode);
+    } else {
+      dom.removeAttribute("inputmode");
+    }
+
+    this._originalInputMode = null;
+    this._suppressedInputEl = null;
   }
 }
