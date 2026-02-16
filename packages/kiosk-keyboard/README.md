@@ -217,6 +217,14 @@ The `keyboardType` property provides a shortcut for common configurations:
 - **`Numeric`** — renders the numeric layout regardless of the `layout` property
 - **`Numpad`** — renders the numpad layout regardless of the `layout` property
 
+### Consistent Height Across Layouts
+
+When using a `Full` keyboard type in **embedded/inline** or **Popover** scenarios, the keyboard maintains a consistent height across all layout switches. Switching from QWERTY (5 rows) to numeric (4 rows) does not shrink the keyboard — the rows expand to fill the available space, providing larger touch targets and preventing layout shifts.
+
+In **docked mode**, consistent height is deliberately disabled so the keyboard shrinks to fit the current layout, minimising the screen area it occupies.
+
+> **Popover note**: `sap.m.Popover` closes automatically when its content height changes during a resize event on scrollable pages (due to a coordinate-system mismatch in `_applyPosition`). The consistent-height behavior prevents this by ensuring layout switches never change the keyboard's outer dimensions. See [`docs/KNOWN-ISSUES.md`](../../docs/KNOWN-ISSUES.md) for details.
+
 ### Custom Layouts
 
 Layouts are arrays of rows, where each row is an array of `KeyDefinition` objects:

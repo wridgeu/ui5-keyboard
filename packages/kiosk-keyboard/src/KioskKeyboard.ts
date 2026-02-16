@@ -58,6 +58,7 @@ export default class KioskKeyboard extends Control {
   declare private _keyboardTypeExplicit: boolean;
   declare private _originalInputMode: string | null;
   declare private _suppressedInputEl: HTMLInputElement | HTMLTextAreaElement | null;
+  declare private _maxHeight: number;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -357,6 +358,7 @@ export default class KioskKeyboard extends Control {
     this._keyboardTypeExplicit = false;
     this._originalInputMode = null;
     this._suppressedInputEl = null;
+    this._maxHeight = 0;
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -369,16 +371,34 @@ export default class KioskKeyboard extends Control {
   }
 
   onAfterRendering(): void {
+    const dom = this.getDomRef();
+
     if (this.getDocked()) {
       // Sync the open/closed CSS class (renderer sets initial state,
       // but show()/close() bypass re-render for smooth animation)
-      this.getDomRef()?.classList.toggle("ui5KioskKeyboard--closed", !this._open);
+      dom?.classList.toggle("ui5KioskKeyboard--closed", !this._open);
 
       // Activate auto-show listeners if the property was set declaratively
       // (e.g. via XML) before the control was rendered.
       if (this.getAutoShow() && !this._autoShowActive) {
         this.enableAutoShow();
       }
+    }
+
+    // Maintain consistent height across layout switches for non-docked
+    // Full keyboards.  This prevents layout shifts in embedded/inline
+    // scenarios and works around a sap.m.Popover bug where content-height
+    // changes during a resize event trigger a spurious off-screen check
+    // that closes the Popover on scrolled pages.
+    // Docked keyboards are excluded: they pin to the viewport edge so
+    // minimising their footprint is more valuable than preventing shifts.
+    if (dom && this.getKeyboardType() === "Full" && !this.getDocked()) {
+      const el = dom as HTMLElement;
+      const h = el.getBoundingClientRect().height;
+      if (h > (this._maxHeight || 0)) {
+        this._maxHeight = h;
+      }
+      el.style.minHeight = `${this._maxHeight}px`;
     }
 
     this._setupInputIds();
@@ -671,7 +691,7 @@ export default class KioskKeyboard extends Control {
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
     const base = entry ? KioskKeyboard._getText(entry[0], entry[1]) : (key.label ?? key.value);
     if (!base) return "";
-    return shift && key.value.length === 1 ? base.toUpperCase() : base;
+    return shift && !entry && key.value.length === 1 ? base.toUpperCase() : base;
   }
 
   /**
