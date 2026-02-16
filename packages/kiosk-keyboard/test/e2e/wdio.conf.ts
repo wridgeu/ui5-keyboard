@@ -3,6 +3,10 @@ import path from "node:path";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
+const headless = !process.env.HEADED && !process.argv.includes("--headed");
+const chromeArgs = ["--window-size=1440,900", "--disable-gpu", "--no-sandbox"];
+if (headless) chromeArgs.unshift("--headless=new");
+
 export const config: WebdriverIO.Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
@@ -15,7 +19,7 @@ export const config: WebdriverIO.Config = {
     {
       browserName: "chrome",
       "goog:chromeOptions": {
-        args: ["--headless=new", "--window-size=1440,900", "--disable-gpu", "--no-sandbox"],
+        args: chromeArgs,
       },
     },
   ],
