@@ -1,6 +1,6 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
-// Side-effect import: ensures Lib.init() runs when this module is loaded (required for lazy library loading)
+// Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
 import HotkeyManager from "./HotkeyManager";
 import { GLOBAL_SCOPE } from "./constants";
@@ -324,7 +324,7 @@ export default class SequenceManager extends BaseObject {
       const newMatch: ActiveMatch = {
         registration: reg,
         stepIndex: 1,
-        timerId: -1 as unknown as ReturnType<typeof setTimeout>,
+        timerId: null,
       };
       newMatch.timerId = setTimeout(() => {
         if (this._destroyed) return;

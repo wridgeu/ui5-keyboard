@@ -1,7 +1,7 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
-// Side-effect import: ensures Lib.init() runs when this module is loaded (required for lazy library loading)
+// Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
@@ -134,13 +134,13 @@ export default class HotkeyManager extends BaseObject {
   // Optional callback for unhandled key events
   private _unhandledCallback: UnhandledCallback | null = null;
 
-  // Debug mode (Feature 3)
+  // Debug mode
   private _debugMode = false;
 
-  // AltGr detection (Feature 5) — tracks location of last Alt keydown
+  // AltGr detection — tracks location of last Alt keydown
   private _lastAltLocation = 0;
 
-  // Target element listeners (Feature 13) — ref-counted per EventTarget
+  // Target element listeners — ref-counted per EventTarget
   private _targetListeners: Map<EventTarget, { handler: EventListener; count: number }> = new Map();
 
   /**
@@ -185,7 +185,6 @@ export default class HotkeyManager extends BaseObject {
     // Conflict detection within the same scope
     this._handleConflict(normalizedHotkey, resolved.scope, resolved.conflictBehavior);
 
-    // Validation warnings (Feature 8)
     this._logValidationWarnings(normalizedHotkey);
 
     const registration: HotkeyRegistration = {
@@ -199,7 +198,7 @@ export default class HotkeyManager extends BaseObject {
 
     this._registrations.set(id, registration);
 
-    // Attach target listener if needed (Feature 13)
+    // Attach target listener if needed
     if (resolved.target) {
       this._attachTargetListener(resolved.target);
     }
@@ -223,7 +222,7 @@ export default class HotkeyManager extends BaseObject {
         if (!active) return;
         active = false;
 
-        // Detach target listener if needed (Feature 13)
+        // Detach target listener if needed
         if (registration.options.target) {
           this._detachTargetListener(registration.options.target);
         }
@@ -450,7 +449,7 @@ export default class HotkeyManager extends BaseObject {
   }
 
   // ──────────────────────────────────────────────
-  // Debug mode (Feature 3)
+  // Debug mode
   // ──────────────────────────────────────────────
 
   /**
@@ -492,7 +491,7 @@ export default class HotkeyManager extends BaseObject {
 
     this._detachListeners();
 
-    // Clean up all target listeners (Feature 13)
+    // Clean up all target listeners
     for (const [target, entry] of this._targetListeners) {
       target.removeEventListener("keydown", entry.handler, true);
     }
@@ -565,7 +564,7 @@ export default class HotkeyManager extends BaseObject {
       this._findMatch(event, isInput, dialogOpen, activeScope, targetElement, skipInfo, debugSkips) ??
       this._findMatch(event, isInput, dialogOpen, GLOBAL_SCOPE, targetElement, skipInfo, debugSkips);
 
-    // Debug logging (Feature 3)
+    // Debug logging
     if (this._debugMode) {
       this._logDebugEvent(event, activeScope, isInput, dialogOpen, matched, debugSkips);
     }
@@ -633,7 +632,7 @@ export default class HotkeyManager extends BaseObject {
       // Must match the target scope exactly
       if (opts.scope !== targetScope) continue;
 
-      // Target element filter (Feature 13)
+      // Target element filter
       if (targetElement !== null) {
         // Target-scoped query: only match registrations bound to this target
         if (opts.target !== targetElement) continue;
@@ -698,7 +697,7 @@ export default class HotkeyManager extends BaseObject {
   }
 
   // ──────────────────────────────────────────────
-  // Private: Debug logging (Feature 3)
+  // Private: Debug logging
   // ──────────────────────────────────────────────
 
   private _logDebugEvent(
@@ -753,7 +752,7 @@ export default class HotkeyManager extends BaseObject {
   }
 
   // ──────────────────────────────────────────────
-  // Private: Validation warnings (Feature 8)
+  // Private: Validation warnings
   // ──────────────────────────────────────────────
 
   private _logValidationWarnings(normalizedHotkey: string): void {
@@ -799,7 +798,7 @@ export default class HotkeyManager extends BaseObject {
   }
 
   // ──────────────────────────────────────────────
-  // Private: Target element listeners (Feature 13)
+  // Private: Target element listeners
   // ──────────────────────────────────────────────
 
   private _attachTargetListener(target: EventTarget): void {
