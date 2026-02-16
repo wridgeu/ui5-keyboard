@@ -1,6 +1,6 @@
 import { browser, $, expect } from "@wdio/globals";
 
-const VISUAL_PAGE = "/test-resources/ui5/kiosk/visual/index.html";
+const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 
 /** Navigate to the visual test page and wait for UI5 to finish rendering. */
 async function openVisualPage(): Promise<void> {
