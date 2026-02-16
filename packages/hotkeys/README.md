@@ -1,5 +1,7 @@
 # ui5-lib-hotkeys
 
+> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md).
+
 Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
 
 A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard shortcuts with scope-based activation, cross-platform modifier normalization, multi-key sequences, hotkey recording, and proper UI5 lifecycle integration.
@@ -636,6 +638,15 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 ---
 
+## Further Reading
+
+- [Architecture & Internals](../../docs/ARCHITECTURE.md) — two-pass matching, scope stack, listener design
+- [Multi-key Sequence Design](../../docs/SEQUENCES.md) — how the sequence system works
+- [Alternatives Review](../../docs/REVIEW.md) — comparison with other keyboard shortcut approaches
+- [UI5 Event Handling Deep Dive](../../docs/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
+
+---
+
 ## When NOT to Use This Library
 
 Use UI5's built-in keyboard handling instead when:
@@ -652,4 +663,4 @@ Use UI5's built-in keyboard handling instead when:
 
 ## License
 
-MIT
+[MIT](../../LICENSE)

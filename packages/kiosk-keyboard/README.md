@@ -1,5 +1,7 @@
 # ui5-lib-kiosk-keyboard
 
+> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md).
+
 On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applications.
 
 A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virtual keyboard that types into any UI5 input control. Supports multiple layouts, Shift/Caps Lock, docked mode with auto-show, and integrates with SAP Horizon theming.
@@ -322,6 +324,12 @@ KeyboardType.Numpad; // "Numpad"
 
 ---
 
+## Further Reading
+
+- [Architecture & Internals](../../docs/KIOSK-ARCHITECTURE.md) — control design, rendering, theming approach
+
+---
+
 ## When NOT to Use This Library
 
 | Scenario                            | Use Instead                                    |
@@ -337,4 +345,4 @@ This library is designed for **kiosk terminals**, **industrial touchscreens**, a
 
 ## License
 
-MIT
+[MIT](../../LICENSE)
