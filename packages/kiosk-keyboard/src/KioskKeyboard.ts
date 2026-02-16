@@ -314,8 +314,12 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Injects the locale-detected layout when no explicit `layout` was
-   * provided in the constructor settings.
+   * Injects the locale-detected layout when constructor settings are
+   * provided but no explicit `layout` is included.
+   *
+   * Note: When no settings are provided at all (e.g. `new KioskKeyboard()`),
+   * ManagedObject does not call `applySettings`. The locale default is
+   * therefore also set in `init()`.
    */
   applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
     if (mSettings && !("layout" in mSettings)) {
@@ -349,10 +353,18 @@ export default class KioskKeyboard extends Control {
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
-    this._baseLayout = DEFAULT_LAYOUT;
     this._keyboardTypeExplicit = false;
     this._originalInputMode = null;
     this._suppressedInputEl = null;
+
+    // Detect locale-appropriate default layout. This covers the case
+    // where no settings are passed (applySettings is not called by
+    // ManagedObject when settings are undefined).
+    const localeLayout = KioskKeyboard.getLocaleLayout();
+    this._baseLayout = localeLayout;
+    if (localeLayout !== DEFAULT_LAYOUT) {
+      this.setProperty("layout", localeLayout);
+    }
   }
 
   onAfterRendering(): void {
@@ -1121,9 +1133,15 @@ export default class KioskKeyboard extends Control {
       if (KioskKeyboard._NUMPAD_CONTROL_TYPES.has(type)) return "Numpad";
     }
 
-    // 2. Control name — e.g. sap.m.StepInput
-    const name = control.getMetadata().getName();
-    if (KioskKeyboard._NUMPAD_CONTROL_NAMES.has(name)) return "Numpad";
+    // 2. Control name — walk up the parent chain because composite controls
+    //    (e.g. sap.m.StepInput) wrap an inner sap.m.Input. Element.closestTo()
+    //    returns the inner Input, but we need to match the outer StepInput.
+    for (let parent: ManagedObject | null = control; parent; parent = parent.getParent()) {
+      if (parent instanceof Control) {
+        const name = parent.getMetadata().getName();
+        if (KioskKeyboard._NUMPAD_CONTROL_NAMES.has(name)) return "Numpad";
+      }
+    }
 
     // 3. DOM inputmode attribute
     const dom = control.getFocusDomRef();

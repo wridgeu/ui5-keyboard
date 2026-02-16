@@ -1961,14 +1961,16 @@ QUnit.test("autoType detects StepInput and switches to Numpad", async (assert) =
   });
   await placeAndWait(kb);
 
-  const inputDom = stepInput.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  try {
+    const inputDom = stepInput.getFocusDomRef() as HTMLElement;
+    inputDom.focus();
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for StepInput");
-
-  stepInput.destroy();
-  kb.destroy();
+    assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for StepInput");
+  } finally {
+    stepInput.destroy();
+    kb.destroy();
+  }
 });
 
 QUnit.test("autoType stays Full for regular text input", async (assert) => {
