@@ -1,4 +1,3 @@
-import type UI5Event from "sap/ui/base/Event";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -19,16 +18,16 @@ export default class Kiosk extends BaseController {
     stateModel.setProperty("/kioskLayout", "qwerty");
   }
 
-  onKeyPress(event: UI5Event<{ key: string; shiftKey: boolean }>): void {
-    const key = event.getParameter("key");
-    const shift = event.getParameter("shiftKey");
+  onKeyPress(event: { getParameter(name: string): unknown }): void {
+    const key = event.getParameter("key") as string;
+    const shift = event.getParameter("shiftKey") as boolean;
     const display = shift ? `${key} (Shift)` : key;
 
     this.getStateModel().setProperty("/kioskLastKey", display);
   }
 
-  onLayoutChange(event: UI5Event<{ layout: string }>): void {
-    const layout = event.getParameter("layout");
+  onLayoutChange(event: { getParameter(name: string): unknown }): void {
+    const layout = event.getParameter("layout") as string;
     this.getStateModel().setProperty("/kioskLayout", layout);
   }
 
