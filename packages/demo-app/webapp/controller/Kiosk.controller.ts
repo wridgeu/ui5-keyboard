@@ -1,3 +1,4 @@
+import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -18,16 +19,16 @@ export default class Kiosk extends BaseController {
     stateModel.setProperty("/kioskLayout", "qwerty");
   }
 
-  onKeyPress(event: { getParameter(name: string): unknown }): void {
-    const key = event.getParameter("key") as string;
-    const shift = event.getParameter("shiftKey") as boolean;
+  onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
+    const key = event.getParameter("key") ?? "";
+    const shift = event.getParameter("shiftKey") ?? false;
     const display = shift ? `${key} (Shift)` : key;
 
     this.getStateModel().setProperty("/kioskLastKey", display);
   }
 
-  onLayoutChange(event: { getParameter(name: string): unknown }): void {
-    const layout = event.getParameter("layout") as string;
+  onLayoutChange(event: KioskKeyboard$LayoutChangeEvent): void {
+    const layout = event.getParameter("layout") ?? "";
     this.getStateModel().setProperty("/kioskLayout", layout);
   }
 
