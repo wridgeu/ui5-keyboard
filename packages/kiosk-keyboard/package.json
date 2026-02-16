@@ -37,10 +37,11 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "ui5 build --clean-dest",
+    "generate": "ts-interface-generator",
+    "build": "npm run generate && ui5 build --clean-dest",
     "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build",
     "start": "ui5 serve --port 8082 -o test-resources/ui5/kiosk/qunit/testsuite.qunit.html",
-    "start:visual": "ui5 serve --port 8082 -o test-resources/ui5/kiosk/visual/index.html",
+    "start:visual": "ui5 serve --port 8082 -o test-resources/ui5/kiosk/e2e/visual/index.html",
     "test:visual": "wdio run test/e2e/wdio.conf.ts",
     "test:visual:update": "wdio run test/e2e/wdio.conf.ts -- --update-visual-baseline",
     "typecheck": "tsc --noEmit"
@@ -49,6 +50,7 @@
     "@types/node": "^22.0.0",
     "@types/qunit": "^2.19.13",
     "@ui5/cli": "^4.0.0",
+    "@ui5/ts-interface-generator": "^0.10.5",
     "@wdio/cli": "^9.0.0",
     "@wdio/local-runner": "^9.0.0",
     "@wdio/mocha-framework": "^9.0.0",

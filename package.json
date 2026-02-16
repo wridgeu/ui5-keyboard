@@ -15,8 +15,7 @@
   ],
   "type": "module",
   "scripts": {
-    "generate": "ts-interface-generator",
-    "build": "npm run generate && npm run build:hotkeys && npm run build:kiosk",
+    "build": "npm run build:hotkeys && npm run build:kiosk",
     "build:hotkeys": "npm run build -w packages/hotkeys",
     "build:kiosk": "npm run build -w packages/kiosk-keyboard",
     "start": "npm run start -w packages/demo-app",
@@ -29,13 +28,12 @@
     "lint:fix": "oxlint --fix packages/",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "typecheck": "npm run generate && tsc -b && npm run typecheck -w packages/demo-app",
+    "typecheck": "npm run generate -w packages/kiosk-keyboard && tsc -b && npm run typecheck -w packages/demo-app",
     "check": "npm run fmt:check && npm run lint && npm run typecheck",
     "prepare": "husky"
   },
   "devDependencies": {
     "@openui5/types": "1.144.0",
-    "@ui5/ts-interface-generator": "^0.10.5",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "oxfmt": "^0.32.0",
