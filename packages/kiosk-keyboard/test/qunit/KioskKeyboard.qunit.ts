@@ -2444,8 +2444,8 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
   await new Promise((resolve) => setTimeout(resolve, 300));
   assert.notOk(dockedKb.isOpen(), "Docked keyboard blocked for input1");
 
-  // Move focus away and close
-  (document.getElementById("qunit-fixture") as HTMLElement).focus();
+  // Move focus away so we can re-focus input1 later (blur triggers focusout)
+  (input1.getFocusDomRef() as HTMLElement).blur();
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   // Re-target inline keyboard to input2, freeing input1

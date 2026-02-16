@@ -756,9 +756,9 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
 
   /** Returns true if any other KioskKeyboard instance already targets this input. */
-  private static _isTargetOfOther(self: KioskKeyboard, inputId: string): boolean {
+  private _isTargetOfOther(inputId: string): boolean {
     for (const other of KioskKeyboard._instances) {
-      if (other !== self && other.getTargetInput() === inputId) return true;
+      if (other !== this && other.getTargetInput() === inputId) return true;
     }
     return false;
   }
@@ -783,7 +783,7 @@ export default class KioskKeyboard extends Control {
       // Skip if this input is already targeted by another keyboard instance.
       // Check BEFORE cancelling the close timer so the keyboard still closes
       // normally when focus moves from an unclaimed input to a claimed one.
-      if (ui5Control instanceof Control && KioskKeyboard._isTargetOfOther(this, ui5Control.getId())) return;
+      if (ui5Control instanceof Control && this._isTargetOfOther(ui5Control.getId())) return;
 
       // Cancel any pending close
       if (this._closeTimer) {
@@ -822,8 +822,12 @@ export default class KioskKeyboard extends Control {
       const myDom = this.getDomRef();
       if (myDom && active && myDom.contains(active)) return;
 
-      // Don't close if focus moved to another input
-      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+      // Don't close if focus moved to another input — unless that input
+      // is claimed by a different keyboard instance (e.g. an inline numpad).
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+        const ui5Control = Element.closestTo(active);
+        if (!(ui5Control instanceof Control && this._isTargetOfOther(ui5Control.getId()))) return;
+      }
 
       this.close();
     }, 200);

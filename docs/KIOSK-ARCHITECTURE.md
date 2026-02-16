@@ -5,13 +5,16 @@ This document describes the internal architecture, design decisions, and edge ca
 ## Module Overview
 
 ```
-KioskKeyboard.ts          UI5 Control — state, event delegation, target input integration
+KioskKeyboard.ts          UI5 Control — state, event delegation, target input integration,
+                          locale detection, auto-type, mobile keyboard suppression
 KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
-library.ts                UI5 Lib.init(), enum registration (KeyboardLayout, KeyboardType)
+library.ts                UI5 Lib.init(), enum registration
+                          (KeyboardLayout, KeyboardType, MobileKeyboard)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
 layouts/
   index.ts                Layout registry (Record<string, LayoutDefinition>)
   qwerty.ts               Standard QWERTY with number row and shift symbols
+  qwertz-de.ts            German QWERTZ with Umlaute (ä, ö, ü, ß)
   numeric.ts              Number pad with basic operators
   special.ts              Special characters and symbols
   numpad.ts               Compact calculator-style keypad
@@ -38,7 +41,7 @@ The `sap.m` dependency is required because the control uses `sap.ui.core.Element
 - ManagedObject metadata (properties, associations, events)
 - Renderer integration
 - Lifecycle hooks (`init`, `onAfterRendering`, `exit`)
-- UI5 event delegation (`ontap`, `onkeydown`)
+- UI5 event delegation (`ontouchstart`, `ontouchend`, `onkeydown`)
 
 Because `Control` extends `ManagedObject`, the class field initializer trap applies. All private fields use `declare` and are initialized in `init()`:
 
@@ -72,13 +75,18 @@ This design was chosen for:
 
 UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontap` and `onkeydown` methods on `KioskKeyboard` receive all events from child elements.
 
-The handler flow:
+The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) instead of `ontap`, because `preventDefault()` on the underlying touch/mouse event is needed to prevent focus steal (see below).
 
 ```
-ontap / onkeydown
+ontouchstart
   |
-  +-- Guard: enabled check
   +-- Resolve: find closest .ui5KioskKey element
+  +-- preventDefault() — prevents focus transfer away from target input
+  +-- Track pressed key, add --pressed CSS class
+
+ontouchend
+  |
+  +-- Guard: enabled check, release target matches press target
   +-- Read: data-key attribute for the key value
   |
   +-- Route by key value:
@@ -91,9 +99,9 @@ ontap / onkeydown
   +-- Auto-release shift (if shift active and not caps lock)
 ```
 
-### Pointer Prevention
+### Focus Steal Prevention
 
-A `pointerdown` listener (attached via `attachBrowserEvent`) calls `preventDefault()` on key elements. This prevents the browser from moving focus away from the target input when the user taps a virtual key — critical for maintaining the cursor position in the input field.
+`ontouchstart` calls `preventDefault()` on the underlying mouse/touch event when a key element is pressed. This prevents the browser from transferring focus away from the target input — critical for maintaining the cursor position in the input field. UI5's `EventSimulation` fires `ontouchstart` for both mouse and touch interactions.
 
 ## Target Input Integration
 
@@ -175,6 +183,106 @@ Layout switch keys use a special value format: `{layout:name}`. When tapped:
 
 Layout switching is only effective in `Full` mode. In `Numeric` or `Numpad` mode, layout switch keys are silently ignored.
 
+## Locale-Based Default Layout
+
+When no explicit `layout` is provided in the constructor settings, the keyboard auto-detects the appropriate layout from the UI5 locale.
+
+### applySettings Override
+
+The UI5 ManagedObject constructor flow is: `init()` → `applySettings(mSettings)`. The control overrides `applySettings` to inject the locale layout when no explicit `layout` key is present:
+
+```ts
+applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
+  if (mSettings && !("layout" in mSettings)) {
+    mSettings.layout = KioskKeyboard.getLocaleLayout();
+  }
+  return super.applySettings(mSettings, oScope);
+}
+```
+
+This is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected as if the developer had written `layout="qwertz-de"`. An explicit `layout="qwerty"` takes priority because the key is already present in `mSettings`.
+
+### Locale Resolution
+
+`getLocaleLayout()` uses `Localization.getLanguageTag()` from `sap/base/i18n/Localization` (available in OpenUI5 1.118+). This API resolves from all UI5 language sources: URL `sap-ui-language` param, `sap-language` param, bootstrap config, and browser settings. No manual URL parsing is needed.
+
+The returned `LanguageTag` has `.language` (lowercase ISO639, e.g. `"de"`) and `.region` (uppercase ISO3166 or `null`, e.g. `"AT"`).
+
+Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`).
+
+The locale → layout map is extensible via `KioskKeyboard.registerLocaleLayout(locale, layout)`.
+
+### Impact on \_baseLayout
+
+Works correctly: `setLayout("qwertz-de")` sets `_baseLayout = "qwertz-de"` (not in `SECONDARY_LAYOUTS`), so `{layout:base}` roundtrips back to it.
+
+## Auto-Type Detection
+
+When `autoType="true"` and the keyboard auto-shows for a focused input, it inspects the input's type metadata and automatically switches between Full and Numpad keyboard types.
+
+### Detection Logic
+
+`_detectKeyboardType(control)` checks in order:
+
+1. **UI5 `getType()`** on the control → `"Number"` or `"Tel"` → `"Numpad"`
+2. **Control name** → `"sap.m.StepInput"` → `"Numpad"`
+3. **DOM `inputmode` attribute** → `"numeric"` / `"decimal"` / `"tel"` → `"Numpad"`
+4. **HTML `type` attribute** → `"number"` / `"tel"` → `"Numpad"`
+5. **Fallback** → `"Full"`
+
+Detection uses static `ReadonlySet` constants for each check, avoiding repeated string comparisons.
+
+### Explicit vs Auto-Detected Type
+
+A private `_keyboardTypeExplicit` flag tracks whether the developer explicitly set `keyboardType`. The custom `setKeyboardType()` setter sets this flag to `true`. Auto-detection uses `setProperty("keyboardType", ...)` directly to bypass the flag.
+
+Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" }` in the constructor will call `setKeyboardType("Numpad")` which sets the flag — auto-detection is disabled.
+
+### Integration Point
+
+In `_onDocumentFocusIn`, after resolving the UI5 control and before `show()`:
+
+```ts
+if (this.getAutoType() && !this._keyboardTypeExplicit) {
+  const detected = this._detectKeyboardType(ui5Control);
+  this.setProperty("keyboardType", detected); // bypasses custom setter
+}
+```
+
+When the user tabs from a Number input to a Text input, `_onDocumentFocusIn` fires again, detects `"Full"`, and switches back.
+
+## Mobile Keyboard Detection
+
+The `mobileKeyboard` property (enum `ui5.kiosk.MobileKeyboard`) controls whether to suppress the native virtual keyboard or defer to it on mobile/touch devices.
+
+### \_shouldDeferToNative()
+
+```ts
+private _shouldDeferToNative(): boolean {
+  const mode = this.getMobileKeyboard();
+  if (mode === "Custom") return false;
+  return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
+}
+```
+
+Uses `sap/ui/Device` for device detection. The `tablet && !desktop` check handles combi devices (laptops with touchscreens) — these report both `tablet: true` and `desktop: true`, and should use the custom keyboard.
+
+### Native Keyboard Suppression
+
+When the KioskKeyboard shows and `_shouldDeferToNative()` returns `false`, it sets `inputmode="none"` on the target input's DOM element. This is the standard web API for preventing the native virtual keyboard.
+
+- `_suppressNativeKeyboard()` — saves original `inputmode`, sets `"none"`. Called by `show()`.
+- `_restoreNativeKeyboard()` — restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()` and `exit()`.
+
+State is tracked via `_originalInputMode` (the saved attribute value or `null`) and `_suppressedInputEl` (reference to the DOM element being suppressed). When the target changes, the previous element is restored before suppressing the new one.
+
+### Integration Points
+
+1. **`_onDocumentFocusIn`**: Checks `_shouldDeferToNative()` first. If `true`, returns early — the native keyboard handles input.
+2. **`show()`**: Calls `_suppressNativeKeyboard()`.
+3. **`close()`**: Calls `_restoreNativeKeyboard()`.
+4. **`exit()`**: Calls `_restoreNativeKeyboard()` for cleanup.
+
 ## Docked Mode
 
 When `docked="true"`, the keyboard uses `position: fixed` anchored to the bottom of the viewport.
@@ -196,39 +304,56 @@ The renderer always renders with `--closed` for docked keyboards. `onAfterRender
 
 Auto-show uses document-level `focusin`/`focusout` listeners in the capture phase:
 
+### Instance Isolation
+
+A static `_instances` set tracks all living `KioskKeyboard` instances. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any **other** KioskKeyboard instance already has that input as its `targetInput`. If so, auto-show bails out — the input belongs to that keyboard.
+
+This prevents a docked auto-show keyboard from stealing inputs that are explicitly assigned to an inline keyboard (e.g. a numpad paired with a numeric field).
+
+The registry is maintained in `init()` (add) and `exit()` (delete).
+
 ### Focus-In Logic
 
 ```
 focusin event
   |
-  +-- Guard: docked mode check
+  +-- Guard: docked mode and enabled check
   +-- Guard: ignore focus on the keyboard itself
   +-- Check: is target an <input> or <textarea>?
   |     No  -> ignore
-  |     Yes -> cancel pending close timer
-  |            resolve UI5 control via Element.closestTo()
+  |     Yes -> resolve UI5 control via Element.closestTo()
+  |            check _isTargetOfOther() -> skip if claimed
+  |            cancel pending close timer
   |            set as target input
+  |            auto-detect keyboard type (if autoType enabled)
   |            show()
 ```
+
+The instance isolation check runs **before** cancelling the close timer. This ensures that when focus moves from an unclaimed input to a claimed input, the docked keyboard's close timer is not cancelled and the keyboard closes normally.
 
 ### Focus-Out Logic
 
 ```
 focusout event
   |
-  +-- Guard: docked and open check
+  +-- Guard: docked, open, and enabled check
   +-- Start 200ms close timer
   |     After 200ms:
-  |       Check: is focus on the keyboard?     -> don't close
-  |       Check: is focus on another input?    -> don't close
-  |       Otherwise                            -> close()
+  |       Check: is focus on the keyboard?           -> don't close
+  |       Check: is focus on another input?
+  |         Yes -> is that input claimed by another   -> close()
+  |                keyboard instance?
+  |                otherwise                          -> don't close
+  |       Otherwise                                  -> close()
 ```
 
 The 200ms debounce handles the gap between `focusout` on one element and `focusin` on the next. Without it, rapid focus transitions (e.g. tabbing between inputs) would cause flicker.
 
+The close timer's "focus on another input" check also consults `_isTargetOfOther()`. If the new active input belongs to a different keyboard, the docked keyboard closes rather than staying open for an input it should not control.
+
 ### Cleanup
 
-`disableAutoShow()` removes both listeners. The `exit()` lifecycle hook calls `disableAutoShow()` and clears any pending close timer, preventing leaks and stale callbacks after the control is destroyed.
+`disableAutoShow()` removes both listeners. The `exit()` lifecycle hook removes the instance from the static registry, calls `disableAutoShow()`, and clears any pending close timer, preventing leaks and stale callbacks after the control is destroyed.
 
 ## Keyboard Navigation
 
@@ -274,33 +399,44 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 
 ## Edge Cases
 
-| Edge Case                               | How It Is Handled                                           |
-| --------------------------------------- | ----------------------------------------------------------- |
-| Focus steal on key tap                  | `pointerdown` `preventDefault()` keeps focus on input       |
-| Target input not yet focused            | `_getTargetDomRef()` focuses and places cursor at end       |
-| Auto-show flicker on focus transitions  | 200ms debounce on close timer                               |
-| Focus on keyboard during auto-show      | Close timer checks `contains(activeElement)`, stays open    |
-| Layout switch in non-Full mode          | Silently ignored (no event, no state change)                |
-| Shift auto-release vs Caps Lock         | Only `_shiftActive` auto-releases, not `_capsLock`          |
-| `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references             |
-| No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings              |
-| `setTargetInput` re-render              | `setAssociation(name, value, true)` suppresses invalidation |
-| Docked show/close during render         | `onAfterRendering` syncs CSS with `_open` state             |
-| Destroy with auto-show active           | `exit()` calls `disableAutoShow()` + clears timer           |
-| `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                 |
+| Edge Case                               | How It Is Handled                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------- |
+| Focus steal on key tap                  | `ontouchstart` `preventDefault()` keeps focus on input                    |
+| Target input not yet focused            | `_getTargetDomRef()` focuses and places cursor at end                     |
+| Auto-show flicker on focus transitions  | 200ms debounce on close timer                                             |
+| Focus on keyboard during auto-show      | Close timer checks `contains(activeElement)`, stays open                  |
+| Auto-show vs input owned by other kbd   | `_isTargetOfOther()` skips inputs claimed by another instance             |
+| Focus moves to claimed input while open | Close timer checks `_isTargetOfOther()`, closes normally                  |
+| Layout switch in non-Full mode          | Silently ignored (no event, no state change)                              |
+| Shift auto-release vs Caps Lock         | Only `_shiftActive` auto-releases, not `_capsLock`                        |
+| `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references                           |
+| No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings                            |
+| `setTargetInput` re-render              | `setAssociation(name, value, true)` suppresses invalidation               |
+| Docked show/close during render         | `onAfterRendering` syncs CSS with `_open` state                           |
+| Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, clears timer |
+| `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                               |
+| Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                   |
+| Explicit `keyboardType` vs auto-type    | `_keyboardTypeExplicit` flag disables auto-detection                      |
+| Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the flag                  |
+| `inputmode` restore on target switch    | `_suppressNativeKeyboard()` restores previous before suppressing new      |
+| `inputmode` restore on destroy          | `exit()` calls `_restoreNativeKeyboard()`                                 |
+| Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop      |
+| `show()` without target input           | `_suppressNativeKeyboard()` is a no-op when no target element exists      |
 
 ## Project Layout
 
 ```
 packages/kiosk-keyboard/
   src/
-    KioskKeyboard.ts          UI5 Control with state and event handling
+    KioskKeyboard.ts          UI5 Control with state, event handling,
+                              locale detection, auto-type, mobile suppression
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
-    library.ts                Lib.init(), KeyboardLayout and KeyboardType enums
+    library.ts                Lib.init(), KeyboardLayout, KeyboardType, MobileKeyboard enums
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition
     layouts/
       index.ts                Layout registry
       qwerty.ts               Standard QWERTY layout
+      qwertz-de.ts            German QWERTZ layout
       numeric.ts              Numeric layout
       special.ts              Special characters layout
       numpad.ts               Compact numpad layout
