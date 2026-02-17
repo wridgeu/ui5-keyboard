@@ -553,7 +553,7 @@ export default class KioskKeyboard extends Control {
     if (dom) {
       dom.classList.remove("ui5KioskKeyboard--closed");
     }
-    this._fireAfterTransition("afterOpen");
+    this.fireEvent("afterOpen");
     return this;
   }
 
@@ -566,7 +566,7 @@ export default class KioskKeyboard extends Control {
     if (dom) {
       dom.classList.add("ui5KioskKeyboard--closed");
     }
-    this._fireAfterTransition("afterClose");
+    this.fireEvent("afterClose");
     return this;
   }
 
@@ -1330,30 +1330,5 @@ export default class KioskKeyboard extends Control {
 
     this._originalInputMode = null;
     this._suppressedInputEl = null;
-  }
-
-  /**
-   * Fires an event after the CSS transition completes (docked mode),
-   * or immediately if not docked or no transition is active.
-   */
-  private _fireAfterTransition(eventName: string): void {
-    const dom = this.getDomRef();
-    if (!dom || !this.getDocked()) {
-      this.fireEvent(eventName);
-      return;
-    }
-    // prefers-reduced-motion sets transition: none → duration is "0s"
-    const duration = getComputedStyle(dom).transitionDuration;
-    if (!duration || duration === "0s") {
-      this.fireEvent(eventName);
-      return;
-    }
-    const handler = (e: Event) => {
-      const te = e as TransitionEvent;
-      if (te.target !== dom || te.propertyName !== "transform") return;
-      dom.removeEventListener("transitionend", handler);
-      this.fireEvent(eventName);
-    };
-    dom.addEventListener("transitionend", handler);
   }
 }

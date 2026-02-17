@@ -759,13 +759,12 @@ QUnit.test("show() fires afterOpen event", async (assert) => {
   kb.setDocked(true);
   await placeAndWait(kb);
 
-  const done = assert.async();
-  kb.attachEvent("afterOpen", () => {
-    assert.ok(true, "afterOpen fired");
-    done();
-  });
+  let fired = false;
+  kb.attachEvent("afterOpen", () => (fired = true));
 
   kb.show();
+  assert.ok(fired, "afterOpen fired");
+
   kb.destroy();
 });
 
@@ -776,13 +775,12 @@ QUnit.test("close() fires afterClose event", async (assert) => {
 
   kb.show();
 
-  const done = assert.async();
-  kb.attachEvent("afterClose", () => {
-    assert.ok(true, "afterClose fired");
-    done();
-  });
+  let fired = false;
+  kb.attachEvent("afterClose", () => (fired = true));
 
   kb.close();
+  assert.ok(fired, "afterClose fired");
+
   kb.destroy();
 });
 

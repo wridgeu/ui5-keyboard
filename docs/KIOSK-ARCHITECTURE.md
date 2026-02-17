@@ -299,6 +299,10 @@ The open/close state is managed via CSS classes rather than re-rendering:
 
 `show()` removes the `--closed` class; `close()` adds it. This approach avoids re-rendering during animation, which would cause visual glitches. The `transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)` provides smooth slide-in/out.
 
+### Event Timing
+
+`afterOpen` and `afterClose` events fire synchronously when `show()` and `close()` are called — they signal the state change, not the animation completion. The CSS transition plays independently. This avoids fragile `transitionend` listener logic and ensures deterministic event timing regardless of animation state, `prefers-reduced-motion`, or test environments.
+
 ### onAfterRendering Sync
 
 The renderer always renders with `--closed` for docked keyboards. `onAfterRendering()` then syncs the CSS class with the actual `_open` state. This handles the case where `show()` was called before or between renders.

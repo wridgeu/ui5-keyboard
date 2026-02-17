@@ -94,6 +94,14 @@ Registrations within each scope are matched in FIFO order (first registered, fir
 
 ## Scope Stack
 
+A **scope** is an arbitrary string identifier that groups related hotkeys by context. In practice, scopes map to UI5 application concepts:
+
+- **Route names** — view-level scopes like `"main"` or `"detail"` (managed automatically by router integration)
+- **Dialog IDs** — dialog-level scopes like `"confirmDialog"` or `"settingsDialog"` (managed manually via `pushScope`/`popScope`)
+- **Fragment or component IDs** — any string that meaningfully groups a set of shortcuts
+
+Scopes are not a UI5 framework concept; they are a library-level abstraction. The global scope (`"__global__"`) is always present at the bottom of the stack.
+
 The scope stack is a simple array used as a LIFO stack:
 
 ```
@@ -106,7 +114,7 @@ resetToGlobalScope():   [__global__]                    <- active: global
 
 The global scope is always at the bottom and cannot be popped.
 
-`popScope(scopeId?)` accepts an optional scope ID for validation. If the provided ID does not match the current top of the stack, an error is thrown. This catches scope management bugs early by failing fast rather than silently producing incorrect behavior.
+`popScope(scopeId)` requires a scope ID that must match the current top of the stack. If the provided ID does not match, an error is thrown. This catches scope management bugs early by failing fast rather than silently producing incorrect behavior.
 
 `resetToGlobalScope()` removes all non-global scopes in one call, which is useful when navigating between views where the entire scope context changes.
 

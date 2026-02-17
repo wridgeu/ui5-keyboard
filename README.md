@@ -100,6 +100,7 @@ See the full [kiosk keyboard API reference](./packages/kiosk-keyboard/README.md)
 | [Kiosk Keyboard Architecture](./docs/KIOSK-ARCHITECTURE.md)            | Internal design of the kiosk keyboard  |
 | [Multi-key Sequences](./docs/SEQUENCES.md)                             | Sequence system design and rationale   |
 | [Alternatives Review](./docs/REVIEW.md)                                | Comparison with alternative approaches |
+| [Known Issues](./docs/KNOWN-ISSUES.md)                                 | Known issues and workarounds           |
 | [UI5 Event Handling Deep Dive](./docs/UI5-EVENT-HANDLING-DEEP-DIVE.md) | How UI5 processes keyboard events      |
 | [UI5 TypeScript Event Typing](./docs/UI5-TYPESCRIPT-EVENT-TYPING.md)   | TypeScript patterns for UI5 events     |
 

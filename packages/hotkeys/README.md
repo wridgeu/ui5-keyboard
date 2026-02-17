@@ -152,7 +152,7 @@ const manager = HotkeyManager.getInstance();
 | `getInstance()`                        | Get or create the singleton                           |
 | `register(hotkey, callback, options?)` | Register a shortcut, returns a handle                 |
 | `pushScope(scopeId)`                   | Push a scope onto the stack                           |
-| `popScope(scopeId?)`                   | Pop the top scope (optional ID for validation)        |
+| `popScope(scopeId)`                    | Pop the top scope (ID must match current top)         |
 | `getActiveScope()`                     | Get the current top-of-stack scope                    |
 | `resetToGlobalScope()`                 | Pop all non-global scopes in one call                 |
 | `enableRouterIntegration(router)`      | Auto-manage view scopes via router events             |

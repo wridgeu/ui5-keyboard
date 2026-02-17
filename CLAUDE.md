@@ -30,19 +30,19 @@ npm run typecheck           # tsc -b (project references) + demo-app typecheck
 
 ### Running Tests
 
-Tests use **UI5 Test Starter** with QUnit. Start the library server and open the testsuite URL in a browser:
+Tests use **UI5 Test Starter** with QUnit. Start the library server — the QUnit TestRunner opens automatically and executes all tests:
 
 ```bash
-# Hotkeys tests (opens automatically)
+# Hotkeys tests (auto-starts)
 npm run start -w packages/hotkeys
-# → http://localhost:8081/test-resources/ui5/hotkeys/qunit/testsuite.qunit.html
+# → http://localhost:8081/test-resources/sap/ui/qunit/testrunner.html?testpage=...&autostart=true
 
-# Kiosk keyboard tests (opens automatically)
+# Kiosk keyboard tests (auto-starts)
 npm run start -w packages/kiosk-keyboard
-# → http://localhost:8082/test-resources/ui5/kiosk/qunit/testsuite.qunit.html
+# → http://localhost:8082/test-resources/sap/ui/qunit/testrunner.html?testpage=...&autostart=true
 ```
 
-Individual test files follow the pattern `<module>.qunit.ts` in `test/qunit/`. To run a single test, append `?testId=<test-key>` to the testsuite URL (test keys are defined in `testsuite.qunit.ts` without the `.qunit` suffix — Test Starter adds it).
+Individual test files follow the pattern `<module>.qunit.ts` in `test/qunit/`. To run a single test, open the Test Starter overview (`testsuite.qunit.html`) and click the test name, or navigate to `Test.qunit.html?testsuite=...&test=<test-key>` (test keys are defined in `testsuite.qunit.ts` without the `.qunit` suffix — Test Starter adds it).
 
 ### Building a Single Package
 
