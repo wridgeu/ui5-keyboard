@@ -207,11 +207,11 @@ export interface HotkeyOptions {
   ignoreRepeat?: boolean;
 
   /**
-   * Whether to suppress this hotkey when a UI5 dialog is open.
-   * Uses `sap.m.InstanceManager.hasOpenDialog()` when available.
+   * Whether to suppress this hotkey when a UI5 popup (dialog or popover) is open.
+   * Uses `sap.m.InstanceManager.hasOpenDialog()` and `hasOpenPopover()` when available.
    * @default false
    */
-  suppressInDialogs?: boolean;
+  suppressInPopups?: boolean;
 
   /**
    * Strategy for handling a conflicting registration with the same
@@ -286,9 +286,25 @@ export interface HotkeyRegistration {
 
 /**
  * Public view of a hotkey registration for introspection (e.g., cheat sheets).
- * Omits internal fields (parsed representation, callback reference).
+ * Flat, serializable shape — no closures, no DOM references.
  */
-export type HotkeyRegistrationInfo = Omit<HotkeyRegistration, "parsedHotkey" | "callback">;
+export interface HotkeyRegistrationInfo {
+  readonly id: string;
+  readonly hotkey: string;
+  readonly normalizedHotkey: string;
+  readonly scope: string;
+  readonly description: string;
+  /** Resolved to current value (not the closure). */
+  readonly enabled: boolean;
+  readonly preventDefault: boolean;
+  readonly stopPropagation: boolean;
+  readonly ignoreInputs: boolean | "auto";
+  readonly ignoreRepeat: boolean;
+  readonly suppressInPopups: boolean;
+  readonly conflictBehavior: ConflictBehavior;
+  /** Whether a target element is bound (boolean flag, not DOM reference). */
+  readonly hasTarget: boolean;
+}
 
 /**
  * Hotkey options with all defaults resolved — no optional fields.
@@ -301,7 +317,7 @@ export interface ResolvedHotkeyOptions {
   scope: string;
   description: string;
   ignoreRepeat: boolean;
-  suppressInDialogs: boolean;
+  suppressInPopups: boolean;
   conflictBehavior: ConflictBehavior;
   target: HTMLElement | Document | null;
 }
@@ -316,10 +332,10 @@ export interface ResolvedHotkeyOptions {
  * - `"no_match"`: No registration matched the key combination in any scope.
  * - `"disabled"`: A registration matched, but its `enabled` option resolved to `false`.
  * - `"input_suppressed"`: A registration matched, but was suppressed because the target is an input element.
- * - `"dialog_suppressed"`: A registration matched, but was suppressed because a dialog is open.
+ * - `"popup_suppressed"`: A registration matched, but was suppressed because a popup (dialog or popover) is open.
  * - `"repeat_ignored"`: A registration matched, but was skipped because the key is held (`event.repeat`).
  */
-export type UnhandledReason = "no_match" | "disabled" | "input_suppressed" | "dialog_suppressed" | "repeat_ignored";
+export type UnhandledReason = "no_match" | "disabled" | "input_suppressed" | "popup_suppressed" | "repeat_ignored";
 
 /**
  * Context passed to the unhandled key callback.
@@ -333,8 +349,8 @@ export interface UnhandledContext {
   readonly activeScope: string;
   /** Whether the event target was an editable input element. */
   readonly isInput: boolean;
-  /** Whether a UI5 dialog was open. */
-  readonly isDialogOpen: boolean;
+  /** Whether a UI5 popup (dialog or popover) was open. */
+  readonly isPopupOpen: boolean;
   /**
    * The registration that matched the key combination but was skipped.
    * Present for all reasons except `"no_match"`.
@@ -433,9 +449,20 @@ export interface SequenceRegistration {
 
 /**
  * Public view of a sequence registration for introspection.
- * Omits internal fields (parsed steps, callback reference).
+ * Flat, serializable shape — no closures, no parsed internals.
  */
-export type SequenceRegistrationInfo = Omit<SequenceRegistration, "parsedSteps" | "callback">;
+export interface SequenceRegistrationInfo {
+  readonly id: string;
+  readonly sequence: readonly string[];
+  readonly scope: string;
+  readonly description: string;
+  /** Resolved to current value (not the closure). */
+  readonly enabled: boolean;
+  readonly timeout: number;
+  readonly ignoreInputs: boolean | "auto";
+  readonly preventDefault: boolean;
+  readonly stopPropagation: boolean;
+}
 
 /**
  * Callback for mid-sequence progress.

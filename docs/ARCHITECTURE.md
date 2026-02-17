@@ -79,7 +79,7 @@ Each registration is checked against the following guards before the callback fi
 2. **enabled** -- must be `true` (or the guard function must return `true`)
 3. **ignoreRepeat** -- skip if `event.repeat` is true and ignoreRepeat is on
 4. **ignoreInputs** -- skip if the target is an input and the option says to suppress
-5. **suppressInDialogs** -- skip if a dialog is open and the option is on
+5. **suppressInPopups** -- skip if a popup (dialog or popover) is open and the option is on
 
 ### Two-Pass Matching
 
@@ -208,18 +208,18 @@ When `ignoreInputs` is set to `"auto"` (the default), the library resolves the e
 - **Ctrl/Meta combos and Escape:** `ignoreInputs` resolves to `false` (shortcut fires even in inputs). Rationale: Ctrl+S for save should work everywhere, and Escape is universally expected to dismiss/cancel.
 - **Single keys and Alt-only combos:** `ignoreInputs` resolves to `true` (shortcut is suppressed in inputs). Rationale: pressing "G" in a text field should type "G", not trigger a shortcut.
 
-## Dialog Suppression
+## Popup Suppression
 
-When `suppressInDialogs: true` is set on a registration, the library checks whether a UI5 dialog is currently open before firing the callback.
+When `suppressInPopups: true` is set on a registration, the library checks whether a UI5 popup (dialog or popover) is currently open before firing the callback.
 
-The check uses `sap.m.InstanceManager.getOpenDialogs()`, but `sap.m` may not be loaded in all applications. The library handles this with a lazy-loading pattern:
+The check uses `sap.m.InstanceManager.hasOpenDialog()` and `sap.m.InstanceManager.hasOpenPopover()`, but `sap.m` may not be loaded in all applications. The library handles this with a lazy-loading pattern:
 
-1. On the first keypress that needs the dialog check, attempt to load `sap/m/InstanceManager` via `sap.ui.require`.
+1. On the first keypress that needs the popup check, attempt to load `sap/m/InstanceManager` via `sap.ui.require`.
 2. If the module is available, cache the check function.
-3. If it is not available (sap.m not loaded), return `false` (no dialog open).
+3. If it is not available (sap.m not loaded), return `false` (no popup open).
 4. Only cache positive results. A negative result (module not found) is not cached, because `sap.m` might be loaded later as the application bootstraps additional libraries.
 
-This avoids a hard dependency on `sap.m` while still supporting dialog detection when the module is available.
+This avoids a hard dependency on `sap.m` while still supporting popup detection when the module is available.
 
 ## Dialog Escape Interop
 
@@ -322,7 +322,7 @@ packages/demo-app/
 
 ### SequenceManager
 
-Multi-key sequence matching (e.g., `G` then `E`). Separate singleton from HotkeyManager with its own listener. Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard and AltGr-guard logic as HotkeyManager (`ignoreInputs` defaults to `true`). See [SEQUENCES.md](SEQUENCES.md).
+Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key events from HotkeyManager (no own document listener). Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard logic as HotkeyManager (`ignoreInputs` defaults to `true`). See [SEQUENCES.md](SEQUENCES.md).
 
 ### KeyStateTracker
 

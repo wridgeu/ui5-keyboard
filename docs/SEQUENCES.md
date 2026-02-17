@@ -7,12 +7,12 @@ Multi-key sequence support for vim-style `g g`, Emacs-style `C-x C-s`, and VS Co
 ## Usage
 
 ```ts
-import SequenceManager from "ui5/hotkeys/SequenceManager";
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
-const seq = SequenceManager.getInstance();
+const manager = HotkeyManager.getInstance();
 
 // Register a two-key sequence
-seq.registerSequence(
+manager.registerSequence(
   ["Ctrl+K", "Ctrl+C"],
   (event) => {
     // Comment selection
@@ -24,7 +24,7 @@ seq.registerSequence(
 );
 
 // Register a simple two-key sequence without modifiers
-seq.registerSequence(
+manager.registerSequence(
   ["G", "G"],
   (event) => {
     // Go to top
@@ -36,7 +36,7 @@ seq.registerSequence(
 );
 ```
 
-`SequenceManager` is a separate singleton from `HotkeyManager`, with its own `getInstance()` / `destroy()` lifecycle. It reads the active scope from `HotkeyManager` for scope-based filtering.
+`SequenceManager` is an internal class managed by `HotkeyManager` — access sequence functionality through `HotkeyManager.registerSequence()` and related facade methods. It receives pre-filtered key events from HotkeyManager's document listener (no own listener) and reads the active scope from `HotkeyManager` for scope-based filtering.
 
 ## Architecture
 
@@ -57,7 +57,7 @@ Sequences use the same two-pass matching as `HotkeyManager`: active scope first,
 Applications can display progress indicators by setting a pending callback:
 
 ```ts
-seq.setPendingCallback((info) => {
+manager.setSequencePendingHandler((info) => {
   // info.completedSteps: number of matched keys so far
   // info.totalSteps: total keys in the sequence
   // info.nextKey: the next expected key string
@@ -80,11 +80,11 @@ seq.setPendingCallback((info) => {
 
 ### Separate Class (not on HotkeyManager)
 
-Sequences are implemented as a separate `SequenceManager` class rather than extending `HotkeyManager.registerSequence()`. This keeps the core `HotkeyManager` focused on single-chord hotkeys and avoids mixing two different matching algorithms in one class. The two managers share scope state but have independent registrations and listeners.
+Sequences are implemented as a separate `SequenceManager` class with its own matching algorithm. This keeps the core `HotkeyManager` focused on single-chord hotkeys. The two managers share scope state and a single document listener — `HotkeyManager` dispatches pre-filtered events to `SequenceManager.processKeyEvent()`.
 
 ### No Standalone Hotkey Conflict Resolution
 
-The current implementation does not delay standalone hotkeys when they share a prefix with a sequence. If `G` is registered as a standalone hotkey and `G G` as a sequence, pressing `G` fires the standalone immediately — the sequence is tracked independently by `SequenceManager`'s own listener. This avoids adding latency to standalone hotkeys.
+The current implementation does not delay standalone hotkeys when they share a prefix with a sequence. If `G` is registered as a standalone hotkey and `G G` as a sequence, pressing `G` fires the standalone immediately — the sequence is tracked independently by `SequenceManager`. This avoids adding latency to standalone hotkeys.
 
 ### Overlapping Sequences
 

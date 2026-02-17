@@ -431,10 +431,10 @@ QUnit.test("ignoreInputs: true suppresses Escape in input", (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// suppressInDialogs
+// suppressInPopups
 // ──────────────────────────────────────────────
 
-QUnit.test("suppressInDialogs: suppresses when dialog is open", (assert) => {
+QUnit.test("suppressInPopups: suppresses when popup is open", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
 
@@ -443,34 +443,34 @@ QUnit.test("suppressInDialogs: suppresses when dialog is open", (assert) => {
     () => {
       called = true;
     },
-    { suppressInDialogs: true },
+    { suppressInPopups: true },
   );
 
-  // Mock dialog state via private field (sap.m may not be loaded in test env)
-  (manager as any)._hasOpenDialog = () => true;
+  // Mock popup state via private field (sap.m may not be loaded in test env)
+  (manager as any)._hasOpenPopup = () => true;
 
   fireKey("F5");
-  assert.notOk(called, "F5 suppressed when dialog is open");
+  assert.notOk(called, "F5 suppressed when popup is open");
 
-  // Reset mock: no dialog open
-  (manager as any)._hasOpenDialog = () => false;
+  // Reset mock: no popup open
+  (manager as any)._hasOpenPopup = () => false;
   fireKey("F5");
-  assert.ok(called, "F5 fires when dialog is closed");
+  assert.ok(called, "F5 fires when popup is closed");
 });
 
-QUnit.test("suppressInDialogs: false (default) fires even with dialog open", (assert) => {
+QUnit.test("suppressInPopups: false (default) fires even with popup open", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
 
-  // Default suppressInDialogs: false
+  // Default suppressInPopups: false
   manager.register("F5", () => {
     called = true;
   });
 
-  (manager as any)._hasOpenDialog = () => true;
+  (manager as any)._hasOpenPopup = () => true;
 
   fireKey("F5");
-  assert.ok(called, "F5 fires even with dialog open when suppressInDialogs is false");
+  assert.ok(called, "F5 fires even with popup open when suppressInPopups is false");
 });
 
 // ──────────────────────────────────────────────
@@ -725,7 +725,7 @@ QUnit.test("Unhandled: fires with input_suppressed for single key in input", (as
   assert.ok(ctx.skippedRegistration, "Skipped registration is present");
 });
 
-QUnit.test("Unhandled: fires with dialog_suppressed when dialog open", (assert) => {
+QUnit.test("Unhandled: fires with popup_suppressed when popup open", (assert) => {
   const manager = HotkeyManager.getInstance();
   let ctx: any = null;
 
@@ -734,18 +734,18 @@ QUnit.test("Unhandled: fires with dialog_suppressed when dialog open", (assert) 
     () => {
       assert.notOk(true, "Should not fire");
     },
-    { suppressInDialogs: true },
+    { suppressInPopups: true },
   );
 
-  (manager as any)._hasOpenDialog = () => true;
+  (manager as any)._hasOpenPopup = () => true;
 
   manager.setUnhandledHandler((c) => {
     ctx = c;
   });
 
   fireKey("F5");
-  assert.strictEqual(ctx.reason, "dialog_suppressed", "Reason is dialog_suppressed");
-  assert.ok(ctx.isDialogOpen, "isDialogOpen is true");
+  assert.strictEqual(ctx.reason, "popup_suppressed", "Reason is popup_suppressed");
+  assert.ok(ctx.isPopupOpen, "isPopupOpen is true");
   assert.ok(ctx.skippedRegistration, "Skipped registration is present");
 });
 
@@ -888,7 +888,7 @@ QUnit.test("setOptions: update description", (assert) => {
 
   const regs = manager.getRegistrations();
   const reg = regs.find((r) => r.id === handle.id);
-  assert.strictEqual(reg?.options.description, "Dismiss", "Description updated");
+  assert.strictEqual(reg?.description, "Dismiss", "Description updated");
 });
 
 QUnit.test("setOptions: update ignoreRepeat", (assert) => {
@@ -970,7 +970,7 @@ QUnit.test("setOptions: update ignoreInputs", (assert) => {
   assert.strictEqual(count, 1, "F5 fires in input after setOptions({ ignoreInputs: false })");
 });
 
-QUnit.test("setOptions: update suppressInDialogs", (assert) => {
+QUnit.test("setOptions: update suppressInPopups", (assert) => {
   const manager = HotkeyManager.getInstance();
   let count = 0;
 
@@ -979,17 +979,17 @@ QUnit.test("setOptions: update suppressInDialogs", (assert) => {
     () => {
       count++;
     },
-    { suppressInDialogs: true },
+    { suppressInPopups: true },
   );
 
-  (manager as any)._hasOpenDialog = () => true;
+  (manager as any)._hasOpenPopup = () => true;
 
   fireKey("F5");
-  assert.strictEqual(count, 0, "F5 suppressed with dialog open");
+  assert.strictEqual(count, 0, "F5 suppressed with popup open");
 
-  handle.setOptions({ suppressInDialogs: false });
+  handle.setOptions({ suppressInPopups: false });
   fireKey("F5");
-  assert.strictEqual(count, 1, "F5 fires after setOptions({ suppressInDialogs: false })");
+  assert.strictEqual(count, 1, "F5 fires after setOptions({ suppressInPopups: false })");
 });
 
 QUnit.test("setOptions: throws on unregistered handle", (assert) => {

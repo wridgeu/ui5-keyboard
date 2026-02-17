@@ -3,7 +3,7 @@ import Log from "sap/base/Log";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
 import { GLOBAL_SCOPE } from "./constants";
-import { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./dom";
+import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
 import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
@@ -38,8 +38,9 @@ interface ActiveMatch {
  * Not intended for direct use — access sequence functionality through
  * {@link HotkeyManager.registerSequence} and related facade methods.
  *
- * Attaches a document-level `keydown` listener (capture phase) and matches
- * multi-key sequences (e.g., ["G", "E"] for go-to-editor).
+ * Receives pre-filtered key events from HotkeyManager's document listener
+ * (no own listener) and matches multi-key sequences (e.g., ["G", "E"]
+ * for go-to-editor).
  *
  * Receives a scope provider callback from HotkeyManager to access the
  * active scope without a reverse singleton dependency.
@@ -54,16 +55,12 @@ export default class SequenceManager extends BaseObject {
   private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
   private _scopeProvider: () => string;
-  private _lastAltLocation = 0;
   private _destroyed = false;
-
-  private readonly _keydownHandler = this._onKeyDown.bind(this);
 
   constructor(scopeProvider: () => string, platform: Platform) {
     super();
     this._scopeProvider = scopeProvider;
     this._platform = platform;
-    document.addEventListener("keydown", this._keydownHandler, true);
     Log.info("SequenceManager initialized", undefined, LOG_COMPONENT);
   }
 
@@ -157,12 +154,13 @@ export default class SequenceManager extends BaseObject {
         }
         const reg = this._registrations.get(id);
         if (!reg) return;
-        // Merge all provided fields
-        for (const [key, value] of Object.entries(newOptions)) {
-          if (value !== undefined) {
-            (reg as unknown as Record<string, unknown>)[key] = value;
-          }
-        }
+        // Type-safe field merge — no casts, compiler catches typos
+        if (newOptions.enabled !== undefined) reg.enabled = newOptions.enabled;
+        if (newOptions.description !== undefined) reg.description = newOptions.description;
+        if (newOptions.timeout !== undefined) reg.timeout = newOptions.timeout;
+        if (newOptions.ignoreInputs !== undefined) reg.ignoreInputs = newOptions.ignoreInputs;
+        if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
+        if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
       },
     };
   }
@@ -176,14 +174,37 @@ export default class SequenceManager extends BaseObject {
 
   /**
    * Get all active registrations.
+   * Info objects are flat snapshots — no closures or parsed internals leak.
    */
-  getRegistrations(): ReadonlyArray<Readonly<SequenceRegistrationInfo>> {
-    return Array.from(this._registrations.values());
+  getRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
+    return Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
+  }
+
+  /**
+   * Convert an internal registration to the public flat info shape.
+   */
+  private _toRegistrationInfo(reg: SequenceRegistration): SequenceRegistrationInfo {
+    let enabled: boolean;
+    try {
+      enabled = typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
+    } catch {
+      enabled = false;
+    }
+    return {
+      id: reg.id,
+      sequence: reg.sequence,
+      scope: reg.scope,
+      description: reg.description,
+      enabled,
+      timeout: reg.timeout,
+      ignoreInputs: reg.ignoreInputs,
+      preventDefault: reg.preventDefault,
+      stopPropagation: reg.stopPropagation,
+    };
   }
 
   destroy(): void {
     this._destroyed = true;
-    document.removeEventListener("keydown", this._keydownHandler, true);
 
     for (const match of this._activeMatches) {
       if (match.timerId !== null) clearTimeout(match.timerId);
@@ -191,26 +212,16 @@ export default class SequenceManager extends BaseObject {
     this._activeMatches = [];
     this._registrations.clear();
     this._pendingCallback = null;
-    this._lastAltLocation = 0;
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
     super.destroy();
   }
 
   /**
-   * Returns true if the event should be ignored entirely (IME, modifier-only, AltGr).
-   * Tracks AltGr state and delegates to the shared pure function.
+   * Process a pre-filtered key event from HotkeyManager.
+   * The caller is responsible for ignoring IME, modifier-only, and AltGr events.
    */
-  private _shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
-    if (event.key === "Alt") {
-      this._lastAltLocation = event.location;
-    }
-    return shouldIgnoreKeyEvent(event, this._platform, this._lastAltLocation);
-  }
-
-  private _onKeyDown(event: KeyboardEvent): void {
-    if (this._shouldIgnoreKeyEvent(event)) return;
-
+  processKeyEvent(event: KeyboardEvent): void {
     const activeScope = this._scopeProvider();
     const target = getEventTarget(event);
     const isInput = isInputElement(target);

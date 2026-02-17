@@ -15,6 +15,7 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
   - [Registration](#registration)
   - [Registration Options](#registration-options)
   - [Registration Handle](#registration-handle)
+  - [Registration Group](#registration-group)
   - [Scope Management](#scope-management)
   - [Router Integration](#router-integration)
   - [Debug Mode](#debug-mode)
@@ -101,13 +102,17 @@ Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unne
 
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 
 // In your Component.init():
 const manager = HotkeyManager.getInstance();
 manager.enableRouterIntegration(this.getRouter());
 
+// Create a group for collective lifecycle management
+const hotkeys: RegistrationGroup = manager.createGroup();
+
 // Register a global shortcut
-const handle = manager.register(
+hotkeys.register(
   "Mod+S",
   (event) => {
     // Save logic -- Cmd+S on Mac, Ctrl+S on Windows/Linux
@@ -117,7 +122,7 @@ const handle = manager.register(
 );
 
 // Register a view-scoped shortcut (scope = route name)
-manager.register(
+hotkeys.register(
   "F5",
   () => {
     this.onRefresh();
@@ -125,11 +130,12 @@ manager.register(
   { scope: "detail", description: "Refresh detail" },
 );
 
-// Update options on the fly
+// Handles returned by the group are normal handles
+const handle = hotkeys.register("Mod+D", () => nav(), { description: "Nav" });
 handle.setOptions({ enabled: () => model.getProperty("/isDirty") });
 
-// Clean up a single registration
-handle.unregister();
+// Clean up all registrations in one call (e.g., in onExit or destroy)
+hotkeys.destroyAll();
 
 // In your Component.destroy():
 manager.destroy();
@@ -151,6 +157,7 @@ const manager = HotkeyManager.getInstance();
 | -------------------------------------- | ----------------------------------------------------- |
 | `getInstance()`                        | Get or create the singleton                           |
 | `register(hotkey, callback, options?)` | Register a shortcut, returns a handle                 |
+| `createGroup()`                        | Create a registration group for collective cleanup    |
 | `pushScope(scopeId)`                   | Push a scope onto the stack                           |
 | `popScope(scopeId)`                    | Pop the top scope (ID must match current top)         |
 | `getActiveScope()`                     | Get the current top-of-stack scope                    |
@@ -189,25 +196,25 @@ manager.register(
     description: "Refresh editor",
     enabled: () => !model.getProperty("/isLoading"),
     ignoreRepeat: true,
-    suppressInDialogs: true,
+    suppressInPopups: true,
   },
 );
 ```
 
 ### Registration Options
 
-| Option              | Type                       | Default        | Description                                                                                      |
-| ------------------- | -------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `enabled`           | `boolean \| () => boolean` | `true`         | Whether the registration is active. Functions are evaluated on every keypress.                   |
-| `preventDefault`    | `boolean`                  | `true`         | Call `event.preventDefault()` on match                                                           |
-| `stopPropagation`   | `boolean`                  | `true`         | Call `event.stopPropagation()` on match                                                          |
-| `ignoreInputs`      | `boolean \| "auto"`        | `"auto"`       | Suppress in text fields. `"auto"` suppresses single keys but allows Ctrl/Meta combos and Escape. |
-| `scope`             | `string`                   | `"__global__"` | Scope this hotkey belongs to. Use `GLOBAL_SCOPE` constant.                                       |
-| `description`       | `string`                   | `""`           | Human-readable description for cheatsheets                                                       |
-| `ignoreRepeat`      | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
-| `suppressInDialogs` | `boolean`                  | `false`        | Suppress when a UI5 dialog is open                                                               |
-| `conflictBehavior`  | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
-| `target`            | `HTMLElement \| Document`  | `null`         | Bind to a specific element instead of the document                                               |
+| Option             | Type                       | Default        | Description                                                                                      |
+| ------------------ | -------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| `enabled`          | `boolean \| () => boolean` | `true`         | Whether the registration is active. Functions are evaluated on every keypress.                   |
+| `preventDefault`   | `boolean`                  | `true`         | Call `event.preventDefault()` on match                                                           |
+| `stopPropagation`  | `boolean`                  | `true`         | Call `event.stopPropagation()` on match                                                          |
+| `ignoreInputs`     | `boolean \| "auto"`        | `"auto"`       | Suppress in text fields. `"auto"` suppresses single keys but allows Ctrl/Meta combos and Escape. |
+| `scope`            | `string`                   | `"__global__"` | Scope this hotkey belongs to. Use `GLOBAL_SCOPE` constant.                                       |
+| `description`      | `string`                   | `""`           | Human-readable description for cheatsheets                                                       |
+| `ignoreRepeat`     | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
+| `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
+| `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
+| `target`           | `HTMLElement \| Document`  | `null`         | Bind to a specific element instead of the document                                               |
 
 ### Registration Handle
 
@@ -230,6 +237,37 @@ handle.isActive; // false
 
 > [!WARNING]
 > Changing `scope` via `setOptions()` throws an error. Unregister and re-register instead.
+
+### Registration Group
+
+`createGroup()` returns a `RegistrationGroup` that tracks all registrations made through it, enabling single-call cleanup:
+
+```ts
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
+
+// Create a group (in onInit)
+private _hotkeys!: RegistrationGroup;
+
+onInit(): void {
+  this._hotkeys = manager.createGroup();
+  this._hotkeys.register("F5", handler, { scope: "main" });
+  this._hotkeys.registerSequence(["G", "I"], handler, { scope: "main" });
+}
+
+onExit(): void {
+  this._hotkeys.destroyAll(); // Unregisters all tracked handles
+}
+```
+
+| Property / Method    | Description                                              |
+| -------------------- | -------------------------------------------------------- |
+| `register()`         | Delegates to `manager.register()`, tracks handle         |
+| `registerSequence()` | Delegates to `manager.registerSequence()`, tracks handle |
+| `destroyAll()`       | Unregister all tracked handles (idempotent)              |
+| `size`               | Number of currently active registrations                 |
+| `isDestroyed`        | Whether `destroyAll()` has been called                   |
+
+Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle` — `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 
 ### Scope Management
 
@@ -330,7 +368,7 @@ manager.setUnhandledHandler((ctx) => {
   }
   if (ctx.reason === UnhandledReason.Disabled) {
     // A registration matched but was disabled
-    console.log("Skipped:", ctx.skippedRegistration?.options.description);
+    console.log("Skipped:", ctx.skippedRegistration?.description);
   }
   if (ctx.reason === UnhandledReason.InputSuppressed) {
     // Suppressed because focus was in a text field
@@ -341,7 +379,7 @@ manager.setUnhandledHandler((ctx) => {
 manager.setUnhandledHandler(null);
 ```
 
-Reasons: `NoMatch`, `Disabled`, `InputSuppressed`, `DialogSuppressed`, `RepeatIgnored`.
+Reasons: `NoMatch`, `Disabled`, `InputSuppressed`, `PopupSuppressed`, `RepeatIgnored`.
 
 ### Target Elements
 
@@ -368,12 +406,12 @@ manager.register("Mod+S", () => savePanel(), {
 Multi-key sequences like Vim-style `G` then `E` for "go to editor":
 
 ```ts
-import SequenceManager from "ui5/hotkeys/SequenceManager";
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
-const seq = SequenceManager.getInstance();
+const manager = HotkeyManager.getInstance();
 
 // Register a 2-key sequence
-seq.registerSequence(
+manager.registerSequence(
   ["G", "E"],
   (event) => {
     router.navTo("editor");
@@ -382,7 +420,7 @@ seq.registerSequence(
 );
 
 // Modifier sequences work too
-seq.registerSequence(
+manager.registerSequence(
   ["Ctrl+K", "Ctrl+S"],
   (event) => {
     saveAll();
@@ -391,12 +429,9 @@ seq.registerSequence(
 );
 
 // Get progress updates mid-sequence
-seq.setPendingCallback((info) => {
+manager.setSequencePendingHandler((info) => {
   statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
 });
-
-// Clean up
-seq.destroy();
 ```
 
 **Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `true` — suppresses in text fields).
@@ -602,7 +637,7 @@ ConflictBehavior.Allow; // "allow"
 UnhandledReason.NoMatch; // "no_match"
 UnhandledReason.Disabled; // "disabled"
 UnhandledReason.InputSuppressed; // "input_suppressed"
-UnhandledReason.DialogSuppressed; // "dialog_suppressed"
+UnhandledReason.PopupSuppressed; // "popup_suppressed"
 UnhandledReason.RepeatIgnored; // "repeat_ignored"
 
 // Platform — detected platform

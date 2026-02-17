@@ -2,7 +2,7 @@ import MessageToast from "sap/m/MessageToast";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 
 /**
@@ -16,42 +16,38 @@ import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
  */
 export default class Detail extends BaseController {
   private _manager!: HotkeyManager;
-  private _handles!: HotkeyRegistrationHandle[];
+  private _hotkeys!: RegistrationGroup;
   private _recorder!: HotkeyRecorder | null;
 
   onInit(): void {
-    this._handles = [];
     this._recorder = null;
 
     this._manager = this.getTypedComponent().getHotkeyManager();
+    this._hotkeys = this._manager.createGroup();
     const stateModel = this.getStateModel();
 
     // Scope "detail" matches the route name — auto-activated by router integration
-    this._handles.push(
-      this._manager.register(
-        "F5",
-        () => {
-          stateModel.setProperty("/lastAction", "Refresh (Detail View)");
-          MessageToast.show("F5: Refresh from Detail View");
-        },
-        {
-          scope: Scope.Detail,
-          description: "Refresh (Detail View)",
-        },
-      ),
+    this._hotkeys.register(
+      "F5",
+      () => {
+        stateModel.setProperty("/lastAction", "Refresh (Detail View)");
+        MessageToast.show("F5: Refresh from Detail View");
+      },
+      {
+        scope: Scope.Detail,
+        description: "Refresh (Detail View)",
+      },
     );
 
-    this._handles.push(
-      this._manager.register(
-        "Mod+B",
-        () => {
-          this._navBack();
-        },
-        {
-          scope: Scope.Detail,
-          description: "Navigate Back",
-        },
-      ),
+    this._hotkeys.register(
+      "Mod+B",
+      () => {
+        this._navBack();
+      },
+      {
+        scope: Scope.Detail,
+        description: "Navigate Back",
+      },
     );
   }
 
@@ -79,8 +75,7 @@ export default class Detail extends BaseController {
   }
 
   onExit(): void {
-    this._handles.forEach((h) => h.unregister());
-    this._handles = [];
+    this._hotkeys.destroyAll();
     if (this._recorder) {
       this._recorder.destroy();
       this._recorder = null;

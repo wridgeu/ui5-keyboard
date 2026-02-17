@@ -74,7 +74,7 @@ QUnit.test("Same hotkey in view vs dialog scope", (assert) => {
   assert.notOk(mainSaveCalled, "Ctrl+S does not fire in view scope (shadowed)");
 });
 
-QUnit.test("suppressInDialogs with mocked _hasOpenDialog", (assert) => {
+QUnit.test("suppressInPopups with mocked _hasOpenPopup", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
 
@@ -83,18 +83,18 @@ QUnit.test("suppressInDialogs with mocked _hasOpenDialog", (assert) => {
     () => {
       called = true;
     },
-    { suppressInDialogs: true },
+    { suppressInPopups: true },
   );
 
-  // Mock dialog as open
-  (manager as any)._hasOpenDialog = () => true;
+  // Mock popup as open
+  (manager as any)._hasOpenPopup = () => true;
   fireKey("s", { ctrlKey: true });
-  assert.notOk(called, "Ctrl+S suppressed when dialog is open");
+  assert.notOk(called, "Ctrl+S suppressed when popup is open");
 
-  // Close dialog
-  (manager as any)._hasOpenDialog = () => false;
+  // Close popup
+  (manager as any)._hasOpenPopup = () => false;
   fireKey("s", { ctrlKey: true });
-  assert.ok(called, "Ctrl+S fires when dialog is closed");
+  assert.ok(called, "Ctrl+S fires when popup is closed");
 });
 
 QUnit.test("Nested dialog scopes", (assert) => {

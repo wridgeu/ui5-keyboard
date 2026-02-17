@@ -39,17 +39,19 @@ import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 // Component.init()
 const manager = HotkeyManager.getInstance();
 manager.enableRouterIntegration(this.getRouter());
+const hotkeys = manager.createGroup();
 
 // Global shortcut — Mod resolves to Cmd on Mac, Ctrl on Windows/Linux
-manager.register("Mod+S", () => this.onSave(), { description: "Save" });
+hotkeys.register("Mod+S", () => this.onSave(), { description: "Save" });
 
 // View-scoped shortcut — only active when this route is active
-manager.register("F5", () => this.onRefresh(), {
+hotkeys.register("F5", () => this.onRefresh(), {
   scope: "detail",
   description: "Refresh detail",
 });
 
 // Component.destroy()
+hotkeys.destroyAll();
 manager.destroy();
 ```
 
@@ -159,6 +161,7 @@ npm run typecheck    # TypeScript type checking
 | `SequenceManager`    | Multi-key sequences, timeout, scope, overlapping sequences, input suppression                                                |
 | `KeyStateTracker`    | Held-key tracking, change callback, blur clear, macOS fix                                                                    |
 | `HotkeyRecorder`     | Recording, auto-stop, Escape cancel, Backspace clear                                                                         |
+| `RegistrationGroup`  | Group lifecycle, destroyAll, size tracking, destroyed group guard                                                            |
 
 **ui5-lib-kiosk-keyboard** (`npm run start:kiosk`)
 

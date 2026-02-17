@@ -35,8 +35,8 @@ export const UnhandledReason = Object.freeze({
   Disabled: "disabled",
   /** A registration matched, but was suppressed because the target is an input element. */
   InputSuppressed: "input_suppressed",
-  /** A registration matched, but was suppressed because a dialog is open. */
-  DialogSuppressed: "dialog_suppressed",
+  /** A registration matched, but was suppressed because a popup (dialog or popover) is open. */
+  PopupSuppressed: "popup_suppressed",
   /** A registration matched, but was skipped because the key is held (`event.repeat`). */
   RepeatIgnored: "repeat_ignored",
 } as const);

@@ -58,6 +58,9 @@ sap.ui.define([], () => {
       HotkeyRecorder: {
         title: "QUnit tests for ui5.hotkeys - HotkeyRecorder",
       },
+      RegistrationGroup: {
+        title: "QUnit tests for ui5.hotkeys - RegistrationGroup",
+      },
     },
   };
 });

@@ -1,8 +1,8 @@
 import UIComponent from "sap/ui/core/UIComponent";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import { formatForDisplay } from "ui5/hotkeys/format";
-import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
 
 /**
  * @name demo.hotkeys.Component
@@ -13,16 +13,15 @@ export default class Component extends UIComponent {
   };
 
   private _hotkeyManager!: HotkeyManager;
-  private _handles!: HotkeyRegistrationHandle[];
+  private _hotkeys!: RegistrationGroup;
   private _routeMatchedHandler!: () => void;
 
   init(): void {
     super.init();
 
-    this._handles = [];
-
     // Initialize the HotkeyManager singleton
     this._hotkeyManager = HotkeyManager.getInstance();
+    this._hotkeys = this._hotkeyManager.createGroup();
 
     // Enable automatic scope management via the router.
     // Route name = scope name. Controllers just register with { scope: "routeName" }.
@@ -45,31 +44,27 @@ export default class Component extends UIComponent {
 
     // Register global shortcuts (active across all views).
     // Global scope is the default — no need to specify scope explicitly.
-    this._handles.push(
-      this._hotkeyManager.register(
-        "Mod+S",
-        (_event, details) => {
-          stateModel.setProperty("/lastAction", `Save (${details.scope})`);
-        },
-        {
-          description: "Save",
-        },
-      ),
+    this._hotkeys.register(
+      "Mod+S",
+      (_event, details) => {
+        stateModel.setProperty("/lastAction", `Save (${details.scope})`);
+      },
+      {
+        description: "Save",
+      },
     );
 
-    this._handles.push(
-      this._hotkeyManager.register(
-        "Escape",
-        (_event) => {
-          stateModel.setProperty("/lastAction", "Cancel / Close");
-        },
-        {
-          description: "Cancel / Close",
-          // Don't block UI5's native Escape handling (e.g., dialog close)
-          preventDefault: false,
-          stopPropagation: false,
-        },
-      ),
+    this._hotkeys.register(
+      "Escape",
+      (_event) => {
+        stateModel.setProperty("/lastAction", "Cancel / Close");
+      },
+      {
+        description: "Cancel / Close",
+        // Don't block UI5's native Escape handling (e.g., dialog close)
+        preventDefault: false,
+        stopPropagation: false,
+      },
     );
 
     // Initialize the router
@@ -84,8 +79,7 @@ export default class Component extends UIComponent {
   }
 
   destroy(): void {
-    this._handles.forEach((h) => h.unregister());
-    this._handles = [];
+    this._hotkeys.destroyAll();
     this._hotkeyManager.destroy();
     this.getRouter().detachRouteMatched(this._routeMatchedHandler, this);
     super.destroy();

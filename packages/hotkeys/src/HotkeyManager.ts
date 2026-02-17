@@ -3,6 +3,7 @@ import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
+import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./SequenceManager";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./dom";
@@ -31,7 +32,7 @@ import type {
 } from "./types";
 
 type ValidateModule = typeof import("./validate");
-type InstanceManagerModule = { hasOpenDialog(): boolean };
+type InstanceManagerModule = { hasOpenDialog(): boolean; hasOpenPopover(): boolean };
 
 type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
@@ -52,7 +53,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     scope: options?.scope ?? GLOBAL_SCOPE,
     description: options?.description ?? "",
     ignoreRepeat: options?.ignoreRepeat ?? true,
-    suppressInDialogs: options?.suppressInDialogs ?? false,
+    suppressInPopups: options?.suppressInPopups ?? false,
     conflictBehavior: options?.conflictBehavior ?? "warn",
     target: options?.target ?? null,
   };
@@ -64,7 +65,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
  */
 interface SkipInfo {
   reason: UnhandledReason;
-  registration?: HotkeyRegistration;
+  registration?: HotkeyRegistrationInfo;
 }
 
 /**
@@ -83,7 +84,7 @@ const SKIP_PRIORITY = {
   no_match: 0,
   repeat_ignored: 1,
   input_suppressed: 2,
-  dialog_suppressed: 3,
+  popup_suppressed: 3,
   disabled: 4,
 } satisfies Record<UnhandledReason, number>;
 
@@ -122,8 +123,8 @@ export default class HotkeyManager extends BaseObject {
   // Bound handler reference for reliable addEventListener/removeEventListener pairing
   private readonly _keydownHandler = this._onKeyDown.bind(this);
 
-  // Lazy-loaded dialog check function
-  private _hasOpenDialog: (() => boolean) | null = null;
+  // Lazy-loaded popup check function (dialog or popover)
+  private _hasOpenPopup: (() => boolean) | null = null;
 
   // Router integration cleanup
   private _routerCleanup: (() => void) | null = null;
@@ -253,16 +254,29 @@ export default class HotkeyManager extends BaseObject {
           opts.target = newOptions.target ?? null;
           if (opts.target) this._attachTargetListener(opts.target);
         }
-        // Merge all other fields
-        for (const [key, value] of Object.entries(newOptions)) {
-          if (key !== "target" && value !== undefined) {
-            (opts as unknown as Record<string, unknown>)[key] = value;
-          }
-        }
+        // Type-safe field merge — no casts, compiler catches typos
+        if (newOptions.enabled !== undefined) opts.enabled = newOptions.enabled;
+        if (newOptions.preventDefault !== undefined) opts.preventDefault = newOptions.preventDefault;
+        if (newOptions.stopPropagation !== undefined) opts.stopPropagation = newOptions.stopPropagation;
+        if (newOptions.ignoreInputs !== undefined) opts.ignoreInputs = newOptions.ignoreInputs;
+        if (newOptions.ignoreRepeat !== undefined) opts.ignoreRepeat = newOptions.ignoreRepeat;
+        if (newOptions.suppressInPopups !== undefined) opts.suppressInPopups = newOptions.suppressInPopups;
+        if (newOptions.description !== undefined) opts.description = newOptions.description;
+        if (newOptions.conflictBehavior !== undefined) opts.conflictBehavior = newOptions.conflictBehavior;
       },
     };
 
     return handle;
+  }
+
+  /**
+   * Create a registration group for collective lifecycle management.
+   *
+   * All registrations made through the group can be cleaned up with a single
+   * `destroyAll()` call — ideal for controller `onExit()` cleanup.
+   */
+  createGroup(): RegistrationGroup {
+    return new RegistrationGroup(this);
   }
 
   // ──────────────────────────────────────────────
@@ -400,16 +414,19 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Get all active registrations. Returns a new array (safe to iterate).
+   * Info objects are flat snapshots — no closures or DOM references leak.
    */
-  getRegistrations(): ReadonlyArray<Readonly<HotkeyRegistrationInfo>> {
-    return Array.from(this._registrations.values());
+  getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
+    return Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
   }
 
   /**
    * Get registrations filtered by scope.
    */
-  getRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<HotkeyRegistrationInfo>> {
-    return this.getRegistrations().filter((r) => r.options.scope === scopeId);
+  getRegistrationsForScope(scopeId: string): ReadonlyArray<HotkeyRegistrationInfo> {
+    return Array.from(this._registrations.values())
+      .filter((r) => r.options.scope === scopeId)
+      .map((r) => this._toRegistrationInfo(r));
   }
 
   /**
@@ -417,6 +434,34 @@ export default class HotkeyManager extends BaseObject {
    */
   getPlatform(): Platform {
     return this._platform;
+  }
+
+  /**
+   * Convert an internal registration to the public flat info shape.
+   */
+  private _toRegistrationInfo(reg: HotkeyRegistration): HotkeyRegistrationInfo {
+    const opts = reg.options;
+    let enabled: boolean;
+    try {
+      enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
+    } catch {
+      enabled = false;
+    }
+    return {
+      id: reg.id,
+      hotkey: reg.hotkey,
+      normalizedHotkey: reg.normalizedHotkey,
+      scope: opts.scope,
+      description: opts.description,
+      enabled,
+      preventDefault: opts.preventDefault,
+      stopPropagation: opts.stopPropagation,
+      ignoreInputs: opts.ignoreInputs,
+      ignoreRepeat: opts.ignoreRepeat,
+      suppressInPopups: opts.suppressInPopups,
+      conflictBehavior: opts.conflictBehavior,
+      hasTarget: opts.target !== null,
+    };
   }
 
   // ──────────────────────────────────────────────
@@ -460,7 +505,7 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Get all active sequence registrations.
    */
-  getSequenceRegistrations(): ReadonlyArray<Readonly<SequenceRegistrationInfo>> {
+  getSequenceRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
     if (!this._sequenceManager) return [];
     return this._sequenceManager.getRegistrations();
   }
@@ -468,7 +513,7 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Get sequence registrations filtered by scope.
    */
-  getSequenceRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<SequenceRegistrationInfo>> {
+  getSequenceRegistrationsForScope(scopeId: string): ReadonlyArray<SequenceRegistrationInfo> {
     if (!this._sequenceManager) return [];
     return this._sequenceManager.getRegistrations().filter((r) => r.scope === scopeId);
   }
@@ -565,7 +610,7 @@ export default class HotkeyManager extends BaseObject {
 
     this._registrations.clear();
     this._scopeStack = [GLOBAL_SCOPE];
-    this._hasOpenDialog = null;
+    this._hasOpenPopup = null;
     this._unhandledCallback = null;
     this._debugMode = false;
     this._lastAltLocation = 0;
@@ -590,7 +635,12 @@ export default class HotkeyManager extends BaseObject {
 
   private _onKeyDown(event: KeyboardEvent): void {
     if (this._shouldIgnoreKeyEvent(event)) return;
+
+    // Single-key hotkey matching
     this._processKeyEvent(event, null);
+
+    // Multi-key sequence matching (if any sequences registered)
+    this._sequenceManager?.processKeyEvent(event);
   }
 
   /**
@@ -614,8 +664,8 @@ export default class HotkeyManager extends BaseObject {
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
 
-    // Check dialog state (lazy-loaded)
-    const dialogOpen = this._checkDialogOpen();
+    // Check popup state (lazy-loaded)
+    const popupOpen = this._checkPopupOpen();
 
     // Debug mode: collect all skips
     const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
@@ -626,12 +676,12 @@ export default class HotkeyManager extends BaseObject {
     // Two-pass matching: active scope first, then global.
     // This ensures scoped handlers always take priority over global ones.
     const matched =
-      this._findMatch(event, isInput, dialogOpen, activeScope, targetElement, skipInfo, debugSkips) ??
-      this._findMatch(event, isInput, dialogOpen, GLOBAL_SCOPE, targetElement, skipInfo, debugSkips);
+      this._findMatch(event, isInput, popupOpen, activeScope, targetElement, skipInfo, debugSkips) ??
+      this._findMatch(event, isInput, popupOpen, GLOBAL_SCOPE, targetElement, skipInfo, debugSkips);
 
     // Debug logging
     if (this._debugMode) {
-      this._logDebugEvent(event, activeScope, isInput, dialogOpen, matched, debugSkips);
+      this._logDebugEvent(event, activeScope, isInput, popupOpen, matched, debugSkips);
     }
 
     if (!matched) {
@@ -641,7 +691,7 @@ export default class HotkeyManager extends BaseObject {
           reason: skipInfo.reason,
           activeScope,
           isInput,
-          isDialogOpen: dialogOpen,
+          isPopupOpen: popupOpen,
           skippedRegistration: skipInfo.reason !== "no_match" ? skipInfo.registration : undefined,
         });
       }
@@ -685,7 +735,7 @@ export default class HotkeyManager extends BaseObject {
   private _findMatch(
     event: KeyboardEvent,
     isInput: boolean,
-    dialogOpen: boolean,
+    popupOpen: boolean,
     targetScope: string,
     targetElement: EventTarget | null,
     skipInfo?: SkipInfo | null,
@@ -749,10 +799,10 @@ export default class HotkeyManager extends BaseObject {
         continue;
       }
 
-      // Dialog suppression
-      if (opts.suppressInDialogs && dialogOpen) {
-        this._recordSkip(skipInfo, "dialog_suppressed", registration);
-        if (debugSkips) debugSkips.push({ registration, reason: "dialog_suppressed" });
+      // Popup suppression (dialogs and popovers)
+      if (opts.suppressInPopups && popupOpen) {
+        this._recordSkip(skipInfo, "popup_suppressed", registration);
+        if (debugSkips) debugSkips.push({ registration, reason: "popup_suppressed" });
         continue;
       }
 
@@ -763,11 +813,12 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Record a skip reason if it is more informative than the current one.
+   * Converts the internal registration to the public info shape.
    */
   private _recordSkip(skipInfo: SkipInfo | null | undefined, reason: UnhandledReason, reg: HotkeyRegistration): void {
     if (skipInfo && SKIP_PRIORITY[reason] > SKIP_PRIORITY[skipInfo.reason]) {
       skipInfo.reason = reason;
-      skipInfo.registration = reg;
+      skipInfo.registration = this._toRegistrationInfo(reg);
     }
   }
 
@@ -779,7 +830,7 @@ export default class HotkeyManager extends BaseObject {
     event: KeyboardEvent,
     activeScope: string,
     isInput: boolean,
-    dialogOpen: boolean,
+    popupOpen: boolean,
     matched: HotkeyRegistration | null,
     debugSkips: DebugSkipEntry[] | null,
   ): void {
@@ -792,7 +843,7 @@ export default class HotkeyManager extends BaseObject {
 
     const lines: string[] = [
       `[HotkeyDebug] Key: ${keyCombo}`,
-      `  Scope: ${activeScope} | Input: ${isInput} | Dialog: ${dialogOpen} | Repeat: ${event.repeat}`,
+      `  Scope: ${activeScope} | Input: ${isInput} | Popup: ${popupOpen} | Repeat: ${event.repeat}`,
     ];
 
     if (matched) {
@@ -860,26 +911,26 @@ export default class HotkeyManager extends BaseObject {
   }
 
   // ──────────────────────────────────────────────
-  // Private: Dialog check
+  // Private: Popup check (dialogs + popovers)
   // ──────────────────────────────────────────────
 
   /**
    * Lazy-load `sap.m.InstanceManager` to avoid a hard dependency on `sap.m`.
-   * Returns whether any UI5 dialog is currently open.
+   * Returns whether any UI5 popup (dialog or popover) is currently open.
    *
    * Only caches the positive result (module found). Negative results are retried
    * on each call because `sap.m` may load asynchronously after the first keypress.
    * `sap.ui.require()` is an O(1) lookup once the module is loaded.
    */
-  private _checkDialogOpen(): boolean {
-    if (!this._hasOpenDialog) {
+  private _checkPopupOpen(): boolean {
+    if (!this._hasOpenPopup) {
       const InstanceManager = sap.ui.require("sap/m/InstanceManager") as InstanceManagerModule | undefined;
       if (InstanceManager) {
-        this._hasOpenDialog = () => InstanceManager.hasOpenDialog();
+        this._hasOpenPopup = () => InstanceManager.hasOpenDialog() || InstanceManager.hasOpenPopover();
       }
     }
 
-    return this._hasOpenDialog?.() ?? false;
+    return this._hasOpenPopup?.() ?? false;
   }
 
   // ──────────────────────────────────────────────

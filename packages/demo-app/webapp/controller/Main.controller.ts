@@ -6,7 +6,7 @@ import VBox from "sap/m/VBox";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import type { HotkeyRegistrationHandle, SequenceRegistrationHandle } from "ui5/hotkeys/types";
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import { formatForDisplay } from "ui5/hotkeys/format";
 
@@ -21,77 +21,67 @@ import { formatForDisplay } from "ui5/hotkeys/format";
  */
 export default class Main extends BaseController {
   private _manager!: HotkeyManager;
-  private _handles!: HotkeyRegistrationHandle[];
-  private _dialogHandles!: HotkeyRegistrationHandle[];
+  private _hotkeys!: RegistrationGroup;
+  private _dialogHotkeys!: RegistrationGroup;
   private _dialog!: Dialog | null;
-  private _sequenceHandles!: SequenceRegistrationHandle[];
   private _keyTracker!: KeyStateTracker;
   private _pendingTimer!: ReturnType<typeof setTimeout> | null;
 
   onInit(): void {
-    this._handles = [];
-    this._dialogHandles = [];
     this._dialog = null;
 
     this._manager = this.getTypedComponent().getHotkeyManager();
+    this._hotkeys = this._manager.createGroup();
+    this._dialogHotkeys = this._manager.createGroup();
     const stateModel = this.getStateModel();
 
     // Register view-scoped shortcuts — scope "main" matches the route name.
     // No pushScope/popScope needed; the router integration handles it.
-    this._handles.push(
-      this._manager.register(
-        "F5",
-        () => {
-          stateModel.setProperty("/lastAction", "Refresh (Main View)");
-          MessageToast.show("F5: Refresh from Main View");
-        },
-        {
-          scope: Scope.Main,
-          description: "Refresh (Main View)",
-        },
-      ),
+    this._hotkeys.register(
+      "F5",
+      () => {
+        stateModel.setProperty("/lastAction", "Refresh (Main View)");
+        MessageToast.show("F5: Refresh from Main View");
+      },
+      {
+        scope: Scope.Main,
+        description: "Refresh (Main View)",
+      },
     );
 
-    this._handles.push(
-      this._manager.register(
-        "Mod+D",
-        () => {
-          this._navToDetail();
-        },
-        {
-          scope: Scope.Main,
-          description: "Navigate to Detail",
-        },
-      ),
+    this._hotkeys.register(
+      "Mod+D",
+      () => {
+        this._navToDetail();
+      },
+      {
+        scope: Scope.Main,
+        description: "Navigate to Detail",
+      },
     );
 
     // D1: Multi-key sequences via HotkeyManager facade
-    this._sequenceHandles = [];
     this._pendingTimer = null;
 
-    this._sequenceHandles.push(
-      this._manager.registerSequence(
-        ["G", "I"],
-        () => {
-          stateModel.setProperty("/lastAction", "Sequence: Go to Inbox (G I)");
-          stateModel.setProperty("/sequenceStatus", "");
-          MessageToast.show("G I: Navigate to Detail");
-          this._navToDetail();
-        },
-        { scope: Scope.Main, description: "Go to Inbox" },
-      ),
+    this._hotkeys.registerSequence(
+      ["G", "I"],
+      () => {
+        stateModel.setProperty("/lastAction", "Sequence: Go to Inbox (G I)");
+        stateModel.setProperty("/sequenceStatus", "");
+        MessageToast.show("G I: Navigate to Detail");
+        this._navToDetail();
+      },
+      { scope: Scope.Main, description: "Go to Inbox" },
     );
 
-    this._sequenceHandles.push(
-      this._manager.registerSequence(
-        ["G", "S"],
-        () => {
-          stateModel.setProperty("/lastAction", "Sequence: Go to Settings (G S)");
-          stateModel.setProperty("/sequenceStatus", "");
-          MessageToast.show("G S: Go to Settings (no-op)");
-        },
-        { scope: Scope.Main, description: "Go to Settings" },
-      ),
+    this._hotkeys.registerSequence(
+      ["G", "S"],
+      () => {
+        stateModel.setProperty("/lastAction", "Sequence: Go to Settings (G S)");
+        stateModel.setProperty("/sequenceStatus", "");
+        MessageToast.show("G S: Go to Settings (no-op)");
+      },
+      { scope: Scope.Main, description: "Go to Settings" },
     );
 
     this._manager.setSequencePendingHandler((info) => {
@@ -116,19 +106,17 @@ export default class Main extends BaseController {
     const platform = this._manager.getPlatform();
     stateModel.setProperty("/printLabel", formatForDisplay("Mod+P", platform));
 
-    this._handles.push(
-      this._manager.register(
-        "Mod+P",
-        () => {
-          stateModel.setProperty("/lastAction", "Print (conditional)");
-          MessageToast.show("Mod+P: Print — dynamic enabled demo");
-        },
-        {
-          scope: Scope.Main,
-          description: "Print (conditional)",
-          enabled: () => stateModel.getProperty("/canSave") as boolean,
-        },
-      ),
+    this._hotkeys.register(
+      "Mod+P",
+      () => {
+        stateModel.setProperty("/lastAction", "Print (conditional)");
+        MessageToast.show("Mod+P: Print — dynamic enabled demo");
+      },
+      {
+        scope: Scope.Main,
+        description: "Print (conditional)",
+        enabled: () => stateModel.getProperty("/canSave") as boolean,
+      },
     );
   }
 
@@ -173,44 +161,37 @@ export default class Main extends BaseController {
     stateModel.setProperty("/activeScope", this._manager.getActiveScope());
 
     // Register dialog-scoped F5
-    this._dialogHandles.push(
-      this._manager.register(
-        "F5",
-        () => {
-          stateModel.setProperty("/lastAction", "Refresh (Dialog)");
-          MessageToast.show("F5: Refresh from Dialog");
-        },
-        {
-          scope: Scope.Dialog,
-          description: "Refresh (Dialog)",
-        },
-      ),
+    this._dialogHotkeys.register(
+      "F5",
+      () => {
+        stateModel.setProperty("/lastAction", "Refresh (Dialog)");
+        MessageToast.show("F5: Refresh from Dialog");
+      },
+      {
+        scope: Scope.Dialog,
+        description: "Refresh (Dialog)",
+      },
     );
 
     // Register dialog-scoped Escape to close dialog with proper cleanup
-    this._dialogHandles.push(
-      this._manager.register(
-        "Escape",
-        () => {
-          this._closeDialog();
-        },
-        {
-          scope: Scope.Dialog,
-          description: "Close Dialog",
-          preventDefault: false,
-          stopPropagation: false,
-        },
-      ),
+    this._dialogHotkeys.register(
+      "Escape",
+      () => {
+        this._closeDialog();
+      },
+      {
+        scope: Scope.Dialog,
+        description: "Close Dialog",
+        preventDefault: false,
+        stopPropagation: false,
+      },
     );
 
     this._dialog.open();
   }
 
   onExit(): void {
-    this._handles.forEach((h) => h.unregister());
-    this._handles = [];
-    this._sequenceHandles.forEach((h) => h.unregister());
-    this._sequenceHandles = [];
+    this._hotkeys.destroyAll();
     this._manager.setSequencePendingHandler(null);
     if (this._pendingTimer) {
       clearTimeout(this._pendingTimer);
@@ -230,8 +211,8 @@ export default class Main extends BaseController {
   }
 
   private _cleanupDialog(): void {
-    this._dialogHandles.forEach((h) => h.unregister());
-    this._dialogHandles = [];
+    this._dialogHotkeys.destroyAll();
+    this._dialogHotkeys = this._manager.createGroup();
 
     // Guard: only pop if dialog scope is actually on top
     if (this._manager.getActiveScope() === Scope.Dialog) {
