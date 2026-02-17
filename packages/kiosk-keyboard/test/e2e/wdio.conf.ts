@@ -44,7 +44,7 @@ export const config: WebdriverIO.Config = {
         baselineFolder: path.resolve(__dirname, "__baselines__"),
         formatImageName: "{tag}-{logName}-{width}x{height}",
         screenshotPath: path.resolve(__dirname, "__screenshots__"),
-        autoSaveBaseline: true,
+        autoSaveBaseline: !process.env.CI,
         disableCSSAnimation: true,
         hideScrollBars: true,
         waitForFontsLoaded: true,

@@ -1,0 +1,51 @@
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+
+/** Minimum time for UI5 to process invalidation + re-render. */
+const RENDER_WAIT = 500;
+
+/** Place a control into qunit-fixture and wait for initial render. */
+export function placeAndWait(control: KioskKeyboard): Promise<void> {
+  control.placeAt("qunit-fixture");
+  return new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+}
+
+/** Wait for a re-render cycle after a state change. */
+export function waitForRender(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+}
+
+/** Find a rendered key by its data-key value and tap it via touch simulation. */
+export function tapKey(keyboard: KioskKeyboard, keyValue: string): void {
+  const dom = keyboard.getDomRef();
+  if (!dom) throw new Error("Keyboard not rendered");
+  const keyEl = dom.querySelector(`[data-key="${keyValue}"]`) as HTMLElement | null;
+  if (!keyEl) throw new Error(`Key "${keyValue}" not found`);
+  simulateTap(keyboard, keyEl);
+}
+
+/** Simulate a touchstart→touchend sequence on a control, targeting a specific element. */
+export function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: el, writable: false });
+  kb.ontouchstart(start);
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: el, writable: false });
+  kb.ontouchend(end);
+}
+
+/** Simulate a shift tap on an unrendered keyboard (creates a fake shift element). */
+export function tapShiftInternally(kb: KioskKeyboard): void {
+  const fakeShiftEl = document.createElement("div");
+  fakeShiftEl.classList.add("ui5KioskKey");
+  fakeShiftEl.dataset.key = "{shift}";
+  fakeShiftEl.id = "fake-shift";
+  simulateTap(kb, fakeShiftEl);
+}
+
+/** Get all rendered key elements from a keyboard. */
+export function getKeyElements(keyboard: KioskKeyboard): NodeListOf<HTMLElement> {
+  const dom = keyboard.getDomRef();
+  if (!dom) throw new Error("Keyboard not rendered");
+  return dom.querySelectorAll<HTMLElement>(".ui5KioskKey");
+}
