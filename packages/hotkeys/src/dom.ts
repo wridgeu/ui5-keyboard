@@ -71,6 +71,19 @@ export function isInputElement(target: EventTarget | null): boolean {
 }
 
 /**
+ * Resolve the `ignoreInputs` option for a given hotkey.
+ *
+ * When set to `"auto"`:
+ * - Ctrl/Meta combos and Escape → `false` (allow in inputs)
+ * - Single keys and Alt/Shift-only combos → `true` (suppress in inputs)
+ */
+export function resolveIgnoreInputs(option: boolean | "auto", ctrl: boolean, meta: boolean, key: string): boolean {
+  if (option !== "auto") return option;
+  // Ctrl/Meta combos and Escape should work in inputs; everything else is suppressed
+  return !(ctrl || meta || key === "Escape");
+}
+
+/**
  * Determine whether a keyboard event should be ignored entirely by hotkey/sequence managers.
  *
  * Filters out:

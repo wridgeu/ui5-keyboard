@@ -95,22 +95,14 @@ QUnit.test("Hotkey fires in correct route scope", (assert) => {
 
   router.fireRouteMatched("main");
   fireKey("F5");
+  assert.ok(mainCalled, "F5 fired in 'main' scope");
+  assert.notOk(detailCalled, "F5 did not fire in 'detail' scope");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(mainCalled, "F5 fired in 'main' scope");
-    assert.notOk(detailCalled, "F5 did not fire in 'detail' scope");
-
-    mainCalled = false;
-    router.fireRouteMatched("detail");
-    fireKey("F5");
-
-    setTimeout(() => {
-      assert.notOk(mainCalled, "F5 did not fire in 'main' scope after switching to 'detail'");
-      assert.ok(detailCalled, "F5 fired in 'detail' scope");
-      done();
-    }, 50);
-  }, 50);
+  mainCalled = false;
+  router.fireRouteMatched("detail");
+  fireKey("F5");
+  assert.notOk(mainCalled, "F5 did not fire in 'main' scope after switching to 'detail'");
+  assert.ok(detailCalled, "F5 fired in 'detail' scope");
 });
 
 QUnit.test("Global hotkey still fires after route change", (assert) => {
@@ -125,12 +117,7 @@ QUnit.test("Global hotkey still fires after route change", (assert) => {
 
   router.fireRouteMatched("main");
   fireKey("s", { ctrlKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(globalCalled, "Global Ctrl+S still fires after route change");
-    done();
-  }, 50);
+  assert.ok(globalCalled, "Global Ctrl+S still fires after route change");
 });
 
 QUnit.test("Detach cleanup on destroy", (assert) => {
@@ -172,4 +159,46 @@ QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
   // Fire route with undefined name
   router.fireRouteMatchedUndefined();
   assert.strictEqual(manager.getActiveScope(), "__global__", "Scope reset to global when route name is undefined");
+});
+
+// ──────────────────────────────────────────────
+// disableRouterIntegration (C3)
+// ──────────────────────────────────────────────
+
+QUnit.test("disableRouterIntegration: disable stops scope updates", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const router = createMockRouter();
+  manager.enableRouterIntegration(router as any);
+
+  router.fireRouteMatched("main");
+  assert.strictEqual(manager.getActiveScope(), "main");
+
+  manager.disableRouterIntegration();
+  router.fireRouteMatched("detail");
+  // Scope should NOT change — router is detached
+  assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after disable");
+});
+
+QUnit.test("disableRouterIntegration: throws when not enabled", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  assert.throws(
+    () => manager.disableRouterIntegration(),
+    /not enabled/,
+    "Throws when router integration is not enabled",
+  );
+});
+
+QUnit.test("disableRouterIntegration: re-enable after disable", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const router = createMockRouter();
+
+  manager.enableRouterIntegration(router as any);
+  manager.disableRouterIntegration();
+  manager.resetToGlobalScope();
+
+  // Re-enable and verify it works again
+  manager.enableRouterIntegration(router as any);
+  router.fireRouteMatched("settings");
+  assert.strictEqual(manager.getActiveScope(), "settings", "Scope changes after re-enable");
 });

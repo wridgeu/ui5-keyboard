@@ -4,7 +4,7 @@ import type Router from "sap/ui/core/routing/Router";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
 import { GLOBAL_SCOPE } from "./constants";
-import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
+import { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { keyboardEventToHotkey, parseHotkey } from "./parse";
@@ -21,27 +21,16 @@ import type {
   ResolvedHotkeyOptions,
   UnhandledCallback,
   UnhandledReason,
+  UpdatableHotkeyOptions,
 } from "./types";
 
 type ValidateModule = typeof import("./validate");
+type InstanceManagerModule = { hasOpenDialog(): boolean };
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
-
-/**
- * Resolve the `ignoreInputs` option for a given hotkey.
- *
- * When set to `"auto"`:
- * - Ctrl/Meta combos and Escape → `false` (allow in inputs)
- * - Single keys and Alt/Shift-only combos → `true` (suppress in inputs)
- */
-function resolveIgnoreInputs(option: boolean | "auto", ctrl: boolean, meta: boolean, key: string): boolean {
-  if (option !== "auto") return option;
-  // Ctrl/Meta combos and Escape should work in inputs; everything else is suppressed
-  return !(ctrl || meta || key === "Escape");
-}
 
 /**
  * Merge user-provided options with defaults.
@@ -230,11 +219,11 @@ export default class HotkeyManager extends BaseObject {
         this._registrations.delete(id);
         Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
       },
-      setOptions: (newOptions: Partial<HotkeyOptions>) => {
+      setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
         if (!active) {
           throw new Error(`Cannot setOptions on unregistered handle (id: ${id})`);
         }
-        if (newOptions.scope !== undefined) {
+        if ((newOptions as Record<string, unknown>).scope !== undefined) {
           throw new Error("Cannot change scope via setOptions — unregister and re-register instead");
         }
         // Merge provided fields into resolved options
@@ -504,7 +493,6 @@ export default class HotkeyManager extends BaseObject {
     this._debugMode = false;
     this._lastAltLocation = 0;
     instance = null;
-    idGen.reset();
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
 
@@ -647,7 +635,17 @@ export default class HotkeyManager extends BaseObject {
       // From here on, the key pattern matched — any skip is reportable.
 
       // Skip disabled (supports static boolean or dynamic function)
-      const enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
+      let enabled: boolean;
+      try {
+        enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
+      } catch (error) {
+        Log.error(
+          `Error evaluating enabled() for "${registration.normalizedHotkey}": ${error}`,
+          undefined,
+          LOG_COMPONENT,
+        );
+        enabled = false;
+      }
       if (!enabled) {
         this._recordSkip(skipInfo, "disabled", registration);
         if (debugSkips) debugSkips.push({ registration, reason: "disabled" });
@@ -788,8 +786,8 @@ export default class HotkeyManager extends BaseObject {
    */
   private _checkDialogOpen(): boolean {
     if (!this._hasOpenDialog) {
-      const InstanceManager = sap.ui.require("sap/m/InstanceManager");
-      if (InstanceManager && typeof InstanceManager.hasOpenDialog === "function") {
+      const InstanceManager = sap.ui.require("sap/m/InstanceManager") as InstanceManagerModule | undefined;
+      if (InstanceManager) {
         this._hasOpenDialog = () => InstanceManager.hasOpenDialog();
       }
     }
@@ -836,7 +834,31 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   private _handleConflict(normalizedHotkey: string, scope: string, conflictBehavior: ConflictBehavior): void {
-    // Find existing registration with same hotkey and scope
+    if (conflictBehavior === "allow") return;
+
+    if (conflictBehavior === "replace") {
+      // Collect ALL matches so we remove every conflicting registration
+      const conflicts: HotkeyRegistration[] = [];
+      for (const reg of this._registrations.values()) {
+        if (reg.normalizedHotkey === normalizedHotkey && reg.options.scope === scope) {
+          conflicts.push(reg);
+        }
+      }
+      for (const reg of conflicts) {
+        if (reg.options.target) {
+          this._detachTargetListener(reg.options.target);
+        }
+        this._registrations.delete(reg.id);
+        Log.debug(
+          `Replaced existing hotkey "${normalizedHotkey}" (id: ${reg.id}) in scope "${scope}"`,
+          undefined,
+          LOG_COMPONENT,
+        );
+      }
+      return;
+    }
+
+    // For "warn" and "error", first match is sufficient
     let conflicting: HotkeyRegistration | null = null;
     for (const reg of this._registrations.values()) {
       if (reg.normalizedHotkey === normalizedHotkey && reg.options.scope === scope) {
@@ -847,32 +869,18 @@ export default class HotkeyManager extends BaseObject {
 
     if (!conflicting) return;
 
-    switch (conflictBehavior) {
-      case "allow":
-        return;
-      case "warn":
-        Log.warning(
-          `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}). ` +
-            `New registration will shadow the existing one.`,
-          undefined,
-          LOG_COMPONENT,
-        );
-        return;
-      case "error":
-        throw new Error(
-          `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}).`,
-        );
-      case "replace":
-        if (conflicting.options.target) {
-          this._detachTargetListener(conflicting.options.target);
-        }
-        this._registrations.delete(conflicting.id);
-        Log.debug(
-          `Replaced existing hotkey "${normalizedHotkey}" (id: ${conflicting.id}) in scope "${scope}"`,
-          undefined,
-          LOG_COMPONENT,
-        );
-        return;
+    if (conflictBehavior === "error") {
+      throw new Error(
+        `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}).`,
+      );
     }
+
+    // "warn"
+    Log.warning(
+      `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}). ` +
+        `New registration will shadow the existing one.`,
+      undefined,
+      LOG_COMPONENT,
+    );
   }
 }

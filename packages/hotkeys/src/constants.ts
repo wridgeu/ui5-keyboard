@@ -129,6 +129,12 @@ export function normalizeKeyName(key: string): string {
     return alias;
   }
 
+  // Case-insensitive fallback for multi-character keys (e.g., "ESCAPE", "DELETE", "ARROWUP")
+  const lowerAlias = KEY_ALIASES[key.toLowerCase()];
+  if (lowerAlias) {
+    return lowerAlias;
+  }
+
   // Single character: uppercase letters
   if (key.length === 1) {
     return key.toUpperCase();

@@ -42,14 +42,9 @@ QUnit.test("Debug mode survives across keypresses", (assert) => {
 
   fireKey("Escape");
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    // ignoreRepeat is true by default but these are separate events (not repeat)
-    assert.strictEqual(count, 2, "Both presses handled");
-    assert.ok(manager.isDebugMode(), "Debug mode still enabled after keypresses");
-    done();
-  }, 50);
+  // ignoreRepeat is true by default but these are separate events (not repeat)
+  assert.strictEqual(count, 2, "Both presses handled");
+  assert.ok(manager.isDebugMode(), "Debug mode still enabled after keypresses");
 });
 
 QUnit.test("Disabling debug mode stops debug logging", (assert) => {
@@ -64,13 +59,8 @@ QUnit.test("Disabling debug mode stops debug logging", (assert) => {
   manager.setDebugMode(false);
 
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.strictEqual(count, 1, "Hotkey still fires with debug off");
-    assert.notOk(manager.isDebugMode(), "Debug mode is off");
-    done();
-  }, 50);
+  assert.strictEqual(count, 1, "Hotkey still fires with debug off");
+  assert.notOk(manager.isDebugMode(), "Debug mode is off");
 });
 
 QUnit.test("Debug mode does not interfere with dispatch", (assert) => {
@@ -87,10 +77,5 @@ QUnit.test("Debug mode does not interfere with dispatch", (assert) => {
 
   manager.setDebugMode(true);
   fireKey("s", { ctrlKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "Ctrl+S fires normally with debug mode on");
-    done();
-  }, 50);
+  assert.ok(called, "Ctrl+S fires normally with debug mode on");
 });

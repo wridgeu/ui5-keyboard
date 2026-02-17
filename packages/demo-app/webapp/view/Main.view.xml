@@ -61,6 +61,43 @@
                     <Button text="Open Dialog" press=".onOpenDialog" type="Emphasized" class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
+
+            <Panel headerText="Key Sequences (SequenceManager)" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Multi-key sequences (like Vim's g-commands). Press the first key, then the second within the timeout." />
+                    <HBox class="sapUiSmallMarginTop">
+                        <Label text="G I" class="sapUiSmallMarginEnd" design="Bold" />
+                        <Text text="Navigate to Detail (sequence)" />
+                    </HBox>
+                    <HBox>
+                        <Label text="G S" class="sapUiSmallMarginEnd" design="Bold" />
+                        <Text text="Go to Settings (sequence)" />
+                    </HBox>
+                    <ObjectStatus text="{state>/sequenceStatus}" state="Warning" class="sapUiSmallMarginTop"
+                        visible="{= ${state>/sequenceStatus} !== '' }" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Held Keys (KeyStateTracker)" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Shows which keys are physically held down, tracked by KeyStateTracker." />
+                    <ObjectStatus text="{state>/heldKeys}" state="Information" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Dynamic Enabled" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Toggle the switch to enable/disable a conditional shortcut. The enabled() function is evaluated on every key event." />
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Feature enabled:" class="sapUiSmallMarginEnd" />
+                        <Switch state="{state>/canSave}" />
+                    </HBox>
+                    <HBox class="sapUiSmallMarginTop">
+                        <Label text="{state>/printLabel}" class="sapUiSmallMarginEnd" design="Bold" />
+                        <Text text="Print (only fires when toggle is on)" />
+                    </HBox>
+                </VBox>
+            </Panel>
         </content>
     </Page>
 </mvc:View>

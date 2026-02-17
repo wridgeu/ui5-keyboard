@@ -1,6 +1,8 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { fireKey, fireKeyOn } from "./test-helpers";
 
+const fixture = document.getElementById("qunit-fixture")!;
+
 QUnit.module("HotkeyManager", {
   beforeEach() {
     // Ensure a fresh instance for each test
@@ -28,28 +30,30 @@ QUnit.test("getInstance returns singleton", (assert) => {
 });
 
 QUnit.test("Register and fire simple hotkey", (assert) => {
-  const done = assert.async();
   const manager = HotkeyManager.getInstance();
+  let fired = false;
+  let receivedEvent: KeyboardEvent | null = null;
 
   manager.register("Escape", (event) => {
-    assert.ok(true, "Escape callback fired");
-    assert.ok(event instanceof KeyboardEvent, "Received KeyboardEvent");
-    done();
+    fired = true;
+    receivedEvent = event;
   });
 
   fireKey("Escape");
+  assert.ok(fired, "Escape callback fired");
+  assert.ok(receivedEvent! instanceof KeyboardEvent, "Received KeyboardEvent");
 });
 
 QUnit.test("Register and fire Ctrl+S", (assert) => {
-  const done = assert.async();
   const manager = HotkeyManager.getInstance();
+  let receivedDetails: { hotkey: string } | null = null;
 
   manager.register("Ctrl+S", (_event, details) => {
-    assert.strictEqual(details.hotkey, "Ctrl+S", "Hotkey string passed in details");
-    done();
+    receivedDetails = details;
   });
 
   fireKey("s", { ctrlKey: true });
+  assert.strictEqual(receivedDetails!.hotkey, "Ctrl+S", "Hotkey string passed in details");
 });
 
 QUnit.test("Unregister prevents callback", (assert) => {
@@ -64,12 +68,16 @@ QUnit.test("Unregister prevents callback", (assert) => {
   assert.notOk(handle.isActive, "Handle is no longer active");
 
   fireKey("Escape");
+  assert.notOk(called, "Callback was not called after unregister");
+});
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Callback was not called after unregister");
-    done();
-  }, 50);
+QUnit.test("Double unregister is a silent no-op", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const handle = manager.register("Escape", () => {});
+
+  handle.unregister();
+  handle.unregister(); // no throw
+  assert.notOk(handle.isActive, "Handle is no longer active");
 });
 
 // ──────────────────────────────────────────────
@@ -89,12 +97,7 @@ QUnit.test("Disabled registration is skipped", (assert) => {
   );
 
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Disabled callback was not called");
-    done();
-  }, 50);
+  assert.notOk(called, "Disabled callback was not called");
 });
 
 QUnit.test("enabled as function: evaluated on each keypress", (assert) => {
@@ -112,20 +115,12 @@ QUnit.test("enabled as function: evaluated on each keypress", (assert) => {
 
   // First press: enabled returns false — should not fire
   fireKey("Escape");
+  assert.strictEqual(callCount, 0, "Not called when enabled() returns false");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.strictEqual(callCount, 0, "Not called when enabled() returns false");
-
-    // Toggle enabled
-    canFire = true;
-    fireKey("Escape");
-
-    setTimeout(() => {
-      assert.strictEqual(callCount, 1, "Called when enabled() returns true");
-      done();
-    }, 50);
-  }, 50);
+  // Toggle enabled
+  canFire = true;
+  fireKey("Escape");
+  assert.strictEqual(callCount, 1, "Called when enabled() returns true");
 });
 
 // ──────────────────────────────────────────────
@@ -147,12 +142,7 @@ QUnit.test("ignoreRepeat skips repeated keydown", (assert) => {
   fireKey("Escape");
   fireKey("Escape", { repeat: true });
   fireKey("Escape", { repeat: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.strictEqual(count, 1, "Only first press counted");
-    done();
-  }, 50);
+  assert.strictEqual(count, 1, "Only first press counted");
 });
 
 // ──────────────────────────────────────────────
@@ -182,13 +172,8 @@ QUnit.test("Scope: hotkey only fires in active scope", (assert) => {
 
   // Editor scope is not active — only global should fire
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(globalCalled, "Global scope callback fired");
-    assert.notOk(editorCalled, "Editor scope callback did not fire");
-    done();
-  }, 50);
+  assert.ok(globalCalled, "Global scope callback fired");
+  assert.notOk(editorCalled, "Editor scope callback did not fire");
 });
 
 QUnit.test("Scope push/pop lifecycle", (assert) => {
@@ -207,22 +192,14 @@ QUnit.test("Scope push/pop lifecycle", (assert) => {
   assert.strictEqual(manager.getActiveScope(), "editor");
 
   fireKey("Escape");
+  assert.ok(editorCalled, "Editor scope callback fired after pushScope");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(editorCalled, "Editor scope callback fired after pushScope");
+  editorCalled = false;
+  manager.popScope("editor");
+  assert.strictEqual(manager.getActiveScope(), "__global__");
 
-    editorCalled = false;
-    manager.popScope("editor");
-    assert.strictEqual(manager.getActiveScope(), "__global__");
-
-    fireKey("Escape");
-
-    setTimeout(() => {
-      assert.notOk(editorCalled, "Editor scope callback did not fire after popScope");
-      done();
-    }, 50);
-  }, 50);
+  fireKey("Escape");
+  assert.notOk(editorCalled, "Editor scope callback did not fire after popScope");
 });
 
 QUnit.test("Scoped handler takes priority over global for same key", (assert) => {
@@ -249,13 +226,8 @@ QUnit.test("Scoped handler takes priority over global for same key", (assert) =>
   // Push editor scope — editor Escape should take priority
   manager.pushScope("editor");
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(editorCalled, "Editor scope Escape fired");
-    assert.notOk(globalCalled, "Global Escape suppressed by scoped match");
-    done();
-  }, 50);
+  assert.ok(editorCalled, "Editor scope Escape fired");
+  assert.notOk(globalCalled, "Global Escape suppressed by scoped match");
 });
 
 QUnit.test("popScope throws on mismatch", (assert) => {
@@ -307,12 +279,7 @@ QUnit.test("Conflict behavior: warn (default) allows both", (assert) => {
   });
 
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(firstCalled, "First registration fires (first-match-wins)");
-    done();
-  }, 50);
+  assert.ok(firstCalled, "First registration fires (first-match-wins)");
 });
 
 QUnit.test("Conflict behavior: error throws", (assert) => {
@@ -345,13 +312,8 @@ QUnit.test("Conflict behavior: replace removes old registration", (assert) => {
   );
 
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(oldCalled, "Old registration was replaced");
-    assert.ok(newCalled, "New registration fires");
-    done();
-  }, 50);
+  assert.notOk(oldCalled, "Old registration was replaced");
+  assert.ok(newCalled, "New registration fires");
 });
 
 // ──────────────────────────────────────────────
@@ -367,19 +329,12 @@ QUnit.test("auto ignoreInputs: single key suppressed in text input", (assert) =>
     called = true;
   });
 
-  // Create and mount an input element
   const input = document.createElement("input");
   input.type = "text";
-  document.body.appendChild(input);
+  fixture.appendChild(input);
 
   fireKeyOn(input, "F5");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Single-key F5 suppressed in text input");
-    document.body.removeChild(input);
-    done();
-  }, 50);
+  assert.notOk(called, "Single-key F5 suppressed in text input");
 });
 
 QUnit.test("auto ignoreInputs: Ctrl combo fires in text input", (assert) => {
@@ -393,16 +348,10 @@ QUnit.test("auto ignoreInputs: Ctrl combo fires in text input", (assert) => {
 
   const input = document.createElement("input");
   input.type = "text";
-  document.body.appendChild(input);
+  fixture.appendChild(input);
 
   fireKeyOn(input, "s", { ctrlKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "Ctrl+S fires in text input (auto mode allows Ctrl combos)");
-    document.body.removeChild(input);
-    done();
-  }, 50);
+  assert.ok(called, "Ctrl+S fires in text input (auto mode allows Ctrl combos)");
 });
 
 QUnit.test("auto ignoreInputs: Escape fires in text input", (assert) => {
@@ -415,16 +364,10 @@ QUnit.test("auto ignoreInputs: Escape fires in text input", (assert) => {
 
   const input = document.createElement("input");
   input.type = "text";
-  document.body.appendChild(input);
+  fixture.appendChild(input);
 
   fireKeyOn(input, "Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "Escape fires in text input (auto mode allows Escape)");
-    document.body.removeChild(input);
-    done();
-  }, 50);
+  assert.ok(called, "Escape fires in text input (auto mode allows Escape)");
 });
 
 QUnit.test("ignoreInputs: false allows single key in input", (assert) => {
@@ -441,16 +384,50 @@ QUnit.test("ignoreInputs: false allows single key in input", (assert) => {
 
   const input = document.createElement("input");
   input.type = "text";
-  document.body.appendChild(input);
+  fixture.appendChild(input);
 
   fireKeyOn(input, "F5");
+  assert.ok(called, "F5 fires in input when ignoreInputs is false");
+});
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "F5 fires in input when ignoreInputs is false");
-    document.body.removeChild(input);
-    done();
-  }, 50);
+QUnit.test("ignoreInputs: true suppresses Ctrl combo in input", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.register(
+    "Ctrl+S",
+    () => {
+      called = true;
+    },
+    { ignoreInputs: true },
+  );
+
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
+  fireKeyOn(input, "s", { ctrlKey: true });
+  assert.notOk(called, "Ctrl+S suppressed in input when ignoreInputs is true (unlike auto)");
+});
+
+QUnit.test("ignoreInputs: true suppresses Escape in input", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.register(
+    "Escape",
+    () => {
+      called = true;
+    },
+    { ignoreInputs: true },
+  );
+
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
+  fireKeyOn(input, "Escape");
+  assert.notOk(called, "Escape suppressed in input when ignoreInputs is true (unlike auto)");
 });
 
 // ──────────────────────────────────────────────
@@ -473,20 +450,12 @@ QUnit.test("suppressInDialogs: suppresses when dialog is open", (assert) => {
   (manager as any)._hasOpenDialog = () => true;
 
   fireKey("F5");
+  assert.notOk(called, "F5 suppressed when dialog is open");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "F5 suppressed when dialog is open");
-
-    // Reset mock: no dialog open
-    (manager as any)._hasOpenDialog = () => false;
-    fireKey("F5");
-
-    setTimeout(() => {
-      assert.ok(called, "F5 fires when dialog is closed");
-      done();
-    }, 50);
-  }, 50);
+  // Reset mock: no dialog open
+  (manager as any)._hasOpenDialog = () => false;
+  fireKey("F5");
+  assert.ok(called, "F5 fires when dialog is closed");
 });
 
 QUnit.test("suppressInDialogs: false (default) fires even with dialog open", (assert) => {
@@ -501,12 +470,7 @@ QUnit.test("suppressInDialogs: false (default) fires even with dialog open", (as
   (manager as any)._hasOpenDialog = () => true;
 
   fireKey("F5");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "F5 fires even with dialog open when suppressInDialogs is false");
-    done();
-  }, 50);
+  assert.ok(called, "F5 fires even with dialog open when suppressInDialogs is false");
 });
 
 // ──────────────────────────────────────────────
@@ -530,12 +494,7 @@ QUnit.test("Callback error is caught and does not crash", (assert) => {
   });
 
   fireKey("F2");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(secondCalled, "Manager still operational after callback error");
-    done();
-  }, 50);
+  assert.ok(secondCalled, "Manager still operational after callback error");
 });
 
 // ──────────────────────────────────────────────
@@ -614,12 +573,8 @@ QUnit.test("stopPropagation: true (default) stops propagation", (assert) => {
   manager.register("F5", () => {});
   fireKey("F5");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(propagated, "Event did not propagate to bubble listener");
-    document.removeEventListener("keydown", listener);
-    done();
-  }, 50);
+  assert.notOk(propagated, "Event did not propagate to bubble listener");
+  document.removeEventListener("keydown", listener);
 });
 
 QUnit.test("stopPropagation: false allows propagation", (assert) => {
@@ -634,12 +589,8 @@ QUnit.test("stopPropagation: false allows propagation", (assert) => {
   manager.register("F5", () => {}, { stopPropagation: false });
   fireKey("F5");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(propagated, "Event propagated to bubble listener");
-    document.removeEventListener("keydown", listener);
-    done();
-  }, 50);
+  assert.ok(propagated, "Event propagated to bubble listener");
+  document.removeEventListener("keydown", listener);
 });
 
 // ──────────────────────────────────────────────
@@ -658,13 +609,8 @@ QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => 
   manager.register("Escape", () => {}, { conflictBehavior: "allow" });
 
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(firstCalled, "First registration fires (first-match-wins)");
-    assert.strictEqual(manager.getRegistrations().length, 2, "Both registrations exist");
-    done();
-  }, 50);
+  assert.ok(firstCalled, "First registration fires (first-match-wins)");
+  assert.strictEqual(manager.getRegistrations().length, 2, "Both registrations exist");
 });
 
 // ──────────────────────────────────────────────
@@ -688,11 +634,7 @@ QUnit.test("IME composition events are ignored", (assert) => {
   Object.defineProperty(event, "isComposing", { value: true });
   document.dispatchEvent(event);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Callback not fired during IME composition");
-    done();
-  }, 50);
+  assert.notOk(called, "Callback not fired during IME composition");
 });
 
 // ──────────────────────────────────────────────
@@ -717,11 +659,7 @@ QUnit.test("Pure modifier key presses are ignored", (assert) => {
   });
   document.dispatchEvent(event);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Callback not fired for modifier-only keypress");
-    done();
-  }, 50);
+  assert.notOk(called, "Callback not fired for modifier-only keypress");
 });
 
 // ──────────────────────────────────────────────
@@ -730,22 +668,22 @@ QUnit.test("Pure modifier key presses are ignored", (assert) => {
 
 QUnit.test("Unhandled: fires with no_match when no registration exists", (assert) => {
   const manager = HotkeyManager.getInstance();
-  const done = assert.async();
+  let ctx: any = null;
 
-  manager.setUnhandledHandler((ctx) => {
-    assert.strictEqual(ctx.reason, "no_match", "Reason is no_match");
-    assert.strictEqual(ctx.activeScope, "__global__", "Active scope is global");
-    assert.notOk(ctx.skippedRegistration, "No skipped registration for no_match");
-    assert.ok(ctx.event instanceof KeyboardEvent, "Event is a KeyboardEvent");
-    done();
+  manager.setUnhandledHandler((c) => {
+    ctx = c;
   });
 
   fireKey("F9");
+  assert.strictEqual(ctx.reason, "no_match", "Reason is no_match");
+  assert.strictEqual(ctx.activeScope, "__global__", "Active scope is global");
+  assert.notOk(ctx.skippedRegistration, "No skipped registration for no_match");
+  assert.ok(ctx.event instanceof KeyboardEvent, "Event is a KeyboardEvent");
 });
 
 QUnit.test("Unhandled: fires with disabled reason when registration is disabled", (assert) => {
   const manager = HotkeyManager.getInstance();
-  const done = assert.async();
+  let ctx: any = null;
 
   const handle = manager.register(
     "Ctrl+S",
@@ -755,19 +693,19 @@ QUnit.test("Unhandled: fires with disabled reason when registration is disabled"
     { enabled: false },
   );
 
-  manager.setUnhandledHandler((ctx) => {
-    assert.strictEqual(ctx.reason, "disabled", "Reason is disabled");
-    assert.ok(ctx.skippedRegistration, "Skipped registration is present");
-    assert.strictEqual(ctx.skippedRegistration!.id, handle.id, "Skipped registration matches");
-    done();
+  manager.setUnhandledHandler((c) => {
+    ctx = c;
   });
 
   fireKey("s", { ctrlKey: true });
+  assert.strictEqual(ctx.reason, "disabled", "Reason is disabled");
+  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
+  assert.strictEqual(ctx.skippedRegistration.id, handle.id, "Skipped registration matches");
 });
 
 QUnit.test("Unhandled: fires with input_suppressed for single key in input", (assert) => {
   const manager = HotkeyManager.getInstance();
-  const done = assert.async();
+  let ctx: any = null;
 
   manager.register("F5", () => {
     assert.notOk(true, "Should not fire");
@@ -775,22 +713,21 @@ QUnit.test("Unhandled: fires with input_suppressed for single key in input", (as
 
   const input = document.createElement("input");
   input.type = "text";
-  document.body.appendChild(input);
+  fixture.appendChild(input);
 
-  manager.setUnhandledHandler((ctx) => {
-    assert.strictEqual(ctx.reason, "input_suppressed", "Reason is input_suppressed");
-    assert.ok(ctx.isInput, "isInput is true");
-    assert.ok(ctx.skippedRegistration, "Skipped registration is present");
-    document.body.removeChild(input);
-    done();
+  manager.setUnhandledHandler((c) => {
+    ctx = c;
   });
 
   fireKeyOn(input, "F5");
+  assert.strictEqual(ctx.reason, "input_suppressed", "Reason is input_suppressed");
+  assert.ok(ctx.isInput, "isInput is true");
+  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
 });
 
 QUnit.test("Unhandled: fires with dialog_suppressed when dialog open", (assert) => {
   const manager = HotkeyManager.getInstance();
-  const done = assert.async();
+  let ctx: any = null;
 
   manager.register(
     "F5",
@@ -802,20 +739,20 @@ QUnit.test("Unhandled: fires with dialog_suppressed when dialog open", (assert) 
 
   (manager as any)._hasOpenDialog = () => true;
 
-  manager.setUnhandledHandler((ctx) => {
-    assert.strictEqual(ctx.reason, "dialog_suppressed", "Reason is dialog_suppressed");
-    assert.ok(ctx.isDialogOpen, "isDialogOpen is true");
-    assert.ok(ctx.skippedRegistration, "Skipped registration is present");
-    done();
+  manager.setUnhandledHandler((c) => {
+    ctx = c;
   });
 
   fireKey("F5");
+  assert.strictEqual(ctx.reason, "dialog_suppressed", "Reason is dialog_suppressed");
+  assert.ok(ctx.isDialogOpen, "isDialogOpen is true");
+  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
 });
 
 QUnit.test("Unhandled: fires with repeat_ignored when key held", (assert) => {
   const manager = HotkeyManager.getInstance();
   let handlerFired = false;
-  const done = assert.async();
+  let ctx: any = null;
 
   manager.register("F5", () => {
     handlerFired = true;
@@ -823,16 +760,16 @@ QUnit.test("Unhandled: fires with repeat_ignored when key held", (assert) => {
 
   // First press fires the handler
   fireKey("F5");
+  assert.ok(handlerFired, "First press was handled normally");
 
-  manager.setUnhandledHandler((ctx) => {
-    assert.ok(handlerFired, "First press was handled normally");
-    assert.strictEqual(ctx.reason, "repeat_ignored", "Reason is repeat_ignored");
-    assert.ok(ctx.skippedRegistration, "Skipped registration is present");
-    done();
+  manager.setUnhandledHandler((c) => {
+    ctx = c;
   });
 
   // Repeated press triggers unhandled callback
   fireKey("F5", { repeat: true });
+  assert.strictEqual(ctx.reason, "repeat_ignored", "Reason is repeat_ignored");
+  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
 });
 
 QUnit.test("Unhandled: does NOT fire for IME composing events", (assert) => {
@@ -851,11 +788,7 @@ QUnit.test("Unhandled: does NOT fire for IME composing events", (assert) => {
   Object.defineProperty(event, "isComposing", { value: true });
   document.dispatchEvent(event);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(unhandledCalled, "Unhandled callback not fired for IME event");
-    done();
-  }, 50);
+  assert.notOk(unhandledCalled, "Unhandled callback not fired for IME event");
 });
 
 QUnit.test("Unhandled: does NOT fire for pure modifier presses", (assert) => {
@@ -874,11 +807,7 @@ QUnit.test("Unhandled: does NOT fire for pure modifier presses", (assert) => {
   });
   document.dispatchEvent(event);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(unhandledCalled, "Unhandled callback not fired for modifier-only press");
-    done();
-  }, 50);
+  assert.notOk(unhandledCalled, "Unhandled callback not fired for modifier-only press");
 });
 
 QUnit.test("Unhandled: does NOT fire when a hotkey IS handled", (assert) => {
@@ -895,27 +824,22 @@ QUnit.test("Unhandled: does NOT fire when a hotkey IS handled", (assert) => {
   });
 
   fireKey("Escape");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(handlerFired, "Hotkey handler fired");
-    assert.notOk(unhandledCalled, "Unhandled callback not fired when hotkey was handled");
-    done();
-  }, 50);
+  assert.ok(handlerFired, "Hotkey handler fired");
+  assert.notOk(unhandledCalled, "Unhandled callback not fired when hotkey was handled");
 });
 
 QUnit.test("Unhandled: passes correct activeScope in context", (assert) => {
   const manager = HotkeyManager.getInstance();
-  const done = assert.async();
+  let ctx: any = null;
 
   manager.pushScope("detail");
 
-  manager.setUnhandledHandler((ctx) => {
-    assert.strictEqual(ctx.activeScope, "detail", "Active scope is detail");
-    done();
+  manager.setUnhandledHandler((c) => {
+    ctx = c;
   });
 
   fireKey("F9");
+  assert.strictEqual(ctx.activeScope, "detail", "Active scope is detail");
 });
 
 QUnit.test("Unhandled: null removes the callback", (assert) => {
@@ -929,12 +853,7 @@ QUnit.test("Unhandled: null removes the callback", (assert) => {
   manager.setUnhandledHandler(null);
 
   fireKey("F9");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(unhandledCalled, "Callback not fired after setting to null");
-    done();
-  }, 50);
+  assert.notOk(unhandledCalled, "Callback not fired after setting to null");
 });
 
 // ──────────────────────────────────────────────
@@ -952,20 +871,12 @@ QUnit.test("setOptions: toggle enabled", (assert) => {
   // Disable via setOptions
   handle.setOptions({ enabled: false });
   fireKey("Escape");
+  assert.strictEqual(count, 0, "Disabled via setOptions — not called");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.strictEqual(count, 0, "Disabled via setOptions — not called");
-
-    // Re-enable
-    handle.setOptions({ enabled: true });
-    fireKey("Escape");
-
-    setTimeout(() => {
-      assert.strictEqual(count, 1, "Re-enabled via setOptions — called once");
-      done();
-    }, 50);
-  }, 50);
+  // Re-enable
+  handle.setOptions({ enabled: true });
+  fireKey("Escape");
+  assert.strictEqual(count, 1, "Re-enabled via setOptions — called once");
 });
 
 QUnit.test("setOptions: update description", (assert) => {
@@ -991,20 +902,94 @@ QUnit.test("setOptions: update ignoreRepeat", (assert) => {
   // Default: ignoreRepeat is true
   fireKey("F5");
   fireKey("F5", { repeat: true });
+  assert.strictEqual(count, 1, "Repeat ignored by default");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.strictEqual(count, 1, "Repeat ignored by default");
+  // Allow repeats
+  handle.setOptions({ ignoreRepeat: false });
+  fireKey("F5", { repeat: true });
+  assert.strictEqual(count, 2, "Repeat fires after disabling ignoreRepeat");
+});
 
-    // Allow repeats
-    handle.setOptions({ ignoreRepeat: false });
-    fireKey("F5", { repeat: true });
+QUnit.test("setOptions: update preventDefault", (assert) => {
+  const manager = HotkeyManager.getInstance();
 
-    setTimeout(() => {
-      assert.strictEqual(count, 2, "Repeat fires after disabling ignoreRepeat");
-      done();
-    }, 50);
-  }, 50);
+  const handle = manager.register("F5", () => {});
+
+  // Default: preventDefault is true
+  let event = fireKey("F5");
+  assert.ok(event.defaultPrevented, "Default prevented initially");
+
+  // Disable preventDefault
+  handle.setOptions({ preventDefault: false });
+  event = fireKey("F5");
+  assert.notOk(event.defaultPrevented, "Default not prevented after setOptions");
+});
+
+QUnit.test("setOptions: update stopPropagation", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let propagated = false;
+
+  const listener = () => {
+    propagated = true;
+  };
+  document.addEventListener("keydown", listener);
+
+  const handle = manager.register("F5", () => {});
+
+  // Default: stopPropagation is true
+  fireKey("F5");
+  assert.notOk(propagated, "Event did not propagate initially");
+
+  // Disable stopPropagation
+  handle.setOptions({ stopPropagation: false });
+  fireKey("F5");
+  assert.ok(propagated, "Event propagates after setOptions({ stopPropagation: false })");
+
+  document.removeEventListener("keydown", listener);
+});
+
+QUnit.test("setOptions: update ignoreInputs", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let count = 0;
+
+  // Register with default ignoreInputs: "auto" — single key suppressed in inputs
+  const handle = manager.register("F5", () => {
+    count++;
+  });
+
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
+  fireKeyOn(input, "F5");
+  assert.strictEqual(count, 0, "F5 suppressed in input with auto ignoreInputs");
+
+  // Override to false
+  handle.setOptions({ ignoreInputs: false });
+  fireKeyOn(input, "F5");
+  assert.strictEqual(count, 1, "F5 fires in input after setOptions({ ignoreInputs: false })");
+});
+
+QUnit.test("setOptions: update suppressInDialogs", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let count = 0;
+
+  const handle = manager.register(
+    "F5",
+    () => {
+      count++;
+    },
+    { suppressInDialogs: true },
+  );
+
+  (manager as any)._hasOpenDialog = () => true;
+
+  fireKey("F5");
+  assert.strictEqual(count, 0, "F5 suppressed with dialog open");
+
+  handle.setOptions({ suppressInDialogs: false });
+  fireKey("F5");
+  assert.strictEqual(count, 1, "F5 fires after setOptions({ suppressInDialogs: false })");
 });
 
 QUnit.test("setOptions: throws on unregistered handle", (assert) => {
@@ -1020,7 +1005,7 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
   const handle = manager.register("Escape", () => {});
 
   assert.throws(
-    () => handle.setOptions({ scope: "other" }),
+    () => handle.setOptions({ scope: "other" } as any),
     /Cannot change scope/,
     "Throws when trying to change scope",
   );
@@ -1061,11 +1046,7 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
   });
   document.dispatchEvent(eEvent);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "AltGr+E did not fire Ctrl+Alt+E");
-    done();
-  }, 50);
+  assert.notOk(called, "AltGr+E did not fire Ctrl+Alt+E");
 });
 
 QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
@@ -1089,12 +1070,7 @@ QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
   document.dispatchEvent(altEvent);
 
   fireKey("e", { ctrlKey: true, altKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "Left Alt+Ctrl+E fires normally");
-    done();
-  }, 50);
+  assert.ok(called, "Left Alt+Ctrl+E fires normally");
 });
 
 QUnit.test("AltGr: guard only active on Windows", (assert) => {
@@ -1118,12 +1094,7 @@ QUnit.test("AltGr: guard only active on Windows", (assert) => {
   document.dispatchEvent(altEvent);
 
   fireKey("e", { ctrlKey: true, altKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "AltGr guard not active on Linux");
-    done();
-  }, 50);
+  assert.ok(called, "AltGr guard not active on Linux");
 });
 
 QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
@@ -1138,12 +1109,7 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
 
   // No prior Alt keydown — _lastAltLocation stays 0
   fireKey("e", { ctrlKey: true, altKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "Ctrl+Alt+E fires without prior Alt (location=0)");
-    done();
-  }, 50);
+  assert.ok(called, "Ctrl+Alt+E fires without prior Alt (location=0)");
 });
 
 // ──────────────────────────────────────────────
@@ -1156,7 +1122,7 @@ QUnit.test("Target element: hotkey fires on target element", (assert) => {
 
   const div = document.createElement("div");
   div.tabIndex = 0;
-  document.body.appendChild(div);
+  fixture.appendChild(div);
 
   manager.register(
     "Escape",
@@ -1174,12 +1140,7 @@ QUnit.test("Target element: hotkey fires on target element", (assert) => {
   });
   div.dispatchEvent(event);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(called, "Hotkey fires on target element");
-    document.body.removeChild(div);
-    done();
-  }, 50);
+  assert.ok(called, "Hotkey fires on target element");
 });
 
 QUnit.test("Target element: document events don't fire target hotkey", (assert) => {
@@ -1188,7 +1149,7 @@ QUnit.test("Target element: document events don't fire target hotkey", (assert) 
 
   const div = document.createElement("div");
   div.tabIndex = 0;
-  document.body.appendChild(div);
+  fixture.appendChild(div);
 
   manager.register(
     "F7",
@@ -1200,13 +1161,7 @@ QUnit.test("Target element: document events don't fire target hotkey", (assert) 
 
   // Fire on document — should NOT trigger target-bound hotkey
   fireKey("F7");
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(targetCalled, "Target hotkey does not fire from document event");
-    document.body.removeChild(div);
-    done();
-  }, 50);
+  assert.notOk(targetCalled, "Target hotkey does not fire from document event");
 });
 
 QUnit.test("Target element: document and target coexist", (assert) => {
@@ -1216,7 +1171,7 @@ QUnit.test("Target element: document and target coexist", (assert) => {
 
   const div = document.createElement("div");
   div.tabIndex = 0;
-  document.body.appendChild(div);
+  fixture.appendChild(div);
 
   // Doc registration must not stop propagation, otherwise the capture-phase
   // document listener fires first (capture goes top-down: document → div)
@@ -1244,23 +1199,15 @@ QUnit.test("Target element: document and target coexist", (assert) => {
   });
   div.dispatchEvent(divEvent);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(targetCalled, "Target hotkey fired from element event");
-    assert.ok(docCalled, "Doc hotkey also fires (capture phase, stopPropagation: false)");
+  assert.ok(targetCalled, "Target hotkey fired from element event");
+  assert.ok(docCalled, "Doc hotkey also fires (capture phase, stopPropagation: false)");
 
-    // Now fire on document directly — only doc should fire
-    targetCalled = false;
-    docCalled = false;
-    fireKey("F8");
-
-    setTimeout(() => {
-      assert.ok(docCalled, "Doc hotkey fires from document event");
-      assert.notOk(targetCalled, "Target hotkey does not fire from document event");
-      document.body.removeChild(div);
-      done();
-    }, 50);
-  }, 50);
+  // Now fire on document directly — only doc should fire
+  targetCalled = false;
+  docCalled = false;
+  fireKey("F8");
+  assert.ok(docCalled, "Doc hotkey fires from document event");
+  assert.notOk(targetCalled, "Target hotkey does not fire from document event");
 });
 
 QUnit.test("Target element: with scope", (assert) => {
@@ -1269,7 +1216,7 @@ QUnit.test("Target element: with scope", (assert) => {
 
   const div = document.createElement("div");
   div.tabIndex = 0;
-  document.body.appendChild(div);
+  fixture.appendChild(div);
 
   manager.register(
     "F9",
@@ -1286,26 +1233,17 @@ QUnit.test("Target element: with scope", (assert) => {
     cancelable: true,
   });
   div.dispatchEvent(event1);
+  assert.notOk(called, "Target hotkey does not fire in wrong scope");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Target hotkey does not fire in wrong scope");
-
-    // Push editor scope
-    manager.pushScope("editor");
-    const event2 = new KeyboardEvent("keydown", {
-      key: "F9",
-      bubbles: true,
-      cancelable: true,
-    });
-    div.dispatchEvent(event2);
-
-    setTimeout(() => {
-      assert.ok(called, "Target hotkey fires in correct scope");
-      document.body.removeChild(div);
-      done();
-    }, 50);
-  }, 50);
+  // Push editor scope
+  manager.pushScope("editor");
+  const event2 = new KeyboardEvent("keydown", {
+    key: "F9",
+    bubbles: true,
+    cancelable: true,
+  });
+  div.dispatchEvent(event2);
+  assert.ok(called, "Target hotkey fires in correct scope");
 });
 
 QUnit.test("Target element: setOptions swaps target", (assert) => {
@@ -1314,11 +1252,11 @@ QUnit.test("Target element: setOptions swaps target", (assert) => {
 
   const div1 = document.createElement("div");
   div1.tabIndex = 0;
-  document.body.appendChild(div1);
+  fixture.appendChild(div1);
 
   const div2 = document.createElement("div");
   div2.tabIndex = 0;
-  document.body.appendChild(div2);
+  fixture.appendChild(div2);
 
   const handle = manager.register(
     "F11",
@@ -1338,26 +1276,16 @@ QUnit.test("Target element: setOptions swaps target", (assert) => {
     cancelable: true,
   });
   div1.dispatchEvent(event1);
+  assert.notOk(called, "Hotkey does not fire on old target after setOptions");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Hotkey does not fire on old target after setOptions");
-
-    // Fire on new target — should fire
-    const event2 = new KeyboardEvent("keydown", {
-      key: "F11",
-      bubbles: true,
-      cancelable: true,
-    });
-    div2.dispatchEvent(event2);
-
-    setTimeout(() => {
-      assert.ok(called, "Hotkey fires on new target after setOptions");
-      document.body.removeChild(div1);
-      document.body.removeChild(div2);
-      done();
-    }, 50);
-  }, 50);
+  // Fire on new target — should fire
+  const event2 = new KeyboardEvent("keydown", {
+    key: "F11",
+    bubbles: true,
+    cancelable: true,
+  });
+  div2.dispatchEvent(event2);
+  assert.ok(called, "Hotkey fires on new target after setOptions");
 });
 
 QUnit.test("Target element: unregister removes listener", (assert) => {
@@ -1366,7 +1294,7 @@ QUnit.test("Target element: unregister removes listener", (assert) => {
 
   const div = document.createElement("div");
   div.tabIndex = 0;
-  document.body.appendChild(div);
+  fixture.appendChild(div);
 
   const handle = manager.register(
     "F10",
@@ -1385,12 +1313,7 @@ QUnit.test("Target element: unregister removes listener", (assert) => {
   });
   div.dispatchEvent(event);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Target hotkey does not fire after unregister");
-    document.body.removeChild(div);
-    done();
-  }, 50);
+  assert.notOk(called, "Target hotkey does not fire after unregister");
 });
 
 QUnit.test("Target element: replace cleans up old target listener", (assert) => {
@@ -1399,7 +1322,7 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
 
   const div = document.createElement("div");
   div.tabIndex = 0;
-  document.body.appendChild(div);
+  fixture.appendChild(div);
 
   // Register on target element — this adds a capture listener on div
   manager.register(
@@ -1420,10 +1343,6 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
     { target: div, conflictBehavior: "replace" },
   );
 
-  // The target listener is ref-counted. After replace with cleanup:
-  //   attach(div) → count=1, detach(div) → count=0 (removed), attach(div) → count=1
-  // Without cleanup (the bug):
-  //   attach(div) → count=1, (no detach), attach(div) → count=2
   // Verify only the new handler fires
   const event = new KeyboardEvent("keydown", {
     key: "F10",
@@ -1432,20 +1351,13 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
   });
   div.dispatchEvent(event);
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(oldCalled, "Old target registration was replaced and does not fire");
-    assert.ok(newCalled, "New target registration fires");
+  assert.notOk(oldCalled, "Old target registration was replaced and does not fire");
+  assert.ok(newCalled, "New target registration fires");
 
-    // Now unregister the new one — ref count should go to 0, removing the listener.
-    // Without the fix, ref count would go to 1 (leaked), and the listener would remain.
-    newHandle.unregister();
+  // Now unregister the new one — ref count should go to 0, removing the listener.
+  newHandle.unregister();
 
-    // Verify the target listener Map is cleaned up (ref count reached 0)
-    const targetListeners = (manager as any)._targetListeners as Map<EventTarget, unknown>;
-    assert.strictEqual(targetListeners.size, 0, "Target listener removed after all registrations unregistered");
-
-    document.body.removeChild(div);
-    done();
-  }, 50);
+  // Verify the target listener Map is cleaned up (ref count reached 0)
+  const targetListeners = (manager as any)._targetListeners as Map<EventTarget, unknown>;
+  assert.strictEqual(targetListeners.size, 0, "Target listener removed after all registrations unregistered");
 });

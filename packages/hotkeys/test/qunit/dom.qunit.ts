@@ -1,4 +1,4 @@
-import { isInputElement } from "ui5/hotkeys/dom";
+import { isInputElement, getEventTarget } from "ui5/hotkeys/dom";
 
 QUnit.module("dom - isInputElement", {
   afterEach() {
@@ -104,4 +104,40 @@ QUnit.test("Returns false for null", (assert) => {
 
 QUnit.test("Returns false for non-HTMLElement", (assert) => {
   assert.notOk(isInputElement(document));
+});
+
+// ──────────────────────────────────────────────
+// getEventTarget (C5)
+// ──────────────────────────────────────────────
+
+QUnit.module("dom - getEventTarget");
+
+QUnit.test("Returns the element that dispatched the event", (assert) => {
+  const div = document.createElement("div");
+  document.getElementById("qunit-fixture")!.appendChild(div);
+
+  let capturedTarget: EventTarget | null = null;
+  div.addEventListener("click", (e) => {
+    capturedTarget = getEventTarget(e);
+  });
+
+  div.dispatchEvent(new Event("click", { bubbles: true }));
+  assert.strictEqual(capturedTarget, div, "Returns the dispatching element");
+});
+
+QUnit.test("Falls back to event.target when composedPath is unavailable", (assert) => {
+  const div = document.createElement("div");
+  document.getElementById("qunit-fixture")!.appendChild(div);
+
+  const event = new Event("click", { bubbles: true });
+  div.dispatchEvent(event);
+
+  // Simulate missing composedPath by creating a mock event object
+  const mockEvent = {
+    target: div,
+    composedPath: undefined,
+  } as unknown as Event;
+
+  const target = getEventTarget(mockEvent);
+  assert.strictEqual(target, div, "Falls back to event.target");
 });

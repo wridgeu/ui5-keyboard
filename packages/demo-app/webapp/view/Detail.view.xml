@@ -24,6 +24,21 @@
                     <Text text="Press the back button or Mod+B to return to Main." />
                 </VBox>
             </Panel>
+
+            <Panel headerText="Record a Shortcut (HotkeyRecorder)" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Click Record, then press any key combination. Press Escape to cancel, Backspace/Delete to clear." />
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Recorded:" class="sapUiSmallMarginEnd" />
+                        <Input value="{state>/recordedShortcut}" editable="false" width="200px" />
+                        <Button
+                            text="{= ${state>/isRecording} ? 'Recording...' : 'Record'}"
+                            press=".onStartRecording"
+                            type="{= ${state>/isRecording} ? 'Reject' : 'Accept'}"
+                            class="sapUiSmallMarginBegin" />
+                    </HBox>
+                </VBox>
+            </Panel>
         </content>
     </Page>
 </mvc:View>

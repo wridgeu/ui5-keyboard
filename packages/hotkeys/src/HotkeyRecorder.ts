@@ -29,6 +29,7 @@ export interface HotkeyRecorderOptions {
 export default class HotkeyRecorder {
   private _options: HotkeyRecorderOptions;
   private _recording = false;
+  private _destroyed = false;
   private readonly _keydownHandler = this._onKeyDown.bind(this);
 
   constructor(options: HotkeyRecorderOptions) {
@@ -39,7 +40,7 @@ export default class HotkeyRecorder {
    * Start recording. Attaches a capture-phase keydown listener.
    */
   start(): void {
-    if (this._recording) return;
+    if (this._destroyed || this._recording) return;
     this._recording = true;
     document.addEventListener("keydown", this._keydownHandler, true);
   }
@@ -66,6 +67,22 @@ export default class HotkeyRecorder {
    */
   get isRecording(): boolean {
     return this._recording;
+  }
+
+  /**
+   * Whether the recorder has been destroyed.
+   */
+  get isDestroyed(): boolean {
+    return this._destroyed;
+  }
+
+  /**
+   * Destroy the recorder. Stops recording and prevents restart.
+   */
+  destroy(): void {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    this.stop();
   }
 
   private _onKeyDown(event: KeyboardEvent): void {

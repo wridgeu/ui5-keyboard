@@ -7,6 +7,10 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
+import SequenceManager from "ui5/hotkeys/SequenceManager";
+import type { SequenceRegistrationHandle } from "ui5/hotkeys/SequenceManager";
+import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import { formatForDisplay } from "ui5/hotkeys/format";
 
 /**
  * Main view controller — demonstrates view-scoped and dialog-scoped shortcuts.
@@ -22,6 +26,10 @@ export default class Main extends BaseController {
   private _handles!: HotkeyRegistrationHandle[];
   private _dialogHandles!: HotkeyRegistrationHandle[];
   private _dialog!: Dialog | null;
+  private _sequenceManager!: SequenceManager;
+  private _sequenceHandles!: SequenceRegistrationHandle[];
+  private _keyTracker!: KeyStateTracker;
+  private _pendingTimer!: ReturnType<typeof setTimeout> | null;
 
   onInit(): void {
     this._handles = [];
@@ -56,6 +64,73 @@ export default class Main extends BaseController {
         {
           scope: Scope.Main,
           description: "Navigate to Detail",
+        },
+      ),
+    );
+
+    // D1: SequenceManager demo — multi-key sequences
+    this._sequenceManager = SequenceManager.getInstance();
+    this._sequenceHandles = [];
+    this._pendingTimer = null;
+
+    this._sequenceHandles.push(
+      this._sequenceManager.registerSequence(
+        ["G", "I"],
+        () => {
+          stateModel.setProperty("/lastAction", "Sequence: Go to Inbox (G I)");
+          stateModel.setProperty("/sequenceStatus", "");
+          MessageToast.show("G I: Navigate to Detail");
+          this._navToDetail();
+        },
+        { scope: Scope.Main, description: "Go to Inbox" },
+      ),
+    );
+
+    this._sequenceHandles.push(
+      this._sequenceManager.registerSequence(
+        ["G", "S"],
+        () => {
+          stateModel.setProperty("/lastAction", "Sequence: Go to Settings (G S)");
+          stateModel.setProperty("/sequenceStatus", "");
+          MessageToast.show("G S: Go to Settings (no-op)");
+        },
+        { scope: Scope.Main, description: "Go to Settings" },
+      ),
+    );
+
+    this._sequenceManager.setPendingCallback((info) => {
+      if (this._pendingTimer) clearTimeout(this._pendingTimer);
+      stateModel.setProperty(
+        "/sequenceStatus",
+        `Waiting for next key\u2026 (${info.completedSteps}/${info.totalSteps}) \u2014 press ${info.nextKey}`,
+      );
+      this._pendingTimer = setTimeout(() => {
+        stateModel.setProperty("/sequenceStatus", "");
+        this._pendingTimer = null;
+      }, 1500);
+    });
+
+    // D3: KeyStateTracker live display
+    this._keyTracker = KeyStateTracker.getInstance();
+    this._keyTracker.setChangeCallback((keys) => {
+      stateModel.setProperty("/heldKeys", keys.length > 0 ? keys.join(" + ") : "None");
+    });
+
+    // D4: Dynamic enabled demo — shortcut only fires when toggle is on
+    const platform = this._manager.getPlatform();
+    stateModel.setProperty("/printLabel", formatForDisplay("Mod+P", platform));
+
+    this._handles.push(
+      this._manager.register(
+        "Mod+P",
+        () => {
+          stateModel.setProperty("/lastAction", "Print (conditional)");
+          MessageToast.show("Mod+P: Print — dynamic enabled demo");
+        },
+        {
+          scope: Scope.Main,
+          description: "Print (conditional)",
+          enabled: () => stateModel.getProperty("/canSave") as boolean,
         },
       ),
     );
@@ -138,6 +213,14 @@ export default class Main extends BaseController {
   onExit(): void {
     this._handles.forEach((h) => h.unregister());
     this._handles = [];
+    this._sequenceHandles.forEach((h) => h.unregister());
+    this._sequenceHandles = [];
+    this._sequenceManager.setPendingCallback(null);
+    if (this._pendingTimer) {
+      clearTimeout(this._pendingTimer);
+      this._pendingTimer = null;
+    }
+    this._keyTracker.setChangeCallback(null);
     this._cleanupDialog();
   }
 

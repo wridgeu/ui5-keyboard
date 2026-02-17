@@ -224,9 +224,20 @@ export interface HotkeyOptions {
    * Bind the hotkey to a specific element instead of the document.
    * The hotkey will only fire for events dispatched on this element.
    * Scopes still apply — both target and scope must match.
+   *
+   * **Note:** Document-level hotkeys with `stopPropagation: true` (the default)
+   * will prevent target-bound hotkeys with the same key from firing, because
+   * the document capture listener fires before the target capture listener.
+   * Set `stopPropagation: false` on the document-level registration to allow both.
    */
   target?: HTMLElement | Document;
 }
+
+/**
+ * Options that can be updated on a live registration via `setOptions()`.
+ * Excludes `scope`, which requires unregister + re-register.
+ */
+export type UpdatableHotkeyOptions = Omit<HotkeyOptions, "scope">;
 
 /**
  * Handle returned by `HotkeyManager.register()` for managing a registration's lifecycle.
@@ -245,7 +256,7 @@ export interface HotkeyRegistrationHandle {
    * @param options - Partial options to merge into the registration.
    * @throws Error if the handle has been unregistered or if `scope` is provided.
    */
-  setOptions(options: Partial<HotkeyOptions>): void;
+  setOptions(options: Partial<UpdatableHotkeyOptions>): void;
 }
 
 /**

@@ -4,7 +4,7 @@ import Log from "sap/base/Log";
 import "./library";
 import HotkeyManager from "./HotkeyManager";
 import { GLOBAL_SCOPE } from "./constants";
-import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
+import { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
@@ -29,9 +29,25 @@ export interface SequenceOptions {
   scope?: string;
   /** Whether the sequence is active. @default true */
   enabled?: boolean | (() => boolean);
-  /** Suppress the sequence when an input element is focused. @default true */
-  ignoreInputs?: boolean;
+  /**
+   * Suppress the sequence when an input element is focused.
+   * - `true`: Always suppress in inputs.
+   * - `false`: Never suppress in inputs.
+   * - `"auto"`: Suppress for single keys; allow for Ctrl/Meta combos and Escape.
+   * @default true
+   */
+  ignoreInputs?: boolean | "auto";
+  /** Prevent default on the final key. @default true */
+  preventDefault?: boolean;
+  /** Stop propagation on the final key. @default true */
+  stopPropagation?: boolean;
 }
+
+/**
+ * Options that can be updated on a live sequence registration via `setOptions()`.
+ * Excludes `scope`, which requires unregister + re-register.
+ */
+export type UpdatableSequenceOptions = Omit<SequenceOptions, "scope">;
 
 /**
  * Handle for managing a sequence registration lifecycle.
@@ -40,6 +56,14 @@ export interface SequenceRegistrationHandle {
   readonly id: string;
   readonly isActive: boolean;
   unregister(): void;
+  /**
+   * Update options on a live registration without re-registering.
+   * All fields except `scope` can be changed.
+   *
+   * @param options - Partial options to merge into the registration.
+   * @throws Error if the handle has been unregistered or if `scope` is provided.
+   */
+  setOptions(options: Partial<UpdatableSequenceOptions>): void;
 }
 
 /**
@@ -64,7 +88,9 @@ interface SequenceRegistration {
   timeout: number;
   scope: string;
   enabled: boolean | (() => boolean);
-  ignoreInputs: boolean;
+  ignoreInputs: boolean | "auto";
+  preventDefault: boolean;
+  stopPropagation: boolean;
 }
 
 /**
@@ -129,7 +155,16 @@ export default class SequenceManager extends BaseObject {
     }
 
     const id = idGen.next();
-    const parsedSteps = sequence.map((s) => parseHotkey(s, this._platform));
+    const parsedSteps = sequence.map((s, i) => {
+      try {
+        return parseHotkey(s, this._platform);
+      } catch (e) {
+        throw new Error(
+          `Invalid sequence step ${i} ("${s}") in [${sequence.join(", ")}]: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e },
+        );
+      }
+    });
 
     const registration: SequenceRegistration = {
       id,
@@ -141,6 +176,8 @@ export default class SequenceManager extends BaseObject {
       scope: options?.scope ?? GLOBAL_SCOPE,
       enabled: options?.enabled ?? true,
       ignoreInputs: options?.ignoreInputs ?? true,
+      preventDefault: options?.preventDefault ?? true,
+      stopPropagation: options?.stopPropagation ?? true,
     };
 
     this._registrations.set(id, registration);
@@ -173,6 +210,22 @@ export default class SequenceManager extends BaseObject {
         });
         Log.debug(`Unregistered sequence (id: ${id})`, undefined, LOG_COMPONENT);
       },
+      setOptions: (newOptions: Partial<UpdatableSequenceOptions>) => {
+        if (!active) {
+          throw new Error(`Cannot setOptions on unregistered sequence (id: ${id})`);
+        }
+        if ((newOptions as Record<string, unknown>).scope !== undefined) {
+          throw new Error("Cannot change scope via setOptions — unregister and re-register instead");
+        }
+        const reg = this._registrations.get(id);
+        if (!reg) return;
+        if (newOptions.enabled !== undefined) reg.enabled = newOptions.enabled;
+        if (newOptions.description !== undefined) reg.description = newOptions.description;
+        if (newOptions.timeout !== undefined) reg.timeout = newOptions.timeout;
+        if (newOptions.ignoreInputs !== undefined) reg.ignoreInputs = newOptions.ignoreInputs;
+        if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
+        if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
+      },
     };
   }
 
@@ -202,7 +255,6 @@ export default class SequenceManager extends BaseObject {
     this._pendingCallback = null;
     this._lastAltLocation = 0;
     instance = null;
-    idGen.reset();
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
     super.destroy();
@@ -240,11 +292,10 @@ export default class SequenceManager extends BaseObject {
       if (match.timerId !== null) clearTimeout(match.timerId);
 
       const reg = match.registration;
+      const nextStep = reg.parsedSteps[match.stepIndex];
 
       // If focused into an input mid-sequence, drop matches that suppress in inputs
-      if (reg.ignoreInputs && isInput) continue;
-
-      const nextStep = reg.parsedSteps[match.stepIndex];
+      if (resolveIgnoreInputs(reg.ignoreInputs, nextStep.ctrl, nextStep.meta, nextStep.key) && isInput) continue;
 
       if (matchesKeyboardEvent(event, nextStep)) {
         // This key advances the sequence
@@ -278,8 +329,8 @@ export default class SequenceManager extends BaseObject {
       this._activeMatches = [];
 
       const reg = fullMatch.registration;
-      event.preventDefault();
-      event.stopPropagation();
+      if (reg.preventDefault) event.preventDefault();
+      if (reg.stopPropagation) event.stopPropagation();
 
       try {
         reg.callback(fullMatch.event, {
@@ -312,12 +363,23 @@ export default class SequenceManager extends BaseObject {
   private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean): void {
     for (const reg of this._registrations.values()) {
       if (reg.scope !== scope) continue;
-      if (reg.ignoreInputs && isInput) continue;
-
-      const enabled = typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
-      if (!enabled) continue;
 
       const firstStep = reg.parsedSteps[0];
+      if (resolveIgnoreInputs(reg.ignoreInputs, firstStep.ctrl, firstStep.meta, firstStep.key) && isInput) continue;
+
+      let enabled: boolean;
+      try {
+        enabled = typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
+      } catch (error) {
+        Log.error(
+          `Error evaluating enabled() for sequence [${reg.sequence.join(", ")}]: ${error}`,
+          undefined,
+          LOG_COMPONENT,
+        );
+        enabled = false;
+      }
+      if (!enabled) continue;
+
       if (!matchesKeyboardEvent(event, firstStep)) continue;
       if (reg.parsedSteps.length === 1) continue;
 

@@ -127,3 +127,35 @@ QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
   fireKey("b");
   assert.ok(newTracker.isKeyHeld("b"), "New instance tracks new keys");
 });
+
+// ──────────────────────────────────────────────
+// Edge cases (C12)
+// ──────────────────────────────────────────────
+
+QUnit.test("setChangeCallback(null) removes callback", (assert) => {
+  const tracker = KeyStateTracker.getInstance();
+  let callCount = 0;
+
+  tracker.setChangeCallback(() => {
+    callCount++;
+  });
+
+  fireKey("a");
+  assert.strictEqual(callCount, 1, "Callback fired once");
+
+  tracker.setChangeCallback(null);
+  fireKey("b");
+  assert.strictEqual(callCount, 1, "Callback not fired after setting to null");
+});
+
+QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
+  const tracker = KeyStateTracker.getInstance();
+
+  fireKey("a");
+  fireKey("a"); // Same key again
+  fireKey("a"); // And again
+
+  const held = tracker.getHeldKeys();
+  assert.strictEqual(held.length, 1, "Only one entry for repeated key");
+  assert.ok(held.includes("a"), "Key 'a' is held");
+});

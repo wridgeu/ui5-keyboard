@@ -3,6 +3,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
+import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 
 /**
  * Detail view controller — demonstrates same-key-different-scope pattern.
@@ -16,9 +17,11 @@ import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
 export default class Detail extends BaseController {
   private _manager!: HotkeyManager;
   private _handles!: HotkeyRegistrationHandle[];
+  private _recorder!: HotkeyRecorder | null;
 
   onInit(): void {
     this._handles = [];
+    this._recorder = null;
 
     this._manager = this.getTypedComponent().getHotkeyManager();
     const stateModel = this.getStateModel();
@@ -56,9 +59,32 @@ export default class Detail extends BaseController {
     this._navBack();
   }
 
+  onStartRecording(): void {
+    if (this._recorder?.isRecording) return;
+
+    const stateModel = this.getStateModel();
+    stateModel.setProperty("/isRecording", true);
+
+    this._recorder = new HotkeyRecorder({
+      onRecord: (hotkey) => {
+        stateModel.setProperty("/recordedShortcut", hotkey || "(cleared)");
+        stateModel.setProperty("/isRecording", false);
+      },
+      onCancel: () => {
+        stateModel.setProperty("/isRecording", false);
+      },
+    });
+
+    this._recorder.start();
+  }
+
   onExit(): void {
     this._handles.forEach((h) => h.unregister());
     this._handles = [];
+    if (this._recorder) {
+      this._recorder.destroy();
+      this._recorder = null;
+    }
   }
 
   private _navBack(): void {

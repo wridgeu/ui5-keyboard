@@ -2,6 +2,8 @@ import SequenceManager from "ui5/hotkeys/SequenceManager";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { fireKey, fireKeyOn } from "./test-helpers";
 
+const fixture = document.getElementById("qunit-fixture")!;
+
 QUnit.module("SequenceManager", {
   beforeEach() {
     try {
@@ -274,6 +276,7 @@ QUnit.test("setPendingCallback fires on mid-sequence progress", (assert) => {
 });
 
 QUnit.test("Destroy cleans up everything", (assert) => {
+  const done = assert.async();
   const seq = SequenceManager.getInstance();
   let called = false;
 
@@ -285,7 +288,6 @@ QUnit.test("Destroy cleans up everything", (assert) => {
 
   fireKey("g");
 
-  const done = assert.async();
   setTimeout(() => {
     fireKey("e");
 
@@ -311,7 +313,7 @@ QUnit.test("Sequences are suppressed in input elements by default", (assert) => 
 
   const input = document.createElement("input");
   input.type = "text";
-  document.body.appendChild(input);
+  fixture.appendChild(input);
 
   fireKeyOn(input, "g");
   setTimeout(() => {
@@ -319,7 +321,6 @@ QUnit.test("Sequences are suppressed in input elements by default", (assert) => 
 
     setTimeout(() => {
       assert.notOk(called, "Sequence suppressed when input is focused");
-      document.body.removeChild(input);
       done();
     }, 50);
   }, 50);
@@ -329,19 +330,18 @@ QUnit.test("ignoreInputs: false allows sequences in input elements", (assert) =>
   const done = assert.async();
   const seq = SequenceManager.getInstance();
 
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
   seq.registerSequence(
     ["Ctrl+K", "Ctrl+S"],
     () => {
       assert.ok(true, "Ctrl+K Ctrl+S fired inside input");
-      document.body.removeChild(input);
       done();
     },
     { ignoreInputs: false },
   );
-
-  const input = document.createElement("input");
-  input.type = "text";
-  document.body.appendChild(input);
 
   fireKeyOn(input, "k", { ctrlKey: true });
   setTimeout(() => {
@@ -360,7 +360,7 @@ QUnit.test("Mid-sequence input focus drops matches with ignoreInputs", (assert) 
 
   const input = document.createElement("input");
   input.type = "text";
-  document.body.appendChild(input);
+  fixture.appendChild(input);
 
   // Start sequence on document, then second key on input
   fireKey("g");
@@ -369,8 +369,238 @@ QUnit.test("Mid-sequence input focus drops matches with ignoreInputs", (assert) 
 
     setTimeout(() => {
       assert.notOk(called, "Sequence dropped when focus moves to input mid-sequence");
-      document.body.removeChild(input);
       done();
     }, 50);
+  }, 50);
+});
+
+// ──────────────────────────────────────────────
+// Validation (C9)
+// ──────────────────────────────────────────────
+
+QUnit.test("1-step sequence throws", (assert) => {
+  const seq = SequenceManager.getInstance();
+  assert.throws(() => seq.registerSequence(["G"], () => {}), /at least 2 steps/, "Throws for 1-step sequence");
+});
+
+QUnit.test("Empty sequence throws", (assert) => {
+  const seq = SequenceManager.getInstance();
+  assert.throws(() => seq.registerSequence([], () => {}), /at least 2 steps/, "Throws for empty sequence");
+});
+
+QUnit.test("3-key sequence completes", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+  let called = false;
+
+  seq.registerSequence(["G", "E", "X"], () => {
+    called = true;
+  });
+
+  fireKey("g");
+  setTimeout(() => {
+    fireKey("e");
+    setTimeout(() => {
+      fireKey("x");
+      setTimeout(() => {
+        assert.ok(called, "3-key sequence completed");
+        done();
+      }, 50);
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("Callback error does not crash", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+
+  seq.registerSequence(["G", "E"], () => {
+    throw new Error("Intentional test error");
+  });
+
+  // Should not throw — the error is caught and logged
+  fireKey("g");
+  setTimeout(() => {
+    fireKey("e");
+
+    setTimeout(() => {
+      // Verify the manager is still operational
+      let secondCalled = false;
+      seq.registerSequence(["H", "I"], () => {
+        secondCalled = true;
+      });
+
+      fireKey("h");
+      setTimeout(() => {
+        fireKey("i");
+        setTimeout(() => {
+          assert.ok(secondCalled, "Manager still operational after callback error");
+          done();
+        }, 50);
+      }, 50);
+    }, 50);
+  }, 50);
+});
+
+// ──────────────────────────────────────────────
+// preventDefault / stopPropagation (C11 / B1)
+// ──────────────────────────────────────────────
+
+QUnit.test("preventDefault: false does not prevent default on final key", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+
+  seq.registerSequence(["G", "E"], () => {}, { preventDefault: false });
+
+  fireKey("g");
+  setTimeout(() => {
+    const event = fireKey("e");
+    setTimeout(() => {
+      assert.notOk(event.defaultPrevented, "Default not prevented on final key");
+      done();
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("stopPropagation: false allows propagation on final key", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+  let propagated = false;
+
+  const listener = () => {
+    propagated = true;
+  };
+  document.addEventListener("keydown", listener);
+
+  seq.registerSequence(["G", "E"], () => {}, { stopPropagation: false });
+
+  fireKey("g");
+  setTimeout(() => {
+    fireKey("e");
+    setTimeout(() => {
+      assert.ok(propagated, "Event propagated on final key");
+      document.removeEventListener("keydown", listener);
+      done();
+    }, 50);
+  }, 50);
+});
+
+// ──────────────────────────────────────────────
+// setOptions (C11 / B2)
+// ──────────────────────────────────────────────
+
+QUnit.test("setOptions: toggle enabled off", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+  let called = false;
+
+  const handle = seq.registerSequence(["G", "E"], () => {
+    called = true;
+  });
+
+  handle.setOptions({ enabled: false });
+
+  fireKey("g");
+  setTimeout(() => {
+    fireKey("e");
+    setTimeout(() => {
+      assert.notOk(called, "Sequence does not fire when disabled via setOptions");
+      done();
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("setOptions: toggle enabled back on", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+  let called = false;
+
+  const handle = seq.registerSequence(["G", "E"], () => {
+    called = true;
+  });
+
+  handle.setOptions({ enabled: false });
+  handle.setOptions({ enabled: true });
+
+  fireKey("g");
+  setTimeout(() => {
+    fireKey("e");
+    setTimeout(() => {
+      assert.ok(called, "Sequence fires again after re-enabling via setOptions");
+      done();
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("setOptions: throws on unregistered handle", (assert) => {
+  const seq = SequenceManager.getInstance();
+  const handle = seq.registerSequence(["G", "E"], () => {});
+  handle.unregister();
+
+  assert.throws(() => handle.setOptions({ enabled: false }), /unregistered/, "Throws on setOptions after unregister");
+});
+
+QUnit.test("setOptions: throws on scope change", (assert) => {
+  const seq = SequenceManager.getInstance();
+  const handle = seq.registerSequence(["G", "E"], () => {});
+
+  assert.throws(
+    () => handle.setOptions({ scope: "other" } as any),
+    /Cannot change scope/,
+    "Throws when trying to change scope",
+  );
+});
+
+// ──────────────────────────────────────────────
+// ignoreInputs: "auto" (C11 / B3)
+// ──────────────────────────────────────────────
+
+QUnit.test("ignoreInputs: auto suppresses single-key sequence in input", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+  let called = false;
+
+  seq.registerSequence(
+    ["G", "E"],
+    () => {
+      called = true;
+    },
+    { ignoreInputs: "auto" },
+  );
+
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
+  fireKeyOn(input, "g");
+  setTimeout(() => {
+    fireKeyOn(input, "e");
+    setTimeout(() => {
+      assert.notOk(called, "Single-key sequence suppressed in input with auto");
+      done();
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("ignoreInputs: auto allows Ctrl sequence in input", (assert) => {
+  const done = assert.async();
+  const seq = SequenceManager.getInstance();
+
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
+  seq.registerSequence(
+    ["Ctrl+K", "Ctrl+S"],
+    () => {
+      assert.ok(true, "Ctrl sequence allowed in input with auto");
+      done();
+    },
+    { ignoreInputs: "auto" },
+  );
+
+  fireKeyOn(input, "k", { ctrlKey: true });
+  setTimeout(() => {
+    fireKeyOn(input, "s", { ctrlKey: true });
   }, 50);
 });

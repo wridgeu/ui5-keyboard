@@ -34,23 +34,15 @@ QUnit.test("Dialog scope push/pop with same hotkey", (assert) => {
   // Push dialog scope — dialog Escape should take priority
   manager.pushScope("dialog");
   fireKey("Escape");
+  assert.ok(dialogEscapeCalled, "Dialog-scoped Escape fired");
+  assert.notOk(globalEscapeCalled, "Global Escape suppressed by dialog scope");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(dialogEscapeCalled, "Dialog-scoped Escape fired");
-    assert.notOk(globalEscapeCalled, "Global Escape suppressed by dialog scope");
-
-    // Pop dialog scope — global Escape should fire again
-    dialogEscapeCalled = false;
-    manager.popScope("dialog");
-    fireKey("Escape");
-
-    setTimeout(() => {
-      assert.ok(globalEscapeCalled, "Global Escape fires after dialog scope popped");
-      assert.notOk(dialogEscapeCalled, "Dialog Escape does not fire after pop");
-      done();
-    }, 50);
-  }, 50);
+  // Pop dialog scope — global Escape should fire again
+  dialogEscapeCalled = false;
+  manager.popScope("dialog");
+  fireKey("Escape");
+  assert.ok(globalEscapeCalled, "Global Escape fires after dialog scope popped");
+  assert.notOk(dialogEscapeCalled, "Dialog Escape does not fire after pop");
 });
 
 QUnit.test("Same hotkey in view vs dialog scope", (assert) => {
@@ -78,13 +70,8 @@ QUnit.test("Same hotkey in view vs dialog scope", (assert) => {
   manager.pushScope("confirmDialog");
 
   fireKey("s", { ctrlKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(dialogSaveCalled, "Ctrl+S fires in dialog scope (top of stack)");
-    assert.notOk(mainSaveCalled, "Ctrl+S does not fire in view scope (shadowed)");
-    done();
-  }, 50);
+  assert.ok(dialogSaveCalled, "Ctrl+S fires in dialog scope (top of stack)");
+  assert.notOk(mainSaveCalled, "Ctrl+S does not fire in view scope (shadowed)");
 });
 
 QUnit.test("suppressInDialogs with mocked _hasOpenDialog", (assert) => {
@@ -102,20 +89,12 @@ QUnit.test("suppressInDialogs with mocked _hasOpenDialog", (assert) => {
   // Mock dialog as open
   (manager as any)._hasOpenDialog = () => true;
   fireKey("s", { ctrlKey: true });
+  assert.notOk(called, "Ctrl+S suppressed when dialog is open");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(called, "Ctrl+S suppressed when dialog is open");
-
-    // Close dialog
-    (manager as any)._hasOpenDialog = () => false;
-    fireKey("s", { ctrlKey: true });
-
-    setTimeout(() => {
-      assert.ok(called, "Ctrl+S fires when dialog is closed");
-      done();
-    }, 50);
-  }, 50);
+  // Close dialog
+  (manager as any)._hasOpenDialog = () => false;
+  fireKey("s", { ctrlKey: true });
+  assert.ok(called, "Ctrl+S fires when dialog is closed");
 });
 
 QUnit.test("Nested dialog scopes", (assert) => {
@@ -144,23 +123,15 @@ QUnit.test("Nested dialog scopes", (assert) => {
   assert.strictEqual(manager.getActiveScope(), "dialog2");
 
   fireKey("Escape");
+  assert.ok(dialog2Called, "Inner dialog Escape fires");
+  assert.notOk(dialog1Called, "Outer dialog Escape does not fire");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(dialog2Called, "Inner dialog Escape fires");
-    assert.notOk(dialog1Called, "Outer dialog Escape does not fire");
-
-    // Pop inner dialog
-    dialog2Called = false;
-    manager.popScope("dialog2");
-    fireKey("Escape");
-
-    setTimeout(() => {
-      assert.ok(dialog1Called, "Outer dialog Escape fires after inner popped");
-      assert.notOk(dialog2Called, "Inner dialog Escape does not fire after pop");
-      done();
-    }, 50);
-  }, 50);
+  // Pop inner dialog
+  dialog2Called = false;
+  manager.popScope("dialog2");
+  fireKey("Escape");
+  assert.ok(dialog1Called, "Outer dialog Escape fires after inner popped");
+  assert.notOk(dialog2Called, "Inner dialog Escape does not fire after pop");
 });
 
 QUnit.test("Dialog scope with global fallthrough", (assert) => {
@@ -175,12 +146,7 @@ QUnit.test("Dialog scope with global fallthrough", (assert) => {
   // Push dialog scope — no Ctrl+S registered there
   manager.pushScope("myDialog");
   fireKey("s", { ctrlKey: true });
-
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(globalCtrlSCalled, "Global Ctrl+S fires as fallthrough when no dialog-scoped match");
-    done();
-  }, 50);
+  assert.ok(globalCtrlSCalled, "Global Ctrl+S fires as fallthrough when no dialog-scoped match");
 });
 
 QUnit.test("Fragment popup lifecycle: push, register, fire, unregister, pop", (assert) => {
@@ -199,21 +165,13 @@ QUnit.test("Fragment popup lifecycle: push, register, fire, unregister, pop", (a
   );
 
   fireKey("Enter");
+  assert.ok(fragmentCalled, "Fragment-scoped Enter fires");
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.ok(fragmentCalled, "Fragment-scoped Enter fires");
+  // Simulate closing the fragment
+  handle.unregister();
+  manager.popScope("myFragment");
 
-    // Simulate closing the fragment
-    handle.unregister();
-    manager.popScope("myFragment");
-
-    fragmentCalled = false;
-    fireKey("Enter");
-
-    setTimeout(() => {
-      assert.notOk(fragmentCalled, "Fragment Enter does not fire after cleanup");
-      done();
-    }, 50);
-  }, 50);
+  fragmentCalled = false;
+  fireKey("Enter");
+  assert.notOk(fragmentCalled, "Fragment Enter does not fire after cleanup");
 });

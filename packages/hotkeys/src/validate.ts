@@ -3,17 +3,13 @@ import type { Platform } from "./types";
 
 /**
  * Result of validating a hotkey string.
+ *
+ * Discriminated union: when `valid` is `true`, `normalizedHotkey` is guaranteed
+ * to be a string. When `valid` is `false`, `normalizedHotkey` is `undefined`.
  */
-export interface HotkeyValidationResult {
-  /** Whether the hotkey is structurally valid (parseable with a non-modifier key). */
-  valid: boolean;
-  /** Non-fatal issues (browser conflicts, SAP conflicts, unknown keys). */
-  warnings: string[];
-  /** Fatal issues (empty string, bad modifier, no key). */
-  errors: string[];
-  /** The normalized hotkey string, present only when valid. */
-  normalizedHotkey?: string;
-}
+export type HotkeyValidationResult =
+  | { valid: true; warnings: string[]; errors: string[]; normalizedHotkey: string }
+  | { valid: false; warnings: string[]; errors: string[]; normalizedHotkey?: undefined };
 
 /**
  * Browser shortcuts that cannot be reliably overridden.
@@ -138,7 +134,7 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
   try {
     parsed = parseHotkey(hotkey, platform);
   } catch (e) {
-    return { valid: false, errors: [(e as Error).message], warnings };
+    return { valid: false, errors: [e instanceof Error ? e.message : String(e)], warnings };
   }
 
   const normalized = [...parsed.modifiers, parsed.key].join("+");
@@ -175,8 +171,7 @@ export function assertValidHotkey(hotkey: string, platform?: Platform): string {
   if (!result.valid) {
     throw new Error(`Invalid hotkey "${hotkey}": ${result.errors.join("; ")}`);
   }
-  // normalizedHotkey is always set when valid===true (see validateHotkey return at line 162)
-  return result.normalizedHotkey as string;
+  return result.normalizedHotkey;
 }
 
 /**

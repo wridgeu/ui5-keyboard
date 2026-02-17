@@ -179,11 +179,61 @@ QUnit.test("stop() is silent (no callbacks)", (assert) => {
   recorder.start();
   recorder.stop();
 
-  const done = assert.async();
-  setTimeout(() => {
-    assert.notOk(recordCalled, "onRecord not called on stop");
-    assert.notOk(cancelCalled, "onCancel not called on stop");
-    assert.notOk(recorder.isRecording, "Not recording after stop");
-    done();
-  }, 50);
+  assert.notOk(recordCalled, "onRecord not called on stop");
+  assert.notOk(cancelCalled, "onCancel not called on stop");
+  assert.notOk(recorder.isRecording, "Not recording after stop");
+});
+
+// ──────────────────────────────────────────────
+// destroy() and edge cases (C10)
+// ──────────────────────────────────────────────
+
+QUnit.test("destroy() stops recording and prevents restart", (assert) => {
+  const recorder = new HotkeyRecorder({ onRecord: () => {} });
+
+  recorder.start();
+  assert.ok(recorder.isRecording, "Recording before destroy");
+
+  recorder.destroy();
+  assert.notOk(recorder.isRecording, "Not recording after destroy");
+  assert.ok(recorder.isDestroyed, "Recorder is destroyed");
+
+  recorder.start();
+  assert.notOk(recorder.isRecording, "Cannot restart after destroy");
+});
+
+QUnit.test("start() while already recording is a no-op", (assert) => {
+  let recordCount = 0;
+
+  const recorder = new HotkeyRecorder({
+    onRecord: () => {
+      recordCount++;
+    },
+  });
+
+  recorder.start();
+  recorder.start(); // Should be no-op
+  assert.ok(recorder.isRecording, "Still recording");
+
+  fireKey("F5");
+  assert.strictEqual(recordCount, 1, "Only one recording captured despite double start");
+});
+
+QUnit.test("stop() while not recording is a no-op", (assert) => {
+  const recorder = new HotkeyRecorder({ onRecord: () => {} });
+
+  // Not recording yet — stop should not throw
+  recorder.stop();
+  assert.notOk(recorder.isRecording, "Still not recording");
+});
+
+QUnit.test("cancel() without onCancel callback does not throw", (assert) => {
+  const recorder = new HotkeyRecorder({
+    onRecord: () => {},
+    // No onCancel provided
+  });
+
+  recorder.start();
+  recorder.cancel(); // Should not throw
+  assert.notOk(recorder.isRecording, "Not recording after cancel");
 });

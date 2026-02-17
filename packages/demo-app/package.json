@@ -6,6 +6,7 @@
   "scripts": {
     "start": "ui5 serve --port 8080 -o index.html",
     "build": "ui5 build --clean-dest",
+    "clean": "rimraf dist",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
