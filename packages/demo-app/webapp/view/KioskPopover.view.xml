@@ -1,0 +1,36 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskPopover"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="Popover Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <Panel headerText="Keyboard in Popover" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Press the keyboard icon to open a popover containing a virtual keyboard targeting that input." />
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="First Name" class="sapUiSmallMarginEnd" />
+                        <Input id="firstName" placeholder="Jane" width="14rem" />
+                        <Button
+                            icon="sap-icon://keyboard-and-mouse"
+                            type="Transparent"
+                            press=".onOpenKeyboard"
+                            ariaHasPopup="Dialog"
+                            customData:key="firstName"
+                            xmlns:customData="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData" />
+                    </HBox>
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Last Name" class="sapUiSmallMarginEnd" />
+                        <Input id="lastName" placeholder="Doe" width="14rem" />
+                        <Button
+                            icon="sap-icon://keyboard-and-mouse"
+                            type="Transparent"
+                            press=".onOpenKeyboard"
+                            ariaHasPopup="Dialog"
+                            customData:key="lastName"
+                            xmlns:customData="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData" />
+                    </HBox>
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>

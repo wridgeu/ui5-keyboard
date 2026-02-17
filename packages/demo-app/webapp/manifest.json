@@ -57,9 +57,34 @@
           "target": "detail"
         },
         {
-          "name": "kiosk",
+          "name": "kioskHub",
           "pattern": "kiosk",
-          "target": "kiosk"
+          "target": "kioskHub"
+        },
+        {
+          "name": "kioskDocked",
+          "pattern": "kiosk/docked",
+          "target": "kioskDocked"
+        },
+        {
+          "name": "kioskPopover",
+          "pattern": "kiosk/popover",
+          "target": "kioskPopover"
+        },
+        {
+          "name": "kioskInputIds",
+          "pattern": "kiosk/input-ids",
+          "target": "kioskInputIds"
+        },
+        {
+          "name": "kioskProgrammatic",
+          "pattern": "kiosk/programmatic",
+          "target": "kioskProgrammatic"
+        },
+        {
+          "name": "kioskComponent",
+          "pattern": "kiosk/component",
+          "target": "kioskComponent"
         }
       ],
       "targets": {
@@ -71,9 +96,29 @@
           "id": "detail",
           "name": "Detail"
         },
-        "kiosk": {
-          "id": "kiosk",
-          "name": "Kiosk"
+        "kioskHub": {
+          "id": "kioskHub",
+          "name": "KioskHub"
+        },
+        "kioskDocked": {
+          "id": "kioskDocked",
+          "name": "KioskDocked"
+        },
+        "kioskPopover": {
+          "id": "kioskPopover",
+          "name": "KioskPopover"
+        },
+        "kioskInputIds": {
+          "id": "kioskInputIds",
+          "name": "KioskInputIds"
+        },
+        "kioskProgrammatic": {
+          "id": "kioskProgrammatic",
+          "name": "KioskProgrammatic"
+        },
+        "kioskComponent": {
+          "id": "kioskComponent",
+          "name": "KioskComponent"
         }
       }
     },
@@ -96,7 +141,12 @@
             "recordedShortcut": "",
             "isRecording": false,
             "kioskLastKey": "None",
-            "kioskLayout": "qwerty"
+            "kioskLayout": "qwerty",
+            "kioskEnabled": true,
+            "kioskMobileKeyboard": "Custom",
+            "kioskIsOpen": false,
+            "kioskKeyboardType": "Full",
+            "kioskCurrentTarget": "None"
           }
         }
       }

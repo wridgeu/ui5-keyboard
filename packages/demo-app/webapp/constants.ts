@@ -6,5 +6,10 @@ export const Scope = {
   Main: "main",
   Detail: "detail",
   Dialog: "dialog",
-  Kiosk: "kiosk",
+  KioskHub: "kioskHub",
+  KioskDocked: "kioskDocked",
+  KioskPopover: "kioskPopover",
+  KioskInputIds: "kioskInputIds",
+  KioskProgrammatic: "kioskProgrammatic",
+  KioskComponent: "kioskComponent",
 } as const;

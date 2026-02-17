@@ -137,7 +137,7 @@ export default class Main extends BaseController {
   }
 
   onNavToKiosk(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.Kiosk);
+    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
   onOpenDialog(): void {

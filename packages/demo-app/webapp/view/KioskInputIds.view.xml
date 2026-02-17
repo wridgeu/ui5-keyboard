@@ -1,0 +1,40 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskInputIds"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:kiosk="ui5.kiosk">
+    <Page title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <Panel headerText="Selective Input Targeting" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="The keyboard below targets only Input A and Input B via inputIds. Focusing Input C or D will not switch the keyboard target." />
+                    <Label text="Input A (targeted)" labelFor="inputA" class="sapUiSmallMarginTop" />
+                    <Input id="inputA" placeholder="Targeted by keyboard" width="100%" />
+                    <Label text="Input B (targeted)" labelFor="inputB" class="sapUiSmallMarginTop" />
+                    <Input id="inputB" placeholder="Targeted by keyboard" width="100%" />
+                    <Label text="Input C (not targeted)" labelFor="inputC" class="sapUiSmallMarginTop" />
+                    <Input id="inputC" placeholder="Not targeted" width="100%" />
+                    <Label text="Input D (not targeted)" labelFor="inputD" class="sapUiSmallMarginTop" />
+                    <Input id="inputD" placeholder="Not targeted" width="100%" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Status" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Current Target:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskCurrentTarget}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <kiosk:KioskKeyboard
+                id="inputIdsKeyboard"
+                docked="true"
+                autoShow="true"
+                inputIds="inputA,inputB"
+                keyPress=".onKeyPress"
+                ariaLabel="Selective Keyboard" />
+        </content>
+    </Page>
+</mvc:View>

@@ -5,6 +5,7 @@ import TextArea from "sap/m/TextArea";
 import Popover from "sap/m/Popover";
 import VBox from "sap/m/VBox";
 import Localization from "sap/base/i18n/Localization";
+import InvisibleText from "sap/ui/core/InvisibleText";
 import { placeAndWait, waitForRender, tapKey, simulateTap, tapShiftInternally, getKeyElements } from "./test-helpers";
 
 // ──────────────────────────────────────────────
@@ -3019,5 +3020,489 @@ QUnit.test("Typing with no target input does not throw", async (assert) => {
 
   assert.ok(true, "No errors when typing without a target input");
 
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// ARIA Associations
+// ──────────────────────────────────────────────
+
+QUnit.test("ariaLabelledBy renders aria-labelledby attribute on root DOM", async (assert) => {
+  const label = new InvisibleText({ text: "My Keyboard" });
+  label.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard();
+  kb.addAriaLabelledBy(label);
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  assert.ok(dom.getAttribute("aria-labelledby")?.includes(label.getId()), "aria-labelledby contains label ID");
+
+  label.destroy();
+  kb.destroy();
+});
+
+QUnit.test("ariaDescribedBy renders aria-describedby attribute", async (assert) => {
+  const desc = new InvisibleText({ text: "Use arrow keys to navigate" });
+  desc.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard();
+  kb.addAriaDescribedBy(desc);
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  assert.ok(dom.getAttribute("aria-describedby")?.includes(desc.getId()), "aria-describedby contains description ID");
+
+  desc.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Multiple ariaLabelledBy IDs render space-separated", async (assert) => {
+  const label1 = new InvisibleText({ text: "Label 1" });
+  const label2 = new InvisibleText({ text: "Label 2" });
+  label1.placeAt("qunit-fixture");
+  label2.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard();
+  kb.addAriaLabelledBy(label1);
+  kb.addAriaLabelledBy(label2);
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const attr = dom.getAttribute("aria-labelledby") ?? "";
+  assert.ok(attr.includes(label1.getId()), "Contains first label ID");
+  assert.ok(attr.includes(label2.getId()), "Contains second label ID");
+
+  label1.destroy();
+  label2.destroy();
+  kb.destroy();
+});
+
+QUnit.test("ariaLabel + ariaLabelledBy coexist", async (assert) => {
+  const label = new InvisibleText({ text: "External label" });
+  label.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ ariaLabel: "Custom Keyboard" });
+  kb.addAriaLabelledBy(label);
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const labelledBy = dom.getAttribute("aria-labelledby") ?? "";
+  assert.ok(labelledBy.includes(label.getId()), "ariaLabelledBy ID included in aria-labelledby");
+
+  label.destroy();
+  kb.destroy();
+});
+
+QUnit.test("removeAriaLabelledBy clears attribute after re-render", async (assert) => {
+  const label = new InvisibleText({ text: "Removable label" });
+  label.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard();
+  kb.addAriaLabelledBy(label);
+  await placeAndWait(kb);
+
+  let attr = kb.getDomRef()!.getAttribute("aria-labelledby") ?? "";
+  assert.ok(attr.includes(label.getId()), "Label ID initially present");
+
+  kb.removeAriaLabelledBy(label);
+  await waitForRender();
+
+  attr = kb.getDomRef()!.getAttribute("aria-labelledby") ?? "";
+  assert.notOk(attr.includes(label.getId()), "Label ID removed after re-render");
+
+  label.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// QWERTZ-DE Shift Symbols Highlight
+// ──────────────────────────────────────────────
+
+QUnit.test('Physical "\\\"" highlights "2" key (Shift+2 on QWERTZ-DE)', async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  await placeAndWait(kb);
+
+  (kb as any)._highlightKey('"', true);
+  const key2 = kb.getDomRef()!.querySelector('[data-key="2"]') as HTMLElement;
+  assert.ok(key2.classList.contains("ui5KioskKey--highlight"), "Key '2' highlighted for '\"'");
+
+  (kb as any)._highlightKey('"', false);
+  assert.notOk(key2.classList.contains("ui5KioskKey--highlight"), "Highlight removed on release");
+
+  kb.destroy();
+});
+
+QUnit.test('Physical "/" highlights "7" key (Shift+7 on QWERTZ-DE)', async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  await placeAndWait(kb);
+
+  (kb as any)._highlightKey("/", true);
+  const key7 = kb.getDomRef()!.querySelector('[data-key="7"]') as HTMLElement;
+  assert.ok(key7.classList.contains("ui5KioskKey--highlight"), "Key '7' highlighted for '/'");
+
+  (kb as any)._highlightKey("/", false);
+  assert.notOk(key7.classList.contains("ui5KioskKey--highlight"), "Highlight removed on release");
+
+  kb.destroy();
+});
+
+QUnit.test('Physical "\u00DC" (capital U-umlaut) highlights "\u00FC" key', async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  await placeAndWait(kb);
+
+  (kb as any)._highlightKey("\u00DC", true);
+  const keyU = kb.getDomRef()!.querySelector('[data-key="\u00FC"]') as HTMLElement;
+  assert.ok(keyU.classList.contains("ui5KioskKey--highlight"), "\u00FC key highlighted for capital \u00DC");
+
+  (kb as any)._highlightKey("\u00DC", false);
+  assert.notOk(keyU.classList.contains("ui5KioskKey--highlight"), "Highlight removed");
+
+  kb.destroy();
+});
+
+QUnit.test('Physical "\u00FC" (lowercase) highlights its own key directly', async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  await placeAndWait(kb);
+
+  (kb as any)._highlightKey("\u00FC", true);
+  const keyU = kb.getDomRef()!.querySelector('[data-key="\u00FC"]') as HTMLElement;
+  assert.ok(keyU.classList.contains("ui5KioskKey--highlight"), "\u00FC key highlighted directly");
+
+  (kb as any)._highlightKey("\u00FC", false);
+  assert.notOk(keyU.classList.contains("ui5KioskKey--highlight"), "Highlight removed");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// applyFocusInfo preventScroll
+// ──────────────────────────────────────────────
+
+QUnit.test("applyFocusInfo with preventScroll: true does not throw", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.applyFocusInfo({ preventScroll: true });
+  assert.ok(true, "No error with preventScroll: true");
+
+  kb.destroy();
+});
+
+QUnit.test("applyFocusInfo with preventScroll: false does not throw", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.applyFocusInfo({ preventScroll: false });
+  assert.ok(true, "No error with preventScroll: false");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Target Input Destroyed While Open
+// ──────────────────────────────────────────────
+
+QUnit.test("Destroying target while open: tap/backspace/enter/close do not throw", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true });
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+  kb.show();
+
+  input.destroy();
+
+  tapKey(kb, "a");
+  tapKey(kb, "{backspace}");
+  tapKey(kb, "{enter}");
+  kb.close();
+
+  assert.ok(true, "No errors after target input destroyed");
+
+  kb.destroy();
+});
+
+QUnit.test("New input focused after target destroyed adopts correctly via autoShow", async (assert) => {
+  const input1 = new Input();
+  const input2 = new Input();
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+  await waitForRender();
+
+  // Focus input1 triggers autoShow
+  (input1.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  // Destroy input1 while keyboard is open
+  input1.destroy();
+
+  // Focus input2 — autoShow should adopt it without error
+  (input2.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  assert.ok(true, "No errors when adopting new input after target destroyed");
+
+  input2.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Shift State on Numpad/Numeric
+// ──────────────────────────────────────────────
+
+QUnit.test("Numpad has no shift key rendered", async (assert) => {
+  const kb = new KioskKeyboard({ keyboardType: "Numpad" });
+  await placeAndWait(kb);
+
+  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  assert.notOk(shiftKey, "No shift key in numpad layout");
+
+  kb.destroy();
+});
+
+QUnit.test("Numeric layout has no shift key rendered", async (assert) => {
+  const kb = new KioskKeyboard({ keyboardType: "Numeric" });
+  await placeAndWait(kb);
+
+  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  assert.notOk(shiftKey, "No shift key in numeric layout");
+
+  kb.destroy();
+});
+
+QUnit.test("Prior shift state does not leak into Numpad rendering", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Activate shift on full layout
+  tapKey(kb, "{shift}");
+  assert.ok(kb.isShiftActive(), "Shift is active on full layout");
+
+  // Switch to numpad
+  kb.setKeyboardType("Numpad");
+  await waitForRender();
+
+  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  assert.notOk(shiftKey, "No shift key rendered in numpad despite prior shift");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Rapid Show/Close Cycling
+// ──────────────────────────────────────────────
+
+QUnit.test("20 show/close cycles without error or state desync", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+
+  for (let i = 0; i < 20; i++) {
+    kb.show();
+    kb.close();
+  }
+
+  assert.notOk(kb.isOpen(), "Keyboard is closed after all cycles");
+  assert.ok(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--closed"), "Closed CSS class present");
+
+  kb.destroy();
+});
+
+QUnit.test("Rapid cycling preserves inputmode restoration", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true });
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  const inputEl = input.getFocusDomRef() as HTMLInputElement;
+  const originalInputMode = inputEl.inputMode;
+
+  for (let i = 0; i < 10; i++) {
+    kb.show();
+    kb.close();
+  }
+
+  assert.strictEqual(inputEl.inputMode, originalInputMode, "inputMode restored after cycling");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Event counts match actual show/close transitions", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+
+  let openCount = 0;
+  let closeCount = 0;
+  kb.attachEvent("afterOpen", () => openCount++);
+  kb.attachEvent("afterClose", () => closeCount++);
+
+  for (let i = 0; i < 5; i++) {
+    kb.show();
+    kb.close();
+  }
+
+  assert.strictEqual(openCount, 5, "5 afterOpen events fired");
+  assert.strictEqual(closeCount, 5, "5 afterClose events fired");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// setDocked Runtime Toggling
+// ──────────────────────────────────────────────
+
+QUnit.test("docked false \u2192 true \u2192 show \u2192 false \u2192 true resets to closed", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.setDocked(true);
+  kb.show();
+  assert.ok(kb.isOpen(), "Open after show()");
+
+  kb.setDocked(false);
+  kb.setDocked(true);
+  assert.notOk(kb.isOpen(), "Closed after toggling docked off and on");
+
+  kb.destroy();
+});
+
+QUnit.test("setDocked(true) adds docked CSS classes after render", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.setDocked(true);
+  await waitForRender();
+
+  const dom = kb.getDomRef()!;
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--docked"), "Docked class present");
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--closed"), "Closed class present (starts closed)");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Static API: getKeyIcon
+// ──────────────────────────────────────────────
+
+QUnit.test('getKeyIcon: {shift} \u2192 "sap-icon://arrow-top"', (assert) => {
+  assert.strictEqual(KioskKeyboard.getKeyIcon("{shift}"), "sap-icon://arrow-top");
+});
+
+QUnit.test('getKeyIcon: {enter} \u2192 "sap-icon://accept"', (assert) => {
+  assert.strictEqual(KioskKeyboard.getKeyIcon("{enter}"), "sap-icon://accept");
+});
+
+QUnit.test("getKeyIcon: {backspace} \u2192 undefined", (assert) => {
+  assert.strictEqual(KioskKeyboard.getKeyIcon("{backspace}"), undefined);
+});
+
+QUnit.test('getKeyIcon: "a" \u2192 undefined', (assert) => {
+  assert.strictEqual(KioskKeyboard.getKeyIcon("a"), undefined);
+});
+
+QUnit.test('getKeyIcon: " " \u2192 undefined', (assert) => {
+  assert.strictEqual(KioskKeyboard.getKeyIcon(" "), undefined);
+});
+
+// ──────────────────────────────────────────────
+// getKeyAriaLabel for Special Keys
+// ──────────────────────────────────────────────
+
+QUnit.test('getKeyAriaLabel: {backspace} (label: "") \u2192 "Backspace"', async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getKeyAriaLabel({ value: "{backspace}", label: "" }), "Backspace");
+
+  kb.destroy();
+});
+
+QUnit.test('getKeyAriaLabel: {enter} (label: "") \u2192 "Enter"', async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getKeyAriaLabel({ value: "{enter}", label: "" }), "Enter");
+
+  kb.destroy();
+});
+
+QUnit.test('getKeyAriaLabel: {shift} (label: "") \u2192 "Shift"', async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getKeyAriaLabel({ value: "{shift}", label: "" }), "Shift");
+
+  kb.destroy();
+});
+
+QUnit.test('getKeyAriaLabel: " " \u2192 "Space"', async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getKeyAriaLabel({ value: " " }), "Space");
+
+  kb.destroy();
+});
+
+QUnit.test('getKeyAriaLabel: "a" \u2192 "a"', async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getKeyAriaLabel({ value: "a" }), "a");
+
+  kb.destroy();
+});
+
+QUnit.test('getKeyAriaLabel after shift: "a" \u2192 "A", "1" with shiftLabel "!" \u2192 "!"', async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  tapKey(kb, "{shift}");
+
+  assert.strictEqual(kb.getKeyAriaLabel({ value: "a" }), "A", "'a' becomes 'A' with shift");
+  assert.strictEqual(
+    kb.getKeyAriaLabel({ value: "1", shiftLabel: "!" }),
+    "!",
+    "'1' with shiftLabel '!' becomes '!' with shift",
+  );
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Cross-Layout Special Char Consistency
+// ──────────────────────────────────────────────
+
+QUnit.test("Numeric layout keys identical regardless of base layout (qwerty vs qwertz-de)", async (assert) => {
+  const kbQwerty = new KioskKeyboard({ layout: "qwerty", keyboardType: "Numeric" });
+  const kbQwertz = new KioskKeyboard({ layout: "qwertz-de", keyboardType: "Numeric" });
+  await placeAndWait(kbQwerty);
+  kbQwertz.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const keysQwerty = Array.from(getKeyElements(kbQwerty)).map((el) => el.dataset.key);
+  const keysQwertz = Array.from(getKeyElements(kbQwertz)).map((el) => el.dataset.key);
+
+  assert.deepEqual(keysQwerty, keysQwertz, "Same key values in same order");
+
+  kbQwerty.destroy();
+  kbQwertz.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Auto-Show Requires Docked
+// ──────────────────────────────────────────────
+
+QUnit.test("autoShow with docked=false does not open keyboard on input focus", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ autoShow: true, docked: false });
+  await placeAndWait(kb);
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  assert.notOk(kb.isOpen(), "Keyboard does not open when docked is false");
+
+  input.destroy();
   kb.destroy();
 });

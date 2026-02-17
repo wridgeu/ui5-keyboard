@@ -1,10 +1,33 @@
 <mvc:View
-    controllerName="demo.hotkeys.controller.Kiosk"
+    controllerName="demo.hotkeys.controller.KioskDocked"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page title="Kiosk Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="Docked Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
         <content>
+            <Panel headerText="Controls" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox alignItems="Center">
+                        <Label text="Enabled:" class="sapUiSmallMarginEnd" />
+                        <Switch state="{state>/kioskEnabled}" change=".onEnabledChange" />
+                    </HBox>
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Mobile Keyboard:" class="sapUiSmallMarginEnd" />
+                        <SegmentedButton selectedKey="{state>/kioskMobileKeyboard}" selectionChange=".onMobileKeyboardChange">
+                            <items>
+                                <SegmentedButtonItem key="Custom" text="Custom" />
+                                <SegmentedButtonItem key="Native" text="Native" />
+                                <SegmentedButtonItem key="Auto" text="Auto" />
+                            </items>
+                        </SegmentedButton>
+                    </HBox>
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Layout:" class="sapUiSmallMarginEnd" />
+                        <Select id="layoutSelect" change=".onLayoutChange" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
             <Panel headerText="Docked Keyboard (tap any input)" class="sapUiMediumMargin">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Tap an input field below. The keyboard slides up and auto-detects numpad for Number/Tel inputs." />
@@ -68,15 +91,15 @@
                     </HBox>
                 </VBox>
             </Panel>
-            <!-- Docked keyboard: rendered in content but position:fixed
-                 handles viewport-bottom anchoring. Slides in when any input is focused. -->
+
             <kiosk:KioskKeyboard
                 id="dockedKeyboard"
                 docked="true"
                 autoShow="true"
                 autoType="true"
+                enabled="{state>/kioskEnabled}"
                 keyPress=".onKeyPress"
-                layoutChange=".onLayoutChange" />
+                layoutChange=".onDockedLayoutChange" />
         </content>
     </Page>
 </mvc:View>

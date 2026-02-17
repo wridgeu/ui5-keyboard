@@ -1,0 +1,64 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskProgrammatic"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:kiosk="ui5.kiosk">
+    <Page title="Programmatic Control Demo" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <Panel headerText="Keyboard Controls" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Button text="Show" press=".onShow" type="Emphasized" class="sapUiSmallMarginEnd" />
+                        <Button text="Close" press=".onClose" class="sapUiSmallMarginEnd" />
+                    </HBox>
+                    <HBox class="sapUiSmallMarginTop">
+                        <Button text="Full" press=".onSetFull" class="sapUiSmallMarginEnd" />
+                        <Button text="Numpad" press=".onSetNumpad" class="sapUiSmallMarginEnd" />
+                        <Button text="Numeric" press=".onSetNumeric" class="sapUiSmallMarginEnd" />
+                        <Button text="Reset Type" press=".onResetType" />
+                    </HBox>
+                    <HBox class="sapUiSmallMarginTop">
+                        <Button text="Register Pinpad" press=".onRegisterPinpad" class="sapUiSmallMarginEnd" />
+                        <Button text="Use Pinpad" press=".onUsePinpad" />
+                    </HBox>
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Enabled:" class="sapUiSmallMarginEnd" />
+                        <Switch state="{state>/kioskEnabled}" change=".onEnabledChange" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Target Input" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Input id="progInput" placeholder="Type here..." width="100%" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Status" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="isOpen():" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskIsOpen}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Keyboard Type:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskKeyboardType}" state="Success" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <kiosk:KioskKeyboard
+                id="progKeyboard"
+                docked="true"
+                targetInput="progInput"
+                enabled="{state>/kioskEnabled}"
+                keyPress=".onKeyPress"
+                afterOpen=".onAfterOpen"
+                afterClose=".onAfterClose" />
+        </content>
+    </Page>
+</mvc:View>

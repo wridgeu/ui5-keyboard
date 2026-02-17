@@ -1,0 +1,36 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskHub"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="Kiosk Keyboard Demos" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <List headerText="Choose a Demo">
+                <StandardListItem
+                    title="Docked Keyboard"
+                    description="Auto-show, auto-type, layout switching, event log"
+                    type="Navigation"
+                    press=".onNavToDocked" />
+                <StandardListItem
+                    title="Popover Keyboard"
+                    description="Keyboard inside a Popover, targeting individual inputs"
+                    type="Navigation"
+                    press=".onNavToPopover" />
+                <StandardListItem
+                    title="Input IDs Targeting"
+                    description="Selective input targeting with inputIds property"
+                    type="Navigation"
+                    press=".onNavToInputIds" />
+                <StandardListItem
+                    title="Programmatic Control"
+                    description="Full API: show, close, set type, custom layouts"
+                    type="Navigation"
+                    press=".onNavToProgrammatic" />
+                <StandardListItem
+                    title="Component-Level Keyboard"
+                    description="Keyboard persists across navigation via static UIArea"
+                    type="Navigation"
+                    press=".onNavToComponent" />
+            </List>
+        </content>
+    </Page>
+</mvc:View>

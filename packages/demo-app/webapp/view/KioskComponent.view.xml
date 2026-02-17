@@ -1,0 +1,34 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskComponent"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="Component-Level Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <Panel headerText="Persistent Keyboard" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="This keyboard is created in the controller and placed in the sap-ui-static UIArea. It persists across navigation." />
+                    <Label text="Input Field" labelFor="compInput" class="sapUiSmallMarginTop" />
+                    <Input id="compInput" placeholder="Type here..." width="100%" />
+                    <HBox class="sapUiSmallMarginTop">
+                        <Button text="Show Keyboard" press=".onShowKeyboard" type="Emphasized" class="sapUiSmallMarginEnd" />
+                        <Button text="Close Keyboard" press=".onCloseKeyboard" class="sapUiSmallMarginEnd" />
+                    </HBox>
+                    <Button text="Navigate Away and Back" press=".onNavigateAway" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Status" class="sapUiMediumMargin">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Keyboard isOpen():" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskIsOpen}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>
