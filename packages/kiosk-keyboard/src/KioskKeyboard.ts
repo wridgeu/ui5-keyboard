@@ -1,6 +1,5 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
-import Lib from "sap/ui/core/Lib";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
@@ -10,6 +9,8 @@ import type { LayoutDefinition, KeyDefinition } from "./types";
 import layouts from "./layouts/index";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
+import { getText } from "./i18n-util";
+import { KEY_ID_SUFFIX_RE, keyElementId } from "./dom-util";
 import "./library"; // side-effect: ensures Lib.init() runs
 
 /**
@@ -695,8 +696,8 @@ export default class KioskKeyboard extends Control {
   } {
     return {
       role: "group",
-      type: KioskKeyboard._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
-      description: this.getAriaLabel() || KioskKeyboard._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
+      type: getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
+      description: this.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
       focusable: true,
       enabled: this.getEnabled(),
     };
@@ -748,19 +749,12 @@ export default class KioskKeyboard extends Control {
     " ": ["KEY_SPACE", "Space"],
   };
 
-  /** Resolves an i18n key from the library resource bundle. */
-  static _getText(sKey: string, sDefault: string): string {
-    const bundle = Lib.getResourceBundleFor("ui5.kiosk");
-    if (!bundle) return sDefault;
-    return bundle.getText(sKey, undefined, true) ?? sDefault;
-  }
-
   /** The display label for a key (may be empty for icon-only keys). */
   getKeyLabel(key: KeyDefinition): string {
     const shift = this.isShiftActive();
     if (shift && key.shiftLabel) return key.shiftLabel;
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    const base = entry ? KioskKeyboard._getText(entry[0], entry[1]) : (key.label ?? key.value);
+    const base = entry ? getText(entry[0], entry[1]) : (key.label ?? key.value);
     if (!base) return "";
     return shift && !entry && key.value.length === 1 ? base.toUpperCase() : base;
   }
@@ -775,7 +769,7 @@ export default class KioskKeyboard extends Control {
 
     // Icon-only key with empty display label — resolve from value
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    return entry ? KioskKeyboard._getText(entry[0], entry[1]) : key.value;
+    return entry ? getText(entry[0], entry[1]) : key.value;
   }
 
   // ──────────────────────────────────────────────
@@ -1157,7 +1151,7 @@ export default class KioskKeyboard extends Control {
   }
 
   private _moveFocus(current: HTMLElement, dRow: number, dCol: number): void {
-    const match = current.id.match(/-key-(\d+)-(\d+)$/);
+    const match = current.id.match(KEY_ID_SUFFIX_RE);
     if (!match) return;
 
     const row = Number.parseInt(match[1], 10) + dRow;
@@ -1165,7 +1159,7 @@ export default class KioskKeyboard extends Control {
     const sId = this.getId();
 
     // Try exact coordinate first
-    let next: HTMLElement | null = document.getElementById(`${sId}-key-${row}-${col}`);
+    let next: HTMLElement | null = document.getElementById(keyElementId(sId, row, col));
 
     if (!next) {
       if (dCol !== 0 && dRow === 0) {

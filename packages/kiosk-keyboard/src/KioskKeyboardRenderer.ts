@@ -1,6 +1,8 @@
 import type RenderManager from "sap/ui/core/RenderManager";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
+import { getText } from "./i18n-util";
+import { keyElementId } from "./dom-util";
 
 /**
  * Renderer for the KioskKeyboard control.
@@ -59,11 +61,10 @@ const KioskKeyboardRenderer = {
 
   /** ARIA/data attributes on the root `<div>`. */
   writeRootAttributes(rm: RenderManager, oControl: KioskKeyboard): void {
-    const Ctor = oControl.constructor as typeof KioskKeyboard;
     rm.accessibilityState(oControl, {
       role: "group",
-      label: oControl.getAriaLabel() || Ctor._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
-      roledescription: Ctor._getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
+      label: oControl.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
+      roledescription: getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
     });
     rm.attr("data-sap-ui-fastnavgroup", "true");
   },
@@ -84,11 +85,10 @@ const KioskKeyboardRenderer = {
     rm.attr("aria-live", "polite");
     rm.openEnd();
 
-    const Ctor = oControl.constructor as typeof KioskKeyboard;
     if (oControl.isCapsLock()) {
-      rm.text(Ctor._getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
+      rm.text(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
     } else if (oControl.isShiftActive()) {
-      rm.text(Ctor._getText("ARIA_SHIFT_ON", "Shift on"));
+      rm.text(getText("ARIA_SHIFT_ON", "Shift on"));
     }
 
     rm.close("span");
@@ -117,7 +117,7 @@ const KioskKeyboardRenderer = {
 
   /** Renders a single key `<div>` with classes, attributes, and content. */
   renderKey(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, ri: number, ci: number): void {
-    rm.openStart("div", `${oControl.getId()}-key-${ri}-${ci}`);
+    rm.openStart("div", keyElementId(oControl.getId(), ri, ci));
     this.addKeyClasses(rm, oControl, key);
     this.writeKeyAttributes(rm, oControl, key, ri, ci);
     rm.openEnd();
@@ -178,22 +178,19 @@ const KioskKeyboardRenderer = {
       rm.attr("data-shift-value", key.shiftValue);
     }
 
-    const Ctor = oControl.constructor as typeof KioskKeyboard;
     const ariaLabel =
-      bIsShiftKey && oControl.isCapsLock()
-        ? Ctor._getText("ARIA_CAPS_LOCK", "Caps Lock")
-        : oControl.getKeyAriaLabel(key);
+      bIsShiftKey && oControl.isCapsLock() ? getText("ARIA_CAPS_LOCK", "Caps Lock") : oControl.getKeyAriaLabel(key);
     rm.attr("aria-label", ariaLabel);
   },
 
   /** Icon or text inside the key. */
   renderKeyContent(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
     const bIsShiftKey = key.value === "{shift}";
-    const Ctor = oControl.constructor as typeof KioskKeyboard;
 
     if (bIsShiftKey && oControl.isCapsLock()) {
       rm.icon("sap-icon://locked", ["sapUiIcon"], { "aria-hidden": "true" });
     } else {
+      const Ctor = oControl.constructor as typeof KioskKeyboard;
       const icon = key.icon || Ctor.getKeyIcon(key.value);
       if (icon) {
         rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });

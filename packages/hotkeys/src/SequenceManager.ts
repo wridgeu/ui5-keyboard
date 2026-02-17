@@ -2,79 +2,25 @@ import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
-import HotkeyManager from "./HotkeyManager";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
 import { matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
-import { detectPlatform } from "./platform";
-import type { HotkeyCallback, ParsedHotkey, Platform } from "./types";
+import type {
+  HotkeyCallback,
+  ParsedHotkey,
+  Platform,
+  SequenceOptions,
+  SequencePendingCallback,
+  SequenceRegistrationHandle,
+  UpdatableSequenceOptions,
+} from "./types";
 
 const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
 
-let instance: SequenceManager | null = null;
 const idGen = createIdGenerator("seq_");
-
-/**
- * Options for registering a key sequence.
- */
-export interface SequenceOptions {
-  /** Human-readable description. */
-  description?: string;
-  /** Timeout in ms between keys before the sequence resets. @default 1000 */
-  timeout?: number;
-  /** Scope — uses HotkeyManager's scope stack. @default "__global__" */
-  scope?: string;
-  /** Whether the sequence is active. @default true */
-  enabled?: boolean | (() => boolean);
-  /**
-   * Suppress the sequence when an input element is focused.
-   * - `true`: Always suppress in inputs.
-   * - `false`: Never suppress in inputs.
-   * - `"auto"`: Suppress for single keys; allow for Ctrl/Meta combos and Escape.
-   * @default true
-   */
-  ignoreInputs?: boolean | "auto";
-  /** Prevent default on the final key. @default true */
-  preventDefault?: boolean;
-  /** Stop propagation on the final key. @default true */
-  stopPropagation?: boolean;
-}
-
-/**
- * Options that can be updated on a live sequence registration via `setOptions()`.
- * Excludes `scope`, which requires unregister + re-register.
- */
-export type UpdatableSequenceOptions = Omit<SequenceOptions, "scope">;
-
-/**
- * Handle for managing a sequence registration lifecycle.
- */
-export interface SequenceRegistrationHandle {
-  readonly id: string;
-  readonly isActive: boolean;
-  unregister(): void;
-  /**
-   * Update options on a live registration without re-registering.
-   * All fields except `scope` can be changed.
-   *
-   * @param options - Partial options to merge into the registration.
-   * @throws Error if the handle has been unregistered or if `scope` is provided.
-   */
-  setOptions(options: Partial<UpdatableSequenceOptions>): void;
-}
-
-/**
- * Callback for mid-sequence progress.
- */
-export type SequencePendingCallback = (info: {
-  sequence: string[];
-  completedSteps: number;
-  totalSteps: number;
-  nextKey: string;
-}) => void;
 
 /**
  * Internal registration record.
@@ -103,12 +49,16 @@ interface ActiveMatch {
 }
 
 /**
- * Singleton key sequence manager for UI5 applications.
+ * Internal key sequence manager for UI5 applications.
+ *
+ * Not intended for direct use — access sequence functionality through
+ * {@link HotkeyManager.registerSequence} and related facade methods.
  *
  * Attaches a document-level `keydown` listener (capture phase) and matches
  * multi-key sequences (e.g., ["G", "E"] for go-to-editor).
  *
- * Uses HotkeyManager's scope stack for scope filtering.
+ * Receives a scope provider callback from HotkeyManager to access the
+ * active scope without a reverse singleton dependency.
  */
 export default class SequenceManager extends BaseObject {
   static readonly metadata = {
@@ -119,23 +69,18 @@ export default class SequenceManager extends BaseObject {
   private _activeMatches: ActiveMatch[] = [];
   private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
+  private _scopeProvider: () => string;
   private _lastAltLocation = 0;
   private _destroyed = false;
 
   private readonly _keydownHandler = this._onKeyDown.bind(this);
 
-  constructor() {
+  constructor(scopeProvider: () => string, platform: Platform) {
     super();
-    this._platform = detectPlatform();
+    this._scopeProvider = scopeProvider;
+    this._platform = platform;
     document.addEventListener("keydown", this._keydownHandler, true);
     Log.info("SequenceManager initialized", undefined, LOG_COMPONENT);
-  }
-
-  static getInstance(): SequenceManager {
-    if (!instance) {
-      instance = new SequenceManager();
-    }
-    return instance;
   }
 
   /**
@@ -175,7 +120,7 @@ export default class SequenceManager extends BaseObject {
       timeout: options?.timeout ?? DEFAULT_TIMEOUT,
       scope: options?.scope ?? GLOBAL_SCOPE,
       enabled: options?.enabled ?? true,
-      ignoreInputs: options?.ignoreInputs ?? true,
+      ignoreInputs: options?.ignoreInputs ?? "auto",
       preventDefault: options?.preventDefault ?? true,
       stopPropagation: options?.stopPropagation ?? true,
     };
@@ -196,6 +141,15 @@ export default class SequenceManager extends BaseObject {
       },
       get isActive() {
         return active;
+      },
+      get sequence() {
+        return registration.sequence;
+      },
+      get scope() {
+        return registration.scope;
+      },
+      get description() {
+        return registration.description;
       },
       unregister: () => {
         if (!active) return;
@@ -219,12 +173,12 @@ export default class SequenceManager extends BaseObject {
         }
         const reg = this._registrations.get(id);
         if (!reg) return;
-        if (newOptions.enabled !== undefined) reg.enabled = newOptions.enabled;
-        if (newOptions.description !== undefined) reg.description = newOptions.description;
-        if (newOptions.timeout !== undefined) reg.timeout = newOptions.timeout;
-        if (newOptions.ignoreInputs !== undefined) reg.ignoreInputs = newOptions.ignoreInputs;
-        if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
-        if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
+        // Merge all provided fields
+        for (const [key, value] of Object.entries(newOptions)) {
+          if (value !== undefined) {
+            (reg as unknown as Record<string, unknown>)[key] = value;
+          }
+        }
       },
     };
   }
@@ -254,16 +208,9 @@ export default class SequenceManager extends BaseObject {
     this._registrations.clear();
     this._pendingCallback = null;
     this._lastAltLocation = 0;
-    instance = null;
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
     super.destroy();
-  }
-
-  // SequenceManager intentionally couples to HotkeyManager for scope state.
-  // getInstance() will create a HotkeyManager if none exists — it never throws.
-  private _getActiveScope(): string {
-    return HotkeyManager.getInstance().getActiveScope();
   }
 
   /**
@@ -280,7 +227,7 @@ export default class SequenceManager extends BaseObject {
   private _onKeyDown(event: KeyboardEvent): void {
     if (this._shouldIgnoreKeyEvent(event)) return;
 
-    const activeScope = this._getActiveScope();
+    const activeScope = this._scopeProvider();
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
 

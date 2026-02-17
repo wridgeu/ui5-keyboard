@@ -243,7 +243,7 @@ QUnit.test("popScope throws on mismatch", (assert) => {
 QUnit.test("popScope throws when only global scope remains", (assert) => {
   const manager = HotkeyManager.getInstance();
 
-  assert.throws(() => manager.popScope(), /Cannot pop the global scope/, "Cannot pop global scope");
+  assert.throws(() => manager.popScope("__global__"), /Cannot pop the global scope/, "Cannot pop global scope");
 });
 
 QUnit.test("resetToGlobalScope pops all non-global scopes", (assert) => {
@@ -1360,4 +1360,39 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
   // Verify the target listener Map is cleaned up (ref count reached 0)
   const targetListeners = (manager as any)._targetListeners as Map<EventTarget, unknown>;
   assert.strictEqual(targetListeners.size, 0, "Target listener removed after all registrations unregistered");
+});
+
+// ──────────────────────────────────────────────
+// Handle introspection
+// ──────────────────────────────────────────────
+
+QUnit.test("Handle exposes hotkey, scope, and description", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  const handle = manager.register("Mod+S", () => {}, {
+    scope: "editor",
+    description: "Save",
+  });
+
+  assert.strictEqual(handle.hotkey, "Mod+S", "hotkey property returns original hotkey string");
+  assert.strictEqual(handle.scope, "editor", "scope property returns scope");
+  assert.strictEqual(handle.description, "Save", "description property returns description");
+});
+
+QUnit.test("Handle description reflects setOptions update", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  const handle = manager.register("Escape", () => {}, { description: "Close" });
+
+  handle.setOptions({ description: "Dismiss" });
+  assert.strictEqual(handle.description, "Dismiss", "description reflects setOptions update");
+});
+
+QUnit.test("Handle defaults: scope is global, description is empty", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  const handle = manager.register("F5", () => {});
+
+  assert.strictEqual(handle.scope, "__global__", "default scope is __global__");
+  assert.strictEqual(handle.description, "", "default description is empty string");
 });

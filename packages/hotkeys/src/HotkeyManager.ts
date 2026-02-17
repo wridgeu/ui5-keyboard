@@ -3,6 +3,7 @@ import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
+import SequenceManager from "./SequenceManager";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
@@ -19,6 +20,9 @@ import type {
   HotkeyRegistrationHandle,
   Platform,
   ResolvedHotkeyOptions,
+  SequenceOptions,
+  SequencePendingCallback,
+  SequenceRegistrationHandle,
   UnhandledCallback,
   UnhandledReason,
   UpdatableHotkeyOptions,
@@ -132,6 +136,9 @@ export default class HotkeyManager extends BaseObject {
   // Target element listeners — ref-counted per EventTarget
   private _targetListeners: Map<EventTarget, { handler: EventListener; count: number }> = new Map();
 
+  // Lazily created SequenceManager (created on first registerSequence call)
+  private _sequenceManager: SequenceManager | null = null;
+
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
    */
@@ -207,6 +214,15 @@ export default class HotkeyManager extends BaseObject {
       get isActive() {
         return active;
       },
+      get hotkey() {
+        return registration.hotkey;
+      },
+      get scope() {
+        return registration.options.scope;
+      },
+      get description() {
+        return registration.options.description;
+      },
       unregister: () => {
         if (!active) return;
         active = false;
@@ -226,21 +242,18 @@ export default class HotkeyManager extends BaseObject {
         if ((newOptions as Record<string, unknown>).scope !== undefined) {
           throw new Error("Cannot change scope via setOptions — unregister and re-register instead");
         }
-        // Merge provided fields into resolved options
         const opts = registration.options;
-        if (newOptions.enabled !== undefined) opts.enabled = newOptions.enabled;
-        if (newOptions.preventDefault !== undefined) opts.preventDefault = newOptions.preventDefault;
-        if (newOptions.stopPropagation !== undefined) opts.stopPropagation = newOptions.stopPropagation;
-        if (newOptions.ignoreInputs !== undefined) opts.ignoreInputs = newOptions.ignoreInputs;
-        if (newOptions.description !== undefined) opts.description = newOptions.description;
-        if (newOptions.ignoreRepeat !== undefined) opts.ignoreRepeat = newOptions.ignoreRepeat;
-        if (newOptions.suppressInDialogs !== undefined) opts.suppressInDialogs = newOptions.suppressInDialogs;
-        if (newOptions.conflictBehavior !== undefined) opts.conflictBehavior = newOptions.conflictBehavior;
+        // Special case: target swap requires listener management
         if (newOptions.target !== undefined) {
-          // Swap target listeners
           if (opts.target) this._detachTargetListener(opts.target);
           opts.target = newOptions.target ?? null;
           if (opts.target) this._attachTargetListener(opts.target);
+        }
+        // Merge all other fields
+        for (const [key, value] of Object.entries(newOptions)) {
+          if (key !== "target" && value !== undefined) {
+            (opts as unknown as Record<string, unknown>)[key] = value;
+          }
         }
       },
     };
@@ -264,27 +277,18 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Pop the top scope from the stack.
    *
-   * @param scopeId - If provided, validates that it matches the top of the stack.
-   *   Throws if it does not match (prevents mismatched push/pop).
+   * @param scopeId - The scope to pop. Must match the top of the stack
+   *   (prevents mismatched push/pop pairs).
    * @throws Error if the stack would be emptied (global scope cannot be popped)
-   *   or if the provided scopeId does not match the top.
+   *   or if the scopeId does not match the top.
    */
-  popScope(scopeId?: string): void {
+  popScope(scopeId: string): void {
     if (this._scopeStack.length <= 1) {
       throw new Error("Cannot pop the global scope");
     }
 
-    if (scopeId === undefined) {
-      Log.debug(
-        `popScope() called without scopeId — popping "${this._scopeStack[this._scopeStack.length - 1]}". ` +
-          "Pass the scope name explicitly to catch mismatched push/pop pairs.",
-        undefined,
-        LOG_COMPONENT,
-      );
-    }
-
     const top = this._scopeStack[this._scopeStack.length - 1];
-    if (scopeId !== undefined && top !== scopeId) {
+    if (top !== scopeId) {
       throw new Error(`Scope mismatch: expected "${scopeId}" but top of stack is "${top}"`);
     }
 
@@ -412,6 +416,62 @@ export default class HotkeyManager extends BaseObject {
   }
 
   // ──────────────────────────────────────────────
+  // Sequence facade
+  // ──────────────────────────────────────────────
+
+  /**
+   * Register a multi-key sequence (e.g., `["G", "I"]` for go-to-inbox).
+   *
+   * Lazily creates the internal SequenceManager on first call. The
+   * sequence manager uses this HotkeyManager's scope stack for scope
+   * filtering, so scoped sequences and scoped hotkeys share the same
+   * scope lifecycle.
+   *
+   * @param sequence - Array of hotkey strings forming the sequence.
+   * @param callback - Function to invoke when the full sequence is matched.
+   * @param options - Optional configuration (scope, timeout, ignoreInputs, etc.).
+   * @returns A handle for managing the registration lifecycle.
+   */
+  registerSequence(
+    sequence: string[],
+    callback: HotkeyCallback,
+    options?: SequenceOptions,
+  ): SequenceRegistrationHandle {
+    return this._getSequenceManager().registerSequence(sequence, callback, options);
+  }
+
+  /**
+   * Set a callback for mid-sequence progress updates.
+   *
+   * The callback fires after each intermediate key in a sequence,
+   * providing information about how many steps are completed and
+   * what key is expected next — useful for "waiting for next key…" UI.
+   *
+   * Pass `null` to remove the callback.
+   */
+  setSequencePendingCallback(callback: SequencePendingCallback | null): void {
+    this._getSequenceManager().setPendingCallback(callback);
+  }
+
+  /**
+   * Get all active sequence registrations.
+   */
+  getSequenceRegistrations(): ReturnType<SequenceManager["getRegistrations"]> {
+    if (!this._sequenceManager) return [];
+    return this._sequenceManager.getRegistrations();
+  }
+
+  /**
+   * Get or create the internal SequenceManager.
+   */
+  private _getSequenceManager(): SequenceManager {
+    if (!this._sequenceManager) {
+      this._sequenceManager = new SequenceManager(() => this.getActiveScope(), this._platform);
+    }
+    return this._sequenceManager;
+  }
+
+  // ──────────────────────────────────────────────
   // Unhandled key callback
   // ──────────────────────────────────────────────
 
@@ -476,6 +536,11 @@ export default class HotkeyManager extends BaseObject {
     if (this._routerCleanup) {
       this._routerCleanup();
       this._routerCleanup = null;
+    }
+
+    if (this._sequenceManager) {
+      this._sequenceManager.destroy();
+      this._sequenceManager = null;
     }
 
     this._detachListeners();

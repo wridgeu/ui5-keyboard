@@ -6,9 +6,7 @@ import VBox from "sap/m/VBox";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
-import SequenceManager from "ui5/hotkeys/SequenceManager";
-import type { SequenceRegistrationHandle } from "ui5/hotkeys/SequenceManager";
+import type { HotkeyRegistrationHandle, SequenceRegistrationHandle } from "ui5/hotkeys/types";
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import { formatForDisplay } from "ui5/hotkeys/format";
 
@@ -26,7 +24,6 @@ export default class Main extends BaseController {
   private _handles!: HotkeyRegistrationHandle[];
   private _dialogHandles!: HotkeyRegistrationHandle[];
   private _dialog!: Dialog | null;
-  private _sequenceManager!: SequenceManager;
   private _sequenceHandles!: SequenceRegistrationHandle[];
   private _keyTracker!: KeyStateTracker;
   private _pendingTimer!: ReturnType<typeof setTimeout> | null;
@@ -68,13 +65,12 @@ export default class Main extends BaseController {
       ),
     );
 
-    // D1: SequenceManager demo — multi-key sequences
-    this._sequenceManager = SequenceManager.getInstance();
+    // D1: Multi-key sequences via HotkeyManager facade
     this._sequenceHandles = [];
     this._pendingTimer = null;
 
     this._sequenceHandles.push(
-      this._sequenceManager.registerSequence(
+      this._manager.registerSequence(
         ["G", "I"],
         () => {
           stateModel.setProperty("/lastAction", "Sequence: Go to Inbox (G I)");
@@ -87,7 +83,7 @@ export default class Main extends BaseController {
     );
 
     this._sequenceHandles.push(
-      this._sequenceManager.registerSequence(
+      this._manager.registerSequence(
         ["G", "S"],
         () => {
           stateModel.setProperty("/lastAction", "Sequence: Go to Settings (G S)");
@@ -98,7 +94,7 @@ export default class Main extends BaseController {
       ),
     );
 
-    this._sequenceManager.setPendingCallback((info) => {
+    this._manager.setSequencePendingCallback((info) => {
       if (this._pendingTimer) clearTimeout(this._pendingTimer);
       stateModel.setProperty(
         "/sequenceStatus",
@@ -215,7 +211,7 @@ export default class Main extends BaseController {
     this._handles = [];
     this._sequenceHandles.forEach((h) => h.unregister());
     this._sequenceHandles = [];
-    this._sequenceManager.setPendingCallback(null);
+    this._manager.setSequencePendingCallback(null);
     if (this._pendingTimer) {
       clearTimeout(this._pendingTimer);
       this._pendingTimer = null;
