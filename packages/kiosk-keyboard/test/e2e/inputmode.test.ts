@@ -51,13 +51,21 @@ describe("inputmode suppression", () => {
     it("should NOT set inputmode='none' and NOT open keyboard when input is focused", async () => {
       // Click blur target first to reset focus state
       await $("#blur-target").click();
-      await browser.pause(300);
+      await browser.waitUntil(async () => !(await isKeyboardOpen("kb-custom")), {
+        timeout: 3_000,
+        timeoutMsg: "Previous keyboard did not close after blur",
+      });
 
       const input = await getInput("input-native");
       await input.click();
 
-      // Give time for any potential keyboard open
-      await browser.pause(500);
+      // Verify keyboard does NOT open — wait briefly then assert
+      try {
+        await browser.waitUntil(() => isKeyboardOpen("kb-native"), { timeout: 500 });
+        expect(false).toBe(true); // Should not reach here
+      } catch {
+        // Expected: keyboard never opened
+      }
 
       const inputmode = await input.getAttribute("inputmode");
       expect(inputmode).not.toBe("none");
@@ -71,7 +79,10 @@ describe("inputmode suppression", () => {
     it("should set inputmode='none' and open keyboard on desktop", async () => {
       // Click blur target first to reset focus state
       await $("#blur-target").click();
-      await browser.pause(300);
+      await browser.waitUntil(async () => !(await isKeyboardOpen("kb-auto")), {
+        timeout: 3_000,
+        timeoutMsg: "Auto keyboard did not close after blur",
+      });
 
       const input = await getInput("input-auto");
       await input.click();

@@ -11,7 +11,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./i18n-util";
 import { KEY_ID_SUFFIX_RE, keyElementId } from "./dom-util";
-import "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
@@ -50,8 +50,8 @@ export default class KioskKeyboard extends Control {
   declare private _inputFocusDelegation: { onfocusin: () => void };
   declare private _registeredInputIds: Set<string>;
   declare private _keyHighlightDelegation: {
-    onkeydown: (event: KeyboardEvent) => void;
-    onkeyup: (event: KeyboardEvent) => void;
+    onkeydown: (event: Event) => void;
+    onkeyup: (event: Event) => void;
   };
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
@@ -369,8 +369,8 @@ export default class KioskKeyboard extends Control {
       },
     };
     this._keyHighlightDelegation = {
-      onkeydown: (event: KeyboardEvent) => this._highlightKey(event.key, true),
-      onkeyup: (event: KeyboardEvent) => this._highlightKey(event.key, false),
+      onkeydown: (event: Event) => this._highlightKey((event as KeyboardEvent).key, true),
+      onkeyup: (event: Event) => this._highlightKey((event as KeyboardEvent).key, false),
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
@@ -400,7 +400,7 @@ export default class KioskKeyboard extends Control {
       // Activate auto-show listeners if the property was set declaratively
       // (e.g. via XML) before the control was rendered.
       if (this.getAutoShow() && !this._autoShowActive) {
-        this.enableAutoShow();
+        this._enableAutoShow();
       }
     }
 
@@ -425,7 +425,7 @@ export default class KioskKeyboard extends Control {
 
   exit(): void {
     KioskKeyboard._instances.delete(this);
-    this.disableAutoShow();
+    this._disableAutoShow();
     this._teardownInputIds();
     this._removeHighlightDelegation();
     this._restoreNativeKeyboard();
@@ -500,9 +500,9 @@ export default class KioskKeyboard extends Control {
   setAutoShow(bAutoShow: boolean): this {
     this.setProperty("autoShow", bAutoShow);
     if (bAutoShow) {
-      this.enableAutoShow();
+      this._enableAutoShow();
     } else {
-      this.disableAutoShow();
+      this._disableAutoShow();
     }
     return this;
   }
@@ -553,7 +553,7 @@ export default class KioskKeyboard extends Control {
     if (dom) {
       dom.classList.remove("ui5KioskKeyboard--closed");
     }
-    this.fireEvent("afterOpen");
+    this._fireAfterTransition("afterOpen");
     return this;
   }
 
@@ -566,7 +566,7 @@ export default class KioskKeyboard extends Control {
     if (dom) {
       dom.classList.add("ui5KioskKeyboard--closed");
     }
-    this.fireEvent("afterClose");
+    this._fireAfterTransition("afterClose");
     return this;
   }
 
@@ -580,7 +580,7 @@ export default class KioskKeyboard extends Control {
    * `<input>` or `<textarea>` on the page receives focus, setting it
    * as the target. Closes when focus moves away from all inputs.
    */
-  enableAutoShow(): this {
+  private _enableAutoShow(): this {
     if (this._autoShowActive) return this;
     this._autoShowActive = true;
     document.addEventListener("focusin", this._boundFocusIn, true);
@@ -589,7 +589,7 @@ export default class KioskKeyboard extends Control {
   }
 
   /** Disables auto-show listeners. */
-  disableAutoShow(): this {
+  private _disableAutoShow(): this {
     if (!this._autoShowActive) return this;
     this._autoShowActive = false;
     document.removeEventListener("focusin", this._boundFocusIn, true);
@@ -1238,7 +1238,7 @@ export default class KioskKeyboard extends Control {
     const ctrl = control as unknown as Record<string, unknown>;
     if (typeof ctrl.getType === "function") {
       const type = ctrl.getType() as string;
-      if (KioskKeyboard._NUMPAD_CONTROL_TYPES.has(type)) return "Numpad";
+      if (KioskKeyboard._NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
     }
 
     // 2. Control name — walk up the parent chain because composite controls
@@ -1247,7 +1247,7 @@ export default class KioskKeyboard extends Control {
     for (let parent: ManagedObject | null = control; parent; parent = parent.getParent()) {
       if (parent instanceof Control) {
         const name = parent.getMetadata().getName();
-        if (KioskKeyboard._NUMPAD_CONTROL_NAMES.has(name)) return "Numpad";
+        if (KioskKeyboard._NUMPAD_CONTROL_NAMES.has(name)) return KeyboardType.Numpad;
       }
     }
 
@@ -1255,15 +1255,15 @@ export default class KioskKeyboard extends Control {
     const dom = control.getFocusDomRef();
     if (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) {
       const inputmode = dom.getAttribute("inputmode");
-      if (inputmode && KioskKeyboard._NUMPAD_INPUT_MODES.has(inputmode)) return "Numpad";
+      if (inputmode && KioskKeyboard._NUMPAD_INPUT_MODES.has(inputmode)) return KeyboardType.Numpad;
 
       // 4. HTML type attribute
       if (dom instanceof HTMLInputElement && KioskKeyboard._NUMPAD_HTML_TYPES.has(dom.type)) {
-        return "Numpad";
+        return KeyboardType.Numpad;
       }
     }
 
-    return "Full";
+    return KeyboardType.Full;
   }
 
   // ──────────────────────────────────────────────
@@ -1312,8 +1312,15 @@ export default class KioskKeyboard extends Control {
    * input element.
    */
   private _restoreNativeKeyboard(): void {
-    const dom = this._suppressedInputEl;
-    if (!dom) return;
+    if (!this._suppressedInputEl) return;
+
+    // Re-resolve: the target control may have re-rendered, replacing the DOM node.
+    // Fall back to the cached ref if the target is no longer available.
+    const freshDom = this._getTargetElement()?.getFocusDomRef();
+    const dom =
+      freshDom instanceof HTMLInputElement || freshDom instanceof HTMLTextAreaElement
+        ? freshDom
+        : this._suppressedInputEl;
 
     if (this._originalInputMode !== null) {
       dom.setAttribute("inputmode", this._originalInputMode);
@@ -1323,5 +1330,30 @@ export default class KioskKeyboard extends Control {
 
     this._originalInputMode = null;
     this._suppressedInputEl = null;
+  }
+
+  /**
+   * Fires an event after the CSS transition completes (docked mode),
+   * or immediately if not docked or no transition is active.
+   */
+  private _fireAfterTransition(eventName: string): void {
+    const dom = this.getDomRef();
+    if (!dom || !this.getDocked()) {
+      this.fireEvent(eventName);
+      return;
+    }
+    // prefers-reduced-motion sets transition: none → duration is "0s"
+    const duration = getComputedStyle(dom).transitionDuration;
+    if (!duration || duration === "0s") {
+      this.fireEvent(eventName);
+      return;
+    }
+    const handler = (e: Event) => {
+      const te = e as TransitionEvent;
+      if (te.target !== dom || te.propertyName !== "transform") return;
+      dom.removeEventListener("transitionend", handler);
+      this.fireEvent(eventName);
+    };
+    dom.addEventListener("transitionend", handler);
   }
 }

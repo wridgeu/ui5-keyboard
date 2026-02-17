@@ -22,6 +22,7 @@ import type {
   ResolvedHotkeyOptions,
   SequenceOptions,
   SequencePendingCallback,
+  SequenceRegistration,
   SequenceRegistrationHandle,
   UnhandledCallback,
   UnhandledReason,
@@ -30,6 +31,8 @@ import type {
 
 type ValidateModule = typeof import("./validate");
 type InstanceManagerModule = { hasOpenDialog(): boolean };
+
+type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
@@ -289,7 +292,7 @@ export default class HotkeyManager extends BaseObject {
 
     const top = this._scopeStack[this._scopeStack.length - 1];
     if (top !== scopeId) {
-      throw new Error(`Scope mismatch: expected "${scopeId}" but top of stack is "${top}"`);
+      throw new Error(`Cannot pop scope "${scopeId}": current top of stack is "${top}"`);
     }
 
     this._scopeStack.pop();
@@ -355,7 +358,7 @@ export default class HotkeyManager extends BaseObject {
       throw new Error("Router integration is already enabled");
     }
 
-    const handler = (event: Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0]) => {
+    const handler = (event: RouteMatchedEvent) => {
       this.resetToGlobalScope();
       const routeName = event.getParameter("name");
       if (routeName) {
@@ -397,14 +400,14 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Get all active registrations. Returns a new array (safe to iterate).
    */
-  getRegistrations(): HotkeyRegistration[] {
+  getRegistrations(): ReadonlyArray<Readonly<HotkeyRegistration>> {
     return Array.from(this._registrations.values());
   }
 
   /**
    * Get registrations filtered by scope.
    */
-  getRegistrationsForScope(scopeId: string): HotkeyRegistration[] {
+  getRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<HotkeyRegistration>> {
     return this.getRegistrations().filter((r) => r.options.scope === scopeId);
   }
 
@@ -456,9 +459,17 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Get all active sequence registrations.
    */
-  getSequenceRegistrations(): ReturnType<SequenceManager["getRegistrations"]> {
+  getSequenceRegistrations(): ReadonlyArray<Readonly<SequenceRegistration>> {
     if (!this._sequenceManager) return [];
     return this._sequenceManager.getRegistrations();
+  }
+
+  /**
+   * Get sequence registrations filtered by scope.
+   */
+  getSequenceRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<SequenceRegistration>> {
+    if (!this._sequenceManager) return [];
+    return this._sequenceManager.getRegistrations().filter((r) => r.scope === scopeId);
   }
 
   /**
@@ -834,6 +845,16 @@ export default class HotkeyManager extends BaseObject {
     const sapConflict = validate.SAP_SHORTCUTS.get(normalizedHotkey);
     if (sapConflict) {
       Log.warning(`Hotkey "${normalizedHotkey}" conflicts with SAP shortcut: ${sapConflict}`, undefined, LOG_COMPONENT);
+    }
+
+    const parts = normalizedHotkey.split("+");
+    const key = parts[parts.length - 1];
+    if (!validate.KNOWN_KEYS.has(key)) {
+      Log.warning(
+        `Hotkey "${normalizedHotkey}" uses unknown key "${key}" — may not match keyboard events correctly`,
+        undefined,
+        LOG_COMPONENT,
+      );
     }
   }
 

@@ -173,8 +173,6 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 | `show()`                 | `this`             | Open the docked keyboard. Idempotent.          |
 | `close()`                | `this`             | Close the docked keyboard. Idempotent.         |
 | `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open. |
-| `enableAutoShow()`       | `this`             | Start listening for input focus events.        |
-| `disableAutoShow()`      | `this`             | Stop listening for input focus events.         |
 | `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.          |
 | `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                   |
 | `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.           |

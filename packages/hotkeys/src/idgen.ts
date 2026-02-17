@@ -1,10 +1,9 @@
 /**
- * Creates a resettable ID generator backed by a generator function.
+ * Creates an ID generator backed by a generator function.
  *
  * Each call to `next()` returns a unique string like `"hk_1"`, `"hk_2"`, etc.
- * Call `reset()` to restart the counter (used in singleton `destroy()`).
  */
-export function createIdGenerator(prefix: string): { next(): string; reset(): void } {
+export function createIdGenerator(prefix: string): { next(): string } {
   function* ids(): Generator<string, never> {
     let id = 0;
     while (true) {
@@ -12,12 +11,9 @@ export function createIdGenerator(prefix: string): { next(): string; reset(): vo
     }
   }
 
-  let gen = ids();
+  const gen = ids();
 
   return {
     next: () => gen.next().value,
-    reset: () => {
-      gen = ids();
-    },
   };
 }

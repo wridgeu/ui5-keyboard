@@ -1,17 +1,15 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-
-/** Minimum time for UI5 to process invalidation + re-render. */
-const RENDER_WAIT = 500;
+import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
 /** Place a control into qunit-fixture and wait for initial render. */
-export function placeAndWait(control: KioskKeyboard): Promise<void> {
+export async function placeAndWait(control: KioskKeyboard): Promise<void> {
   control.placeAt("qunit-fixture");
-  return new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await nextUIUpdate();
 }
 
 /** Wait for a re-render cycle after a state change. */
-export function waitForRender(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+export async function waitForRender(): Promise<void> {
+  await nextUIUpdate();
 }
 
 /** Find a rendered key by its data-key value and tap it via touch simulation. */

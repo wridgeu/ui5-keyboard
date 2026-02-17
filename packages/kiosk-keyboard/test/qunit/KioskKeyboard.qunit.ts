@@ -835,17 +835,17 @@ QUnit.test("Non-docked keyboard has no docked CSS classes", async (assert) => {
 // Auto-show
 // ──────────────────────────────────────────────
 
-QUnit.test("enableAutoShow / disableAutoShow are idempotent", (assert) => {
+QUnit.test("setAutoShow is idempotent", (assert) => {
   const kb = new KioskKeyboard();
 
   // Should not throw
-  kb.enableAutoShow();
-  kb.enableAutoShow();
+  kb.setAutoShow(true);
+  kb.setAutoShow(true);
 
-  kb.disableAutoShow();
-  kb.disableAutoShow();
+  kb.setAutoShow(false);
+  kb.setAutoShow(false);
 
-  assert.ok(true, "Multiple enable/disable calls don't throw");
+  assert.ok(true, "Multiple setAutoShow calls don't throw");
 
   kb.destroy();
 });
@@ -855,7 +855,7 @@ QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
   kb.setDocked(true);
   await placeAndWait(kb);
 
-  kb.enableAutoShow();
+  kb.setAutoShow(true);
   kb.destroy();
 
   // If cleanup failed, the listener would throw on next focus event.

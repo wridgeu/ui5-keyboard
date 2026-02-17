@@ -234,7 +234,7 @@ QUnit.test("popScope throws on mismatch", (assert) => {
   const manager = HotkeyManager.getInstance();
   manager.pushScope("editor");
 
-  assert.throws(() => manager.popScope("dialog"), /Scope mismatch/, "Throws on scope mismatch");
+  assert.throws(() => manager.popScope("dialog"), /Cannot pop scope/, "Throws on scope mismatch");
 
   // Cleanup
   manager.popScope("editor");

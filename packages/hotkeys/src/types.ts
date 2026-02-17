@@ -407,6 +407,23 @@ export interface SequenceRegistrationHandle {
 }
 
 /**
+ * Internal representation of a fully resolved sequence registration.
+ */
+export interface SequenceRegistration {
+  id: string;
+  sequence: string[];
+  parsedSteps: ParsedHotkey[];
+  callback: HotkeyCallback;
+  description: string;
+  timeout: number;
+  scope: string;
+  enabled: boolean | (() => boolean);
+  ignoreInputs: boolean | "auto";
+  preventDefault: boolean;
+  stopPropagation: boolean;
+}
+
+/**
  * Callback for mid-sequence progress.
  */
 export type SequencePendingCallback = (info: {

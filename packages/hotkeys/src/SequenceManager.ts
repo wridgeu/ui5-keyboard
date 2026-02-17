@@ -9,10 +9,10 @@ import { matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import type {
   HotkeyCallback,
-  ParsedHotkey,
   Platform,
   SequenceOptions,
   SequencePendingCallback,
+  SequenceRegistration,
   SequenceRegistrationHandle,
   UpdatableSequenceOptions,
 } from "./types";
@@ -21,23 +21,6 @@ const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
 
 const idGen = createIdGenerator("seq_");
-
-/**
- * Internal registration record.
- */
-interface SequenceRegistration {
-  id: string;
-  sequence: string[];
-  parsedSteps: ParsedHotkey[];
-  callback: HotkeyCallback;
-  description: string;
-  timeout: number;
-  scope: string;
-  enabled: boolean | (() => boolean);
-  ignoreInputs: boolean | "auto";
-  preventDefault: boolean;
-  stopPropagation: boolean;
-}
 
 /**
  * Tracks in-progress match state for a registration.
@@ -193,7 +176,7 @@ export default class SequenceManager extends BaseObject {
   /**
    * Get all active registrations.
    */
-  getRegistrations(): SequenceRegistration[] {
+  getRegistrations(): ReadonlyArray<Readonly<SequenceRegistration>> {
     return Array.from(this._registrations.values());
   }
 

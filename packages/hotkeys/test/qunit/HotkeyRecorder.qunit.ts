@@ -1,14 +1,25 @@
 import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 import { fireKey } from "./test-helpers";
 
+const recorders: HotkeyRecorder[] = [];
+
+function createRecorder(options: ConstructorParameters<typeof HotkeyRecorder>[0]): HotkeyRecorder {
+  const recorder = new HotkeyRecorder(options);
+  recorders.push(recorder);
+  return recorder;
+}
+
 QUnit.module("HotkeyRecorder", {
   afterEach() {
-    // Safety cleanup — any recorder left active would leak listeners
+    for (const r of recorders) {
+      if (!r.isDestroyed) r.destroy();
+    }
+    recorders.length = 0;
   },
 });
 
 QUnit.test("Start enables recording", (assert) => {
-  const recorder = new HotkeyRecorder({ onRecord: () => {} });
+  const recorder = createRecorder({ onRecord: () => {} });
   assert.notOk(recorder.isRecording, "Not recording initially");
 
   recorder.start();
@@ -21,7 +32,7 @@ QUnit.test("Start enables recording", (assert) => {
 QUnit.test("Records simple key", (assert) => {
   const done = assert.async();
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: (hotkey) => {
       assert.strictEqual(hotkey, "F5", "Recorded F5");
       assert.notOk(recorder.isRecording, "Auto-stopped after recording");
@@ -36,7 +47,7 @@ QUnit.test("Records simple key", (assert) => {
 QUnit.test("Records modifier combo", (assert) => {
   const done = assert.async();
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: (hotkey) => {
       assert.ok(hotkey.includes("Control"), "Hotkey includes Control modifier");
       assert.ok(hotkey.includes("S"), "Hotkey includes S key");
@@ -52,7 +63,7 @@ QUnit.test("Escape cancels recording", (assert) => {
   const done = assert.async();
   let recordCalled = false;
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: () => {
       recordCalled = true;
     },
@@ -70,7 +81,7 @@ QUnit.test("Escape cancels recording", (assert) => {
 QUnit.test("Backspace clears (records empty string)", (assert) => {
   const done = assert.async();
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: (hotkey) => {
       assert.strictEqual(hotkey, "", "Backspace records empty string (clear)");
       done();
@@ -84,7 +95,7 @@ QUnit.test("Backspace clears (records empty string)", (assert) => {
 QUnit.test("Delete clears (records empty string)", (assert) => {
   const done = assert.async();
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: (hotkey) => {
       assert.strictEqual(hotkey, "", "Delete records empty string (clear)");
       done();
@@ -99,7 +110,7 @@ QUnit.test("Modifier-only waits for action key", (assert) => {
   const done = assert.async();
   let recorded: string | null = null;
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: (hotkey) => {
       recorded = hotkey;
     },
@@ -128,7 +139,7 @@ QUnit.test("Auto-stops after recording", (assert) => {
   const done = assert.async();
   let recordCount = 0;
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: () => {
       recordCount++;
     },
@@ -151,7 +162,7 @@ QUnit.test("Auto-stops after recording", (assert) => {
 QUnit.test("Modifier+Backspace records as hotkey (not clear)", (assert) => {
   const done = assert.async();
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: (hotkey) => {
       assert.ok(hotkey.includes("Control"), "Hotkey includes Control modifier");
       assert.ok(hotkey.includes("Backspace"), "Hotkey includes Backspace");
@@ -167,7 +178,7 @@ QUnit.test("stop() is silent (no callbacks)", (assert) => {
   let recordCalled = false;
   let cancelCalled = false;
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: () => {
       recordCalled = true;
     },
@@ -189,7 +200,7 @@ QUnit.test("stop() is silent (no callbacks)", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("destroy() stops recording and prevents restart", (assert) => {
-  const recorder = new HotkeyRecorder({ onRecord: () => {} });
+  const recorder = createRecorder({ onRecord: () => {} });
 
   recorder.start();
   assert.ok(recorder.isRecording, "Recording before destroy");
@@ -205,7 +216,7 @@ QUnit.test("destroy() stops recording and prevents restart", (assert) => {
 QUnit.test("start() while already recording is a no-op", (assert) => {
   let recordCount = 0;
 
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: () => {
       recordCount++;
     },
@@ -220,7 +231,7 @@ QUnit.test("start() while already recording is a no-op", (assert) => {
 });
 
 QUnit.test("stop() while not recording is a no-op", (assert) => {
-  const recorder = new HotkeyRecorder({ onRecord: () => {} });
+  const recorder = createRecorder({ onRecord: () => {} });
 
   // Not recording yet — stop should not throw
   recorder.stop();
@@ -228,7 +239,7 @@ QUnit.test("stop() while not recording is a no-op", (assert) => {
 });
 
 QUnit.test("cancel() without onCancel callback does not throw", (assert) => {
-  const recorder = new HotkeyRecorder({
+  const recorder = createRecorder({
     onRecord: () => {},
     // No onCancel provided
   });
