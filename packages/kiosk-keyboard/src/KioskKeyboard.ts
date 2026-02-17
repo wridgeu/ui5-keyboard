@@ -71,8 +71,11 @@ export default class KioskKeyboard extends Control {
       },
       /**
        * Keyboard display type.
-       * "full" renders the active layout. "numeric" and "numpad" render
+       * "Full" renders the active layout. "Numeric" and "Numpad" render
        * compact number-oriented layouts regardless of the layout property.
+       * Setting this property (via setter, constructor, or XML attribute)
+       * disables auto-type detection permanently.
+       * Call `resetKeyboardType()` to re-enable it.
        */
       keyboardType: {
         type: "ui5.kiosk.KeyboardType",
@@ -114,8 +117,11 @@ export default class KioskKeyboard extends Control {
       /**
        * When true and autoShow is active, the keyboard inspects the
        * focused input's type metadata and automatically switches between
-       * Full and Numpad keyboard types. Has no effect when keyboardType
-       * is set explicitly.
+       * Full and Numpad keyboard types.
+       * Has no effect when keyboardType has been set explicitly (via
+       * setter, constructor, or XML attribute), because that locks the
+       * keyboard type. Call `resetKeyboardType()` to clear the lock
+       * and re-enable auto-type detection.
        */
       autoType: {
         type: "boolean",
@@ -502,11 +508,28 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Custom setter for keyboardType — marks the type as explicitly set,
-   * which disables auto-type detection.
+   * which disables auto-type detection. Use {@link #resetKeyboardType}
+   * to re-enable auto-type.
    */
   setKeyboardType(sType: string): this {
     this._keyboardTypeExplicit = true;
     return this.setProperty("keyboardType", sType);
+  }
+
+  /**
+   * Clears the explicit keyboardType lock and resets to "Full".
+   *
+   * Once {@link #setKeyboardType} has been called — directly, via the
+   * constructor, or via an XML attribute — the `autoType` feature is
+   * permanently disabled. Call this method to re-enable auto-type
+   * detection so the keyboard can switch between Full and Numpad
+   * based on the focused input's metadata again.
+   *
+   * @public
+   */
+  resetKeyboardType(): this {
+    this._keyboardTypeExplicit = false;
+    return this.setProperty("keyboardType", "Full");
   }
 
   /**

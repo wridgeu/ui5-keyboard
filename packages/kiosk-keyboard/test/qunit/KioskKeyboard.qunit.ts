@@ -172,6 +172,22 @@ QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) =>
   kb.destroy();
 });
 
+QUnit.test("setLayout with unregistered name falls back to QWERTY", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("nonexistent-layout");
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getLayout(), "nonexistent-layout", "getLayout() returns the set name");
+  const resolved = kb.getResolvedLayout();
+  assert.strictEqual(resolved[0][0].value, "1", "Resolved layout falls back to QWERTY (number row starts with 1)");
+  assert.strictEqual(resolved.length, 5, "QWERTY fallback has 5 rows");
+
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.ok(keys.includes("q"), "QWERTY keys rendered despite invalid layout name");
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Key labels and shift
 // ──────────────────────────────────────────────
@@ -2079,6 +2095,74 @@ QUnit.test("autoType renders numpad keys after switching to Numpad", async (asse
   assert.notOk(keys.includes("q"), "No alphabetic keys in auto-switched numpad");
 
   numInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("resetKeyboardType re-enables autoType after explicit setKeyboardType", async (assert) => {
+  const numInput = new Input({ type: "Number" });
+  const textInput = new Input();
+  numInput.placeAt("qunit-fixture");
+  textInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+  });
+  kb.setKeyboardType("Full"); // Lock auto-type
+  await placeAndWait(kb);
+
+  // Focus Number input — should stay Full because of the lock
+  (numInput.getFocusDomRef() as HTMLElement).focus();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.strictEqual(kb.getKeyboardType(), "Full", "Locked: Number input stays Full");
+
+  // Move focus away, then reset
+  (textInput.getFocusDomRef() as HTMLElement).focus();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  kb.resetKeyboardType();
+
+  // Focus Number input again — should now auto-detect Numpad
+  (numInput.getFocusDomRef() as HTMLElement).focus();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "After reset: Number input triggers Numpad");
+
+  numInput.destroy();
+  textInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType", async (assert) => {
+  const numInput = new Input({ type: "Number" });
+  const textInput = new Input();
+  numInput.placeAt("qunit-fixture");
+  textInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+    keyboardType: "Full", // Lock via constructor
+  });
+  await placeAndWait(kb);
+
+  // Focus Number input — should stay Full because of the constructor lock
+  (numInput.getFocusDomRef() as HTMLElement).focus();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.strictEqual(kb.getKeyboardType(), "Full", "Constructor lock: Number input stays Full");
+
+  // Move focus away, then reset
+  (textInput.getFocusDomRef() as HTMLElement).focus();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  kb.resetKeyboardType();
+
+  // Focus Number input again — should now auto-detect Numpad
+  (numInput.getFocusDomRef() as HTMLElement).focus();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "After reset: constructor lock cleared, Numpad detected");
+
+  numInput.destroy();
+  textInput.destroy();
   kb.destroy();
 });
 
