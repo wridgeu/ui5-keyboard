@@ -18,12 +18,13 @@ import type {
   HotkeyOptions,
   HotkeyRegistration,
   HotkeyRegistrationHandle,
+  HotkeyRegistrationInfo,
   Platform,
   ResolvedHotkeyOptions,
   SequenceOptions,
   SequencePendingCallback,
-  SequenceRegistration,
   SequenceRegistrationHandle,
+  SequenceRegistrationInfo,
   UnhandledCallback,
   UnhandledReason,
   UpdatableHotkeyOptions,
@@ -400,14 +401,14 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Get all active registrations. Returns a new array (safe to iterate).
    */
-  getRegistrations(): ReadonlyArray<Readonly<HotkeyRegistration>> {
+  getRegistrations(): ReadonlyArray<Readonly<HotkeyRegistrationInfo>> {
     return Array.from(this._registrations.values());
   }
 
   /**
    * Get registrations filtered by scope.
    */
-  getRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<HotkeyRegistration>> {
+  getRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<HotkeyRegistrationInfo>> {
     return this.getRegistrations().filter((r) => r.options.scope === scopeId);
   }
 
@@ -452,14 +453,14 @@ export default class HotkeyManager extends BaseObject {
    *
    * Pass `null` to remove the callback.
    */
-  setSequencePendingCallback(callback: SequencePendingCallback | null): void {
+  setSequencePendingHandler(callback: SequencePendingCallback | null): void {
     this._getSequenceManager().setPendingCallback(callback);
   }
 
   /**
    * Get all active sequence registrations.
    */
-  getSequenceRegistrations(): ReadonlyArray<Readonly<SequenceRegistration>> {
+  getSequenceRegistrations(): ReadonlyArray<Readonly<SequenceRegistrationInfo>> {
     if (!this._sequenceManager) return [];
     return this._sequenceManager.getRegistrations();
   }
@@ -467,7 +468,7 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Get sequence registrations filtered by scope.
    */
-  getSequenceRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<SequenceRegistration>> {
+  getSequenceRegistrationsForScope(scopeId: string): ReadonlyArray<Readonly<SequenceRegistrationInfo>> {
     if (!this._sequenceManager) return [];
     return this._sequenceManager.getRegistrations().filter((r) => r.scope === scopeId);
   }

@@ -267,6 +267,7 @@ export interface HotkeyRegistrationHandle {
 
 /**
  * Internal representation of a fully resolved hotkey registration.
+ * @internal Use {@link HotkeyRegistrationInfo} for public introspection.
  */
 export interface HotkeyRegistration {
   /** Unique identifier. */
@@ -282,6 +283,12 @@ export interface HotkeyRegistration {
   /** Fully resolved options (no undefined values). */
   options: ResolvedHotkeyOptions;
 }
+
+/**
+ * Public view of a hotkey registration for introspection (e.g., cheat sheets).
+ * Omits internal fields (parsed representation, callback reference).
+ */
+export type HotkeyRegistrationInfo = Omit<HotkeyRegistration, "parsedHotkey" | "callback">;
 
 /**
  * Hotkey options with all defaults resolved — no optional fields.
@@ -332,7 +339,7 @@ export interface UnhandledContext {
    * The registration that matched the key combination but was skipped.
    * Present for all reasons except `"no_match"`.
    */
-  readonly skippedRegistration?: HotkeyRegistration;
+  readonly skippedRegistration?: HotkeyRegistrationInfo;
 }
 
 /**
@@ -408,6 +415,7 @@ export interface SequenceRegistrationHandle {
 
 /**
  * Internal representation of a fully resolved sequence registration.
+ * @internal Use {@link SequenceRegistrationInfo} for public introspection.
  */
 export interface SequenceRegistration {
   id: string;
@@ -422,6 +430,12 @@ export interface SequenceRegistration {
   preventDefault: boolean;
   stopPropagation: boolean;
 }
+
+/**
+ * Public view of a sequence registration for introspection.
+ * Omits internal fields (parsed steps, callback reference).
+ */
+export type SequenceRegistrationInfo = Omit<SequenceRegistration, "parsedSteps" | "callback">;
 
 /**
  * Callback for mid-sequence progress.

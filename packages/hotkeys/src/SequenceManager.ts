@@ -14,6 +14,7 @@ import type {
   SequencePendingCallback,
   SequenceRegistration,
   SequenceRegistrationHandle,
+  SequenceRegistrationInfo,
   UpdatableSequenceOptions,
 } from "./types";
 
@@ -176,7 +177,7 @@ export default class SequenceManager extends BaseObject {
   /**
    * Get all active registrations.
    */
-  getRegistrations(): ReadonlyArray<Readonly<SequenceRegistration>> {
+  getRegistrations(): ReadonlyArray<Readonly<SequenceRegistrationInfo>> {
     return Array.from(this._registrations.values());
   }
 

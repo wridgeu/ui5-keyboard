@@ -226,7 +226,7 @@ QUnit.test("getSequenceRegistrations returns active registrations", (assert) => 
   assert.strictEqual(manager.getSequenceRegistrations().length, 0, "Empty after all unregistered");
 });
 
-QUnit.test("setSequencePendingCallback fires on mid-sequence progress", (assert) => {
+QUnit.test("setSequencePendingHandler fires on mid-sequence progress", (assert) => {
   const done = assert.async();
   const manager = HotkeyManager.getInstance();
   const pendingCalls: { completedSteps: number; totalSteps: number; nextKey: string }[] = [];
@@ -235,7 +235,7 @@ QUnit.test("setSequencePendingCallback fires on mid-sequence progress", (assert)
     // Full sequence callback — not relevant for this test
   });
 
-  manager.setSequencePendingCallback((info) => {
+  manager.setSequencePendingHandler((info) => {
     pendingCalls.push({
       completedSteps: info.completedSteps,
       totalSteps: info.totalSteps,
@@ -252,7 +252,7 @@ QUnit.test("setSequencePendingCallback fires on mid-sequence progress", (assert)
     assert.strictEqual(pendingCalls[0].nextKey, "E", "Next key is E");
 
     // Clean up
-    manager.setSequencePendingCallback(null);
+    manager.setSequencePendingHandler(null);
     done();
   }, 50);
 });

@@ -94,7 +94,7 @@ export default class Main extends BaseController {
       ),
     );
 
-    this._manager.setSequencePendingCallback((info) => {
+    this._manager.setSequencePendingHandler((info) => {
       if (this._pendingTimer) clearTimeout(this._pendingTimer);
       stateModel.setProperty(
         "/sequenceStatus",
@@ -211,7 +211,7 @@ export default class Main extends BaseController {
     this._handles = [];
     this._sequenceHandles.forEach((h) => h.unregister());
     this._sequenceHandles = [];
-    this._manager.setSequencePendingCallback(null);
+    this._manager.setSequencePendingHandler(null);
     if (this._pendingTimer) {
       clearTimeout(this._pendingTimer);
       this._pendingTimer = null;
