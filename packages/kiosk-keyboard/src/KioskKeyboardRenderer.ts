@@ -1,19 +1,6 @@
 import type RenderManager from "sap/ui/core/RenderManager";
-import Lib from "sap/ui/core/Lib";
 import type KioskKeyboard from "./KioskKeyboard";
-import type { KeyDefinition } from "./types";
-
-/** Default icons for special keys — used when the key has no explicit icon */
-const SPECIAL_KEY_ICONS: Record<string, string> = {
-  "{shift}": "sap-icon://arrow-top",
-  "{enter}": "sap-icon://accept",
-};
-
-function getText(sKey: string, sDefault: string): string {
-  const bundle = Lib.getResourceBundleFor("ui5.kiosk");
-  if (!bundle) return sDefault;
-  return bundle.getText(sKey, undefined, true) ?? sDefault;
-}
+import type { KeyDefinition, LayoutDefinition } from "./types";
 
 /**
  * Renderer for the KioskKeyboard control.
@@ -22,83 +9,133 @@ function getText(sKey: string, sDefault: string): string {
  * its own properties and state, so the framework can skip re-rendering when only
  * the parent changes. Renders a flat DOM structure: rows of key divs with
  * role="button". No child UI5 controls — all keys are plain DOM via event delegation.
+ *
+ * Split into small hook methods following the InputBaseRenderer pattern so that
+ * extending renderers can selectively override individual aspects (classes,
+ * attributes, key content, etc.) without rewriting the entire renderer.
  */
 const KioskKeyboardRenderer = {
   apiVersion: 4,
 
+  // ──────────────────────────────────────────────
+  // Main entry point
+  // ──────────────────────────────────────────────
+
   render(rm: RenderManager, oControl: KioskKeyboard): void {
-    const layout = oControl.getResolvedLayout();
-    const sId = oControl.getId();
-    const bShift = oControl.isShiftActive();
-    const bCapsLock = oControl.isCapsLock();
-    const bEnabled = oControl.getEnabled();
-    const bDocked = oControl.getDocked();
-
-    // Root
     rm.openStart("div", oControl);
-    rm.class("ui5KioskKeyboard");
-    // Keyboard type class for type-specific styling (numpad, numeric)
-    const sType = oControl.getKeyboardType().toLowerCase();
-    if (sType !== "full") {
-      rm.class(`ui5KioskKeyboard--${sType}`);
-    }
-    if (bDocked) {
-      rm.class("ui5KioskKeyboard--docked");
-      // Start closed; onAfterRendering syncs with _open state
-      rm.class("ui5KioskKeyboard--closed");
-    }
-    if (!bEnabled) {
-      rm.class("ui5KioskKeyboard--disabled");
-      rm.attr("aria-disabled", "true");
-    }
-    rm.attr("role", "group");
-    rm.attr("aria-label", oControl.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"));
-    rm.attr("data-sap-ui-fastnavgroup", "true");
+    this.addRootClasses(rm, oControl);
+    this.writeRootAttributes(rm, oControl);
     rm.openEnd();
 
-    layout.forEach((row, ri) => {
-      rm.openStart("div", `${sId}-row-${ri}`);
-      rm.class("ui5KioskRow");
-      rm.openEnd();
-
-      row.forEach((key, ci) => {
-        this.renderKey(rm, oControl, key, ri, ci, sId, bShift, bCapsLock);
-      });
-
-      rm.close("div");
-    });
-
-    // ARIA live region — announces shift/caps state changes to screen readers
-    rm.openStart("span", `${sId}-liveState`);
-    rm.class("sapUiInvisibleText");
-    rm.attr("role", "status");
-    rm.attr("aria-live", "polite");
-    rm.openEnd();
-    if (bCapsLock) {
-      rm.text(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
-    } else if (bShift) {
-      rm.text(getText("ARIA_SHIFT_ON", "Shift on"));
-    }
-    rm.close("span");
+    this.renderContent(rm, oControl);
+    this.renderLiveRegion(rm, oControl);
 
     rm.close("div");
   },
 
-  renderKey(
-    rm: RenderManager,
-    oControl: KioskKeyboard,
-    key: KeyDefinition,
-    ri: number,
-    ci: number,
-    sId: string,
-    bShift: boolean,
-    bCapsLock: boolean,
-  ): void {
-    const label = oControl.getKeyLabel(key);
-    const ariaLabel = oControl.getKeyAriaLabel(key);
-    const bIsShiftKey = key.value === "{shift}";
+  // ──────────────────────────────────────────────
+  // Root-level hooks
+  // ──────────────────────────────────────────────
 
-    rm.openStart("div", `${sId}-key-${ri}-${ci}`);
+  /** CSS classes on the root `<div>`. */
+  addRootClasses(rm: RenderManager, oControl: KioskKeyboard): void {
+    rm.class("ui5KioskKeyboard");
+
+    const sType = oControl.getKeyboardType().toLowerCase();
+    if (sType !== "full") {
+      rm.class(`ui5KioskKeyboard--${sType}`);
+    }
+
+    if (oControl.getDocked()) {
+      rm.class("ui5KioskKeyboard--docked");
+      // Start closed; onAfterRendering syncs with _open state
+      rm.class("ui5KioskKeyboard--closed");
+    }
+
+    if (!oControl.getEnabled()) {
+      rm.class("ui5KioskKeyboard--disabled");
+    }
+  },
+
+  /** ARIA/data attributes on the root `<div>`. */
+  writeRootAttributes(rm: RenderManager, oControl: KioskKeyboard): void {
+    if (!oControl.getEnabled()) {
+      rm.attr("aria-disabled", "true");
+    }
+    rm.attr("role", "group");
+    rm.attr(
+      "aria-label",
+      oControl.getAriaLabel() ||
+        (oControl.constructor as typeof KioskKeyboard)._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
+    );
+    rm.attr(
+      "aria-roledescription",
+      (oControl.constructor as typeof KioskKeyboard)._getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
+    );
+    rm.attr("data-sap-ui-fastnavgroup", "true");
+  },
+
+  /** The row loop — override to add toolbar, extra sections, etc. */
+  renderContent(rm: RenderManager, oControl: KioskKeyboard): void {
+    const layout = oControl.getResolvedLayout();
+    layout.forEach((row, ri) => {
+      this.renderRow(rm, oControl, row, ri);
+    });
+  },
+
+  /** ARIA live region — announces shift/caps state changes to screen readers. */
+  renderLiveRegion(rm: RenderManager, oControl: KioskKeyboard): void {
+    rm.openStart("span", `${oControl.getId()}-liveState`);
+    rm.class("sapUiInvisibleText");
+    rm.attr("role", "status");
+    rm.attr("aria-live", "polite");
+    rm.openEnd();
+
+    const Ctor = oControl.constructor as typeof KioskKeyboard;
+    if (oControl.isCapsLock()) {
+      rm.text(Ctor._getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
+    } else if (oControl.isShiftActive()) {
+      rm.text(Ctor._getText("ARIA_SHIFT_ON", "Shift on"));
+    }
+
+    rm.close("span");
+  },
+
+  // ──────────────────────────────────────────────
+  // Row-level hooks
+  // ──────────────────────────────────────────────
+
+  /** Single row wrapper + key iteration. */
+  renderRow(rm: RenderManager, oControl: KioskKeyboard, row: LayoutDefinition[number], ri: number): void {
+    rm.openStart("div", `${oControl.getId()}-row-${ri}`);
+    rm.class("ui5KioskRow");
+    rm.openEnd();
+
+    row.forEach((key, ci) => {
+      this.renderKey(rm, oControl, key, ri, ci);
+    });
+
+    rm.close("div");
+  },
+
+  // ──────────────────────────────────────────────
+  // Key-level hooks
+  // ──────────────────────────────────────────────
+
+  /** Renders a single key `<div>` with classes, attributes, and content. */
+  renderKey(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, ri: number, ci: number): void {
+    rm.openStart("div", `${oControl.getId()}-key-${ri}-${ci}`);
+    this.addKeyClasses(rm, oControl, key);
+    this.writeKeyAttributes(rm, oControl, key, ri, ci);
+    rm.openEnd();
+
+    this.renderKeyContent(rm, oControl, key);
+
+    rm.close("div");
+  },
+
+  /** CSS classes on a key `<div>`. */
+  addKeyClasses(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
     rm.class("ui5KioskKey");
 
     // Width class
@@ -116,23 +153,31 @@ const KioskKeyboardRenderer = {
     }
 
     // Active shift / caps lock indicator
-    if (bIsShiftKey && bShift) {
+    if (key.value === "{shift}" && oControl.isShiftActive()) {
       rm.class("ui5KioskKey--active");
-      if (bCapsLock) {
+      if (oControl.isCapsLock()) {
         rm.class("ui5KioskKey--capsLock");
       }
     }
+  },
+
+  /** Attributes (`role`, `tabindex`, `data-key`, `aria-*`) on a key `<div>`. */
+  writeKeyAttributes(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, ri: number, ci: number): void {
+    const bIsShiftKey = key.value === "{shift}";
 
     rm.attr("role", "button");
 
     // Toggle state for shift key (aria-pressed for screen readers)
     if (bIsShiftKey) {
-      rm.attr("aria-pressed", bShift ? "true" : "false");
+      rm.attr("aria-pressed", oControl.isShiftActive() ? "true" : "false");
     }
+
     rm.attr("tabindex", ri === 0 && ci === 0 ? "0" : "-1");
+
     if (!oControl.getEnabled()) {
       rm.attr("aria-disabled", "true");
     }
+
     rm.attr("data-key", key.value);
 
     // Store shift value for efficient lookup in tap handler
@@ -140,21 +185,29 @@ const KioskKeyboardRenderer = {
       rm.attr("data-shift-value", key.shiftValue);
     }
 
-    rm.attr("aria-label", bIsShiftKey && bCapsLock ? getText("ARIA_CAPS_LOCK", "Caps Lock") : ariaLabel);
-    rm.openEnd();
+    const Ctor = oControl.constructor as typeof KioskKeyboard;
+    const ariaLabel =
+      bIsShiftKey && oControl.isCapsLock()
+        ? Ctor._getText("ARIA_CAPS_LOCK", "Caps Lock")
+        : oControl.getKeyAriaLabel(key);
+    rm.attr("aria-label", ariaLabel);
+  },
 
-    // Key content: icon, caps lock icon, or text
-    const icon = key.icon || SPECIAL_KEY_ICONS[key.value];
+  /** Icon or text inside the key. */
+  renderKeyContent(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
+    const bIsShiftKey = key.value === "{shift}";
+    const Ctor = oControl.constructor as typeof KioskKeyboard;
 
-    if (bIsShiftKey && bCapsLock) {
+    if (bIsShiftKey && oControl.isCapsLock()) {
       rm.icon("sap-icon://locked", ["sapUiIcon"], { "aria-hidden": "true" });
-    } else if (icon) {
-      rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
     } else {
-      rm.text(label);
+      const icon = key.icon || Ctor.getKeyIcon(key.value);
+      if (icon) {
+        rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
+      } else {
+        rm.text(oControl.getKeyLabel(key));
+      }
     }
-
-    rm.close("div");
   },
 };
 

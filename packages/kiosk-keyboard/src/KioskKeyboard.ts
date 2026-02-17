@@ -679,6 +679,24 @@ export default class KioskKeyboard extends Control {
     return layouts[name] ?? layouts[DEFAULT_LAYOUT];
   }
 
+  /** Default icons for special keys — used when the key has no explicit icon. */
+  static readonly SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
+    "{shift}": "sap-icon://arrow-top",
+    "{enter}": "sap-icon://accept",
+  };
+
+  /**
+   * Returns the default icon URI for a special key value, or undefined
+   * if the key has no default icon.
+   *
+   * @param sKeyValue Key value (e.g. "{shift}", "{enter}")
+   * @public
+   * @static
+   */
+  static getKeyIcon(sKeyValue: string): string | undefined {
+    return KioskKeyboard.SPECIAL_KEY_ICONS[sKeyValue];
+  }
+
   /** Map from special key value to [i18nKey, fallback]. */
   private static readonly _SPECIAL_KEY_I18N: Record<string, [string, string]> = {
     "{backspace}": ["KEY_BACKSPACE", "Backspace"],

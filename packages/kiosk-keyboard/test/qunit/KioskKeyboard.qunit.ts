@@ -5,52 +5,7 @@ import TextArea from "sap/m/TextArea";
 import Popover from "sap/m/Popover";
 import VBox from "sap/m/VBox";
 import Localization from "sap/base/i18n/Localization";
-
-// ──────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────
-
-const RENDER_WAIT = 500;
-
-function placeAndWait(control: KioskKeyboard): Promise<void> {
-  control.placeAt("qunit-fixture");
-  return new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
-}
-
-function tapKey(keyboard: KioskKeyboard, keyValue: string): void {
-  const dom = keyboard.getDomRef();
-  if (!dom) throw new Error("Keyboard not rendered");
-
-  const keyEl = dom.querySelector(`[data-key="${keyValue}"]`) as HTMLElement | null;
-  if (!keyEl) throw new Error(`Key "${keyValue}" not found`);
-
-  simulateTap(keyboard, keyEl);
-}
-
-function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
-  const start = new Event("touchstart", { bubbles: true });
-  Object.defineProperty(start, "target", { value: el, writable: false });
-  kb.ontouchstart(start);
-
-  const end = new Event("touchend", { bubbles: true });
-  Object.defineProperty(end, "target", { value: el, writable: false });
-  kb.ontouchend(end);
-}
-
-function tapShiftInternally(kb: KioskKeyboard): void {
-  const fakeShiftEl = document.createElement("div");
-  fakeShiftEl.classList.add("ui5KioskKey");
-  fakeShiftEl.dataset.key = "{shift}";
-  fakeShiftEl.id = "fake-shift";
-
-  simulateTap(kb, fakeShiftEl);
-}
-
-function getKeyElements(keyboard: KioskKeyboard): NodeListOf<HTMLElement> {
-  const dom = keyboard.getDomRef();
-  if (!dom) throw new Error("Keyboard not rendered");
-  return dom.querySelectorAll<HTMLElement>(".ui5KioskKey");
-}
+import { placeAndWait, waitForRender, tapKey, simulateTap, tapShiftInternally, getKeyElements } from "./test-helpers";
 
 // ──────────────────────────────────────────────
 // Module
@@ -92,6 +47,7 @@ QUnit.test("Renders with default properties", async (assert) => {
   assert.ok(dom!.classList.contains("ui5KioskKeyboard"), "Has root CSS class");
   assert.strictEqual(dom!.getAttribute("role"), "group", "Root has role=group");
   assert.strictEqual(dom!.getAttribute("aria-label"), "Virtual Keyboard", "Default aria-label");
+  assert.strictEqual(dom!.getAttribute("aria-roledescription"), "keyboard", "Root has aria-roledescription");
   assert.strictEqual(dom!.getAttribute("data-sap-ui-fastnavgroup"), "true", "F6 group enabled");
 
   const keys = getKeyElements(kb);
@@ -307,7 +263,7 @@ QUnit.test("Shift key renders active class", async (assert) => {
   tapKey(kb, "{shift}");
 
   // Wait for re-render
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   const updatedShiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
   assert.ok(updatedShiftKey!.classList.contains("ui5KioskKey--active"), "Shift key has active class");
@@ -535,7 +491,7 @@ QUnit.test("Layout switch updates rendered keys", async (assert) => {
   tapKey(kb, "{layout:numeric}");
 
   // Wait for re-render
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   keys = getKeyElements(kb);
   const numericKeyValues = Array.from(keys).map((k) => k.dataset.key);
@@ -627,7 +583,7 @@ QUnit.test("setTargetInput does not trigger re-render", async (assert) => {
 
   const kb = new KioskKeyboard();
   kb.placeAt("qunit-fixture");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   const domBefore = kb.getDomRef();
   assert.ok(domBefore, "Keyboard is rendered before setTargetInput");
@@ -671,7 +627,7 @@ QUnit.test("Shift key has aria-pressed", async (assert) => {
   assert.strictEqual(shiftKey!.getAttribute("aria-pressed"), "false", "Initially aria-pressed=false");
 
   tapKey(kb, "{shift}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   const updatedShift = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
   assert.strictEqual(updatedShift!.getAttribute("aria-pressed"), "true", "After shift: aria-pressed=true");
@@ -1321,7 +1277,7 @@ QUnit.test("Keyboard renders inside a Popover", async (assert) => {
   });
 
   popover.openBy(trigger);
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.ok(popover.isOpen(), "Popover is open");
   assert.ok(kb.getDomRef(), "Keyboard is rendered inside popover");
@@ -1330,7 +1286,7 @@ QUnit.test("Keyboard renders inside a Popover", async (assert) => {
   assert.ok(keys.length > 0, "Keyboard keys are rendered");
 
   popover.close();
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   popover.destroy();
 });
@@ -1349,7 +1305,7 @@ QUnit.test("Typing into input inside a Popover", async (assert) => {
   });
 
   popover.openBy(trigger);
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   tapKey(kb, "h");
   tapKey(kb, "i");
@@ -1363,7 +1319,7 @@ QUnit.test("Typing into input inside a Popover", async (assert) => {
   assert.strictEqual(input.getValue(), "hi", "Backspace works inside popover");
 
   popover.close();
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   popover.destroy();
 });
@@ -1382,7 +1338,7 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   });
 
   popover.openBy(trigger);
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Tap several keys — popover should remain open
   tapKey(kb, "a");
@@ -1394,7 +1350,7 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   assert.strictEqual(input.getValue(), "abc", "Input value accumulated correctly");
 
   popover.close();
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   popover.destroy();
 });
@@ -1412,7 +1368,7 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   tapKey(kb, "{shift}");
   assert.ok(kb.isCapsLock(), "Caps lock is on");
 
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]')!;
   assert.ok(shiftKey.classList.contains("ui5KioskKey--capsLock"), "Shift key has capsLock CSS class");
@@ -1436,7 +1392,7 @@ QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (asse
   assert.ok(kb.isShiftActive(), "Shift is active");
   assert.notOk(kb.isCapsLock(), "Caps lock is NOT on");
 
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]')!;
   assert.ok(shiftKey.classList.contains("ui5KioskKey--active"), "Has active class");
@@ -1532,13 +1488,13 @@ QUnit.test("Switching to numeric and back returns to base layout", async (assert
 
   // Switch to numeric
   tapKey(kb, "{layout:numeric}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "numeric", "Layout is now numeric");
 
   // Switch back via ABC (which uses {layout:base})
   tapKey(kb, "{layout:base}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "qwertz-de", "Layout returned to qwertz-de (not qwerty)");
 
@@ -1556,11 +1512,11 @@ QUnit.test("Base layout defaults to qwerty", async (assert) => {
 
   // Switch to numeric
   tapKey(kb, "{layout:numeric}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Switch back via ABC ({layout:base})
   tapKey(kb, "{layout:base}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "qwerty", "Default base layout is qwerty");
 
@@ -1577,17 +1533,17 @@ QUnit.test("Base layout roundtrip: qwertz-de -> numeric -> special -> base", asy
 
   // Go to numeric
   tapKey(kb, "{layout:numeric}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Go to special from numeric
   tapKey(kb, "{layout:special}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "special", "Now on special layout");
 
   // Go back via ABC ({layout:base})
   tapKey(kb, "{layout:base}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "qwertz-de", "Returned to qwertz-de after special");
 
@@ -1649,7 +1605,7 @@ QUnit.test("Layout switching works inside a Popover", async (assert) => {
   });
 
   popover.openBy(trigger);
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Verify QWERTY is active
   let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
@@ -1657,14 +1613,14 @@ QUnit.test("Layout switching works inside a Popover", async (assert) => {
 
   // Switch to numeric
   tapKey(kb, "{layout:numeric}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
   assert.notOk(keys.includes("q"), "Numeric layout after switch");
   assert.ok(popover.isOpen(), "Popover still open after layout switch");
 
   popover.close();
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   popover.destroy();
   trigger.remove();
@@ -1721,13 +1677,13 @@ QUnit.test("Custom layout works as base layout for {layout:base} roundtrip", asy
 
   // Switch to numeric
   tapKey(kb, "{layout:numeric}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "numeric", "On numeric now");
 
   // Switch back via {layout:base}
   tapKey(kb, "{layout:base}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "test-roundtrip", "Returned to custom layout");
 
@@ -1864,12 +1820,12 @@ QUnit.test("Locale layout used as base layout for {layout:base} roundtrip", asyn
 
     // Switch to numeric
     tapKey(kb, "{layout:numeric}");
-    await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+    await waitForRender();
     assert.strictEqual(kb.getLayout(), "numeric", "Switched to numeric");
 
     // Switch back via {layout:base}
     tapKey(kb, "{layout:base}");
-    await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+    await waitForRender();
     assert.strictEqual(kb.getLayout(), "qwertz-de", "Returned to locale-detected qwertz-de");
 
     kb.destroy();
@@ -2117,7 +2073,7 @@ QUnit.test("autoType renders numpad keys after switching to Numpad", async (asse
   await placeAndWait(kb);
 
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
   assert.ok(keys.includes("7"), "Numpad keys present after auto-switch");
@@ -2427,7 +2383,7 @@ QUnit.test("Auto-show skips input targeted by another keyboard", async (assert) 
     autoShow: true,
   });
   dockedKb.placeAt("qunit-fixture");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Focus the input — docked keyboard should NOT open
   (input.getFocusDomRef() as HTMLElement).focus();
@@ -2458,7 +2414,7 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
     autoShow: true,
   });
   dockedKb.placeAt("qunit-fixture");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Focus the free input — docked keyboard SHOULD open
   (freeInput.getFocusDomRef() as HTMLElement).focus();
@@ -2488,7 +2444,7 @@ QUnit.test("Destroying the claiming keyboard frees the input for auto-show", asy
     autoShow: true,
   });
   dockedKb.placeAt("qunit-fixture");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Focus while inline keyboard exists — docked should NOT open
   (input.getFocusDomRef() as HTMLElement).focus();
@@ -2527,7 +2483,7 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
     autoShow: true,
   });
   dockedKb.placeAt("qunit-fixture");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Focus input1 — should be blocked
   (input1.getFocusDomRef() as HTMLElement).focus();
@@ -2569,7 +2525,7 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
     autoShow: true,
   });
   dockedKb.placeAt("qunit-fixture");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Focus free input — docked keyboard opens
   (freeInput.getFocusDomRef() as HTMLElement).focus();
@@ -2602,7 +2558,7 @@ QUnit.test("Two docked keyboards with auto-show do not fight over same input", a
     autoShow: true,
   });
   docked2.placeAt("qunit-fixture");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   // Focus input — first registered keyboard claims it
   (input.getFocusDomRef() as HTMLElement).focus();
@@ -2914,21 +2870,21 @@ QUnit.test("Live region announces Shift state", async (assert) => {
 
   // Activate shift
   tapKey(kb, "{shift}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   liveRegion = document.getElementById(`${sId}-liveState`);
   assert.strictEqual(liveRegion!.textContent, "Shift on", "Announces Shift on");
 
   // Activate caps lock
   tapKey(kb, "{shift}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   liveRegion = document.getElementById(`${sId}-liveState`);
   assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Announces Caps Lock on");
 
   // Deactivate
   tapKey(kb, "{shift}");
-  await new Promise((resolve) => setTimeout(resolve, RENDER_WAIT));
+  await waitForRender();
 
   liveRegion = document.getElementById(`${sId}-liveState`);
   assert.strictEqual(liveRegion!.textContent, "", "Empty after shift off");
