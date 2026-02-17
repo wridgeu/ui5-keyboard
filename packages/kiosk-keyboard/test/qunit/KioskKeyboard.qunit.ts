@@ -857,14 +857,13 @@ QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
 // liveChange event parameters
 // ──────────────────────────────────────────────
 
-QUnit.test("fireLiveChange receives value and newValue parameters", async (assert) => {
+QUnit.test("fireLiveChange receives value parameter", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
   const done = assert.async();
   input.attachLiveChange((event: { getParameter(name: string): unknown }) => {
     assert.strictEqual(event.getParameter("value"), "a", "value parameter is correct");
-    assert.strictEqual(event.getParameter("newValue"), "a", "newValue parameter is correct");
     done();
   });
 

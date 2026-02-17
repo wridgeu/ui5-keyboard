@@ -148,6 +148,16 @@ export default class KioskKeyboard extends Control {
     associations: {
       /** The input control to type into (e.g. sap.m.Input, sap.m.TextArea). */
       targetInput: { type: "sap.ui.core.Control", multiple: false },
+      ariaLabelledBy: {
+        type: "sap.ui.core.Control",
+        multiple: true,
+        singularName: "ariaLabelledBy",
+      },
+      ariaDescribedBy: {
+        type: "sap.ui.core.Control",
+        multiple: true,
+        singularName: "ariaDescribedBy",
+      },
     },
     events: {
       /** Fired when a virtual key is pressed. Call preventDefault() to skip the default input action. */
@@ -569,8 +579,18 @@ export default class KioskKeyboard extends Control {
 
   private _setupInputIds(): void {
     const ids = this.getInputIds();
-    if (!ids?.length) return;
+    const nextIds = new Set(ids);
 
+    // Remove delegates for IDs no longer in the list
+    for (const oldId of this._registeredInputIds) {
+      if (!nextIds.has(oldId)) {
+        const control = this._findControlById(oldId);
+        if (control) control.removeEventDelegate(this._inputFocusDelegation);
+        this._registeredInputIds.delete(oldId);
+      }
+    }
+
+    // Add delegates for new IDs
     for (const inputId of ids) {
       if (this._registeredInputIds.has(inputId)) continue;
       const control = this._findControlById(inputId);
@@ -1109,7 +1129,7 @@ export default class KioskKeyboard extends Control {
       }
     }
     if (metadata.hasEvent("liveChange")) {
-      element.fireEvent("liveChange", { value: newValue, newValue });
+      element.fireEvent("liveChange", { value: newValue });
     }
   }
 

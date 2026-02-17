@@ -59,19 +59,12 @@ const KioskKeyboardRenderer = {
 
   /** ARIA/data attributes on the root `<div>`. */
   writeRootAttributes(rm: RenderManager, oControl: KioskKeyboard): void {
-    if (!oControl.getEnabled()) {
-      rm.attr("aria-disabled", "true");
-    }
-    rm.attr("role", "group");
-    rm.attr(
-      "aria-label",
-      oControl.getAriaLabel() ||
-        (oControl.constructor as typeof KioskKeyboard)._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
-    );
-    rm.attr(
-      "aria-roledescription",
-      (oControl.constructor as typeof KioskKeyboard)._getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
-    );
+    const Ctor = oControl.constructor as typeof KioskKeyboard;
+    rm.accessibilityState(oControl, {
+      role: "group",
+      label: oControl.getAriaLabel() || Ctor._getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
+      roledescription: Ctor._getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
+    });
     rm.attr("data-sap-ui-fastnavgroup", "true");
   },
 

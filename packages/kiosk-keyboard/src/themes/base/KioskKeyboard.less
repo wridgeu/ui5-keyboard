@@ -265,6 +265,13 @@
 /* Compact mode                  */
 /* ============================= */
 
+/*
+ * Compact mode reduces key height to @sapUiElementHeight (2rem / 32px),
+ * below WCAG 2.2 Level AA's 44x44 CSS pixel minimum touch target.
+ * This is consistent with SAP's compact density (mouse-optimized).
+ * For touch-primary kiosk scenarios, use cozy density or override
+ * --ui5KioskKeyboard-keyHeight with a value >= 2.75rem (44px).
+ */
 .sapUiSizeCompact {
   .ui5KioskKeyboard {
     --ui5KioskKeyboard-padding: 0.5rem;

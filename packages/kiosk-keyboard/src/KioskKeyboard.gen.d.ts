@@ -76,6 +76,8 @@ declare module "./KioskKeyboard" {
          * The input control to type into (e.g. sap.m.Input, sap.m.TextArea).
          */
         targetInput?: Control | string;
+        ariaLabelledBy?: Control | string | (Control | string)[];
+        ariaDescribedBy?: Control | string | (Control | string)[];
 
         /**
          * Fired when a virtual key is pressed. Call preventDefault() to skip the default input action.
@@ -249,6 +251,18 @@ declare module "./KioskKeyboard" {
          * The input control to type into (e.g. sap.m.Input, sap.m.TextArea).
          */
         setTargetInput(targetInput?: string | Control): this;
+
+        // association: ariaLabelledBy
+        getAriaLabelledBy(): string[];
+        addAriaLabelledBy(ariaLabelledBy: string | Control): this;
+        removeAriaLabelledBy(ariaLabelledBy: number | string | Control): string;
+        removeAllAriaLabelledBy(): string[];
+
+        // association: ariaDescribedBy
+        getAriaDescribedBy(): string[];
+        addAriaDescribedBy(ariaDescribedBy: string | Control): this;
+        removeAriaDescribedBy(ariaDescribedBy: number | string | Control): string;
+        removeAllAriaDescribedBy(): string[];
 
         // event: keyPress
 
