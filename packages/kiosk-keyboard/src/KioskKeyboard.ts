@@ -756,17 +756,18 @@ export default class KioskKeyboard extends Control {
   }
 
   private _findControlById(targetId: string): Control | null {
-    // Try global first
-    const global = Element.getElementById(targetId);
-    if (global instanceof Control) return global;
-
-    // Walk up to find parent View for view-local IDs
+    // Try view-local first (standard UI5 pattern — matches controller.byId())
     for (let parent: ManagedObject | null = this.getParent(); parent; parent = parent.getParent()) {
       if (parent instanceof View) {
         const found = parent.byId(targetId);
         if (found instanceof Control) return found;
       }
     }
+
+    // Fall back to global registry
+    const global = Element.getElementById(targetId);
+    if (global instanceof Control) return global;
+
     return null;
   }
 

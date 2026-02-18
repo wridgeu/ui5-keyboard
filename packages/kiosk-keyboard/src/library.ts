@@ -23,6 +23,8 @@ export const KeyboardLayout = Object.freeze({
   Numeric: "numeric",
   /** Special characters layout. */
   Special: "special",
+  /** Compact numeric keypad layout. */
+  Numpad: "numpad",
 } as const);
 
 /**

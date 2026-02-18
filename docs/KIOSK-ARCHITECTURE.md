@@ -11,6 +11,8 @@ KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
+dom-util.ts               Key element ID construction + regex (shared by control & renderer)
+i18n-util.ts              getText() helper for library resource bundle (shared by control & renderer)
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
@@ -124,7 +126,7 @@ The keyboard operates on the target's inner DOM element (`getFocusDomRef()`) for
 
 1. **Text insertion**: Reads `selectionStart`/`selectionEnd`, splices the new text in, updates cursor position.
 2. **Backspace**: Deletes the selection (if any) or the character before the cursor.
-3. **Enter**: Inserts `\n` for `<textarea>`, no-op for single-line `<input>`.
+3. **Enter**: Inserts `\n` for `<textarea>`. For single-line `<input>`, fires a `change` event on the target control (matching physical Enter key behavior).
 
 After modifying the DOM value, the keyboard calls the UI5 control's `setValue()` and `fireLiveChange()` for proper data binding integration. These are invoked via duck-typing (`Record<string, unknown>`) to avoid a hard dependency on specific control types.
 
@@ -264,11 +266,15 @@ The `mobileKeyboard` property (enum `ui5.kiosk.MobileKeyboard`) controls whether
 private _shouldDeferToNative(): boolean {
   const mode = this.getMobileKeyboard();
   if (mode === "Custom") return false;
+  if (mode === "Native") return true;
+  // "Auto": kiosk keyboard on desktop, native on mobile
   return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
 }
 ```
 
-Uses `sap/ui/Device` for device detection. The `tablet && !desktop` check handles combi devices (laptops with touchscreens) — these report both `tablet: true` and `desktop: true`, and should use the custom keyboard.
+- `"Custom"` — always returns `false` (use the kiosk keyboard).
+- `"Native"` — always returns `true` (defer on every device, disabling auto-show entirely).
+- `"Auto"` — uses `sap/ui/Device` for device detection. The `tablet && !desktop` check handles combi devices (laptops with touchscreens) — these report both `tablet: true` and `desktop: true`, and should use the custom keyboard.
 
 ### Native Keyboard Suppression
 
@@ -458,4 +464,9 @@ packages/kiosk-keyboard/
   test/qunit/
     KioskKeyboard.qunit.ts   Control tests
     testsuite.qunit.ts        Test suite runner
+    test-helpers.ts            Shared test utilities
+  test/e2e/
+    wdio.conf.ts               WebdriverIO configuration
+    visual.test.ts             Visual regression tests
+    inputmode.test.ts          E2E tests for inputmode suppression
 ```

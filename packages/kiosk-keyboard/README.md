@@ -163,17 +163,17 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 
 ### Properties
 
-| Property         | Type                       | Default              | Description                                                                                 |
-| ---------------- | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
-| `layout`         | `string`                   | `"qwerty"`           | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`. |
-| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`             | Display type: `Full`, `Numeric`, or `Numpad`.                                               |
-| `enabled`        | `boolean`                  | `true`               | Whether the keyboard is interactive.                                                        |
-| `ariaLabel`      | `string`                   | `"Virtual Keyboard"` | Accessible label for the keyboard group.                                                    |
-| `docked`         | `boolean`                  | `false`              | Anchor to the bottom of the viewport with slide animation.                                  |
-| `autoShow`       | `boolean`                  | `false`              | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                  |
-| `autoType`       | `boolean`                  | `false`              | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.           |
-| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"`           | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).     |
-| `inputIds`       | `string[]`                 | `[]`                 | Input control IDs for multi-input targeting. See [inputIds](#inputids).                     |
+| Property         | Type                       | Default    | Description                                                                                   |
+| ---------------- | -------------------------- | ---------- | --------------------------------------------------------------------------------------------- |
+| `layout`         | `string`                   | `"qwerty"` | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.   |
+| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`   | Display type: `Full`, `Numeric`, or `Numpad`.                                                 |
+| `enabled`        | `boolean`                  | `true`     | Whether the keyboard is interactive.                                                          |
+| `ariaLabel`      | `string`                   | `""`       | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty. |
+| `docked`         | `boolean`                  | `false`    | Anchor to the bottom of the viewport with slide animation.                                    |
+| `autoShow`       | `boolean`                  | `false`    | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                    |
+| `autoType`       | `boolean`                  | `false`    | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.             |
+| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"` | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).       |
+| `inputIds`       | `string[]`                 | `[]`       | Input control IDs for multi-input targeting. See [inputIds](#inputids).                       |
 
 ### Associations
 
@@ -201,6 +201,7 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 | `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open. |
 | `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.          |
 | `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                   |
+| `resetKeyboardType()`    | `this`             | Clear explicit lock, re-enable auto-type.      |
 | `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.           |
 
 ### Static Methods
@@ -213,6 +214,7 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 | `isBuiltInLayout(name)`                | `boolean`           | Whether the given name is a built-in layout.                                 |
 | `getLocaleLayout()`                    | `string`            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`. |
 | `registerLocaleLayout(locale, layout)` | `void`              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.        |
+| `getKeyIcon(keyValue)`                 | `string?`           | Default icon URI for a special key value, or `undefined` if none.            |
 
 ---
 
@@ -226,7 +228,7 @@ The library ships with five built-in layouts:
 | `qwertz-de` | German QWERTZ with Umlaute (ä, ö, ü, ß) | 5    |
 | `numeric`   | Numbers with basic operators            | 4    |
 | `special`   | Special characters and symbols          | 4    |
-| `numpad`    | Compact numeric keypad (calculator)     | 4    |
+| `numpad`    | Compact numeric keypad (calculator)     | 5    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -418,11 +420,11 @@ new KioskKeyboard({
 
 The `mobileKeyboard` property controls how the keyboard interacts with native virtual keyboards on mobile/touch devices.
 
-| Value      | Behavior                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.**     |
-| `"Native"` | On phones and tablets, defer to the native keyboard entirely (KioskKeyboard does not show). |
-| `"Auto"`   | Desktop/kiosk → use KioskKeyboard. Phone/tablet → defer to native.                          |
+| Value      | Behavior                                                                                |
+| ---------- | --------------------------------------------------------------------------------------- |
+| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.** |
+| `"Native"` | Always defer to the native keyboard — KioskKeyboard does not auto-show on any device.   |
+| `"Auto"`   | Desktop/kiosk → use KioskKeyboard. Phone/tablet → defer to native.                      |
 
 ```xml
 <!-- Suppress native keyboard on all devices (kiosk use case) -->
@@ -456,10 +458,10 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 
 ## Accessibility
 
-- The keyboard root has `role="group"` with a configurable `aria-label`
+- The keyboard root has `role="group"` with a configurable `aria-label` and `aria-roledescription="keyboard"`
 - Each key has `role="button"` with an `aria-label` (resolves to human-readable names for icon-only keys like Backspace and Enter)
 - The Shift key has `aria-pressed` reflecting its toggle state
-- Arrow keys navigate between virtual keys via roving tabindex
+- Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 
@@ -495,6 +497,7 @@ KeyboardLayout.Qwerty; // "qwerty"
 KeyboardLayout.QwertzDe; // "qwertz-de"
 KeyboardLayout.Numeric; // "numeric"
 KeyboardLayout.Special; // "special"
+KeyboardLayout.Numpad; // "numpad"
 
 // KeyboardType — keyboard display type
 KeyboardType.Full; // "Full"
