@@ -30,7 +30,7 @@
   ],
   "type": "module",
   "main": "dist/resources/ui5/hotkeys/library.js",
-  "types": "dist/resources/ui5/hotkeys/HotkeyManager.d.ts",
+  "types": "dist/index.d.ts",
   "publishConfig": {
     "access": "public"
   },

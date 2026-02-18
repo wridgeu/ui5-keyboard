@@ -31,7 +31,7 @@
   ],
   "type": "module",
   "main": "dist/resources/ui5/kiosk/library.js",
-  "types": "dist/resources/ui5/kiosk/KioskKeyboard.d.ts",
+  "types": "dist/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
