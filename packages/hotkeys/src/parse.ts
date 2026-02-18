@@ -24,9 +24,18 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
 
   const p = platform ?? detectPlatform();
 
-  // Split on "+" but handle literal "+" as the last key.
-  // "Ctrl++" splits to ["Ctrl", "", ""] — the key is "+"
-  // "Ctrl+Shift+S" splits to ["Ctrl", "Shift", "S"]
+  // Split on "+" then detect literal "+" from the resulting empty strings.
+  //
+  // Examples:
+  //   "Ctrl+Shift+S"  → ["Ctrl", "Shift", "S"]         → key = "S"
+  //   "+"             → ["", ""]                        → trailing empty  → key = "+"
+  //   "Ctrl++"        → ["Ctrl", "", ""]                → two trailing empties → key = "+"
+  //   "Ctrl+Shift++"  → ["Ctrl", "Shift", "", ""]       → two trailing empties → key = "+"
+  //
+  // The trailing-empty check is intentionally position-dependent: only the
+  // last one or two empty segments are interpreted as a literal "+".  Leading
+  // or interior empty segments (which would indicate consecutive delimiters
+  // with no modifier between them, e.g. "++S") are skipped/ignored.
   const parts = hotkey.split("+");
 
   const modifiers = new Set<CanonicalModifier>();
@@ -35,16 +44,17 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i].trim();
 
-    // Handle literal "+" key: empty string from splitting "+"
+    // Trailing empty → literal "+" key (e.g. "+" → ["", ""])
     if (part === "" && i === parts.length - 1) {
       key = "+";
       continue;
     }
+    // Two trailing empties → literal "+" with modifier (e.g. "Ctrl++" → ["Ctrl", "", ""])
     if (part === "" && i > 0 && i === parts.length - 2 && parts[i + 1] === "") {
-      // "Ctrl++" case: part[1]="" and part[2]=""
       key = "+";
       break;
     }
+    // Interior empty (e.g. leading "+" or typo) — skip
     if (part === "") {
       continue;
     }

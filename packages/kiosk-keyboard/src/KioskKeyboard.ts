@@ -43,7 +43,6 @@ export default class KioskKeyboard extends Control {
   declare private _capsLock: boolean;
   declare private _lastFocusedKeyId: string | null;
   declare private _open: boolean;
-  declare private _closeTimer: ReturnType<typeof setTimeout> | null;
   declare private _boundFocusIn: (e: FocusEvent) => void;
   declare private _boundFocusOut: (e: FocusEvent) => void;
   declare private _autoShowActive: boolean;
@@ -479,7 +478,6 @@ export default class KioskKeyboard extends Control {
     this._capsLock = false;
     this._lastFocusedKeyId = null;
     this._open = false;
-    this._closeTimer = null;
     this._autoShowActive = false;
     this._boundFocusIn = this._onDocumentFocusIn.bind(this);
     this._boundFocusOut = this._onDocumentFocusOut.bind(this);
@@ -555,10 +553,6 @@ export default class KioskKeyboard extends Control {
     this._teardownInputIds();
     this._removeHighlightDelegation();
     this._restoreNativeKeyboard();
-    if (this._closeTimer) {
-      clearTimeout(this._closeTimer);
-      this._closeTimer = null;
-    }
   }
 
   // ──────────────────────────────────────────────
@@ -1046,15 +1040,7 @@ export default class KioskKeyboard extends Control {
       const ui5Control = Element.closestTo(target);
 
       // Skip if this input is already targeted by another keyboard instance.
-      // Check BEFORE cancelling the close timer so the keyboard still closes
-      // normally when focus moves from an unclaimed input to a claimed one.
       if (ui5Control instanceof Control && this._isTargetOfOther(ui5Control.getId())) return;
-
-      // Cancel any pending close
-      if (this._closeTimer) {
-        clearTimeout(this._closeTimer);
-        this._closeTimer = null;
-      }
 
       if (ui5Control instanceof Control) {
         this.setTargetInput(ui5Control);
@@ -1078,32 +1064,29 @@ export default class KioskKeyboard extends Control {
     }
   }
 
-  private _onDocumentFocusOut(_event: FocusEvent): void {
+  private _onDocumentFocusOut(event: FocusEvent): void {
     if (!this.getDocked() || !this._open || !this.getEnabled()) return;
 
-    // Clear any pending close timer before setting a new one
-    if (this._closeTimer) {
-      clearTimeout(this._closeTimer);
-    }
+    // Use relatedTarget to decide synchronously whether to close.
+    // relatedTarget is the element that is *receiving* focus.
+    const related = event.relatedTarget as HTMLElement | null;
 
-    // Delay close — focus might be moving to another input or the keyboard
-    this._closeTimer = setTimeout(() => {
-      this._closeTimer = null;
-      const active = document.activeElement;
+    // Focus staying on the keyboard itself — don't close
+    const myDom = this.getDomRef();
+    if (myDom && related && myDom.contains(related)) return;
 
-      // Don't close if focus is on the keyboard
-      const myDom = this.getDomRef();
-      if (myDom && active && myDom.contains(active)) return;
-
-      // Don't close if focus moved to another input — unless that input
-      // is claimed by a different keyboard instance (e.g. an inline numpad).
-      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
-        const ui5Control = Element.closestTo(active);
+    // Focus moving to an input/textarea — keep open if the focusin handler
+    // will claim it (i.e. it is an unclaimed input and we won't defer to native).
+    if (related instanceof HTMLInputElement || related instanceof HTMLTextAreaElement) {
+      if (!this._shouldDeferToNative()) {
+        const ui5Control = Element.closestTo(related);
         if (!(ui5Control instanceof Control && this._isTargetOfOther(ui5Control.getId()))) return;
       }
+    }
 
-      this.close();
-    }, 200);
+    // Focus left all inputs, moved to a claimed input, or should
+    // defer to native keyboard — close.
+    this.close();
   }
 
   // ──────────────────────────────────────────────
@@ -1134,10 +1117,12 @@ export default class KioskKeyboard extends Control {
 
     if (keyValue.startsWith("{layout:")) {
       if (this.getKeyboardType() === KeyboardType.Full) {
-        const raw = keyValue.slice(8, -1);
-        const name = raw === "base" ? this._baseLayout : raw;
-        this.setLayout(name);
-        this.fireEvent("layoutChange", { layout: name });
+        const raw = keyValue.slice("{layout:".length, -1).trim();
+        if (raw) {
+          const name = raw === "base" ? this._baseLayout : raw;
+          this.setLayout(name);
+          this.fireEvent("layoutChange", { layout: name });
+        }
       }
       return;
     }

@@ -116,7 +116,7 @@ describe("inputmode suppression", () => {
       // Click the blur target to close the keyboard
       await $("#blur-target").click();
 
-      // Wait for keyboard to close (200ms focus-out delay + animation)
+      // Wait for keyboard to close
       await browser.waitUntil(async () => !(await isKeyboardOpen("kb-custom")), {
         timeout: 5_000,
         timeoutMsg: "Custom keyboard did not close",

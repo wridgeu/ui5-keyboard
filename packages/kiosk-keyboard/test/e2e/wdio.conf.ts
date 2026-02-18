@@ -1,6 +1,6 @@
 import url from "node:url";
 import path from "node:path";
-import { createServerManager } from "../../../../test/wdio-server.js";
+import { createServerManager } from "../../../../tools/wdio-server.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8082;

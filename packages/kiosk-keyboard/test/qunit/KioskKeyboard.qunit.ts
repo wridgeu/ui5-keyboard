@@ -7,6 +7,7 @@ import VBox from "sap/m/VBox";
 import XMLView from "sap/ui/core/mvc/XMLView";
 import Localization from "sap/base/i18n/Localization";
 import InvisibleText from "sap/ui/core/InvisibleText";
+import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait, waitForRender, tapKey, simulateTap, tapShiftInternally, getKeyElements } from "./test-helpers";
 
 // ──────────────────────────────────────────────
@@ -610,7 +611,7 @@ QUnit.test("setTargetInput does not trigger re-render", async (assert) => {
   kb.setTargetInput(input);
 
   // Wait a tick to let any potential async re-render occur
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await nextUIUpdate();
 
   // Should still be the same DOM ref (no re-render from suppressInvalidate)
   assert.strictEqual(kb.getDomRef(), domBefore, "DOM ref unchanged after setTargetInput");
@@ -1154,7 +1155,7 @@ QUnit.test("Focusing a registered input sets it as target", async (assert) => {
   const dom2 = input2.getFocusDomRef() as HTMLElement;
   dom2.focus();
   // Wait for delegation to propagate
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switched to focused input");
 
@@ -1204,7 +1205,7 @@ QUnit.test("inputIds resolves view-local IDs when keyboard is inside a View", as
   // Focus the input — delegation should set it as target
   const dom = input.getFocusDomRef() as HTMLElement;
   dom.focus();
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getTargetInput(), input.getId(), "View-local input resolved and set as target after focus");
 
@@ -1232,7 +1233,7 @@ QUnit.test("inputIds prefers view-local over global when IDs collide", async (as
   // Focus the view-local input
   const dom = viewLocalInput.getFocusDomRef() as HTMLElement;
   dom.focus();
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await nextUIUpdate();
 
   assert.strictEqual(
     kb.getTargetInput(),
@@ -1257,7 +1258,7 @@ QUnit.test("inputIds falls back to global when not inside a View", async (assert
   // Focus the input — delegation should set it as target via global fallback
   const dom = globalInput.getFocusDomRef() as HTMLElement;
   dom.focus();
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await nextUIUpdate();
 
   assert.strictEqual(
     kb.getTargetInput(),
@@ -1281,7 +1282,7 @@ QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
   // Focus the real input — should still work despite the bad ID
   const dom = input.getFocusDomRef() as HTMLElement;
   dom.focus();
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getTargetInput(), input.getId(), "Valid input still resolved when mixed with unresolvable IDs");
 
@@ -1312,7 +1313,7 @@ QUnit.test("Physical keydown adds highlight class to matching key", async (asser
   inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
 
   // Allow event delegation to process
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await nextUIUpdate();
 
   assert.ok(qKey.classList.contains("ui5KioskKey--highlight"), "Highlight class added on keydown");
 
@@ -1334,11 +1335,11 @@ QUnit.test("Physical keyup removes highlight class", async (assert) => {
   const inputDom = input.getFocusDomRef() as HTMLElement;
   inputDom.focus();
   inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await nextUIUpdate();
   assert.ok(qKey.classList.contains("ui5KioskKey--highlight"), "Highlight present after keydown");
 
   inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "q", bubbles: true }));
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await nextUIUpdate();
   assert.notOk(qKey.classList.contains("ui5KioskKey--highlight"), "Highlight removed after keyup");
 
   input.destroy();
@@ -1365,14 +1366,14 @@ QUnit.test("Changing target input moves highlight delegation", async (assert) =>
   const inputDom1 = input1.getFocusDomRef() as HTMLElement;
   inputDom1.focus();
   inputDom1.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await nextUIUpdate();
   assert.notOk(qKey.classList.contains("ui5KioskKey--highlight"), "Old target keydown does not highlight");
 
   // Keydown on input2 SHOULD highlight
   const inputDom2 = input2.getFocusDomRef() as HTMLElement;
   inputDom2.focus();
   inputDom2.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await nextUIUpdate();
   assert.ok(qKey.classList.contains("ui5KioskKey--highlight"), "New target keydown does highlight");
 
   input1.destroy();
@@ -1524,7 +1525,7 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   tapKey(kb, "b");
   tapKey(kb, "c");
 
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await nextUIUpdate();
   assert.ok(popover.isOpen(), "Popover stays open during keyboard interaction");
   assert.strictEqual(input.getValue(), "abc", "Input value accumulated correctly");
 
@@ -1639,7 +1640,7 @@ QUnit.test("QWERTZ-DE German number row shift symbols", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   kb.setTargetInput(input);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await nextUIUpdate();
 
   // Shift+2 should produce " (double quote) in German layout
   tapKey(kb, "{shift}");
@@ -1749,12 +1750,12 @@ QUnit.test("Physical Shift+1 highlights the '1' key via data-shift-value", async
   const inputDom = input.getFocusDomRef() as HTMLElement;
   inputDom.focus();
   inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "!", bubbles: true }));
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await nextUIUpdate();
 
   assert.ok(oneKey.classList.contains("ui5KioskKey--highlight"), "'1' key highlighted when '!' typed");
 
   inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "!", bubbles: true }));
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await nextUIUpdate();
 
   assert.notOk(oneKey.classList.contains("ui5KioskKey--highlight"), "Highlight removed on keyup");
 
@@ -2057,7 +2058,7 @@ QUnit.test("autoType detects Number input and switches to Numpad", async (assert
   inputDom.focus();
 
   // Wait for focusin handler + render
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for Number input");
 
@@ -2078,7 +2079,7 @@ QUnit.test("autoType detects Tel input and switches to Numpad", async (assert) =
 
   const inputDom = input.getFocusDomRef() as HTMLElement;
   inputDom.focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for Tel input");
 
@@ -2100,7 +2101,7 @@ QUnit.test("autoType detects StepInput and switches to Numpad", async (assert) =
   try {
     const inputDom = stepInput.getFocusDomRef() as HTMLElement;
     inputDom.focus();
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextUIUpdate();
 
     assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for StepInput");
   } finally {
@@ -2122,7 +2123,7 @@ QUnit.test("autoType stays Full for regular text input", async (assert) => {
 
   const inputDom = input.getFocusDomRef() as HTMLElement;
   inputDom.focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Full", "Stays Full for regular text input");
 
@@ -2145,12 +2146,12 @@ QUnit.test("autoType switches back from Numpad to Full when focus moves", async 
 
   // Focus number input → Numpad
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Numpad", "Numpad for number input");
 
   // Focus text input → Full
   (textInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Full", "Switched back to Full for text input");
 
   numInput.destroy();
@@ -2171,7 +2172,7 @@ QUnit.test("Explicit setKeyboardType disables autoType", async (assert) => {
   await placeAndWait(kb);
 
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Full", "Explicit keyboardType prevents auto-detection");
 
@@ -2192,7 +2193,7 @@ QUnit.test("Constructor keyboardType also disables autoType", async (assert) => 
   await placeAndWait(kb);
 
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Full", "Constructor keyboardType prevents auto-detection");
 
@@ -2212,7 +2213,7 @@ QUnit.test("autoType=false does not switch keyboardType on focus", async (assert
   await placeAndWait(kb);
 
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Full", "autoType=false keeps Full for Number input");
 
@@ -2232,7 +2233,7 @@ QUnit.test("autoType Email input stays Full", async (assert) => {
   await placeAndWait(kb);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Full", "Email input keeps Full keyboard");
 
@@ -2278,17 +2279,17 @@ QUnit.test("resetKeyboardType re-enables autoType after explicit setKeyboardType
 
   // Focus Number input — should stay Full because of the lock
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Full", "Locked: Number input stays Full");
 
   // Move focus away, then reset
   (textInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   kb.resetKeyboardType();
 
   // Focus Number input again — should now auto-detect Numpad
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Numpad", "After reset: Number input triggers Numpad");
 
   numInput.destroy();
@@ -2312,17 +2313,17 @@ QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType
 
   // Focus Number input — should stay Full because of the constructor lock
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Full", "Constructor lock: Number input stays Full");
 
   // Move focus away, then reset
   (textInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   kb.resetKeyboardType();
 
   // Focus Number input again — should now auto-detect Numpad
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Numpad", "After reset: constructor lock cleared, Numpad detected");
 
   numInput.destroy();
@@ -2353,7 +2354,7 @@ QUnit.test("mobileKeyboard Custom never defers to native (desktop)", async (asse
   await placeAndWait(kb);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.ok(kb.isOpen(), "Keyboard opens with mobileKeyboard=Custom");
 
@@ -2420,7 +2421,7 @@ QUnit.test("Native mode always defers to native keyboard", async (assert) => {
   await placeAndWait(kb);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   // "Native" always defers — the kiosk keyboard should NOT auto-show
   assert.notOk(kb.isOpen(), "mobileKeyboard=Native defers even on desktop");
@@ -2441,7 +2442,7 @@ QUnit.test("Auto mode still opens on desktop", async (assert) => {
   await placeAndWait(kb);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.ok(kb.isOpen(), "mobileKeyboard=Auto still opens on desktop");
 
@@ -2506,13 +2507,13 @@ QUnit.test("Switching target while open restores old and suppresses new", async 
 
   // Focus input1 → opens keyboard, suppresses input1
   (input1.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   const dom1 = input1.getFocusDomRef() as HTMLInputElement;
   assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 suppressed");
 
   // Focus input2 → should suppress input2, restore input1
   (input2.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   const dom2 = input2.getFocusDomRef() as HTMLInputElement;
   assert.strictEqual(dom2.getAttribute("inputmode"), "none", "input2 suppressed");
   assert.notStrictEqual(dom1.getAttribute("inputmode"), "none", "input1 restored");
@@ -2634,7 +2635,7 @@ QUnit.test("Auto-show skips input targeted by another keyboard", async (assert) 
 
   // Focus the input — docked keyboard should NOT open
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.notOk(dockedKb.isOpen(), "Docked keyboard does not open for input targeted by inline keyboard");
 
@@ -2665,7 +2666,7 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
 
   // Focus the free input — docked keyboard SHOULD open
   (freeInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.ok(dockedKb.isOpen(), "Docked keyboard opens for unclaimed input");
   assert.strictEqual(dockedKb.getTargetInput(), freeInput.getId(), "Target set to unclaimed input");
@@ -2695,17 +2696,17 @@ QUnit.test("Destroying the claiming keyboard frees the input for auto-show", asy
 
   // Focus while inline keyboard exists — docked should NOT open
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.notOk(dockedKb.isOpen(), "Docked keyboard blocked while inline keyboard exists");
 
   // Move focus away, then destroy the inline keyboard
   (document.getElementById("qunit-fixture") as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   inlineKb.destroy();
 
   // Focus again — docked keyboard SHOULD open now
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.ok(dockedKb.isOpen(), "Docked keyboard opens after inline keyboard is destroyed");
 
   input.destroy();
@@ -2734,19 +2735,19 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
 
   // Focus input1 — should be blocked
   (input1.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.notOk(dockedKb.isOpen(), "Docked keyboard blocked for input1");
 
   // Move focus away so we can re-focus input1 later (blur triggers focusout)
   (input1.getFocusDomRef() as HTMLElement).blur();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   // Re-target inline keyboard to input2, freeing input1
   inlineKb.setTargetInput(input2);
 
   // Focus input1 again — now unclaimed
   (input1.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.ok(dockedKb.isOpen(), "Docked keyboard opens for input1 after re-target");
 
   input1.destroy();
@@ -2776,12 +2777,12 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
 
   // Focus free input — docked keyboard opens
   (freeInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.ok(dockedKb.isOpen(), "Docked keyboard is open for free input");
 
   // Focus claimed input — docked keyboard should close (close timer not cancelled)
   (claimedInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
   assert.notOk(dockedKb.isOpen(), "Docked keyboard closed after focus moved to claimed input");
 
   freeInput.destroy();
@@ -2809,7 +2810,7 @@ QUnit.test("Two docked keyboards with auto-show do not fight over same input", a
 
   // Focus input — first registered keyboard claims it
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   // Exactly one should open — the first one claims the target,
   // the second sees _isTargetOfOther and skips
@@ -2972,7 +2973,7 @@ QUnit.test("setAutoShow(true) activates auto-show listeners", async (assert) => 
   kb.setAutoShow(true);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.ok(kb.isOpen(), "Keyboard opens after setAutoShow(true)");
 
@@ -2991,7 +2992,7 @@ QUnit.test("setAutoShow(false) deactivates auto-show listeners", async (assert) 
   kb.setAutoShow(false);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.notOk(kb.isOpen(), "Keyboard does not open after setAutoShow(false)");
 
@@ -3778,7 +3779,7 @@ QUnit.test("autoType fires keyboardTypeChange with autoDetected=true", async (as
   await placeAndWait(kb);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(events.length, 1, "Event fired once");
   assert.strictEqual(events[0].keyboardType, "Numpad", "Auto-detected Numpad");
@@ -3808,7 +3809,7 @@ QUnit.test("autoType does not fire keyboardTypeChange when type stays Full", asy
   await placeAndWait(kb);
 
   (input.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(fireCount, 0, "No event when type stays Full");
 
@@ -3842,11 +3843,11 @@ QUnit.test("autoType switching back fires keyboardTypeChange twice", async (asse
 
   // Focus number input → Numpad
   (numInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   // Focus text input → Full
   (textInput.getFocusDomRef() as HTMLElement).focus();
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await nextUIUpdate();
 
   assert.strictEqual(events.length, 2, "Two events fired");
   assert.strictEqual(events[0].keyboardType, "Numpad", "First switch to Numpad");

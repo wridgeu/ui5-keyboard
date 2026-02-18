@@ -23,6 +23,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Locale-Based Default Layout](#locale-based-default-layout)
 - [Docked Mode](#docked-mode)
 - [Auto-Show](#auto-show)
+  - [Input Detection](#input-detection)
 - [Auto-Type](#auto-type)
 - [inputIds](#inputids)
 - [Mobile Keyboard Detection](#mobile-keyboard-detection)
@@ -361,14 +362,61 @@ The docked keyboard uses `position: fixed` with `z-index: 100` and a `box-shadow
 When `autoShow="true"` (requires `docked="true"`), the keyboard automatically:
 
 1. **Opens** when any `<input>` or `<textarea>` on the page receives focus, setting it as the target.
-2. **Closes** when focus leaves all inputs (with a 200ms debounce to handle focus transitions).
-3. **Stays open** when focus moves between the keyboard and an input.
+2. **Closes** when focus leaves all inputs (uses `FocusEvent.relatedTarget` for synchronous close decisions — no timers or debounce).
+3. **Stays open** when focus moves between the keyboard and an input, or between two inputs.
 
 ```xml
 <kiosk:KioskKeyboard docked="true" autoShow="true" />
 ```
 
 The auto-show listeners use document-level `focusin`/`focusout` in the capture phase. They are automatically cleaned up on `destroy()`.
+
+### Input Detection
+
+The keyboard recognizes input elements through a two-layer check: **DOM-level detection** (what triggers open/close) and **UI5-level resolution** (what the keyboard types into).
+
+**1. DOM layer — what triggers auto-show:**
+
+The `focusin` handler checks whether the focused DOM element is an `HTMLInputElement` or `HTMLTextAreaElement`. This is the only gate — if the focused element is not one of these two native types, the keyboard will **not** open.
+
+| DOM element                                 | Detected? | Notes                                              |
+| ------------------------------------------- | --------- | -------------------------------------------------- |
+| `<input>` (any type)                        | Yes       | Standard HTML inputs                               |
+| `<textarea>`                                | Yes       | Multi-line text inputs                             |
+| `<div contenteditable>`                     | No        | Not an `HTMLInputElement` or `HTMLTextAreaElement` |
+| `<select>`                                  | No        | Not a text input element                           |
+| Custom element / Shadow DOM inner `<input>` | No\*      | See below                                          |
+
+> \* If a Web Component or custom element renders a native `<input>` in its Shadow DOM, the `focusin` event's `event.target` will be the **host element**, not the inner `<input>`. Since the host element is not an `HTMLInputElement`, the keyboard will not detect it. To work with such components, set `targetInput` explicitly and use `show()`/`close()` programmatically.
+
+**2. UI5 layer — what the keyboard types into:**
+
+Once an `<input>` or `<textarea>` receives focus, the keyboard uses `Element.closestTo(domElement)` to resolve the owning UI5 control. This resolved control becomes the `targetInput`. For typing to work, the control must:
+
+| Requirement     | Method/Property                                                        | Used for                                                                      |
+| --------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **Required**    | `getFocusDomRef()` returning `HTMLInputElement \| HTMLTextAreaElement` | Reading/writing `.value`, cursor position via `selectionStart`/`selectionEnd` |
+| **Recommended** | `setValue(string)` method                                              | Syncs value to both ManagedObject property and DOM                            |
+| **Recommended** | `liveChange` event                                                     | Fires after each keystroke for data binding integration                       |
+| **Optional**    | `change` event                                                         | Fired on Enter key (simulates form submit)                                    |
+| **Optional**    | `getType()` returning `"Number"` or `"Tel"`                            | Auto-type numpad detection                                                    |
+
+All standard `sap.m` input controls (`Input`, `TextArea`, `SearchField`, `StepInput`) satisfy these requirements out of the box.
+
+**Working with custom controls or Web Components:**
+
+If your custom control renders a native `<input>` as its focus DOM ref and is registered in the UI5 Element registry (extends `sap.ui.core.Element`), auto-show works automatically. For anything else, use programmatic control:
+
+```ts
+// Custom element that doesn't auto-detect
+myCustomInput.attachBrowserEvent("focusin", () => {
+  keyboard.setTargetInput(myCustomInput);
+  keyboard.show();
+});
+myCustomInput.attachBrowserEvent("focusout", () => {
+  keyboard.close();
+});
+```
 
 ---
 

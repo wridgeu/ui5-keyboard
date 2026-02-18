@@ -50,8 +50,8 @@ export function detectPlatform(): Platform {
 }
 
 function resolvePlatformString(value: string): Platform {
-  if (value.includes("mac")) return Platform.Mac;
-  if (value.includes("win")) return Platform.Windows;
+  if (/mac|iphone|ipad/.test(value)) return Platform.Mac;
+  if (/\bwin/.test(value)) return Platform.Windows;
   return Platform.Linux;
 }
 

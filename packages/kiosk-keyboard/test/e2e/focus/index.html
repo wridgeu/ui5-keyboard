@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>KioskKeyboard Focus Behavior Test</title>
+    <script
+      id="sap-ui-bootstrap"
+      src="../../../../../resources/sap-ui-core.js"
+      data-sap-ui-theme="sap_horizon"
+      data-sap-ui-libs="sap.m, ui5.kiosk"
+      data-sap-ui-compat-version="edge"
+      data-sap-ui-resource-roots='{"ui5.kiosk": "../../../../../resources/ui5/kiosk/", "focus": "./"}'
+      data-sap-ui-async="true"
+      data-sap-ui-on-init="module:focus/init"
+    ></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "72", Arial, sans-serif;
+        background: #f5f6f7;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="font-size: 20px; color: #32363a">Focus Behavior Test</h1>
+
+    <div id="input-a" style="margin-bottom: 12px"></div>
+    <div id="input-b" style="margin-bottom: 12px"></div>
+    <div id="kb" style="margin-bottom: 20px"></div>
+
+    <!-- Focusable non-input element to move focus away from inputs -->
+    <button id="blur-target" style="padding: 12px 24px; margin-top: 20px">Click to blur</button>
+  </body>
+</html>
