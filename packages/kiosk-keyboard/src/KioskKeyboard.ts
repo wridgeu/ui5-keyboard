@@ -319,6 +319,36 @@ export default class KioskKeyboard extends Control {
   /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
+  /** HTML input types that accept text entry — only these trigger auto-show. */
+  private static readonly _TEXTUAL_INPUT_TYPES: ReadonlySet<string> = new Set([
+    "text",
+    "search",
+    "url",
+    "tel",
+    "email",
+    "password",
+    "number",
+    "date",
+    "datetime-local",
+    "month",
+    "week",
+    "time",
+  ]);
+
+  /**
+   * Returns true if the DOM element is a text-entry input or textarea.
+   * Only allowlisted input types (text, search, number, etc.) pass —
+   * unknown or non-textual types (checkbox, radio, file, etc.) are rejected.
+   * Readonly inputs are also excluded.
+   */
+  private static _isTextualInput(el: EventTarget | null): el is HTMLInputElement | HTMLTextAreaElement {
+    if (el instanceof HTMLTextAreaElement) return !el.readOnly;
+    if (el instanceof HTMLInputElement) {
+      return !el.readOnly && KioskKeyboard._TEXTUAL_INPUT_TYPES.has(el.type);
+    }
+    return false;
+  }
+
   /**
    * Registers a custom keyboard layout that can then be used via
    * `setLayout(name)` or declaratively as `layout="name"` in XML views.
@@ -1031,37 +1061,38 @@ export default class KioskKeyboard extends Control {
     const myDom = this.getDomRef();
     if (myDom && myDom.contains(target)) return;
 
-    // Check if focus went to an input/textarea
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-      // Defer to native keyboard on mobile when configured
-      if (this._shouldDeferToNative()) return;
+    // Only react to textual input/textarea (not checkbox, radio, file, etc.)
+    if (!KioskKeyboard._isTextualInput(target)) return;
 
-      // Resolve the UI5 control that owns this DOM element
-      const ui5Control = Element.closestTo(target);
+    // Defer to native keyboard on mobile when configured
+    if (this._shouldDeferToNative()) return;
 
-      // Skip if this input is already targeted by another keyboard instance.
-      if (ui5Control instanceof Control && this._isTargetOfOther(ui5Control.getId())) return;
+    // Resolve the UI5 control that owns this DOM element
+    const ui5Control = Element.closestTo(target);
 
-      if (ui5Control instanceof Control) {
-        this.setTargetInput(ui5Control);
+    // Skip raw DOM inputs not owned by a UI5 control
+    if (!(ui5Control instanceof Control)) return;
 
-        // Auto-detect keyboard type from input metadata
-        if (this.getAutoType() && !this._keyboardTypeExplicit) {
-          const detected = this._detectKeyboardType(ui5Control);
-          const previous = this.getKeyboardType();
-          this.setProperty("keyboardType", detected);
-          if (detected !== previous) {
-            this.fireEvent("keyboardTypeChange", {
-              keyboardType: detected,
-              previousKeyboardType: previous,
-              autoDetected: true,
-            });
-          }
-        }
+    // Skip if this input is already targeted by another keyboard instance
+    if (this._isTargetOfOther(ui5Control.getId())) return;
+
+    this.setTargetInput(ui5Control);
+
+    // Auto-detect keyboard type from input metadata
+    if (this.getAutoType() && !this._keyboardTypeExplicit) {
+      const detected = this._detectKeyboardType(ui5Control);
+      const previous = this.getKeyboardType();
+      this.setProperty("keyboardType", detected);
+      if (detected !== previous) {
+        this.fireEvent("keyboardTypeChange", {
+          keyboardType: detected,
+          previousKeyboardType: previous,
+          autoDetected: true,
+        });
       }
-
-      this.show(); // show() calls _suppressNativeKeyboard() internally
     }
+
+    this.show();
   }
 
   private _onDocumentFocusOut(event: FocusEvent): void {
@@ -1075,12 +1106,12 @@ export default class KioskKeyboard extends Control {
     const myDom = this.getDomRef();
     if (myDom && related && myDom.contains(related)) return;
 
-    // Focus moving to an input/textarea — keep open if the focusin handler
-    // will claim it (i.e. it is an unclaimed input and we won't defer to native).
-    if (related instanceof HTMLInputElement || related instanceof HTMLTextAreaElement) {
+    // Focus moving to a textual input/textarea — keep open if the focusin handler
+    // will claim it (i.e. it is an unclaimed UI5 input and we won't defer to native).
+    if (KioskKeyboard._isTextualInput(related)) {
       if (!this._shouldDeferToNative()) {
         const ui5Control = Element.closestTo(related);
-        if (!(ui5Control instanceof Control && this._isTargetOfOther(ui5Control.getId()))) return;
+        if (ui5Control instanceof Control && !this._isTargetOfOther(ui5Control.getId())) return;
       }
     }
 

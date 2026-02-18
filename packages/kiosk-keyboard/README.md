@@ -377,15 +377,17 @@ The keyboard recognizes input elements through a two-layer check: **DOM-level de
 
 **1. DOM layer — what triggers auto-show:**
 
-The `focusin` handler checks whether the focused DOM element is an `HTMLInputElement` or `HTMLTextAreaElement`. This is the only gate — if the focused element is not one of these two native types, the keyboard will **not** open.
+The `focusin` handler checks whether the focused DOM element is a **text-entry** `HTMLInputElement` or `HTMLTextAreaElement`. Non-textual input types (checkbox, radio, file, range, color, button, submit, reset, image) and `readonly` inputs are filtered out. Additionally, the element must be owned by a UI5 control (`Element.closestTo()` must resolve) — raw DOM inputs without a UI5 control wrapper are ignored.
 
-| DOM element                                 | Detected? | Notes                                              |
-| ------------------------------------------- | --------- | -------------------------------------------------- |
-| `<input>` (any type)                        | Yes       | Standard HTML inputs                               |
-| `<textarea>`                                | Yes       | Multi-line text inputs                             |
-| `<div contenteditable>`                     | No        | Not an `HTMLInputElement` or `HTMLTextAreaElement` |
-| `<select>`                                  | No        | Not a text input element                           |
-| Custom element / Shadow DOM inner `<input>` | No\*      | See below                                          |
+| DOM element                                                           | Detected? | Notes                                              |
+| --------------------------------------------------------------------- | --------- | -------------------------------------------------- |
+| `<input type="text\|search\|url\|tel\|email\|password\|number\|...">` | Yes       | All text-entry types                               |
+| `<textarea>`                                                          | Yes       | Multi-line text inputs                             |
+| `<input type="checkbox\|radio\|file\|range\|color\|...">`             | No        | Non-textual input types are filtered out           |
+| `<input readonly>` / `<textarea readonly>`                            | No        | Read-only inputs cannot be typed into              |
+| `<div contenteditable>`                                               | No        | Not an `HTMLInputElement` or `HTMLTextAreaElement` |
+| `<select>`                                                            | No        | Not a text input element                           |
+| Custom element / Shadow DOM inner `<input>`                           | No\*      | See below                                          |
 
 > \* If a Web Component or custom element renders a native `<input>` in its Shadow DOM, the `focusin` event's `event.target` will be the **host element**, not the inner `<input>`. Since the host element is not an `HTMLInputElement`, the keyboard will not detect it. To work with such components, set `targetInput` explicitly and use `show()`/`close()` programmatically.
 

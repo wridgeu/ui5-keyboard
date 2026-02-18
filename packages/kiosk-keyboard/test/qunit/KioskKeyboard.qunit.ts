@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CheckBox from "sap/m/CheckBox";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
 import TextArea from "sap/m/TextArea";
@@ -3670,6 +3671,80 @@ QUnit.test("autoShow with docked=false does not open keyboard on input focus", a
   assert.notOk(kb.isOpen(), "Keyboard does not open when docked is false");
 
   input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Auto-Show Input Detection Guards
+// ──────────────────────────────────────────────
+
+QUnit.test("autoShow ignores non-textual input types (checkbox)", async (assert) => {
+  const cb = new CheckBox();
+  cb.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  // Focus the checkbox's inner <input type="checkbox">
+  const innerInput = cb.getDomRef()?.querySelector("input") as HTMLElement;
+  assert.ok(innerInput, "CheckBox renders an inner <input>");
+  innerInput.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard does not open for checkbox input");
+
+  cb.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoShow ignores readonly inputs", async (assert) => {
+  const input = new Input({ editable: false });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard does not open for readonly input");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoShow ignores raw DOM input without UI5 control", async (assert) => {
+  const rawInput = document.createElement("input");
+  rawInput.type = "text";
+  document.getElementById("qunit-fixture")!.appendChild(rawInput);
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  rawInput.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard does not open for raw DOM input");
+
+  kb.destroy();
+});
+
+QUnit.test("autoShow does not call show() when Element.closestTo fails", async (assert) => {
+  const rawInput = document.createElement("input");
+  rawInput.type = "text";
+  document.getElementById("qunit-fixture")!.appendChild(rawInput);
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  // Focus the raw input — no UI5 control owns it, so show() must not be called
+  rawInput.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard stays closed when no UI5 control wraps the input");
+  assert.strictEqual(kb.getTargetInput(), null, "No target input was set");
+
   kb.destroy();
 });
 
