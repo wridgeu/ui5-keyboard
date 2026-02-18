@@ -31,8 +31,8 @@
     "test:kiosk:e2e:update": "npm run test:e2e:update -w packages/kiosk-keyboard",
     "lint": "oxlint packages/",
     "lint:fix": "oxlint --fix packages/",
-    "fmt": "oxfmt .",
-    "fmt:check": "oxfmt --check .",
+    "fmt": "oxfmt --ignore-path .oxfmtignore .",
+    "fmt:check": "oxfmt --ignore-path .oxfmtignore --check .",
     "typecheck": "npm run generate -w packages/kiosk-keyboard && tsc -b && npm run typecheck -w packages/demo-app",
     "check": "npm run fmt:check && npm run lint && npm run typecheck",
     "prepare": "husky"
@@ -56,7 +56,7 @@
   },
   "lint-staged": {
     "*.ts": [
-      "oxfmt",
+      "oxfmt --ignore-path .oxfmtignore",
       "oxlint --fix"
     ],
     "*.{json,yaml,yml,md,html,xml,css,less}": "oxfmt"

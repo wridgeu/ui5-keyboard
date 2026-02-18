@@ -47,7 +47,7 @@
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
     "test:e2e:open": "wdio run test/e2e/wdio.conf.ts -- --headed",
     "test:e2e:update": "wdio run test/e2e/wdio.conf.ts -- --update-visual-baseline",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "npm run generate && tsc --noEmit"
   },
   "devDependencies": {
     "@ui5/cli": "^4.0.0",

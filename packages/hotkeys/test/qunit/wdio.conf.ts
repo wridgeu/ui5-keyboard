@@ -1,59 +1,12 @@
 import url from "node:url";
 import path from "node:path";
-import net from "node:net";
-import { type ChildProcess, execSync, spawn } from "node:child_process";
+import { createServerManager } from "../../../../test/wdio-server.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8081;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
-let serverProcess: ChildProcess | undefined;
-
-function isPortInUse(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = net.createConnection(port, "localhost");
-    socket.once("connect", () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once("error", () => resolve(false));
-  });
-}
-
-function waitForServer(port: number, timeout = 30_000): Promise<void> {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    function check() {
-      const socket = net.createConnection(port, "localhost");
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve();
-      });
-      socket.once("error", () => {
-        if (Date.now() - start > timeout) {
-          reject(new Error(`Server not ready on port ${port} after ${timeout}ms`));
-        } else {
-          setTimeout(check, 500);
-        }
-      });
-    }
-    check();
-  });
-}
-
-function stopServer(): void {
-  if (!serverProcess?.pid) return;
-  if (process.platform === "win32") {
-    try {
-      execSync(`taskkill /pid ${serverProcess.pid} /f /t`, { stdio: "ignore" });
-    } catch {
-      // already exited
-    }
-  } else {
-    serverProcess.kill();
-  }
-  serverProcess = undefined;
-}
+const server = createServerManager(PORT, PACKAGE_ROOT);
 
 export const config: WebdriverIO.Config = {
   runner: "local",
@@ -111,17 +64,6 @@ export const config: WebdriverIO.Config = {
     ],
   ],
 
-  async onPrepare() {
-    if (await isPortInUse(PORT)) return;
-    serverProcess = spawn("npx", ["ui5", "serve", "--port", String(PORT)], {
-      cwd: PACKAGE_ROOT,
-      stdio: "pipe",
-      shell: true,
-    });
-    await waitForServer(PORT);
-  },
-
-  onComplete() {
-    stopServer();
-  },
+  onPrepare: () => server.onPrepare(),
+  onComplete: () => server.onComplete(),
 };
