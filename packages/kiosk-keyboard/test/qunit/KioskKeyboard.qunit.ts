@@ -4,6 +4,7 @@ import StepInput from "sap/m/StepInput";
 import TextArea from "sap/m/TextArea";
 import Popover from "sap/m/Popover";
 import VBox from "sap/m/VBox";
+import XMLView from "sap/ui/core/mvc/XMLView";
 import Localization from "sap/base/i18n/Localization";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import { placeAndWait, waitForRender, tapKey, simulateTap, tapShiftInternally, getKeyElements } from "./test-helpers";
@@ -1179,6 +1180,111 @@ QUnit.test("exit() cleans up inputIds delegates", async (assert) => {
 
   assert.ok(true, "No errors after destroy with inputIds");
 
+  input.destroy();
+});
+
+// ──────────────────────────────────────────────
+// inputIds control resolution (view-local vs global)
+// ──────────────────────────────────────────────
+
+QUnit.test("inputIds resolves view-local IDs when keyboard is inside a View", async (assert) => {
+  const view = await XMLView.create({
+    definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
+      <m:Input id="localInput" />
+      <kiosk:KioskKeyboard id="kb" inputIds="localInput" />
+    </mvc:View>`,
+  });
+  view.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const kb = view.byId("kb") as KioskKeyboard;
+  const input = view.byId("localInput") as Input;
+
+  // Focus the input — delegation should set it as target
+  const dom = input.getFocusDomRef() as HTMLElement;
+  dom.focus();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  assert.strictEqual(kb.getTargetInput(), input.getId(), "View-local input resolved and set as target after focus");
+
+  view.destroy();
+});
+
+QUnit.test("inputIds prefers view-local over global when IDs collide", async (assert) => {
+  // Create a global control with a short ID that matches the view-local one
+  const globalInput = new Input("collisionInput");
+  globalInput.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const view = await XMLView.create({
+    definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
+      <m:Input id="collisionInput" />
+      <kiosk:KioskKeyboard id="kb" inputIds="collisionInput" />
+    </mvc:View>`,
+  });
+  view.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const kb = view.byId("kb") as KioskKeyboard;
+  const viewLocalInput = view.byId("collisionInput") as Input;
+
+  // Focus the view-local input
+  const dom = viewLocalInput.getFocusDomRef() as HTMLElement;
+  dom.focus();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  assert.strictEqual(
+    kb.getTargetInput(),
+    viewLocalInput.getId(),
+    "View-local input takes priority over global with same short ID",
+  );
+  assert.notStrictEqual(kb.getTargetInput(), globalInput.getId(), "Global control was NOT selected");
+
+  view.destroy();
+  globalInput.destroy();
+});
+
+QUnit.test("inputIds falls back to global when not inside a View", async (assert) => {
+  const globalInput = new Input("global-resolution-input");
+  globalInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    inputIds: ["global-resolution-input"],
+  });
+  await placeAndWait(kb);
+
+  // Focus the input — delegation should set it as target via global fallback
+  const dom = globalInput.getFocusDomRef() as HTMLElement;
+  dom.focus();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  assert.strictEqual(
+    kb.getTargetInput(),
+    globalInput.getId(),
+    "Global input resolved via fallback when keyboard is not inside a View",
+  );
+
+  kb.destroy();
+  globalInput.destroy();
+});
+
+QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
+  const input = new Input("real-input");
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    inputIds: ["nonexistent-input", "real-input"],
+  });
+  await placeAndWait(kb);
+
+  // Focus the real input — should still work despite the bad ID
+  const dom = input.getFocusDomRef() as HTMLElement;
+  dom.focus();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  assert.strictEqual(kb.getTargetInput(), input.getId(), "Valid input still resolved when mixed with unresolvable IDs");
+
+  kb.destroy();
   input.destroy();
 });
 
