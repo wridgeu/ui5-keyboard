@@ -10,5 +10,5 @@
     "noEmit": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["test/e2e/**/*.ts"]
+  "exclude": ["test/e2e/**/*.ts", "test/qunit/wdio.conf.ts"]
 }

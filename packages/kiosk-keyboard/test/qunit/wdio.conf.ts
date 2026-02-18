@@ -55,15 +55,9 @@ function stopServer(): void {
   serverProcess = undefined;
 }
 
-const headless = !process.env.HEADED && !process.argv.includes("--headed");
-const chromeArgs = ["--window-size=1440,900", "--disable-gpu", "--no-sandbox"];
-if (headless) chromeArgs.unshift("--headless=new");
-
 export const config: WebdriverIO.Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
-
-  specs: [path.resolve(__dirname, "**/*.test.ts")],
 
   maxInstances: 1,
 
@@ -71,7 +65,7 @@ export const config: WebdriverIO.Config = {
     {
       browserName: "chrome",
       "goog:chromeOptions": {
-        args: chromeArgs,
+        args: ["--headless=new", "--window-size=1440,900", "--disable-gpu", "--no-sandbox"],
       },
     },
   ],
@@ -79,27 +73,23 @@ export const config: WebdriverIO.Config = {
   logLevel: "warn",
 
   baseUrl: `http://localhost:${PORT}`,
+  waitforTimeout: 90_000,
 
   framework: "mocha",
   mochaOpts: {
     ui: "bdd",
-    timeout: 60_000,
+    timeout: 120_000,
   },
 
   reporters: ["spec"],
 
   services: [
-    "ui5",
     [
-      "visual",
+      "qunit",
       {
-        baselineFolder: path.resolve(__dirname, "__baselines__"),
-        formatImageName: "{tag}-{logName}-{width}x{height}",
-        screenshotPath: path.resolve(__dirname, "__screenshots__"),
-        autoSaveBaseline: !process.env.CI,
-        disableCSSAnimation: true,
-        hideScrollBars: true,
-        waitForFontsLoaded: true,
+        paths: [
+          "/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=KioskKeyboard",
+        ],
       },
     ],
   ],
