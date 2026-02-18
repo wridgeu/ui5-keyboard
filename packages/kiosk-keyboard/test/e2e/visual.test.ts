@@ -6,7 +6,7 @@ const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 async function openVisualPage(): Promise<void> {
   await browser.url(VISUAL_PAGE);
   // wdi5 "ui5" service handles UI5 bootstrap sync; additionally wait for the last keyboard
-  await $("#kb-special .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
+  await $("#kb-stable-height .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
 }
 
 /** Get the rendered KioskKeyboard element inside a container. */
@@ -62,6 +62,16 @@ describe("KioskKeyboard Visual Regression", () => {
   it("should match special characters layout", async () => {
     const kb = await getKeyboard("kb-special");
     await expect(kb).toMatchElementSnapshot("kb-special");
+  });
+
+  it("should match keyboard in fixed container (400x350)", async () => {
+    const container = await $("#kb-container-fixed");
+    await expect(container).toMatchElementSnapshot("kb-container-fixed");
+  });
+
+  it("should match keyboard with stableHeight", async () => {
+    const kb = await getKeyboard("kb-stable-height");
+    await expect(kb).toMatchElementSnapshot("kb-stable-height");
   });
 });
 

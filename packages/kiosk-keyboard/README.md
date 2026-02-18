@@ -19,6 +19,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Public Methods](#public-methods)
   - [Static Methods](#static-methods)
 - [Layouts](#layouts)
+  - [Stable Height](#stable-height)
 - [Locale-Based Default Layout](#locale-based-default-layout)
 - [Docked Mode](#docked-mode)
 - [Auto-Show](#auto-show)
@@ -163,17 +164,18 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 
 ### Properties
 
-| Property         | Type                       | Default    | Description                                                                                   |
-| ---------------- | -------------------------- | ---------- | --------------------------------------------------------------------------------------------- |
-| `layout`         | `string`                   | `"qwerty"` | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.   |
-| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`   | Display type: `Full`, `Numeric`, or `Numpad`.                                                 |
-| `enabled`        | `boolean`                  | `true`     | Whether the keyboard is interactive.                                                          |
-| `ariaLabel`      | `string`                   | `""`       | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty. |
-| `docked`         | `boolean`                  | `false`    | Anchor to the bottom of the viewport with slide animation.                                    |
-| `autoShow`       | `boolean`                  | `false`    | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                    |
-| `autoType`       | `boolean`                  | `false`    | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.             |
-| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"` | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).       |
-| `inputIds`       | `string[]`                 | `[]`       | Input control IDs for multi-input targeting. See [inputIds](#inputids).                       |
+| Property         | Type                       | Default    | Description                                                                                     |
+| ---------------- | -------------------------- | ---------- | ----------------------------------------------------------------------------------------------- |
+| `layout`         | `string`                   | `"qwerty"` | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.     |
+| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`   | Display type: `Full`, `Numeric`, or `Numpad`.                                                   |
+| `enabled`        | `boolean`                  | `true`     | Whether the keyboard is interactive.                                                            |
+| `ariaLabel`      | `string`                   | `""`       | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.   |
+| `docked`         | `boolean`                  | `false`    | Anchor to the bottom of the viewport with slide animation.                                      |
+| `autoShow`       | `boolean`                  | `false`    | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                      |
+| `autoType`       | `boolean`                  | `false`    | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.               |
+| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"` | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).         |
+| `inputIds`       | `string[]`                 | `[]`       | Input control IDs for multi-input targeting. See [inputIds](#inputids).                         |
+| `stableHeight`   | `boolean`                  | `false`    | Maintain consistent minimum height across layout switches. See [Stable Height](#stable-height). |
 
 ### Associations
 
@@ -243,13 +245,27 @@ The `keyboardType` property provides a shortcut for common configurations:
 - **`Numeric`** — renders the numeric layout regardless of the `layout` property
 - **`Numpad`** — renders the numpad layout regardless of the `layout` property
 
-### Consistent Height Across Layouts
+### Stable Height
 
-When using a `Full` keyboard type in **embedded/inline** or **Popover** scenarios, the keyboard maintains a consistent height across all layout switches. Switching from QWERTY (5 rows) to numeric (4 rows) does not shrink the keyboard — the rows expand to fill the available space, providing larger touch targets and preventing layout shifts.
+The `stableHeight` property enables consistent minimum height across layout switches. When enabled, switching from QWERTY (5 rows) to numeric (4 rows) does not shrink the keyboard — the rows expand to fill the available space, providing larger touch targets and preventing layout shifts.
 
-In **docked mode**, consistent height is deliberately disabled so the keyboard shrinks to fit the current layout, minimising the screen area it occupies.
+This is **opt-in** (`false` by default) and only effective for non-docked Full keyboards. Docked keyboards always minimize their footprint.
 
-> **Popover note**: `sap.m.Popover` closes automatically when its content height changes during a resize event on scrollable pages (due to a coordinate-system mismatch in `_applyPosition`). The consistent-height behavior prevents this by ensuring layout switches never change the keyboard's outer dimensions. See [`docs/KNOWN-ISSUES.md`](../../docs/KNOWN-ISSUES.md) for details.
+> **When to use `stableHeight`:**
+>
+> Enable `stableHeight="true"` when the keyboard is rendered inside a **`sap.m.Popover`** or any container that reacts to content height changes. `sap.m.Popover` in particular will close automatically when its content height changes during a resize event on scrolled pages (due to a coordinate-system mismatch in `_applyPosition`). The stable height prevents this by ensuring layout switches never change the keyboard's outer dimensions.
+>
+> For keyboards embedded **inline on a page** (not in a Popover), `stableHeight` is typically not needed — the surrounding layout can accommodate height changes naturally.
+
+```xml
+<!-- Recommended: keyboard inside a Popover -->
+<Popover>
+  <kiosk:KioskKeyboard stableHeight="true" targetInput="myInput" />
+</Popover>
+
+<!-- Default: inline keyboard, no stable height needed -->
+<kiosk:KioskKeyboard targetInput="myInput" />
+```
 
 ### Custom Layouts
 

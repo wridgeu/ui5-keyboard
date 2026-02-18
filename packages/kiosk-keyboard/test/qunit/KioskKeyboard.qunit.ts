@@ -32,6 +32,7 @@ QUnit.test("Default property values", (assert) => {
   assert.strictEqual(kb.getEnabled(), true, "Default enabled is true");
   assert.strictEqual(kb.getAriaLabel(), "", "Default ariaLabel is empty (resolved from i18n at render)");
   assert.strictEqual(kb.getDocked(), false, "Default docked is false");
+  assert.strictEqual(kb.getStableHeight(), false, "Default stableHeight is false");
 
   kb.destroy();
 });
@@ -1380,6 +1381,64 @@ QUnit.test("Changing target input moves highlight delegation", async (assert) =>
 });
 
 // ──────────────────────────────────────────────
+// stableHeight property
+// ──────────────────────────────────────────────
+
+QUnit.test("stableHeight=false does not set minHeight", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef() as HTMLElement;
+  assert.strictEqual(dom.style.minHeight, "", "No minHeight when stableHeight is false");
+
+  kb.destroy();
+});
+
+QUnit.test("stableHeight maintains minimum height across layout switches", async (assert) => {
+  const kb = new KioskKeyboard({ stableHeight: true });
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef() as HTMLElement;
+  const initialHeight = dom.getBoundingClientRect().height;
+  assert.ok(initialHeight > 0, "Has initial height");
+  assert.ok(dom.style.minHeight, "minHeight is set when stableHeight is true");
+
+  // Switch to numeric (fewer rows → shorter)
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  const minH = parseFloat(dom.style.minHeight);
+  assert.ok(minH >= initialHeight, "minHeight preserved after switching to shorter layout");
+
+  kb.destroy();
+});
+
+QUnit.test("Toggling stableHeight off clears minHeight", async (assert) => {
+  const kb = new KioskKeyboard({ stableHeight: true });
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef() as HTMLElement;
+  assert.ok(dom.style.minHeight, "minHeight set while stableHeight is true");
+
+  kb.setStableHeight(false);
+  await waitForRender();
+
+  assert.strictEqual(dom.style.minHeight, "", "minHeight cleared after disabling stableHeight");
+
+  kb.destroy();
+});
+
+QUnit.test("stableHeight ignored for docked keyboards", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true, stableHeight: true });
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef() as HTMLElement;
+  assert.strictEqual(dom.style.minHeight, "", "No minHeight for docked keyboard even with stableHeight");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
 // Popover integration (consumption scenario)
 // ──────────────────────────────────────────────
 
@@ -1389,7 +1448,7 @@ QUnit.test("Keyboard renders inside a Popover", async (assert) => {
   document.getElementById("qunit-fixture")!.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ targetInput: input, stableHeight: true });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",
@@ -1417,7 +1476,7 @@ QUnit.test("Typing into input inside a Popover", async (assert) => {
   document.getElementById("qunit-fixture")!.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ targetInput: input, stableHeight: true });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",
@@ -1450,7 +1509,7 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   document.getElementById("qunit-fixture")!.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ targetInput: input, stableHeight: true });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",
@@ -1717,7 +1776,7 @@ QUnit.test("Layout switching works inside a Popover", async (assert) => {
   document.body.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ targetInput: input, stableHeight: true });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",

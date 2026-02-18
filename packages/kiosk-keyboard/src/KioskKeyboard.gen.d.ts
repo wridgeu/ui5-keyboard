@@ -111,6 +111,17 @@ declare module "./KioskKeyboard" {
         inputIds?: string[] | PropertyBindingInfo | `{${string}}`;
 
         /**
+         * When `true`, the keyboard maintains a consistent minimum height
+        across layout switches. Prevents visual layout shifts and works
+        around a `sap.m.Popover` bug where content height changes can
+        trigger spurious close.
+        
+        Only effective for non-docked Full keyboards. Docked keyboards
+        always minimize their footprint.
+         */
+        stableHeight?: boolean | PropertyBindingInfo | `{${string}}`;
+
+        /**
          * The input control to type into (e.g. `sap.m.Input`, `sap.m.TextArea`).
         For targeting multiple inputs, use the `inputIds` property instead.
          */
@@ -362,6 +373,30 @@ declare module "./KioskKeyboard" {
         a single keyboard (e.g. a form with several fields).
          */
         setInputIds(inputIds: string[]): this;
+
+        // property: stableHeight
+
+        /**
+         * When `true`, the keyboard maintains a consistent minimum height
+        across layout switches. Prevents visual layout shifts and works
+        around a `sap.m.Popover` bug where content height changes can
+        trigger spurious close.
+        
+        Only effective for non-docked Full keyboards. Docked keyboards
+        always minimize their footprint.
+         */
+        getStableHeight(): boolean;
+
+        /**
+         * When `true`, the keyboard maintains a consistent minimum height
+        across layout switches. Prevents visual layout shifts and works
+        around a `sap.m.Popover` bug where content height changes can
+        trigger spurious close.
+        
+        Only effective for non-docked Full keyboards. Docked keyboards
+        always minimize their footprint.
+         */
+        setStableHeight(stableHeight: boolean): this;
 
         // association: targetInput
 

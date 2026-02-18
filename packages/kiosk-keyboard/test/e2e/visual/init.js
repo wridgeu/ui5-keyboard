@@ -75,5 +75,11 @@ sap.ui.define(
     // 12. Special characters layout
     var kbSpecial = new KioskKeyboard({ layout: "special" });
     kbSpecial.placeAt("kb-special");
+
+    // 13. Inline in fixed container
+    new KioskKeyboard().placeAt("kb-container-fixed");
+
+    // 14. Inline with stableHeight
+    new KioskKeyboard({ stableHeight: true }).placeAt("kb-stable-height");
   },
 );

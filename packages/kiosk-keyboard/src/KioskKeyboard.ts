@@ -209,6 +209,25 @@ export default class KioskKeyboard extends Control {
         defaultValue: [],
         group: "Data",
       },
+      /**
+       * When `true`, the keyboard maintains a consistent minimum height
+       * across layout switches. Prevents visual layout shifts and works
+       * around a `sap.m.Popover` bug where content height changes can
+       * trigger spurious close.
+       *
+       * Only effective for non-docked Full keyboards. Docked keyboards
+       * always minimize their footprint.
+       *
+       * @example <caption>XML view — keyboard inside a Popover</caption>
+       * <Popover>
+       *   <kiosk:KioskKeyboard stableHeight="true" targetInput="myInput" />
+       * </Popover>
+       */
+      stableHeight: {
+        type: "boolean",
+        defaultValue: false,
+        group: "Behavior",
+      },
     },
     associations: {
       /**
@@ -509,20 +528,22 @@ export default class KioskKeyboard extends Control {
       }
     }
 
-    // Maintain consistent height across layout switches for non-docked
-    // Full keyboards.  This prevents layout shifts in embedded/inline
-    // scenarios and works around a sap.m.Popover bug where content-height
-    // changes during a resize event trigger a spurious off-screen check
-    // that closes the Popover on scrolled pages.
+    // Opt-in stable height: maintain consistent minHeight across layout
+    // switches for non-docked Full keyboards.  Prevents layout shifts in
+    // Popover scenarios and works around a sap.m.Popover bug where
+    // content-height changes trigger a spurious close.
     // Docked keyboards are excluded: they pin to the viewport edge so
     // minimising their footprint is more valuable than preventing shifts.
-    if (dom && this.getKeyboardType() === "Full" && !this.getDocked()) {
+    if (dom && this.getStableHeight() && this.getKeyboardType() === "Full" && !this.getDocked()) {
       const el = dom as HTMLElement;
       const h = el.getBoundingClientRect().height;
       if (h > (this._maxHeight || 0)) {
         this._maxHeight = h;
       }
       el.style.minHeight = `${this._maxHeight}px`;
+    } else if (dom) {
+      (dom as HTMLElement).style.minHeight = "";
+      this._maxHeight = 0;
     }
 
     this._setupInputIds();
