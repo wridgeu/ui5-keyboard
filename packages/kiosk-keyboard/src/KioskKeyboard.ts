@@ -64,7 +64,17 @@ export default class KioskKeyboard extends Control {
   static readonly metadata = {
     library: "ui5.kiosk" as const,
     properties: {
-      /** Active layout name. Only effective when keyboardType is "full". */
+      /**
+       * Active layout name. Only effective when keyboardType is "Full".
+       * Auto-detected from the UI5 locale when omitted.
+       *
+       * @example <caption>XML view</caption>
+       * <kiosk:KioskKeyboard layout="qwertz-de" targetInput="myInput" />
+       *
+       * @example <caption>TypeScript — custom layout</caption>
+       * KioskKeyboard.registerLayout("azerty-fr", frenchLayout);
+       * new KioskKeyboard({ layout: "azerty-fr" });
+       */
       layout: {
         type: "string",
         defaultValue: "qwerty",
@@ -72,33 +82,54 @@ export default class KioskKeyboard extends Control {
       },
       /**
        * Keyboard display type.
-       * "Full" renders the active layout. "Numeric" and "Numpad" render
+       * `"Full"` renders the active layout. `"Numeric"` and `"Numpad"` render
        * compact number-oriented layouts regardless of the layout property.
+       *
        * Setting this property (via setter, constructor, or XML attribute)
        * disables auto-type detection permanently.
-       * Call `resetKeyboardType()` to re-enable it.
+       * Call {@link #resetKeyboardType} to re-enable it.
+       *
+       * @example <caption>XML view — fixed numpad</caption>
+       * <kiosk:KioskKeyboard keyboardType="Numpad" targetInput="pinInput" />
        */
       keyboardType: {
         type: "ui5.kiosk.KeyboardType",
         defaultValue: "Full",
         group: "Appearance",
       },
-      /** Whether the keyboard is interactive. */
+      /**
+       * Whether the keyboard is interactive. When `false`, all keys are
+       * visually dimmed and pointer events are disabled.
+       *
+       * @example <caption>XML view — bind to model</caption>
+       * <kiosk:KioskKeyboard enabled="{/keyboardEnabled}" targetInput="myInput" />
+       */
       enabled: {
         type: "boolean",
         defaultValue: true,
         group: "Behavior",
       },
-      /** Accessible label for the keyboard group. */
+      /**
+       * Accessible label for the keyboard group. Defaults to
+       * "Virtual Keyboard" from the resource bundle when left empty.
+       *
+       * @example <caption>XML view</caption>
+       * <kiosk:KioskKeyboard ariaLabel="PIN entry keyboard" targetInput="pinInput" />
+       */
       ariaLabel: {
         type: "string",
         defaultValue: "",
         group: "Accessibility",
       },
       /**
-       * When true, the keyboard anchors to the bottom of the viewport
-       * and slides in/out. Use show()/close() to control visibility
-       * manually, or set autoShow to true for automatic behavior.
+       * When `true`, the keyboard anchors to the bottom of the viewport
+       * and slides in/out. Use {@link #show}/{@link #close} to control
+       * visibility manually, or set `autoShow` to `true` for automatic
+       * focus-based behavior.
+       *
+       * @example <caption>XML view — docked with programmatic control</caption>
+       * <kiosk:KioskKeyboard id="kb" docked="true" />
+       * <!-- Controller: this.byId("kb").show(); -->
        */
       docked: {
         type: "boolean",
@@ -106,9 +137,12 @@ export default class KioskKeyboard extends Control {
         group: "Behavior",
       },
       /**
-       * When true, the docked keyboard automatically opens when any
+       * When `true`, the docked keyboard automatically opens when any
        * `<input>` or `<textarea>` receives focus, and closes when
        * focus leaves. Requires `docked="true"`.
+       *
+       * @example <caption>XML view</caption>
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" />
        */
       autoShow: {
         type: "boolean",
@@ -116,13 +150,17 @@ export default class KioskKeyboard extends Control {
         group: "Behavior",
       },
       /**
-       * When true and autoShow is active, the keyboard inspects the
+       * When `true` and `autoShow` is active, the keyboard inspects the
        * focused input's type metadata and automatically switches between
        * Full and Numpad keyboard types.
-       * Has no effect when keyboardType has been set explicitly (via
+       *
+       * Has no effect when `keyboardType` has been set explicitly (via
        * setter, constructor, or XML attribute), because that locks the
-       * keyboard type. Call `resetKeyboardType()` to clear the lock
+       * keyboard type. Call {@link #resetKeyboardType} to clear the lock
        * and re-enable auto-type detection.
+       *
+       * @example <caption>XML view — full auto kiosk setup</caption>
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" mobileKeyboard="Auto" />
        */
       autoType: {
         type: "boolean",
@@ -131,10 +169,15 @@ export default class KioskKeyboard extends Control {
       },
       /**
        * Controls native keyboard behavior on mobile/touch devices.
-       * "Custom" (default) always uses this keyboard and suppresses
-       * the native one. "Native" defers to the native keyboard on
-       * phones and tablets. "Auto" uses custom on desktop, native
-       * on mobile.
+       *
+       * - `"Custom"` (default) — always suppresses the native keyboard
+       *   via `inputmode="none"`.
+       * - `"Native"` — always defers to the native keyboard.
+       * - `"Auto"` — uses KioskKeyboard on desktop, native on
+       *   phones/tablets.
+       *
+       * @example <caption>XML view — let mobile devices use native keyboard</caption>
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
        */
       mobileKeyboard: {
         type: "ui5.kiosk.MobileKeyboard",
@@ -145,6 +188,21 @@ export default class KioskKeyboard extends Control {
        * List of input control IDs to target. When set, attaches focus
        * delegation to each resolved control so the keyboard auto-targets
        * whichever input last received focus.
+       *
+       * IDs are resolved against the parent View first (view-local IDs),
+       * then globally. This makes the property safe to use in XML views
+       * where control IDs are prefixed by the view ID.
+       *
+       * Use this instead of `targetInput` when multiple inputs share
+       * a single keyboard (e.g. a form with several fields).
+       *
+       * @example <caption>XML view — target multiple inputs</caption>
+       * <m:Input id="name" />
+       * <m:Input id="email" />
+       * <kiosk:KioskKeyboard inputIds="name,email" />
+       *
+       * @example <caption>TypeScript</caption>
+       * new KioskKeyboard({ inputIds: ["name", "email"] });
        */
       inputIds: {
         type: "string[]",
@@ -153,7 +211,14 @@ export default class KioskKeyboard extends Control {
       },
     },
     associations: {
-      /** The input control to type into (e.g. sap.m.Input, sap.m.TextArea). */
+      /**
+       * The input control to type into (e.g. `sap.m.Input`, `sap.m.TextArea`).
+       * For targeting multiple inputs, use the `inputIds` property instead.
+       *
+       * @example <caption>XML view</caption>
+       * <m:Input id="myInput" />
+       * <kiosk:KioskKeyboard targetInput="myInput" />
+       */
       targetInput: { type: "sap.ui.core.Control", multiple: false },
       ariaLabelledBy: {
         type: "sap.ui.core.Control",
@@ -167,7 +232,18 @@ export default class KioskKeyboard extends Control {
       },
     },
     events: {
-      /** Fired when a virtual key is pressed. Call preventDefault() to skip the default input action. */
+      /**
+       * Fired when a virtual key is pressed. Call `preventDefault()` to
+       * skip the default input action (text insertion, backspace, etc.).
+       *
+       * @example <caption>TypeScript — intercept key presses</caption>
+       * keyboard.attachKeyPress((event) => {
+       *   if (event.getParameter("key") === "Enter") {
+       *     event.preventDefault();
+       *     submitForm();
+       *   }
+       * });
+       */
       keyPress: {
         allowPreventDefault: true,
         parameters: {
@@ -175,15 +251,44 @@ export default class KioskKeyboard extends Control {
           shiftKey: { type: "boolean" },
         },
       },
-      /** Fired when the active layout changes. */
+      /**
+       * Fired when the active layout changes (via a `{layout:name}` key
+       * or programmatic `setLayout()` call).
+       *
+       * @example <caption>TypeScript</caption>
+       * keyboard.attachLayoutChange((event) => {
+       *   console.log("Switched to:", event.getParameter("layout"));
+       * });
+       */
       layoutChange: {
         parameters: {
           layout: { type: "string" },
         },
       },
-      /** Fired after the docked keyboard has opened. */
+      /**
+       * Fired when the keyboard type changes — by auto-type detection,
+       * explicit `setKeyboardType()`, or `resetKeyboardType()`.
+       *
+       * @example <caption>TypeScript</caption>
+       * keyboard.attachKeyboardTypeChange((event) => {
+       *   const type = event.getParameter("keyboardType");
+       *   const auto = event.getParameter("autoDetected");
+       *   console.log(`Type: ${type}, auto: ${auto}`);
+       * });
+       */
+      keyboardTypeChange: {
+        parameters: {
+          /** The new keyboard type. */
+          keyboardType: { type: "string" },
+          /** The previous keyboard type. */
+          previousKeyboardType: { type: "string" },
+          /** Whether this change was triggered by auto-type detection. */
+          autoDetected: { type: "boolean" },
+        },
+      },
+      /** Fired after the docked keyboard has opened (slide-in complete). */
       afterOpen: {},
-      /** Fired after the docked keyboard has closed. */
+      /** Fired after the docked keyboard has closed (slide-out complete). */
       afterClose: {},
     },
   };
@@ -513,8 +618,17 @@ export default class KioskKeyboard extends Control {
    * to re-enable auto-type.
    */
   setKeyboardType(sType: string): this {
+    const sPrevious = this.getKeyboardType();
     this._keyboardTypeExplicit = true;
-    return this.setProperty("keyboardType", sType);
+    this.setProperty("keyboardType", sType);
+    if (sType !== sPrevious) {
+      this.fireEvent("keyboardTypeChange", {
+        keyboardType: sType,
+        previousKeyboardType: sPrevious,
+        autoDetected: false,
+      });
+    }
+    return this;
   }
 
   /**
@@ -529,8 +643,17 @@ export default class KioskKeyboard extends Control {
    * @public
    */
   resetKeyboardType(): this {
+    const sPrevious = this.getKeyboardType();
     this._keyboardTypeExplicit = false;
-    return this.setProperty("keyboardType", "Full");
+    this.setProperty("keyboardType", "Full");
+    if ("Full" !== sPrevious) {
+      this.fireEvent("keyboardTypeChange", {
+        keyboardType: "Full",
+        previousKeyboardType: sPrevious,
+        autoDetected: false,
+      });
+    }
+    return this;
   }
 
   /**
@@ -917,7 +1040,15 @@ export default class KioskKeyboard extends Control {
         // Auto-detect keyboard type from input metadata
         if (this.getAutoType() && !this._keyboardTypeExplicit) {
           const detected = this._detectKeyboardType(ui5Control);
+          const previous = this.getKeyboardType();
           this.setProperty("keyboardType", detected);
+          if (detected !== previous) {
+            this.fireEvent("keyboardTypeChange", {
+              keyboardType: detected,
+              previousKeyboardType: previous,
+              autoDetected: true,
+            });
+          }
         }
       }
 

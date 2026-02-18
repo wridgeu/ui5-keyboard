@@ -165,7 +165,12 @@ const KioskKeyboardRenderer = {
       rm.attr("aria-pressed", oControl.isShiftActive() ? "true" : "false");
     }
 
-    rm.attr("tabindex", ri === 0 && ci === 0 ? "0" : "-1");
+    // Roving tabindex: exactly one key gets tabindex="0".
+    // Prefer the last focused key (survives re-render); fall back to (0,0).
+    const sLastFocusedId = oControl.getFocusInfo().lastFocusedKeyId;
+    const sKeyId = keyElementId(oControl.getId(), ri, ci);
+    const bIsFocusTarget = sLastFocusedId ? sKeyId === sLastFocusedId : ri === 0 && ci === 0;
+    rm.attr("tabindex", bIsFocusTarget ? "0" : "-1");
 
     if (!oControl.getEnabled()) {
       rm.attr("aria-disabled", "true");

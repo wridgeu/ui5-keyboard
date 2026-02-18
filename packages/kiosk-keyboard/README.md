@@ -10,6 +10,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 - [Features](#features)
 - [Installation](#installation)
+- [Getting Started](#getting-started)
 - [Quick Start](#quick-start)
 - [KioskKeyboard Control](#kioskkeyboard-control)
   - [Properties](#properties)
@@ -22,6 +23,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Docked Mode](#docked-mode)
 - [Auto-Show](#auto-show)
 - [Auto-Type](#auto-type)
+- [inputIds](#inputids)
 - [Mobile Keyboard Detection](#mobile-keyboard-detection)
 - [Shift & Caps Lock](#shift--caps-lock)
 - [Accessibility](#accessibility)
@@ -85,7 +87,28 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 npm install ui5-lib-kiosk-keyboard
 ```
 
-Add the library to your application's `manifest.json`:
+## Getting Started
+
+**1. Add the library dependency to `ui5.yaml`:**
+
+```yaml
+framework:
+  libraries:
+    - name: ui5.kiosk
+```
+
+If the library is consumed from npm (not a workspace sibling), also configure `ui5-tooling-transpile` to transpile it:
+
+```yaml
+builder:
+  customTasks:
+    - name: ui5-tooling-transpile-task
+      afterTask: replaceVersion
+      configuration:
+        transpileDependencies: true
+```
+
+**2. Declare the library dependency in `manifest.json`:**
 
 ```json
 {
@@ -98,6 +121,8 @@ Add the library to your application's `manifest.json`:
   }
 }
 ```
+
+**3. Use the control in your view or controller.** See [Quick Start](#quick-start) below.
 
 ---
 
@@ -148,7 +173,7 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 | `autoShow`       | `boolean`                  | `false`              | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                  |
 | `autoType`       | `boolean`                  | `false`              | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.           |
 | `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"`           | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).     |
-| `inputIds`       | `string[]`                 | `[]`                 | Input control IDs for focus delegation targeting.                                           |
+| `inputIds`       | `string[]`                 | `[]`                 | Input control IDs for multi-input targeting. See [inputIds](#inputids).                     |
 
 ### Associations
 
@@ -158,12 +183,13 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 
 ### Events
 
-| Event          | Parameters                         | Description                                                                                |
-| -------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| `keyPress`     | `key: string`, `shiftKey: boolean` | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. |
-| `layoutChange` | `layout: string`                   | Fired when the active layout changes.                                                      |
-| `afterOpen`    | —                                  | Fired after the docked keyboard has opened.                                                |
-| `afterClose`   | —                                  | Fired after the docked keyboard has closed.                                                |
+| Event                | Parameters                                                                      | Description                                                                                |
+| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. |
+| `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                      |
+| `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                      |
+| `afterOpen`          | —                                                                               | Fired after the docked keyboard has opened.                                                |
+| `afterClose`         | —                                                                               | Fired after the docked keyboard has closed.                                                |
 
 ### Public Methods
 
@@ -347,6 +373,44 @@ When `autoType="true"` (requires `autoShow="true"`), the keyboard inspects the f
 When the user tabs from a numeric input to a text input, the keyboard switches back to Full automatically.
 
 **Explicit override:** Setting `keyboardType` explicitly (via XML, constructor, or `setKeyboardType()`) disables auto-type detection. The keyboard respects the explicit type and never overrides it.
+
+---
+
+## inputIds
+
+The `inputIds` property provides declarative multi-input targeting. Instead of manually calling `setTargetInput()` when focus changes, list all relevant input IDs and the keyboard will automatically target whichever one last received focus.
+
+```xml
+<m:Input id="firstName" />
+<m:Input id="lastName" />
+<m:Input id="email" />
+
+<kiosk:KioskKeyboard inputIds="firstName,lastName,email" />
+```
+
+**How it works:**
+
+1. The keyboard attaches a focus delegation to each resolved control.
+2. When any of them receives focus, the keyboard sets it as the `targetInput`.
+3. IDs are resolved against the parent View first (view-local IDs), then globally — safe for XML views where IDs are prefixed.
+
+**`inputIds` vs `targetInput`:**
+
+| Use case                              | Approach                                |
+| ------------------------------------- | --------------------------------------- |
+| Single input                          | `targetInput="myInput"`                 |
+| Multiple inputs in a form             | `inputIds="field1,field2,field3"`       |
+| Dynamic input (determined at runtime) | `setTargetInput(control)` in controller |
+
+When `inputIds` is set, there is no need to also set `targetInput` — the keyboard updates the target association automatically based on focus.
+
+**TypeScript:**
+
+```ts
+new KioskKeyboard({
+  inputIds: ["firstName", "lastName", "email"],
+});
+```
 
 ---
 
