@@ -11,7 +11,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./i18n-util";
 import { KEY_ID_SUFFIX_RE, keyElementId } from "./dom-util";
-import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, MobileKeyboard } from "./library"; // side-effect: ensures Lib.init() runs
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
@@ -534,7 +534,7 @@ export default class KioskKeyboard extends Control {
     // content-height changes trigger a spurious close.
     // Docked keyboards are excluded: they pin to the viewport edge so
     // minimising their footprint is more valuable than preventing shifts.
-    if (dom && this.getStableHeight() && this.getKeyboardType() === "Full" && !this.getDocked()) {
+    if (dom && this.getStableHeight() && this.getKeyboardType() === KeyboardType.Full && !this.getDocked()) {
       const el = dom as HTMLElement;
       const h = el.getBoundingClientRect().height;
       if (h > (this._maxHeight || 0)) {
@@ -666,10 +666,10 @@ export default class KioskKeyboard extends Control {
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
     this._keyboardTypeExplicit = false;
-    this.setProperty("keyboardType", "Full");
-    if ("Full" !== sPrevious) {
+    this.setProperty("keyboardType", KeyboardType.Full);
+    if (KeyboardType.Full !== sPrevious) {
       this.fireEvent("keyboardTypeChange", {
-        keyboardType: "Full",
+        keyboardType: KeyboardType.Full,
         previousKeyboardType: sPrevious,
         autoDetected: false,
       });
@@ -862,8 +862,8 @@ export default class KioskKeyboard extends Control {
 
   getResolvedLayout(): LayoutDefinition {
     const kbType = this.getKeyboardType();
-    if (kbType === "Numpad") return layouts.numpad;
-    if (kbType === "Numeric") return layouts.numeric;
+    if (kbType === KeyboardType.Numpad) return layouts.numpad;
+    if (kbType === KeyboardType.Numeric) return layouts.numeric;
     const name = this.getLayout();
     return layouts[name] ?? layouts[DEFAULT_LAYOUT];
   }
@@ -1133,7 +1133,7 @@ export default class KioskKeyboard extends Control {
     }
 
     if (keyValue.startsWith("{layout:")) {
-      if (this.getKeyboardType() === "Full") {
+      if (this.getKeyboardType() === KeyboardType.Full) {
         const raw = keyValue.slice(8, -1);
         const name = raw === "base" ? this._baseLayout : raw;
         this.setLayout(name);
@@ -1430,8 +1430,8 @@ export default class KioskKeyboard extends Control {
    */
   private _shouldDeferToNative(): boolean {
     const mode = this.getMobileKeyboard();
-    if (mode === "Custom") return false;
-    if (mode === "Native") return true;
+    if (mode === MobileKeyboard.Custom) return false;
+    if (mode === MobileKeyboard.Native) return true;
     // "Auto": kiosk keyboard on desktop, native on mobile
     return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
   }

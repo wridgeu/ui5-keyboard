@@ -3,6 +3,7 @@ import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./i18n-util";
 import { keyElementId } from "./dom-util";
+import { KeyboardType } from "./library";
 
 /**
  * Renderer for the KioskKeyboard control.
@@ -43,9 +44,9 @@ const KioskKeyboardRenderer = {
   addRootClasses(rm: RenderManager, oControl: KioskKeyboard): void {
     rm.class("ui5KioskKeyboard");
 
-    const sType = oControl.getKeyboardType().toLowerCase();
-    if (sType !== "full") {
-      rm.class(`ui5KioskKeyboard--${sType}`);
+    const sType = oControl.getKeyboardType();
+    if (sType !== KeyboardType.Full) {
+      rm.class(`ui5KioskKeyboard--${sType.toLowerCase()}`);
     }
 
     if (oControl.getDocked()) {
