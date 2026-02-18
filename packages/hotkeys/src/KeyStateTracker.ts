@@ -1,6 +1,6 @@
 import { MODIFIER_KEYS } from "./constants";
+import { Platform } from "./library";
 import { detectPlatform } from "./platform";
-import type { Platform } from "./types";
 
 let instance: KeyStateTracker | null = null;
 
@@ -80,7 +80,7 @@ export default class KeyStateTracker {
     // macOS stuck-key fix (from TanStack): When a modifier is released,
     // clear all non-modifier keys. On macOS, Cmd+Tab swallows the Tab keyup,
     // leaving it permanently "stuck".
-    if (this._platform === "mac" && MODIFIER_KEYS.has(key)) {
+    if (this._platform === Platform.Mac && MODIFIER_KEYS.has(key)) {
       let changed = false;
       for (const held of this._heldKeys) {
         if (!MODIFIER_KEYS.has(held)) {

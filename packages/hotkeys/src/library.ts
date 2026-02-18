@@ -21,6 +21,7 @@ export const ConflictBehavior = Object.freeze({
   /** Allow multiple registrations silently. */
   Allow: "allow",
 } as const);
+export type ConflictBehavior = (typeof ConflictBehavior)[keyof typeof ConflictBehavior];
 
 /**
  * Reason why a key event was not handled by any registration.
@@ -40,6 +41,7 @@ export const UnhandledReason = Object.freeze({
   /** A registration matched, but was skipped because the key is held (`event.repeat`). */
   RepeatIgnored: "repeat_ignored",
 } as const);
+export type UnhandledReason = (typeof UnhandledReason)[keyof typeof UnhandledReason];
 
 /**
  * Supported platform identifiers for cross-platform modifier resolution.
@@ -55,6 +57,7 @@ export const Platform = Object.freeze({
   /** Linux — uses Control as the primary modifier. */
   Linux: "linux",
 } as const);
+export type Platform = (typeof Platform)[keyof typeof Platform];
 
 // Re-export from constants — single source of truth
 export { GLOBAL_SCOPE } from "./constants";

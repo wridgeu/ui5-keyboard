@@ -1,7 +1,7 @@
 import { KEY_DISPLAY_SYMBOLS, MAC_MODIFIER_SYMBOLS, STANDARD_MODIFIER_LABELS } from "./constants";
+import { Platform } from "./library";
 import { parseHotkey } from "./parse";
 import { detectPlatform } from "./platform";
-import type { Platform } from "./types";
 
 /**
  * Format a hotkey string for display, using platform-appropriate symbols.
@@ -22,7 +22,7 @@ export function formatForDisplay(hotkey: string, platform?: Platform): string {
 
   const keyDisplay = KEY_DISPLAY_SYMBOLS[parsed.key] ?? parsed.key;
 
-  if (p === "mac") {
+  if (p === Platform.Mac) {
     const modSymbols = parsed.modifiers.map((m) => MAC_MODIFIER_SYMBOLS[m]);
     return modSymbols.join("") + keyDisplay;
   }

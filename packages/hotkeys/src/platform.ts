@@ -1,4 +1,5 @@
-import type { CanonicalModifier, Platform } from "./types";
+import { Platform } from "./library";
+import type { CanonicalModifier } from "./types";
 
 interface NavigatorUAData {
   platform: string;
@@ -23,7 +24,7 @@ export function detectPlatform(): Platform {
   }
 
   if (typeof navigator === "undefined") {
-    cachedPlatform = "linux";
+    cachedPlatform = Platform.Linux;
     return cachedPlatform;
   }
 
@@ -49,9 +50,9 @@ export function detectPlatform(): Platform {
 }
 
 function resolvePlatformString(value: string): Platform {
-  if (value.includes("mac")) return "mac";
-  if (value.includes("win")) return "windows";
-  return "linux";
+  if (value.includes("mac")) return Platform.Mac;
+  if (value.includes("win")) return Platform.Windows;
+  return Platform.Linux;
 }
 
 /**
@@ -65,7 +66,7 @@ function resolvePlatformString(value: string): Platform {
 export function resolveModifier(modifier: CanonicalModifier | "Mod", platform?: Platform): CanonicalModifier {
   if (modifier === "Mod") {
     const p = platform ?? detectPlatform();
-    return p === "mac" ? "Meta" : "Control";
+    return p === Platform.Mac ? "Meta" : "Control";
   }
   return modifier;
 }

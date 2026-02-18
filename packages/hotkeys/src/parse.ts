@@ -1,6 +1,7 @@
-import { MODIFIER_ALIASES, MODIFIER_ORDER, normalizeKeyName } from "./constants";
+import { MODIFIER_ALIASES, MODIFIER_KEYS, MODIFIER_ORDER, normalizeKeyName } from "./constants";
+import { Platform } from "./library";
 import { detectPlatform, resolveModifier } from "./platform";
-import type { CanonicalModifier, ParsedHotkey, Platform } from "./types";
+import type { CanonicalModifier, ParsedHotkey } from "./types";
 
 /**
  * Parse a hotkey string into its constituent parts.
@@ -104,7 +105,7 @@ export function keyboardEventToHotkey(event: KeyboardEvent): string | null {
   const key = event.key;
 
   // Modifier-only presses don't form a hotkey
-  if (key === "Control" || key === "Shift" || key === "Alt" || key === "Meta") {
+  if (MODIFIER_KEYS.has(key)) {
     return null;
   }
 
@@ -138,8 +139,8 @@ export function convertToModFormat(hotkey: string, platform?: Platform): string 
   const p = platform ?? detectPlatform();
   const parsed = parseHotkey(hotkey, p);
 
-  const platformMod: CanonicalModifier = p === "mac" ? "Meta" : "Control";
-  const otherMod: CanonicalModifier = p === "mac" ? "Control" : "Meta";
+  const platformMod: CanonicalModifier = p === Platform.Mac ? "Meta" : "Control";
+  const otherMod: CanonicalModifier = p === Platform.Mac ? "Control" : "Meta";
 
   // Only convert if the platform modifier is present and the other is not
   if (!parsed.modifiers.includes(platformMod) || parsed.modifiers.includes(otherMod)) {

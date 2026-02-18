@@ -1,8 +1,7 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
-// Side-effect import: ensures Lib.init() runs even when this module is imported directly
-import "./library";
+import { ConflictBehavior, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./SequenceManager";
 import { GLOBAL_SCOPE } from "./constants";
@@ -12,7 +11,6 @@ import { matchesKeyboardEvent } from "./match";
 import { keyboardEventToHotkey, parseHotkey } from "./parse";
 import { detectPlatform } from "./platform";
 import type {
-  ConflictBehavior,
   Hotkey,
   HotkeyCallback,
   HotkeyCallbackDetails,
@@ -27,7 +25,6 @@ import type {
   SequenceRegistrationHandle,
   SequenceRegistrationInfo,
   UnhandledCallback,
-  UnhandledReason,
   UpdatableHotkeyOptions,
 } from "./types";
 
@@ -54,7 +51,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     description: options?.description ?? "",
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,
-    conflictBehavior: options?.conflictBehavior ?? "warn",
+    conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
     target: options?.target ?? null,
   };
 }
@@ -81,11 +78,11 @@ interface DebugSkipEntry {
  * are skipped, the most informative reason is reported.
  */
 const SKIP_PRIORITY = {
-  no_match: 0,
-  repeat_ignored: 1,
-  input_suppressed: 2,
-  popup_suppressed: 3,
-  disabled: 4,
+  [UnhandledReason.NoMatch]: 0,
+  [UnhandledReason.RepeatIgnored]: 1,
+  [UnhandledReason.InputSuppressed]: 2,
+  [UnhandledReason.PopupSuppressed]: 3,
+  [UnhandledReason.Disabled]: 4,
 } satisfies Record<UnhandledReason, number>;
 
 /**
@@ -671,7 +668,7 @@ export default class HotkeyManager extends BaseObject {
     const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
 
     // Collect skip info for the unhandled callback
-    const skipInfo: SkipInfo | null = this._unhandledCallback ? { reason: "no_match" } : null;
+    const skipInfo: SkipInfo | null = this._unhandledCallback ? { reason: UnhandledReason.NoMatch } : null;
 
     // Two-pass matching: active scope first, then global.
     // This ensures scoped handlers always take priority over global ones.
@@ -692,7 +689,7 @@ export default class HotkeyManager extends BaseObject {
           activeScope,
           isInput,
           isPopupOpen: popupOpen,
-          skippedRegistration: skipInfo.reason !== "no_match" ? skipInfo.registration : undefined,
+          skippedRegistration: skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined,
         });
       }
       return;
@@ -774,15 +771,15 @@ export default class HotkeyManager extends BaseObject {
         enabled = false;
       }
       if (!enabled) {
-        this._recordSkip(skipInfo, "disabled", registration);
-        if (debugSkips) debugSkips.push({ registration, reason: "disabled" });
+        this._recordSkip(skipInfo, UnhandledReason.Disabled, registration);
+        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.Disabled });
         continue;
       }
 
       // Key repeat check
       if (opts.ignoreRepeat && event.repeat) {
-        this._recordSkip(skipInfo, "repeat_ignored", registration);
-        if (debugSkips) debugSkips.push({ registration, reason: "repeat_ignored" });
+        this._recordSkip(skipInfo, UnhandledReason.RepeatIgnored, registration);
+        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.RepeatIgnored });
         continue;
       }
 
@@ -794,15 +791,15 @@ export default class HotkeyManager extends BaseObject {
         registration.parsedHotkey.key,
       );
       if (shouldIgnoreInputs && isInput) {
-        this._recordSkip(skipInfo, "input_suppressed", registration);
-        if (debugSkips) debugSkips.push({ registration, reason: "input_suppressed" });
+        this._recordSkip(skipInfo, UnhandledReason.InputSuppressed, registration);
+        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.InputSuppressed });
         continue;
       }
 
       // Popup suppression (dialogs and popovers)
       if (opts.suppressInPopups && popupOpen) {
-        this._recordSkip(skipInfo, "popup_suppressed", registration);
-        if (debugSkips) debugSkips.push({ registration, reason: "popup_suppressed" });
+        this._recordSkip(skipInfo, UnhandledReason.PopupSuppressed, registration);
+        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.PopupSuppressed });
         continue;
       }
 
@@ -972,9 +969,9 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   private _handleConflict(normalizedHotkey: string, scope: string, conflictBehavior: ConflictBehavior): void {
-    if (conflictBehavior === "allow") return;
+    if (conflictBehavior === ConflictBehavior.Allow) return;
 
-    if (conflictBehavior === "replace") {
+    if (conflictBehavior === ConflictBehavior.Replace) {
       // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
       for (const reg of this._registrations.values()) {
@@ -1007,7 +1004,7 @@ export default class HotkeyManager extends BaseObject {
 
     if (!conflicting) return;
 
-    if (conflictBehavior === "error") {
+    if (conflictBehavior === ConflictBehavior.Error) {
       throw new Error(
         `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}).`,
       );

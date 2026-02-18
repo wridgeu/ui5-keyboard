@@ -1,5 +1,5 @@
 import { MODIFIER_KEYS } from "./constants";
-import type { Platform } from "./types";
+import { Platform } from "./library";
 
 /**
  * Set of `<input>` types that are considered editable text fields.
@@ -103,7 +103,7 @@ export function shouldIgnoreKeyEvent(event: KeyboardEvent, platform: Platform, l
 
   // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.
   // When the last Alt was right-side (location=2), this is AltGr character input.
-  if (platform === "windows" && event.ctrlKey && event.altKey && lastAltLocation === 2) return true;
+  if (platform === Platform.Windows && event.ctrlKey && event.altKey && lastAltLocation === 2) return true;
 
   return false;
 }
