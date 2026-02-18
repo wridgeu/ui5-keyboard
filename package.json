@@ -51,6 +51,7 @@
     "oxfmt": "^0.32.0",
     "oxlint": "^1.47.0",
     "rimraf": "^6.0.0",
+    "tree-kill": "^1.2.2",
     "typescript": "~5.9.3",
     "wdio-qunit-service": "^2.0.0"
   },

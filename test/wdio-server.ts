@@ -1,5 +1,6 @@
 import net from "node:net";
-import { type ChildProcess, execSync, spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
+import treeKill from "tree-kill";
 
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -33,6 +34,15 @@ function waitForServer(port: number, timeout = 30_000): Promise<void> {
   });
 }
 
+function killProcessTree(pid: number): Promise<void> {
+  return new Promise((resolve) => {
+    treeKill(pid, (err) => {
+      if (err) console.warn(`Failed to kill process tree (pid ${pid}):`, err.message);
+      resolve();
+    });
+  });
+}
+
 /**
  * Creates wdio lifecycle hooks that auto-start a UI5 dev server
  * if the target port is not already in use, and tear it down on completion.
@@ -51,18 +61,11 @@ export function createServerManager(port: number, packageRoot: string) {
       await waitForServer(port);
     },
 
-    onComplete() {
+    async onComplete() {
       if (!serverProcess?.pid) return;
-      if (process.platform === "win32") {
-        try {
-          execSync(`taskkill /pid ${serverProcess.pid} /f /t`, { stdio: "ignore" });
-        } catch {
-          // already exited
-        }
-      } else {
-        serverProcess.kill();
-      }
+      const pid = serverProcess.pid;
       serverProcess = undefined;
+      await killProcessTree(pid);
     },
   };
 }
