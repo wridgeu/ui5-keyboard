@@ -1067,12 +1067,17 @@ export default class KioskKeyboard extends Control {
 
   /** Returns true if this keyboard would auto-claim the given DOM element. */
   private _wouldClaimInput(target: EventTarget | null): boolean {
-    if (!KioskKeyboard._isTextualInput(target)) return false;
-    if (this._shouldDeferToNative()) return false;
+    return this._resolveClaimableControl(target) !== null;
+  }
+
+  /** Returns the UI5 control this keyboard would auto-claim, or null. */
+  private _resolveClaimableControl(target: EventTarget | null): Control | null {
+    if (!KioskKeyboard._isTextualInput(target)) return null;
+    if (this._shouldDeferToNative()) return null;
     const ui5Control = Element.closestTo(target);
-    if (!(ui5Control instanceof Control)) return false;
-    if (this._isTargetOfOther(ui5Control.getId())) return false;
-    return true;
+    if (!(ui5Control instanceof Control)) return null;
+    if (this._isTargetOfOther(ui5Control.getId())) return null;
+    return ui5Control;
   }
 
   private _onDocumentFocusIn(event: FocusEvent): void {
@@ -1085,8 +1090,8 @@ export default class KioskKeyboard extends Control {
     if (myDom && myDom.contains(target)) return;
 
     // Only claim textual inputs not deferred to native or owned by another instance
-    if (!this._wouldClaimInput(target)) return;
-    const ui5Control = Element.closestTo(target) as Control;
+    const ui5Control = this._resolveClaimableControl(target);
+    if (!ui5Control) return;
 
     this.setTargetInput(ui5Control);
 
@@ -1319,6 +1324,13 @@ export default class KioskKeyboard extends Control {
       } else {
         element.setProperty("value", newValue);
       }
+    } else {
+      // Fallback for custom controls without a "value" metadata property:
+      // set the inner DOM input value directly so typing still works.
+      const dom = element.getFocusDomRef();
+      if (KioskKeyboard._isInputOrTextarea(dom)) {
+        dom.value = newValue;
+      }
     }
     if (metadata.hasEvent("liveChange")) {
       element.fireEvent("liveChange", { value: newValue });
@@ -1496,7 +1508,7 @@ export default class KioskKeyboard extends Control {
     const dom = KioskKeyboard._isInputOrTextarea(freshDom) ? freshDom : this._suppressedInputEl;
 
     // If the DOM node was replaced by a re-render, also clean up the stale cached ref
-    if (dom !== this._suppressedInputEl && this._suppressedInputEl) {
+    if (dom !== this._suppressedInputEl) {
       if (this._originalInputMode !== null) {
         this._suppressedInputEl.setAttribute("inputmode", this._originalInputMode);
       } else {

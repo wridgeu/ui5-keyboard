@@ -1,5 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import CheckBox from "sap/m/CheckBox";
+import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
 import TextArea from "sap/m/TextArea";
@@ -3726,26 +3727,71 @@ QUnit.test("autoShow ignores raw DOM input without UI5 control", async (assert) 
   await nextUIUpdate();
 
   assert.notOk(kb.isOpen(), "Keyboard does not open for raw DOM input");
+  assert.strictEqual(kb.getTargetInput(), null, "No target input was set");
 
   kb.destroy();
 });
 
-QUnit.test("autoShow does not call show() when Element.closestTo fails", async (assert) => {
-  const rawInput = document.createElement("input");
-  rawInput.type = "text";
-  document.getElementById("qunit-fixture")!.appendChild(rawInput);
+// ──────────────────────────────────────────────
+// Custom Control Targeting (DOM Fallback)
+// ──────────────────────────────────────────────
 
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+// Minimal custom control: renders a textual <input> but has no "value" metadata property.
+// Verifies that the DOM-fallback path in _setTargetValue works for non-standard controls.
+const CustomWrapper = (Control as any).extend("test.CustomWrapper", {
+  metadata: { properties: {} },
+  renderer: {
+    apiVersion: 2,
+    render(rm: any, ctrl: any) {
+      rm.openStart("div", ctrl).openEnd();
+      rm.voidStart("input")
+        .attr("id", ctrl.getId() + "-inner")
+        .attr("type", "text")
+        .voidEnd();
+      rm.close("div");
+    },
+  },
+  getFocusDomRef() {
+    return document.getElementById((this as any).getId() + "-inner");
+  },
+}) as any;
+
+QUnit.test("typing works for custom control without value property (DOM fallback)", async (assert) => {
+  const custom = new CustomWrapper();
+  custom.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(custom);
   await placeAndWait(kb);
 
-  // Focus the raw input — no UI5 control owns it, so show() must not be called
-  rawInput.focus();
-  await nextUIUpdate();
+  const keyEl = kb.getDomRef()!.querySelector('[data-key="a"]') as HTMLElement;
+  simulateTap(kb, keyEl);
 
-  assert.notOk(kb.isOpen(), "Keyboard stays closed when no UI5 control wraps the input");
-  assert.strictEqual(kb.getTargetInput(), null, "No target input was set");
+  const dom = custom.getFocusDomRef() as HTMLInputElement;
+  assert.strictEqual(dom.value, "a", "Character typed into custom control via DOM fallback");
 
   kb.destroy();
+  custom.destroy();
+});
+
+QUnit.test("backspace works for custom control without value property (DOM fallback)", async (assert) => {
+  const custom = new CustomWrapper();
+  custom.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(custom);
+  await placeAndWait(kb);
+
+  // Type "ab" then backspace
+  simulateTap(kb, kb.getDomRef()!.querySelector('[data-key="a"]') as HTMLElement);
+  simulateTap(kb, kb.getDomRef()!.querySelector('[data-key="b"]') as HTMLElement);
+  simulateTap(kb, kb.getDomRef()!.querySelector('[data-key="{backspace}"]') as HTMLElement);
+
+  const dom = custom.getFocusDomRef() as HTMLInputElement;
+  assert.strictEqual(dom.value, "a", "Backspace removes last character from custom control");
+
+  kb.destroy();
+  custom.destroy();
 });
 
 // ──────────────────────────────────────────────
