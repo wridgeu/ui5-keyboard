@@ -342,11 +342,13 @@ export default class KioskKeyboard extends Control {
    * Readonly inputs are also excluded.
    */
   private static _isTextualInput(el: EventTarget | null): el is HTMLInputElement | HTMLTextAreaElement {
-    if (el instanceof HTMLTextAreaElement) return !el.readOnly;
-    if (el instanceof HTMLInputElement) {
-      return !el.readOnly && KioskKeyboard._TEXTUAL_INPUT_TYPES.has(el.type);
-    }
-    return false;
+    if (!KioskKeyboard._isInputOrTextarea(el)) return false;
+    if (el.readOnly) return false;
+    return el instanceof HTMLTextAreaElement || KioskKeyboard._TEXTUAL_INPUT_TYPES.has(el.type);
+  }
+
+  private static _isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
+    return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
   }
 
   /**
@@ -632,6 +634,17 @@ export default class KioskKeyboard extends Control {
       if (next) {
         next.addEventDelegate(this._keyHighlightDelegation);
         this._highlightTargetId = newId;
+
+        // Dev-time check: warn if the control won't work as a target
+        const focusRef = next.getFocusDomRef?.();
+        if (focusRef && !KioskKeyboard._isInputOrTextarea(focusRef)) {
+          Log.warning(
+            `KioskKeyboard: targetInput "${newId}" does not have a textual input DOM ref — ` +
+              "key taps will have no effect. Expected HTMLInputElement or HTMLTextAreaElement.",
+            undefined,
+            "ui5.kiosk.KioskKeyboard",
+          );
+        }
       }
     }
 
@@ -1052,6 +1065,16 @@ export default class KioskKeyboard extends Control {
     return false;
   }
 
+  /** Returns true if this keyboard would auto-claim the given DOM element. */
+  private _wouldClaimInput(target: EventTarget | null): boolean {
+    if (!KioskKeyboard._isTextualInput(target)) return false;
+    if (this._shouldDeferToNative()) return false;
+    const ui5Control = Element.closestTo(target);
+    if (!(ui5Control instanceof Control)) return false;
+    if (this._isTargetOfOther(ui5Control.getId())) return false;
+    return true;
+  }
+
   private _onDocumentFocusIn(event: FocusEvent): void {
     if (!this.getDocked() || !this.getEnabled()) return;
 
@@ -1061,20 +1084,9 @@ export default class KioskKeyboard extends Control {
     const myDom = this.getDomRef();
     if (myDom && myDom.contains(target)) return;
 
-    // Only react to textual input/textarea (not checkbox, radio, file, etc.)
-    if (!KioskKeyboard._isTextualInput(target)) return;
-
-    // Defer to native keyboard on mobile when configured
-    if (this._shouldDeferToNative()) return;
-
-    // Resolve the UI5 control that owns this DOM element
-    const ui5Control = Element.closestTo(target);
-
-    // Skip raw DOM inputs not owned by a UI5 control
-    if (!(ui5Control instanceof Control)) return;
-
-    // Skip if this input is already targeted by another keyboard instance
-    if (this._isTargetOfOther(ui5Control.getId())) return;
+    // Only claim textual inputs not deferred to native or owned by another instance
+    if (!this._wouldClaimInput(target)) return;
+    const ui5Control = Element.closestTo(target) as Control;
 
     this.setTargetInput(ui5Control);
 
@@ -1106,14 +1118,8 @@ export default class KioskKeyboard extends Control {
     const myDom = this.getDomRef();
     if (myDom && related && myDom.contains(related)) return;
 
-    // Focus moving to a textual input/textarea — keep open if the focusin handler
-    // will claim it (i.e. it is an unclaimed UI5 input and we won't defer to native).
-    if (KioskKeyboard._isTextualInput(related)) {
-      if (!this._shouldDeferToNative()) {
-        const ui5Control = Element.closestTo(related);
-        if (ui5Control instanceof Control && !this._isTargetOfOther(ui5Control.getId())) return;
-      }
-    }
+    // Focus moving to an input this keyboard would claim — keep open
+    if (this._wouldClaimInput(related)) return;
 
     // Focus left all inputs, moved to a claimed input, or should
     // defer to native keyboard — close.
@@ -1206,7 +1212,7 @@ export default class KioskKeyboard extends Control {
     if (!element) return null;
 
     const dom = element.getFocusDomRef();
-    if (!(dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement)) {
+    if (!KioskKeyboard._isInputOrTextarea(dom)) {
       return null;
     }
 
@@ -1404,10 +1410,11 @@ export default class KioskKeyboard extends Control {
    */
   private _detectKeyboardType(control: Control): string {
     // 1. UI5 getType() — e.g. sap.m.Input type="Number"
-    const ctrl = control as unknown as Record<string, unknown>;
-    if (typeof ctrl.getType === "function") {
-      const type = ctrl.getType() as string;
-      if (KioskKeyboard._NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
+    //    Only sap.m.Input defines the `type` property; other InputBase
+    //    subclasses (TextArea, ComboBox, DatePicker) do not have getType().
+    if (control.isA("sap.m.InputBase")) {
+      const type = (control as unknown as { getType?: () => string }).getType?.();
+      if (type && KioskKeyboard._NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
     }
 
     // 2. Control name — walk up the parent chain because composite controls
@@ -1422,7 +1429,7 @@ export default class KioskKeyboard extends Control {
 
     // 3. DOM inputmode attribute
     const dom = control.getFocusDomRef();
-    if (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) {
+    if (KioskKeyboard._isInputOrTextarea(dom)) {
       const inputmode = dom.getAttribute("inputmode");
       if (inputmode && KioskKeyboard._NUMPAD_INPUT_MODES.has(inputmode)) return KeyboardType.Numpad;
 
@@ -1463,7 +1470,7 @@ export default class KioskKeyboard extends Control {
     if (!el) return;
 
     const dom = el.getFocusDomRef();
-    if (!(dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement)) return;
+    if (!KioskKeyboard._isInputOrTextarea(dom)) return;
 
     // Already suppressing this element
     if (this._suppressedInputEl === dom) return;
@@ -1486,10 +1493,16 @@ export default class KioskKeyboard extends Control {
     // Re-resolve: the target control may have re-rendered, replacing the DOM node.
     // Fall back to the cached ref if the target is no longer available.
     const freshDom = this._getTargetElement()?.getFocusDomRef();
-    const dom =
-      freshDom instanceof HTMLInputElement || freshDom instanceof HTMLTextAreaElement
-        ? freshDom
-        : this._suppressedInputEl;
+    const dom = KioskKeyboard._isInputOrTextarea(freshDom) ? freshDom : this._suppressedInputEl;
+
+    // If the DOM node was replaced by a re-render, also clean up the stale cached ref
+    if (dom !== this._suppressedInputEl && this._suppressedInputEl) {
+      if (this._originalInputMode !== null) {
+        this._suppressedInputEl.setAttribute("inputmode", this._originalInputMode);
+      } else {
+        this._suppressedInputEl.removeAttribute("inputmode");
+      }
+    }
 
     if (this._originalInputMode !== null) {
       dom.setAttribute("inputmode", this._originalInputMode);

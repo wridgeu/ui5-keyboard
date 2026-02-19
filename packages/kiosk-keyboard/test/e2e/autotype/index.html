@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>KioskKeyboard Auto-Type Detection Test</title>
+    <script
+      id="sap-ui-bootstrap"
+      src="../../../../../resources/sap-ui-core.js"
+      data-sap-ui-theme="sap_horizon"
+      data-sap-ui-libs="sap.m, ui5.kiosk"
+      data-sap-ui-compat-version="edge"
+      data-sap-ui-resource-roots='{"ui5.kiosk": "../../../../../resources/ui5/kiosk/", "autotype": "./"}'
+      data-sap-ui-async="true"
+      data-sap-ui-on-init="module:autotype/init"
+    ></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "72", Arial, sans-serif;
+        background: #f5f6f7;
+      }
+      .section {
+        margin-bottom: 40px;
+      }
+      .section h2 {
+        font-size: 16px;
+        color: #32363a;
+        margin-bottom: 12px;
+      }
+      .input-row {
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="font-size: 20px; color: #32363a">Auto-Type Detection Test</h1>
+
+    <div class="section">
+      <h2>Full keyboard inputs</h2>
+      <div id="input-text" class="input-row"></div>
+      <div id="input-email" class="input-row"></div>
+      <div id="input-password" class="input-row"></div>
+      <div id="input-url" class="input-row"></div>
+      <div id="input-textarea" class="input-row"></div>
+      <div id="input-search" class="input-row"></div>
+      <div id="input-combo" class="input-row"></div>
+      <div id="input-date" class="input-row"></div>
+    </div>
+
+    <div class="section">
+      <h2>Numpad keyboard inputs</h2>
+      <div id="input-number" class="input-row"></div>
+      <div id="input-tel" class="input-row"></div>
+      <div id="input-step" class="input-row"></div>
+    </div>
+
+    <div class="section">
+      <h2>Ignored inputs</h2>
+      <div id="input-checkbox" class="input-row"></div>
+      <div id="input-radio" class="input-row"></div>
+      <div id="input-readonly" class="input-row"></div>
+      <input type="text" id="input-raw" placeholder="Raw HTML input" style="width: 300px; padding: 8px" />
+    </div>
+
+    <div id="kb"></div>
+
+    <!-- Click target to remove focus from inputs -->
+    <div id="blur-target" tabindex="0" style="padding: 20px; margin-top: 40px; background: #e0e0e0; text-align: center">
+      Click here to blur
+    </div>
+  </body>
+</html>
