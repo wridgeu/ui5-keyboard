@@ -15,6 +15,7 @@ export default class Component extends UIComponent {
   private _hotkeyManager!: HotkeyManager;
   private _hotkeys!: RegistrationGroup;
   private _routeMatchedHandler!: () => void;
+  private _keyDownHandler!: (e: KeyboardEvent) => void;
 
   init(): void {
     super.init();
@@ -67,6 +68,19 @@ export default class Component extends UIComponent {
       },
     );
 
+    // Track physical keyboard presses into the state model for demo event logs
+    this._keyDownHandler = (e: KeyboardEvent) => {
+      if (e.key === "Unidentified" || e.key === "Process") return;
+      const parts: string[] = [];
+      if (e.ctrlKey) parts.push("Ctrl");
+      if (e.altKey) parts.push("Alt");
+      if (e.shiftKey) parts.push("Shift");
+      if (e.metaKey) parts.push("Meta");
+      if (!["Control", "Alt", "Shift", "Meta"].includes(e.key)) parts.push(e.key);
+      if (parts.length) stateModel.setProperty("/kioskLastKey", parts.join(" + "));
+    };
+    document.addEventListener("keydown", this._keyDownHandler, true);
+
     // Initialize the router
     this.getRouter().initialize();
   }
@@ -82,6 +96,7 @@ export default class Component extends UIComponent {
     this._hotkeys.destroyAll();
     this._hotkeyManager.destroy();
     this.getRouter().detachRouteMatched(this._routeMatchedHandler, this);
+    document.removeEventListener("keydown", this._keyDownHandler, true);
     super.destroy();
   }
 }

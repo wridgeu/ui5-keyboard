@@ -484,23 +484,21 @@ new KioskKeyboard({
 
 ## Mobile Keyboard Detection
 
-The `mobileKeyboard` property controls how the keyboard interacts with native virtual keyboards on mobile/touch devices.
+The `mobileKeyboard` property controls whether the KioskKeyboard or the native on-screen keyboard is used.
 
-| Value      | Behavior                                                                                |
-| ---------- | --------------------------------------------------------------------------------------- |
-| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.** |
-| `"Native"` | Always defer to the native keyboard — KioskKeyboard does not auto-show on any device.   |
-| `"Auto"`   | Desktop/kiosk → use KioskKeyboard. Phone/tablet → defer to native.                      |
+| Value      | Behavior                                                                                | Use when                                         |
+| ---------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.** | Dedicated kiosk terminal (no physical keyboard)  |
+| `"Native"` | Always defer to the native keyboard — KioskKeyboard does not open on focus.             | Desktop/mobile app where desktops have keyboards |
+| `"Auto"`   | Desktop browsers → use KioskKeyboard. Phone/tablet → defer to native.                   | Kiosk terminal that also serves mobile visitors  |
+
+> **Note:** `"Auto"` relies on `sap/ui/Device` for device detection. Browsers cannot detect whether a physical keyboard is attached, so on any desktop browser — including a regular laptop — the virtual keyboard **will** appear. Use `"Native"` if that is not desired.
 
 ```xml
-<!-- Suppress native keyboard on all devices (kiosk use case) -->
-<kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Custom" />
-
-<!-- Let mobile devices use their native keyboard -->
 <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
 ```
 
-When `mobileKeyboard` is `"Custom"`, the keyboard sets `inputmode="none"` on the focused input's DOM element when it opens, and restores the original `inputmode` when it closes. This suppression is transparent and does not affect the input's value or behavior.
+When the KioskKeyboard is active, it sets `inputmode="none"` on the focused input to suppress the native keyboard, and restores the original value on close.
 
 ---
 

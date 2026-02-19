@@ -167,13 +167,26 @@ export default class KioskKeyboard extends Control {
         group: "Behavior",
       },
       /**
-       * Controls native keyboard behavior on mobile/touch devices.
+       * Controls whether the KioskKeyboard or the native on-screen
+       * keyboard is used.
        *
-       * - `"Custom"` (default) — always suppresses the native keyboard
-       *   via `inputmode="none"`.
-       * - `"Native"` — always defers to the native keyboard.
-       * - `"Auto"` — uses KioskKeyboard on desktop, native on
-       *   phones/tablets.
+       * - `"Custom"` (default) — always uses the KioskKeyboard and
+       *   suppresses the native keyboard via `inputmode="none"`.
+       *   Best for **dedicated kiosk terminals** without a physical
+       *   keyboard.
+       * - `"Native"` — always defers to the native keyboard; the
+       *   KioskKeyboard will not open on focus.
+       * - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+       *   to the native keyboard on phones and tablets. This is
+       *   intended for **kiosk terminals running a desktop OS**
+       *   (no physical keyboard) that should still let mobile
+       *   visitors use their native keyboard. On a regular
+       *   laptop/desktop with a physical keyboard the virtual
+       *   keyboard **will** still appear — use `"Native"` if that
+       *   is not desired.
+       *
+       * @example <caption>XML view — kiosk terminal setup</caption>
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Custom" />
        *
        * @example <caption>XML view — let mobile devices use native keyboard</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />

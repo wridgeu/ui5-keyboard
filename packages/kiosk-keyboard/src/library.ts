@@ -52,11 +52,11 @@ export const KeyboardType = Object.freeze({
  * @public
  */
 export const MobileKeyboard = Object.freeze({
-  /** Always use KioskKeyboard, suppress native keyboard. Default for kiosk use cases. */
+  /** Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. Best for dedicated kiosk terminals without a physical keyboard. */
   Custom: "Custom",
-  /** Always defer to the native keyboard — KioskKeyboard will not open. */
+  /** Always defer to the native keyboard — KioskKeyboard will not open on focus. */
   Native: "Native",
-  /** Auto-detect: desktop/kiosk uses KioskKeyboard, phone/tablet defers to native. */
+  /** Desktop browsers use KioskKeyboard, phones/tablets defer to native. Note: on a regular laptop/desktop with a physical keyboard the virtual keyboard will still appear — use `Native` if that is not desired. */
   Auto: "Auto",
 } as const);
 

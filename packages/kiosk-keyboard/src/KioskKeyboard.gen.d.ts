@@ -86,13 +86,23 @@ declare module "./KioskKeyboard" {
         autoType?: boolean | PropertyBindingInfo | `{${string}}`;
 
         /**
-         * Controls native keyboard behavior on mobile/touch devices.
+         * Controls whether the KioskKeyboard or the native on-screen
+        keyboard is used.
         
-        - `"Custom"` (default) — always suppresses the native keyboard
-          via `inputmode="none"`.
-        - `"Native"` — always defers to the native keyboard.
-        - `"Auto"` — uses KioskKeyboard on desktop, native on
-          phones/tablets.
+        - `"Custom"` (default) — always uses the KioskKeyboard and
+          suppresses the native keyboard via `inputmode="none"`.
+          Best for **dedicated kiosk terminals** without a physical
+          keyboard.
+        - `"Native"` — always defers to the native keyboard; the
+          KioskKeyboard will not open on focus.
+        - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+          to the native keyboard on phones and tablets. This is
+          intended for **kiosk terminals running a desktop OS**
+          (no physical keyboard) that should still let mobile
+          visitors use their native keyboard. On a regular
+          laptop/desktop with a physical keyboard the virtual
+          keyboard **will** still appear — use `"Native"` if that
+          is not desired.
          */
         mobileKeyboard?: MobileKeyboard | PropertyBindingInfo | `{${string}}`;
 
@@ -416,13 +426,23 @@ declare module "./KioskKeyboard" {
         /**
          * Gets current value of property "mobileKeyboard".
          *
-         * Controls native keyboard behavior on mobile/touch devices.
+         * Controls whether the KioskKeyboard or the native on-screen
+        keyboard is used.
         
-        - `"Custom"` (default) — always suppresses the native keyboard
-          via `inputmode="none"`.
-        - `"Native"` — always defers to the native keyboard.
-        - `"Auto"` — uses KioskKeyboard on desktop, native on
-          phones/tablets.
+        - `"Custom"` (default) — always uses the KioskKeyboard and
+          suppresses the native keyboard via `inputmode="none"`.
+          Best for **dedicated kiosk terminals** without a physical
+          keyboard.
+        - `"Native"` — always defers to the native keyboard; the
+          KioskKeyboard will not open on focus.
+        - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+          to the native keyboard on phones and tablets. This is
+          intended for **kiosk terminals running a desktop OS**
+          (no physical keyboard) that should still let mobile
+          visitors use their native keyboard. On a regular
+          laptop/desktop with a physical keyboard the virtual
+          keyboard **will** still appear — use `"Native"` if that
+          is not desired.
          *
          * Default value is: "Custom"
          * @returns Value of property "mobileKeyboard"
@@ -432,13 +452,23 @@ declare module "./KioskKeyboard" {
         /**
          * Sets a new value for property "mobileKeyboard".
          *
-         * Controls native keyboard behavior on mobile/touch devices.
+         * Controls whether the KioskKeyboard or the native on-screen
+        keyboard is used.
         
-        - `"Custom"` (default) — always suppresses the native keyboard
-          via `inputmode="none"`.
-        - `"Native"` — always defers to the native keyboard.
-        - `"Auto"` — uses KioskKeyboard on desktop, native on
-          phones/tablets.
+        - `"Custom"` (default) — always uses the KioskKeyboard and
+          suppresses the native keyboard via `inputmode="none"`.
+          Best for **dedicated kiosk terminals** without a physical
+          keyboard.
+        - `"Native"` — always defers to the native keyboard; the
+          KioskKeyboard will not open on focus.
+        - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+          to the native keyboard on phones and tablets. This is
+          intended for **kiosk terminals running a desktop OS**
+          (no physical keyboard) that should still let mobile
+          visitors use their native keyboard. On a regular
+          laptop/desktop with a physical keyboard the virtual
+          keyboard **will** still appear — use `"Native"` if that
+          is not desired.
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *

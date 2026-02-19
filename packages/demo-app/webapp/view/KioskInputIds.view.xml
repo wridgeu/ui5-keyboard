@@ -25,6 +25,10 @@
                         <Label text="Current Target:" class="sapUiSmallMarginEnd" />
                         <ObjectStatus text="{state>/kioskCurrentTarget}" state="Information" />
                     </HBox>
+                    <HBox>
+                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                    </HBox>
                 </VBox>
             </Panel>
 
