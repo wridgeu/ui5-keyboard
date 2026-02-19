@@ -1404,12 +1404,21 @@ export default class KioskKeyboard extends Control {
   // Private — Physical keyboard highlighting
   // ──────────────────────────────────────────────
 
+  /** Maps KeyboardEvent.key names to special-key data-key values. */
+  private static readonly _KEY_TO_DATA_KEY: Record<string, string> = {
+    Shift: "{shift}",
+    Backspace: "{backspace}",
+    Enter: "{enter}",
+    Delete: "{backspace}", // virtual keyboard has no separate Delete — highlight Backspace
+  };
+
   private _highlightKey(key: string, add: boolean): void {
     const dom = this.getDomRef();
     if (!dom) return;
 
+    const mapped = KioskKeyboard._KEY_TO_DATA_KEY[key];
     const el =
-      dom.querySelector(`[data-key="${CSS.escape(key)}"]`) ??
+      dom.querySelector(`[data-key="${CSS.escape(mapped ?? key)}"]`) ??
       (key.length === 1 ? dom.querySelector(`[data-key="${CSS.escape(key.toLowerCase())}"]`) : null) ??
       dom.querySelector(`[data-shift-value="${CSS.escape(key)}"]`);
     el?.classList.toggle("ui5KioskKey--highlight", add);
