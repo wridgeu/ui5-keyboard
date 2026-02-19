@@ -59,7 +59,7 @@
       "oxfmt --ignore-path .oxfmtignore",
       "oxlint --fix"
     ],
-    "*.{json,yaml,yml,md,html,xml,css,less}": "oxfmt"
+    "*.{json,yaml,yml,md,html,css,less}": "oxfmt"
   },
   "engines": {
     "node": ">=22"

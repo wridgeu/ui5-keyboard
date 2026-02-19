@@ -3,9 +3,9 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Selective Input Targeting" class="sapUiMediumMargin">
+            <Panel headerText="Selective Input Targeting" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="The keyboard below targets only Input A and Input B via inputIds. Focusing Input C or D will not switch the keyboard target." />
                     <Label text="Input A (targeted)" labelFor="inputA" class="sapUiSmallMarginTop" />
@@ -19,7 +19,7 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Status" class="sapUiMediumMargin">
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="Current Target:" class="sapUiSmallMarginEnd" />

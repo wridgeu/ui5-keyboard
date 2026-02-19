@@ -2,9 +2,9 @@
     controllerName="demo.hotkeys.controller.KioskComponent"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="Component-Level Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="Component-Level Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Persistent Keyboard" class="sapUiMediumMargin">
+            <Panel headerText="Persistent Keyboard" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="This keyboard is created in the controller and placed in the sap-ui-static UIArea. It persists across navigation." />
                     <Label text="Input Field" labelFor="compInput" class="sapUiSmallMarginTop" />
@@ -17,7 +17,7 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Status" class="sapUiMediumMargin">
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="Keyboard isOpen():" class="sapUiSmallMarginEnd" />

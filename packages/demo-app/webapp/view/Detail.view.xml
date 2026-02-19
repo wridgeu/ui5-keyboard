@@ -2,9 +2,9 @@
     controllerName="demo.hotkeys.controller.Detail"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="ui5.hotkeys Demo — Detail View" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="ui5.hotkeys Demo — Detail View" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Status" class="sapUiMediumMargin">
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="Active Scope:" class="sapUiSmallMarginEnd" />
@@ -17,7 +17,7 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Detail View Shortcuts" class="sapUiMediumMargin">
+            <Panel headerText="Detail View Shortcuts" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="F5 here triggers 'Refresh (Detail View)' — different from Main View." />
                     <Text text="Ctrl+S / Cmd+S still works (global scope)." />
@@ -25,7 +25,7 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Record a Shortcut (HotkeyRecorder)" class="sapUiMediumMargin">
+            <Panel headerText="Record a Shortcut (HotkeyRecorder)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Click Record, then press any key combination. Press Escape to cancel, Backspace/Delete to clear." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">

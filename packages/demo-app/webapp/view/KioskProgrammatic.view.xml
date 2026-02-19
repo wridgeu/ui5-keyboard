@@ -3,9 +3,9 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page title="Programmatic Control Demo" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="Programmatic Control Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Keyboard Controls" class="sapUiMediumMargin">
+            <Panel headerText="Keyboard Controls" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Button text="Show" press=".onShow" type="Emphasized" class="sapUiSmallMarginEnd" />
@@ -28,13 +28,13 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Target Input" class="sapUiMediumMargin">
+            <Panel headerText="Target Input" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Input id="progInput" placeholder="Type here..." width="100%" />
                 </VBox>
             </Panel>
 
-            <Panel headerText="Status" class="sapUiMediumMargin">
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="isOpen():" class="sapUiSmallMarginEnd" />

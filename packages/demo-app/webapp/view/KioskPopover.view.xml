@@ -2,9 +2,9 @@
     controllerName="demo.hotkeys.controller.KioskPopover"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="Popover Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="Popover Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Keyboard in Popover" class="sapUiMediumMargin">
+            <Panel headerText="Keyboard in Popover" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Press the keyboard icon to open a popover containing a virtual keyboard targeting that input." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">

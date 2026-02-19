@@ -2,13 +2,13 @@
     controllerName="demo.hotkeys.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="ui5.hotkeys Demo — Main View" id="mainPage">
+    <Page title="ui5.hotkeys Demo — Main View" id="mainPage" class="sapUiContentPadding">
         <headerContent>
             <Button text="Navigate to Detail" press=".onNavToDetail" type="Emphasized" />
             <Button text="Kiosk Keyboard" press=".onNavToKiosk" />
         </headerContent>
         <content>
-            <Panel headerText="Status" class="sapUiMediumMargin">
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="Platform:" class="sapUiSmallMarginEnd" />
@@ -25,7 +25,7 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Registered Shortcuts" class="sapUiMediumMargin">
+            <Panel headerText="Registered Shortcuts" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="{state>/saveLabel}" class="sapUiSmallMarginEnd" design="Bold" />
@@ -46,7 +46,7 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Input Field Test" class="sapUiMediumMargin">
+            <Panel headerText="Input Field Test" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Type in the field below. Single-key shortcuts are suppressed, but Ctrl/Cmd combos still work." />
                     <Input id="testInput" placeholder="Try typing, then press Ctrl+S or Escape..." class="sapUiSmallMarginTop"
@@ -55,14 +55,14 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Dialog Test" class="sapUiMediumMargin">
+            <Panel headerText="Dialog Test" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Open a dialog to test scope switching. The dialog registers its own F5 handler." />
                     <Button text="Open Dialog" press=".onOpenDialog" type="Emphasized" class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
 
-            <Panel headerText="Key Sequences (SequenceManager)" class="sapUiMediumMargin">
+            <Panel headerText="Key Sequences (SequenceManager)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Multi-key sequences (like Vim's g-commands). Press the first key, then the second within the timeout." />
                     <HBox class="sapUiSmallMarginTop">
@@ -78,14 +78,14 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="Held Keys (KeyStateTracker)" class="sapUiMediumMargin">
+            <Panel headerText="Held Keys (KeyStateTracker)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Shows which keys are physically held down, tracked by KeyStateTracker." />
                     <ObjectStatus text="{state>/heldKeys}" state="Information" class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
 
-            <Panel headerText="Dynamic Enabled" class="sapUiMediumMargin">
+            <Panel headerText="Dynamic Enabled" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Toggle the switch to enable/disable a conditional shortcut. The enabled() function is evaluated on every key event." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">

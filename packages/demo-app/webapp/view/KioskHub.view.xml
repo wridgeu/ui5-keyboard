@@ -2,7 +2,7 @@
     controllerName="demo.hotkeys.controller.KioskHub"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="Kiosk Keyboard Demos" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="Kiosk Keyboard Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <List headerText="Choose a Demo">
                 <StandardListItem
