@@ -972,18 +972,22 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
 
   /**
-   * Prevents focus from leaving the target input when a key is pressed.
+   * Prevents focus from leaving the target input when clicking anywhere
+   * on the keyboard surface — keys, rows, or gaps between keys.
    *
    * Uses UI5's EventSimulation touchstart (fires for both mouse and touch)
    * instead of raw pointerdown. preventDefault() on the underlying
-   * mousedown/touchstart prevents focus transfer to the key div without
-   * suppressing the click/tap chain — unlike pointerdown's preventDefault()
-   * which suppresses all compatibility mouse events per the Pointer Events spec.
+   * mousedown/touchstart prevents focus transfer without suppressing the
+   * click/tap chain — unlike pointerdown's preventDefault() which
+   * suppresses all compatibility mouse events per the Pointer Events spec.
    */
   ontouchstart(event: Event): void {
+    // Always prevent focus steal when clicking anywhere on the keyboard
+    // (including gaps between keys), so the target input keeps focus.
+    event.preventDefault();
+
     const el = (event.target as HTMLElement).closest(".ui5KioskKey") as HTMLElement | null;
     if (el) {
-      event.preventDefault();
       this._pressedKeyEl = el;
       el.classList.add("ui5KioskKey--pressed");
     }
