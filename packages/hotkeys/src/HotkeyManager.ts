@@ -9,9 +9,9 @@ import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
 import { keyboardEventToHotkey, parseHotkey } from "./parse";
 import { detectPlatform } from "./platform";
-import ListenerRegistry from "./listener-registry";
-import { resolveMatchedRegistration } from "./dispatch-core";
-import type { DebugSkipEntry, SkipInfo } from "./skip-reason";
+import ListenerRegistry from "./internal/listener-registry";
+import { resolveMatchedRegistration } from "./internal/dispatch-core";
+import type { DebugSkipEntry, SkipInfo } from "./internal/skip-reason";
 import type {
   Hotkey,
   HotkeyCallback,

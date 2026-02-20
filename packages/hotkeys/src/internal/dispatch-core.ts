@@ -1,0 +1,151 @@
+import Log from "sap/base/Log";
+import { UnhandledReason } from "../library";
+import { matchesKeyboardEvent } from "../match";
+import { resolveIgnoreInputs } from "../dom";
+import { GLOBAL_SCOPE } from "../constants";
+import type { HotkeyRegistration, HotkeyRegistrationInfo } from "../types";
+import { recordSkip, type DebugSkipEntry, type SkipInfo } from "./skip-reason";
+
+interface FindMatchOptions {
+  event: KeyboardEvent;
+  isInput: boolean;
+  popupOpen: boolean;
+  targetScope: string;
+  targetElement: EventTarget | null;
+  registrations: ReadonlyMap<string, HotkeyRegistration>;
+  skipInfo?: SkipInfo | null;
+  debugSkips?: DebugSkipEntry[] | null;
+  toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo;
+  logComponent: string;
+}
+
+/**
+ * Find first matching registration for a specific scope.
+ */
+export function findMatchInScope(options: FindMatchOptions): HotkeyRegistration | null {
+  const {
+    event,
+    isInput,
+    popupOpen,
+    targetScope,
+    targetElement,
+    registrations,
+    skipInfo,
+    debugSkips,
+    toRegistrationInfo,
+    logComponent,
+  } = options;
+
+  for (const registration of registrations.values()) {
+    const opts = registration.options;
+
+    if (opts.scope !== targetScope) continue;
+
+    if (targetElement !== null) {
+      if (opts.target !== targetElement) continue;
+    } else if (opts.target !== null) {
+      continue;
+    }
+
+    if (!matchesKeyboardEvent(event, registration.parsedHotkey)) continue;
+
+    let enabled: boolean;
+    try {
+      enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
+    } catch (error) {
+      Log.error(`Error evaluating enabled() for "${registration.normalizedHotkey}": ${error}`, undefined, logComponent);
+      enabled = false;
+    }
+    if (!enabled) {
+      recordSkip(skipInfo, UnhandledReason.Disabled, registration, toRegistrationInfo);
+      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.Disabled });
+      continue;
+    }
+
+    if (opts.ignoreRepeat && event.repeat) {
+      recordSkip(skipInfo, UnhandledReason.RepeatIgnored, registration, toRegistrationInfo);
+      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.RepeatIgnored });
+      continue;
+    }
+
+    const shouldIgnoreInputs = resolveIgnoreInputs(
+      opts.ignoreInputs,
+      registration.parsedHotkey.ctrl,
+      registration.parsedHotkey.meta,
+      registration.parsedHotkey.key,
+    );
+    if (shouldIgnoreInputs && isInput) {
+      recordSkip(skipInfo, UnhandledReason.InputSuppressed, registration, toRegistrationInfo);
+      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.InputSuppressed });
+      continue;
+    }
+
+    if (opts.suppressInPopups && popupOpen) {
+      recordSkip(skipInfo, UnhandledReason.PopupSuppressed, registration, toRegistrationInfo);
+      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.PopupSuppressed });
+      continue;
+    }
+
+    return registration;
+  }
+
+  return null;
+}
+
+interface ResolveMatchOptions {
+  event: KeyboardEvent;
+  isInput: boolean;
+  popupOpen: boolean;
+  activeScope: string;
+  targetElement: EventTarget | null;
+  registrations: ReadonlyMap<string, HotkeyRegistration>;
+  skipInfo?: SkipInfo | null;
+  debugSkips?: DebugSkipEntry[] | null;
+  toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo;
+  logComponent: string;
+}
+
+/**
+ * Two-pass matching: active scope first, then global scope.
+ */
+export function resolveMatchedRegistration(options: ResolveMatchOptions): HotkeyRegistration | null {
+  const {
+    event,
+    isInput,
+    popupOpen,
+    activeScope,
+    targetElement,
+    registrations,
+    skipInfo,
+    debugSkips,
+    toRegistrationInfo,
+    logComponent,
+  } = options;
+
+  return (
+    findMatchInScope({
+      event,
+      isInput,
+      popupOpen,
+      targetScope: activeScope,
+      targetElement,
+      registrations,
+      skipInfo,
+      debugSkips,
+      toRegistrationInfo,
+      logComponent,
+    }) ??
+    findMatchInScope({
+      event,
+      isInput,
+      popupOpen,
+      targetScope: GLOBAL_SCOPE,
+      targetElement,
+      registrations,
+      skipInfo,
+      debugSkips,
+      toRegistrationInfo,
+      logComponent,
+    })
+  );
+}

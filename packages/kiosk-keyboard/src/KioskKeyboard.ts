@@ -20,8 +20,8 @@ import {
   getLocaleLayout as registryGetLocaleLayout,
 } from "./layout-registry";
 import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
-import FocusClaimService from "./focus-claim-service";
-import TargetInputSession from "./target-input-session";
+import FocusClaimService from "./internal/focus-claim-service";
+import TargetInputSession from "./internal/target-input-session";
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.

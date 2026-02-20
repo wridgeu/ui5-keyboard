@@ -158,7 +158,7 @@ import { ConflictBehavior, GLOBAL_SCOPE, UnhandledReason } from "ui5/hotkeys/lib
 import type { Hotkey } from "ui5/hotkeys/types";
 ```
 
-Advanced utility modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. This includes modules such as `ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/dom`, `ui5/hotkeys/platform`, and `ui5/hotkeys/validate`.
+Advanced utility modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. This also includes modules such as `ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/dom`, `ui5/hotkeys/platform`, and `ui5/hotkeys/validate`.
 
 ## HotkeyManager
 

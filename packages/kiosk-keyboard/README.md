@@ -178,7 +178,7 @@ import { KeyboardLayout, KeyboardType, MobileKeyboard } from "ui5/kiosk/library"
 import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 ```
 
-Advanced/internal modules are available but should not be treated as a semver-stable API surface. This includes layout internals (`ui5/kiosk/layouts/*`), renderer internals, and helper modules such as input operations and low-level DOM utilities.
+Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes layout internals (`ui5/kiosk/layouts/*`), renderer internals, and helper modules such as input operations and low-level DOM utilities.
 
 ## KioskKeyboard Control
 
