@@ -1,7 +1,7 @@
 import Control from "sap/ui/core/Control";
 import ManagedObject from "sap/ui/base/ManagedObject";
-import { isInputOrTextarea } from "./dom-util";
-import { KeyboardType } from "./library";
+import { isInputOrTextarea } from "./dom";
+import { KeyboardType } from "../library";
 
 /** Numeric input types that map to Numpad keyboard. */
 const NUMPAD_CONTROL_TYPES: ReadonlySet<string> = new Set(["Number", "Tel"]);

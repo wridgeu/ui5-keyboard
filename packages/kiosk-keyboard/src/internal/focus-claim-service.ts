@@ -1,7 +1,7 @@
 import Control from "sap/ui/core/Control";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import Element from "sap/ui/core/Element";
-import { isInputOrTextarea } from "../dom-util";
+import { isInputOrTextarea } from "./dom";
 
 /**
  * Encapsulates focus-based input claim decisions for docked auto-show mode.

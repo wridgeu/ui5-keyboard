@@ -1,5 +1,5 @@
 import Element from "sap/ui/core/Element";
-import { isInputOrTextarea } from "./dom-util";
+import { isInputOrTextarea } from "./dom";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
 export type CursorPos = [number, number];

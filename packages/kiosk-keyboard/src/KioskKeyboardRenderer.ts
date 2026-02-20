@@ -1,8 +1,8 @@
 import type RenderManager from "sap/ui/core/RenderManager";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
-import { getText } from "./i18n-util";
-import { keyElementId } from "./dom-util";
+import { getText } from "./internal/i18n";
+import { keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
 
 /**

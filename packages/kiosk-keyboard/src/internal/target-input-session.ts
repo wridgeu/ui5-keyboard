@@ -1,10 +1,10 @@
 import Element from "sap/ui/core/Element";
-import { isInputOrTextarea } from "../dom-util";
+import { isInputOrTextarea } from "./dom";
 import {
   insertText as opsInsertText,
   handleBackspace as opsHandleBackspace,
   fireTargetChange as opsFireTargetChange,
-} from "../input-operations";
+} from "./input-operations";
 
 /**
  * Tracks target input editing session state (cursor + dirty flag).

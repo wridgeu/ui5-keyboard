@@ -7,8 +7,8 @@ import { DEFAULT_LAYOUT, SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
-import { getText } from "./i18n-util";
-import { KEY_ID_SUFFIX_RE, keyElementId, isInputOrTextarea } from "./dom-util";
+import { getText } from "./internal/i18n";
+import { KEY_ID_SUFFIX_RE, keyElementId, isInputOrTextarea } from "./internal/dom";
 import { KeyboardType, MobileKeyboard } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
@@ -19,7 +19,7 @@ import {
   registerLocaleLayout as registryRegisterLocale,
   getLocaleLayout as registryGetLocaleLayout,
 } from "./layout-registry";
-import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
+import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
 

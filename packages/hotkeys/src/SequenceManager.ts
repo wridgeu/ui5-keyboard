@@ -4,7 +4,7 @@ import Log from "sap/base/Log";
 import "./library";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
-import { createIdGenerator } from "./idgen";
+import { createIdGenerator } from "./internal/idgen";
 import { matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import type {

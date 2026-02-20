@@ -6,7 +6,7 @@ import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./SequenceManager";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
-import { createIdGenerator } from "./idgen";
+import { createIdGenerator } from "./internal/idgen";
 import { keyboardEventToHotkey, parseHotkey } from "./parse";
 import { detectPlatform } from "./platform";
 import ListenerRegistry from "./internal/listener-registry";
