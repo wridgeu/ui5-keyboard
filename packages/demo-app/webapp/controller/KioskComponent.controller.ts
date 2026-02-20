@@ -60,7 +60,9 @@ export default class KioskComponent extends BaseController {
   }
 
   onNavigateAway(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    const router = this.getTypedComponent().getRouter();
+    router.navTo(Scope.KioskHub);
+    setTimeout(() => router.navTo(Scope.KioskComponent), 2000);
   }
 
   onNavBack(): void {

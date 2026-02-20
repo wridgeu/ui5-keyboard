@@ -13,6 +13,7 @@ import { KeyboardType, MobileKeyboard } from "./library"; // side-effect: ensure
 import {
   registerLayout as registryRegisterLayout,
   getRegisteredLayout as registryGetLayout,
+  getLayoutOrDefault as registryGetLayoutOrDefault,
   getRegisteredLayoutNames as registryGetLayoutNames,
   isBuiltInLayout as registryIsBuiltIn,
   registerLocaleLayout as registryRegisterLocale,
@@ -72,6 +73,7 @@ export default class KioskKeyboard extends Control {
   declare private _suppressedInputEl: HTMLInputElement | HTMLTextAreaElement | null;
   declare private _maxHeight: number;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
+  declare private _cursorInitialized: boolean;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -434,6 +436,10 @@ export default class KioskKeyboard extends Control {
         const delegateTarget = Element.getActiveElement();
         if (delegateTarget instanceof Control) {
           this.setTargetInput(delegateTarget);
+          // When docked with autoShow, show the keyboard for inputIds targets
+          if (this.getDocked() && this.getAutoShow() && !this._open) {
+            this.show();
+          }
         }
       },
     };
@@ -448,6 +454,7 @@ export default class KioskKeyboard extends Control {
     this._suppressedInputEl = null;
     this._maxHeight = 0;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
+    this._cursorInitialized = false;
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -542,6 +549,7 @@ export default class KioskKeyboard extends Control {
       this._restoreNativeKeyboard();
     }
 
+    this._cursorInitialized = false;
     this.setAssociation("targetInput", target, true);
 
     // Add highlight delegation to new target
@@ -845,10 +853,9 @@ export default class KioskKeyboard extends Control {
 
   getResolvedLayout(): LayoutDefinition {
     const kbType = this.getKeyboardType();
-    if (kbType === KeyboardType.Numpad) return registryGetLayout("numpad")!;
-    if (kbType === KeyboardType.Numeric) return registryGetLayout("numeric")!;
-    const name = this.getLayout();
-    return registryGetLayout(name) ?? registryGetLayout(DEFAULT_LAYOUT)!;
+    if (kbType === KeyboardType.Numpad) return registryGetLayoutOrDefault("numpad");
+    if (kbType === KeyboardType.Numeric) return registryGetLayoutOrDefault("numeric");
+    return registryGetLayoutOrDefault(this.getLayout());
   }
 
   /** Default icons for special keys — used when the key has no explicit icon. */
@@ -1027,7 +1034,21 @@ export default class KioskKeyboard extends Control {
     const ui5Control = Element.closestTo(target);
     if (!(ui5Control instanceof Control)) return null;
     if (this._isTargetOfOther(ui5Control.getId())) return null;
+    // When inputIds is set, only claim inputs in that list
+    const ids = this.getInputIds();
+    if (ids.length > 0 && !this._isInInputIds(ui5Control)) return null;
     return ui5Control;
+  }
+
+  /** Checks if a control matches any ID in the inputIds list (view-local or global). */
+  private _isInInputIds(control: Control): boolean {
+    const controlId = control.getId();
+    for (const inputId of this.getInputIds()) {
+      // Direct match against the resolved global ID
+      const resolved = this._findControlById(inputId);
+      if (resolved && resolved.getId() === controlId) return true;
+    }
+    return false;
   }
 
   private _onDocumentFocusIn(event: FocusEvent): void {
@@ -1162,13 +1183,13 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Returns the target input's inner DOM element, ensuring it is focused
-   * with the cursor at the end of its value if it wasn't already active.
+   * Returns the target input's inner DOM element.
    *
-   * Real virtual keyboards always operate at the cursor position. When the
-   * target input hasn't been focused yet (e.g. set programmatically via
-   * `setTargetInput`), `selectionStart` defaults to 0. Without this guard
-   * every operation would happen at the beginning instead of the end.
+   * On first access for a given target, positions the cursor at the end
+   * of the value (via `setSelectionRange`, without `dom.focus()`) — but
+   * only when the input is not already the active element, so a
+   * user-placed cursor is never overwritten. Avoiding `dom.focus()`
+   * prevents focus-steal when the keyboard lives inside a Popover.
    */
   private _getTargetDomRef(): HTMLInputElement | HTMLTextAreaElement | null {
     const element = this._getTargetElement();
@@ -1179,11 +1200,21 @@ export default class KioskKeyboard extends Control {
       return null;
     }
 
-    // Ensure cursor is positioned — if the input isn't the active element,
-    // focus it and place the cursor at the end of the existing value.
-    if (document.activeElement !== dom) {
-      dom.focus();
-      dom.setSelectionRange(dom.value.length, dom.value.length);
+    // Ensure cursor is positioned at the end when the target was set
+    // programmatically and never focused by the user. Uses
+    // setSelectionRange WITHOUT dom.focus() so that focus stays where it
+    // is (e.g. inside a Popover that contains the keyboard).
+    // When the input is already the active element, the user placed the
+    // cursor themselves — don't override their position.
+    if (!this._cursorInitialized) {
+      this._cursorInitialized = true;
+      if (document.activeElement !== dom) {
+        try {
+          dom.setSelectionRange(dom.value.length, dom.value.length);
+        } catch {
+          // setSelectionRange throws on some input types (e.g. email) — ignore
+        }
+      }
     }
 
     return dom;

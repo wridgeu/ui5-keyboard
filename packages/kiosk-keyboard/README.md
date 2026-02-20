@@ -456,7 +456,7 @@ The docked keyboard uses `position: fixed` with `z-index: 100` and a `box-shadow
 
 When `autoShow="true"` (requires `docked="true"`), the keyboard automatically:
 
-1. **Opens** when any `<input>` or `<textarea>` on the page receives focus, setting it as the target.
+1. **Opens** when any `<input>` or `<textarea>` on the page receives focus, setting it as the target. When `inputIds` is set, only the listed inputs trigger open.
 2. **Closes** when focus leaves all inputs (uses `FocusEvent.relatedTarget` for synchronous close decisions — no timers or debounce).
 3. **Stays open** when focus moves between the keyboard and an input, or between two inputs.
 
@@ -554,8 +554,9 @@ The `inputIds` property provides declarative multi-input targeting. Instead of m
 **How it works:**
 
 1. The keyboard attaches a focus delegation to each resolved control.
-2. When any of them receives focus, the keyboard sets it as the `targetInput`.
-3. IDs are resolved against the parent View first (view-local IDs), then globally — safe for XML views where IDs are prefixed.
+2. When any of them receives focus, the keyboard sets it as the `targetInput`. In docked + `autoShow` mode, the keyboard also opens automatically.
+3. When `autoShow` is active, `inputIds` acts as a filter — only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
+4. IDs are resolved against the parent View first (view-local IDs), then globally — safe for XML views where IDs are prefixed.
 
 **`inputIds` vs `targetInput`:**
 

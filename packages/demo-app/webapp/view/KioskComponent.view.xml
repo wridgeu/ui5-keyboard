@@ -6,14 +6,14 @@
         <content>
             <Panel headerText="Persistent Keyboard" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="This keyboard is created in the controller and placed in the sap-ui-static UIArea. It persists across navigation." />
+                    <Text text="This keyboard is created in the controller and placed in the sap-ui-static UIArea. It persists across navigation. Click 'Round-Trip Navigation' to navigate away and auto-return after 2 seconds — the keyboard stays visible the whole time." />
                     <Label text="Input Field" labelFor="compInput" class="sapUiSmallMarginTop" />
                     <Input id="compInput" placeholder="Type here..." width="100%" />
                     <HBox class="sapUiSmallMarginTop">
                         <Button text="Show Keyboard" press=".onShowKeyboard" type="Emphasized" class="sapUiSmallMarginEnd" />
                         <Button text="Close Keyboard" press=".onCloseKeyboard" class="sapUiSmallMarginEnd" />
                     </HBox>
-                    <Button text="Navigate Away and Back" press=".onNavigateAway" class="sapUiSmallMarginTop" />
+                    <Button text="Round-Trip Navigation" press=".onNavigateAway" class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
 

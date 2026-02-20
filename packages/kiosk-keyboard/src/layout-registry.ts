@@ -64,6 +64,14 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
   return layouts[sName];
 }
 
+/**
+ * Returns the layout for the given name, falling back to
+ * {@link DEFAULT_LAYOUT} when the name is not registered.
+ */
+export function getLayoutOrDefault(sName: string): LayoutDefinition {
+  return layouts[sName] ?? layouts[DEFAULT_LAYOUT];
+}
+
 /** Returns the names of all registered layouts (built-in + custom). */
 export function getRegisteredLayoutNames(): string[] {
   return Object.keys(layouts);
