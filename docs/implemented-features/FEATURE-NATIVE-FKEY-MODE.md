@@ -1,6 +1,6 @@
 # Feature: Native F-Key Mode
 
-> Status: Proposal
+> Status: Implemented
 
 ## Problem
 

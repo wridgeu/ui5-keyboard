@@ -1,6 +1,7 @@
 import Event from "sap/ui/base/Event";
 import { KeyboardType } from "ui5/kiosk/library";
 import { MobileKeyboard } from "ui5/kiosk/library";
+import { FKeyMode } from "ui5/kiosk/library";
 import Control from "sap/ui/core/Control";
 import { PropertyBindingInfo } from "sap/ui/base/ManagedObject";
 import { $ControlSettings } from "sap/ui/core/Control";
@@ -105,6 +106,16 @@ declare module "./KioskKeyboard" {
           is not desired.
          */
         mobileKeyboard?: MobileKeyboard | PropertyBindingInfo | `{${string}}`;
+
+        /**
+         * Controls how virtual F-key taps are handled.
+        
+        - `"Virtual"` (default): fire `keyPress` only. The app decides what to do.
+        - `"Native"`: dispatch a synthetic `keydown` (`F1`-`F12`) to the
+          current target element (or document fallback). If not canceled,
+          built-in native actions run for selected keys (`F5`, `F11`).
+         */
+        fKeyMode?: FKeyMode | PropertyBindingInfo | `{${string}}`;
 
         /**
          * List of input control IDs to target. When set, attaches focus
@@ -477,6 +488,41 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
         setMobileKeyboard(mobileKeyboard: MobileKeyboard): this;
+
+        // property: fKeyMode
+
+        /**
+         * Gets current value of property "fKeyMode".
+         *
+         * Controls how virtual F-key taps are handled.
+        
+        - `"Virtual"` (default): fire `keyPress` only. The app decides what to do.
+        - `"Native"`: dispatch a synthetic `keydown` (`F1`-`F12`) to the
+          current target element (or document fallback). If not canceled,
+          built-in native actions run for selected keys (`F5`, `F11`).
+         *
+         * Default value is: "Virtual"
+         * @returns Value of property "fKeyMode"
+         */
+        getFKeyMode(): FKeyMode;
+
+        /**
+         * Sets a new value for property "fKeyMode".
+         *
+         * Controls how virtual F-key taps are handled.
+        
+        - `"Virtual"` (default): fire `keyPress` only. The app decides what to do.
+        - `"Native"`: dispatch a synthetic `keydown` (`F1`-`F12`) to the
+          current target element (or document fallback). If not canceled,
+          built-in native actions run for selected keys (`F5`, `F11`).
+         *
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * Default value is: "Virtual"
+         * @param [fKeyMode="Virtual"] New value for property "fKeyMode"
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        setFKeyMode(fKeyMode: FKeyMode): this;
 
         // property: inputIds
 

@@ -9,7 +9,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n";
 import { KEY_ID_SUFFIX_RE, keyElementId, resolveInputOrTextarea } from "./internal/dom";
-import { KeyboardType, MobileKeyboard } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, MobileKeyboard, FKeyMode } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
   getRegisteredLayout as registryGetLayout,
@@ -113,7 +113,7 @@ export default class KioskKeyboard extends Control {
       keyboardType: {
         type: "ui5.kiosk.KeyboardType",
         defaultValue: "Full",
-        group: "Appearance",
+        group: "Behavior",
       },
       /**
        * Whether the keyboard is interactive. When `false`, all keys are
@@ -216,6 +216,19 @@ export default class KioskKeyboard extends Control {
         group: "Behavior",
       },
       /**
+       * Controls how virtual F-key taps are handled.
+       *
+       * - `"Virtual"` (default): fire `keyPress` only. The app decides what to do.
+       * - `"Native"`: dispatch a synthetic `keydown` (`F1`-`F12`) to the
+       *   current target element (or document fallback). If not canceled,
+       *   built-in native actions run for selected keys (`F5`, `F11`).
+       */
+      fKeyMode: {
+        type: "ui5.kiosk.FKeyMode",
+        defaultValue: "Virtual",
+        group: "Behavior",
+      },
+      /**
        * List of input control IDs to target. When set, attaches focus
        * delegation to each resolved control so the keyboard auto-targets
        * whichever input last received focus.
@@ -238,7 +251,7 @@ export default class KioskKeyboard extends Control {
       inputIds: {
         type: "string[]",
         defaultValue: [],
-        group: "Data",
+        group: "Behavior",
       },
       /**
        * When `true`, the keyboard maintains a consistent minimum height
@@ -348,6 +361,20 @@ export default class KioskKeyboard extends Control {
   /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
+  /** Native actions executed in `fKeyMode="Native"` when not prevented. */
+  private static readonly _NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
+    F5: () => {
+      location.reload();
+    },
+    F11: () => {
+      if (document.fullscreenElement) {
+        void document.exitFullscreen?.();
+      } else {
+        void document.documentElement.requestFullscreen?.();
+      }
+    },
+  };
+
   // ──────────────────────────────────────────────
   // Static delegates — layout registry (see layout-registry.ts)
   // ──────────────────────────────────────────────
@@ -447,7 +474,7 @@ export default class KioskKeyboard extends Control {
     const localeLayout = registryGetLocaleLayout();
     this._baseLayout = localeLayout;
     if (localeLayout !== DEFAULT_LAYOUT) {
-      this.setProperty("layout", localeLayout);
+      this.setLayout(localeLayout);
     }
   }
 
@@ -1125,6 +1152,14 @@ export default class KioskKeyboard extends Control {
 
     if (keyValue.startsWith("{fkey:")) {
       const fkeyName = keyValue.slice("{fkey:".length, -1);
+
+      if (this.getFKeyMode() === FKeyMode.Native) {
+        const allowed = this._dispatchNativeFKeydown(fkeyName, shift);
+        if (allowed) {
+          KioskKeyboard._executeNativeFKeyAction(fkeyName);
+        }
+      }
+
       this.fireEvent("keyPress", { key: fkeyName, shiftKey: shift }, true);
       return;
     }
@@ -1287,6 +1322,33 @@ export default class KioskKeyboard extends Control {
     if (mode === MobileKeyboard.Native) return true;
     // "Auto": kiosk keyboard on desktop, native on mobile
     return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
+  }
+
+  /** Best-effort event target used for synthetic native F-key dispatch. */
+  private _resolveNativeFKeyTarget(): EventTarget {
+    const target = this._getTargetElement()?.getFocusDomRef();
+    const textual = resolveInputOrTextarea(target);
+    if (textual) return textual;
+    if (target instanceof HTMLElement) return target;
+    if (document.activeElement instanceof HTMLElement) return document.activeElement;
+    return document;
+  }
+
+  /** Dispatches synthetic `keydown` for an F-key and returns whether it was not canceled. */
+  private _dispatchNativeFKeydown(fkeyName: string, shiftKey: boolean): boolean {
+    const nativeEvent = new KeyboardEvent("keydown", {
+      key: fkeyName,
+      code: fkeyName,
+      bubbles: true,
+      cancelable: true,
+      shiftKey,
+    });
+
+    return this._resolveNativeFKeyTarget().dispatchEvent(nativeEvent);
+  }
+
+  private static _executeNativeFKeyAction(fkeyName: string): void {
+    KioskKeyboard._NATIVE_FKEY_ACTIONS[fkeyName]?.();
   }
 
   /**

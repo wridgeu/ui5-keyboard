@@ -292,3 +292,93 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   input.destroy();
   kb.destroy();
 });
+
+QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (assert) => {
+  const input = new Input();
+  const kb = new KioskKeyboard({
+    layout: "fkeys",
+    targetInput: input,
+  });
+  kb.setFKeyMode("Native");
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  let observedKey = "";
+  let observedShift = false;
+  input.getFocusDomRef()!.addEventListener("keydown", (e) => {
+    observedKey = (e as KeyboardEvent).key;
+    observedShift = (e as KeyboardEvent).shiftKey;
+  });
+
+  let pressedKey = "";
+  kb.attachEvent("keyPress", (e: any) => {
+    pressedKey = e.getParameter("key");
+  });
+
+  const statics = KioskKeyboard as unknown as {
+    _executeNativeFKeyAction: (fkeyName: string) => void;
+  };
+  const originalAction = statics._executeNativeFKeyAction;
+  let nativeAction = "";
+  statics._executeNativeFKeyAction = (fkeyName: string) => {
+    nativeAction = fkeyName;
+  };
+
+  try {
+    tapShiftInternally(kb);
+    tapKey(kb, "{fkey:F5}");
+
+    assert.strictEqual(observedKey, "F5", "Synthetic keydown dispatched to target element");
+    assert.ok(observedShift, "Synthetic keydown preserves shiftKey");
+    assert.strictEqual(nativeAction, "F5", "Native action executed when event is not prevented");
+    assert.strictEqual(pressedKey, "F5", "keyPress still fires in Native mode");
+  } finally {
+    statics._executeNativeFKeyAction = originalAction;
+  }
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Native fKeyMode skips native action when keydown is prevented", async (assert) => {
+  const input = new Input();
+  const kb = new KioskKeyboard({
+    layout: "fkeys",
+    targetInput: input,
+  });
+  kb.setFKeyMode("Native");
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  input.getFocusDomRef()!.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key === "F5") {
+      e.preventDefault();
+    }
+  });
+
+  let pressedKey = "";
+  kb.attachEvent("keyPress", (e: any) => {
+    pressedKey = e.getParameter("key");
+  });
+
+  const statics = KioskKeyboard as unknown as {
+    _executeNativeFKeyAction: (fkeyName: string) => void;
+  };
+  const originalAction = statics._executeNativeFKeyAction;
+  let actionCalls = 0;
+  statics._executeNativeFKeyAction = () => {
+    actionCalls += 1;
+  };
+
+  try {
+    tapKey(kb, "{fkey:F5}");
+
+    assert.strictEqual(actionCalls, 0, "Native action not executed when synthetic keydown is prevented");
+    assert.strictEqual(pressedKey, "F5", "keyPress still fires when native action is blocked");
+  } finally {
+    statics._executeNativeFKeyAction = originalAction;
+  }
+
+  input.destroy();
+  kb.destroy();
+});

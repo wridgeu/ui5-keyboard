@@ -174,7 +174,7 @@ Recommended stable consumer imports:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import { KeyboardLayout, KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
+import { KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";
 import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 ```
 
@@ -184,18 +184,19 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 ### Properties
 
-| Property         | Type                       | Default    | Description                                                                                     |
-| ---------------- | -------------------------- | ---------- | ----------------------------------------------------------------------------------------------- |
-| `layout`         | `string`                   | `"qwerty"` | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.     |
-| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`   | Display type: `Full`, `Numeric`, or `Numpad`.                                                   |
-| `enabled`        | `boolean`                  | `true`     | Whether the keyboard is interactive.                                                            |
-| `ariaLabel`      | `string`                   | `""`       | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.   |
-| `docked`         | `boolean`                  | `false`    | Anchor to the bottom of the viewport with slide animation.                                      |
-| `autoShow`       | `boolean`                  | `false`    | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                      |
-| `autoType`       | `boolean`                  | `false`    | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.               |
-| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"` | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).         |
-| `inputIds`       | `string[]`                 | `[]`       | Input control IDs for multi-input targeting. See [inputIds](#inputids).                         |
-| `stableHeight`   | `boolean`                  | `false`    | Maintain consistent minimum height across layout switches. See [Stable Height](#stable-height). |
+| Property         | Type                       | Default     | Description                                                                                            |
+| ---------------- | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| `layout`         | `string`                   | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.            |
+| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                          |
+| `enabled`        | `boolean`                  | `true`      | Whether the keyboard is interactive.                                                                   |
+| `ariaLabel`      | `string`                   | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.          |
+| `docked`         | `boolean`                  | `false`     | Anchor to the bottom of the viewport with slide animation.                                             |
+| `autoShow`       | `boolean`                  | `false`     | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                             |
+| `autoType`       | `boolean`                  | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                      |
+| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"`  | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).                |
+| `fKeyMode`       | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`) or `Native` (dispatch synthetic keydown + native actions). |
+| `inputIds`       | `string[]`                 | `[]`        | Input control IDs for multi-input targeting. See [inputIds](#inputids).                                |
+| `stableHeight`   | `boolean`                  | `false`     | Maintain consistent minimum height across layout switches. See [Stable Height](#stable-height).        |
 
 ### Associations
 
@@ -367,6 +368,20 @@ keyboard.attachKeyPress((event) => {
       break;
   }
 });
+```
+
+### Opt-in native F-key behavior
+
+Set `fKeyMode="Native"` to opt into browser-style F-key handling.
+
+- The keyboard dispatches a synthetic `keydown` for the F-key.
+- If that event is not `preventDefault()`'d, built-in native actions run for:
+  - `F5`: `location.reload()`
+  - `F11`: fullscreen toggle
+- `keyPress` still fires afterward for compatibility.
+
+```xml
+<kiosk:KioskKeyboard layout="qwerty" fKeyMode="Native" targetInput="myInput" />
 ```
 
 This mirrors how SAP GUI intercepts physical F-keys and maps them to transaction commands. The virtual keyboard fires the event; your application provides the meaning.

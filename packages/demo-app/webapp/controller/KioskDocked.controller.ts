@@ -19,6 +19,7 @@ export default class KioskDocked extends BaseController {
     stateModel.setProperty("/kioskLayout", "qwerty");
     stateModel.setProperty("/kioskEnabled", true);
     stateModel.setProperty("/kioskMobileKeyboard", "Custom");
+    stateModel.setProperty("/kioskFKeyMode", "Virtual");
 
     // Populate layout select with all registered layout names
     const select = this.byId("layoutSelect") as Select;
@@ -55,6 +56,13 @@ export default class KioskDocked extends BaseController {
     const layout = select.getSelectedKey();
     const kb = this.byId("dockedKeyboard") as KioskKeyboard;
     kb.setLayout(layout);
+  }
+
+  onFKeyModeChange(event: SegmentedButton$SelectionChangeEvent): void {
+    const key = event.getParameter("item")!.getKey();
+    const kb = this.byId("dockedKeyboard") as KioskKeyboard;
+    kb.setFKeyMode(key as "Virtual" | "Native");
+    this.getStateModel().setProperty("/kioskFKeyMode", key);
   }
 
   onNavBack(): void {

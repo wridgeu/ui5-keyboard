@@ -25,6 +25,15 @@
                         <Label text="Layout:" class="sapUiSmallMarginEnd" />
                         <Select id="layoutSelect" change=".onLayoutChange" />
                     </HBox>
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="F-Key Mode:" class="sapUiSmallMarginEnd" />
+                        <SegmentedButton selectedKey="{state>/kioskFKeyMode}" selectionChange=".onFKeyModeChange">
+                            <items>
+                                <SegmentedButtonItem key="Virtual" text="Virtual" />
+                                <SegmentedButtonItem key="Native" text="Native" />
+                            </items>
+                        </SegmentedButton>
+                    </HBox>
                 </VBox>
             </Panel>
 
@@ -89,6 +98,10 @@
                         <Label text="Active Layout:" class="sapUiSmallMarginEnd" />
                         <ObjectStatus text="{state>/kioskLayout}" state="Success" />
                     </HBox>
+                    <HBox>
+                        <Label text="F-Key Mode:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskFKeyMode}" state="Information" />
+                    </HBox>
                 </VBox>
             </Panel>
 
@@ -98,6 +111,7 @@
                 autoShow="true"
                 autoType="true"
                 enabled="{state>/kioskEnabled}"
+                fKeyMode="{state>/kioskFKeyMode}"
                 keyPress=".onKeyPress"
                 layoutChange=".onDockedLayoutChange" />
         </content>

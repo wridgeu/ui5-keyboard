@@ -66,6 +66,19 @@ export const MobileKeyboard = Object.freeze({
   Auto: "Auto",
 } as const);
 
+/**
+ * Controls how virtual F-key taps are dispatched.
+ *
+ * @enum {string}
+ * @public
+ */
+export const FKeyMode = Object.freeze({
+  /** Virtual mode: fire `keyPress` only (application handles behavior). */
+  Virtual: "Virtual",
+  /** Native mode: dispatch synthetic `keydown` and run built-in native actions for selected keys. */
+  Native: "Native",
+} as const);
+
 // ──────────────────────────────────────────────
 // UI5 Enum Registration
 // ──────────────────────────────────────────────
@@ -73,6 +86,7 @@ export const MobileKeyboard = Object.freeze({
 DataType.registerEnum("ui5.kiosk.KeyboardLayout", KeyboardLayout);
 DataType.registerEnum("ui5.kiosk.KeyboardType", KeyboardType);
 DataType.registerEnum("ui5.kiosk.MobileKeyboard", MobileKeyboard);
+DataType.registerEnum("ui5.kiosk.FKeyMode", FKeyMode);
 
 // ──────────────────────────────────────────────
 // Library Initialization
@@ -83,7 +97,7 @@ const library = Lib.init({
   name: "ui5.kiosk",
   version: "${version}",
   dependencies: ["sap.ui.core", "sap.m"],
-  types: ["ui5.kiosk.KeyboardLayout", "ui5.kiosk.KeyboardType", "ui5.kiosk.MobileKeyboard"],
+  types: ["ui5.kiosk.KeyboardLayout", "ui5.kiosk.KeyboardType", "ui5.kiosk.MobileKeyboard", "ui5.kiosk.FKeyMode"],
   interfaces: [],
   controls: ["ui5.kiosk.KioskKeyboard"],
   elements: [],

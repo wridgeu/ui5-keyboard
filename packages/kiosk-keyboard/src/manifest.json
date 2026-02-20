@@ -47,7 +47,12 @@
       "content": {
         "controls": ["ui5.kiosk.KioskKeyboard"],
         "elements": [],
-        "types": ["ui5.kiosk.KeyboardLayout", "ui5.kiosk.KeyboardType", "ui5.kiosk.MobileKeyboard"],
+        "types": [
+          "ui5.kiosk.KeyboardLayout",
+          "ui5.kiosk.KeyboardType",
+          "ui5.kiosk.MobileKeyboard",
+          "ui5.kiosk.FKeyMode"
+        ],
         "interfaces": []
       }
     }
