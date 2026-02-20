@@ -1,4 +1,4 @@
-# Known Issues
+# Known Limitations
 
 ## KioskKeyboard layout switch closes `sap.m.Popover`
 

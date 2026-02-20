@@ -694,7 +694,7 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 - [Architecture & Internals](../../docs/ARCHITECTURE.md) — two-pass matching, scope stack, listener design
 - [Multi-key Sequence Design](../../docs/SEQUENCES.md) — how the sequence system works
-- [Alternatives Review](../../docs/REVIEW.md) — comparison with other keyboard shortcut approaches
+- [Alternatives Research](../../docs/RESEARCH.md) — comparison with other keyboard shortcut approaches
 - [UI5 Event Handling Deep Dive](../../docs/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
 
 ---

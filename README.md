@@ -63,11 +63,13 @@ npm install                 # Install all workspaces
 
 ### Dev Servers
 
-| Command                 | Description                          | Port |
-| ----------------------- | ------------------------------------ | ---- |
-| `npm start`             | Demo app                             | 8080 |
-| `npm run start:hotkeys` | Hotkeys library + test runner        | 8081 |
-| `npm run start:kiosk`   | Kiosk keyboard library + test runner | 8082 |
+| Command                      | Description                          | Port |
+| ---------------------------- | ------------------------------------ | ---- |
+| `npm start`                  | Demo app                             | 8080 |
+| `npm run start:demo`         | Demo app (explicit alias)            | 8080 |
+| `npm run start:hotkeys`      | Hotkeys library + test runner        | 8081 |
+| `npm run start:kiosk`        | Kiosk keyboard library + test runner | 8082 |
+| `npm run start:kiosk:visual` | Kiosk visual test page               | 8082 |
 
 ### Build & Test
 
@@ -79,6 +81,8 @@ npm run build:kiosk         # Build kiosk-keyboard only
 npm test                    # Run all tests in parallel (headless)
 npm run test:hotkeys        # Hotkeys QUnit tests
 npm run test:kiosk          # Kiosk QUnit + e2e tests
+npm run test:kiosk:e2e      # Kiosk e2e tests only
+npm run test:kiosk:e2e:update # Update kiosk visual baselines
 ```
 
 ### Code Quality
@@ -103,16 +107,20 @@ ui5-keyboard/
 
 ## Documentation
 
-| Document                                                               | Description                            |
-| ---------------------------------------------------------------------- | -------------------------------------- |
-| [Hotkeys Architecture](./docs/ARCHITECTURE.md)                         | Internal design of the hotkeys library |
-| [Kiosk Keyboard Architecture](./docs/KIOSK-ARCHITECTURE.md)            | Internal design of the kiosk keyboard  |
-| [Multi-key Sequences](./docs/SEQUENCES.md)                             | Sequence system design and rationale   |
-| [Alternatives Review](./docs/REVIEW.md)                                | Comparison with alternative approaches |
-| [Known Issues](./docs/KNOWN-ISSUES.md)                                 | Known issues and workarounds           |
-| [API Stability Policy](./docs/API-STABILITY.md)                        | Stable vs internal import boundaries   |
-| [UI5 Event Handling Deep Dive](./docs/UI5-EVENT-HANDLING-DEEP-DIVE.md) | How UI5 processes keyboard events      |
-| [UI5 TypeScript Event Typing](./docs/UI5-TYPESCRIPT-EVENT-TYPING.md)   | TypeScript patterns for UI5 events     |
+| Document                                                                             | Description                            |
+| ------------------------------------------------------------------------------------ | -------------------------------------- |
+| [Hotkeys Architecture](./docs/ARCHITECTURE.md)                                       | Internal design of the hotkeys library |
+| [Kiosk Keyboard Architecture](./docs/KIOSK-ARCHITECTURE.md)                          | Internal design of the kiosk keyboard  |
+| [Multi-key Sequences](./docs/SEQUENCES.md)                                           | Sequence system design and rationale   |
+| [Alternatives Research](./docs/RESEARCH.md)                                          | Comparison with alternative approaches |
+| [Known Limitations](./docs/KNOWN-LIMITATIONS.md)                                     | Known limitations and workarounds      |
+| [API Stability Policy](./docs/API-STABILITY.md)                                      | Stable vs internal import boundaries   |
+| [UI5 Event Handling Deep Dive](./docs/UI5-EVENT-HANDLING-DEEP-DIVE.md)               | How UI5 processes keyboard events      |
+| [UI5 TypeScript Event Typing](./docs/UI5-TYPESCRIPT-EVENT-TYPING.md)                 | TypeScript patterns for UI5 events     |
+| [Hotkeys Backward Compatibility](./docs/features/FEATURE-BACKWARD-COMPAT-HOTKEYS.md) | Hotkeys compatibility guarantees       |
+| [Kiosk Backward Compatibility](./docs/features/FEATURE-BACKWARD-COMPAT-KIOSK.md)     | Kiosk compatibility guarantees         |
+| [Tab and Done Keys](./docs/features/FEATURE-TAB-AND-DONE-KEYS.md)                    | Tab and Done key behavior details      |
+| [Implemented Feature Notes](./docs/implemented-features/)                            | Historical implementation notes        |
 
 ## License
 
