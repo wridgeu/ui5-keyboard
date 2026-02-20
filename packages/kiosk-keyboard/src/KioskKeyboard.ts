@@ -75,6 +75,8 @@ export default class KioskKeyboard extends Control {
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
   /** JS-tracked cursor position [start, end]. Null until first access. */
   declare private _cursorPos: [number, number] | null;
+  /** Whether the target input has been modified since the last change event. */
+  declare private _targetDirty: boolean;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -345,7 +347,13 @@ export default class KioskKeyboard extends Control {
   /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
-  /** HTML input types that accept text entry — only these trigger auto-show. */
+  /**
+   * HTML input types that accept free-form text entry — only these trigger
+   * auto-show. Date/time types (`date`, `datetime-local`, `month`, `week`,
+   * `time`) are deliberately excluded: they require specific value formats
+   * and don't support `selectionStart`/`selectionEnd`, which cursor-aware
+   * typing depends on.
+   */
   private static readonly _TEXTUAL_INPUT_TYPES: ReadonlySet<string> = new Set([
     "text",
     "search",
@@ -354,11 +362,6 @@ export default class KioskKeyboard extends Control {
     "email",
     "password",
     "number",
-    "date",
-    "datetime-local",
-    "month",
-    "week",
-    "time",
   ]);
 
   /**
@@ -434,13 +437,16 @@ export default class KioskKeyboard extends Control {
     this._registeredInputIds = new Set();
     this._inputFocusDelegation = {
       onfocusin: () => {
-        const delegateTarget = Element.getActiveElement();
-        if (delegateTarget instanceof Control) {
-          this.setTargetInput(delegateTarget);
-          // When docked with autoShow, show the keyboard for inputIds targets
-          if (this.getDocked() && this.getAutoShow() && !this._open) {
-            this.show();
-          }
+        const active = Element.getActiveElement();
+        if (!(active instanceof Control)) return;
+        // For composite controls (e.g. StepInput), the active element is the
+        // inner Input, but inputIds references the outer wrapper. Resolve the
+        // registered ancestor so setTargetInput gets the right control.
+        const ancestor = this._resolveInputIdsAncestor(active);
+        this.setTargetInput(ancestor ?? active);
+        // When docked with autoShow, show the keyboard for inputIds targets
+        if (this.getDocked() && this.getAutoShow() && !this._open) {
+          this.show();
         }
       },
     };
@@ -456,6 +462,7 @@ export default class KioskKeyboard extends Control {
     this._maxHeight = 0;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._cursorPos = null;
+    this._targetDirty = false;
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -541,6 +548,9 @@ export default class KioskKeyboard extends Control {
    * Also moves the physical keyboard highlight delegation to the new target.
    */
   setTargetInput(target: string | Control): this {
+    // Fire pending change on the previous target before switching
+    this._fireChangeIfDirty();
+
     // Remove highlight delegation from previous target
     this._removeHighlightDelegation();
 
@@ -660,6 +670,7 @@ export default class KioskKeyboard extends Control {
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.remove("ui5KioskKeyboard--closed");
+      this._announceLiveRegion(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
     }
     this.fireEvent("afterOpen");
     return this;
@@ -668,12 +679,14 @@ export default class KioskKeyboard extends Control {
   /** Closes the keyboard (docked mode). Slides it out of view. */
   close(): this {
     if (!this._open) return this;
+    this._fireChangeIfDirty();
     this._open = false;
     this._restoreNativeKeyboard();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.add("ui5KioskKeyboard--closed");
+      this._announceLiveRegion(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
     }
     this.fireEvent("afterClose");
     return this;
@@ -1041,15 +1054,28 @@ export default class KioskKeyboard extends Control {
     return ui5Control;
   }
 
-  /** Checks if a control matches any ID in the inputIds list (view-local or global). */
+  /** Checks if a control (or any ancestor) matches an ID in the inputIds list. */
   private _isInInputIds(control: Control): boolean {
-    const controlId = control.getId();
+    return this._resolveInputIdsAncestor(control) !== null;
+  }
+
+  /**
+   * Walks the UI5 parent chain of `candidate` and returns the first control
+   * whose ID matches a resolved inputIds entry, or null. This handles
+   * composite controls (e.g. StepInput wrapping an inner Input) where
+   * `Element.closestTo()` returns the inner control but inputIds references
+   * the outer wrapper.
+   */
+  private _resolveInputIdsAncestor(candidate: Control): Control | null {
+    const resolvedIds = new Set<string>();
     for (const inputId of this.getInputIds()) {
-      // Direct match against the resolved global ID
-      const resolved = this._findControlById(inputId);
-      if (resolved && resolved.getId() === controlId) return true;
+      const ctrl = this._findControlById(inputId);
+      if (ctrl) resolvedIds.add(ctrl.getId());
     }
-    return false;
+    for (let parent: ManagedObject | null = candidate; parent; parent = parent.getParent()) {
+      if (parent instanceof Control && resolvedIds.has(parent.getId())) return parent;
+    }
+    return null;
   }
 
   private _onDocumentFocusIn(event: FocusEvent): void {
@@ -1120,7 +1146,10 @@ export default class KioskKeyboard extends Control {
         const dom = this._getTargetDomRef();
         if (dom) {
           const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined);
-          if (pos) this._cursorPos = pos;
+          if (pos) {
+            this._cursorPos = pos;
+            this._targetDirty = true;
+          }
         }
       }
       return;
@@ -1166,6 +1195,7 @@ export default class KioskKeyboard extends Control {
       const dom = this._getTargetDomRef();
       if (dom) {
         this._cursorPos = opsInsertText(dom, effective, this._cursorPos ?? undefined);
+        this._targetDirty = true;
       }
     }
 
@@ -1214,13 +1244,10 @@ export default class KioskKeyboard extends Control {
     } else if (this._cursorPos === null) {
       // First access after setTargetInput() and the input is NOT focused
       // (e.g. keyboard inside a Popover). Default cursor to end of value.
+      // JS-tracked _cursorPos is sufficient — calling setSelectionRange()
+      // on unfocused inputs is unreliable across browsers/input types.
       const end = dom.value.length;
       this._cursorPos = [end, end];
-      try {
-        dom.setSelectionRange(end, end);
-      } catch {
-        // setSelectionRange throws on some input types (e.g. email)
-      }
     } else {
       // Clamp tracked position to current value length — the value may
       // have been changed externally (binding, programmatic setValue).
@@ -1233,6 +1260,23 @@ export default class KioskKeyboard extends Control {
     return dom;
   }
 
+  /**
+   * If the target input was modified (dirty), fires a `change` event
+   * on it and resets the dirty flag. Skips TextArea — HTML textarea's
+   * native `change` is a blur-level event, not a commit-level one.
+   */
+  private _fireChangeIfDirty(): void {
+    if (!this._targetDirty) return;
+    this._targetDirty = false;
+    const element = this._getTargetElement();
+    if (!element) return;
+    const dom = element.getFocusDomRef();
+    if (dom instanceof HTMLTextAreaElement) return;
+    if (isInputOrTextarea(dom)) {
+      opsFireTargetChange(element, dom.value);
+    }
+  }
+
   private _handleEnter(): void {
     const dom = this._getTargetDomRef();
     if (dom instanceof HTMLTextAreaElement) {
@@ -1243,6 +1287,7 @@ export default class KioskKeyboard extends Control {
     if (dom instanceof HTMLInputElement) {
       const element = this._getTargetElement();
       if (element) opsFireTargetChange(element, dom.value);
+      this._targetDirty = false;
     }
   }
 
@@ -1336,6 +1381,12 @@ export default class KioskKeyboard extends Control {
       (key.length === 1 ? dom.querySelector(`[data-key="${CSS.escape(key.toLowerCase())}"]`) : null) ??
       dom.querySelector(`[data-shift-value="${CSS.escape(key)}"]`);
     el?.classList.toggle("ui5KioskKey--highlight", add);
+  }
+
+  /** Updates the ARIA live region text for screen reader announcements. */
+  private _announceLiveRegion(text: string): void {
+    const liveRegion = document.getElementById(`${this.getId()}-liveState`);
+    if (liveRegion) liveRegion.textContent = text;
   }
 
   private _removeHighlightDelegation(): void {

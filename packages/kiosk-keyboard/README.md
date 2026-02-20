@@ -474,15 +474,16 @@ The keyboard recognizes input elements through a two-layer check: **DOM-level de
 
 The `focusin` handler checks whether the focused DOM element is a **text-entry** `HTMLInputElement` or `HTMLTextAreaElement`. Non-textual input types (checkbox, radio, file, range, color, button, submit, reset, image) and `readonly` inputs are filtered out. Additionally, the element must be owned by a UI5 control (`Element.closestTo()` must resolve) — raw DOM inputs without a UI5 control wrapper are ignored.
 
-| DOM element                                                           | Detected? | Notes                                              |
-| --------------------------------------------------------------------- | --------- | -------------------------------------------------- |
-| `<input type="text\|search\|url\|tel\|email\|password\|number\|...">` | Yes       | All text-entry types                               |
-| `<textarea>`                                                          | Yes       | Multi-line text inputs                             |
-| `<input type="checkbox\|radio\|file\|range\|color\|...">`             | No        | Non-textual input types are filtered out           |
-| `<input readonly>` / `<textarea readonly>`                            | No        | Read-only inputs cannot be typed into              |
-| `<div contenteditable>`                                               | No        | Not an `HTMLInputElement` or `HTMLTextAreaElement` |
-| `<select>`                                                            | No        | Not a text input element                           |
-| Custom element / Shadow DOM inner `<input>`                           | No\*      | See below                                          |
+| DOM element                                                      | Detected? | Notes                                                 |
+| ---------------------------------------------------------------- | --------- | ----------------------------------------------------- |
+| `<input type="text\|search\|url\|tel\|email\|password\|number">` | Yes       | Free-form text-entry types                            |
+| `<input type="date\|datetime-local\|month\|week\|time">`         | No        | Require specific formats, no `selectionStart` support |
+| `<textarea>`                                                     | Yes       | Multi-line text inputs                                |
+| `<input type="checkbox\|radio\|file\|range\|color\|...">`        | No        | Non-textual input types are filtered out              |
+| `<input readonly>` / `<textarea readonly>`                       | No        | Read-only inputs cannot be typed into                 |
+| `<div contenteditable>`                                          | No        | Not an `HTMLInputElement` or `HTMLTextAreaElement`    |
+| `<select>`                                                       | No        | Not a text input element                              |
+| Custom element / Shadow DOM inner `<input>`                      | No\*      | See below                                             |
 
 > \* If a Web Component or custom element renders a native `<input>` in its Shadow DOM, the `focusin` event's `event.target` will be the **host element**, not the inner `<input>`. Since the host element is not an `HTMLInputElement`, the keyboard will not detect it. To work with such components, set `targetInput` explicitly and use `show()`/`close()` programmatically.
 
@@ -557,6 +558,7 @@ The `inputIds` property provides declarative multi-input targeting. Instead of m
 2. When any of them receives focus, the keyboard sets it as the `targetInput`. In docked + `autoShow` mode, the keyboard also opens automatically.
 3. When `autoShow` is active, `inputIds` acts as a filter — only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
 4. IDs are resolved against the parent View first (view-local IDs), then globally — safe for XML views where IDs are prefixed.
+5. **Composite controls** (e.g. `sap.m.StepInput`) are supported — when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
 
 **`inputIds` vs `targetInput`:**
 
@@ -624,6 +626,9 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
+- ARIA live region announces keyboard open/close and shift state changes to screen readers
+- Closing the keyboard or switching targets fires a `change` event on modified single-line inputs (mirrors physical keyboard commit behavior)
+- Compact mode key sizes meet WCAG 2.5.8 minimum touch target size (24x24 CSS px)
 
 ---
 

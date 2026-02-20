@@ -1067,6 +1067,123 @@ QUnit.test("Enter key does not fire change on TextArea (inserts newline instead)
   kb.destroy();
 });
 
+QUnit.test("change fires on close after typing", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  let changeValue: string | undefined;
+  input.attachChange((event: { getParameter(name: string): unknown }) => {
+    changeValue = event.getParameter("value") as string;
+  });
+
+  const kb = new KioskKeyboard({ docked: true });
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+  kb.show();
+
+  tapKey(kb, "a");
+  tapKey(kb, "b");
+  kb.close();
+
+  assert.strictEqual(changeValue, "ab", "change fired with correct value on close");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("change does NOT fire on close without typing", async (assert) => {
+  const input = new Input({ value: "hello" });
+  input.placeAt("qunit-fixture");
+
+  let changeFired = false;
+  input.attachChange(() => {
+    changeFired = true;
+  });
+
+  const kb = new KioskKeyboard({ docked: true });
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+  kb.show();
+  kb.close();
+
+  assert.notOk(changeFired, "change not fired when nothing was typed");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("change fires on setTargetInput switch after typing", async (assert) => {
+  const input1 = new Input({ value: "" });
+  const input2 = new Input({ value: "" });
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+
+  let changeValue: string | undefined;
+  input1.attachChange((event: { getParameter(name: string): unknown }) => {
+    changeValue = event.getParameter("value") as string;
+  });
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input1);
+  await placeAndWait(kb);
+
+  tapKey(kb, "x");
+  kb.setTargetInput(input2);
+
+  assert.strictEqual(changeValue, "x", "change fired on input1 when switching to input2");
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
+QUnit.test("change doesn't double-fire after Enter then close", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  let changeCount = 0;
+  input.attachChange(() => {
+    changeCount++;
+  });
+
+  const kb = new KioskKeyboard({ docked: true });
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+  kb.show();
+
+  tapKey(kb, "a");
+  tapKey(kb, "{enter}");
+  kb.close();
+
+  assert.strictEqual(changeCount, 1, "change fired exactly once (by Enter, not again on close)");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("change NOT fired for TextArea on close", async (assert) => {
+  const textarea = new TextArea({ value: "" });
+  textarea.placeAt("qunit-fixture");
+
+  let changeFired = false;
+  textarea.attachChange(() => {
+    changeFired = true;
+  });
+
+  const kb = new KioskKeyboard({ docked: true });
+  kb.setTargetInput(textarea);
+  await placeAndWait(kb);
+  kb.show();
+
+  tapKey(kb, "a");
+  kb.close();
+
+  assert.notOk(changeFired, "change not fired for TextArea on close");
+
+  textarea.destroy();
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Home / End key support
 // ──────────────────────────────────────────────
@@ -1415,6 +1532,26 @@ QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
 
   kb.destroy();
   input.destroy();
+});
+
+QUnit.test("inputIds works with composite controls (StepInput)", async (assert) => {
+  const stepInput = new StepInput("step-input-composite");
+  stepInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    inputIds: ["step-input-composite"],
+  });
+  await placeAndWait(kb);
+
+  // Focus the inner input of StepInput — delegation should resolve to StepInput
+  const innerDom = stepInput.getFocusDomRef() as HTMLElement;
+  innerDom.focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(kb.getTargetInput(), stepInput.getId(), "StepInput resolved as target via parent chain");
+
+  stepInput.destroy();
+  kb.destroy();
 });
 
 // ──────────────────────────────────────────────
@@ -3267,6 +3404,25 @@ QUnit.test("Live region announces Shift state", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Live region announces open and close", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+
+  const sId = kb.getId();
+  let liveRegion = document.getElementById(`${sId}-liveState`);
+  assert.ok(liveRegion, "Live region element exists");
+
+  kb.show();
+  liveRegion = document.getElementById(`${sId}-liveState`);
+  assert.strictEqual(liveRegion!.textContent, "Virtual keyboard opened", "Announces open");
+
+  kb.close();
+  liveRegion = document.getElementById(`${sId}-liveState`);
+  assert.strictEqual(liveRegion!.textContent, "Virtual keyboard closed", "Announces close");
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Tap cancellation (drag away)
 // ──────────────────────────────────────────────
@@ -3855,6 +4011,42 @@ QUnit.test("autoShow ignores raw DOM input without UI5 control", async (assert) 
   assert.strictEqual(kb.getTargetInput(), null, "No target input was set");
 
   kb.destroy();
+});
+
+QUnit.test("autoShow ignores date/time input types", async (assert) => {
+  // Create a custom control that renders <input type="date">
+  const DateWrapper = (Control as any).extend("test.DateWrapper", {
+    metadata: { properties: {} },
+    renderer: {
+      apiVersion: 2,
+      render(rm: any, ctrl: any) {
+        rm.openStart("div", ctrl).openEnd();
+        rm.voidStart("input")
+          .attr("id", ctrl.getId() + "-inner")
+          .attr("type", "date")
+          .voidEnd();
+        rm.close("div");
+      },
+    },
+    getFocusDomRef() {
+      return document.getElementById((this as any).getId() + "-inner");
+    },
+  }) as any;
+
+  const dateInput = new DateWrapper();
+  dateInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  const innerDom = dateInput.getFocusDomRef() as HTMLElement;
+  innerDom.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard does not open for date input type");
+
+  kb.destroy();
+  dateInput.destroy();
 });
 
 // ──────────────────────────────────────────────

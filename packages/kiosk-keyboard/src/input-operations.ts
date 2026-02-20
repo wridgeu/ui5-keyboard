@@ -18,7 +18,13 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
   const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
   const newPos = start + text.length;
 
-  setTargetValue(Element.closestTo(dom)!, newValue);
+  const element = Element.closestTo(dom);
+  if (element) {
+    setTargetValue(element, newValue);
+  } else {
+    // Target control destroyed — fall back to raw DOM value
+    dom.value = newValue;
+  }
   try {
     dom.setSelectionRange(newPos, newPos);
   } catch {
@@ -51,7 +57,12 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
     return null;
   }
 
-  setTargetValue(Element.closestTo(dom)!, newValue);
+  const element = Element.closestTo(dom);
+  if (element) {
+    setTargetValue(element, newValue);
+  } else {
+    dom.value = newValue;
+  }
   try {
     dom.setSelectionRange(newPos, newPos);
   } catch {
