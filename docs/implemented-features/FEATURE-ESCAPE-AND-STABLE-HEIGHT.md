@@ -1,6 +1,6 @@
 # Feature: Escape Key Handling & Opt-in Stable Height
 
-> Status: Proposal (Escape) / **Implemented** (Stable Height)
+> Status: **Implemented** (Escape) / **Implemented** (Stable Height)
 
 ## Problem 1: No Escape key handling for docked keyboards
 

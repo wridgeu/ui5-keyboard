@@ -1028,6 +1028,15 @@ export default class KioskKeyboard extends Control {
     const target = event.target as HTMLElement;
     if (!target.classList.contains("ui5KioskKey")) return;
 
+    // Escape closes docked keyboard when a virtual key has focus (WCAG 2.1 SC 2.1.1)
+    if (event.key === "Escape" && this.getDocked() && this._open) {
+      event.preventDefault();
+      this.close();
+      const dom = this._getTargetElement()?.getFocusDomRef() as HTMLElement | null;
+      dom?.focus();
+      return;
+    }
+
     switch (event.key) {
       case "Enter":
       case " ": {
