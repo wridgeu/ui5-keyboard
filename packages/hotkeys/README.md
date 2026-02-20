@@ -451,7 +451,7 @@ manager.setSequencePendingHandler((info) => {
 });
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `true` — suppresses in text fields).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"` — suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape).
 
 > [!NOTE]
 > Uses HotkeyManager's scope stack — sequences respect the active scope.

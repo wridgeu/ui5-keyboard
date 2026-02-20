@@ -41,6 +41,13 @@ export default class KioskComponent extends BaseController {
       .attachPatternMatched(this._onRouteMatched, this);
   }
 
+  onExit(): void {
+    this.getTypedComponent()
+      .getRouter()
+      .getRoute(Scope.KioskComponent)!
+      .detachPatternMatched(this._onRouteMatched, this);
+  }
+
   onShowKeyboard(): void {
     const kb = KioskComponent._keyboard;
     if (kb) {

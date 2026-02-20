@@ -87,7 +87,7 @@ npm run test:kiosk          # Kiosk QUnit + e2e tests
 npm run check               # fmt:check + lint + typecheck (CI gate)
 npm run fmt                 # Format (oxfmt)
 npm run lint                # Lint (oxlint)
-npm run typecheck           # TypeScript type checking (tsc -b)
+npm run typecheck           # Generate kiosk typings + tsc -b + demo-app typecheck
 ```
 
 ## Project Structure

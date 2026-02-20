@@ -299,7 +299,7 @@ QUnit.test("Conflict behavior: replace removes old registration", (assert) => {
   let oldCalled = false;
   let newCalled = false;
 
-  manager.register("Escape", () => {
+  const oldHandle = manager.register("Escape", () => {
     oldCalled = true;
   });
 
@@ -314,6 +314,44 @@ QUnit.test("Conflict behavior: replace removes old registration", (assert) => {
   fireKey("Escape");
   assert.notOk(oldCalled, "Old registration was replaced");
   assert.ok(newCalled, "New registration fires");
+  assert.notOk(oldHandle.isActive, "Old handle becomes inactive after replace");
+});
+
+QUnit.test("Conflict behavior: same key/scope on different targets does not conflict", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let firstCalled = false;
+  let secondCalled = false;
+
+  const firstTarget = document.createElement("div");
+  firstTarget.tabIndex = 0;
+  fixture.appendChild(firstTarget);
+
+  const secondTarget = document.createElement("div");
+  secondTarget.tabIndex = 0;
+  fixture.appendChild(secondTarget);
+
+  manager.register(
+    "F7",
+    () => {
+      firstCalled = true;
+    },
+    { target: firstTarget },
+  );
+
+  assert.expect(2);
+  manager.register(
+    "F7",
+    () => {
+      secondCalled = true;
+    },
+    { target: secondTarget, conflictBehavior: "error" },
+  );
+
+  firstTarget.dispatchEvent(new KeyboardEvent("keydown", { key: "F7", bubbles: true, cancelable: true }));
+  secondTarget.dispatchEvent(new KeyboardEvent("keydown", { key: "F7", bubbles: true, cancelable: true }));
+
+  assert.ok(firstCalled, "First target registration fires");
+  assert.ok(secondCalled, "Second target registration also fires");
 });
 
 // ──────────────────────────────────────────────
@@ -826,6 +864,33 @@ QUnit.test("Unhandled: does NOT fire when a hotkey IS handled", (assert) => {
   fireKey("Escape");
   assert.ok(handlerFired, "Hotkey handler fired");
   assert.notOk(unhandledCalled, "Unhandled callback not fired when hotkey was handled");
+});
+
+QUnit.test("Unhandled: does NOT fire no_match when target hotkey handles event", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let targetCalled = false;
+  let unhandledCalled = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register(
+    "F6",
+    () => {
+      targetCalled = true;
+    },
+    { target: div },
+  );
+
+  manager.setUnhandledHandler(() => {
+    unhandledCalled = true;
+  });
+
+  div.dispatchEvent(new KeyboardEvent("keydown", { key: "F6", bubbles: true, cancelable: true }));
+
+  assert.ok(targetCalled, "Target hotkey handler fired");
+  assert.notOk(unhandledCalled, "Unhandled callback is not fired for target-handled key");
 });
 
 QUnit.test("Unhandled: passes correct activeScope in context", (assert) => {

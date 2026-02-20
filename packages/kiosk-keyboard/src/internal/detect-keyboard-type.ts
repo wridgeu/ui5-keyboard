@@ -3,6 +3,8 @@ import ManagedObject from "sap/ui/base/ManagedObject";
 import { resolveInputOrTextarea } from "./dom";
 import { KeyboardType } from "../library";
 
+type KeyboardTypeValue = (typeof KeyboardType)[keyof typeof KeyboardType];
+
 /** Numeric input types that map to Numpad keyboard. */
 const NUMPAD_CONTROL_TYPES: ReadonlySet<string> = new Set(["Number", "Tel"]);
 const NUMPAD_CONTROL_NAMES: ReadonlySet<string> = new Set(["sap.m.StepInput"]);
@@ -14,7 +16,7 @@ const NUMPAD_HTML_TYPES: ReadonlySet<string> = new Set(["number", "tel"]);
  * keyboard type. Checks UI5 control type, control name, DOM
  * inputmode, and HTML type in order.
  */
-export function detectKeyboardType(control: Control): string {
+export function detectKeyboardType(control: Control): KeyboardTypeValue {
   // 1. UI5 getType() — e.g. sap.m.Input type="Number"
   //    Only sap.m.Input defines the `type` property; other InputBase
   //    subclasses (TextArea, ComboBox, DatePicker) do not have getType().

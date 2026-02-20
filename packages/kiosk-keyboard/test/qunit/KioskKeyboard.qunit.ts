@@ -760,6 +760,34 @@ QUnit.test("close() closes docked keyboard", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("setDocked(false) closes an open keyboard and restores inputmode", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: "Custom",
+  });
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  kb.show();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode suppressed while open");
+
+  let afterCloseCount = 0;
+  kb.attachEvent("afterClose", () => afterCloseCount++);
+
+  kb.setDocked(false);
+
+  assert.notOk(kb.isOpen(), "Keyboard is closed when docked is turned off");
+  assert.strictEqual(afterCloseCount, 1, "afterClose fired once during docked->undocked transition");
+  assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored after transition");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("show() fires afterOpen event", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setDocked(true);
@@ -3200,6 +3228,21 @@ QUnit.test("applyFocusInfo falls back to first key when saved key is gone", asyn
   const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
   assert.strictEqual(document.activeElement, firstKey, "Focus falls back to first key");
   assert.strictEqual(firstKey.getAttribute("tabindex"), "0", "First key has tabindex=0");
+
+  kb.destroy();
+});
+
+QUnit.test("Renderer falls back to first key when saved focus id is stale", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  (kb as any)._lastFocusedKeyId = `${kb.getId()}-key-99-99`;
+  kb.invalidate();
+  await waitForRender();
+
+  const focusableKeys = kb.getDomRef()!.querySelectorAll('.ui5KioskKey[tabindex="0"]');
+  assert.strictEqual(focusableKeys.length, 1, "Exactly one key remains keyboard-focusable");
+  assert.strictEqual(focusableKeys[0], kb.getDomRef()!.querySelector(".ui5KioskKey"), "First key receives tabindex=0");
 
   kb.destroy();
 });

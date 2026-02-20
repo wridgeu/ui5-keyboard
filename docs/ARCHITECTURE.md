@@ -317,21 +317,31 @@ packages/demo-app/
   webapp/
     Component.ts        Global shortcuts, router integration, lifecycle
     controller/
-      Main.controller.ts    View-scoped + dialog-scoped shortcuts
-      Detail.controller.ts  Same-hotkey-different-scope demonstration
-      Kiosk.controller.ts   Kiosk keyboard demo
+      Main.controller.ts              View-scoped + dialog-scoped shortcuts
+      Detail.controller.ts            Same-hotkey-different-scope demonstration
+      KioskHub.controller.ts          Kiosk demo landing page
+      KioskDocked.controller.ts       Docked keyboard demo
+      KioskProgrammatic.controller.ts Programmatic show/close demo
+      KioskPopover.controller.ts      Popover integration demo
+      KioskInputIds.controller.ts     Multi-input targeting demo
+      KioskComponent.controller.ts    Component-level persistent keyboard demo
     view/
       App.view.xml          Root shell container
       Main.view.xml         Status panel, shortcut list, input test, dialog test
       Detail.view.xml       Detail view with scope override
-      Kiosk.view.xml        Kiosk keyboard showcase
+      KioskHub.view.xml           Kiosk demo navigation hub
+      KioskDocked.view.xml        Docked keyboard showcase
+      KioskProgrammatic.view.xml  Programmatic control showcase
+      KioskPopover.view.xml       Popover integration showcase
+      KioskInputIds.view.xml      inputIds showcase
+      KioskComponent.view.xml     Component-level keyboard showcase
 ```
 
 ## Additional Modules
 
 ### SequenceManager
 
-Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key events from HotkeyManager (no own document listener). Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard logic as HotkeyManager (`ignoreInputs` defaults to `true`). See [SEQUENCES.md](SEQUENCES.md).
+Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key events from HotkeyManager (no own document listener). Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard logic as HotkeyManager (`ignoreInputs` defaults to `"auto"`). See [SEQUENCES.md](SEQUENCES.md).
 
 ### KeyStateTracker
 

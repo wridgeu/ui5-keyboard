@@ -234,6 +234,9 @@ export default class SequenceManager extends BaseObject {
       if (match.timerId !== null) clearTimeout(match.timerId);
 
       const reg = match.registration;
+      if (!this._isRegistrationActiveInScope(reg, activeScope)) continue;
+      if (!this._isRegistrationEnabled(reg)) continue;
+
       const nextStep = reg.parsedSteps[match.stepIndex];
 
       // If focused into an input mid-sequence, drop matches that suppress in inputs
@@ -299,6 +302,23 @@ export default class SequenceManager extends BaseObject {
     }
   }
 
+  private _isRegistrationActiveInScope(reg: SequenceRegistration, activeScope: string): boolean {
+    return reg.scope === activeScope || reg.scope === GLOBAL_SCOPE;
+  }
+
+  private _isRegistrationEnabled(reg: SequenceRegistration): boolean {
+    try {
+      return typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
+    } catch (error) {
+      Log.error(
+        `Error evaluating enabled() for sequence [${reg.sequence.join(", ")}]: ${error}`,
+        undefined,
+        LOG_COMPONENT,
+      );
+      return false;
+    }
+  }
+
   /**
    * Start new sequence matches for registrations in the given scope.
    */
@@ -309,18 +329,7 @@ export default class SequenceManager extends BaseObject {
       const firstStep = reg.parsedSteps[0];
       if (resolveIgnoreInputs(reg.ignoreInputs, firstStep.ctrl, firstStep.meta, firstStep.key) && isInput) continue;
 
-      let enabled: boolean;
-      try {
-        enabled = typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
-      } catch (error) {
-        Log.error(
-          `Error evaluating enabled() for sequence [${reg.sequence.join(", ")}]: ${error}`,
-          undefined,
-          LOG_COMPONENT,
-        );
-        enabled = false;
-      }
-      if (!enabled) continue;
+      if (!this._isRegistrationEnabled(reg)) continue;
 
       if (!matchesKeyboardEvent(event, firstStep)) continue;
       if (reg.parsedSteps.length === 1) continue;

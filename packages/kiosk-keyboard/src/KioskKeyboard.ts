@@ -24,6 +24,8 @@ import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-t
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
 
+type KeyboardTypeValue = (typeof KeyboardType)[keyof typeof KeyboardType];
+
 type InputFocusDelegation = {
   onfocusin: () => void;
 };
@@ -624,7 +626,7 @@ export default class KioskKeyboard extends Control {
    * which disables auto-type detection. Use {@link #resetKeyboardType}
    * to re-enable auto-type.
    */
-  setKeyboardType(sType: string): this {
+  setKeyboardType(sType: KeyboardTypeValue): this {
     const sPrevious = this.getKeyboardType();
     this._keyboardTypeExplicit = true;
     this.setProperty("keyboardType", sType);
@@ -668,6 +670,9 @@ export default class KioskKeyboard extends Control {
    * rather than re-rendering (which would disrupt transitions).
    */
   setDocked(bDocked: boolean): this {
+    if (this.getDocked() && !bDocked && this._open) {
+      this.close();
+    }
     if (!this.getDocked() && bDocked) {
       this._open = false;
     }

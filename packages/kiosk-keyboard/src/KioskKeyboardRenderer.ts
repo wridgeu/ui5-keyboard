@@ -2,7 +2,7 @@ import type RenderManager from "sap/ui/core/RenderManager";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n";
-import { keyElementId } from "./internal/dom";
+import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
 
 /**
@@ -73,9 +73,31 @@ const KioskKeyboardRenderer = {
   /** The row loop — override to add toolbar, extra sections, etc. */
   renderContent(rm: RenderManager, oControl: KioskKeyboard): void {
     const layout = oControl.getResolvedLayout();
+    const focusTarget = this.resolveFocusTarget(oControl, layout);
     layout.forEach((row, ri) => {
-      this.renderRow(rm, oControl, row, ri);
+      this.renderRow(rm, oControl, row, ri, focusTarget);
     });
+  },
+
+  resolveFocusTarget(oControl: KioskKeyboard, layout: LayoutDefinition): { row: number; col: number } {
+    const sLastFocusedId = oControl.getFocusInfo().lastFocusedKeyId;
+    if (!sLastFocusedId) {
+      return { row: 0, col: 0 };
+    }
+
+    const match = sLastFocusedId.match(KEY_ID_SUFFIX_RE);
+    if (!match) {
+      return { row: 0, col: 0 };
+    }
+
+    const row = Number.parseInt(match[1], 10);
+    const col = Number.parseInt(match[2], 10);
+
+    if (layout[row]?.[col]) {
+      return { row, col };
+    }
+
+    return { row: 0, col: 0 };
   },
 
   /** ARIA live region — announces shift/caps state changes to screen readers. */
@@ -100,13 +122,19 @@ const KioskKeyboardRenderer = {
   // ──────────────────────────────────────────────
 
   /** Single row wrapper + key iteration. */
-  renderRow(rm: RenderManager, oControl: KioskKeyboard, row: LayoutDefinition[number], ri: number): void {
+  renderRow(
+    rm: RenderManager,
+    oControl: KioskKeyboard,
+    row: LayoutDefinition[number],
+    ri: number,
+    focusTarget: { row: number; col: number },
+  ): void {
     rm.openStart("div", `${oControl.getId()}-row-${ri}`);
     rm.class("ui5KioskRow");
     rm.openEnd();
 
     row.forEach((key, ci) => {
-      this.renderKey(rm, oControl, key, ri, ci);
+      this.renderKey(rm, oControl, key, ri, ci, focusTarget);
     });
 
     rm.close("div");
@@ -117,10 +145,17 @@ const KioskKeyboardRenderer = {
   // ──────────────────────────────────────────────
 
   /** Renders a single key `<div>` with classes, attributes, and content. */
-  renderKey(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, ri: number, ci: number): void {
+  renderKey(
+    rm: RenderManager,
+    oControl: KioskKeyboard,
+    key: KeyDefinition,
+    ri: number,
+    ci: number,
+    focusTarget: { row: number; col: number },
+  ): void {
     rm.openStart("div", keyElementId(oControl.getId(), ri, ci));
     this.addKeyClasses(rm, oControl, key);
-    this.writeKeyAttributes(rm, oControl, key, ri, ci);
+    this.writeKeyAttributes(rm, oControl, key, ri, ci, focusTarget);
     rm.openEnd();
 
     this.renderKeyContent(rm, oControl, key);
@@ -156,7 +191,14 @@ const KioskKeyboardRenderer = {
   },
 
   /** Attributes (`role`, `tabindex`, `data-key`, `aria-*`) on a key `<div>`. */
-  writeKeyAttributes(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, ri: number, ci: number): void {
+  writeKeyAttributes(
+    rm: RenderManager,
+    oControl: KioskKeyboard,
+    key: KeyDefinition,
+    ri: number,
+    ci: number,
+    focusTarget: { row: number; col: number },
+  ): void {
     const bIsShiftKey = key.value === "{shift}";
 
     rm.attr("role", "button");
@@ -168,9 +210,7 @@ const KioskKeyboardRenderer = {
 
     // Roving tabindex: exactly one key gets tabindex="0".
     // Prefer the last focused key (survives re-render); fall back to (0,0).
-    const sLastFocusedId = oControl.getFocusInfo().lastFocusedKeyId;
-    const sKeyId = keyElementId(oControl.getId(), ri, ci);
-    const bIsFocusTarget = sLastFocusedId ? sKeyId === sLastFocusedId : ri === 0 && ci === 0;
+    const bIsFocusTarget = ri === focusTarget.row && ci === focusTarget.col;
     rm.attr("tabindex", bIsFocusTarget ? "0" : "-1");
 
     if (!oControl.getEnabled()) {

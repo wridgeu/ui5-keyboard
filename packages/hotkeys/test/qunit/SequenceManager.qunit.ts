@@ -492,6 +492,27 @@ QUnit.test("setOptions: toggle enabled off", (assert) => {
   }, 50);
 });
 
+QUnit.test("setOptions: disabling mid-sequence drops pending match", (assert) => {
+  const done = assert.async();
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  const handle = manager.registerSequence(["G", "E"], () => {
+    called = true;
+  });
+
+  fireKey("g");
+  handle.setOptions({ enabled: false });
+
+  setTimeout(() => {
+    fireKey("e");
+    setTimeout(() => {
+      assert.notOk(called, "Disabled sequence does not complete when already pending");
+      done();
+    }, 50);
+  }, 50);
+});
+
 QUnit.test("setOptions: toggle enabled back on", (assert) => {
   const done = assert.async();
   const manager = HotkeyManager.getInstance();
@@ -509,6 +530,33 @@ QUnit.test("setOptions: toggle enabled back on", (assert) => {
     fireKey("e");
     setTimeout(() => {
       assert.ok(called, "Sequence fires again after re-enabling via setOptions");
+      done();
+    }, 50);
+  }, 50);
+});
+
+QUnit.test("Scope change mid-sequence drops pending match", (assert) => {
+  const done = assert.async();
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.registerSequence(
+    ["G", "E"],
+    () => {
+      called = true;
+    },
+    { scope: "editor" },
+  );
+
+  manager.pushScope("editor");
+  fireKey("g");
+
+  manager.popScope("editor");
+
+  setTimeout(() => {
+    fireKey("e");
+    setTimeout(() => {
+      assert.notOk(called, "Sequence does not complete after leaving its scope");
       done();
     }, 50);
   }, 50);

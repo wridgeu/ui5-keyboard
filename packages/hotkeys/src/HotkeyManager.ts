@@ -87,6 +87,7 @@ export default class HotkeyManager extends BaseObject {
   };
 
   private _registrations: Map<string, HotkeyRegistration> = new Map();
+  private _registrationState: Map<string, { active: boolean }> = new Map();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
 
@@ -163,7 +164,7 @@ export default class HotkeyManager extends BaseObject {
     const id = idGen.next();
 
     // Conflict detection within the same scope
-    this._handleConflict(normalizedHotkey, resolved.scope, resolved.conflictBehavior);
+    this._handleConflict(normalizedHotkey, resolved.scope, resolved.target, resolved.conflictBehavior);
 
     this._logValidationWarnings(normalizedHotkey);
 
@@ -177,6 +178,8 @@ export default class HotkeyManager extends BaseObject {
     };
 
     this._registrations.set(id, registration);
+    const state = { active: true };
+    this._registrationState.set(id, state);
 
     // Attach target listener if needed
     if (resolved.target) {
@@ -189,14 +192,12 @@ export default class HotkeyManager extends BaseObject {
       LOG_COMPONENT,
     );
 
-    let active = true;
-
     const handle: HotkeyRegistrationHandle = {
       get id() {
         return id;
       },
       get isActive() {
-        return active;
+        return state.active;
       },
       get hotkey() {
         return registration.hotkey;
@@ -208,8 +209,8 @@ export default class HotkeyManager extends BaseObject {
         return registration.options.description;
       },
       unregister: () => {
-        if (!active) return;
-        active = false;
+        if (!state.active) return;
+        state.active = false;
 
         // Detach target listener if needed
         if (registration.options.target) {
@@ -217,10 +218,11 @@ export default class HotkeyManager extends BaseObject {
         }
 
         this._registrations.delete(id);
+        this._registrationState.delete(id);
         Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
       },
       setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
-        if (!active) {
+        if (!state.active) {
           throw new Error(`Cannot setOptions on unregistered handle (id: ${id})`);
         }
         if ((newOptions as Record<string, unknown>).scope !== undefined) {
@@ -584,6 +586,7 @@ export default class HotkeyManager extends BaseObject {
     this._listenerRegistry.detachAllTargets();
 
     this._registrations.clear();
+    this._registrationState.clear();
     this._scopeStack = [GLOBAL_SCOPE];
     this._hasOpenPopup = null;
     this._unhandledCallback = null;
@@ -612,10 +615,24 @@ export default class HotkeyManager extends BaseObject {
     if (this._shouldIgnoreKeyEvent(event)) return;
 
     // Single-key hotkey matching
-    this._processKeyEvent(event, null);
+    this._processKeyEvent(event, null, !this._hasTargetListenerInPath(event));
 
     // Multi-key sequence matching (if any sequences registered)
     this._sequenceManager?.processKeyEvent(event);
+  }
+
+  private _hasTargetListenerInPath(event: KeyboardEvent): boolean {
+    const path = event.composedPath?.();
+    if (Array.isArray(path)) {
+      for (const node of path) {
+        if (this._targetListeners.has(node as EventTarget)) {
+          return true;
+        }
+      }
+    }
+
+    const target = getEventTarget(event);
+    return target ? this._targetListeners.has(target) : false;
   }
 
   /**
@@ -634,7 +651,7 @@ export default class HotkeyManager extends BaseObject {
    * When `targetElement` is null, processes document-level registrations (those without a target).
    * When `targetElement` is set, only processes registrations bound to that target.
    */
-  private _processKeyEvent(event: KeyboardEvent, targetElement: EventTarget | null): void {
+  private _processKeyEvent(event: KeyboardEvent, targetElement: EventTarget | null, emitUnhandled = true): void {
     const activeScope = this.getActiveScope();
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
@@ -669,7 +686,7 @@ export default class HotkeyManager extends BaseObject {
     }
 
     if (!matched) {
-      if (this._unhandledCallback && skipInfo) {
+      if (emitUnhandled && this._unhandledCallback && skipInfo) {
         this._unhandledCallback({
           event,
           reason: skipInfo.reason,
@@ -832,20 +849,39 @@ export default class HotkeyManager extends BaseObject {
   // Private: Conflict handling
   // ──────────────────────────────────────────────
 
-  private _handleConflict(normalizedHotkey: string, scope: string, conflictBehavior: ConflictBehavior): void {
+  private _isSameConflictBucket(
+    reg: HotkeyRegistration,
+    normalizedHotkey: string,
+    scope: string,
+    target: EventTarget | null,
+  ): boolean {
+    return reg.normalizedHotkey === normalizedHotkey && reg.options.scope === scope && reg.options.target === target;
+  }
+
+  private _handleConflict(
+    normalizedHotkey: string,
+    scope: string,
+    target: EventTarget | null,
+    conflictBehavior: ConflictBehavior,
+  ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
 
     if (conflictBehavior === ConflictBehavior.Replace) {
       // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
       for (const reg of this._registrations.values()) {
-        if (reg.normalizedHotkey === normalizedHotkey && reg.options.scope === scope) {
+        if (this._isSameConflictBucket(reg, normalizedHotkey, scope, target)) {
           conflicts.push(reg);
         }
       }
       for (const reg of conflicts) {
         if (reg.options.target) {
           this._detachTargetListener(reg.options.target);
+        }
+        const state = this._registrationState.get(reg.id);
+        if (state) {
+          state.active = false;
+          this._registrationState.delete(reg.id);
         }
         this._registrations.delete(reg.id);
         Log.debug(
@@ -860,7 +896,7 @@ export default class HotkeyManager extends BaseObject {
     // For "warn" and "error", first match is sufficient
     let conflicting: HotkeyRegistration | null = null;
     for (const reg of this._registrations.values()) {
-      if (reg.normalizedHotkey === normalizedHotkey && reg.options.scope === scope) {
+      if (this._isSameConflictBucket(reg, normalizedHotkey, scope, target)) {
         conflicting = reg;
         break;
       }
@@ -877,7 +913,7 @@ export default class HotkeyManager extends BaseObject {
     // "warn"
     Log.warning(
       `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}). ` +
-        `New registration will shadow the existing one.`,
+        `Existing registration keeps priority unless conflictBehavior is "replace".`,
       undefined,
       LOG_COMPONENT,
     );
