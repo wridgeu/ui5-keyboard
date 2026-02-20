@@ -20,6 +20,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Static Methods](#static-methods)
 - [Layouts](#layouts)
   - [Stable Height](#stable-height)
+- [Function Keys (F1-F12)](#function-keys-f1-f12)
 - [Locale-Based Default Layout](#locale-based-default-layout)
 - [Docked Mode](#docked-mode)
 - [Auto-Show](#auto-show)
@@ -46,12 +47,14 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 **Layouts**
 
-- Built-in layouts: QWERTY, QWERTZ-DE, numeric, special characters, numpad
+- Built-in layouts: QWERTY, QWERTZ-DE, numeric, special characters, numpad, function keys
+- F-key variant layouts: QWERTY-FK and QWERTZ-DE-FK with F1-F12 row on top
 - Locale-based default layout (auto-detects from UI5 language setting)
 - Runtime layout switching via `{layout:name}` keys
 - `keyboardType` property for quick switching between Full, Numeric, and Numpad modes
 - Extensible layout definition format (`LayoutDefinition` type)
 - Custom layout registration via `registerLayout()`
+- Reusable `fkey-row` module for composing custom F-key variant layouts
 
 **Docked Mode**
 
@@ -223,15 +226,18 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 
 ## Layouts
 
-The library ships with five built-in layouts:
+The library ships with eight built-in layouts:
 
-| Layout      | Description                             | Rows |
-| ----------- | --------------------------------------- | ---- |
-| `qwerty`    | Standard QWERTY with number row         | 5    |
-| `qwertz-de` | German QWERTZ with Umlaute (ä, ö, ü, ß) | 5    |
-| `numeric`   | Numbers with basic operators            | 4    |
-| `special`   | Special characters and symbols          | 4    |
-| `numpad`    | Compact numeric keypad (calculator)     | 5    |
+| Layout         | Description                             | Rows |
+| -------------- | --------------------------------------- | ---- |
+| `qwerty`       | Standard QWERTY with number row         | 5    |
+| `qwertz-de`    | German QWERTZ with Umlaute (ä, ö, ü, ß) | 5    |
+| `numeric`      | Numbers with basic operators            | 4    |
+| `special`      | Special characters and symbols          | 4    |
+| `numpad`       | Compact numeric keypad (calculator)     | 5    |
+| `fkeys`        | Function keys F1-F12 (standalone)       | 3    |
+| `qwerty-fk`    | QWERTY with F1-F12 row on top           | 6    |
+| `qwertz-de-fk` | German QWERTZ with F1-F12 row on top    | 6    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -288,15 +294,104 @@ const myLayout: LayoutDefinition = [
 
 **KeyDefinition fields:**
 
-| Field        | Type     | Description                                                                      |
-| ------------ | -------- | -------------------------------------------------------------------------------- |
-| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`)       |
-| `label`      | `string` | Display label (defaults to `value`). Set to `""` for icon-only.                  |
-| `shiftLabel` | `string` | Label when Shift is active.                                                      |
-| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                   |
-| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                       |
-| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`. |
-| `icon`       | `string` | UI5 icon URI for icon-only keys (e.g. `"sap-icon://arrow-left"`).                |
+| Field        | Type     | Description                                                                               |
+| ------------ | -------- | ----------------------------------------------------------------------------------------- |
+| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`) |
+| `label`      | `string` | Display label (defaults to `value`). Set to `""` for icon-only.                           |
+| `shiftLabel` | `string` | Label when Shift is active.                                                               |
+| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                            |
+| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                |
+| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.          |
+| `icon`       | `string` | UI5 icon URI for icon-only keys (e.g. `"sap-icon://arrow-left"`).                         |
+
+---
+
+## Function Keys (F1-F12)
+
+SAP GUI transactions rely heavily on function keys (F1 Help, F3 Back, F4 Value Help, F5 Refresh, F8 Execute). Kiosk and terminal setups that lack physical keyboards need virtual F-key access. The library provides three approaches:
+
+### Approach 1: Fn button on base layouts
+
+The `qwerty` and `qwertz-de` layouts include an **Fn** button on the bottom row. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default — no configuration needed.
+
+### Approach 2: Variant layouts with F-key row
+
+Use `qwerty-fk` or `qwertz-de-fk` to render a full keyboard with an F1-F12 row permanently visible on top (6 rows total):
+
+```xml
+<kiosk:KioskKeyboard layout="qwerty-fk" targetInput="myInput" />
+```
+
+### Approach 3: Standalone fkeys layout
+
+Use the `fkeys` layout directly for an F-key-only keyboard (F1-F12 + Enter):
+
+```xml
+<kiosk:KioskKeyboard layout="fkeys" targetInput="myInput" />
+```
+
+### Handling F-key presses
+
+F-keys fire the `keyPress` event but do **not** insert text into the target input. The consuming application decides what each F-key does:
+
+```ts
+keyboard.attachKeyPress((event) => {
+  switch (event.getParameter("key")) {
+    case "F1":
+      showHelp();
+      break;
+    case "F3":
+      navigateBack();
+      break;
+    case "F5":
+      refreshData();
+      break;
+    case "F8":
+      executeTransaction();
+      break;
+  }
+});
+```
+
+This mirrors how SAP GUI intercepts physical F-keys and maps them to transaction commands. The virtual keyboard fires the event; your application provides the meaning.
+
+### Custom F-key variant layouts
+
+Import the shared `fkey-row` module to compose custom layouts with an F-key row on top — the same row used by the built-in `qwerty-fk` and `qwertz-de-fk` layouts:
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import fkeyRow from "ui5/kiosk/layouts/fkey-row";
+import type { LayoutDefinition } from "ui5/kiosk/types";
+
+// Define your custom base layout
+const azertyFr: LayoutDefinition = [
+  /* ... */
+];
+KioskKeyboard.registerLayout("azerty-fr", azertyFr);
+
+// Compose a variant with F-keys on top
+const azertyFrFk: LayoutDefinition = [fkeyRow, ...azertyFr];
+KioskKeyboard.registerLayout("azerty-fr-fk", azertyFrFk);
+```
+
+### Custom F-key actions
+
+The `{fkey:*}` syntax is not limited to F1-F12. You can define custom function keys with any name:
+
+```ts
+const sapLayout: LayoutDefinition = [
+  [
+    { value: "{fkey:F1}", label: "Help", type: "modifier" },
+    { value: "{fkey:F3}", label: "Back", type: "modifier" },
+    { value: "{fkey:F5}", label: "Refresh", type: "modifier" },
+    { value: "{fkey:F8}", label: "Execute", type: "action" },
+  ],
+  // ... rest of the layout
+];
+```
+
+F-key taps do not auto-release Shift, and the `shiftKey` parameter is passed along so applications can distinguish shifted F-key presses if needed.
 
 ---
 
@@ -562,6 +657,9 @@ KeyboardLayout.QwertzDe; // "qwertz-de"
 KeyboardLayout.Numeric; // "numeric"
 KeyboardLayout.Special; // "special"
 KeyboardLayout.Numpad; // "numpad"
+KeyboardLayout.Fkeys; // "fkeys"
+KeyboardLayout.QwertyFk; // "qwerty-fk"
+KeyboardLayout.QwertzDeFk; // "qwertz-de-fk"
 
 // KeyboardType — keyboard display type
 KeyboardType.Full; // "Full"

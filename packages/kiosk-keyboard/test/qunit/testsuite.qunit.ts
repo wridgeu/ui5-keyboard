@@ -19,6 +19,9 @@ sap.ui.define([], () => {
       KioskKeyboard: {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard",
       },
+      FKeys: {
+        title: "QUnit tests for ui5.kiosk - FKeys",
+      },
     },
   };
 });

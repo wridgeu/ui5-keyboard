@@ -2,7 +2,7 @@
 export const DEFAULT_LAYOUT = "qwerty" as const;
 
 /** Layouts that serve as secondary views (not base alphabetic layouts). @internal */
-export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special"]);
+export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys"]);
 
 /**
  * Valid width values for keys.
@@ -41,12 +41,13 @@ export type KeyType = "default" | "modifier" | "action" | "space";
  * | `{shift}`              | Toggles Shift / Caps Lock state                |
  * | `{layout:<name>}`      | Switches to the named layout (e.g. `numeric`)  |
  * | `{layout:base}`        | Returns to the base (alphabetic) layout        |
+ * | `{fkey:<name>}`        | Fires keyPress with key name, no text insertion |
  *
  * Any other string is treated as a literal character to insert.
  *
  * @public
  */
-export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:${string}}`;
+export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:${string}}` | `{fkey:${string}}`;
 
 /**
  * Describes a single key on the keyboard.

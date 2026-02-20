@@ -25,6 +25,12 @@ export const KeyboardLayout = Object.freeze({
   Special: "special",
   /** Compact numeric keypad layout. */
   Numpad: "numpad",
+  /** Function keys F1-F12 standalone layout. */
+  Fkeys: "fkeys",
+  /** QWERTY layout with F1-F12 row on top. */
+  QwertyFk: "qwerty-fk",
+  /** German QWERTZ layout with F1-F12 row on top. */
+  QwertzDeFk: "qwertz-de-fk",
 } as const);
 
 /**

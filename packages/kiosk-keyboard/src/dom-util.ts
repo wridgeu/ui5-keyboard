@@ -17,3 +17,8 @@ export const KEY_ID_SUFFIX_RE = /-key-(\d+)-(\d+)$/;
 export function keyElementId(controlId: string, row: number, col: number): string {
   return `${controlId}-key-${row}-${col}`;
 }
+
+/** Type guard: returns true if the value is an HTMLInputElement or HTMLTextAreaElement. */
+export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
+  return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+}

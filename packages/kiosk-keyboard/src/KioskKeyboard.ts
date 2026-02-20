@@ -3,15 +3,27 @@ import Element from "sap/ui/core/Element";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
-import Localization from "sap/base/i18n/Localization";
 import { DEFAULT_LAYOUT, SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
-import layouts from "./layouts/index";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./i18n-util";
-import { KEY_ID_SUFFIX_RE, keyElementId } from "./dom-util";
+import { KEY_ID_SUFFIX_RE, keyElementId, isInputOrTextarea } from "./dom-util";
 import { KeyboardType, MobileKeyboard } from "./library"; // side-effect: ensures Lib.init() runs
+import {
+  registerLayout as registryRegisterLayout,
+  getRegisteredLayout as registryGetLayout,
+  getRegisteredLayoutNames as registryGetLayoutNames,
+  isBuiltInLayout as registryIsBuiltIn,
+  registerLocaleLayout as registryRegisterLocale,
+  getLocaleLayout as registryGetLocaleLayout,
+} from "./layout-registry";
+import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
+import {
+  insertText as opsInsertText,
+  handleBackspace as opsHandleBackspace,
+  fireTargetChange as opsFireTargetChange,
+} from "./input-operations";
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
@@ -59,6 +71,7 @@ export default class KioskKeyboard extends Control {
   declare private _originalInputMode: string | null;
   declare private _suppressedInputEl: HTMLInputElement | HTMLTextAreaElement | null;
   declare private _maxHeight: number;
+  declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -326,9 +339,6 @@ export default class KioskKeyboard extends Control {
 
   static readonly renderer = KioskKeyboardRenderer;
 
-  /** Built-in layout names that cannot be overwritten by registerLayout. */
-  private static readonly _BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(Object.keys(layouts));
-
   /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
@@ -355,151 +365,43 @@ export default class KioskKeyboard extends Control {
    * Readonly inputs are also excluded.
    */
   private static _isTextualInput(el: EventTarget | null): el is HTMLInputElement | HTMLTextAreaElement {
-    if (!KioskKeyboard._isInputOrTextarea(el)) return false;
+    if (!isInputOrTextarea(el)) return false;
     if (el.readOnly) return false;
     return el instanceof HTMLTextAreaElement || KioskKeyboard._TEXTUAL_INPUT_TYPES.has(el.type);
   }
 
-  private static _isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
-    return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
-  }
+  // ──────────────────────────────────────────────
+  // Static delegates — layout registry (see layout-registry.ts)
+  // ──────────────────────────────────────────────
 
-  /**
-   * Registers a custom keyboard layout that can then be used via
-   * `setLayout(name)` or declaratively as `layout="name"` in XML views.
-   *
-   * Built-in layouts (qwerty, qwertz-de, numeric, special, numpad)
-   * cannot be overwritten. Attempting to do so logs a warning and is
-   * ignored.
-   *
-   * @param sName Layout identifier (lowercase, e.g. "azerty-fr")
-   * @param oDefinition Array of rows, each containing key definitions
-   * @public
-   * @static
-   */
+  /** @see {@link registerLayout} in `layout-registry.ts` */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
-    const name = sName.toLowerCase();
-
-    if (KioskKeyboard._BUILTIN_LAYOUTS.has(name)) {
-      Log.warning(
-        `Cannot overwrite built-in layout "${name}". Use a different name for custom layouts.`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-      return;
-    }
-
-    if (
-      !Array.isArray(oDefinition) ||
-      oDefinition.length === 0 ||
-      !oDefinition.every(
-        (row) =>
-          Array.isArray(row) &&
-          row.length > 0 &&
-          row.every((key) => key !== null && typeof key === "object" && typeof key.value === "string"),
-      )
-    ) {
-      Log.warning(
-        `Invalid layout "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-      return;
-    }
-
-    layouts[name] = oDefinition;
+    registryRegisterLayout(sName, oDefinition);
   }
 
-  /**
-   * Returns the layout definition for the given name, or undefined
-   * if no such layout is registered.
-   *
-   * @param sName Layout identifier
-   * @public
-   * @static
-   */
+  /** @see {@link getRegisteredLayout} in `layout-registry.ts` */
   static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
-    return layouts[sName];
+    return registryGetLayout(sName);
   }
 
-  /**
-   * Returns the names of all registered layouts (built-in + custom).
-   *
-   * @public
-   * @static
-   */
+  /** @see {@link getRegisteredLayoutNames} in `layout-registry.ts` */
   static getRegisteredLayoutNames(): string[] {
-    return Object.keys(layouts);
+    return registryGetLayoutNames();
   }
 
-  /**
-   * Returns whether the given layout name is a built-in layout.
-   * Custom layouts registered via `registerLayout` return false.
-   *
-   * @param sName Layout identifier
-   * @public
-   * @static
-   */
+  /** @see {@link isBuiltInLayout} in `layout-registry.ts` */
   static isBuiltInLayout(sName: string): boolean {
-    return KioskKeyboard._BUILTIN_LAYOUTS.has(sName);
+    return registryIsBuiltIn(sName);
   }
 
-  // ──────────────────────────────────────────────
-  // Locale → Layout Mapping
-  // ──────────────────────────────────────────────
-
-  /** BCP-47 language prefix → layout name. Checked after exact match. */
-  private static _LOCALE_LAYOUT_MAP: Record<string, string> = {
-    de: "qwertz-de",
-  };
-
-  /**
-   * Registers a mapping from a BCP-47 language tag (or prefix) to a
-   * layout name. When no explicit `layout` is provided, the keyboard
-   * uses this map to select a locale-appropriate default.
-   *
-   * @param sLocale Language tag or prefix (e.g. "fr", "es", "pt-br")
-   * @param sLayout Layout name (must be registered via `registerLayout`)
-   * @public
-   * @static
-   */
+  /** @see {@link registerLocaleLayout} in `layout-registry.ts` */
   static registerLocaleLayout(sLocale: string, sLayout: string): void {
-    KioskKeyboard._LOCALE_LAYOUT_MAP[sLocale.toLowerCase()] = sLayout;
+    registryRegisterLocale(sLocale, sLayout);
   }
 
-  /**
-   * Returns the layout name appropriate for the current UI5 locale.
-   *
-   * Resolution order:
-   * 1. Exact BCP-47 match (e.g. "de-at")
-   * 2. Language prefix (e.g. "de")
-   * 3. {@link DEFAULT_LAYOUT} fallback ("qwerty")
-   *
-   * Uses `sap/base/i18n/Localization.getLanguageTag()` which already
-   * resolves from all UI5 language sources (URL params, bootstrap
-   * config, browser settings).
-   *
-   * @public
-   * @static
-   */
+  /** @see {@link getLocaleLayout} in `layout-registry.ts` */
   static getLocaleLayout(): string {
-    const tag = Localization.getLanguageTag();
-    const lang = tag.language; // lowercase ISO639, e.g. "de"
-    const region = tag.region; // uppercase ISO3166 or null, e.g. "AT"
-
-    const map = KioskKeyboard._LOCALE_LAYOUT_MAP;
-
-    // Exact match: "de-at", "pt-br", etc.
-    if (region) {
-      const exact = map[`${lang}-${region.toLowerCase()}`];
-      if (exact) return exact;
-    }
-
-    // Language prefix: "de", "fr", etc.
-    const prefix = map[lang];
-    if (prefix) return prefix;
-
-    return DEFAULT_LAYOUT;
+    return registryGetLocaleLayout();
   }
 
   /**
@@ -512,7 +414,7 @@ export default class KioskKeyboard extends Control {
    */
   applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
     if (mSettings && !("layout" in mSettings)) {
-      mSettings.layout = KioskKeyboard.getLocaleLayout();
+      mSettings.layout = registryGetLocaleLayout();
     }
     return super.applySettings(mSettings, oScope);
   }
@@ -545,11 +447,12 @@ export default class KioskKeyboard extends Control {
     this._originalInputMode = null;
     this._suppressedInputEl = null;
     this._maxHeight = 0;
+    this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
     // ManagedObject when settings are undefined).
-    const localeLayout = KioskKeyboard.getLocaleLayout();
+    const localeLayout = registryGetLocaleLayout();
     this._baseLayout = localeLayout;
     if (localeLayout !== DEFAULT_LAYOUT) {
       this.setProperty("layout", localeLayout);
@@ -598,6 +501,7 @@ export default class KioskKeyboard extends Control {
     this._teardownInputIds();
     this._removeHighlightDelegation();
     this._restoreNativeKeyboard();
+    document.removeEventListener("keydown", this._boundEscapeKeydown, true);
   }
 
   // ──────────────────────────────────────────────
@@ -613,7 +517,7 @@ export default class KioskKeyboard extends Control {
     if (!SECONDARY_LAYOUTS.has(name)) {
       this._baseLayout = name;
     }
-    if (!layouts[name]) {
+    if (!registryGetLayout(name)) {
       Log.warning(
         `Layout "${name}" is not registered. The keyboard will fall back to "${DEFAULT_LAYOUT}".`,
         undefined,
@@ -650,7 +554,7 @@ export default class KioskKeyboard extends Control {
 
         // Dev-time check: warn if the control won't work as a target
         const focusRef = next.getFocusDomRef?.();
-        if (focusRef && !KioskKeyboard._isInputOrTextarea(focusRef)) {
+        if (focusRef && !isInputOrTextarea(focusRef)) {
           Log.warning(
             `KioskKeyboard: targetInput "${newId}" does not have a textual input DOM ref — ` +
               "key taps will have no effect. Expected HTMLInputElement or HTMLTextAreaElement.",
@@ -743,6 +647,7 @@ export default class KioskKeyboard extends Control {
     if (this._open) return this;
     this._open = true;
     this._suppressNativeKeyboard();
+    document.addEventListener("keydown", this._boundEscapeKeydown, true);
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.remove("ui5KioskKeyboard--closed");
@@ -756,6 +661,7 @@ export default class KioskKeyboard extends Control {
     if (!this._open) return this;
     this._open = false;
     this._restoreNativeKeyboard();
+    document.removeEventListener("keydown", this._boundEscapeKeydown, true);
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.add("ui5KioskKeyboard--closed");
@@ -789,6 +695,33 @@ export default class KioskKeyboard extends Control {
     document.removeEventListener("focusin", this._boundFocusIn, true);
     document.removeEventListener("focusout", this._boundFocusOut, true);
     return this;
+  }
+
+  /**
+   * Document-level Escape handler for docked keyboards. Closes the
+   * keyboard when Escape is pressed regardless of whether a virtual
+   * key or the target input has focus. Attached in `show()`, detached
+   * in `close()`.
+   */
+  private _onDocumentEscapeKeydown(event: KeyboardEvent): void {
+    if (event.key !== "Escape") return;
+    if (!this.getDocked() || !this._open) return;
+
+    // Don't close if Escape originated outside the keyboard and its target input
+    const target = event.target as HTMLElement;
+    const myDom = this.getDomRef();
+    const inputDom = this._getTargetElement()?.getFocusDomRef() as HTMLElement | null;
+    const isOnKeyboard = myDom?.contains(target);
+    const isOnInput = inputDom && (inputDom === target || inputDom.contains(target));
+    if (!isOnKeyboard && !isOnInput) return;
+
+    event.preventDefault();
+    this.close();
+    // Move focus to the target input (if Escape was pressed on a virtual key)
+    // or keep it where it is (if already on the input)
+    if (isOnKeyboard && inputDom) {
+      inputDom.focus();
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -912,10 +845,10 @@ export default class KioskKeyboard extends Control {
 
   getResolvedLayout(): LayoutDefinition {
     const kbType = this.getKeyboardType();
-    if (kbType === KeyboardType.Numpad) return layouts.numpad;
-    if (kbType === KeyboardType.Numeric) return layouts.numeric;
+    if (kbType === KeyboardType.Numpad) return registryGetLayout("numpad")!;
+    if (kbType === KeyboardType.Numeric) return registryGetLayout("numeric")!;
     const name = this.getLayout();
-    return layouts[name] ?? layouts[DEFAULT_LAYOUT];
+    return registryGetLayout(name) ?? registryGetLayout(DEFAULT_LAYOUT)!;
   }
 
   /** Default icons for special keys — used when the key has no explicit icon. */
@@ -1028,15 +961,6 @@ export default class KioskKeyboard extends Control {
     const target = event.target as HTMLElement;
     if (!target.classList.contains("ui5KioskKey")) return;
 
-    // Escape closes docked keyboard when a virtual key has focus (WCAG 2.1 SC 2.1.1)
-    if (event.key === "Escape" && this.getDocked() && this._open) {
-      event.preventDefault();
-      this.close();
-      const dom = this._getTargetElement()?.getFocusDomRef() as HTMLElement | null;
-      dom?.focus();
-      return;
-    }
-
     switch (event.key) {
       case "Enter":
       case " ": {
@@ -1123,7 +1047,7 @@ export default class KioskKeyboard extends Control {
 
     // Auto-detect keyboard type from input metadata
     if (this.getAutoType() && !this._keyboardTypeExplicit) {
-      const detected = this._detectKeyboardType(ui5Control);
+      const detected = detectKbType(ui5Control);
       const previous = this.getKeyboardType();
       this.setProperty("keyboardType", detected);
       if (detected !== previous) {
@@ -1171,7 +1095,8 @@ export default class KioskKeyboard extends Control {
 
     if (keyValue === "{backspace}") {
       if (this.fireEvent("keyPress", { key: "Backspace", shiftKey: shift }, true)) {
-        this._handleBackspace();
+        const dom = this._getTargetDomRef();
+        if (dom) opsHandleBackspace(dom);
       }
       return;
     }
@@ -1195,6 +1120,12 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
+    if (keyValue.startsWith("{fkey:")) {
+      const fkeyName = keyValue.slice("{fkey:".length, -1);
+      this.fireEvent("keyPress", { key: fkeyName, shiftKey: shift }, true);
+      return;
+    }
+
     // Regular character — resolve shift value
     let effective = keyValue;
     if (shift) {
@@ -1207,7 +1138,8 @@ export default class KioskKeyboard extends Control {
     }
 
     if (this.fireEvent("keyPress", { key: effective, shiftKey: shift }, true)) {
-      this._insertText(effective);
+      const dom = this._getTargetDomRef();
+      if (dom) opsInsertText(dom, effective);
     }
 
     // Auto-release shift (not caps lock)
@@ -1243,7 +1175,7 @@ export default class KioskKeyboard extends Control {
     if (!element) return null;
 
     const dom = element.getFocusDomRef();
-    if (!KioskKeyboard._isInputOrTextarea(dom)) {
+    if (!isInputOrTextarea(dom)) {
       return null;
     }
 
@@ -1257,60 +1189,16 @@ export default class KioskKeyboard extends Control {
     return dom;
   }
 
-  private _insertText(text: string): void {
-    const dom = this._getTargetDomRef();
-    if (!dom) return;
-
-    const start = dom.selectionStart ?? dom.value.length;
-    const end = dom.selectionEnd ?? start;
-    const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
-    const newPos = start + text.length;
-
-    this._setTargetValue(newValue);
-    try {
-      dom.setSelectionRange(newPos, newPos);
-    } catch {
-      // May throw on certain input types (e.g. type="number")
-    }
-  }
-
-  private _handleBackspace(): void {
-    const dom = this._getTargetDomRef();
-    if (!dom) return;
-
-    const start = dom.selectionStart ?? dom.value.length;
-    const end = dom.selectionEnd ?? start;
-
-    let newValue: string;
-    let newPos: number;
-
-    if (start !== end) {
-      newValue = dom.value.slice(0, start) + dom.value.slice(end);
-      newPos = start;
-    } else if (start > 0) {
-      newValue = dom.value.slice(0, start - 1) + dom.value.slice(start);
-      newPos = start - 1;
-    } else {
-      return;
-    }
-
-    this._setTargetValue(newValue);
-    try {
-      dom.setSelectionRange(newPos, newPos);
-    } catch {
-      // May throw on certain input types (e.g. type="number")
-    }
-  }
-
   private _handleEnter(): void {
     const dom = this._getTargetDomRef();
     if (dom instanceof HTMLTextAreaElement) {
-      this._insertText("\n");
+      opsInsertText(dom, "\n");
       return;
     }
     // Single-line input: fire change event (matches physical Enter behavior)
     if (dom instanceof HTMLInputElement) {
-      this._fireTargetChange(dom.value);
+      const element = this._getTargetElement();
+      if (element) opsFireTargetChange(element, dom.value);
     }
   }
 
@@ -1322,45 +1210,6 @@ export default class KioskKeyboard extends Control {
     const id = this.getTargetInput();
     if (!id) return null;
     return Element.getElementById(id) ?? null;
-  }
-
-  private _fireTargetChange(value: string): void {
-    const element = this._getTargetElement();
-    if (!element) return;
-
-    if (element.getMetadata().hasEvent("change")) {
-      element.fireEvent("change", { value });
-    }
-  }
-
-  private _setTargetValue(newValue: string): void {
-    const element = this._getTargetElement();
-    if (!element) return;
-
-    const metadata = element.getMetadata();
-    if (metadata.hasProperty("value")) {
-      // Use the typed setter (e.g. InputBase.setValue) which updates both
-      // the ManagedObject property AND the DOM value synchronously.
-      // Direct setProperty() only updates the property bag — but
-      // InputBase.getValue() reads from the DOM when rendered, causing a
-      // desync where the property is updated but getValue() returns stale data.
-      const ctrl = element as unknown as Record<string, unknown>;
-      if (typeof ctrl.setValue === "function") {
-        (ctrl.setValue as (v: string) => unknown).call(element, newValue);
-      } else {
-        element.setProperty("value", newValue);
-      }
-    } else {
-      // Fallback for custom controls without a "value" metadata property:
-      // set the inner DOM input value directly so typing still works.
-      const dom = element.getFocusDomRef();
-      if (KioskKeyboard._isInputOrTextarea(dom)) {
-        dom.value = newValue;
-      }
-    }
-    if (metadata.hasEvent("liveChange")) {
-      element.fireEvent("liveChange", { value: newValue });
-    }
   }
 
   private _moveFocus(current: HTMLElement, dRow: number, dCol: number): void {
@@ -1419,6 +1268,18 @@ export default class KioskKeyboard extends Control {
     Backspace: "{backspace}",
     Enter: "{enter}",
     Delete: "{backspace}", // virtual keyboard has no separate Delete — highlight Backspace
+    F1: "{fkey:F1}",
+    F2: "{fkey:F2}",
+    F3: "{fkey:F3}",
+    F4: "{fkey:F4}",
+    F5: "{fkey:F5}",
+    F6: "{fkey:F6}",
+    F7: "{fkey:F7}",
+    F8: "{fkey:F8}",
+    F9: "{fkey:F9}",
+    F10: "{fkey:F10}",
+    F11: "{fkey:F11}",
+    F12: "{fkey:F12}",
   };
 
   private _highlightKey(key: string, add: boolean): void {
@@ -1438,55 +1299,6 @@ export default class KioskKeyboard extends Control {
     const prev = Element.getElementById(this._highlightTargetId);
     if (prev) prev.removeEventDelegate(this._keyHighlightDelegation);
     this._highlightTargetId = null;
-  }
-
-  // ──────────────────────────────────────────────
-  // Private — Auto-type detection
-  // ──────────────────────────────────────────────
-
-  /** Numeric input types that map to Numpad keyboard. */
-  private static readonly _NUMPAD_CONTROL_TYPES: ReadonlySet<string> = new Set(["Number", "Tel"]);
-  private static readonly _NUMPAD_CONTROL_NAMES: ReadonlySet<string> = new Set(["sap.m.StepInput"]);
-  private static readonly _NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "tel"]);
-  private static readonly _NUMPAD_HTML_TYPES: ReadonlySet<string> = new Set(["number", "tel"]);
-
-  /**
-   * Detects whether the target control should use a Numpad or Full
-   * keyboard type. Checks UI5 control type, control name, DOM
-   * inputmode, and HTML type in order.
-   */
-  private _detectKeyboardType(control: Control): string {
-    // 1. UI5 getType() — e.g. sap.m.Input type="Number"
-    //    Only sap.m.Input defines the `type` property; other InputBase
-    //    subclasses (TextArea, ComboBox, DatePicker) do not have getType().
-    if (control.isA("sap.m.InputBase")) {
-      const type = (control as unknown as { getType?: () => string }).getType?.();
-      if (type && KioskKeyboard._NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
-    }
-
-    // 2. Control name — walk up the parent chain because composite controls
-    //    (e.g. sap.m.StepInput) wrap an inner sap.m.Input. Element.closestTo()
-    //    returns the inner Input, but we need to match the outer StepInput.
-    for (let parent: ManagedObject | null = control; parent; parent = parent.getParent()) {
-      if (parent instanceof Control) {
-        const name = parent.getMetadata().getName();
-        if (KioskKeyboard._NUMPAD_CONTROL_NAMES.has(name)) return KeyboardType.Numpad;
-      }
-    }
-
-    // 3. DOM inputmode attribute
-    const dom = control.getFocusDomRef();
-    if (KioskKeyboard._isInputOrTextarea(dom)) {
-      const inputmode = dom.getAttribute("inputmode");
-      if (inputmode && KioskKeyboard._NUMPAD_INPUT_MODES.has(inputmode)) return KeyboardType.Numpad;
-
-      // 4. HTML type attribute
-      if (dom instanceof HTMLInputElement && KioskKeyboard._NUMPAD_HTML_TYPES.has(dom.type)) {
-        return KeyboardType.Numpad;
-      }
-    }
-
-    return KeyboardType.Full;
   }
 
   // ──────────────────────────────────────────────
@@ -1517,7 +1329,7 @@ export default class KioskKeyboard extends Control {
     if (!el) return;
 
     const dom = el.getFocusDomRef();
-    if (!KioskKeyboard._isInputOrTextarea(dom)) return;
+    if (!isInputOrTextarea(dom)) return;
 
     // Already suppressing this element
     if (this._suppressedInputEl === dom) return;
@@ -1540,7 +1352,7 @@ export default class KioskKeyboard extends Control {
     // Re-resolve: the target control may have re-rendered, replacing the DOM node.
     // Fall back to the cached ref if the target is no longer available.
     const freshDom = this._getTargetElement()?.getFocusDomRef();
-    const dom = KioskKeyboard._isInputOrTextarea(freshDom) ? freshDom : this._suppressedInputEl;
+    const dom = isInputOrTextarea(freshDom) ? freshDom : this._suppressedInputEl;
 
     // If the DOM node was replaced by a re-render, also clean up the stale cached ref
     if (dom !== this._suppressedInputEl) {

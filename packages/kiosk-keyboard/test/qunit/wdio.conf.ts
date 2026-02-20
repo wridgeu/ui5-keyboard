@@ -42,6 +42,7 @@ export const config: WebdriverIO.Config = {
       {
         paths: [
           "/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=KioskKeyboard",
+          "/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=FKeys",
         ],
       },
     ],

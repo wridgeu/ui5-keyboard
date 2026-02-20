@@ -80,8 +80,8 @@ const qwerty: LayoutDefinition = [
     { value: " ", label: "Space", width: "space", type: "space" },
     { value: ".", shiftLabel: ">", shiftValue: ">" },
     {
-      value: "{layout:special}",
-      label: "#+=",
+      value: "{layout:fkeys}",
+      label: "Fn",
       width: "1.5",
       type: "modifier",
     },
