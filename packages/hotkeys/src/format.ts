@@ -1,7 +1,7 @@
-import { KEY_DISPLAY_SYMBOLS, MAC_MODIFIER_SYMBOLS, STANDARD_MODIFIER_LABELS } from "./constants";
+import { KEY_DISPLAY_SYMBOLS, MAC_MODIFIER_SYMBOLS, STANDARD_MODIFIER_LABELS } from "./internal/constants";
 import { Platform } from "./library";
-import { parseHotkey } from "./parse";
-import { detectPlatform } from "./platform";
+import { parseHotkey } from "./internal/parse";
+import { detectPlatform } from "./internal/platform";
 
 /**
  * Format a hotkey string for display, using platform-appropriate symbols.

@@ -3,8 +3,9 @@ import Element from "sap/ui/core/Element";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
-import { DEFAULT_LAYOUT, SECONDARY_LAYOUTS } from "./types";
+import { SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
+import { DEFAULT_LAYOUT } from "./layouts/index";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n";
@@ -18,7 +19,7 @@ import {
   isBuiltInLayout as registryIsBuiltIn,
   registerLocaleLayout as registryRegisterLocale,
   getLocaleLayout as registryGetLocaleLayout,
-} from "./layout-registry";
+} from "./internal/layout-registry";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
@@ -376,35 +377,35 @@ export default class KioskKeyboard extends Control {
   };
 
   // ──────────────────────────────────────────────
-  // Static delegates — layout registry (see layout-registry.ts)
+  // Static delegates — layout registry (see internal/layout-registry.ts)
   // ──────────────────────────────────────────────
 
-  /** @see {@link registerLayout} in `layout-registry.ts` */
+  /** @see {@link registerLayout} in `internal/layout-registry.ts` */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
     registryRegisterLayout(sName, oDefinition);
   }
 
-  /** @see {@link getRegisteredLayout} in `layout-registry.ts` */
+  /** @see {@link getRegisteredLayout} in `internal/layout-registry.ts` */
   static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
     return registryGetLayout(sName);
   }
 
-  /** @see {@link getRegisteredLayoutNames} in `layout-registry.ts` */
+  /** @see {@link getRegisteredLayoutNames} in `internal/layout-registry.ts` */
   static getRegisteredLayoutNames(): string[] {
     return registryGetLayoutNames();
   }
 
-  /** @see {@link isBuiltInLayout} in `layout-registry.ts` */
+  /** @see {@link isBuiltInLayout} in `internal/layout-registry.ts` */
   static isBuiltInLayout(sName: string): boolean {
     return registryIsBuiltIn(sName);
   }
 
-  /** @see {@link registerLocaleLayout} in `layout-registry.ts` */
+  /** @see {@link registerLocaleLayout} in `internal/layout-registry.ts` */
   static registerLocaleLayout(sLocale: string, sLayout: string): void {
     registryRegisterLocale(sLocale, sLayout);
   }
 
-  /** @see {@link getLocaleLayout} in `layout-registry.ts` */
+  /** @see {@link getLocaleLayout} in `internal/layout-registry.ts` */
   static getLocaleLayout(): string {
     return registryGetLocaleLayout();
   }
@@ -565,6 +566,14 @@ export default class KioskKeyboard extends Control {
     }
 
     this._targetSession.resetForTargetSwitch();
+
+    // Reset shift/caps state for the new input context
+    if (this._shiftActive || this._capsLock) {
+      this._shiftActive = false;
+      this._capsLock = false;
+      this.invalidate();
+    }
+
     this.setAssociation("targetInput", target, true);
 
     // Add highlight delegation to new target

@@ -60,7 +60,7 @@ export const Platform = Object.freeze({
 export type Platform = (typeof Platform)[keyof typeof Platform];
 
 // Re-export from constants — single source of truth
-export { GLOBAL_SCOPE } from "./constants";
+export { GLOBAL_SCOPE } from "./internal/constants";
 
 // ──────────────────────────────────────────────
 // UI5 Enum Registration

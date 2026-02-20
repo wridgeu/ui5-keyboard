@@ -1,5 +1,5 @@
-import { MODIFIER_KEYS } from "./constants";
-import { keyboardEventToHotkey } from "./parse";
+import { MODIFIER_KEYS } from "./internal/constants";
+import { keyboardEventToHotkey } from "./internal/parse";
 
 /**
  * Options for the HotkeyRecorder.

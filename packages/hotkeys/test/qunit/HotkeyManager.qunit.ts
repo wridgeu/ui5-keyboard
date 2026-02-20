@@ -1396,3 +1396,95 @@ QUnit.test("Handle defaults: scope is global, description is empty", (assert) =>
   assert.strictEqual(handle.scope, "__global__", "default scope is __global__");
   assert.strictEqual(handle.description, "", "default description is empty string");
 });
+
+// ──────────────────────────────────────────────
+// enabled() callback error handling
+// ──────────────────────────────────────────────
+
+QUnit.test("enabled function throwing: hotkey does not fire and manager stays operational", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.register(
+    "Escape",
+    () => {
+      called = true;
+    },
+    {
+      enabled: () => {
+        throw new Error("Intentional enabled() error");
+      },
+    },
+  );
+
+  fireKey("Escape");
+  assert.notOk(called, "Callback not fired when enabled() throws");
+
+  // Manager should still be operational
+  let secondCalled = false;
+  manager.register("F2", () => {
+    secondCalled = true;
+  });
+  fireKey("F2");
+  assert.ok(secondCalled, "Manager still operational after enabled() error");
+});
+
+QUnit.test("enabled function throwing: getRegistrations shows enabled as false", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  const handle = manager.register("F3", () => {}, {
+    enabled: () => {
+      throw new Error("Intentional enabled() error");
+    },
+  });
+
+  const reg = manager.getRegistrations().find((r) => r.id === handle.id);
+  assert.strictEqual(reg?.enabled, false, "Registration shows enabled=false when enabled() throws");
+});
+
+// ──────────────────────────────────────────────
+// Target element: ref-counting with multiple registrations
+// ──────────────────────────────────────────────
+
+QUnit.test("Target element: two registrations on same target, unregister one", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let firstCalled = false;
+  let secondCalled = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  const h1 = manager.register(
+    "F3",
+    () => {
+      firstCalled = true;
+    },
+    { target: div },
+  );
+
+  manager.register(
+    "F4",
+    () => {
+      secondCalled = true;
+    },
+    { target: div },
+  );
+
+  // Unregister the first — the target listener should remain (ref count > 0)
+  h1.unregister();
+
+  // F3 should no longer fire
+  const event1 = new KeyboardEvent("keydown", { key: "F3", bubbles: true, cancelable: true });
+  div.dispatchEvent(event1);
+  assert.notOk(firstCalled, "Unregistered F3 does not fire");
+
+  // F4 should still fire — the target listener was NOT removed
+  const event2 = new KeyboardEvent("keydown", { key: "F4", bubbles: true, cancelable: true });
+  div.dispatchEvent(event2);
+  assert.ok(secondCalled, "F4 still fires on same target after sibling unregister");
+
+  // Verify listener map still has the target
+  const targetListeners = (manager as any)._targetListeners as Map<EventTarget, unknown>;
+  assert.strictEqual(targetListeners.size, 1, "Target listener still registered (ref count > 0)");
+});

@@ -1,6 +1,6 @@
-import { MODIFIER_KEYS } from "./constants";
+import { MODIFIER_KEYS } from "./internal/constants";
 import { Platform } from "./library";
-import { detectPlatform } from "./platform";
+import { detectPlatform } from "./internal/platform";
 
 let instance: KeyStateTracker | null = null;
 

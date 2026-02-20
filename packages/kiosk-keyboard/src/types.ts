@@ -1,6 +1,3 @@
-/** Default layout used as fallback when no base layout is configured. @internal */
-export const DEFAULT_LAYOUT = "qwerty" as const;
-
 /** Layouts that serve as secondary views (not base alphabetic layouts). @internal */
 export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys"]);
 
@@ -185,6 +182,13 @@ export type KeyRow = KeyDefinition[];
  *
  * Each entry is a row of keys rendered top-to-bottom. Use this type
  * with {@link KioskKeyboard.registerLayout} to register custom layouts.
+ *
+ * **Accessibility:** For icon-only keys (where `label` is `""`), the renderer
+ * automatically generates an `aria-label` from the key's `value` using i18n
+ * translations for built-in special keys (`{backspace}`, `{enter}`, `{shift}`,
+ * `" "`). For custom icon-only keys with non-standard values, ensure the
+ * `value` is human-readable (e.g. `"Delete"` rather than `"del"`) since it
+ * will be used as the accessible name.
  *
  * @example Minimal custom layout
  * ```ts

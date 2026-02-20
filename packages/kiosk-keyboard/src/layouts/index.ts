@@ -8,6 +8,9 @@ import fkeys from "./fkeys";
 import qwertyFk from "./qwerty-fk";
 import qwertzDeFk from "./qwertz-de-fk";
 
+/** Default base layout name used when no explicit layout is configured. */
+export const DEFAULT_LAYOUT = "qwerty" as const;
+
 const layouts: Record<string, LayoutDefinition> = {
   qwerty,
   "qwertz-de": qwertzDe,

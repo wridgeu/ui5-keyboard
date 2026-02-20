@@ -2,11 +2,11 @@ import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
-import { GLOBAL_SCOPE } from "./constants";
-import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
+import { GLOBAL_SCOPE } from "./internal/constants";
+import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
-import { matchesKeyboardEvent } from "./match";
-import { parseHotkey } from "./parse";
+import { matchesKeyboardEvent } from "./internal/match";
+import { parseHotkey } from "./internal/parse";
 import type {
   HotkeyCallback,
   Platform,

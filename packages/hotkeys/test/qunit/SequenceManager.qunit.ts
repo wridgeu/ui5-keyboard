@@ -599,3 +599,34 @@ QUnit.test("Handle exposes sequence, scope, and description", (assert) => {
   handle.setOptions({ description: "Navigate to Inbox" });
   assert.strictEqual(handle.description, "Navigate to Inbox", "description reflects setOptions update");
 });
+
+// ──────────────────────────────────────────────
+// enabled() callback error handling
+// ──────────────────────────────────────────────
+
+QUnit.test("enabled function throwing: sequence does not start", (assert) => {
+  const done = assert.async();
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.registerSequence(
+    ["G", "E"],
+    () => {
+      called = true;
+    },
+    {
+      enabled: () => {
+        throw new Error("Intentional enabled() error");
+      },
+    },
+  );
+
+  fireKey("g");
+  setTimeout(() => {
+    fireKey("e");
+    setTimeout(() => {
+      assert.notOk(called, "Sequence not started when enabled() throws");
+      done();
+    }, 50);
+  }, 50);
+});
