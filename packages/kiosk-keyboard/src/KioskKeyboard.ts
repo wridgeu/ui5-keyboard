@@ -20,11 +20,8 @@ import {
   getLocaleLayout as registryGetLocaleLayout,
 } from "./layout-registry";
 import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
-import {
-  insertText as opsInsertText,
-  handleBackspace as opsHandleBackspace,
-  fireTargetChange as opsFireTargetChange,
-} from "./input-operations";
+import FocusClaimService from "./focus-claim-service";
+import TargetInputSession from "./target-input-session";
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
@@ -73,10 +70,8 @@ export default class KioskKeyboard extends Control {
   declare private _suppressedInputEl: HTMLInputElement | HTMLTextAreaElement | null;
   declare private _maxHeight: number;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
-  /** JS-tracked cursor position [start, end]. Null until first access. */
-  declare private _cursorPos: [number, number] | null;
-  /** Whether the target input has been modified since the last change event. */
-  declare private _targetDirty: boolean;
+  declare private _focusClaimService: FocusClaimService;
+  declare private _targetSession: TargetInputSession;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -335,9 +330,9 @@ export default class KioskKeyboard extends Control {
           autoDetected: { type: "boolean" },
         },
       },
-      /** Fired after the docked keyboard has opened (slide-in complete). */
+      /** Fired when `show()` opens the docked keyboard (not tied to CSS transition end). */
       afterOpen: {},
-      /** Fired after the docked keyboard has closed (slide-out complete). */
+      /** Fired when `close()` closes the docked keyboard (not tied to CSS transition end). */
       afterClose: {},
     },
   };
@@ -346,35 +341,6 @@ export default class KioskKeyboard extends Control {
 
   /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
-
-  /**
-   * HTML input types that accept free-form text entry — only these trigger
-   * auto-show. Date/time types (`date`, `datetime-local`, `month`, `week`,
-   * `time`) are deliberately excluded: they require specific value formats
-   * and don't support `selectionStart`/`selectionEnd`, which cursor-aware
-   * typing depends on.
-   */
-  private static readonly _TEXTUAL_INPUT_TYPES: ReadonlySet<string> = new Set([
-    "text",
-    "search",
-    "url",
-    "tel",
-    "email",
-    "password",
-    "number",
-  ]);
-
-  /**
-   * Returns true if the DOM element is a text-entry input or textarea.
-   * Only allowlisted input types (text, search, number, etc.) pass —
-   * unknown or non-textual types (checkbox, radio, file, etc.) are rejected.
-   * Readonly inputs are also excluded.
-   */
-  private static _isTextualInput(el: EventTarget | null): el is HTMLInputElement | HTMLTextAreaElement {
-    if (!isInputOrTextarea(el)) return false;
-    if (el.readOnly) return false;
-    return el instanceof HTMLTextAreaElement || KioskKeyboard._TEXTUAL_INPUT_TYPES.has(el.type);
-  }
 
   // ──────────────────────────────────────────────
   // Static delegates — layout registry (see layout-registry.ts)
@@ -461,8 +427,13 @@ export default class KioskKeyboard extends Control {
     this._suppressedInputEl = null;
     this._maxHeight = 0;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
-    this._cursorPos = null;
-    this._targetDirty = false;
+    this._focusClaimService = new FocusClaimService(
+      () => this.getInputIds(),
+      (id) => this._findControlById(id),
+      () => this._shouldDeferToNative(),
+      (id) => this._isTargetOfOther(id),
+    );
+    this._targetSession = new TargetInputSession(() => this._getTargetElement());
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -549,7 +520,7 @@ export default class KioskKeyboard extends Control {
    */
   setTargetInput(target: string | Control): this {
     // Fire pending change on the previous target before switching
-    this._fireChangeIfDirty();
+    this._targetSession.fireChangeIfDirty();
 
     // Remove highlight delegation from previous target
     this._removeHighlightDelegation();
@@ -560,7 +531,7 @@ export default class KioskKeyboard extends Control {
       this._restoreNativeKeyboard();
     }
 
-    this._cursorPos = null;
+    this._targetSession.resetForTargetSwitch();
     this.setAssociation("targetInput", target, true);
 
     // Add highlight delegation to new target
@@ -1038,25 +1009,12 @@ export default class KioskKeyboard extends Control {
 
   /** Returns true if this keyboard would auto-claim the given DOM element. */
   private _wouldClaimInput(target: EventTarget | null): boolean {
-    return this._resolveClaimableControl(target) !== null;
+    return this._focusClaimService.wouldClaimInput(target);
   }
 
   /** Returns the UI5 control this keyboard would auto-claim, or null. */
   private _resolveClaimableControl(target: EventTarget | null): Control | null {
-    if (!KioskKeyboard._isTextualInput(target)) return null;
-    if (this._shouldDeferToNative()) return null;
-    const ui5Control = Element.closestTo(target);
-    if (!(ui5Control instanceof Control)) return null;
-    if (this._isTargetOfOther(ui5Control.getId())) return null;
-    // When inputIds is set, only claim inputs in that list
-    const ids = this.getInputIds();
-    if (ids.length > 0 && !this._isInInputIds(ui5Control)) return null;
-    return ui5Control;
-  }
-
-  /** Checks if a control (or any ancestor) matches an ID in the inputIds list. */
-  private _isInInputIds(control: Control): boolean {
-    return this._resolveInputIdsAncestor(control) !== null;
+    return this._focusClaimService.resolveClaimableControl(target);
   }
 
   /**
@@ -1067,15 +1025,7 @@ export default class KioskKeyboard extends Control {
    * the outer wrapper.
    */
   private _resolveInputIdsAncestor(candidate: Control): Control | null {
-    const resolvedIds = new Set<string>();
-    for (const inputId of this.getInputIds()) {
-      const ctrl = this._findControlById(inputId);
-      if (ctrl) resolvedIds.add(ctrl.getId());
-    }
-    for (let parent: ManagedObject | null = candidate; parent; parent = parent.getParent()) {
-      if (parent instanceof Control && resolvedIds.has(parent.getId())) return parent;
-    }
-    return null;
+    return this._focusClaimService.resolveInputIdsAncestor(candidate);
   }
 
   private _onDocumentFocusIn(event: FocusEvent): void {
@@ -1143,21 +1093,14 @@ export default class KioskKeyboard extends Control {
 
     if (keyValue === "{backspace}") {
       if (this.fireEvent("keyPress", { key: "Backspace", shiftKey: shift }, true)) {
-        const dom = this._getTargetDomRef();
-        if (dom) {
-          const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined);
-          if (pos) {
-            this._cursorPos = pos;
-            this._targetDirty = true;
-          }
-        }
+        this._targetSession.handleBackspace();
       }
       return;
     }
 
     if (keyValue === "{enter}") {
       if (this.fireEvent("keyPress", { key: "Enter", shiftKey: shift }, true)) {
-        this._handleEnter();
+        this._targetSession.handleEnter();
       }
       return;
     }
@@ -1192,11 +1135,7 @@ export default class KioskKeyboard extends Control {
     }
 
     if (this.fireEvent("keyPress", { key: effective, shiftKey: shift }, true)) {
-      const dom = this._getTargetDomRef();
-      if (dom) {
-        this._cursorPos = opsInsertText(dom, effective, this._cursorPos ?? undefined);
-        this._targetDirty = true;
-      }
+      this._targetSession.insertText(effective);
     }
 
     // Auto-release shift (not caps lock)
@@ -1218,77 +1157,8 @@ export default class KioskKeyboard extends Control {
     this.invalidate();
   }
 
-  /**
-   * Returns the target input's inner DOM element.
-   *
-   * Initialises `_cursorPos` on first access for a given target:
-   * - If the input is focused, reads the browser's live selection.
-   * - Otherwise, places the cursor at the end of the current value.
-   *
-   * Never calls `dom.focus()` — this prevents focus-steal when the
-   * keyboard lives inside a Popover whose target input is outside.
-   */
-  private _getTargetDomRef(): HTMLInputElement | HTMLTextAreaElement | null {
-    const element = this._getTargetElement();
-    if (!element) return null;
-
-    const dom = element.getFocusDomRef();
-    if (!isInputOrTextarea(dom)) {
-      return null;
-    }
-
-    if (document.activeElement === dom) {
-      // Input is focused — the user may have repositioned the cursor
-      // via click or arrow keys, so always sync from the live DOM.
-      this._cursorPos = [dom.selectionStart ?? dom.value.length, dom.selectionEnd ?? dom.value.length];
-    } else if (this._cursorPos === null) {
-      // First access after setTargetInput() and the input is NOT focused
-      // (e.g. keyboard inside a Popover). Default cursor to end of value.
-      // JS-tracked _cursorPos is sufficient — calling setSelectionRange()
-      // on unfocused inputs is unreliable across browsers/input types.
-      const end = dom.value.length;
-      this._cursorPos = [end, end];
-    } else {
-      // Clamp tracked position to current value length — the value may
-      // have been changed externally (binding, programmatic setValue).
-      const len = dom.value.length;
-      if (this._cursorPos[0] > len || this._cursorPos[1] > len) {
-        this._cursorPos = [Math.min(this._cursorPos[0], len), Math.min(this._cursorPos[1], len)];
-      }
-    }
-
-    return dom;
-  }
-
-  /**
-   * If the target input was modified (dirty), fires a `change` event
-   * on it and resets the dirty flag. Skips TextArea — HTML textarea's
-   * native `change` is a blur-level event, not a commit-level one.
-   */
   private _fireChangeIfDirty(): void {
-    if (!this._targetDirty) return;
-    this._targetDirty = false;
-    const element = this._getTargetElement();
-    if (!element) return;
-    const dom = element.getFocusDomRef();
-    if (dom instanceof HTMLTextAreaElement) return;
-    if (isInputOrTextarea(dom)) {
-      opsFireTargetChange(element, dom.value);
-    }
-  }
-
-  private _handleEnter(): void {
-    const dom = this._getTargetDomRef();
-    if (dom instanceof HTMLTextAreaElement) {
-      this._cursorPos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
-      return;
-    }
-    // Single-line input: fire change event (matches physical Enter behavior)
-    if (dom instanceof HTMLInputElement) {
-      const element = this._getTargetElement();
-      if (element) opsFireTargetChange(element, dom.value);
-      this._targetDirty = false;
-    }
+    this._targetSession.fireChangeIfDirty();
   }
 
   /**

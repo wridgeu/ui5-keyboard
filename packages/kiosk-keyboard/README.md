@@ -88,9 +88,15 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 ## Installation
 
+> This package is currently workspace-only (`private: true`) and not published to npm.
+
+In this monorepo, dependencies are managed via npm workspaces:
+
 ```bash
-npm install ui5-lib-kiosk-keyboard
+npm install
 ```
+
+If/when this package is published, you can install it directly from npm (`ui5-lib-kiosk-keyboard`).
 
 ## Getting Started
 
@@ -162,7 +168,17 @@ const keyboard = new KioskKeyboard({
 
 The keyboard anchors to the bottom of the viewport and automatically opens when any input receives focus.
 
----
+## API Stability
+
+Recommended stable consumer imports:
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardLayout, KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
+import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
+```
+
+Advanced/internal modules are available but should not be treated as a semver-stable API surface. This includes layout internals (`ui5/kiosk/layouts/*`), renderer internals, and helper modules such as input operations and low-level DOM utilities.
 
 ## KioskKeyboard Control
 
@@ -189,13 +205,13 @@ The keyboard anchors to the bottom of the viewport and automatically opens when 
 
 ### Events
 
-| Event                | Parameters                                                                      | Description                                                                                |
-| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. |
-| `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                      |
-| `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                      |
-| `afterOpen`          | —                                                                               | Fired after the docked keyboard has opened.                                                |
-| `afterClose`         | —                                                                               | Fired after the docked keyboard has closed.                                                |
+| Event                | Parameters                                                                      | Description                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action.  |
+| `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                       |
+| `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                       |
+| `afterOpen`          | —                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).   |
+| `afterClose`         | —                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end). |
 
 ### Public Methods
 
@@ -446,7 +462,7 @@ keyboard.show(); // slides in
 keyboard.close(); // slides out
 ```
 
-Both `show()` and `close()` are idempotent — calling them multiple times has no effect. They fire `afterOpen` and `afterClose` events respectively.
+Both `show()` and `close()` are idempotent — calling them multiple times has no effect. They fire `afterOpen` and `afterClose` immediately as state-change hooks (not after CSS transition completion).
 
 The docked keyboard uses `position: fixed` with `z-index: 100` and a `box-shadow` for visual separation.
 
@@ -516,7 +532,66 @@ myCustomInput.attachBrowserEvent("focusout", () => {
 });
 ```
 
----
+## Interop Cookbook
+
+### 1. Integration Style
+
+- Declarative (XML properties like `targetInput`, `inputIds`, `autoShow`, `autoType`) is recommended for standard UI5 forms.
+- Imperative (`setTargetInput()`, `show()`, `close()`) is recommended for dynamic targets, custom controls, and web component bridges.
+- Mixing both is valid: use declarative defaults, then override imperatively for edge flows.
+
+### 2. Standard UI5 Controls
+
+Use `sap.m.Input`, `sap.m.TextArea`, or `sap.m.StepInput` with `targetInput` (single field) or `inputIds` (form fields):
+
+```xml
+<m:Input id="firstName" />
+<m:Input id="lastName" />
+<kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" inputIds="firstName,lastName" />
+```
+
+### 3. Custom UI5 Controls
+
+For auto-show + typing to work, the control should:
+
+- resolve from DOM to UI5 control via `Element.closestTo()`
+- expose `getFocusDomRef()` that returns `HTMLInputElement` or `HTMLTextAreaElement`
+- ideally support `setValue(string)` plus `liveChange` (and optionally `change`)
+
+Minimal programmatic fallback:
+
+```ts
+keyboard.setTargetInput(myCustomControl);
+keyboard.show();
+```
+
+### 4. Web Components and Shadow DOM
+
+Focus retargeting means `focusin` often arrives on the host element, not the inner input. In that case auto-show cannot reliably claim the inner input. Bridge programmatically:
+
+```ts
+myHost.attachBrowserEvent("focusin", () => {
+  keyboard.setTargetInput(myUi5WrapperControl);
+  keyboard.show();
+});
+
+myHost.attachBrowserEvent("focusout", () => {
+  keyboard.close();
+});
+```
+
+### 5. Do and Don't
+
+- Do use `inputIds` for multi-field forms
+- Do set `targetInput` explicitly for custom/non-standard integrations
+- Don't rely on implicit auto-detection for arbitrary shadow-hosted inputs
+- Don't assume `afterOpen`/`afterClose` are CSS transition-end events
+
+### 6. Troubleshooting
+
+- Keyboard does not open: ensure `docked="true"` and `autoShow="true"`, and target resolves to a UI5 control
+- Typing does not update bindings: ensure control supports `setValue` and `liveChange`
+- Change timing differs from expected: `change` is commit-oriented (Enter/close/target switch) for single-line inputs
 
 ## Auto-Type
 

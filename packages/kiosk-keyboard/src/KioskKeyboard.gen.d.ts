@@ -158,12 +158,12 @@ declare module "./KioskKeyboard" {
         keyboardTypeChange?: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void;
 
         /**
-         * Fired after the docked keyboard has opened (slide-in complete).
+         * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          */
         afterOpen?: (event: KioskKeyboard$AfterOpenEvent) => void;
 
         /**
-         * Fired after the docked keyboard has closed (slide-out complete).
+         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          */
         afterClose?: (event: KioskKeyboard$AfterCloseEvent) => void;
     }
@@ -842,7 +842,7 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "afterOpen" event of this "KioskKeyboard".
          *
-         * Fired after the docked keyboard has opened (slide-in complete).
+         * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          *
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
@@ -857,7 +857,7 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "afterOpen" event of this "KioskKeyboard".
          *
-         * Fired after the docked keyboard has opened (slide-in complete).
+         * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          *
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
@@ -873,7 +873,7 @@ declare module "./KioskKeyboard" {
         /**
          * Detaches event handler "fn" from the "afterOpen" event of this "KioskKeyboard".
          *
-         * Fired after the docked keyboard has opened (slide-in complete).
+         * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          *
          * The passed function and listener object must match the ones used for event registration.
          *
@@ -886,7 +886,7 @@ declare module "./KioskKeyboard" {
         /**
          * Fires event "afterOpen" to attached listeners.
          *
-         * Fired after the docked keyboard has opened (slide-in complete).
+         * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          *
          * @param parameters Parameters to pass along with the event
          * @returns Reference to "this" in order to allow method chaining
@@ -898,7 +898,7 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "afterClose" event of this "KioskKeyboard".
          *
-         * Fired after the docked keyboard has closed (slide-out complete).
+         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          *
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
@@ -913,7 +913,7 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "afterClose" event of this "KioskKeyboard".
          *
-         * Fired after the docked keyboard has closed (slide-out complete).
+         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          *
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
@@ -929,7 +929,7 @@ declare module "./KioskKeyboard" {
         /**
          * Detaches event handler "fn" from the "afterClose" event of this "KioskKeyboard".
          *
-         * Fired after the docked keyboard has closed (slide-out complete).
+         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          *
          * The passed function and listener object must match the ones used for event registration.
          *
@@ -942,7 +942,7 @@ declare module "./KioskKeyboard" {
         /**
          * Fires event "afterClose" to attached listeners.
          *
-         * Fired after the docked keyboard has closed (slide-out complete).
+         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          *
          * @param parameters Parameters to pass along with the event
          * @returns Reference to "this" in order to allow method chaining
@@ -982,7 +982,7 @@ declare module "./KioskKeyboard" {
 
     /**
      * Interface describing the parameters of KioskKeyboard's 'afterOpen' event.
-     * Fired after the docked keyboard has opened (slide-in complete).
+     * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
      */
     // eslint-disable-next-line
     export interface KioskKeyboard$AfterOpenEventParameters {
@@ -990,7 +990,7 @@ declare module "./KioskKeyboard" {
 
     /**
      * Interface describing the parameters of KioskKeyboard's 'afterClose' event.
-     * Fired after the docked keyboard has closed (slide-out complete).
+     * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
      */
     // eslint-disable-next-line
     export interface KioskKeyboard$AfterCloseEventParameters {
@@ -1019,13 +1019,13 @@ declare module "./KioskKeyboard" {
 
     /**
      * Type describing the KioskKeyboard's 'afterOpen' event.
-     * Fired after the docked keyboard has opened (slide-in complete).
+     * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
      */
     export type KioskKeyboard$AfterOpenEvent = Event<KioskKeyboard$AfterOpenEventParameters>;
 
     /**
      * Type describing the KioskKeyboard's 'afterClose' event.
-     * Fired after the docked keyboard has closed (slide-out complete).
+     * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
      */
     export type KioskKeyboard$AfterCloseEvent = Event<KioskKeyboard$AfterCloseEventParameters>;
 }

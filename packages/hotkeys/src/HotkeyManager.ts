@@ -5,11 +5,13 @@ import { ConflictBehavior, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./SequenceManager";
 import { GLOBAL_SCOPE } from "./constants";
-import { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./dom";
+import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./dom";
 import { createIdGenerator } from "./idgen";
-import { matchesKeyboardEvent } from "./match";
 import { keyboardEventToHotkey, parseHotkey } from "./parse";
 import { detectPlatform } from "./platform";
+import ListenerRegistry from "./listener-registry";
+import { resolveMatchedRegistration } from "./dispatch-core";
+import type { DebugSkipEntry, SkipInfo } from "./skip-reason";
 import type {
   Hotkey,
   HotkeyCallback,
@@ -55,35 +57,6 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     target: options?.target ?? null,
   };
 }
-
-/**
- * Tracks why a matching registration was skipped during event processing.
- * Used to provide meaningful context to the unhandled callback.
- */
-interface SkipInfo {
-  reason: UnhandledReason;
-  registration?: HotkeyRegistrationInfo;
-}
-
-/**
- * Debug skip entry for debug mode — records ALL skipped registrations.
- */
-interface DebugSkipEntry {
-  registration: HotkeyRegistration;
-  reason: UnhandledReason;
-}
-
-/**
- * Higher number = more specific/useful reason. When multiple registrations
- * are skipped, the most informative reason is reported.
- */
-const SKIP_PRIORITY = {
-  [UnhandledReason.NoMatch]: 0,
-  [UnhandledReason.RepeatIgnored]: 1,
-  [UnhandledReason.InputSuppressed]: 2,
-  [UnhandledReason.PopupSuppressed]: 3,
-  [UnhandledReason.Disabled]: 4,
-} satisfies Record<UnhandledReason, number>;
 
 /**
  * Singleton keyboard shortcut manager for UI5 applications.
@@ -136,7 +109,11 @@ export default class HotkeyManager extends BaseObject {
   private _lastAltLocation = 0;
 
   // Target element listeners — ref-counted per EventTarget
+  // Kept on manager for debugging/tests and delegated via ListenerRegistry.
   private _targetListeners: Map<EventTarget, { handler: EventListener; count: number }> = new Map();
+
+  // Document + target listener bookkeeping
+  private readonly _listenerRegistry: ListenerRegistry;
 
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
@@ -147,6 +124,11 @@ export default class HotkeyManager extends BaseObject {
   constructor() {
     super();
     this._platform = detectPlatform();
+    this._listenerRegistry = new ListenerRegistry(
+      (event) => this._shouldIgnoreKeyEvent(event),
+      (event, target) => this._processKeyEvent(event, target),
+      this._targetListeners,
+    );
     this._attachListeners();
 
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
@@ -599,11 +581,7 @@ export default class HotkeyManager extends BaseObject {
 
     this._detachListeners();
 
-    // Clean up all target listeners
-    for (const [target, entry] of this._targetListeners) {
-      target.removeEventListener("keydown", entry.handler, true);
-    }
-    this._targetListeners.clear();
+    this._listenerRegistry.detachAllTargets();
 
     this._registrations.clear();
     this._scopeStack = [GLOBAL_SCOPE];
@@ -623,11 +601,11 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   private _attachListeners(): void {
-    document.addEventListener("keydown", this._keydownHandler, true);
+    this._listenerRegistry.attachDocument(this._keydownHandler);
   }
 
   private _detachListeners(): void {
-    document.removeEventListener("keydown", this._keydownHandler, true);
+    this._listenerRegistry.detachDocument(this._keydownHandler);
   }
 
   private _onKeyDown(event: KeyboardEvent): void {
@@ -672,9 +650,18 @@ export default class HotkeyManager extends BaseObject {
 
     // Two-pass matching: active scope first, then global.
     // This ensures scoped handlers always take priority over global ones.
-    const matched =
-      this._findMatch(event, isInput, popupOpen, activeScope, targetElement, skipInfo, debugSkips) ??
-      this._findMatch(event, isInput, popupOpen, GLOBAL_SCOPE, targetElement, skipInfo, debugSkips);
+    const matched = resolveMatchedRegistration({
+      event,
+      isInput,
+      popupOpen,
+      activeScope,
+      targetElement,
+      registrations: this._registrations,
+      skipInfo,
+      debugSkips,
+      toRegistrationInfo: (reg) => this._toRegistrationInfo(reg),
+      logComponent: LOG_COMPONENT,
+    });
 
     // Debug logging
     if (this._debugMode) {
@@ -715,107 +702,6 @@ export default class HotkeyManager extends BaseObject {
       matched.callback(event, details);
     } catch (error) {
       Log.error(`Error in hotkey callback for "${matched.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
-    }
-  }
-
-  /**
-   * Find the first matching registration for a given target scope.
-   *
-   * When `skipInfo` is provided, records the most informative reason
-   * why a key-matching registration was skipped (for the unhandled callback).
-   *
-   * When `debugSkips` is provided, records ALL skipped registrations with reasons.
-   *
-   * When `targetElement` is non-null, only matches registrations with that specific target.
-   * When `targetElement` is null, only matches registrations without a target.
-   */
-  private _findMatch(
-    event: KeyboardEvent,
-    isInput: boolean,
-    popupOpen: boolean,
-    targetScope: string,
-    targetElement: EventTarget | null,
-    skipInfo?: SkipInfo | null,
-    debugSkips?: DebugSkipEntry[] | null,
-  ): HotkeyRegistration | null {
-    for (const registration of this._registrations.values()) {
-      const opts = registration.options;
-
-      // Must match the target scope exactly
-      if (opts.scope !== targetScope) continue;
-
-      // Target element filter
-      if (targetElement !== null) {
-        // Target-scoped query: only match registrations bound to this target
-        if (opts.target !== targetElement) continue;
-      } else {
-        // Document-scoped query: skip registrations with a target
-        if (opts.target !== null) continue;
-      }
-
-      // Event matching (key + modifiers)
-      if (!matchesKeyboardEvent(event, registration.parsedHotkey)) continue;
-
-      // From here on, the key pattern matched — any skip is reportable.
-
-      // Skip disabled (supports static boolean or dynamic function)
-      let enabled: boolean;
-      try {
-        enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
-      } catch (error) {
-        Log.error(
-          `Error evaluating enabled() for "${registration.normalizedHotkey}": ${error}`,
-          undefined,
-          LOG_COMPONENT,
-        );
-        enabled = false;
-      }
-      if (!enabled) {
-        this._recordSkip(skipInfo, UnhandledReason.Disabled, registration);
-        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.Disabled });
-        continue;
-      }
-
-      // Key repeat check
-      if (opts.ignoreRepeat && event.repeat) {
-        this._recordSkip(skipInfo, UnhandledReason.RepeatIgnored, registration);
-        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.RepeatIgnored });
-        continue;
-      }
-
-      // Input element check (resolved per-registration)
-      const shouldIgnoreInputs = resolveIgnoreInputs(
-        opts.ignoreInputs,
-        registration.parsedHotkey.ctrl,
-        registration.parsedHotkey.meta,
-        registration.parsedHotkey.key,
-      );
-      if (shouldIgnoreInputs && isInput) {
-        this._recordSkip(skipInfo, UnhandledReason.InputSuppressed, registration);
-        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.InputSuppressed });
-        continue;
-      }
-
-      // Popup suppression (dialogs and popovers)
-      if (opts.suppressInPopups && popupOpen) {
-        this._recordSkip(skipInfo, UnhandledReason.PopupSuppressed, registration);
-        if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.PopupSuppressed });
-        continue;
-      }
-
-      return registration;
-    }
-    return null;
-  }
-
-  /**
-   * Record a skip reason if it is more informative than the current one.
-   * Converts the internal registration to the public info shape.
-   */
-  private _recordSkip(skipInfo: SkipInfo | null | undefined, reason: UnhandledReason, reg: HotkeyRegistration): void {
-    if (skipInfo && SKIP_PRIORITY[reason] > SKIP_PRIORITY[skipInfo.reason]) {
-      skipInfo.reason = reason;
-      skipInfo.registration = this._toRegistrationInfo(reg);
     }
   }
 
@@ -935,33 +821,11 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   private _attachTargetListener(target: EventTarget): void {
-    const existing = this._targetListeners.get(target);
-    if (existing) {
-      existing.count++;
-      return;
-    }
-
-    // Cast at the boundary: "keydown" always dispatches KeyboardEvent,
-    // but EventTarget.addEventListener types the callback as EventListener (Event → void).
-    const handler: EventListener = (e) => {
-      const ke = e as KeyboardEvent;
-      if (this._shouldIgnoreKeyEvent(ke)) return;
-      this._processKeyEvent(ke, target);
-    };
-
-    target.addEventListener("keydown", handler, true);
-    this._targetListeners.set(target, { handler, count: 1 });
+    this._listenerRegistry.attachTarget(target);
   }
 
   private _detachTargetListener(target: EventTarget): void {
-    const existing = this._targetListeners.get(target);
-    if (!existing) return;
-
-    existing.count--;
-    if (existing.count <= 0) {
-      target.removeEventListener("keydown", existing.handler, true);
-      this._targetListeners.delete(target);
-    }
+    this._listenerRegistry.detachTarget(target);
   }
 
   // ──────────────────────────────────────────────

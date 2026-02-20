@@ -76,9 +76,15 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 
 ## Installation
 
+> This package is currently workspace-only (`private: true`) and not published to npm.
+
+In this monorepo, dependencies are managed via npm workspaces:
+
 ```bash
-npm install ui5-lib-hotkeys
+npm install
 ```
+
+If/when this package is published, you can install it directly from npm (`ui5-lib-hotkeys`).
 
 Add the library to your application's `manifest.json`:
 
@@ -141,7 +147,18 @@ hotkeys.destroyAll();
 manager.destroy();
 ```
 
----
+## API Stability
+
+Recommended stable consumer imports:
+
+```ts
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
+import { ConflictBehavior, GLOBAL_SCOPE, UnhandledReason } from "ui5/hotkeys/library";
+import type { Hotkey } from "ui5/hotkeys/types";
+```
+
+Advanced utility modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. This includes modules such as `ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/dom`, `ui5/hotkeys/platform`, and `ui5/hotkeys/validate`.
 
 ## HotkeyManager
 

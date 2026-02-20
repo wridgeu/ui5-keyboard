@@ -31,9 +31,6 @@
   "type": "module",
   "main": "dist/resources/ui5/hotkeys/library.js",
   "types": "dist/index.d.ts",
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "clean": "rimraf dist",
     "build": "ui5 build --clean-dest",
