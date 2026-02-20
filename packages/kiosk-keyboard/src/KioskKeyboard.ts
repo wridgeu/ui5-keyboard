@@ -23,6 +23,15 @@ import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
 
+type InputFocusDelegation = {
+  onfocusin: () => void;
+};
+
+type KeyHighlightDelegation = {
+  onkeydown: (event: Event) => void;
+  onkeyup: (event: Event) => void;
+};
+
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
  *
@@ -56,12 +65,9 @@ export default class KioskKeyboard extends Control {
   declare private _boundFocusIn: (e: FocusEvent) => void;
   declare private _boundFocusOut: (e: FocusEvent) => void;
   declare private _autoShowActive: boolean;
-  declare private _inputFocusDelegation: { onfocusin: () => void };
+  declare private _inputFocusDelegation: InputFocusDelegation;
   declare private _registeredInputIds: Set<string>;
-  declare private _keyHighlightDelegation: {
-    onkeydown: (event: Event) => void;
-    onkeyup: (event: Event) => void;
-  };
+  declare private _keyHighlightDelegation: KeyHighlightDelegation;
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
   declare private _baseLayout: string;
