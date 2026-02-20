@@ -1,13 +1,20 @@
 import Element from "sap/ui/core/Element";
 import { isInputOrTextarea } from "./dom-util";
 
+/** Cursor position tuple: [selectionStart, selectionEnd]. */
+export type CursorPos = [number, number];
+
 /**
- * Inserts text at the current cursor position in the given input/textarea,
- * replacing any active selection.
+ * Inserts text at the given cursor position (or the DOM selection when
+ * omitted) in the given input/textarea, replacing any active selection.
+ *
+ * Returns the new cursor position so the caller can track it in JS
+ * without relying on the DOM's `selectionStart`/`selectionEnd` which
+ * may be unreliable on unfocused inputs in some environments.
  */
-export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: string): void {
-  const start = dom.selectionStart ?? dom.value.length;
-  const end = dom.selectionEnd ?? start;
+export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: string, cursor?: CursorPos): CursorPos {
+  const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
+  const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
   const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
   const newPos = start + text.length;
 
@@ -17,15 +24,19 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
+  return [newPos, newPos];
 }
 
 /**
  * Deletes the character before the cursor, or removes the active
  * selection, in the given input/textarea.
+ *
+ * Returns the new cursor position, or `null` when nothing was deleted
+ * (cursor already at position 0 with no selection).
  */
-export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement): void {
-  const start = dom.selectionStart ?? dom.value.length;
-  const end = dom.selectionEnd ?? start;
+export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos | null {
+  const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
+  const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
 
   let newValue: string;
   let newPos: number;
@@ -37,7 +48,7 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement): vo
     newValue = dom.value.slice(0, start - 1) + dom.value.slice(start);
     newPos = start - 1;
   } else {
-    return;
+    return null;
   }
 
   setTargetValue(Element.closestTo(dom)!, newValue);
@@ -46,6 +57,7 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement): vo
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
+  return [newPos, newPos];
 }
 
 /**

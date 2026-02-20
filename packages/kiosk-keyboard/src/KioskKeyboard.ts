@@ -73,7 +73,8 @@ export default class KioskKeyboard extends Control {
   declare private _suppressedInputEl: HTMLInputElement | HTMLTextAreaElement | null;
   declare private _maxHeight: number;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
-  declare private _cursorInitialized: boolean;
+  /** JS-tracked cursor position [start, end]. Null until first access. */
+  declare private _cursorPos: [number, number] | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -454,7 +455,7 @@ export default class KioskKeyboard extends Control {
     this._suppressedInputEl = null;
     this._maxHeight = 0;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
-    this._cursorInitialized = false;
+    this._cursorPos = null;
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -549,7 +550,7 @@ export default class KioskKeyboard extends Control {
       this._restoreNativeKeyboard();
     }
 
-    this._cursorInitialized = false;
+    this._cursorPos = null;
     this.setAssociation("targetInput", target, true);
 
     // Add highlight delegation to new target
@@ -1117,7 +1118,10 @@ export default class KioskKeyboard extends Control {
     if (keyValue === "{backspace}") {
       if (this.fireEvent("keyPress", { key: "Backspace", shiftKey: shift }, true)) {
         const dom = this._getTargetDomRef();
-        if (dom) opsHandleBackspace(dom);
+        if (dom) {
+          const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined);
+          if (pos) this._cursorPos = pos;
+        }
       }
       return;
     }
@@ -1160,7 +1164,9 @@ export default class KioskKeyboard extends Control {
 
     if (this.fireEvent("keyPress", { key: effective, shiftKey: shift }, true)) {
       const dom = this._getTargetDomRef();
-      if (dom) opsInsertText(dom, effective);
+      if (dom) {
+        this._cursorPos = opsInsertText(dom, effective, this._cursorPos ?? undefined);
+      }
     }
 
     // Auto-release shift (not caps lock)
@@ -1185,11 +1191,12 @@ export default class KioskKeyboard extends Control {
   /**
    * Returns the target input's inner DOM element.
    *
-   * On first access for a given target, positions the cursor at the end
-   * of the value (via `setSelectionRange`, without `dom.focus()`) — but
-   * only when the input is not already the active element, so a
-   * user-placed cursor is never overwritten. Avoiding `dom.focus()`
-   * prevents focus-steal when the keyboard lives inside a Popover.
+   * Initialises `_cursorPos` on first access for a given target:
+   * - If the input is focused, reads the browser's live selection.
+   * - Otherwise, places the cursor at the end of the current value.
+   *
+   * Never calls `dom.focus()` — this prevents focus-steal when the
+   * keyboard lives inside a Popover whose target input is outside.
    */
   private _getTargetDomRef(): HTMLInputElement | HTMLTextAreaElement | null {
     const element = this._getTargetElement();
@@ -1200,20 +1207,26 @@ export default class KioskKeyboard extends Control {
       return null;
     }
 
-    // Ensure cursor is positioned at the end when the target was set
-    // programmatically and never focused by the user. Uses
-    // setSelectionRange WITHOUT dom.focus() so that focus stays where it
-    // is (e.g. inside a Popover that contains the keyboard).
-    // When the input is already the active element, the user placed the
-    // cursor themselves — don't override their position.
-    if (!this._cursorInitialized) {
-      this._cursorInitialized = true;
-      if (document.activeElement !== dom) {
-        try {
-          dom.setSelectionRange(dom.value.length, dom.value.length);
-        } catch {
-          // setSelectionRange throws on some input types (e.g. email) — ignore
-        }
+    if (document.activeElement === dom) {
+      // Input is focused — the user may have repositioned the cursor
+      // via click or arrow keys, so always sync from the live DOM.
+      this._cursorPos = [dom.selectionStart ?? dom.value.length, dom.selectionEnd ?? dom.value.length];
+    } else if (this._cursorPos === null) {
+      // First access after setTargetInput() and the input is NOT focused
+      // (e.g. keyboard inside a Popover). Default cursor to end of value.
+      const end = dom.value.length;
+      this._cursorPos = [end, end];
+      try {
+        dom.setSelectionRange(end, end);
+      } catch {
+        // setSelectionRange throws on some input types (e.g. email)
+      }
+    } else {
+      // Clamp tracked position to current value length — the value may
+      // have been changed externally (binding, programmatic setValue).
+      const len = dom.value.length;
+      if (this._cursorPos[0] > len || this._cursorPos[1] > len) {
+        this._cursorPos = [Math.min(this._cursorPos[0], len), Math.min(this._cursorPos[1], len)];
       }
     }
 
@@ -1223,7 +1236,7 @@ export default class KioskKeyboard extends Control {
   private _handleEnter(): void {
     const dom = this._getTargetDomRef();
     if (dom instanceof HTMLTextAreaElement) {
-      opsInsertText(dom, "\n");
+      this._cursorPos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
       return;
     }
     // Single-line input: fire change event (matches physical Enter behavior)

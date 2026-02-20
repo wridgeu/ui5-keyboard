@@ -24,7 +24,7 @@ export default class KioskPopover extends BaseController {
 
   onOpenKeyboard(event: { getSource: () => Button }): void {
     const button = event.getSource();
-    const inputId = button.data("key") as string;
+    const inputId = button.data("inputId") as string;
     const input = this.byId(inputId) as Input;
 
     if (!this._keyboard) {

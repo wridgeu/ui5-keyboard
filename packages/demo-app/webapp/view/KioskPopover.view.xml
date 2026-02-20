@@ -1,6 +1,7 @@
 <mvc:View
     controllerName="demo.hotkeys.controller.KioskPopover"
     xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
     xmlns="sap.m">
     <Page title="Popover Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
@@ -14,9 +15,11 @@
                             icon="sap-icon://keyboard-and-mouse"
                             type="Transparent"
                             press=".onOpenKeyboard"
-                            ariaHasPopup="Dialog"
-                            customData:key="firstName"
-                            xmlns:customData="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData" />
+                            ariaHasPopup="Dialog">
+                            <customData>
+                                <core:CustomData key="inputId" value="firstName" />
+                            </customData>
+                        </Button>
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Last Name" class="sapUiSmallMarginEnd" />
@@ -25,9 +28,11 @@
                             icon="sap-icon://keyboard-and-mouse"
                             type="Transparent"
                             press=".onOpenKeyboard"
-                            ariaHasPopup="Dialog"
-                            customData:key="lastName"
-                            xmlns:customData="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData" />
+                            ariaHasPopup="Dialog">
+                            <customData>
+                                <core:CustomData key="inputId" value="lastName" />
+                            </customData>
+                        </Button>
                     </HBox>
                 </VBox>
             </Panel>
