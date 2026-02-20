@@ -20,6 +20,10 @@ dom.ts              Input element detection (text fields, textareas, contentEdit
 platform.ts         Platform detection (mac/windows/linux) and Mod resolution
 format.ts           Platform-aware display formatting
 library.ts          UI5 library entry point (Lib.init)
+internal/dispatch-core.ts    Dispatch pipeline helpers and skip handling
+internal/listener-registry.ts Target listener reference counting
+internal/skip-reason.ts      Internal dispatch skip-reason types
+internal/idgen.ts            Internal registration ID generator
 ```
 
 `HotkeyManager` is the only public-facing class. The other modules are importable utilities that can be used independently.
@@ -299,6 +303,11 @@ packages/hotkeys/
     dom.ts              Input element detection
     platform.ts         Platform detection and Mod resolution
     format.ts           Display formatting
+    internal/
+      dispatch-core.ts  Internal dispatch helpers
+      listener-registry.ts Internal target listener registry
+      skip-reason.ts    Internal skip-reason models
+      idgen.ts          Internal ID generator
     manifest.json       Library manifest (v2.0.0)
   test/qunit/
     testsuite.qunit.ts  Test suite runner (UI5 Test Starter)

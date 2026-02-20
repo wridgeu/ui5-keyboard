@@ -1,5 +1,5 @@
 import Element from "sap/ui/core/Element";
-import { isInputOrTextarea } from "./dom";
+import { resolveInputOrTextarea } from "./dom";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
 export type CursorPos = [number, number];
@@ -93,8 +93,8 @@ export function setTargetValue(element: Element, newValue: string): void {
   } else {
     // Fallback for custom controls without a "value" metadata property:
     // set the inner DOM input value directly so typing still works.
-    const dom = element.getFocusDomRef();
-    if (isInputOrTextarea(dom)) {
+    const dom = resolveInputOrTextarea(element.getFocusDomRef());
+    if (dom) {
       dom.value = newValue;
     }
   }

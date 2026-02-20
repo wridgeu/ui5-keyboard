@@ -27,6 +27,7 @@
         "sap.m": {},
         "sap.ui.core": {},
         "sap.ui.layout": {},
+        "sap.ui.webc.main": {},
         "ui5.hotkeys": {},
         "ui5.kiosk": {}
       }

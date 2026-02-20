@@ -499,21 +499,21 @@ The `focusin` handler checks whether the focused DOM element is a **text-entry**
 | `<input readonly>` / `<textarea readonly>`                       | No        | Read-only inputs cannot be typed into                 |
 | `<div contenteditable>`                                          | No        | Not an `HTMLInputElement` or `HTMLTextAreaElement`    |
 | `<select>`                                                       | No        | Not a text input element                              |
-| Custom element / Shadow DOM inner `<input>`                      | No\*      | See below                                             |
+| Custom element / Shadow DOM inner `<input>`                      | Depends   | See Web Components notes below                        |
 
-> \* If a Web Component or custom element renders a native `<input>` in its Shadow DOM, the `focusin` event's `event.target` will be the **host element**, not the inner `<input>`. Since the host element is not an `HTMLInputElement`, the keyboard will not detect it. To work with such components, set `targetInput` explicitly and use `show()`/`close()` programmatically.
+> For host controls/wrappers, typing and auto-type now resolve inner native `<input>/<textarea>` from either light DOM or Shadow DOM when available via `getFocusDomRef()`. Auto-show claiming still depends on the focused event target and UI5 control resolution.
 
 **2. UI5 layer — what the keyboard types into:**
 
 Once an `<input>` or `<textarea>` receives focus, the keyboard uses `Element.closestTo(domElement)` to resolve the owning UI5 control. This resolved control becomes the `targetInput`. For typing to work, the control must:
 
-| Requirement     | Method/Property                                                        | Used for                                                                      |
-| --------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **Required**    | `getFocusDomRef()` returning `HTMLInputElement \| HTMLTextAreaElement` | Reading/writing `.value`, cursor position via `selectionStart`/`selectionEnd` |
-| **Recommended** | `setValue(string)` method                                              | Syncs value to both ManagedObject property and DOM                            |
-| **Recommended** | `liveChange` event                                                     | Fires after each keystroke for data binding integration                       |
-| **Optional**    | `change` event                                                         | Fired on Enter key (simulates form submit)                                    |
-| **Optional**    | `getType()` returning `"Number"` or `"Tel"`                            | Auto-type numpad detection                                                    |
+| Requirement     | Method/Property                                                                                                   | Used for                                                                      |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **Required**    | `getFocusDomRef()` returning an element that exposes an inner `input/textarea` (direct, light DOM, or Shadow DOM) | Reading/writing `.value`, cursor position via `selectionStart`/`selectionEnd` |
+| **Recommended** | `setValue(string)` method                                                                                         | Syncs value to both ManagedObject property and DOM                            |
+| **Recommended** | `liveChange` event                                                                                                | Fires after each keystroke for data binding integration                       |
+| **Optional**    | `change` event                                                                                                    | Fired on Enter key (simulates form submit)                                    |
+| **Optional**    | `getType()` returning `"Number"` or `"Tel"`                                                                       | Auto-type numpad detection                                                    |
 
 All standard `sap.m` input controls (`Input`, `TextArea`, `SearchField`, `StepInput`) satisfy these requirements out of the box.
 
@@ -567,7 +567,12 @@ keyboard.show();
 
 ### 4. Web Components and Shadow DOM
 
-Focus retargeting means `focusin` often arrives on the host element, not the inner input. In that case auto-show cannot reliably claim the inner input. Bridge programmatically:
+There are two paths:
+
+- UI5 wrappers (for example `sap.ui.webc.main.Input`) can be used declaratively with `inputIds` and are covered by e2e interop tests.
+- Generic host elements may still require a programmatic bridge because focus retargeting can hide the inner input from auto-show claim logic.
+
+Programmatic bridge pattern:
 
 ```ts
 myHost.attachBrowserEvent("focusin", () => {

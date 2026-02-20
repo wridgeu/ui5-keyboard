@@ -11,8 +11,13 @@ KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
-dom-util.ts               Key element ID construction + regex (shared by control & renderer)
-i18n-util.ts              getText() helper for library resource bundle (shared by control & renderer)
+layout-registry.ts        Layout registration + locale-based layout resolution
+internal/dom.ts           Key element IDs, input guards, input/textarea resolver
+internal/i18n.ts          getText() helper for library resource bundle
+internal/detect-keyboard-type.ts  Auto-type detection helpers
+internal/input-operations.ts      Target input text operations
+internal/target-input-session.ts  Per-target dirty/value/change handling
+internal/focus-claim-service.ts   Auto-show input claim logic
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
@@ -23,6 +28,10 @@ layouts/
   numeric.ts              Number pad with basic operators
   special.ts              Special characters and symbols
   numpad.ts               Compact calculator-style keypad
+  fkeys.ts                Standalone function key layout (F1-F12)
+  fkey-row.ts             Shared F1-F12 row used by *-fk variants
+  qwerty-fk.ts            QWERTY with F1-F12 row on top
+  qwertz-de-fk.ts         QWERTZ-DE with F1-F12 row on top
 themes/
   base/
     KioskKeyboard.less    Base styles using SAP LESS parameters
@@ -211,7 +220,7 @@ This is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected a
 
 ### Locale Resolution
 
-`getLocaleLayout()` uses `Localization.getLanguageTag()` from `sap/base/i18n/Localization` (available in OpenUI5 1.118+). This API resolves from all UI5 language sources: URL `sap-ui-language` param, `sap-language` param, bootstrap config, and browser settings. No manual URL parsing is needed.
+`getLocaleLayout()` uses `Localization.getLanguageTag()` from `sap/base/i18n/Localization`. This API resolves from all UI5 language sources: URL `sap-ui-language` param, `sap-language` param, bootstrap config, and browser settings. No manual URL parsing is needed.
 
 The returned `LanguageTag` has `.language` (lowercase ISO639, e.g. `"de"`) and `.region` (uppercase ISO3166 or `null`, e.g. `"AT"`).
 
@@ -443,10 +452,18 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 packages/kiosk-keyboard/
   src/
     KioskKeyboard.ts          UI5 Control with state, event handling,
-                              locale detection, auto-type, mobile suppression
+                               locale detection, auto-type, mobile suppression
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
     library.ts                Lib.init(), KeyboardLayout, KeyboardType, MobileKeyboard enums
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition
+    layout-registry.ts        Layout registration and locale resolution
+    internal/
+      dom.ts                  DOM/key ID utilities + input resolver
+      i18n.ts                 I18n helper
+      detect-keyboard-type.ts Auto-type detection
+      input-operations.ts     Text insertion/backspace/enter ops
+      target-input-session.ts Target state + commit handling
+      focus-claim-service.ts  Auto-show claim decisions
     layouts/
       index.ts                Layout registry
       qwerty.ts               Standard QWERTY layout
@@ -454,6 +471,10 @@ packages/kiosk-keyboard/
       numeric.ts              Numeric layout
       special.ts              Special characters layout
       numpad.ts               Compact numpad layout
+      fkeys.ts                Standalone F-key layout
+      fkey-row.ts             Shared F-key row
+      qwerty-fk.ts            QWERTY + F-key row
+      qwertz-de-fk.ts         QWERTZ-DE + F-key row
     themes/
       base/
         KioskKeyboard.less    Base styles (SAP LESS parameters)
@@ -470,4 +491,7 @@ packages/kiosk-keyboard/
     wdio.conf.ts               WebdriverIO configuration
     visual.test.ts             Visual regression tests
     inputmode.test.ts          E2E tests for inputmode suppression
+    focus.test.ts              Focus/auto-show behavior
+    autotype.test.ts           Auto-type keyboard switching
+    interop.test.ts            StepInput + UI5 Web Components interop
 ```

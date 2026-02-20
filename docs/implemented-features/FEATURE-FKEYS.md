@@ -1,8 +1,10 @@
 # Feature: Function Key Row (F1-F12)
 
+> Status: **Implemented**
+
 ## Overview
 
-Add an optional row of function keys (F1 through F12) to the kiosk keyboard. Function keys are common in industrial/kiosk terminals where SAP transactions rely on F-key shortcuts (e.g. F8 = Execute, F3 = Back).
+Adds an optional row of function keys (F1 through F12) to the kiosk keyboard. Function keys are common in industrial/kiosk terminals where SAP transactions rely on F-key shortcuts (e.g. F8 = Execute, F3 = Back).
 
 ## Motivation
 
@@ -89,7 +91,7 @@ Add a layout-switch key to the bottom row of `qwerty` and `qwertz-de`:
 ];
 ```
 
-> **Open question**: Does `Fn` replace the `#+=` (special) key, or should we add a fourth button? Replacing keeps the row balanced. If both are needed, the bottom row gets 5 buttons and the space bar shrinks.
+Decision: `Fn` replaces the old `#+=` switch in the default bottom row for balanced width and predictable touch targets.
 
 ### Registration
 
@@ -142,8 +144,8 @@ Add `"fkeys"` to `_BUILTIN_LAYOUTS` in `KioskKeyboard.ts` and to `SECONDARY_LAYO
 | `test/qunit/testsuite.qunit.ts` | Register new test                                               |
 | Demo app view/controller        | Showcase F-key event handling                                   |
 
-## Open questions
+## Final decisions
 
-1. **Bottom row layout**: Replace `#+=` with `Fn`, or add a fourth button alongside it?
-2. **F-key visual style**: Use `type: "default"` (standard key look) or `type: "modifier"` (subdued)? Modifier makes sense since F-keys are function triggers, not text.
-3. **Shift behavior**: Should Shift have any effect on F-keys? (Probably not — F-keys are typically shift-agnostic on physical keyboards.)
+1. **Bottom row layout**: `Fn` replaces `#+=` in default base layouts.
+2. **F-key visual style**: F-keys use `type: "modifier"`.
+3. **Shift behavior**: F-key taps do not insert text and do not auto-release shift; `shiftKey` is still exposed in `keyPress`.

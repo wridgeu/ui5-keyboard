@@ -1,5 +1,5 @@
 import Element from "sap/ui/core/Element";
-import { isInputOrTextarea } from "./dom";
+import { isInputOrTextarea, resolveInputOrTextarea } from "./dom";
 import {
   insertText as opsInsertText,
   handleBackspace as opsHandleBackspace,
@@ -69,8 +69,8 @@ export default class TargetInputSession {
     const element = this._getTargetElement();
     if (!element) return null;
 
-    const dom = element.getFocusDomRef();
-    if (!isInputOrTextarea(dom)) {
+    const dom = resolveInputOrTextarea(element.getFocusDomRef());
+    if (!dom) {
       return null;
     }
 

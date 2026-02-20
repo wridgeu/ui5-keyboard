@@ -1,6 +1,6 @@
 import Control from "sap/ui/core/Control";
 import ManagedObject from "sap/ui/base/ManagedObject";
-import { isInputOrTextarea } from "./dom";
+import { resolveInputOrTextarea } from "./dom";
 import { KeyboardType } from "../library";
 
 /** Numeric input types that map to Numpad keyboard. */
@@ -34,8 +34,8 @@ export function detectKeyboardType(control: Control): string {
   }
 
   // 3. DOM inputmode attribute
-  const dom = control.getFocusDomRef();
-  if (isInputOrTextarea(dom)) {
+  const dom = resolveInputOrTextarea(control.getFocusDomRef());
+  if (dom) {
     const inputmode = dom.getAttribute("inputmode");
     if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return KeyboardType.Numpad;
 

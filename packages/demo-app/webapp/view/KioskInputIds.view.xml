@@ -2,16 +2,21 @@
     controllerName="demo.hotkeys.controller.KioskInputIds"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
+    xmlns:webc="sap.ui.webc.main"
     xmlns:kiosk="ui5.kiosk">
     <Page title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <Panel headerText="Selective Input Targeting" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="The keyboard below targets only Input A and Input B via inputIds. Focusing Input C or D will not switch the keyboard target." />
+                    <Text text="The keyboard below targets Input A, Input B, StepInput, and UI5 WebC Input via inputIds. Focusing Input C or D will not switch the keyboard target." />
                     <Label text="Input A (targeted)" labelFor="inputA" class="sapUiSmallMarginTop" />
                     <Input id="inputA" placeholder="Targeted by keyboard" width="100%" />
                     <Label text="Input B (targeted)" labelFor="inputB" class="sapUiSmallMarginTop" />
                     <Input id="inputB" placeholder="Targeted by keyboard" width="100%" />
+                    <Label text="StepInput (targeted)" labelFor="stepInputTarget" class="sapUiSmallMarginTop" />
+                    <StepInput id="stepInputTarget" width="12rem" min="0" max="999" value="5" />
+                    <Label text="UI5 WebC Input (targeted)" labelFor="webcInputTarget" class="sapUiSmallMarginTop" />
+                    <webc:Input id="webcInputTarget" placeholder="Targeted Web Component wrapper" value="" />
                     <Label text="Input C (not targeted)" labelFor="inputC" class="sapUiSmallMarginTop" />
                     <Input id="inputC" placeholder="Not targeted" width="100%" />
                     <Label text="Input D (not targeted)" labelFor="inputD" class="sapUiSmallMarginTop" />
@@ -36,7 +41,7 @@
                 id="inputIdsKeyboard"
                 docked="true"
                 autoShow="true"
-                inputIds="inputA,inputB"
+                inputIds="inputA,inputB,stepInputTarget,webcInputTarget"
                 keyPress=".onKeyPress"
                 ariaLabel="Selective Keyboard" />
         </content>

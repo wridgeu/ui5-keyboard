@@ -8,7 +8,7 @@ import type { LayoutDefinition, KeyDefinition } from "./types";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n";
-import { KEY_ID_SUFFIX_RE, keyElementId, isInputOrTextarea } from "./internal/dom";
+import { KEY_ID_SUFFIX_RE, keyElementId, resolveInputOrTextarea } from "./internal/dom";
 import { KeyboardType, MobileKeyboard } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
@@ -550,10 +550,10 @@ export default class KioskKeyboard extends Control {
 
         // Dev-time check: warn if the control won't work as a target
         const focusRef = next.getFocusDomRef?.();
-        if (focusRef && !isInputOrTextarea(focusRef)) {
+        if (focusRef && !resolveInputOrTextarea(focusRef)) {
           Log.warning(
             `KioskKeyboard: targetInput "${newId}" does not have a textual input DOM ref — ` +
-              "key taps will have no effect. Expected HTMLInputElement or HTMLTextAreaElement.",
+              "key taps will have no effect. Expected (or containing) HTMLInputElement/HTMLTextAreaElement.",
             undefined,
             "ui5.kiosk.KioskKeyboard",
           );
@@ -1299,8 +1299,8 @@ export default class KioskKeyboard extends Control {
     const el = this._getTargetElement();
     if (!el) return;
 
-    const dom = el.getFocusDomRef();
-    if (!isInputOrTextarea(dom)) return;
+    const dom = resolveInputOrTextarea(el.getFocusDomRef());
+    if (!dom) return;
 
     // Already suppressing this element
     if (this._suppressedInputEl === dom) return;
@@ -1322,8 +1322,8 @@ export default class KioskKeyboard extends Control {
 
     // Re-resolve: the target control may have re-rendered, replacing the DOM node.
     // Fall back to the cached ref if the target is no longer available.
-    const freshDom = this._getTargetElement()?.getFocusDomRef();
-    const dom = isInputOrTextarea(freshDom) ? freshDom : this._suppressedInputEl;
+    const freshDom = resolveInputOrTextarea(this._getTargetElement()?.getFocusDomRef());
+    const dom = freshDom ?? this._suppressedInputEl;
 
     // If the DOM node was replaced by a re-render, also clean up the stale cached ref
     if (dom !== this._suppressedInputEl) {

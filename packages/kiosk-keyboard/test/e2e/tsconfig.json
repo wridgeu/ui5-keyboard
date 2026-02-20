@@ -6,7 +6,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": true,
-    "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework", "@wdio/visual-service"]
+    "types": ["node", "@openui5/types", "@wdio/globals/types", "@wdio/mocha-framework", "@wdio/visual-service"]
   },
   "include": ["./**/*.ts"]
 }

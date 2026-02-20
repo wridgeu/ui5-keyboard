@@ -12,10 +12,18 @@ UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications
 
 ## Getting Started
 
-Each library is installed and configured independently. See the package READMEs for full API docs:
+This monorepo currently keeps both libraries workspace-local (`private: true`).
+For local development, install once at the repository root and use the package READMEs for API details:
 
-- **[ui5-lib-hotkeys README](./packages/hotkeys/README.md)** — installation, API reference, all options
-- **[ui5-lib-kiosk-keyboard README](./packages/kiosk-keyboard/README.md)** — installation, API reference, layouts
+```bash
+npm install
+```
+
+If/when the packages are published, use the install commands below.
+For full API details, see:
+
+- **[ui5-lib-hotkeys README](./packages/hotkeys/README.md)**
+- **[ui5-lib-kiosk-keyboard README](./packages/kiosk-keyboard/README.md)**
 
 ### Hotkeys
 
@@ -102,6 +110,7 @@ ui5-keyboard/
 | [Multi-key Sequences](./docs/SEQUENCES.md)                             | Sequence system design and rationale   |
 | [Alternatives Review](./docs/REVIEW.md)                                | Comparison with alternative approaches |
 | [Known Issues](./docs/KNOWN-ISSUES.md)                                 | Known issues and workarounds           |
+| [API Stability Policy](./docs/API-STABILITY.md)                        | Stable vs internal import boundaries   |
 | [UI5 Event Handling Deep Dive](./docs/UI5-EVENT-HANDLING-DEEP-DIVE.md) | How UI5 processes keyboard events      |
 | [UI5 TypeScript Event Typing](./docs/UI5-TYPESCRIPT-EVENT-TYPING.md)   | TypeScript patterns for UI5 events     |
 
