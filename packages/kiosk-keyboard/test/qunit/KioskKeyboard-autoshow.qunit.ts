@@ -12,6 +12,10 @@ QUnit.module("KioskKeyboard autoShow", {
   },
 });
 
+const dispatchNullRelatedFocusOut = (element: HTMLElement): void => {
+  element.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null }));
+};
+
 QUnit.test("autoShow with docked=false does not open keyboard on input focus", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -129,8 +133,7 @@ QUnit.test(
     await nextUIUpdate();
     assert.ok(kb.isOpen(), "Keyboard opened for first input");
 
-    const internals = kb as unknown as { _onDocumentFocusOut: (event: FocusEvent) => void };
-    internals._onDocumentFocusOut(new FocusEvent("focusout"));
+    dispatchNullRelatedFocusOut(input1.getFocusDomRef() as HTMLElement);
 
     (input2.getFocusDomRef() as HTMLElement).focus();
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -160,8 +163,7 @@ QUnit.test("autoShow closes when null relatedTarget settles outside claimable in
   await nextUIUpdate();
   assert.ok(kb.isOpen(), "Keyboard opened for input");
 
-  const internals = kb as unknown as { _onDocumentFocusOut: (event: FocusEvent) => void };
-  internals._onDocumentFocusOut(new FocusEvent("focusout"));
+  dispatchNullRelatedFocusOut(input.getFocusDomRef() as HTMLElement);
 
   outside.focus();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -184,8 +186,7 @@ QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) =
   await nextUIUpdate();
   assert.ok(kb.isOpen(), "Keyboard opened for input");
 
-  const internals = kb as unknown as { _onDocumentFocusOut: (event: FocusEvent) => void };
-  internals._onDocumentFocusOut(new FocusEvent("focusout"));
+  dispatchNullRelatedFocusOut(input.getFocusDomRef() as HTMLElement);
 
   kb.destroy();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -193,4 +194,194 @@ QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) =
   assert.ok(true, "No errors after destroy with deferred close pending");
 
   input.destroy();
+});
+
+QUnit.test("Auto-show skips input targeted by another keyboard", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const inlineKb = new KioskKeyboard({
+    keyboardType: "Numpad",
+    targetInput: input,
+  });
+  inlineKb.placeAt("qunit-fixture");
+
+  const dockedKb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  dockedKb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
+  assert.notOk(dockedKb.isOpen(), "Docked keyboard does not open for input targeted by inline keyboard");
+
+  input.destroy();
+  inlineKb.destroy();
+  dockedKb.destroy();
+});
+
+QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
+  const claimedInput = new Input();
+  const freeInput = new Input();
+  claimedInput.placeAt("qunit-fixture");
+  freeInput.placeAt("qunit-fixture");
+
+  const inlineKb = new KioskKeyboard({
+    keyboardType: "Numpad",
+    targetInput: claimedInput,
+  });
+  inlineKb.placeAt("qunit-fixture");
+
+  const dockedKb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  dockedKb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  (freeInput.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
+  assert.ok(dockedKb.isOpen(), "Docked keyboard opens for unclaimed input");
+  assert.strictEqual(dockedKb.getTargetInput(), freeInput.getId(), "Target set to unclaimed input");
+
+  claimedInput.destroy();
+  freeInput.destroy();
+  inlineKb.destroy();
+  dockedKb.destroy();
+});
+
+QUnit.test("Destroying the claiming keyboard frees the input for auto-show", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const inlineKb = new KioskKeyboard({
+    keyboardType: "Numpad",
+    targetInput: input,
+  });
+  inlineKb.placeAt("qunit-fixture");
+
+  const dockedKb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  dockedKb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.notOk(dockedKb.isOpen(), "Docked keyboard blocked while inline keyboard exists");
+
+  (document.getElementById("qunit-fixture") as HTMLElement).focus();
+  await nextUIUpdate();
+  inlineKb.destroy();
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.ok(dockedKb.isOpen(), "Docked keyboard opens after inline keyboard is destroyed");
+
+  input.destroy();
+  dockedKb.destroy();
+});
+
+QUnit.test("Re-targeting the claiming keyboard frees the original input", async (assert) => {
+  const input1 = new Input();
+  const input2 = new Input();
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+
+  const inlineKb = new KioskKeyboard({
+    keyboardType: "Numpad",
+    targetInput: input1,
+  });
+  inlineKb.placeAt("qunit-fixture");
+
+  const dockedKb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  dockedKb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  (input1.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.notOk(dockedKb.isOpen(), "Docked keyboard blocked for input1");
+
+  (input1.getFocusDomRef() as HTMLElement).blur();
+  await nextUIUpdate();
+
+  inlineKb.setTargetInput(input2);
+
+  (input1.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.ok(dockedKb.isOpen(), "Docked keyboard opens for input1 after re-target");
+
+  input1.destroy();
+  input2.destroy();
+  inlineKb.destroy();
+  dockedKb.destroy();
+});
+
+QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed input", async (assert) => {
+  const freeInput = new Input();
+  const claimedInput = new Input();
+  freeInput.placeAt("qunit-fixture");
+  claimedInput.placeAt("qunit-fixture");
+
+  const inlineKb = new KioskKeyboard({
+    keyboardType: "Numpad",
+    targetInput: claimedInput,
+  });
+  inlineKb.placeAt("qunit-fixture");
+
+  const dockedKb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  dockedKb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  (freeInput.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.ok(dockedKb.isOpen(), "Docked keyboard is open for free input");
+
+  (claimedInput.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.notOk(dockedKb.isOpen(), "Docked keyboard closed after focus moved to claimed input");
+
+  freeInput.destroy();
+  claimedInput.destroy();
+  inlineKb.destroy();
+  dockedKb.destroy();
+});
+
+QUnit.test("Two docked keyboards with auto-show do not fight over same input", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const docked1 = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  docked1.placeAt("qunit-fixture");
+
+  const docked2 = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  docked2.placeAt("qunit-fixture");
+  await waitForRender();
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
+  const openCount = [docked1.isOpen(), docked2.isOpen()].filter(Boolean).length;
+  assert.strictEqual(openCount, 1, "Exactly one docked keyboard opens");
+
+  input.destroy();
+  docked1.destroy();
+  docked2.destroy();
 });
