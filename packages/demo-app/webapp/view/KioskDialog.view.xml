@@ -1,0 +1,58 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskDialog"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:kiosk="ui5.kiosk">
+    <Page title="Dialog Integration Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <content>
+            <Panel headerText="Page Input (Docked Keyboard)" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Tap the input below — the docked keyboard auto-opens. Opening a dialog causes the docked keyboard to auto-close because focus leaves the page input." />
+                    <Label text="Page Input" labelFor="pageInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="pageInput"
+                        placeholder="Type here..."
+                        width="100%" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Dialog Approaches" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Button
+                        text="Approach A: Dialog without Keyboard"
+                        press=".onOpenDialogA"
+                        class="sapUiSmallMarginBottom" />
+                    <Text text="Plain dialog with an input. Docked keyboard auto-closes. On dialog close, page input is re-focused so keyboard resumes." />
+                    <Button
+                        text="Approach B: Dialog with Embedded Keyboard"
+                        press=".onOpenDialogB"
+                        class="sapUiSmallMarginTop sapUiSmallMarginBottom" />
+                    <Text text="Dialog with its own inline KioskKeyboard targeting the dialog input. Uses stableHeight to prevent dialog repositioning." />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Docked Keyboard Open:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/dialogDockedOpen}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/dialogLastKey}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <kiosk:KioskKeyboard
+                id="dialogDockedKeyboard"
+                docked="true"
+                autoShow="true"
+                inputIds="pageInput"
+                keyPress=".onKeyPress"
+                afterOpen=".onDockedAfterOpen"
+                afterClose=".onDockedAfterClose"
+                ariaLabel="Page Keyboard" />
+        </content>
+    </Page>
+</mvc:View>

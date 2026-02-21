@@ -12,4 +12,8 @@ export const Scope = {
   KioskInputIds: "kioskInputIds",
   KioskProgrammatic: "kioskProgrammatic",
   KioskComponent: "kioskComponent",
+  KioskFormWorkflow: "kioskFormWorkflow",
+  KioskMultiKeyboard: "kioskMultiKeyboard",
+  KioskDialog: "kioskDialog",
+  KioskCustomLayouts: "kioskCustomLayouts",
 } as const;

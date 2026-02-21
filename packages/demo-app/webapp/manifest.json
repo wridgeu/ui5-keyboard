@@ -27,7 +27,6 @@
         "sap.m": {},
         "sap.ui.core": {},
         "sap.ui.layout": {},
-        "sap.ui.webc.main": {},
         "ui5.hotkeys": {},
         "ui5.kiosk": {}
       }
@@ -86,6 +85,26 @@
           "name": "kioskComponent",
           "pattern": "kiosk/component",
           "target": "kioskComponent"
+        },
+        {
+          "name": "kioskFormWorkflow",
+          "pattern": "kiosk/form-workflow",
+          "target": "kioskFormWorkflow"
+        },
+        {
+          "name": "kioskMultiKeyboard",
+          "pattern": "kiosk/multi-keyboard",
+          "target": "kioskMultiKeyboard"
+        },
+        {
+          "name": "kioskDialog",
+          "pattern": "kiosk/dialog",
+          "target": "kioskDialog"
+        },
+        {
+          "name": "kioskCustomLayouts",
+          "pattern": "kiosk/custom-layouts",
+          "target": "kioskCustomLayouts"
         }
       ],
       "targets": {
@@ -120,6 +139,22 @@
         "kioskComponent": {
           "id": "kioskComponent",
           "name": "KioskComponent"
+        },
+        "kioskFormWorkflow": {
+          "id": "kioskFormWorkflow",
+          "name": "KioskFormWorkflow"
+        },
+        "kioskMultiKeyboard": {
+          "id": "kioskMultiKeyboard",
+          "name": "KioskMultiKeyboard"
+        },
+        "kioskDialog": {
+          "id": "kioskDialog",
+          "name": "KioskDialog"
+        },
+        "kioskCustomLayouts": {
+          "id": "kioskCustomLayouts",
+          "name": "KioskCustomLayouts"
         }
       }
     },

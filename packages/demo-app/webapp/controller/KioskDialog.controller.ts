@@ -1,0 +1,133 @@
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+import Dialog from "sap/m/Dialog";
+import Button from "sap/m/Button";
+import Input from "sap/m/Input";
+import VBox from "sap/m/VBox";
+import Label from "sap/m/Label";
+import { Scope } from "../constants";
+import BaseController from "./BaseController";
+
+/**
+ * Keyboard behavior with sap.m.Dialog — two approaches:
+ * A) Dialog without keyboard (docked auto-closes), and
+ * B) Dialog with embedded inline keyboard.
+ *
+ * @name demo.hotkeys.controller.KioskDialog
+ */
+export default class KioskDialog extends BaseController {
+  private _dialogA: Dialog | null = null;
+  private _dialogB: Dialog | null = null;
+
+  onInit(): void {
+    const stateModel = this.getStateModel();
+    stateModel.setProperty("/dialogDockedOpen", false);
+    stateModel.setProperty("/dialogLastKey", "None");
+  }
+
+  onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
+    const key = event.getParameter("key") ?? "";
+    const shift = event.getParameter("shiftKey") ?? false;
+    const display = shift ? `${key} (Shift)` : key;
+    this.getStateModel().setProperty("/dialogLastKey", display);
+  }
+
+  onDockedAfterOpen(): void {
+    this.getStateModel().setProperty("/dialogDockedOpen", true);
+  }
+
+  onDockedAfterClose(): void {
+    this.getStateModel().setProperty("/dialogDockedOpen", false);
+  }
+
+  onOpenDialogA(): void {
+    const dialogInput = new Input({
+      placeholder: "Type in dialog...",
+      width: "100%",
+    });
+
+    this._dialogA = new Dialog({
+      title: "Approach A: No Keyboard",
+      content: [
+        new VBox({
+          items: [new Label({ text: "Dialog Input" }), dialogInput],
+        }).addStyleClass("sapUiSmallMargin"),
+      ],
+      beginButton: new Button({
+        text: "Close",
+        press: () => {
+          this._dialogA!.close();
+        },
+      }),
+      afterClose: () => {
+        this._dialogA!.destroy();
+        this._dialogA = null;
+        // Re-focus page input so docked keyboard resumes
+        const pageInput = this.byId("pageInput") as Input;
+        pageInput.focus();
+      },
+    });
+
+    this.getView()!.addDependent(this._dialogA);
+    this._dialogA.open();
+  }
+
+  onOpenDialogB(): void {
+    const dialogInputId = this.getView()!.createId("dialogBInput");
+    const dialogInput = new Input(dialogInputId, {
+      placeholder: "Type in dialog...",
+      width: "100%",
+    });
+
+    const dialogKeyboard = new KioskKeyboard({
+      inputIds: [dialogInputId],
+      stableHeight: true,
+      ariaLabel: "Dialog Keyboard",
+    });
+
+    this._dialogB = new Dialog({
+      title: "Approach B: Embedded Keyboard",
+      contentWidth: "30rem",
+      content: [
+        new VBox({
+          items: [new Label({ text: "Dialog Input" }), dialogInput, dialogKeyboard],
+        }).addStyleClass("sapUiSmallMargin"),
+      ],
+      beginButton: new Button({
+        text: "Close",
+        press: () => {
+          this._dialogB!.close();
+        },
+      }),
+      afterClose: () => {
+        this._dialogB!.destroy();
+        this._dialogB = null;
+        const pageInput = this.byId("pageInput") as Input;
+        pageInput.focus();
+      },
+    });
+
+    this.getView()!.addDependent(this._dialogB);
+    this._dialogB.open();
+  }
+
+  onNavBack(): void {
+    this._closeDialogs();
+    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+  }
+
+  onExit(): void {
+    this._closeDialogs();
+  }
+
+  private _closeDialogs(): void {
+    if (this._dialogA) {
+      this._dialogA.destroy();
+      this._dialogA = null;
+    }
+    if (this._dialogB) {
+      this._dialogB.destroy();
+      this._dialogB = null;
+    }
+  }
+}

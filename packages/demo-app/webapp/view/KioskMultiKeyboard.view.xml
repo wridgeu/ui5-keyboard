@@ -1,0 +1,73 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskMultiKeyboard"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:kiosk="ui5.kiosk">
+    <Page title="Multi-Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <content>
+            <Text text="Two independent KioskKeyboard instances on one page. Each keyboard targets its own input via inputIds — instance isolation prevents cross-claiming." class="sapUiSmallMarginBottom" />
+
+            <l:Grid defaultSpan="L6 M12 S12">
+                <Panel headerText="Product Search (Docked Full Keyboard)">
+                    <VBox class="sapUiSmallMargin">
+                        <Label text="Search Term" labelFor="searchInput" />
+                        <Input
+                            id="searchInput"
+                            placeholder="Search products..."
+                            width="100%" />
+                        <HBox class="sapUiSmallMarginTop">
+                            <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                            <ObjectStatus text="{state>/multiSearchLastKey}" state="Information" />
+                        </HBox>
+                    </VBox>
+                </Panel>
+
+                <Panel headerText="Quantity Entry (Inline Numpad)">
+                    <VBox class="sapUiSmallMargin">
+                        <Label text="Quantity" labelFor="quantityInput" />
+                        <Input
+                            id="quantityInput"
+                            type="Number"
+                            placeholder="0"
+                            width="12rem" />
+                        <kiosk:KioskKeyboard
+                            id="quantityKeyboard"
+                            keyboardType="Numpad"
+                            inputIds="quantityInput"
+                            keyPress=".onQuantityKeyPress"
+                            ariaLabel="Quantity Numpad"
+                            class="sapUiSmallMarginTop" />
+                        <HBox class="sapUiSmallMarginTop">
+                            <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                            <ObjectStatus text="{state>/multiQuantityLastKey}" state="Information" />
+                        </HBox>
+                    </VBox>
+                </Panel>
+            </l:Grid>
+
+            <Panel headerText="Isolation Status" class="sapUiSmallMarginTop">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Docked Keyboard Open:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/multiDockedOpen}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Quantity Keyboard Target:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="quantityInput (fixed)" state="Success" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <kiosk:KioskKeyboard
+                id="searchKeyboard"
+                docked="true"
+                autoShow="true"
+                inputIds="searchInput"
+                keyPress=".onSearchKeyPress"
+                afterOpen=".onSearchAfterOpen"
+                afterClose=".onSearchAfterClose"
+                ariaLabel="Product Search Keyboard" />
+        </content>
+    </Page>
+</mvc:View>

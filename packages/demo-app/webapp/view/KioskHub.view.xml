@@ -11,10 +11,25 @@
                     type="Navigation"
                     press=".onNavToDocked" />
                 <StandardListItem
+                    title="Form Workflow"
+                    description="Self-service check-in form with Enter-to-advance and auto-type"
+                    type="Navigation"
+                    press=".onNavToFormWorkflow" />
+                <StandardListItem
+                    title="Multi-Keyboard"
+                    description="Two independent keyboards with instance isolation via inputIds"
+                    type="Navigation"
+                    press=".onNavToMultiKeyboard" />
+                <StandardListItem
                     title="Popover Keyboard"
                     description="Keyboard inside a Popover, targeting individual inputs"
                     type="Navigation"
                     press=".onNavToPopover" />
+                <StandardListItem
+                    title="Dialog Integration"
+                    description="Keyboard behavior with sap.m.Dialog — auto-close and embedded approaches"
+                    type="Navigation"
+                    press=".onNavToDialog" />
                 <StandardListItem
                     title="Input IDs Targeting"
                     description="Selective input targeting with inputIds property"
@@ -25,6 +40,11 @@
                     description="Full API: show, close, set type, custom layouts"
                     type="Navigation"
                     press=".onNavToProgrammatic" />
+                <StandardListItem
+                    title="Custom Layouts Gallery"
+                    description="Emoji picker, IP address pad, currency pad — custom LayoutDefinitions"
+                    type="Navigation"
+                    press=".onNavToCustomLayouts" />
                 <StandardListItem
                     title="Component-Level Keyboard"
                     description="Keyboard persists across navigation via static UIArea"
