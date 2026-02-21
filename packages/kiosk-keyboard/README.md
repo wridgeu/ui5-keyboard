@@ -929,7 +929,7 @@ KeyName.PageDown; // "PageDown"
 
 ## Further Reading
 
-- [Architecture & Internals](../../docs/KIOSK-ARCHITECTURE.md) — control design, rendering, theming approach
+- [Architecture & Internals](../../docs/kiosk/ARCHITECTURE.md) — control design, rendering, theming approach
 
 ---
 

@@ -341,7 +341,7 @@ packages/demo-app/
 
 ### SequenceManager
 
-Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key events from HotkeyManager (no own document listener). Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard logic as HotkeyManager (`ignoreInputs` defaults to `"auto"`). See [SEQUENCES.md](SEQUENCES.md).
+Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key events from HotkeyManager (no own document listener). Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard logic as HotkeyManager (`ignoreInputs` defaults to `"auto"`). See [SEQUENCES.md](./SEQUENCES.md).
 
 ### KeyStateTracker
 

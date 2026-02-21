@@ -182,20 +182,20 @@ ui5-keyboard/
 
 ## Documentation
 
-| Document                                                                             | Description                            |
-| ------------------------------------------------------------------------------------ | -------------------------------------- |
-| [Hotkeys Architecture](./docs/ARCHITECTURE.md)                                       | Internal design of the hotkeys library |
-| [Kiosk Keyboard Architecture](./docs/KIOSK-ARCHITECTURE.md)                          | Internal design of the kiosk keyboard  |
-| [Multi-key Sequences](./docs/SEQUENCES.md)                                           | Sequence system design and rationale   |
-| [Alternatives Research](./docs/RESEARCH.md)                                          | Comparison with alternative approaches |
-| [Known Limitations](./docs/KNOWN-LIMITATIONS.md)                                     | Known limitations and workarounds      |
-| [API Stability Policy](./docs/API-STABILITY.md)                                      | Stable vs internal import boundaries   |
-| [UI5 Event Handling Deep Dive](./docs/UI5-EVENT-HANDLING-DEEP-DIVE.md)               | How UI5 processes keyboard events      |
-| [UI5 TypeScript Event Typing](./docs/UI5-TYPESCRIPT-EVENT-TYPING.md)                 | TypeScript patterns for UI5 events     |
-| [Hotkeys Backward Compatibility](./docs/features/FEATURE-BACKWARD-COMPAT-HOTKEYS.md) | Hotkeys compatibility guarantees       |
-| [Kiosk Backward Compatibility](./docs/features/FEATURE-BACKWARD-COMPAT-KIOSK.md)     | Kiosk compatibility guarantees         |
-| [Tab and Done Keys](./docs/features/FEATURE-TAB-AND-DONE-KEYS.md)                    | Tab and Done key behavior details      |
-| [Implemented Feature Notes](./docs/implemented-features/)                            | Historical implementation notes        |
+| Document                                                                               | Description                            |
+| -------------------------------------------------------------------------------------- | -------------------------------------- |
+| [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                 | Internal design of the hotkeys library |
+| [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                            | Internal design of the kiosk keyboard  |
+| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                     | Sequence system design and rationale   |
+| [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                       | Comparison with alternative approaches |
+| [Kiosk Popover Layout Switch Behavior](./docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md) | Known popover behavior and mitigation  |
+| [API Stability Policy](./docs/shared/API-STABILITY.md)                                 | Stable vs internal import boundaries   |
+| [UI5 Event Handling Deep Dive](./docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md)          | How UI5 processes keyboard events      |
+| [UI5 TypeScript Event Typing](./docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)            | TypeScript patterns for UI5 events     |
+| [Hotkeys Backward Compatibility](./docs/hotkeys/features/BACKWARD-COMPATIBILITY.md)    | Hotkeys compatibility guarantees       |
+| [Kiosk Backward Compatibility](./docs/kiosk/features/BACKWARD-COMPATIBILITY.md)        | Kiosk compatibility guarantees         |
+| [Tab and Done Keys](./docs/kiosk/features/TAB-AND-DONE-KEYS.md)                        | Tab and Done key behavior details      |
+| [Kiosk Implemented Feature Notes](./docs/kiosk/implemented-features/)                  | Historical kiosk implementation notes  |
 
 ## License
 

@@ -750,10 +750,10 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 ## Further Reading
 
-- [Architecture & Internals](../../docs/ARCHITECTURE.md) — two-pass matching, scope stack, listener design
-- [Multi-key Sequence Design](../../docs/SEQUENCES.md) — how the sequence system works
-- [Alternatives Research](../../docs/RESEARCH.md) — comparison with other keyboard shortcut approaches
-- [UI5 Event Handling Deep Dive](../../docs/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
+- [Architecture & Internals](../../docs/hotkeys/ARCHITECTURE.md) — two-pass matching, scope stack, listener design
+- [Multi-key Sequence Design](../../docs/hotkeys/SEQUENCES.md) — how the sequence system works
+- [Alternatives Research](../../docs/hotkeys/ALTERNATIVES-RESEARCH.md) — comparison with other keyboard shortcut approaches
+- [UI5 Event Handling Deep Dive](../../docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
 
 ---
 
