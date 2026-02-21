@@ -25,30 +25,16 @@ async function blurKeyboard(): Promise<void> {
 
 async function focusControl(controlId: string): Promise<void> {
   await browser.execute((id) => {
-    const control = sap.ui.getCore().byId(id) as
-      | {
-          getFocusDomRef?: () => Element | null;
-          focus?: () => void;
-        }
-      | undefined;
-    if (!control) return;
-
-    const focusRef = control.getFocusDomRef?.();
-    if (focusRef instanceof HTMLElement) {
-      const shadowInput = focusRef.shadowRoot?.querySelector("input,textarea") as HTMLElement | null;
-      const lightInput = focusRef.querySelector?.("input,textarea") as HTMLElement | null;
-      (shadowInput ?? lightInput ?? focusRef).focus();
-      return;
-    }
-
-    control.focus?.();
+    const harness = (window as unknown as { interopHarness?: { focusControlById?: (controlId: string) => void } })
+      .interopHarness;
+    harness?.focusControlById?.(id);
   }, controlId);
 }
 
 async function getKeyboardTargetId(): Promise<string> {
   return browser.execute(() => {
-    const kb = sap.ui.getCore().byId("interopKeyboard") as { getTargetInput: () => string } | undefined;
-    return kb?.getTargetInput() ?? "";
+    const harness = (window as unknown as { interopHarness?: { getKeyboardTargetId?: () => string } }).interopHarness;
+    return harness?.getKeyboardTargetId?.() ?? "";
   });
 }
 
@@ -58,7 +44,7 @@ async function isNumpadKeyboard(): Promise<boolean> {
   return classes.includes("ui5KioskKeyboard--numpad");
 }
 
-describe("interop: StepInput and UI5 WebC Input", () => {
+describe("interop: StepInput and TextArea", () => {
   before(async () => {
     await openPage();
   });
@@ -75,18 +61,16 @@ describe("interop: StepInput and UI5 WebC Input", () => {
     expect(await isNumpadKeyboard()).toBe(true);
   });
 
-  it("opens and targets sap.ui.webc.main.Input via inputIds", async () => {
+  it("opens and targets TextArea via inputIds", async () => {
     await blurKeyboard();
-    await focusControl("interopWebc");
+    await focusControl("interopTextArea");
 
     await browser.waitUntil(() => isKeyboardOpen(), {
       timeout: 5_000,
-      timeoutMsg: "Keyboard did not open for sap.ui.webc.main.Input",
+      timeoutMsg: "Keyboard did not open for TextArea",
     });
 
-    expect(await getKeyboardTargetId()).toBe("interopWebc");
-    // For WebC wrappers we primarily verify focus target resolution.
-    // Keyboard type can vary depending on wrapper input metadata.
+    expect(await getKeyboardTargetId()).toBe("interopTextArea");
     expect(await isKeyboardOpen()).toBe(true);
   });
 });

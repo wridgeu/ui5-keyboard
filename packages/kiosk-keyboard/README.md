@@ -365,7 +365,7 @@ Navigation keys fire `keyPress` and also perform default caret navigation on the
 - `ArrowLeft` / `ArrowRight`: move caret by one character
 - `ArrowUp` / `ArrowDown`: move caret vertically for multiline text
 - `Home` / `End`: jump to start/end
-- `PageUp` / `PageDown`: jump to start/end (single-line inputs)
+- `PageUp` / `PageDown`: jump to start/end
 
 For single-line inputs, `ArrowUp` and `ArrowDown` do not change the caret.
 
@@ -620,8 +620,8 @@ keyboard.show();
 
 There are two paths:
 
-- UI5 wrappers (for example `sap.ui.webc.main.Input`) can be used declaratively with `inputIds` and are covered by e2e interop tests.
-- Generic host elements may still require a programmatic bridge because focus retargeting can hide the inner input from auto-show claim logic.
+- Native/custom web components are best integrated with a small UI5 bridge control because focus retargeting can hide the inner input from auto-show claim logic.
+- UI5 wrapper controls from `sap.ui.webc.main` are deprecated in modern UI5; prefer `sap.m`/`sap.f` controls or a bridge pattern for custom elements.
 
 Programmatic bridge pattern:
 
