@@ -23,6 +23,9 @@ The app runs on `http://localhost:8080`.
 - Programmatic kiosk view includes all registered layouts (including F-key and nav variants)
 - `inputIds` targeting, including composite controls (`sap.m.StepInput`)
 - Mixed input targeting across `sap.m.Input`, `sap.m.StepInput`, and `sap.m.TextArea`
+- Native custom-element consumption in UI5 XML (`demo.hotkeys.webc` namespace)
+- Bridge-based custom-element integration for focus/target synchronization
+- Standalone UI5 Web Components page: `standalone-webc/index.html`
 
 ## Routes
 
@@ -34,3 +37,4 @@ The app runs on `http://localhost:8080`.
 - `#/kiosk/input-ids` multi-input targeting and interop
 - `#/kiosk/programmatic` imperative API usage
 - `#/kiosk/component` component-style embedding
+- `standalone-webc/index.html` standalone UI5 Web Components demo (outside UI5 runtime)

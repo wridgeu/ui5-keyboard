@@ -38,13 +38,20 @@ async function getKeyboardTargetId(): Promise<string> {
   });
 }
 
+async function focusCustomElement(): Promise<void> {
+  await browser.execute(() => {
+    const harness = (window as unknown as { interopHarness?: { focusCustomElement?: () => void } }).interopHarness;
+    harness?.focusCustomElement?.();
+  });
+}
+
 async function isNumpadKeyboard(): Promise<boolean> {
   const kb = await $("#interop-kb .ui5KioskKeyboard");
   const classes = (await kb.getAttribute("class")) ?? "";
   return classes.includes("ui5KioskKeyboard--numpad");
 }
 
-describe("interop: StepInput and TextArea", () => {
+describe("interop: StepInput, TextArea, and bridge custom element", () => {
   before(async () => {
     await openPage();
   });
@@ -71,6 +78,19 @@ describe("interop: StepInput and TextArea", () => {
     });
 
     expect(await getKeyboardTargetId()).toBe("interopTextArea");
+    expect(await isKeyboardOpen()).toBe(true);
+  });
+
+  it("opens for custom element and targets bridge input", async () => {
+    await blurKeyboard();
+    await focusCustomElement();
+
+    await browser.waitUntil(() => isKeyboardOpen(), {
+      timeout: 5_000,
+      timeoutMsg: "Keyboard did not open for custom element bridge",
+    });
+
+    expect(await getKeyboardTargetId()).toBe("interopBridgeInput");
     expect(await isKeyboardOpen()).toBe(true);
   });
 });

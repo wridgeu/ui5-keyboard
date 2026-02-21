@@ -35,6 +35,13 @@ export default class KioskHub extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskInputIds);
   }
 
+  onOpenStandaloneWebComponents(): void {
+    const current = window.location.href;
+    const base = current.includes("#") ? current.split("#")[0] : current;
+    const standaloneUrl = new URL("standalone-webc/index.html", base);
+    window.open(standaloneUrl.toString(), "_blank", "noopener,noreferrer");
+  }
+
   onNavToProgrammatic(): void {
     this.getTypedComponent().getRouter().navTo(Scope.KioskProgrammatic);
   }

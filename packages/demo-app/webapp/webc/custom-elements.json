@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "modules": [
+    {
+      "kind": "javascript-module",
+      "path": "CustomAlertButton.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "CustomAlertButton",
+          "tagName": "demo-alert-button",
+          "customElement": true,
+          "attributes": [
+            {
+              "name": "text",
+              "type": {
+                "text": "string"
+              },
+              "default": "Show Alert"
+            },
+            {
+              "name": "message",
+              "type": {
+                "text": "string"
+              },
+              "default": ""
+            }
+          ],
+          "events": [
+            {
+              "name": "demo-alert"
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "CustomAlertButton",
+            "module": "CustomAlertButton.js"
+          }
+        }
+      ]
+    }
+  ]
+}

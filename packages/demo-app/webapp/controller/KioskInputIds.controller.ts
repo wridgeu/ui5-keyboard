@@ -1,6 +1,8 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+import CustomAlertButton from "demo/hotkeys/webc/CustomAlertButton";
 import Input from "sap/m/Input";
+import MessageToast from "sap/m/MessageToast";
 import HTML from "sap/ui/core/HTML";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
@@ -42,6 +44,8 @@ if (!customElements.get("demo-kiosk-input")) {
   customElements.define("demo-kiosk-input", DemoKioskInput);
 }
 
+void CustomAlertButton;
+
 /**
  * Demonstrates the `inputIds` property — the keyboard only responds to
  * focus events from the listed input controls.
@@ -51,6 +55,7 @@ if (!customElements.get("demo-kiosk-input")) {
 export default class KioskInputIds extends BaseController {
   private _wcFocusInHandler: ((event: FocusEvent) => void) | null = null;
   private _wcInputHandler: ((event: Event) => void) | null = null;
+  private _nativeAlertHandler: ((event: Event) => void) | null = null;
 
   onInit(): void {
     this.getStateModel().setProperty("/kioskCurrentTarget", "None");
@@ -72,6 +77,19 @@ export default class KioskInputIds extends BaseController {
 
   onAfterRendering(): void {
     this._detachWebComponentBridge();
+    this._detachNativeCustomElementListener();
+
+    const view = this.getView();
+    if (!view) return;
+    const viewDom = view.getDomRef();
+    if (viewDom instanceof HTMLElement) {
+      this._nativeAlertHandler = (event: Event) => {
+        const custom = event as CustomEvent<{ message?: string }>;
+        const message = custom.detail?.message ?? "Custom element event";
+        MessageToast.show(message);
+      };
+      viewDom.addEventListener("demo-alert", this._nativeAlertHandler as EventListener);
+    }
 
     const host = this._getWebComponentHost();
     if (!host) return;
@@ -99,6 +117,7 @@ export default class KioskInputIds extends BaseController {
 
   onExit(): void {
     this._detachWebComponentBridge();
+    this._detachNativeCustomElementListener();
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
@@ -138,5 +157,18 @@ export default class KioskInputIds extends BaseController {
     }
     this._wcFocusInHandler = null;
     this._wcInputHandler = null;
+  }
+
+  private _detachNativeCustomElementListener(): void {
+    const view = this.getView();
+    if (!view) {
+      this._nativeAlertHandler = null;
+      return;
+    }
+    const viewDom = view.getDomRef();
+    if (viewDom instanceof HTMLElement && this._nativeAlertHandler) {
+      viewDom.removeEventListener("demo-alert", this._nativeAlertHandler as EventListener);
+    }
+    this._nativeAlertHandler = null;
   }
 }
