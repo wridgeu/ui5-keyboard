@@ -8,7 +8,7 @@ import { GLOBAL_SCOPE } from "./internal/constants";
 import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { keyboardEventToHotkey, parseHotkey } from "./internal/parse";
-import { detectPlatform } from "./internal/platform";
+import { resetRuntimeCaches, runtimeHooks } from "./internal/runtime";
 import ListenerRegistry from "./internal/listener-registry";
 import { resolveMatchedRegistration } from "./internal/dispatch-core";
 import type { DebugSkipEntry, SkipInfo } from "./internal/skip-reason";
@@ -31,7 +31,6 @@ import type {
 } from "./types";
 
 type ValidateModule = typeof import("./validate");
-type InstanceManagerModule = { hasOpenDialog(): boolean; hasOpenPopover(): boolean };
 
 type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
@@ -94,9 +93,6 @@ export default class HotkeyManager extends BaseObject {
   // Bound handler reference for reliable addEventListener/removeEventListener pairing
   private readonly _keydownHandler = this._onKeyDown.bind(this);
 
-  // Lazy-loaded popup check function (dialog or popover)
-  private _hasOpenPopup: (() => boolean) | null = null;
-
   // Router integration cleanup
   private _routerCleanup: (() => void) | null = null;
 
@@ -124,7 +120,7 @@ export default class HotkeyManager extends BaseObject {
    */
   constructor() {
     super();
-    this._platform = detectPlatform();
+    this._platform = runtimeHooks.detectPlatform();
     this._listenerRegistry = new ListenerRegistry(
       (event) => this._shouldIgnoreKeyEvent(event),
       (event, target) => this._processKeyEvent(event, target),
@@ -589,7 +585,7 @@ export default class HotkeyManager extends BaseObject {
     this._registrations.clear();
     this._registrationState.clear();
     this._scopeStack = [GLOBAL_SCOPE];
-    this._hasOpenPopup = null;
+    resetRuntimeCaches();
     this._unhandledCallback = null;
     this._debugMode = false;
     this._lastAltLocation = 0;
@@ -824,14 +820,7 @@ export default class HotkeyManager extends BaseObject {
    * `sap.ui.require()` is an O(1) lookup once the module is loaded.
    */
   private _checkPopupOpen(): boolean {
-    if (!this._hasOpenPopup) {
-      const InstanceManager = sap.ui.require("sap/m/InstanceManager") as InstanceManagerModule | undefined;
-      if (InstanceManager) {
-        this._hasOpenPopup = () => InstanceManager.hasOpenDialog() || InstanceManager.hasOpenPopover();
-      }
-    }
-
-    return this._hasOpenPopup?.() ?? false;
+    return runtimeHooks.hasOpenPopup();
   }
 
   // ──────────────────────────────────────────────

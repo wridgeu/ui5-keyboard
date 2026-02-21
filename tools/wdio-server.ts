@@ -1,4 +1,5 @@
 import net from "node:net";
+import fs from "node:fs";
 import { type ChildProcess, spawn } from "node:child_process";
 import treeKill from "tree-kill";
 
@@ -68,4 +69,53 @@ export function createServerManager(port: number, packageRoot: string) {
       await killProcessTree(pid);
     },
   };
+}
+
+/**
+ * Extract test IDs from a UI5 testsuite.qunit.ts file.
+ * Keys are read from the "tests" object and returned in declaration order.
+ */
+export function readQUnitTestIds(testsuitePath: string): string[] {
+  const source = fs.readFileSync(testsuitePath, "utf8");
+  const testsIndex = source.indexOf("tests:");
+  if (testsIndex < 0) {
+    throw new Error(`No tests section found in ${testsuitePath}`);
+  }
+
+  const objectStart = source.indexOf("{", testsIndex);
+  if (objectStart < 0) {
+    throw new Error(`No tests object start found in ${testsuitePath}`);
+  }
+
+  let depth = 0;
+  let objectEnd = -1;
+  for (let i = objectStart; i < source.length; i++) {
+    const char = source[i];
+    if (char === "{") depth++;
+    if (char === "}") {
+      depth--;
+      if (depth === 0) {
+        objectEnd = i;
+        break;
+      }
+    }
+  }
+
+  if (objectEnd < 0) {
+    throw new Error(`No tests object end found in ${testsuitePath}`);
+  }
+
+  const testsBlock = source.slice(objectStart + 1, objectEnd);
+  const keyPattern = /^\s*(?:"([^"]+)"|([A-Za-z0-9_-]+)):\s*\{/gm;
+  const ids: string[] = [];
+  for (const match of testsBlock.matchAll(keyPattern)) {
+    const id = match[1] ?? match[2];
+    if (id) ids.push(id);
+  }
+
+  if (ids.length === 0) {
+    throw new Error(`No test IDs extracted from ${testsuitePath}`);
+  }
+
+  return ids;
 }

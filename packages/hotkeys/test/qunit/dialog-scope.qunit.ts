@@ -1,12 +1,21 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { fireKey } from "./test-helpers";
+
+let restoreRuntimeHooks: (() => void) | null = null;
 
 QUnit.module("Dialog & Fragment Scopes", {
   beforeEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
+
     const existing = HotkeyManager.getInstance();
     existing.destroy();
   },
   afterEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
+
     try {
       HotkeyManager.getInstance().destroy();
     } catch {
@@ -74,7 +83,7 @@ QUnit.test("Same hotkey in view vs dialog scope", (assert) => {
   assert.notOk(mainSaveCalled, "Ctrl+S does not fire in view scope (shadowed)");
 });
 
-QUnit.test("suppressInPopups with mocked _hasOpenPopup", (assert) => {
+QUnit.test("suppressInPopups with runtime popup hook", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
 
@@ -86,13 +95,12 @@ QUnit.test("suppressInPopups with mocked _hasOpenPopup", (assert) => {
     { suppressInPopups: true },
   );
 
-  // Mock popup as open
-  (manager as any)._hasOpenPopup = () => true;
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
   fireKey("s", { ctrlKey: true });
   assert.notOk(called, "Ctrl+S suppressed when popup is open");
 
-  // Close popup
-  (manager as any)._hasOpenPopup = () => false;
+  restoreRuntimeHooks();
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => false });
   fireKey("s", { ctrlKey: true });
   assert.ok(called, "Ctrl+S fires when popup is closed");
 });

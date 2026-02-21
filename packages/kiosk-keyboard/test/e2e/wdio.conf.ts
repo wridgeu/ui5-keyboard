@@ -19,10 +19,12 @@ export const config: WebdriverIO.Config = {
   specs: [path.resolve(__dirname, "**/*.test.ts")],
 
   maxInstances: 1,
+  maxInstancesPerCapability: 1,
 
   capabilities: [
     {
       browserName: "chrome",
+      maxInstances: 1,
       "goog:chromeOptions": {
         args: chromeArgs,
       },

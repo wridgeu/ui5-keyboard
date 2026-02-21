@@ -1,22 +1,26 @@
 import url from "node:url";
 import path from "node:path";
-import { createServerManager } from "../../../../tools/wdio-server.js";
+import { createServerManager, readQUnitTestIds } from "../../../../tools/wdio-server.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8082;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
+const TESTSUITE_FILE = path.resolve(__dirname, "testsuite.qunit.ts");
 
 const server = createServerManager(PORT, PACKAGE_ROOT);
+const testIds = readQUnitTestIds(TESTSUITE_FILE);
 
 export const config: WebdriverIO.Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
 
   maxInstances: 1,
+  maxInstancesPerCapability: 1,
 
   capabilities: [
     {
       browserName: "chrome",
+      maxInstances: 1,
       "goog:chromeOptions": {
         args: ["--headless=new", "--window-size=1440,900", "--disable-gpu", "--no-sandbox"],
       },
@@ -40,12 +44,10 @@ export const config: WebdriverIO.Config = {
     [
       "qunit",
       {
-        paths: [
-          "/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=KioskKeyboard",
-          "/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=FKeys",
-          "/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=NavKeys",
-          "/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=Grapheme",
-        ],
+        paths: testIds.map(
+          (name) =>
+            `/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=${name}`,
+        ),
       },
     ],
   ],

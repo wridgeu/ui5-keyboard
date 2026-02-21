@@ -1,6 +1,6 @@
 import { MODIFIER_KEYS } from "./internal/constants";
 import { Platform } from "./library";
-import { detectPlatform } from "./internal/platform";
+import { runtimeHooks } from "./internal/runtime";
 
 let instance: KeyStateTracker | null = null;
 
@@ -23,7 +23,7 @@ export default class KeyStateTracker {
   private readonly _blurHandler = this._onBlur.bind(this);
 
   constructor() {
-    this._platform = detectPlatform();
+    this._platform = runtimeHooks.detectPlatform();
     document.addEventListener("keydown", this._keydownHandler, true);
     document.addEventListener("keyup", this._keyupHandler, true);
     window.addEventListener("blur", this._blurHandler);

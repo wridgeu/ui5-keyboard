@@ -107,7 +107,6 @@ QUnit.test("Delete clears (records empty string)", (assert) => {
 });
 
 QUnit.test("Modifier-only waits for action key", (assert) => {
-  const done = assert.async();
   let recorded: string | null = null;
 
   const recorder = createRecorder({
@@ -120,23 +119,15 @@ QUnit.test("Modifier-only waits for action key", (assert) => {
 
   // Press just Control — should not record
   fireKey("Control", { ctrlKey: true });
+  assert.strictEqual(recorded, null, "Control alone was not recorded");
+  assert.ok(recorder.isRecording, "Still recording after modifier-only press");
 
-  setTimeout(() => {
-    assert.strictEqual(recorded, null, "Control alone was not recorded");
-    assert.ok(recorder.isRecording, "Still recording after modifier-only press");
-
-    // Now press S with Ctrl — should record
-    fireKey("s", { ctrlKey: true });
-
-    setTimeout(() => {
-      assert.ok(recorded !== null, "Recorded after action key");
-      done();
-    }, 50);
-  }, 50);
+  // Now press S with Ctrl — should record
+  fireKey("s", { ctrlKey: true });
+  assert.ok(recorded !== null, "Recorded after action key");
 });
 
 QUnit.test("Auto-stops after recording", (assert) => {
-  const done = assert.async();
   let recordCount = 0;
 
   const recorder = createRecorder({
@@ -149,14 +140,8 @@ QUnit.test("Auto-stops after recording", (assert) => {
   fireKey("F5");
 
   // Second key should not be captured
-  setTimeout(() => {
-    fireKey("F6");
-
-    setTimeout(() => {
-      assert.strictEqual(recordCount, 1, "Only one key recorded (auto-stopped)");
-      done();
-    }, 50);
-  }, 50);
+  fireKey("F6");
+  assert.strictEqual(recordCount, 1, "Only one key recorded (auto-stopped)");
 });
 
 QUnit.test("Modifier+Backspace records as hotkey (not clear)", (assert) => {

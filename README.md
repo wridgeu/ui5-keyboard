@@ -103,7 +103,7 @@ npm run build               # Build both libraries
 npm run build:hotkeys       # Build hotkeys only
 npm run build:kiosk         # Build kiosk-keyboard only
 
-npm test                    # Run all tests in parallel (headless)
+npm test                    # Run all tests (headless)
 npm run test:hotkeys        # Hotkeys QUnit tests
 npm run test:kiosk          # Kiosk QUnit + e2e tests
 npm run test:kiosk:e2e      # Kiosk e2e tests only

@@ -13,12 +13,12 @@ function getInput(containerId: string) {
 
 async function isKeyboardOpen(): Promise<boolean> {
   const kb = await $("#kb .ui5KioskKeyboard");
-  const classes = await kb.getAttribute("class");
+  const classes = String(await kb.getAttribute("class"));
   return !classes.includes("ui5KioskKeyboard--closed");
 }
 
 describe("docked keyboard focus behavior", () => {
-  before(async () => {
+  beforeEach(async () => {
     await openPage();
   });
 
@@ -33,18 +33,34 @@ describe("docked keyboard focus behavior", () => {
   });
 
   it("should stay open when focus moves from one input to another", async () => {
-    // Input A is already focused and keyboard is open from the previous test
+    const inputA = await getInput("input-a");
+    await inputA.click();
+    await browser.waitUntil(() => isKeyboardOpen(), {
+      timeout: 5_000,
+      timeoutMsg: "Keyboard did not open after focusing input A",
+    });
+
     const inputB = await getInput("input-b");
     await inputB.click();
 
-    // Keyboard should remain open — wait briefly to ensure no close/reopen flicker
-    await browser.pause(300);
-    const open = await isKeyboardOpen();
-    expect(open).toBe(true);
+    const stableStart = Date.now();
+    await browser.waitUntil(async () => (await isKeyboardOpen()) && Date.now() - stableStart >= 250, {
+      timeout: 2_000,
+      interval: 50,
+      timeoutMsg: "Keyboard did not stay open when moving focus between inputs",
+    });
+
+    expect(await isKeyboardOpen()).toBe(true);
   });
 
   it("should close when focus moves to a non-input element", async () => {
-    // Input B is focused and keyboard is open
+    const inputB = await getInput("input-b");
+    await inputB.click();
+    await browser.waitUntil(() => isKeyboardOpen(), {
+      timeout: 5_000,
+      timeoutMsg: "Keyboard did not open after focusing input B",
+    });
+
     await $("#blur-target").click();
 
     await browser.waitUntil(async () => !(await isKeyboardOpen()), {
@@ -54,7 +70,19 @@ describe("docked keyboard focus behavior", () => {
   });
 
   it("should reopen when an input is focused again after closing", async () => {
-    // Keyboard is closed from the previous test
+    const inputB = await getInput("input-b");
+    await inputB.click();
+    await browser.waitUntil(() => isKeyboardOpen(), {
+      timeout: 5_000,
+      timeoutMsg: "Keyboard did not open after focusing input B",
+    });
+
+    await $("#blur-target").click();
+    await browser.waitUntil(async () => !(await isKeyboardOpen()), {
+      timeout: 5_000,
+      timeoutMsg: "Keyboard did not close before reopen check",
+    });
+
     const input = await getInput("input-a");
     await input.click();
 

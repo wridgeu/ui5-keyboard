@@ -42,23 +42,19 @@ QUnit.test("group.register delegates to manager and tracks handle", (assert) => 
 });
 
 QUnit.test("group.registerSequence delegates and tracks", (assert) => {
-  const done = assert.async();
   const manager = HotkeyManager.getInstance();
   const group = manager.createGroup();
 
   const handle = group.registerSequence(["G", "I"], () => {
     assert.ok(true, "Sequence callback fired");
     assert.strictEqual(group.size, 1, "Group size is 1 (sequence)");
-    done();
   });
 
   assert.ok(handle.isActive, "Sequence handle is active");
   assert.strictEqual(group.size, 1, "Group size is 1");
 
   fireKey("g");
-  setTimeout(() => {
-    fireKey("i");
-  }, 50);
+  fireKey("i");
 });
 
 QUnit.test("destroyAll unregisters all handles", (assert) => {

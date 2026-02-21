@@ -1,8 +1,14 @@
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { fireKey, fireKeyUp, fireBlur } from "./test-helpers";
+
+let restoreRuntimeHooks: (() => void) | null = null;
 
 QUnit.module("KeyStateTracker", {
   beforeEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
+
     try {
       KeyStateTracker.getInstance().destroy();
     } catch {
@@ -10,6 +16,9 @@ QUnit.module("KeyStateTracker", {
     }
   },
   afterEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
+
     try {
       KeyStateTracker.getInstance().destroy();
     } catch {
@@ -93,10 +102,8 @@ QUnit.test("Blur clears all held keys", (assert) => {
 });
 
 QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "mac" });
   const tracker = KeyStateTracker.getInstance();
-
-  // Override platform detection for this test
-  (tracker as any)._platform = "mac";
 
   fireKey("Meta", { metaKey: true });
   fireKey("Tab");

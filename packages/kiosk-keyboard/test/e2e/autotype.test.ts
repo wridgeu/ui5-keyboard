@@ -22,14 +22,14 @@ async function focusInput(containerId: string): Promise<void> {
 /** Check whether the docked keyboard is visually open (not closed). */
 async function isKeyboardOpen(): Promise<boolean> {
   const kb = await $("#kb .ui5KioskKeyboard");
-  const classes = await kb.getAttribute("class");
+  const classes = String(await kb.getAttribute("class"));
   return !classes.includes("ui5KioskKeyboard--closed");
 }
 
 /** Check whether the keyboard is in Numpad mode. */
 async function isNumpadKeyboard(): Promise<boolean> {
   const kb = await $("#kb .ui5KioskKeyboard");
-  const classes = await kb.getAttribute("class");
+  const classes = String(await kb.getAttribute("class"));
   return classes.includes("ui5KioskKeyboard--numpad");
 }
 
@@ -47,7 +47,7 @@ async function blurAndWaitForClose(): Promise<void> {
 }
 
 describe("auto-type detection across input types", () => {
-  before(async () => {
+  beforeEach(async () => {
     await openPage();
   });
 
@@ -119,8 +119,12 @@ describe("auto-type detection across input types", () => {
           (document.querySelector(sel) as HTMLElement)?.focus();
         }, selector);
 
-        // Brief wait to allow any spurious open
-        await browser.pause(500);
+        const stableStart = Date.now();
+        await browser.waitUntil(async () => !(await isKeyboardOpen()) && Date.now() - stableStart >= 400, {
+          timeout: 2_000,
+          interval: 50,
+          timeoutMsg: `Keyboard opened unexpectedly for ${label}`,
+        });
 
         const open = await isKeyboardOpen();
         expect(open).toBe(false);

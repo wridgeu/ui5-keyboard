@@ -1,15 +1,23 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
+let restoreRuntimeHooks: (() => void) | null = null;
 
 QUnit.module("HotkeyManager", {
   beforeEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
+
     // Ensure a fresh instance for each test
     const existing = HotkeyManager.getInstance();
     existing.destroy();
   },
   afterEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
+
     // Clean up singleton
     try {
       HotkeyManager.getInstance().destroy();
@@ -528,14 +536,13 @@ QUnit.test("suppressInPopups: suppresses when popup is open", (assert) => {
     { suppressInPopups: true },
   );
 
-  // Mock popup state via private field (sap.m may not be loaded in test env)
-  (manager as any)._hasOpenPopup = () => true;
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
 
   fireKey("F5");
   assert.notOk(called, "F5 suppressed when popup is open");
 
-  // Reset mock: no popup open
-  (manager as any)._hasOpenPopup = () => false;
+  restoreRuntimeHooks();
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => false });
   fireKey("F5");
   assert.ok(called, "F5 fires when popup is closed");
 });
@@ -549,7 +556,7 @@ QUnit.test("suppressInPopups: false (default) fires even with popup open", (asse
     called = true;
   });
 
-  (manager as any)._hasOpenPopup = () => true;
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
 
   fireKey("F5");
   assert.ok(called, "F5 fires even with popup open when suppressInPopups is false");
@@ -835,7 +842,7 @@ QUnit.test("Unhandled: fires with popup_suppressed when popup open", (assert) =>
     { suppressInPopups: true },
   );
 
-  (manager as any)._hasOpenPopup = () => true;
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
 
   manager.setUnhandledHandler((c) => {
     ctx = c;
@@ -1107,7 +1114,7 @@ QUnit.test("setOptions: update suppressInPopups", (assert) => {
     { suppressInPopups: true },
   );
 
-  (manager as any)._hasOpenPopup = () => true;
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
 
   fireKey("F5");
   assert.strictEqual(count, 0, "F5 suppressed with popup open");
@@ -1141,11 +1148,9 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert) => {
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
   const manager = HotkeyManager.getInstance();
   let called = false;
-
-  // Override platform to windows for this test
-  (manager as any)._platform = "windows";
 
   manager.register("Ctrl+Alt+E", () => {
     called = true;
@@ -1175,10 +1180,9 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
 });
 
 QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
   const manager = HotkeyManager.getInstance();
   let called = false;
-
-  (manager as any)._platform = "windows";
 
   manager.register("Ctrl+Alt+E", () => {
     called = true;
@@ -1199,10 +1203,9 @@ QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
 });
 
 QUnit.test("AltGr: guard only active on Windows", (assert) => {
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "linux" });
   const manager = HotkeyManager.getInstance();
   let called = false;
-
-  (manager as any)._platform = "linux";
 
   manager.register("Ctrl+Alt+E", () => {
     called = true;
@@ -1223,10 +1226,9 @@ QUnit.test("AltGr: guard only active on Windows", (assert) => {
 });
 
 QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
   const manager = HotkeyManager.getInstance();
   let called = false;
-
-  (manager as any)._platform = "windows";
 
   manager.register("Ctrl+Alt+E", () => {
     called = true;
@@ -1481,10 +1483,10 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
 
   // Now unregister the new one — ref count should go to 0, removing the listener.
   newHandle.unregister();
+  newCalled = false;
 
-  // Verify the target listener Map is cleaned up (ref count reached 0)
-  const targetListeners = (manager as any)._targetListeners as Map<EventTarget, unknown>;
-  assert.strictEqual(targetListeners.size, 0, "Target listener removed after all registrations unregistered");
+  fireKeyOn(div, "F3");
+  assert.notOk(newCalled, "No callbacks fire after unregistering all registrations");
 });
 
 // ──────────────────────────────────────────────
@@ -1588,7 +1590,7 @@ QUnit.test("Target element: two registrations on same target, unregister one", (
     { target: div },
   );
 
-  manager.register(
+  const h2 = manager.register(
     "F4",
     () => {
       secondCalled = true;
@@ -1609,7 +1611,12 @@ QUnit.test("Target element: two registrations on same target, unregister one", (
   div.dispatchEvent(event2);
   assert.ok(secondCalled, "F4 still fires on same target after sibling unregister");
 
-  // Verify listener map still has the target
-  const targetListeners = (manager as any)._targetListeners as Map<EventTarget, unknown>;
-  assert.strictEqual(targetListeners.size, 1, "Target listener still registered (ref count > 0)");
+  h2.unregister();
+  firstCalled = false;
+  secondCalled = false;
+
+  fireKeyOn(div, "F3");
+  fireKeyOn(div, "F4");
+  assert.notOk(firstCalled, "No first callback after unregistering both handles");
+  assert.notOk(secondCalled, "No second callback after unregistering both handles");
 });
