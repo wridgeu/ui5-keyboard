@@ -11,7 +11,7 @@ const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"];
 
 describe("README screenshots", () => {
-  it("captures full-size inline and docked keyboards across themes", async () => {
+  it("captures full-size inline keyboards across themes", async () => {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
     for (const theme of THEMES) {
@@ -34,21 +34,6 @@ describe("README screenshots", () => {
       const inlineWide = await $("#kb-wide .ui5KioskKeyboard");
       await inlineWide.waitForDisplayed({ timeout: 20_000 });
       await inlineWide.saveScreenshot(path.join(OUTPUT_DIR, `kiosk-inline-wide-${theme}.png`));
-
-      const toggleDocked = await $("#toggle-docked");
-      await toggleDocked.click();
-
-      const docked = await $("#kb-docked .ui5KioskKeyboard");
-      await docked.waitForDisplayed({ timeout: 20_000 });
-      await docked.waitUntil(
-        async () => {
-          const classes = (await docked.getAttribute("class")) ?? "";
-          const size = await docked.getSize();
-          return !classes.includes("ui5KioskKeyboard--closed") && size.height > 80;
-        },
-        { timeout: 20_000, timeoutMsg: `Docked keyboard did not open in theme ${theme}` },
-      );
-      await browser.saveScreenshot(path.join(OUTPUT_DIR, `kiosk-docked-${theme}.png`));
     }
   });
 });

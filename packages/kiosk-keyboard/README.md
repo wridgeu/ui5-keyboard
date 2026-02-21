@@ -834,16 +834,6 @@ Full-size inline keyboard:
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | ![Inline wide kiosk keyboard in sap_horizon_hcb](../../docs/kiosk/images/kiosk-inline-wide-sap_horizon_hcb.png) | ![Inline wide kiosk keyboard in sap_horizon_hcw](../../docs/kiosk/images/kiosk-inline-wide-sap_horizon_hcw.png) |
 
-Docked keyboard:
-
-| `sap_horizon`                                                                                 | `sap_horizon_dark`                                                                                      |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| ![Docked kiosk keyboard in sap_horizon](../../docs/kiosk/images/kiosk-docked-sap_horizon.png) | ![Docked kiosk keyboard in sap_horizon_dark](../../docs/kiosk/images/kiosk-docked-sap_horizon_dark.png) |
-
-| `sap_horizon_hcb`                                                                                     | `sap_horizon_hcw`                                                                                     |
-| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| ![Docked kiosk keyboard in sap_horizon_hcb](../../docs/kiosk/images/kiosk-docked-sap_horizon_hcb.png) | ![Docked kiosk keyboard in sap_horizon_hcw](../../docs/kiosk/images/kiosk-docked-sap_horizon_hcw.png) |
-
 Both `compact` and `cozy` content densities are supported with adjusted key heights and spacing.
 
 ---

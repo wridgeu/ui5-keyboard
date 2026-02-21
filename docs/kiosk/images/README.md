@@ -19,7 +19,6 @@ What this does:
 2. Opens the visual test page for each theme.
 3. Captures:
    - inline full-size keyboard (`kiosk-inline-wide-*.png`)
-   - docked keyboard (`kiosk-docked-*.png`)
 4. Writes files into this folder.
 
 ## Why Pointer Events Are Disabled During Capture
