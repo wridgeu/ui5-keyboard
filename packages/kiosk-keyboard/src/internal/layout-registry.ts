@@ -1,7 +1,8 @@
 import Localization from "sap/base/i18n/Localization";
 import Log from "sap/base/Log";
 import type { LayoutDefinition } from "../types";
-import layouts, { DEFAULT_LAYOUT } from "../layouts/index";
+import layouts from "../layouts/index";
+import DEFAULT_LAYOUT from "../layouts/default-layout";
 
 /** Built-in layout names that cannot be overwritten by registerLayout. */
 const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(Object.keys(layouts));

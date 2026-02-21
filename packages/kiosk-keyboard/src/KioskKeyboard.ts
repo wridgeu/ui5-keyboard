@@ -5,7 +5,7 @@ import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
 import { SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
-import { DEFAULT_LAYOUT } from "./layouts/index";
+import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n";
