@@ -129,7 +129,7 @@
             <Panel headerText="Both Libraries Together" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="A KioskKeyboard and HotkeyManager on the same page. Virtual key taps fire keyPress (not keydown), so they don't trigger hotkeys." />
-                    <Input id="comboInput" value="{state>/comboText}" placeholder="Type with the virtual keyboard or use Ctrl+S..."
+                    <Input id="comboInput" value="{state>/comboText}" placeholder="Type with the virtual keyboard or use Ctrl+Shift+M..."
                         class="sapUiSmallMarginTop" ariaLabelledBy="comboInputLabel" />
                     <core:InvisibleText id="comboInputLabel" text="Combined hotkey and virtual keyboard input" />
                     <ObjectStatus text="{state>/comboStatus}" state="Information" class="sapUiSmallMarginTop" />
