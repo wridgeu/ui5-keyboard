@@ -31,6 +31,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Shift & Caps Lock](#shift--caps-lock)
 - [Accessibility](#accessibility)
 - [Theming](#theming)
+- [Library Enums & Constants](#library-enums--constants)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
 
 ---
@@ -174,7 +175,7 @@ Recommended stable consumer imports:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import { KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";
+import { KeyboardLayout, KeyboardType, KeyName, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";
 import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 ```
 
@@ -206,13 +207,13 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 ### Events
 
-| Event                | Parameters                                                                      | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action.  |
-| `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                       |
-| `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                       |
-| `afterOpen`          | —                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).   |
-| `afterClose`         | —                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end). |
+| Event                | Parameters                                                                      | Description                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
+| `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                                                                      |
+| `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
+| `afterOpen`          | —                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
+| `afterClose`         | —                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
 
 ### Public Methods
 
@@ -376,18 +377,20 @@ If your app handles these keys itself, call `preventDefault()` on `keyPress` to 
 F-keys fire the `keyPress` event but do **not** insert text into the target input. The consuming application decides what each F-key does:
 
 ```ts
+import { KeyName } from "ui5/kiosk/library";
+
 keyboard.attachKeyPress((event) => {
   switch (event.getParameter("key")) {
-    case "F1":
+    case KeyName.F1:
       showHelp();
       break;
-    case "F3":
+    case KeyName.F3:
       navigateBack();
       break;
-    case "F5":
+    case KeyName.F5:
       refreshData();
       break;
-    case "F8":
+    case KeyName.F8:
       executeTransaction();
       break;
   }
@@ -781,12 +784,12 @@ Both `compact` and `cozy` content densities are supported with adjusted key heig
 
 ---
 
-## Library Enums
+## Library Enums & Constants
 
-The library registers proper UI5 enums via `DataType.registerEnum()`:
+The library exports frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`) are additionally registered via `DataType.registerEnum()` for XML view binding.
 
 ```ts
-import { KeyboardLayout, KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
+import { KeyboardLayout, KeyboardType, KeyName, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";
 
 // KeyboardLayout — built-in layout identifiers
 KeyboardLayout.Qwerty; // "qwerty"
@@ -810,7 +813,29 @@ KeyboardType.Numpad; // "Numpad"
 MobileKeyboard.Custom; // "Custom"
 MobileKeyboard.Native; // "Native"
 MobileKeyboard.Auto; // "Auto"
+
+// FKeyMode — F-key dispatch mode
+FKeyMode.Virtual; // "Virtual"
+FKeyMode.Native; // "Native"
+
+// KeyName — key names for the keyPress event's `key` parameter
+// Action keys
+KeyName.Enter; // "Enter"
+KeyName.Backspace; // "Backspace"
+// Function keys
+KeyName.F1; // "F1"  …  KeyName.F12  // "F12"
+// Navigation keys
+KeyName.ArrowLeft; // "ArrowLeft"
+KeyName.ArrowRight; // "ArrowRight"
+KeyName.ArrowUp; // "ArrowUp"
+KeyName.ArrowDown; // "ArrowDown"
+KeyName.Home; // "Home"
+KeyName.End; // "End"
+KeyName.PageUp; // "PageUp"
+KeyName.PageDown; // "PageDown"
 ```
+
+> **Note:** `KeyName` is not a UI5 DataType enum — it is a consumer convenience for type-safe comparisons in `keyPress` event handlers. Regular character keys fire their literal value (e.g. `"a"`, `"A"`, `"1"`) and are not covered by `KeyName`. Custom `{fkey:CustomAction}` keys fire their action name directly — use a string literal for those.
 
 ---
 

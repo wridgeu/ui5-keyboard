@@ -303,8 +303,10 @@ export default class KioskKeyboard extends Control {
        * skip the default input action (text insertion, backspace, etc.).
        *
        * @example <caption>TypeScript — intercept key presses</caption>
+       * import { KeyName } from "ui5/kiosk/library";
+       *
        * keyboard.attachKeyPress((event) => {
-       *   if (event.getParameter("key") === "Enter") {
+       *   if (event.getParameter("key") === KeyName.Enter) {
        *     event.preventDefault();
        *     submitForm();
        *   }

@@ -1,5 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$KeyboardTypeChangeEvent } from "ui5/kiosk/KioskKeyboard";
+import { KeyName } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
 import MessageToast from "sap/m/MessageToast";
@@ -30,7 +31,7 @@ export default class KioskFormWorkflow extends BaseController {
     const display = shift ? `${key} (Shift)` : key;
     this.getStateModel().setProperty("/formLastKey", display);
 
-    if (key === "Enter") {
+    if (key === KeyName.Enter) {
       event.preventDefault();
       this._advanceToNextField();
     }
