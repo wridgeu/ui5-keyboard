@@ -6,10 +6,16 @@ import layouts, { DEFAULT_LAYOUT } from "../layouts/index";
 /** Built-in layout names that cannot be overwritten by registerLayout. */
 const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(Object.keys(layouts));
 
+const FORBIDDEN_KEYS: ReadonlySet<string> = new Set(["__proto__", "prototype", "constructor"]);
+
 /** BCP-47 language prefix -> layout name. Checked after exact match. */
-const LOCALE_LAYOUT_MAP: Record<string, string> = {
+const LOCALE_LAYOUT_MAP: Record<string, string> = Object.assign(Object.create(null), {
   de: "qwertz-de",
-};
+});
+
+function isSafeMapKey(key: string): boolean {
+  return key.length > 0 && !FORBIDDEN_KEYS.has(key);
+}
 
 /**
  * Registers a custom keyboard layout that can then be used via
@@ -24,6 +30,11 @@ const LOCALE_LAYOUT_MAP: Record<string, string> = {
  */
 export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
   const name = sName.toLowerCase();
+
+  if (!isSafeMapKey(name)) {
+    Log.warning(`Invalid layout name "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
+    return;
+  }
 
   if (BUILTIN_LAYOUTS.has(name)) {
     Log.warning(
@@ -60,7 +71,7 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
  * if no such layout is registered.
  */
 export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
-  return layouts[sName];
+  return Object.hasOwn(layouts, sName) ? layouts[sName] : undefined;
 }
 
 /**
@@ -68,7 +79,7 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
  * {@link DEFAULT_LAYOUT} when the name is not registered.
  */
 export function getLayoutOrDefault(sName: string): LayoutDefinition {
-  return layouts[sName] ?? layouts[DEFAULT_LAYOUT];
+  return (Object.hasOwn(layouts, sName) ? layouts[sName] : undefined) ?? layouts[DEFAULT_LAYOUT];
 }
 
 /** Returns the names of all registered layouts (built-in + custom). */
@@ -87,7 +98,12 @@ export function isBuiltInLayout(sName: string): boolean {
  * uses this map to select a locale-appropriate default.
  */
 export function registerLocaleLayout(sLocale: string, sLayout: string): void {
-  LOCALE_LAYOUT_MAP[sLocale.toLowerCase()] = sLayout;
+  const locale = sLocale.toLowerCase();
+  if (!isSafeMapKey(locale)) {
+    Log.warning(`Invalid locale map key "${locale}".`, undefined, "ui5.kiosk.KioskKeyboard");
+    return;
+  }
+  LOCALE_LAYOUT_MAP[locale] = sLayout;
 }
 
 /**
