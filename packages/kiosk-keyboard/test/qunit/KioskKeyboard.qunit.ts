@@ -1,5 +1,4 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import CheckBox from "sap/m/CheckBox";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
@@ -2355,583 +2354,7 @@ QUnit.test("Locale layout renders correct keys", async (assert) => {
   }
 });
 
-// ──────────────────────────────────────────────
-// Feature 2: Auto-type based on input metadata
-// ──────────────────────────────────────────────
-
-QUnit.test("Default autoType is false", (assert) => {
-  const kb = new KioskKeyboard();
-  assert.strictEqual(kb.getAutoType(), false, "autoType defaults to false");
-  kb.destroy();
-});
-
-QUnit.test("autoType detects Number input and switches to Numpad", async (assert) => {
-  const input = new Input({ type: "Number" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  // Simulate focus on the number input
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-
-  // Wait for focusin handler + render
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for Number input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType detects Tel input and switches to Numpad", async (assert) => {
-  const input = new Input({ type: "Tel" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for Tel input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType detects StepInput and switches to Numpad", async (assert) => {
-  const stepInput = new StepInput();
-  stepInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  try {
-    const inputDom = stepInput.getFocusDomRef() as HTMLElement;
-    inputDom.focus();
-    await nextUIUpdate();
-
-    assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for StepInput");
-  } finally {
-    stepInput.destroy();
-    kb.destroy();
-  }
-});
-
-QUnit.test("autoType stays Full for regular text input", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Stays Full for regular text input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType switches back from Numpad to Full when focus moves", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
-  numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  // Focus number input → Numpad
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Numpad for number input");
-
-  // Focus text input → Full
-  (textInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Switched back to Full for text input");
-
-  numInput.destroy();
-  textInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Explicit setKeyboardType disables autoType", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  numInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  kb.setKeyboardType("Full"); // Explicit — should lock it
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Explicit keyboardType prevents auto-detection");
-
-  numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Constructor keyboardType also disables autoType", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  numInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-    keyboardType: "Full", // Explicit in constructor
-  });
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Constructor keyboardType prevents auto-detection");
-
-  numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType=false does not switch keyboardType on focus", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  numInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: false, // Disabled
-  });
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "autoType=false keeps Full for Number input");
-
-  numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType Email input stays Full", async (assert) => {
-  const input = new Input({ type: "Email" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Email input keeps Full keyboard");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType renders numpad keys after switching to Numpad", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  numInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await waitForRender();
-
-  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("7"), "Numpad keys present after auto-switch");
-  assert.notOk(keys.includes("q"), "No alphabetic keys in auto-switched numpad");
-
-  numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("resetKeyboardType re-enables autoType after explicit setKeyboardType", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
-  numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  kb.setKeyboardType("Full"); // Lock auto-type
-  await placeAndWait(kb);
-
-  // Focus Number input — should stay Full because of the lock
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Locked: Number input stays Full");
-
-  // Move focus away, then reset
-  (textInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  kb.resetKeyboardType();
-
-  // Focus Number input again — should now auto-detect Numpad
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "After reset: Number input triggers Numpad");
-
-  numInput.destroy();
-  textInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
-  numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-    keyboardType: "Full", // Lock via constructor
-  });
-  await placeAndWait(kb);
-
-  // Focus Number input — should stay Full because of the constructor lock
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Constructor lock: Number input stays Full");
-
-  // Move focus away, then reset
-  (textInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  kb.resetKeyboardType();
-
-  // Focus Number input again — should now auto-detect Numpad
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "After reset: constructor lock cleared, Numpad detected");
-
-  numInput.destroy();
-  textInput.destroy();
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
-// Feature 3: Mobile keyboard detection
-// ──────────────────────────────────────────────
-
-QUnit.test("Default mobileKeyboard is Custom", (assert) => {
-  const kb = new KioskKeyboard();
-  assert.strictEqual(kb.getMobileKeyboard(), "Custom", "mobileKeyboard defaults to Custom");
-  kb.destroy();
-});
-
-QUnit.test("mobileKeyboard Custom never defers to native (desktop)", async (assert) => {
-  // On desktop, Custom mode should always use our keyboard
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: "Custom",
-  });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.ok(kb.isOpen(), "Keyboard opens with mobileKeyboard=Custom");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("show() sets inputmode=none on target input", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    mobileKeyboard: "Custom",
-  });
-  kb.setTargetInput(input);
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLInputElement;
-  const originalMode = inputDom.getAttribute("inputmode");
-
-  kb.show();
-  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode set to none on show");
-
-  kb.close();
-  assert.strictEqual(inputDom.getAttribute("inputmode"), originalMode, "inputmode restored on close");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("exit() restores inputmode if keyboard was open", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    mobileKeyboard: "Custom",
-  });
-  kb.setTargetInput(input);
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLInputElement;
-  kb.show();
-  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode suppressed");
-
-  kb.destroy();
-
-  // After destroy, inputmode should be restored
-  assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored after destroy");
-
-  input.destroy();
-});
-
-QUnit.test("Native mode always defers to native keyboard", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: "Native",
-  });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  // "Native" always defers — the kiosk keyboard should NOT auto-show
-  assert.notOk(kb.isOpen(), "mobileKeyboard=Native defers even on desktop");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Auto mode still opens on desktop", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: "Auto",
-  });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.ok(kb.isOpen(), "mobileKeyboard=Auto still opens on desktop");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Existing inputmode attribute is preserved and restored", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    mobileKeyboard: "Custom",
-  });
-  kb.setTargetInput(input);
-  await placeAndWait(kb);
-
-  // Set a custom inputmode AFTER all rendering is complete so the
-  // DOM reference is stable (placeAt triggers a UIArea re-render
-  // that may recreate sibling controls' inner DOM elements).
-  const inputDom = input.getFocusDomRef() as HTMLInputElement;
-  inputDom.setAttribute("inputmode", "email");
-
-  kb.show();
-  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode overridden to none");
-
-  kb.close();
-  assert.strictEqual(inputDom.getAttribute("inputmode"), "email", "Original inputmode=email restored");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("show() without target input does not throw", async (assert) => {
-  const kb = new KioskKeyboard({
-    docked: true,
-    mobileKeyboard: "Custom",
-  });
-  await placeAndWait(kb);
-
-  // No target input set — show should not throw
-  kb.show();
-  assert.ok(kb.isOpen(), "Keyboard opens without error even without target input");
-
-  kb.close();
-  kb.destroy();
-});
-
-QUnit.test("Switching target while open restores old and suppresses new", async (assert) => {
-  const input1 = new Input();
-  const input2 = new Input();
-  input1.placeAt("qunit-fixture");
-  input2.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: "Custom",
-  });
-  await placeAndWait(kb);
-
-  // Focus input1 → opens keyboard, suppresses input1
-  (input1.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  const dom1 = input1.getFocusDomRef() as HTMLInputElement;
-  assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 suppressed");
-
-  // Focus input2 → should suppress input2, restore input1
-  (input2.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  const dom2 = input2.getFocusDomRef() as HTMLInputElement;
-  assert.strictEqual(dom2.getAttribute("inputmode"), "none", "input2 suppressed");
-  assert.notStrictEqual(dom1.getAttribute("inputmode"), "none", "input1 restored");
-
-  input1.destroy();
-  input2.destroy();
-  kb.destroy();
-});
-
-QUnit.test("setTargetInput while closed does not suppress inputmode", async (assert) => {
-  const input1 = new Input();
-  const input2 = new Input();
-  input1.placeAt("qunit-fixture");
-  input2.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    mobileKeyboard: "Custom",
-  });
-  kb.setTargetInput(input1);
-  await placeAndWait(kb);
-
-  // Keyboard is docked but NOT open — switching target should not suppress
-  kb.setTargetInput(input2);
-
-  const dom2 = input2.getFocusDomRef() as HTMLInputElement;
-  assert.notStrictEqual(dom2.getAttribute("inputmode"), "none", "input2 not suppressed while closed");
-
-  input1.destroy();
-  input2.destroy();
-  kb.destroy();
-});
-
-QUnit.test("setTargetInput to null while open restores old inputmode", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    mobileKeyboard: "Custom",
-  });
-  kb.setTargetInput(input);
-  await placeAndWait(kb);
-
-  kb.show();
-  const inputDom = input.getFocusDomRef() as HTMLInputElement;
-  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode suppressed");
-
-  kb.setTargetInput("");
-  assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored after clearing target");
-
-  kb.close();
-  kb.destroy();
-  input.destroy();
-});
-
-QUnit.test("Rapid target switches while open: each intermediate target is restored", async (assert) => {
-  const input1 = new Input();
-  const input2 = new Input();
-  const input3 = new Input();
-  input1.placeAt("qunit-fixture");
-  input2.placeAt("qunit-fixture");
-  input3.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    mobileKeyboard: "Custom",
-  });
-  kb.setTargetInput(input1);
-  await placeAndWait(kb);
-
-  kb.show();
-  const dom1 = input1.getFocusDomRef() as HTMLInputElement;
-  assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 suppressed");
-
-  // Rapid switch to input2
-  kb.setTargetInput(input2);
-  const dom2 = input2.getFocusDomRef() as HTMLInputElement;
-  assert.notStrictEqual(dom1.getAttribute("inputmode"), "none", "input1 restored after switch to input2");
-  assert.strictEqual(dom2.getAttribute("inputmode"), "none", "input2 suppressed");
-
-  // Rapid switch to input3
-  kb.setTargetInput(input3);
-  const dom3 = input3.getFocusDomRef() as HTMLInputElement;
-  assert.notStrictEqual(dom2.getAttribute("inputmode"), "none", "input2 restored after switch to input3");
-  assert.strictEqual(dom3.getAttribute("inputmode"), "none", "input3 suppressed");
-
-  kb.close();
-  assert.notStrictEqual(dom3.getAttribute("inputmode"), "none", "input3 restored on close");
-
-  input1.destroy();
-  input2.destroy();
-  input3.destroy();
-  kb.destroy();
-});
+// autoType and mobile keyboard tests moved to KioskKeyboard-autotype-mobile.qunit.ts
 
 // ──────────────────────────────────────────────
 // Auto-show: instance isolation
@@ -3693,58 +3116,94 @@ QUnit.test("aria-controls updates when setTargetInput is called", async (assert)
 // ──────────────────────────────────────────────
 
 QUnit.test('Physical "\\\"" highlights "2" key (Shift+2 on QWERTZ-DE)', async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  kb.setTargetInput(input);
   await placeAndWait(kb);
 
-  (kb as any)._highlightKey('"', true);
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: '"', bubbles: true }));
+  await nextUIUpdate();
+
   const key2 = kb.getDomRef()!.querySelector('[data-key="2"]') as HTMLElement;
   assert.ok(key2.classList.contains("ui5KioskKey--highlight"), "Key '2' highlighted for '\"'");
 
-  (kb as any)._highlightKey('"', false);
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: '"', bubbles: true }));
+  await nextUIUpdate();
   assert.notOk(key2.classList.contains("ui5KioskKey--highlight"), "Highlight removed on release");
 
+  input.destroy();
   kb.destroy();
 });
 
 QUnit.test('Physical "/" highlights "7" key (Shift+7 on QWERTZ-DE)', async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  kb.setTargetInput(input);
   await placeAndWait(kb);
 
-  (kb as any)._highlightKey("/", true);
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "/", bubbles: true }));
+  await nextUIUpdate();
+
   const key7 = kb.getDomRef()!.querySelector('[data-key="7"]') as HTMLElement;
   assert.ok(key7.classList.contains("ui5KioskKey--highlight"), "Key '7' highlighted for '/'");
 
-  (kb as any)._highlightKey("/", false);
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "/", bubbles: true }));
+  await nextUIUpdate();
   assert.notOk(key7.classList.contains("ui5KioskKey--highlight"), "Highlight removed on release");
 
+  input.destroy();
   kb.destroy();
 });
 
 QUnit.test('Physical "\u00DC" (capital U-umlaut) highlights "\u00FC" key', async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  kb.setTargetInput(input);
   await placeAndWait(kb);
 
-  (kb as any)._highlightKey("\u00DC", true);
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "\u00DC", bubbles: true }));
+  await nextUIUpdate();
+
   const keyU = kb.getDomRef()!.querySelector('[data-key="\u00FC"]') as HTMLElement;
   assert.ok(keyU.classList.contains("ui5KioskKey--highlight"), "\u00FC key highlighted for capital \u00DC");
 
-  (kb as any)._highlightKey("\u00DC", false);
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "\u00DC", bubbles: true }));
+  await nextUIUpdate();
   assert.notOk(keyU.classList.contains("ui5KioskKey--highlight"), "Highlight removed");
 
+  input.destroy();
   kb.destroy();
 });
 
 QUnit.test('Physical "\u00FC" (lowercase) highlights its own key directly', async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  kb.setTargetInput(input);
   await placeAndWait(kb);
 
-  (kb as any)._highlightKey("\u00FC", true);
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "\u00FC", bubbles: true }));
+  await nextUIUpdate();
+
   const keyU = kb.getDomRef()!.querySelector('[data-key="\u00FC"]') as HTMLElement;
   assert.ok(keyU.classList.contains("ui5KioskKey--highlight"), "\u00FC key highlighted directly");
 
-  (kb as any)._highlightKey("\u00FC", false);
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "\u00FC", bubbles: true }));
+  await nextUIUpdate();
   assert.notOk(keyU.classList.contains("ui5KioskKey--highlight"), "Highlight removed");
 
+  input.destroy();
   kb.destroy();
 });
 
@@ -4066,198 +3525,7 @@ QUnit.test("Numeric layout keys identical regardless of base layout (qwerty vs q
   kbQwertz.destroy();
 });
 
-// ──────────────────────────────────────────────
-// Auto-Show Requires Docked
-// ──────────────────────────────────────────────
-
-QUnit.test("autoShow with docked=false does not open keyboard on input focus", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ autoShow: true, docked: false });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await waitForRender();
-
-  assert.notOk(kb.isOpen(), "Keyboard does not open when docked is false");
-
-  input.destroy();
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
-// Auto-Show Input Detection Guards
-// ──────────────────────────────────────────────
-
-QUnit.test("autoShow ignores non-textual input types (checkbox)", async (assert) => {
-  const cb = new CheckBox();
-  cb.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
-  await placeAndWait(kb);
-
-  // Focus the checkbox's inner <input type="checkbox">
-  const innerInput = cb.getDomRef()?.querySelector("input") as HTMLElement;
-  assert.ok(innerInput, "CheckBox renders an inner <input>");
-  innerInput.focus();
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "Keyboard does not open for checkbox input");
-
-  cb.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoShow ignores readonly inputs", async (assert) => {
-  const input = new Input({ editable: false });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "Keyboard does not open for readonly input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoShow ignores raw DOM input without UI5 control", async (assert) => {
-  const rawInput = document.createElement("input");
-  rawInput.type = "text";
-  document.getElementById("qunit-fixture")!.appendChild(rawInput);
-
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
-  await placeAndWait(kb);
-
-  rawInput.focus();
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "Keyboard does not open for raw DOM input");
-  assert.strictEqual(kb.getTargetInput(), null, "No target input was set");
-
-  kb.destroy();
-});
-
-QUnit.test("autoShow ignores date/time input types", async (assert) => {
-  // Create a custom control that renders <input type="date">
-  const DateWrapper = (Control as any).extend("test.DateWrapper", {
-    metadata: { properties: {} },
-    renderer: {
-      apiVersion: 2,
-      render(rm: any, ctrl: any) {
-        rm.openStart("div", ctrl).openEnd();
-        rm.voidStart("input")
-          .attr("id", ctrl.getId() + "-inner")
-          .attr("type", "date")
-          .voidEnd();
-        rm.close("div");
-      },
-    },
-    getFocusDomRef() {
-      return document.getElementById((this as any).getId() + "-inner");
-    },
-  }) as any;
-
-  const dateInput = new DateWrapper();
-  dateInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
-  await placeAndWait(kb);
-
-  const innerDom = dateInput.getFocusDomRef() as HTMLElement;
-  innerDom.focus();
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "Keyboard does not open for date input type");
-
-  kb.destroy();
-  dateInput.destroy();
-});
-
-QUnit.test(
-  "autoShow keeps keyboard open when null relatedTarget settles on another claimable input",
-  async (assert) => {
-    const input1 = new Input();
-    const input2 = new Input();
-    input1.placeAt("qunit-fixture");
-    input2.placeAt("qunit-fixture");
-
-    const kb = new KioskKeyboard({ docked: true, autoShow: true });
-    await placeAndWait(kb);
-
-    (input1.getFocusDomRef() as HTMLElement).focus();
-    await nextUIUpdate();
-    assert.ok(kb.isOpen(), "Keyboard opened for first input");
-
-    const internals = kb as unknown as { _onDocumentFocusOut: (event: FocusEvent) => void };
-    internals._onDocumentFocusOut(new FocusEvent("focusout"));
-
-    (input2.getFocusDomRef() as HTMLElement).focus();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await nextUIUpdate();
-
-    assert.ok(kb.isOpen(), "Keyboard stays open after deferred close check");
-    assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switched to second input");
-
-    input1.destroy();
-    input2.destroy();
-    kb.destroy();
-  },
-);
-
-QUnit.test("autoShow closes when null relatedTarget settles outside claimable inputs", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const outside = document.createElement("button");
-  outside.id = "kb-outside-focus-target";
-  document.getElementById("qunit-fixture")!.appendChild(outside);
-
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.ok(kb.isOpen(), "Keyboard opened for input");
-
-  const internals = kb as unknown as { _onDocumentFocusOut: (event: FocusEvent) => void };
-  internals._onDocumentFocusOut(new FocusEvent("focusout"));
-
-  outside.focus();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "Keyboard closed after deferred close check");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.ok(kb.isOpen(), "Keyboard opened for input");
-
-  const internals = kb as unknown as { _onDocumentFocusOut: (event: FocusEvent) => void };
-  internals._onDocumentFocusOut(new FocusEvent("focusout"));
-
-  kb.destroy();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  assert.ok(true, "No errors after destroy with deferred close pending");
-
-  input.destroy();
-});
+// autoShow detection and deferred-close tests moved to KioskKeyboard-autoshow.qunit.ts
 
 // ──────────────────────────────────────────────
 // Custom Control Targeting (DOM Fallback)

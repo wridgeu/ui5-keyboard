@@ -22,6 +22,12 @@ sap.ui.define([], () => {
       "KioskKeyboard-events": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Events & RTL",
       },
+      "KioskKeyboard-autotype-mobile": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard autoType & mobile keyboard",
+      },
+      "KioskKeyboard-autoshow": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard autoShow",
+      },
       FKeys: {
         title: "QUnit tests for ui5.kiosk - FKeys",
       },
