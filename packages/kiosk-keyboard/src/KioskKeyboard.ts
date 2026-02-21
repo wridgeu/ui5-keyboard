@@ -599,6 +599,23 @@ export default class KioskKeyboard extends Control {
             "ui5.kiosk.KioskKeyboard",
           );
         }
+      } else {
+        Log.warning(
+          `KioskKeyboard: targetInput "${newId}" could not be resolved — Element.getElementById() returned null`,
+          undefined,
+          "ui5.kiosk.KioskKeyboard",
+        );
+      }
+    }
+
+    // Keep aria-controls in sync (setAssociation suppresses re-render)
+    const dom = this.getDomRef();
+    if (dom) {
+      const resolvedId = this.getTargetInput();
+      if (resolvedId) {
+        dom.setAttribute("aria-controls", resolvedId);
+      } else {
+        dom.removeAttribute("aria-controls");
       }
     }
 

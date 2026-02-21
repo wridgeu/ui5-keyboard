@@ -1,6 +1,8 @@
 <mvc:View
     controllerName="demo.hotkeys.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
+    xmlns:kiosk="ui5.kiosk"
     xmlns="sap.m">
     <Page title="ui5.hotkeys Demo — Main View" id="mainPage" class="sapUiContentPadding">
         <headerContent>
@@ -51,7 +53,7 @@
                     <Text text="Type in the field below. Single-key shortcuts are suppressed, but Ctrl/Cmd combos still work." />
                     <Input id="testInput" placeholder="Try typing, then press Ctrl+S or Escape..." class="sapUiSmallMarginTop"
                         ariaLabelledBy="testInputLabel" />
-                    <core:InvisibleText id="testInputLabel" text="Test input for keyboard shortcuts" xmlns:core="sap.ui.core" />
+                    <core:InvisibleText id="testInputLabel" text="Test input for keyboard shortcuts" />
                 </VBox>
             </Panel>
 
@@ -96,6 +98,42 @@
                         <Label text="{state>/printLabel}" class="sapUiSmallMarginEnd" design="Bold" />
                         <Text text="Print (only fires when toggle is on)" />
                     </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Conflict Behavior" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Register duplicate Ctrl+Shift+K hotkeys with different conflict strategies. Watch the console and status below." />
+                    <HBox class="sapUiSmallMarginTop">
+                        <Button text="Warn (default)" press=".onConflictWarn" class="sapUiTinyMarginEnd" />
+                        <Button text="Allow" press=".onConflictAllow" class="sapUiTinyMarginEnd" />
+                        <Button text="Replace" press=".onConflictReplace" class="sapUiTinyMarginEnd" />
+                        <Button text="Error" press=".onConflictError" type="Reject" class="sapUiTinyMarginEnd" />
+                        <Button text="Reset" press=".onConflictReset" />
+                    </HBox>
+                    <ObjectStatus text="{state>/conflictStatus}" state="{state>/conflictState}" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Target-Element Scoped Hotkeys" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Ctrl+Enter is bound to the panel below (not the document). Click inside the panel, then press Ctrl+Enter." />
+                    <VBox id="targetPanel" class="sapUiSmallMarginTop sapUiSmallMargin sapUiContentPadding">
+                        <Input id="targetInput" placeholder="Focus here, then press Ctrl+Enter..." ariaLabelledBy="targetInputLabel" />
+                        <core:InvisibleText id="targetInputLabel" text="Target-scoped hotkey test input" />
+                        <ObjectStatus text="{state>/targetStatus}" state="Success" class="sapUiSmallMarginTop" />
+                    </VBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Both Libraries Together" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="A KioskKeyboard and HotkeyManager on the same page. Virtual key taps fire keyPress (not keydown), so they don't trigger hotkeys." />
+                    <Input id="comboInput" value="{state>/comboText}" placeholder="Type with the virtual keyboard or use Ctrl+S..."
+                        class="sapUiSmallMarginTop" ariaLabelledBy="comboInputLabel" />
+                    <core:InvisibleText id="comboInputLabel" text="Combined hotkey and virtual keyboard input" />
+                    <ObjectStatus text="{state>/comboStatus}" state="Information" class="sapUiSmallMarginTop" />
+                    <kiosk:KioskKeyboard targetInput="comboInput" class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
         </content>

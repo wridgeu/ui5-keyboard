@@ -67,6 +67,10 @@ const KioskKeyboardRenderer = {
       label: oControl.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
       roledescription: getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
     });
+    const targetId = oControl.getTargetInput();
+    if (targetId) {
+      rm.attr("aria-controls", targetId);
+    }
     rm.attr("data-sap-ui-fastnavgroup", "true");
   },
 

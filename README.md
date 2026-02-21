@@ -53,6 +53,31 @@ npm install ui5-lib-kiosk-keyboard
 </mvc:View>
 ```
 
+## Using Both Libraries Together
+
+The two libraries are independent — neither depends on the other — but they complement each other well. A typical kiosk application uses hotkeys for global shortcuts and the virtual keyboard for text input:
+
+```xml
+<mvc:View xmlns:kiosk="ui5.kiosk" xmlns:m="sap.m" xmlns:mvc="sap.ui.core.mvc">
+  <m:Input id="searchField" placeholder="Search..." />
+  <kiosk:KioskKeyboard docked="true" autoShow="true" targetInput="searchField" />
+</mvc:View>
+```
+
+```ts
+// Controller — register hotkeys alongside the virtual keyboard
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+
+onInit(): void {
+  const manager = HotkeyManager.getInstance();
+  manager.register("Mod+K", () => this.byId("searchField")?.focus(), {
+    description: "Focus search",
+  });
+}
+```
+
+Both libraries use standard UI5 lifecycle management (`destroy()`) and coexist on the same page without conflicts. The KioskKeyboard fires `keyPress` events (not native `keydown`), so virtual key taps do not trigger hotkeys registered via HotkeyManager.
+
 ## Development
 
 Monorepo using npm workspaces. Requires Node >= 22.

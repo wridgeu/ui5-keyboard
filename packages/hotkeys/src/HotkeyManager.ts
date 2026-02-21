@@ -425,7 +425,8 @@ export default class HotkeyManager extends BaseObject {
     let enabled: boolean;
     try {
       enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
-    } catch {
+    } catch (error) {
+      Log.warning(`Error evaluating enabled() for "${reg.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
       enabled = false;
     }
     return {

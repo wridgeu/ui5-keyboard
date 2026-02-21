@@ -1858,6 +1858,35 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Shift toggle works via keyboard (Enter key)", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]') as HTMLElement;
+
+  // Simulate Enter keydown on the Shift key
+  const pressEnter = () => {
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    shiftKey.dispatchEvent(event);
+  };
+
+  // Off → Shift
+  pressEnter();
+  assert.ok(kb.isShiftActive(), "Shift active after first Enter");
+  assert.notOk(kb.isCapsLock(), "Not caps lock yet");
+
+  // Shift → Caps Lock
+  pressEnter();
+  assert.ok(kb.isCapsLock(), "Caps Lock after second Enter");
+
+  // Caps Lock → Off
+  pressEnter();
+  assert.notOk(kb.isShiftActive(), "Shift off after third Enter");
+  assert.notOk(kb.isCapsLock(), "Caps Lock off after third Enter");
+
+  kb.destroy();
+});
+
 QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
@@ -3605,6 +3634,61 @@ QUnit.test("removeAriaLabelledBy clears attribute after re-render", async (asser
 });
 
 // ──────────────────────────────────────────────
+// aria-controls
+// ──────────────────────────────────────────────
+
+QUnit.test("aria-controls points to targetInput on initial render", async (assert) => {
+  const input = new Input("a11y-target");
+  input.placeAt("qunit-fixture");
+  await nextUIUpdate();
+
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  assert.strictEqual(
+    kb.getDomRef()!.getAttribute("aria-controls"),
+    input.getId(),
+    "aria-controls set to target input ID",
+  );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("aria-controls absent when no targetInput", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.notOk(kb.getDomRef()!.hasAttribute("aria-controls"), "No aria-controls without target");
+
+  kb.destroy();
+});
+
+QUnit.test("aria-controls updates when setTargetInput is called", async (assert) => {
+  const input1 = new Input("a11y-input1");
+  const input2 = new Input("a11y-input2");
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+  await nextUIUpdate();
+
+  const kb = new KioskKeyboard({ targetInput: input1 });
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getDomRef()!.getAttribute("aria-controls"), input1.getId(), "Initially points to input1");
+
+  kb.setTargetInput(input2);
+  assert.strictEqual(
+    kb.getDomRef()!.getAttribute("aria-controls"),
+    input2.getId(),
+    "Updated to input2 without re-render",
+  );
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
 // QWERTZ-DE Shift Symbols Highlight
 // ──────────────────────────────────────────────
 
@@ -4340,5 +4424,38 @@ QUnit.test("autoType switching back fires keyboardTypeChange twice", async (asse
 
   numInput.destroy();
   textInput.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// RTL support
+// ──────────────────────────────────────────────
+
+QUnit.test("RTL: renders with direction rtl inside .sapUiRtl container", async (assert) => {
+  const rtlContainer = document.createElement("div");
+  rtlContainer.className = "sapUiRtl";
+  rtlContainer.id = "rtl-container";
+  document.getElementById("qunit-fixture")!.appendChild(rtlContainer);
+
+  const kb = new KioskKeyboard();
+  kb.placeAt("rtl-container");
+  await nextUIUpdate();
+  await waitForRender();
+
+  const dom = kb.getDomRef() as HTMLElement;
+  const computed = window.getComputedStyle(dom);
+  assert.strictEqual(computed.direction, "rtl", "Keyboard has direction: rtl in RTL context");
+
+  kb.destroy();
+});
+
+QUnit.test("RTL: renders with direction ltr when not in RTL container", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef() as HTMLElement;
+  const computed = window.getComputedStyle(dom);
+  assert.strictEqual(computed.direction, "ltr", "Keyboard has direction: ltr by default");
+
   kb.destroy();
 });

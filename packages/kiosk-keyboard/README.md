@@ -31,7 +31,9 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Shift & Caps Lock](#shift--caps-lock)
 - [Accessibility](#accessibility)
 - [Theming](#theming)
+- [Internationalization (i18n)](#internationalization-i18n)
 - [Library Enums & Constants](#library-enums--constants)
+- [Troubleshooting](#troubleshooting)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
 
 ---
@@ -217,16 +219,18 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 ### Public Methods
 
-| Method                   | Returns            | Description                                    |
-| ------------------------ | ------------------ | ---------------------------------------------- |
-| `setTargetInput(target)` | `this`             | Set the target input (no re-render).           |
-| `show()`                 | `this`             | Open the docked keyboard. Idempotent.          |
-| `close()`                | `this`             | Close the docked keyboard. Idempotent.         |
-| `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open. |
-| `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.          |
-| `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                   |
-| `resetKeyboardType()`    | `this`             | Clear explicit lock, re-enable auto-type.      |
-| `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.           |
+| Method                   | Returns            | Description                                                                       |
+| ------------------------ | ------------------ | --------------------------------------------------------------------------------- |
+| `setTargetInput(target)` | `this`             | Set the target input (no re-render).                                              |
+| `show()`                 | `this`             | Open the docked keyboard. Idempotent.                                             |
+| `close()`                | `this`             | Close the docked keyboard. Idempotent.                                            |
+| `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open.                                    |
+| `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.                                             |
+| `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                                                      |
+| `resetKeyboardType()`    | `this`             | Clear explicit lock, re-enable auto-type.                                         |
+| `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.                                              |
+| `getKeyLabel(key)`       | `string`           | Display label for a key, respecting current Shift/Caps state.                     |
+| `getKeyAriaLabel(key)`   | `string`           | Accessible label for a key (human-readable name for icons like Backspace, Enter). |
 
 ### Static Methods
 
@@ -784,6 +788,52 @@ Both `compact` and `cozy` content densities are supported with adjusted key heig
 
 ---
 
+## Internationalization (i18n)
+
+The library ships with an English resource bundle for all accessibility labels and key names. German (`messagebundle_de.properties`) is also included.
+
+**Resource bundle keys:**
+
+| Key                              | Default (English)       | Used for                                                |
+| -------------------------------- | ----------------------- | ------------------------------------------------------- |
+| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `ariaLabel` property is empty |
+| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element              |
+| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key         |
+| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key         |
+| `KEY_BACKSPACE`                  | Backspace               | `aria-label` for the Backspace key (icon-only)          |
+| `KEY_SPACE`                      | Space                   | `aria-label` for the Space key                          |
+| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active |
+| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                           |
+| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                           |
+| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`               |
+| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`              |
+
+**Adding translations:**
+
+Create a properties file following the standard UI5 i18n naming convention in the library's `i18n/` folder. For example, to add French:
+
+```
+packages/kiosk-keyboard/src/i18n/messagebundle_fr.properties
+```
+
+```properties
+KIOSK_KEYBOARD_LABEL=Clavier virtuel
+KIOSK_KEYBOARD_ROLEDESCRIPTION=clavier
+KEY_SHIFT=Maj
+KEY_ENTER=Entrée
+KEY_BACKSPACE=Retour arrière
+KEY_SPACE=Espace
+ARIA_CAPS_LOCK=Verrouillage majuscules
+ARIA_CAPS_LOCK_ON=Verrouillage majuscules activé
+ARIA_SHIFT_ON=Majuscules activées
+ARIA_KEYBOARD_OPENED=Clavier virtuel ouvert
+ARIA_KEYBOARD_CLOSED=Clavier virtuel fermé
+```
+
+The UI5 resource bundle mechanism (`Lib.getResourceBundleFor("ui5.kiosk")`) automatically resolves the correct bundle based on the active UI5 locale.
+
+---
+
 ## Library Enums & Constants
 
 The library exports frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`) are additionally registered via `DataType.registerEnum()` for XML view binding.
@@ -842,6 +892,35 @@ KeyName.PageDown; // "PageDown"
 ## Further Reading
 
 - [Architecture & Internals](../../docs/KIOSK-ARCHITECTURE.md) — control design, rendering, theming approach
+
+---
+
+## Troubleshooting
+
+**Keyboard does not open on input focus:**
+
+- Ensure both `docked="true"` and `autoShow="true"` are set
+- The focused element must be a text-entry `<input>` or `<textarea>` owned by a UI5 control (`Element.closestTo()` must resolve)
+- If `inputIds` is set, only the listed inputs trigger auto-show
+- Check the browser console for `Log.warning` messages from `ui5.kiosk.KioskKeyboard`
+
+**Typing does not update the model/binding:**
+
+- The target control must support `setValue(string)` and fire `liveChange`. All standard `sap.m` input controls support this out of the box
+- For custom controls, ensure `getFocusDomRef()` returns the actual `<input>` or `<textarea>` element
+
+**Native keyboard appears alongside the virtual keyboard:**
+
+- Set `mobileKeyboard="Custom"` (the default) to suppress native keyboard via `inputmode="none"`
+- If the target control re-renders while the keyboard is open, the suppression may be lost — see [Mobile Keyboard Detection](#mobile-keyboard-detection)
+
+**Layout switches cause the keyboard to change size:**
+
+- Enable `stableHeight="true"` to maintain consistent height. This is especially important inside `sap.m.Popover`, which may close on content height changes
+
+**Physical keyboard highlighting doesn't work for custom layout keys:**
+
+- Ensure custom key `value` strings don't conflict with built-in action keys (`{backspace}`, `{enter}`, `{shift}`, etc.)
 
 ---
 

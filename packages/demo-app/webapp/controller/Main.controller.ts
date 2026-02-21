@@ -7,6 +7,8 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
+import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
+import { ConflictBehavior } from "ui5/hotkeys/library";
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import { formatForDisplay } from "ui5/hotkeys/format";
 
@@ -20,12 +22,17 @@ import { formatForDisplay } from "ui5/hotkeys/format";
  * @name demo.hotkeys.controller.Main
  */
 export default class Main extends BaseController {
+  private static readonly CONFLICT_HOTKEY = "Ctrl+Shift+K";
+  private static readonly COMBO_HOTKEY = "Ctrl+Shift+M";
+
   private _manager!: HotkeyManager;
   private _hotkeys!: RegistrationGroup;
   private _dialogHotkeys!: RegistrationGroup;
   private _dialog!: Dialog | null;
   private _keyTracker!: KeyStateTracker;
   private _pendingTimer!: ReturnType<typeof setTimeout> | null;
+  private _conflictHandles!: HotkeyRegistrationHandle[];
+  private _targetHandle!: HotkeyRegistrationHandle | null;
 
   onInit(): void {
     this._dialog = null;
@@ -118,6 +125,57 @@ export default class Main extends BaseController {
         enabled: () => stateModel.getProperty("/canSave") as boolean,
       },
     );
+
+    // Conflict behavior demo state
+    this._conflictHandles = [];
+    stateModel.setProperty("/conflictStatus", `Not configured. Choose a strategy, then press ${Main.CONFLICT_HOTKEY}.`);
+    stateModel.setProperty("/conflictState", "Information");
+
+    stateModel.setProperty("/targetStatus", "Focus inside the panel and press Ctrl+Enter.");
+
+    stateModel.setProperty("/comboStatus", `Try ${Main.COMBO_HOTKEY} or type with the virtual keyboard.`);
+    stateModel.setProperty("/comboText", "");
+
+    this._hotkeys.register(
+      Main.COMBO_HOTKEY,
+      () => {
+        const previous = (stateModel.getProperty("/comboText") as string) || "";
+        const next = `${previous}${previous ? " " : ""}[hotkey:${Main.COMBO_HOTKEY}]`;
+        stateModel.setProperty("/comboText", next);
+        stateModel.setProperty("/comboStatus", `${Main.COMBO_HOTKEY} fired via HotkeyManager.`);
+        stateModel.setProperty("/lastAction", "Combined demo hotkey");
+        MessageToast.show(`${Main.COMBO_HOTKEY}: Combined demo hotkey fired`);
+      },
+      {
+        scope: Scope.Main,
+        description: "Combined hotkey + kiosk demo",
+      },
+    );
+
+    // Target-element scoped hotkey — bound after rendering
+    this._targetHandle = null;
+  }
+
+  onAfterRendering(): void {
+    // Bind target-element hotkey once the DOM is available
+    if (this._targetHandle) return;
+    const targetPanel = this.byId("targetPanel")?.getDomRef();
+    if (targetPanel) {
+      const stateModel = this.getStateModel();
+      this._targetHandle = this._manager.register(
+        "Ctrl+Enter",
+        () => {
+          stateModel.setProperty("/targetStatus", "Ctrl+Enter fired inside panel!");
+          stateModel.setProperty("/lastAction", "Target-scoped Ctrl+Enter");
+          MessageToast.show("Ctrl+Enter: Target-scoped hotkey fired!");
+        },
+        {
+          scope: Scope.Main,
+          target: targetPanel as HTMLElement,
+          description: "Target-scoped action",
+        },
+      );
+    }
   }
 
   onNavToDetail(): void {
@@ -126,6 +184,29 @@ export default class Main extends BaseController {
 
   onNavToKiosk(): void {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+  }
+
+  onConflictWarn(): void {
+    this._configureConflictDemo(ConflictBehavior.Warn);
+  }
+
+  onConflictAllow(): void {
+    this._configureConflictDemo(ConflictBehavior.Allow);
+  }
+
+  onConflictReplace(): void {
+    this._configureConflictDemo(ConflictBehavior.Replace);
+  }
+
+  onConflictError(): void {
+    this._configureConflictDemo(ConflictBehavior.Error);
+  }
+
+  onConflictReset(): void {
+    this._clearConflictHandles();
+    const stateModel = this.getStateModel();
+    stateModel.setProperty("/conflictStatus", `Reset complete. Choose a strategy, then press ${Main.CONFLICT_HOTKEY}.`);
+    stateModel.setProperty("/conflictState", "Information");
   }
 
   onOpenDialog(): void {
@@ -191,6 +272,11 @@ export default class Main extends BaseController {
   }
 
   onExit(): void {
+    this._clearConflictHandles();
+    if (this._targetHandle) {
+      this._targetHandle.unregister();
+      this._targetHandle = null;
+    }
     this._hotkeys.destroyAll();
     this._manager.setSequencePendingHandler(null);
     if (this._pendingTimer) {
@@ -226,5 +312,52 @@ export default class Main extends BaseController {
       this._dialog.destroy();
       this._dialog = null;
     }
+  }
+
+  private _configureConflictDemo(behavior: (typeof ConflictBehavior)[keyof typeof ConflictBehavior]): void {
+    this._clearConflictHandles();
+
+    const stateModel = this.getStateModel();
+    const triggerA = () => {
+      stateModel.setProperty("/lastAction", `Conflict demo A (${behavior})`);
+      stateModel.setProperty("/conflictStatus", `Handler A fired (${behavior}). Press ${Main.CONFLICT_HOTKEY} again.`);
+      stateModel.setProperty("/conflictState", "Success");
+    };
+    const triggerB = () => {
+      stateModel.setProperty("/lastAction", `Conflict demo B (${behavior})`);
+      stateModel.setProperty("/conflictStatus", `Handler B fired (${behavior}). Press ${Main.CONFLICT_HOTKEY} again.`);
+      stateModel.setProperty("/conflictState", "Success");
+    };
+
+    try {
+      this._conflictHandles.push(
+        this._manager.register(Main.CONFLICT_HOTKEY, triggerA, {
+          scope: Scope.Main,
+          description: `Conflict demo A (${behavior})`,
+          conflictBehavior: behavior,
+        }),
+      );
+      this._conflictHandles.push(
+        this._manager.register(Main.CONFLICT_HOTKEY, triggerB, {
+          scope: Scope.Main,
+          description: `Conflict demo B (${behavior})`,
+          conflictBehavior: behavior,
+        }),
+      );
+      stateModel.setProperty("/conflictStatus", `Registered using ${behavior}. Press ${Main.CONFLICT_HOTKEY} to test.`);
+      stateModel.setProperty("/conflictState", "Information");
+    } catch (error) {
+      stateModel.setProperty("/conflictStatus", `Registration failed (${behavior}): ${String(error)}`);
+      stateModel.setProperty("/conflictState", "Error");
+    }
+  }
+
+  private _clearConflictHandles(): void {
+    for (const handle of this._conflictHandles) {
+      if (handle.isActive) {
+        handle.unregister();
+      }
+    }
+    this._conflictHandles = [];
   }
 }

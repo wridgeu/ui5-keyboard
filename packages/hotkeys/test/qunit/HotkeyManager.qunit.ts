@@ -261,6 +261,50 @@ QUnit.test("resetToGlobalScope pops all non-global scopes", (assert) => {
   assert.strictEqual(manager.getActiveScope(), "__global__", "No-op when already at global");
 });
 
+QUnit.test("pushScope allows duplicate scope and pops correctly", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let editorCalled = false;
+  let globalCalled = false;
+
+  manager.register("F5", () => {
+    globalCalled = true;
+  });
+  manager.register(
+    "F5",
+    () => {
+      editorCalled = true;
+    },
+    { scope: "editor" },
+  );
+
+  // Push editor twice
+  manager.pushScope("editor");
+  manager.pushScope("editor");
+  assert.strictEqual(manager.getActiveScope(), "editor", "Active scope is editor");
+
+  fireKey("F5");
+  assert.ok(editorCalled, "Editor handler fires with duplicate scope on stack");
+  assert.notOk(globalCalled, "Global handler suppressed");
+
+  // First pop — still in editor
+  editorCalled = false;
+  manager.popScope("editor");
+  assert.strictEqual(manager.getActiveScope(), "editor", "Still editor after first pop");
+
+  fireKey("F5");
+  assert.ok(editorCalled, "Editor handler still fires after first pop");
+
+  // Second pop — back to global
+  editorCalled = false;
+  globalCalled = false;
+  manager.popScope("editor");
+  assert.strictEqual(manager.getActiveScope(), "__global__", "Back to global after second pop");
+
+  fireKey("F5");
+  assert.ok(globalCalled, "Global handler fires after both pops");
+  assert.notOk(editorCalled, "Editor handler no longer fires");
+});
+
 // ──────────────────────────────────────────────
 // Conflict handling
 // ──────────────────────────────────────────────
@@ -574,6 +618,22 @@ QUnit.test("destroy cleans up everything", (assert) => {
   const newManager = HotkeyManager.getInstance();
   assert.strictEqual(newManager.getRegistrations().length, 0, "New instance has no registrations");
   assert.strictEqual(newManager.getActiveScope(), "__global__", "Scope stack reset");
+});
+
+QUnit.test("destroy is idempotent (safe to call twice)", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  manager.register("Escape", () => {});
+  manager.pushScope("editor");
+
+  manager.destroy();
+
+  // Second destroy on the same reference should not throw
+  manager.destroy();
+
+  // A fresh instance should still work
+  const fresh = HotkeyManager.getInstance();
+  assert.strictEqual(fresh.getRegistrations().length, 0, "Fresh instance after double destroy");
+  assert.strictEqual(fresh.getActiveScope(), "__global__", "Scope stack clean after double destroy");
 });
 
 // ──────────────────────────────────────────────

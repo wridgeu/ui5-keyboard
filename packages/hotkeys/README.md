@@ -27,7 +27,9 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - [Validation](#validation)
 - [Utility Functions](#utility-functions)
 - [Library Enums & Constants](#library-enums--constants)
+  - [ConflictBehavior Examples](#conflictbehavior-examples)
 - [Type-safe Hotkey Strings](#type-safe-hotkey-strings)
+- [Troubleshooting](#troubleshooting)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
 
 ---
@@ -250,6 +252,24 @@ handle.setOptions({ ignoreRepeat: false });
 // Remove the registration
 handle.unregister();
 handle.isActive; // false
+```
+
+**Updatable options via `setOptions()`:**
+
+All [Registration Options](#registration-options) except `scope` can be updated at any time:
+
+```ts
+handle.setOptions({
+  enabled: () => model.getProperty("/isDirty"),
+  description: "Save (modified)",
+  preventDefault: false,
+  stopPropagation: false,
+  ignoreInputs: true,
+  ignoreRepeat: false,
+  suppressInPopups: true,
+  conflictBehavior: ConflictBehavior.Allow,
+  target: document.getElementById("myPanel"),
+});
 ```
 
 > [!WARNING]
@@ -532,15 +552,16 @@ Validate hotkey strings for correctness and check for conflicts with browser or 
 
 ```ts
 import { validateHotkey, assertValidHotkey, checkHotkey } from "ui5/hotkeys/validate";
+import { Platform } from "ui5/hotkeys/library";
 
 // Full validation with warnings
-const result = validateHotkey("Ctrl+S", "windows");
+const result = validateHotkey("Ctrl+S", Platform.Windows);
 // result.valid === true
 // result.normalizedHotkey === "Control+S"
 // result.warnings === ["Conflicts with SAP shortcut: Save (Fiori) (Control+S)"]
 // result.errors === []
 
-const result2 = validateHotkey("F5", "windows");
+const result2 = validateHotkey("F5", Platform.Windows);
 // result2.warnings includes browser reload conflict
 
 // Quick boolean check
@@ -559,6 +580,17 @@ assertValidHotkey(""); // throws Error
 > [!TIP]
 > Validation warnings are also automatically logged when calling `manager.register()`.
 
+**Common errors from invalid hotkey strings:**
+
+| Input          | Error                                                             |
+| -------------- | ----------------------------------------------------------------- |
+| `""`           | `Hotkey string must not be empty`                                 |
+| `"Ctrl"`       | `Invalid hotkey "Ctrl": no non-modifier key found`                |
+| `"Ctrl+Shift"` | `Invalid hotkey "Ctrl+Shift": no non-modifier key found`          |
+| `"Ctrl+S+X"`   | `Invalid hotkey "Ctrl+S+X": unexpected segment "X" after key "S"` |
+
+Unknown key names (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw — they are allowed for forward compatibility.
+
 ---
 
 ## Utility Functions
@@ -567,14 +599,15 @@ assertValidHotkey(""); // throws Error
 
 ```ts
 import { parseHotkey, normalizeHotkey, keyboardEventToHotkey, convertToModFormat } from "ui5/hotkeys/parse";
+import { Platform } from "ui5/hotkeys/library";
 
 // Parse a hotkey string into components
-const parsed = parseHotkey("Mod+Shift+S", "mac");
+const parsed = parseHotkey("Mod+Shift+S", Platform.Mac);
 // { key: "S", ctrl: false, shift: true, alt: false, meta: true, modifiers: ["Shift", "Meta"] }
 
 // Normalize to canonical form
-normalizeHotkey("cmd+shift+s", "mac"); // "Shift+Meta+S"
-normalizeHotkey("Mod+S", "windows"); // "Control+S"
+normalizeHotkey("cmd+shift+s", Platform.Mac); // "Shift+Meta+S"
+normalizeHotkey("Mod+S", Platform.Windows); // "Control+S"
 
 // Convert a KeyboardEvent to a hotkey string
 document.addEventListener("keydown", (event) => {
@@ -582,20 +615,21 @@ document.addEventListener("keydown", (event) => {
 });
 
 // Convert platform-specific to cross-platform "Mod" format
-convertToModFormat("Control+S", "windows"); // "Mod+S"
-convertToModFormat("Meta+S", "mac"); // "Mod+S"
+convertToModFormat("Control+S", Platform.Windows); // "Mod+S"
+convertToModFormat("Meta+S", Platform.Mac); // "Mod+S"
 ```
 
 ### Display Formatting
 
 ```ts
 import { formatForDisplay } from "ui5/hotkeys/format";
+import { Platform } from "ui5/hotkeys/library";
 
 // macOS: uses symbols without separators
-formatForDisplay("Mod+Shift+S", "mac"); // "⇧⌘S"
+formatForDisplay("Mod+Shift+S", Platform.Mac); // "⇧⌘S"
 
 // Windows/Linux: uses text labels with "+"
-formatForDisplay("Mod+Shift+S", "windows"); // "Ctrl+Shift+S"
+formatForDisplay("Mod+Shift+S", Platform.Windows); // "Ctrl+Shift+S"
 ```
 
 ### Event Matching
@@ -627,11 +661,12 @@ const target = getEventTarget(event);
 
 ```ts
 import { detectPlatform, resolveModifier } from "ui5/hotkeys/platform";
+import { Platform } from "ui5/hotkeys/library";
 
-detectPlatform(); // "mac", "windows", or "linux"
+detectPlatform(); // Platform.Mac, Platform.Windows, or Platform.Linux
 
-resolveModifier("Mod", "mac"); // "Meta"
-resolveModifier("Mod", "windows"); // "Control"
+resolveModifier("Mod", Platform.Mac); // "Meta"
+resolveModifier("Mod", Platform.Windows); // "Control"
 resolveModifier("Shift"); // "Shift" (non-Mod modifiers pass through)
 ```
 
@@ -645,10 +680,10 @@ The library registers proper UI5 enums via `DataType.registerEnum()`:
 import { ConflictBehavior, UnhandledReason, Platform, GLOBAL_SCOPE } from "ui5/hotkeys/library";
 
 // ConflictBehavior — strategy for duplicate registrations
-ConflictBehavior.Warn; // "warn"
-ConflictBehavior.Error; // "error"
-ConflictBehavior.Replace; // "replace"
-ConflictBehavior.Allow; // "allow"
+ConflictBehavior.Warn; // "warn" — log warning, allow both (default)
+ConflictBehavior.Error; // "error" — throw, prevent new registration
+ConflictBehavior.Replace; // "replace" — unregister existing, register new
+ConflictBehavior.Allow; // "allow" — allow silently, no feedback
 
 // UnhandledReason — why a key event was not handled
 UnhandledReason.NoMatch; // "no_match"
@@ -667,6 +702,29 @@ GLOBAL_SCOPE; // "__global__"
 ```
 
 All enum objects are frozen with `Object.freeze()`.
+
+### ConflictBehavior Examples
+
+```ts
+// Default: warn and allow both (duplicate hotkeys fire in registration order)
+manager.register("Mod+S", saveHandler);
+manager.register("Mod+S", otherHandler); // logs warning, both remain active
+
+// Strict: throw on conflict (prevents accidental duplicates)
+manager.register("Mod+S", saveHandler, { conflictBehavior: ConflictBehavior.Error });
+manager.register("Mod+S", otherHandler, { conflictBehavior: ConflictBehavior.Error });
+// → throws Error("Hotkey "Control+S" conflicts with ...")
+
+// Replace: new registration replaces existing (useful for overriding defaults)
+manager.register("Mod+S", saveHandler);
+manager.register("Mod+S", betterSaveHandler, { conflictBehavior: ConflictBehavior.Replace });
+// saveHandler is unregistered, only betterSaveHandler remains
+
+// Allow: silently allow duplicates (no warning logged)
+manager.register("Mod+S", handlerA, { conflictBehavior: ConflictBehavior.Allow });
+manager.register("Mod+S", handlerB, { conflictBehavior: ConflictBehavior.Allow });
+// Both active, no console output
+```
 
 ---
 
@@ -696,6 +754,31 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 - [Multi-key Sequence Design](../../docs/SEQUENCES.md) — how the sequence system works
 - [Alternatives Research](../../docs/RESEARCH.md) — comparison with other keyboard shortcut approaches
 - [UI5 Event Handling Deep Dive](../../docs/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
+
+---
+
+## Troubleshooting
+
+**Hotkey doesn't fire:**
+
+1. Check if the correct scope is active — use `manager.getActiveScope()` or enable debug mode
+2. If focus is in a text field, single-key hotkeys are suppressed by default (`ignoreInputs: "auto"`). Use `Ctrl`/`Mod` combos or set `ignoreInputs: false`
+3. Check if the registration is disabled — `handle.setOptions({ enabled: true })`
+4. Check for popup suppression — `suppressInPopups: true` blocks hotkeys when a dialog is open
+5. Enable debug mode (`manager.setDebugMode(true)`) and check the browser console for detailed per-keypress logs
+
+**Hotkey fires the wrong handler:**
+
+- The active scope's handler always wins over global. Use `getRegistrations()` to inspect all active registrations and their scopes
+- With router integration, the scope matches the route name — check that your route names match your scope strings
+
+**AltGr characters trigger hotkeys on Windows:**
+
+- The AltGr guard is automatic on Windows. If it's not working, ensure the library detected `Platform.Windows` (check `manager.getPlatform()`)
+
+**`enabled()` guard function seems broken:**
+
+- If `enabled()` throws an error, the registration is silently treated as disabled. Check the browser console for `Log.warning` messages from `ui5.hotkeys.HotkeyManager`
 
 ---
 

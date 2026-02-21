@@ -187,7 +187,12 @@ export default class SequenceManager extends BaseObject {
     let enabled: boolean;
     try {
       enabled = typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
-    } catch {
+    } catch (error) {
+      Log.warning(
+        `Error evaluating enabled() for sequence [${reg.sequence.join(", ")}]: ${error}`,
+        undefined,
+        LOG_COMPONENT,
+      );
       enabled = false;
     }
     return {
