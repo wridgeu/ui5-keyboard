@@ -12,6 +12,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Installation](#installation)
 - [Getting Started](#getting-started)
 - [Quick Start](#quick-start)
+- [API Stability](#api-stability)
 - [KioskKeyboard Control](#kioskkeyboard-control)
   - [Properties](#properties)
   - [Associations](#associations)
@@ -20,11 +21,13 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Static Methods](#static-methods)
 - [Layouts](#layouts)
   - [Stable Height](#stable-height)
+  - [Custom Layouts](#custom-layouts)
 - [Function Keys (F1-F12)](#function-keys-f1-f12)
 - [Locale-Based Default Layout](#locale-based-default-layout)
 - [Docked Mode](#docked-mode)
 - [Auto-Show](#auto-show)
   - [Input Detection](#input-detection)
+- [Interop Cookbook](#interop-cookbook)
 - [Auto-Type](#auto-type)
 - [inputIds](#inputids)
 - [Mobile Keyboard Detection](#mobile-keyboard-detection)
@@ -33,6 +36,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Theming](#theming)
 - [Internationalization (i18n)](#internationalization-i18n)
 - [Library Enums & Constants](#library-enums--constants)
+- [Further Reading](#further-reading)
 - [Troubleshooting](#troubleshooting)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
 
@@ -203,9 +207,11 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 ### Associations
 
-| Association   | Type                  | Cardinality | Description                                          |
-| ------------- | --------------------- | ----------- | ---------------------------------------------------- |
-| `targetInput` | `sap.ui.core.Control` | 0..1        | The input control to type into (e.g. `sap.m.Input`). |
+| Association       | Type                  | Cardinality | Description                                                  |
+| ----------------- | --------------------- | ----------- | ------------------------------------------------------------ |
+| `targetInput`     | `sap.ui.core.Control` | 0..1        | The input control to type into (e.g. `sap.m.Input`).         |
+| `ariaLabelledBy`  | `sap.ui.core.Control` | 0..n        | Additional labels announced by assistive technologies.       |
+| `ariaDescribedBy` | `sap.ui.core.Control` | 0..n        | Additional descriptions announced by assistive technologies. |
 
 ### Events
 
@@ -221,6 +227,10 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 | Method                   | Returns            | Description                                                                       |
 | ------------------------ | ------------------ | --------------------------------------------------------------------------------- |
+| `setLayout(layout)`      | `this`             | Set active layout (effective when `keyboardType="Full"`).                         |
+| `setKeyboardType(type)`  | `this`             | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.       |
+| `setAutoShow(autoShow)`  | `this`             | Enable/disable focus-driven open/close behavior (docked mode).                    |
+| `setDocked(docked)`      | `this`             | Enable/disable docked positioning and related open state handling.                |
 | `setTargetInput(target)` | `this`             | Set the target input (no re-render).                                              |
 | `show()`                 | `this`             | Open the docked keyboard. Idempotent.                                             |
 | `close()`                | `this`             | Close the docked keyboard. Idempotent.                                            |
