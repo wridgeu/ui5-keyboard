@@ -1,5 +1,6 @@
 import Element from "sap/ui/core/Element";
 import { resolveInputOrTextarea } from "./dom";
+import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
 export type CursorPos = [number, number];
@@ -59,8 +60,8 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
 }
 
 /**
- * Deletes the character before the cursor, or removes the active
- * selection, in the given input/textarea.
+ * Deletes the grapheme cluster before the cursor, or removes the
+ * active selection, in the given input/textarea.
  *
  * Returns the new cursor position, or `null` when nothing was deleted
  * (cursor already at position 0 with no selection).
@@ -76,8 +77,9 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
     newValue = dom.value.slice(0, start) + dom.value.slice(end);
     newPos = start;
   } else if (start > 0) {
-    newValue = dom.value.slice(0, start - 1) + dom.value.slice(start);
-    newPos = start - 1;
+    const deleteLen = graphemeLengthBefore(dom.value, start);
+    newValue = dom.value.slice(0, start - deleteLen) + dom.value.slice(start);
+    newPos = start - deleteLen;
   } else {
     return null;
   }
@@ -112,10 +114,10 @@ export function handleNavigation(
 
   switch (key) {
     case "ArrowLeft":
-      newPos = start !== end ? start : Math.max(0, start - 1);
+      newPos = start !== end ? start : Math.max(0, start - graphemeLengthBefore(dom.value, start));
       break;
     case "ArrowRight":
-      newPos = start !== end ? end : Math.min(len, end + 1);
+      newPos = start !== end ? end : Math.min(len, end + graphemeLengthAfter(dom.value, end));
       break;
     case "Home":
     case "PageUp":
