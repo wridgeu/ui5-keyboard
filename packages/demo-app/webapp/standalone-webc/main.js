@@ -1,8 +1,8 @@
-import "https://cdn.jsdelivr.net/npm/@ui5/webcomponents@2.15.1/dist/Button.js";
-import "https://cdn.jsdelivr.net/npm/@ui5/webcomponents@2.15.1/dist/Input.js";
-import "https://cdn.jsdelivr.net/npm/@ui5/webcomponents@2.15.1/dist/Label.js";
-import "https://cdn.jsdelivr.net/npm/@ui5/webcomponents@2.15.1/dist/MessageStrip.js";
-import "https://cdn.jsdelivr.net/npm/@ui5/webcomponents@2.15.1/dist/TextArea.js";
+import "./vendor-npm/@ui5/webcomponents/dist/Button.js";
+import "./vendor-npm/@ui5/webcomponents/dist/Input.js";
+import "./vendor-npm/@ui5/webcomponents/dist/Label.js";
+import "./vendor-npm/@ui5/webcomponents/dist/MessageStrip.js";
+import "./vendor-npm/@ui5/webcomponents/dist/TextArea.js";
 
 const nameInput = document.getElementById("nameInput");
 const messageInput = document.getElementById("messageInput");

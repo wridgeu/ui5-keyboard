@@ -1,3 +1,7 @@
 # Exclude auto-generated interface files (ts-interface-generator output)
 # because oxfmt cannot converge on a stable format for their JSDoc style.
 *.gen.d.ts
+
+# Vendored third-party web component package snapshot
+packages/demo-app/webapp/standalone-webc/vendor/
+packages/demo-app/webapp/standalone-webc/vendor-npm/

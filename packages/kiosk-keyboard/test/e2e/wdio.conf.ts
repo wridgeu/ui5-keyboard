@@ -33,6 +33,11 @@ export const config: WebdriverIO.Config = {
 
   baseUrl: `http://localhost:${PORT}`,
 
+  wdi5: {
+    skipInjectUI5OnStart: true,
+    waitForUI5Timeout: 20_000,
+  },
+
   framework: "mocha",
   mochaOpts: {
     ui: "bdd",
