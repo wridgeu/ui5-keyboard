@@ -51,6 +51,7 @@ function killProcessTree(pid: number): Promise<void> {
 export function createServerManager(port: number, packageRoot: string) {
   let serverProcess: ChildProcess | undefined;
   const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
+  const useShell = process.platform === "win32";
 
   return {
     async onPrepare() {
@@ -58,6 +59,8 @@ export function createServerManager(port: number, packageRoot: string) {
       serverProcess = spawn(npxCommand, ["ui5", "serve", "--port", String(port)], {
         cwd: packageRoot,
         stdio: "pipe",
+        shell: useShell,
+        windowsHide: useShell,
       });
       await waitForServer(port);
     },

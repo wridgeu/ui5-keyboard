@@ -2259,6 +2259,38 @@ QUnit.test("registerLocaleLayout extends the locale map", (assert) => {
   }
 });
 
+QUnit.test("Unknown locale mapping falls back to default layout", (assert) => {
+  const currentLang = Localization.getLanguage();
+  KioskKeyboard.registerLocaleLayout("zz", "layout-does-not-exist");
+
+  try {
+    Localization.setLanguage("zz");
+    assert.strictEqual(
+      KioskKeyboard.getLocaleLayout(),
+      "qwerty",
+      "Unknown layout mapping falls back to default layout",
+    );
+  } finally {
+    Localization.setLanguage(currentLang);
+  }
+});
+
+QUnit.test("Unknown exact locale mapping falls back to valid language prefix", (assert) => {
+  const currentLang = Localization.getLanguage();
+  KioskKeyboard.registerLocaleLayout("de-ch", "layout-does-not-exist");
+
+  try {
+    Localization.setLanguage("de-CH");
+    assert.strictEqual(
+      KioskKeyboard.getLocaleLayout(),
+      "qwertz-de",
+      "Invalid exact de-ch mapping falls back to valid de prefix mapping",
+    );
+  } finally {
+    Localization.setLanguage(currentLang);
+  }
+});
+
 QUnit.test("applySettings injects locale layout when no explicit layout", (assert) => {
   const currentLang = Localization.getLanguage();
   try {

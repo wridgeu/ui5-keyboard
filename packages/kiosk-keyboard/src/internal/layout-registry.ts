@@ -18,6 +18,16 @@ function isSafeMapKey(key: string): boolean {
   return key.length > 0 && !FORBIDDEN_KEYS.has(key);
 }
 
+function isRegisteredLayout(layout: string): boolean {
+  return Object.hasOwn(layouts, layout);
+}
+
+function resolveLocaleMappedLayout(locale: string): string | null {
+  const mappedLayout = LOCALE_LAYOUT_MAP[locale];
+  if (!mappedLayout) return null;
+  return isRegisteredLayout(mappedLayout) ? mappedLayout : null;
+}
+
 /**
  * Registers a custom keyboard layout that can then be used via
  * `setLayout(name)` or declaratively as `layout="name"` in XML views.
@@ -100,11 +110,27 @@ export function isBuiltInLayout(sName: string): boolean {
  */
 export function registerLocaleLayout(sLocale: string, sLayout: string): void {
   const locale = sLocale.toLowerCase();
+  const layout = sLayout.toLowerCase();
+
   if (!isSafeMapKey(locale)) {
     Log.warning(`Invalid locale map key "${locale}".`, undefined, "ui5.kiosk.KioskKeyboard");
     return;
   }
-  LOCALE_LAYOUT_MAP[locale] = sLayout;
+
+  if (!isSafeMapKey(layout)) {
+    Log.warning(`Invalid layout map value "${layout}".`, undefined, "ui5.kiosk.KioskKeyboard");
+    return;
+  }
+
+  if (!isRegisteredLayout(layout)) {
+    Log.warning(
+      `Locale "${locale}" maps to unknown layout "${layout}". It will be used once the layout is registered.`,
+      undefined,
+      "ui5.kiosk.KioskKeyboard",
+    );
+  }
+
+  LOCALE_LAYOUT_MAP[locale] = layout;
 }
 
 /**
@@ -117,17 +143,17 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
  */
 export function getLocaleLayout(): string {
   const tag = Localization.getLanguageTag();
-  const lang = tag.language;
+  const lang = tag.language.toLowerCase();
   const region = tag.region;
 
   // Exact match: "de-at", "pt-br", etc.
   if (region) {
-    const exact = LOCALE_LAYOUT_MAP[`${lang}-${region.toLowerCase()}`];
+    const exact = resolveLocaleMappedLayout(`${lang}-${region.toLowerCase()}`);
     if (exact) return exact;
   }
 
   // Language prefix: "de", "fr", etc.
-  const prefix = LOCALE_LAYOUT_MAP[lang];
+  const prefix = resolveLocaleMappedLayout(lang);
   if (prefix) return prefix;
 
   return DEFAULT_LAYOUT;
