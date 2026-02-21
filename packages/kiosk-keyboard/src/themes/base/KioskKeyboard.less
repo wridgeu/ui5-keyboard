@@ -141,19 +141,22 @@
   cursor: pointer;
   box-sizing: border-box;
   box-shadow: var(--ui5KioskKeyboard-keyShadow);
-  transition:
-    background 0.1s ease,
-    box-shadow 0.1s ease,
-    transform 0.05s ease;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
+  /* Transitions are scoped to interactive states so that renderer-driven
+     class changes (e.g. layout switches via DOM patching) apply instantly
+     instead of animating from the old styling. */
   &:hover {
     background: @sapUiButtonHoverBackground;
     border-color: @sapUiButtonHoverBorderColor;
     transform: translateY(-1px);
     box-shadow: var(--ui5KioskKeyboard-keyShadowHover);
+    transition:
+      background 0.1s ease,
+      box-shadow 0.1s ease,
+      transform 0.05s ease;
   }
 
   &:active,
@@ -164,6 +167,9 @@
     border-color: @sapUiButtonActiveBorderColor;
     transform: scale(0.96) translateY(1px);
     box-shadow: none;
+    transition:
+      background 0.1s ease,
+      transform 0.05s ease;
   }
 
   &:focus-visible {
