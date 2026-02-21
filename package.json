@@ -36,9 +36,12 @@
     "fmt:check": "oxfmt --ignore-path .oxfmtignore --check .",
     "typecheck": "npm run generate -w packages/kiosk-keyboard && tsc -b && npm run typecheck -w packages/demo-app",
     "check": "npm run fmt:check && npm run lint && npm run typecheck && npm run test:guardrails",
-    "prepare": "husky"
+    "prepare": "husky",
+    "commitlint": "commitlint --edit"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "@openui5/types": "1.144.0",
     "@types/node": "^22.0.0",
     "@types/qunit": "^2.19.13",
