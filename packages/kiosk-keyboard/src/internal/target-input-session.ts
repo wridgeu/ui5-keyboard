@@ -3,6 +3,7 @@ import { isInputOrTextarea, resolveInputOrTextarea } from "./dom";
 import {
   insertText as opsInsertText,
   handleBackspace as opsHandleBackspace,
+  handleNavigation as opsHandleNavigation,
   fireTargetChange as opsFireTargetChange,
 } from "./input-operations";
 
@@ -49,6 +50,15 @@ export default class TargetInputSession {
       if (element) opsFireTargetChange(element, dom.value);
       this._targetDirty = false;
     }
+  }
+
+  handleNavigationKey(key: string): void {
+    const dom = this._getTargetDomRef();
+    if (!dom) return;
+
+    const pos = opsHandleNavigation(dom, key, this._cursorPos ?? undefined);
+    if (!pos) return;
+    this._cursorPos = pos;
   }
 
   fireChangeIfDirty(): void {

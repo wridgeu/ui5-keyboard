@@ -20,6 +20,7 @@ The app runs on `http://localhost:8080`.
 
 - Hotkey registration, scopes, router integration, and sequence handling
 - Kiosk keyboard modes: docked, popover, programmatic, component integration
+- Programmatic kiosk view includes all registered layouts (including F-key and nav variants)
 - `inputIds` targeting, including composite controls (`sap.m.StepInput`)
 - UI5 Web Components wrapper interop (for example `sap.ui.webc.main.Input`)
 

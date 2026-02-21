@@ -1,5 +1,5 @@
 /** Layouts that serve as secondary views (not base alphabetic layouts). @internal */
-export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys"]);
+export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
 
 /**
  * Valid width values for keys.

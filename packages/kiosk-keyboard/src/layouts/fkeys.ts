@@ -19,10 +19,11 @@ const fkeys: LayoutDefinition = [
     { value: "{fkey:F11}", label: "F11", type: "modifier" },
     { value: "{fkey:F12}", label: "F12", type: "modifier" },
   ],
-  // Row 3: ABC + Enter
+  // Row 3: ABC + Nav + Enter
   [
-    { value: "{layout:base}", label: "ABC", width: "2", type: "modifier" },
-    { value: "{enter}", label: "Enter", width: "2", type: "action" },
+    { value: "{layout:base}", label: "ABC", width: "1.5", type: "modifier" },
+    { value: "{layout:nav}", label: "Nav", width: "1.5", type: "modifier" },
+    { value: "{enter}", label: "Enter", width: "1.5", type: "action" },
   ],
 ];
 

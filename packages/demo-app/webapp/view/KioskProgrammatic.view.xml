@@ -21,6 +21,19 @@
                         <Button text="Register Pinpad" press=".onRegisterPinpad" class="sapUiSmallMarginEnd" />
                         <Button text="Use Pinpad" press=".onUsePinpad" />
                     </HBox>
+                    <HBox class="sapUiSmallMarginTop">
+                        <Button text="Use FKeys" press=".onUseFKeys" class="sapUiSmallMarginEnd" />
+                        <Button text="Use Nav" press=".onUseNav" class="sapUiSmallMarginEnd" />
+                        <Button text="Use Qwerty Nav" press=".onUseQwertyNav" />
+                    </HBox>
+                    <HBox class="sapUiSmallMarginTop">
+                        <Button text="Register Qwerty FK+Nav" press=".onRegisterQwertyFkNav" class="sapUiSmallMarginEnd" />
+                        <Button text="Use Qwerty FK+Nav" press=".onUseQwertyFkNav" />
+                    </HBox>
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Layout:" class="sapUiSmallMarginEnd" />
+                        <Select id="layoutSelect" width="16rem" change=".onLayoutChange" />
+                    </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Enabled:" class="sapUiSmallMarginEnd" />
                         <Switch state="{state>/kioskEnabled}" change=".onEnabledChange" />
@@ -45,6 +58,10 @@
                         <ObjectStatus text="{state>/kioskKeyboardType}" state="Success" />
                     </HBox>
                     <HBox>
+                        <Label text="Layout:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/kioskLayout}" state="Success" />
+                    </HBox>
+                    <HBox>
                         <Label text="Last Key:" class="sapUiSmallMarginEnd" />
                         <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
                     </HBox>
@@ -57,6 +74,7 @@
                 targetInput="progInput"
                 enabled="{state>/kioskEnabled}"
                 keyPress=".onKeyPress"
+                layoutChange=".onLayoutEvent"
                 afterOpen=".onAfterOpen"
                 afterClose=".onAfterClose" />
         </content>

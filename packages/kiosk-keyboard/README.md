@@ -47,14 +47,14 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 **Layouts**
 
-- Built-in layouts: QWERTY, QWERTZ-DE, numeric, special characters, numpad, function keys
-- F-key variant layouts: QWERTY-FK and QWERTZ-DE-FK with F1-F12 row on top
+- Built-in layouts: QWERTY, QWERTZ-DE, numeric, special characters, numpad, function keys, navigation keys
+- Variant layouts: QWERTY-FK/QWERTZ-DE-FK and QWERTY-NAV/QWERTZ-DE-NAV
 - Locale-based default layout (auto-detects from UI5 language setting)
 - Runtime layout switching via `{layout:name}` keys
 - `keyboardType` property for quick switching between Full, Numeric, and Numpad modes
 - Extensible layout definition format (`LayoutDefinition` type)
 - Custom layout registration via `registerLayout()`
-- Reusable `fkey-row` module for composing custom F-key variant layouts
+- Reusable `fkey-row` and `nav-row` modules for composing custom variant layouts
 
 **Docked Mode**
 
@@ -178,7 +178,7 @@ import { KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode } from "ui5/kios
 import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 ```
 
-Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, only `ui5/kiosk/layouts/fkey-row` is supported as a stable consumer import for composing custom F-key layouts.
+Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, only `ui5/kiosk/layouts/fkey-row` and `ui5/kiosk/layouts/nav-row` are supported as stable consumer imports for composing custom variant layouts.
 
 ## KioskKeyboard Control
 
@@ -243,18 +243,21 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 ## Layouts
 
-The library ships with eight built-in layouts:
+The library ships with eleven built-in layouts:
 
-| Layout         | Description                             | Rows |
-| -------------- | --------------------------------------- | ---- |
-| `qwerty`       | Standard QWERTY with number row         | 5    |
-| `qwertz-de`    | German QWERTZ with Umlaute (ä, ö, ü, ß) | 5    |
-| `numeric`      | Numbers with basic operators            | 4    |
-| `special`      | Special characters and symbols          | 4    |
-| `numpad`       | Compact numeric keypad (calculator)     | 5    |
-| `fkeys`        | Function keys F1-F12 (standalone)       | 3    |
-| `qwerty-fk`    | QWERTY with F1-F12 row on top           | 6    |
-| `qwertz-de-fk` | German QWERTZ with F1-F12 row on top    | 6    |
+| Layout          | Description                              | Rows |
+| --------------- | ---------------------------------------- | ---- |
+| `qwerty`        | Standard QWERTY with number row          | 5    |
+| `qwertz-de`     | German QWERTZ with Umlaute (ä, ö, ü, ß)  | 5    |
+| `numeric`       | Numbers with basic operators             | 4    |
+| `special`       | Special characters and symbols           | 4    |
+| `numpad`        | Compact numeric keypad (calculator)      | 5    |
+| `fkeys`         | Function keys F1-F12 (standalone)        | 3    |
+| `nav`           | Navigation keys (arrows, Home/End, Pg)   | 4    |
+| `qwerty-fk`     | QWERTY with F1-F12 row on top            | 6    |
+| `qwertz-de-fk`  | German QWERTZ with F1-F12 row on top     | 6    |
+| `qwerty-nav`    | QWERTY with navigation row on top        | 6    |
+| `qwertz-de-nav` | German QWERTZ with navigation row on top | 6    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -347,6 +350,27 @@ Use the `fkeys` layout directly for an F-key-only keyboard (F1-F12 + Enter):
 <kiosk:KioskKeyboard layout="fkeys" targetInput="myInput" />
 ```
 
+### Navigation keys
+
+Use the `nav` layout for directional/navigation keys (Arrow keys, Home/End, PageUp/PageDown):
+
+```xml
+<kiosk:KioskKeyboard layout="nav" targetInput="myInput" />
+```
+
+Or use `qwerty-nav` / `qwertz-de-nav` for integrated top-row navigation.
+
+Navigation keys fire `keyPress` and also perform default caret navigation on the target input/textarea:
+
+- `ArrowLeft` / `ArrowRight`: move caret by one character
+- `ArrowUp` / `ArrowDown`: move caret vertically for multiline text
+- `Home` / `End`: jump to start/end
+- `PageUp` / `PageDown`: jump to start/end (single-line inputs)
+
+For single-line inputs, `ArrowUp` and `ArrowDown` do not change the caret.
+
+If your app handles these keys itself, call `preventDefault()` on `keyPress` to suppress the built-in navigation behavior.
+
 ### Handling F-key presses
 
 F-keys fire the `keyPress` event but do **not** insert text into the target input. The consuming application decides what each F-key does:
@@ -404,6 +428,18 @@ KioskKeyboard.registerLayout("azerty-fr", azertyFr);
 // Compose a variant with F-keys on top
 const azertyFrFk: LayoutDefinition = [fkeyRow, ...azertyFr];
 KioskKeyboard.registerLayout("azerty-fr-fk", azertyFrFk);
+```
+
+Import the shared `nav-row` module to compose navigation variants, or combine both rows in a single custom variant:
+
+```ts
+import navRow from "ui5/kiosk/layouts/nav-row";
+
+const azertyFrNav: LayoutDefinition = [navRow, ...azertyFr];
+KioskKeyboard.registerLayout("azerty-fr-nav", azertyFrNav);
+
+const azertyFrFkNav: LayoutDefinition = [fkeyRow, navRow, ...azertyFr];
+KioskKeyboard.registerLayout("azerty-fr-fk-nav", azertyFrFkNav);
 ```
 
 ### Custom F-key actions
@@ -759,8 +795,11 @@ KeyboardLayout.Numeric; // "numeric"
 KeyboardLayout.Special; // "special"
 KeyboardLayout.Numpad; // "numpad"
 KeyboardLayout.Fkeys; // "fkeys"
+KeyboardLayout.Nav; // "nav"
 KeyboardLayout.QwertyFk; // "qwerty-fk"
 KeyboardLayout.QwertzDeFk; // "qwertz-de-fk"
+KeyboardLayout.QwertyNav; // "qwerty-nav"
+KeyboardLayout.QwertzDeNav; // "qwertz-de-nav"
 
 // KeyboardType — keyboard display type
 KeyboardType.Full; // "Full"

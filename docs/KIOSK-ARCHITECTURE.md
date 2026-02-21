@@ -29,9 +29,13 @@ layouts/
   special.ts              Special characters and symbols
   numpad.ts               Compact calculator-style keypad
   fkeys.ts                Standalone function key layout (F1-F12)
+  nav.ts                  Standalone navigation layout (arrows + Home/End/Page)
   fkey-row.ts             Shared F1-F12 row used by *-fk variants
+  nav-row.ts              Shared navigation row used by *-nav variants
   qwerty-fk.ts            QWERTY with F1-F12 row on top
   qwertz-de-fk.ts         QWERTZ-DE with F1-F12 row on top
+  qwerty-nav.ts           QWERTY with navigation row on top
+  qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 themes/
   base/
     KioskKeyboard.less    Base styles using SAP LESS parameters
@@ -472,9 +476,13 @@ packages/kiosk-keyboard/
       special.ts              Special characters layout
       numpad.ts               Compact numpad layout
       fkeys.ts                Standalone F-key layout
+      nav.ts                  Standalone navigation layout
       fkey-row.ts             Shared F-key row
+      nav-row.ts              Shared navigation row
       qwerty-fk.ts            QWERTY + F-key row
       qwertz-de-fk.ts         QWERTZ-DE + F-key row
+      qwerty-nav.ts           QWERTY + navigation row
+      qwertz-de-nav.ts        QWERTZ-DE + navigation row
     themes/
       base/
         KioskKeyboard.less    Base styles (SAP LESS parameters)

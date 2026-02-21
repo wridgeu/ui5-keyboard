@@ -1167,15 +1167,19 @@ export default class KioskKeyboard extends Control {
 
     if (keyValue.startsWith("{fkey:")) {
       const fkeyName = keyValue.slice("{fkey:".length, -1);
+      let nativeAllowed = true;
 
       if (this.getFKeyMode() === FKeyMode.Native) {
-        const allowed = this._dispatchNativeFKeydown(fkeyName, shift);
-        if (allowed) {
+        nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shift);
+        if (nativeAllowed) {
           KioskKeyboard._executeNativeFKeyAction(fkeyName);
         }
       }
 
-      this.fireEvent("keyPress", { key: fkeyName, shiftKey: shift }, true);
+      const keyPressAllowed = this.fireEvent("keyPress", { key: fkeyName, shiftKey: shift }, true);
+      if (nativeAllowed && keyPressAllowed) {
+        this._targetSession.handleNavigationKey(fkeyName);
+      }
       return;
     }
 
@@ -1295,6 +1299,14 @@ export default class KioskKeyboard extends Control {
     F10: "{fkey:F10}",
     F11: "{fkey:F11}",
     F12: "{fkey:F12}",
+    ArrowLeft: "{fkey:ArrowLeft}",
+    ArrowRight: "{fkey:ArrowRight}",
+    ArrowUp: "{fkey:ArrowUp}",
+    ArrowDown: "{fkey:ArrowDown}",
+    Home: "{fkey:Home}",
+    End: "{fkey:End}",
+    PageUp: "{fkey:PageUp}",
+    PageDown: "{fkey:PageDown}",
   };
 
   private _highlightKey(key: string, add: boolean): void {

@@ -22,6 +22,9 @@ sap.ui.define([], () => {
       FKeys: {
         title: "QUnit tests for ui5.kiosk - FKeys",
       },
+      NavKeys: {
+        title: "QUnit tests for ui5.kiosk - NavKeys",
+      },
     },
   };
 });
