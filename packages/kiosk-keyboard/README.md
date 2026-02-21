@@ -17,8 +17,9 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Properties](#properties)
   - [Associations](#associations)
   - [Events](#events)
-  - [Public Methods](#public-methods)
-  - [Static Methods](#static-methods)
+  - [Public Methods (Common)](#public-methods-common)
+  - [Public Methods (Complete)](#public-methods-complete)
+  - [Static Methods (Complete)](#static-methods-complete)
 - [Layouts](#layouts)
   - [Stable Height](#stable-height)
   - [Custom Layouts](#custom-layouts)
@@ -223,7 +224,7 @@ Advanced/internal modules are available but should not be treated as a semver-st
 | `afterOpen`          | —                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
 | `afterClose`         | —                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
 
-### Public Methods
+### Public Methods (Common)
 
 | Method                   | Returns            | Description                                                                       |
 | ------------------------ | ------------------ | --------------------------------------------------------------------------------- |
@@ -242,7 +243,34 @@ Advanced/internal modules are available but should not be treated as a semver-st
 | `getKeyLabel(key)`       | `string`           | Display label for a key, respecting current Shift/Caps state.                     |
 | `getKeyAriaLabel(key)`   | `string`           | Accessible label for a key (human-readable name for icons like Backspace, Enter). |
 
-### Static Methods
+### Public Methods (Complete)
+
+Complete list of KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
+
+| Method                   | Returns            | Description                                                                       |
+| ------------------------ | ------------------ | --------------------------------------------------------------------------------- |
+| `setLayout(layout)`      | `this`             | Set active layout (effective when `keyboardType="Full"`).                         |
+| `setKeyboardType(type)`  | `this`             | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.       |
+| `resetKeyboardType()`    | `this`             | Clear explicit lock, re-enable auto-type.                                         |
+| `setAutoShow(autoShow)`  | `this`             | Enable/disable focus-driven open/close behavior (docked mode).                    |
+| `setDocked(docked)`      | `this`             | Enable/disable docked positioning and related open state handling.                |
+| `setTargetInput(target)` | `this`             | Set the target input (no re-render).                                              |
+| `show()`                 | `this`             | Open the docked keyboard. Idempotent.                                             |
+| `close()`                | `this`             | Close the docked keyboard. Idempotent.                                            |
+| `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open.                                    |
+| `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.                                             |
+| `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                                                      |
+| `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.                                              |
+| `getKeyLabel(key)`       | `string`           | Display label for a key, respecting current Shift/Caps state.                     |
+| `getKeyAriaLabel(key)`   | `string`           | Accessible label for a key (human-readable name for icons like Backspace, Enter). |
+| `getFocusDomRef()`       | `Element \| null`  | Returns the keyboard root DOM reference used for focus handling.                  |
+| `getFocusInfo()`         | `object`           | Returns focus state snapshot for UI5 focus restoration.                           |
+| `applyFocusInfo(info)`   | `this`             | Restores focus state snapshot previously returned by `getFocusInfo()`.            |
+| `getAccessibilityInfo()` | `object`           | Returns UI5 accessibility metadata for assistive technologies.                    |
+
+For full generated typings (including property/event accessors from UI5 metadata), see `packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts`.
+
+### Static Methods (Complete)
 
 | Method                                 | Returns             | Description                                                                  |
 | -------------------------------------- | ------------------- | ---------------------------------------------------------------------------- |
