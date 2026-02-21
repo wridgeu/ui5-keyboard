@@ -536,15 +536,16 @@ export default class KioskKeyboard extends Control {
    */
   setLayout(sLayout: string): this {
     const name = sLayout.toLowerCase();
-    if (!SECONDARY_LAYOUTS.has(name)) {
-      this._baseLayout = name;
-    }
     if (!registryGetLayout(name)) {
       Log.warning(
-        `Layout "${name}" is not registered. The keyboard will fall back to "${DEFAULT_LAYOUT}".`,
+        `Layout "${name}" is not registered. Call registerLayout() before setLayout().`,
         undefined,
         "ui5.kiosk.KioskKeyboard",
       );
+      return this;
+    }
+    if (!SECONDARY_LAYOUTS.has(name)) {
+      this._baseLayout = name;
     }
     return this.setProperty("layout", name);
   }

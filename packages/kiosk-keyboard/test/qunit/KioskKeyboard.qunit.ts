@@ -178,18 +178,20 @@ QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) =>
   kb.destroy();
 });
 
-QUnit.test("setLayout with unregistered name falls back to QWERTY", async (assert) => {
+QUnit.test("setLayout with unregistered name is ignored and keeps current layout", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setLayout("nonexistent-layout");
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getLayout(), "nonexistent-layout", "getLayout() returns the set name");
+  const before = kb.getLayout();
+  kb.setLayout("nonexistent-layout");
+
+  assert.strictEqual(kb.getLayout(), before, "getLayout() still returns the previous layout");
   const resolved = kb.getResolvedLayout();
-  assert.strictEqual(resolved[0][0].value, "1", "Resolved layout falls back to QWERTY (number row starts with 1)");
-  assert.strictEqual(resolved.length, 5, "QWERTY fallback has 5 rows");
+  assert.strictEqual(resolved[0][0].value, "1", "QWERTY layout still rendered (number row starts with 1)");
+  assert.strictEqual(resolved.length, 5, "QWERTY layout has 5 rows");
 
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("q"), "QWERTY keys rendered despite invalid layout name");
+  assert.ok(keys.includes("q"), "QWERTY keys rendered — unregistered name had no effect");
 
   kb.destroy();
 });

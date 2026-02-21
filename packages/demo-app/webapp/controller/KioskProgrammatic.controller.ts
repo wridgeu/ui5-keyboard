@@ -33,6 +33,7 @@ export default class KioskProgrammatic extends BaseController {
   onSetFull(): void {
     const kb = this._getKeyboard();
     kb.setKeyboardType("Full");
+    kb.setLayout(KioskKeyboard.getLocaleLayout());
     this._updateStatus();
   }
 
@@ -51,6 +52,7 @@ export default class KioskProgrammatic extends BaseController {
   onResetType(): void {
     const kb = this._getKeyboard();
     kb.resetKeyboardType();
+    kb.setLayout(KioskKeyboard.getLocaleLayout());
     this._updateStatus();
   }
 
