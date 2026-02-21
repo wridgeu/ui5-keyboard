@@ -25,6 +25,56 @@ For full API details, see:
 - **[ui5-lib-hotkeys README](./packages/hotkeys/README.md)**
 - **[ui5-lib-kiosk-keyboard README](./packages/kiosk-keyboard/README.md)**
 
+### Consumption Modes (Both Libraries)
+
+Both `ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard` are packaged in a dual-mode way:
+
+- **UI5-native development mode (source-based):** keep `src` in the npm package so UI5 tooling can resolve library sources via `ui5.yaml` and transpile dependencies during local development.
+- **Runtime/published mode (dist-based):** ship prebuilt `dist/resources/...` artifacts and typings for stable runtime consumption.
+
+For app projects that consume these libraries in development with transpilation of dependencies, enable UI5 transpile middleware with dependency transpilation:
+
+```yaml
+server:
+  customMiddleware:
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
+      configuration:
+        transpileDependencies: true
+```
+
+Notes:
+
+- `main`/`types` in the library `package.json` point to `dist` for predictable runtime/type resolution.
+- Sourcemaps are included in `dist` with embedded source content, so debugging remains usable even when consuming built resources.
+
+#### UI5 Dist-Based Consumption (No Dependency Transpile)
+
+If you want a pure runtime setup in a UI5 app (no source transpilation of dependencies), mount the prebuilt library resources from `dist/resources` via static middleware.
+
+Install middleware in the consuming app:
+
+```bash
+npm install -D ui5-middleware-servestatic
+```
+
+```yaml
+server:
+  customMiddleware:
+    - name: ui5-middleware-servestatic
+      afterMiddleware: compression
+      mountPath: /resources/ui5/hotkeys/
+      configuration:
+        npmPackagePath: ui5-lib-hotkeys/dist/resources/ui5/hotkeys
+    - name: ui5-middleware-servestatic
+      afterMiddleware: compression
+      mountPath: /resources/ui5/kiosk/
+      configuration:
+        npmPackagePath: ui5-lib-kiosk-keyboard/dist/resources/ui5/kiosk
+```
+
+Use this mode when you want UI5 to load only built artifacts from dependencies while keeping your app build pipeline minimal and predictable.
+
 ### Hotkeys
 
 ```bash
