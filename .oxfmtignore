@@ -2,6 +2,5 @@
 # because oxfmt cannot converge on a stable format for their JSDoc style.
 *.gen.d.ts
 
-# Vendored third-party web component package snapshot
-packages/demo-app/webapp/standalone-webc/vendor/
-packages/demo-app/webapp/standalone-webc/vendor-npm/
+# ui5-tooling-modules cache output (generated during serve/build)
+.ui5-tooling-modules/

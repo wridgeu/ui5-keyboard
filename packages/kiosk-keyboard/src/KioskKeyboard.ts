@@ -81,6 +81,7 @@ export default class KioskKeyboard extends Control {
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
   declare private _focusClaimService: FocusClaimService;
   declare private _targetSession: TargetInputSession;
+  declare private _deferredFocusOutCloseId: number | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -465,6 +466,7 @@ export default class KioskKeyboard extends Control {
     this._suppressedInputEl = null;
     this._maxHeight = 0;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
+    this._deferredFocusOutCloseId = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getInputIds(),
       (id) => this._findControlById(id),
@@ -521,6 +523,7 @@ export default class KioskKeyboard extends Control {
 
   exit(): void {
     KioskKeyboard._instances.delete(this);
+    this._cancelDeferredFocusOutClose();
     this._disableAutoShow();
     this._teardownInputIds();
     this._removeHighlightDelegation();
@@ -1098,6 +1101,8 @@ export default class KioskKeyboard extends Control {
   private _onDocumentFocusIn(event: FocusEvent): void {
     if (!this.getDocked() || !this.getEnabled()) return;
 
+    this._cancelDeferredFocusOutClose();
+
     const target = event.target as HTMLElement;
 
     // Ignore focus on the keyboard itself
@@ -1141,9 +1146,36 @@ export default class KioskKeyboard extends Control {
     // Focus moving to an input this keyboard would claim — keep open
     if (this._wouldClaimInput(related)) return;
 
-    // Focus left all inputs, moved to a claimed input, or should
-    // defer to native keyboard — close.
+    // relatedTarget can be null for some browser/shadow-dom transitions.
+    // Defer once and re-check the settled activeElement before closing.
+    if (!related) {
+      this._scheduleDeferredFocusOutClose();
+      return;
+    }
+
     this.close();
+  }
+
+  private _cancelDeferredFocusOutClose(): void {
+    if (this._deferredFocusOutCloseId === null) return;
+    clearTimeout(this._deferredFocusOutCloseId);
+    this._deferredFocusOutCloseId = null;
+  }
+
+  private _scheduleDeferredFocusOutClose(): void {
+    this._cancelDeferredFocusOutClose();
+    this._deferredFocusOutCloseId = setTimeout(() => {
+      this._deferredFocusOutCloseId = null;
+
+      if (!this.getDocked() || !this._open || !this.getEnabled()) return;
+
+      const related = document.activeElement as HTMLElement | null;
+      const myDom = this.getDomRef();
+      if (myDom && related && myDom.contains(related)) return;
+      if (this._wouldClaimInput(related)) return;
+
+      this.close();
+    }, 0);
   }
 
   // ──────────────────────────────────────────────

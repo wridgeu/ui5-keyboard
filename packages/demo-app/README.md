@@ -111,6 +111,8 @@ Landing page linking to all kiosk demos.
 ## Standalone Web Components
 
 - `standalone-webc/index.html` demonstrates UI5 Web Components usage outside the UI5 runtime.
+- Modules are consumed from npm (`@ui5/webcomponents`) via ES-module imports in `standalone-webc/main.js`.
+- `standalone-webc/index.html` maps `@ui5/` to `/resources/@ui5/` and relies on `ui5-tooling-modules` middleware/task.
 
 ## Route Map
 

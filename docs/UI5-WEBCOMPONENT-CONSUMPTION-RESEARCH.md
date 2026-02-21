@@ -69,20 +69,20 @@ And evaluate what is currently covered by this repository's demos.
 - Replaced wrapper-based interop examples with:
   - standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`, `sap.m.TextArea`) for inputIds targeting
   - custom-element bridge example in demo app
+- Added a standalone web components page at `packages/demo-app/webapp/standalone-webc/`.
+  - `main.js` imports `@ui5/webcomponents/dist/*` modules directly from npm package names.
+  - `index.html` maps `@ui5/` to `/resources/@ui5/`.
+  - `ui5-tooling-modules` middleware/task serves and builds npm module resources.
 - Updated interop e2e harness to avoid deprecated/global-core access patterns.
 - Re-ran UI5 linter: clean for both projects.
 
-## Is the Standalone Scenario Missing?
+## Standalone Scenario Status
 
-Short answer: **yes, partially**.
+Short answer: **no** — the standalone scenario is now covered.
 
-- We now demonstrate custom-element integration _inside_ a UI5 app via bridge.
-- We do **not** yet have a pure standalone UI5 Web Components demo page (NPM imports + `<ui5-*>` usage outside UI5 control wrappers).
-
-This is a reasonable gap if the goal is to demonstrate both:
-
-1. standalone consumption model
-2. UI5 app integration model
+- We demonstrate custom-element integration inside a UI5 app via bridge.
+- We also demonstrate pure standalone UI5 Web Components usage (npm imports + `<ui5-*>`) outside UI5 wrappers.
+- Consumption is local and reproducible via project dependencies (`npm install`) rather than vendored snapshots.
 
 ## Key Learnings from Community Posts
 
@@ -121,59 +121,21 @@ So the bridge is a targeted integration tool, not a universal recommendation.
 
 ## What This Means for Our Demo App
 
-To cover both modern paths clearly, demo should include:
+The demo now covers both modern paths clearly:
 
 - **Inside UI5 app:** custom/external web component integration example (already present as bridge pattern).
-- **Inside UI5 app (native custom elements):** add an example using a package namespace + custom element tag in XML, aligned with the 2025 post.
-- **Standalone page:** direct `@ui5/webcomponents` usage without UI5 wrappers (currently missing).
+- **Inside UI5 app (native custom elements):** example using package namespace + custom element tag in XML.
+- **Standalone page:** direct `@ui5/webcomponents` usage without UI5 wrappers.
 
 This split avoids deprecated `sap.ui.webc.main` while still demonstrating web component interoperability.
 
-## Suggested Demo Extensions from the Blogs
+## Operational Notes (Standalone Page)
 
-1. **Standalone "UI5 Everywhere" sample**
-   - Custom element that bootstraps and renders an embedded SAPUI5 component in a non-UI5 page.
-   - Keep it as an advanced sample with explicit caveat: no shadow DOM styling isolation for embedded UI5 content.
+1. Install dependencies at repo root (`npm install`).
+2. Start demo app (`npm start`).
+3. Open `http://localhost:8080/standalone-webc/index.html`.
 
-2. **Native custom-element consumption in UI5 XML**
-   - Add a minimal local custom web component package fixture.
-   - Generate and include `custom-elements.json`.
-   - Consume it in an XML view via namespace mapping.
-   - Keep bridge sample for keyboard target/focus-heavy scenarios where native mapping alone is insufficient.
-
-3. **Keep deprecated wrappers out of primary path**
-   - Do not reintroduce `sap.ui.webc.main` in demo runtime artifacts.
-   - If needed, mention legacy wrapper path in docs only, with deprecation warning.
-
-## Recommendation
-
-Add a small standalone demo artifact (separate from XML-view wrappers), for example:
-
-- `packages/demo-app/webapp/standalone-webc/index.html` (or test-resources page)
-- imports from `@ui5/webcomponents` ES modules
-- minimal input + button + event handling sample
-- a short README section linking this page and clarifying it is standalone, not UI5 wrapper consumption
-
-This gives clear coverage of both worlds without reintroducing deprecated wrapper APIs.
-
-## Implementation Plan: Add Missing Standalone Scenario
-
-1. Create `packages/demo-app/webapp/standalone-webc/` with:
-   - `index.html`
-   - `main.js` (imports `@ui5/webcomponents` modules)
-   - small style sheet and readme note in-page
-2. Demonstrate at least:
-   - `ui5-input`, `ui5-button`, one message/feedback interaction
-   - basic theming switch or theme declaration
-3. Add a second tab/section in that page:
-   - optional "UI5 Everywhere" variant showing embedded UI5 app bootstrap approach (documented as advanced)
-4. Add docs links:
-   - `packages/demo-app/README.md`
-   - this research file and a short "when to use what" matrix
-5. Verify:
-   - page loads under demo app static hosting
-   - no new UI5 linter errors in app/library projects
-   - formatting/type checks remain green
+This keeps standalone Web Components consumption fully npm-based and avoids keeping third-party package snapshots in app source.
 
 ## Practical Rule-of-Thumb
 

@@ -5,6 +5,30 @@ const PAGE = "/test-resources/ui5/kiosk/e2e/interop/index.html";
 async function openPage(): Promise<void> {
   await browser.url(PAGE);
   await $("#interop-kb .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
+  await browser.waitUntil(
+    () =>
+      browser.execute(() => {
+        const w = window as unknown as {
+          interopHarnessReady?: boolean;
+          interopHarness?: {
+            focusControlById?: (controlId: string) => void;
+            getKeyboardTargetId?: () => string;
+            focusCustomElement?: () => void;
+          };
+        };
+
+        return Boolean(
+          w.interopHarnessReady &&
+          w.interopHarness?.focusControlById &&
+          w.interopHarness?.getKeyboardTargetId &&
+          w.interopHarness?.focusCustomElement,
+        );
+      }),
+    {
+      timeout: 10_000,
+      timeoutMsg: "Interop harness not ready",
+    },
+  );
 }
 
 async function isKeyboardOpen(): Promise<boolean> {

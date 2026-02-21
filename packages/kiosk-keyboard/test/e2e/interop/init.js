@@ -4,6 +4,8 @@ sap.ui.define(
   function (KioskKeyboard, Input, StepInput, TextArea, Element) {
     "use strict";
 
+    window.interopHarnessReady = false;
+
     if (!customElements.get("interop-bridge-input")) {
       customElements.define(
         "interop-bridge-input",
@@ -101,5 +103,7 @@ sap.ui.define(
         }
       },
     };
+
+    window.interopHarnessReady = true;
   },
 );

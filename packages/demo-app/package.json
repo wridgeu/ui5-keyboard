@@ -10,12 +10,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ui5-lib-hotkeys": "workspace:*",
-    "ui5-lib-kiosk-keyboard": "workspace:*"
+    "@ui5/webcomponents": "2.15.1",
+    "ui5-lib-hotkeys": "file:../hotkeys",
+    "ui5-lib-kiosk-keyboard": "file:../kiosk-keyboard"
   },
   "devDependencies": {
     "@ui5/cli": "^4.0.0",
     "ui5-middleware-livereload": "^3.0.0",
+    "ui5-tooling-modules": "^3.30.0",
     "ui5-tooling-transpile": "^3.9.0"
   }
 }

@@ -1,4 +1,24 @@
-const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+let cachedSegmenter: Intl.Segmenter | null | undefined;
+
+function getSegmenter(): Intl.Segmenter | null {
+  if (cachedSegmenter !== undefined) {
+    return cachedSegmenter;
+  }
+
+  const Segmenter = globalThis.Intl?.Segmenter;
+  if (typeof Segmenter !== "function") {
+    cachedSegmenter = null;
+    return cachedSegmenter;
+  }
+
+  try {
+    cachedSegmenter = new Segmenter(undefined, { granularity: "grapheme" });
+  } catch {
+    cachedSegmenter = null;
+  }
+
+  return cachedSegmenter;
+}
 
 /**
  * Returns the code-unit length of the grapheme cluster ending at the
@@ -8,8 +28,18 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
  */
 export function graphemeLengthBefore(value: string, offset: number): number {
   if (offset <= 0) return 0;
-  const before = value.slice(0, offset);
-  const segments = segmenter.segment(before);
+
+  const segmenter = getSegmenter();
+  if (!segmenter) return 1;
+
+  const before = value.slice(0, Math.min(offset, value.length));
+
+  let segments: Intl.Segments;
+  try {
+    segments = segmenter.segment(before);
+  } catch {
+    return 1;
+  }
 
   // Walk to last segment — Intl.Segmenter is iterable but not indexable
   let last: Intl.SegmentData | undefined;
@@ -27,7 +57,18 @@ export function graphemeLengthBefore(value: string, offset: number): number {
  */
 export function graphemeLengthAfter(value: string, offset: number): number {
   if (offset >= value.length) return 0;
+
+  const segmenter = getSegmenter();
+  if (!segmenter) return 1;
+
   const after = value.slice(offset);
-  const first = segmenter.segment(after)[Symbol.iterator]().next();
+
+  let first: IteratorResult<Intl.SegmentData, undefined>;
+  try {
+    first = segmenter.segment(after)[Symbol.iterator]().next();
+  } catch {
+    return 1;
+  }
+
   return first.done ? 1 : first.value.segment.length;
 }
