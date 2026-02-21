@@ -54,6 +54,13 @@ For `Object.assign(...)`, helper `getPropertiesOfObjectAssignOrExtendHelper` map
 - identifier args -> recursively resolves
 - anything else -> returns `undefined`
 
+Concrete locations in the built plugin (`dist`):
+
+- `node_modules/babel-plugin-transform-modules-ui5/dist/utils/ast.js:127` starts `node.arguments.map(...)`
+- `node_modules/babel-plugin-transform-modules-ui5/dist/utils/ast.js:128-133` only returns for `ObjectExpression` and `Identifier`
+- no `else` return means call expressions like `Object.create(null)` become `undefined`
+- that `undefined` is flattened and returned to the caller
+
 With `Object.assign(Object.create(null), { ... })`, first arg is `Object.create(null)` (a call expression), so it contributes `undefined` to the collected list. Later, the export-collapsing loop touches `.key` on that `undefined` entry and crashes.
 
 ## Why Other `as const` Usages Do Not Crash
