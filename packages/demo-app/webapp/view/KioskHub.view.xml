@@ -32,14 +32,9 @@
                     press=".onNavToDialog" />
                 <StandardListItem
                     title="Input IDs Targeting"
-                    description="Selective input targeting with inputIds, bridge integration, and native custom-element XML consumption"
+                    description="Selective input targeting with inputIds, native UI5 Web Components, and custom-element bridge integration"
                     type="Navigation"
                     press=".onNavToInputIds" />
-                <StandardListItem
-                    title="Standalone Web Components"
-                    description="Pure UI5 Web Components page (framework-agnostic consumption)"
-                    type="Active"
-                    press=".onOpenStandaloneWebComponents" />
                 <StandardListItem
                     title="Programmatic Control"
                     description="Full API: show, close, set type, custom layouts"

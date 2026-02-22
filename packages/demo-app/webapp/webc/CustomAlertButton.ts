@@ -1,24 +1,25 @@
 class CustomAlertButton extends HTMLElement {
-  static get observedAttributes() {
+  static get observedAttributes(): string[] {
     return ["text", "message"];
   }
 
+  private _button: HTMLButtonElement | null = null;
+  private _onClick: (() => void) | null = null;
+
   constructor() {
     super();
-    this._button = null;
-    this._onClick = null;
     this.attachShadow({ mode: "open" });
   }
 
-  connectedCallback() {
+  connectedCallback(): void {
     this._render();
   }
 
-  attributeChangedCallback() {
+  attributeChangedCallback(): void {
     this._render();
   }
 
-  _render() {
+  private _render(): void {
     if (!this.shadowRoot) return;
 
     if (!this._button) {

@@ -31,6 +31,13 @@
         "ui5.kiosk": {}
       }
     },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
     "rootView": {
       "viewName": "demo.hotkeys.view.App",
       "type": "XML",

@@ -24,7 +24,7 @@ This app is a scenario catalog for keyboard-heavy UX in UI5. It shows:
 - conflict strategies and target-element scoped shortcuts
 - input-safe behavior (`ignoreInputs: "auto"`) and conditional hotkeys (`enabled()`)
 - virtual keyboard patterns for docked, popover, dialog, multi-instance, and programmatic control
-- integration with custom web components (native XML namespace and bridge input approach)
+- integration with native UI5 web components and custom web components (bridge input approach)
 
 ## Hotkeys Scenarios
 
@@ -86,8 +86,9 @@ Landing page linking to all kiosk demos.
 
 - Selective targeting using `inputIds`
 - Mixed target controls (`Input`, `StepInput`)
+- Native UI5 Web Component input (`@ui5/webcomponents/dist` XML namespace) targeted directly via `inputIds`
 - Bridge integration for custom element typing via hidden UI5 input
-- Native custom element usage in XML (`demo.hotkeys.webc` namespace)
+- Native custom element usage in XML via `sap.ui.core.webc.WebComponent` wrapper controls
 
 ### Programmatic Control (`#/kiosk/programmatic`)
 
@@ -108,12 +109,6 @@ Landing page linking to all kiosk demos.
 - Keyboard created in controller and placed in static UI area
 - Persists across navigation (round-trip navigation demo)
 
-## Standalone Web Components
-
-- `standalone-webc/index.html` demonstrates UI5 Web Components usage outside the UI5 runtime.
-- Modules are consumed from npm (`@ui5/webcomponents`) via ES-module imports in `standalone-webc/main.js`.
-- `standalone-webc/index.html` maps `@ui5/` to `/resources/@ui5/` and relies on `ui5-tooling-modules` middleware/task.
-
 ## Route Map
 
 - `#/` main hotkeys scenarios
@@ -128,4 +123,3 @@ Landing page linking to all kiosk demos.
 - `#/kiosk/programmatic` imperative API and runtime layouts
 - `#/kiosk/custom-layouts` custom layout gallery
 - `#/kiosk/component` persistent component-level keyboard
-- `standalone-webc/index.html` standalone web components page

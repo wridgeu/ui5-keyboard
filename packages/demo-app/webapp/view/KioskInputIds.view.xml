@@ -2,25 +2,27 @@
     controllerName="demo.hotkeys.controller.KioskInputIds"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core"
-    xmlns:webc="demo.hotkeys.webc"
+    xmlns:custom="demo.hotkeys.control"
+    xmlns:webc="@ui5/webcomponents/dist"
     xmlns:kiosk="ui5.kiosk">
     <Page title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <Panel headerText="Selective Input Targeting" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="The keyboard below targets Input A, Input B, StepInput, and a custom Web Component via a UI5 bridge input. Focusing Input C or D will not switch the keyboard target." />
-                    <Label text="Native custom-element consumption in UI5 XML" class="sapUiSmallMarginTop" />
-                    <webc:demo-alert-button text="Native Custom Element" message="Hello from demo-alert-button (XML namespace consumption)!" />
+                    <Text text="The keyboard below targets Input A, Input B, StepInput, and a native UI5 Web Component input directly via inputIds. It also targets a custom Web Component via a hidden UI5 bridge input. Focusing Input C or D will not switch the keyboard target." />
+                    <Label text="Native custom-element consumption in UI5 XML (WebComponent wrapper control)" class="sapUiSmallMarginTop" />
+                    <custom:AlertButton text="Native Custom Element" message="Hello from demo-alert-button (native custom element in XML view)!" />
                     <Label text="Input A (targeted)" labelFor="inputA" class="sapUiSmallMarginTop" />
                     <Input id="inputA" placeholder="Targeted by keyboard" width="100%" />
                     <Label text="Input B (targeted)" labelFor="inputB" class="sapUiSmallMarginTop" />
                     <Input id="inputB" placeholder="Targeted by keyboard" width="100%" />
                     <Label text="StepInput (targeted)" labelFor="stepInputTarget" class="sapUiSmallMarginTop" />
                     <StepInput id="stepInputTarget" width="12rem" min="0" max="999" value="5" />
+                    <Label text="UI5 Web Component input (targeted directly)" class="sapUiSmallMarginTop" />
+                    <webc:Input id="ui5WebcInput" valueState="None" placeholder="UI5 Web Component Input" />
                     <Label text="Custom Web Component input (targeted via bridge)" class="sapUiSmallMarginTop" />
-                    <core:HTML id="wcHost" content='&lt;demo-kiosk-input id="wcInputTarget" aria-label="Web Component Input"&gt;&lt;/demo-kiosk-input&gt;' />
-                    <Input id="wcBridgeInput" visible="false" />
+                    <custom:KioskInput id="wcInputTarget" placeholder="Custom element input" />
+                    <Input id="wcBridgeInput" width="1px" class="demoBridgeInput" valueLiveUpdate="true" />
                     <Label text="Input C (not targeted)" labelFor="inputC" class="sapUiSmallMarginTop" />
                     <Input id="inputC" placeholder="Not targeted" width="100%" />
                     <Label text="Input D (not targeted)" labelFor="inputD" class="sapUiSmallMarginTop" />
@@ -45,7 +47,7 @@
                 id="inputIdsKeyboard"
                 docked="true"
                 autoShow="true"
-                inputIds="inputA,inputB,stepInputTarget,wcBridgeInput"
+                inputIds="inputA,inputB,stepInputTarget,ui5WebcInput,wcBridgeInput"
                 keyPress=".onKeyPress"
                 ariaLabel="Selective Keyboard" />
         </content>

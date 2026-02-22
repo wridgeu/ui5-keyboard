@@ -1,50 +1,14 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
-import CustomAlertButton from "demo/hotkeys/webc/CustomAlertButton";
 import Input from "sap/m/Input";
 import MessageToast from "sap/m/MessageToast";
-import HTML from "sap/ui/core/HTML";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
-class DemoKioskInput extends HTMLElement {
-  private _input: HTMLInputElement | null = null;
-
-  connectedCallback(): void {
-    if (this._input) return;
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = "Custom element input";
-    input.style.width = "100%";
-    input.style.padding = "0.625rem";
-    input.style.border = "1px solid #c8d0d8";
-    input.style.borderRadius = "0.5rem";
-    input.style.boxSizing = "border-box";
-    input.style.font = '400 1rem/1.4 "72", Arial, sans-serif';
-    this.append(input);
-    this._input = input;
-  }
-
-  get value(): string {
-    return this._input?.value ?? "";
-  }
-
-  set value(next: string) {
-    if (this._input) {
-      this._input.value = next;
-    }
-  }
-
-  focusInner(): void {
-    this._input?.focus();
-  }
-}
-
-if (!customElements.get("demo-kiosk-input")) {
-  customElements.define("demo-kiosk-input", DemoKioskInput);
-}
-
-void CustomAlertButton;
+type DemoKioskInputHost = HTMLElement & {
+  value?: string;
+  focusInner?: () => void;
+};
 
 /**
  * Demonstrates the `inputIds` property — the keyboard only responds to
@@ -70,7 +34,7 @@ export default class KioskInputIds extends BaseController {
     bridge.attachLiveChange(() => {
       const host = this._getWebComponentHost();
       if (host) {
-        host.value = bridge.getValue();
+        this._writeHostValue(host, bridge.getValue());
       }
     });
   }
@@ -91,28 +55,7 @@ export default class KioskInputIds extends BaseController {
       viewDom.addEventListener("demo-alert", this._nativeAlertHandler as EventListener);
     }
 
-    const host = this._getWebComponentHost();
-    if (!host) return;
-
-    const bridge = this.byId("wcBridgeInput") as Input;
-    const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
-
-    this._wcFocusInHandler = () => {
-      bridge.setValue(host.value);
-      kb.setTargetInput(bridge);
-      kb.show();
-      bridge.focus();
-      this._updateTargetStatus();
-    };
-
-    this._wcInputHandler = (event: Event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLInputElement)) return;
-      bridge.setValue(target.value);
-    };
-
-    host.addEventListener("focusin", this._wcFocusInHandler);
-    host.addEventListener("input", this._wcInputHandler, true);
+    this._attachWebComponentBridge();
   }
 
   onExit(): void {
@@ -138,13 +81,64 @@ export default class KioskInputIds extends BaseController {
     this.getStateModel().setProperty("/kioskCurrentTarget", targetId || "None");
   }
 
-  private _getWebComponentHost(): DemoKioskInput | null {
-    const html = this.byId("wcHost") as HTML;
-    const dom = html.getDomRef();
+  private _getWebComponentHost(): DemoKioskInputHost | null {
+    const wcControl = this.byId("wcInputTarget");
+    const dom = wcControl?.getDomRef?.();
     if (!(dom instanceof HTMLElement)) return null;
-    const host = dom.querySelector("#wcInputTarget");
-    if (!(host instanceof DemoKioskInput)) return null;
-    return host;
+
+    if (customElements.get("demo-kiosk-input")) {
+      customElements.upgrade(dom);
+    }
+
+    return dom as DemoKioskInputHost;
+  }
+
+  private _attachWebComponentBridge(): void {
+    const host = this._getWebComponentHost();
+    if (!host) {
+      return;
+    }
+
+    const bridge = this.byId("wcBridgeInput") as Input;
+    const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
+
+    this._wcFocusInHandler = () => {
+      bridge.setValue(this._readHostValue(host));
+      kb.setTargetInput(bridge);
+      kb.show();
+      this._updateTargetStatus();
+    };
+
+    this._wcInputHandler = (event: Event) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement) {
+        bridge.setValue(target.value);
+        return;
+      }
+      bridge.setValue(this._readHostValue(host));
+    };
+
+    host.addEventListener("focusin", this._wcFocusInHandler);
+    host.addEventListener("input", this._wcInputHandler, true);
+  }
+
+  private _readHostValue(host: DemoKioskInputHost): string {
+    if (typeof host.value === "string") {
+      return host.value;
+    }
+    const input = host.querySelector("input");
+    return input instanceof HTMLInputElement ? input.value : "";
+  }
+
+  private _writeHostValue(host: DemoKioskInputHost, next: string): void {
+    if ("value" in host) {
+      host.value = next;
+      return;
+    }
+    const input = host.querySelector("input");
+    if (input instanceof HTMLInputElement) {
+      input.value = next;
+    }
   }
 
   private _detachWebComponentBridge(): void {
