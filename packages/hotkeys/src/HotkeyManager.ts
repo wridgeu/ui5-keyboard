@@ -269,8 +269,7 @@ export default class HotkeyManager extends BaseObject {
    * `destroyAll()` call — ideal for controller `onExit()` cleanup.
    */
   createGroup(): RegistrationGroup {
-    let group: RegistrationGroup;
-    group = new RegistrationGroup(this, () => {
+    const group = new RegistrationGroup(this, () => {
       this._groups.delete(group);
     });
     this._groups.add(group);
@@ -594,7 +593,7 @@ export default class HotkeyManager extends BaseObject {
       this._routerCleanup = null;
     }
 
-    for (const group of this._groups) {
+    for (const group of Array.from(this._groups)) {
       group._onManagerDestroy();
     }
     this._groups.clear();
