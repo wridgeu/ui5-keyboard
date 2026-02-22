@@ -2487,6 +2487,21 @@ QUnit.test("registerLayout rejects key with non-string value", (assert) => {
   assert.strictEqual(KioskKeyboard.getRegisteredLayout("test-invalid-5"), undefined, "Key with numeric value rejected");
 });
 
+QUnit.test("registerLayout keeps existing custom layout when re-registration payload is invalid", (assert) => {
+  const layoutName = "test-invalid-overwrite-guard";
+  const originalLayout = [[{ value: "a" }, { value: "b" }]];
+
+  KioskKeyboard.registerLayout(layoutName, originalLayout);
+  assert.deepEqual(KioskKeyboard.getRegisteredLayout(layoutName), originalLayout, "Initial custom layout registered");
+
+  KioskKeyboard.registerLayout(layoutName, [[{ value: "x" }], []]);
+  assert.deepEqual(
+    KioskKeyboard.getRegisteredLayout(layoutName),
+    originalLayout,
+    "Invalid re-registration does not clobber existing custom layout",
+  );
+});
+
 // ──────────────────────────────────────────────
 // Focus save / restore (getFocusInfo / applyFocusInfo)
 // ──────────────────────────────────────────────
@@ -3132,11 +3147,57 @@ QUnit.test("New input focused after target destroyed adopts correctly via autoSh
   (input2.getFocusDomRef() as HTMLElement).focus();
   await waitForRender();
 
-  assert.ok(true, "No errors when adopting new input after target destroyed");
+  assert.ok(kb.isOpen(), "Keyboard remains open after adopting a new input");
+  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switched to the newly focused input");
 
   input2.destroy();
   kb.destroy();
 });
+
+QUnit.test(
+  "Switching target while open after old target destroy still suppresses new target inputmode",
+  async (assert) => {
+    const input1 = new Input();
+    const input2 = new Input();
+    input1.placeAt("qunit-fixture");
+    input2.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({ docked: true, mobileKeyboard: "Custom" });
+    kb.setTargetInput(input1);
+    await placeAndWait(kb);
+
+    const inputDom1 = input1.getFocusDomRef() as HTMLInputElement;
+    const inputDom2 = input2.getFocusDomRef() as HTMLInputElement;
+    const originalInputMode2 = inputDom2.getAttribute("inputmode");
+
+    kb.show();
+    assert.strictEqual(
+      inputDom1.getAttribute("inputmode"),
+      "none",
+      "Old target inputmode suppressed while keyboard open",
+    );
+
+    input1.destroy();
+    kb.setTargetInput(input2);
+
+    assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switches to surviving input");
+    assert.strictEqual(inputDom2.getAttribute("inputmode"), "none", "New target inputmode suppressed after switch");
+
+    kb.close();
+    if (originalInputMode2 !== null) {
+      assert.strictEqual(
+        inputDom2.getAttribute("inputmode"),
+        originalInputMode2,
+        "Original inputmode restored after close",
+      );
+    } else {
+      assert.notOk(inputDom2.hasAttribute("inputmode"), "inputmode attribute removed after close");
+    }
+
+    input2.destroy();
+    kb.destroy();
+  },
+);
 
 // ──────────────────────────────────────────────
 // Shift State on Numpad/Numeric

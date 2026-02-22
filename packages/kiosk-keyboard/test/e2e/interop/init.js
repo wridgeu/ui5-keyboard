@@ -25,6 +25,26 @@ sap.ui.define(
       );
     }
 
+    if (!customElements.get("interop-shadow-bridge-input")) {
+      customElements.define(
+        "interop-shadow-bridge-input",
+        class extends HTMLElement {
+          connectedCallback() {
+            if (this.shadowRoot && this.shadowRoot.querySelector("input")) return;
+            var root = this.shadowRoot || this.attachShadow({ mode: "open" });
+            var input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = "Custom element (shadow bridge target)";
+            input.style.width = "320px";
+            input.style.padding = "10px";
+            input.style.border = "1px solid #c8d0d8";
+            input.style.borderRadius = "8px";
+            root.append(input);
+          }
+        },
+      );
+    }
+
     var input = new Input("interopInput", { width: "320px", placeholder: "Standard Input" });
     input.placeAt("interop-input");
 
@@ -37,12 +57,21 @@ sap.ui.define(
     var bridge = new Input("interopBridgeInput", { visible: false, value: "" });
     bridge.placeAt("interop-bridge");
 
+    var shadowBridge = new Input("interopShadowBridgeInput", { visible: false, value: "" });
+    shadowBridge.placeAt("interop-shadow-bridge");
+
     var host = document.getElementById("interop-custom-host");
     if (host) {
       host.innerHTML = '<interop-bridge-input id="interopCustom"></interop-bridge-input>';
     }
 
+    var shadowHost = document.getElementById("interop-shadow-host");
+    if (shadowHost) {
+      shadowHost.innerHTML = '<interop-shadow-bridge-input id="interopShadowCustom"></interop-shadow-bridge-input>';
+    }
+
     var custom = document.getElementById("interopCustom");
+    var shadowCustom = document.getElementById("interopShadowCustom");
 
     var keyboard = new KioskKeyboard({
       id: "interopKeyboard",
@@ -50,7 +79,7 @@ sap.ui.define(
       autoShow: true,
       autoType: true,
       mobileKeyboard: "Custom",
-      inputIds: [input.getId(), step.getId(), textArea.getId(), bridge.getId()],
+      inputIds: [input.getId(), step.getId(), textArea.getId(), bridge.getId(), shadowBridge.getId()],
     });
     keyboard.placeAt("interop-kb");
 
@@ -72,6 +101,30 @@ sap.ui.define(
         },
         true,
       );
+    }
+
+    if (shadowCustom instanceof HTMLElement) {
+      const getShadowInput = function () {
+        return shadowCustom.shadowRoot ? shadowCustom.shadowRoot.querySelector("input") : null;
+      };
+
+      const adoptShadowBridgeTarget = function () {
+        const nativeInput = getShadowInput();
+        shadowBridge.setValue(nativeInput ? nativeInput.value : "");
+        keyboard.setTargetInput(shadowBridge);
+        keyboard.show();
+        shadowBridge.focus();
+      };
+
+      shadowCustom.addEventListener("focusin", adoptShadowBridgeTarget);
+
+      const shadowInput = getShadowInput();
+      if (shadowInput instanceof HTMLInputElement) {
+        shadowInput.addEventListener("focus", adoptShadowBridgeTarget);
+        shadowInput.addEventListener("input", function () {
+          shadowBridge.setValue(shadowInput.value);
+        });
+      }
     }
 
     window.interopHarness = {
@@ -98,6 +151,13 @@ sap.ui.define(
       focusCustomElement: function () {
         var el = document.getElementById("interopCustom");
         var nativeInput = el && el.querySelector ? el.querySelector("input") : null;
+        if (nativeInput instanceof HTMLElement) {
+          nativeInput.focus();
+        }
+      },
+      focusShadowCustomElement: function () {
+        var el = document.getElementById("interopShadowCustom");
+        var nativeInput = el && el.shadowRoot ? el.shadowRoot.querySelector("input") : null;
         if (nativeInput instanceof HTMLElement) {
           nativeInput.focus();
         }

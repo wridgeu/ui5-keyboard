@@ -14,6 +14,7 @@ async function openPage(): Promise<void> {
             focusControlById?: (controlId: string) => void;
             getKeyboardTargetId?: () => string;
             focusCustomElement?: () => void;
+            focusShadowCustomElement?: () => void;
           };
         };
 
@@ -21,7 +22,8 @@ async function openPage(): Promise<void> {
           w.interopHarnessReady &&
           w.interopHarness?.focusControlById &&
           w.interopHarness?.getKeyboardTargetId &&
-          w.interopHarness?.focusCustomElement,
+          w.interopHarness?.focusCustomElement &&
+          w.interopHarness?.focusShadowCustomElement,
         );
       }),
     {
@@ -66,6 +68,14 @@ async function focusCustomElement(): Promise<void> {
   await browser.execute(() => {
     const harness = (window as unknown as { interopHarness?: { focusCustomElement?: () => void } }).interopHarness;
     harness?.focusCustomElement?.();
+  });
+}
+
+async function focusShadowCustomElement(): Promise<void> {
+  await browser.execute(() => {
+    const harness = (window as unknown as { interopHarness?: { focusShadowCustomElement?: () => void } })
+      .interopHarness;
+    harness?.focusShadowCustomElement?.();
   });
 }
 
@@ -115,6 +125,19 @@ describe("interop: StepInput, TextArea, and bridge custom element", () => {
     });
 
     expect(await getKeyboardTargetId()).toBe("interopBridgeInput");
+    expect(await isKeyboardOpen()).toBe(true);
+  });
+
+  it("opens for shadow custom element and targets shadow bridge input", async () => {
+    await blurKeyboard();
+    await focusShadowCustomElement();
+
+    await browser.waitUntil(() => isKeyboardOpen(), {
+      timeout: 5_000,
+      timeoutMsg: "Keyboard did not open for shadow custom element bridge",
+    });
+
+    expect(await getKeyboardTargetId()).toBe("interopShadowBridgeInput");
     expect(await isKeyboardOpen()).toBe(true);
   });
 });

@@ -97,14 +97,60 @@ QUnit.test("Returns false for invalid hotkey", (assert) => {
 QUnit.module("validate - blocklist completeness");
 
 QUnit.test("BROWSER_SHORTCUTS has expected entries", (assert) => {
-  assert.ok(BROWSER_SHORTCUTS.has("F5"), "F5 in browser blocklist");
-  assert.ok(BROWSER_SHORTCUTS.has("Control+W"), "Ctrl+W in browser blocklist");
-  assert.ok(BROWSER_SHORTCUTS.has("F12"), "F12 in browser blocklist");
-  assert.ok(BROWSER_SHORTCUTS.size >= 15, "At least 15 browser shortcuts");
+  const expectedBrowserShortcuts = [
+    "Control+L",
+    "Control+N",
+    "Control+Shift+N",
+    "Control+T",
+    "Control+Shift+T",
+    "Control+W",
+    "Control+Shift+W",
+    "Control+Tab",
+    "Control+Shift+Tab",
+    "Control+0",
+    "F5",
+    "Control+F5",
+    "F6",
+    "F11",
+    "F12",
+    "Tab",
+    "Shift+Tab",
+    "Meta+L",
+    "Meta+N",
+    "Meta+T",
+    "Meta+W",
+    "Control+Q",
+    "Control+PageUp",
+    "Control+PageDown",
+  ];
+
+  assert.strictEqual(BROWSER_SHORTCUTS.size, expectedBrowserShortcuts.length, "Browser blocklist count stays exact");
+  assert.deepEqual(
+    [...BROWSER_SHORTCUTS.keys()].toSorted(),
+    [...expectedBrowserShortcuts].toSorted(),
+    "Browser blocklist keys stay exact",
+  );
 });
 
 QUnit.test("SAP_SHORTCUTS has expected entries", (assert) => {
-  assert.ok(SAP_SHORTCUTS.has("Control+S"), "Ctrl+S in SAP blocklist");
-  assert.ok(SAP_SHORTCUTS.has("F6"), "F6 in SAP blocklist");
-  assert.ok(SAP_SHORTCUTS.size >= 9, "At least 9 SAP shortcuts");
+  const expectedSapShortcuts = [
+    "Control+S",
+    "Control+E",
+    "Control+D",
+    "Control+Enter",
+    "Control+Shift+S",
+    "Control+Shift+E",
+    "Control+Shift+M",
+    "F6",
+    "Shift+F6",
+    "Meta+S",
+    "Meta+E",
+    "Meta+D",
+    "Control+Alt+Shift+P",
+    "Control+Alt+Shift+S",
+    "Control+Alt+Shift+T",
+  ];
+
+  assert.strictEqual(SAP_SHORTCUTS.size, expectedSapShortcuts.length, "SAP blocklist count stays exact");
+  assert.deepEqual([...SAP_SHORTCUTS.keys()].toSorted(), [...expectedSapShortcuts].toSorted(), "SAP blocklist keys stay exact");
 });
