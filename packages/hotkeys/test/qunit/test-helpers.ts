@@ -16,6 +16,12 @@ export function fireKey(key: string, options?: Partial<KeyboardEvent>): Keyboard
     metaKey: options?.metaKey ?? false,
     repeat: options?.repeat ?? false,
   });
+  if (options?.code !== undefined) {
+    Object.defineProperty(event, "code", { value: options.code, writable: false });
+  }
+  if (options?.location !== undefined) {
+    Object.defineProperty(event, "location", { value: options.location, writable: false });
+  }
   document.dispatchEvent(event);
   return event;
 }
@@ -35,6 +41,12 @@ export function fireKeyOn(target: EventTarget, key: string, options?: Partial<Ke
     metaKey: options?.metaKey ?? false,
     repeat: options?.repeat ?? false,
   });
+  if (options?.code !== undefined) {
+    Object.defineProperty(event, "code", { value: options.code, writable: false });
+  }
+  if (options?.location !== undefined) {
+    Object.defineProperty(event, "location", { value: options.location, writable: false });
+  }
   target.dispatchEvent(event);
   return event;
 }
@@ -42,12 +54,22 @@ export function fireKeyOn(target: EventTarget, key: string, options?: Partial<Ke
 /**
  * Dispatch a keyup event on document.
  */
-export function fireKeyUp(key: string): void {
+export function fireKeyUp(key: string, options?: Partial<KeyboardEvent>): void {
   const event = new KeyboardEvent("keyup", {
     key,
     bubbles: true,
     cancelable: true,
+    ctrlKey: options?.ctrlKey ?? false,
+    shiftKey: options?.shiftKey ?? false,
+    altKey: options?.altKey ?? false,
+    metaKey: options?.metaKey ?? false,
   });
+  if (options?.code !== undefined) {
+    Object.defineProperty(event, "code", { value: options.code, writable: false });
+  }
+  if (options?.location !== undefined) {
+    Object.defineProperty(event, "location", { value: options.location, writable: false });
+  }
   document.dispatchEvent(event);
 }
 

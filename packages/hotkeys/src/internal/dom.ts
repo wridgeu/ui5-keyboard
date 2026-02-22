@@ -102,7 +102,9 @@ export function shouldIgnoreKeyEvent(event: KeyboardEvent, platform: Platform, l
   if (MODIFIER_KEYS.has(event.key)) return true;
 
   // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.
-  // When the last Alt was right-side (location=2), this is AltGr character input.
+  // Prefer direct AltGraph signal when available, then fall back to
+  // right-Alt location tracking for environments where AltGraph is absent.
+  if (platform === Platform.Windows && event.getModifierState("AltGraph")) return true;
   if (platform === Platform.Windows && event.ctrlKey && event.altKey && lastAltLocation === 2) return true;
 
   return false;

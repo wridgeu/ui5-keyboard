@@ -66,6 +66,42 @@ QUnit.test("autoShow ignores readonly inputs", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("autoShow ignores disabled inputs", async (assert) => {
+  const DisabledWrapper = (Control as any).extend("test.DisabledWrapper", {
+    metadata: { properties: {} },
+    renderer: {
+      apiVersion: 2,
+      render(rm: any, ctrl: any) {
+        rm.openStart("div", ctrl).openEnd();
+        rm.voidStart("input")
+          .attr("id", ctrl.getId() + "-inner")
+          .attr("type", "text")
+          .attr("disabled", "disabled")
+          .voidEnd();
+        rm.close("div");
+      },
+    },
+    getFocusDomRef() {
+      return document.getElementById((this as any).getId() + "-inner");
+    },
+  }) as any;
+
+  const disabledInput = new DisabledWrapper();
+  disabledInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  const innerDom = disabledInput.getFocusDomRef() as HTMLElement;
+  innerDom.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard does not open for disabled input");
+
+  kb.destroy();
+  disabledInput.destroy();
+});
+
 QUnit.test("autoShow ignores raw DOM input without UI5 control", async (assert) => {
   const rawInput = document.createElement("input");
   rawInput.type = "text";

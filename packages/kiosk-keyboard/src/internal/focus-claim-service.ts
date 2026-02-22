@@ -59,6 +59,7 @@ export default class FocusClaimService {
 
   private static isTextualInput(el: EventTarget | null): el is HTMLInputElement | HTMLTextAreaElement {
     if (!isInputOrTextarea(el)) return false;
+    if (el.disabled) return false;
     if (el.readOnly) return false;
     return el instanceof HTMLTextAreaElement || FocusClaimService.TEXTUAL_INPUT_TYPES.has(el.type);
   }

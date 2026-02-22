@@ -18,15 +18,17 @@ Framework: OpenUI5 1.144.0 · TypeScript ~5.9.3 · Node >=22
 
 ```bash
 npm install                 # Install all workspaces
-npm run check               # fmt:check + lint + typecheck (CI gate)
+npm run check               # fmt:check + lint + typecheck + test:guardrails
 npm run build               # Build both libraries
+npm run build:all           # Build both libraries + demo app
 npm start                   # Start demo app (port 8080)
 npm run start:hotkeys       # Start hotkeys lib with test runner (port 8081)
 npm run start:kiosk         # Start kiosk-keyboard lib with test runner (port 8082)
 npm run lint                # oxlint packages/
 npm run fmt                 # oxfmt .
-npm run typecheck           # tsc -b (project references) + demo-app typecheck
+npm run typecheck           # Typecheck all workspaces
 npm test                    # Run all library tests in parallel (headless)
+npm run test:qunit          # Run all library QUnit tests (headless)
 npm run test:hotkeys        # Hotkeys QUnit tests (headless)
 npm run test:kiosk          # Kiosk QUnit + e2e tests (headless)
 npm run test:kiosk:e2e      # Kiosk e2e only (headless)

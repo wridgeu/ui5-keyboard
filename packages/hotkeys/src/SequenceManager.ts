@@ -259,8 +259,10 @@ export default class SequenceManager extends BaseObject {
       if (matchesKeyboardEvent(event, nextStep)) {
         // This key advances the sequence
         if (match.stepIndex + 1 >= reg.parsedSteps.length) {
-          // Full match!
-          fullMatch = { registration: reg, event };
+          // Full match! Preserve scope priority: active scope always wins over global.
+          if (!fullMatch || (fullMatch.registration.scope !== activeScope && reg.scope === activeScope)) {
+            fullMatch = { registration: reg, event };
+          }
         } else {
           // Mid-sequence — advance
           const newMatch: ActiveMatch = {

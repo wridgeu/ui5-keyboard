@@ -164,8 +164,11 @@ npm install                 # Install all workspaces
 npm run build               # Build both libraries
 npm run build:hotkeys       # Build hotkeys only
 npm run build:kiosk         # Build kiosk-keyboard only
+npm run build:demo          # Build demo app only
+npm run build:all           # Build libraries + demo app
 
 npm test                    # Run all tests (headless)
+npm run test:qunit          # Run all library QUnit tests
 npm run test:hotkeys        # Hotkeys QUnit tests
 npm run test:kiosk          # Kiosk QUnit + e2e tests
 npm run test:kiosk:e2e      # Kiosk e2e tests only
@@ -178,7 +181,7 @@ npm run test:kiosk:e2e:update # Update kiosk visual baselines
 npm run check               # fmt:check + lint + typecheck + test:guardrails (CI gate)
 npm run fmt                 # Format (oxfmt)
 npm run lint                # Lint (oxlint)
-npm run typecheck           # Generate kiosk typings + tsc -b + demo-app typecheck
+npm run typecheck           # Typecheck all workspaces (kiosk includes generated typings)
 ```
 
 ## Project Structure

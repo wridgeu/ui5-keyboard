@@ -166,3 +166,14 @@ QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
   assert.strictEqual(held.length, 1, "Only one entry for repeated key");
   assert.ok(held.includes("a"), "Key 'a' is held");
 });
+
+QUnit.test("Keyup removes held key by code when key value changed", (assert) => {
+  const tracker = KeyStateTracker.getInstance();
+
+  fireKey("A", { code: "KeyA", shiftKey: true });
+  assert.ok(tracker.isKeyHeld("A"), "Uppercase key is tracked while Shift is held");
+
+  fireKeyUp("a", { code: "KeyA" });
+  assert.notOk(tracker.isKeyHeld("A"), "Held key is cleared using physical key code");
+  assert.strictEqual(tracker.getHeldKeys().length, 0, "No held keys remain");
+});

@@ -669,6 +669,8 @@ export default class HotkeyManager extends BaseObject {
   private _shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
     if (event.key === "Alt") {
       this._lastAltLocation = event.location;
+    } else if (!event.altKey) {
+      this._lastAltLocation = 0;
     }
     return shouldIgnoreKeyEvent(event, this._platform, this._lastAltLocation);
   }

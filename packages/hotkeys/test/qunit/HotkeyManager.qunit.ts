@@ -1,4 +1,5 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { fireKey, fireKeyOn } from "./test-helpers";
 
@@ -167,7 +168,7 @@ QUnit.test("Scope: hotkey only fires in active scope", (assert) => {
     () => {
       globalCalled = true;
     },
-    { scope: "__global__" },
+    { scope: GLOBAL_SCOPE },
   );
 
   manager.register(
@@ -204,7 +205,7 @@ QUnit.test("Scope push/pop lifecycle", (assert) => {
 
   editorCalled = false;
   manager.popScope("editor");
-  assert.strictEqual(manager.getActiveScope(), "__global__");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE);
 
   fireKey("Escape");
   assert.notOk(editorCalled, "Editor scope callback did not fire after popScope");
@@ -220,7 +221,7 @@ QUnit.test("Scoped handler takes priority over global for same key", (assert) =>
     () => {
       globalCalled = true;
     },
-    { scope: "__global__" },
+    { scope: GLOBAL_SCOPE },
   );
 
   manager.register(
@@ -251,7 +252,7 @@ QUnit.test("popScope throws on mismatch", (assert) => {
 QUnit.test("popScope throws when only global scope remains", (assert) => {
   const manager = HotkeyManager.getInstance();
 
-  assert.throws(() => manager.popScope("__global__"), /Cannot pop the global scope/, "Cannot pop global scope");
+  assert.throws(() => manager.popScope(GLOBAL_SCOPE), /Cannot pop the global scope/, "Cannot pop global scope");
 });
 
 QUnit.test("resetToGlobalScope pops all non-global scopes", (assert) => {
@@ -262,11 +263,11 @@ QUnit.test("resetToGlobalScope pops all non-global scopes", (assert) => {
   assert.strictEqual(manager.getActiveScope(), "dialog");
 
   manager.resetToGlobalScope();
-  assert.strictEqual(manager.getActiveScope(), "__global__", "Back to global after reset");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Back to global after reset");
 
   // Should be safe to call when already at global
   manager.resetToGlobalScope();
-  assert.strictEqual(manager.getActiveScope(), "__global__", "No-op when already at global");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "No-op when already at global");
 });
 
 QUnit.test("pushScope allows duplicate scope and pops correctly", (assert) => {
@@ -306,7 +307,7 @@ QUnit.test("pushScope allows duplicate scope and pops correctly", (assert) => {
   editorCalled = false;
   globalCalled = false;
   manager.popScope("editor");
-  assert.strictEqual(manager.getActiveScope(), "__global__", "Back to global after second pop");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Back to global after second pop");
 
   fireKey("F5");
   assert.ok(globalCalled, "Global handler fires after both pops");
@@ -603,10 +604,10 @@ QUnit.test("getRegistrations returns all registrations", (assert) => {
 QUnit.test("getRegistrationsForScope filters by scope", (assert) => {
   const manager = HotkeyManager.getInstance();
 
-  manager.register("Escape", () => {}, { scope: "__global__" });
+  manager.register("Escape", () => {}, { scope: GLOBAL_SCOPE });
   manager.register("Ctrl+S", () => {}, { scope: "editor" });
 
-  assert.strictEqual(manager.getRegistrationsForScope("__global__").length, 1);
+  assert.strictEqual(manager.getRegistrationsForScope(GLOBAL_SCOPE).length, 1);
   assert.strictEqual(manager.getRegistrationsForScope("editor").length, 1);
   assert.strictEqual(manager.getRegistrationsForScope("unknown").length, 0);
 });
@@ -624,7 +625,7 @@ QUnit.test("destroy cleans up everything", (assert) => {
   // Getting a new instance should give a fresh manager
   const newManager = HotkeyManager.getInstance();
   assert.strictEqual(newManager.getRegistrations().length, 0, "New instance has no registrations");
-  assert.strictEqual(newManager.getActiveScope(), "__global__", "Scope stack reset");
+  assert.strictEqual(newManager.getActiveScope(), GLOBAL_SCOPE, "Scope stack reset");
 });
 
 QUnit.test("destroy is idempotent (safe to call twice)", (assert) => {
@@ -640,7 +641,7 @@ QUnit.test("destroy is idempotent (safe to call twice)", (assert) => {
   // A fresh instance should still work
   const fresh = HotkeyManager.getInstance();
   assert.strictEqual(fresh.getRegistrations().length, 0, "Fresh instance after double destroy");
-  assert.strictEqual(fresh.getActiveScope(), "__global__", "Scope stack clean after double destroy");
+  assert.strictEqual(fresh.getActiveScope(), GLOBAL_SCOPE, "Scope stack clean after double destroy");
 });
 
 QUnit.test("destroy invalidates hotkey and sequence handles", (assert) => {
@@ -806,7 +807,7 @@ QUnit.test("Unhandled: fires with no_match when no registration exists", (assert
 
   fireKey("F9");
   assert.strictEqual(ctx.reason, "no_match", "Reason is no_match");
-  assert.strictEqual(ctx.activeScope, "__global__", "Active scope is global");
+  assert.strictEqual(ctx.activeScope, GLOBAL_SCOPE, "Active scope is global");
   assert.notOk(ctx.skippedRegistration, "No skipped registration for no_match");
   assert.ok(ctx.event instanceof KeyboardEvent, "Event is a KeyboardEvent");
 });
@@ -1204,6 +1205,31 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
   assert.notOk(called, "AltGr+E did not fire Ctrl+Alt+E");
 });
 
+QUnit.test("AltGr: AltGraph modifier state suppresses Ctrl+Alt hotkey on Windows", (assert) => {
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.register("Ctrl+Alt+E", () => {
+    called = true;
+  });
+
+  const eEvent = new KeyboardEvent("keydown", {
+    key: "e",
+    bubbles: true,
+    cancelable: true,
+    ctrlKey: true,
+    altKey: true,
+  });
+  Object.defineProperty(eEvent, "getModifierState", {
+    value: (keyArg: string) => keyArg === "AltGraph",
+    writable: false,
+  });
+  document.dispatchEvent(eEvent);
+
+  assert.notOk(called, "AltGraph+E did not fire Ctrl+Alt+E");
+});
+
 QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
   const manager = HotkeyManager.getInstance();
@@ -1262,6 +1288,31 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
   // No prior Alt keydown — _lastAltLocation stays 0
   fireKey("e", { ctrlKey: true, altKey: true });
   assert.ok(called, "Ctrl+Alt+E fires without prior Alt (location=0)");
+});
+
+QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (assert) => {
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.register("Ctrl+Alt+E", () => {
+    called = true;
+  });
+
+  const altEvent = new KeyboardEvent("keydown", {
+    key: "Alt",
+    bubbles: true,
+    cancelable: true,
+    altKey: true,
+  });
+  Object.defineProperty(altEvent, "location", { value: 2 });
+  document.dispatchEvent(altEvent);
+
+  // Alt is no longer held on this event, so stale AltGr state should be reset.
+  fireKey("x");
+  fireKey("e", { ctrlKey: true, altKey: true });
+
+  assert.ok(called, "Ctrl+Alt hotkey fires after stale AltGr state reset");
 });
 
 // ──────────────────────────────────────────────
@@ -1545,7 +1596,7 @@ QUnit.test("Handle defaults: scope is global, description is empty", (assert) =>
 
   const handle = manager.register("F5", () => {});
 
-  assert.strictEqual(handle.scope, "__global__", "default scope is __global__");
+  assert.strictEqual(handle.scope, GLOBAL_SCOPE, "default scope is GLOBAL_SCOPE");
   assert.strictEqual(handle.description, "", "default description is empty string");
 });
 

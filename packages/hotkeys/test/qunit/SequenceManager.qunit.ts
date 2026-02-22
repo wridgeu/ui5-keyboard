@@ -156,6 +156,31 @@ QUnit.test("Scope filtering", (assert) => {
   assert.ok(called, "Sequence fires in correct scope");
 });
 
+QUnit.test("Active scope sequence wins over global on completion", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let scopedCalled = false;
+  let globalCalled = false;
+
+  manager.registerSequence(["G", "E"], () => {
+    globalCalled = true;
+  });
+  manager.registerSequence(
+    ["G", "E"],
+    () => {
+      scopedCalled = true;
+    },
+    { scope: "editor" },
+  );
+
+  manager.pushScope("editor");
+  fireKey("g");
+  clock.tick(50);
+  fireKey("e");
+
+  assert.ok(scopedCalled, "Scoped sequence fired");
+  assert.notOk(globalCalled, "Global sequence did not override scoped sequence");
+});
+
 QUnit.test("Disabled sequence does not fire", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;

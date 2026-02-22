@@ -1016,6 +1016,21 @@ export default class KioskKeyboard extends Control {
   // UI5 Event Delegation
   // ──────────────────────────────────────────────
 
+  private _resolveKeyElementFromEventTarget(target: EventTarget | null): HTMLElement | null {
+    if (!(target instanceof globalThis.Element)) return null;
+    const keyElement = target.closest(".ui5KioskKey");
+    return keyElement instanceof HTMLElement ? keyElement : null;
+  }
+
+  private _clearPressedKeyState(): HTMLElement | null {
+    const pressed = this._pressedKeyEl;
+    this._pressedKeyEl = null;
+    if (pressed) {
+      pressed.classList.remove("ui5KioskKey--pressed");
+    }
+    return pressed;
+  }
+
   /**
    * Prevents focus from leaving the target input when clicking anywhere
    * on the keyboard surface — keys, rows, or gaps between keys.
@@ -1031,7 +1046,7 @@ export default class KioskKeyboard extends Control {
     // (including gaps between keys), so the target input keeps focus.
     event.preventDefault();
 
-    const el = (event.target as HTMLElement).closest(".ui5KioskKey") as HTMLElement | null;
+    const el = this._resolveKeyElementFromEventTarget(event.target);
     if (el) {
       this._pressedKeyEl = el;
       el.classList.add("ui5KioskKey--pressed");
@@ -1047,15 +1062,11 @@ export default class KioskKeyboard extends Control {
    * event that jQuery's tap plugin depends on.
    */
   ontouchend(event: Event): void {
-    const pressed = this._pressedKeyEl;
-    this._pressedKeyEl = null;
-    if (pressed) {
-      pressed.classList.remove("ui5KioskKey--pressed");
-    }
+    const pressed = this._clearPressedKeyState();
 
     if (!this.getEnabled() || !pressed) return;
 
-    const el = (event.target as HTMLElement).closest(".ui5KioskKey") as HTMLElement | null;
+    const el = this._resolveKeyElementFromEventTarget(event.target);
     if (el !== pressed) return;
 
     const keyValue = pressed.dataset.key;
@@ -1063,6 +1074,10 @@ export default class KioskKeyboard extends Control {
 
     this._lastFocusedKeyId = pressed.id;
     this._handleKeyAction(keyValue, pressed);
+  }
+
+  ontouchcancel(): void {
+    this._clearPressedKeyState();
   }
 
   onkeydown(event: KeyboardEvent): void {
@@ -1263,8 +1278,12 @@ export default class KioskKeyboard extends Control {
         const raw = keyValue.slice("{layout:".length, -1).trim();
         if (raw) {
           const name = raw === "base" ? this._baseLayout : raw;
+          const previousLayout = this.getLayout();
           this.setLayout(name);
-          this.fireEvent("layoutChange", { layout: name });
+          const nextLayout = this.getLayout();
+          if (nextLayout !== previousLayout) {
+            this.fireEvent("layoutChange", { layout: nextLayout });
+          }
         }
       }
       return;

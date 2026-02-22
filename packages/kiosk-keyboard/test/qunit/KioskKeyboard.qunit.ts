@@ -98,6 +98,9 @@ QUnit.test("Disabled state renders correctly", async (assert) => {
   const firstKey = dom.querySelector(".ui5KioskKey");
   assert.strictEqual(firstKey!.getAttribute("aria-disabled"), "true", "Keys have aria-disabled");
 
+  const focusableKeys = dom.querySelectorAll('.ui5KioskKey[tabindex="0"]');
+  assert.strictEqual(focusableKeys.length, 0, "No key is keyboard-focusable when disabled");
+
   kb.destroy();
 });
 
@@ -542,6 +545,34 @@ QUnit.test("Layout switch ignored when keyboardType is Numpad", async (assert) =
   simulateTap(kb, fakeEl);
 
   assert.notOk(layoutChanged, "Layout switch ignored in Numpad mode");
+
+  kb.destroy();
+});
+
+QUnit.test("Layout switch does not fire layoutChange for invalid or unchanged layout", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const initialLayout = kb.getLayout();
+  let changeCount = 0;
+  kb.attachEvent("layoutChange", () => {
+    changeCount++;
+  });
+
+  const invalidLayoutEl = document.createElement("div");
+  invalidLayoutEl.classList.add("ui5KioskKey");
+  invalidLayoutEl.dataset.key = "{layout:not-registered}";
+  invalidLayoutEl.id = "fake-layout-invalid";
+  simulateTap(kb, invalidLayoutEl);
+
+  const sameLayoutEl = document.createElement("div");
+  sameLayoutEl.classList.add("ui5KioskKey");
+  sameLayoutEl.dataset.key = `{layout:${initialLayout}}`;
+  sameLayoutEl.id = "fake-layout-same";
+  simulateTap(kb, sameLayoutEl);
+
+  assert.strictEqual(changeCount, 0, "No layoutChange event for invalid or unchanged layout");
+  assert.strictEqual(kb.getLayout(), initialLayout, "Layout remains unchanged");
 
   kb.destroy();
 });
@@ -2819,6 +2850,57 @@ QUnit.test("Tap cancelled when release is on a different key", async (assert) =>
   kb.ontouchend(end);
 
   assert.notOk(keyPressed, "No keyPress when drag away from original key");
+
+  kb.destroy();
+});
+
+QUnit.test("Touch cancel clears pressed state and prevents activation", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  let keyPressed = false;
+  kb.attachEvent("keyPress", () => {
+    keyPressed = true;
+  });
+
+  const key = kb.getDomRef()!.querySelector('[data-key="q"]') as HTMLElement;
+
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: key, writable: false });
+  kb.ontouchstart(start);
+  assert.ok(key.classList.contains("ui5KioskKey--pressed"), "Pressed state is applied on touchstart");
+
+  kb.ontouchcancel();
+  assert.notOk(key.classList.contains("ui5KioskKey--pressed"), "Pressed state is cleared on touchcancel");
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: key, writable: false });
+  kb.ontouchend(end);
+
+  assert.notOk(keyPressed, "No keyPress after cancelled touch");
+
+  kb.destroy();
+});
+
+QUnit.test("Touch handlers ignore non-element event targets", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  let keyPressed = false;
+  kb.attachEvent("keyPress", () => {
+    keyPressed = true;
+  });
+
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: window, writable: false });
+  kb.ontouchstart(start);
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: window, writable: false });
+  kb.ontouchend(end);
+
+  assert.notOk(keyPressed, "No keyPress for non-element touch targets");
+  assert.ok(true, "Touch handlers do not throw for non-element targets");
 
   kb.destroy();
 });

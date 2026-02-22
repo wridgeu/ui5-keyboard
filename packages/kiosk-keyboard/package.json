@@ -35,7 +35,8 @@
   "scripts": {
     "clean": "rimraf dist",
     "generate": "ts-interface-generator",
-    "build": "npm run generate && ui5 build --clean-dest",
+    "prebuild": "npm run generate",
+    "build": "ui5 build --clean-dest",
     "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build",
     "start": "ui5 serve --port 8082 -o test-resources/sap/ui/qunit/testrunner.html?testpage=%2Ftest-resources%2Fui5%2Fkiosk%2Fqunit%2Ftestsuite.qunit.html&autostart=true",
     "start:visual": "ui5 serve --port 8082 -o test-resources/ui5/kiosk/e2e/visual/index.html",
@@ -44,7 +45,8 @@
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
     "test:e2e:open": "wdio run test/e2e/wdio.conf.ts -- --headed",
     "test:e2e:update": "wdio run test/e2e/wdio.conf.ts -- --update-visual-baseline",
-    "typecheck": "npm run generate && tsc --noEmit"
+    "pretypecheck": "npm run generate",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@ui5/cli": "^4.0.0",

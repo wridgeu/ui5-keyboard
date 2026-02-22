@@ -1,4 +1,5 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { fireKey } from "./test-helpers";
 
 interface MockRouter {
@@ -133,7 +134,7 @@ QUnit.test("Detach cleanup on destroy", (assert) => {
   // Get a fresh manager - route changes should have no effect
   const newManager = HotkeyManager.getInstance();
   router.fireRouteMatched("detail");
-  assert.strictEqual(newManager.getActiveScope(), "__global__", "New manager unaffected by old router");
+  assert.strictEqual(newManager.getActiveScope(), GLOBAL_SCOPE, "New manager unaffected by old router");
 });
 
 QUnit.test("Error on double enableRouterIntegration", (assert) => {
@@ -158,7 +159,7 @@ QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
 
   // Fire route with undefined name
   router.fireRouteMatchedUndefined();
-  assert.strictEqual(manager.getActiveScope(), "__global__", "Scope reset to global when route name is undefined");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Scope reset to global when route name is undefined");
 });
 
 // ──────────────────────────────────────────────

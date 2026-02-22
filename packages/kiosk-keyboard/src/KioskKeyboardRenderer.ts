@@ -215,7 +215,8 @@ const KioskKeyboardRenderer = {
     // Roving tabindex: exactly one key gets tabindex="0".
     // Prefer the last focused key (survives re-render); fall back to (0,0).
     const bIsFocusTarget = ri === focusTarget.row && ci === focusTarget.col;
-    rm.attr("tabindex", bIsFocusTarget ? "0" : "-1");
+    const bEnabled = oControl.getEnabled();
+    rm.attr("tabindex", bEnabled && bIsFocusTarget ? "0" : "-1");
 
     if (!oControl.getEnabled()) {
       rm.attr("aria-disabled", "true");
