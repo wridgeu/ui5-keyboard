@@ -668,6 +668,25 @@ There are two paths:
 - Native/custom web components are best integrated with a small UI5 bridge control because focus retargeting can hide the inner input from auto-show claim logic.
 - UI5 wrapper controls from `sap.ui.webc.main` are deprecated in modern UI5; prefer `sap.m`/`sap.f` controls or a bridge pattern for custom elements.
 
+If you build your own UI5 wrapper around a native custom element (for example via `sap/ui/core/webc/WebComponent.extend`), define a custom `setValue` that updates both the UI5 property bag and the rendered host element immediately:
+
+```ts
+setValue(value: string) {
+  this.setProperty("value", value, true); // no invalidation
+
+  const host = this.getDomRef();
+  if (host instanceof HTMLElement) {
+    (host as HTMLElement & { value?: string }).value = value;
+  }
+
+  return this;
+}
+```
+
+Kiosk typing writes on every keypress. Relying only on metadata mapping can cause invalidation/re-render timing, which may introduce focus/caret jitter. The custom setter keeps typing smooth by avoiding re-render and syncing the DOM value immediately. Apply the same pattern to other frequently updated properties (for example `placeholder`) when you want immediate host sync without re-render.
+
+This is not mandatory for every wrapper. If default metadata mapping already keeps your UI and bindings stable in your scenario, you may not need custom setters. Validate with your own integration (especially sustained typing) and add explicit DOM sync only when you observe lag, re-render side effects, or caret/focus issues.
+
 Programmatic bridge pattern:
 
 ```ts

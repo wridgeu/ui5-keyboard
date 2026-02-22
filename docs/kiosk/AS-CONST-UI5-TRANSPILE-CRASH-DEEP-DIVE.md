@@ -108,7 +108,7 @@ const layouts: Record<string, LayoutDefinition> = Object.assign(Object.create(nu
 
 That change itself is valid. The crash appeared because the file still had a named export in the same module (`DEFAULT_LAYOUT`), which activated export collapse in the plugin.
 
-## `noExportCollapse`: What It Is And Why It Matters
+## `noExportCollapse`: Behavior And Impact
 
 `babel-plugin-transform-modules-ui5` has export collapsing enabled by default.
 
