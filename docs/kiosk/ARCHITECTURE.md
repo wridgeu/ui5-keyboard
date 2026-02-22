@@ -11,7 +11,7 @@ KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
-layout-registry.ts        Layout registration + locale-based layout resolution
+layout-registry.ts        Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
 internal/i18n.ts          getText() helper for library resource bundle
 internal/detect-keyboard-type.ts  Auto-type detection helpers
@@ -231,6 +231,8 @@ The returned `LanguageTag` has `.language` (lowercase ISO639, e.g. `"de"`) and `
 Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`).
 
 The locale → layout map is extensible via `KioskKeyboard.registerLocaleLayout(locale, layout)`.
+Cleanup is technically optional for most apps because repeated initialization usually reapplies the same mapping without errors or leaks.
+For deterministic app-specific state, mappings can be cleaned up with `KioskKeyboard.unregisterLocaleLayout(locale)` or reset to defaults with `KioskKeyboard.resetLocaleLayouts()`.
 
 ### Impact on \_baseLayout
 

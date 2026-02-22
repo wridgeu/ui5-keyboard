@@ -17,6 +17,8 @@ import { placeAndWait, waitForRender, tapKey, simulateTap, tapShiftInternally, g
 
 QUnit.module("KioskKeyboard", {
   afterEach() {
+    KioskKeyboard.resetCustomLayouts();
+    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -2235,6 +2237,49 @@ QUnit.test("registerLayout rejects overwrite of built-in layout", (assert) => {
   assert.deepEqual(after, original, "Built-in qwerty layout was NOT overwritten");
 });
 
+QUnit.test("unregisterLayout removes a custom layout", (assert) => {
+  KioskKeyboard.registerLayout("test-remove-custom", [[{ value: "x" }]]);
+  assert.ok(KioskKeyboard.getRegisteredLayout("test-remove-custom"), "Custom layout exists before removal");
+
+  KioskKeyboard.unregisterLayout("test-remove-custom");
+
+  assert.strictEqual(
+    KioskKeyboard.getRegisteredLayout("test-remove-custom"),
+    undefined,
+    "Custom layout removed successfully",
+  );
+});
+
+QUnit.test("unregisterLayout keeps built-in layout intact", (assert) => {
+  const before = KioskKeyboard.getRegisteredLayout("qwerty");
+
+  KioskKeyboard.unregisterLayout("qwerty");
+
+  const after = KioskKeyboard.getRegisteredLayout("qwerty");
+  assert.deepEqual(after, before, "Built-in layout cannot be removed");
+});
+
+QUnit.test("resetCustomLayouts removes all custom layouts", (assert) => {
+  KioskKeyboard.registerLayout("test-reset-custom-a", [[{ value: "a" }]]);
+  KioskKeyboard.registerLayout("test-reset-custom-b", [[{ value: "b" }]]);
+  assert.ok(KioskKeyboard.getRegisteredLayout("test-reset-custom-a"), "First custom layout registered");
+  assert.ok(KioskKeyboard.getRegisteredLayout("test-reset-custom-b"), "Second custom layout registered");
+
+  KioskKeyboard.resetCustomLayouts();
+
+  assert.strictEqual(
+    KioskKeyboard.getRegisteredLayout("test-reset-custom-a"),
+    undefined,
+    "First custom layout removed",
+  );
+  assert.strictEqual(
+    KioskKeyboard.getRegisteredLayout("test-reset-custom-b"),
+    undefined,
+    "Second custom layout removed",
+  );
+  assert.ok(KioskKeyboard.getRegisteredLayout("qwerty"), "Built-in layout remains available");
+});
+
 QUnit.test("registerLayout rejects forbidden map keys", (assert) => {
   for (const name of ["__proto__", "prototype", "constructor"]) {
     KioskKeyboard.registerLayout(name, [[{ value: "x" }]]);
@@ -2297,6 +2342,50 @@ QUnit.test("registerLocaleLayout extends the locale map", (assert) => {
   try {
     Localization.setLanguage("xx");
     assert.strictEqual(KioskKeyboard.getLocaleLayout(), "test-locale-layout", "Custom locale maps to custom layout");
+  } finally {
+    Localization.setLanguage(currentLang);
+  }
+});
+
+QUnit.test("unregisterLocaleLayout removes custom locale mapping", (assert) => {
+  const currentLang = Localization.getLanguage();
+  KioskKeyboard.registerLayout("test-locale-remove-layout", [[{ value: "x" }]]);
+  KioskKeyboard.registerLocaleLayout("xy", "test-locale-remove-layout");
+
+  try {
+    Localization.setLanguage("xy");
+    assert.strictEqual(
+      KioskKeyboard.getLocaleLayout(),
+      "test-locale-remove-layout",
+      "Custom locale mapping is active before removal",
+    );
+
+    KioskKeyboard.unregisterLocaleLayout("xy");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Locale mapping removed and fallback is used");
+  } finally {
+    Localization.setLanguage(currentLang);
+  }
+});
+
+QUnit.test("resetLocaleLayouts restores built-in locale mappings", (assert) => {
+  const currentLang = Localization.getLanguage();
+  KioskKeyboard.registerLayout("test-reset-locale-layout", [[{ value: "x" }]]);
+  KioskKeyboard.registerLocaleLayout("yy", "test-reset-locale-layout");
+
+  try {
+    Localization.setLanguage("yy");
+    assert.strictEqual(
+      KioskKeyboard.getLocaleLayout(),
+      "test-reset-locale-layout",
+      "Custom mapping active before reset",
+    );
+
+    KioskKeyboard.resetLocaleLayouts();
+
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Custom mapping removed after reset");
+
+    Localization.setLanguage("de");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "Built-in locale mapping restored after reset");
   } finally {
     Localization.setLanguage(currentLang);
   }

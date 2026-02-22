@@ -188,6 +188,18 @@ import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 
 Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, only `ui5/kiosk/layouts/fkey-row` and `ui5/kiosk/layouts/nav-row` are supported as stable consumer imports for composing custom variant layouts.
 
+## FLP Lifecycle (Module Cache)
+
+In SAP Fiori launchpad (single-page shell), modules are cached and reused between app launches. Keep these rules in mind:
+
+- Controls inside the normal view/control tree are destroyed by UI5 and clean up automatically.
+- Programmatically created keyboards outside the view tree (for example `placeAt("sap-ui-static")`) must be destroyed explicitly in `Component.destroy()`.
+- App-specific layout registrations are module-level state and survive app reopen in FLP.
+- Technical note: cleanup of layout/locale registrations is optional. Re-registering the same custom layout names is blocked, and reapplying locale mappings is typically harmless.
+- For deterministic per-app state (and especially dynamic registration names), cleanup is still recommended in `Component.destroy()` with:
+  - `KioskKeyboard.unregisterLayout(name)` / `KioskKeyboard.unregisterLocaleLayout(locale)` for targeted cleanup, or
+  - `KioskKeyboard.resetCustomLayouts()` / `KioskKeyboard.resetLocaleLayouts()` to reset to built-in defaults.
+
 ## KioskKeyboard Control
 
 ### Properties
@@ -272,15 +284,19 @@ For full generated typings (including property/event accessors from UI5 metadata
 
 ### Static Methods (Complete)
 
-| Method                                 | Returns             | Description                                                                  |
-| -------------------------------------- | ------------------- | ---------------------------------------------------------------------------- |
-| `registerLayout(name, definition)`     | `void`              | Register a custom layout. Built-in layouts cannot be overwritten.            |
-| `getRegisteredLayout(name)`            | `LayoutDefinition?` | Get the definition for a layout name, or `undefined`.                        |
-| `getRegisteredLayoutNames()`           | `string[]`          | List all registered layout names (built-in + custom).                        |
-| `isBuiltInLayout(name)`                | `boolean`           | Whether the given name is a built-in layout.                                 |
-| `getLocaleLayout()`                    | `string`            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`. |
-| `registerLocaleLayout(locale, layout)` | `void`              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.        |
-| `getKeyIcon(keyValue)`                 | `string?`           | Default icon URI for a special key value, or `undefined` if none.            |
+| Method                                 | Returns             | Description                                                                   |
+| -------------------------------------- | ------------------- | ----------------------------------------------------------------------------- |
+| `registerLayout(name, definition)`     | `void`              | Register a custom layout. Built-in layouts cannot be overwritten.             |
+| `unregisterLayout(name)`               | `void`              | Remove a previously registered custom layout. Built-in layouts are protected. |
+| `resetCustomLayouts()`                 | `void`              | Remove all custom layouts and keep built-in layouts.                          |
+| `getRegisteredLayout(name)`            | `LayoutDefinition?` | Get the definition for a layout name, or `undefined`.                         |
+| `getRegisteredLayoutNames()`           | `string[]`          | List all registered layout names (built-in + custom).                         |
+| `isBuiltInLayout(name)`                | `boolean`           | Whether the given name is a built-in layout.                                  |
+| `getLocaleLayout()`                    | `string`            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.  |
+| `registerLocaleLayout(locale, layout)` | `void`              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.         |
+| `unregisterLocaleLayout(locale)`       | `void`              | Remove one locale-to-layout mapping.                                          |
+| `resetLocaleLayouts()`                 | `void`              | Reset locale mappings to built-in defaults.                                   |
+| `getKeyIcon(keyValue)`                 | `string?`           | Default icon URI for a special key value, or `undefined` if none.             |
 
 ---
 

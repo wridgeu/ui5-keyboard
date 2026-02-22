@@ -13,11 +13,15 @@ import { KEY_ID_SUFFIX_RE, keyElementId, resolveInputOrTextarea } from "./intern
 import { KeyboardType, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
+  unregisterLayout as registryUnregisterLayout,
+  resetCustomLayouts as registryResetCustomLayouts,
   getRegisteredLayout as registryGetLayout,
   getLayoutOrDefault as registryGetLayoutOrDefault,
   getRegisteredLayoutNames as registryGetLayoutNames,
   isBuiltInLayout as registryIsBuiltIn,
   registerLocaleLayout as registryRegisterLocale,
+  unregisterLocaleLayout as registryUnregisterLocale,
+  resetLocaleLayouts as registryResetLocales,
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
@@ -407,6 +411,16 @@ export default class KioskKeyboard extends Control {
     registryRegisterLayout(sName, oDefinition);
   }
 
+  /** @see {@link unregisterLayout} in `internal/layout-registry.ts` */
+  static unregisterLayout(sName: string): void {
+    registryUnregisterLayout(sName);
+  }
+
+  /** @see {@link resetCustomLayouts} in `internal/layout-registry.ts` */
+  static resetCustomLayouts(): void {
+    registryResetCustomLayouts();
+  }
+
   /** @see {@link getRegisteredLayout} in `internal/layout-registry.ts` */
   static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
     return registryGetLayout(sName);
@@ -425,6 +439,16 @@ export default class KioskKeyboard extends Control {
   /** @see {@link registerLocaleLayout} in `internal/layout-registry.ts` */
   static registerLocaleLayout(sLocale: string, sLayout: string): void {
     registryRegisterLocale(sLocale, sLayout);
+  }
+
+  /** @see {@link unregisterLocaleLayout} in `internal/layout-registry.ts` */
+  static unregisterLocaleLayout(sLocale: string): void {
+    registryUnregisterLocale(sLocale);
+  }
+
+  /** @see {@link resetLocaleLayouts} in `internal/layout-registry.ts` */
+  static resetLocaleLayouts(): void {
+    registryResetLocales();
   }
 
   /** @see {@link getLocaleLayout} in `internal/layout-registry.ts` */

@@ -9,10 +9,12 @@ const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(Object.keys(layouts));
 
 const FORBIDDEN_KEYS: ReadonlySet<string> = new Set(["__proto__", "prototype", "constructor"]);
 
-/** BCP-47 language prefix -> layout name. Checked after exact match. */
-const LOCALE_LAYOUT_MAP: Record<string, string> = Object.assign(Object.create(null), {
+const DEFAULT_LOCALE_LAYOUT_MAP: Readonly<Record<string, string>> = Object.freeze({
   de: "qwertz-de",
 });
+
+/** BCP-47 language prefix -> layout name. Checked after exact match. */
+const LOCALE_LAYOUT_MAP: Record<string, string> = Object.assign(Object.create(null), DEFAULT_LOCALE_LAYOUT_MAP);
 
 function isSafeMapKey(key: string): boolean {
   return key.length > 0 && !FORBIDDEN_KEYS.has(key);
@@ -75,6 +77,37 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
 }
 
 /**
+ * Removes a previously registered custom layout.
+ * Built-in layouts cannot be removed.
+ */
+export function unregisterLayout(sName: string): void {
+  const name = sName.toLowerCase();
+
+  if (!isSafeMapKey(name)) {
+    Log.warning(`Invalid layout name "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
+    return;
+  }
+
+  if (BUILTIN_LAYOUTS.has(name)) {
+    Log.warning(`Cannot remove built-in layout "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
+    return;
+  }
+
+  delete layouts[name];
+}
+
+/**
+ * Removes all custom layouts and keeps built-in layouts intact.
+ */
+export function resetCustomLayouts(): void {
+  for (const layoutName of Object.keys(layouts)) {
+    if (!BUILTIN_LAYOUTS.has(layoutName)) {
+      delete layouts[layoutName];
+    }
+  }
+}
+
+/**
  * Returns the layout definition for the given name, or undefined
  * if no such layout is registered.
  */
@@ -128,6 +161,30 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
   }
 
   LOCALE_LAYOUT_MAP[locale] = layout;
+}
+
+/**
+ * Removes a locale -> layout mapping.
+ */
+export function unregisterLocaleLayout(sLocale: string): void {
+  const locale = sLocale.toLowerCase();
+
+  if (!isSafeMapKey(locale)) {
+    Log.warning(`Invalid locale map key "${locale}".`, undefined, "ui5.kiosk.KioskKeyboard");
+    return;
+  }
+
+  delete LOCALE_LAYOUT_MAP[locale];
+}
+
+/**
+ * Resets locale mappings to the built-in defaults.
+ */
+export function resetLocaleLayouts(): void {
+  for (const key of Object.keys(LOCALE_LAYOUT_MAP)) {
+    delete LOCALE_LAYOUT_MAP[key];
+  }
+  Object.assign(LOCALE_LAYOUT_MAP, DEFAULT_LOCALE_LAYOUT_MAP);
 }
 
 /**
