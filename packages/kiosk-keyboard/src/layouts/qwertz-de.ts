@@ -16,7 +16,6 @@ const qwertzDe: LayoutDefinition = [
     {
       value: "{backspace}",
       label: "",
-      icon: "sap-icon://arrow-left",
       width: "2",
       type: "action",
     },
@@ -53,7 +52,6 @@ const qwertzDe: LayoutDefinition = [
   [
     {
       value: "{shift}",
-      label: "Shift",
       width: "1.75",
       type: "modifier",
     },
@@ -67,7 +65,6 @@ const qwertzDe: LayoutDefinition = [
     { value: "\u00DF", shiftLabel: "?", shiftValue: "?" },
     {
       value: "{enter}",
-      label: "Enter",
       width: "1.75",
       type: "action",
     },
@@ -81,7 +78,7 @@ const qwertzDe: LayoutDefinition = [
       type: "modifier",
     },
     { value: ",", shiftLabel: ";", shiftValue: ";" },
-    { value: " ", label: "Space", width: "space", type: "space" },
+    { value: " ", width: "space", type: "space" },
     { value: ".", shiftLabel: ":", shiftValue: ":" },
     {
       value: "{layout:fkeys}",

@@ -10,7 +10,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n";
 import { KEY_ID_SUFFIX_RE, keyElementId, resolveInputOrTextarea } from "./internal/dom";
-import { KeyboardType, MobileKeyboard, FKeyMode } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
   getRegisteredLayout as registryGetLayout,
@@ -70,6 +70,8 @@ export default class KioskKeyboard extends Control {
   declare private _autoShowActive: boolean;
   declare private _inputFocusDelegation: InputFocusDelegation;
   declare private _registeredInputIds: Set<string>;
+  declare private _resolvedInputControlIds: Set<string>;
+  declare private _hasUnresolvedInputIds: boolean;
   declare private _keyHighlightDelegation: KeyHighlightDelegation;
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
@@ -223,9 +225,11 @@ export default class KioskKeyboard extends Control {
        * Controls how virtual F-key taps are handled.
        *
        * - `"Virtual"` (default): fire `keyPress` only. The app decides what to do.
-       * - `"Native"`: dispatch a synthetic `keydown` (`F1`-`F12`) to the
-       *   current target element (or document fallback). If not canceled,
-       *   built-in native actions run for selected keys (`F5`, `F11`).
+       * - `"Native"`: dispatch a synthetic `keydown` for standard
+       *   function/navigation keys (`F1`-`F12`, arrows, `Home`/`End`,
+       *   `PageUp`/`PageDown`) to the current target element (or document
+       *   fallback). If not canceled, built-in native actions run for
+       *   selected keys (`F5`, `F11`).
        */
       fKeyMode: {
         type: "ui5.kiosk.FKeyMode",
@@ -381,6 +385,12 @@ export default class KioskKeyboard extends Control {
     },
   };
 
+  /** Tracks unsupported native F-key names already warned about. */
+  private static readonly _WARNED_UNSUPPORTED_NATIVE_FKEYS = new Set<string>();
+
+  /** Internal set used for O(1) native-dispatch allowlist checks. */
+  private static readonly _NATIVE_DISPATCHABLE_FKEYS = new Set<string>(NativeDispatchableKeyNames);
+
   // ──────────────────────────────────────────────
   // Static delegates — layout registry (see internal/layout-registry.ts)
   // ──────────────────────────────────────────────
@@ -440,6 +450,8 @@ export default class KioskKeyboard extends Control {
     this._boundFocusIn = this._onDocumentFocusIn.bind(this);
     this._boundFocusOut = this._onDocumentFocusOut.bind(this);
     this._registeredInputIds = new Set();
+    this._resolvedInputControlIds = new Set();
+    this._hasUnresolvedInputIds = false;
     this._inputFocusDelegation = {
       onfocusin: () => {
         const active = Element.getActiveElement();
@@ -469,7 +481,7 @@ export default class KioskKeyboard extends Control {
     this._deferredFocusOutCloseId = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getInputIds(),
-      (id) => this._findControlById(id),
+      () => this._resolvedInputControlIds,
       () => this._shouldDeferToNative(),
       (id) => this._isTargetOfOther(id),
     );
@@ -488,11 +500,9 @@ export default class KioskKeyboard extends Control {
   onAfterRendering(): void {
     const dom = this.getDomRef();
 
-    if (this.getDocked()) {
-      // Sync the open/closed CSS class (renderer sets initial state,
-      // but show()/close() bypass re-render for smooth animation)
-      dom?.classList.toggle("ui5KioskKeyboard--closed", !this._open);
+    this._syncDockedDomState();
 
+    if (this.getDocked()) {
       // Activate auto-show listeners if the property was set declaratively
       // (e.g. via XML) before the control was rendered.
       if (this.getAutoShow() && !this._autoShowActive) {
@@ -500,25 +510,42 @@ export default class KioskKeyboard extends Control {
       }
     }
 
+    this._syncStableHeight(dom as HTMLElement | null);
+
+    this._setupInputIds();
+  }
+
+  /** Keeps docked/closed root classes in sync without forcing a re-render. */
+  private _syncDockedDomState(): void {
+    const dom = this.getDomRef();
+    if (!dom) return;
+
+    const docked = this.getDocked();
+    dom.classList.toggle("ui5KioskKeyboard--docked", docked);
+    dom.classList.toggle("ui5KioskKeyboard--closed", docked && !this._open);
+  }
+
+  /** Updates stable-height minHeight based on current mode and measured height. */
+  private _syncStableHeight(dom: HTMLElement | null): void {
     // Opt-in stable height: maintain consistent minHeight across layout
-    // switches for non-docked Full keyboards.  Prevents layout shifts in
+    // switches for non-docked Full keyboards. Prevents layout shifts in
     // Popover scenarios and works around a sap.m.Popover bug where
     // content-height changes trigger a spurious close.
     // Docked keyboards are excluded: they pin to the viewport edge so
     // minimising their footprint is more valuable than preventing shifts.
     if (dom && this.getStableHeight() && this.getKeyboardType() === KeyboardType.Full && !this.getDocked()) {
-      const el = dom as HTMLElement;
-      const h = el.getBoundingClientRect().height;
-      if (h > (this._maxHeight || 0)) {
+      const h = dom.getBoundingClientRect().height;
+      if (h > this._maxHeight) {
         this._maxHeight = h;
       }
-      el.style.minHeight = `${this._maxHeight}px`;
-    } else if (dom) {
-      (dom as HTMLElement).style.minHeight = "";
-      this._maxHeight = 0;
+      dom.style.minHeight = `${this._maxHeight}px`;
+      return;
     }
 
-    this._setupInputIds();
+    if (dom) {
+      dom.style.minHeight = "";
+    }
+    this._maxHeight = 0;
   }
 
   exit(): void {
@@ -635,7 +662,7 @@ export default class KioskKeyboard extends Control {
    * auto-show document listeners via enableAutoShow/disableAutoShow.
    */
   setAutoShow(bAutoShow: boolean): this {
-    this.setProperty("autoShow", bAutoShow);
+    this.setProperty("autoShow", bAutoShow, true);
     if (bAutoShow) {
       this._enableAutoShow();
     } else {
@@ -693,13 +720,21 @@ export default class KioskKeyboard extends Control {
    * rather than re-rendering (which would disrupt transitions).
    */
   setDocked(bDocked: boolean): this {
-    if (this.getDocked() && !bDocked && this._open) {
+    const wasDocked = this.getDocked();
+    if (wasDocked === bDocked) return this;
+
+    if (wasDocked && !bDocked && this._open) {
       this.close();
     }
-    if (!this.getDocked() && bDocked) {
+
+    if (!wasDocked && bDocked) {
       this._open = false;
     }
-    return this.setProperty("docked", bDocked);
+
+    this.setProperty("docked", bDocked, true);
+    this._syncDockedDomState();
+    this._syncStableHeight(this.getDomRef() as HTMLElement | null);
+    return this;
   }
 
   /** Opens the keyboard (docked mode). Slides it into view. */
@@ -794,6 +829,8 @@ export default class KioskKeyboard extends Control {
   private _setupInputIds(): void {
     const ids = this.getInputIds();
     const nextIds = new Set(ids);
+    const resolvedControlIds = new Set<string>();
+    let hasUnresolved = false;
 
     // Remove delegates for IDs no longer in the list
     for (const oldId of this._registeredInputIds) {
@@ -806,12 +843,22 @@ export default class KioskKeyboard extends Control {
 
     // Add delegates for new IDs
     for (const inputId of ids) {
-      if (this._registeredInputIds.has(inputId)) continue;
       const control = this._findControlById(inputId);
-      if (!control) continue;
+      if (!control) {
+        hasUnresolved = true;
+        this._registeredInputIds.delete(inputId);
+        continue;
+      }
+
+      resolvedControlIds.add(control.getId());
+
+      if (this._registeredInputIds.has(inputId)) continue;
       control.addEventDelegate(this._inputFocusDelegation);
       this._registeredInputIds.add(inputId);
     }
+
+    this._resolvedInputControlIds = resolvedControlIds;
+    this._hasUnresolvedInputIds = hasUnresolved;
   }
 
   private _teardownInputIds(): void {
@@ -820,6 +867,8 @@ export default class KioskKeyboard extends Control {
       if (control) control.removeEventDelegate(this._inputFocusDelegation);
     }
     this._registeredInputIds.clear();
+    this._resolvedInputControlIds.clear();
+    this._hasUnresolvedInputIds = false;
   }
 
   private _findControlById(targetId: string): Control | null {
@@ -915,6 +964,7 @@ export default class KioskKeyboard extends Control {
 
   /** Default icons for special keys — used when the key has no explicit icon. */
   static readonly SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
+    "{backspace}": "sap-icon://arrow-left",
     "{shift}": "sap-icon://arrow-top",
     "{enter}": "sap-icon://accept",
   };
@@ -1103,6 +1153,10 @@ export default class KioskKeyboard extends Control {
 
     this._cancelDeferredFocusOutClose();
 
+    if (this._hasUnresolvedInputIds) {
+      this._setupInputIds();
+    }
+
     const target = event.target as HTMLElement;
 
     // Ignore focus on the keyboard itself
@@ -1221,9 +1275,22 @@ export default class KioskKeyboard extends Control {
       let nativeAllowed = true;
 
       if (this.getFKeyMode() === FKeyMode.Native) {
-        nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shift);
-        if (nativeAllowed) {
-          KioskKeyboard._executeNativeFKeyAction(fkeyName);
+        if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
+          nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shift);
+          if (nativeAllowed) {
+            KioskKeyboard._executeNativeFKeyAction(fkeyName);
+          }
+        } else {
+          nativeAllowed = false;
+          if (!KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.has(fkeyName)) {
+            KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.add(fkeyName);
+            Log.warning(
+              `Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
+                "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
+              undefined,
+              "ui5.kiosk.KioskKeyboard",
+            );
+          }
         }
       }
 
@@ -1427,6 +1494,10 @@ export default class KioskKeyboard extends Control {
 
   private static _executeNativeFKeyAction(fkeyName: string): void {
     KioskKeyboard._NATIVE_FKEY_ACTIONS[fkeyName]?.();
+  }
+
+  private static _isNativeDispatchableFKey(fkeyName: string): boolean {
+    return KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(fkeyName);
   }
 
   /**

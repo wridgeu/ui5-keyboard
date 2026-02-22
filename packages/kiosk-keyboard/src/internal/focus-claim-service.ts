@@ -20,7 +20,7 @@ export default class FocusClaimService {
 
   constructor(
     private readonly getInputIds: () => string[],
-    private readonly findControlById: (id: string) => Control | null,
+    private readonly getResolvedInputControlIds: () => ReadonlySet<string>,
     private readonly shouldDeferToNative: () => boolean,
     private readonly isTargetOfOther: (inputId: string) => boolean,
   ) {}
@@ -47,11 +47,8 @@ export default class FocusClaimService {
   }
 
   resolveInputIdsAncestor(candidate: Control): Control | null {
-    const resolvedIds = new Set<string>();
-    for (const inputId of this.getInputIds()) {
-      const control = this.findControlById(inputId);
-      if (control) resolvedIds.add(control.getId());
-    }
+    const resolvedIds = this.getResolvedInputControlIds();
+    if (resolvedIds.size === 0) return null;
 
     for (let parent: ManagedObject | null = candidate; parent; parent = parent.getParent()) {
       if (parent instanceof Control && resolvedIds.has(parent.getId())) return parent;

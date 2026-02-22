@@ -23,7 +23,7 @@ const fkeys: LayoutDefinition = [
   [
     { value: "{layout:base}", label: "ABC", width: "1.5", type: "modifier" },
     { value: "{layout:nav}", label: "Nav", width: "1.5", type: "modifier" },
-    { value: "{enter}", label: "Enter", width: "1.5", type: "action" },
+    { value: "{enter}", width: "1.5", type: "action" },
   ],
 ];
 

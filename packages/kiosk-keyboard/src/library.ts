@@ -147,6 +147,38 @@ export const KeyName = Object.freeze({
   PageDown: "PageDown",
 } as const);
 
+/**
+ * Keys that are allowed for synthetic native `keydown` dispatch in
+ * `fKeyMode="Native"`.
+ *
+ * Custom `{fkey:...}` names still fire `keyPress`, but are intentionally
+ * excluded from native dispatch and native action execution.
+ *
+ * @public
+ */
+export const NativeDispatchableKeyNames = Object.freeze([
+  KeyName.F1,
+  KeyName.F2,
+  KeyName.F3,
+  KeyName.F4,
+  KeyName.F5,
+  KeyName.F6,
+  KeyName.F7,
+  KeyName.F8,
+  KeyName.F9,
+  KeyName.F10,
+  KeyName.F11,
+  KeyName.F12,
+  KeyName.ArrowLeft,
+  KeyName.ArrowRight,
+  KeyName.ArrowUp,
+  KeyName.ArrowDown,
+  KeyName.Home,
+  KeyName.End,
+  KeyName.PageUp,
+  KeyName.PageDown,
+] as const);
+
 // ──────────────────────────────────────────────
 // UI5 Enum Registration
 // ──────────────────────────────────────────────

@@ -3346,8 +3346,8 @@ QUnit.test('getKeyIcon: {enter} \u2192 "sap-icon://accept"', (assert) => {
   assert.strictEqual(KioskKeyboard.getKeyIcon("{enter}"), "sap-icon://accept");
 });
 
-QUnit.test("getKeyIcon: {backspace} \u2192 undefined", (assert) => {
-  assert.strictEqual(KioskKeyboard.getKeyIcon("{backspace}"), undefined);
+QUnit.test('getKeyIcon: {backspace} \u2192 "sap-icon://arrow-left"', (assert) => {
+  assert.strictEqual(KioskKeyboard.getKeyIcon("{backspace}"), "sap-icon://arrow-left");
 });
 
 QUnit.test('getKeyIcon: "a" \u2192 undefined', (assert) => {

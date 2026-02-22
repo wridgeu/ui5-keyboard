@@ -10,14 +10,12 @@ const numpad: LayoutDefinition = [
     {
       value: "{backspace}",
       label: "",
-      icon: "sap-icon://arrow-left",
       type: "action",
     },
   ],
   [
     {
       value: "{enter}",
-      label: "Enter",
       width: "space",
       type: "action",
     },

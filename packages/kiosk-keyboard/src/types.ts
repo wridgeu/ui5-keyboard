@@ -157,7 +157,7 @@ export interface KeyDefinition {
    * set this property):
    * - `{shift}` — `sap-icon://arrow-top` (Caps Lock uses `sap-icon://locked`)
    * - `{enter}` — `sap-icon://accept`
-   * - `{backspace}` — set explicitly in built-in layouts as `sap-icon://arrow-left`
+   * - `{backspace}` — `sap-icon://arrow-left`
    *
    * To override a default icon, set this property to a different icon URI.
    *
@@ -200,7 +200,7 @@ export type KeyRow = KeyDefinition[];
  *   [{ value: "4" }, { value: "5" }, { value: "6" }],
  *   [{ value: "7" }, { value: "8" }, { value: "9" }],
  *   [
- *     { value: "{backspace}", label: "", icon: "sap-icon://arrow-left", type: "action" },
+ *     { value: "{backspace}", label: "", type: "action" },
  *     { value: "0" },
  *     { value: "{enter}", label: "OK", type: "action" },
  *   ],

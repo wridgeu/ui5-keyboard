@@ -43,7 +43,6 @@ const numeric: LayoutDefinition = [
     {
       value: "{backspace}",
       label: "",
-      icon: "sap-icon://arrow-left",
       width: "2.25",
       type: "action",
     },
@@ -56,10 +55,9 @@ const numeric: LayoutDefinition = [
       width: "1.5",
       type: "modifier",
     },
-    { value: " ", label: "Space", width: "space", type: "space" },
+    { value: " ", width: "space", type: "space" },
     {
       value: "{enter}",
-      label: "Enter",
       width: "1.5",
       type: "action",
     },
