@@ -4,3 +4,4 @@ These documents describe forward-looking design ideas and may diverge from the c
 
 - [Backward Compatibility](./BACKWARD-COMPATIBILITY.md)
 - [Tab and Done Keys](./TAB-AND-DONE-KEYS.md)
+- [i18n Extensibility](./I18N-EXTENSIBILITY.md)
