@@ -2204,6 +2204,18 @@ QUnit.test("registerLayout rejects overwrite of built-in layout", (assert) => {
   assert.deepEqual(after, original, "Built-in qwerty layout was NOT overwritten");
 });
 
+QUnit.test("registerLayout rejects forbidden map keys", (assert) => {
+  for (const name of ["__proto__", "prototype", "constructor"]) {
+    KioskKeyboard.registerLayout(name, [[{ value: "x" }]]);
+    assert.strictEqual(KioskKeyboard.getRegisteredLayout(name), undefined, `Forbidden key "${name}" was rejected`);
+  }
+
+  const names = KioskKeyboard.getRegisteredLayoutNames();
+  assert.notOk(names.includes("__proto__"), "Forbidden key __proto__ is not listed");
+  assert.notOk(names.includes("prototype"), "Forbidden key prototype is not listed");
+  assert.notOk(names.includes("constructor"), "Forbidden key constructor is not listed");
+});
+
 // ──────────────────────────────────────────────
 // Feature 1: Locale-based default layout
 // ──────────────────────────────────────────────
@@ -2256,6 +2268,30 @@ QUnit.test("registerLocaleLayout extends the locale map", (assert) => {
     assert.strictEqual(KioskKeyboard.getLocaleLayout(), "test-locale-layout", "Custom locale maps to custom layout");
   } finally {
     Localization.setLanguage(currentLang);
+  }
+});
+
+QUnit.test("registerLocaleLayout rejects forbidden locale keys", (assert) => {
+  const localization = Localization as unknown as {
+    getLanguageTag: () => { language: string; region?: string | null };
+  };
+  const originalGetLanguageTag = localization.getLanguageTag;
+
+  for (const locale of ["__proto__", "prototype", "constructor"]) {
+    KioskKeyboard.registerLocaleLayout(locale, "qwertz-de");
+  }
+
+  try {
+    localization.getLanguageTag = () => ({ language: "__proto__", region: undefined });
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Forbidden locale key __proto__ is ignored");
+
+    localization.getLanguageTag = () => ({ language: "prototype", region: undefined });
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Forbidden locale key prototype is ignored");
+
+    localization.getLanguageTag = () => ({ language: "constructor", region: undefined });
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Forbidden locale key constructor is ignored");
+  } finally {
+    localization.getLanguageTag = originalGetLanguageTag;
   }
 });
 
