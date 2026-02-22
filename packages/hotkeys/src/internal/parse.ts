@@ -18,47 +18,35 @@ import type { CanonicalModifier, ParsedHotkey } from "../types";
  * @throws Error if the hotkey string is empty or contains no non-modifier key.
  */
 export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
-  if (!hotkey) {
+  if (!hotkey?.trim()) {
     throw new Error("Hotkey string must not be empty");
   }
 
   const p = platform ?? detectPlatform();
 
-  // Split on "+" then detect literal "+" from the resulting empty strings.
-  //
-  // Examples:
-  //   "Ctrl+Shift+S"  → ["Ctrl", "Shift", "S"]         → key = "S"
-  //   "+"             → ["", ""]                        → trailing empty  → key = "+"
-  //   "Ctrl++"        → ["Ctrl", "", ""]                → two trailing empties → key = "+"
-  //   "Ctrl+Shift++"  → ["Ctrl", "Shift", "", ""]       → two trailing empties → key = "+"
-  //
-  // The trailing-empty check is intentionally position-dependent: only the
-  // last one or two empty segments are interpreted as a literal "+".  Leading
-  // or interior empty segments (which would indicate consecutive delimiters
-  // with no modifier between them, e.g. "++S") are skipped/ignored.
-  const parts = hotkey.split("+");
+  const rawParts = hotkey.split("+").map((part) => part.trim());
+  let parts: string[] = rawParts;
+  let trailingPlusKey = false;
+
+  // Standalone plus key: "+"
+  if (rawParts.length === 2 && rawParts[0] === "" && rawParts[1] === "") {
+    parts = [];
+    trailingPlusKey = true;
+  } else if (rawParts.length >= 3 && rawParts[rawParts.length - 1] === "" && rawParts[rawParts.length - 2] === "") {
+    // Plus key with modifiers: "Ctrl++", "Ctrl+Shift++"
+    parts = rawParts.slice(0, -2);
+    trailingPlusKey = true;
+    if (parts.some((part) => part === "")) {
+      throw new Error(`Invalid hotkey "${hotkey}": malformed "+" separators`);
+    }
+  } else if (rawParts.some((part) => part === "")) {
+    throw new Error(`Invalid hotkey "${hotkey}": malformed "+" separators`);
+  }
 
   const modifiers = new Set<CanonicalModifier>();
   let key: string | null = null;
 
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i].trim();
-
-    // Trailing empty → literal "+" key (e.g. "+" → ["", ""])
-    if (part === "" && i === parts.length - 1) {
-      key = "+";
-      continue;
-    }
-    // Two trailing empties → literal "+" with modifier (e.g. "Ctrl++" → ["Ctrl", "", ""])
-    if (part === "" && i > 0 && i === parts.length - 2 && parts[i + 1] === "") {
-      key = "+";
-      break;
-    }
-    // Interior empty (e.g. leading "+" or typo) — skip
-    if (part === "") {
-      continue;
-    }
-
+  for (const part of parts) {
     const modAlias = MODIFIER_ALIASES[part];
     if (modAlias) {
       const resolved = resolveModifier(modAlias, p);
@@ -68,6 +56,13 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
     } else {
       throw new Error(`Invalid hotkey "${hotkey}": unexpected segment "${part}" after key "${key}"`);
     }
+  }
+
+  if (trailingPlusKey) {
+    if (key !== null) {
+      throw new Error(`Invalid hotkey "${hotkey}": multiple non-modifier keys`);
+    }
+    key = "+";
   }
 
   if (key === null) {

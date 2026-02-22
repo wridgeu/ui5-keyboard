@@ -86,6 +86,18 @@ QUnit.test("Throws on modifier-only", (assert) => {
   assert.throws(() => parseHotkey("Ctrl+Shift", "windows"), /no non-modifier key/);
 });
 
+QUnit.test("Throws on malformed separators (Ctrl++S)", (assert) => {
+  assert.throws(() => parseHotkey("Ctrl++S", "windows"), /malformed "\+" separators/);
+});
+
+QUnit.test("Throws on malformed separators (++S)", (assert) => {
+  assert.throws(() => parseHotkey("++S", "windows"), /malformed "\+" separators/);
+});
+
+QUnit.test("Throws when multiple keys are provided (A++)", (assert) => {
+  assert.throws(() => parseHotkey("A++", "windows"), /multiple non-modifier keys/);
+});
+
 QUnit.module("parse - normalizeHotkey");
 
 QUnit.test("Normalizes modifier order", (assert) => {

@@ -114,6 +114,24 @@ QUnit.test("Overlapping sequences: G E vs G G", (assert) => {
   assert.notOk(geCalled, "G E sequence did not fire");
 });
 
+QUnit.test("Repeated keydown does not advance duplicate-key sequence", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.registerSequence(["G", "G"], () => {
+    called = true;
+  });
+
+  fireKey("g");
+  clock.tick(20);
+  fireKey("g", { repeat: true });
+
+  assert.notOk(called, "Repeated keydown from a held key does not complete sequence");
+
+  fireKey("g");
+  assert.ok(called, "A new non-repeat keydown completes sequence");
+});
+
 QUnit.test("Scope filtering", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;

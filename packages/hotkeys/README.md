@@ -306,6 +306,14 @@ onExit(): void {
 
 Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle` — `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 
+Lifecycle guidance (UI5):
+
+- **Controller (`onInit`/`onExit`)**: create one group in `onInit()`, register through it, call `destroyAll()` in `onExit()`.
+  This only unregisters entries that were created through that specific group; other groups stay active.
+- **View lifecycle**: if a view/controller is recreated by routing, do not reuse old groups/handles across instances.
+- **Component lifecycle**: call `HotkeyManager.getInstance().destroy()` in `Component.destroy()` to release listeners and invalidate all existing handles/groups.
+- **After manager destroy**: old handles/groups are intentionally inactive; create fresh registrations from the new manager instance.
+
 ### Scope Management
 
 The scope stack determines which hotkeys are active. Global hotkeys always fire as a fallback.

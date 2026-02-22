@@ -643,6 +643,31 @@ QUnit.test("destroy is idempotent (safe to call twice)", (assert) => {
   assert.strictEqual(fresh.getActiveScope(), "__global__", "Scope stack clean after double destroy");
 });
 
+QUnit.test("destroy invalidates hotkey and sequence handles", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const hotkeyHandle = manager.register("Escape", () => {});
+  const sequenceHandle = manager.registerSequence(["G", "E"], () => {});
+
+  assert.ok(hotkeyHandle.isActive, "Hotkey handle starts active");
+  assert.ok(sequenceHandle.isActive, "Sequence handle starts active");
+
+  manager.destroy();
+
+  assert.notOk(hotkeyHandle.isActive, "Hotkey handle is inactive after manager destroy");
+  assert.notOk(sequenceHandle.isActive, "Sequence handle is inactive after manager destroy");
+
+  assert.throws(
+    () => hotkeyHandle.setOptions({ enabled: false }),
+    /unregistered/,
+    "setOptions throws on hotkey handle after manager destroy",
+  );
+  assert.throws(
+    () => sequenceHandle.setOptions({ enabled: false }),
+    /unregistered/,
+    "setOptions throws on sequence handle after manager destroy",
+  );
+});
+
 // ──────────────────────────────────────────────
 // preventDefault / stopPropagation
 // ──────────────────────────────────────────────

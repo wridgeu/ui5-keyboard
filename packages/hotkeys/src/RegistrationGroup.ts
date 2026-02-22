@@ -14,6 +14,11 @@ import type {
  * Created via `HotkeyManager.createGroup()`. Tracks all registrations made
  * through it, enabling single-call cleanup via `destroyAll()`.
  *
+ * Lifecycle behavior:
+ * - Calling `destroyAll()` finalizes the group (idempotent).
+ * - `HotkeyManager.destroy()` also finalizes all groups created from that manager.
+ *   This prevents stale group/handle reuse across Component recreation.
+ *
  * Recommended for controller code where registrations should be cleaned up
  * in `onExit()`:
  *
@@ -36,9 +41,11 @@ export default class RegistrationGroup {
   private _handles: HotkeyRegistrationHandle[] = [];
   private _sequenceHandles: SequenceRegistrationHandle[] = [];
   private _destroyed = false;
+  private _onDispose: (() => void) | null;
 
-  constructor(manager: HotkeyManager) {
+  constructor(manager: HotkeyManager, onDispose?: () => void) {
     this._manager = manager;
+    this._onDispose = onDispose ?? null;
   }
 
   register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle {
@@ -61,6 +68,8 @@ export default class RegistrationGroup {
 
   /** Unregister all tracked handles. Safe to call multiple times. */
   destroyAll(): void {
+    if (this._destroyed) return;
+
     for (const h of this._handles) {
       if (h.isActive) h.unregister();
     }
@@ -70,6 +79,16 @@ export default class RegistrationGroup {
     }
     this._sequenceHandles = [];
     this._destroyed = true;
+    this._dispose();
+  }
+
+  /** @internal Called by HotkeyManager.destroy() to finalize lifecycle-bound groups. */
+  _onManagerDestroy(): void {
+    if (this._destroyed) return;
+    this._handles = [];
+    this._sequenceHandles = [];
+    this._destroyed = true;
+    this._dispose();
   }
 
   /** Whether destroyAll() has been called. */
@@ -80,5 +99,10 @@ export default class RegistrationGroup {
   /** Number of active registrations (hotkeys + sequences) in this group. */
   get size(): number {
     return this._handles.filter((h) => h.isActive).length + this._sequenceHandles.filter((h) => h.isActive).length;
+  }
+
+  private _dispose(): void {
+    this._onDispose?.();
+    this._onDispose = null;
   }
 }

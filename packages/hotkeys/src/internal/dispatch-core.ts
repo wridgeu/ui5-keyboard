@@ -1,8 +1,8 @@
 import Log from "sap/base/Log";
 import { UnhandledReason } from "../library";
-import { matchesKeyboardEvent } from "../match";
-import { resolveIgnoreInputs } from "../dom";
-import { GLOBAL_SCOPE } from "../constants";
+import { matchesKeyboardEvent } from "./match";
+import { resolveIgnoreInputs } from "./dom";
+import { GLOBAL_SCOPE } from "./constants";
 import type { HotkeyRegistration, HotkeyRegistrationInfo } from "../types";
 import { recordSkip, type DebugSkipEntry, type SkipInfo } from "./skip-reason";
 
@@ -10,9 +10,7 @@ interface FindMatchOptions {
   event: KeyboardEvent;
   isInput: boolean;
   popupOpen: boolean;
-  targetScope: string;
-  targetElement: EventTarget | null;
-  registrations: ReadonlyMap<string, HotkeyRegistration>;
+  registrations: ReadonlyArray<HotkeyRegistration>;
   skipInfo?: SkipInfo | null;
   debugSkips?: DebugSkipEntry[] | null;
   toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo;
@@ -23,29 +21,10 @@ interface FindMatchOptions {
  * Find first matching registration for a specific scope.
  */
 export function findMatchInScope(options: FindMatchOptions): HotkeyRegistration | null {
-  const {
-    event,
-    isInput,
-    popupOpen,
-    targetScope,
-    targetElement,
-    registrations,
-    skipInfo,
-    debugSkips,
-    toRegistrationInfo,
-    logComponent,
-  } = options;
+  const { event, isInput, popupOpen, registrations, skipInfo, debugSkips, toRegistrationInfo, logComponent } = options;
 
-  for (const registration of registrations.values()) {
+  for (const registration of registrations) {
     const opts = registration.options;
-
-    if (opts.scope !== targetScope) continue;
-
-    if (targetElement !== null) {
-      if (opts.target !== targetElement) continue;
-    } else if (opts.target !== null) {
-      continue;
-    }
 
     if (!matchesKeyboardEvent(event, registration.parsedHotkey)) continue;
 
@@ -98,7 +77,7 @@ interface ResolveMatchOptions {
   popupOpen: boolean;
   activeScope: string;
   targetElement: EventTarget | null;
-  registrations: ReadonlyMap<string, HotkeyRegistration>;
+  getScopeRegistrations: (scope: string, targetElement: EventTarget | null) => ReadonlyArray<HotkeyRegistration>;
   skipInfo?: SkipInfo | null;
   debugSkips?: DebugSkipEntry[] | null;
   toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo;
@@ -115,7 +94,7 @@ export function resolveMatchedRegistration(options: ResolveMatchOptions): Hotkey
     popupOpen,
     activeScope,
     targetElement,
-    registrations,
+    getScopeRegistrations,
     skipInfo,
     debugSkips,
     toRegistrationInfo,
@@ -127,25 +106,23 @@ export function resolveMatchedRegistration(options: ResolveMatchOptions): Hotkey
       event,
       isInput,
       popupOpen,
-      targetScope: activeScope,
-      targetElement,
-      registrations,
+      registrations: getScopeRegistrations(activeScope, targetElement),
       skipInfo,
       debugSkips,
       toRegistrationInfo,
       logComponent,
     }) ??
-    findMatchInScope({
-      event,
-      isInput,
-      popupOpen,
-      targetScope: GLOBAL_SCOPE,
-      targetElement,
-      registrations,
-      skipInfo,
-      debugSkips,
-      toRegistrationInfo,
-      logComponent,
-    })
+    (activeScope !== GLOBAL_SCOPE
+      ? findMatchInScope({
+          event,
+          isInput,
+          popupOpen,
+          registrations: getScopeRegistrations(GLOBAL_SCOPE, targetElement),
+          skipInfo,
+          debugSkips,
+          toRegistrationInfo,
+          logComponent,
+        })
+      : null)
   );
 }

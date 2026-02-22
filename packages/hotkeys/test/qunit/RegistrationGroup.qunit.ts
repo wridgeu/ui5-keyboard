@@ -80,6 +80,36 @@ QUnit.test("destroyAll unregisters all handles", (assert) => {
   assert.notOk(hotkeyCalled, "Callback does not fire after destroyAll");
 });
 
+QUnit.test("destroyAll only affects its own group", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const groupA = manager.createGroup();
+  const groupB = manager.createGroup();
+
+  let aCalled = false;
+  let bCalled = false;
+
+  groupA.register("F5", () => {
+    aCalled = true;
+  });
+  groupB.register("F6", () => {
+    bCalled = true;
+  });
+
+  assert.strictEqual(manager.getRegistrations().length, 2, "Two registrations before cleanup");
+
+  groupA.destroyAll();
+
+  assert.ok(groupA.isDestroyed, "Group A is destroyed");
+  assert.notOk(groupB.isDestroyed, "Group B remains active");
+  assert.strictEqual(manager.getRegistrations().length, 1, "Only Group A registrations were removed");
+
+  fireKey("F5");
+  fireKey("F6");
+
+  assert.notOk(aCalled, "Group A callback no longer fires");
+  assert.ok(bCalled, "Group B callback still fires");
+});
+
 QUnit.test("destroyAll is idempotent", (assert) => {
   const manager = HotkeyManager.getInstance();
   const group = manager.createGroup();
@@ -90,6 +120,26 @@ QUnit.test("destroyAll is idempotent", (assert) => {
 
   assert.ok(group.isDestroyed, "Still destroyed after second call");
   assert.strictEqual(group.size, 0, "Size is 0");
+});
+
+QUnit.test("manager destroy finalizes group lifecycle", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const group = manager.createGroup();
+
+  const hotkeyHandle = group.register("F5", () => {});
+  const sequenceHandle = group.registerSequence(["G", "I"], () => {});
+
+  manager.destroy();
+
+  assert.ok(group.isDestroyed, "Group is destroyed when manager is destroyed");
+  assert.strictEqual(group.size, 0, "Group size is 0 after manager destroy");
+  assert.notOk(hotkeyHandle.isActive, "Hotkey handle is inactive after manager destroy");
+  assert.notOk(sequenceHandle.isActive, "Sequence handle is inactive after manager destroy");
+  assert.throws(
+    () => group.register("F6", () => {}),
+    /destroyed RegistrationGroup/,
+    "Group rejects new registrations after manager destroy",
+  );
 });
 
 QUnit.test("size reflects active registrations", (assert) => {

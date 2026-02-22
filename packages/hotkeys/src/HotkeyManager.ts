@@ -39,6 +39,11 @@ const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
 
+interface ScopeRegistrationBucket {
+  document: Set<string>;
+  targets: Map<EventTarget, Set<string>>;
+}
+
 /**
  * Merge user-provided options with defaults.
  */
@@ -87,8 +92,10 @@ export default class HotkeyManager extends BaseObject {
 
   private _registrations: Map<string, HotkeyRegistration> = new Map();
   private _registrationState: Map<string, { active: boolean }> = new Map();
+  private _registrationsByScope: Map<string, ScopeRegistrationBucket> = new Map();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
+  private _groups: Set<RegistrationGroup> = new Set();
 
   // Bound handler reference for reliable addEventListener/removeEventListener pairing
   private readonly _keydownHandler = this._onKeyDown.bind(this);
@@ -176,6 +183,7 @@ export default class HotkeyManager extends BaseObject {
     this._registrations.set(id, registration);
     const state = { active: true };
     this._registrationState.set(id, state);
+    this._indexRegistration(registration);
 
     // Attach target listener if needed
     if (resolved.target) {
@@ -213,6 +221,8 @@ export default class HotkeyManager extends BaseObject {
           this._detachTargetListener(registration.options.target);
         }
 
+        this._deindexRegistration(registration);
+
         this._registrations.delete(id);
         this._registrationState.delete(id);
         Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
@@ -227,9 +237,15 @@ export default class HotkeyManager extends BaseObject {
         const opts = registration.options;
         // Special case: target swap requires listener management
         if (newOptions.target !== undefined) {
-          if (opts.target) this._detachTargetListener(opts.target);
-          opts.target = newOptions.target ?? null;
-          if (opts.target) this._attachTargetListener(opts.target);
+          const currentTarget = opts.target;
+          const nextTarget = newOptions.target ?? null;
+          if (currentTarget !== nextTarget) {
+            this._deindexRegistration(registration);
+            if (currentTarget) this._detachTargetListener(currentTarget);
+            opts.target = nextTarget;
+            if (nextTarget) this._attachTargetListener(nextTarget);
+            this._indexRegistration(registration);
+          }
         }
         // Type-safe field merge — no casts, compiler catches typos
         if (newOptions.enabled !== undefined) opts.enabled = newOptions.enabled;
@@ -253,7 +269,12 @@ export default class HotkeyManager extends BaseObject {
    * `destroyAll()` call — ideal for controller `onExit()` cleanup.
    */
   createGroup(): RegistrationGroup {
-    return new RegistrationGroup(this);
+    let group: RegistrationGroup;
+    group = new RegistrationGroup(this, () => {
+      this._groups.delete(group);
+    });
+    this._groups.add(group);
+    return group;
   }
 
   // ──────────────────────────────────────────────
@@ -573,6 +594,11 @@ export default class HotkeyManager extends BaseObject {
       this._routerCleanup = null;
     }
 
+    for (const group of this._groups) {
+      group._onManagerDestroy();
+    }
+    this._groups.clear();
+
     if (this._sequenceManager) {
       this._sequenceManager.destroy();
       this._sequenceManager = null;
@@ -582,8 +608,13 @@ export default class HotkeyManager extends BaseObject {
 
     this._listenerRegistry.detachAllTargets();
 
+    for (const state of this._registrationState.values()) {
+      state.active = false;
+    }
+
     this._registrations.clear();
     this._registrationState.clear();
+    this._registrationsByScope.clear();
     this._scopeStack = [GLOBAL_SCOPE];
     resetRuntimeCaches();
     this._unhandledCallback = null;
@@ -670,7 +701,7 @@ export default class HotkeyManager extends BaseObject {
       popupOpen,
       activeScope,
       targetElement,
-      registrations: this._registrations,
+      getScopeRegistrations: (scope, target) => this._getScopeRegistrations(scope, target),
       skipInfo,
       debugSkips,
       toRegistrationInfo: (reg) => this._toRegistrationInfo(reg),
@@ -868,6 +899,7 @@ export default class HotkeyManager extends BaseObject {
         if (reg.options.target) {
           this._detachTargetListener(reg.options.target);
         }
+        this._deindexRegistration(reg);
         const state = this._registrationState.get(reg.id);
         if (state) {
           state.active = false;
@@ -907,5 +939,73 @@ export default class HotkeyManager extends BaseObject {
       undefined,
       LOG_COMPONENT,
     );
+  }
+
+  private _getScopeBucket(scope: string): ScopeRegistrationBucket {
+    let bucket = this._registrationsByScope.get(scope);
+    if (!bucket) {
+      bucket = {
+        document: new Set<string>(),
+        targets: new Map<EventTarget, Set<string>>(),
+      };
+      this._registrationsByScope.set(scope, bucket);
+    }
+    return bucket;
+  }
+
+  private _indexRegistration(registration: HotkeyRegistration): void {
+    const bucket = this._getScopeBucket(registration.options.scope);
+    const target = registration.options.target;
+    if (target) {
+      let ids = bucket.targets.get(target);
+      if (!ids) {
+        ids = new Set<string>();
+        bucket.targets.set(target, ids);
+      }
+      ids.add(registration.id);
+      return;
+    }
+
+    bucket.document.add(registration.id);
+  }
+
+  private _deindexRegistration(registration: HotkeyRegistration): void {
+    const scope = registration.options.scope;
+    const bucket = this._registrationsByScope.get(scope);
+    if (!bucket) return;
+
+    const target = registration.options.target;
+    if (target) {
+      const ids = bucket.targets.get(target);
+      if (ids) {
+        ids.delete(registration.id);
+        if (ids.size === 0) {
+          bucket.targets.delete(target);
+        }
+      }
+    } else {
+      bucket.document.delete(registration.id);
+    }
+
+    if (bucket.document.size === 0 && bucket.targets.size === 0) {
+      this._registrationsByScope.delete(scope);
+    }
+  }
+
+  private _getScopeRegistrations(scope: string, targetElement: EventTarget | null): ReadonlyArray<HotkeyRegistration> {
+    const bucket = this._registrationsByScope.get(scope);
+    if (!bucket) return [];
+
+    const ids = targetElement === null ? bucket.document : bucket.targets.get(targetElement);
+    if (!ids || ids.size === 0) return [];
+
+    const registrations: HotkeyRegistration[] = [];
+    for (const id of ids) {
+      const registration = this._registrations.get(id);
+      if (registration) {
+        registrations.push(registration);
+      }
+    }
+    return registrations;
   }
 }

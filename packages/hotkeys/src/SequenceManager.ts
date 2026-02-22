@@ -51,6 +51,7 @@ export default class SequenceManager extends BaseObject {
   };
 
   private _registrations: Map<string, SequenceRegistration> = new Map();
+  private _registrationState: Map<string, { active: boolean }> = new Map();
   private _activeMatches: ActiveMatch[] = [];
   private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
@@ -107,6 +108,8 @@ export default class SequenceManager extends BaseObject {
     };
 
     this._registrations.set(id, registration);
+    const state = { active: true };
+    this._registrationState.set(id, state);
 
     Log.debug(
       `Registered sequence [${sequence.join(", ")}] (id: ${id}, scope: ${registration.scope})`,
@@ -114,14 +117,12 @@ export default class SequenceManager extends BaseObject {
       LOG_COMPONENT,
     );
 
-    let active = true;
-
     return {
       get id() {
         return id;
       },
       get isActive() {
-        return active;
+        return state.active;
       },
       get sequence() {
         return registration.sequence;
@@ -133,9 +134,10 @@ export default class SequenceManager extends BaseObject {
         return registration.description;
       },
       unregister: () => {
-        if (!active) return;
-        active = false;
+        if (!state.active) return;
+        state.active = false;
         this._registrations.delete(id);
+        this._registrationState.delete(id);
         // Clear any active matches for this registration
         this._activeMatches = this._activeMatches.filter((m) => {
           if (m.registration.id === id) {
@@ -146,7 +148,7 @@ export default class SequenceManager extends BaseObject {
         Log.debug(`Unregistered sequence (id: ${id})`, undefined, LOG_COMPONENT);
       },
       setOptions: (newOptions: Partial<UpdatableSequenceOptions>) => {
-        if (!active) {
+        if (!state.active) {
           throw new Error(`Cannot setOptions on unregistered sequence (id: ${id})`);
         }
         if ((newOptions as Record<string, unknown>).scope !== undefined) {
@@ -215,7 +217,11 @@ export default class SequenceManager extends BaseObject {
       if (match.timerId !== null) clearTimeout(match.timerId);
     }
     this._activeMatches = [];
+    for (const state of this._registrationState.values()) {
+      state.active = false;
+    }
     this._registrations.clear();
+    this._registrationState.clear();
     this._pendingCallback = null;
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
@@ -227,6 +233,9 @@ export default class SequenceManager extends BaseObject {
    * The caller is responsible for ignoring IME, modifier-only, and AltGr events.
    */
   processKeyEvent(event: KeyboardEvent): void {
+    // Repeated keydown events from a held key must not advance/start sequences.
+    if (event.repeat) return;
+
     const activeScope = this._scopeProvider();
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
@@ -337,7 +346,6 @@ export default class SequenceManager extends BaseObject {
       if (!this._isRegistrationEnabled(reg)) continue;
 
       if (!matchesKeyboardEvent(event, firstStep)) continue;
-      if (reg.parsedSteps.length === 1) continue;
 
       const newMatch: ActiveMatch = {
         registration: reg,

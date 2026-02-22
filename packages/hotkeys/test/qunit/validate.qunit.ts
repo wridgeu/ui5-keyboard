@@ -125,11 +125,12 @@ QUnit.test("BROWSER_SHORTCUTS has expected entries", (assert) => {
   ];
 
   assert.strictEqual(BROWSER_SHORTCUTS.size, expectedBrowserShortcuts.length, "Browser blocklist count stays exact");
-  assert.deepEqual(
-    [...BROWSER_SHORTCUTS.keys()].toSorted(),
-    [...expectedBrowserShortcuts].toSorted(),
-    "Browser blocklist keys stay exact",
-  );
+  for (const key of expectedBrowserShortcuts) {
+    assert.ok(BROWSER_SHORTCUTS.has(key), `Browser blocklist contains ${key}`);
+  }
+  for (const key of BROWSER_SHORTCUTS.keys()) {
+    assert.ok(expectedBrowserShortcuts.includes(key), `Browser blocklist has no unexpected key ${key}`);
+  }
 });
 
 QUnit.test("SAP_SHORTCUTS has expected entries", (assert) => {
@@ -152,5 +153,10 @@ QUnit.test("SAP_SHORTCUTS has expected entries", (assert) => {
   ];
 
   assert.strictEqual(SAP_SHORTCUTS.size, expectedSapShortcuts.length, "SAP blocklist count stays exact");
-  assert.deepEqual([...SAP_SHORTCUTS.keys()].toSorted(), [...expectedSapShortcuts].toSorted(), "SAP blocklist keys stay exact");
+  for (const key of expectedSapShortcuts) {
+    assert.ok(SAP_SHORTCUTS.has(key), `SAP blocklist contains ${key}`);
+  }
+  for (const key of SAP_SHORTCUTS.keys()) {
+    assert.ok(expectedSapShortcuts.includes(key), `SAP blocklist has no unexpected key ${key}`);
+  }
 });
