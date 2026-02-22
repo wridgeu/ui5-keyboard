@@ -1,15 +1,35 @@
-import type { MetadataOptions } from "sap/ui/core/webc/WebComponent";
 import WebComponent from "sap/ui/core/webc/WebComponent";
-import CustomAlertButtonElement from "demo/hotkeys/webc/CustomAlertButton";
 
-void CustomAlertButtonElement;
-
-export default class AlertButton extends WebComponent {
-  static readonly metadata: MetadataOptions = {
+const AlertButton = WebComponent.extend("demo.hotkeys.control.AlertButton", {
+  metadata: {
     tag: "demo-alert-button",
     properties: {
-      text: "string",
-      message: "string",
+      text: {
+        type: "string",
+        mapping: {
+          type: "property",
+          to: "text",
+        },
+      },
+      message: {
+        type: "string",
+        mapping: {
+          type: "property",
+          to: "message",
+        },
+      },
     },
-  };
-}
+    events: {
+      demoAlert: {
+        parameters: {
+          message: "string",
+        },
+        mapping: {
+          to: "demo-alert",
+        },
+      },
+    },
+  },
+}) as typeof WebComponent;
+
+export default AlertButton;

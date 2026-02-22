@@ -19,6 +19,28 @@ class CustomAlertButton extends HTMLElement {
     this._render();
   }
 
+  get text(): string {
+    return this.getAttribute("text") || "Show Alert";
+  }
+
+  set text(next: string) {
+    const normalized = String(next ?? "");
+    if (this.getAttribute("text") !== normalized) {
+      this.setAttribute("text", normalized);
+    }
+  }
+
+  get message(): string {
+    return this.getAttribute("message") || "";
+  }
+
+  set message(next: string) {
+    const normalized = String(next ?? "");
+    if (this.getAttribute("message") !== normalized) {
+      this.setAttribute("message", normalized);
+    }
+  }
+
   private _render(): void {
     if (!this.shadowRoot) return;
 
@@ -42,8 +64,8 @@ class CustomAlertButton extends HTMLElement {
       this.shadowRoot.append(this._button);
     }
 
-    const text = this.getAttribute("text") || "Show Alert";
-    const message = this.getAttribute("message") || "";
+    const text = this.text;
+    const message = this.message;
 
     this._button.textContent = text;
     if (this._onClick) {
