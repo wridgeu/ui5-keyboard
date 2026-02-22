@@ -35,6 +35,11 @@ type KeyHighlightDelegation = {
   onkeyup: (event: Event) => void;
 };
 
+type InputModeSuppressionState = {
+  originalInputMode: string | null;
+  refCount: number;
+};
+
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
  *
@@ -77,8 +82,7 @@ export default class KioskKeyboard extends Control {
   declare private _pressedKeyEl: HTMLElement | null;
   declare private _baseLayout: string;
   declare private _keyboardTypeExplicit: boolean;
-  declare private _originalInputMode: string | null;
-  declare private _suppressedInputEl: HTMLInputElement | HTMLTextAreaElement | null;
+  declare private _suppressedInputId: string | null;
   declare private _maxHeight: number;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
   declare private _focusClaimService: FocusClaimService;
@@ -391,6 +395,9 @@ export default class KioskKeyboard extends Control {
   /** Internal set used for O(1) native-dispatch allowlist checks. */
   private static readonly _NATIVE_DISPATCHABLE_FKEYS = new Set<string>(NativeDispatchableKeyNames);
 
+  /** Ref-counted inputmode suppressions shared across keyboard instances. */
+  private static readonly _inputModeSuppressions = new Map<string, InputModeSuppressionState>();
+
   // ──────────────────────────────────────────────
   // Static delegates — layout registry (see internal/layout-registry.ts)
   // ──────────────────────────────────────────────
@@ -474,8 +481,7 @@ export default class KioskKeyboard extends Control {
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
     this._keyboardTypeExplicit = false;
-    this._originalInputMode = null;
-    this._suppressedInputEl = null;
+    this._suppressedInputId = null;
     this._maxHeight = 0;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._deferredFocusOutCloseId = null;
@@ -1519,28 +1525,50 @@ export default class KioskKeyboard extends Control {
     return KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(fkeyName);
   }
 
+  private _resolveInputDomById(inputId: string): HTMLInputElement | HTMLTextAreaElement | null {
+    const target = Element.getElementById(inputId);
+    if (!target) return null;
+    return resolveInputOrTextarea(target.getFocusDomRef());
+  }
+
   /**
    * Suppresses the native virtual keyboard by setting
    * `inputmode="none"` on the target input's DOM element.
+   *
+   * Suppression is tracked per target input ID and ref-counted across
+   * all KioskKeyboard instances, so one instance cannot accidentally
+   * restore `inputmode` while another instance still needs suppression.
    */
   private _suppressNativeKeyboard(): void {
     if (this._shouldDeferToNative()) return;
 
-    const el = this._getTargetElement();
-    if (!el) return;
+    const inputId = this.getTargetInput();
+    if (!inputId) return;
 
-    const dom = resolveInputOrTextarea(el.getFocusDomRef());
-    if (!dom) return;
+    // Already suppressing this target input
+    if (this._suppressedInputId === inputId) {
+      this._resolveInputDomById(inputId)?.setAttribute("inputmode", "none");
+      return;
+    }
 
-    // Already suppressing this element
-    if (this._suppressedInputEl === dom) return;
-
-    // Restore previous if different
+    // Restore previous target (if any) before claiming another one
     this._restoreNativeKeyboard();
 
-    this._originalInputMode = dom.getAttribute("inputmode");
-    this._suppressedInputEl = dom;
+    const dom = this._resolveInputDomById(inputId);
+    if (!dom) return;
+
+    const state = KioskKeyboard._inputModeSuppressions.get(inputId);
+    if (state) {
+      state.refCount += 1;
+    } else {
+      KioskKeyboard._inputModeSuppressions.set(inputId, {
+        originalInputMode: dom.getAttribute("inputmode"),
+        refCount: 1,
+      });
+    }
+
     dom.setAttribute("inputmode", "none");
+    this._suppressedInputId = inputId;
   }
 
   /**
@@ -1548,29 +1576,35 @@ export default class KioskKeyboard extends Control {
    * input element.
    */
   private _restoreNativeKeyboard(): void {
-    if (!this._suppressedInputEl) return;
+    const inputId = this._suppressedInputId;
+    if (!inputId) return;
 
-    // Re-resolve: the target control may have re-rendered, replacing the DOM node.
-    // Fall back to the cached ref if the target is no longer available.
-    const freshDom = resolveInputOrTextarea(this._getTargetElement()?.getFocusDomRef());
-    const dom = freshDom ?? this._suppressedInputEl;
+    const state = KioskKeyboard._inputModeSuppressions.get(inputId);
+    if (!state) {
+      this._suppressedInputId = null;
+      return;
+    }
 
-    // If the DOM node was replaced by a re-render, also clean up the stale cached ref
-    if (dom !== this._suppressedInputEl) {
-      if (this._originalInputMode !== null) {
-        this._suppressedInputEl.setAttribute("inputmode", this._originalInputMode);
+    state.refCount -= 1;
+
+    const dom = this._resolveInputDomById(inputId);
+
+    if (state.refCount > 0) {
+      // Another keyboard instance still claims this input.
+      dom?.setAttribute("inputmode", "none");
+      this._suppressedInputId = null;
+      return;
+    }
+
+    if (dom) {
+      if (state.originalInputMode !== null) {
+        dom.setAttribute("inputmode", state.originalInputMode);
       } else {
-        this._suppressedInputEl.removeAttribute("inputmode");
+        dom.removeAttribute("inputmode");
       }
     }
 
-    if (this._originalInputMode !== null) {
-      dom.setAttribute("inputmode", this._originalInputMode);
-    } else {
-      dom.removeAttribute("inputmode");
-    }
-
-    this._originalInputMode = null;
-    this._suppressedInputEl = null;
+    KioskKeyboard._inputModeSuppressions.delete(inputId);
+    this._suppressedInputId = null;
   }
 }

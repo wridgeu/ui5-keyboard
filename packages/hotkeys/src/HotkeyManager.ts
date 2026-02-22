@@ -38,6 +38,7 @@ const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
+const handledEvents = new WeakSet<KeyboardEvent>();
 
 interface ScopeRegistrationBucket {
   document: Set<string>;
@@ -130,7 +131,7 @@ export default class HotkeyManager extends BaseObject {
     this._platform = runtimeHooks.detectPlatform();
     this._listenerRegistry = new ListenerRegistry(
       (event) => this._shouldIgnoreKeyEvent(event),
-      (event, target) => this._processKeyEvent(event, target),
+      (event, target, emitUnhandled) => this._processKeyEvent(event, target, emitUnhandled),
       this._targetListeners,
     );
     this._attachListeners();
@@ -715,7 +716,7 @@ export default class HotkeyManager extends BaseObject {
     }
 
     if (!matched) {
-      if (emitUnhandled && this._unhandledCallback && skipInfo) {
+      if (emitUnhandled && this._unhandledCallback && skipInfo && !handledEvents.has(event)) {
         this._unhandledCallback({
           event,
           reason: skipInfo.reason,
@@ -737,6 +738,7 @@ export default class HotkeyManager extends BaseObject {
     if (opts.stopPropagation) {
       event.stopPropagation();
     }
+    handledEvents.add(event);
 
     const details: HotkeyCallbackDetails = {
       hotkey: matched.hotkey,

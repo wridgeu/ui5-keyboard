@@ -38,7 +38,7 @@
     "fmt": "oxfmt --ignore-path .oxfmtignore .",
     "fmt:check": "oxfmt --ignore-path .oxfmtignore --check .",
     "typecheck": "npm run typecheck -w packages/hotkeys -w packages/kiosk-keyboard && npm run typecheck -w packages/demo-app",
-    "check": "npm run fmt:check && npm run lint && npm run typecheck && npm run test:guardrails",
+    "check": "npm run fmt:check && npm run lint && npm run typecheck && npm run test:guardrails && npm test",
     "prepare": "husky",
     "commitlint": "commitlint --edit"
   },

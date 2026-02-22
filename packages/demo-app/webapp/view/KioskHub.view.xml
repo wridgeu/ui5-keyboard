@@ -17,7 +17,7 @@
                     press=".onNavToFormWorkflow" />
                 <StandardListItem
                     title="Multi-Keyboard"
-                    description="Two independent keyboards with instance isolation via inputIds"
+                    description="Independent keyboard isolation plus shared-target inputmode ref-count visualization"
                     type="Navigation"
                     press=".onNavToMultiKeyboard" />
                 <StandardListItem

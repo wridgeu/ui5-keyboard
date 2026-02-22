@@ -74,7 +74,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 - Auto-type: automatically switches to numpad for Number/Tel inputs and StepInput
 - Mobile keyboard detection: suppress native keyboard or defer to it on phones/tablets
-- Native keyboard suppression via `inputmode="none"` with proper save/restore
+- Native keyboard suppression via `inputmode="none"` with ref-counted restore across keyboard instances
 
 **Integration**
 
@@ -791,7 +791,7 @@ The `mobileKeyboard` property controls whether the KioskKeyboard or the native o
 <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
 ```
 
-When the KioskKeyboard is active, it sets `inputmode="none"` on the focused input to suppress the native keyboard, and restores the original value on close.
+When the KioskKeyboard is active, it sets `inputmode="none"` on the focused input to suppress the native keyboard, and restores the original value when the last keyboard instance targeting that input closes or is destroyed.
 
 ---
 

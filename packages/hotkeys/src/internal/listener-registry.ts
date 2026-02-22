@@ -10,7 +10,11 @@ export default class ListenerRegistry {
 
   constructor(
     private readonly _shouldIgnoreKeyEvent: (event: KeyboardEvent) => boolean,
-    private readonly _processTargetKeyEvent: (event: KeyboardEvent, target: EventTarget) => void,
+    private readonly _processTargetKeyEvent: (
+      event: KeyboardEvent,
+      target: EventTarget,
+      emitUnhandled: boolean,
+    ) => void,
     targetListeners?: Map<EventTarget, { handler: EventListener; count: number }>,
   ) {
     this._targetListeners = targetListeners ?? new Map();
@@ -36,7 +40,7 @@ export default class ListenerRegistry {
     const handler: EventListener = (event) => {
       const keyboardEvent = event as KeyboardEvent;
       if (this._shouldIgnoreKeyEvent(keyboardEvent)) return;
-      this._processTargetKeyEvent(keyboardEvent, target);
+      this._processTargetKeyEvent(keyboardEvent, target, this._shouldEmitUnhandledForTarget(keyboardEvent, target));
     };
 
     target.addEventListener("keydown", handler, true);
@@ -59,5 +63,23 @@ export default class ListenerRegistry {
       target.removeEventListener("keydown", entry.handler, true);
     }
     this._targetListeners.clear();
+  }
+
+  private _shouldEmitUnhandledForTarget(event: KeyboardEvent, target: EventTarget): boolean {
+    const path = event.composedPath?.();
+    if (!Array.isArray(path)) {
+      return true;
+    }
+
+    // Emit unhandled only for the innermost registered target in the composed path.
+    // This avoids false-positive `no_match` from outer targets when an inner target
+    // listener handles the same key later in the capture chain.
+    for (const node of path) {
+      if (this._targetListeners.has(node as EventTarget)) {
+        return node === target;
+      }
+    }
+
+    return true;
   }
 }

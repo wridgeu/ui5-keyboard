@@ -71,6 +71,7 @@ Landing page linking to all kiosk demos.
 - Two independent keyboard instances on one page
 - Isolation through `inputIds` targeting
 - Docked full keyboard + inline numpad working simultaneously
+- Shared-target ref-count visualization for `inputmode` suppression (open A/B, close order)
 
 ### Popover Keyboard (`#/kiosk/popover`)
 

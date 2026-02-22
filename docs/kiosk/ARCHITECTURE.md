@@ -298,7 +298,12 @@ When the KioskKeyboard shows and `_shouldDeferToNative()` returns `false`, it se
 - `_suppressNativeKeyboard()` — saves original `inputmode`, sets `"none"`. Called by `show()`.
 - `_restoreNativeKeyboard()` — restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()` and `exit()`.
 
-State is tracked via `_originalInputMode` (the saved attribute value or `null`) and `_suppressedInputEl` (reference to the DOM element being suppressed). When the target changes, the previous element is restored before suppressing the new one.
+State is tracked via:
+
+- Per instance: `_suppressedInputId` (which target this keyboard currently claims)
+- Shared across instances: static `_inputModeSuppressions` map keyed by target input ID with `{ originalInputMode, refCount }`
+
+This makes suppression safe for multi-keyboard setups targeting the same input: each show/claim increments a ref-count, each close/destroy decrements it, and the original `inputmode` is restored only when the last claimant releases the input. When the target changes, the previous target is released before suppressing the new one.
 
 ### Integration Points
 

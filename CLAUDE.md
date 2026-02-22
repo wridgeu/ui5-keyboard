@@ -18,7 +18,7 @@ Framework: OpenUI5 1.144.0 · TypeScript ~5.9.3 · Node >=22
 
 ```bash
 npm install                 # Install all workspaces
-npm run check               # fmt:check + lint + typecheck + test:guardrails
+npm run check               # fmt:check + lint + typecheck + test:guardrails + test
 npm run build               # Build both libraries
 npm run build:all           # Build both libraries + demo app
 npm start                   # Start demo app (port 8080)
@@ -76,7 +76,7 @@ npm run build -w packages/kiosk-keyboard
 - **Layouts** — QWERTY, QWERTZ-DE, numeric, numpad, special. Custom layouts supported via `LayoutDefinition` type.
 - **Locale detection** — Auto-selects layout from UI5 locale via `Localization.getLanguageTag()`. Extensible via `registerLocaleLayout()`.
 - **Auto-type** — When `autoType="true"`, auto-switches between Full/Numpad based on focused input metadata (UI5 type, control name, DOM inputmode, HTML type).
-- **Mobile keyboard** — `mobileKeyboard` enum (`Custom`/`Native`/`Auto`) controls native keyboard suppression via `inputmode="none"`.
+- **Mobile keyboard** — `mobileKeyboard` enum (`Custom`/`Native`/`Auto`) controls native keyboard suppression via `inputmode="none"` with ref-counted restore across instances.
 - **Target input** — Associated via `targetInput` association. Duck-types `setValue`/`fireLiveChange` (no `any`).
 - **Instance isolation** — Static `_instances` set prevents multiple keyboards from claiming the same input during auto-show.
 

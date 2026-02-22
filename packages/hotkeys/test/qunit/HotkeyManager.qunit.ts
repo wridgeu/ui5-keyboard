@@ -986,6 +986,99 @@ QUnit.test("Unhandled: does NOT fire no_match when target hotkey handles event",
   assert.notOk(unhandledCalled, "Unhandled callback is not fired for target-handled key");
 });
 
+QUnit.test("Unhandled: nested targets do not emit no_match when inner target handles", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let innerCalled = false;
+  let unhandledCalled = false;
+
+  const outer = document.createElement("div");
+  outer.tabIndex = 0;
+  const inner = document.createElement("button");
+  inner.type = "button";
+  outer.appendChild(inner);
+  fixture.appendChild(outer);
+
+  // Keep a listener attached on the outer target so this key first passes
+  // through an outer no-match before being handled by the inner target.
+  manager.register("F7", () => {}, { target: outer });
+  manager.register(
+    "F6",
+    () => {
+      innerCalled = true;
+    },
+    { target: inner },
+  );
+
+  manager.setUnhandledHandler(() => {
+    unhandledCalled = true;
+  });
+
+  inner.dispatchEvent(new KeyboardEvent("keydown", { key: "F6", bubbles: true, cancelable: true }));
+
+  assert.ok(innerCalled, "Inner target hotkey handler fired");
+  assert.notOk(unhandledCalled, "Outer no_match does not emit unhandled before inner handler runs");
+});
+
+QUnit.test("Unhandled: nested target no_match is emitted once", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let unhandledCount = 0;
+  let lastReason = "";
+
+  const outer = document.createElement("div");
+  outer.tabIndex = 0;
+  const inner = document.createElement("button");
+  inner.type = "button";
+  outer.appendChild(inner);
+  fixture.appendChild(outer);
+
+  manager.register("F7", () => {}, { target: outer });
+  manager.register("F8", () => {}, { target: inner });
+
+  manager.setUnhandledHandler((ctx) => {
+    unhandledCount++;
+    lastReason = ctx.reason;
+  });
+
+  inner.dispatchEvent(new KeyboardEvent("keydown", { key: "F9", bubbles: true, cancelable: true }));
+
+  assert.strictEqual(unhandledCount, 1, "no_match is reported exactly once for nested target listeners");
+  assert.strictEqual(lastReason, "no_match", "Reason remains no_match");
+});
+
+QUnit.test("Unhandled: nested inner no_match is suppressed after ancestor handles", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let outerCalled = false;
+  let unhandledCalled = false;
+
+  const outer = document.createElement("div");
+  outer.tabIndex = 0;
+  const inner = document.createElement("button");
+  inner.type = "button";
+  outer.appendChild(inner);
+  fixture.appendChild(outer);
+
+  manager.register(
+    "F6",
+    () => {
+      outerCalled = true;
+    },
+    {
+      target: outer,
+      stopPropagation: false,
+    },
+  );
+  manager.register("F7", () => {}, { target: inner });
+
+  manager.setUnhandledHandler(() => {
+    unhandledCalled = true;
+  });
+
+  inner.dispatchEvent(new KeyboardEvent("keydown", { key: "F6", bubbles: true, cancelable: true }));
+
+  assert.ok(outerCalled, "Ancestor target handled the key");
+  assert.notOk(unhandledCalled, "Inner no_match does not emit unhandled after key was already handled");
+});
+
 QUnit.test("Unhandled: passes correct activeScope in context", (assert) => {
   const manager = HotkeyManager.getInstance();
   let ctx: any = null;

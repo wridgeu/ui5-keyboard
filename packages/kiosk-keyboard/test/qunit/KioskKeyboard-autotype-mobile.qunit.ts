@@ -431,6 +431,79 @@ QUnit.test("Existing inputmode attribute is preserved and restored", async (asse
   kb.destroy();
 });
 
+QUnit.test("Shared target suppression is ref-counted across keyboard instances", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb1 = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: "Custom",
+  });
+  kb1.setTargetInput(input);
+  await placeAndWait(kb1);
+
+  const kb2 = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: "Custom",
+  });
+  kb2.setTargetInput(input);
+  await placeAndWait(kb2);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.setAttribute("inputmode", "email");
+
+  kb1.show();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "First keyboard suppresses inputmode");
+
+  kb2.show();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "Second keyboard keeps suppression active");
+
+  kb1.close();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode stays suppressed while kb2 is open");
+
+  kb2.close();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "email", "Original inputmode restored after last close");
+
+  input.destroy();
+  kb1.destroy();
+  kb2.destroy();
+});
+
+QUnit.test("Destroying one shared keyboard keeps suppression for survivor", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb1 = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: "Custom",
+  });
+  kb1.setTargetInput(input);
+  await placeAndWait(kb1);
+
+  const kb2 = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: "Custom",
+  });
+  kb2.setTargetInput(input);
+  await placeAndWait(kb2);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.setAttribute("inputmode", "decimal");
+
+  kb1.show();
+  kb2.show();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "Shared target is suppressed");
+
+  kb1.destroy();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "Suppression remains while kb2 is still active");
+
+  kb2.close();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "decimal", "Original mode restored after survivor closes");
+
+  input.destroy();
+  kb2.destroy();
+});
+
 QUnit.test("show() without target input does not throw", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,

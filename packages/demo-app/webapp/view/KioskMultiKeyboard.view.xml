@@ -59,6 +59,80 @@
                 </VBox>
             </Panel>
 
+            <Panel headerText="Shared Target Ref-Count Visualization" class="sapUiSmallMarginTop">
+                <VBox class="sapUiSmallMargin">
+                    <Text
+                        text="Both hidden keyboards below target the same input. Open A + Open B, then close only A: inputmode must stay 'none'. Close B last: inputmode must restore to 'email'."
+                        wrapping="true" />
+
+                    <Label text="Shared Input" labelFor="sharedInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="sharedInput"
+                        placeholder="Watch inputmode status update below"
+                        width="100%" />
+
+                    <HBox class="sapUiSmallMarginTop" wrap="Wrap">
+                        <Button
+                            text="Open A"
+                            type="Emphasized"
+                            enabled="{= !${state>/sharedAOpen} }"
+                            press=".onOpenSharedA" />
+                        <Button
+                            text="Close A"
+                            class="sapUiTinyMarginBegin"
+                            enabled="{= ${state>/sharedAOpen} }"
+                            press=".onCloseSharedA" />
+                        <Button
+                            text="Open B"
+                            class="sapUiTinyMarginBegin"
+                            enabled="{= !${state>/sharedBOpen} }"
+                            press=".onOpenSharedB" />
+                        <Button
+                            text="Close B"
+                            class="sapUiTinyMarginBegin"
+                            enabled="{= ${state>/sharedBOpen} }"
+                            press=".onCloseSharedB" />
+                        <Button
+                            text="Reset Scenario"
+                            class="sapUiTinyMarginBegin"
+                            press=".onResetSharedScenario" />
+                    </HBox>
+
+                    <HBox class="sapUiSmallMarginTop" wrap="Wrap">
+                        <Label text="Keyboard A:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus
+                            text="{= ${state>/sharedAOpen} ? 'Open' : 'Closed' }"
+                            state="{= ${state>/sharedAOpen} ? 'Warning' : 'Success' }" />
+
+                        <Label text="Keyboard B:" class="sapUiSmallMarginBegin sapUiSmallMarginEnd" />
+                        <ObjectStatus
+                            text="{= ${state>/sharedBOpen} ? 'Open' : 'Closed' }"
+                            state="{= ${state>/sharedBOpen} ? 'Warning' : 'Success' }" />
+                    </HBox>
+
+                    <HBox class="sapUiTinyMarginTop" wrap="Wrap">
+                        <Label text="Current inputmode:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/sharedInputMode}" state="{state>/sharedInputModeState}" />
+                    </HBox>
+
+                    <Text text="{state>/sharedExpectation}" wrapping="true" class="sapUiTinyMarginTop" />
+                    <Text text="{state>/sharedLastAction}" wrapping="true" class="sapUiTinyMarginTop" />
+                </VBox>
+
+                <kiosk:KioskKeyboard
+                    id="sharedKeyboardA"
+                    docked="true"
+                    mobileKeyboard="Custom"
+                    targetInput="sharedInput"
+                    visible="false" />
+                <kiosk:KioskKeyboard
+                    id="sharedKeyboardB"
+                    docked="true"
+                    mobileKeyboard="Custom"
+                    targetInput="sharedInput"
+                    visible="false" />
+            </Panel>
+
             <kiosk:KioskKeyboard
                 id="searchKeyboard"
                 docked="true"
