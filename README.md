@@ -202,7 +202,7 @@ ui5-keyboard/
 | [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                            | Sequence system design and rationale   |
 | [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                              | Comparison with alternative approaches |
 | [Kiosk Popover Layout Switch Behavior](./docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)        | Known popover behavior and mitigation  |
-| [UI5 Transpile Crash Deep Dive](./docs/kiosk/as-const-ui5-transpile-crash-deep-dive.md)       | Tooling crash analysis and fixes       |
+| [UI5 Transpile Crash Deep Dive](./docs/kiosk/AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)       | Tooling crash analysis and fixes       |
 | [API Stability Policy](./docs/shared/API-STABILITY.md)                                        | Stable vs internal import boundaries   |
 | [UI5 Event Handling Deep Dive](./docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md)                 | How UI5 processes keyboard events      |
 | [UI5 TypeScript Event Typing](./docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)                   | TypeScript patterns for UI5 events     |

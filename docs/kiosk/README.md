@@ -4,7 +4,7 @@
 
 - [Architecture](./ARCHITECTURE.md)
 - [Popover Layout Switch Behavior](./POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)
-- [UI5 Transpile Crash Deep Dive](./as-const-ui5-transpile-crash-deep-dive.md)
+- [UI5 Transpile Crash Deep Dive](./AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)
 
 ## Proposals
 
