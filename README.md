@@ -175,7 +175,7 @@ npm run test:kiosk:e2e:update # Update kiosk visual baselines
 ### Code Quality
 
 ```bash
-npm run check               # fmt:check + lint + typecheck (CI gate)
+npm run check               # fmt:check + lint + typecheck + test:guardrails (CI gate)
 npm run fmt                 # Format (oxfmt)
 npm run lint                # Lint (oxlint)
 npm run typecheck           # Generate kiosk typings + tsc -b + demo-app typecheck
@@ -194,20 +194,22 @@ ui5-keyboard/
 
 ## Documentation
 
-| Document                                                                               | Description                            |
-| -------------------------------------------------------------------------------------- | -------------------------------------- |
-| [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                 | Internal design of the hotkeys library |
-| [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                            | Internal design of the kiosk keyboard  |
-| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                     | Sequence system design and rationale   |
-| [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                       | Comparison with alternative approaches |
-| [Kiosk Popover Layout Switch Behavior](./docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md) | Known popover behavior and mitigation  |
-| [API Stability Policy](./docs/shared/API-STABILITY.md)                                 | Stable vs internal import boundaries   |
-| [UI5 Event Handling Deep Dive](./docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md)          | How UI5 processes keyboard events      |
-| [UI5 TypeScript Event Typing](./docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)            | TypeScript patterns for UI5 events     |
-| [Hotkeys Backward Compatibility](./docs/hotkeys/features/BACKWARD-COMPATIBILITY.md)    | Hotkeys compatibility guarantees       |
-| [Kiosk Backward Compatibility](./docs/kiosk/features/BACKWARD-COMPATIBILITY.md)        | Kiosk compatibility guarantees         |
-| [Tab and Done Keys](./docs/kiosk/features/TAB-AND-DONE-KEYS.md)                        | Tab and Done key behavior details      |
-| [Kiosk Implemented Feature Notes](./docs/kiosk/implemented-features/)                  | Historical kiosk implementation notes  |
+| Document                                                                                      | Description                            |
+| --------------------------------------------------------------------------------------------- | -------------------------------------- |
+| [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                        | Internal design of the hotkeys library |
+| [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                                   | Internal design of the kiosk keyboard  |
+| [Docs Index & Conventions](./docs/README.md)                                                  | Doc structure, naming, and lifecycle   |
+| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                            | Sequence system design and rationale   |
+| [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                              | Comparison with alternative approaches |
+| [Kiosk Popover Layout Switch Behavior](./docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)        | Known popover behavior and mitigation  |
+| [UI5 Transpile Crash Deep Dive](./docs/kiosk/as-const-ui5-transpile-crash-deep-dive.md)       | Tooling crash analysis and fixes       |
+| [API Stability Policy](./docs/shared/API-STABILITY.md)                                        | Stable vs internal import boundaries   |
+| [UI5 Event Handling Deep Dive](./docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md)                 | How UI5 processes keyboard events      |
+| [UI5 TypeScript Event Typing](./docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)                   | TypeScript patterns for UI5 events     |
+| [Hotkeys Backward Compatibility Proposal](./docs/hotkeys/proposals/BACKWARD-COMPATIBILITY.md) | Planned compatibility work             |
+| [Kiosk Backward Compatibility Proposal](./docs/kiosk/proposals/BACKWARD-COMPATIBILITY.md)     | Planned compatibility work             |
+| [Tab and Done Keys Proposal](./docs/kiosk/proposals/TAB-AND-DONE-KEYS.md)                     | Proposed special-key behavior          |
+| [Kiosk History Notes](./docs/kiosk/history/)                                                  | Archived implementation design notes   |
 
 ## License
 

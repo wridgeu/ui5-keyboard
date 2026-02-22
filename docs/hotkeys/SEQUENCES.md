@@ -68,13 +68,15 @@ manager.setSequencePendingHandler((info) => {
 
 ### Options
 
-| Option         | Type                       | Default        | Description                               |
-| -------------- | -------------------------- | -------------- | ----------------------------------------- |
-| `description`  | `string`                   | `""`           | Human-readable description                |
-| `timeout`      | `number`                   | `1000`         | Timeout in ms between keys before reset   |
-| `scope`        | `string`                   | `"__global__"` | Scope for filtering                       |
-| `enabled`      | `boolean \| () => boolean` | `true`         | Whether the sequence is active            |
-| `ignoreInputs` | `boolean`                  | `true`         | Suppress when an input element is focused |
+| Option            | Type                       | Default        | Description                                                   |
+| ----------------- | -------------------------- | -------------- | ------------------------------------------------------------- |
+| `description`     | `string`                   | `""`           | Human-readable description                                    |
+| `timeout`         | `number`                   | `1000`         | Timeout in ms between keys before reset                       |
+| `scope`           | `string`                   | `"__global__"` | Scope for filtering                                           |
+| `enabled`         | `boolean \| () => boolean` | `true`         | Whether the sequence is active                                |
+| `ignoreInputs`    | `boolean \| "auto"`        | `"auto"`       | Suppress in inputs; auto allows Ctrl/Meta combos and Escape   |
+| `preventDefault`  | `boolean`                  | `true`         | Call `event.preventDefault()` when the full sequence matches  |
+| `stopPropagation` | `boolean`                  | `true`         | Call `event.stopPropagation()` when the full sequence matches |
 
 ## Design Decisions
 
