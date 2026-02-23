@@ -119,7 +119,7 @@ export default class KioskKeyboard extends Control {
        *
        * Setting this property (via setter, constructor, or XML attribute)
        * disables auto-type detection permanently.
-       * Call {@link #resetKeyboardType} to re-enable it.
+       * Call `resetKeyboardType()` to re-enable it.
        *
        * @example <caption>XML view — fixed numpad</caption>
        * <kiosk:KioskKeyboard keyboardType="Numpad" targetInput="pinInput" />
@@ -155,7 +155,7 @@ export default class KioskKeyboard extends Control {
       },
       /**
        * When `true`, the keyboard anchors to the bottom of the viewport
-       * and slides in/out. Use {@link #show}/{@link #close} to control
+       * and slides in/out. Use `show()` / `close()` to control
        * visibility manually, or set `autoShow` to `true` for automatic
        * focus-based behavior.
        *
@@ -188,7 +188,7 @@ export default class KioskKeyboard extends Control {
        *
        * Has no effect when `keyboardType` has been set explicitly (via
        * setter, constructor, or XML attribute), because that locks the
-       * keyboard type. Call {@link #resetKeyboardType} to clear the lock
+       * keyboard type. Call `resetKeyboardType()` to clear the lock
        * and re-enable auto-type detection.
        *
        * @example <caption>XML view — full auto kiosk setup</caption>
@@ -618,7 +618,7 @@ export default class KioskKeyboard extends Control {
    * since the association does not affect the keyboard's visual output.
    * Also moves the physical keyboard highlight delegation to the new target.
    */
-  setTargetInput(target: string | Control): this {
+  setTargetInput(target?: string | Control): this {
     // Fire pending change on the previous target before switching
     this._targetSession.fireChangeIfDirty();
 
@@ -640,7 +640,7 @@ export default class KioskKeyboard extends Control {
       this.invalidate();
     }
 
-    this.setAssociation("targetInput", target, true);
+    this.setAssociation("targetInput", target as string | Control, true);
 
     const newId = this.getTargetInput();
     if (newId && this._isTargetOfOther(newId)) {
@@ -1286,7 +1286,7 @@ export default class KioskKeyboard extends Control {
   }
 
   private _onDocumentFocusOut(event: FocusEvent): void {
-    if (!this.getDocked() || !this._open || !this._isAutoShowParticipationActive()) return;
+    if (!this.getDocked() || !this._open) return;
 
     // Use relatedTarget to decide synchronously whether to close.
     // relatedTarget is the element that is *receiving* focus.
@@ -1320,7 +1320,7 @@ export default class KioskKeyboard extends Control {
     this._deferredFocusOutCloseId = setTimeout(() => {
       this._deferredFocusOutCloseId = null;
 
-      if (!this.getDocked() || !this._open || !this._isAutoShowParticipationActive()) return;
+      if (!this.getDocked() || !this._open) return;
 
       const related = document.activeElement as HTMLElement | null;
       const myDom = this.getDomRef();

@@ -20,18 +20,13 @@ declare module "./KioskKeyboard" {
         layout?: string | PropertyBindingInfo;
 
         /**
-         * /**
-               * Keyboard display type.
-               * `"Full"` renders the active layout. `"Numeric"` and `"Numpad"` render
-               * compact number-oriented layouts regardless of the layout property.
-               *
-               * Setting this property (via setter, constructor, or XML attribute)
-               * disables auto-type detection permanently.
-               * Call
-        {@link #resetKeyboardType}
-         to re-enable it.
-               *
-               *
+         * Keyboard display type.
+        `"Full"` renders the active layout. `"Numeric"` and `"Numpad"` render
+        compact number-oriented layouts regardless of the layout property.
+        
+        Setting this property (via setter, constructor, or XML attribute)
+        disables auto-type detection permanently.
+        Call `resetKeyboardType()` to re-enable it.
          */
         keyboardType?: KeyboardType | PropertyBindingInfo | `{${string}}`;
 
@@ -48,17 +43,10 @@ declare module "./KioskKeyboard" {
         ariaLabel?: string | PropertyBindingInfo;
 
         /**
-         * /**
-               * When `true`, the keyboard anchors to the bottom of the viewport
-               * and slides in/out. Use
-        {@link #show}
-        /
-        {@link #close}
-         to control
-               * visibility manually, or set `autoShow` to `true` for automatic
-               * focus-based behavior.
-               *
-               *
+         * When `true`, the keyboard anchors to the bottom of the viewport
+        and slides in/out. Use `show()` / `close()` to control
+        visibility manually, or set `autoShow` to `true` for automatic
+        focus-based behavior.
          */
         docked?: boolean | PropertyBindingInfo | `{${string}}`;
 
@@ -70,19 +58,14 @@ declare module "./KioskKeyboard" {
         autoShow?: boolean | PropertyBindingInfo | `{${string}}`;
 
         /**
-         * /**
-               * When `true` and `autoShow` is active, the keyboard inspects the
-               * focused input's type metadata and automatically switches between
-               * Full and Numpad keyboard types.
-               *
-               * Has no effect when `keyboardType` has been set explicitly (via
-               * setter, constructor, or XML attribute), because that locks the
-               * keyboard type. Call
-        {@link #resetKeyboardType}
-         to clear the lock
-               * and re-enable auto-type detection.
-               *
-               *
+         * When `true` and `autoShow` is active, the keyboard inspects the
+        focused input's type metadata and automatically switches between
+        Full and Numpad keyboard types.
+        
+        Has no effect when `keyboardType` has been set explicitly (via
+        setter, constructor, or XML attribute), because that locks the
+        keyboard type. Call `resetKeyboardType()` to clear the lock
+        and re-enable auto-type detection.
          */
         autoType?: boolean | PropertyBindingInfo | `{${string}}`;
 
@@ -215,18 +198,13 @@ declare module "./KioskKeyboard" {
         /**
          * Gets current value of property "keyboardType".
          *
-         * /**
-               * Keyboard display type.
-               * `"Full"` renders the active layout. `"Numeric"` and `"Numpad"` render
-               * compact number-oriented layouts regardless of the layout property.
-               *
-               * Setting this property (via setter, constructor, or XML attribute)
-               * disables auto-type detection permanently.
-               * Call
-        {@link #resetKeyboardType}
-         to re-enable it.
-               *
-               *
+         * Keyboard display type.
+        `"Full"` renders the active layout. `"Numeric"` and `"Numpad"` render
+        compact number-oriented layouts regardless of the layout property.
+        
+        Setting this property (via setter, constructor, or XML attribute)
+        disables auto-type detection permanently.
+        Call `resetKeyboardType()` to re-enable it.
          *
          * Default value is: "Full"
          * @returns Value of property "keyboardType"
@@ -236,18 +214,13 @@ declare module "./KioskKeyboard" {
         /**
          * Sets a new value for property "keyboardType".
          *
-         * /**
-               * Keyboard display type.
-               * `"Full"` renders the active layout. `"Numeric"` and `"Numpad"` render
-               * compact number-oriented layouts regardless of the layout property.
-               *
-               * Setting this property (via setter, constructor, or XML attribute)
-               * disables auto-type detection permanently.
-               * Call
-        {@link #resetKeyboardType}
-         to re-enable it.
-               *
-               *
+         * Keyboard display type.
+        `"Full"` renders the active layout. `"Numeric"` and `"Numpad"` render
+        compact number-oriented layouts regardless of the layout property.
+        
+        Setting this property (via setter, constructor, or XML attribute)
+        disables auto-type detection permanently.
+        Call `resetKeyboardType()` to re-enable it.
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
@@ -316,17 +289,10 @@ declare module "./KioskKeyboard" {
         /**
          * Gets current value of property "docked".
          *
-         * /**
-               * When `true`, the keyboard anchors to the bottom of the viewport
-               * and slides in/out. Use
-        {@link #show}
-        /
-        {@link #close}
-         to control
-               * visibility manually, or set `autoShow` to `true` for automatic
-               * focus-based behavior.
-               *
-               *
+         * When `true`, the keyboard anchors to the bottom of the viewport
+        and slides in/out. Use `show()` / `close()` to control
+        visibility manually, or set `autoShow` to `true` for automatic
+        focus-based behavior.
          *
          * Default value is: false
          * @returns Value of property "docked"
@@ -336,17 +302,10 @@ declare module "./KioskKeyboard" {
         /**
          * Sets a new value for property "docked".
          *
-         * /**
-               * When `true`, the keyboard anchors to the bottom of the viewport
-               * and slides in/out. Use
-        {@link #show}
-        /
-        {@link #close}
-         to control
-               * visibility manually, or set `autoShow` to `true` for automatic
-               * focus-based behavior.
-               *
-               *
+         * When `true`, the keyboard anchors to the bottom of the viewport
+        and slides in/out. Use `show()` / `close()` to control
+        visibility manually, or set `autoShow` to `true` for automatic
+        focus-based behavior.
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
@@ -390,19 +349,14 @@ declare module "./KioskKeyboard" {
         /**
          * Gets current value of property "autoType".
          *
-         * /**
-               * When `true` and `autoShow` is active, the keyboard inspects the
-               * focused input's type metadata and automatically switches between
-               * Full and Numpad keyboard types.
-               *
-               * Has no effect when `keyboardType` has been set explicitly (via
-               * setter, constructor, or XML attribute), because that locks the
-               * keyboard type. Call
-        {@link #resetKeyboardType}
-         to clear the lock
-               * and re-enable auto-type detection.
-               *
-               *
+         * When `true` and `autoShow` is active, the keyboard inspects the
+        focused input's type metadata and automatically switches between
+        Full and Numpad keyboard types.
+        
+        Has no effect when `keyboardType` has been set explicitly (via
+        setter, constructor, or XML attribute), because that locks the
+        keyboard type. Call `resetKeyboardType()` to clear the lock
+        and re-enable auto-type detection.
          *
          * Default value is: false
          * @returns Value of property "autoType"
@@ -412,19 +366,14 @@ declare module "./KioskKeyboard" {
         /**
          * Sets a new value for property "autoType".
          *
-         * /**
-               * When `true` and `autoShow` is active, the keyboard inspects the
-               * focused input's type metadata and automatically switches between
-               * Full and Numpad keyboard types.
-               *
-               * Has no effect when `keyboardType` has been set explicitly (via
-               * setter, constructor, or XML attribute), because that locks the
-               * keyboard type. Call
-        {@link #resetKeyboardType}
-         to clear the lock
-               * and re-enable auto-type detection.
-               *
-               *
+         * When `true` and `autoShow` is active, the keyboard inspects the
+        focused input's type metadata and automatically switches between
+        Full and Numpad keyboard types.
+        
+        Has no effect when `keyboardType` has been set explicitly (via
+        setter, constructor, or XML attribute), because that locks the
+        keyboard type. Call `resetKeyboardType()` to clear the lock
+        and re-enable auto-type detection.
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *

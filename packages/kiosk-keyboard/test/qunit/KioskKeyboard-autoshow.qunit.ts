@@ -319,6 +319,90 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
   dockedKb.destroy();
 });
 
+QUnit.test("Open keyboard still closes and restores inputmode after becoming hidden", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const outside = document.createElement("button");
+  outside.id = "kb-hidden-close-target";
+  document.getElementById("qunit-fixture")!.appendChild(outside);
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    mobileKeyboard: "Custom",
+  });
+  kb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  const originalInputMode = inputDom.getAttribute("inputmode");
+
+  inputDom.focus();
+  await nextUIUpdate();
+
+  assert.ok(kb.isOpen(), "Keyboard opens for focused input");
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode is suppressed while open");
+
+  kb.setVisible(false);
+  await nextUIUpdate();
+
+  outside.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard closes even after becoming hidden");
+  if (originalInputMode !== null) {
+    assert.strictEqual(inputDom.getAttribute("inputmode"), originalInputMode, "Original inputmode is restored");
+  } else {
+    assert.notOk(inputDom.hasAttribute("inputmode"), "inputmode attribute is removed after close");
+  }
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Open keyboard still closes and restores inputmode after becoming disabled", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const outside = document.createElement("button");
+  outside.id = "kb-disabled-close-target";
+  document.getElementById("qunit-fixture")!.appendChild(outside);
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    mobileKeyboard: "Custom",
+  });
+  kb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  const originalInputMode = inputDom.getAttribute("inputmode");
+
+  inputDom.focus();
+  await nextUIUpdate();
+
+  assert.ok(kb.isOpen(), "Keyboard opens for focused input");
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode is suppressed while open");
+
+  kb.setEnabled(false);
+  await nextUIUpdate();
+
+  outside.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard closes even after becoming disabled");
+  if (originalInputMode !== null) {
+    assert.strictEqual(inputDom.getAttribute("inputmode"), originalInputMode, "Original inputmode is restored");
+  } else {
+    assert.notOk(inputDom.hasAttribute("inputmode"), "inputmode attribute is removed after close");
+  }
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Destroying the claiming keyboard frees the input for auto-show", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
