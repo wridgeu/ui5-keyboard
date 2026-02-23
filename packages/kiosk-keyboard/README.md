@@ -857,6 +857,32 @@ The control uses SAP LESS theme parameters for all visual states:
 
 Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_horizon_hcw`.
 
+### CSS Custom Properties
+
+Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
+
+| Property                               | Default    | Description                |
+| -------------------------------------- | ---------- | -------------------------- |
+| `--ui5KioskKeyboard-padding`           | `0.75rem`  | Container padding          |
+| `--ui5KioskKeyboard-keyGap`            | `0.375rem` | Gap between keys and rows  |
+| `--ui5KioskKeyboard-keyHeight`         | `3rem`     | Key height / touch target  |
+| `--ui5KioskKeyboard-keyFontSize`       | `1.125rem` | Key label font size        |
+| `--ui5KioskKeyboard-keyShadow`         | _(theme)_  | Key resting shadow         |
+| `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_  | Key hover shadow           |
+| `--ui5KioskKeyboard-dockedMaxWidth`    | `1024px`   | Max width when docked      |
+| `--ui5KioskKeyboard-dockedShadow`      | _(theme)_  | Shadow when docked         |
+| `--ui5KioskKeyboard-dockedZIndex`      | `100`      | Z-index when docked        |
+| `--ui5KioskKeyboard-numpadMaxWidth`    | `20rem`    | Numpad container max-width |
+| `--ui5KioskKeyboard-numpadKeyMinWidth` | `4rem`     | Numpad key min-width       |
+
+```css
+/* Example: larger keys for kiosk terminals */
+.ui5KioskKeyboard {
+  --ui5KioskKeyboard-keyHeight: 4rem;
+  --ui5KioskKeyboard-keyFontSize: 1.5rem;
+}
+```
+
 Theme preview (QWERTY layout):
 
 Full-size inline keyboard:

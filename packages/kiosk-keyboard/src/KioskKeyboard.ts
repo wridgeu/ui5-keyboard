@@ -641,8 +641,16 @@ export default class KioskKeyboard extends Control {
 
     this.setAssociation("targetInput", target, true);
 
-    // Add highlight delegation to new target
     const newId = this.getTargetInput();
+    if (newId && this._isTargetOfOther(newId)) {
+      Log.warning(
+        `KioskKeyboard: targetInput "${newId}" is already targeted by another KioskKeyboard instance`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+    }
+
+    // Add highlight delegation to new target
     if (newId) {
       const next = Element.getElementById(newId);
       if (next) {

@@ -37,17 +37,11 @@ export default class KioskMultiKeyboard extends BaseController {
   }
 
   onSearchKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    const key = event.getParameter("key") ?? "";
-    const shift = event.getParameter("shiftKey") ?? false;
-    const display = shift ? `${key} (Shift)` : key;
-    this.getStateModel().setProperty("/multiSearchLastKey", display);
+    this.getStateModel().setProperty("/multiSearchLastKey", this.formatKeyPress(event));
   }
 
   onQuantityKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    const key = event.getParameter("key") ?? "";
-    const shift = event.getParameter("shiftKey") ?? false;
-    const display = shift ? `${key} (Shift)` : key;
-    this.getStateModel().setProperty("/multiQuantityLastKey", display);
+    this.getStateModel().setProperty("/multiQuantityLastKey", this.formatKeyPress(event));
   }
 
   onSearchAfterOpen(): void {

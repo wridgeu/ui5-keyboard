@@ -90,10 +90,7 @@ export default class KioskCustomLayouts extends BaseController {
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    const key = event.getParameter("key") ?? "";
-    const shift = event.getParameter("shiftKey") ?? false;
-    const display = shift ? `${key} (Shift)` : key;
-    this.getStateModel().setProperty("/customLastKey", display);
+    this.getStateModel().setProperty("/customLastKey", this.formatKeyPress(event));
   }
 
   onUseEmoji(): void {

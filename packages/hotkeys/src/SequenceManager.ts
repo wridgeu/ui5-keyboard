@@ -29,7 +29,7 @@ const idGen = createIdGenerator("seq_");
 interface ActiveMatch {
   registration: SequenceRegistration;
   stepIndex: number;
-  timerId: ReturnType<typeof setTimeout> | null;
+  timerId: ReturnType<typeof setTimeout> | undefined;
 }
 
 /**
@@ -56,7 +56,6 @@ export default class SequenceManager extends BaseObject {
   private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
   private _scopeProvider: () => string;
-  private _destroyed = false;
 
   constructor(scopeProvider: () => string, platform: Platform) {
     super();
@@ -100,7 +99,7 @@ export default class SequenceManager extends BaseObject {
       callback,
       description: options?.description ?? "",
       timeout: options?.timeout ?? DEFAULT_TIMEOUT,
-      scope: options?.scope ?? GLOBAL_SCOPE,
+      scope: options?.scope || GLOBAL_SCOPE,
       enabled: options?.enabled ?? true,
       ignoreInputs: options?.ignoreInputs ?? "auto",
       preventDefault: options?.preventDefault ?? true,
@@ -141,7 +140,7 @@ export default class SequenceManager extends BaseObject {
         // Clear any active matches for this registration
         this._activeMatches = this._activeMatches.filter((m) => {
           if (m.registration.id === id) {
-            if (m.timerId !== null) clearTimeout(m.timerId);
+            clearTimeout(m.timerId);
           }
           return m.registration.id !== id;
         });
@@ -211,10 +210,8 @@ export default class SequenceManager extends BaseObject {
   }
 
   destroy(): void {
-    this._destroyed = true;
-
     for (const match of this._activeMatches) {
-      if (match.timerId !== null) clearTimeout(match.timerId);
+      clearTimeout(match.timerId);
     }
     this._activeMatches = [];
     for (const state of this._registrationState.values()) {
@@ -268,10 +265,9 @@ export default class SequenceManager extends BaseObject {
           const newMatch: ActiveMatch = {
             registration: reg,
             stepIndex: match.stepIndex + 1,
-            timerId: null,
+            timerId: undefined,
           };
           newMatch.timerId = setTimeout(() => {
-            if (this._destroyed) return;
             this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
           }, reg.timeout);
           newActiveMatches.push(newMatch);
@@ -285,7 +281,7 @@ export default class SequenceManager extends BaseObject {
     // If we got a full match, fire it and clear all tracking
     if (fullMatch) {
       for (const m of this._activeMatches) {
-        if (m.timerId !== null) clearTimeout(m.timerId);
+        clearTimeout(m.timerId);
       }
       this._activeMatches = [];
 
@@ -352,10 +348,9 @@ export default class SequenceManager extends BaseObject {
       const newMatch: ActiveMatch = {
         registration: reg,
         stepIndex: 1,
-        timerId: null,
+        timerId: undefined,
       };
       newMatch.timerId = setTimeout(() => {
-        if (this._destroyed) return;
         this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
       }, reg.timeout);
       this._activeMatches.push(newMatch);

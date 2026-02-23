@@ -54,7 +54,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     preventDefault: options?.preventDefault ?? true,
     stopPropagation: options?.stopPropagation ?? true,
     ignoreInputs: options?.ignoreInputs ?? "auto",
-    scope: options?.scope ?? GLOBAL_SCOPE,
+    scope: options?.scope || GLOBAL_SCOPE,
     description: options?.description ?? "",
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,
@@ -113,10 +113,6 @@ export default class HotkeyManager extends BaseObject {
   // AltGr detection — tracks location of last Alt keydown
   private _lastAltLocation = 0;
 
-  // Target element listeners — ref-counted per EventTarget
-  // Kept on manager for debugging/tests and delegated via ListenerRegistry.
-  private _targetListeners: Map<EventTarget, { handler: EventListener; count: number }> = new Map();
-
   // Document + target listener bookkeeping
   private readonly _listenerRegistry: ListenerRegistry;
 
@@ -132,7 +128,6 @@ export default class HotkeyManager extends BaseObject {
     this._listenerRegistry = new ListenerRegistry(
       (event) => this._shouldIgnoreKeyEvent(event),
       (event, target, emitUnhandled) => this._processKeyEvent(event, target, emitUnhandled),
-      this._targetListeners,
     );
     this._attachListeners();
 
@@ -286,6 +281,7 @@ export default class HotkeyManager extends BaseObject {
    * become active, while non-global hotkeys in other scopes are paused.
    */
   pushScope(scopeId: string): void {
+    if (!scopeId) return;
     this._scopeStack.push(scopeId);
     Log.debug(`Pushed scope "${scopeId}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
   }
@@ -299,6 +295,7 @@ export default class HotkeyManager extends BaseObject {
    *   or if the scopeId does not match the top.
    */
   popScope(scopeId: string): void {
+    if (!scopeId) return;
     if (this._scopeStack.length <= 1) {
       throw new Error("Cannot pop the global scope");
     }
@@ -653,14 +650,14 @@ export default class HotkeyManager extends BaseObject {
     const path = event.composedPath?.();
     if (Array.isArray(path)) {
       for (const node of path) {
-        if (this._targetListeners.has(node as EventTarget)) {
+        if (this._listenerRegistry.hasTarget(node as EventTarget)) {
           return true;
         }
       }
     }
 
     const target = getEventTarget(event);
-    return target ? this._targetListeners.has(target) : false;
+    return target ? this._listenerRegistry.hasTarget(target) : false;
   }
 
   /**
@@ -793,8 +790,7 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
-    // Check external conflicts (lazy import to avoid circular deps at module level)
-    const validate = sap.ui.require("ui5/hotkeys/validate") as ValidateModule | undefined;
+    const validate = this._getValidateModule();
     if (validate) {
       const normalized = keyboardEventToHotkey(event);
       if (normalized) {
@@ -808,12 +804,17 @@ export default class HotkeyManager extends BaseObject {
     Log.debug(lines.join("\n"), undefined, LOG_COMPONENT);
   }
 
+  /** Lazy import to avoid circular deps at module level. */
+  private _getValidateModule(): ValidateModule | undefined {
+    return sap.ui.require("ui5/hotkeys/validate") as ValidateModule | undefined;
+  }
+
   // ──────────────────────────────────────────────
   // Private: Validation warnings
   // ──────────────────────────────────────────────
 
   private _logValidationWarnings(normalizedHotkey: string): void {
-    const validate = sap.ui.require("ui5/hotkeys/validate") as ValidateModule | undefined;
+    const validate = this._getValidateModule();
     if (!validate) return;
 
     const browserConflict = validate.BROWSER_SHORTCUTS.get(normalizedHotkey);

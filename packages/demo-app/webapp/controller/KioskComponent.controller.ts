@@ -46,6 +46,11 @@ export default class KioskComponent extends BaseController {
       .getRouter()
       .getRoute(Scope.KioskComponent)!
       .detachPatternMatched(this._onRouteMatched, this);
+
+    if (KioskComponent._keyboard) {
+      KioskComponent._keyboard.destroy();
+      KioskComponent._keyboard = null;
+    }
   }
 
   onShowKeyboard(): void {

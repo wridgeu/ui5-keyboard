@@ -15,9 +15,12 @@ export default class ListenerRegistry {
       target: EventTarget,
       emitUnhandled: boolean,
     ) => void,
-    targetListeners?: Map<EventTarget, { handler: EventListener; count: number }>,
   ) {
-    this._targetListeners = targetListeners ?? new Map();
+    this._targetListeners = new Map();
+  }
+
+  hasTarget(target: EventTarget): boolean {
+    return this._targetListeners.has(target);
   }
 
   attachDocument(handler: (event: KeyboardEvent) => void): void {

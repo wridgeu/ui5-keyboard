@@ -62,7 +62,7 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
     !Array.isArray(oDefinition) ||
     oDefinition.length === 0 ||
     !oDefinition.every(
-      (row) => Array.isArray(row) && row.length > 0 && row.every((key) => typeof key?.value === "string"),
+      (row) => Array.isArray(row) && row.length > 0 && row.every((key) => typeof key?.value === "string" && key.value),
     )
   ) {
     Log.warning(

@@ -26,11 +26,9 @@ export default class KioskFormWorkflow extends BaseController {
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    const key = event.getParameter("key") ?? "";
-    const shift = event.getParameter("shiftKey") ?? false;
-    const display = shift ? `${key} (Shift)` : key;
-    this.getStateModel().setProperty("/formLastKey", display);
+    this.getStateModel().setProperty("/formLastKey", this.formatKeyPress(event));
 
+    const key = event.getParameter("key") ?? "";
     if (key === KeyName.Enter) {
       event.preventDefault();
       this._advanceToNextField();

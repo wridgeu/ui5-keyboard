@@ -549,6 +549,9 @@ recorder.start();
 recorder.stop();
 ```
 
+> [!IMPORTANT]
+> While recording, **all keyboard input is blocked** (`preventDefault` + `stopPropagation` in capture phase). Keep the recording window short.
+
 > [!TIP]
 > Not a singleton — create one per settings row if needed.
 

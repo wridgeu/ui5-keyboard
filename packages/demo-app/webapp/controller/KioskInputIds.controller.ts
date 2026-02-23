@@ -34,10 +34,7 @@ export default class KioskInputIds extends BaseController {
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
     this._updateTargetStatus();
-    const key = event.getParameter("key") ?? "";
-    const shift = event.getParameter("shiftKey") ?? false;
-    const display = shift ? `${key} (Shift)` : key;
-    this.getStateModel().setProperty("/kioskLastKey", display);
+    this.getStateModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
   }
 
   onDemoAlert(event: AlertButton$DemoAlertEvent): void {

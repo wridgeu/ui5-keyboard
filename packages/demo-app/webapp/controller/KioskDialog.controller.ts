@@ -26,10 +26,7 @@ export default class KioskDialog extends BaseController {
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    const key = event.getParameter("key") ?? "";
-    const shift = event.getParameter("shiftKey") ?? false;
-    const display = shift ? `${key} (Shift)` : key;
-    this.getStateModel().setProperty("/dialogLastKey", display);
+    this.getStateModel().setProperty("/dialogLastKey", this.formatKeyPress(event));
   }
 
   onDockedAfterOpen(): void {
