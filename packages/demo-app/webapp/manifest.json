@@ -186,7 +186,8 @@
           "kioskMobileKeyboard": "Custom",
           "kioskIsOpen": false,
           "kioskKeyboardType": "Full",
-          "kioskCurrentTarget": "None"
+          "kioskCurrentTarget": "None",
+          "kioskAutoType": false
         }
       }
     }

@@ -1,5 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$KeyboardTypeChangeEvent } from "ui5/kiosk/KioskKeyboard";
 import type UI5Event from "sap/ui/base/Event";
 import MessageToast from "sap/m/MessageToast";
 import { Scope } from "../constants";
@@ -23,7 +23,10 @@ type AlertButton$DemoAlertEvent = UI5Event<AlertButtonDemoAlertEventParameters>;
  */
 export default class KioskInputIds extends BaseController {
   onInit(): void {
-    this.getStateModel().setProperty("/kioskCurrentTarget", "None");
+    const stateModel = this.getStateModel();
+    stateModel.setProperty("/kioskCurrentTarget", "None");
+    stateModel.setProperty("/kioskAutoType", false);
+    stateModel.setProperty("/kioskKeyboardType", "Full");
 
     // Track target changes via afterOpen/key events
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
@@ -44,6 +47,10 @@ export default class KioskInputIds extends BaseController {
       event.getParameter("originalEvent")?.detail?.message ??
       "Custom element event";
     MessageToast.show(message);
+  }
+
+  onKeyboardTypeChange(event: KioskKeyboard$KeyboardTypeChangeEvent): void {
+    this.getStateModel().setProperty("/kioskKeyboardType", event.getParameter("keyboardType"));
   }
 
   onNavBack(): void {
