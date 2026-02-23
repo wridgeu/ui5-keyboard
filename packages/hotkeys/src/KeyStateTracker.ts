@@ -1,6 +1,9 @@
 import { MODIFIER_KEYS } from "./internal/constants";
+import Log from "sap/base/Log";
 import { Platform } from "./library";
 import { runtimeHooks } from "./internal/runtime";
+
+const LOG_COMPONENT = "ui5.hotkeys.KeyStateTracker";
 
 let instance: KeyStateTracker | null = null;
 
@@ -200,7 +203,11 @@ export default class KeyStateTracker {
 
   private _notifyChange(): void {
     if (this._changeCallback) {
-      this._changeCallback(this.getHeldKeys());
+      try {
+        this._changeCallback(this.getHeldKeys());
+      } catch (error) {
+        Log.error(`Error in KeyStateTracker change callback: ${error}`, undefined, LOG_COMPONENT);
+      }
     }
   }
 }

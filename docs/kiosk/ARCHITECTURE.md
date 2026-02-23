@@ -131,6 +131,8 @@ The target input is a UI5 association (`targetInput`), not an aggregation. This 
 - The input can exist anywhere in the control tree
 - The association stores just the control ID
 
+For controller code that needs the control instance (not the ID), use `getTargetControl()` as a typed convenience wrapper over the association.
+
 `setTargetInput()` is overridden to pass `true` (suppressInvalidate) to `setAssociation()`, since changing the target doesn't affect the keyboard's visual output and shouldn't trigger a re-render.
 
 ### Value Manipulation
@@ -380,7 +382,7 @@ focusout event
   |     Otherwise                                       -> close()
 ```
 
-The `relatedTarget` property of the `FocusEvent` identifies the element receiving focus synchronously — no timer or debounce needed. This eliminates flicker during rapid focus transitions.
+The `relatedTarget` property of the `FocusEvent` identifies the element receiving focus synchronously in the common path. When `relatedTarget` is `null` (seen in some browser/shadow-DOM transitions), the implementation schedules a one-tick deferred check against `document.activeElement` before closing. This preserves flicker-free behavior while handling null-relatedTarget transitions safely.
 
 The "would this keyboard claim" check uses `_wouldClaimInput()`, which consults `_isTargetOfOther()`. If the new target input belongs to a different keyboard, the docked keyboard closes rather than staying open for an input it should not control.
 
@@ -436,7 +438,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | --------------------------------------- | -------------------------------------------------------------------------------- |
 | Focus steal on key tap                  | `ontouchstart` `preventDefault()` keeps focus on input                           |
 | Target input not yet focused            | `_getTargetDomRef()` places cursor at end via `setSelectionRange()` (no focus)   |
-| Auto-show flicker on focus transitions  | Synchronous `relatedTarget` check on focusout                                    |
+| Auto-show flicker on focus transitions  | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null     |
 | Focus on keyboard during auto-show      | `relatedTarget` checked against keyboard DOM via `contains()`                    |
 | Auto-show vs input owned by other kbd   | `_wouldClaimInput()` checks `_isTargetOfOther()`                                 |
 | Focus moves to claimed input while open | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                |

@@ -250,6 +250,7 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 | `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open.                                    |
 | `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.                                             |
 | `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                                                      |
+| `getTargetControl()`     | `Control \| null`  | Resolve the associated target input to a control instance (typed helper).         |
 | `resetKeyboardType()`    | `this`             | Clear explicit lock, re-enable auto-type.                                         |
 | `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.                                              |
 | `getKeyLabel(key)`       | `string`           | Display label for a key, respecting current Shift/Caps state.                     |
@@ -272,6 +273,7 @@ Complete list of KioskKeyboard-specific public instance methods (excluding inher
 | `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open.                                    |
 | `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.                                             |
 | `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                                                      |
+| `getTargetControl()`     | `Control \| null`  | Resolve the associated target input to a control instance (typed helper).         |
 | `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.                                              |
 | `getKeyLabel(key)`       | `string`           | Display label for a key, respecting current Shift/Caps state.                     |
 | `getKeyAriaLabel(key)`   | `string`           | Accessible label for a key (human-readable name for icons like Backspace, Enter). |
@@ -585,7 +587,7 @@ The docked keyboard uses `position: fixed` with `z-index: 100` and a `box-shadow
 When `autoShow="true"` (requires `docked="true"`), the keyboard automatically:
 
 1. **Opens** when any `<input>` or `<textarea>` on the page receives focus, setting it as the target. When `inputIds` is set, only the listed inputs trigger open.
-2. **Closes** when focus leaves all inputs (uses `FocusEvent.relatedTarget` for synchronous close decisions — no timers or debounce).
+2. **Closes** when focus leaves all inputs (uses `FocusEvent.relatedTarget` for synchronous close decisions, with a one-tick deferred fallback when `relatedTarget` is `null` during browser/shadow-DOM transitions).
 3. **Stays open** when focus moves between the keyboard and an input, or between two inputs.
 
 ```xml

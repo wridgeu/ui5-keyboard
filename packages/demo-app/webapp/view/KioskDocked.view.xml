@@ -9,7 +9,7 @@
                 <VBox class="sapUiSmallMargin">
                     <HBox alignItems="Center">
                         <Label text="Enabled:" class="sapUiSmallMarginEnd" />
-                        <Switch state="{state>/kioskEnabled}" change=".onEnabledChange" />
+                        <Switch state="{state>/kioskEnabled}" />
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Mobile Keyboard:" class="sapUiSmallMarginEnd" />

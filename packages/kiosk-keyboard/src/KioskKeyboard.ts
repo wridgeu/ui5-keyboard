@@ -386,9 +386,9 @@ export default class KioskKeyboard extends Control {
     },
     F11: () => {
       if (document.fullscreenElement) {
-        void document.exitFullscreen?.();
+        void document.exitFullscreen?.().catch(() => undefined);
       } else {
-        void document.documentElement.requestFullscreen?.();
+        void document.documentElement.requestFullscreen?.().catch(() => undefined);
       }
     },
   };
@@ -944,9 +944,9 @@ export default class KioskKeyboard extends Control {
   applyFocusInfo(oFocusInfo: { preventScroll?: boolean; lastFocusedKeyId?: string }): this {
     if (oFocusInfo.lastFocusedKeyId) {
       const el = document.getElementById(oFocusInfo.lastFocusedKeyId);
-      if (el) {
+      if (el instanceof HTMLElement) {
         el.setAttribute("tabindex", "0");
-        el.focus();
+        this._focusWithOptions(el, oFocusInfo.preventScroll);
         return this;
       }
     }
@@ -956,9 +956,22 @@ export default class KioskKeyboard extends Control {
     const first = this.getDomRef()?.querySelector(".ui5KioskKey") as HTMLElement | null;
     if (first) {
       first.setAttribute("tabindex", "0");
-      first.focus();
+      this._focusWithOptions(first, oFocusInfo.preventScroll);
     }
     return this;
+  }
+
+  private _focusWithOptions(element: HTMLElement, preventScroll?: boolean): void {
+    if (preventScroll === undefined) {
+      element.focus();
+      return;
+    }
+
+    try {
+      element.focus({ preventScroll });
+    } catch {
+      element.focus();
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -998,6 +1011,17 @@ export default class KioskKeyboard extends Control {
     if (kbType === KeyboardType.Numpad) return registryGetLayoutOrDefault("numpad");
     if (kbType === KeyboardType.Numeric) return registryGetLayoutOrDefault("numeric");
     return registryGetLayoutOrDefault(this.getLayout());
+  }
+
+  /**
+   * Resolves and returns the associated target input control instance.
+   *
+   * This is a typed convenience over `getTargetInput()` when controller code
+   * needs the control object rather than the association ID string.
+   */
+  getTargetControl<T extends Control = Control>(): T | null {
+    const target = this._getTargetElement();
+    return target instanceof Control ? (target as T) : null;
   }
 
   /** Default icons for special keys — used when the key has no explicit icon. */

@@ -38,12 +38,19 @@ export default class KioskDialog extends BaseController {
   }
 
   onOpenDialogA(): void {
+    if (this._dialogA?.isOpen()) return;
+
+    if (this._dialogA) {
+      this._dialogA.destroy();
+      this._dialogA = null;
+    }
+
     const dialogInput = new Input({
       placeholder: "Type in dialog...",
       width: "100%",
     });
 
-    this._dialogA = new Dialog({
+    const dialog = new Dialog({
       title: "Approach A: No Keyboard",
       content: [
         new VBox({
@@ -53,23 +60,33 @@ export default class KioskDialog extends BaseController {
       beginButton: new Button({
         text: "Close",
         press: () => {
-          this._dialogA!.close();
+          dialog.close();
         },
       }),
       afterClose: () => {
-        this._dialogA!.destroy();
-        this._dialogA = null;
+        dialog.destroy();
+        if (this._dialogA === dialog) {
+          this._dialogA = null;
+        }
         // Re-focus page input so docked keyboard resumes
         const pageInput = this.byId("pageInput") as Input;
         pageInput.focus();
       },
     });
 
-    this.getView()!.addDependent(this._dialogA);
-    this._dialogA.open();
+    this._dialogA = dialog;
+    this.getView()!.addDependent(dialog);
+    dialog.open();
   }
 
   onOpenDialogB(): void {
+    if (this._dialogB?.isOpen()) return;
+
+    if (this._dialogB) {
+      this._dialogB.destroy();
+      this._dialogB = null;
+    }
+
     const dialogInputId = this.getView()!.createId("dialogBInput");
     const dialogInput = new Input(dialogInputId, {
       placeholder: "Type in dialog...",
@@ -82,7 +99,7 @@ export default class KioskDialog extends BaseController {
       ariaLabel: "Dialog Keyboard",
     });
 
-    this._dialogB = new Dialog({
+    const dialog = new Dialog({
       title: "Approach B: Embedded Keyboard",
       contentWidth: "30rem",
       content: [
@@ -93,19 +110,22 @@ export default class KioskDialog extends BaseController {
       beginButton: new Button({
         text: "Close",
         press: () => {
-          this._dialogB!.close();
+          dialog.close();
         },
       }),
       afterClose: () => {
-        this._dialogB!.destroy();
-        this._dialogB = null;
+        dialog.destroy();
+        if (this._dialogB === dialog) {
+          this._dialogB = null;
+        }
         const pageInput = this.byId("pageInput") as Input;
         pageInput.focus();
       },
     });
 
-    this.getView()!.addDependent(this._dialogB);
-    this._dialogB.open();
+    this._dialogB = dialog;
+    this.getView()!.addDependent(dialog);
+    dialog.open();
   }
 
   onNavBack(): void {

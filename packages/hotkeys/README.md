@@ -228,7 +228,7 @@ manager.register(
 | `preventDefault`   | `boolean`                  | `true`         | Call `event.preventDefault()` on match                                                           |
 | `stopPropagation`  | `boolean`                  | `true`         | Call `event.stopPropagation()` on match                                                          |
 | `ignoreInputs`     | `boolean \| "auto"`        | `"auto"`       | Suppress in text fields. `"auto"` suppresses single keys but allows Ctrl/Meta combos and Escape. |
-| `scope`            | `string`                   | `"__global__"` | Scope this hotkey belongs to. Use `GLOBAL_SCOPE` constant.                                       |
+| `scope`            | `string`                   | `"__global__"` | Scope this hotkey belongs to. Use `GLOBAL_SCOPE` constant. Must be non-empty if provided.        |
 | `description`      | `string`                   | `""`           | Human-readable description for cheatsheets                                                       |
 | `ignoreRepeat`     | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
 | `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
@@ -482,6 +482,7 @@ manager.setSequencePendingHandler((info) => {
 **Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"` — suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape).
 
 > [!NOTE]
+> `scope` must be a non-empty string when provided.
 > Uses HotkeyManager's scope stack — sequences respect the active scope.
 
 ---

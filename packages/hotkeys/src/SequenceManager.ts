@@ -7,6 +7,7 @@ import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./internal/
 import { createIdGenerator } from "./internal/idgen";
 import { matchesKeyboardEvent } from "./internal/match";
 import { parseHotkey } from "./internal/parse";
+import { resolveScopeOrGlobal } from "./internal/scope";
 import type {
   HotkeyCallback,
   Platform,
@@ -22,6 +23,13 @@ const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
 
 const idGen = createIdGenerator("seq_");
+
+function assertValidTimeout(timeout: number): number {
+  if (!Number.isFinite(timeout) || timeout <= 0) {
+    throw new Error(`Invalid sequence timeout "${String(timeout)}": must be a finite number > 0`);
+  }
+  return timeout;
+}
 
 /**
  * Tracks in-progress match state for a registration.
@@ -92,14 +100,18 @@ export default class SequenceManager extends BaseObject {
       }
     });
 
+    const timeout = assertValidTimeout(options?.timeout ?? DEFAULT_TIMEOUT);
+    const scope = resolveScopeOrGlobal(options?.scope);
+    const sequenceCopy = [...sequence];
+
     const registration: SequenceRegistration = {
       id,
-      sequence,
+      sequence: sequenceCopy,
       parsedSteps,
       callback,
       description: options?.description ?? "",
-      timeout: options?.timeout ?? DEFAULT_TIMEOUT,
-      scope: options?.scope || GLOBAL_SCOPE,
+      timeout,
+      scope,
       enabled: options?.enabled ?? true,
       ignoreInputs: options?.ignoreInputs ?? "auto",
       preventDefault: options?.preventDefault ?? true,
@@ -124,7 +136,7 @@ export default class SequenceManager extends BaseObject {
         return state.active;
       },
       get sequence() {
-        return registration.sequence;
+        return [...registration.sequence];
       },
       get scope() {
         return registration.scope;
@@ -158,7 +170,7 @@ export default class SequenceManager extends BaseObject {
         // Type-safe field merge — no casts, compiler catches typos
         if (newOptions.enabled !== undefined) reg.enabled = newOptions.enabled;
         if (newOptions.description !== undefined) reg.description = newOptions.description;
-        if (newOptions.timeout !== undefined) reg.timeout = newOptions.timeout;
+        if (newOptions.timeout !== undefined) reg.timeout = assertValidTimeout(newOptions.timeout);
         if (newOptions.ignoreInputs !== undefined) reg.ignoreInputs = newOptions.ignoreInputs;
         if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
         if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
@@ -198,7 +210,7 @@ export default class SequenceManager extends BaseObject {
     }
     return {
       id: reg.id,
-      sequence: reg.sequence,
+      sequence: [...reg.sequence],
       scope: reg.scope,
       description: reg.description,
       enabled,
@@ -361,7 +373,7 @@ export default class SequenceManager extends BaseObject {
 
   private _firePendingCallback(reg: SequenceRegistration, stepIndex: number): void {
     this._pendingCallback?.({
-      sequence: reg.sequence,
+      sequence: [...reg.sequence],
       completedSteps: stepIndex,
       totalSteps: reg.parsedSteps.length,
       nextKey: reg.sequence[stepIndex],

@@ -1,6 +1,7 @@
 import net from "node:net";
 import fs from "node:fs";
 import { type ChildProcess, spawn } from "node:child_process";
+import ts from "typescript";
 import treeKill from "tree-kill";
 
 function isPortInUse(port: number): Promise<boolean> {
@@ -77,43 +78,51 @@ export function createServerManager(port: number, packageRoot: string) {
 /**
  * Extract test IDs from a UI5 testsuite.qunit.ts file.
  * Keys are read from the "tests" object and returned in declaration order.
+ *
+ * Uses TypeScript AST parsing (not regex/brace matching) so formatting changes
+ * in testsuite files do not break extraction.
  */
 export function readQUnitTestIds(testsuitePath: string): string[] {
   const source = fs.readFileSync(testsuitePath, "utf8");
-  const testsIndex = source.indexOf("tests:");
-  if (testsIndex < 0) {
+
+  const sourceFile = ts.createSourceFile(testsuitePath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  const getPropertyName = (name: ts.PropertyName): string | null => {
+    if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
+      return name.text;
+    }
+    return null;
+  };
+
+  const findTestsObject = (node: ts.Node): ts.ObjectLiteralExpression | null => {
+    if (ts.isPropertyAssignment(node) && getPropertyName(node.name) === "tests") {
+      if (ts.isObjectLiteralExpression(node.initializer)) {
+        return node.initializer;
+      }
+      throw new Error(`tests section in ${testsuitePath} is not an object literal`);
+    }
+
+    for (const child of node.getChildren(sourceFile)) {
+      const found = findTestsObject(child);
+      if (found) return found;
+    }
+
+    return null;
+  };
+
+  const resolvedTestsObject = findTestsObject(sourceFile);
+  if (!resolvedTestsObject) {
     throw new Error(`No tests section found in ${testsuitePath}`);
   }
 
-  const objectStart = source.indexOf("{", testsIndex);
-  if (objectStart < 0) {
-    throw new Error(`No tests object start found in ${testsuitePath}`);
-  }
-
-  let depth = 0;
-  let objectEnd = -1;
-  for (let i = objectStart; i < source.length; i++) {
-    const char = source[i];
-    if (char === "{") depth++;
-    if (char === "}") {
-      depth--;
-      if (depth === 0) {
-        objectEnd = i;
-        break;
-      }
-    }
-  }
-
-  if (objectEnd < 0) {
-    throw new Error(`No tests object end found in ${testsuitePath}`);
-  }
-
-  const testsBlock = source.slice(objectStart + 1, objectEnd);
-  const keyPattern = /^\s*(?:"([^"]+)"|([A-Za-z0-9_-]+)):\s*\{/gm;
   const ids: string[] = [];
-  for (const match of testsBlock.matchAll(keyPattern)) {
-    const id = match[1] ?? match[2];
-    if (id) ids.push(id);
+  for (const prop of resolvedTestsObject.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue;
+    const id = getPropertyName(prop.name);
+    if (!id) {
+      throw new Error(`Unsupported test key syntax in ${testsuitePath}`);
+    }
+    ids.push(id);
   }
 
   if (ids.length === 0) {

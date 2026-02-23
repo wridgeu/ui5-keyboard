@@ -34,6 +34,12 @@
       "rules": {
         "import/no-unassigned-import": "off"
       }
+    },
+    {
+      "files": ["tools/*.ts", "tools/*.mjs"],
+      "rules": {
+        "no-console": "off"
+      }
     }
   ],
   "ignorePatterns": ["dist/", "node_modules/", "**/*.js"]

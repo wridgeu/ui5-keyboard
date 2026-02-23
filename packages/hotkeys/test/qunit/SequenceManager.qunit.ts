@@ -358,6 +358,41 @@ QUnit.test("Empty sequence throws", (assert) => {
   assert.throws(() => manager.registerSequence([], () => {}), /at least 2 steps/, "Throws for empty sequence");
 });
 
+QUnit.test("registerSequence throws for invalid timeout values", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  assert.throws(
+    () => manager.registerSequence(["G", "E"], () => {}, { timeout: 0 }),
+    /Invalid sequence timeout/,
+    "Timeout 0 is rejected",
+  );
+  assert.throws(
+    () => manager.registerSequence(["G", "E"], () => {}, { timeout: -1 }),
+    /Invalid sequence timeout/,
+    "Negative timeout is rejected",
+  );
+  assert.throws(
+    () => manager.registerSequence(["G", "E"], () => {}, { timeout: Number.NaN }),
+    /Invalid sequence timeout/,
+    "NaN timeout is rejected",
+  );
+});
+
+QUnit.test("registerSequence throws for empty scope", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  assert.throws(
+    () => manager.registerSequence(["G", "E"], () => {}, { scope: "" }),
+    /non-empty string/,
+    "Empty scope is rejected",
+  );
+  assert.throws(
+    () => manager.registerSequence(["G", "E"], () => {}, { scope: "   " }),
+    /non-empty string/,
+    "Whitespace-only scope is rejected",
+  );
+});
+
 QUnit.test("3-key sequence completes", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
@@ -526,6 +561,13 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
   );
 });
 
+QUnit.test("setOptions: timeout validation rejects invalid values", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const handle = manager.registerSequence(["G", "E"], () => {});
+
+  assert.throws(() => handle.setOptions({ timeout: 0 }), /Invalid sequence timeout/, "Timeout 0 is rejected");
+});
+
 // ──────────────────────────────────────────────
 // ignoreInputs: "auto" (default)
 // ──────────────────────────────────────────────
@@ -585,6 +627,10 @@ QUnit.test("Handle exposes sequence, scope, and description", (assert) => {
   // Description updates via setOptions should be reflected
   handle.setOptions({ description: "Navigate to Inbox" });
   assert.strictEqual(handle.description, "Navigate to Inbox", "description reflects setOptions update");
+
+  const snapshot = handle.sequence;
+  snapshot[0] = "X";
+  assert.deepEqual(handle.sequence, ["G", "I"], "Mutating sequence snapshot does not mutate registration");
 });
 
 // ──────────────────────────────────────────────

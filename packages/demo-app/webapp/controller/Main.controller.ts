@@ -157,8 +157,12 @@ export default class Main extends BaseController {
   }
 
   onAfterRendering(): void {
-    // Bind target-element hotkey once the DOM is available
-    if (this._targetHandle) return;
+    // Rebind target-element hotkey to the current DOM ref after each render
+    if (this._targetHandle) {
+      this._targetHandle.unregister();
+      this._targetHandle = null;
+    }
+
     const targetPanel = this.byId("targetPanel")?.getDomRef();
     if (targetPanel) {
       const stateModel = this.getStateModel();

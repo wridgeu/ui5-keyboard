@@ -69,9 +69,11 @@ export default class KioskFormWorkflow extends BaseController {
 
   private _advanceToNextField(): void {
     const kb = this.byId("formKeyboard") as KioskKeyboard;
-    const currentTargetId = kb.getTargetInput();
+    const currentTargetId = kb.getTargetControl<Input | TextArea>()?.getId();
 
-    const currentIndex = KioskFormWorkflow._FIELD_IDS.findIndex((id) => currentTargetId?.endsWith(id));
+    const currentIndex = KioskFormWorkflow._FIELD_IDS.findIndex(
+      (id) => (this.byId(id) as Input | TextArea | undefined)?.getId() === currentTargetId,
+    );
 
     if (currentIndex === -1) return;
 

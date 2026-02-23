@@ -6,13 +6,14 @@ import BaseController from "./BaseController";
 
 /**
  * Component-level keyboard demo — the keyboard is created once, placed
- * in the `sap-ui-static` UIArea, and survives navigation.
+ * in the `sap-ui-static` UIArea, and reused while this controller instance lives.
  *
  * @name demo.hotkeys.controller.KioskComponent
  */
 export default class KioskComponent extends BaseController {
   /** Shared across controller re-instantiations. */
   private static _keyboard: KioskKeyboard | null = null;
+  private _returnNavTimer: ReturnType<typeof setTimeout> | null = null;
 
   onInit(): void {
     const stateModel = this.getStateModel();
@@ -47,6 +48,11 @@ export default class KioskComponent extends BaseController {
       .getRoute(Scope.KioskComponent)!
       .detachPatternMatched(this._onRouteMatched, this);
 
+    if (this._returnNavTimer) {
+      clearTimeout(this._returnNavTimer);
+      this._returnNavTimer = null;
+    }
+
     if (KioskComponent._keyboard) {
       KioskComponent._keyboard.destroy();
       KioskComponent._keyboard = null;
@@ -74,10 +80,21 @@ export default class KioskComponent extends BaseController {
   onNavigateAway(): void {
     const router = this.getTypedComponent().getRouter();
     router.navTo(Scope.KioskHub);
-    setTimeout(() => router.navTo(Scope.KioskComponent), 2000);
+    if (this._returnNavTimer) {
+      clearTimeout(this._returnNavTimer);
+    }
+    this._returnNavTimer = setTimeout(() => {
+      this._returnNavTimer = null;
+      router.navTo(Scope.KioskComponent);
+    }, 2000);
   }
 
   onNavBack(): void {
+    if (this._returnNavTimer) {
+      clearTimeout(this._returnNavTimer);
+      this._returnNavTimer = null;
+    }
+
     // Close keyboard when leaving this demo
     KioskComponent._keyboard?.close();
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);

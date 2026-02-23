@@ -10,6 +10,7 @@
 
 - [Backward Compatibility](./proposals/BACKWARD-COMPATIBILITY.md)
 - [Tab and Done Keys](./proposals/TAB-AND-DONE-KEYS.md)
+- [i18n Extensibility](./proposals/I18N-EXTENSIBILITY.md)
 
 ## History
 

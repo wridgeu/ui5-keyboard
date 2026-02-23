@@ -50,7 +50,7 @@ manager.registerSequence(
 
 ### Scope Integration
 
-Sequences use the same two-pass matching as `HotkeyManager`: active scope first, then global. The active scope is read from `HotkeyManager.getInstance().getActiveScope()` on each keydown.
+Sequences use the same two-pass matching as `HotkeyManager`: active scope first, then global. The active scope is read via a scope-provider callback supplied by `HotkeyManager` (no reverse singleton lookup) on each keydown.
 
 ### Pending Callback
 

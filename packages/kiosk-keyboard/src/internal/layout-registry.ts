@@ -112,7 +112,8 @@ export function resetCustomLayouts(): void {
  * if no such layout is registered.
  */
 export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
-  return Object.hasOwn(layouts, sName) ? layouts[sName] : undefined;
+  const name = sName.toLowerCase();
+  return Object.hasOwn(layouts, name) ? layouts[name] : undefined;
 }
 
 /**
@@ -120,7 +121,8 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
  * {@link DEFAULT_LAYOUT} when the name is not registered.
  */
 export function getLayoutOrDefault(sName: string): LayoutDefinition {
-  return (Object.hasOwn(layouts, sName) ? layouts[sName] : undefined) ?? layouts[DEFAULT_LAYOUT];
+  const name = sName.toLowerCase();
+  return (Object.hasOwn(layouts, name) ? layouts[name] : undefined) ?? layouts[DEFAULT_LAYOUT];
 }
 
 /** Returns the names of all registered layouts (built-in + custom). */
@@ -130,7 +132,7 @@ export function getRegisteredLayoutNames(): string[] {
 
 /** Returns whether the given layout name is a built-in layout. */
 export function isBuiltInLayout(sName: string): boolean {
-  return BUILTIN_LAYOUTS.has(sName);
+  return BUILTIN_LAYOUTS.has(sName.toLowerCase());
 }
 
 /**

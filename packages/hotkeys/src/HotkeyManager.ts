@@ -8,6 +8,7 @@ import { GLOBAL_SCOPE } from "./internal/constants";
 import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { keyboardEventToHotkey, parseHotkey } from "./internal/parse";
+import { resolveScopeOrGlobal } from "./internal/scope";
 import { resetRuntimeCaches, runtimeHooks } from "./internal/runtime";
 import ListenerRegistry from "./internal/listener-registry";
 import { resolveMatchedRegistration } from "./internal/dispatch-core";
@@ -49,12 +50,14 @@ interface ScopeRegistrationBucket {
  * Merge user-provided options with defaults.
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
+  const scope = resolveScopeOrGlobal(options?.scope);
+
   return {
     enabled: options?.enabled ?? true,
     preventDefault: options?.preventDefault ?? true,
     stopPropagation: options?.stopPropagation ?? true,
     ignoreInputs: options?.ignoreInputs ?? "auto",
-    scope: options?.scope || GLOBAL_SCOPE,
+    scope,
     description: options?.description ?? "",
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,

@@ -88,7 +88,7 @@ Landing page linking to all kiosk demos.
 - Selective targeting using `inputIds`
 - Mixed target controls (`Input`, `StepInput`)
 - Native UI5 Web Component input (`@ui5/webcomponents/dist` XML namespace) targeted directly via `inputIds`
-- Bridge integration for custom element typing via hidden UI5 input
+- Custom Web Component input targeted directly via `inputIds` (UI5 wrapper control with `setValue` bridge)
 - Native custom element usage in XML via `sap.ui.core.webc.WebComponent` wrapper controls
 
 ### Programmatic Control (`#/kiosk/programmatic`)
@@ -108,7 +108,7 @@ Landing page linking to all kiosk demos.
 ### Component-Level Keyboard (`#/kiosk/component`)
 
 - Keyboard created in controller and placed in static UI area
-- Persists across navigation (round-trip navigation demo)
+- Reused across route round-trips while the demo controller remains alive
 
 ## Route Map
 

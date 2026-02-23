@@ -1,3 +1,9 @@
+import type {
+  ConflictBehavior as LibraryConflictBehavior,
+  Platform as LibraryPlatform,
+  UnhandledReason as LibraryUnhandledReason,
+} from "./library";
+
 /**
  * The four canonical modifier keys as reported by KeyboardEvent properties.
  */
@@ -6,7 +12,7 @@ export type CanonicalModifier = "Control" | "Shift" | "Alt" | "Meta";
 /**
  * Supported platform identifiers for cross-platform modifier resolution.
  */
-export type Platform = "mac" | "windows" | "linux";
+export type Platform = LibraryPlatform;
 
 /**
  * Strategy for handling conflicting hotkey registrations on the same scope.
@@ -16,7 +22,7 @@ export type Platform = "mac" | "windows" | "linux";
  * - `"replace"`: Unregister the existing hotkey and register the new one.
  * - `"allow"`: Allow multiple registrations silently.
  */
-export type ConflictBehavior = "warn" | "error" | "replace" | "allow";
+export type ConflictBehavior = LibraryConflictBehavior;
 
 // ──────────────────────────────────────────────
 // Type-safe Hotkey union (Feature 12)
@@ -335,7 +341,7 @@ export interface ResolvedHotkeyOptions {
  * - `"popup_suppressed"`: A registration matched, but was suppressed because a popup (dialog or popover) is open.
  * - `"repeat_ignored"`: A registration matched, but was skipped because the key is held (`event.repeat`).
  */
-export type UnhandledReason = "no_match" | "disabled" | "input_suppressed" | "popup_suppressed" | "repeat_ignored";
+export type UnhandledReason = LibraryUnhandledReason;
 
 /**
  * Context passed to the unhandled key callback.

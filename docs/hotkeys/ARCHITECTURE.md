@@ -26,7 +26,7 @@ internal/skip-reason.ts      Internal dispatch skip-reason types
 internal/idgen.ts            Internal registration ID generator
 ```
 
-`HotkeyManager` is the only public-facing class. The other modules are importable utilities that can be used independently.
+`HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). Anything under `ui5/hotkeys/internal/*` remains internal-only.
 
 ## UI5 Integration
 

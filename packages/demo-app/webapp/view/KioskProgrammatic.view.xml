@@ -41,7 +41,7 @@
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Enabled:" class="sapUiSmallMarginEnd" />
-                        <Switch state="{state>/kioskEnabled}" change=".onEnabledChange" />
+                        <Switch state="{state>/kioskEnabled}" />
                     </HBox>
                 </VBox>
             </Panel>

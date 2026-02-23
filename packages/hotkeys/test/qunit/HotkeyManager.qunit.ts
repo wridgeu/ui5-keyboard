@@ -211,6 +211,22 @@ QUnit.test("Scope push/pop lifecycle", (assert) => {
   assert.notOk(editorCalled, "Editor scope callback did not fire after popScope");
 });
 
+QUnit.test("register throws for empty scope string", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  assert.throws(
+    () => manager.register("Escape", () => {}, { scope: "" }),
+    /non-empty string/,
+    "Empty scope is rejected",
+  );
+
+  assert.throws(
+    () => manager.register("Escape", () => {}, { scope: "   " }),
+    /non-empty string/,
+    "Whitespace-only scope is rejected",
+  );
+});
+
 QUnit.test("Scoped handler takes priority over global for same key", (assert) => {
   const manager = HotkeyManager.getInstance();
   let globalCalled = false;

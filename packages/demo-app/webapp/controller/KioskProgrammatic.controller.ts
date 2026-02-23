@@ -146,10 +146,6 @@ export default class KioskProgrammatic extends BaseController {
     this._updateStatus();
   }
 
-  onEnabledChange(): void {
-    // Two-way binding handles the update
-  }
-
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
     this.getStateModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
   }

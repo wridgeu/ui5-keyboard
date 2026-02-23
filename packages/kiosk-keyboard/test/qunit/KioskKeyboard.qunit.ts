@@ -3678,4 +3678,17 @@ QUnit.test("backspace works for custom control without value property (DOM fallb
   custom.destroy();
 });
 
+QUnit.test("getTargetControl resolves target control instance", async (assert) => {
+  const input = new Input({ value: "" });
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const target = kb.getTargetControl();
+  assert.ok(target instanceof Control, "Resolved target is a control instance");
+  assert.strictEqual(target, input, "Resolved target matches the associated control");
+
+  kb.destroy();
+  input.destroy();
+});
+
 // keyboardTypeChange and RTL tests moved to KioskKeyboard-events.qunit.ts

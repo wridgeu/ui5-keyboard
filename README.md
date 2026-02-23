@@ -212,6 +212,7 @@ ui5-keyboard/
 | [Hotkeys Backward Compatibility Proposal](./docs/hotkeys/proposals/BACKWARD-COMPATIBILITY.md) | Planned compatibility work             |
 | [Kiosk Backward Compatibility Proposal](./docs/kiosk/proposals/BACKWARD-COMPATIBILITY.md)     | Planned compatibility work             |
 | [Tab and Done Keys Proposal](./docs/kiosk/proposals/TAB-AND-DONE-KEYS.md)                     | Proposed special-key behavior          |
+| [Kiosk i18n Extensibility Proposal](./docs/kiosk/proposals/I18N-EXTENSIBILITY.md)             | Proposed i18n extension surface        |
 | [Kiosk History Notes](./docs/kiosk/history/)                                                  | Archived implementation design notes   |
 
 ## License

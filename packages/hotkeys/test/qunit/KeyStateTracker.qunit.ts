@@ -155,6 +155,25 @@ QUnit.test("setChangeCallback(null) removes callback", (assert) => {
   assert.strictEqual(callCount, 1, "Callback not fired after setting to null");
 });
 
+QUnit.test("Change callback errors are isolated", (assert) => {
+  const tracker = KeyStateTracker.getInstance();
+  let safeCallbackCalls = 0;
+
+  tracker.setChangeCallback(() => {
+    throw new Error("intentional callback failure");
+  });
+
+  assert.ok(true, "Setup complete");
+  fireKey("a");
+
+  tracker.setChangeCallback(() => {
+    safeCallbackCalls++;
+  });
+  fireKey("b");
+
+  assert.strictEqual(safeCallbackCalls, 1, "Tracker remains operational after callback error");
+});
+
 QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
   const tracker = KeyStateTracker.getInstance();
 

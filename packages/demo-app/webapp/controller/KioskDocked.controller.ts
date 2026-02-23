@@ -38,10 +38,6 @@ export default class KioskDocked extends BaseController {
     this.getStateModel().setProperty("/kioskLayout", layout);
   }
 
-  onEnabledChange(): void {
-    // Two-way binding handles the state model update
-  }
-
   onMobileKeyboardChange(event: SegmentedButton$SelectionChangeEvent): void {
     const key = event.getParameter("item")!.getKey();
     const kb = this.byId("dockedKeyboard") as KioskKeyboard;
