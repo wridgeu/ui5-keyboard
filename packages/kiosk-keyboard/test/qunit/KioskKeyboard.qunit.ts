@@ -2622,6 +2622,33 @@ QUnit.test("registerLayout keeps existing custom layout when re-registration pay
   );
 });
 
+QUnit.test("layout registry APIs handle non-string arguments safely", (assert) => {
+  KioskKeyboard.registerLayout(123 as never, [[{ value: "x" }]]);
+  KioskKeyboard.unregisterLayout(123 as never);
+
+  assert.strictEqual(
+    KioskKeyboard.getRegisteredLayout(123 as never),
+    undefined,
+    "getRegisteredLayout returns undefined for non-string names",
+  );
+  assert.notOk(KioskKeyboard.isBuiltInLayout(123 as never), "isBuiltInLayout returns false for non-string names");
+  assert.ok(KioskKeyboard.getRegisteredLayout("qwerty"), "Built-in layouts remain intact after invalid calls");
+});
+
+QUnit.test("locale registry APIs handle non-string arguments safely", (assert) => {
+  const currentLang = Localization.getLanguage();
+  try {
+    KioskKeyboard.registerLocaleLayout(123 as never, "qwertz-de");
+    KioskKeyboard.registerLocaleLayout("de", 123 as never);
+    KioskKeyboard.unregisterLocaleLayout(123 as never);
+
+    Localization.setLanguage("de");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "Built-in locale mapping remains intact");
+  } finally {
+    Localization.setLanguage(currentLang);
+  }
+});
+
 // ──────────────────────────────────────────────
 // Focus save / restore (getFocusInfo / applyFocusInfo)
 // ──────────────────────────────────────────────

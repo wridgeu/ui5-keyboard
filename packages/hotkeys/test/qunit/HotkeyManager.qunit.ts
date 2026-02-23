@@ -211,6 +211,49 @@ QUnit.test("Scope push/pop lifecycle", (assert) => {
   assert.notOk(editorCalled, "Editor scope callback did not fire after popScope");
 });
 
+QUnit.test("pushScope trims whitespace and activates normalized scope", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let editorCalled = false;
+
+  manager.register(
+    "Escape",
+    () => {
+      editorCalled = true;
+    },
+    { scope: "editor" },
+  );
+
+  manager.pushScope("  editor  ");
+  assert.strictEqual(manager.getActiveScope(), "editor", "Active scope is trimmed");
+
+  fireKey("Escape");
+  assert.ok(editorCalled, "Registration in normalized scope fires");
+});
+
+QUnit.test("popScope trims whitespace and pops normalized scope", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  manager.pushScope("editor");
+  assert.strictEqual(manager.getActiveScope(), "editor", "Editor scope pushed");
+
+  manager.popScope("  editor  ");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Pop with whitespace-trimmed value succeeds");
+});
+
+QUnit.test("pushScope and popScope whitespace-only values throw", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  manager.pushScope("main");
+  assert.throws(() => manager.pushScope("   "), /non-empty string/, "Whitespace-only pushScope is rejected");
+
+  assert.throws(() => manager.popScope("   "), /non-empty string/, "Whitespace-only popScope is rejected");
+
+  assert.strictEqual(manager.getActiveScope(), "main", "Stack remains unchanged after rejected whitespace calls");
+
+  manager.popScope("main");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Normal pop still works after rejected whitespace calls");
+});
+
 QUnit.test("register throws for empty scope string", (assert) => {
   const manager = HotkeyManager.getInstance();
 

@@ -8,7 +8,7 @@ import { GLOBAL_SCOPE } from "./internal/constants";
 import { getEventTarget, isInputElement, shouldIgnoreKeyEvent } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { keyboardEventToHotkey, parseHotkey } from "./internal/parse";
-import { resolveScopeOrGlobal } from "./internal/scope";
+import { resolveRequiredScope, resolveScopeOrGlobal } from "./internal/scope";
 import { resetRuntimeCaches, runtimeHooks } from "./internal/runtime";
 import ListenerRegistry from "./internal/listener-registry";
 import { resolveMatchedRegistration } from "./internal/dispatch-core";
@@ -284,9 +284,9 @@ export default class HotkeyManager extends BaseObject {
    * become active, while non-global hotkeys in other scopes are paused.
    */
   pushScope(scopeId: string): void {
-    if (!scopeId) return;
-    this._scopeStack.push(scopeId);
-    Log.debug(`Pushed scope "${scopeId}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
+    const normalized = resolveRequiredScope(scopeId);
+    this._scopeStack.push(normalized);
+    Log.debug(`Pushed scope "${normalized}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
   }
 
   /**
@@ -298,14 +298,14 @@ export default class HotkeyManager extends BaseObject {
    *   or if the scopeId does not match the top.
    */
   popScope(scopeId: string): void {
-    if (!scopeId) return;
+    const normalized = resolveRequiredScope(scopeId);
     if (this._scopeStack.length <= 1) {
       throw new Error("Cannot pop the global scope");
     }
 
     const top = this._scopeStack[this._scopeStack.length - 1];
-    if (top !== scopeId) {
-      throw new Error(`Cannot pop scope "${scopeId}": current top of stack is "${top}"`);
+    if (top !== normalized) {
+      throw new Error(`Cannot pop scope "${normalized}": current top of stack is "${top}"`);
     }
 
     this._scopeStack.pop();

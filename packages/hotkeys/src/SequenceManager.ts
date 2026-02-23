@@ -254,7 +254,7 @@ export default class SequenceManager extends BaseObject {
     let fullMatch: { registration: SequenceRegistration; event: KeyboardEvent } | null = null;
 
     for (const match of this._activeMatches) {
-      if (match.timerId !== null) clearTimeout(match.timerId);
+      clearTimeout(match.timerId);
 
       const reg = match.registration;
       if (!this._isRegistrationActiveInScope(reg, activeScope)) continue;
