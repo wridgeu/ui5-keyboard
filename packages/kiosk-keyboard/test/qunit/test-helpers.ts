@@ -1,6 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
-import { asRendererInternalControl } from "ui5/kiosk/internal/renderer-internal-api";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
 /** Place a control into qunit-fixture and wait for initial render. */
@@ -51,21 +50,21 @@ export function getKeyElements(keyboard: KioskKeyboard): NodeListOf<HTMLElement>
 }
 
 export function isShiftActive(keyboard: KioskKeyboard): boolean {
-  return asRendererInternalControl(keyboard)._isShiftActive();
+  return keyboard._getRendererApi()._isShiftActive();
 }
 
 export function isCapsLock(keyboard: KioskKeyboard): boolean {
-  return asRendererInternalControl(keyboard)._isCapsLock();
+  return keyboard._getRendererApi()._isCapsLock();
 }
 
 export function getResolvedLayout(keyboard: KioskKeyboard): LayoutDefinition {
-  return asRendererInternalControl(keyboard)._getResolvedLayout();
+  return keyboard._getRendererApi()._getResolvedLayout();
 }
 
 export function getKeyLabel(keyboard: KioskKeyboard, key: KeyDefinition): string {
-  return asRendererInternalControl(keyboard)._getKeyLabel(key);
+  return keyboard._getRendererApi()._getKeyLabel(key);
 }
 
 export function getKeyAriaLabel(keyboard: KioskKeyboard, key: KeyDefinition): string {
-  return asRendererInternalControl(keyboard)._getKeyAriaLabel(key);
+  return keyboard._getRendererApi()._getKeyAriaLabel(key);
 }

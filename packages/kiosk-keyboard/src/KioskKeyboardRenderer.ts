@@ -3,7 +3,6 @@ import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n";
 import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
-import { asRendererInternalControl } from "./internal/renderer-internal-api";
 import { KeyboardType } from "./library";
 
 /**
@@ -77,7 +76,8 @@ const KioskKeyboardRenderer = {
 
   /** The row loop — override to add toolbar, extra sections, etc. */
   renderContent(rm: RenderManager, oControl: KioskKeyboard): void {
-    const layout = asRendererInternalControl(oControl)._getResolvedLayout();
+    const { _getResolvedLayout } = oControl._getRendererApi();
+    const layout = _getResolvedLayout();
     const focusTarget = this.resolveFocusTarget(oControl, layout);
     layout.forEach((row, ri) => {
       this.renderRow(rm, oControl, row, ri, focusTarget);
@@ -107,16 +107,16 @@ const KioskKeyboardRenderer = {
 
   /** ARIA live region — announces shift/caps state changes to screen readers. */
   renderLiveRegion(rm: RenderManager, oControl: KioskKeyboard): void {
-    const internal = asRendererInternalControl(oControl);
+    const { _isCapsLock, _isShiftActive } = oControl._getRendererApi();
     rm.openStart("span", `${oControl.getId()}-liveState`);
     rm.class("sapUiInvisibleText");
     rm.attr("role", "status");
     rm.attr("aria-live", "polite");
     rm.openEnd();
 
-    if (internal._isCapsLock()) {
+    if (_isCapsLock()) {
       rm.text(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
-    } else if (internal._isShiftActive()) {
+    } else if (_isShiftActive()) {
       rm.text(getText("ARIA_SHIFT_ON", "Shift on"));
     }
 
@@ -171,7 +171,7 @@ const KioskKeyboardRenderer = {
 
   /** CSS classes on a key `<div>`. */
   addKeyClasses(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
-    const internal = asRendererInternalControl(oControl);
+    const { _isShiftActive, _isCapsLock } = oControl._getRendererApi();
     rm.class("ui5KioskKey");
 
     // Width class
@@ -189,9 +189,9 @@ const KioskKeyboardRenderer = {
     }
 
     // Active shift / caps lock indicator
-    if (key.value === "{shift}" && internal._isShiftActive()) {
+    if (key.value === "{shift}" && _isShiftActive()) {
       rm.class("ui5KioskKey--active");
-      if (internal._isCapsLock()) {
+      if (_isCapsLock()) {
         rm.class("ui5KioskKey--capsLock");
       }
     }
@@ -206,14 +206,14 @@ const KioskKeyboardRenderer = {
     ci: number,
     focusTarget: { row: number; col: number },
   ): void {
-    const internal = asRendererInternalControl(oControl);
+    const { _isShiftActive, _isCapsLock, _getKeyAriaLabel } = oControl._getRendererApi();
     const bIsShiftKey = key.value === "{shift}";
 
     rm.attr("role", "button");
 
     // Toggle state for shift key (aria-pressed for screen readers)
     if (bIsShiftKey) {
-      rm.attr("aria-pressed", internal._isShiftActive() ? "true" : "false");
+      rm.attr("aria-pressed", _isShiftActive() ? "true" : "false");
     }
 
     // Roving tabindex: exactly one key gets tabindex="0".
@@ -233,17 +233,16 @@ const KioskKeyboardRenderer = {
       rm.attr("data-shift-value", key.shiftValue);
     }
 
-    const ariaLabel =
-      bIsShiftKey && internal._isCapsLock() ? getText("ARIA_CAPS_LOCK", "Caps Lock") : internal._getKeyAriaLabel(key);
+    const ariaLabel = bIsShiftKey && _isCapsLock() ? getText("ARIA_CAPS_LOCK", "Caps Lock") : _getKeyAriaLabel(key);
     rm.attr("aria-label", ariaLabel);
   },
 
   /** Icon or text inside the key. */
   renderKeyContent(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
-    const internal = asRendererInternalControl(oControl);
+    const { _isCapsLock, _getKeyLabel } = oControl._getRendererApi();
     const bIsShiftKey = key.value === "{shift}";
 
-    if (bIsShiftKey && internal._isCapsLock()) {
+    if (bIsShiftKey && _isCapsLock()) {
       rm.icon("sap-icon://locked", ["sapUiIcon"], { "aria-hidden": "true" });
     } else {
       const Ctor = oControl.constructor as typeof KioskKeyboard;
@@ -251,7 +250,7 @@ const KioskKeyboardRenderer = {
       if (icon) {
         rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
       } else {
-        rm.text(internal._getKeyLabel(key));
+        rm.text(_getKeyLabel(key));
       }
     }
   },

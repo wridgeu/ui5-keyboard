@@ -24,13 +24,22 @@ function isRegisteredLayout(layout: string): boolean {
   return Object.hasOwn(layouts, layout);
 }
 
+/**
+ * Normalizes an input to a trimmed lowercase string.
+ * Returns `undefined` for non-string or empty-after-trim values, logging a warning.
+ */
 function normalizeLowerString(value: unknown, argName: string): string | undefined {
   if (typeof value !== "string") {
     Log.warning(`Invalid ${argName}: expected a string.`, undefined, "ui5.kiosk.KioskKeyboard");
     return undefined;
   }
 
-  return value.trim().toLowerCase();
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) {
+    Log.warning(`Invalid ${argName}: must be a non-empty string.`, undefined, "ui5.kiosk.KioskKeyboard");
+    return undefined;
+  }
+  return trimmed;
 }
 
 function resolveLocaleMappedLayout(locale: string): string | null {
@@ -52,11 +61,7 @@ function resolveLocaleMappedLayout(locale: string): string | null {
  */
 export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
   const name = normalizeLowerString(sName, "layout name");
-  if (name === undefined) return;
-  if (!name) {
-    Log.warning("Invalid layout name: must be a non-empty string.", undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
+  if (!name) return;
 
   if (!isSafeMapKey(name)) {
     Log.warning(`Invalid layout name "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
@@ -96,11 +101,7 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
  */
 export function unregisterLayout(sName: string): void {
   const name = normalizeLowerString(sName, "layout name");
-  if (name === undefined) return;
-  if (!name) {
-    Log.warning("Invalid layout name: must be a non-empty string.", undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
+  if (!name) return;
 
   if (!isSafeMapKey(name)) {
     Log.warning(`Invalid layout name "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
@@ -132,7 +133,6 @@ export function resetCustomLayouts(): void {
  */
 export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
   const name = normalizeLowerString(sName, "layout name");
-  if (name === undefined) return undefined;
   if (!name) return undefined;
   return Object.hasOwn(layouts, name) ? layouts[name] : undefined;
 }
@@ -143,7 +143,6 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
  */
 export function getLayoutOrDefault(sName: string): LayoutDefinition {
   const name = normalizeLowerString(sName, "layout name");
-  if (name === undefined) return layouts[DEFAULT_LAYOUT];
   if (!name) return layouts[DEFAULT_LAYOUT];
   return (Object.hasOwn(layouts, name) ? layouts[name] : undefined) ?? layouts[DEFAULT_LAYOUT];
 }
@@ -156,7 +155,6 @@ export function getRegisteredLayoutNames(): string[] {
 /** Returns whether the given layout name is a built-in layout. */
 export function isBuiltInLayout(sName: string): boolean {
   const name = normalizeLowerString(sName, "layout name");
-  if (name === undefined) return false;
   if (!name) return false;
   return BUILTIN_LAYOUTS.has(name);
 }
@@ -169,18 +167,7 @@ export function isBuiltInLayout(sName: string): boolean {
 export function registerLocaleLayout(sLocale: string, sLayout: string): void {
   const locale = normalizeLowerString(sLocale, "locale map key");
   const layout = normalizeLowerString(sLayout, "layout map value");
-
-  if (locale === undefined || layout === undefined) return;
-
-  if (!locale) {
-    Log.warning("Invalid locale map key: must be a non-empty string.", undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
-
-  if (!layout) {
-    Log.warning("Invalid layout map value: must be a non-empty string.", undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
+  if (!locale || !layout) return;
 
   if (!isSafeMapKey(locale)) {
     Log.warning(`Invalid locale map key "${locale}".`, undefined, "ui5.kiosk.KioskKeyboard");
@@ -208,11 +195,7 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
  */
 export function unregisterLocaleLayout(sLocale: string): void {
   const locale = normalizeLowerString(sLocale, "locale map key");
-  if (locale === undefined) return;
-  if (!locale) {
-    Log.warning("Invalid locale map key: must be a non-empty string.", undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
+  if (!locale) return;
 
   if (!isSafeMapKey(locale)) {
     Log.warning(`Invalid locale map key "${locale}".`, undefined, "ui5.kiosk.KioskKeyboard");

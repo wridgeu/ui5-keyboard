@@ -12,7 +12,7 @@ import BaseController from "./BaseController";
  * @name demo.hotkeys.controller.KioskComponent
  */
 export default class KioskComponent extends BaseController {
-  /** Shared within one controller lifetime (until `onExit`). */
+  /** Static: destroyed in onExit, lazily recreated in onInit. */
   private static _keyboard: KioskKeyboard | null = null;
   private _returnNavTimer: ReturnType<typeof setTimeout> | null = null;
 

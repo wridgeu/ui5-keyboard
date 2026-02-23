@@ -5,6 +5,7 @@ import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
 import { SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
+import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
@@ -92,6 +93,7 @@ export default class KioskKeyboard extends Control {
   declare private _focusClaimService: FocusClaimService;
   declare private _targetSession: TargetInputSession;
   declare private _deferredFocusOutCloseId: number | null;
+  declare private _rendererApi: RendererInternalApi | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -701,7 +703,7 @@ export default class KioskKeyboard extends Control {
       this.invalidate();
     }
 
-    this.setAssociation("targetInput", target as string | Control, true);
+    this.setAssociation("targetInput", target ?? "", true);
 
     const newId = this.getTargetInput();
     if (newId && this._isTargetOfOther(newId)) {
@@ -1077,6 +1079,32 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
   // Internal renderer helpers
   // ──────────────────────────────────────────────
+
+  /**
+   * Returns the internal renderer API object.
+   *
+   * Exposes the five private helpers the renderer and tests need, without
+   * an unsafe `as unknown as` cast. TypeScript structurally checks the
+   * returned object literal against {@link RendererInternalApi} — if any
+   * method is renamed or its signature changes, this line produces a
+   * compile error.
+   *
+   * The object is lazily created and cached per instance.
+   *
+   * @internal Used by KioskKeyboardRenderer and test helpers only.
+   */
+  _getRendererApi(): RendererInternalApi {
+    if (!this._rendererApi) {
+      this._rendererApi = {
+        _isShiftActive: () => this._isShiftActive(),
+        _isCapsLock: () => this._isCapsLock(),
+        _getResolvedLayout: () => this._getResolvedLayout(),
+        _getKeyLabel: (key) => this._getKeyLabel(key),
+        _getKeyAriaLabel: (key) => this._getKeyAriaLabel(key),
+      };
+    }
+    return this._rendererApi;
+  }
 
   /** Returns true for one-shot Shift and Caps Lock mode. */
   private _isShiftActive(): boolean {
