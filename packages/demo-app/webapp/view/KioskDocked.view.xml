@@ -110,6 +110,7 @@
                 docked="true"
                 autoShow="true"
                 autoType="true"
+                inputIds="nameInput,emailInput,ageInput,phoneInput,notesInput"
                 enabled="{state>/kioskEnabled}"
                 fKeyMode="{state>/kioskFKeyMode}"
                 keyPress=".onKeyPress"

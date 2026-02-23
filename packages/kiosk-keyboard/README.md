@@ -596,6 +596,13 @@ When `autoShow="true"` (requires `docked="true"`), the keyboard automatically:
 
 The auto-show listeners use document-level `focusin`/`focusout` in the capture phase. They are automatically cleaned up on `destroy()`.
 
+When multiple `KioskKeyboard` instances exist, auto-show claim arbitration only considers instances that are currently active in the UI (visible, enabled, rendered, and attached to the document). Hidden/inactive instances do not block another active keyboard from claiming the focused input.
+
+For routed applications with cached views, still prefer one of these patterns for predictable behavior:
+
+- Scope each keyboard with `inputIds` to its own form fields.
+- Disable `autoShow` when a route/view becomes inactive (`setAutoShow(false)`) and re-enable on route enter.
+
 ### Input Detection
 
 The keyboard recognizes input elements through a two-layer check: **DOM-level detection** (what triggers open/close) and **UI5-level resolution** (what the keyboard types into).

@@ -15,6 +15,7 @@ import BaseController from "./BaseController";
  */
 export default class KioskFormWorkflow extends BaseController {
   private static readonly _FIELD_IDS = ["nameInput", "emailInput", "phoneInput", "guestsInput", "notesInput"];
+  private _routeAttached: boolean = false;
 
   onInit(): void {
     const stateModel = this.getStateModel();
@@ -23,6 +24,20 @@ export default class KioskFormWorkflow extends BaseController {
     stateModel.setProperty("/formActiveField", "None");
     stateModel.setProperty("/formKeyboardType", "Full");
     stateModel.setProperty("/formLastKey", "None");
+
+    if (!this._routeAttached) {
+      this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+      this._routeAttached = true;
+    }
+  }
+
+  onExit(): void {
+    if (this._routeAttached) {
+      this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+      this._routeAttached = false;
+    }
+
+    this._setKeyboardRouteActive(false);
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
@@ -64,7 +79,27 @@ export default class KioskFormWorkflow extends BaseController {
   }
 
   onNavBack(): void {
+    this._setKeyboardRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+  }
+
+  private _onRouteMatched(event: unknown): void {
+    const routeName = (event as { getParameter: (name: string) => string | undefined }).getParameter("name");
+    this._setKeyboardRouteActive(routeName === Scope.KioskFormWorkflow);
+  }
+
+  private _setKeyboardRouteActive(active: boolean): void {
+    const keyboard = this.byId("formKeyboard") as KioskKeyboard | undefined;
+    if (!keyboard) return;
+
+    if (active) {
+      keyboard.setAutoShow(true);
+      return;
+    }
+
+    keyboard.close();
+    keyboard.setAutoShow(false);
+    this.getStateModel().setProperty("/formActiveField", "None");
   }
 
   private _advanceToNextField(): void {

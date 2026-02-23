@@ -78,6 +78,7 @@
                 docked="true"
                 autoShow="true"
                 autoType="true"
+                inputIds="nameInput,emailInput,phoneInput,guestsInput,notesInput"
                 keyPress=".onKeyPress"
                 keyboardTypeChange=".onKeyboardTypeChange"
                 afterOpen=".onAfterOpen" />

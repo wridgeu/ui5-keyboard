@@ -485,6 +485,7 @@ export default class KioskKeyboard extends Control {
     this._hasUnresolvedInputIds = false;
     this._inputFocusDelegation = {
       onfocusin: () => {
+        if (!this.getEnabled()) return;
         const active = Element.getActiveElement();
         if (!(active instanceof Control)) return;
         // For composite controls (e.g. StepInput), the active element is the
@@ -1203,9 +1204,26 @@ export default class KioskKeyboard extends Control {
   /** Returns true if any other KioskKeyboard instance already targets this input. */
   private _isTargetOfOther(inputId: string): boolean {
     for (const other of KioskKeyboard._instances) {
-      if (other !== this && other.getTargetInput() === inputId) return true;
+      if (other === this) continue;
+      if (!other._isAutoShowParticipationActive()) continue;
+      if (other.getTargetInput() === inputId) return true;
     }
     return false;
+  }
+
+  /**
+   * Returns true when this instance should participate in auto-show claim checks.
+   *
+   * Hidden/inactive controls must not block other keyboards from claiming inputs.
+   */
+  private _isAutoShowParticipationActive(): boolean {
+    if (!this.getVisible() || !this.getEnabled()) return false;
+
+    const dom = this.getDomRef();
+    if (!(dom instanceof HTMLElement)) return false;
+    if (!document.contains(dom)) return false;
+
+    return dom.getClientRects().length > 0;
   }
 
   /** Returns true if this keyboard would auto-claim the given DOM element. */
@@ -1230,7 +1248,7 @@ export default class KioskKeyboard extends Control {
   }
 
   private _onDocumentFocusIn(event: FocusEvent): void {
-    if (!this.getDocked() || !this.getEnabled()) return;
+    if (!this.getDocked() || !this._isAutoShowParticipationActive()) return;
 
     this._cancelDeferredFocusOutClose();
 
@@ -1268,7 +1286,7 @@ export default class KioskKeyboard extends Control {
   }
 
   private _onDocumentFocusOut(event: FocusEvent): void {
-    if (!this.getDocked() || !this._open || !this.getEnabled()) return;
+    if (!this.getDocked() || !this._open || !this._isAutoShowParticipationActive()) return;
 
     // Use relatedTarget to decide synchronously whether to close.
     // relatedTarget is the element that is *receiving* focus.
@@ -1302,7 +1320,7 @@ export default class KioskKeyboard extends Control {
     this._deferredFocusOutCloseId = setTimeout(() => {
       this._deferredFocusOutCloseId = null;
 
-      if (!this.getDocked() || !this._open || !this.getEnabled()) return;
+      if (!this.getDocked() || !this._open || !this._isAutoShowParticipationActive()) return;
 
       const related = document.activeElement as HTMLElement | null;
       const myDom = this.getDomRef();

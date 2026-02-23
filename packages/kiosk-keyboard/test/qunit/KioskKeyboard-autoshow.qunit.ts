@@ -290,6 +290,35 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
   dockedKb.destroy();
 });
 
+QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const hiddenKb = new KioskKeyboard({
+    keyboardType: "Numpad",
+    targetInput: input,
+    visible: false,
+  });
+  hiddenKb.placeAt("qunit-fixture");
+
+  const dockedKb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+  });
+  dockedKb.placeAt("qunit-fixture");
+  await waitForRender();
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
+  assert.ok(dockedKb.isOpen(), "Docked keyboard opens even when hidden keyboard targets the input");
+  assert.strictEqual(dockedKb.getTargetInput(), input.getId(), "Docked keyboard claims the focused input");
+
+  input.destroy();
+  hiddenKb.destroy();
+  dockedKb.destroy();
+});
+
 QUnit.test("Destroying the claiming keyboard frees the input for auto-show", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");

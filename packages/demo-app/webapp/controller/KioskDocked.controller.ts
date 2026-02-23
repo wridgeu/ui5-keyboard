@@ -13,6 +13,8 @@ import BaseController from "./BaseController";
  * @name demo.hotkeys.controller.KioskDocked
  */
 export default class KioskDocked extends BaseController {
+  private _routeAttached: boolean = false;
+
   onInit(): void {
     const stateModel = this.getStateModel();
     stateModel.setProperty("/kioskLastKey", "None");
@@ -27,6 +29,20 @@ export default class KioskDocked extends BaseController {
       select.addItem(new Item({ key: name, text: name }));
     }
     select.setSelectedKey("qwerty");
+
+    if (!this._routeAttached) {
+      this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+      this._routeAttached = true;
+    }
+  }
+
+  onExit(): void {
+    if (this._routeAttached) {
+      this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+      this._routeAttached = false;
+    }
+
+    this._setKeyboardRouteActive(false);
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
@@ -59,6 +75,25 @@ export default class KioskDocked extends BaseController {
   }
 
   onNavBack(): void {
+    this._setKeyboardRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+  }
+
+  private _onRouteMatched(event: unknown): void {
+    const routeName = (event as { getParameter: (name: string) => string | undefined }).getParameter("name");
+    this._setKeyboardRouteActive(routeName === Scope.KioskDocked);
+  }
+
+  private _setKeyboardRouteActive(active: boolean): void {
+    const keyboard = this.byId("dockedKeyboard") as KioskKeyboard | undefined;
+    if (!keyboard) return;
+
+    if (active) {
+      keyboard.setAutoShow(true);
+      return;
+    }
+
+    keyboard.close();
+    keyboard.setAutoShow(false);
   }
 }
