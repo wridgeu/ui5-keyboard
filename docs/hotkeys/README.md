@@ -5,6 +5,7 @@
 - [Architecture](./ARCHITECTURE.md)
 - [Multi-key Sequences](./SEQUENCES.md)
 - [Alternatives Research](./ALTERNATIVES-RESEARCH.md)
+- [Black-Box Test Plan](./BLACKBOX-TEST-PLAN.md)
 
 ## Proposals
 

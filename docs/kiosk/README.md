@@ -3,6 +3,7 @@
 ## Current
 
 - [Architecture](./ARCHITECTURE.md)
+- [Black-Box Test Plan](./BLACKBOX-TEST-PLAN.md)
 - [Popover Layout Switch Behavior](./POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)
 - [UI5 Transpile Crash Deep Dive](./AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)
 - [Error Handling and DX Consistency](./feature.md)
