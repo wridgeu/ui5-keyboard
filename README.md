@@ -178,9 +178,10 @@ npm run test:kiosk:e2e:update # Update kiosk visual baselines
 ### Code Quality
 
 ```bash
-npm run check               # fmt:check + lint + typecheck + test:guardrails + test (CI gate)
+npm run check               # fmt:check + lint + lint:ui5 + typecheck + test:guardrails + test (CI gate)
 npm run fmt                 # Format (oxfmt)
 npm run lint                # Lint (oxlint)
+npm run lint:ui5            # UI5 linter across all workspaces
 npm run typecheck           # Typecheck all workspaces (kiosk includes generated typings)
 npm run test:guardrails     # Fails on browser.pause/hard-wait anti-patterns in e2e tests
 ```

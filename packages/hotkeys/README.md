@@ -308,6 +308,18 @@ onExit(): void {
 
 Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle` — `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 
+Group-level introspection can drive scoped shortcut UIs:
+
+```ts
+const hotkeysForThisController = this._hotkeys.getRegistrations();
+const sequencesForThisController = this._hotkeys.getSequenceRegistrations();
+
+// Example: render a quick hint list
+hotkeysForThisController.forEach((entry) => {
+  console.log(entry.normalizedHotkey, entry.description);
+});
+```
+
 Lifecycle guidance (UI5):
 
 - **Controller (`onInit`/`onExit`)**: create one group in `onInit()`, register through it, call `destroyAll()` in `onExit()`.
@@ -383,6 +395,19 @@ manager.register("F5", () => this.onRefreshDetail(), {
 ```
 
 When the user navigates from `main` to `detail`, the router handler automatically resets to global scope and pushes `"detail"`. The correct F5 handler fires based on which route is active.
+
+`hasRouterIntegration()` is useful for guarded setup and teardown:
+
+```ts
+if (!manager.hasRouterIntegration()) {
+  manager.enableRouterIntegration(this.getRouter());
+}
+
+// later (e.g. integration toggle / test cleanup)
+if (manager.hasRouterIntegration()) {
+  manager.disableRouterIntegration();
+}
+```
 
 > [!IMPORTANT]
 > Dialog scopes still require manual `pushScope`/`popScope` since they're not route-based.

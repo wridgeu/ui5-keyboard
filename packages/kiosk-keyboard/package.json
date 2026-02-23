@@ -46,7 +46,8 @@
     "test:e2e:open": "wdio run test/e2e/wdio.conf.ts -- --headed",
     "test:e2e:update": "wdio run test/e2e/wdio.conf.ts -- --update-visual-baseline",
     "pretypecheck": "npm run generate",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },
   "devDependencies": {
     "@ui5/cli": "^4.0.0",

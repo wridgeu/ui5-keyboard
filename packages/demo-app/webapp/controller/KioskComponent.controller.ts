@@ -1,5 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type Input from "sap/m/Input";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
@@ -35,18 +36,11 @@ export default class KioskComponent extends BaseController {
       KioskComponent._keyboard.placeAt("sap-ui-static");
     }
 
-    // Point the keyboard at this view's input after the view renders
-    this.getTypedComponent()
-      .getRouter()
-      .getRoute(Scope.KioskComponent)!
-      .attachPatternMatched(this._onRouteMatched, this);
+    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent()
-      .getRouter()
-      .getRoute(Scope.KioskComponent)!
-      .detachPatternMatched(this._onRouteMatched, this);
+    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
 
     if (this._returnNavTimer) {
       clearTimeout(this._returnNavTimer);
@@ -100,7 +94,9 @@ export default class KioskComponent extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
-  private _onRouteMatched(): void {
+  private _onRouteMatched(event: Router$RouteMatchedEvent): void {
+    if (event.getParameter("name") !== Scope.KioskComponent) return;
+
     // Re-wire the keyboard to this view's input whenever we navigate back
     const kb = KioskComponent._keyboard;
     if (kb) {

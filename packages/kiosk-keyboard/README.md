@@ -329,6 +329,18 @@ The `keyboardType` property provides a shortcut for common configurations:
 - **`Numeric`** — renders the numeric layout regardless of the `layout` property
 - **`Numpad`** — renders the numpad layout regardless of the `layout` property
 
+Programmatic base-layout helpers make layout round-trips explicit:
+
+```ts
+const kb = this.byId("keyboard") as KioskKeyboard;
+
+kb.setLayout("qwertz-de");
+kb.setLayout("numeric");
+
+kb.getBaseLayout(); // "qwertz-de"
+kb.resetLayout(); // back to qwertz-de
+```
+
 ### Stable Height
 
 The `stableHeight` property enables consistent minimum height across layout switches. When enabled, switching from QWERTY (5 rows) to numeric (4 rows) does not shrink the keyboard — the rows expand to fill the available space, providing larger touch targets and preventing layout shifts.
@@ -757,6 +769,16 @@ When `autoType="true"` (requires `autoShow="true"`), the keyboard inspects the f
 When the user tabs from a numeric input to a text input, the keyboard switches back to Full automatically.
 
 **Explicit override:** Setting `keyboardType` explicitly (via XML, constructor, or `setKeyboardType()`) disables auto-type detection. The keyboard respects the explicit type and never overrides it.
+
+You can query this lock state directly:
+
+```ts
+kb.setKeyboardType("Full");
+kb.isKeyboardTypeExplicit(); // true
+
+kb.resetKeyboardType();
+kb.isKeyboardTypeExplicit(); // false
+```
 
 ---
 

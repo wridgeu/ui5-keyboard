@@ -7,7 +7,8 @@
     "start": "ui5 serve --port 8080 -o index.html",
     "build": "ui5 build --clean-dest",
     "clean": "rimraf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },
   "dependencies": {
     "@ui5/webcomponents": "2.15.1",
