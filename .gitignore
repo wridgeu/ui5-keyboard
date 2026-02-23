@@ -21,3 +21,7 @@ npm-debug.log*
 
 # OpenCode scratch prompt files
 prompt*.txt
+
+# Local Claude/OpenCode workspace settings
+.claude/
+packages/**/.claude/
