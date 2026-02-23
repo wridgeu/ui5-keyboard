@@ -315,6 +315,7 @@ This makes suppression safe for multi-keyboard setups targeting the same input: 
 2. **`show()`**: Calls `_suppressNativeKeyboard()`.
 3. **`close()`**: Calls `_restoreNativeKeyboard()`.
 4. **`exit()`**: Calls `_restoreNativeKeyboard()` for cleanup.
+5. **Focus-out cleanup**: If the keyboard is already open, close/restore still runs when focus leaves even if the control became non-participating (`visible=false` / `enabled=false`) after opening.
 
 ## Docked Mode
 

@@ -822,6 +822,12 @@ The `mobileKeyboard` property controls whether the KioskKeyboard or the native o
 
 When the KioskKeyboard is active, it sets `inputmode="none"` on the focused input to suppress the native keyboard, and restores the original value when the last keyboard instance targeting that input closes or is destroyed.
 
+### `inputmode` Lifecycle Details
+
+- Suppression is applied when the keyboard opens, and also when the target input is switched while the keyboard remains open.
+- Restoration runs on `close()` / `destroy()`, and also when an already open docked keyboard becomes non-participating (for example `visible="false"` or `enabled="false"`) and focus leaves the input.
+- For shared targets, restoration is ref-counted: the original `inputmode` is restored only after the last keyboard instance releases that input.
+
 ---
 
 ## Shift & Caps Lock
