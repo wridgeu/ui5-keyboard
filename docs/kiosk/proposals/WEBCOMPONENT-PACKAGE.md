@@ -2,7 +2,9 @@
 
 ## Why
 
-`KioskKeyboard` is currently a SAPUI5 control. It works well inside UI5 apps, but cannot be consumed directly in framework-agnostic pages (plain HTML, React, Vue, etc.) without loading the UI5 runtime.
+`KioskKeyboard` is currently a SAPUI5 control. It works well inside UI5 apps,
+but cannot be consumed directly in framework-agnostic pages (plain HTML,
+React, Vue, etc.) without loading the UI5 runtime.
 
 Adding a native web component variant would enable:
 
@@ -12,7 +14,9 @@ Adding a native web component variant would enable:
 
 ## Goal
 
-Ship a **new optional** web component package for kiosk keyboard behavior, while preserving the existing UI5 control API and behavior in `ui5-lib-kiosk-keyboard`.
+Ship a **new optional** web component package for kiosk keyboard behavior,
+while preserving the existing UI5 control API and behavior in
+`ui5-lib-kiosk-keyboard`.
 
 ## Non-Goals
 
@@ -30,7 +34,8 @@ Ship a **new optional** web component package for kiosk keyboard behavior, while
 ## Runtime element
 
 - Custom element: `<ui5-kiosk-keyboard>`
-- Keyboard logic extracted into framework-agnostic core module shared by both implementations
+- Keyboard logic extracted into framework-agnostic core module shared by both
+  implementations
 
 ## Shared core candidates
 
@@ -76,8 +81,10 @@ Targeting:
 
 1. Extract internal pure modules from current UI5 control where possible.
 2. Build `<ui5-kiosk-keyboard>` using custom elements + shared core.
-3. Add adapter layer in current UI5 control to consume shared core (reduce divergence).
-4. Add compatibility tests that run the same behavioral scenarios for both implementations.
+3. Add adapter layer in current UI5 control to consume shared core (reduce
+   divergence).
+4. Add compatibility tests that run the same behavioral scenarios for both
+   implementations.
 5. Publish as experimental package first, then stabilize.
 
 ## Testing Strategy

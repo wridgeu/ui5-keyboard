@@ -632,9 +632,9 @@ The `focusin` handler checks whether the focused DOM element is a **text-entry**
 
 > For host controls/wrappers, typing and auto-type now resolve inner native `<input>/<textarea>` from either light DOM or Shadow DOM when available via `getFocusDomRef()`. Auto-show claiming still depends on the focused event target and UI5 control resolution.
 
-Escape-close targeting in docked mode uses the same inner-input resolution. If
-`getFocusDomRef()` returns a host element, the keyboard still treats focus on a
-light/shadow inner `<input>/<textarea>` as "inside target input".
+In docked mode, pressing physical Escape closes the keyboard regardless of
+where focus currently is. Inner-input resolution from `getFocusDomRef()` is
+still used for focus return behavior when Escape is pressed on a virtual key.
 
 **2. UI5 layer — what the keyboard types into:**
 

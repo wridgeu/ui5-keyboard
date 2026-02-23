@@ -1031,6 +1031,28 @@ QUnit.test("Unhandled: does NOT fire when a hotkey IS handled", (assert) => {
   assert.notOk(unhandledCalled, "Unhandled callback not fired when hotkey was handled");
 });
 
+QUnit.test("Unhandled: does NOT fire no_match for sequence progression/completion", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let sequenceCalled = false;
+  let unhandledCount = 0;
+
+  manager.registerSequence(["G", "E"], () => {
+    sequenceCalled = true;
+  });
+
+  manager.setUnhandledHandler((ctx) => {
+    if (ctx.reason === "no_match") {
+      unhandledCount++;
+    }
+  });
+
+  fireKey("g");
+  fireKey("e");
+
+  assert.ok(sequenceCalled, "Sequence callback fired");
+  assert.strictEqual(unhandledCount, 0, "no_match not emitted for sequence keys");
+});
+
 QUnit.test("Unhandled: does NOT fire no_match when target hotkey handles event", (assert) => {
   const manager = HotkeyManager.getInstance();
   let targetCalled = false;

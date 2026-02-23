@@ -27,6 +27,7 @@ import type {
   SequencePendingCallback,
   SequenceRegistrationHandle,
   SequenceRegistrationInfo,
+  UnhandledContext,
   UnhandledCallback,
   UpdatableHotkeyOptions,
 } from "./types";
@@ -40,6 +41,7 @@ const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
 const handledEvents = new WeakSet<KeyboardEvent>();
+const sequenceConsumedEvents = new WeakSet<KeyboardEvent>();
 
 interface ScopeRegistrationBucket {
   documentIds: Set<string>;
@@ -121,6 +123,9 @@ export default class HotkeyManager extends BaseObject {
 
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
+
+  // Defers document-level unhandled emission until sequence processing finishes.
+  private readonly _deferredUnhandledByEvent: WeakMap<KeyboardEvent, UnhandledContext> = new WeakMap();
 
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
@@ -655,10 +660,15 @@ export default class HotkeyManager extends BaseObject {
     if (this._shouldIgnoreKeyEvent(event)) return;
 
     // Single-key hotkey matching
-    this._processKeyEvent(event, null, !this._hasTargetListenerInPath(event));
+    this._processKeyEvent(event, null, !this._hasTargetListenerInPath(event), true);
 
     // Multi-key sequence matching (if any sequences registered)
-    this._sequenceManager?.processKeyEvent(event);
+    const sequenceConsumed = this._sequenceManager?.processKeyEvent(event) ?? false;
+    if (sequenceConsumed) {
+      sequenceConsumedEvents.add(event);
+    }
+
+    this._flushDeferredUnhandled(event);
   }
 
   private _hasTargetListenerInPath(event: KeyboardEvent): boolean {
@@ -693,7 +703,12 @@ export default class HotkeyManager extends BaseObject {
    * When `targetElement` is null, processes document-level registrations (those without a target).
    * When `targetElement` is set, only processes registrations bound to that target.
    */
-  private _processKeyEvent(event: KeyboardEvent, targetElement: EventTarget | null, emitUnhandled = true): void {
+  private _processKeyEvent(
+    event: KeyboardEvent,
+    targetElement: EventTarget | null,
+    emitUnhandled = true,
+    deferUnhandled = false,
+  ): void {
     const activeScope = this.getActiveScope();
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
@@ -728,15 +743,27 @@ export default class HotkeyManager extends BaseObject {
     }
 
     if (!matched) {
-      if (emitUnhandled && this._unhandledCallback && skipInfo && !handledEvents.has(event)) {
-        this._unhandledCallback({
+      if (
+        emitUnhandled &&
+        this._unhandledCallback &&
+        skipInfo &&
+        !handledEvents.has(event) &&
+        !sequenceConsumedEvents.has(event)
+      ) {
+        const context: UnhandledContext = {
           event,
           reason: skipInfo.reason,
           activeScope,
           isInput,
           isPopupOpen: popupOpen,
           skippedRegistration: skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined,
-        });
+        };
+
+        if (deferUnhandled) {
+          this._deferredUnhandledByEvent.set(event, context);
+        } else {
+          this._unhandledCallback(context);
+        }
       }
       return;
     }
@@ -763,6 +790,19 @@ export default class HotkeyManager extends BaseObject {
     } catch (error) {
       Log.error(`Error in hotkey callback for "${matched.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
     }
+  }
+
+  private _flushDeferredUnhandled(event: KeyboardEvent): void {
+    const context = this._deferredUnhandledByEvent.get(event);
+    if (!context) return;
+
+    this._deferredUnhandledByEvent.delete(event);
+
+    if (!this._unhandledCallback) return;
+    if (handledEvents.has(event)) return;
+    if (sequenceConsumedEvents.has(event)) return;
+
+    this._unhandledCallback(context);
   }
 
   // ──────────────────────────────────────────────

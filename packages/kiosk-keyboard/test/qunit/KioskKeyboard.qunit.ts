@@ -987,6 +987,30 @@ QUnit.test("Escape closes docked keyboard when target input has focus", async (a
   kb.destroy();
 });
 
+QUnit.test("Escape closes docked keyboard when focus is outside keyboard and target input", async (assert) => {
+  const input = new Input("escape-outside-focus");
+  const kb = new KioskKeyboard({ docked: true, targetInput: input.getId() });
+  input.placeAt("qunit-fixture");
+
+  const outside = document.createElement("button");
+  outside.id = "escape-outside-button";
+  document.getElementById("qunit-fixture")!.appendChild(outside);
+
+  await placeAndWait(kb);
+
+  kb.show();
+  assert.ok(kb.isOpen(), "Keyboard is open");
+
+  outside.focus();
+  outside.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+
+  assert.notOk(kb.isOpen(), "Keyboard closed after Escape outside keyboard/input");
+
+  outside.remove();
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Escape on docked keyboard returns focus to target input", async (assert) => {
   const input = new Input("escape-focus-input");
   const kb = new KioskKeyboard({ docked: true, targetInput: input.getId() });
@@ -2863,6 +2887,21 @@ QUnit.test("setDocked(true) resets open state", async (assert) => {
   // Starts undocked — set docked should ensure closed
   kb.setDocked(true);
   assert.notOk(kb.isOpen(), "Keyboard is closed after switching to docked mode");
+
+  kb.destroy();
+});
+
+QUnit.test("setDocked toggles auto-show listener activation", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  assert.ok((kb as any)._autoShowActive, "autoShow listeners are active while docked");
+
+  kb.setDocked(false);
+  assert.notOk((kb as any)._autoShowActive, "autoShow listeners are detached when undocked");
+
+  kb.setDocked(true);
+  assert.ok((kb as any)._autoShowActive, "autoShow listeners are re-attached after re-docking");
 
   kb.destroy();
 });

@@ -264,6 +264,36 @@ QUnit.test("setSequencePendingHandler fires on mid-sequence progress", (assert) 
   manager.setSequencePendingHandler(null);
 });
 
+QUnit.test("Pending callback error does not crash", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let called = false;
+
+  manager.registerSequence(["G", "E"], () => {
+    called = true;
+  });
+
+  manager.setSequencePendingHandler(() => {
+    throw new Error("Intentional pending callback error");
+  });
+
+  fireKey("g");
+  clock.tick(50);
+  fireKey("e");
+
+  assert.ok(called, "Sequence still completes when pending callback throws");
+
+  let secondCalled = false;
+  manager.registerSequence(["H", "I"], () => {
+    secondCalled = true;
+  });
+
+  fireKey("h");
+  clock.tick(50);
+  fireKey("i");
+
+  assert.ok(secondCalled, "Manager remains operational after pending callback error");
+});
+
 QUnit.test("Destroy cleans up everything", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;

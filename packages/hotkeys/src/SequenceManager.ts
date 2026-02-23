@@ -241,13 +241,14 @@ export default class SequenceManager extends BaseObject {
    * Process a pre-filtered key event from HotkeyManager.
    * The caller is responsible for ignoring IME, modifier-only, and AltGr events.
    */
-  processKeyEvent(event: KeyboardEvent): void {
+  processKeyEvent(event: KeyboardEvent): boolean {
     // Repeated keydown events from a held key must not advance/start sequences.
-    if (event.repeat) return;
+    if (event.repeat) return false;
 
     const activeScope = this._scopeProvider();
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
+    let consumed = false;
 
     // 1. Advance or reset existing active matches
     const newActiveMatches: ActiveMatch[] = [];
@@ -266,6 +267,8 @@ export default class SequenceManager extends BaseObject {
       if (resolveIgnoreInputs(reg.ignoreInputs, nextStep.ctrl, nextStep.meta, nextStep.key) && isInput) continue;
 
       if (matchesKeyboardEvent(event, nextStep)) {
+        consumed = true;
+
         // This key advances the sequence
         if (match.stepIndex + 1 >= reg.parsedSteps.length) {
           // Full match! Preserve scope priority: active scope always wins over global.
@@ -310,20 +313,22 @@ export default class SequenceManager extends BaseObject {
       } catch (error) {
         Log.error(`Error in sequence callback for [${reg.sequence.join(", ")}]: ${error}`, undefined, LOG_COMPONENT);
       }
-      return;
+      return true;
     }
 
     // 2. Two-pass: check active scope first, then global.
     // Ensures scoped sequences take priority over global ones.
-    this._startMatchesForScope(event, activeScope, isInput);
+    let startedMatch = this._startMatchesForScope(event, activeScope, isInput);
     if (activeScope !== GLOBAL_SCOPE) {
-      this._startMatchesForScope(event, GLOBAL_SCOPE, isInput);
+      startedMatch = this._startMatchesForScope(event, GLOBAL_SCOPE, isInput) || startedMatch;
     }
 
     // Fire pending callback for advanced matches (those that progressed from an existing active match)
     for (const match of newActiveMatches) {
       this._firePendingCallback(match.registration, match.stepIndex);
     }
+
+    return consumed || startedMatch;
   }
 
   private _isRegistrationActiveInScope(reg: SequenceRegistration, activeScope: string): boolean {
@@ -346,7 +351,9 @@ export default class SequenceManager extends BaseObject {
   /**
    * Start new sequence matches for registrations in the given scope.
    */
-  private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean): void {
+  private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean): boolean {
+    let started = false;
+
     for (const reg of this._registrations.values()) {
       if (reg.scope !== scope) continue;
 
@@ -366,17 +373,30 @@ export default class SequenceManager extends BaseObject {
         this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
       }, reg.timeout);
       this._activeMatches.push(newMatch);
+      started = true;
 
       this._firePendingCallback(reg, 1);
     }
+
+    return started;
   }
 
   private _firePendingCallback(reg: SequenceRegistration, stepIndex: number): void {
-    this._pendingCallback?.({
-      sequence: [...reg.sequence],
-      completedSteps: stepIndex,
-      totalSteps: reg.parsedSteps.length,
-      nextKey: reg.sequence[stepIndex],
-    });
+    if (!this._pendingCallback) return;
+
+    try {
+      this._pendingCallback({
+        sequence: [...reg.sequence],
+        completedSteps: stepIndex,
+        totalSteps: reg.parsedSteps.length,
+        nextKey: reg.sequence[stepIndex],
+      });
+    } catch (error) {
+      Log.error(
+        `Error in sequence pending callback for [${reg.sequence.join(", ")}], step ${stepIndex}: ${error}`,
+        undefined,
+        LOG_COMPONENT,
+      );
+    }
   }
 }

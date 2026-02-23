@@ -830,12 +830,18 @@ export default class KioskKeyboard extends Control {
     const wasDocked = this.getDocked();
     if (wasDocked === bDocked) return this;
 
-    if (wasDocked && !bDocked && this._open) {
-      this.close();
+    if (wasDocked && !bDocked) {
+      if (this._open) {
+        this.close();
+      }
+      this._disableAutoShow();
     }
 
     if (!wasDocked && bDocked) {
       this._open = false;
+      if (this.getAutoShow()) {
+        this._enableAutoShow();
+      }
     }
 
     this.setProperty("docked", bDocked, true);
@@ -906,9 +912,8 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Document-level Escape handler for docked keyboards. Closes the
-   * keyboard when Escape is pressed regardless of whether a virtual
-   * key or the target input has focus. Attached in `show()`, detached
-   * in `close()`.
+   * keyboard when Escape is pressed regardless of focus source.
+   * Attached in `show()`, detached in `close()`.
    */
   private _onDocumentEscapeKeydown(event: KeyboardEvent): void {
     if (event.key !== "Escape") return;
@@ -916,15 +921,11 @@ export default class KioskKeyboard extends Control {
 
     const eventTarget = event.composedPath?.()[0] ?? event.target;
 
-    // Don't close if Escape originated outside the keyboard and its target input
-    const target = eventTarget;
-    if (!(target instanceof HTMLElement)) return;
+    const target = eventTarget instanceof HTMLElement ? eventTarget : null;
     const myDom = this.getDomRef();
     const focusDomRef = this._getTargetElement()?.getFocusDomRef();
     const inputDom = resolveInputOrTextarea(focusDomRef) ?? (focusDomRef instanceof HTMLElement ? focusDomRef : null);
-    const isOnKeyboard = myDom?.contains(target);
-    const isOnInput = inputDom && (inputDom === target || inputDom.contains(target));
-    if (!isOnKeyboard && !isOnInput) return;
+    const isOnKeyboard = target ? Boolean(myDom?.contains(target)) : false;
 
     event.preventDefault();
     this.close();

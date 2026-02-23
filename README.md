@@ -203,6 +203,7 @@ ui5-keyboard/
 | --------------------------------------------------------------------------------------------- | -------------------------------------- |
 | [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                        | Internal design of the hotkeys library |
 | [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                                   | Internal design of the kiosk keyboard  |
+| [Kiosk Error Handling and DX](./docs/kiosk/feature.md)                                        | Error handling consistency proposal    |
 | [Docs Index & Conventions](./docs/README.md)                                                  | Doc structure, naming, and lifecycle   |
 | [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                            | Sequence system design and rationale   |
 | [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                              | Comparison with alternative approaches |
@@ -215,6 +216,7 @@ ui5-keyboard/
 | [Kiosk Backward Compatibility Proposal](./docs/kiosk/proposals/BACKWARD-COMPATIBILITY.md)     | Planned compatibility work             |
 | [Tab and Done Keys Proposal](./docs/kiosk/proposals/TAB-AND-DONE-KEYS.md)                     | Proposed special-key behavior          |
 | [Kiosk i18n Extensibility Proposal](./docs/kiosk/proposals/I18N-EXTENSIBILITY.md)             | Proposed i18n extension surface        |
+| [Kiosk Web Component Package Proposal](./docs/kiosk/proposals/WEBCOMPONENT-PACKAGE.md)        | Proposed web component package         |
 | [Kiosk History Notes](./docs/kiosk/history/)                                                  | Archived implementation design notes   |
 
 ## License
