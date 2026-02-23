@@ -26,7 +26,10 @@
 
             <Panel headerText="Selective Input Targeting" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="The keyboard below targets Input A, Input B, StepInput, a native UI5 Web Component input, and a custom Web Component input directly via inputIds. Focusing Input C or D will not switch the keyboard target." />
+                    <MessageStrip
+                        text="The keyboard targets inputs A, B, StepInput, and the Web Component inputs via inputIds — focusing C or D will not switch the target. Toggle autoType to see the keyboard auto-switch to Numpad when the StepInput is focused, and back to Full for text inputs."
+                        type="Information"
+                        showIcon="true" />
                     <HBox class="sapUiSmallMarginTop">
                         <VBox class="sapUiMediumMarginEnd">
                             <HBox>
