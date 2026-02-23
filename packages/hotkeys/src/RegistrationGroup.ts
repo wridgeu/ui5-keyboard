@@ -3,8 +3,10 @@ import type {
   Hotkey,
   HotkeyCallback,
   HotkeyOptions,
+  HotkeyRegistrationInfo,
   HotkeyRegistrationHandle,
   SequenceOptions,
+  SequenceRegistrationInfo,
   SequenceRegistrationHandle,
 } from "./types";
 
@@ -48,6 +50,18 @@ export default class RegistrationGroup {
     this._onDispose = onDispose ?? null;
   }
 
+  /**
+   * Register a hotkey and track its handle in this group.
+   *
+   * The returned handle behaves like a normal manager handle. Calling
+   * `unregister()` on it also removes it from this group's internal tracking.
+   *
+   * @param hotkey - Hotkey string (e.g. "Mod+S", "Escape").
+   * @param callback - Callback invoked when the hotkey matches.
+   * @param options - Optional registration options.
+   * @returns A lifecycle handle for the new registration.
+   * @throws Error if this group has already been destroyed.
+   */
   register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle {
     if (this._destroyed) throw new Error("Cannot register on a destroyed RegistrationGroup");
     const innerHandle = this._manager.register(hotkey, callback, options);
@@ -80,6 +94,18 @@ export default class RegistrationGroup {
     return wrappedHandle;
   }
 
+  /**
+   * Register a multi-key sequence and track its handle in this group.
+   *
+   * The returned handle behaves like a normal sequence handle. Calling
+   * `unregister()` on it also removes it from this group's internal tracking.
+   *
+   * @param sequence - Ordered keys that form the sequence.
+   * @param callback - Callback invoked when the sequence matches.
+   * @param options - Optional sequence configuration.
+   * @returns A lifecycle handle for the new sequence registration.
+   * @throws Error if this group has already been destroyed.
+   */
   registerSequence(
     sequence: string[],
     callback: HotkeyCallback,
@@ -149,6 +175,30 @@ export default class RegistrationGroup {
   /** Number of active registrations (hotkeys + sequences) in this group. */
   get size(): number {
     return this._handles.size + this._sequenceHandles.size;
+  }
+
+  /**
+   * Get the group's currently active hotkey registrations.
+   */
+  getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
+    if (this._handles.size === 0) return [];
+    const ids = new Set<string>();
+    for (const handle of this._handles) {
+      ids.add(handle.id);
+    }
+    return this._manager.getRegistrations().filter((registration) => ids.has(registration.id));
+  }
+
+  /**
+   * Get the group's currently active sequence registrations.
+   */
+  getSequenceRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
+    if (this._sequenceHandles.size === 0) return [];
+    const ids = new Set<string>();
+    for (const handle of this._sequenceHandles) {
+      ids.add(handle.id);
+    }
+    return this._manager.getSequenceRegistrations().filter((registration) => ids.has(registration.id));
   }
 
   private _dispose(): void {

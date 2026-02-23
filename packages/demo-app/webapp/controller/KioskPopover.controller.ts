@@ -1,5 +1,5 @@
 import Popover from "sap/m/Popover";
-import type Button from "sap/m/Button";
+import type { Button$PressEvent } from "sap/m/Button";
 import type Input from "sap/m/Input";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { Scope } from "../constants";
@@ -22,7 +22,7 @@ export default class KioskPopover extends BaseController {
     this._keyboard = null;
   }
 
-  onOpenKeyboard(event: { getSource: () => Button }): void {
+  onOpenKeyboard(event: Button$PressEvent): void {
     const button = event.getSource();
     const inputId = button.data("inputId") as string;
     const input = this.byId(inputId) as Input;

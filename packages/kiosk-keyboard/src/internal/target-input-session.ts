@@ -41,6 +41,10 @@ export default class TargetInputSession {
   handleEnter(): void {
     const dom = this._getTargetDomRef();
     if (dom instanceof HTMLTextAreaElement) {
+      // Intentionally bypass this.insertText(): Enter in a textarea should only
+      // insert a newline and must not mark the session dirty for change firing.
+      // Textareas never emit change on Enter, and fireChangeIfDirty() also
+      // skips textarea targets by design.
       this._cursorPos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
       return;
     }

@@ -9,7 +9,19 @@ import XMLView from "sap/ui/core/mvc/XMLView";
 import Localization from "sap/base/i18n/Localization";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender, tapKey, simulateTap, tapShiftInternally, getKeyElements } from "./test-helpers";
+import {
+  placeAndWait,
+  waitForRender,
+  tapKey,
+  simulateTap,
+  tapShiftInternally,
+  getKeyElements,
+  isShiftActive,
+  isCapsLock,
+  getResolvedLayout,
+  getKeyLabel,
+  getKeyAriaLabel,
+} from "./test-helpers";
 
 // ──────────────────────────────────────────────
 // Module
@@ -112,7 +124,7 @@ QUnit.test("Disabled state renders correctly", async (assert) => {
 
 QUnit.test("getResolvedLayout returns QWERTY by default", (assert) => {
   const kb = new KioskKeyboard();
-  const layout = kb.getResolvedLayout();
+  const layout = getResolvedLayout(kb);
   assert.strictEqual(layout.length, 5, "QWERTY has 5 rows");
   assert.strictEqual(layout[0][0].value, "1", "First key in number row is 1");
   kb.destroy();
@@ -121,7 +133,7 @@ QUnit.test("getResolvedLayout returns QWERTY by default", (assert) => {
 QUnit.test("KeyboardType 'Numpad' overrides layout", (assert) => {
   const kb = new KioskKeyboard();
   kb.setKeyboardType("Numpad");
-  const layout = kb.getResolvedLayout();
+  const layout = getResolvedLayout(kb);
   assert.ok(layout.length <= 5, "Numpad has reasonable row count");
   assert.strictEqual(layout[0][0].value, "7", "Numpad starts with 7");
   kb.destroy();
@@ -151,7 +163,7 @@ QUnit.test("Layout property switches full keyboard layout", async (assert) => {
   kb.setLayout("numeric");
   await placeAndWait(kb);
 
-  const layout = kb.getResolvedLayout();
+  const layout = getResolvedLayout(kb);
   assert.strictEqual(layout[0][0].value, "1", "Numeric layout starts with 1");
   const allValues = layout.flat().map((k) => k.value);
   assert.notOk(allValues.includes("q"), "Numeric layout has no alphabetic keys");
@@ -190,7 +202,7 @@ QUnit.test("setLayout with unregistered name is ignored and keeps current layout
   kb.setLayout("nonexistent-layout");
 
   assert.strictEqual(kb.getLayout(), before, "getLayout() still returns the previous layout");
-  const resolved = kb.getResolvedLayout();
+  const resolved = getResolvedLayout(kb);
   assert.strictEqual(resolved[0][0].value, "1", "QWERTY layout still rendered (number row starts with 1)");
   assert.strictEqual(resolved.length, 5, "QWERTY layout has 5 rows");
 
@@ -206,8 +218,8 @@ QUnit.test("setLayout with unregistered name is ignored and keeps current layout
 
 QUnit.test("getKeyLabel returns value by default", (assert) => {
   const kb = new KioskKeyboard();
-  assert.strictEqual(kb.getKeyLabel({ value: "a" }), "a", "Simple key shows value");
-  assert.strictEqual(kb.getKeyLabel({ value: "1", label: "!" }), "!", "Key with label shows label");
+  assert.strictEqual(getKeyLabel(kb, { value: "a" }), "a", "Simple key shows value");
+  assert.strictEqual(getKeyLabel(kb, { value: "1", label: "!" }), "!", "Key with label shows label");
   kb.destroy();
 });
 
@@ -216,9 +228,9 @@ QUnit.test("getKeyLabel returns uppercase when shift active", (assert) => {
 
   tapShiftInternally(kb);
 
-  assert.strictEqual(kb.getKeyLabel({ value: "a" }), "A", "Shifted single char is uppercase");
+  assert.strictEqual(getKeyLabel(kb, { value: "a" }), "A", "Shifted single char is uppercase");
   assert.strictEqual(
-    kb.getKeyLabel({ value: "1", shiftLabel: "!" }),
+    getKeyLabel(kb, { value: "1", shiftLabel: "!" }),
     "!",
     "Shifted key with shiftLabel uses shiftLabel",
   );
@@ -233,20 +245,20 @@ QUnit.test("getKeyLabel returns uppercase when shift active", (assert) => {
 QUnit.test("Shift toggles: off -> shift -> caps -> off", (assert) => {
   const kb = new KioskKeyboard();
 
-  assert.notOk(kb.isShiftActive(), "Initially not shifted");
-  assert.notOk(kb.isCapsLock(), "Initially no caps lock");
+  assert.notOk(isShiftActive(kb), "Initially not shifted");
+  assert.notOk(isCapsLock(kb), "Initially no caps lock");
 
   tapShiftInternally(kb);
-  assert.ok(kb.isShiftActive(), "After first tap: shift active");
-  assert.notOk(kb.isCapsLock(), "After first tap: not caps lock");
+  assert.ok(isShiftActive(kb), "After first tap: shift active");
+  assert.notOk(isCapsLock(kb), "After first tap: not caps lock");
 
   tapShiftInternally(kb);
-  assert.ok(kb.isShiftActive(), "After second tap: still active (caps)");
-  assert.ok(kb.isCapsLock(), "After second tap: caps lock on");
+  assert.ok(isShiftActive(kb), "After second tap: still active (caps)");
+  assert.ok(isCapsLock(kb), "After second tap: caps lock on");
 
   tapShiftInternally(kb);
-  assert.notOk(kb.isShiftActive(), "After third tap: shift off");
-  assert.notOk(kb.isCapsLock(), "After third tap: caps lock off");
+  assert.notOk(isShiftActive(kb), "After third tap: shift off");
+  assert.notOk(isCapsLock(kb), "After third tap: caps lock off");
 
   kb.destroy();
 });
@@ -256,10 +268,10 @@ QUnit.test("Shift auto-releases after character key", async (assert) => {
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
-  assert.ok(kb.isShiftActive(), "Shift is active");
+  assert.ok(isShiftActive(kb), "Shift is active");
 
   tapKey(kb, "q");
-  assert.notOk(kb.isShiftActive(), "Shift auto-released after character");
+  assert.notOk(isShiftActive(kb), "Shift auto-released after character");
 
   kb.destroy();
 });
@@ -271,11 +283,11 @@ QUnit.test("Caps Lock does NOT auto-release after character key", async (assert)
   // Double-tap shift for caps lock
   tapKey(kb, "{shift}");
   tapKey(kb, "{shift}");
-  assert.ok(kb.isCapsLock(), "Caps lock is on");
+  assert.ok(isCapsLock(kb), "Caps lock is on");
 
   tapKey(kb, "q");
-  assert.ok(kb.isShiftActive(), "Still shifted after character");
-  assert.ok(kb.isCapsLock(), "Caps lock still on");
+  assert.ok(isShiftActive(kb), "Still shifted after character");
+  assert.ok(isCapsLock(kb), "Caps lock still on");
 
   kb.destroy();
 });
@@ -894,6 +906,37 @@ QUnit.test("Non-docked keyboard has no docked CSS classes", async (assert) => {
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--docked"), "No docked class");
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--closed"), "No closed class");
 
+  kb.destroy();
+});
+
+QUnit.test("show()/close() are no-ops when docked is false", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: false,
+    mobileKeyboard: "Custom",
+    targetInput: input,
+  });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  const originalInputMode = inputDom.getAttribute("inputmode");
+
+  let openCount = 0;
+  let closeCount = 0;
+  kb.attachEvent("afterOpen", () => openCount++);
+  kb.attachEvent("afterClose", () => closeCount++);
+
+  kb.show();
+  kb.close();
+
+  assert.notOk(kb.isOpen(), "Keyboard remains closed");
+  assert.strictEqual(openCount, 0, "afterOpen not fired in non-docked mode");
+  assert.strictEqual(closeCount, 0, "afterClose not fired in non-docked mode");
+  assert.strictEqual(inputDom.getAttribute("inputmode"), originalInputMode, "inputmode is unchanged");
+
+  input.destroy();
   kb.destroy();
 });
 
@@ -1872,7 +1915,7 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   // Double-tap shift for caps lock
   tapKey(kb, "{shift}");
   tapKey(kb, "{shift}");
-  assert.ok(kb.isCapsLock(), "Caps lock is on");
+  assert.ok(isCapsLock(kb), "Caps lock is on");
 
   await waitForRender();
 
@@ -1904,17 +1947,17 @@ QUnit.test("Shift toggle works via keyboard (Enter key)", async (assert) => {
 
   // Off → Shift
   pressEnter();
-  assert.ok(kb.isShiftActive(), "Shift active after first Enter");
-  assert.notOk(kb.isCapsLock(), "Not caps lock yet");
+  assert.ok(isShiftActive(kb), "Shift active after first Enter");
+  assert.notOk(isCapsLock(kb), "Not caps lock yet");
 
   // Shift → Caps Lock
   pressEnter();
-  assert.ok(kb.isCapsLock(), "Caps Lock after second Enter");
+  assert.ok(isCapsLock(kb), "Caps Lock after second Enter");
 
   // Caps Lock → Off
   pressEnter();
-  assert.notOk(kb.isShiftActive(), "Shift off after third Enter");
-  assert.notOk(kb.isCapsLock(), "Caps Lock off after third Enter");
+  assert.notOk(isShiftActive(kb), "Shift off after third Enter");
+  assert.notOk(isCapsLock(kb), "Caps Lock off after third Enter");
 
   kb.destroy();
 });
@@ -1924,8 +1967,8 @@ QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (asse
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
-  assert.ok(kb.isShiftActive(), "Shift is active");
-  assert.notOk(kb.isCapsLock(), "Caps lock is NOT on");
+  assert.ok(isShiftActive(kb), "Shift is active");
+  assert.notOk(isCapsLock(kb), "Caps lock is NOT on");
 
   await waitForRender();
 
@@ -1950,7 +1993,7 @@ QUnit.test("QWERTZ-DE layout resolves correctly", (assert) => {
   const kb = new KioskKeyboard();
   kb.setLayout("qwertz-de");
 
-  const layout = kb.getResolvedLayout();
+  const layout = getResolvedLayout(kb);
   assert.strictEqual(layout.length, 5, "QWERTZ-DE has 5 rows");
 
   // Row 2 should have Z instead of Y (QWERTZ)
@@ -2057,6 +2100,35 @@ QUnit.test("Base layout defaults to qwerty", async (assert) => {
 
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
   assert.ok(keys.includes("q"), "QWERTY q key is present");
+
+  kb.destroy();
+});
+
+QUnit.test("getBaseLayout tracks last non-secondary layout", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getBaseLayout(), "qwerty", "Initial base layout is qwerty");
+
+  kb.setLayout("qwertz-de");
+  assert.strictEqual(kb.getBaseLayout(), "qwertz-de", "Base updates on non-secondary layout");
+
+  kb.setLayout("numeric");
+  assert.strictEqual(kb.getBaseLayout(), "qwertz-de", "Base is preserved when switching to secondary layout");
+
+  kb.destroy();
+});
+
+QUnit.test("resetLayout returns from secondary layout to base", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
+
+  kb.setLayout("numeric");
+  assert.strictEqual(kb.getLayout(), "numeric", "Secondary layout is active before reset");
+
+  kb.resetLayout();
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "resetLayout restores the tracked base layout");
 
   kb.destroy();
 });
@@ -3427,7 +3499,7 @@ QUnit.test("Prior shift state does not leak into Numpad rendering", async (asser
 
   // Activate shift on full layout
   tapKey(kb, "{shift}");
-  assert.ok(kb.isShiftActive(), "Shift is active on full layout");
+  assert.ok(isShiftActive(kb), "Shift is active on full layout");
 
   // Switch to numpad
   kb.setKeyboardType("Numpad");
@@ -3564,7 +3636,7 @@ QUnit.test('getKeyAriaLabel: {backspace} (label: "") \u2192 "Backspace"', async 
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getKeyAriaLabel({ value: "{backspace}", label: "" }), "Backspace");
+  assert.strictEqual(getKeyAriaLabel(kb, { value: "{backspace}", label: "" }), "Backspace");
 
   kb.destroy();
 });
@@ -3573,7 +3645,7 @@ QUnit.test('getKeyAriaLabel: {enter} (label: "") \u2192 "Enter"', async (assert)
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getKeyAriaLabel({ value: "{enter}", label: "" }), "Enter");
+  assert.strictEqual(getKeyAriaLabel(kb, { value: "{enter}", label: "" }), "Enter");
 
   kb.destroy();
 });
@@ -3582,7 +3654,7 @@ QUnit.test('getKeyAriaLabel: {shift} (label: "") \u2192 "Shift"', async (assert)
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getKeyAriaLabel({ value: "{shift}", label: "" }), "Shift");
+  assert.strictEqual(getKeyAriaLabel(kb, { value: "{shift}", label: "" }), "Shift");
 
   kb.destroy();
 });
@@ -3591,7 +3663,7 @@ QUnit.test('getKeyAriaLabel: " " \u2192 "Space"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getKeyAriaLabel({ value: " " }), "Space");
+  assert.strictEqual(getKeyAriaLabel(kb, { value: " " }), "Space");
 
   kb.destroy();
 });
@@ -3600,7 +3672,7 @@ QUnit.test('getKeyAriaLabel: "a" \u2192 "a"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getKeyAriaLabel({ value: "a" }), "a");
+  assert.strictEqual(getKeyAriaLabel(kb, { value: "a" }), "a");
 
   kb.destroy();
 });
@@ -3611,9 +3683,9 @@ QUnit.test('getKeyAriaLabel after shift: "a" \u2192 "A", "1" with shiftLabel "!"
 
   tapKey(kb, "{shift}");
 
-  assert.strictEqual(kb.getKeyAriaLabel({ value: "a" }), "A", "'a' becomes 'A' with shift");
+  assert.strictEqual(getKeyAriaLabel(kb, { value: "a" }), "A", "'a' becomes 'A' with shift");
   assert.strictEqual(
-    kb.getKeyAriaLabel({ value: "1", shiftLabel: "!" }),
+    getKeyAriaLabel(kb, { value: "1", shiftLabel: "!" }),
     "!",
     "'1' with shiftLabel '!' becomes '!' with shift",
   );

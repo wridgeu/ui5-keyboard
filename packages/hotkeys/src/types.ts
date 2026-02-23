@@ -241,9 +241,9 @@ export interface HotkeyOptions {
 
 /**
  * Options that can be updated on a live registration via `setOptions()`.
- * Excludes `scope`, which requires unregister + re-register.
+ * Excludes `scope` and `conflictBehavior`, which require unregister + re-register.
  */
-export type UpdatableHotkeyOptions = Omit<HotkeyOptions, "scope">;
+export type UpdatableHotkeyOptions = Omit<HotkeyOptions, "scope" | "conflictBehavior">;
 
 /**
  * Handle returned by `HotkeyManager.register()` for managing a registration's lifecycle.
@@ -263,10 +263,10 @@ export interface HotkeyRegistrationHandle {
   unregister(): void;
   /**
    * Update options on a live registration without re-registering.
-   * All fields except `scope` can be changed.
+   * All fields except `scope` and `conflictBehavior` can be changed.
    *
    * @param options - Partial options to merge into the registration.
-   * @throws Error if the handle has been unregistered or if `scope` is provided.
+   * @throws Error if the handle has been unregistered, or if `scope` / `conflictBehavior` is provided.
    */
   setOptions(options: Partial<UpdatableHotkeyOptions>): void;
 }

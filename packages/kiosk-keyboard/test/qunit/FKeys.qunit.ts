@@ -2,7 +2,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender, tapKey, tapShiftInternally } from "./test-helpers";
+import { placeAndWait, waitForRender, tapKey, tapShiftInternally, isShiftActive } from "./test-helpers";
 
 // ──────────────────────────────────────────────
 // Module
@@ -175,10 +175,10 @@ QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
 
   // Activate shift
   tapShiftInternally(kb);
-  assert.ok(kb.isShiftActive(), "Shift is active before F-key tap");
+  assert.ok(isShiftActive(kb), "Shift is active before F-key tap");
 
   tapKey(kb, "{fkey:F3}");
-  assert.ok(kb.isShiftActive(), "Shift remains active after F-key tap");
+  assert.ok(isShiftActive(kb), "Shift remains active after F-key tap");
 
   kb.destroy();
 });

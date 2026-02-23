@@ -182,6 +182,7 @@ npm run check               # fmt:check + lint + typecheck + test:guardrails + t
 npm run fmt                 # Format (oxfmt)
 npm run lint                # Lint (oxlint)
 npm run typecheck           # Typecheck all workspaces (kiosk includes generated typings)
+npm run test:guardrails     # Fails on browser.pause/hard-wait anti-patterns in e2e tests
 ```
 
 ## Project Structure

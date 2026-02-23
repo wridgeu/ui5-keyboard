@@ -238,49 +238,45 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 
 ### Public Methods (Common)
 
-| Method                   | Returns            | Description                                                                       |
-| ------------------------ | ------------------ | --------------------------------------------------------------------------------- |
-| `setLayout(layout)`      | `this`             | Set active layout (effective when `keyboardType="Full"`).                         |
-| `setKeyboardType(type)`  | `this`             | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.       |
-| `setAutoShow(autoShow)`  | `this`             | Enable/disable focus-driven open/close behavior (docked mode).                    |
-| `setDocked(docked)`      | `this`             | Enable/disable docked positioning and related open state handling.                |
-| `setTargetInput(target)` | `this`             | Set the target input (no re-render).                                              |
-| `show()`                 | `this`             | Open the docked keyboard. Idempotent.                                             |
-| `close()`                | `this`             | Close the docked keyboard. Idempotent.                                            |
-| `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open.                                    |
-| `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.                                             |
-| `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                                                      |
-| `getTargetControl()`     | `Control \| null`  | Resolve the associated target input to a control instance (typed helper).         |
-| `resetKeyboardType()`    | `this`             | Clear explicit lock, re-enable auto-type.                                         |
-| `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.                                              |
-| `getKeyLabel(key)`       | `string`           | Display label for a key, respecting current Shift/Caps state.                     |
-| `getKeyAriaLabel(key)`   | `string`           | Accessible label for a key (human-readable name for icons like Backspace, Enter). |
+| Method                     | Returns           | Description                                                                 |
+| -------------------------- | ----------------- | --------------------------------------------------------------------------- |
+| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                   |
+| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.           |
+| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                     |
+| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type. |
+| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).             |
+| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).              |
+| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.          |
+| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                        |
+| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                       |
+| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                      |
+| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                              |
+| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).   |
+| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                   |
 
 ### Public Methods (Complete)
 
 Complete list of KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
 
-| Method                   | Returns            | Description                                                                       |
-| ------------------------ | ------------------ | --------------------------------------------------------------------------------- |
-| `setLayout(layout)`      | `this`             | Set active layout (effective when `keyboardType="Full"`).                         |
-| `setKeyboardType(type)`  | `this`             | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.       |
-| `resetKeyboardType()`    | `this`             | Clear explicit lock, re-enable auto-type.                                         |
-| `setAutoShow(autoShow)`  | `this`             | Enable/disable focus-driven open/close behavior (docked mode).                    |
-| `setDocked(docked)`      | `this`             | Enable/disable docked positioning and related open state handling.                |
-| `setTargetInput(target)` | `this`             | Set the target input (no re-render).                                              |
-| `show()`                 | `this`             | Open the docked keyboard. Idempotent.                                             |
-| `close()`                | `this`             | Close the docked keyboard. Idempotent.                                            |
-| `isOpen()`               | `boolean`          | Whether the docked keyboard is currently open.                                    |
-| `isShiftActive()`        | `boolean`          | Whether Shift or Caps Lock is active.                                             |
-| `isCapsLock()`           | `boolean`          | Whether Caps Lock is active.                                                      |
-| `getTargetControl()`     | `Control \| null`  | Resolve the associated target input to a control instance (typed helper).         |
-| `getResolvedLayout()`    | `LayoutDefinition` | The layout currently being rendered.                                              |
-| `getKeyLabel(key)`       | `string`           | Display label for a key, respecting current Shift/Caps state.                     |
-| `getKeyAriaLabel(key)`   | `string`           | Accessible label for a key (human-readable name for icons like Backspace, Enter). |
-| `getFocusDomRef()`       | `Element \| null`  | Returns the keyboard root DOM reference used for focus handling.                  |
-| `getFocusInfo()`         | `object`           | Returns focus state snapshot for UI5 focus restoration.                           |
-| `applyFocusInfo(info)`   | `this`             | Restores focus state snapshot previously returned by `getFocusInfo()`.            |
-| `getAccessibilityInfo()` | `object`           | Returns UI5 accessibility metadata for assistive technologies.                    |
+| Method                     | Returns           | Description                                                                 |
+| -------------------------- | ----------------- | --------------------------------------------------------------------------- |
+| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                   |
+| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.           |
+| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                     |
+| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type. |
+| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).             |
+| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                   |
+| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).              |
+| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.          |
+| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                        |
+| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                       |
+| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                      |
+| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                              |
+| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).   |
+| `getFocusDomRef()`         | `Element \| null` | Returns the keyboard root DOM reference used for focus handling.            |
+| `getFocusInfo()`           | `object`          | Returns focus state snapshot for UI5 focus restoration.                     |
+| `applyFocusInfo(info)`     | `this`            | Restores focus state snapshot previously returned by `getFocusInfo()`.      |
+| `getAccessibilityInfo()`   | `object`          | Returns UI5 accessibility metadata for assistive technologies.              |
 
 For full generated typings (including property/event accessors from UI5 metadata), see `packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts`.
 

@@ -162,6 +162,19 @@ QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
   assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Scope reset to global when route name is undefined");
 });
 
+QUnit.test("hasRouterIntegration reflects router integration state", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const router = createMockRouter();
+
+  assert.notOk(manager.hasRouterIntegration(), "False before enable");
+
+  manager.enableRouterIntegration(router as any);
+  assert.ok(manager.hasRouterIntegration(), "True after enable");
+
+  manager.disableRouterIntegration();
+  assert.notOk(manager.hasRouterIntegration(), "False after disable");
+});
+
 // ──────────────────────────────────────────────
 // disableRouterIntegration (C3)
 // ──────────────────────────────────────────────

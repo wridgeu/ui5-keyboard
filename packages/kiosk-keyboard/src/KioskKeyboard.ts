@@ -406,52 +406,96 @@ export default class KioskKeyboard extends Control {
   // Static delegates — layout registry (see internal/layout-registry.ts)
   // ──────────────────────────────────────────────
 
-  /** @see {@link registerLayout} in `internal/layout-registry.ts` */
+  /**
+   * Register a custom keyboard layout.
+   *
+   * Registered layouts can be used via `setLayout(name)` or declaratively
+   * with `layout="name"`. Built-in layouts cannot be overwritten.
+   *
+   * @param sName Layout identifier (e.g. "azerty-fr").
+   * @param oDefinition Layout rows and key definitions.
+   */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
     registryRegisterLayout(sName, oDefinition);
   }
 
-  /** @see {@link unregisterLayout} in `internal/layout-registry.ts` */
+  /**
+   * Remove a previously registered custom layout.
+   *
+   * Built-in layouts cannot be removed.
+   *
+   * @param sName Layout identifier.
+   */
   static unregisterLayout(sName: string): void {
     registryUnregisterLayout(sName);
   }
 
-  /** @see {@link resetCustomLayouts} in `internal/layout-registry.ts` */
+  /**
+   * Remove all custom layouts and keep built-in layouts intact.
+   */
   static resetCustomLayouts(): void {
     registryResetCustomLayouts();
   }
 
-  /** @see {@link getRegisteredLayout} in `internal/layout-registry.ts` */
+  /**
+   * Get a registered layout definition by name.
+   *
+   * @param sName Layout identifier.
+   * @returns The layout definition, or undefined if not found.
+   */
   static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
     return registryGetLayout(sName);
   }
 
-  /** @see {@link getRegisteredLayoutNames} in `internal/layout-registry.ts` */
+  /**
+   * Get all registered layout names (built-in and custom).
+   */
   static getRegisteredLayoutNames(): string[] {
     return registryGetLayoutNames();
   }
 
-  /** @see {@link isBuiltInLayout} in `internal/layout-registry.ts` */
+  /**
+   * Check whether a layout name belongs to a built-in layout.
+   *
+   * @param sName Layout identifier.
+   */
   static isBuiltInLayout(sName: string): boolean {
     return registryIsBuiltIn(sName);
   }
 
-  /** @see {@link registerLocaleLayout} in `internal/layout-registry.ts` */
+  /**
+   * Register a locale-to-layout mapping.
+   *
+   * Mapping is used when no explicit `layout` is provided.
+   *
+   * @param sLocale BCP-47 locale key or prefix (e.g. "de", "de-at").
+   * @param sLayout Target layout name.
+   */
   static registerLocaleLayout(sLocale: string, sLayout: string): void {
     registryRegisterLocale(sLocale, sLayout);
   }
 
-  /** @see {@link unregisterLocaleLayout} in `internal/layout-registry.ts` */
+  /**
+   * Remove a locale-to-layout mapping.
+   *
+   * @param sLocale Locale key or prefix.
+   */
   static unregisterLocaleLayout(sLocale: string): void {
     registryUnregisterLocale(sLocale);
   }
 
-  /** @see {@link resetLocaleLayouts} in `internal/layout-registry.ts` */
+  /**
+   * Reset locale mappings back to built-in defaults.
+   */
   static resetLocaleLayouts(): void {
     registryResetLocales();
   }
 
-  /** @see {@link getLocaleLayout} in `internal/layout-registry.ts` */
+  /**
+   * Resolve the layout name for the current UI5 locale.
+   *
+   * Uses exact locale match, then language-prefix match, then fallback.
+   */
   static getLocaleLayout(): string {
     return registryGetLocaleLayout();
   }
@@ -614,6 +658,23 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Returns the current base (alphabetic) layout name.
+   *
+   * This is the layout used when `{layout:base}` is triggered from secondary
+   * layouts such as `numeric`, `special`, `fkeys`, or `nav`.
+   */
+  getBaseLayout(): string {
+    return this._baseLayout;
+  }
+
+  /**
+   * Restores the active layout to the tracked base layout.
+   */
+  resetLayout(): this {
+    return this.setLayout(this._baseLayout);
+  }
+
+  /**
    * Sets the target input association without triggering a re-render,
    * since the association does not affect the keyboard's visual output.
    * Also moves the physical keyboard highlight delegation to the new target.
@@ -755,6 +816,13 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Whether keyboardType has been explicitly set and auto-type is locked.
+   */
+  isKeyboardTypeExplicit(): boolean {
+    return this._keyboardTypeExplicit;
+  }
+
+  /**
    * Custom setter for docked — manages CSS on the existing DOM
    * rather than re-rendering (which would disrupt transitions).
    */
@@ -778,6 +846,7 @@ export default class KioskKeyboard extends Control {
 
   /** Opens the keyboard (docked mode). Slides it into view. */
   show(): this {
+    if (!this.getDocked()) return this;
     if (this._open) return this;
     this._open = true;
     this._suppressNativeKeyboard();
@@ -793,8 +862,9 @@ export default class KioskKeyboard extends Control {
 
   /** Closes the keyboard (docked mode). Slides it out of view. */
   close(): this {
+    if (!this.getDocked()) return this;
     if (!this._open) return this;
-    this._fireChangeIfDirty();
+    this._targetSession.fireChangeIfDirty();
     this._open = false;
     this._restoreNativeKeyboard();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
@@ -935,6 +1005,10 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
 
   getFocusDomRef(): globalThis.Element | null {
+    if (this._getResolvedLayout().length === 0) {
+      return null;
+    }
+
     return (
       (this._lastFocusedKeyId && document.getElementById(this._lastFocusedKeyId)) ||
       this.getDomRef()?.querySelector(".ui5KioskKey") ||
@@ -1000,18 +1074,21 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Public API (used by renderer)
+  // Internal renderer helpers
   // ──────────────────────────────────────────────
 
-  isShiftActive(): boolean {
-    return this._shiftActive || this._capsLock;
+  /** Returns true for one-shot Shift and Caps Lock mode. */
+  private _isShiftActive(): boolean {
+    return this._shiftActive || this._isCapsLock();
   }
 
-  isCapsLock(): boolean {
+  /** Returns true when Caps Lock mode is active. */
+  private _isCapsLock(): boolean {
     return this._capsLock;
   }
 
-  getResolvedLayout(): LayoutDefinition {
+  /** Resolve the effective layout used by the renderer. */
+  private _getResolvedLayout(): LayoutDefinition {
     const kbType = this.getKeyboardType();
     if (kbType === KeyboardType.Numpad) return registryGetLayoutOrDefault("numpad");
     if (kbType === KeyboardType.Numeric) return registryGetLayoutOrDefault("numeric");
@@ -1056,27 +1133,28 @@ export default class KioskKeyboard extends Control {
     " ": ["KEY_SPACE", "Space"],
   };
 
-  /** The display label for a key (may be empty for icon-only keys). */
-  getKeyLabel(key: KeyDefinition): string {
-    const shift = this.isShiftActive();
-    if (shift && key.shiftLabel) return key.shiftLabel;
-    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    const base = entry ? getText(entry[0], entry[1]) : (key.label ?? key.value);
-    if (!base) return "";
-    return shift && !entry && key.value.length === 1 ? base.toUpperCase() : base;
-  }
-
   /**
    * Accessible label for a key — always non-empty.
    * For icon-only keys (label=""), resolves to a human-readable name.
    */
-  getKeyAriaLabel(key: KeyDefinition): string {
-    const display = this.getKeyLabel(key);
-    if (display) return display;
-
-    // Icon-only key with empty display label — resolve from value
+  private _getKeyAriaLabel(key: KeyDefinition): string {
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    return entry ? getText(entry[0], entry[1]) : key.value;
+    if (entry) {
+      return getText(entry[0], entry[1]);
+    }
+
+    const display = this._getKeyLabel(key);
+    return display || key.value;
+  }
+
+  /** The display label for a key (may be empty for icon-only keys). */
+  private _getKeyLabel(key: KeyDefinition): string {
+    const shift = this._isShiftActive();
+    if (shift && key.shiftLabel) return key.shiftLabel;
+    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
+    const base = entry ? this._getKeyAriaLabel(key) : (key.label ?? key.value);
+    if (!base) return "";
+    return shift && !entry && key.value.length === 1 ? base.toUpperCase() : base;
   }
 
   // ──────────────────────────────────────────────
@@ -1336,7 +1414,7 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
-    const shift = this.isShiftActive();
+    const shift = this._isShiftActive();
 
     if (keyValue === "{shift}") {
       this._toggleShift();
@@ -1436,10 +1514,6 @@ export default class KioskKeyboard extends Control {
       this._shiftActive = true;
     }
     this.invalidate();
-  }
-
-  private _fireChangeIfDirty(): void {
-    this._targetSession.fireChangeIfDirty();
   }
 
   /**

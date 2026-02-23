@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$KeyboardTypeChangeEvent } from "ui5/kiosk/KioskKeyboard";
 import { KeyName } from "ui5/kiosk/library";
+import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
 import MessageToast from "sap/m/MessageToast";
@@ -15,7 +16,6 @@ import BaseController from "./BaseController";
  */
 export default class KioskFormWorkflow extends BaseController {
   private static readonly _FIELD_IDS = ["nameInput", "emailInput", "phoneInput", "guestsInput", "notesInput"];
-  private _routeAttached: boolean = false;
 
   onInit(): void {
     const stateModel = this.getStateModel();
@@ -25,17 +25,11 @@ export default class KioskFormWorkflow extends BaseController {
     stateModel.setProperty("/formKeyboardType", "Full");
     stateModel.setProperty("/formLastKey", "None");
 
-    if (!this._routeAttached) {
-      this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
-      this._routeAttached = true;
-    }
+    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    if (this._routeAttached) {
-      this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
-      this._routeAttached = false;
-    }
+    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
 
     this._setKeyboardRouteActive(false);
   }
@@ -83,8 +77,8 @@ export default class KioskFormWorkflow extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
-  private _onRouteMatched(event: unknown): void {
-    const routeName = (event as { getParameter: (name: string) => string | undefined }).getParameter("name");
+  private _onRouteMatched(event: Router$RouteMatchedEvent): void {
+    const routeName = event.getParameter("name");
     this._setKeyboardRouteActive(routeName === Scope.KioskFormWorkflow);
   }
 

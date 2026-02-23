@@ -1,6 +1,7 @@
 import Item from "sap/ui/core/Item";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
+import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type Select from "sap/m/Select";
 import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
 import { Scope } from "../constants";
@@ -13,8 +14,6 @@ import BaseController from "./BaseController";
  * @name demo.hotkeys.controller.KioskDocked
  */
 export default class KioskDocked extends BaseController {
-  private _routeAttached: boolean = false;
-
   onInit(): void {
     const stateModel = this.getStateModel();
     stateModel.setProperty("/kioskLastKey", "None");
@@ -30,17 +29,11 @@ export default class KioskDocked extends BaseController {
     }
     select.setSelectedKey("qwerty");
 
-    if (!this._routeAttached) {
-      this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
-      this._routeAttached = true;
-    }
+    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    if (this._routeAttached) {
-      this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
-      this._routeAttached = false;
-    }
+    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
 
     this._setKeyboardRouteActive(false);
   }
@@ -79,8 +72,8 @@ export default class KioskDocked extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
-  private _onRouteMatched(event: unknown): void {
-    const routeName = (event as { getParameter: (name: string) => string | undefined }).getParameter("name");
+  private _onRouteMatched(event: Router$RouteMatchedEvent): void {
+    const routeName = event.getParameter("name");
     this._setKeyboardRouteActive(routeName === Scope.KioskDocked);
   }
 

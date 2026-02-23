@@ -64,8 +64,9 @@ export default class KioskDialog extends BaseController {
         },
       }),
       afterClose: () => {
+        const isCurrentDialog = this._dialogA === dialog;
         dialog.destroy();
-        if (this._dialogA === dialog) {
+        if (isCurrentDialog) {
           this._dialogA = null;
         }
         // Re-focus page input so docked keyboard resumes
@@ -114,8 +115,9 @@ export default class KioskDialog extends BaseController {
         },
       }),
       afterClose: () => {
+        const isCurrentDialog = this._dialogB === dialog;
         dialog.destroy();
-        if (this._dialogB === dialog) {
+        if (isCurrentDialog) {
           this._dialogB = null;
         }
         const pageInput = this.byId("pageInput") as Input;

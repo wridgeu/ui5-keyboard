@@ -57,6 +57,29 @@ QUnit.test("group.registerSequence delegates and tracks", (assert) => {
   fireKey("i");
 });
 
+QUnit.test("getRegistrations/getSequenceRegistrations return only this group's entries", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const groupA = manager.createGroup();
+  const groupB = manager.createGroup();
+
+  const aHotkey = groupA.register("F5", () => {}, { description: "A" });
+  groupA.registerSequence(["G", "I"], () => {}, { description: "A-seq" });
+
+  groupB.register("F6", () => {}, { description: "B" });
+  groupB.registerSequence(["G", "H"], () => {}, { description: "B-seq" });
+
+  const aRegistrations = groupA.getRegistrations();
+  const aSequences = groupA.getSequenceRegistrations();
+
+  assert.strictEqual(aRegistrations.length, 1, "Group A returns only its hotkey registration");
+  assert.strictEqual(aRegistrations[0]?.id, aHotkey.id, "Hotkey registration id matches Group A handle");
+  assert.strictEqual(aSequences.length, 1, "Group A returns only its sequence registration");
+  assert.strictEqual(aSequences[0]?.description, "A-seq", "Sequence registration belongs to Group A");
+
+  aHotkey.unregister();
+  assert.strictEqual(groupA.getRegistrations().length, 0, "Unregistered group hotkey is removed from introspection");
+});
+
 QUnit.test("destroyAll unregisters all handles", (assert) => {
   const manager = HotkeyManager.getInstance();
   const group = manager.createGroup();

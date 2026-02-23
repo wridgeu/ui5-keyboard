@@ -1334,6 +1334,17 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
   );
 });
 
+QUnit.test("setOptions: throws on conflictBehavior change", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const handle = manager.register("Escape", () => {});
+
+  assert.throws(
+    () => handle.setOptions({ conflictBehavior: "error" } as any),
+    /Cannot change conflictBehavior/,
+    "Throws when trying to change conflictBehavior",
+  );
+});
+
 // ──────────────────────────────────────────────
 // AltGr guard (Feature 5)
 // ──────────────────────────────────────────────

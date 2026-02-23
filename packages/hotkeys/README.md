@@ -183,6 +183,7 @@ const manager = HotkeyManager.getInstance();
 | `resetToGlobalScope()`                 | Pop all non-global scopes in one call                 |
 | `enableRouterIntegration(router)`      | Auto-manage view scopes via router events             |
 | `disableRouterIntegration()`           | Detach router handler without destroying the manager  |
+| `hasRouterIntegration()`               | Check whether router integration is currently active  |
 | `getRegistrations()`                   | Get all active registrations                          |
 | `getRegistrationsForScope(scopeId)`    | Filter registrations by scope                         |
 | `getPlatform()`                        | Get the detected platform                             |
@@ -256,7 +257,7 @@ handle.isActive; // false
 
 **Updatable options via `setOptions()`:**
 
-All [Registration Options](#registration-options) except `scope` can be updated at any time:
+All [Registration Options](#registration-options) except `scope` and `conflictBehavior` can be updated at any time:
 
 ```ts
 handle.setOptions({
@@ -267,13 +268,12 @@ handle.setOptions({
   ignoreInputs: true,
   ignoreRepeat: false,
   suppressInPopups: true,
-  conflictBehavior: ConflictBehavior.Allow,
   target: document.getElementById("myPanel"),
 });
 ```
 
 > [!WARNING]
-> Changing `scope` via `setOptions()` throws an error. Unregister and re-register instead.
+> Changing `scope` or `conflictBehavior` via `setOptions()` throws an error. Unregister and re-register instead.
 
 ### Registration Group
 
@@ -296,13 +296,15 @@ onExit(): void {
 }
 ```
 
-| Property / Method    | Description                                              |
-| -------------------- | -------------------------------------------------------- |
-| `register()`         | Delegates to `manager.register()`, tracks handle         |
-| `registerSequence()` | Delegates to `manager.registerSequence()`, tracks handle |
-| `destroyAll()`       | Unregister all tracked handles (idempotent)              |
-| `size`               | Number of currently active registrations                 |
-| `isDestroyed`        | Whether `destroyAll()` has been called                   |
+| Property / Method            | Description                                              |
+| ---------------------------- | -------------------------------------------------------- |
+| `register()`                 | Delegates to `manager.register()`, tracks handle         |
+| `registerSequence()`         | Delegates to `manager.registerSequence()`, tracks handle |
+| `getRegistrations()`         | Get this group's active hotkey registrations             |
+| `getSequenceRegistrations()` | Get this group's active sequence registrations           |
+| `destroyAll()`               | Unregister all tracked handles (idempotent)              |
+| `size`                       | Number of currently active registrations                 |
+| `isDestroyed`                | Whether `destroyAll()` has been called                   |
 
 Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle` — `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 

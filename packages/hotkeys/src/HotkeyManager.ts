@@ -42,7 +42,7 @@ const idGen = createIdGenerator("hk_");
 const handledEvents = new WeakSet<KeyboardEvent>();
 
 interface ScopeRegistrationBucket {
-  document: Set<string>;
+  documentIds: Set<string>;
   targets: Map<EventTarget, Set<string>>;
 }
 
@@ -230,8 +230,12 @@ export default class HotkeyManager extends BaseObject {
         if (!state.active) {
           throw new Error(`Cannot setOptions on unregistered handle (id: ${id})`);
         }
-        if ((newOptions as Record<string, unknown>).scope !== undefined) {
+        const optionRecord = newOptions as Record<string, unknown>;
+        if (optionRecord.scope !== undefined) {
           throw new Error("Cannot change scope via setOptions — unregister and re-register instead");
+        }
+        if (optionRecord.conflictBehavior !== undefined) {
+          throw new Error("Cannot change conflictBehavior via setOptions — unregister and re-register instead");
         }
         const opts = registration.options;
         // Special case: target swap requires listener management
@@ -254,7 +258,6 @@ export default class HotkeyManager extends BaseObject {
         if (newOptions.ignoreRepeat !== undefined) opts.ignoreRepeat = newOptions.ignoreRepeat;
         if (newOptions.suppressInPopups !== undefined) opts.suppressInPopups = newOptions.suppressInPopups;
         if (newOptions.description !== undefined) opts.description = newOptions.description;
-        if (newOptions.conflictBehavior !== undefined) opts.conflictBehavior = newOptions.conflictBehavior;
       },
     };
 
@@ -404,6 +407,13 @@ export default class HotkeyManager extends BaseObject {
     this._routerCleanup = null;
 
     Log.info("Router integration disabled", undefined, LOG_COMPONENT);
+  }
+
+  /**
+   * Whether router integration is currently active.
+   */
+  hasRouterIntegration(): boolean {
+    return this._routerCleanup !== null;
   }
 
   // ──────────────────────────────────────────────
@@ -879,7 +889,7 @@ export default class HotkeyManager extends BaseObject {
   // Private: Conflict handling
   // ──────────────────────────────────────────────
 
-  private _isSameConflictBucket(
+  private _isConflictingRegistration(
     reg: HotkeyRegistration,
     normalizedHotkey: string,
     scope: string,
@@ -900,7 +910,7 @@ export default class HotkeyManager extends BaseObject {
       // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
       for (const reg of this._registrations.values()) {
-        if (this._isSameConflictBucket(reg, normalizedHotkey, scope, target)) {
+        if (this._isConflictingRegistration(reg, normalizedHotkey, scope, target)) {
           conflicts.push(reg);
         }
       }
@@ -927,7 +937,7 @@ export default class HotkeyManager extends BaseObject {
     // For "warn" and "error", first match is sufficient
     let conflicting: HotkeyRegistration | null = null;
     for (const reg of this._registrations.values()) {
-      if (this._isSameConflictBucket(reg, normalizedHotkey, scope, target)) {
+      if (this._isConflictingRegistration(reg, normalizedHotkey, scope, target)) {
         conflicting = reg;
         break;
       }
@@ -954,7 +964,7 @@ export default class HotkeyManager extends BaseObject {
     let bucket = this._registrationsByScope.get(scope);
     if (!bucket) {
       bucket = {
-        document: new Set<string>(),
+        documentIds: new Set<string>(),
         targets: new Map<EventTarget, Set<string>>(),
       };
       this._registrationsByScope.set(scope, bucket);
@@ -975,7 +985,7 @@ export default class HotkeyManager extends BaseObject {
       return;
     }
 
-    bucket.document.add(registration.id);
+    bucket.documentIds.add(registration.id);
   }
 
   private _deindexRegistration(registration: HotkeyRegistration): void {
@@ -993,10 +1003,10 @@ export default class HotkeyManager extends BaseObject {
         }
       }
     } else {
-      bucket.document.delete(registration.id);
+      bucket.documentIds.delete(registration.id);
     }
 
-    if (bucket.document.size === 0 && bucket.targets.size === 0) {
+    if (bucket.documentIds.size === 0 && bucket.targets.size === 0) {
       this._registrationsByScope.delete(scope);
     }
   }
@@ -1005,7 +1015,7 @@ export default class HotkeyManager extends BaseObject {
     const bucket = this._registrationsByScope.get(scope);
     if (!bucket) return [];
 
-    const ids = targetElement === null ? bucket.document : bucket.targets.get(targetElement);
+    const ids = targetElement === null ? bucket.documentIds : bucket.targets.get(targetElement);
     if (!ids || ids.size === 0) return [];
 
     const registrations: HotkeyRegistration[] = [];

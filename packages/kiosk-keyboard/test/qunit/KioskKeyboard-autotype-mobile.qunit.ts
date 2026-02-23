@@ -141,6 +141,8 @@ QUnit.test("Explicit setKeyboardType disables autoType", async (assert) => {
   kb.setKeyboardType("Full");
   await placeAndWait(kb);
 
+  assert.ok(kb.isKeyboardTypeExplicit(), "Explicit lock flag is true after setKeyboardType");
+
   (numInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
 
@@ -161,6 +163,8 @@ QUnit.test("Constructor keyboardType also disables autoType", async (assert) => 
     keyboardType: "Full",
   });
   await placeAndWait(kb);
+
+  assert.ok(kb.isKeyboardTypeExplicit(), "Explicit lock flag is true when keyboardType comes from settings");
 
   (numInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
@@ -247,6 +251,8 @@ QUnit.test("resetKeyboardType re-enables autoType after explicit setKeyboardType
   kb.setKeyboardType("Full");
   await placeAndWait(kb);
 
+  assert.ok(kb.isKeyboardTypeExplicit(), "Lock flag starts true after explicit set");
+
   (numInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Full", "Locked: Number input stays Full");
@@ -254,6 +260,7 @@ QUnit.test("resetKeyboardType re-enables autoType after explicit setKeyboardType
   (textInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
   kb.resetKeyboardType();
+  assert.notOk(kb.isKeyboardTypeExplicit(), "Lock flag is cleared after resetKeyboardType");
 
   (numInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
@@ -278,6 +285,8 @@ QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType
   });
   await placeAndWait(kb);
 
+  assert.ok(kb.isKeyboardTypeExplicit(), "Lock flag starts true from constructor setting");
+
   (numInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
   assert.strictEqual(kb.getKeyboardType(), "Full", "Constructor lock: Number input stays Full");
@@ -285,6 +294,7 @@ QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType
   (textInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
   kb.resetKeyboardType();
+  assert.notOk(kb.isKeyboardTypeExplicit(), "Lock flag is cleared after resetKeyboardType");
 
   (numInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
