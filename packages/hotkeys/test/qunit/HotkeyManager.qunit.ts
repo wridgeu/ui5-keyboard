@@ -671,6 +671,19 @@ QUnit.test("getRegistrationsForScope filters by scope", (assert) => {
   assert.strictEqual(manager.getRegistrationsForScope("unknown").length, 0);
 });
 
+QUnit.test("scope introspection normalizes whitespace consistently", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  manager.register("Escape", () => {}, { scope: GLOBAL_SCOPE });
+  manager.register("Ctrl+S", () => {}, { scope: "editor" });
+  manager.registerSequence(["G", "I"], () => {}, { scope: "editor" });
+
+  assert.strictEqual(manager.getRegistrationsForScope(" editor ").length, 1, "Hotkeys trim scope values");
+  assert.throws(() => manager.getRegistrationsForScope("   "), /scope must be a non-empty string/);
+  assert.strictEqual(manager.getSequenceRegistrationsForScope(" editor ").length, 1, "Sequences trim scope values");
+  assert.throws(() => manager.getSequenceRegistrationsForScope("   "), /scope must be a non-empty string/);
+});
+
 // ──────────────────────────────────────────────
 // Lifecycle
 // ──────────────────────────────────────────────

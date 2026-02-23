@@ -513,6 +513,10 @@ tracker.setChangeCallback((keys) => {
 tracker.destroy();
 ```
 
+In long-lived shells (for example FLP), call `destroy()` when the tracker is no
+longer needed. `KeyStateTracker` attaches document/window listeners and keeps
+them until explicit teardown.
+
 > [!NOTE]
 > Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
 

@@ -287,7 +287,7 @@ export default class Main extends BaseController {
       clearTimeout(this._pendingTimer);
       this._pendingTimer = null;
     }
-    this._keyTracker.setChangeCallback(null);
+    this._keyTracker.destroy();
     this._cleanupDialog();
   }
 

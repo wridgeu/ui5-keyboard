@@ -422,8 +422,9 @@ export default class HotkeyManager extends BaseObject {
    * Get registrations filtered by scope.
    */
   getRegistrationsForScope(scopeId: string): ReadonlyArray<HotkeyRegistrationInfo> {
+    const normalizedScope = resolveScopeOrGlobal(scopeId);
     return Array.from(this._registrations.values())
-      .filter((r) => r.options.scope === scopeId)
+      .filter((r) => r.options.scope === normalizedScope)
       .map((r) => this._toRegistrationInfo(r));
   }
 
@@ -514,7 +515,8 @@ export default class HotkeyManager extends BaseObject {
    */
   getSequenceRegistrationsForScope(scopeId: string): ReadonlyArray<SequenceRegistrationInfo> {
     if (!this._sequenceManager) return [];
-    return this._sequenceManager.getRegistrations().filter((r) => r.scope === scopeId);
+    const normalizedScope = resolveScopeOrGlobal(scopeId);
+    return this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope);
   }
 
   /**

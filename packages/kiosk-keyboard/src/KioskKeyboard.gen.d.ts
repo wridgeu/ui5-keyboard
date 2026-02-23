@@ -1,5 +1,5 @@
-import Event from "sap/ui/base/Event";
 import { KeyboardType } from "ui5/kiosk/library";
+import Event from "sap/ui/base/Event";
 import { MobileKeyboard } from "ui5/kiosk/library";
 import { FKeyMode } from "ui5/kiosk/library";
 import Control from "sap/ui/core/Control";
@@ -1027,8 +1027,8 @@ declare module "./KioskKeyboard" {
     explicit `setKeyboardType()`, or `resetKeyboardType()`.
      */
     export interface KioskKeyboard$KeyboardTypeChangeEventParameters {
-        keyboardType?: string;
-        previousKeyboardType?: string;
+        keyboardType?: KeyboardType;
+        previousKeyboardType?: KeyboardType;
         autoDetected?: boolean;
     }
 

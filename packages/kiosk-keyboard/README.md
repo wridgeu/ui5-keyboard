@@ -617,6 +617,10 @@ The `focusin` handler checks whether the focused DOM element is a **text-entry**
 
 > For host controls/wrappers, typing and auto-type now resolve inner native `<input>/<textarea>` from either light DOM or Shadow DOM when available via `getFocusDomRef()`. Auto-show claiming still depends on the focused event target and UI5 control resolution.
 
+Escape-close targeting in docked mode uses the same inner-input resolution. If
+`getFocusDomRef()` returns a host element, the keyboard still treats focus on a
+light/shadow inner `<input>/<textarea>` as "inside target input".
+
 **2. UI5 layer — what the keyboard types into:**
 
 Once an `<input>` or `<textarea>` receives focus, the keyboard uses `Element.closestTo(domElement)` to resolve the owning UI5 control. This resolved control becomes the `targetInput`. For typing to work, the control must:

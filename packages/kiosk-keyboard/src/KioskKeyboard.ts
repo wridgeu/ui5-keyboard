@@ -360,9 +360,9 @@ export default class KioskKeyboard extends Control {
       keyboardTypeChange: {
         parameters: {
           /** The new keyboard type. */
-          keyboardType: { type: "string" },
+          keyboardType: { type: "ui5.kiosk.KeyboardType" },
           /** The previous keyboard type. */
-          previousKeyboardType: { type: "string" },
+          previousKeyboardType: { type: "ui5.kiosk.KeyboardType" },
           /** Whether this change was triggered by auto-type detection. */
           autoDetected: { type: "boolean" },
         },
@@ -843,10 +843,14 @@ export default class KioskKeyboard extends Control {
     if (event.key !== "Escape") return;
     if (!this.getDocked() || !this._open) return;
 
+    const eventTarget = event.composedPath?.()[0] ?? event.target;
+
     // Don't close if Escape originated outside the keyboard and its target input
-    const target = event.target as HTMLElement;
+    const target = eventTarget;
+    if (!(target instanceof HTMLElement)) return;
     const myDom = this.getDomRef();
-    const inputDom = this._getTargetElement()?.getFocusDomRef() as HTMLElement | null;
+    const focusDomRef = this._getTargetElement()?.getFocusDomRef();
+    const inputDom = resolveInputOrTextarea(focusDomRef) ?? (focusDomRef instanceof HTMLElement ? focusDomRef : null);
     const isOnKeyboard = myDom?.contains(target);
     const isOnInput = inputDom && (inputDom === target || inputDom.contains(target));
     if (!isOnKeyboard && !isOnInput) return;
