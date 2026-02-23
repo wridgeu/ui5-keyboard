@@ -7,21 +7,23 @@ This document describes the internal architecture, design decisions, and edge ca
 The library is split into focused, single-responsibility modules:
 
 ```
-HotkeyManager.ts    Singleton manager, event listener, scope stack, dispatch loop
-SequenceManager.ts  Multi-key sequence matching (e.g., G then E)
-KeyStateTracker.ts  Held-key state tracking with macOS stuck-key fix
-HotkeyRecorder.ts   Keyboard shortcut recorder for settings UIs
-validate.ts         Hotkey validation + browser/SAP conflict blocklists
-types.ts            All TypeScript interfaces, types, and option defaults
-constants.ts        Key/modifier aliases, display symbols, normalization
-parse.ts            Hotkey string parsing ("Mod+Shift+S" -> structured object)
-match.ts            KeyboardEvent matching against parsed hotkeys
-dom.ts              Input element detection (text fields, textareas, contentEditable)
-platform.ts         Platform detection (mac/windows/linux) and Mod resolution
-format.ts           Platform-aware display formatting
-library.ts          UI5 library entry point (Lib.init)
+HotkeyManager.ts     Singleton manager, event listener, scope stack, dispatch loop
+RegistrationGroup.ts Scoped batch registration with auto-cleanup
+SequenceManager.ts   Multi-key sequence matching (e.g., G then E)
+KeyStateTracker.ts   Held-key state tracking with macOS stuck-key fix
+HotkeyRecorder.ts    Keyboard shortcut recorder for settings UIs
+validate.ts          Hotkey validation + browser/SAP conflict blocklists
+types.ts             All TypeScript interfaces, types, and option defaults
+constants.ts         Key/modifier aliases, display symbols, normalization
+parse.ts             Hotkey string parsing ("Mod+Shift+S" -> structured object)
+match.ts             KeyboardEvent matching against parsed hotkeys
+dom.ts               Input element detection (text fields, textareas, contentEditable)
+platform.ts          Platform detection (mac/windows/linux) and Mod resolution
+format.ts            Platform-aware display formatting
+library.ts           UI5 library entry point (Lib.init)
 internal/dispatch-core.ts    Dispatch pipeline helpers and skip handling
 internal/listener-registry.ts Target listener reference counting
+internal/scope.ts            Scope string resolution and validation
 internal/skip-reason.ts      Internal dispatch skip-reason types
 internal/idgen.ts            Internal registration ID generator
 ```
@@ -290,24 +292,26 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 ```
 packages/hotkeys/
   src/
-    library.ts          UI5 Lib.init() entry point, apiVersion 2
-    HotkeyManager.ts    Core singleton, event listener, scope stack, dispatch loop
-    SequenceManager.ts  Multi-key sequence matching
-    KeyStateTracker.ts  Held-key state tracking
-    HotkeyRecorder.ts   Keyboard shortcut recorder
-    validate.ts         Validation + browser/SAP blocklists
-    types.ts            All interfaces and type definitions
-    constants.ts        Alias maps, display symbols, normalization
-    parse.ts            Hotkey string parsing
-    match.ts            KeyboardEvent matching
-    dom.ts              Input element detection
-    platform.ts         Platform detection and Mod resolution
-    format.ts           Display formatting
+    library.ts           UI5 Lib.init() entry point, apiVersion 2
+    HotkeyManager.ts     Core singleton, event listener, scope stack, dispatch loop
+    RegistrationGroup.ts Scoped batch registration with auto-cleanup
+    SequenceManager.ts   Multi-key sequence matching
+    KeyStateTracker.ts   Held-key state tracking
+    HotkeyRecorder.ts    Keyboard shortcut recorder
+    validate.ts          Validation + browser/SAP blocklists
+    types.ts             All interfaces and type definitions
+    constants.ts         Alias maps, display symbols, normalization
+    parse.ts             Hotkey string parsing
+    match.ts             KeyboardEvent matching
+    dom.ts               Input element detection
+    platform.ts          Platform detection and Mod resolution
+    format.ts            Display formatting
     internal/
-      dispatch-core.ts  Internal dispatch helpers
+      dispatch-core.ts   Internal dispatch helpers
       listener-registry.ts Internal target listener registry
-      skip-reason.ts    Internal skip-reason models
-      idgen.ts          Internal ID generator
+      scope.ts           Scope string resolution and validation
+      skip-reason.ts     Internal skip-reason models
+      idgen.ts           Internal ID generator
     manifest.json       Library manifest (v2.0.0)
   test/qunit/
     testsuite.qunit.ts  Test suite runner (UI5 Test Starter)

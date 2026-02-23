@@ -128,10 +128,10 @@ export function handleNavigation(
       newPos = len;
       break;
     case "ArrowUp":
-      newPos = resolveVerticalCaret(dom.value, start !== end ? start : start, -1);
+      newPos = resolveVerticalCaret(dom.value, start, -1);
       break;
     case "ArrowDown":
-      newPos = resolveVerticalCaret(dom.value, start !== end ? end : end, 1);
+      newPos = resolveVerticalCaret(dom.value, end, 1);
       break;
     default:
       return null;

@@ -27,7 +27,7 @@ npm run start:kiosk         # Start kiosk-keyboard lib with test runner (port 80
 npm run lint                # oxlint packages/
 npm run fmt                 # oxfmt .
 npm run typecheck           # Typecheck all workspaces
-npm test                    # Run all library tests in parallel (headless)
+npm test                    # Run all library tests sequentially (headless)
 npm run test:qunit          # Run all library QUnit tests (headless)
 npm run test:hotkeys        # Hotkeys QUnit tests (headless)
 npm run test:kiosk          # Kiosk QUnit + e2e tests (headless)
