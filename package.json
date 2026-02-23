@@ -34,7 +34,7 @@
     "test:kiosk:e2e:update": "npm run test:e2e:update -w packages/kiosk-keyboard",
     "test:guardrails": "node ./tools/check-test-hard-waits.mjs",
     "lint": "oxlint packages/ tools/",
-    "lint:ui5": "npm run lint:ui5 -w packages/hotkeys -w packages/kiosk-keyboard -w packages/demo-app",
+    "lint:ui5": "npm run lint:ui5 --workspaces --if-present",
     "lint:fix": "oxlint --fix packages/ tools/",
     "fmt": "oxfmt --ignore-path .oxfmtignore .",
     "fmt:check": "oxfmt --ignore-path .oxfmtignore --check .",
