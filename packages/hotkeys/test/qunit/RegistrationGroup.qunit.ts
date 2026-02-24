@@ -42,6 +42,7 @@ QUnit.test("group.register delegates to manager and tracks handle", (assert) => 
 });
 
 QUnit.test("group.registerSequence delegates and tracks", (assert) => {
+  assert.expect(4);
   const manager = HotkeyManager.getInstance();
   const group = manager.createGroup();
 

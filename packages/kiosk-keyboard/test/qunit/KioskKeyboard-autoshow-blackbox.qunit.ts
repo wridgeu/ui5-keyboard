@@ -187,3 +187,55 @@ QUnit.test(
     kb.destroy();
   },
 );
+
+// ──────────────────────────────────────────────
+// 5. Re-entrant setTargetInput preserves auto-type from inner call
+// ──────────────────────────────────────────────
+
+QUnit.test(
+  "Auto-type re-entrancy: inner call's keyboard type wins over outer call's stale detection",
+  async (assert) => {
+    // inputA = text (Full), inputB = text (Full), inputC = number (Numpad)
+    const inputA = new Input({ value: "" });
+    const inputB = new Input({ value: "" });
+    const inputC = new Input({ type: "Number", value: "" });
+    inputA.placeAt("qunit-fixture");
+    inputB.placeAt("qunit-fixture");
+    inputC.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({ docked: true, autoShow: true, autoType: true });
+    await placeAndWait(kb);
+
+    // Focus inputA → keyboard targets it, auto-type → Full
+    (inputA.getFocusDomRef() as HTMLElement).focus();
+    await nextUIUpdate();
+
+    assert.strictEqual(kb.getKeyboardType(), "Full", "Starts as Full for text inputA");
+
+    // Type a character to mark the session dirty (needed for change event)
+    tapKey(kb, "x");
+
+    // Change handler on A synchronously focuses the number input (inputC)
+    inputA.attachChange(() => {
+      (inputC.getFocusDomRef() as HTMLElement).focus();
+    });
+
+    // Focus inputB (text) → triggers setTargetInput(inputB) → deferred change
+    // fires on inputA → handler focuses inputC (number) → setTargetInput(inputC)
+    // The inner call should detect Numpad; outer call must NOT overwrite it with Full.
+    (inputB.getFocusDomRef() as HTMLElement).focus();
+    await nextUIUpdate();
+
+    assert.strictEqual(kb.getTargetInput(), inputC.getId(), "Target is inputC — re-entrant call wins");
+    assert.strictEqual(
+      kb.getKeyboardType(),
+      "Numpad",
+      "Keyboard type is Numpad from inputC — outer call did not overwrite",
+    );
+
+    inputA.destroy();
+    inputB.destroy();
+    inputC.destroy();
+    kb.destroy();
+  },
+);

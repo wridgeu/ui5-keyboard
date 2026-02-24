@@ -1416,8 +1416,9 @@ export default class KioskKeyboard extends Control {
 
     this.setTargetInput(ui5Control);
 
-    // Auto-detect keyboard type from input metadata
-    if (this.getAutoType() && !this._keyboardTypeExplicit) {
+    // Auto-detect keyboard type from input metadata.
+    // Skip if re-entrancy (from deferred change handler) superseded this target.
+    if (this.getAutoType() && !this._keyboardTypeExplicit && this.getTargetInput() === ui5Control.getId()) {
       const detected = detectKbType(ui5Control);
       const previous = this.getKeyboardType();
       this.setProperty("keyboardType", detected);

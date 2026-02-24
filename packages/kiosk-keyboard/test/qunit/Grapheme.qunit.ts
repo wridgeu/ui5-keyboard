@@ -107,6 +107,7 @@ QUnit.test("regional indicator pair (flag)", (assert) => {
 
 QUnit.module("Grapheme integration", {
   afterEach() {
+    KioskKeyboard.resetCustomLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

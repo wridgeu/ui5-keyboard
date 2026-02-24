@@ -9,6 +9,7 @@ import { placeAndWait, tapKey, waitForRender } from "./test-helpers";
 
 QUnit.module("NavKeys", {
   afterEach() {
+    KioskKeyboard.resetCustomLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

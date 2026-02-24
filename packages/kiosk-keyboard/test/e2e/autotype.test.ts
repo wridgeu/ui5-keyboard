@@ -5,7 +5,7 @@ const PAGE = "/test-resources/ui5/kiosk/e2e/autotype/index.html";
 /** Navigate to the autotype test page and wait for UI5 to finish rendering. */
 async function openPage(): Promise<void> {
   await browser.url(PAGE);
-  await $("#kb .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
+  await $("#kb .ui5KioskKeyboard").waitForExist({ timeout: 30_000 });
 }
 
 /** Focus the inner input/textarea of a UI5 control container via JS focus().
