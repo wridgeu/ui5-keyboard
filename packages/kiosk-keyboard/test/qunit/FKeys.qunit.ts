@@ -383,6 +383,47 @@ QUnit.test("Native fKeyMode skips native action when keydown is prevented", asyn
   kb.destroy();
 });
 
+QUnit.test("keyPress preventDefault prevents native dispatch and native action", async (assert) => {
+  const input = new Input();
+  const kb = new KioskKeyboard({
+    layout: "fkeys",
+    targetInput: input,
+  });
+  kb.setFKeyMode("Native");
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  let dispatched = 0;
+  input.getFocusDomRef()!.addEventListener("keydown", () => {
+    dispatched += 1;
+  });
+
+  kb.attachEvent("keyPress", (e: any) => {
+    e.preventDefault();
+  });
+
+  const statics = KioskKeyboard as unknown as {
+    _executeNativeFKeyAction: (fkeyName: string) => void;
+  };
+  const originalAction = statics._executeNativeFKeyAction;
+  let actionCalls = 0;
+  statics._executeNativeFKeyAction = () => {
+    actionCalls += 1;
+  };
+
+  try {
+    tapKey(kb, "{fkey:F5}");
+
+    assert.strictEqual(dispatched, 0, "No synthetic keydown dispatched when keyPress is prevented");
+    assert.strictEqual(actionCalls, 0, "No native action when keyPress is prevented");
+  } finally {
+    statics._executeNativeFKeyAction = originalAction;
+  }
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Native fKeyMode does not dispatch unsupported custom fkey names", async (assert) => {
   const input = new Input();
   const kb = new KioskKeyboard({
