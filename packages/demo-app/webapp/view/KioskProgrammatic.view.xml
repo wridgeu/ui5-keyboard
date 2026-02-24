@@ -10,68 +10,76 @@
                 type="Information"
                 showIcon="true"
                 class="sapUiSmallMarginBottom" />
-            <Panel headerText="Keyboard Controls" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <HBox>
-                        <Button text="Show" press=".onShow" type="Emphasized" class="sapUiSmallMarginEnd" />
-                        <Button text="Close" press=".onClose" class="sapUiSmallMarginEnd" />
-                    </HBox>
-                    <HBox class="sapUiSmallMarginTop">
-                        <Button text="Full" press=".onSetFull" class="sapUiSmallMarginEnd" />
-                        <Button text="Numpad" press=".onSetNumpad" class="sapUiSmallMarginEnd" />
-                        <Button text="Numeric" press=".onSetNumeric" class="sapUiSmallMarginEnd" />
-                        <Button text="Reset Type" press=".onResetType" />
-                    </HBox>
-                    <HBox class="sapUiSmallMarginTop">
-                        <Button text="Register Pinpad" press=".onRegisterPinpad" class="sapUiSmallMarginEnd" />
-                        <Button text="Use Pinpad" press=".onUsePinpad" />
-                    </HBox>
-                    <HBox class="sapUiSmallMarginTop">
-                        <Button text="Use FKeys" press=".onUseFKeys" class="sapUiSmallMarginEnd" />
-                        <Button text="Use Nav" press=".onUseNav" class="sapUiSmallMarginEnd" />
-                        <Button text="Use Qwerty Nav" press=".onUseQwertyNav" />
-                    </HBox>
-                    <HBox class="sapUiSmallMarginTop">
-                        <Button text="Register Qwerty FK+Nav" press=".onRegisterQwertyFkNav" class="sapUiSmallMarginEnd" />
-                        <Button text="Use Qwerty FK+Nav" press=".onUseQwertyFkNav" />
-                    </HBox>
-                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Layout:" class="sapUiSmallMarginEnd" />
-                        <Select id="layoutSelect" width="16rem" change=".onLayoutChange" />
-                    </HBox>
-                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Enabled:" class="sapUiSmallMarginEnd" />
-                        <Switch state="{state>/kioskEnabled}" />
-                    </HBox>
+            <HBox width="100%" gap="1rem" class="sapUiSmallMarginBottom">
+                <Panel headerText="Keyboard Controls">
+                    <layoutData>
+                        <FlexItemData growFactor="1" baseSize="0" />
+                    </layoutData>
+                    <VBox class="sapUiSmallMargin">
+                        <HBox>
+                            <Button text="Show" press=".onShow" type="Emphasized" class="sapUiSmallMarginEnd" />
+                            <Button text="Close" press=".onClose" class="sapUiSmallMarginEnd" />
+                        </HBox>
+                        <HBox class="sapUiSmallMarginTop">
+                            <Button text="Full" press=".onSetFull" class="sapUiSmallMarginEnd" />
+                            <Button text="Numpad" press=".onSetNumpad" class="sapUiSmallMarginEnd" />
+                            <Button text="Numeric" press=".onSetNumeric" class="sapUiSmallMarginEnd" />
+                            <Button text="Reset Type" press=".onResetType" />
+                        </HBox>
+                        <HBox class="sapUiSmallMarginTop">
+                            <Button text="Register Pinpad" press=".onRegisterPinpad" class="sapUiSmallMarginEnd" />
+                            <Button text="Use Pinpad" press=".onUsePinpad" />
+                        </HBox>
+                        <HBox class="sapUiSmallMarginTop">
+                            <Button text="Use FKeys" press=".onUseFKeys" class="sapUiSmallMarginEnd" />
+                            <Button text="Use Nav" press=".onUseNav" class="sapUiSmallMarginEnd" />
+                            <Button text="Use Qwerty Nav" press=".onUseQwertyNav" />
+                        </HBox>
+                        <HBox class="sapUiSmallMarginTop">
+                            <Button text="Register Qwerty FK+Nav" press=".onRegisterQwertyFkNav" class="sapUiSmallMarginEnd" />
+                            <Button text="Use Qwerty FK+Nav" press=".onUseQwertyFkNav" />
+                        </HBox>
+                        <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                            <Label text="Layout:" class="sapUiSmallMarginEnd" />
+                            <Select id="layoutSelect" width="16rem" change=".onLayoutChange" />
+                        </HBox>
+                        <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                            <Label text="Enabled:" class="sapUiSmallMarginEnd" />
+                            <Switch state="{state>/kioskEnabled}" />
+                        </HBox>
+                    </VBox>
+                </Panel>
+                <VBox>
+                    <layoutData>
+                        <FlexItemData growFactor="1" baseSize="0" />
+                    </layoutData>
+                    <Panel headerText="Target Input" class="sapUiSmallMarginBottom">
+                        <VBox class="sapUiSmallMargin">
+                            <Input id="progInput" placeholder="Type here..." width="100%" />
+                        </VBox>
+                    </Panel>
+                    <Panel headerText="Status">
+                        <VBox class="sapUiSmallMargin">
+                            <HBox>
+                                <Label text="isOpen():" class="sapUiSmallMarginEnd" />
+                                <ObjectStatus text="{state>/kioskIsOpen}" state="Information" />
+                            </HBox>
+                            <HBox>
+                                <Label text="Keyboard Type:" class="sapUiSmallMarginEnd" />
+                                <ObjectStatus text="{state>/kioskKeyboardType}" state="Success" />
+                            </HBox>
+                            <HBox>
+                                <Label text="Layout:" class="sapUiSmallMarginEnd" />
+                                <ObjectStatus text="{state>/kioskLayout}" state="Success" />
+                            </HBox>
+                            <HBox>
+                                <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                                <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                            </HBox>
+                        </VBox>
+                    </Panel>
                 </VBox>
-            </Panel>
-
-            <Panel headerText="Target Input" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Input id="progInput" placeholder="Type here..." width="100%" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Status" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <HBox>
-                        <Label text="isOpen():" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskIsOpen}" state="Information" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Keyboard Type:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskKeyboardType}" state="Success" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Layout:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskLayout}" state="Success" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
-                    </HBox>
-                </VBox>
-            </Panel>
+            </HBox>
 
             <kiosk:KioskKeyboard
                 id="progKeyboard"
