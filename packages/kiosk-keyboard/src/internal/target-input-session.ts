@@ -12,18 +12,21 @@ import {
  */
 export default class TargetInputSession {
   private _cursorPos: [number, number] | null = null;
+  private _lastKnownValue: string | null = null;
   private _targetDirty = false;
 
   constructor(private readonly _getTargetElement: () => Element | null) {}
 
   resetForTargetSwitch(): void {
     this._cursorPos = null;
+    this._lastKnownValue = null;
   }
 
   insertText(text: string): void {
     const dom = this._getTargetDomRef();
     if (!dom) return;
     this._cursorPos = opsInsertText(dom, text, this._cursorPos ?? undefined);
+    this._lastKnownValue = dom.value;
     this._targetDirty = true;
   }
 
@@ -35,6 +38,7 @@ export default class TargetInputSession {
     if (!pos) return;
 
     this._cursorPos = pos;
+    this._lastKnownValue = dom.value;
     this._targetDirty = true;
   }
 
@@ -46,6 +50,7 @@ export default class TargetInputSession {
       // Textareas never emit change on Enter, and fireChangeIfDirty() also
       // skips textarea targets by design.
       this._cursorPos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
+      this._lastKnownValue = dom.value;
       return;
     }
 
@@ -112,10 +117,17 @@ export default class TargetInputSession {
       return null;
     }
 
+    const value = dom.value;
+
     if (document.activeElement === dom) {
       this._cursorPos = [dom.selectionStart ?? dom.value.length, dom.selectionEnd ?? dom.value.length];
     } else if (this._cursorPos === null) {
       const end = dom.value.length;
+      this._cursorPos = [end, end];
+    } else if (this._lastKnownValue !== null && value !== this._lastKnownValue) {
+      // The value changed while unfocused (e.g. programmatic setValue()) and
+      // cached cursor coordinates may now point into unrelated content.
+      const end = value.length;
       this._cursorPos = [end, end];
     } else {
       const len = dom.value.length;
@@ -123,6 +135,8 @@ export default class TargetInputSession {
         this._cursorPos = [Math.min(this._cursorPos[0], len), Math.min(this._cursorPos[1], len)];
       }
     }
+
+    this._lastKnownValue = value;
 
     return dom;
   }

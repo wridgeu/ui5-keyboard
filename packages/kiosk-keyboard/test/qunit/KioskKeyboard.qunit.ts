@@ -1663,6 +1663,82 @@ QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
   input.destroy();
 });
 
+QUnit.test("inputIds deduplicates delegates when aliased IDs resolve to the same control", async (assert) => {
+  // Create a view so that "localInput" resolves via view.byId AND via
+  // global registry as "myView--localInput" — both should map to the
+  // same sap.m.Input instance.
+  const view = await XMLView.create({
+    id: "myView",
+    definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
+      <m:Input id="localInput" />
+      <kiosk:KioskKeyboard id="kb" />
+    </mvc:View>`,
+  });
+  view.placeAt("qunit-fixture");
+  await nextUIUpdate();
+
+  const input = view.byId("localInput") as Input;
+  const kb = view.byId("kb") as KioskKeyboard;
+
+  // Spy on addEventDelegate
+  let addCount = 0;
+  const origAdd = input.addEventDelegate.bind(input);
+  input.addEventDelegate = function (...args: Parameters<typeof origAdd>) {
+    addCount++;
+    return origAdd(...args);
+  };
+
+  // Set inputIds with both the view-local and the global alias
+  kb.setInputIds(["localInput", "myView--localInput"]);
+  await nextUIUpdate();
+
+  assert.strictEqual(addCount, 1, "addEventDelegate called exactly once despite aliased IDs");
+
+  view.destroy();
+});
+
+QUnit.test("inputIds removal of one alias keeps delegate when another alias remains", async (assert) => {
+  const view = await XMLView.create({
+    id: "aliasView",
+    definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
+      <m:Input id="sharedInput" />
+      <kiosk:KioskKeyboard id="kb" />
+    </mvc:View>`,
+  });
+  view.placeAt("qunit-fixture");
+  await nextUIUpdate();
+
+  const input = view.byId("sharedInput") as Input;
+  const kb = view.byId("kb") as KioskKeyboard;
+
+  // Register both aliases
+  kb.setInputIds(["sharedInput", "aliasView--sharedInput"]);
+  await nextUIUpdate();
+
+  // Spy on removeEventDelegate
+  let removeCount = 0;
+  const origRemove = input.removeEventDelegate.bind(input);
+  input.removeEventDelegate = function (...args: Parameters<typeof origRemove>) {
+    removeCount++;
+    return origRemove(...args);
+  };
+
+  // Remove one alias — delegate should NOT be removed since the other alias still covers it
+  kb.setInputIds(["sharedInput"]);
+  await nextUIUpdate();
+
+  assert.strictEqual(removeCount, 0, "removeEventDelegate not called when another alias still covers the control");
+
+  // Focus the input — should still work as a registered inputIds target
+  const dom = input.getFocusDomRef() as HTMLElement;
+  dom.focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(kb.getTargetInput(), input.getId(), "Input still works as target after alias removal");
+
+  view.destroy();
+});
+
 QUnit.test("inputIds works with composite controls (StepInput)", async (assert) => {
   const stepInput = new StepInput("step-input-composite");
   stepInput.placeAt("qunit-fixture");
@@ -2989,6 +3065,30 @@ QUnit.test("Typing replaces selected text", async (assert) => {
 
   tapKey(kb, "a");
   assert.strictEqual(input.getValue(), "hao", "Selected text replaced by typed character");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Programmatic setValue while unfocused resets cached cursor to end", async (assert) => {
+  const input = new Input({ value: "abcd" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard();
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.focus();
+  inputDom.setSelectionRange(1, 1);
+  tapKey(kb, "x");
+  assert.strictEqual(input.getValue(), "axbcd", "Initial insert used the focused caret position");
+
+  inputDom.blur();
+  input.setValue("12345");
+
+  tapKey(kb, "y");
+  assert.strictEqual(input.getValue(), "12345y", "Insert after external setValue appends at end when unfocused");
 
   input.destroy();
   kb.destroy();

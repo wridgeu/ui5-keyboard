@@ -2,6 +2,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import CheckBox from "sap/m/CheckBox";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
+import VBox from "sap/m/VBox";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait, waitForRender } from "./test-helpers";
 
@@ -505,6 +506,47 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
   claimedInput.destroy();
   inlineKb.destroy();
   dockedKb.destroy();
+});
+
+QUnit.test("inputIds rebinds delegates after control recreation in autoShow flow", async (assert) => {
+  const box = new VBox("churn-box");
+  box.placeAt("qunit-fixture");
+
+  const input1 = new Input("churn-input");
+  box.addItem(input1);
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    inputIds: ["churn-input"],
+  });
+  await placeAndWait(kb);
+
+  (input1.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.ok(kb.isOpen(), "Keyboard opens for initial input");
+
+  input1.destroy();
+  await nextUIUpdate();
+
+  const input2 = new Input("churn-input");
+  let addCount = 0;
+  const originalAdd = input2.addEventDelegate.bind(input2);
+  input2.addEventDelegate = function (...args: Parameters<typeof originalAdd>) {
+    addCount += 1;
+    return originalAdd(...args);
+  };
+
+  box.addItem(input2);
+  await nextUIUpdate();
+
+  (input2.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
+  assert.ok(addCount > 0, "Focus delegate was rebound to recreated input control");
+
+  box.destroy();
+  kb.destroy();
 });
 
 QUnit.test("Two docked keyboards with auto-show do not fight over same input", async (assert) => {

@@ -423,7 +423,7 @@ focusin event
   |                   show()
 ```
 
-The instance isolation and `inputIds` filter checks run inside `_resolveClaimableControl()`. When `inputIds` is set, only inputs in that list pass the filter — focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally.
+The instance isolation and `inputIds` filter checks run inside `_resolveClaimableControl()`. When `inputIds` is set, only inputs in that list pass the filter — focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally. During each auto-show `focusin`, `_setupInputIds()` reconciles delegates by resolved control IDs so aggregation-bound input recreation (destroy/create churn) is picked up immediately.
 
 ### Focus-Out Logic
 
@@ -507,6 +507,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode  |
 | `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                      |
 | `inputIds` with `autoShow`              | `_resolveClaimableControl()` filters by `inputIds`; delegation triggers `show()` |
+| `inputIds` aggregation churn            | `_setupInputIds()` rebinds delegates by control ID on each auto-show `focusin`   |
 | Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                          |
 | Explicit `keyboardType` vs auto-type    | `_keyboardTypeExplicit` flag disables auto-detection                             |
 | Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the flag                         |

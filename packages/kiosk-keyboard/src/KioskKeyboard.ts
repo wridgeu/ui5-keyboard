@@ -79,7 +79,7 @@ export default class KioskKeyboard extends Control {
   declare private _boundFocusOut: (e: FocusEvent) => void;
   declare private _autoShowActive: boolean;
   declare private _inputFocusDelegation: InputFocusDelegation;
-  declare private _registeredInputIds: Set<string>;
+  declare private _registeredInputControlById: Map<string, string>;
   declare private _resolvedInputControlIds: Set<string>;
   declare private _hasUnresolvedInputIds: boolean;
   declare private _keyHighlightDelegation: KeyHighlightDelegation;
@@ -526,7 +526,7 @@ export default class KioskKeyboard extends Control {
     this._autoShowActive = false;
     this._boundFocusIn = this._onDocumentFocusIn.bind(this);
     this._boundFocusOut = this._onDocumentFocusOut.bind(this);
-    this._registeredInputIds = new Set();
+    this._registeredInputControlById = new Map();
     this._resolvedInputControlIds = new Set();
     this._hasUnresolvedInputIds = false;
     this._inputFocusDelegation = {
@@ -768,6 +768,19 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Custom setter for inputIds.
+   *
+   * Reconciles focus delegates against currently resolved control instances
+   * without forcing a re-render, because inputIds does not affect renderer
+   * output directly.
+   */
+  setInputIds(inputIds: string[]): this {
+    this.setProperty("inputIds", inputIds, true);
+    this._setupInputIds();
+    return this;
+  }
+
+  /**
    * Custom setter for autoShow — activates or deactivates the
    * auto-show document listeners via enableAutoShow/disableAutoShow.
    */
@@ -952,45 +965,65 @@ export default class KioskKeyboard extends Control {
 
   private _setupInputIds(): void {
     const ids = this.getInputIds();
-    const nextIds = new Set(ids);
+    const nextByInputId = new Map<string, string>();
+    const nextCountsByControlId = new Map<string, number>();
+    const prevCountsByControlId = new Map<string, number>();
     const resolvedControlIds = new Set<string>();
     let hasUnresolved = false;
 
-    // Remove delegates for IDs no longer in the list
-    for (const oldId of this._registeredInputIds) {
-      if (!nextIds.has(oldId)) {
-        const control = this._findControlById(oldId);
-        if (control) control.removeEventDelegate(this._inputFocusDelegation);
-        this._registeredInputIds.delete(oldId);
-      }
+    for (const controlId of this._registeredInputControlById.values()) {
+      prevCountsByControlId.set(controlId, (prevCountsByControlId.get(controlId) ?? 0) + 1);
     }
 
-    // Add delegates for new IDs
+    // Resolve current IDs to canonical control IDs.
     for (const inputId of ids) {
       const control = this._findControlById(inputId);
       if (!control) {
         hasUnresolved = true;
-        this._registeredInputIds.delete(inputId);
         continue;
       }
 
-      resolvedControlIds.add(control.getId());
-
-      if (this._registeredInputIds.has(inputId)) continue;
-      control.addEventDelegate(this._inputFocusDelegation);
-      this._registeredInputIds.add(inputId);
+      const controlId = control.getId();
+      nextByInputId.set(inputId, controlId);
+      nextCountsByControlId.set(controlId, (nextCountsByControlId.get(controlId) ?? 0) + 1);
+      resolvedControlIds.add(controlId);
     }
 
+    // Detach controls that are no longer referenced (including instance
+    // replacement for the same raw inputId string).
+    for (const controlId of prevCountsByControlId.keys()) {
+      if (nextCountsByControlId.has(controlId)) continue;
+      const control = Element.getElementById(controlId);
+      if (control instanceof Control) {
+        control.removeEventDelegate(this._inputFocusDelegation);
+      }
+    }
+
+    // Attach controls newly referenced by current inputIds.
+    for (const controlId of nextCountsByControlId.keys()) {
+      if (prevCountsByControlId.has(controlId)) continue;
+      const control = Element.getElementById(controlId);
+      if (control instanceof Control) {
+        control.addEventDelegate(this._inputFocusDelegation);
+      }
+    }
+
+    this._registeredInputControlById = nextByInputId;
     this._resolvedInputControlIds = resolvedControlIds;
     this._hasUnresolvedInputIds = hasUnresolved;
   }
 
   private _teardownInputIds(): void {
-    for (const inputId of this._registeredInputIds) {
-      const control = this._findControlById(inputId);
-      if (control) control.removeEventDelegate(this._inputFocusDelegation);
+    const seen = new Set<string>();
+    for (const controlId of this._registeredInputControlById.values()) {
+      if (seen.has(controlId)) continue;
+      const control = Element.getElementById(controlId);
+      if (control instanceof Control) {
+        control.removeEventDelegate(this._inputFocusDelegation);
+        seen.add(controlId);
+      }
     }
-    this._registeredInputIds.clear();
+    this._registeredInputControlById.clear();
     this._resolvedInputControlIds.clear();
     this._hasUnresolvedInputIds = false;
   }
@@ -1367,7 +1400,7 @@ export default class KioskKeyboard extends Control {
 
     this._cancelDeferredFocusOutClose();
 
-    if (this._hasUnresolvedInputIds) {
+    if (this.getInputIds().length > 0) {
       this._setupInputIds();
     }
 
