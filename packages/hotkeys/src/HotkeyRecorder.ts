@@ -22,7 +22,8 @@ export interface HotkeyRecorderOptions {
  * 3. The recorder auto-stops after capturing one hotkey
  *
  * While recording, all keyboard input is blocked (preventDefault + stopPropagation
- * in capture phase). Keep the recording window short.
+ * in capture phase). Listener is attached on `window` capture so it runs before
+ * `document` capture listeners such as HotkeyManager. Keep the recording window short.
  *
  * Special keys:
  * - Escape → cancels recording
@@ -40,12 +41,12 @@ export default class HotkeyRecorder {
   }
 
   /**
-   * Start recording. Attaches a capture-phase keydown listener.
+   * Start recording. Attaches a `window` capture-phase keydown listener.
    */
   start(): void {
     if (this._destroyed || this._recording) return;
     this._recording = true;
-    document.addEventListener("keydown", this._keydownHandler, true);
+    window.addEventListener("keydown", this._keydownHandler, true);
   }
 
   /**
@@ -54,7 +55,7 @@ export default class HotkeyRecorder {
   stop(): void {
     if (!this._recording) return;
     this._recording = false;
-    document.removeEventListener("keydown", this._keydownHandler, true);
+    window.removeEventListener("keydown", this._keydownHandler, true);
   }
 
   /**
@@ -91,7 +92,7 @@ export default class HotkeyRecorder {
   private _onKeyDown(event: KeyboardEvent): void {
     // Prevent all default behavior while recording
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
 
     const key = event.key;
 
@@ -123,7 +124,7 @@ export default class HotkeyRecorder {
   /** Remove listener BEFORE callback (TanStack pattern — prevents race conditions). */
   private _stopAndRecord(hotkey: string): void {
     this._recording = false;
-    document.removeEventListener("keydown", this._keydownHandler, true);
+    window.removeEventListener("keydown", this._keydownHandler, true);
     this._options.onRecord(hotkey);
   }
 }

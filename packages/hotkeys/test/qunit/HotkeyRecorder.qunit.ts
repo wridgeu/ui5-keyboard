@@ -1,4 +1,5 @@
 import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { fireKey } from "./test-helpers";
 
 const recorders: HotkeyRecorder[] = [];
@@ -15,6 +16,12 @@ QUnit.module("HotkeyRecorder", {
       if (!r.isDestroyed) r.destroy();
     }
     recorders.length = 0;
+
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
   },
 });
 
@@ -285,4 +292,31 @@ QUnit.test("onCancel: recorder is stopped before callback runs (resilient to err
   assert.ok(recorder.isRecording, "Recorder restartable after cancel callback");
   recorder.cancel();
   assert.strictEqual(cancelCount, 2, "Second cancel callback invoked successfully");
+});
+
+QUnit.test("Recorder blocks HotkeyManager hotkeys while recording", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let managerCallCount = 0;
+  let cancelCallCount = 0;
+
+  const handle = manager.register("Escape", () => {
+    managerCallCount++;
+  });
+
+  const recorder = createRecorder({
+    onRecord: () => {
+      assert.ok(false, "Escape should cancel recording, not record a hotkey");
+    },
+    onCancel: () => {
+      cancelCallCount++;
+    },
+  });
+
+  recorder.start();
+  fireKey("Escape");
+
+  assert.strictEqual(cancelCallCount, 1, "Recorder received Escape and cancelled");
+  assert.strictEqual(managerCallCount, 0, "HotkeyManager did not handle Escape during recording");
+
+  handle.unregister();
 });
