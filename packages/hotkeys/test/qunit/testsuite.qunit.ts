@@ -61,6 +61,12 @@ sap.ui.define([], () => {
       RegistrationGroup: {
         title: "QUnit tests for ui5.hotkeys - RegistrationGroup",
       },
+      "HotkeyManager-blackbox": {
+        title: "QUnit tests for ui5.hotkeys - HotkeyManager Black-Box Contracts",
+      },
+      "SequenceManager-blackbox": {
+        title: "QUnit tests for ui5.hotkeys - SequenceManager Black-Box Contracts",
+      },
     },
   };
 });

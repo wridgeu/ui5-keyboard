@@ -1,6 +1,6 @@
 # Feature: Black-Box QUnit Test Plan for `ui5.hotkeys`
 
-> Status: Proposal
+> Status: Implemented
 
 ## Goal
 
