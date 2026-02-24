@@ -24,7 +24,7 @@ npm run build:all           # Build both libraries + demo app
 npm start                   # Start demo app (port 8080)
 npm run start:hotkeys       # Start hotkeys lib with test runner (port 8081)
 npm run start:kiosk         # Start kiosk-keyboard lib with test runner (port 8082)
-npm run lint                # oxlint packages/
+npm run lint                # oxlint packages/ tools/
 npm run lint:ui5            # ui5lint all workspaces
 npm run fmt                 # oxfmt .
 npm run typecheck           # Typecheck all workspaces
@@ -74,16 +74,19 @@ npm run build -w packages/kiosk-keyboard
 
 - **KioskKeyboard** — Pure UI5 `Control` (flat DOM, event delegation, not a wrapper). Uses `KioskKeyboardRenderer` with `apiVersion: 4`.
 - **Theming** — SAP LESS with `base/` and `sap_horizon/` theme folders. `noLibraryCSS: false` (requires CSS — this is why it's a separate library from hotkeys).
-- **Layouts** — QWERTY, QWERTZ-DE, numeric, numpad, special. Custom layouts supported via `LayoutDefinition` type.
+- **Layouts** — QWERTY, QWERTZ-DE, numeric, numpad, special, fkeys, nav. Composite variants combine base layouts with function/navigation key rows (e.g. `qwerty-fk`, `qwertz-de-nav`). Custom layouts supported via `LayoutDefinition` type.
 - **Locale detection** — Auto-selects layout from UI5 locale via `Localization.getLanguageTag()`. Extensible via `registerLocaleLayout()`.
 - **Auto-type** — When `autoType="true"`, auto-switches between Full/Numpad based on focused input metadata (UI5 type, control name, DOM inputmode, HTML type).
 - **Mobile keyboard** — `mobileKeyboard` enum (`Custom`/`Native`/`Auto`) controls native keyboard suppression via `inputmode="none"` with ref-counted restore across instances.
-- **Target input** — Associated via `targetInput` association. Duck-types `setValue`/`fireLiveChange` (no `any`).
-- **Instance isolation** — Static `_instances` set prevents multiple keyboards from claiming the same input during auto-show.
+- **Target input** — Associated via `targetInput` association or `inputIds` property (multi-input). `TargetInputSession` tracks cursor position and dirty state; `input-operations.ts` duck-types `setValue`/`fireLiveChange` (no `any`).
+- **F-key mode** — `fKeyMode` enum (`Virtual`/`Native`) controls whether F-key taps fire `keyPress` only or also dispatch synthetic `keydown` events with built-in actions (F5 reload, F11 fullscreen).
+- **Stable height** — `stableHeight` property maintains consistent `minHeight` across layout switches for non-docked Full keyboards, preventing Popover layout shifts.
+- **Instance isolation** — `FocusClaimService` + static `_instances` set prevents multiple keyboards from claiming the same input during auto-show.
+- **Renderer** — `KioskKeyboardRenderer` uses `apiVersion: 4` with hook methods (`addRootClasses`, `writeKeyAttributes`, `renderKeyContent`, etc.) following the InputBaseRenderer pattern for selective override by extending renderers. Control exposes internal state via `_getRendererApi()` returning a cached `RendererInternalApi` object (type-safe bridge, no unsafe casts).
 
 ### Demo App (`demo.hotkeys`)
 
-Showcases both libraries with routing (Main, Detail, Kiosk views). Depends on both libraries as workspace deps with `transpileDependencies: true`.
+Showcases both libraries with routing. Depends on both libraries as workspace deps with `transpileDependencies: true`. Views: Main, Detail (hotkeys), KioskHub (scenario menu), KioskDocked, KioskPopover, KioskDialog, KioskComponent, KioskInputIds, KioskProgrammatic, KioskFormWorkflow, KioskMultiKeyboard, KioskCustomLayouts.
 
 ## UI5 TypeScript Patterns
 
@@ -98,7 +101,7 @@ Showcases both libraries with routing (Main, Detail, Kiosk views). Depends on bo
 - **oxfmt** for formatting, **oxlint** for linting (with TypeScript, import, unicorn plugins).
 - Several unicorn rules disabled for UI5 compatibility (no-null, prefer-event-target, no-static-only-class, prefer-global-this, consistent-function-scoping, prefer-top-level-await).
 - `no-explicit-any` is `error` in production code, `off` in test files.
-- **husky + lint-staged** runs oxfmt and oxlint on staged `.ts` files pre-commit.
+- **husky + lint-staged** runs oxfmt + oxlint on staged `.ts` files, oxfmt-only on `*.{json,yaml,yml,md,html,css,less}` pre-commit.
 - TypeScript transpilation handled by `ui5-tooling-transpile`. Generated JS is NOT committed.
 
 ## Windows Environment
