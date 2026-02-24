@@ -1,1 +1,1 @@
-export { getEventTarget, isInputElement, resolveIgnoreInputs, shouldIgnoreKeyEvent } from "./internal/dom";
+export { getEventTarget, isInputElement } from "./internal/dom";

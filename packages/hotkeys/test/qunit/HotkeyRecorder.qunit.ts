@@ -233,3 +233,56 @@ QUnit.test("cancel() without onCancel callback does not throw", (assert) => {
   recorder.cancel(); // Should not throw
   assert.notOk(recorder.isRecording, "Not recording after cancel");
 });
+
+QUnit.test("onRecord: recorder is stopped before callback runs (resilient to errors)", (assert) => {
+  let wasRecordingInCallback: boolean | undefined;
+  let callCount = 0;
+  const recorder = createRecorder({
+    onRecord: () => {
+      callCount++;
+      wasRecordingInCallback = recorder.isRecording;
+    },
+  });
+
+  recorder.start();
+  fireKey("F5");
+  assert.strictEqual(
+    wasRecordingInCallback,
+    false,
+    "Recorder already stopped when onRecord fires (stop-before-callback)",
+  );
+  assert.strictEqual(callCount, 1, "onRecord called exactly once");
+
+  // Recorder should be restartable after callback completes
+  recorder.start();
+  assert.ok(recorder.isRecording, "Recorder restartable after callback");
+  fireKey("F6");
+  assert.strictEqual(callCount, 2, "Second recording captured successfully");
+});
+
+QUnit.test("onCancel: recorder is stopped before callback runs (resilient to errors)", (assert) => {
+  let wasRecordingInCancel: boolean | undefined;
+  let cancelCount = 0;
+  const recorder = createRecorder({
+    onRecord: () => {},
+    onCancel: () => {
+      cancelCount++;
+      wasRecordingInCancel = recorder.isRecording;
+    },
+  });
+
+  recorder.start();
+  fireKey("Escape");
+  assert.strictEqual(
+    wasRecordingInCancel,
+    false,
+    "Recorder already stopped when onCancel fires (stop-before-callback)",
+  );
+  assert.strictEqual(cancelCount, 1, "onCancel called exactly once");
+
+  // Recorder should be restartable after callback completes
+  recorder.start();
+  assert.ok(recorder.isRecording, "Recorder restartable after cancel callback");
+  recorder.cancel();
+  assert.strictEqual(cancelCount, 2, "Second cancel callback invoked successfully");
+});

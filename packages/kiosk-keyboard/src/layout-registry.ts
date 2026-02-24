@@ -3,7 +3,6 @@ export {
   unregisterLayout,
   resetCustomLayouts,
   getRegisteredLayout,
-  getLayoutOrDefault,
   getRegisteredLayoutNames,
   isBuiltInLayout,
   registerLocaleLayout,

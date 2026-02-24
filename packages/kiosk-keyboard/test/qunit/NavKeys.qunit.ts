@@ -3,6 +3,7 @@ import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
+import TextArea from "sap/m/TextArea";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait, tapKey, waitForRender } from "./test-helpers";
 
@@ -131,6 +132,92 @@ QUnit.test("Consumers can compose fkey-row + nav-row + base layout", async (asse
   assert.ok(kb.getDomRef()!.querySelector('[data-key="{fkey:F1}"]'), "Composite includes fkey row");
   assert.ok(kb.getDomRef()!.querySelector('[data-key="{fkey:ArrowLeft}"]'), "Composite includes nav row");
 
+  kb.destroy();
+});
+
+QUnit.test("ArrowUp and ArrowDown move caret vertically in TextArea", async (assert) => {
+  const textarea = new TextArea({ value: "abc\ndefgh\nij", rows: 4 });
+  const kb = new KioskKeyboard({ layout: "nav", targetInput: textarea });
+  textarea.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  textarea.focus();
+  await waitForRender();
+
+  const dom = textarea.getFocusDomRef() as HTMLTextAreaElement;
+  // Place caret at column 2 of line 2 ("defgh") → position 6 ("abc\nde|fgh\nij")
+  dom.setSelectionRange(6, 6);
+
+  // ArrowDown: line 2 col 2 → line 3 col 2 ("ij" has length 2, so clamps to 2)
+  tapKey(kb, "{fkey:ArrowDown}");
+  await waitForRender();
+  assert.strictEqual(dom.selectionStart, 12, "ArrowDown moves caret to line 3 col 2");
+
+  // ArrowDown at last line → end of value
+  tapKey(kb, "{fkey:ArrowDown}");
+  await waitForRender();
+  assert.strictEqual(dom.selectionStart, dom.value.length, "ArrowDown at last line moves to end");
+
+  // Reset to line 2 col 2
+  dom.setSelectionRange(6, 6);
+
+  // ArrowUp: line 2 col 2 → line 1 col 2 ("abc" has length 3, col 2 fits)
+  tapKey(kb, "{fkey:ArrowUp}");
+  await waitForRender();
+  assert.strictEqual(dom.selectionStart, 2, "ArrowUp moves caret to line 1 col 2");
+
+  // ArrowUp at first line → position 0
+  tapKey(kb, "{fkey:ArrowUp}");
+  await waitForRender();
+  assert.strictEqual(dom.selectionStart, 0, "ArrowUp at first line moves to position 0");
+
+  textarea.destroy();
+  kb.destroy();
+});
+
+QUnit.test("ArrowDown clamps column to shorter line", async (assert) => {
+  const textarea = new TextArea({ value: "abcdef\nhi", rows: 4 });
+  const kb = new KioskKeyboard({ layout: "nav", targetInput: textarea });
+  textarea.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  textarea.focus();
+  await waitForRender();
+
+  const dom = textarea.getFocusDomRef() as HTMLTextAreaElement;
+  // Caret at column 5 of line 1 ("abcdef") → position 5
+  dom.setSelectionRange(5, 5);
+
+  // ArrowDown to line 2 ("hi" length 2) → should clamp to col 2 → position 9
+  tapKey(kb, "{fkey:ArrowDown}");
+  await waitForRender();
+  assert.strictEqual(dom.selectionStart, 9, "Column clamped to shorter line length");
+
+  textarea.destroy();
+  kb.destroy();
+});
+
+QUnit.test("PageUp moves caret to start, PageDown moves to end", async (assert) => {
+  const input = new Input({ value: "hello world" });
+  const kb = new KioskKeyboard({ layout: "nav", targetInput: input });
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  input.focus();
+  await waitForRender();
+
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.setSelectionRange(5, 5);
+
+  tapKey(kb, "{fkey:PageUp}");
+  await waitForRender();
+  assert.strictEqual(dom.selectionStart, 0, "PageUp moves caret to position 0");
+
+  tapKey(kb, "{fkey:PageDown}");
+  await waitForRender();
+  assert.strictEqual(dom.selectionStart, 11, "PageDown moves caret to end of value");
+
+  input.destroy();
   kb.destroy();
 });
 

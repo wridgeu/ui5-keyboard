@@ -3829,4 +3829,13 @@ QUnit.test("getTargetControl resolves target control instance", async (assert) =
   input.destroy();
 });
 
+QUnit.test("getTargetControl returns null when no target is associated", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getTargetControl(), null, "Returns null without target association");
+
+  kb.destroy();
+});
+
 // keyboardTypeChange and RTL tests moved to KioskKeyboard-events.qunit.ts
