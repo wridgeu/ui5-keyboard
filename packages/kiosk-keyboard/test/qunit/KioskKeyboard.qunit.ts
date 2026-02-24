@@ -1109,6 +1109,7 @@ QUnit.test("setAutoShow is idempotent", (assert) => {
 });
 
 QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
+  assert.expect(1);
   const kb = new KioskKeyboard();
   kb.setDocked(true);
   await placeAndWait(kb);
@@ -1756,6 +1757,44 @@ QUnit.test("inputIds works with composite controls (StepInput)", async (assert) 
   assert.strictEqual(kb.getTargetInput(), stepInput.getId(), "StepInput resolved as target via parent chain");
 
   stepInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("inputIds rebinds delegate when control is destroyed and recreated with same ID", async (assert) => {
+  const box = new VBox("recreate-box");
+  box.placeAt("qunit-fixture");
+
+  const input1 = new Input("recreate-input");
+  box.addItem(input1);
+
+  // Inline (non-docked, no autoShow) keyboard — only _inputFocusDelegation sets target
+  const kb = new KioskKeyboard({
+    inputIds: ["recreate-input"],
+  });
+  await placeAndWait(kb);
+
+  // Focus input1 → delegate should set target
+  (input1.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.strictEqual(kb.getTargetInput(), input1.getId(), "Target set for original input instance");
+
+  // Destroy and recreate with same explicit ID
+  input1.destroy();
+  await nextUIUpdate();
+
+  const input2 = new Input("recreate-input");
+  box.addItem(input2);
+  await nextUIUpdate();
+
+  // Trigger reconciliation so the new instance gets the delegate
+  kb.setInputIds(["recreate-input"]);
+
+  // Focus the new input — delegate should fire on the new instance
+  (input2.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target updated to recreated input instance");
+
+  box.destroy();
   kb.destroy();
 });
 

@@ -526,24 +526,26 @@ QUnit.test("inputIds rebinds delegates after control recreation in autoShow flow
   await nextUIUpdate();
   assert.ok(kb.isOpen(), "Keyboard opens for initial input");
 
+  // Close and destroy the original input
+  kb.close();
+  await nextUIUpdate();
   input1.destroy();
   await nextUIUpdate();
 
+  // Recreate with same explicit ID
   const input2 = new Input("churn-input");
-  let addCount = 0;
-  const originalAdd = input2.addEventDelegate.bind(input2);
-  input2.addEventDelegate = function (...args: Parameters<typeof originalAdd>) {
-    addCount += 1;
-    return originalAdd(...args);
-  };
-
   box.addItem(input2);
   await nextUIUpdate();
 
+  // Trigger reconciliation so the new instance gets the delegate
+  kb.setInputIds(["churn-input"]);
+
+  // Focus the new input — keyboard should reopen and target should update
   (input2.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
 
-  assert.ok(addCount > 0, "Focus delegate was rebound to recreated input control");
+  assert.ok(kb.isOpen(), "Keyboard reopens for recreated input");
+  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target updated to recreated input");
 
   box.destroy();
   kb.destroy();

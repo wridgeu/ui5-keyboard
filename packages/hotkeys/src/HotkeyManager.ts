@@ -248,11 +248,13 @@ export default class HotkeyManager extends BaseObject {
           const currentTarget = opts.target;
           const nextTarget = newOptions.target ?? null;
           if (currentTarget !== nextTarget) {
+            // Conflict check runs first for atomicity — if it throws, no state
+            // was mutated and the registration stays fully indexed on its old
+            // target. No self-match: the registration still has opts.target ===
+            // currentTarget which differs from nextTarget (#17).
+            this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
             this._deindexRegistration(registration);
             if (currentTarget) this._detachTargetListener(currentTarget);
-            // Conflict check against the new target — runs before opts.target
-            // is updated so _isConflictingRegistration won't self-match (#17)
-            this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
             opts.target = nextTarget;
             if (nextTarget) this._attachTargetListener(nextTarget);
             this._indexRegistration(registration);

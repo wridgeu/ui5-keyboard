@@ -1704,7 +1704,14 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
   manager.register("F9", () => {}, { target: div2, conflictBehavior: "error" });
 
   // Register the same hotkey on div1
-  const handle = manager.register("F9", () => {}, { target: div1, conflictBehavior: "error" });
+  let fired = false;
+  const handle = manager.register(
+    "F9",
+    () => {
+      fired = true;
+    },
+    { target: div1, conflictBehavior: "error" },
+  );
 
   // Retarget to div2 — should throw because F9 is already registered on div2
   assert.throws(
@@ -1712,6 +1719,11 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
     /already registered/,
     "setOptions target swap throws on conflict with error behavior",
   );
+
+  // After failed retarget, registration must remain fully functional on div1
+  assert.ok(handle.isActive, "Handle stays active after failed retarget");
+  div1.dispatchEvent(new KeyboardEvent("keydown", { key: "F9", bubbles: true, cancelable: true }));
+  assert.ok(fired, "Hotkey still fires on original target after failed retarget");
 });
 
 QUnit.test("Target element: setOptions target swap triggers conflict detection (replace)", (assert) => {

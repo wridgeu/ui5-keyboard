@@ -82,6 +82,7 @@ export default class KioskKeyboard extends Control {
   declare private _registeredInputControlById: Map<string, string>;
   declare private _resolvedInputControlIds: Set<string>;
   declare private _hasUnresolvedInputIds: boolean;
+  declare private _delegatedInstances: Map<string, Control>;
   declare private _keyHighlightDelegation: KeyHighlightDelegation;
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
@@ -529,6 +530,7 @@ export default class KioskKeyboard extends Control {
     this._registeredInputControlById = new Map();
     this._resolvedInputControlIds = new Set();
     this._hasUnresolvedInputIds = false;
+    this._delegatedInstances = new Map();
     this._inputFocusDelegation = {
       onfocusin: () => {
         if (!this.getEnabled()) return;
@@ -989,22 +991,30 @@ export default class KioskKeyboard extends Control {
       resolvedControlIds.add(controlId);
     }
 
-    // Detach controls that are no longer referenced (including instance
-    // replacement for the same raw inputId string).
+    // Detach controls no longer referenced or whose instance changed.
     for (const controlId of prevCountsByControlId.keys()) {
-      if (nextCountsByControlId.has(controlId)) continue;
-      const control = Element.getElementById(controlId);
-      if (control instanceof Control) {
-        control.removeEventDelegate(this._inputFocusDelegation);
-      }
+      const prev = this._delegatedInstances.get(controlId);
+      if (!prev) continue;
+      // Keep delegate if same controlId in next AND same Control instance
+      if (nextCountsByControlId.has(controlId) && Element.getElementById(controlId) === prev) continue;
+      prev.removeEventDelegate(this._inputFocusDelegation);
     }
 
-    // Attach controls newly referenced by current inputIds.
+    // Attach controls newly referenced or whose instance changed.
     for (const controlId of nextCountsByControlId.keys()) {
-      if (prevCountsByControlId.has(controlId)) continue;
+      const control = Element.getElementById(controlId);
+      if (!(control instanceof Control)) continue;
+      // Skip if same controlId in prev AND same Control instance
+      if (prevCountsByControlId.has(controlId) && this._delegatedInstances.get(controlId) === control) continue;
+      control.addEventDelegate(this._inputFocusDelegation);
+    }
+
+    // Rebuild instance tracking
+    this._delegatedInstances = new Map();
+    for (const controlId of nextCountsByControlId.keys()) {
       const control = Element.getElementById(controlId);
       if (control instanceof Control) {
-        control.addEventDelegate(this._inputFocusDelegation);
+        this._delegatedInstances.set(controlId, control);
       }
     }
 
@@ -1014,15 +1024,10 @@ export default class KioskKeyboard extends Control {
   }
 
   private _teardownInputIds(): void {
-    const seen = new Set<string>();
-    for (const controlId of this._registeredInputControlById.values()) {
-      if (seen.has(controlId)) continue;
-      const control = Element.getElementById(controlId);
-      if (control instanceof Control) {
-        control.removeEventDelegate(this._inputFocusDelegation);
-        seen.add(controlId);
-      }
+    for (const instance of this._delegatedInstances.values()) {
+      instance.removeEventDelegate(this._inputFocusDelegation);
     }
+    this._delegatedInstances.clear();
     this._registeredInputControlById.clear();
     this._resolvedInputControlIds.clear();
     this._hasUnresolvedInputIds = false;
