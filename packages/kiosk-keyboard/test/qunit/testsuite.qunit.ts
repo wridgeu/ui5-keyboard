@@ -37,6 +37,15 @@ sap.ui.define([], () => {
       Grapheme: {
         title: "QUnit tests for ui5.kiosk - Grapheme",
       },
+      "KioskKeyboard-renderer-blackbox": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Renderer Black-Box",
+      },
+      "KioskKeyboard-input-blackbox": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Input Black-Box",
+      },
+      "KioskKeyboard-autoshow-blackbox": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Auto-Show Black-Box",
+      },
     },
   };
 });

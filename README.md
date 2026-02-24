@@ -203,7 +203,7 @@ ui5-keyboard/
 | --------------------------------------------------------------------------------------------- | -------------------------------------- |
 | [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                        | Internal design of the hotkeys library |
 | [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                                   | Internal design of the kiosk keyboard  |
-| [Kiosk Error Handling and DX](./docs/kiosk/feature.md)                                        | Error handling consistency proposal    |
+| [Kiosk Error Handling and DX](./docs/kiosk/ERROR-HANDLING-DX.md)                              | Error handling consistency proposal    |
 | [Docs Index & Conventions](./docs/README.md)                                                  | Doc structure, naming, and lifecycle   |
 | [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                            | Sequence system design and rationale   |
 | [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                              | Comparison with alternative approaches |

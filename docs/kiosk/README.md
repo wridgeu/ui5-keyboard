@@ -3,10 +3,9 @@
 ## Current
 
 - [Architecture](./ARCHITECTURE.md)
-- [Black-Box Test Plan](./BLACKBOX-TEST-PLAN.md)
 - [Popover Layout Switch Behavior](./POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)
 - [UI5 Transpile Crash Deep Dive](./AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)
-- [Error Handling and DX Consistency](./feature.md)
+- [Error Handling and DX Consistency](./ERROR-HANDLING-DX.md)
 
 ## Proposals
 
@@ -18,6 +17,7 @@
 ## History
 
 - [Arrow and Navigation Key Layouts](./history/ARROW-KEY-LAYOUT.md)
+- [Black-Box Test Plan](./history/BLACKBOX-TEST-PLAN.md)
 - [Escape Key Handling and Stable Height](./history/ESCAPE-AND-STABLE-HEIGHT.md)
 - [Function Key Row (F1-F12)](./history/FUNCTION-KEYS.md)
 - [Grapheme-Aware Editing](./history/GRAPHEME-AWARE-EDITING.md)
