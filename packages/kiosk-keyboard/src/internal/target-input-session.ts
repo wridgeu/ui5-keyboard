@@ -79,6 +79,30 @@ export default class TargetInputSession {
     }
   }
 
+  /**
+   * Captures the pending change state and clears the dirty flag.
+   *
+   * Returns a callback that fires the `change` event on the captured
+   * element, or `null` when there is nothing to fire. Call the returned
+   * function **after** all state transitions in `setTargetInput` have
+   * completed so that any re-entrant call sees fully settled state.
+   */
+  captureAndClearDirty(): (() => void) | null {
+    if (!this._targetDirty) return null;
+    this._targetDirty = false;
+
+    const element = this._getTargetElement();
+    if (!element) return null;
+
+    const dom = element.getFocusDomRef();
+    if (dom instanceof HTMLTextAreaElement) return null;
+    if (isInputOrTextarea(dom)) {
+      const value = dom.value;
+      return () => opsFireTargetChange(element, value);
+    }
+    return null;
+  }
+
   private _getTargetDomRef(): HTMLInputElement | HTMLTextAreaElement | null {
     const element = this._getTargetElement();
     if (!element) return null;

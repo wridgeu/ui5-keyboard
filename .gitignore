@@ -25,3 +25,6 @@ prompt*.txt
 # Local Claude/OpenCode workspace settings
 .claude/
 packages/**/.claude/
+
+# Review notes
+review.md

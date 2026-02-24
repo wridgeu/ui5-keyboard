@@ -682,8 +682,10 @@ export default class KioskKeyboard extends Control {
    * Also moves the physical keyboard highlight delegation to the new target.
    */
   setTargetInput(target?: string | Control): this {
-    // Fire pending change on the previous target before switching
-    this._targetSession.fireChangeIfDirty();
+    // Capture pending change on the old target. The event is deferred to
+    // after all state transitions so that re-entrant calls (from a change
+    // handler that synchronously focuses another input) see settled state.
+    const fireDeferredChange = this._targetSession.captureAndClearDirty();
 
     // Remove highlight delegation from previous target
     this._removeHighlightDelegation();
@@ -755,6 +757,12 @@ export default class KioskKeyboard extends Control {
     if (this._open) {
       this._suppressNativeKeyboard();
     }
+
+    // Fire the deferred change event on the OLD target. State is now
+    // settled, so if the handler re-enters setTargetInput (e.g. by
+    // focusing another input), the inner call sees consistent state
+    // and its result becomes the final state.
+    fireDeferredChange?.();
 
     return this;
   }
@@ -1482,6 +1490,13 @@ export default class KioskKeyboard extends Control {
 
     if (keyValue.startsWith("{fkey:")) {
       const fkeyName = keyValue.slice("{fkey:".length, -1);
+
+      // Fire keyPress first so consumers can prevent all downstream action
+      // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
+      if (!this.fireEvent("keyPress", { key: fkeyName, shiftKey: shift }, true)) {
+        return;
+      }
+
       let nativeAllowed = true;
 
       if (this.getFKeyMode() === FKeyMode.Native) {
@@ -1504,8 +1519,7 @@ export default class KioskKeyboard extends Control {
         }
       }
 
-      const keyPressAllowed = this.fireEvent("keyPress", { key: fkeyName, shiftKey: shift }, true);
-      if (nativeAllowed && keyPressAllowed) {
+      if (nativeAllowed) {
         this._targetSession.handleNavigationKey(fkeyName);
       }
       return;

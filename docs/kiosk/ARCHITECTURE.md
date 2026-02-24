@@ -135,6 +135,60 @@ For controller code that needs the control instance (not the ID), use `getTarget
 
 `setTargetInput()` is overridden to pass `true` (suppressInvalidate) to `setAssociation()`, since changing the target doesn't affect the keyboard's visual output and shouldn't trigger a re-render.
 
+### setTargetInput Execution Order
+
+`setTargetInput()` performs a full state transition from the old target to the new one. The order of operations matters because of a re-entrancy scenario.
+
+**Normal flow** (no re-entrancy):
+
+```
+setTargetInput(newInput)
+  1. captureAndClearDirty()        — snapshot old target's change data, clear dirty flag
+  2. _removeHighlightDelegation()  — remove key highlight from old target
+  3. _restoreNativeKeyboard()      — restore old target's inputmode (if keyboard is open)
+  4. resetForTargetSwitch()        — reset cursor state
+  5. setAssociation(newInput)      — update the association
+  6. add highlight delegation      — attach to new target
+  7. _suppressNativeKeyboard()     — suppress new target's inputmode (if keyboard is open)
+  8. fireDeferredChange()          — fire "change" on the OLD target (captured in step 1)
+```
+
+**Re-entrant flow** — when the deferred `change` handler focuses another input:
+
+This happens when autoShow is active and a consumer's `change` handler synchronously focuses a third input (e.g. a validation-then-advance pattern in form-heavy apps).
+
+```
+setTargetInput(inputB)          — target was inputA
+  1. capture inputA's change data, clear dirty
+  2. remove inputA's highlight delegation
+  3. restore inputA's inputmode
+  4. reset cursor
+  5. set association → inputB
+  6. add highlight delegation → inputB
+  7. suppress inputB's inputmode
+  8. fire deferred change on inputA
+     └─ handler calls inputC.focus()
+        └─ focusin → _onDocumentFocusIn → setTargetInput(inputC)
+             1. capture (nothing — not dirty)
+             2. remove inputB's highlight delegation
+             3. restore inputB's inputmode
+             4. reset cursor
+             5. set association → inputC
+             6. add highlight delegation → inputC
+             7. suppress inputC's inputmode
+             8. fire deferred change (null — no-op)
+             ← returns
+        ← handler returns
+     ← change event returns
+  ← returns
+
+Final state: target = inputC, delegation on inputC, suppression on inputC ✓
+```
+
+The key insight: all state transitions (steps 2-7) complete **before** the change event fires (step 8). So when the inner call starts, it sees fully settled state and can cleanly transition from inputB to inputC. The outer call has no more state work after step 8.
+
+**Why the change event must be deferred** — if it fired eagerly at step 1 (the original design), the inner call would set up inputC, then the outer call would resume at step 2 and tear down inputC's delegation, restore inputC's suppression, and overwrite the association to inputB.
+
 ### Value Manipulation
 
 The keyboard operates on the target's inner DOM element (`getFocusDomRef()`) for cursor-aware operations:
@@ -448,6 +502,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references                                  |
 | No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings                                   |
 | `setTargetInput` re-render              | `setAssociation(name, value, true)` suppresses invalidation                      |
+| `setTargetInput` re-entrancy            | Change event deferred to after state transitions via `captureAndClearDirty()`    |
 | Docked show/close during render         | `onAfterRendering` syncs CSS with `_open` state                                  |
 | Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode  |
 | `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                      |

@@ -1,7 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender } from "./test-helpers";
+import { placeAndWait, tapKey, waitForRender } from "./test-helpers";
 
 QUnit.module("KioskKeyboard autoshow black-box", {
   afterEach() {
@@ -134,3 +134,56 @@ QUnit.test("keyboardTypeChange event on auto-detected transitions", async (asser
   textInput.destroy();
   kb.destroy();
 });
+
+// ──────────────────────────────────────────────
+// 4. Re-entrant setTargetInput via change handler
+// ──────────────────────────────────────────────
+
+QUnit.test(
+  "setTargetInput re-entrancy: change handler focusing another input lands on correct target",
+  async (assert) => {
+    const inputA = new Input({ value: "" });
+    const inputB = new Input({ value: "" });
+    const inputC = new Input({ value: "" });
+    inputA.placeAt("qunit-fixture");
+    inputB.placeAt("qunit-fixture");
+    inputC.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({ docked: true, autoShow: true });
+    await placeAndWait(kb);
+
+    // Focus inputA → keyboard targets it and opens
+    (inputA.getFocusDomRef() as HTMLElement).focus();
+    await nextUIUpdate();
+
+    assert.strictEqual(kb.getTargetInput(), inputA.getId(), "Target is inputA after focus");
+    assert.ok(kb.isOpen(), "Keyboard is open");
+
+    // Type a character to mark the session dirty (needed for change event)
+    tapKey(kb, "x");
+
+    // Attach change handler that synchronously focuses inputC
+    // (simulates a validation-then-advance pattern in form-heavy apps)
+    inputA.attachChange(() => {
+      (inputC.getFocusDomRef() as HTMLElement).focus();
+    });
+
+    // Focus inputB → triggers setTargetInput(inputB) → deferred change
+    // fires on inputA → handler focuses inputC → setTargetInput(inputC)
+    (inputB.getFocusDomRef() as HTMLElement).focus();
+    await nextUIUpdate();
+
+    // The final target must be inputC (the last focus destination),
+    // NOT inputB (which was superseded by the re-entrant call)
+    assert.strictEqual(
+      kb.getTargetInput(),
+      inputC.getId(),
+      "Target is inputC — re-entrant setTargetInput from change handler wins",
+    );
+
+    inputA.destroy();
+    inputB.destroy();
+    inputC.destroy();
+    kb.destroy();
+  },
+);
