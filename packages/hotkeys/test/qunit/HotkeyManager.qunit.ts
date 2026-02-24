@@ -1689,6 +1689,72 @@ QUnit.test("Target element: setOptions swaps target", (assert) => {
   assert.ok(called, "Hotkey fires on new target after setOptions");
 });
 
+QUnit.test("Target element: setOptions target swap triggers conflict detection (error)", (assert) => {
+  const manager = HotkeyManager.getInstance();
+
+  const div1 = document.createElement("div");
+  div1.tabIndex = 0;
+  fixture.appendChild(div1);
+
+  const div2 = document.createElement("div");
+  div2.tabIndex = 0;
+  fixture.appendChild(div2);
+
+  // Register F9 on div2 with error conflict behavior
+  manager.register("F9", () => {}, { target: div2, conflictBehavior: "error" });
+
+  // Register the same hotkey on div1
+  const handle = manager.register("F9", () => {}, { target: div1, conflictBehavior: "error" });
+
+  // Retarget to div2 — should throw because F9 is already registered on div2
+  assert.throws(
+    () => handle.setOptions({ target: div2 }),
+    /already registered/,
+    "setOptions target swap throws on conflict with error behavior",
+  );
+});
+
+QUnit.test("Target element: setOptions target swap triggers conflict detection (replace)", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let oldCalled = false;
+  let swappedCalled = false;
+
+  const div1 = document.createElement("div");
+  div1.tabIndex = 0;
+  fixture.appendChild(div1);
+
+  const div2 = document.createElement("div");
+  div2.tabIndex = 0;
+  fixture.appendChild(div2);
+
+  // Existing registration on div2
+  const existingHandle = manager.register(
+    "F9",
+    () => {
+      oldCalled = true;
+    },
+    { target: div2 },
+  );
+
+  // Register same hotkey on div1 with replace behavior
+  const handle = manager.register(
+    "F9",
+    () => {
+      swappedCalled = true;
+    },
+    { target: div1, conflictBehavior: "replace" },
+  );
+
+  // Retarget to div2 — should replace the existing registration
+  handle.setOptions({ target: div2 });
+
+  assert.notOk(existingHandle.isActive, "Existing registration deactivated after replace");
+
+  div2.dispatchEvent(new KeyboardEvent("keydown", { key: "F9", bubbles: true, cancelable: true }));
+  assert.notOk(oldCalled, "Old registration callback not called");
+  assert.ok(swappedCalled, "Swapped registration callback fires on new target");
+});
+
 QUnit.test("Target element: unregister removes listener", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;

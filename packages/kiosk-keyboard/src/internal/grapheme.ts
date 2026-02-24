@@ -1,74 +1,41 @@
-let cachedSegmenter: Intl.Segmenter | null | undefined;
+/**
+ * Grapheme-aware cursor utilities using {@link Intl.Segmenter}.
+ *
+ * Baseline: `Intl.Segmenter` is available in all modern browsers since 2022
+ * (Chrome 87+, Firefox 104+, Safari 15.4+). No fallback is provided.
+ *
+ * @module
+ */
 
-function getSegmenter(): Intl.Segmenter | null {
-  if (cachedSegmenter !== undefined) {
-    return cachedSegmenter;
-  }
-
-  const Segmenter = globalThis.Intl?.Segmenter;
-  if (typeof Segmenter !== "function") {
-    cachedSegmenter = null;
-    return cachedSegmenter;
-  }
-
-  try {
-    cachedSegmenter = new Segmenter(undefined, { granularity: "grapheme" });
-  } catch {
-    cachedSegmenter = null;
-  }
-
-  return cachedSegmenter;
-}
+const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 /**
  * Returns the code-unit length of the grapheme cluster ending at the
  * given code-unit offset. Returns 0 when offset is at or before
- * position 0 (nothing to delete). Falls back to 1 if segmentation
- * yields no result (should not happen in practice).
+ * position 0 (nothing to delete).
  */
 export function graphemeLengthBefore(value: string, offset: number): number {
   if (offset <= 0) return 0;
 
-  const segmenter = getSegmenter();
-  if (!segmenter) return 1;
-
   const before = value.slice(0, Math.min(offset, value.length));
-
-  let segments: Intl.Segments;
-  try {
-    segments = segmenter.segment(before);
-  } catch {
-    return 1;
-  }
 
   // Walk to last segment — Intl.Segmenter is iterable but not indexable
   let last: Intl.SegmentData | undefined;
-  for (const seg of segments) {
+  for (const seg of segmenter.segment(before)) {
     last = seg;
   }
-  return last ? last.segment.length : 1;
+  return last ? last.segment.length : 0;
 }
 
 /**
  * Returns the code-unit length of the grapheme cluster starting at
  * the given code-unit offset. Returns 0 when offset is at or past
- * the end of the string (nothing ahead). Falls back to 1 if
- * segmentation yields no result.
+ * the end of the string (nothing ahead).
  */
 export function graphemeLengthAfter(value: string, offset: number): number {
   if (offset >= value.length) return 0;
 
-  const segmenter = getSegmenter();
-  if (!segmenter) return 1;
-
   const after = value.slice(offset);
-
-  let first: IteratorResult<Intl.SegmentData, undefined>;
-  try {
-    first = segmenter.segment(after)[Symbol.iterator]().next();
-  } catch {
-    return 1;
-  }
-
-  return first.done ? 1 : first.value.segment.length;
+  const first = segmenter.segment(after)[Symbol.iterator]().next();
+  return first.done ? 0 : first.value.segment.length;
 }

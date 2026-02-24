@@ -103,30 +103,6 @@ QUnit.test("regional indicator pair (flag)", (assert) => {
   assert.strictEqual(graphemeLengthAfter(s, 1), flag.length, "flag emoji at offset 1 is one grapheme");
 });
 
-// ── Unit tests: fallback behavior ──────────────────────────────
-
-QUnit.module("grapheme fallback behavior");
-
-QUnit.test("falls back to single code-unit steps when Segmenter throws", (assert) => {
-  if (typeof Intl?.Segmenter !== "function") {
-    assert.ok(true, "Intl.Segmenter unavailable in this runtime — fallback path is implicit");
-    return;
-  }
-
-  const original = Intl.Segmenter.prototype.segment;
-
-  try {
-    Intl.Segmenter.prototype.segment = (() => {
-      throw new Error("forced segmenter failure");
-    }) as typeof Intl.Segmenter.prototype.segment;
-
-    assert.strictEqual(graphemeLengthBefore("😀", 2), 1, "Before fallback returns one code unit");
-    assert.strictEqual(graphemeLengthAfter("😀", 0), 1, "After fallback returns one code unit");
-  } finally {
-    Intl.Segmenter.prototype.segment = original;
-  }
-});
-
 // ── Integration tests through KioskKeyboard ───────────────────
 
 QUnit.module("Grapheme integration", {

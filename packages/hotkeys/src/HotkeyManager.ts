@@ -243,13 +243,16 @@ export default class HotkeyManager extends BaseObject {
           throw new Error("Cannot change conflictBehavior via setOptions — unregister and re-register instead");
         }
         const opts = registration.options;
-        // Special case: target swap requires listener management
+        // Special case: target swap requires listener + conflict management
         if (newOptions.target !== undefined) {
           const currentTarget = opts.target;
           const nextTarget = newOptions.target ?? null;
           if (currentTarget !== nextTarget) {
             this._deindexRegistration(registration);
             if (currentTarget) this._detachTargetListener(currentTarget);
+            // Conflict check against the new target — runs before opts.target
+            // is updated so _isConflictingRegistration won't self-match (#17)
+            this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
             opts.target = nextTarget;
             if (nextTarget) this._attachTargetListener(nextTarget);
             this._indexRegistration(registration);
@@ -730,7 +733,7 @@ export default class HotkeyManager extends BaseObject {
       popupOpen,
       activeScope,
       targetElement,
-      getScopeRegistrations: (scope, target) => this._getScopeRegistrations(scope, target),
+      getScopeRegistrations: (s, t) => this._getScopeRegistrations(s, t),
       skipInfo,
       debugSkips,
       toRegistrationInfo: (reg) => this._toRegistrationInfo(reg),
