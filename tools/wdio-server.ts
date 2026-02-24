@@ -117,7 +117,11 @@ export function readQUnitTestIds(testsuitePath: string): string[] {
 
   const ids: string[] = [];
   for (const prop of resolvedTestsObject.properties) {
-    if (!ts.isPropertyAssignment(prop)) continue;
+    if (!ts.isPropertyAssignment(prop)) {
+      throw new Error(
+        `Unsupported property syntax in tests object in ${testsuitePath} (only standard key: value entries are supported)`,
+      );
+    }
     const id = getPropertyName(prop.name);
     if (!id) {
       throw new Error(`Unsupported test key syntax in ${testsuitePath}`);
