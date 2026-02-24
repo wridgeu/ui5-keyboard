@@ -537,10 +537,8 @@ QUnit.test("inputIds rebinds delegates after control recreation in autoShow flow
   box.addItem(input2);
   await nextUIUpdate();
 
-  // Trigger reconciliation so the new instance gets the delegate
-  kb.setInputIds(["churn-input"]);
-
-  // Focus the new input — keyboard should reopen and target should update
+  // Focus the new input — _onDocumentFocusIn must re-resolve inputIds
+  // and attach the delegate to the new instance automatically
   (input2.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
 
