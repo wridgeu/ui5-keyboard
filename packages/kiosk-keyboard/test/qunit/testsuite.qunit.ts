@@ -49,6 +49,9 @@ sap.ui.define([], () => {
       "input-operations": {
         title: "QUnit tests for ui5.kiosk - input-operations",
       },
+      "target-input-session": {
+        title: "QUnit tests for ui5.kiosk - target-input-session",
+      },
     },
   };
 });
