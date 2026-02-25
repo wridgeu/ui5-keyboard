@@ -163,6 +163,12 @@ export function isBuiltInLayout(sName: string): boolean {
  * Registers a mapping from a BCP-47 language tag (or prefix) to a
  * layout name. When no explicit `layout` is provided, the keyboard
  * uses this map to select a locale-appropriate default.
+ *
+ * The mapping is stored even if `sLayout` does not refer to a currently
+ * registered layout (a warning is logged in that case). This allows
+ * locale mappings to be set up before the custom layout is registered
+ * via {@link registerLayout}. The mapping takes effect as soon as the
+ * target layout exists.
  */
 export function registerLocaleLayout(sLocale: string, sLayout: string): void {
   const locale = normalizeLowerString(sLocale, "locale map key");
