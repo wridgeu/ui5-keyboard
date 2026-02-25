@@ -65,7 +65,8 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Process a keydown event. Called by EventDispatcher.
+   * Process a keydown event — maps `code` to `key`, ref-counts held keys.
+   * Called by EventDispatcher (step 1 of the dispatch pipeline).
    * @internal
    */
   processKeyDown(event: KeyboardEvent): void {
@@ -94,7 +95,8 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Process a keyup event. Called by EventDispatcher.
+   * Process a keyup event — decrements ref-count, includes macOS stuck-key fix.
+   * Called by EventDispatcher.
    * @internal
    */
   processKeyUp(event: KeyboardEvent): void {
@@ -127,7 +129,8 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Process a blur event (window lost focus). Called by EventDispatcher.
+   * Process a blur event (window lost focus) — clears all held keys.
+   * Called by EventDispatcher.
    * @internal
    */
   processBlur(): void {

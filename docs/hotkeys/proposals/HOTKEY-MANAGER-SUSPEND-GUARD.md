@@ -1072,27 +1072,27 @@ New tests:
 
 ### Documentation
 
-- [ ] Update `packages/hotkeys/README.md` — rewrite KeyStateTracker section (no longer standalone, accessed via manager or internal)
-- [ ] Update `packages/hotkeys/README.md` — rewrite HotkeyRecorder section (created via `manager.createRecorder()`, not `new HotkeyRecorder()`)
-- [ ] Update `packages/hotkeys/README.md` — add suspend guard API to HotkeyManager method table and usage examples
-- [ ] Update `packages/hotkeys/README.md` — add `createRecorder()` and `getKeyStateTracker()` to HotkeyManager method table
-- [ ] Update `packages/hotkeys/README.md` — update API Stability section (verify `HotkeyRecorder` and `KeyStateTracker` are not listed as stable imports — they currently aren't — and add a note that their constructors are internal)
-- [ ] Update `packages/hotkeys/README.md` — add new `UnhandledReason` values (`TargetMismatch`, `Suspended`) to enum docs
-- [ ] Update `packages/hotkeys/README.md` — update Quick Start if lifecycle examples change
-- [ ] Update `packages/hotkeys/README.md` — update Troubleshooting with suspend guard and interceptor scenarios
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — new module overview, updated event handling section, updated dispatch flow diagram
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — document EventDispatcher pipeline, guard API, interceptor mechanism
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — update project layout section (new files, deleted files)
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — update edge cases table with new target-scoped behavior
-- [ ] Update `docs/hotkeys/SEQUENCES.md` — note that SequenceManager no longer called directly from HotkeyManager's listener
-- [ ] Update `docs/hotkeys/SEQUENCES.md` — document how sequence dispatch integrates with the EventDispatcher pipeline
-- [ ] Update `docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md` — update "Implications for Our Libraries" section (window vs document, single listener)
-- [ ] Update `docs/hotkeys/proposals/README.md` — link to this proposal
-- [ ] Update `HotkeyOptions.target` JSDoc in `types.ts` — remove note about "document capture listener fires before target capture listener" (priority is now enforced in the dispatch pipeline, not via DOM ordering)
-- [ ] Review and update all JSDoc on public API (`HotkeyManager`, `HotkeyRecorder`, `RegistrationGroup`, exported types)
+- [x] Update `packages/hotkeys/README.md` — rewrite KeyStateTracker section (no longer standalone, accessed via manager or internal)
+- [x] Update `packages/hotkeys/README.md` — rewrite HotkeyRecorder section (created via `manager.createRecorder()`, not `new HotkeyRecorder()`)
+- [x] Update `packages/hotkeys/README.md` — add suspend guard API to HotkeyManager method table and usage examples
+- [x] Update `packages/hotkeys/README.md` — add `createRecorder()` and `getKeyStateTracker()` to HotkeyManager method table
+- [x] Update `packages/hotkeys/README.md` — update API Stability section (verify `HotkeyRecorder` and `KeyStateTracker` are not listed as stable imports — they currently aren't — and add a note that their constructors are internal)
+- [x] Update `packages/hotkeys/README.md` — add new `UnhandledReason` values (`TargetMismatch`, `Suspended`) to enum docs
+- [x] Update `packages/hotkeys/README.md` — update Quick Start if lifecycle examples change
+- [x] Update `packages/hotkeys/README.md` — update Troubleshooting with suspend guard and interceptor scenarios
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — new module overview, updated event handling section, updated dispatch flow diagram
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — document EventDispatcher pipeline, guard API, interceptor mechanism
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — update project layout section (new files, deleted files)
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — update edge cases table with new target-scoped behavior
+- [x] Update `docs/hotkeys/SEQUENCES.md` — note that SequenceManager no longer called directly from HotkeyManager's listener
+- [x] Update `docs/hotkeys/SEQUENCES.md` — document how sequence dispatch integrates with the EventDispatcher pipeline
+- [x] Update `docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md` — update "Implications for Our Libraries" section (window vs document, single listener)
+- [x] Update `docs/hotkeys/proposals/README.md` — link to this proposal
+- [x] Update `HotkeyOptions.target` JSDoc in `types.ts` — remove note about "document capture listener fires before target capture listener" (priority is now enforced in the dispatch pipeline, not via DOM ordering)
+- [x] Review and update all JSDoc on public API (`HotkeyManager`, `HotkeyRecorder`, `RegistrationGroup`, exported types)
 - [x] Update demo app `Component.ts` and controllers to use `createRecorder()` factory if HotkeyRecorder is used
 - [x] Update demo app `Main.controller.ts` to use `manager.getKeyStateTracker()` instead of `KeyStateTracker.getInstance()`
-- [ ] Verify all code examples in docs still compile and reflect the new API surface
+- [x] Verify all code examples in docs still compile and reflect the new API surface
 
 ## API Changes
 
