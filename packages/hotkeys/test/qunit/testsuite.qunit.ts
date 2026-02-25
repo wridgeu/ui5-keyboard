@@ -67,6 +67,15 @@ sap.ui.define([], () => {
       "SequenceManager-blackbox": {
         title: "QUnit tests for ui5.hotkeys - SequenceManager Black-Box Contracts",
       },
+      "skip-reason": {
+        title: "QUnit tests for ui5.hotkeys - skip-reason",
+      },
+      "dispatch-core": {
+        title: "QUnit tests for ui5.hotkeys - dispatch-core",
+      },
+      "listener-registry": {
+        title: "QUnit tests for ui5.hotkeys - listener-registry",
+      },
     },
   };
 });
