@@ -46,6 +46,9 @@ sap.ui.define([], () => {
       "KioskKeyboard-autoshow-blackbox": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Auto-Show Black-Box",
       },
+      "input-operations": {
+        title: "QUnit tests for ui5.kiosk - input-operations",
+      },
     },
   };
 });
