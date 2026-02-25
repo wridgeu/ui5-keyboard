@@ -158,13 +158,10 @@ export function handleNavigation(
  */
 export function setTargetValue(element: Element, newValue: string): void {
   const metadata = element.getMetadata();
-  if (metadata.hasProperty("value")) {
-    const ctrl = element as unknown as Record<string, unknown>;
-    if (typeof ctrl.setValue === "function") {
-      (ctrl.setValue as (v: string) => unknown).call(element, newValue);
-    } else {
-      element.setProperty("value", newValue);
-    }
+  if ("setValue" in element && typeof element.setValue === "function") {
+    (element.setValue as (v: string) => unknown).call(element, newValue);
+  } else if (metadata.hasProperty("value")) {
+    element.setProperty("value", newValue);
   } else {
     // Fallback for custom controls without a "value" metadata property:
     // set the inner DOM input value directly so typing still works.
