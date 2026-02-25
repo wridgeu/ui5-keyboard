@@ -50,6 +50,11 @@
                     description="Keyboard persists across navigation via static UIArea"
                     type="Navigation"
                     press=".onNavToComponent" />
+                <StandardListItem
+                    title="Focus Scenarios"
+                    description="Focus transitions, deferred close, composite controls, and live event log"
+                    type="Navigation"
+                    press=".onNavToFocusScenarios" />
             </List>
         </content>
     </Page>

@@ -46,4 +46,8 @@ export default class KioskHub extends BaseController {
   onNavToComponent(): void {
     this.getTypedComponent().getRouter().navTo(Scope.KioskComponent);
   }
+
+  onNavToFocusScenarios(): void {
+    this.getTypedComponent().getRouter().navTo(Scope.KioskFocusScenarios);
+  }
 }

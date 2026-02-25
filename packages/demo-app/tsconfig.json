@@ -3,6 +3,10 @@
   "compilerOptions": {
     "rootDir": "../..",
     "baseUrl": ".",
+    // Monorepo development only: paths resolve library imports to sibling workspace
+    // source folders so the IDE provides go-to-definition and type-checking across
+    // packages. When the libraries are consumed from npm, consumers use the published
+    // type declarations instead — these paths have no effect outside this monorepo.
     "paths": {
       "demo/hotkeys/*": ["./webapp/*"],
       "ui5/hotkeys/*": ["../hotkeys/src/*"],
@@ -14,6 +18,9 @@
     "declaration": false,
     "declarationMap": false
   },
+  // The sibling library source globs let TypeScript see cross-package symbols.
+  // This is intentional for monorepo development only and would not apply when
+  // the libraries are installed from npm (where compiled .d.ts files are used).
   "include": ["webapp/**/*.ts", "../hotkeys/src/**/*.ts", "../kiosk-keyboard/src/**/*.ts"],
   "exclude": ["node_modules"]
 }

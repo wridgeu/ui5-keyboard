@@ -105,6 +105,11 @@
           "name": "kioskCustomLayouts",
           "pattern": "kiosk/custom-layouts",
           "target": "kioskCustomLayouts"
+        },
+        {
+          "name": "kioskFocusScenarios",
+          "pattern": "kiosk/focus-scenarios",
+          "target": "kioskFocusScenarios"
         }
       ],
       "targets": {
@@ -155,6 +160,10 @@
         "kioskCustomLayouts": {
           "id": "kioskCustomLayouts",
           "name": "KioskCustomLayouts"
+        },
+        "kioskFocusScenarios": {
+          "id": "kioskFocusScenarios",
+          "name": "KioskFocusScenarios"
         }
       }
     },
