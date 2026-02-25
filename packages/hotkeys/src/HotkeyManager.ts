@@ -616,6 +616,11 @@ export default class HotkeyManager extends BaseObject {
       this._routerCleanup = null;
     }
 
+    // Detach all event listeners first — no keydown handler can re-enter
+    // the manager while internal state is being torn down.
+    this._detachListeners();
+    this._listenerRegistry.detachAllTargets();
+
     for (const group of Array.from(this._groups)) {
       group._onManagerDestroy();
     }
@@ -625,10 +630,6 @@ export default class HotkeyManager extends BaseObject {
       this._sequenceManager.destroy();
       this._sequenceManager = null;
     }
-
-    this._detachListeners();
-
-    this._listenerRegistry.detachAllTargets();
 
     for (const state of this._registrationState.values()) {
       state.active = false;
