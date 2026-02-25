@@ -76,6 +76,9 @@ sap.ui.define([], () => {
       "listener-registry": {
         title: "QUnit tests for ui5.hotkeys - listener-registry",
       },
+      "negative-edge-cases": {
+        title: "QUnit tests for ui5.hotkeys - Negative & Edge-Case Paths",
+      },
     },
   };
 });
