@@ -58,6 +58,9 @@ sap.ui.define([], () => {
       "layout-registry": {
         title: "QUnit tests for ui5.kiosk - layout-registry",
       },
+      "negative-edge-cases": {
+        title: "QUnit tests for ui5.kiosk - Negative-path & edge-case tests",
+      },
     },
   };
 });
