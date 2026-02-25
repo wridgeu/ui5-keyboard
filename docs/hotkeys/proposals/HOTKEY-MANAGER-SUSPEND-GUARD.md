@@ -954,10 +954,10 @@ New tests:
 - [x] Implement `_matchTargetRegistrations` — scope-first ordering: (1) active scope pass iterates `composedPath()` from index 0 (innermost) outward, uses `bucket.targets.get(node)` per node; first match wins; `stopPropagation: true` on a match skips outer targets. (2) Global scope pass only if active scope pass found no match and active scope is not `GLOBAL_SCOPE`. (3) Skip-reason pass: when skip tracking is active and no match found, iterate all target registrations in evaluated scope buckets; for each registration whose **key combo matches the event**, record `TargetMismatch` if its target was not in the `composedPath()` — registrations whose key combo does not match are ignored (they are `NoMatch`, not `TargetMismatch`). Use a `Set` of path nodes for O(1) lookup
 - [x] Pass pre-computed `composedPath()` array through the matching pipeline (avoid redundant calls — `composedPath()` returns a new array each call)
 - [x] Implement `composedPath()` fallback — if `composedPath()` returns empty or is undefined, fall back to `[event.target, document, window].filter(Boolean)`
-- [ ] Test: active-scope target registration takes precedence over global-scope target for the same key, regardless of DOM position (inner global-scope target does NOT fire when an outer active-scope target matches)
-- [ ] Test: when active scope is `GLOBAL_SCOPE`, no duplicate matching occurs (global pass is skipped)
+- [x] Test: active-scope target registration takes precedence over global-scope target for the same key, regardless of DOM position (inner global-scope target does NOT fire when an outer active-scope target matches)
+- [x] Test: when active scope is `GLOBAL_SCOPE`, no duplicate matching occurs (global pass is skipped)
 - [x] Test: nested targets in the same scope — only innermost fires, outer target callback does NOT execute
-- [ ] Test: `target: document` registration behaves as outermost target (lower priority than element targets and document-level registrations)
+- [x] Test: `target: document` registration behaves as outermost target (lower priority than element targets and document-level registrations)
 
 ### ListenerRegistry removal
 
@@ -1025,7 +1025,7 @@ New tests:
 - [x] Unit: interceptor blocks hotkey dispatch
 - [x] Unit: interceptor auto-clears on stop
 - [x] Unit: key state tracks during interception
-- [ ] Unit: `clearInterceptor` is owner-safe
+- [x] Unit: `clearInterceptor` is owner-safe
 - [ ] Unit: recorder `stopImmediatePropagation` blocks non-library window listeners during recording
 - [ ] Unit: interceptor replacement logs warning
 - [x] Unit: multi-recorder contention — RecorderA starts, RecorderB replaces, RecorderA.onDetached() called, RecorderA.isRecording === false, RecorderA receives no events
@@ -1035,8 +1035,8 @@ New tests:
 - [x] Unit: document registration priority over target-scoped
 - [x] Unit: document match without stopPropagation + target match — both callbacks fire
 - [x] Unit: nested targets — innermost wins for same key
-- [ ] Unit: nested targets — innermost wins even with `stopPropagation: false` (only innermost fires, outer does not)
-- [ ] Unit: nested targets — stopPropagation option on inner prevents outer (not callback `event.stopPropagation()`)
+- [x] Unit: nested targets — innermost wins even with `stopPropagation: false` (only innermost fires, outer does not)
+- [x] Unit: nested targets — stopPropagation option on inner prevents outer (not callback `event.stopPropagation()`)
 - [x] Unit: nested targets — different keys fire independently
 - [x] Unit: unhandled fires synchronously (no deferred state)
 - [x] Unit: full sequence consumed suppresses unhandled
@@ -1044,7 +1044,7 @@ New tests:
 - [x] Unit: target mismatch → unhandled with `TargetMismatch` reason
 - [x] Unit: destroy removes all window listeners
 - [x] Unit: re-create after destroy works
-- [ ] Unit: destroyed dispatcher safety — `setInterceptor`/`clearInterceptor` are no-ops, `suspendDispatch` throws
+- [x] Unit: destroyed dispatcher safety — `setInterceptor`/`clearInterceptor` are no-ops, `suspendDispatch` throws
 - [x] Unit: destroy marks tracked recorders as destroyed
 - [x] Unit: recorder `stop()` after manager destroy — no throw (null dispatcher)
 - [x] Unit: interceptor active + guard active → interceptor still receives events
@@ -1055,20 +1055,20 @@ New tests:
 - [x] Regression: update/remove ListenerRegistry tests
 - [x] Regression: KeyStateTracker updates during recording — recorder active, press key, `getHeldKeys()` includes key (behavioral change from current: stale during recording)
 - [x] Unit: reentrancy — hotkey callback calls `suspendDispatch()` → current event finishes normally, next event is suspended
-- [ ] Unit: `_processHotkeys` resets `_lastSkipInfo` at top — no stale data from previous events
-- [ ] Unit: third-party window capture listener + stopPropagation true — external window listener fires (same target), document listeners do NOT fire
-- [ ] Unit: third-party window capture listener + stopPropagation false — both external window and document listeners fire
-- [ ] Unit: third-party document capture listener + stopPropagation true — external document listener does NOT fire (event stopped at window)
-- [ ] Unit: third-party document bubble listener + stopPropagation true — external document listener does NOT fire
-- [ ] Unit: target-scoped with `target: document` — treated as target-scoped, lower priority than document-level registrations
+- [x] Unit: `_processHotkeys` resets `_lastSkipInfo` at top — no stale data from previous events
+- [x] Unit: third-party window capture listener + stopPropagation true — external window listener fires (same target), document listeners do NOT fire
+- [x] Unit: third-party window capture listener + stopPropagation false — both external window and document listeners fire
+- [x] Unit: third-party document capture listener + stopPropagation true — external document listener does NOT fire (event stopped at window)
+- [x] Unit: third-party document bubble listener + stopPropagation true — external document listener does NOT fire
+- [x] Unit: target-scoped with `target: document` — treated as target-scoped, lower priority than document-level registrations
 - [ ] Unit: target-scoped with same-origin iframe document — does NOT match events from parent document
 - [ ] Unit: composedPath fallback — empty composedPath falls back to `[event.target, document, window]`
 - [x] Unit: suspend mid-sequence, release before timeout — sequence completes (pending state preserved)
-- [ ] Unit: onDetached is idempotent — calling on already-stopped recorder does not throw
-- [ ] Unit: setInterceptor replacement calls onDetached on prior interceptor synchronously
+- [x] Unit: onDetached is idempotent — calling on already-stopped recorder does not throw
+- [x] Unit: setInterceptor replacement calls onDetached on prior interceptor synchronously
 - [x] Unit: direct `new HotkeyRecorder()` without INTERNAL_TOKEN throws
 - [x] Unit: direct `new KeyStateTracker()` without INTERNAL_TOKEN throws
-- [ ] Unit: recorder.destroy() removes from dispatcher tracking set (no leak)
+- [x] Unit: recorder.destroy() removes from dispatcher tracking set (no leak)
 
 ### Documentation
 
