@@ -932,3 +932,85 @@ QUnit.test("GLOBAL_SCOPE: no duplicate matching when active scope is global", (a
 
   target.remove();
 });
+
+// ──────────────────────────────────────────────
+// stopImmediatePropagation during recording
+// ──────────────────────────────────────────────
+
+QUnit.test("Recorder stopImmediatePropagation blocks non-library window listeners", (assert) => {
+  let externalListenerCount = 0;
+  const externalListener = () => {
+    externalListenerCount++;
+  };
+
+  // Add an external window capture listener (simulating third-party code)
+  window.addEventListener("keydown", externalListener, true);
+
+  const recorder = manager.createRecorder({ onRecord: () => {} });
+  recorder.start();
+
+  fireKey("F5");
+
+  // The recorder's onKeyDown calls stopImmediatePropagation, which blocks
+  // other same-target capture listeners added after the dispatcher's listener.
+  // However, the external listener was added AFTER manager creation, so it
+  // should be blocked by stopImmediatePropagation.
+  assert.strictEqual(
+    externalListenerCount,
+    0,
+    "External window capture listener was blocked by stopImmediatePropagation",
+  );
+
+  recorder.destroy();
+  window.removeEventListener("keydown", externalListener, true);
+});
+
+// ──────────────────────────────────────────────
+// composedPath fallback
+// ──────────────────────────────────────────────
+
+QUnit.test("composedPath fallback — event with empty composedPath uses target fallback", (assert) => {
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+
+  let fired = false;
+  // Register on the target
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target },
+  );
+
+  // Create a keyboard event and override composedPath to return empty
+  const event = new KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  Object.defineProperty(event, "composedPath", { value: () => [] });
+  Object.defineProperty(event, "target", { value: target });
+
+  // Dispatch on target — the fallback should use [event.target, document, window]
+  // so target should be in the path
+  target.dispatchEvent(event);
+
+  // Note: when dispatched on target, the real composedPath is used by the browser,
+  // not our mock. So we test via document dispatch where we control the event.
+  fired = false;
+  const event2 = new KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  // Override composedPath on the event
+  Object.defineProperty(event2, "composedPath", { value: () => [] });
+  Object.defineProperty(event2, "target", { value: target });
+  window.dispatchEvent(event2);
+
+  // With fallback [event.target, document, window], the target element IS in the path
+  assert.ok(fired, "Target-scoped hotkey fires via composedPath fallback");
+
+  target.remove();
+});
