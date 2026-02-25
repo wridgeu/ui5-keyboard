@@ -22,13 +22,15 @@ export interface DebugSkipEntry {
  * Higher number = more specific/useful reason. When multiple registrations
  * are skipped, the most informative reason is reported.
  */
-const SKIP_PRIORITY = {
+const SKIP_PRIORITY: Record<UnhandledReason, number> = {
   [UnhandledReason.NoMatch]: 0,
-  [UnhandledReason.RepeatIgnored]: 1,
-  [UnhandledReason.InputSuppressed]: 2,
-  [UnhandledReason.PopupSuppressed]: 3,
-  [UnhandledReason.Disabled]: 4,
-} satisfies Record<UnhandledReason, number>;
+  [UnhandledReason.TargetMismatch]: 1,
+  [UnhandledReason.RepeatIgnored]: 2,
+  [UnhandledReason.InputSuppressed]: 3,
+  [UnhandledReason.PopupSuppressed]: 4,
+  [UnhandledReason.Disabled]: 5,
+  [UnhandledReason.Suspended]: 6,
+};
 
 /**
  * Record a skip reason if it is more informative than the current one.

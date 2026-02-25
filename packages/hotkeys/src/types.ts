@@ -336,10 +336,12 @@ export interface ResolvedHotkeyOptions {
  * Reason why a key event was not handled by any registration.
  *
  * - `"no_match"`: No registration matched the key combination in any scope.
+ * - `"target_mismatch"`: A registration matched the key combo but the event target is outside the registration's target element.
  * - `"disabled"`: A registration matched, but its `enabled` option resolved to `false`.
  * - `"input_suppressed"`: A registration matched, but was suppressed because the target is an input element.
  * - `"popup_suppressed"`: A registration matched, but was suppressed because a popup (dialog or popover) is open.
  * - `"repeat_ignored"`: A registration matched, but was skipped because the key is held (`event.repeat`).
+ * - `"suspended"`: Dispatch was suspended via a guard when the event arrived.
  */
 export type UnhandledReason = LibraryUnhandledReason;
 
@@ -372,6 +374,23 @@ export interface UnhandledContext {
  * debugging why a shortcut didn't fire.
  */
 export type UnhandledCallback = (context: UnhandledContext) => void;
+
+// ──────────────────────────────────────────────
+// Suspend guard
+// ──────────────────────────────────────────────
+
+/**
+ * RAII-style guard handle returned by `HotkeyManager.suspendDispatch()`.
+ *
+ * While active, all hotkey and sequence callbacks are blocked.
+ * Call `release()` to resume dispatch. Release is idempotent.
+ */
+export interface KeyboardDispatchGuard {
+  /** Release this guard. Idempotent — double-release does not throw. */
+  release(): void;
+  /** Whether this guard is still actively suspending dispatch. */
+  readonly isActive: boolean;
+}
 
 // ──────────────────────────────────────────────
 // Sequence types

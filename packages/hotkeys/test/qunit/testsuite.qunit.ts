@@ -73,8 +73,8 @@ sap.ui.define([], () => {
       "dispatch-core": {
         title: "QUnit tests for ui5.hotkeys - dispatch-core",
       },
-      "listener-registry": {
-        title: "QUnit tests for ui5.hotkeys - listener-registry",
+      "event-dispatcher": {
+        title: "QUnit tests for ui5.hotkeys - EventDispatcher & Suspend Guard",
       },
       "negative-edge-cases": {
         title: "QUnit tests for ui5.hotkeys - Negative & Edge-Case Paths",

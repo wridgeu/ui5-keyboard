@@ -1,20 +1,23 @@
 import { MODIFIER_KEYS } from "./internal/constants";
+import { INTERNAL_TOKEN } from "./internal/internal-token";
 import Log from "sap/base/Log";
 import { Platform } from "./library";
-import { runtimeHooks } from "./internal/runtime";
 
 const LOG_COMPONENT = "ui5.hotkeys.KeyStateTracker";
-
-let instance: KeyStateTracker | null = null;
 
 /**
  * Tracks which keys are currently held down.
  *
- * Listens to `keydown`, `keyup`, and `blur` events to maintain an accurate
- * set of held keys. Includes a macOS fix for stuck keys when a modifier
- * is released (Cmd+Tab swallows the Tab keyup on macOS).
+ * Receives events from EventDispatcher via `processKeyDown`, `processKeyUp`,
+ * and `processBlur` — does NOT own any DOM listeners.
+ *
+ * Includes a macOS fix for stuck keys when a modifier is released
+ * (Cmd+Tab swallows the Tab keyup on macOS).
  *
  * Plain class — no UI5 lifecycle dependency.
+ *
+ * @public — exported for type usage. Obtain an instance via
+ * `HotkeyManager.getKeyStateTracker()`.
  */
 export default class KeyStateTracker {
   private _heldKeys: Set<string> = new Set();
@@ -23,22 +26,14 @@ export default class KeyStateTracker {
   private _platform: Platform;
   private _changeCallback: ((keys: readonly string[]) => void) | null = null;
 
-  private readonly _keydownHandler = this._onKeyDown.bind(this);
-  private readonly _keyupHandler = this._onKeyUp.bind(this);
-  private readonly _blurHandler = this._onBlur.bind(this);
-
-  constructor() {
-    this._platform = runtimeHooks.detectPlatform();
-    document.addEventListener("keydown", this._keydownHandler, true);
-    document.addEventListener("keyup", this._keyupHandler, true);
-    window.addEventListener("blur", this._blurHandler);
-  }
-
-  static getInstance(): KeyStateTracker {
-    if (!instance) {
-      instance = new KeyStateTracker();
+  /**
+   * @internal — Do not instantiate directly. Use `HotkeyManager.getKeyStateTracker()`.
+   */
+  constructor(platform: Platform, token: symbol) {
+    if (token !== INTERNAL_TOKEN) {
+      throw new Error("KeyStateTracker cannot be instantiated directly. Use HotkeyManager.getKeyStateTracker().");
     }
-    return instance;
+    this._platform = platform;
   }
 
   /**
@@ -70,23 +65,10 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Remove all event listeners and reset singleton state.
-   *
-   * Safe to call multiple times; after destroy, `getInstance()` creates a new,
-   * fresh tracker instance.
+   * Process a keydown event. Called by EventDispatcher.
+   * @internal
    */
-  destroy(): void {
-    document.removeEventListener("keydown", this._keydownHandler, true);
-    document.removeEventListener("keyup", this._keyupHandler, true);
-    window.removeEventListener("blur", this._blurHandler);
-    this._heldKeys.clear();
-    this._heldKeyCounts.clear();
-    this._heldByCode.clear();
-    this._changeCallback = null;
-    instance = null;
-  }
-
-  private _onKeyDown(event: KeyboardEvent): void {
+  processKeyDown(event: KeyboardEvent): void {
     const key = event.key;
     const code = event.code;
     let changed = false;
@@ -111,7 +93,11 @@ export default class KeyStateTracker {
     }
   }
 
-  private _onKeyUp(event: KeyboardEvent): void {
+  /**
+   * Process a keyup event. Called by EventDispatcher.
+   * @internal
+   */
+  processKeyUp(event: KeyboardEvent): void {
     const key = event.key;
 
     // macOS stuck-key fix (from TanStack): When a modifier is released,
@@ -140,7 +126,11 @@ export default class KeyStateTracker {
     }
   }
 
-  private _onBlur(): void {
+  /**
+   * Process a blur event (window lost focus). Called by EventDispatcher.
+   * @internal
+   */
+  processBlur(): void {
     if (this._heldKeys.size > 0) {
       this._heldKeys.clear();
       this._heldKeyCounts.clear();
@@ -151,6 +141,17 @@ export default class KeyStateTracker {
 
     this._heldKeyCounts.clear();
     this._heldByCode.clear();
+  }
+
+  /**
+   * Reset all state and clear callbacks.
+   * @internal — Called by EventDispatcher.destroy(), not by consumers.
+   */
+  destroy(): void {
+    this._heldKeys.clear();
+    this._heldKeyCounts.clear();
+    this._heldByCode.clear();
+    this._changeCallback = null;
   }
 
   private _releaseKeyEventIdentity(event: KeyboardEvent): boolean {

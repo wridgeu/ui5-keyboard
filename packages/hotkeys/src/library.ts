@@ -32,6 +32,8 @@ export type ConflictBehavior = (typeof ConflictBehavior)[keyof typeof ConflictBe
 export const UnhandledReason = Object.freeze({
   /** No registration matched the key combination in any scope. */
   NoMatch: "no_match",
+  /** A registration matched the key combo but the event target is outside the registration's target element. */
+  TargetMismatch: "target_mismatch",
   /** A registration matched, but its `enabled` option resolved to `false`. */
   Disabled: "disabled",
   /** A registration matched, but was suppressed because the target is an input element. */
@@ -40,6 +42,8 @@ export const UnhandledReason = Object.freeze({
   PopupSuppressed: "popup_suppressed",
   /** A registration matched, but was skipped because the key is held (`event.repeat`). */
   RepeatIgnored: "repeat_ignored",
+  /** Dispatch was suspended via a guard when the event arrived. */
+  Suspended: "suspended",
 } as const);
 export type UnhandledReason = (typeof UnhandledReason)[keyof typeof UnhandledReason];
 

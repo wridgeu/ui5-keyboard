@@ -9,7 +9,7 @@ import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
 import { ConflictBehavior } from "ui5/hotkeys/library";
-import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import { formatForDisplay } from "ui5/hotkeys/format";
 
 /**
@@ -104,7 +104,7 @@ export default class Main extends BaseController {
     });
 
     // D3: KeyStateTracker live display
-    this._keyTracker = KeyStateTracker.getInstance();
+    this._keyTracker = this._manager.getKeyStateTracker();
     this._keyTracker.setChangeCallback((keys) => {
       stateModel.setProperty("/heldKeys", keys.length > 0 ? keys.join(" + ") : "None");
     });
@@ -287,7 +287,7 @@ export default class Main extends BaseController {
       clearTimeout(this._pendingTimer);
       this._pendingTimer = null;
     }
-    this._keyTracker.destroy();
+    this._keyTracker.setChangeCallback(null);
     this._cleanupDialog();
   }
 

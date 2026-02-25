@@ -1,4 +1,5 @@
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { fireKey, fireKeyUp, fireBlur } from "./test-helpers";
 
@@ -10,7 +11,7 @@ QUnit.module("KeyStateTracker", {
     restoreRuntimeHooks = null;
 
     try {
-      KeyStateTracker.getInstance().destroy();
+      HotkeyManager.getInstance().destroy();
     } catch {
       // Not initialized yet
     }
@@ -20,21 +21,22 @@ QUnit.module("KeyStateTracker", {
     restoreRuntimeHooks = null;
 
     try {
-      KeyStateTracker.getInstance().destroy();
+      HotkeyManager.getInstance().destroy();
     } catch {
       // Already destroyed
     }
   },
 });
 
-QUnit.test("getInstance returns singleton", (assert) => {
-  const a = KeyStateTracker.getInstance();
-  const b = KeyStateTracker.getInstance();
+QUnit.test("getKeyStateTracker returns same instance", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const a = manager.getKeyStateTracker();
+  const b = manager.getKeyStateTracker();
   assert.strictEqual(a, b, "Same instance returned");
 });
 
 QUnit.test("Keydown adds key, keyup removes key", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
 
   fireKey("a");
   assert.ok(tracker.isKeyHeld("a"), "Key 'a' is held after keydown");
@@ -44,7 +46,7 @@ QUnit.test("Keydown adds key, keyup removes key", (assert) => {
 });
 
 QUnit.test("isKeyHeld returns correct state", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
 
   assert.notOk(tracker.isKeyHeld("Control"), "Control not held initially");
 
@@ -56,7 +58,7 @@ QUnit.test("isKeyHeld returns correct state", (assert) => {
 });
 
 QUnit.test("getHeldKeys returns snapshot", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
 
   fireKey("a");
   fireKey("b");
@@ -73,7 +75,7 @@ QUnit.test("getHeldKeys returns snapshot", (assert) => {
 });
 
 QUnit.test("Change callback fires on key changes", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
   const changes: string[][] = [];
 
   tracker.setChangeCallback((keys) => {
@@ -91,7 +93,7 @@ QUnit.test("Change callback fires on key changes", (assert) => {
 });
 
 QUnit.test("Blur clears all held keys", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
 
   fireKey("a");
   fireKey("Control", { ctrlKey: true });
@@ -103,7 +105,8 @@ QUnit.test("Blur clears all held keys", (assert) => {
 
 QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "mac" });
-  const tracker = KeyStateTracker.getInstance();
+  const manager = HotkeyManager.getInstance();
+  const tracker = manager.getKeyStateTracker();
 
   fireKey("Meta", { metaKey: true });
   fireKey("Tab");
@@ -119,15 +122,17 @@ QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
 });
 
 QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const manager = HotkeyManager.getInstance();
+  const tracker = manager.getKeyStateTracker();
 
   fireKey("a");
   assert.ok(tracker.isKeyHeld("a"), "Key held before destroy");
 
-  tracker.destroy();
+  manager.destroy();
 
-  // New instance should be fresh
-  const newTracker = KeyStateTracker.getInstance();
+  // New instance should have fresh tracker
+  const newManager = HotkeyManager.getInstance();
+  const newTracker = newManager.getKeyStateTracker();
   assert.strictEqual(newTracker.getHeldKeys().length, 0, "New instance has no held keys");
 
   // Old events should not affect new instance
@@ -140,7 +145,7 @@ QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("setChangeCallback(null) removes callback", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
   let callCount = 0;
 
   tracker.setChangeCallback(() => {
@@ -156,7 +161,7 @@ QUnit.test("setChangeCallback(null) removes callback", (assert) => {
 });
 
 QUnit.test("Change callback errors are isolated", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
   let safeCallbackCalls = 0;
 
   tracker.setChangeCallback(() => {
@@ -175,7 +180,7 @@ QUnit.test("Change callback errors are isolated", (assert) => {
 });
 
 QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
 
   fireKey("a");
   fireKey("a"); // Same key again
@@ -187,7 +192,7 @@ QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
 });
 
 QUnit.test("Keyup removes held key by code when key value changed", (assert) => {
-  const tracker = KeyStateTracker.getInstance();
+  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
 
   fireKey("A", { code: "KeyA", shiftKey: true });
   assert.ok(tracker.isKeyHeld("A"), "Uppercase key is tracked while Shift is held");
@@ -195,4 +200,14 @@ QUnit.test("Keyup removes held key by code when key value changed", (assert) => 
   fireKeyUp("a", { code: "KeyA" });
   assert.notOk(tracker.isKeyHeld("A"), "Held key is cleared using physical key code");
   assert.strictEqual(tracker.getHeldKeys().length, 0, "No held keys remain");
+});
+
+QUnit.test("Direct instantiation throws without INTERNAL_TOKEN", (assert) => {
+  assert.throws(
+    () => {
+      new KeyStateTracker("windows" as never, Symbol() as never);
+    },
+    /cannot be instantiated directly/i,
+    "Direct construction is blocked",
+  );
 });
