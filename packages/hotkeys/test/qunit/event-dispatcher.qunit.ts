@@ -6,10 +6,11 @@ import { fireKey, fireKeyOn, fireKeyUp, fireBlur } from "./test-helpers";
 
 declare const sinon: {
   spy: (
-    obj: unknown,
+    obj: object,
     method: string,
   ) => {
     callCount: number;
+    called: boolean;
     restore: () => void;
   };
 };
@@ -804,7 +805,7 @@ QUnit.test("Target-scoped: target = document is lower priority than document-lev
     () => {
       targetDocFired = true;
     },
-    { target: document as unknown as HTMLElement },
+    { target: document },
   );
 
   fireKey("F5");

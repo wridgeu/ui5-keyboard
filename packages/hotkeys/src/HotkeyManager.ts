@@ -821,7 +821,7 @@ export default class HotkeyManager extends BaseObject {
       return path;
     }
     // Fallback for environments where composedPath() is unavailable or empty
-    return [event.target, document, window].filter(Boolean) as EventTarget[];
+    return [event.target, document, window].filter((x): x is EventTarget => x != null);
   }
 
   /**

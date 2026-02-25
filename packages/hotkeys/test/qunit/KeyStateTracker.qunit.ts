@@ -1,5 +1,6 @@
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import { Platform } from "ui5/hotkeys/library";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { fireKey, fireKeyUp, fireBlur } from "./test-helpers";
 
@@ -205,7 +206,7 @@ QUnit.test("Keyup removes held key by code when key value changed", (assert) => 
 QUnit.test("Direct instantiation throws without INTERNAL_TOKEN", (assert) => {
   assert.throws(
     () => {
-      new KeyStateTracker("windows" as never, Symbol() as never);
+      new KeyStateTracker(Platform.Windows, Symbol() as never);
     },
     /cannot be instantiated directly/i,
     "Direct construction is blocked",
