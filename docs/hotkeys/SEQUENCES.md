@@ -36,7 +36,7 @@ manager.registerSequence(
 );
 ```
 
-`SequenceManager` is an internal class managed by `HotkeyManager` — access sequence functionality through `HotkeyManager.registerSequence()` and related facade methods. It receives pre-filtered key events from HotkeyManager's document listener (no own listener) and reads the active scope from `HotkeyManager` for scope-based filtering.
+`SequenceManager` is an internal class managed by `HotkeyManager` — access sequence functionality through `HotkeyManager.registerSequence()` and related facade methods. It receives pre-filtered key events from the EventDispatcher pipeline (step 6, after hotkey matching) and reads the active scope from `HotkeyManager` for scope-based filtering.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ manager.setSequencePendingHandler((info) => {
 
 ### Separate Class (not on HotkeyManager)
 
-Sequences are implemented as a separate `SequenceManager` class with its own matching algorithm. This keeps the core `HotkeyManager` focused on single-chord hotkeys. The two managers share scope state and a single document listener — `HotkeyManager` dispatches pre-filtered events to `SequenceManager.processKeyEvent()`.
+Sequences are implemented as a separate `SequenceManager` class with its own matching algorithm. This keeps the core `HotkeyManager` focused on single-chord hotkeys. The two systems share scope state and the centralized EventDispatcher — step 6 of the dispatch pipeline calls `SequenceManager.processKeyEvent()` after hotkey matching (step 5).
 
 ### No Standalone Hotkey Conflict Resolution
 

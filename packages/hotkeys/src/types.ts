@@ -228,12 +228,14 @@ export interface HotkeyOptions {
 
   /**
    * Bind the hotkey to a specific element instead of the document.
-   * The hotkey will only fire for events dispatched on this element.
-   * Scopes still apply — both target and scope must match.
+   * The hotkey will only fire when the target element appears in the event's
+   * `composedPath()`. Scopes still apply — both target and scope must match.
+   *
+   * For nested targets with the same key, the innermost matching target wins.
    *
    * **Note:** Document-level hotkeys with `stopPropagation: true` (the default)
    * will prevent target-bound hotkeys with the same key from firing, because
-   * the document capture listener fires before the target capture listener.
+   * the dispatch pipeline checks document-level registrations before target-scoped ones.
    * Set `stopPropagation: false` on the document-level registration to allow both.
    */
   target?: HTMLElement | Document;

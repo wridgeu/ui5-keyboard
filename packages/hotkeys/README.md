@@ -21,6 +21,7 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
   - [Debug Mode](#debug-mode)
   - [Unhandled Key Callback](#unhandled-key-callback)
   - [Target Elements](#target-elements)
+  - [Suspend Guard](#suspend-guard)
 - [SequenceManager](#sequencemanager)
 - [KeyStateTracker](#keystatetracker)
 - [HotkeyRecorder](#hotkeyrecorder)
@@ -156,9 +157,13 @@ Recommended stable consumer imports:
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
+import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 import { ConflictBehavior, GLOBAL_SCOPE, UnhandledReason } from "ui5/hotkeys/library";
-import type { Hotkey } from "ui5/hotkeys/types";
+import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 ```
+
+`HotkeyRecorder` and `KeyStateTracker` classes are exported for type declarations (e.g., `const tracker: KeyStateTracker = manager.getKeyStateTracker()`), but their constructors are internal — use `manager.createRecorder()` and `manager.getKeyStateTracker()` respectively.
 
 Advanced utility modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. This also includes modules such as `ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/dom`, `ui5/hotkeys/platform`, and `ui5/hotkeys/validate`.
 
@@ -187,6 +192,10 @@ const manager = HotkeyManager.getInstance();
 | `getRegistrations()`                   | Get all active registrations                          |
 | `getRegistrationsForScope(scopeId)`    | Filter registrations by scope                         |
 | `getPlatform()`                        | Get the detected platform                             |
+| `suspendDispatch(reason?)`             | Suspend dispatch, returns a guard handle              |
+| `isDispatchSuspended()`                | Whether dispatch is currently suspended               |
+| `createRecorder(options)`              | Create a HotkeyRecorder instance                      |
+| `getKeyStateTracker()`                 | Access the held-key state tracker                     |
 | `setUnhandledHandler(callback)`        | Set callback for unhandled key events                 |
 | `setDebugMode(enabled)`                | Enable/disable detailed keypress logging              |
 | `isDebugMode()`                        | Check if debug mode is on                             |
@@ -451,7 +460,7 @@ manager.setUnhandledHandler((ctx) => {
 manager.setUnhandledHandler(null);
 ```
 
-Reasons: `NoMatch`, `Disabled`, `InputSuppressed`, `PopupSuppressed`, `RepeatIgnored`.
+Reasons: `NoMatch`, `Disabled`, `InputSuppressed`, `PopupSuppressed`, `RepeatIgnored`, `TargetMismatch`, `Suspended`.
 
 ### Target Elements
 
@@ -466,9 +475,34 @@ manager.register("Mod+S", () => savePanel(), {
   description: "Save panel content",
 });
 
-// This hotkey only fires for keydown events on the panel element.
-// Document-level Mod+S (if registered) still works independently.
+// This hotkey only fires when the event's composedPath() includes the panel element.
+// Document-level registrations with stopPropagation: true (the default) block
+// target-scoped registrations with the same key. Set stopPropagation: false
+// on the document-level registration to allow both.
+// For nested targets with the same key, the innermost matching target wins.
 // Scopes still apply — both target and scope must match.
+```
+
+### Suspend Guard
+
+Temporarily suspend all hotkey and sequence dispatch (e.g., during onboarding overlays or guided tours):
+
+```ts
+// Acquire a guard — dispatch is suspended while any guard is active
+const guard = manager.suspendDispatch("onboarding-overlay");
+
+// Key state tracking continues normally.
+// Browser defaults are NOT suppressed (no preventDefault).
+// Unhandled callback fires with reason "suspended".
+
+// Release the guard to resume dispatch
+guard.release(); // idempotent — safe to call multiple times
+
+// Nested guards: all must be released before dispatch resumes
+const g1 = manager.suspendDispatch("outer");
+const g2 = manager.suspendDispatch("inner");
+g1.release(); // still suspended — g2 active
+g2.release(); // dispatch resumes
 ```
 
 ---
@@ -519,9 +553,9 @@ manager.setSequencePendingHandler((info) => {
 Track which keys are currently held down (useful for "hold Shift to multi-select" patterns):
 
 ```ts
-import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 
-const tracker = KeyStateTracker.getInstance();
+const tracker = manager.getKeyStateTracker();
 
 // Check if a key is held
 if (tracker.isKeyHeld("Shift")) {
@@ -536,13 +570,11 @@ tracker.setChangeCallback((keys) => {
   console.log("Currently held:", keys);
 });
 
-// Clean up
-tracker.destroy();
+// Clean up (remove callback — tracker lifecycle is owned by the manager)
+tracker.setChangeCallback(null);
 ```
 
-In long-lived shells (for example FLP), call `destroy()` when the tracker is no
-longer needed. `KeyStateTracker` attaches document/window listeners and keeps
-them until explicit teardown.
+The tracker is owned by `HotkeyManager` and shares its lifecycle — it is created and destroyed automatically. Access it via `manager.getKeyStateTracker()`. The `KeyStateTracker` class is exported for type declarations but its constructor is internal.
 
 > [!NOTE]
 > Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
@@ -554,9 +586,9 @@ them until explicit teardown.
 Capture a keyboard shortcut from user input — for "press a key to set shortcut" settings UIs:
 
 ```ts
-import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
+import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 
-const recorder = new HotkeyRecorder({
+const recorder = manager.createRecorder({
   onRecord: (hotkey) => {
     // hotkey = "Control+Shift+S" or "" (cleared via Backspace)
     model.setProperty("/shortcut", hotkey);
@@ -566,7 +598,7 @@ const recorder = new HotkeyRecorder({
   },
 });
 
-// Start listening (attaches a capture-phase keydown listener)
+// Start listening (sets the recorder as the manager's interceptor)
 recorder.start();
 // recorder.isRecording === true
 
@@ -579,13 +611,16 @@ recorder.start();
 
 // Manual stop (no callbacks fired)
 recorder.stop();
+
+// Clean up when done
+recorder.destroy();
 ```
 
 > [!IMPORTANT]
-> While recording, **all keyboard input is blocked** (`preventDefault` + `stopPropagation` in capture phase). Keep the recording window short.
+> While recording, **all keyboard input is blocked** (`preventDefault` + `stopImmediatePropagation`). Keep the recording window short.
 
 > [!TIP]
-> Not a singleton — create one per settings row if needed.
+> Not a singleton — create one per settings row via `manager.createRecorder()`. The `HotkeyRecorder` class is exported for type declarations but its constructor is internal.
 
 ---
 
@@ -730,10 +765,12 @@ ConflictBehavior.Allow; // "allow" — allow silently, no feedback
 
 // UnhandledReason — why a key event was not handled
 UnhandledReason.NoMatch; // "no_match"
+UnhandledReason.TargetMismatch; // "target_mismatch" — key matched but target element was not in composedPath
 UnhandledReason.Disabled; // "disabled"
 UnhandledReason.InputSuppressed; // "input_suppressed"
 UnhandledReason.PopupSuppressed; // "popup_suppressed"
 UnhandledReason.RepeatIgnored; // "repeat_ignored"
+UnhandledReason.Suspended; // "suspended" — dispatch was suspended via suspendDispatch()
 
 // Platform — detected platform
 Platform.Mac; // "mac"
@@ -814,6 +851,11 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 - The active scope's handler always wins over global. Use `getRegistrations()` to inspect all active registrations and their scopes
 - With router integration, the scope matches the route name — check that your route names match your scope strings
+
+**Hotkeys stopped firing unexpectedly:**
+
+- Check if dispatch is suspended: `manager.isDispatchSuspended()`. A suspend guard may not have been released
+- Check if a recorder is active — while recording, all hotkey dispatch is blocked
 
 **AltGr characters trigger hotkeys on Windows:**
 

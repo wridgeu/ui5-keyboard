@@ -7,7 +7,7 @@ This document describes the internal architecture, design decisions, and edge ca
 The library is split into focused, single-responsibility modules:
 
 ```
-HotkeyManager.ts     Singleton manager, event listener, scope stack, dispatch loop
+HotkeyManager.ts     Singleton manager, scope stack, hotkey/sequence dispatch
 RegistrationGroup.ts Scoped batch registration with auto-cleanup
 SequenceManager.ts   Multi-key sequence matching (e.g., G then E)
 KeyStateTracker.ts   Held-key state tracking with macOS stuck-key fix
@@ -21,14 +21,15 @@ dom.ts               Input element detection (text fields, textareas, contentEdi
 platform.ts          Platform detection (mac/windows/linux) and Mod resolution
 format.ts            Platform-aware display formatting
 library.ts           UI5 library entry point (Lib.init)
+internal/event-dispatcher.ts Centralized DOM listener + 7-step dispatch pipeline
 internal/dispatch-core.ts    Dispatch pipeline helpers and skip handling
-internal/listener-registry.ts Target listener reference counting
+internal/internal-token.ts   Runtime instantiation guard for internal classes
 internal/scope.ts            Scope string resolution and validation
 internal/skip-reason.ts      Internal dispatch skip-reason types
 internal/idgen.ts            Internal registration ID generator
 ```
 
-`HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). Anything under `ui5/hotkeys/internal/*` remains internal-only.
+`HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`) — their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
 
 ## UI5 Integration
 
@@ -52,32 +53,49 @@ The manager is a strict singleton accessed via `HotkeyManager.getInstance()`. Th
 
 ### Listener Setup
 
-A single `keydown` listener is attached to `document` in the **capture phase**:
+All DOM listeners are owned by a centralized `EventDispatcher` (internal class, created by `HotkeyManager`). Three listeners are attached to `window`:
 
 ```ts
-document.addEventListener("keydown", handler, { capture: true });
+window.addEventListener("keydown", handler, true); // capture phase
+window.addEventListener("keyup", handler, true); // capture phase
+window.addEventListener("blur", handler); // bubble phase
 ```
 
-Capture phase ensures the library sees the event before any UI5 controls or application handlers in the bubble phase. This is critical for `preventDefault()` and `stopPropagation()` to work as expected.
+Using `window` capture ensures the library sees events before any `document` or element-level listeners. This is critical for `preventDefault()`, `stopPropagation()`, and the interceptor mechanism (used by `HotkeyRecorder`).
 
-### Dispatch Flow
+### Dispatch Pipeline
+
+The EventDispatcher runs a deterministic 7-step pipeline on each `keydown`:
 
 ```
-keydown event
-  |
-  +-- IME guard: skip if event.isComposing || event.keyCode === 229
-  +-- Modifier-only guard: skip if key is Control, Shift, Alt, or Meta
-  |
-  +-- Resolve event target via composedPath (Shadow DOM safe)
-  +-- Check if target is an editable input element
-  +-- Check if a UI5 dialog is open (lazy)
-  |
-  +-- Pass 1: Match against ACTIVE SCOPE registrations (FIFO order)
-  |     First match wins -> fire callback -> done
-  |
-  +-- Pass 2: Match against GLOBAL scope registrations (FIFO order)
-        First match wins -> fire callback -> done
+keydown event (window capture)
+  │
+  ├─ Step 1: Key state tracking (KeyStateTracker.processKeyDown)
+  │           Always runs — even for modifiers, IME, suspended state
+  │
+  ├─ Step 2: Interceptor check (e.g., HotkeyRecorder)
+  │           If interceptor returns true → event consumed, pipeline stops
+  │
+  ├─ Step 3: Pre-filter
+  │           Skip if: IME composition, modifier-only, AltGr on Windows
+  │
+  ├─ Step 4: Suspend guard check
+  │           If any guard active → emit unhandled(Suspended), stop
+  │
+  ├─ Step 5: Hotkey dispatch (HotkeyManager._processHotkeys)
+  │           Pass 1: document-level registrations (active scope → global)
+  │           Pass 2: target-scoped via composedPath() (active scope → global)
+  │
+  ├─ Step 6: Sequence dispatch (SequenceManager.processKeyEvent)
+  │           Returns true if full match OR partial advance
+  │
+  └─ Step 7: Unhandled emission
+             If neither step 5 nor 6 consumed → emit unhandled callback
 ```
+
+### Suspend Guard
+
+`manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5–7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted — all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`.
 
 Each registration is checked against the following guards before the callback fires:
 
@@ -89,12 +107,22 @@ Each registration is checked against the following guards before the callback fi
 
 ### Two-Pass Matching
 
-The two-pass approach is the core of the scope system. When a keydown arrives:
+The two-pass approach is the core of the scope system. Document-level registrations are checked first:
 
-1. All registrations belonging to the **active scope** (top of the stack) are checked first.
-2. If no match is found, all **global scope** registrations are checked.
+1. All document-level registrations in the **active scope** (top of the stack) are checked first.
+2. If no match is found, all **global scope** document-level registrations are checked.
 
-This means a scoped handler for F5 always takes priority over a global F5 handler when that scope is active, without requiring the global handler to be aware of the scoped one.
+If a document-level match is found with `stopPropagation: true` (the default), target-scoped registrations are skipped entirely.
+
+### Target-Scoped Matching via composedPath()
+
+Target-scoped registrations use `event.composedPath()` for membership checks instead of per-element DOM listeners. The matching follows scope-first, innermost-wins semantics:
+
+1. **Active scope pass**: iterate `composedPath()` from index 0 (innermost) outward. For each node, check if it has target-scoped registrations in the active scope's bucket. The first match wins.
+2. **Global scope pass**: only if no active-scope target matched and active scope is not `GLOBAL_SCOPE`.
+3. **Skip-reason pass**: for unhandled tracking, iterate off-path targets whose key combo matches the event and record `TargetMismatch`.
+
+For nested targets with the same key, only the **innermost** matching target fires — regardless of `stopPropagation` settings. This is a deliberate design choice, not an artifact of DOM listener ordering.
 
 Registrations within each scope are matched in FIFO order (first registered, first matched).
 
@@ -286,6 +314,13 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 | Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`   |
 | sap.m not loaded                               | Lazy-load InstanceManager, only cache positive result  |
 | Router detach requires listener context        | Pass `this` as oListener to `detachBeforeRouteMatched` |
+| Nested target-scoped same key                  | Innermost target in composedPath() wins                |
+| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                |
+| Dispatch suspended via guard                   | Steps 5–7 skipped, UnhandledReason.Suspended reported  |
+| Closed shadow root targets                     | composedPath() stops at boundary — no match            |
+| Detached targets                               | Not in composedPath() — inactive until reattached      |
+| Empty composedPath()                           | Fallback to `[event.target, document, window]`         |
+| stopPropagation on window capture              | Blocks document-level listeners (UI5, third-party)     |
 
 ## Project Layout
 
@@ -307,11 +342,12 @@ packages/hotkeys/
     platform.ts          Platform detection and Mod resolution
     format.ts            Display formatting
     internal/
-      dispatch-core.ts   Internal dispatch helpers
-      listener-registry.ts Internal target listener registry
-      scope.ts           Scope string resolution and validation
-      skip-reason.ts     Internal skip-reason models
-      idgen.ts           Internal ID generator
+      event-dispatcher.ts  Centralized DOM listener + 7-step pipeline
+      dispatch-core.ts     Internal dispatch helpers
+      internal-token.ts    Runtime instantiation guard symbol
+      scope.ts             Scope string resolution and validation
+      skip-reason.ts       Internal skip-reason models
+      idgen.ts             Internal ID generator
     manifest.json       Library manifest (v2.0.0)
   test/qunit/
     testsuite.qunit.ts  Test suite runner (UI5 Test Starter)
@@ -345,15 +381,15 @@ packages/demo-app/
 
 ### SequenceManager
 
-Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key events from HotkeyManager (no own document listener). Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard logic as HotkeyManager (`ignoreInputs` defaults to `"auto"`). See [SEQUENCES.md](./SEQUENCES.md).
+Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key events from the EventDispatcher pipeline (step 6). Reads the active scope from HotkeyManager for scope-based filtering. Includes the same input-guard logic as HotkeyManager (`ignoreInputs` defaults to `"auto"`). See [SEQUENCES.md](./SEQUENCES.md).
 
 ### KeyStateTracker
 
-Tracks which keys are currently held down. Includes a macOS fix for stuck keys when a modifier is released (Cmd+Tab swallows the Tab keyup).
+Tracks which keys are currently held down. Owned by the EventDispatcher — created and destroyed as part of its lifecycle. Accessed via `manager.getKeyStateTracker()`. Receives events from the EventDispatcher pipeline (step 1) — always runs, even during recording or suspension. Includes a macOS fix for stuck keys when a modifier is released (Cmd+Tab swallows the Tab keyup).
 
 ### HotkeyRecorder
 
-Records a single keyboard shortcut from user input for "press a key" settings UIs. Not a singleton — multiple recorders can coexist.
+Records a single keyboard shortcut from user input for "press a key" settings UIs. Created via `manager.createRecorder()`. Implements the `KeyEventInterceptor` interface — when recording, it is set as the EventDispatcher's interceptor (step 2) and blocks all subsequent pipeline steps. Multiple recorders can coexist but only one can be active at a time (starting a second recorder detaches the first).
 
 ### validate.ts
 
