@@ -1,7 +1,18 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
+import type Log from "sap/base/Log";
 import { fireKey, fireKeyOn, fireKeyUp, fireBlur } from "./test-helpers";
+
+declare const sinon: {
+  spy: (
+    obj: unknown,
+    method: string,
+  ) => {
+    callCount: number;
+    restore: () => void;
+  };
+};
 
 let manager: HotkeyManager;
 
@@ -1013,4 +1024,81 @@ QUnit.test("composedPath fallback — event with empty composedPath uses target 
   assert.ok(fired, "Target-scoped hotkey fires via composedPath fallback");
 
   target.remove();
+});
+
+// ──────────────────────────────────────────────
+// Interceptor replacement logs warning
+// ──────────────────────────────────────────────
+
+QUnit.test("Interceptor replacement logs warning via sap/base/Log", (assert) => {
+  // Load sap/base/Log synchronously — module is already loaded by the library
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  assert.ok(LogModule, "sap/base/Log loaded synchronously");
+
+  // Spy on Log.warning
+  const spy = sinon.spy(LogModule, "warning");
+
+  try {
+    const recorderA = manager.createRecorder({ onRecord: () => {} });
+    const recorderB = manager.createRecorder({ onRecord: () => {} });
+
+    recorderA.start();
+    assert.strictEqual(spy.callCount, 0, "No warning before replacement");
+
+    // Starting recorderB replaces recorderA's interceptor
+    recorderB.start();
+    assert.strictEqual(spy.callCount, 1, "Log.warning fired on interceptor replacement");
+
+    recorderB.destroy();
+    recorderA.destroy();
+  } finally {
+    spy.restore();
+  }
+});
+
+// ──────────────────────────────────────────────
+// Target-scoped with same-origin iframe document
+// ──────────────────────────────────────────────
+
+QUnit.test("Target-scoped iframe document does NOT match parent document events", (assert) => {
+  const done = assert.async();
+
+  // Create a same-origin iframe
+  const iframe = document.createElement("iframe");
+  iframe.srcdoc = "<!DOCTYPE html><html><body></body></html>";
+  document.body.appendChild(iframe);
+
+  iframe.addEventListener("load", () => {
+    try {
+      const iframeDoc = iframe.contentDocument!;
+      assert.ok(iframeDoc, "iframe contentDocument is accessible (same-origin)");
+
+      let fired = false;
+      // Register with target set to the iframe's document
+      const handle = manager.register(
+        "Escape",
+        () => {
+          fired = true;
+        },
+        { target: iframeDoc },
+      );
+
+      // Fire a key event on the PARENT document — the iframe's document
+      // is NOT in the parent document's composedPath()
+      fireKey("Escape");
+      assert.notOk(fired, "Hotkey did NOT fire — iframe document is not in parent composedPath()");
+
+      // Verify it also doesn't fire from a child element in the parent document
+      const parentDiv = document.createElement("div");
+      document.body.appendChild(parentDiv);
+      fireKeyOn(parentDiv, "Escape");
+      assert.notOk(fired, "Hotkey did NOT fire from parent div either");
+      parentDiv.remove();
+
+      handle.unregister();
+    } finally {
+      iframe.remove();
+      done();
+    }
+  });
 });

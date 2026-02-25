@@ -1027,7 +1027,7 @@ New tests:
 - [x] Unit: key state tracks during interception
 - [x] Unit: `clearInterceptor` is owner-safe
 - [x] Unit: recorder `stopImmediatePropagation` blocks non-library window listeners during recording
-- [ ] Unit: interceptor replacement logs warning
+- [x] Unit: interceptor replacement logs warning
 - [x] Unit: multi-recorder contention — RecorderA starts, RecorderB replaces, RecorderA.onDetached() called, RecorderA.isRecording === false, RecorderA receives no events
 - [x] Unit: destroy-while-recording — manager destroyed while recorder active, onDetached() called, recorder.isRecording === false, recorder.isDestroyed === true
 - [x] Unit: target-scoped composedPath match
@@ -1061,7 +1061,7 @@ New tests:
 - [x] Unit: third-party document capture listener + stopPropagation true — external document listener does NOT fire (event stopped at window)
 - [x] Unit: third-party document bubble listener + stopPropagation true — external document listener does NOT fire
 - [x] Unit: target-scoped with `target: document` — treated as target-scoped, lower priority than document-level registrations
-- [ ] Unit: target-scoped with same-origin iframe document — does NOT match events from parent document
+- [x] Unit: target-scoped with same-origin iframe document — does NOT match events from parent document
 - [x] Unit: composedPath fallback — empty composedPath falls back to `[event.target, document, window]`
 - [x] Unit: suspend mid-sequence, release before timeout — sequence completes (pending state preserved)
 - [x] Unit: onDetached is idempotent — calling on already-stopped recorder does not throw
