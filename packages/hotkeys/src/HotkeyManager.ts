@@ -908,6 +908,8 @@ export default class HotkeyManager extends BaseObject {
     const pathSet = new Set(eventPath);
     const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
 
+    let result: HotkeyRegistration | null = null;
+
     for (const scope of scopesToCheck) {
       const bucket = this._registrationsByScope.get(scope);
       if (!bucket || bucket.targets.size === 0) continue;
@@ -930,10 +932,17 @@ export default class HotkeyManager extends BaseObject {
           logComponent: LOG_COMPONENT,
         });
 
-        if (matched) {
-          return matched;
+        if (matched && !result) {
+          result = matched;
+          // stopPropagation: true → skip remaining outer targets entirely
+          if (matched.options.stopPropagation) return result;
+          // stopPropagation: false → innermost still wins, but continue
+          // iterating outer targets for debug/skip-reason tracking
         }
       }
+
+      // If a match was found in this scope, don't check lower-priority scopes
+      if (result) break;
     }
 
     // Skip-reason pass for off-path targets: record TargetMismatch for
@@ -957,7 +966,7 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
-    return null;
+    return result;
   }
 
   /**

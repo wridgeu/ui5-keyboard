@@ -363,7 +363,8 @@ export interface UnhandledContext {
   readonly isPopupOpen: boolean;
   /**
    * The registration that matched the key combination but was skipped.
-   * Present for all reasons except `"no_match"`.
+   * Present for all reasons except `"no_match"` and `"suspended"` (no
+   * specific registration is evaluated when dispatch is suspended).
    */
   readonly skippedRegistration?: HotkeyRegistrationInfo;
 }

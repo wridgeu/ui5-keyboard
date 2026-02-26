@@ -533,21 +533,7 @@ interface ScopeRegistrationBucket {
 
 The `Map<EventTarget, Set<string>>` is essential for `_matchTargetRegistrations`: for each node in the `composedPath()`, it does `targets.get(node)` to find relevant registrations in O(1). A flat set would require iterating all registrations per path node — O(path_length \* registrations_in_scope) vs O(path_length + relevant_registrations).
 
-In `dispatch-core.ts`, add `eventPath` to `FindMatchOptions`:
-
-```ts
-interface FindMatchOptions {
-  event: KeyboardEvent;
-  isInput: boolean;
-  popupOpen: boolean;
-  eventPath: EventTarget[]; // NEW — pre-computed composedPath()
-  registrations: ReadonlyArray<HotkeyRegistration>;
-  skipInfo?: SkipInfo | null;
-  debugSkips?: DebugSkipEntry[] | null;
-  toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo;
-  logComponent: string;
-}
-```
+**Implementation note:** The original proposal planned to add `eventPath` to `FindMatchOptions` in `dispatch-core.ts`. In the final implementation, `findMatchInScope` operates on pre-filtered registrations (document-level, or for a specific target node) and does not need path awareness. Path iteration logic lives in `HotkeyManager._matchTargetRegistrations`, which calls `findMatchInScope` per-node. This keeps the dispatch-core module focused on single-scope matching without DOM coupling.
 
 **Note on `TargetMismatch` in `findMatchInScope`:** The `findMatchInScope` function is only called for document-level registrations (from `bucket.documentIds`), which do not have targets. No `TargetMismatch` check is needed here — document-level registrations match regardless of where the event target is in the DOM.
 
@@ -946,7 +932,7 @@ New tests:
 
 ### Target-scoped matching overhaul
 
-- [x] Add `eventPath: EventTarget[]` to `FindMatchOptions` interface in `dispatch-core.ts`
+- [x] ~Add `eventPath: EventTarget[]` to `FindMatchOptions` interface in `dispatch-core.ts`~ — path iteration handled in `HotkeyManager._matchTargetRegistrations`; `findMatchInScope` operates on pre-filtered registrations per-node
 - [x] Verify `findMatchInScope` is only called for document-level registrations (`bucket.documentIds`) — no `TargetMismatch` check needed here (see Phase 4 note). `TargetMismatch` tracking happens in `_matchTargetRegistrations`
 - [x] Keep `ScopeRegistrationBucket` split structure (`documentIds` + `targets` map) — required for O(1) per-target lookup during `composedPath()` iteration
 - [x] Retain `_indexRegistration` / `_deindexRegistration` split logic — add to `documentIds` or `targets` map based on whether registration has a target
