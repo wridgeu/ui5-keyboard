@@ -1,6 +1,6 @@
 /**
  * Scope names used for hotkey registration.
- * Values match the route names in manifest.json (plus "dialog" for non-route scopes).
+ * Values match the route names in manifest.json.
  */
 export const Scope = {
   Main: "main",
@@ -10,7 +10,6 @@ export const Scope = {
   HotkeysTargetBubble: "hotkeysTargetBubble",
   HotkeysConflict: "hotkeysConflict",
   Detail: "detail",
-  Dialog: "dialog",
   KioskHub: "kioskHub",
   KioskDocked: "kioskDocked",
   KioskPopover: "kioskPopover",

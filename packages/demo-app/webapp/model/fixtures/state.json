@@ -108,6 +108,7 @@
   "comboStatus": "",
   "recordedShortcut": "",
   "isRecording": false,
+  "physicalLastKey": "None",
   "kioskLastKey": "None",
   "kioskLayout": "qwerty",
   "kioskEnabled": true,

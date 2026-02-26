@@ -1,4 +1,5 @@
 import MessageToast from "sap/m/MessageToast";
+import JSONModel from "sap/ui/model/json/JSONModel";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
@@ -17,6 +18,8 @@ export default class Integration extends BaseController {
   private _hotkeys!: RegistrationGroup;
 
   onInit(): void {
+    this.getView()!.setModel(new JSONModel({ lastKioskKey: "None" }), "integration");
+
     this._manager = this.getTypedComponent().getHotkeyManager();
     this._hotkeys = this._manager.createGroup();
 
@@ -49,9 +52,11 @@ export default class Integration extends BaseController {
     const key = event.getParameter("key") ?? "";
     const shift = event.getParameter("shiftKey") ?? false;
     const display = shift ? `${key} (Shift)` : key;
+    const stateModel = this.getStateModel();
+    const viewModel = this.getView()!.getModel("integration") as JSONModel;
 
-    this.getStateModel().setProperty("/kioskLastKey", display || "None");
-    this.getStateModel().setProperty("/lastAction", "Kiosk keyPress event");
+    viewModel.setProperty("/lastKioskKey", display || "None");
+    stateModel.setProperty("/lastAction", "Kiosk keyPress event");
   }
 
   onExit(): void {

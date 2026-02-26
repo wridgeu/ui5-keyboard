@@ -18,8 +18,6 @@ export default class KioskComponent extends BaseController {
 
   onInit(): void {
     const stateModel = this.getStateModel();
-    stateModel.setProperty("/kioskIsOpen", false);
-    stateModel.setProperty("/kioskLastKey", "None");
 
     // Lazily create the keyboard once - it lives in sap-ui-static
     if (!KioskComponent._keyboard) {

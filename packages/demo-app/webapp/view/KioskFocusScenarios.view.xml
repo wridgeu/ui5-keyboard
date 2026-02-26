@@ -88,7 +88,7 @@
                             <StandardListItem
                                 title="{log>event}"
                                 description="{log>detail}"
-                                info="{ path: 'log>time', type: 'sap.ui.model.type.Time', formatOptions: { pattern: 'HH:mm:ss.SSS' } }"
+                                info="{ path: 'log>time', formatter: '.formatLogTime' }"
                                 infoState="{log>state}"
                                 type="Inactive" />
                         </List>

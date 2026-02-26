@@ -5,6 +5,8 @@ import MessageToast from "sap/m/MessageToast";
 import type { Select$ChangeEvent } from "sap/m/Select";
 import Select from "sap/m/Select";
 import Item from "sap/ui/core/Item";
+import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
+import JSONModel from "sap/ui/model/json/JSONModel";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
 import { Scope } from "../constants";
@@ -17,19 +19,32 @@ import BaseController from "./BaseController";
  * @name demo.hotkeys.controller.KioskProgrammatic
  */
 export default class KioskProgrammatic extends BaseController {
+  private static readonly _MODEL_NAME = "programmatic";
+
   onInit(): void {
-    const stateModel = this.getStateModel();
-    stateModel.setProperty("/kioskIsOpen", false);
-    stateModel.setProperty("/kioskKeyboardType", "Full");
-    stateModel.setProperty("/kioskLayout", "qwerty");
-    stateModel.setProperty("/kioskLastKey", "None");
-    stateModel.setProperty("/kioskEnabled", true);
+    this.getView()!.setModel(
+      new JSONModel({
+        kioskIsOpen: false,
+        kioskKeyboardType: "Full",
+        kioskLayout: "qwerty",
+        kioskLastKey: "None",
+        kioskEnabled: true,
+      }),
+      KioskProgrammatic._MODEL_NAME,
+    );
 
     const select = this.byId("layoutSelect") as Select;
     for (const name of KioskKeyboard.getRegisteredLayoutNames()) {
       select.addItem(new Item({ key: name, text: name }));
     }
     select.setSelectedKey("qwerty");
+
+    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+  }
+
+  onExit(): void {
+    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this._setRouteActive(false);
   }
 
   onShow(): void {
@@ -147,7 +162,7 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    this.getStateModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
+    this._getViewModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
   }
 
   onAfterOpen(): void {
@@ -163,7 +178,32 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   onNavBack(): void {
+    this._setRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+  }
+
+  private _onRouteMatched(event: Router$RouteMatchedEvent): void {
+    this._setRouteActive(event.getParameter("name") === Scope.KioskProgrammatic);
+  }
+
+  private _setRouteActive(active: boolean): void {
+    const kb = this.byId("progKeyboard") as KioskKeyboard | undefined;
+    if (!kb) return;
+
+    if (active) {
+      this._updateStatus();
+      return;
+    }
+
+    kb.resetKeyboardType();
+    kb.setLayout("qwerty");
+    kb.close();
+    const viewModel = this._getViewModel();
+    viewModel.setProperty("/kioskIsOpen", false);
+    viewModel.setProperty("/kioskLastKey", "None");
+    viewModel.setProperty("/kioskKeyboardType", "Full");
+    viewModel.setProperty("/kioskLayout", "qwerty");
+    viewModel.setProperty("/kioskEnabled", true);
   }
 
   private _getKeyboard(): KioskKeyboard {
@@ -172,14 +212,18 @@ export default class KioskProgrammatic extends BaseController {
 
   private _updateStatus(): void {
     const kb = this._getKeyboard();
-    const stateModel = this.getStateModel();
-    stateModel.setProperty("/kioskIsOpen", kb.isOpen());
-    stateModel.setProperty("/kioskKeyboardType", kb.getKeyboardType());
-    stateModel.setProperty("/kioskLayout", kb.getLayout());
+    const viewModel = this._getViewModel();
+    viewModel.setProperty("/kioskIsOpen", kb.isOpen());
+    viewModel.setProperty("/kioskKeyboardType", kb.getKeyboardType());
+    viewModel.setProperty("/kioskLayout", kb.getLayout());
 
     const select = this.byId("layoutSelect") as Select;
     if (select.getSelectedKey() !== kb.getLayout()) {
       select.setSelectedKey(kb.getLayout());
     }
+  }
+
+  private _getViewModel(): JSONModel {
+    return this.getView()!.getModel(KioskProgrammatic._MODEL_NAME) as JSONModel;
   }
 }

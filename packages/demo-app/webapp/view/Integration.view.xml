@@ -38,7 +38,7 @@
                     </HBox>
                     <HBox>
                         <Label text="Last Kiosk keyPress:" class="sapUiSmallMarginEnd" />
-                        <Text text="{state>/kioskLastKey}" />
+                        <Text text="{integration>/lastKioskKey}" />
                     </HBox>
                 </VBox>
             </Panel>

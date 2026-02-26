@@ -14,13 +14,8 @@ import BaseController from "./BaseController";
  * @name demo.hotkeys.controller.KioskPopover
  */
 export default class KioskPopover extends BaseController {
-  private _popover!: Popover | null;
-  private _keyboard!: KioskKeyboard | null;
-
-  onInit(): void {
-    this._popover = null;
-    this._keyboard = null;
-  }
+  private _popover: Popover | null = null;
+  private _keyboard: KioskKeyboard | null = null;
 
   onOpenKeyboard(event: Button$PressEvent): void {
     const button = event.getSource();

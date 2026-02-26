@@ -9,11 +9,11 @@
                 <VBox class="sapUiSmallMargin">
                     <HBox alignItems="Center">
                         <Label text="Enabled:" class="sapUiSmallMarginEnd" />
-                        <Switch state="{state>/kioskEnabled}" />
+                        <Switch state="{docked>/kioskEnabled}" />
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Mobile Keyboard:" class="sapUiSmallMarginEnd" />
-                        <SegmentedButton selectedKey="{state>/kioskMobileKeyboard}" selectionChange=".onMobileKeyboardChange">
+                        <SegmentedButton selectedKey="{docked>/kioskMobileKeyboard}" selectionChange=".onMobileKeyboardChange">
                             <items>
                                 <SegmentedButtonItem key="Custom" text="Custom" />
                                 <SegmentedButtonItem key="Native" text="Native" />
@@ -27,7 +27,7 @@
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="F-Key Mode:" class="sapUiSmallMarginEnd" />
-                        <SegmentedButton selectedKey="{state>/kioskFKeyMode}" selectionChange=".onFKeyModeChange">
+                        <SegmentedButton selectedKey="{docked>/kioskFKeyMode}" selectionChange=".onFKeyModeChange">
                             <items>
                                 <SegmentedButtonItem key="Virtual" text="Virtual" />
                                 <SegmentedButtonItem key="Native" text="Native" />
@@ -92,15 +92,15 @@
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="Last Key:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                        <ObjectStatus text="{docked>/kioskLastKey}" state="Information" />
                     </HBox>
                     <HBox>
                         <Label text="Active Layout:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskLayout}" state="Success" />
+                        <ObjectStatus text="{docked>/kioskLayout}" state="Success" />
                     </HBox>
                     <HBox>
                         <Label text="F-Key Mode:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskFKeyMode}" state="Information" />
+                        <ObjectStatus text="{docked>/kioskFKeyMode}" state="Information" />
                     </HBox>
                 </VBox>
             </Panel>
@@ -111,8 +111,8 @@
                 autoShow="true"
                 autoType="true"
                 inputIds="nameInput,emailInput,ageInput,phoneInput,notesInput"
-                enabled="{state>/kioskEnabled}"
-                fKeyMode="{state>/kioskFKeyMode}"
+                enabled="{docked>/kioskEnabled}"
+                fKeyMode="{docked>/kioskFKeyMode}"
                 keyPress=".onKeyPress"
                 layoutChange=".onDockedLayoutChange" />
         </content>

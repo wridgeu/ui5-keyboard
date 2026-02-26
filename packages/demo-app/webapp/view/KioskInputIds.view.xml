@@ -11,15 +11,15 @@
                 <VBox class="sapUiSmallMargin">
                     <HBox>
                         <Label text="Keyboard Type:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskKeyboardType}" state="Success" />
+                        <ObjectStatus text="{inputIds>/kioskKeyboardType}" state="Success" />
                     </HBox>
                     <HBox>
                         <Label text="Current Target:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskCurrentTarget}" state="Information" />
+                        <ObjectStatus text="{inputIds>/kioskCurrentTarget}" state="Information" />
                     </HBox>
                     <HBox>
                         <Label text="Last Key:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                        <ObjectStatus text="{inputIds>/kioskLastKey}" state="Information" />
                     </HBox>
                 </VBox>
             </Panel>
@@ -78,7 +78,7 @@
                                 </VBox>
                                 <HBox alignItems="Center">
                                     <Label text="autoType:" class="sapUiSmallMarginEnd" />
-                                    <Switch state="{state>/kioskAutoType}" />
+                                    <Switch state="{inputIds>/kioskAutoType}" />
                                 </HBox>
                             </HBox>
                         </VBox>
@@ -90,7 +90,7 @@
                 id="inputIdsKeyboard"
                 docked="true"
                 autoShow="true"
-                autoType="{state>/kioskAutoType}"
+                autoType="{inputIds>/kioskAutoType}"
                 inputIds="inputA,inputB,stepInputTarget,ui5WebcInput,wcInputTarget"
                 keyPress=".onKeyPress"
                 keyboardTypeChange=".onKeyboardTypeChange"

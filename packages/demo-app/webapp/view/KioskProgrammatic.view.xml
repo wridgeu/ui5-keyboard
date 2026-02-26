@@ -45,7 +45,7 @@
                         </HBox>
                         <HBox alignItems="Center" class="sapUiSmallMarginTop">
                             <Label text="Enabled:" class="sapUiSmallMarginEnd" />
-                            <Switch state="{state>/kioskEnabled}" />
+                            <Switch state="{programmatic>/kioskEnabled}" />
                         </HBox>
                     </VBox>
                 </Panel>
@@ -62,19 +62,19 @@
                         <VBox class="sapUiSmallMargin">
                             <HBox>
                                 <Label text="isOpen():" class="sapUiSmallMarginEnd" />
-                                <ObjectStatus text="{state>/kioskIsOpen}" state="Information" />
+                                <ObjectStatus text="{programmatic>/kioskIsOpen}" state="Information" />
                             </HBox>
                             <HBox>
                                 <Label text="Keyboard Type:" class="sapUiSmallMarginEnd" />
-                                <ObjectStatus text="{state>/kioskKeyboardType}" state="Success" />
+                                <ObjectStatus text="{programmatic>/kioskKeyboardType}" state="Success" />
                             </HBox>
                             <HBox>
                                 <Label text="Layout:" class="sapUiSmallMarginEnd" />
-                                <ObjectStatus text="{state>/kioskLayout}" state="Success" />
+                                <ObjectStatus text="{programmatic>/kioskLayout}" state="Success" />
                             </HBox>
                             <HBox>
                                 <Label text="Last Key:" class="sapUiSmallMarginEnd" />
-                                <ObjectStatus text="{state>/kioskLastKey}" state="Information" />
+                                <ObjectStatus text="{programmatic>/kioskLastKey}" state="Information" />
                             </HBox>
                         </VBox>
                     </Panel>
@@ -85,7 +85,7 @@
                 id="progKeyboard"
                 docked="true"
                 targetInput="progInput"
-                enabled="{state>/kioskEnabled}"
+                enabled="{programmatic>/kioskEnabled}"
                 keyPress=".onKeyPress"
                 layoutChange=".onLayoutEvent"
                 afterOpen=".onAfterOpen"

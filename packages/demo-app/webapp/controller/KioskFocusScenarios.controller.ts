@@ -106,6 +106,15 @@ export default class KioskFocusScenarios extends BaseController {
     this._logModel.setProperty("/entries", []);
   }
 
+  formatLogTime(value: Date | string | null): string {
+    if (!value) return "";
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const pad = (n: number, size: number): string => String(n).padStart(size, "0");
+    return `${pad(date.getHours(), 2)}:${pad(date.getMinutes(), 2)}:${pad(date.getSeconds(), 2)}.${pad(date.getMilliseconds(), 3)}`;
+  }
+
   onNavBack(): void {
     this._setKeyboardRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);

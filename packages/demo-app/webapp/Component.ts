@@ -87,7 +87,7 @@ export default class Component extends UIComponent {
       },
     );
 
-    // Track physical keyboard presses into the state model for demo event logs
+    // Track physical keyboard presses separately from kiosk virtual key events.
     this._keyDownHandler = (e: KeyboardEvent) => {
       if (e.key === "Unidentified" || e.key === "Process") return;
       const parts: string[] = [];
@@ -96,7 +96,7 @@ export default class Component extends UIComponent {
       if (e.shiftKey) parts.push("Shift");
       if (e.metaKey) parts.push("Meta");
       if (!["Control", "Alt", "Shift", "Meta"].includes(e.key)) parts.push(e.key);
-      if (parts.length) stateModel.setProperty("/kioskLastKey", parts.join(" + "));
+      if (parts.length) stateModel.setProperty("/physicalLastKey", parts.join(" + "));
     };
     document.addEventListener("keydown", this._keyDownHandler, true);
 
