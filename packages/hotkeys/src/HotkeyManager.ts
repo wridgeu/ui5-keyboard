@@ -142,6 +142,7 @@ export default class HotkeyManager extends BaseObject {
   private _lastFocusedAt = 0;
   private _lastBlurredElement: Element | null = null;
   private _lastBlurredAt = 0;
+  private _lastConsumedBlurFallbackAt = 0;
   private _focusInHandler = (event: FocusEvent): void => {
     const target = event.target;
     if (!(target instanceof Element)) {
@@ -160,6 +161,9 @@ export default class HotkeyManager extends BaseObject {
   private _focusOutHandler = (event: FocusEvent): void => {
     const target = event.target;
     if (!(target instanceof Element)) {
+      return;
+    }
+    if (this._isGenericRootNode(target)) {
       return;
     }
     this._lastBlurredElement = target;
@@ -753,6 +757,7 @@ export default class HotkeyManager extends BaseObject {
     this._lastFocusedAt = 0;
     this._lastBlurredElement = null;
     this._lastBlurredAt = 0;
+    this._lastConsumedBlurFallbackAt = 0;
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -935,17 +940,23 @@ export default class HotkeyManager extends BaseObject {
       !!lastFocusedElement &&
       this._isSameElementOrAncestor(this._lastBlurredElement, lastFocusedElement) &&
       Date.now() - this._lastBlurredAt <= FOCUS_PATH_FALLBACK_TTL_MS;
+    const hasUnconsumedRecentBlurFromLastFocused =
+      hasRecentBlurFromLastFocused && this._lastConsumedBlurFallbackAt !== this._lastBlurredAt;
+    const shouldUseFocusedElementFallback = hasRecentFocusOnLastFocused && !hasRecentBlurFromLastFocused;
     if (
       shouldUseFocusFallback &&
       lastFocusedElement &&
       lastFocusedElement.isConnected &&
-      (hasRecentFocusOnLastFocused || hasRecentBlurFromLastFocused) &&
+      (shouldUseFocusedElementFallback || hasUnconsumedRecentBlurFromLastFocused) &&
       !resolvedPath.includes(lastFocusedElement)
     ) {
       for (const node of this._getActiveElementPath(lastFocusedElement)) {
         if (!resolvedPath.includes(node)) {
           resolvedPath.push(node);
         }
+      }
+      if (hasUnconsumedRecentBlurFromLastFocused) {
+        this._lastConsumedBlurFallbackAt = this._lastBlurredAt;
       }
     }
 
@@ -971,6 +982,9 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Whether a node is a generic top-level dispatch target.
+   *
+   * Includes `#content` — the UI5 shell root where focus bounces during
+   * rendering transitions.
    */
   private _isGenericRootNode(node: EventTarget | null): boolean {
     if (!node) {

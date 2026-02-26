@@ -120,6 +120,5 @@
   "kioskIsOpen": false,
   "kioskKeyboardType": "Full",
   "kioskCurrentTarget": "None",
-  "kioskAutoType": false,
-  "hotkeysBubbleLog": ""
+  "kioskAutoType": false
 }

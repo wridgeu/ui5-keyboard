@@ -83,8 +83,8 @@ keydown event (window capture)
   │           If any guard active → emit unhandled(Suspended), stop
   │
   ├─ Step 5: Hotkey dispatch (HotkeyManager._processHotkeys)
-  │           Pass 1: document-level registrations (active scope → global)
-  │           Pass 2: target-scoped via composedPath() (active scope → global)
+  │           Pass 1: target-scoped via composedPath() (active scope → global)
+  │           Pass 2: document-level registrations (active scope → global)
   │
   ├─ Step 6: Sequence dispatch (SequenceManager.processKeyEvent)
   │           Returns true if full match OR partial advance
@@ -107,12 +107,12 @@ Each registration is checked against the following guards before the callback fi
 
 ### Two-Pass Matching
 
-The two-pass approach is the core of the scope system. Document-level registrations are checked first:
+The two-pass approach is the core of the scope system. Target-scoped registrations are checked first:
 
-1. All document-level registrations in the **active scope** (top of the stack) are checked first.
-2. If no match is found, all **global scope** document-level registrations are checked.
+1. All target-scoped registrations whose target appears in the event's `composedPath()` are checked, innermost first (active scope → global scope).
+2. If no target match stopped propagation, all document-level registrations are checked (active scope → global scope).
 
-If a document-level match is found with `stopPropagation: true` (the default), target-scoped registrations are skipped entirely.
+A target-scoped match with `stopPropagation: true` (the default) prevents document-level registrations from firing.
 
 ### Target-Scoped Matching via composedPath()
 
