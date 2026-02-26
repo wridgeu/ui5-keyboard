@@ -23,7 +23,7 @@ During this process the browser fires `compositionstart`, `compositionupdate`, a
 
 Hotkey matching must **not** interfere with IME composition. If a user is typing Chinese text and presses `S` as part of a pinyin sequence, that keystroke is not a hotkey attempt — it is part of character composition.
 
-The EventDispatcher's pre-filter step (`_shouldFilter`) checks for `event.isComposing` and `event.keyCode === 229`, silently dropping these events before they reach the hotkey matching pipeline.
+The EventDispatcher's pre-filter step (`_preFilterEvent`) checks for `event.isComposing` and `event.keyCode === 229`, silently dropping these events before they reach the hotkey matching pipeline.
 
 ### Edge cases
 

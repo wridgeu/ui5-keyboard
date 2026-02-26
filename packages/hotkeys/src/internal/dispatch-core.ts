@@ -31,7 +31,11 @@ export function findMatchInScope(options: FindMatchOptions): HotkeyRegistration 
     try {
       enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
     } catch (error) {
-      Log.error(`Error evaluating enabled() for "${registration.normalizedHotkey}": ${error}`, undefined, logComponent);
+      Log.warning(
+        `Error evaluating enabled() for "${registration.normalizedHotkey}": ${error}`,
+        undefined,
+        logComponent,
+      );
       enabled = false;
     }
     if (!enabled) {

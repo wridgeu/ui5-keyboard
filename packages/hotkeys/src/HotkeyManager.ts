@@ -4,7 +4,6 @@ import type Router from "sap/ui/core/routing/Router";
 import { ConflictBehavior, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./SequenceManager";
-import KeyStateTracker from "./KeyStateTracker";
 import HotkeyRecorder from "./HotkeyRecorder";
 import type { HotkeyRecorderOptions } from "./HotkeyRecorder";
 import EventDispatcher from "./internal/event-dispatcher";
@@ -27,6 +26,7 @@ import type {
   HotkeyRegistrationHandle,
   HotkeyRegistrationInfo,
   KeyboardDispatchGuard,
+  KeyStateTrackerApi,
   Platform,
   ResolvedHotkeyOptions,
   SequenceOptions,
@@ -344,10 +344,11 @@ export default class HotkeyManager extends BaseObject {
    * Access held-key state.
    *
    * The tracker is owned by the manager and shares its lifecycle — it is
-   * created and destroyed automatically. The `KeyStateTracker` class is
-   * exported for type declarations but its constructor is internal.
+   * created and destroyed automatically. Returns the consumer-facing
+   * `KeyStateTrackerApi` interface; internal lifecycle methods
+   * (`processKeyDown`, `destroy`, etc.) are not exposed.
    */
-  getKeyStateTracker(): KeyStateTracker {
+  getKeyStateTracker(): KeyStateTrackerApi {
     return this._dispatcher.keyStateTracker;
   }
 
@@ -360,6 +361,7 @@ export default class HotkeyManager extends BaseObject {
    * become active, while non-global hotkeys in other scopes are paused.
    */
   pushScope(scopeId: string): void {
+    this._assertAlive("pushScope");
     const normalized = resolveRequiredScope(scopeId);
     this._scopeStack.push(normalized);
     Log.debug(`Pushed scope "${normalized}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
@@ -374,6 +376,7 @@ export default class HotkeyManager extends BaseObject {
    *   or if the scopeId does not match the top.
    */
   popScope(scopeId: string): void {
+    this._assertAlive("popScope");
     const normalized = resolveRequiredScope(scopeId);
     if (this._scopeStack.length <= 1) {
       throw new Error("Cannot pop the global scope");
@@ -402,6 +405,7 @@ export default class HotkeyManager extends BaseObject {
    * or any scenario where stale scopes need to be cleared.
    */
   resetToGlobalScope(): void {
+    this._assertAlive("resetToGlobalScope");
     if (this._scopeStack.length > 1) {
       const depth = this._scopeStack.length - 1;
       this._scopeStack = [GLOBAL_SCOPE];
@@ -443,6 +447,7 @@ export default class HotkeyManager extends BaseObject {
    * ```
    */
   enableRouterIntegration(router: Router): void {
+    this._assertAlive("enableRouterIntegration");
     if (this._routerCleanup) {
       throw new Error("Router integration is already enabled");
     }
@@ -472,6 +477,7 @@ export default class HotkeyManager extends BaseObject {
    * @throws Error if router integration is not enabled.
    */
   disableRouterIntegration(): void {
+    this._assertAlive("disableRouterIntegration");
     if (!this._routerCleanup) {
       throw new Error("Router integration is not enabled");
     }
@@ -583,6 +589,7 @@ export default class HotkeyManager extends BaseObject {
    * Pass `null` to remove the callback.
    */
   setSequencePendingHandler(callback: SequencePendingCallback | null): void {
+    this._assertAlive("setSequencePendingHandler");
     this._getSequenceManager().setPendingCallback(callback);
   }
 
@@ -636,6 +643,7 @@ export default class HotkeyManager extends BaseObject {
    * ```
    */
   setUnhandledHandler(callback: UnhandledCallback | null): void {
+    this._assertAlive("setUnhandledHandler");
     this._unhandledCallback = callback;
   }
 
@@ -653,6 +661,7 @@ export default class HotkeyManager extends BaseObject {
    * - External conflicts from browser/SAP blocklists
    */
   setDebugMode(enabled: boolean): void {
+    this._assertAlive("setDebugMode");
     this._debugMode = enabled;
     Log.info(`Debug mode ${enabled ? "enabled" : "disabled"}`, undefined, LOG_COMPONENT);
   }

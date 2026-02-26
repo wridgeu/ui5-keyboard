@@ -328,7 +328,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 packages/hotkeys/
   src/
     library.ts           UI5 Lib.init() entry point, apiVersion 2
-    HotkeyManager.ts     Core singleton, event listener, scope stack, dispatch loop
+    HotkeyManager.ts     Core singleton, scope stack, dispatch routing
     RegistrationGroup.ts Scoped batch registration with auto-cleanup
     SequenceManager.ts   Multi-key sequence matching
     KeyStateTracker.ts   Held-key state tracking

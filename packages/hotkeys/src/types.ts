@@ -379,6 +379,27 @@ export interface UnhandledContext {
 export type UnhandledCallback = (context: UnhandledContext) => void;
 
 // ──────────────────────────────────────────────
+// KeyStateTracker (consumer-facing view)
+// ──────────────────────────────────────────────
+
+/**
+ * Read-only consumer view of the held-key tracker.
+ *
+ * The concrete `KeyStateTracker` class exposes additional lifecycle
+ * methods (`processKeyDown`, `processKeyUp`, `processBlur`, `destroy`)
+ * that are `@internal` — this interface hides them so that callers of
+ * `HotkeyManager.getKeyStateTracker()` cannot break dispatcher-owned state.
+ */
+export interface KeyStateTrackerApi {
+  /** Get a snapshot of currently held keys. */
+  getHeldKeys(): readonly string[];
+  /** Check whether a specific key is currently held. */
+  isKeyHeld(key: string): boolean;
+  /** Set a callback that fires whenever the held keys change. Pass `null` to remove. */
+  setChangeCallback(callback: ((keys: readonly string[]) => void) | null): void;
+}
+
+// ──────────────────────────────────────────────
 // Suspend guard
 // ──────────────────────────────────────────────
 
