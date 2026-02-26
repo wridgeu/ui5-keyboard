@@ -5,10 +5,10 @@
     xmlns="sap.m">
     <Page id="targetBubblePage" title="Hotkeys Demo - Target Bubbling" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <HBox fitContainer="true" renderType="Bare">
-                <VBox class="sapUiSmallMarginEnd">
+            <HBox fitContainer="true" renderType="Bare" wrap="Wrap" gap="1rem">
+                <VBox>
                     <layoutData>
-                        <FlexItemData growFactor="1" />
+                        <FlexItemData growFactor="1" baseSize="20rem" />
                     </layoutData>
                     <Panel headerText="Scenario" class="sapUiSmallMarginBottom">
                         <VBox class="sapUiSmallMargin">
@@ -39,7 +39,7 @@
                 <!-- Live event log -->
                 <Panel>
                     <layoutData>
-                        <FlexItemData growFactor="1" baseSize="20rem" />
+                        <FlexItemData growFactor="1" baseSize="20rem" shrinkFactor="0" />
                     </layoutData>
                     <headerToolbar>
                         <OverflowToolbar>

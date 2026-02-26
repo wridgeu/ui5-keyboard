@@ -38,11 +38,6 @@
       "title": "Conflict Behavior",
       "description": "Warn/Allow/Replace/Error strategies for duplicate registrations",
       "route": "hotkeysConflict"
-    },
-    {
-      "title": "Integration Demo",
-      "description": "Jump to combined ui5.hotkeys + ui5.kiosk page",
-      "route": "integration"
     }
   ],
   "kioskDemoEntries": [

@@ -11,10 +11,10 @@
                 showIcon="true"
                 class="sapUiSmallMarginBottom" />
 
-            <HBox fitContainer="true" renderType="Bare">
-                <Panel id="scenarioArea" headerText="Scenarios" class="sapUiSmallMarginEnd">
+            <HBox fitContainer="true" renderType="Bare" wrap="Wrap" gap="1rem">
+                <Panel id="scenarioArea" headerText="Scenarios">
                     <layoutData>
-                        <FlexItemData growFactor="1" />
+                        <FlexItemData growFactor="1" baseSize="20rem" />
                     </layoutData>
                     <VBox class="sapUiSmallMargin">
                         <!-- 1. Multiple inputIds — keyboard stays open on tab -->
@@ -71,7 +71,7 @@
                 <!-- Live event log -->
                 <Panel>
                     <layoutData>
-                        <FlexItemData baseSize="20rem" />
+                        <FlexItemData growFactor="1" baseSize="20rem" shrinkFactor="0" />
                     </layoutData>
                     <headerToolbar>
                         <OverflowToolbar>
