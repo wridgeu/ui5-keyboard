@@ -298,17 +298,18 @@ QUnit.test("Target-scoped: composedPath miss", (assert) => {
   other.remove();
 });
 
-QUnit.test("Target-scoped: document priority (stopPropagation: true)", (assert) => {
+QUnit.test("Target-scoped: target priority over document (stopPropagation: true)", (assert) => {
   const target = document.createElement("div");
   document.body.appendChild(target);
 
   let docFired = false;
   let targetFired = false;
 
-  // Document-level with stopPropagation: true (default) → blocks target-scoped
+  // Document-level handler exists, but target-scoped fires first
   manager.register("Escape", () => {
     docFired = true;
   });
+  // Target-scoped with stopPropagation: true (default) → blocks document-level
   manager.register(
     "Escape",
     () => {
@@ -318,37 +319,34 @@ QUnit.test("Target-scoped: document priority (stopPropagation: true)", (assert) 
   );
 
   fireKeyOn(target, "Escape");
-  assert.ok(docFired, "Document-level callback fired");
-  assert.notOk(targetFired, "Target-scoped callback skipped (document stopPropagation: true)");
+  assert.ok(targetFired, "Target-scoped callback fired (target has priority)");
+  assert.notOk(docFired, "Document-level callback skipped (target stopPropagation: true)");
 
   target.remove();
 });
 
-QUnit.test("Target-scoped: document without stopPropagation + target — both fire", (assert) => {
+QUnit.test("Target-scoped: target without stopPropagation + document — both fire", (assert) => {
   const target = document.createElement("div");
   document.body.appendChild(target);
 
   let docFired = false;
   let targetFired = false;
 
-  manager.register(
-    "Escape",
-    () => {
-      docFired = true;
-    },
-    { stopPropagation: false },
-  );
+  manager.register("Escape", () => {
+    docFired = true;
+  });
+  // Target-scoped with stopPropagation: false → allows document-level to fire too
   manager.register(
     "Escape",
     () => {
       targetFired = true;
     },
-    { target },
+    { target, stopPropagation: false },
   );
 
   fireKeyOn(target, "Escape");
-  assert.ok(docFired, "Document-level callback fired");
-  assert.ok(targetFired, "Target-scoped callback also fired (doc stopPropagation: false)");
+  assert.ok(targetFired, "Target-scoped callback fired first");
+  assert.ok(docFired, "Document-level callback also fired (target stopPropagation: false)");
 
   target.remove();
 });
@@ -448,34 +446,71 @@ QUnit.test("Target-scoped: allowBubble skips outer when inner unregisters it", (
   outer.remove();
 });
 
-QUnit.test("Target-scoped: stopPropagation stops bubbling even when allowBubble is true", (assert) => {
+QUnit.test("Target-scoped: stopPropagation on inner does not block allowBubble", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
   document.body.appendChild(outer);
 
-  let outerFired = false;
-  let innerFired = false;
+  const firedOrder: string[] = [];
 
   manager.register(
     "Escape",
     () => {
-      outerFired = true;
+      firedOrder.push("outer");
     },
     { target: outer, stopPropagation: false },
   );
   manager.register(
     "Escape",
     () => {
-      innerFired = true;
+      firedOrder.push("inner");
     },
     { target: inner, allowBubble: true, stopPropagation: true },
   );
 
   fireKeyOn(inner, "Escape");
 
-  assert.ok(innerFired, "Inner callback fired");
-  assert.notOk(outerFired, "Outer callback blocked by stopPropagation on inner match");
+  assert.deepEqual(
+    firedOrder,
+    ["inner", "outer"],
+    "allowBubble controls internal target traversal independently from stopPropagation",
+  );
+
+  outer.remove();
+});
+
+QUnit.test("Target-scoped: stopPropagation on inner blocks document-level even when allowBubble is true", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let docCalled = false;
+  const firedOrder: string[] = [];
+
+  manager.register("Escape", () => {
+    docCalled = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      firedOrder.push("outer");
+    },
+    { target: outer, stopPropagation: false },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      firedOrder.push("inner");
+    },
+    { target: inner, allowBubble: true, stopPropagation: true },
+  );
+
+  fireKeyOn(inner, "Escape");
+
+  assert.deepEqual(firedOrder, ["inner", "outer"], "Both target handlers fire via allowBubble");
+  assert.notOk(docCalled, "Document-level handler blocked by stopPropagation on inner target match");
 
   outer.remove();
 });
@@ -947,15 +982,15 @@ QUnit.test("Window capture listener fires even with stopPropagation: true", (ass
 // Target-scoped: target = document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped: target = document is lower priority than document-level", (assert) => {
+QUnit.test("Target-scoped: target = document has higher priority than document-level", (assert) => {
   let docLevelFired = false;
   let targetDocFired = false;
 
-  // Document-level (no target) — higher priority
+  // Document-level (no target) — lower priority (fallback)
   manager.register("F5", () => {
     docLevelFired = true;
   });
-  // target: document — treated as target-scoped, lower priority
+  // target: document — treated as target-scoped, fires first
   manager.register(
     "F5",
     () => {
@@ -965,8 +1000,8 @@ QUnit.test("Target-scoped: target = document is lower priority than document-lev
   );
 
   fireKey("F5");
-  assert.ok(docLevelFired, "Document-level registration fired");
-  assert.notOk(targetDocFired, "target:document registration did NOT fire (doc-level stopPropagation blocks it)");
+  assert.ok(targetDocFired, "target:document registration fired (target-scoped has priority)");
+  assert.notOk(docLevelFired, "Document-level registration did NOT fire (target stopPropagation blocks it)");
 });
 
 // ──────────────────────────────────────────────

@@ -731,8 +731,8 @@ export default class HotkeyManager extends BaseObject {
    * Process hotkeys for a pre-filtered, non-suspended keydown event.
    *
    * Two-pass matching:
-   *   Pass 1: document-level registrations (active scope → global)
-   *   Pass 2: target-scoped registrations via composedPath() (active scope → global)
+   *   Pass 1: target-scoped registrations via composedPath() (active scope → global)
+   *   Pass 2: document-level registrations (active scope → global)
    *
    * Returns a result with `consumed` flag and, when not consumed, an opaque
    * `eventContext` that the dispatcher passes through to `emitUnhandled`.
@@ -751,20 +751,7 @@ export default class HotkeyManager extends BaseObject {
     const skipInfo: SkipInfo | null = needsSkipTracking ? { reason: UnhandledReason.NoMatch } : null;
     const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
 
-    // Pass 1: document-level registrations (no target)
-    const docMatch = this._matchDocumentRegistrations(event, activeScope, isInput, popupOpen, skipInfo, debugSkips);
-
-    if (docMatch) {
-      this._executeMatch(event, docMatch);
-      if (this._debugMode) {
-        this._logDebugEvent(event, activeScope, isInput, popupOpen, docMatch, debugSkips);
-      }
-      // If matched with stopPropagation, skip target-scoped registrations entirely.
-      if (docMatch.options.stopPropagation) return { consumed: true };
-      // Document match WITHOUT stopPropagation allows target-scoped matching to proceed.
-    }
-
-    // Pass 2: target-scoped registrations — innermost-first, optional bubbling.
+    // Pass 1: target-scoped registrations — innermost-first, optional bubbling.
     const targetMatches = this._matchTargetRegistrations(
       event,
       eventPath,
@@ -775,9 +762,10 @@ export default class HotkeyManager extends BaseObject {
       debugSkips,
     );
 
+    let targetConsumed = false;
+    let targetStopPropagation = false;
+    let firstExecutedTargetMatch: HotkeyRegistration | null = null;
     if (targetMatches.length > 0) {
-      let firstExecutedTargetMatch: HotkeyRegistration | null = null;
-
       for (const targetMatch of targetMatches) {
         // A prior callback in the same event cycle may have unregistered this match.
         if (!this._registrationState.get(targetMatch.id)?.active) {
@@ -785,23 +773,29 @@ export default class HotkeyManager extends BaseObject {
         }
 
         this._executeMatch(event, targetMatch);
-        if (!firstExecutedTargetMatch) {
-          firstExecutedTargetMatch = targetMatch;
-        }
+        if (!targetConsumed) targetConsumed = true;
+        if (!firstExecutedTargetMatch) firstExecutedTargetMatch = targetMatch;
+        if (targetMatch.options.stopPropagation) targetStopPropagation = true;
       }
 
-      if (firstExecutedTargetMatch) {
+      if (firstExecutedTargetMatch && this._debugMode) {
+        this._logDebugEvent(event, activeScope, isInput, popupOpen, firstExecutedTargetMatch, debugSkips);
+      }
+    }
+
+    // Pass 2: document-level registrations (only if no target match stopped propagation)
+    if (!targetStopPropagation) {
+      const docMatch = this._matchDocumentRegistrations(event, activeScope, isInput, popupOpen, skipInfo, debugSkips);
+      if (docMatch) {
+        this._executeMatch(event, docMatch);
         if (this._debugMode) {
-          this._logDebugEvent(event, activeScope, isInput, popupOpen, firstExecutedTargetMatch, debugSkips);
+          this._logDebugEvent(event, activeScope, isInput, popupOpen, docMatch, debugSkips);
         }
         return true;
       }
     }
 
-    // Document match without stopPropagation still counts as consumed — callback already fired.
-    if (docMatch) {
-      return { consumed: true };
-    }
+    if (targetConsumed) return true;
 
     // Nothing matched at all
     if (this._debugMode) {
@@ -1001,7 +995,7 @@ export default class HotkeyManager extends BaseObject {
 
         if (matched) {
           matches.push(matched);
-          if (matched.options.stopPropagation || !matched.options.allowBubble) {
+          if (!matched.options.allowBubble) {
             return matches;
           }
         }

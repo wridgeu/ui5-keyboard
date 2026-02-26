@@ -12,7 +12,10 @@
                 class="sapUiSmallMarginBottom" />
 
             <HBox fitContainer="true" renderType="Bare">
-                <Panel id="scenarioArea" headerText="Scenarios" class="sapUiSmallMarginEnd" layoutData="{sap.m.FlexItemData: {growFactor: 1}}">
+                <Panel id="scenarioArea" headerText="Scenarios" class="sapUiSmallMarginEnd">
+                    <layoutData>
+                        <FlexItemData growFactor="1" />
+                    </layoutData>
                     <VBox class="sapUiSmallMargin">
                         <!-- 1. Multiple inputIds — keyboard stays open on tab -->
                         <Label text="1. Tab between targeted inputs — keyboard stays open" design="Bold" class="sapUiTinyMarginBottom" />
@@ -66,7 +69,10 @@
                 </Panel>
 
                 <!-- Live event log -->
-                <Panel layoutData="{sap.m.FlexItemData: {baseSize: '20rem'}}">
+                <Panel>
+                    <layoutData>
+                        <FlexItemData baseSize="20rem" />
+                    </layoutData>
                     <headerToolbar>
                         <OverflowToolbar>
                             <Title text="Event Log" />
@@ -74,17 +80,19 @@
                             <Button icon="sap-icon://delete" tooltip="Clear log" press=".onClearLog" type="Transparent" />
                         </OverflowToolbar>
                     </headerToolbar>
-                    <List
-                        id="logList"
-                        items="{log>/entries}"
-                        noDataText="No events yet — interact with the scenarios to the left">
-                        <StandardListItem
-                            title="{log>event}"
-                            description="{log>detail}"
-                            info="{log>time}"
-                            infoState="{log>state}"
-                            type="Inactive" />
-                    </List>
+                    <ScrollContainer height="60vh" vertical="true">
+                        <List
+                            id="logList"
+                            items="{log>/entries}"
+                            noDataText="No events yet — interact with the scenarios to the left">
+                            <StandardListItem
+                                title="{log>event}"
+                                description="{log>detail}"
+                                info="{ path: 'log>time', type: 'sap.ui.model.type.Time', formatOptions: { pattern: 'HH:mm:ss.SSS' } }"
+                                infoState="{log>state}"
+                                type="Inactive" />
+                        </List>
+                    </ScrollContainer>
                 </Panel>
             </HBox>
 

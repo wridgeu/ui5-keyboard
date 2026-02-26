@@ -1,9 +1,21 @@
 import MessageToast from "sap/m/MessageToast";
+import type App from "sap/m/App";
+import type Input from "sap/m/Input";
 import type { Switch$ChangeEvent } from "sap/m/Switch";
+import type View from "sap/ui/core/mvc/View";
+import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
+import JSONModel from "sap/ui/model/json/JSONModel";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
+
+interface LogEntry {
+  time: string;
+  event: string;
+  detail: string;
+  state: string;
+}
 
 /**
  * Target-scoped bubbling scenario demo.
@@ -11,22 +23,27 @@ import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
  * @name demo.hotkeys.controller.HotkeysTargetBubble
  */
 export default class HotkeysTargetBubble extends BaseController {
+  private static readonly _MAX_LOG = 80;
+
   private _manager!: HotkeyManager;
   private _outerHandle: HotkeyRegistrationHandle | null = null;
   private _innerHandle: HotkeyRegistrationHandle | null = null;
+  private _docFallbackHandle: HotkeyRegistrationHandle | null = null;
+  private _logModel!: JSONModel;
+  private _renderDelegate = { onAfterRendering: () => this._bindTargetHotkeys() };
+  private _focusTimers: number[] = [];
 
   onInit(): void {
     this._manager = this.getTypedComponent().getHotkeyManager();
     const stateModel = this.getStateModel();
     stateModel.setProperty("/hotkeysBubbleEnabled", false);
-    stateModel.setProperty(
-      "/hotkeysBubbleLog",
-      "Focus the inner input and press Escape.\nExpect only inner by default; enable allowBubble for inner+outer.",
-    );
-  }
 
-  onAfterRendering(): void {
-    this._bindTargetHotkeys();
+    this._logModel = new JSONModel({ entries: [] as LogEntry[] });
+    this.getView()!.setModel(this._logModel, "bubbleLog");
+
+    // Re-bind whenever the target container re-renders (DOM refs change)
+    this.byId("outerTargetBox")!.addEventDelegate(this._renderDelegate);
+    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onToggleBubble(event: Switch$ChangeEvent): void {
@@ -35,11 +52,19 @@ export default class HotkeysTargetBubble extends BaseController {
     this._bindTargetHotkeys();
   }
 
+  onClearLog(): void {
+    this._logModel.setProperty("/entries", []);
+  }
+
   onNavBack(): void {
     this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
   }
 
   onExit(): void {
+    this.byId("outerTargetBox")?.removeEventDelegate(this._renderDelegate);
+    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this._setAppAutoFocus(true);
+    this._clearFocusTimers();
     this._destroyHandles();
   }
 
@@ -48,19 +73,35 @@ export default class HotkeysTargetBubble extends BaseController {
 
     const outerTarget = this.byId("outerTargetBox")?.getDomRef();
     const innerTarget = this.byId("innerTargetBox")?.getDomRef();
-    if (!outerTarget || !innerTarget) return;
+    if (!outerTarget || !innerTarget) {
+      return;
+    }
 
     const stateModel = this.getStateModel();
+    const bubbleEnabled = stateModel.getProperty("/hotkeysBubbleEnabled") as boolean;
+
+    this._docFallbackHandle = this._manager.register(
+      "Escape",
+      () => {
+        this._addLogEntry("Escape", "outside nested target (refocus input)", "Information");
+        this._focusBubbleInput();
+      },
+      {
+        scope: Scope.HotkeysTargetBubble,
+        stopPropagation: false,
+        description: "Route fallback Escape",
+      },
+    );
 
     this._outerHandle = this._manager.register(
       "Escape",
       () => {
-        this._appendLogLine("outer target fired");
+        this._addLogEntry("Escape", "outer target fired", "Warning");
       },
       {
         scope: Scope.HotkeysTargetBubble,
         target: outerTarget as HTMLElement,
-        stopPropagation: false,
+        stopPropagation: true,
         description: "Outer target Escape",
       },
     );
@@ -68,27 +109,100 @@ export default class HotkeysTargetBubble extends BaseController {
     this._innerHandle = this._manager.register(
       "Escape",
       () => {
-        this._appendLogLine("inner target fired");
+        this._addLogEntry("Escape", "inner target fired", "Success");
         stateModel.setProperty("/lastAction", "Target bubble demo fired");
         MessageToast.show("Inner target fired");
       },
       {
         scope: Scope.HotkeysTargetBubble,
         target: innerTarget as HTMLElement,
-        allowBubble: stateModel.getProperty("/hotkeysBubbleEnabled") as boolean,
-        stopPropagation: false,
+        allowBubble: bubbleEnabled,
+        stopPropagation: !bubbleEnabled,
         description: "Inner target Escape",
       },
     );
+
+    this._focusBubbleInput();
   }
 
-  private _appendLogLine(line: string): void {
-    const stateModel = this.getStateModel();
-    const current = (stateModel.getProperty("/hotkeysBubbleLog") as string) || "";
-    stateModel.setProperty("/hotkeysBubbleLog", current ? `${current}\n${line}` : line);
+  private _focusBubbleInput(): void {
+    this._clearFocusTimers();
+    const timer = window.setTimeout(() => {
+      if (this._manager.getActiveScope() !== Scope.HotkeysTargetBubble) {
+        return;
+      }
+      const input = this.byId("bubbleInput") as Input | undefined;
+      input?.focus();
+    }, 0);
+    this._focusTimers.push(timer);
+  }
+
+  private _focusBubbleInputAfterNavigation(): void {
+    this._clearFocusTimers();
+
+    const delays = [0, 100, 250, 400, 550, 700, 850, 1000];
+    for (const delay of delays) {
+      const timer = window.setTimeout(() => {
+        if (this._manager.getActiveScope() !== Scope.HotkeysTargetBubble) {
+          return;
+        }
+        const input = this.byId("bubbleInput") as Input | undefined;
+        input?.focus();
+      }, delay);
+      this._focusTimers.push(timer);
+    }
+  }
+
+  private _onRouteMatched(event: Router$RouteMatchedEvent): void {
+    const isTargetRoute = event.getParameter("name") === Scope.HotkeysTargetBubble;
+    this._setAppAutoFocus(!isTargetRoute);
+    if (!isTargetRoute) {
+      this._clearFocusTimers();
+      return;
+    }
+    this._focusBubbleInputAfterNavigation();
+  }
+
+  private _setAppAutoFocus(enabled: boolean): void {
+    const rootView = this.getTypedComponent().getRootControl() as View | undefined;
+    const app = rootView?.byId("appControl") as App | undefined;
+    if (!app) {
+      return;
+    }
+    if (app.getAutoFocus() !== enabled) {
+      app.setAutoFocus(enabled);
+    }
+  }
+
+  private _clearFocusTimers(): void {
+    for (const timer of this._focusTimers) {
+      window.clearTimeout(timer);
+    }
+    this._focusTimers = [];
+  }
+
+  private _addLogEntry(event: string, detail: string, state: string): void {
+    const current = (this._logModel.getProperty("/entries") as LogEntry[]) ?? [];
+    const next = [{ time: this._formatTimestamp(new Date()), event, detail, state }, ...current].slice(
+      0,
+      HotkeysTargetBubble._MAX_LOG,
+    );
+    this._logModel.setProperty("/entries", next);
+  }
+
+  private _formatTimestamp(now: Date): string {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    const ms = String(now.getMilliseconds()).padStart(3, "0");
+    return `${hh}:${mm}:${ss}.${ms}`;
   }
 
   private _destroyHandles(): void {
+    if (this._docFallbackHandle) {
+      this._docFallbackHandle.unregister();
+      this._docFallbackHandle = null;
+    }
     if (this._outerHandle) {
       this._outerHandle.unregister();
       this._outerHandle = null;

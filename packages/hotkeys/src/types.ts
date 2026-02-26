@@ -234,10 +234,10 @@ export interface HotkeyOptions {
    * For nested targets with the same key, the innermost matching target fires
    * by default. Set `allowBubble: true` to continue matching outer targets.
    *
-   * **Note:** Document-level hotkeys with `stopPropagation: true` (the default)
-   * will prevent target-bound hotkeys with the same key from firing, because
-   * the dispatch pipeline checks document-level registrations before target-scoped ones.
-   * Set `stopPropagation: false` on the document-level registration to allow both.
+   * **Dispatch order:** Target-scoped handlers fire before document-level handlers.
+   * A target-scoped match with `stopPropagation: true` (the default) prevents
+   * document-level handlers for the same key from firing. Set `stopPropagation: false`
+   * on the target-scoped registration to allow both target and document handlers.
    */
   target?: HTMLElement | Document;
 
@@ -250,8 +250,10 @@ export interface HotkeyOptions {
    * - `false` (default): innermost matching target fires and target matching stops.
    * - `true`: after a target match, continue checking outer targets.
    *
-   * If a matched registration has `stopPropagation: true`, bubbling stops even
-   * when `allowBubble` is true.
+   * `allowBubble` controls internal target traversal independently from
+   * `stopPropagation`, which only affects the DOM event. A registration can
+   * set `stopPropagation: true` to block browser/UI5 handlers while still
+   * allowing the library to bubble to outer targets.
    *
    * @default false
    */
