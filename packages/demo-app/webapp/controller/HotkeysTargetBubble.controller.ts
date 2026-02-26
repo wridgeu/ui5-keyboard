@@ -33,6 +33,10 @@ export default class HotkeysTargetBubble extends BaseController {
   private _logModel!: JSONModel;
   private _renderDelegate = { onAfterRendering: () => this._bindTargetHotkeys() };
   private _focusTimers: number[] = [];
+  private _boundOuterTargetId: string | null = null;
+  private _boundInnerTargetId: string | null = null;
+  private _boundInnerWrapperTargetId: string | null = null;
+  private _boundBubbleEnabled = false;
 
   onInit(): void {
     this._manager = this.getTypedComponent().getHotkeyManager();
@@ -72,8 +76,6 @@ export default class HotkeysTargetBubble extends BaseController {
   }
 
   private _bindTargetHotkeys(): void {
-    this._destroyHandles();
-
     const outerTarget = this.byId("outerTargetBox")?.getDomRef();
     const bubbleInput = this.byId("bubbleInput") as Input | undefined;
     const innerTarget = bubbleInput?.getFocusDomRef() ?? bubbleInput?.getDomRef();
@@ -85,18 +87,22 @@ export default class HotkeysTargetBubble extends BaseController {
     const stateModel = this.getStateModel();
     const bubbleEnabled = stateModel.getProperty("/hotkeysBubbleEnabled") as boolean;
 
-    this._docFallbackHandle = this._manager.register(
-      "Escape",
-      () => {
-        this._addLogEntry("Escape", "outside nested target (refocus input)", "Information");
-        this._focusBubbleInput();
-      },
-      {
-        scope: Scope.HotkeysTargetBubble,
-        stopPropagation: false,
-        description: "Route fallback Escape",
-      },
-    );
+    const nextOuterId = outerTarget.id || null;
+    const nextInnerId = (innerTarget as HTMLElement).id || null;
+    const nextInnerWrapperId = innerWrapperTarget?.id || null;
+    if (
+      this._docFallbackHandle &&
+      this._outerHandle &&
+      this._innerHandle &&
+      this._boundOuterTargetId === nextOuterId &&
+      this._boundInnerTargetId === nextInnerId &&
+      this._boundInnerWrapperTargetId === nextInnerWrapperId &&
+      this._boundBubbleEnabled === bubbleEnabled
+    ) {
+      return;
+    }
+
+    this._destroyHandles();
 
     this._outerHandle = this._manager.register(
       "Escape",
@@ -144,6 +150,24 @@ export default class HotkeysTargetBubble extends BaseController {
         },
       );
     }
+
+    this._docFallbackHandle = this._manager.register(
+      "Escape",
+      () => {
+        this._addLogEntry("Escape", "outside nested target (refocus input)", "Information");
+        this._focusBubbleInput();
+      },
+      {
+        scope: Scope.HotkeysTargetBubble,
+        stopPropagation: false,
+        description: "Route fallback Escape",
+      },
+    );
+
+    this._boundOuterTargetId = nextOuterId;
+    this._boundInnerTargetId = nextInnerId;
+    this._boundInnerWrapperTargetId = nextInnerWrapperId;
+    this._boundBubbleEnabled = bubbleEnabled;
 
     this._focusBubbleInput();
   }
@@ -244,5 +268,8 @@ export default class HotkeysTargetBubble extends BaseController {
       this._innerWrapperHandle.unregister();
       this._innerWrapperHandle = null;
     }
+    this._boundOuterTargetId = null;
+    this._boundInnerTargetId = null;
+    this._boundInnerWrapperTargetId = null;
   }
 }
