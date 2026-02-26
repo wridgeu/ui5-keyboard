@@ -72,7 +72,7 @@ export default class HotkeysTargetBubble extends BaseController {
     this._destroyHandles();
 
     const outerTarget = this.byId("outerTargetBox")?.getDomRef();
-    const innerTarget = this.byId("innerTargetBox")?.getDomRef();
+    const innerTarget = (this.byId("bubbleInput") as Input | undefined)?.getDomRef();
     if (!outerTarget || !innerTarget) {
       return;
     }
@@ -160,6 +160,7 @@ export default class HotkeysTargetBubble extends BaseController {
       this._clearFocusTimers();
       return;
     }
+    this._bindTargetHotkeys();
     this._focusBubbleInputAfterNavigation();
   }
 
