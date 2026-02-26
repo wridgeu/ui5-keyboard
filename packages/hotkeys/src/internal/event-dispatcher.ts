@@ -270,7 +270,7 @@ export default class EventDispatcher {
     if (this._interceptor?.onKeyDown(event)) return;
 
     // Step 3: Pre-filter: IME, modifier-only, AltGr
-    if (this._shouldFilter(event)) return;
+    if (this._preFilterEvent(event)) return;
 
     // Step 4: Suspend guard check
     if (this._guards.size > 0) {
@@ -296,6 +296,7 @@ export default class EventDispatcher {
 
   private _onBlur(): void {
     this._keyStateTracker.processBlur();
+    this._lastAltLocation = 0;
   }
 
   // ──────────────────────────────────────────────
@@ -303,10 +304,14 @@ export default class EventDispatcher {
   // ──────────────────────────────────────────────
 
   /**
-   * Pre-filter: IME composition, modifier-only, AltGr.
+   * Pre-filter and AltGr state tracking.
+   *
+   * Filters out IME composition, modifier-only presses, and AltGr character
+   * input. Also tracks `_lastAltLocation` for the AltGr heuristic.
+   *
    * Returns true if the event should be silently dropped.
    */
-  private _shouldFilter(event: KeyboardEvent): boolean {
+  private _preFilterEvent(event: KeyboardEvent): boolean {
     // Track AltGr state
     if (event.key === "Alt") {
       this._lastAltLocation = event.location;

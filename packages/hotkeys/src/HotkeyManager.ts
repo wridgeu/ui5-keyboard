@@ -53,6 +53,17 @@ interface ScopeRegistrationBucket {
 }
 
 /**
+ * Cached per-event context from _processHotkeys, consumed by _emitUnhandled
+ * to avoid redundant recomputation.
+ */
+interface EventContext {
+  activeScope: string;
+  isInput: boolean;
+  popupOpen: boolean;
+  skipInfo: SkipInfo | null;
+}
+
+/**
  * Merge user-provided options with defaults.
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
@@ -107,6 +118,7 @@ export default class HotkeyManager extends BaseObject {
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
   private _groups: Set<RegistrationGroup> = new Set();
+  private _destroyed = false;
 
   // Router integration cleanup
   private _routerCleanup: (() => void) | null = null;
@@ -123,8 +135,8 @@ export default class HotkeyManager extends BaseObject {
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
 
-  // Skip info from the most recent _processHotkeys call — read by _emitUnhandled.
-  private _lastSkipInfo: SkipInfo | null = null;
+  // Event context from the most recent _processHotkeys call — read by _emitUnhandled.
+  private _lastEventContext: EventContext | null = null;
 
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
@@ -153,6 +165,15 @@ export default class HotkeyManager extends BaseObject {
     return instance;
   }
 
+  /**
+   * Guard: throw if the manager has been destroyed.
+   */
+  private _assertAlive(method: string): void {
+    if (this._destroyed) {
+      throw new Error(`Cannot call ${method}() on a destroyed HotkeyManager`);
+    }
+  }
+
   // ──────────────────────────────────────────────
   // Registration
   // ──────────────────────────────────────────────
@@ -166,6 +187,7 @@ export default class HotkeyManager extends BaseObject {
    * @returns A handle for managing the registration lifecycle.
    */
   register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle {
+    this._assertAlive("register");
     const resolved = resolveOptions(options);
     const parsedHotkey = parseHotkey(hotkey, this._platform);
     const normalizedHotkey = [...parsedHotkey.modifiers, parsedHotkey.key].join("+");
@@ -266,6 +288,7 @@ export default class HotkeyManager extends BaseObject {
    * `destroyAll()` call — ideal for controller `onExit()` cleanup.
    */
   createGroup(): RegistrationGroup {
+    this._assertAlive("createGroup");
     const group = new RegistrationGroup(this, () => {
       this._groups.delete(group);
     });
@@ -286,6 +309,7 @@ export default class HotkeyManager extends BaseObject {
    * @param reason - Optional debug metadata.
    */
   suspendDispatch(reason?: string): KeyboardDispatchGuard {
+    this._assertAlive("suspendDispatch");
     return this._dispatcher.suspendDispatch(reason);
   }
 
@@ -306,6 +330,7 @@ export default class HotkeyManager extends BaseObject {
    * @param options - Recorder callbacks (onRecord, onCancel).
    */
   createRecorder(options: HotkeyRecorderOptions): HotkeyRecorder {
+    this._assertAlive("createRecorder");
     const recorder = new HotkeyRecorder(options, this._dispatcher, INTERNAL_TOKEN);
     this._dispatcher.trackRecorder(recorder);
     return recorder;
@@ -544,6 +569,7 @@ export default class HotkeyManager extends BaseObject {
     callback: HotkeyCallback,
     options?: SequenceOptions,
   ): SequenceRegistrationHandle {
+    this._assertAlive("registerSequence");
     return this._getSequenceManager().registerSequence(sequence, callback, options);
   }
 
@@ -649,6 +675,8 @@ export default class HotkeyManager extends BaseObject {
    * Follows UI5 `BaseObject.destroy()` pattern.
    */
   destroy(): void {
+    this._destroyed = true;
+
     if (this._routerCleanup) {
       this._routerCleanup();
       this._routerCleanup = null;
@@ -679,7 +707,7 @@ export default class HotkeyManager extends BaseObject {
     resetRuntimeCaches();
     this._unhandledCallback = null;
     this._debugMode = false;
-    this._lastSkipInfo = null;
+    this._lastEventContext = null;
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -703,7 +731,7 @@ export default class HotkeyManager extends BaseObject {
   private _processHotkeys(event: KeyboardEvent): boolean {
     // Defensive reset — prevents stale data from a previous event leaking
     // into _emitUnhandled if a future code path reads it unexpectedly.
-    this._lastSkipInfo = null;
+    this._lastEventContext = null;
 
     const eventPath = this._getEventPath(event);
     const activeScope = this.getActiveScope();
@@ -713,7 +741,9 @@ export default class HotkeyManager extends BaseObject {
     // Check popup state (lazy-loaded)
     const popupOpen = this._checkPopupOpen();
 
-    const skipInfo: SkipInfo | null = this._unhandledCallback ? { reason: UnhandledReason.NoMatch } : null;
+    // Allocate skip tracking when either unhandled callback or debug mode needs it
+    const needsSkipTracking = this._unhandledCallback !== null || this._debugMode;
+    const skipInfo: SkipInfo | null = needsSkipTracking ? { reason: UnhandledReason.NoMatch } : null;
     const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
 
     // Pass 1: document-level registrations (no target)
@@ -758,8 +788,8 @@ export default class HotkeyManager extends BaseObject {
       this._logDebugEvent(event, activeScope, isInput, popupOpen, null, debugSkips);
     }
 
-    // Store skipInfo for _emitUnhandled (called by EventDispatcher in step 7)
-    this._lastSkipInfo = skipInfo;
+    // Store event context for _emitUnhandled (called by EventDispatcher in step 7)
+    this._lastEventContext = { activeScope, isInput, popupOpen, skipInfo };
 
     return false;
   }
@@ -776,29 +806,41 @@ export default class HotkeyManager extends BaseObject {
    * Emit an unhandled callback.
    *
    * When `forcedReason` is non-null (e.g., Suspended), it is used directly
-   * with no `skippedRegistration`. When null, uses `_lastSkipInfo` from
-   * the most recent `_processHotkeys` call.
+   * with no `skippedRegistration`. When null, uses `_lastEventContext` from
+   * the most recent `_processHotkeys` call (avoids redundant recomputation).
    */
   private _emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null): void {
     if (!this._unhandledCallback) return;
 
-    const activeScope = this.getActiveScope();
-    const target = getEventTarget(event);
-    const isInput = isInputElement(target);
-    const popupOpen = this._checkPopupOpen();
-
     let reason: UnhandledReason;
     let skippedRegistration: HotkeyRegistrationInfo | undefined;
+    let activeScope: string;
+    let isInput: boolean;
+    let popupOpen: boolean;
 
     if (forcedReason !== null) {
+      // Forced reason (e.g., Suspended) — compute fresh context since
+      // _processHotkeys was never called for this event.
       reason = forcedReason;
-      // No specific registration was evaluated for forced reasons
-    } else if (this._lastSkipInfo) {
-      reason = this._lastSkipInfo.reason;
-      skippedRegistration =
-        this._lastSkipInfo.reason !== UnhandledReason.NoMatch ? this._lastSkipInfo.registration : undefined;
+      activeScope = this.getActiveScope();
+      const target = getEventTarget(event);
+      isInput = isInputElement(target);
+      popupOpen = this._checkPopupOpen();
+    } else if (this._lastEventContext) {
+      // Reuse cached context from _processHotkeys
+      const ctx = this._lastEventContext;
+      activeScope = ctx.activeScope;
+      isInput = ctx.isInput;
+      popupOpen = ctx.popupOpen;
+      const skipInfo = ctx.skipInfo;
+      reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
+      skippedRegistration = skipInfo && skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined;
     } else {
       reason = UnhandledReason.NoMatch;
+      activeScope = this.getActiveScope();
+      const target = getEventTarget(event);
+      isInput = isInputElement(target);
+      popupOpen = this._checkPopupOpen();
     }
 
     const context: UnhandledContext = {
@@ -826,7 +868,7 @@ export default class HotkeyManager extends BaseObject {
       return path;
     }
     // Fallback for environments where composedPath() is unavailable or empty
-    return [event.target, document, window].filter((x): x is EventTarget => x != null);
+    return [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
   }
 
   /**
@@ -947,7 +989,7 @@ export default class HotkeyManager extends BaseObject {
 
     // Skip-reason pass for off-path targets: record TargetMismatch for
     // registrations whose key combo matches but target is not in the path.
-    if (skipInfo) {
+    if (skipInfo || debugSkips) {
       for (const scope of scopesToCheck) {
         const bucket = this._registrationsByScope.get(scope);
         if (!bucket) continue;

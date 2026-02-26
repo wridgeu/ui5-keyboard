@@ -58,6 +58,11 @@ export default class Detail extends BaseController {
   onStartRecording(): void {
     if (this._recorder?.isRecording) return;
 
+    // Destroy the previous recorder to avoid leaking it in EventDispatcher._trackedRecorders
+    if (this._recorder && !this._recorder.isDestroyed) {
+      this._recorder.destroy();
+    }
+
     const stateModel = this.getStateModel();
     stateModel.setProperty("/isRecording", true);
 

@@ -689,7 +689,7 @@ QUnit.test("Destroyed manager: suspendDispatch throws", (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// _lastSkipInfo reset — no stale data
+// Event context reset — no stale data
 // ──────────────────────────────────────────────
 
 QUnit.test("Unhandled reason is fresh per event (no stale skip info)", (assert) => {
