@@ -1,10 +1,10 @@
 <mvc:View
-    controllerName="demo.hotkeys.controller.KioskHub"
+    controllerName="demo.hotkeys.controller.HotkeysHub"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="Kiosk Keyboard Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page title="Hotkey Manager Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <List headerText="Choose a Demo" items="{state>/kioskDemoEntries}" itemPress=".onScenarioPress">
+            <List headerText="Choose a Scenario" items="{state>/hotkeysDemoEntries}" itemPress=".onScenarioPress">
                 <StandardListItem
                     title="{state>title}"
                     description="{state>description}"

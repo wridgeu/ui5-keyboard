@@ -384,6 +384,68 @@ QUnit.test("Target-scoped: nested targets, innermost wins", (assert) => {
   outer.remove();
 });
 
+QUnit.test("Target-scoped: nested targets with allowBubble execute inner then outer", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  const firedOrder: string[] = [];
+
+  manager.register(
+    "Escape",
+    () => {
+      firedOrder.push("outer");
+    },
+    { target: outer },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      firedOrder.push("inner");
+    },
+    { target: inner, allowBubble: true, stopPropagation: false },
+  );
+
+  fireKeyOn(inner, "Escape");
+
+  assert.deepEqual(firedOrder, ["inner", "outer"], "Bubbling executes targets from inner to outer");
+
+  outer.remove();
+});
+
+QUnit.test("Target-scoped: stopPropagation stops bubbling even when allowBubble is true", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer, stopPropagation: false },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner, allowBubble: true, stopPropagation: true },
+  );
+
+  fireKeyOn(inner, "Escape");
+
+  assert.ok(innerFired, "Inner callback fired");
+  assert.notOk(outerFired, "Outer callback blocked by stopPropagation on inner match");
+
+  outer.remove();
+});
+
 QUnit.test("Target-scoped: nested targets, different keys fire independently", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
@@ -610,7 +672,7 @@ QUnit.test("clearInterceptor is owner-safe — wrong owner cannot clear", (asser
 // Nested targets — stopPropagation edge cases
 // ──────────────────────────────────────────────
 
-QUnit.test("Nested targets — innermost wins even with stopPropagation: false", (assert) => {
+QUnit.test("Nested targets — default remains innermost with stopPropagation: false", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -636,12 +698,12 @@ QUnit.test("Nested targets — innermost wins even with stopPropagation: false",
 
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
-  assert.notOk(outerFired, "Outer target callback did NOT fire (innermost wins regardless of stopPropagation)");
+  assert.notOk(outerFired, "Outer target callback did NOT fire (no bubbling by default)");
 
   outer.remove();
 });
 
-QUnit.test("Nested targets — stopPropagation option on inner does not change innermost-wins behavior", (assert) => {
+QUnit.test("Nested targets — stopPropagation on inner does not change default non-bubbling", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -666,7 +728,7 @@ QUnit.test("Nested targets — stopPropagation option on inner does not change i
   );
 
   fireKeyOn(inner, "Escape");
-  assert.ok(innerFired, "Inner callback fired (innermost wins)");
+  assert.ok(innerFired, "Inner callback fired");
   assert.notOk(outerFired, "Outer callback did NOT fire");
 
   outer.remove();
@@ -676,7 +738,7 @@ QUnit.test("Nested targets — stopPropagation option on inner does not change i
 // Target-scoped: stopPropagation option vs callback
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped: stopPropagation option governs, not callback event.stopPropagation()", (assert) => {
+QUnit.test("Target-scoped: option governs bubbling, not callback event.stopPropagation()", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -696,9 +758,8 @@ QUnit.test("Target-scoped: stopPropagation option governs, not callback event.st
     "Escape",
     (event) => {
       innerFired = true;
-      // Callback explicitly calls event.stopPropagation(), but the OPTION is false.
-      // The pipeline should ignore the DOM state and still check outer targets
-      // for skip-reason tracking (though innermost still wins for execution).
+      // Callback explicitly calls event.stopPropagation(), but option-based
+      // dispatch behavior is controlled by registration options.
       event.stopPropagation();
     },
     { target: inner, stopPropagation: false },
@@ -706,10 +767,7 @@ QUnit.test("Target-scoped: stopPropagation option governs, not callback event.st
 
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
-  // Outer still does NOT fire because innermost-wins — but the key point is that
-  // the pipeline did NOT short-circuit before checking outer targets (it continued
-  // iterating for skip-reason tracking because option was false).
-  assert.notOk(outerFired, "Outer target did NOT fire (innermost wins regardless)");
+  assert.notOk(outerFired, "Outer target did NOT fire (allowBubble not enabled)");
 
   outer.remove();
 });

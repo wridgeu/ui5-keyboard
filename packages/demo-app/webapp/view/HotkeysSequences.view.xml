@@ -1,0 +1,30 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.HotkeysSequences"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="Hotkeys Demo - Sequences" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <content>
+            <Panel headerText="Try Sequences" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Press G then I to fire the first sequence." />
+                    <Text text="Press G then S to fire the second sequence." />
+                    <ObjectStatus text="{state>/sequenceStatus}" state="Warning" class="sapUiSmallMarginTop"
+                        visible="{= ${state>/sequenceStatus} !== '' }" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Status">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Active Scope:" class="sapUiSmallMarginEnd" />
+                        <Text text="{state>/activeScope}" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Action:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/lastAction}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>

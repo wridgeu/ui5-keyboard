@@ -1,13 +1,18 @@
 import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
+import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Welcome page controller for demo navigation.
+ * Hub landing page for hotkeys scenarios.
  *
- * @name demo.hotkeys.controller.Main
+ * @name demo.hotkeys.controller.HotkeysHub
  */
-export default class Main extends BaseController {
-  onMainEntryPress(event: ListBase$ItemPressEvent): void {
+export default class HotkeysHub extends BaseController {
+  onNavBack(): void {
+    this.getTypedComponent().getRouter().navTo(Scope.Main);
+  }
+
+  onScenarioPress(event: ListBase$ItemPressEvent): void {
     const item = event.getParameter("listItem");
     const route = item?.getBindingContext("state")?.getProperty("route") as string | undefined;
     if (!route) return;

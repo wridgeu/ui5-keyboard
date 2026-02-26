@@ -4,6 +4,11 @@
  */
 export const Scope = {
   Main: "main",
+  Integration: "integration",
+  HotkeysHub: "hotkeysHub",
+  HotkeysSequences: "hotkeysSequences",
+  HotkeysTargetBubble: "hotkeysTargetBubble",
+  HotkeysConflict: "hotkeysConflict",
   Detail: "detail",
   Dialog: "dialog",
   KioskHub: "kioskHub",

@@ -1,0 +1,47 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.Integration"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
+    xmlns:kiosk="ui5.kiosk"
+    xmlns="sap.m">
+    <Page title="Integration Demo - ui5.hotkeys + ui5.kiosk" showNavButton="true" navButtonPress=".onNavBack"
+        class="sapUiContentPadding">
+        <content>
+            <Panel headerText="How this page combines both libraries" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="HotkeyManager handles physical keydown shortcuts." />
+                    <Text text="KioskKeyboard emits keyPress-style input events for virtual typing." />
+                    <Text text="Use Ctrl+Shift+M to trigger the hotkey action and type with the virtual keyboard below." />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Combined Interaction" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Input id="comboInput" value="{state>/comboText}"
+                        placeholder="Type with the virtual keyboard or use Ctrl+Shift+M..." class="sapUiSmallMarginTop"
+                        ariaLabelledBy="comboInputLabel" />
+                    <core:InvisibleText id="comboInputLabel" text="Combined hotkey and virtual keyboard input" />
+                    <ObjectStatus text="{state>/comboStatus}" state="Information" class="sapUiSmallMarginTop" />
+                    <kiosk:KioskKeyboard targetInput="comboInput" keyPress=".onKioskKeyPress" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Status">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Active Scope:" class="sapUiSmallMarginEnd" />
+                        <Text text="{state>/activeScope}" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Action:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/lastAction}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Kiosk keyPress:" class="sapUiSmallMarginEnd" />
+                        <Text text="{state>/kioskLastKey}" />
+                    </HBox>
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>

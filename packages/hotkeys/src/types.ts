@@ -231,7 +231,8 @@ export interface HotkeyOptions {
    * The hotkey will only fire when the target element appears in the event's
    * `composedPath()`. Scopes still apply — both target and scope must match.
    *
-   * For nested targets with the same key, the innermost matching target wins.
+   * For nested targets with the same key, the innermost matching target fires
+   * by default. Set `allowBubble: true` to continue matching outer targets.
    *
    * **Note:** Document-level hotkeys with `stopPropagation: true` (the default)
    * will prevent target-bound hotkeys with the same key from firing, because
@@ -239,6 +240,22 @@ export interface HotkeyOptions {
    * Set `stopPropagation: false` on the document-level registration to allow both.
    */
   target?: HTMLElement | Document;
+
+  /**
+   * Allow a target-scoped hotkey match to continue matching outer targets in
+   * the event's `composedPath()`.
+   *
+   * Only applies when `target` is set.
+   *
+   * - `false` (default): innermost matching target fires and target matching stops.
+   * - `true`: after a target match, continue checking outer targets.
+   *
+   * If a matched registration has `stopPropagation: true`, bubbling stops even
+   * when `allowBubble` is true.
+   *
+   * @default false
+   */
+  allowBubble?: boolean;
 }
 
 /**
@@ -309,6 +326,7 @@ export interface HotkeyRegistrationInfo {
   readonly ignoreInputs: boolean | "auto";
   readonly ignoreRepeat: boolean;
   readonly suppressInPopups: boolean;
+  readonly allowBubble: boolean;
   readonly conflictBehavior: ConflictBehavior;
   /** Whether a target element is bound (boolean flag, not DOM reference). */
   readonly hasTarget: boolean;
@@ -326,6 +344,7 @@ export interface ResolvedHotkeyOptions {
   description: string;
   ignoreRepeat: boolean;
   suppressInPopups: boolean;
+  allowBubble: boolean;
   conflictBehavior: ConflictBehavior;
   target: HTMLElement | Document | null;
 }

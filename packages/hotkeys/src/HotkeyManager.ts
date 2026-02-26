@@ -78,6 +78,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     description: options?.description ?? "",
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,
+    allowBubble: options?.allowBubble ?? false,
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
     target: options?.target ?? null,
   };
@@ -271,6 +272,7 @@ export default class HotkeyManager extends BaseObject {
         if (newOptions.ignoreInputs !== undefined) opts.ignoreInputs = newOptions.ignoreInputs;
         if (newOptions.ignoreRepeat !== undefined) opts.ignoreRepeat = newOptions.ignoreRepeat;
         if (newOptions.suppressInPopups !== undefined) opts.suppressInPopups = newOptions.suppressInPopups;
+        if (newOptions.allowBubble !== undefined) opts.allowBubble = newOptions.allowBubble;
         if (newOptions.description !== undefined) opts.description = newOptions.description;
       },
     };
@@ -545,6 +547,7 @@ export default class HotkeyManager extends BaseObject {
       ignoreInputs: opts.ignoreInputs,
       ignoreRepeat: opts.ignoreRepeat,
       suppressInPopups: opts.suppressInPopups,
+      allowBubble: opts.allowBubble,
       conflictBehavior: opts.conflictBehavior,
       hasTarget: opts.target !== null,
     };
@@ -761,8 +764,8 @@ export default class HotkeyManager extends BaseObject {
       // Document match WITHOUT stopPropagation allows target-scoped matching to proceed.
     }
 
-    // Pass 2: target-scoped registrations — innermost target in composedPath wins.
-    const targetMatch = this._matchTargetRegistrations(
+    // Pass 2: target-scoped registrations — innermost-first, optional bubbling.
+    const targetMatches = this._matchTargetRegistrations(
       event,
       eventPath,
       activeScope,
@@ -772,10 +775,12 @@ export default class HotkeyManager extends BaseObject {
       debugSkips,
     );
 
-    if (targetMatch) {
-      this._executeMatch(event, targetMatch);
+    if (targetMatches.length > 0) {
+      for (const targetMatch of targetMatches) {
+        this._executeMatch(event, targetMatch);
+      }
       if (this._debugMode) {
-        this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatch, debugSkips);
+        this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatches[0], debugSkips);
       }
       return { consumed: true };
     }
@@ -942,9 +947,9 @@ export default class HotkeyManager extends BaseObject {
    * Match target-scoped registrations via composedPath(), innermost-first.
    *
    * Scope-first ordering: active scope targets checked before global scope targets.
-   * Within a scope, the first (innermost) matching target wins.
+   * Within a scope, matching can continue to outer targets when allowBubble is true.
    *
-   * Returns the matched registration or null (caller is responsible for execution).
+   * Returns matched registrations in execution order (caller executes in order).
    */
   private _matchTargetRegistrations(
     event: KeyboardEvent,
@@ -954,11 +959,10 @@ export default class HotkeyManager extends BaseObject {
     popupOpen: boolean,
     skipInfo: SkipInfo | null,
     debugSkips: DebugSkipEntry[] | null,
-  ): HotkeyRegistration | null {
+  ): ReadonlyArray<HotkeyRegistration> {
     const pathSet = new Set(eventPath);
     const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
-
-    let result: HotkeyRegistration | null = null;
+    const matches: HotkeyRegistration[] = [];
 
     for (const scope of scopesToCheck) {
       const bucket = this._registrationsByScope.get(scope);
@@ -982,24 +986,23 @@ export default class HotkeyManager extends BaseObject {
           logComponent: LOG_COMPONENT,
         });
 
-        if (matched && !result) {
-          result = matched;
-          // stopPropagation: true → skip remaining outer targets entirely
-          if (matched.options.stopPropagation) return result;
-          // stopPropagation: false → innermost still wins, but continue
-          // iterating outer targets for debug/skip-reason tracking
+        if (matched) {
+          matches.push(matched);
+          if (matched.options.stopPropagation || !matched.options.allowBubble) {
+            return matches;
+          }
         }
       }
 
       // If a match was found in this scope, don't check lower-priority scopes
-      if (result) break;
+      if (matches.length > 0) break;
     }
 
     // Skip-reason pass for off-path targets: record TargetMismatch for
     // registrations whose key combo matches but target is not in the path.
     // Only runs when no target match was found — a successful match means
     // the event was handled and target-mismatch skips are irrelevant.
-    if (!result && (skipInfo || debugSkips)) {
+    if (matches.length === 0 && (skipInfo || debugSkips)) {
       for (const scope of scopesToCheck) {
         const bucket = this._registrationsByScope.get(scope);
         if (!bucket) continue;
@@ -1018,7 +1021,7 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
-    return result;
+    return matches;
   }
 
   /**

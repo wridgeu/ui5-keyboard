@@ -88,6 +88,6 @@ export default class Detail extends BaseController {
   }
 
   private _navBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.Main);
+    this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
   }
 }

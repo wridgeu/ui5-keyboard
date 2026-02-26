@@ -1,0 +1,126 @@
+{
+  "lastAction": "None",
+  "activeScope": "__global__",
+  "mainDemoEntries": [
+    {
+      "title": "Hotkey Manager Scenarios",
+      "description": "Dedicated scenario pages for scope, sequences, target bubbling, and conflict behavior",
+      "route": "hotkeysHub"
+    },
+    {
+      "title": "Kiosk Keyboard Scenarios",
+      "description": "Docked/popover/dialog/custom layout scenarios for virtual keyboard workflows",
+      "route": "kioskHub"
+    },
+    {
+      "title": "Integration Demo",
+      "description": "Combined page showing ui5.hotkeys and ui5.kiosk together in one flow",
+      "route": "integration"
+    }
+  ],
+  "hotkeysDemoEntries": [
+    {
+      "title": "Scope + Recorder",
+      "description": "Route-scoped hotkeys and shortcut recording",
+      "route": "detail"
+    },
+    {
+      "title": "Sequences",
+      "description": "Two-step command sequences with pending-state feedback",
+      "route": "hotkeysSequences"
+    },
+    {
+      "title": "Target Bubbling",
+      "description": "Nested targets with allowBubble and stopPropagation behavior",
+      "route": "hotkeysTargetBubble"
+    },
+    {
+      "title": "Conflict Behavior",
+      "description": "Warn/Allow/Replace/Error strategies for duplicate registrations",
+      "route": "hotkeysConflict"
+    },
+    {
+      "title": "Integration Demo",
+      "description": "Jump to combined ui5.hotkeys + ui5.kiosk page",
+      "route": "integration"
+    }
+  ],
+  "kioskDemoEntries": [
+    {
+      "title": "Docked Keyboard",
+      "description": "Auto-show, auto-type, layout switching, event log",
+      "route": "kioskDocked"
+    },
+    {
+      "title": "Form Workflow",
+      "description": "Self-service check-in form with Enter-to-advance and auto-type",
+      "route": "kioskFormWorkflow"
+    },
+    {
+      "title": "Multi-Keyboard",
+      "description": "Independent keyboard isolation plus shared-target inputmode ref-count visualization",
+      "route": "kioskMultiKeyboard"
+    },
+    {
+      "title": "Popover Keyboard",
+      "description": "Keyboard inside a Popover, targeting individual inputs",
+      "route": "kioskPopover"
+    },
+    {
+      "title": "Dialog Integration",
+      "description": "Keyboard behavior with sap.m.Dialog - auto-close and embedded approaches",
+      "route": "kioskDialog"
+    },
+    {
+      "title": "Input IDs Targeting",
+      "description": "Selective input targeting with inputIds, native UI5 Web Components, and custom-element bridge integration",
+      "route": "kioskInputIds"
+    },
+    {
+      "title": "Programmatic Control",
+      "description": "Full API: show, close, set type, custom layouts",
+      "route": "kioskProgrammatic"
+    },
+    {
+      "title": "Custom Layouts Gallery",
+      "description": "Emoji picker, IP address pad, currency pad - custom LayoutDefinitions",
+      "route": "kioskCustomLayouts"
+    },
+    {
+      "title": "Component-Level Keyboard",
+      "description": "Keyboard persists across navigation via static UIArea",
+      "route": "kioskComponent"
+    },
+    {
+      "title": "Focus Scenarios",
+      "description": "Focus transitions, deferred close, composite controls, and live event log",
+      "route": "kioskFocusScenarios"
+    }
+  ],
+  "platform": "",
+  "saveLabel": "",
+  "escapeLabel": "",
+  "f5Label": "",
+  "navLabel": "",
+  "sequenceStatus": "",
+  "heldKeys": "None",
+  "canSave": true,
+  "printLabel": "",
+  "conflictStatus": "",
+  "conflictState": "Information",
+  "targetStatus": "",
+  "comboText": "",
+  "comboStatus": "",
+  "recordedShortcut": "",
+  "isRecording": false,
+  "kioskLastKey": "None",
+  "kioskLayout": "qwerty",
+  "kioskEnabled": true,
+  "kioskMobileKeyboard": "Custom",
+  "kioskIsOpen": false,
+  "kioskKeyboardType": "Full",
+  "kioskCurrentTarget": "None",
+  "kioskAutoType": false,
+  "hotkeysBubbleEnabled": false,
+  "hotkeysBubbleLog": ""
+}

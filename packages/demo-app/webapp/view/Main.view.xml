@@ -1,141 +1,23 @@
 <mvc:View
     controllerName="demo.hotkeys.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns:core="sap.ui.core"
-    xmlns:kiosk="ui5.kiosk"
     xmlns="sap.m">
-    <Page title="ui5.hotkeys Demo — Main View" id="mainPage" class="sapUiContentPadding">
-        <headerContent>
-            <Button text="Navigate to Detail" press=".onNavToDetail" type="Emphasized" />
-            <Button text="Kiosk Keyboard" press=".onNavToKiosk" />
-        </headerContent>
+    <Page title="UI5 Keyboard Libraries Demo" id="mainPage" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Status" class="sapUiSmallMarginBottom">
+            <Panel headerText="Welcome" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <HBox>
-                        <Label text="Platform:" class="sapUiSmallMarginEnd" />
-                        <Text text="{state>/platform}" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Active Scope:" class="sapUiSmallMarginEnd" />
-                        <Text text="{state>/activeScope}" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Last Action:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/lastAction}" state="Information" />
-                    </HBox>
+                    <Text text="Explore two keyboard-focused libraries for UI5 applications:" />
+                    <Text text="- ui5.hotkeys: scoped hotkey management, sequences, target-scoped matching" />
+                    <Text text="- ui5.kiosk: virtual keyboard flows for touch and kiosk environments" />
                 </VBox>
             </Panel>
 
-            <Panel headerText="Registered Shortcuts" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <HBox>
-                        <Label text="{state>/saveLabel}" class="sapUiSmallMarginEnd" design="Bold" />
-                        <Text text="Save (global — works in inputs too)" />
-                    </HBox>
-                    <HBox>
-                        <Label text="{state>/escapeLabel}" class="sapUiSmallMarginEnd" design="Bold" />
-                        <Text text="Cancel / Close (global — works in inputs too)" />
-                    </HBox>
-                    <HBox>
-                        <Label text="{state>/f5Label}" class="sapUiSmallMarginEnd" design="Bold" />
-                        <Text text="Refresh (Main view scope — overrides browser refresh)" />
-                    </HBox>
-                    <HBox>
-                        <Label text="{state>/navLabel}" class="sapUiSmallMarginEnd" design="Bold" />
-                        <Text text="Navigate to Detail (Main view scope)" />
-                    </HBox>
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Input Field Test" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Type in the field below. Single-key shortcuts are suppressed, but Ctrl/Cmd combos still work." />
-                    <Input id="testInput" placeholder="Try typing, then press Ctrl+S or Escape..." class="sapUiSmallMarginTop"
-                        ariaLabelledBy="testInputLabel" />
-                    <core:InvisibleText id="testInputLabel" text="Test input for keyboard shortcuts" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Dialog Test" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Open a dialog to test scope switching. The dialog registers its own F5 handler." />
-                    <Button text="Open Dialog" press=".onOpenDialog" type="Emphasized" class="sapUiSmallMarginTop" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Key Sequences (SequenceManager)" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Multi-key sequences (like Vim's g-commands). Press the first key, then the second within the timeout." />
-                    <HBox class="sapUiSmallMarginTop">
-                        <Label text="G I" class="sapUiSmallMarginEnd" design="Bold" />
-                        <Text text="Navigate to Detail (sequence)" />
-                    </HBox>
-                    <HBox>
-                        <Label text="G S" class="sapUiSmallMarginEnd" design="Bold" />
-                        <Text text="Go to Settings (sequence)" />
-                    </HBox>
-                    <ObjectStatus text="{state>/sequenceStatus}" state="Warning" class="sapUiSmallMarginTop"
-                        visible="{= ${state>/sequenceStatus} !== '' }" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Held Keys (KeyStateTracker)" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Shows which keys are physically held down, tracked by KeyStateTracker." />
-                    <ObjectStatus text="{state>/heldKeys}" state="Information" class="sapUiSmallMarginTop" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Dynamic Enabled" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Toggle the switch to enable/disable a conditional shortcut. The enabled() function is evaluated on every key event." />
-                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Feature enabled:" class="sapUiSmallMarginEnd" />
-                        <Switch state="{state>/canSave}" />
-                    </HBox>
-                    <HBox class="sapUiSmallMarginTop">
-                        <Label text="{state>/printLabel}" class="sapUiSmallMarginEnd" design="Bold" />
-                        <Text text="Print (only fires when toggle is on)" />
-                    </HBox>
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Conflict Behavior" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Register duplicate Ctrl+Shift+K hotkeys with different conflict strategies. Watch the console and status below." />
-                    <HBox class="sapUiSmallMarginTop">
-                        <Button text="Warn (default)" press=".onConflictWarn" class="sapUiTinyMarginEnd" />
-                        <Button text="Allow" press=".onConflictAllow" class="sapUiTinyMarginEnd" />
-                        <Button text="Replace" press=".onConflictReplace" class="sapUiTinyMarginEnd" />
-                        <Button text="Error" press=".onConflictError" type="Reject" class="sapUiTinyMarginEnd" />
-                        <Button text="Reset" press=".onConflictReset" />
-                    </HBox>
-                    <ObjectStatus text="{state>/conflictStatus}" state="{state>/conflictState}" class="sapUiSmallMarginTop" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Target-Element Scoped Hotkeys" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Ctrl+Enter is bound to the panel below (not the document). Click inside the panel, then press Ctrl+Enter." />
-                    <VBox id="targetPanel" class="sapUiSmallMarginTop sapUiSmallMargin sapUiContentPadding">
-                        <Input id="targetInput" placeholder="Focus here, then press Ctrl+Enter..." ariaLabelledBy="targetInputLabel" />
-                        <core:InvisibleText id="targetInputLabel" text="Target-scoped hotkey test input" />
-                        <ObjectStatus text="{state>/targetStatus}" state="Success" class="sapUiSmallMarginTop" />
-                    </VBox>
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Both Libraries Together" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="A KioskKeyboard and HotkeyManager on the same page. Virtual key taps fire keyPress (not keydown), so they don't trigger hotkeys." />
-                    <Input id="comboInput" value="{state>/comboText}" placeholder="Type with the virtual keyboard or use Ctrl+Shift+M..."
-                        class="sapUiSmallMarginTop" ariaLabelledBy="comboInputLabel" />
-                    <core:InvisibleText id="comboInputLabel" text="Combined hotkey and virtual keyboard input" />
-                    <ObjectStatus text="{state>/comboStatus}" state="Information" class="sapUiSmallMarginTop" />
-                    <kiosk:KioskKeyboard targetInput="comboInput" class="sapUiSmallMarginTop" />
-                </VBox>
-            </Panel>
+            <List headerText="Choose a Demo Area" items="{state>/mainDemoEntries}" itemPress=".onMainEntryPress">
+                <StandardListItem
+                    title="{state>title}"
+                    description="{state>description}"
+                    type="Navigation" />
+            </List>
         </content>
     </Page>
 </mvc:View>

@@ -21,7 +21,7 @@
                 <VBox class="sapUiSmallMargin">
                     <Text text="F5 here triggers 'Refresh (Detail View)' — different from Main View." />
                     <Text text="Ctrl+S / Cmd+S still works (global scope)." />
-                    <Text text="Press the back button or Mod+B to return to Main." />
+                    <Text text="Press the back button or Mod+B to return to the Hotkeys Hub." />
                 </VBox>
             </Panel>
 

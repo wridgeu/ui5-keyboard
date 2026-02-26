@@ -1,0 +1,40 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.HotkeysTargetBubble"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+    <Page title="Hotkeys Demo - Target Bubbling" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <content>
+            <Panel headerText="Scenario" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Two nested target registrations use the same key (Escape)." />
+                    <Text text="Default: only inner target fires. Enable allowBubble to fire inner then outer." />
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Enable allowBubble on inner target:" class="sapUiSmallMarginEnd" />
+                        <Switch state="{state>/hotkeysBubbleEnabled}" change=".onToggleBubble" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Nested Targets" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <VBox id="outerTargetBox" class="sapUiContentPadding sapUiSmallMarginBottom">
+                        <Text text="Outer target" />
+                        <VBox id="innerTargetBox" class="sapUiContentPadding sapUiSmallMarginTop">
+                            <Text text="Inner target" />
+                            <Input id="bubbleInput" placeholder="Focus here and press Escape" class="sapUiSmallMarginTop"
+                                ariaLabelledBy="bubbleInputLabel" />
+                            <core:InvisibleText id="bubbleInputLabel" text="Input for target bubbling scenario" />
+                        </VBox>
+                    </VBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Event Log">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="{state>/hotkeysBubbleLog}" />
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>
