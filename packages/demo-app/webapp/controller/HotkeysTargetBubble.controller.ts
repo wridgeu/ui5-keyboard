@@ -175,34 +175,19 @@ export default class HotkeysTargetBubble extends BaseController {
   private _focusBubbleInput(): void {
     const input = this.byId("bubbleInput") as Input | undefined;
     input?.focus();
-
-    this._clearFocusTimers();
-    const retries = [0, 100, 250];
-    for (const delay of retries) {
-      const timer = window.setTimeout(() => {
-        if (this._manager.getActiveScope() !== Scope.HotkeysTargetBubble) {
-          return;
-        }
-        input?.focus();
-      }, delay);
-      this._focusTimers.push(timer);
-    }
   }
 
   private _focusBubbleInputAfterNavigation(): void {
     this._clearFocusTimers();
 
-    const delays = [0, 100, 250, 400, 550, 700, 850, 1000];
-    for (const delay of delays) {
-      const timer = window.setTimeout(() => {
-        if (this._manager.getActiveScope() !== Scope.HotkeysTargetBubble) {
-          return;
-        }
-        const input = this.byId("bubbleInput") as Input | undefined;
-        input?.focus();
-      }, delay);
-      this._focusTimers.push(timer);
-    }
+    const timer = window.setTimeout(() => {
+      if (this._manager.getActiveScope() !== Scope.HotkeysTargetBubble) {
+        return;
+      }
+      const input = this.byId("bubbleInput") as Input | undefined;
+      input?.focus();
+    }, 0);
+    this._focusTimers.push(timer);
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
