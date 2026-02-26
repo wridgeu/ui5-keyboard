@@ -429,139 +429,6 @@ QUnit.test("Target-scoped: nested targets, innermost wins", (assert) => {
   outer.remove();
 });
 
-QUnit.test("Target-scoped: nested targets with allowBubble execute inner then outer", (assert) => {
-  const outer = document.createElement("div");
-  const inner = document.createElement("div");
-  outer.appendChild(inner);
-  document.body.appendChild(outer);
-
-  const firedOrder: string[] = [];
-
-  manager.register(
-    "Escape",
-    () => {
-      firedOrder.push("outer");
-    },
-    { target: outer },
-  );
-  manager.register(
-    "Escape",
-    () => {
-      firedOrder.push("inner");
-    },
-    { target: inner, allowBubble: true, stopPropagation: false },
-  );
-
-  fireKeyOn(inner, "Escape");
-
-  assert.deepEqual(firedOrder, ["inner", "outer"], "Bubbling executes targets from inner to outer");
-
-  outer.remove();
-});
-
-QUnit.test("Target-scoped: allowBubble skips outer when inner unregisters it", (assert) => {
-  const outer = document.createElement("div");
-  const inner = document.createElement("div");
-  outer.appendChild(inner);
-  document.body.appendChild(outer);
-
-  let outerFired = false;
-  let innerFired = false;
-
-  const outerHandle = manager.register(
-    "Escape",
-    () => {
-      outerFired = true;
-    },
-    { target: outer },
-  );
-
-  manager.register(
-    "Escape",
-    () => {
-      innerFired = true;
-      outerHandle.unregister();
-    },
-    { target: inner, allowBubble: true, stopPropagation: false },
-  );
-
-  fireKeyOn(inner, "Escape");
-
-  assert.ok(innerFired, "Inner callback fired");
-  assert.notOk(outerFired, "Outer callback did NOT fire after being unregistered by inner callback");
-
-  outer.remove();
-});
-
-QUnit.test("Target-scoped: stopPropagation on inner does not block allowBubble", (assert) => {
-  const outer = document.createElement("div");
-  const inner = document.createElement("div");
-  outer.appendChild(inner);
-  document.body.appendChild(outer);
-
-  const firedOrder: string[] = [];
-
-  manager.register(
-    "Escape",
-    () => {
-      firedOrder.push("outer");
-    },
-    { target: outer, stopPropagation: false },
-  );
-  manager.register(
-    "Escape",
-    () => {
-      firedOrder.push("inner");
-    },
-    { target: inner, allowBubble: true, stopPropagation: true },
-  );
-
-  fireKeyOn(inner, "Escape");
-
-  assert.deepEqual(
-    firedOrder,
-    ["inner", "outer"],
-    "allowBubble controls internal target traversal independently from stopPropagation",
-  );
-
-  outer.remove();
-});
-
-QUnit.test("Target-scoped: stopPropagation on inner blocks document-level even when allowBubble is true", (assert) => {
-  const outer = document.createElement("div");
-  const inner = document.createElement("div");
-  outer.appendChild(inner);
-  document.body.appendChild(outer);
-
-  let docCalled = false;
-  const firedOrder: string[] = [];
-
-  manager.register("Escape", () => {
-    docCalled = true;
-  });
-  manager.register(
-    "Escape",
-    () => {
-      firedOrder.push("outer");
-    },
-    { target: outer, stopPropagation: false },
-  );
-  manager.register(
-    "Escape",
-    () => {
-      firedOrder.push("inner");
-    },
-    { target: inner, allowBubble: true, stopPropagation: true },
-  );
-
-  fireKeyOn(inner, "Escape");
-
-  assert.deepEqual(firedOrder, ["inner", "outer"], "Both target handlers fire via allowBubble");
-  assert.notOk(docCalled, "Document-level handler blocked by stopPropagation on inner target match");
-
-  outer.remove();
-});
-
 QUnit.test("Target-scoped: nested targets, different keys fire independently", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
@@ -883,7 +750,7 @@ QUnit.test("Target-scoped: option governs bubbling, not callback event.stopPropa
 
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
-  assert.notOk(outerFired, "Outer target did NOT fire (allowBubble not enabled)");
+  assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
 
   outer.remove();
 });
@@ -1348,4 +1215,304 @@ QUnit.test("Target-scoped iframe document does NOT match parent document events"
       done();
     }
   });
+});
+
+// ──────────────────────────────────────────────
+// Three-tier target matching (inner + outer + doc-level)
+// ──────────────────────────────────────────────
+
+QUnit.test("Three-tier: focus in inner → only inner fires", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let docFired = false;
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register("Escape", () => {
+    docFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  fireKeyOn(input, "Escape");
+
+  assert.ok(innerFired, "Inner target fired");
+  assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
+  assert.notOk(docFired, "Doc-level did NOT fire (stopPropagation)");
+
+  outer.remove();
+});
+
+QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  const outerButton = document.createElement("button");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  outer.appendChild(outerButton);
+  document.body.appendChild(outer);
+
+  let docFired = false;
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register("Escape", () => {
+    docFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  // Fire from sibling inside outer but outside inner
+  fireKeyOn(outerButton, "Escape");
+
+  assert.ok(outerFired, "Outer target fired");
+  assert.notOk(innerFired, "Inner target did NOT fire (event outside inner)");
+  assert.notOk(docFired, "Doc-level did NOT fire (stopPropagation)");
+
+  outer.remove();
+});
+
+QUnit.test("Three-tier: focus outside all targets → doc-level fires", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const outside = document.createElement("div");
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+  document.body.appendChild(outside);
+
+  let docFired = false;
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register("Escape", () => {
+    docFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner },
+  );
+
+  fireKeyOn(outside, "Escape");
+
+  assert.ok(docFired, "Doc-level fallback fired");
+  assert.notOk(outerFired, "Outer target did NOT fire");
+  assert.notOk(innerFired, "Inner target did NOT fire");
+
+  outer.remove();
+  outside.remove();
+});
+
+// ──────────────────────────────────────────────
+// Focus transitions — repeated Escape scenarios
+// ──────────────────────────────────────────────
+
+QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → second fires doc-level", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  const outside = document.createElement("input");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+  document.body.appendChild(outside);
+
+  let innerCount = 0;
+  let outerCount = 0;
+  let docCount = 0;
+
+  manager.register("Escape", () => {
+    docCount++;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerCount++;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerCount++;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  // First Escape — event originates inside inner target
+  fireKeyOn(input, "Escape");
+  assert.strictEqual(innerCount, 1, "First Escape: inner target fired");
+  assert.strictEqual(outerCount, 0, "First Escape: outer did not fire");
+  assert.strictEqual(docCount, 0, "First Escape: doc did not fire");
+
+  // Simulate focus leaving to element outside all targets (like sap.m.Input blur)
+  outside.focus();
+
+  // Second Escape — from outside element
+  fireKeyOn(outside, "Escape");
+  assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire again");
+  assert.strictEqual(outerCount, 0, "Second Escape: outer did not fire");
+  assert.strictEqual(docCount, 1, "Second Escape: doc-level fallback fired");
+
+  outer.remove();
+  outside.remove();
+});
+
+QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → second fires outer", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  const outerButton = document.createElement("button");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  outer.appendChild(outerButton);
+  document.body.appendChild(outer);
+
+  let innerCount = 0;
+  let outerCount = 0;
+  let docCount = 0;
+
+  manager.register("Escape", () => {
+    docCount++;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerCount++;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerCount++;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  // First Escape — from inner target
+  fireKeyOn(input, "Escape");
+  assert.strictEqual(innerCount, 1, "First Escape: inner target fired");
+
+  // Focus moves to sibling inside outer
+  outerButton.focus();
+
+  // Second Escape — from outer target area
+  fireKeyOn(outerButton, "Escape");
+  assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire");
+  assert.strictEqual(outerCount, 1, "Second Escape: outer target fired");
+  assert.strictEqual(docCount, 0, "Second Escape: doc did not fire (outer stopPropagation)");
+
+  outer.remove();
+});
+
+// ──────────────────────────────────────────────
+// Focus fallback for Escape — generic root skip
+// ──────────────────────────────────────────────
+
+QUnit.test("Focus fallback: focus bounces to body, Escape still matches previous target", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target },
+  );
+
+  // Focus the input (sets _lastFocusedElement = input via focusin handler)
+  input.focus();
+
+  // Blur — focus goes to body (generic root → _focusInHandler skips it)
+  input.blur();
+
+  // Fire Escape from document level — fallback should reconstruct path from _lastFocusedElement
+  fireKey("Escape");
+
+  assert.ok(fired, "Target-scoped hotkey fires via focus fallback after blur to body");
+
+  target.remove();
+});
+
+QUnit.test("Focus fallback: focus moves to real non-target element → old target does NOT fire", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  const outside = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+  document.body.appendChild(outside);
+
+  let targetFired = false;
+  let docFired = false;
+
+  manager.register("Escape", () => {
+    docFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Focus the input (sets _lastFocusedElement = input)
+  input.focus();
+
+  // Focus moves to a REAL element outside the target (not a generic root)
+  // _lastFocusedElement updates to 'outside'
+  outside.focus();
+
+  // Fire Escape on the outside element — target should NOT match
+  fireKeyOn(outside, "Escape");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire (focus genuinely moved away)");
+  assert.ok(docFired, "Doc-level fallback fires instead");
+
+  target.remove();
+  outside.remove();
 });

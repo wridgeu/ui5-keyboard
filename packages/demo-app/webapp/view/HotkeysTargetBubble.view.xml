@@ -12,12 +12,12 @@
                     </layoutData>
                     <Panel headerText="Scenario" class="sapUiSmallMarginBottom">
                         <VBox class="sapUiSmallMargin">
-                            <Text text="Two nested target registrations use the same key (Escape)." />
-                            <Text text="Default: only inner target fires. Enable allowBubble to fire inner then outer." />
-                            <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                                <Label text="Enable allowBubble on inner target:" class="sapUiSmallMarginEnd" />
-                                <Switch state="{state>/hotkeysBubbleEnabled}" change=".onToggleBubble" />
-                            </HBox>
+                            <Text text="Two nested target registrations use the same key (Escape). The innermost matching target fires." />
+                            <MessageStrip
+                                text="Pressing Escape repeatedly will eventually resolve to 'outside nested target' because UI5 releases focus from the input after the first Escape, so subsequent presses no longer originate inside the inner target."
+                                type="Information"
+                                showIcon="true"
+                                class="sapUiSmallMarginTop" />
                         </VBox>
                     </Panel>
 

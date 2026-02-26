@@ -236,7 +236,6 @@ manager.register(
 | `description`      | `string`                   | `""`           | Human-readable description for cheatsheets                                                       |
 | `ignoreRepeat`     | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
 | `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
-| `allowBubble`      | `boolean`                  | `false`        | Target-scoped only: continue matching outer targets after a match                                |
 | `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
 | `target`           | `HTMLElement \| Document`  | `null`         | Bind to a specific element instead of the document                                               |
 
@@ -272,7 +271,6 @@ handle.setOptions({
   ignoreInputs: true,
   ignoreRepeat: false,
   suppressInPopups: true,
-  allowBubble: true,
   target: document.getElementById("myPanel"),
 });
 ```
@@ -472,12 +470,9 @@ manager.register("Mod+S", () => savePanel(), {
 });
 
 // This hotkey only fires when the event's composedPath() includes the panel element.
-// Document-level registrations with stopPropagation: true (the default) block
-// target-scoped registrations with the same key. Set stopPropagation: false
-// on the document-level registration to allow both.
-// For nested targets with the same key, the innermost match fires by default.
-// Set allowBubble: true on a target registration to continue matching outer targets.
-// If a matched registration has stopPropagation: true, bubbling stops.
+// For nested targets with the same key, the innermost match fires.
+// A target-scoped match with stopPropagation: true (the default) prevents
+// document-level handlers for the same key from firing.
 // Scopes still apply — both target and scope must match.
 ```
 

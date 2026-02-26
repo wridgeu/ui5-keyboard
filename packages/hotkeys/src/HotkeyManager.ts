@@ -43,6 +43,7 @@ type ValidateModule = typeof import("./validate");
 type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
+const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
 let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
@@ -78,7 +79,6 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     description: options?.description ?? "",
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,
-    allowBubble: options?.allowBubble ?? false,
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
     target: options?.target ?? null,
   };
@@ -136,6 +136,36 @@ export default class HotkeyManager extends BaseObject {
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
 
+  // Event context from the most recent _processHotkeys call — read by _emitUnhandled.
+  private _lastEventContext: EventContext | null = null;
+  private _lastFocusedElement: Element | null = null;
+  private _lastFocusedAt = 0;
+  private _lastBlurredElement: Element | null = null;
+  private _lastBlurredAt = 0;
+  private _focusInHandler = (event: FocusEvent): void => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    // Skip generic root containers — focus bounces there as a side-effect of
+    // rendering and does not represent a meaningful user focus target.  Keeping
+    // the previous value ensures the fallback in _getEventPath still points at
+    // the real element the user was interacting with.
+    if (this._isGenericRootNode(target)) {
+      return;
+    }
+    this._lastFocusedElement = target;
+    this._lastFocusedAt = Date.now();
+  };
+  private _focusOutHandler = (event: FocusEvent): void => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    this._lastBlurredElement = target;
+    this._lastBlurredAt = Date.now();
+  };
+
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
    */
@@ -149,6 +179,8 @@ export default class HotkeyManager extends BaseObject {
       emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx as EventContext | undefined),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
+    document.addEventListener("focusin", this._focusInHandler, true);
+    document.addEventListener("focusout", this._focusOutHandler, true);
 
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
   }
@@ -272,7 +304,6 @@ export default class HotkeyManager extends BaseObject {
         if (newOptions.ignoreInputs !== undefined) opts.ignoreInputs = newOptions.ignoreInputs;
         if (newOptions.ignoreRepeat !== undefined) opts.ignoreRepeat = newOptions.ignoreRepeat;
         if (newOptions.suppressInPopups !== undefined) opts.suppressInPopups = newOptions.suppressInPopups;
-        if (newOptions.allowBubble !== undefined) opts.allowBubble = newOptions.allowBubble;
         if (newOptions.description !== undefined) opts.description = newOptions.description;
       },
     };
@@ -547,7 +578,6 @@ export default class HotkeyManager extends BaseObject {
       ignoreInputs: opts.ignoreInputs,
       ignoreRepeat: opts.ignoreRepeat,
       suppressInPopups: opts.suppressInPopups,
-      allowBubble: opts.allowBubble,
       conflictBehavior: opts.conflictBehavior,
       hasTarget: opts.target !== null,
     };
@@ -694,6 +724,8 @@ export default class HotkeyManager extends BaseObject {
     // Destroy the dispatcher first — removes all DOM listeners, invalidates
     // guards, notifies interceptor/recorders, destroys KeyStateTracker.
     this._dispatcher.destroy();
+    document.removeEventListener("focusin", this._focusInHandler, true);
+    document.removeEventListener("focusout", this._focusOutHandler, true);
 
     for (const group of Array.from(this._groups)) {
       group._onManagerDestroy();
@@ -716,6 +748,11 @@ export default class HotkeyManager extends BaseObject {
     resetRuntimeCaches();
     this._unhandledCallback = null;
     this._debugMode = false;
+    this._lastEventContext = null;
+    this._lastFocusedElement = null;
+    this._lastFocusedAt = 0;
+    this._lastBlurredElement = null;
+    this._lastBlurredAt = 0;
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -751,8 +788,8 @@ export default class HotkeyManager extends BaseObject {
     const skipInfo: SkipInfo | null = needsSkipTracking ? { reason: UnhandledReason.NoMatch } : null;
     const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
 
-    // Pass 1: target-scoped registrations — innermost-first, optional bubbling.
-    const targetMatches = this._matchTargetRegistrations(
+    // Pass 1: target-scoped registrations — innermost match wins.
+    const targetMatch = this._matchTargetRegistrations(
       event,
       eventPath,
       activeScope,
@@ -762,29 +799,15 @@ export default class HotkeyManager extends BaseObject {
       debugSkips,
     );
 
-    let targetConsumed = false;
-    let targetStopPropagation = false;
-    let firstExecutedTargetMatch: HotkeyRegistration | null = null;
-    if (targetMatches.length > 0) {
-      for (const targetMatch of targetMatches) {
-        // A prior callback in the same event cycle may have unregistered this match.
-        if (!this._registrationState.get(targetMatch.id)?.active) {
-          continue;
-        }
-
-        this._executeMatch(event, targetMatch);
-        if (!targetConsumed) targetConsumed = true;
-        if (!firstExecutedTargetMatch) firstExecutedTargetMatch = targetMatch;
-        if (targetMatch.options.stopPropagation) targetStopPropagation = true;
-      }
-
-      if (firstExecutedTargetMatch && this._debugMode) {
-        this._logDebugEvent(event, activeScope, isInput, popupOpen, firstExecutedTargetMatch, debugSkips);
+    if (targetMatch) {
+      this._executeMatch(event, targetMatch);
+      if (this._debugMode) {
+        this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatch, debugSkips);
       }
     }
 
     // Pass 2: document-level registrations (only if no target match stopped propagation)
-    if (!targetStopPropagation) {
+    if (!targetMatch?.options.stopPropagation) {
       const docMatch = this._matchDocumentRegistrations(event, activeScope, isInput, popupOpen, skipInfo, debugSkips);
       if (docMatch) {
         this._executeMatch(event, docMatch);
@@ -795,7 +818,7 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
-    if (targetConsumed) return true;
+    if (targetMatch) return true;
 
     // Nothing matched at all
     if (this._debugMode) {
@@ -901,7 +924,75 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
+    // Some browsers/extensions dispatch Escape after focus has already moved to
+    // body/content. Use the most recently focused element as a short-lived
+    // fallback to preserve target-scoped matching.
+    const shouldUseFocusFallback = this._shouldUseFocusPathFallback(event, resolvedPath);
+    const lastFocusedElement = this._lastFocusedElement;
+    const hasRecentFocusOnLastFocused =
+      !!lastFocusedElement && Date.now() - this._lastFocusedAt <= FOCUS_PATH_FALLBACK_TTL_MS;
+    const hasRecentBlurFromLastFocused =
+      !!lastFocusedElement &&
+      this._isSameElementOrAncestor(this._lastBlurredElement, lastFocusedElement) &&
+      Date.now() - this._lastBlurredAt <= FOCUS_PATH_FALLBACK_TTL_MS;
+    if (
+      shouldUseFocusFallback &&
+      lastFocusedElement &&
+      lastFocusedElement.isConnected &&
+      (hasRecentFocusOnLastFocused || hasRecentBlurFromLastFocused) &&
+      !resolvedPath.includes(lastFocusedElement)
+    ) {
+      for (const node of this._getActiveElementPath(lastFocusedElement)) {
+        if (!resolvedPath.includes(node)) {
+          resolvedPath.push(node);
+        }
+      }
+    }
+
     return resolvedPath;
+  }
+
+  /**
+   * Detect generic root-target keyboard dispatches where composedPath lacks
+   * concrete focus ancestry (for example only #content/document/window).
+   */
+  private _shouldUseFocusPathFallback(event: KeyboardEvent, eventPath: EventTarget[]): boolean {
+    if (event.key !== "Escape") {
+      return false;
+    }
+
+    const eventTarget = getEventTarget(event);
+    if (this._isGenericRootNode(eventTarget)) {
+      return true;
+    }
+
+    return eventPath.every((node) => this._isGenericRootNode(node));
+  }
+
+  /**
+   * Whether a node is a generic top-level dispatch target.
+   */
+  private _isGenericRootNode(node: EventTarget | null): boolean {
+    if (!node) {
+      return true;
+    }
+    if (node === document || node === window) {
+      return true;
+    }
+    if (!(node instanceof Element)) {
+      return false;
+    }
+    return node === document.documentElement || node === document.body || node.id === "content";
+  }
+
+  /**
+   * Whether the two elements are equal or in a direct ancestor relationship.
+   */
+  private _isSameElementOrAncestor(a: Element | null, b: Element | null): boolean {
+    if (!a || !b) {
+      return false;
+    }
+    return a === b || a.contains(b) || b.contains(a);
   }
 
   /**
@@ -1001,9 +1092,9 @@ export default class HotkeyManager extends BaseObject {
    * Match target-scoped registrations via composedPath(), innermost-first.
    *
    * Scope-first ordering: active scope targets checked before global scope targets.
-   * Within a scope, matching can continue to outer targets when allowBubble is true.
+   * The innermost matching target wins — once a match is found, return immediately.
    *
-   * Returns matched registrations in execution order (caller executes in order).
+   * Returns the single matched registration, or null.
    */
   private _matchTargetRegistrations(
     event: KeyboardEvent,
@@ -1013,10 +1104,9 @@ export default class HotkeyManager extends BaseObject {
     popupOpen: boolean,
     skipInfo: SkipInfo | null,
     debugSkips: DebugSkipEntry[] | null,
-  ): ReadonlyArray<HotkeyRegistration> {
+  ): HotkeyRegistration | null {
     const pathSet = new Set(eventPath);
     const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
-    const matches: HotkeyRegistration[] = [];
 
     for (const scope of scopesToCheck) {
       const bucket = this._registrationsByScope.get(scope);
@@ -1041,22 +1131,14 @@ export default class HotkeyManager extends BaseObject {
         });
 
         if (matched) {
-          matches.push(matched);
-          if (!matched.options.allowBubble) {
-            return matches;
-          }
+          return matched;
         }
       }
-
-      // If a match was found in this scope, don't check lower-priority scopes
-      if (matches.length > 0) break;
     }
 
     // Skip-reason pass for off-path targets: record TargetMismatch for
     // registrations whose key combo matches but target is not in the path.
-    // Only runs when no target match was found — a successful match means
-    // the event was handled and target-mismatch skips are irrelevant.
-    if (matches.length === 0 && (skipInfo || debugSkips)) {
+    if (skipInfo || debugSkips) {
       for (const scope of scopesToCheck) {
         const bucket = this._registrationsByScope.get(scope);
         if (!bucket) continue;
@@ -1075,7 +1157,7 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
-    return matches;
+    return null;
   }
 
   /**

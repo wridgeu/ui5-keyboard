@@ -244,7 +244,7 @@ The EventDispatcher pipeline in detail:
 
 Per-element listeners are replaced by a `composedPath()` membership check during matching. When a registration has a `target`, the dispatcher checks whether that target appears in the event's composed path. Zero additional listeners.
 
-**Behavioral change vs current:** Today, if two nested targets both have registrations for the same key (e.g., `Ctrl+S` on both an outer and inner element), both target listeners fire independently during capture phase and both callbacks execute (unless one uses `stopPropagation`). In the new design, target-scoped matching iterates from innermost to outermost target in the `composedPath()`, and only the **first (innermost)** matching registration fires. This is a deliberate change — innermost-wins is consistent with CSS specificity and user expectation. If the current "fire all" behavior is needed, it should be explicitly re-introduced via an `allowBubble` option in a future proposal.
+**Behavioral change vs current:** Today, if two nested targets both have registrations for the same key (e.g., `Ctrl+S` on both an outer and inner element), both target listeners fire independently during capture phase and both callbacks execute (unless one uses `stopPropagation`). In the new design, target-scoped matching iterates from innermost to outermost target in the `composedPath()`, and only the **first (innermost)** matching registration fires. This is a deliberate change — innermost-wins is consistent with CSS specificity and user expectation.
 
 **Priority ordering:**
 

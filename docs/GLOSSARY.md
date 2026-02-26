@@ -123,11 +123,7 @@ Target-scoped hotkey registrations (those with a `target` option) use `composedP
 
 ### Target matching order
 
-When multiple nested elements have registrations for the same key, matching starts at the **innermost** node and moves outward.
-
-- By default, only the innermost match fires.
-- If the matched registration sets `allowBubble: true`, matching can continue to outer targets.
-- If a matched registration has `stopPropagation: true`, target matching stops immediately.
+When multiple nested elements have registrations for the same key, matching starts at the **innermost** node and moves outward. Only the innermost match fires.
 
 ### Limitations
 

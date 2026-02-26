@@ -21,7 +21,6 @@ function makeRegistration(id: string): Registration {
       description: "",
       ignoreRepeat: true,
       suppressInPopups: false,
-      allowBubble: false,
       conflictBehavior: "warn",
       target: null,
     },

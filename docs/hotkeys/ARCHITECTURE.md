@@ -118,13 +118,11 @@ If a document-level match is found with `stopPropagation: true` (the default), t
 
 Target-scoped registrations use `event.composedPath()` for membership checks instead of per-element DOM listeners. The matching follows scope-first, innermost-first semantics:
 
-1. **Active scope pass**: iterate `composedPath()` from index 0 (innermost) outward. For each node, check if it has target-scoped registrations in the active scope's bucket.
-2. **Bubble control**: when a target match is found, continue checking outer targets only if that matched registration has `allowBubble: true`. If `allowBubble: false` (default), stop target matching.
-3. **Stop boundary**: if a matched registration has `stopPropagation: true`, stop target matching immediately (even when `allowBubble` is true).
-4. **Global scope pass**: only if no active-scope target matched and active scope is not `GLOBAL_SCOPE`.
-5. **Skip-reason pass**: for unhandled tracking, iterate off-path targets whose key combo matches the event and record `TargetMismatch`.
+1. **Active scope pass**: iterate `composedPath()` from index 0 (innermost) outward. For each node, check if it has target-scoped registrations in the active scope's bucket. The first (innermost) match wins.
+2. **Global scope pass**: only if no active-scope target matched and active scope is not `GLOBAL_SCOPE`.
+3. **Skip-reason pass**: for unhandled tracking, iterate off-path targets whose key combo matches the event and record `TargetMismatch`.
 
-For nested targets with the same key, only the **innermost** matching target fires by default. To intentionally execute outer targets too, set `allowBubble: true` on the matched target registration(s).
+For nested targets with the same key, only the **innermost** matching target fires.
 
 Registrations within each scope are matched in FIFO order (first registered, first matched).
 

@@ -34,7 +34,6 @@ function makeRegistration(id: string, hotkey: string, overrides?: RegistrationOv
       description: "",
       ignoreRepeat: overrides?.ignoreRepeat ?? true,
       suppressInPopups: overrides?.suppressInPopups ?? false,
-      allowBubble: false,
       conflictBehavior: "warn",
       target: null,
     },

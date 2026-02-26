@@ -1337,16 +1337,6 @@ QUnit.test("setOptions: update suppressInPopups", (assert) => {
   assert.strictEqual(count, 1, "F5 fires after setOptions({ suppressInPopups: false })");
 });
 
-QUnit.test("setOptions: update allowBubble", (assert) => {
-  const manager = HotkeyManager.getInstance();
-
-  const handle = manager.register("Escape", () => {}, { target: document, allowBubble: false });
-  handle.setOptions({ allowBubble: true });
-
-  const reg = manager.getRegistrations().find((r) => r.id === handle.id);
-  assert.strictEqual(reg?.allowBubble, true, "allowBubble updated via setOptions");
-});
-
 QUnit.test("setOptions: throws on unregistered handle", (assert) => {
   const manager = HotkeyManager.getInstance();
   const handle = manager.register("Escape", () => {});
