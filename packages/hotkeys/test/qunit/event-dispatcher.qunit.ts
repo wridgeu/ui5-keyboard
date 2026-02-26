@@ -414,6 +414,40 @@ QUnit.test("Target-scoped: nested targets with allowBubble execute inner then ou
   outer.remove();
 });
 
+QUnit.test("Target-scoped: allowBubble skips outer when inner unregisters it", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let outerFired = false;
+  let innerFired = false;
+
+  const outerHandle = manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer },
+  );
+
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+      outerHandle.unregister();
+    },
+    { target: inner, allowBubble: true, stopPropagation: false },
+  );
+
+  fireKeyOn(inner, "Escape");
+
+  assert.ok(innerFired, "Inner callback fired");
+  assert.notOk(outerFired, "Outer callback did NOT fire after being unregistered by inner callback");
+
+  outer.remove();
+});
+
 QUnit.test("Target-scoped: stopPropagation stops bubbling even when allowBubble is true", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");

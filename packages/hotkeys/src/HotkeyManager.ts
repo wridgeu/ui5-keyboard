@@ -776,13 +776,26 @@ export default class HotkeyManager extends BaseObject {
     );
 
     if (targetMatches.length > 0) {
+      let firstExecutedTargetMatch: HotkeyRegistration | null = null;
+
       for (const targetMatch of targetMatches) {
+        // A prior callback in the same event cycle may have unregistered this match.
+        if (!this._registrationState.get(targetMatch.id)?.active) {
+          continue;
+        }
+
         this._executeMatch(event, targetMatch);
+        if (!firstExecutedTargetMatch) {
+          firstExecutedTargetMatch = targetMatch;
+        }
       }
-      if (this._debugMode) {
-        this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatches[0], debugSkips);
+
+      if (firstExecutedTargetMatch) {
+        if (this._debugMode) {
+          this._logDebugEvent(event, activeScope, isInput, popupOpen, firstExecutedTargetMatch, debugSkips);
+        }
+        return true;
       }
-      return { consumed: true };
     }
 
     // Document match without stopPropagation still counts as consumed — callback already fired.

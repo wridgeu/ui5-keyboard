@@ -4,8 +4,6 @@ Comprehensive reference for UI5 keyboard events, touch event simulation, pseudo 
 
 > **Research date:** February 2026, based on OpenUI5 1.144.0 source code and official documentation.
 
----
-
 ## Table of Contents
 
 1. [Event Architecture Overview](#1-event-architecture-overview)
@@ -20,8 +18,6 @@ Comprehensive reference for UI5 keyboard events, touch event simulation, pseudo 
 10. [ItemNavigation Delegate](#10-itemnavigation-delegate)
 11. [Hybrid Device Handling (Mouse + Touch)](#11-hybrid-device-handling-mouse--touch)
 12. [Implications for Our Libraries](#12-implications-for-our-libraries)
-
----
 
 ## 1. Event Architecture Overview
 
@@ -59,8 +55,6 @@ When an event fires, `_handleEvent()`:
 3. Dispatches to each control's `on<eventName>` methods
 4. Bubbles up the control hierarchy
 
----
-
 ## 2. ControlEvents — UIArea Auto-Delegation
 
 **Module:** `sap/ui/events/ControlEvents` (public since 1.58)
@@ -87,8 +81,6 @@ Controls implement `on<eventName>(oEvent)` methods to handle these. UIArea regis
 - `ControlEvents.events` — the array of event names
 - `ControlEvents.bindAnyEvent(fn)` — bind callback for ALL events on `document`
 - `ControlEvents.unbindAnyEvent(fn)` — unbind callback
-
----
 
 ## 3. PseudoEvents — Semantic Keyboard Events
 
@@ -185,8 +177,6 @@ Pseudo events are **semantically enriched keyboard events**. They:
 | `sapplus`               | keypress | `+` character (experimental since 1.25) |
 | `sapdelayeddoubleclick` | click    | Two clicks 300-1300ms apart             |
 
----
-
 ## 4. EventSimulation — saptouchstart / saptouchend
 
 **Module:** `sap/ui/events/jquery/EventSimulation` (internal, but stable)
@@ -245,8 +235,6 @@ ontouchstart(e) { handle(e); }  // Works for both mouse and touch via EventSimul
 ontouchend(e) { handle(e); }
 ```
 
----
-
 ## 5. F6 Fast Navigation
 
 **Module:** `sap/ui/events/F6Navigation` (internal but stable)
@@ -271,8 +259,6 @@ this.data("sap-ui-fastnavgroup", "true", true); // CustomData approach
 ### Important for HotkeyManager
 
 **F6 is in the disallowed shortcuts list** (see section 7). Our HotkeyManager should warn if someone registers F6 as a hotkey since it conflicts with UI5's built-in fast navigation.
-
----
 
 ## 6. CommandExecution — UI5's Built-in Shortcut System
 
@@ -333,8 +319,6 @@ The `Shortcut` module validates key combinations using two regexes — one for t
 
 Platform adaptation: `Ctrl` → `Cmd` on macOS.
 
----
-
 ## 7. UI5 Reserved / Disallowed Shortcuts
 
 **Source:** `sap/ui/core/util/ShortcutHelper.js` — `mDisallowedShortcuts`
@@ -384,8 +368,6 @@ These shortcuts are **blocked by UI5's CommandExecution** and should also be war
 
 Shortcuts with `Shift` modifier + punctuation keys (`., - + = * /`) are blocked because Shift changes the meaning of these keys on many keyboard layouts.
 
----
-
 ## 8. SAP Fiori Elements Standard Shortcuts
 
 Applications should avoid conflicting with these standard Fiori Elements shortcuts:
@@ -406,8 +388,6 @@ Applications should avoid conflicting with these standard Fiori Elements shortcu
 | Share               | Ctrl+Shift+S     | Cmd+Shift+S     |
 | Table settings      | Ctrl+,           | Ctrl+,          |
 
----
-
 ## 9. Focus Handling
 
 **Module:** `sap/ui/core/Element` provides five focus management methods:
@@ -423,8 +403,6 @@ Applications should avoid conflicting with these standard Fiori Elements shortcu
 Re-rendering destroys and recreates DOM nodes. Without `getFocusInfo()`/`applyFocusInfo()`, focus is lost.
 
 **KioskKeyboard implements both** (`getFocusInfo` at line ~426, `applyFocusInfo` at line ~436) to preserve the focused key across re-renders.
-
----
 
 ## 10. ItemNavigation Delegate
 
@@ -451,8 +429,6 @@ Provides arrow key, Home/End, PageUp/PageDown navigation for list-like controls 
 
 KioskKeyboard implements its own arrow key navigation (`_moveFocus()`) rather than using ItemNavigation because the keyboard layout (rows of varying widths) doesn't fit ItemNavigation's linear or fixed-grid model.
 
----
-
 ## 11. Hybrid Device Handling (Mouse + Touch)
 
 UI5 handles devices supporting both mouse and touch input simultaneously.
@@ -473,8 +449,6 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
    if (oEvent.isMarked("delayedMouseEvent")) return; // Skip emulated event
    ```
 3. UI5 auto-manages the simulation: `ontouch*` and `ontap*` fire for BOTH mouse and touch
-
----
 
 ## 12. Implications for Our Libraries
 
@@ -509,8 +483,6 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 | `jQuery.sap.keycodes`                | `sap/ui/events/KeyCodes`      | N/A (we use `event.key` strings)          |
 | `jQuery.sap.handleF6GroupNavigation` | `sap/ui/events/F6Navigation`  | N/A                                       |
 | `UIEvent.which` / `UIEvent.keyCode`  | `KeyboardEvent.key`           | **Correct** — we use `event.key`          |
-
----
 
 ## Sources
 

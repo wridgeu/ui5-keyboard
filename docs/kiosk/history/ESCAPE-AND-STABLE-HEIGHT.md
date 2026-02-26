@@ -50,8 +50,6 @@ onkeydown(event: KeyboardEvent): void {
 
 **Why not a `{escape}` layout key?** An Escape key in the layout would be unusual — physical keyboards have Escape in the top-left corner, far from the main key area. Users don't expect it on a virtual keyboard. The physical Escape key (when keyboard has focus) is the correct affordance.
 
----
-
 ## Problem 2: `_maxHeight` only grows, never shrinks
 
 When a `Full` keyboard type is used in embedded/inline or Popover scenarios, `onAfterRendering` tracks the maximum height and applies it as `minHeight`:

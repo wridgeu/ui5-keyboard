@@ -33,8 +33,6 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - [Troubleshooting](#troubleshooting)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
 
----
-
 ## Features
 
 **Core**
@@ -75,8 +73,6 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - Key repeat filtering (on by default)
 - Callback error isolation (errors in handlers don't crash the manager)
 
----
-
 ## Installation
 
 > This package is currently workspace-only (`private: true`) and not published to npm.
@@ -104,8 +100,6 @@ Add the library to your application's `manifest.json`:
 ```
 
 Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unnecessary — the library is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
-
----
 
 ## Quick Start
 
@@ -509,8 +503,6 @@ g1.release(); // still suspended — g2 active
 g2.release(); // dispatch resumes
 ```
 
----
-
 ## SequenceManager
 
 Multi-key sequences like Vim-style `G` then `E` for "go to editor":
@@ -550,8 +542,6 @@ manager.setSequencePendingHandler((info) => {
 > `scope` must be a non-empty string when provided.
 > Uses HotkeyManager's scope stack — sequences respect the active scope.
 
----
-
 ## KeyStateTracker
 
 Track which keys are currently held down (useful for "hold Shift to multi-select" patterns):
@@ -582,8 +572,6 @@ The tracker is owned by `HotkeyManager` and shares its lifecycle — it is creat
 
 > [!NOTE]
 > Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
-
----
 
 ## HotkeyRecorder
 
@@ -625,8 +613,6 @@ recorder.destroy();
 
 > [!TIP]
 > Not a singleton — create one per settings row via `manager.createRecorder()`. The `HotkeyRecorder` class is exported for type declarations but its constructor is internal.
-
----
 
 ## Validation
 
@@ -672,8 +658,6 @@ assertValidHotkey(""); // throws Error
 | `"Ctrl+S+X"`   | `Invalid hotkey "Ctrl+S+X": unexpected segment "X" after key "S"` |
 
 Unknown key names (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw — they are allowed for forward compatibility.
-
----
 
 ## Utility Functions
 
@@ -752,8 +736,6 @@ resolveModifier("Mod", Platform.Windows); // "Control"
 resolveModifier("Shift"); // "Shift" (non-Mod modifiers pass through)
 ```
 
----
-
 ## Library Enums & Constants
 
 The library registers proper UI5 enums via `DataType.registerEnum()`:
@@ -810,8 +792,6 @@ manager.register("Mod+S", handlerB, { conflictBehavior: ConflictBehavior.Allow }
 // Both active, no console output
 ```
 
----
-
 ## Type-safe Hotkey Strings
 
 The `Hotkey` type provides IDE autocomplete for known key combinations while still accepting any string:
@@ -830,16 +810,12 @@ Supported key categories: Letters (A-Z), Digits (0-9), Function keys (F1-F24), S
 
 Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `Cmd`, `Command`, `Option`.
 
----
-
 ## Further Reading
 
 - [Architecture & Internals](../../docs/hotkeys/ARCHITECTURE.md) — two-pass matching, scope stack, listener design
 - [Multi-key Sequence Design](../../docs/hotkeys/SEQUENCES.md) — how the sequence system works
 - [Alternatives Research](../../docs/hotkeys/ALTERNATIVES-RESEARCH.md) — comparison with other keyboard shortcut approaches
 - [UI5 Event Handling Deep Dive](../../docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
-
----
 
 ## Troubleshooting
 
@@ -869,8 +845,6 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 - If `enabled()` throws an error, the registration is silently treated as disabled. Check the browser console for `Log.warning` messages from `ui5.hotkeys.HotkeyManager`.
 
----
-
 ## When NOT to Use This Library
 
 Use UI5's built-in keyboard handling instead when:
@@ -882,8 +856,6 @@ Use UI5's built-in keyboard handling instead when:
 | List/table arrow key navigation          | `sap.ui.core.delegate.ItemNavigation`                           |
 | F6 group navigation                      | `data-sap-ui-fastnavgroup` attribute                            |
 | Simple view-scoped with guaranteed focus | `sap.ui.core.CommandExecution` in manifest.json                 |
-
----
 
 ## License
 

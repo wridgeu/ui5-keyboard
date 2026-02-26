@@ -19,7 +19,7 @@ During this process the browser fires `compositionstart`, `compositionupdate`, a
 - `event.isComposing === true` (modern browsers)
 - `event.key === "Process"` or `event.keyCode === 229` (legacy fallback)
 
-### Why it matters
+### Relevance for hotkeys
 
 Hotkey matching must **not** interfere with IME composition. If a user is typing Chinese text and presses `S` as part of a pinyin sequence, that keystroke is not a hotkey attempt — it is part of character composition.
 
@@ -121,9 +121,13 @@ Events identified as AltGr are silently dropped in the pre-filter step, preventi
 
 Target-scoped hotkey registrations (those with a `target` option) use `composedPath()` to determine whether the event originated from within the target element. Instead of attaching per-element DOM listeners, the EventDispatcher checks whether the registration's target appears in the event's composed path.
 
-### Innermost-wins semantics
+### Target matching order
 
-When multiple nested elements have registrations for the same key, the **innermost** matching target wins. The composed path is iterated from index 0 (innermost) outward, and the first match is used.
+When multiple nested elements have registrations for the same key, matching starts at the **innermost** node and moves outward.
+
+- By default, only the innermost match fires.
+- If the matched registration sets `allowBubble: true`, matching can continue to outer targets.
+- If a matched registration has `stopPropagation: true`, target matching stops immediately.
 
 ### Limitations
 
