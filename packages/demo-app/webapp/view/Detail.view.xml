@@ -42,6 +42,8 @@
             <Panel headerText="Record a Shortcut (HotkeyRecorder)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Click Record, then press one hotkey (one action key with optional modifiers)." />
+                    <Text text="After recording, the shortcut is live — press it to trigger a MessageToast." class="sapUiTinyMarginTop" />
+                    <Text text="Use Reset to clear the shortcut and record a new one." />
                     <Text text="Examples that work: G, F5, Ctrl+Shift+K, Alt+ArrowDown." class="sapUiTinyMarginTop" />
                     <Text text="Not supported as one hotkey: G+K (two action keys) or sequences like G then K." />
                     <Text text="Tip: prefer modifier-based shortcuts for app actions; single letters are often suppressed in inputs with default settings." />
@@ -52,6 +54,12 @@
                             text="{= ${state>/isRecording} ? 'Recording...' : 'Record'}"
                             press=".onStartRecording"
                             type="{= ${state>/isRecording} ? 'Reject' : 'Accept'}"
+                            class="sapUiSmallMarginBegin" />
+                        <Button
+                            text="Reset"
+                            press=".onResetRecording"
+                            type="Default"
+                            enabled="{= !!${state>/recordedShortcut} &amp;&amp; !${state>/isRecording}}"
                             class="sapUiSmallMarginBegin" />
                     </HBox>
                 </VBox>
