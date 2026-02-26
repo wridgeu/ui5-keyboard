@@ -646,16 +646,13 @@ export default class KioskKeyboard extends Control {
    * before disabling. Without this, the framework's generic onfocusfail
    * fallback would move focus to an arbitrary sibling.
    *
-   * Note: `setEnabled(true)` does not re-open a previously closed docked
-   * keyboard — call `show()` explicitly after re-enabling.
+   * A docked keyboard that is disabled stays visually open (greyed out)
+   * rather than closing. The escape listener and native keyboard suppression
+   * remain attached so that re-enabling works without requiring `show()`.
    */
   setEnabled(bEnabled: boolean): this {
     if (!bEnabled) {
       this._redirectFocusToTargetIfOwned();
-      // Close the docked keyboard — a disabled keyboard should not remain open.
-      if (this.getDocked() && this._open) {
-        this.close();
-      }
     }
     return this.setProperty("enabled", bEnabled) as this;
   }

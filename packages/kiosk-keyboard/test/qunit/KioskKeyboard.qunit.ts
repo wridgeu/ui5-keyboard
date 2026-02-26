@@ -3079,7 +3079,7 @@ QUnit.test("setEnabled(false) without focus on keyboard does not throw", async (
   kb.destroy();
 });
 
-QUnit.test("setEnabled(false) closes docked keyboard", async (assert) => {
+QUnit.test("setEnabled(false) keeps docked keyboard open but disabled", async (assert) => {
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
   kb.show();
@@ -3088,7 +3088,15 @@ QUnit.test("setEnabled(false) closes docked keyboard", async (assert) => {
   kb.setEnabled(false);
   await waitForRender();
 
-  assert.notOk(kb.isOpen(), "Docked keyboard is closed after disabling");
+  assert.ok(kb.isOpen(), "Docked keyboard stays open (visually greyed out)");
+  assert.ok(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--disabled"), "Disabled CSS class is applied");
+
+  // Re-enabling restores interaction without needing show()
+  kb.setEnabled(true);
+  await waitForRender();
+
+  assert.ok(kb.isOpen(), "Keyboard is still open after re-enabling");
+  assert.notOk(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--disabled"), "Disabled CSS class is removed");
 
   kb.destroy();
 });
