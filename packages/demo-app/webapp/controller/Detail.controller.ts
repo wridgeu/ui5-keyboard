@@ -67,8 +67,9 @@ export default class Detail extends BaseController {
         stateModel.setProperty("/recordedShortcut", hotkey || "(cleared)");
         stateModel.setProperty("/isRecording", false);
 
+        this._unregisterDynamic();
+
         if (hotkey) {
-          this._unregisterDynamic();
           this._dynamicHandle = this._hotkeys.register(
             hotkey,
             () => {
