@@ -267,7 +267,16 @@ export default class EventDispatcher {
 
     // Step 2: Interceptor (modal capture)
     // Interceptor handles its own DOM event manipulation (preventDefault, etc.)
-    if (this._interceptor?.onKeyDown(event)) return;
+    // Wrapped in try-catch so a throwing onRecord/onCancel callback does not
+    // kill the pipeline — matches the isolation pattern used by _executeMatch.
+    if (this._interceptor) {
+      try {
+        if (this._interceptor.onKeyDown(event)) return;
+      } catch (error) {
+        Log.error(`Error in interceptor onKeyDown: ${error}`, undefined, LOG_COMPONENT);
+        return; // Event was consumed by the interceptor (preventDefault already called)
+      }
+    }
 
     // Step 3: Pre-filter: IME, modifier-only, AltGr
     if (this._preFilterEvent(event)) return;

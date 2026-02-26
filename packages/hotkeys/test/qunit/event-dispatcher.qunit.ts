@@ -673,6 +673,48 @@ QUnit.test("Nested targets — stopPropagation option on inner does not change i
 });
 
 // ──────────────────────────────────────────────
+// Target-scoped: stopPropagation option vs callback
+// ──────────────────────────────────────────────
+
+QUnit.test("Target-scoped: stopPropagation option governs, not callback event.stopPropagation()", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer },
+  );
+  manager.register(
+    "Escape",
+    (event) => {
+      innerFired = true;
+      // Callback explicitly calls event.stopPropagation(), but the OPTION is false.
+      // The pipeline should ignore the DOM state and still check outer targets
+      // for skip-reason tracking (though innermost still wins for execution).
+      event.stopPropagation();
+    },
+    { target: inner, stopPropagation: false },
+  );
+
+  fireKeyOn(inner, "Escape");
+  assert.ok(innerFired, "Innermost target callback fired");
+  // Outer still does NOT fire because innermost-wins — but the key point is that
+  // the pipeline did NOT short-circuit before checking outer targets (it continued
+  // iterating for skip-reason tracking because option was false).
+  assert.notOk(outerFired, "Outer target did NOT fire (innermost wins regardless)");
+
+  outer.remove();
+});
+
+// ──────────────────────────────────────────────
 // Destroyed dispatcher safety
 // ──────────────────────────────────────────────
 
@@ -765,6 +807,28 @@ QUnit.test("stopPropagation: true blocks document bubble listeners", (assert) =>
   assert.strictEqual(docBubbleCount, 0, "Document bubble listener did NOT fire");
 
   document.removeEventListener("keydown", docListener, false);
+});
+
+QUnit.test("stopPropagation: false allows both window capture and document listeners", (assert) => {
+  let windowCaptureCount = 0;
+  let docCaptureCount = 0;
+  const winListener = () => {
+    windowCaptureCount++;
+  };
+  const docListener = () => {
+    docCaptureCount++;
+  };
+  window.addEventListener("keydown", winListener, true);
+  document.addEventListener("keydown", docListener, true);
+
+  manager.register("F5", () => {}, { stopPropagation: false });
+
+  fireKey("F5");
+  assert.strictEqual(windowCaptureCount, 1, "Window capture listener fires (stopPropagation: false)");
+  assert.strictEqual(docCaptureCount, 1, "Document capture listener fires (stopPropagation: false)");
+
+  window.removeEventListener("keydown", winListener, true);
+  document.removeEventListener("keydown", docListener, true);
 });
 
 QUnit.test("Window capture listener fires even with stopPropagation: true", (assert) => {
@@ -869,19 +933,27 @@ QUnit.test("setInterceptor replacement calls onDetached synchronously", (assert)
 // Recorder tracking leak prevention
 // ──────────────────────────────────────────────
 
-QUnit.test("recorder.destroy() allows clean re-creation after manager destroy", (assert) => {
+QUnit.test("recorder.destroy() untracks from dispatcher — no double-destroy on manager teardown", (assert) => {
   const recorder = manager.createRecorder({ onRecord: () => {} });
+
+  // Destroy the recorder first — this should untrack it from the dispatcher
   recorder.destroy();
+  assert.ok(recorder.isDestroyed, "Recorder is destroyed after its own destroy()");
 
-  // Verify the recorder was untracked — when manager destroys, it should not
-  // attempt to call _onDispatcherDestroyed on the already-destroyed recorder
+  // Now create a second recorder that stays alive
+  const recorder2 = manager.createRecorder({ onRecord: () => {} });
+
+  // When manager destroys, it iterates tracked recorders and calls _onDispatcherDestroyed.
+  // If recorder was NOT untracked, _onDispatcherDestroyed would be called on an already-
+  // destroyed recorder (which would be a leak). recorder2 should be properly notified.
   manager.destroy();
-  assert.ok(recorder.isDestroyed, "Recorder still destroyed");
+  assert.ok(recorder.isDestroyed, "First recorder still destroyed (no double-destroy side effects)");
+  assert.ok(recorder2.isDestroyed, "Second recorder destroyed by manager teardown");
 
-  // Re-create manager works
+  // Re-create manager works cleanly
   const newManager = HotkeyManager.getInstance();
   const newRecorder = newManager.createRecorder({ onRecord: () => {} });
-  assert.notOk(newRecorder.isDestroyed, "New recorder is functional");
+  assert.notOk(newRecorder.isDestroyed, "New recorder is functional after clean re-creation");
   newRecorder.destroy();
 });
 

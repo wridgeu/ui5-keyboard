@@ -852,7 +852,11 @@ export default class HotkeyManager extends BaseObject {
       skippedRegistration,
     };
 
-    this._unhandledCallback(context);
+    try {
+      this._unhandledCallback(context);
+    } catch (error) {
+      Log.error(`Error in unhandled callback: ${error}`, undefined, LOG_COMPONENT);
+    }
   }
 
   // ──────────────────────────────────────────────
