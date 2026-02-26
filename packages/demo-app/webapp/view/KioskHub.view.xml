@@ -7,8 +7,7 @@
             <List
                 headerText="Choose a Demo"
                 items="{state>/kioskDemoEntries}"
-                itemPress=".onScenarioPress"
-                inset="true">
+                itemPress=".onScenarioPress">
                 <StandardListItem
                     title="{state>title}"
                     description="{state>description}"
