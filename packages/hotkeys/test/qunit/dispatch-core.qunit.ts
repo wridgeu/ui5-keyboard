@@ -1,7 +1,7 @@
-import { findMatchInScope, resolveMatchedRegistration } from "ui5/hotkeys/dispatch-core";
+import { findMatchInScope } from "ui5/hotkeys/internal/dispatch-core";
 import { parseHotkey } from "ui5/hotkeys/parse";
 import { UnhandledReason, GLOBAL_SCOPE } from "ui5/hotkeys/library";
-import { type SkipInfo, type DebugSkipEntry } from "ui5/hotkeys/skip-reason";
+import { type SkipInfo, type DebugSkipEntry } from "ui5/hotkeys/internal/skip-reason";
 
 // ──────────────────────────────────────────────
 // Test helpers
@@ -320,111 +320,4 @@ QUnit.test("Populates debugSkips array for every skipped registration", (assert)
   assert.strictEqual(debugSkips[0].reason, UnhandledReason.Disabled, "First skip reason correct");
   assert.strictEqual(debugSkips[1].registration.id, "d2", "Second skip has correct registration");
   assert.strictEqual(debugSkips[1].reason, UnhandledReason.Disabled, "Second skip reason correct");
-});
-
-// ──────────────────────────────────────────────
-// resolveMatchedRegistration
-// ──────────────────────────────────────────────
-
-QUnit.module("dispatch-core — resolveMatchedRegistration");
-
-QUnit.test("Matches in active scope first", (assert) => {
-  const scopeReg = makeRegistration("scoped", "Escape", { scope: "editor" });
-  const globalReg = makeRegistration("global", "Escape");
-  const event = mockKeyEvent({ key: "Escape" });
-
-  const result = resolveMatchedRegistration({
-    event,
-    isInput: false,
-    popupOpen: false,
-    activeScope: "editor",
-    targetElement: null,
-    getScopeRegistrations: (scope) => (scope === "editor" ? [scopeReg] : [globalReg]),
-    toRegistrationInfo: toInfo,
-    logComponent: LOG_COMPONENT,
-  });
-
-  assert.strictEqual(result?.id, "scoped", "Active scope match preferred");
-});
-
-QUnit.test("Falls back to global scope when no match in active scope", (assert) => {
-  const globalReg = makeRegistration("global", "Escape");
-  const event = mockKeyEvent({ key: "Escape" });
-
-  const result = resolveMatchedRegistration({
-    event,
-    isInput: false,
-    popupOpen: false,
-    activeScope: "editor",
-    targetElement: null,
-    getScopeRegistrations: (scope) => (scope === GLOBAL_SCOPE ? [globalReg] : []),
-    toRegistrationInfo: toInfo,
-    logComponent: LOG_COMPONENT,
-  });
-
-  assert.strictEqual(result?.id, "global", "Global scope fallback used");
-});
-
-QUnit.test("No global fallback when active scope IS global", (assert) => {
-  // When active scope is already global, only one pass should occur.
-  // If no match, result is null (no redundant second pass).
-  const event = mockKeyEvent({ key: "Enter" });
-  let callCount = 0;
-
-  const result = resolveMatchedRegistration({
-    event,
-    isInput: false,
-    popupOpen: false,
-    activeScope: GLOBAL_SCOPE,
-    targetElement: null,
-    getScopeRegistrations: (scope) => {
-      callCount++;
-      assert.strictEqual(scope, GLOBAL_SCOPE, `Pass ${callCount}: requested scope is global`);
-      return [];
-    },
-    toRegistrationInfo: toInfo,
-    logComponent: LOG_COMPONENT,
-  });
-
-  assert.strictEqual(result, null, "No match");
-  assert.strictEqual(callCount, 1, "getScopeRegistrations called only once (no redundant fallback)");
-});
-
-QUnit.test("Returns null when no match in any scope", (assert) => {
-  const event = mockKeyEvent({ key: "F12" });
-
-  const result = resolveMatchedRegistration({
-    event,
-    isInput: false,
-    popupOpen: false,
-    activeScope: "editor",
-    targetElement: null,
-    getScopeRegistrations: () => [],
-    toRegistrationInfo: toInfo,
-    logComponent: LOG_COMPONENT,
-  });
-
-  assert.strictEqual(result, null, "Null when nothing matches");
-});
-
-QUnit.test("Passes targetElement through to getScopeRegistrations", (assert) => {
-  const target = document.createElement("div");
-  const event = mockKeyEvent({ key: "Escape" });
-  let receivedTarget: EventTarget | null = null;
-
-  resolveMatchedRegistration({
-    event,
-    isInput: false,
-    popupOpen: false,
-    activeScope: GLOBAL_SCOPE,
-    targetElement: target,
-    getScopeRegistrations: (_scope, tgt) => {
-      receivedTarget = tgt ?? null;
-      return [];
-    },
-    toRegistrationInfo: toInfo,
-    logComponent: LOG_COMPONENT,
-  });
-
-  assert.strictEqual(receivedTarget, target, "targetElement forwarded to callback");
 });

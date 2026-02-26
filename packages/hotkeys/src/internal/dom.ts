@@ -1,6 +1,3 @@
-import { MODIFIER_KEYS } from "./constants";
-import { Platform } from "../library";
-
 /**
  * Set of `<input>` types that are considered editable text fields.
  * Button-like inputs (button, submit, reset) and non-text inputs
@@ -81,31 +78,4 @@ export function resolveIgnoreInputs(option: boolean | "auto", ctrl: boolean, met
   if (option !== "auto") return option;
   // Ctrl/Meta combos and Escape should work in inputs; everything else is suppressed
   return !(ctrl || meta || key === "Escape");
-}
-
-/**
- * Determine whether a keyboard event should be ignored entirely by hotkey/sequence managers.
- *
- * Filters out:
- * - IME composition events (not a hotkey attempt)
- * - Pure modifier-only key presses (not a hotkey attempt)
- * - AltGr character input on Windows (Ctrl+Alt with right-side Alt)
- *
- * Callers must track `lastAltLocation` themselves and pass it in, since
- * it needs to persist across events within each manager instance.
- */
-export function shouldIgnoreKeyEvent(event: KeyboardEvent, platform: Platform, lastAltLocation: number): boolean {
-  // IME composition — not a hotkey attempt
-  if (event.isComposing || event.keyCode === 229) return true;
-
-  // Pure modifier key press — not a hotkey attempt
-  if (MODIFIER_KEYS.has(event.key)) return true;
-
-  // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.
-  // Prefer direct AltGraph signal when available, then fall back to
-  // right-Alt location tracking for environments where AltGraph is absent.
-  if (platform === Platform.Windows && event.getModifierState("AltGraph")) return true;
-  if (platform === Platform.Windows && event.ctrlKey && event.altKey && lastAltLocation === 2) return true;
-
-  return false;
 }

@@ -365,7 +365,7 @@ this._dispatcher = new EventDispatcher(
 
 This keeps the dispatch methods private on HotkeyManager while satisfying the interface contract.
 
-**Side-effect coupling:** `processHotkeys` returns `boolean` (consumed or not) but also stores skip information in `_lastSkipInfo` as a side effect. `emitUnhandled` reads `_lastSkipInfo` when `forcedReason` is null. This coupling is acceptable because both methods live on the same HotkeyManager instance and the call order is guaranteed by the EventDispatcher pipeline (step 5 before step 7). The alternative — returning a richer result type — was considered but rejected as over-engineering given the fixed call order.
+**Side-effect coupling:** `processHotkeys` returns `boolean` (consumed or not) but also stores the full evaluation context in `_lastEventContext` (active scope, input state, popup state, skip info) as a side effect. `emitUnhandled` reads `_lastEventContext` when `forcedReason` is null, avoiding redundant recomputation of scope and input state. This coupling is acceptable because both methods live on the same HotkeyManager instance and the call order is guaranteed by the EventDispatcher pipeline (step 5 before step 7). The alternative — returning a richer result type — was considered but rejected as over-engineering given the fixed call order.
 
 KeyStateTracker is not part of this interface — the dispatcher owns it directly and calls `processKeyDown`/`processKeyUp`/`processBlur` on the instance. The `HotkeyDispatchHandler` only contains things HotkeyManager provides.
 
@@ -488,9 +488,9 @@ Add to HotkeyManager:
 - `isDispatchSuspended()` — public, delegates to `_dispatcher.isDispatchSuspended()`.
 - `createRecorder(options)` — public factory, passes `_dispatcher` to `new HotkeyRecorder(options, dispatcher)`. Consistent with `createGroup()` pattern.
 - `getKeyStateTracker()` — public getter, returns `_dispatcher.keyStateTracker`. Replaces `KeyStateTracker.getInstance()` for consumers that need held-key state.
-- `_processHotkeys(event): boolean` — private, implements `HotkeyDispatchHandler.processHotkeys` via anonymous handler. Replaces `_processKeyEvent`. Returns `boolean` (consumed or not). Runs document-level registrations first, then target-scoped (innermost-first via `composedPath()`). Stores skip info in `_lastSkipInfo` for `_emitUnhandled`. See Phase 4 for detailed pseudocode.
+- `_processHotkeys(event): boolean` — private, implements `HotkeyDispatchHandler.processHotkeys` via anonymous handler. Replaces `_processKeyEvent`. Returns `boolean` (consumed or not). Runs document-level registrations first, then target-scoped (innermost-first via `composedPath()`). Stores the full evaluation context in `_lastEventContext` (active scope, input state, popup state, skip info) for `_emitUnhandled`. See Phase 4 for detailed pseudocode.
 - `_processSequences(event): boolean` — private, implements `HotkeyDispatchHandler.processSequences` via anonymous handler. Delegates to `_sequenceManager?.processKeyEvent(event) ?? false`.
-- `_emitUnhandled(event, forcedReason): void` — private, implements `HotkeyDispatchHandler.emitUnhandled` via anonymous handler. If `forcedReason` is non-null, uses it directly. Otherwise uses `_lastSkipInfo` for the most specific reason.
+- `_emitUnhandled(event, forcedReason): void` — private, implements `HotkeyDispatchHandler.emitUnhandled` via anonymous handler. If `forcedReason` is non-null, uses it directly. Otherwise reads `_lastEventContext` for the most specific reason and cached evaluation state.
 
 **Debug mode:** The existing `_logDebugEvent` method and `_debugMode` flag remain on HotkeyManager. Debug logging fires inside `_processHotkeys` (after matching) and inside `_emitUnhandled` (for unhandled events). The EventDispatcher has no knowledge of debug mode. **Dual-match logging:** When a document-level registration matches with `stopPropagation: false` AND a target-scoped registration also matches the same event, `_logDebugEvent` fires twice — once for each match. Each log entry includes the matched registration, so consumers can distinguish them. The current log shape (`_logDebugEvent(event, scope, isInput, popupOpen, match, debugSkips)`) is sufficient — the `match` parameter identifies which registration triggered the log. A future enhancement could merge both matches into a single log entry, but this is not required for the initial implementation.
 
@@ -533,21 +533,7 @@ interface ScopeRegistrationBucket {
 
 The `Map<EventTarget, Set<string>>` is essential for `_matchTargetRegistrations`: for each node in the `composedPath()`, it does `targets.get(node)` to find relevant registrations in O(1). A flat set would require iterating all registrations per path node — O(path_length \* registrations_in_scope) vs O(path_length + relevant_registrations).
 
-In `dispatch-core.ts`, add `eventPath` to `FindMatchOptions`:
-
-```ts
-interface FindMatchOptions {
-  event: KeyboardEvent;
-  isInput: boolean;
-  popupOpen: boolean;
-  eventPath: EventTarget[]; // NEW — pre-computed composedPath()
-  registrations: ReadonlyArray<HotkeyRegistration>;
-  skipInfo?: SkipInfo | null;
-  debugSkips?: DebugSkipEntry[] | null;
-  toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo;
-  logComponent: string;
-}
-```
+**Implementation note:** The original proposal planned to add `eventPath` to `FindMatchOptions` in `dispatch-core.ts`. In the final implementation, `findMatchInScope` operates on pre-filtered registrations (document-level, or for a specific target node) and does not need path awareness. Path iteration logic lives in `HotkeyManager._matchTargetRegistrations`, which calls `findMatchInScope` per-node. This keeps the dispatch-core module focused on single-scope matching without DOM coupling.
 
 **Note on `TargetMismatch` in `findMatchInScope`:** The `findMatchInScope` function is only called for document-level registrations (from `bucket.documentIds`), which do not have targets. No `TargetMismatch` check is needed here — document-level registrations match regardless of where the event target is in the DOM.
 
@@ -578,7 +564,7 @@ private _executeMatch(event: KeyboardEvent, matched: HotkeyRegistration): void {
 _processHotkeys(event: KeyboardEvent): boolean {
   // Defensive reset — prevents stale data from a previous event leaking
   // into _emitUnhandled if a future code path reads it unexpectedly.
-  this._lastSkipInfo = null;
+  this._lastEventContext = null;
 
   const eventPath = event.composedPath();
   const activeScope = this.getActiveScope();
@@ -636,8 +622,8 @@ _processHotkeys(event: KeyboardEvent): boolean {
     this._logDebugEvent(event, activeScope, isInput, popupOpen, null, debugSkips);
   }
 
-  // Store skipInfo for _emitUnhandled (called by EventDispatcher in step 7)
-  this._lastSkipInfo = skipInfo;
+  // Store event context for _emitUnhandled (called by EventDispatcher in step 7)
+  this._lastEventContext = { activeScope, isInput, popupOpen, skipInfo };
 
   return false;
 }
@@ -813,7 +799,7 @@ if (!hotkeyConsumed && !sequenceConsumed) {
 }
 ```
 
-HotkeyManager's `_emitUnhandled(event, forcedReason)` implementation: if `forcedReason` is non-null, use it directly as the `UnhandledContext.reason` — the `skippedRegistration` field is omitted (undefined) because no registration was evaluated. If `forcedReason` is null, use `this._lastSkipInfo` (populated during `_processHotkeys`) to determine the most specific reason and skipped registration.
+HotkeyManager's `_emitUnhandled(event, forcedReason)` implementation: if `forcedReason` is non-null, use it directly as the `UnhandledContext.reason` — the `skippedRegistration` field is omitted (undefined) because no registration was evaluated. If `forcedReason` is null, use `this._lastEventContext` (populated during `_processHotkeys`) which caches the full evaluation context (active scope, input state, popup state, skip info) to determine the most specific reason and skipped registration without redundant recomputation.
 
 HotkeyManager's `_processHotkeys` returns `boolean`. SequenceManager's `processKeyEvent` already returns `boolean`.
 
@@ -895,204 +881,204 @@ New tests:
 
 ### Core infrastructure
 
-- [ ] Create `internal/event-dispatcher.ts` — plain class (not a singleton), `window` capture listeners (`keydown`, `keyup`), `window` bubble listener (`blur`)
-- [ ] Implement keydown pipeline (7 steps: key state → interceptor → pre-filter → guard → hotkeys → sequences → unhandled)
-- [ ] When interceptor consumes event, stop pipeline — interceptor handles its own DOM event manipulation (`preventDefault`, `stopImmediatePropagation`, etc.)
-- [ ] Implement `keyup` forwarding to key state callback
-- [ ] Implement `blur` forwarding to key state callback
-- [ ] Move pre-filter logic from `HotkeyManager._shouldIgnoreKeyEvent` into EventDispatcher (`_shouldFilter`)
-- [ ] Move AltGr detection (`_lastAltLocation`) from HotkeyManager into EventDispatcher
-- [ ] Implement `destroy()` — remove all listeners, invalidate guards, call `onDetached()` on active interceptor then clear slot, mark tracked recorders destroyed (set `_destroyed = true`, null dispatcher ref), clear tracking set, destroy owned KeyStateTracker
-- [ ] Implement `trackRecorder(recorder)` — add to internal `Set<HotkeyRecorder>` for lifecycle management
-- [ ] Destroyed dispatcher safety — all public methods are no-ops after destroy, except `suspendDispatch()` which throws
+- [x] Create `internal/event-dispatcher.ts` — plain class (not a singleton), `window` capture listeners (`keydown`, `keyup`), `window` bubble listener (`blur`)
+- [x] Implement keydown pipeline (7 steps: key state → interceptor → pre-filter → guard → hotkeys → sequences → unhandled)
+- [x] When interceptor consumes event, stop pipeline — interceptor handles its own DOM event manipulation (`preventDefault`, `stopImmediatePropagation`, etc.)
+- [x] Implement `keyup` forwarding to key state callback
+- [x] Implement `blur` forwarding to key state callback
+- [x] Move pre-filter logic from `HotkeyManager._shouldIgnoreKeyEvent` into EventDispatcher (`_shouldFilter`)
+- [x] Move AltGr detection (`_lastAltLocation`) from HotkeyManager into EventDispatcher
+- [x] Implement `destroy()` — remove all listeners, invalidate guards, call `onDetached()` on active interceptor then clear slot, mark tracked recorders destroyed (set `_destroyed = true`, null dispatcher ref), clear tracking set, destroy owned KeyStateTracker
+- [x] Implement `trackRecorder(recorder)` — add to internal `Set<HotkeyRecorder>` for lifecycle management
+- [x] Destroyed dispatcher safety — all public methods are no-ops after destroy, except `suspendDispatch()` which throws
 
 ### Suspend guard API
 
-- [ ] Implement `suspendDispatch(reason?)` on EventDispatcher — returns `KeyboardDispatchGuard`, adds to `Set<guard>`
-- [ ] Implement `isDispatchSuspended()` on EventDispatcher — returns `this._guards.size > 0`
-- [ ] Guard `release()` — idempotent, removes from set, sets `isActive = false`
-- [ ] Guard invalidation on `destroy()` — iterate set, set `isActive = false`, clear
-- [ ] Add `suspendDispatch(reason?)` on HotkeyManager — delegates to `_dispatcher`
-- [ ] Add `isDispatchSuspended()` on HotkeyManager — delegates to `_dispatcher`
-- [ ] Export `KeyboardDispatchGuard` interface from `types.ts`
+- [x] Implement `suspendDispatch(reason?)` on EventDispatcher — returns `KeyboardDispatchGuard`, adds to `Set<guard>`
+- [x] Implement `isDispatchSuspended()` on EventDispatcher — returns `this._guards.size > 0`
+- [x] Guard `release()` — idempotent, removes from set, sets `isActive = false`
+- [x] Guard invalidation on `destroy()` — iterate set, set `isActive = false`, clear
+- [x] Add `suspendDispatch(reason?)` on HotkeyManager — delegates to `_dispatcher`
+- [x] Add `isDispatchSuspended()` on HotkeyManager — delegates to `_dispatcher`
+- [x] Export `KeyboardDispatchGuard` interface from `types.ts`
 
 ### Interceptor API
 
-- [ ] Implement `setInterceptor(interceptor)` on EventDispatcher — call `onDetached()` on replaced interceptor, log warning if replacing an active interceptor
-- [ ] Implement `clearInterceptor(owner)` on EventDispatcher — owner-safe (only clears if current === owner)
-- [ ] Define `KeyEventInterceptor` interface in `event-dispatcher.ts` — includes `onKeyDown(event): boolean` and `onDetached(): void`
-- [ ] Implement `untrackRecorder(recorder)` on EventDispatcher — removes from tracking set (no-op if not present)
+- [x] Implement `setInterceptor(interceptor)` on EventDispatcher — call `onDetached()` on replaced interceptor, log warning if replacing an active interceptor
+- [x] Implement `clearInterceptor(owner)` on EventDispatcher — owner-safe (only clears if current === owner)
+- [x] Define `KeyEventInterceptor` interface in `event-dispatcher.ts` — includes `onKeyDown(event): boolean` and `onDetached(): void`
+- [x] Implement `untrackRecorder(recorder)` on EventDispatcher — removes from tracking set (no-op if not present)
 
 ### HotkeyManager refactoring
 
-- [ ] Create anonymous `HotkeyDispatchHandler` object in constructor wrapping private methods (`_processHotkeys`, `_processSequences`, `_emitUnhandled`)
-- [ ] Create `_dispatcher` field — instantiate in constructor with anonymous handler object, destroy in `destroy()`
-- [ ] Refactor `_processKeyEvent` → `_processHotkeys` (private) — returns `boolean`, no `deferUnhandled`/`emitUnhandled` params, resets `_lastSkipInfo = null` at top, stores skip info in `_lastSkipInfo` on no-match path
-- [ ] Extract `_executeMatch(event, matched)` — encapsulates `preventDefault`, `stopPropagation`, callback try/catch (called from `_processHotkeys` and `_matchTargetRegistrations`)
-- [ ] Ensure debug logging fires for ALL outcomes in `_processHotkeys` (document match, target match, and no match) — not just the no-match path
-- [ ] Implement `_processSequences` (private) — delegates to `_sequenceManager?.processKeyEvent(event) ?? false`
-- [ ] Implement `_emitUnhandled(event, forcedReason)` (private) — uses `forcedReason` if non-null, otherwise `_lastSkipInfo`
-- [ ] Add `getKeyStateTracker()` — public getter, returns `_dispatcher.keyStateTracker`
-- [ ] Remove `_keydownHandler` field and `_onKeyDown()` method
-- [ ] Remove `_attachListeners()` / `_detachListeners()`
-- [ ] Remove `_shouldIgnoreKeyEvent()`
-- [ ] Remove `_lastAltLocation`
-- [ ] Remove `_listenerRegistry` field and all usages
-- [ ] Remove `_deferredUnhandledByEvent` WeakMap
-- [ ] Remove `_flushDeferredUnhandled()`
-- [ ] Remove `_hasTargetListenerInPath()`
-- [ ] Remove module-level `handledEvents` and `sequenceConsumedEvents` WeakSets
-- [ ] Remove `_attachTargetListener()` / `_detachTargetListener()`
+- [x] Create anonymous `HotkeyDispatchHandler` object in constructor wrapping private methods (`_processHotkeys`, `_processSequences`, `_emitUnhandled`)
+- [x] Create `_dispatcher` field — instantiate in constructor with anonymous handler object, destroy in `destroy()`
+- [x] Refactor `_processKeyEvent` → `_processHotkeys` (private) — returns `boolean`, no `deferUnhandled`/`emitUnhandled` params, resets `_lastEventContext = null` at top, stores full evaluation context in `_lastEventContext` on no-match path
+- [x] Extract `_executeMatch(event, matched)` — encapsulates `preventDefault`, `stopPropagation`, callback try/catch (called from `_processHotkeys` and `_matchTargetRegistrations`)
+- [x] Ensure debug logging fires for ALL outcomes in `_processHotkeys` (document match, target match, and no match) — not just the no-match path
+- [x] Implement `_processSequences` (private) — delegates to `_sequenceManager?.processKeyEvent(event) ?? false`
+- [x] Implement `_emitUnhandled(event, forcedReason)` (private) — uses `forcedReason` if non-null, otherwise `_lastEventContext`
+- [x] Add `getKeyStateTracker()` — public getter, returns `_dispatcher.keyStateTracker`
+- [x] Remove `_keydownHandler` field and `_onKeyDown()` method
+- [x] Remove `_attachListeners()` / `_detachListeners()`
+- [x] Remove `_shouldIgnoreKeyEvent()`
+- [x] Remove `_lastAltLocation`
+- [x] Remove `_listenerRegistry` field and all usages
+- [x] Remove `_deferredUnhandledByEvent` WeakMap
+- [x] Remove `_flushDeferredUnhandled()`
+- [x] Remove `_hasTargetListenerInPath()`
+- [x] Remove module-level `handledEvents` and `sequenceConsumedEvents` WeakSets
+- [x] Remove `_attachTargetListener()` / `_detachTargetListener()`
 
 ### Target-scoped matching overhaul
 
-- [ ] Add `eventPath: EventTarget[]` to `FindMatchOptions` interface in `dispatch-core.ts`
-- [ ] Verify `findMatchInScope` is only called for document-level registrations (`bucket.documentIds`) — no `TargetMismatch` check needed here (see Phase 4 note). `TargetMismatch` tracking happens in `_matchTargetRegistrations`
-- [ ] Keep `ScopeRegistrationBucket` split structure (`documentIds` + `targets` map) — required for O(1) per-target lookup during `composedPath()` iteration
-- [ ] Retain `_indexRegistration` / `_deindexRegistration` split logic — add to `documentIds` or `targets` map based on whether registration has a target
-- [ ] `_matchDocumentRegistrations` uses `bucket.documentIds` for document-level registrations (two-pass: active scope → global)
-- [ ] Implement `_matchTargetRegistrations` — scope-first ordering: (1) active scope pass iterates `composedPath()` from index 0 (innermost) outward, uses `bucket.targets.get(node)` per node; first match wins; `stopPropagation: true` on a match skips outer targets. (2) Global scope pass only if active scope pass found no match and active scope is not `GLOBAL_SCOPE`. (3) Skip-reason pass: when skip tracking is active and no match found, iterate all target registrations in evaluated scope buckets; for each registration whose **key combo matches the event**, record `TargetMismatch` if its target was not in the `composedPath()` — registrations whose key combo does not match are ignored (they are `NoMatch`, not `TargetMismatch`). Use a `Set` of path nodes for O(1) lookup
-- [ ] Pass pre-computed `composedPath()` array through the matching pipeline (avoid redundant calls — `composedPath()` returns a new array each call)
-- [ ] Implement `composedPath()` fallback — if `composedPath()` returns empty or is undefined, fall back to `[event.target, document, window].filter(Boolean)`
-- [ ] Test: active-scope target registration takes precedence over global-scope target for the same key, regardless of DOM position (inner global-scope target does NOT fire when an outer active-scope target matches)
-- [ ] Test: when active scope is `GLOBAL_SCOPE`, no duplicate matching occurs (global pass is skipped)
-- [ ] Test: nested targets in the same scope — only innermost fires, outer target callback does NOT execute
-- [ ] Test: `target: document` registration behaves as outermost target (lower priority than element targets and document-level registrations)
+- [x] ~Add `eventPath: EventTarget[]` to `FindMatchOptions` interface in `dispatch-core.ts`~ — path iteration handled in `HotkeyManager._matchTargetRegistrations`; `findMatchInScope` operates on pre-filtered registrations per-node
+- [x] Verify `findMatchInScope` is only called for document-level registrations (`bucket.documentIds`) — no `TargetMismatch` check needed here (see Phase 4 note). `TargetMismatch` tracking happens in `_matchTargetRegistrations`
+- [x] Keep `ScopeRegistrationBucket` split structure (`documentIds` + `targets` map) — required for O(1) per-target lookup during `composedPath()` iteration
+- [x] Retain `_indexRegistration` / `_deindexRegistration` split logic — add to `documentIds` or `targets` map based on whether registration has a target
+- [x] `_matchDocumentRegistrations` uses `bucket.documentIds` for document-level registrations (two-pass: active scope → global)
+- [x] Implement `_matchTargetRegistrations` — scope-first ordering: (1) active scope pass iterates `composedPath()` from index 0 (innermost) outward, uses `bucket.targets.get(node)` per node; first match wins; `stopPropagation: true` on a match skips outer targets. (2) Global scope pass only if active scope pass found no match and active scope is not `GLOBAL_SCOPE`. (3) Skip-reason pass: when skip tracking is active and no match found, iterate all target registrations in evaluated scope buckets; for each registration whose **key combo matches the event**, record `TargetMismatch` if its target was not in the `composedPath()` — registrations whose key combo does not match are ignored (they are `NoMatch`, not `TargetMismatch`). Use a `Set` of path nodes for O(1) lookup
+- [x] Pass pre-computed `composedPath()` array through the matching pipeline (avoid redundant calls — `composedPath()` returns a new array each call)
+- [x] Implement `composedPath()` fallback — if `composedPath()` returns empty or is undefined, fall back to `[event.target, document, window].filter(Boolean)`
+- [x] Test: active-scope target registration takes precedence over global-scope target for the same key, regardless of DOM position (inner global-scope target does NOT fire when an outer active-scope target matches)
+- [x] Test: when active scope is `GLOBAL_SCOPE`, no duplicate matching occurs (global pass is skipped)
+- [x] Test: nested targets in the same scope — only innermost fires, outer target callback does NOT execute
+- [x] Test: `target: document` registration behaves as outermost target (lower priority than element targets and document-level registrations)
 
 ### ListenerRegistry removal
 
-- [ ] Delete `internal/listener-registry.ts`
-- [ ] Delete `listener-registry.ts` (public re-export wrapper)
-- [ ] Remove or update any tests that import from `listener-registry` or `internal/listener-registry`
-- [ ] Remove ListenerRegistry import from `HotkeyManager.ts`
-- [ ] Remove all `ListenerRegistry` references in `HotkeyManager` constructor and `destroy()`
+- [x] Delete `internal/listener-registry.ts`
+- [x] Delete `listener-registry.ts` (public re-export wrapper)
+- [x] Remove or update any tests that import from `listener-registry` or `internal/listener-registry`
+- [x] Remove ListenerRegistry import from `HotkeyManager.ts`
+- [x] Remove all `ListenerRegistry` references in `HotkeyManager` constructor and `destroy()`
 
 ### KeyStateTracker integration
 
-- [ ] Rename `_onKeyDown` → `processKeyDown` (public)
-- [ ] Rename `_onKeyUp` → `processKeyUp` (public)
-- [ ] Rename `_onBlur` → `processBlur` (public)
-- [ ] Remove `addEventListener` calls from constructor
-- [ ] Remove `removeEventListener` calls from `destroy()`
-- [ ] Change KeyStateTracker constructor to accept `platform: Platform` parameter (replaces internal `runtimeHooks.detectPlatform()` call) + `INTERNAL_TOKEN` for runtime enforcement
-- [ ] Add runtime token guard in constructor — throw if token does not match `INTERNAL_TOKEN`
-- [ ] Add `/** @internal */` JSDoc to constructor (not part of public API)
-- [ ] Add `/** @internal */` JSDoc to `destroy()` (called by EventDispatcher, not consumers)
-- [ ] Create `internal/internal-token.ts` — exports `INTERNAL_TOKEN` symbol (not exported from library barrel)
-- [ ] EventDispatcher creates KeyStateTracker in constructor (passing `platform`), exposes via `keyStateTracker` getter
-- [ ] Remove `KeyStateTracker.getInstance()` static method and module-level `instance` variable
-- [ ] Keep `KeyStateTracker` as named export from barrel (consumers need the type for variable declarations)
-- [ ] EventDispatcher calls `processKeyDown`/`processKeyUp`/`processBlur` directly (not via callbacks)
-- [ ] Tie KeyStateTracker lifecycle to EventDispatcher — created and destroyed by dispatcher
+- [x] Rename `_onKeyDown` → `processKeyDown` (public)
+- [x] Rename `_onKeyUp` → `processKeyUp` (public)
+- [x] Rename `_onBlur` → `processBlur` (public)
+- [x] Remove `addEventListener` calls from constructor
+- [x] Remove `removeEventListener` calls from `destroy()`
+- [x] Change KeyStateTracker constructor to accept `platform: Platform` parameter (replaces internal `runtimeHooks.detectPlatform()` call) + `INTERNAL_TOKEN` for runtime enforcement
+- [x] Add runtime token guard in constructor — throw if token does not match `INTERNAL_TOKEN`
+- [x] Add `/** @internal */` JSDoc to constructor (not part of public API)
+- [x] Add `/** @internal */` JSDoc to `destroy()` (called by EventDispatcher, not consumers)
+- [x] Create `internal/internal-token.ts` — exports `INTERNAL_TOKEN` symbol (not exported from library barrel)
+- [x] EventDispatcher creates KeyStateTracker in constructor (passing `platform`), exposes via `keyStateTracker` getter
+- [x] Remove `KeyStateTracker.getInstance()` static method and module-level `instance` variable
+- [x] Keep `KeyStateTracker` as named export from barrel (consumers need the type for variable declarations)
+- [x] EventDispatcher calls `processKeyDown`/`processKeyUp`/`processBlur` directly (not via callbacks)
+- [x] Tie KeyStateTracker lifecycle to EventDispatcher — created and destroyed by dispatcher
 
 ### HotkeyRecorder migration
 
-- [ ] Change constructor to accept `EventDispatcher` as explicit dependency + `INTERNAL_TOKEN` for runtime enforcement
-- [ ] Add runtime token guard in constructor — throw if token does not match `INTERNAL_TOKEN`
-- [ ] Add `createRecorder(options)` factory method on HotkeyManager — passes `INTERNAL_TOKEN` to constructor
-- [ ] Implement `KeyEventInterceptor` interface on HotkeyRecorder (both `onKeyDown` and `onDetached`)
-- [ ] Implement `onDetached()` — sets `_recording = false` (idempotent, does NOT call `clearInterceptor`)
-- [ ] Replace `window.addEventListener` in `start()` with `this._dispatcher.setInterceptor(this)`
-- [ ] Replace `window.removeEventListener` in `stop()` with `this._dispatcher?.clearInterceptor(this)`
-- [ ] Keep `stopImmediatePropagation()` in HotkeyRecorder `onKeyDown` — preserves documented "all keyboard input is blocked" contract (library pipeline is blocked structurally via return value; `stopImmediatePropagation` blocks non-library `window` capture listeners)
-- [ ] Keep `preventDefault()` in HotkeyRecorder `onKeyDown` (prevents browser defaults during recording)
-- [ ] Return `true` from `onKeyDown` as consumed signal to dispatcher
-- [ ] Update `_stopAndRecord` — clear interceptor before firing callback
-- [ ] Add `_onDispatcherDestroyed()` internal method — sets `_destroyed = true`, nulls dispatcher reference (called by EventDispatcher.destroy(), not cross-class private field mutation)
-- [ ] Update `destroy()` — call `stop()`, then `untrackRecorder(this)`, then call `_onDispatcherDestroyed()` on self
-- [ ] Guard against null dispatcher reference in `stop()` and `destroy()` — no-op if dispatcher was cleared by `manager.destroy()`
+- [x] Change constructor to accept `EventDispatcher` as explicit dependency + `INTERNAL_TOKEN` for runtime enforcement
+- [x] Add runtime token guard in constructor — throw if token does not match `INTERNAL_TOKEN`
+- [x] Add `createRecorder(options)` factory method on HotkeyManager — passes `INTERNAL_TOKEN` to constructor
+- [x] Implement `KeyEventInterceptor` interface on HotkeyRecorder (both `onKeyDown` and `onDetached`)
+- [x] Implement `onDetached()` — sets `_recording = false` (idempotent, does NOT call `clearInterceptor`)
+- [x] Replace `window.addEventListener` in `start()` with `this._dispatcher.setInterceptor(this)`
+- [x] Replace `window.removeEventListener` in `stop()` with `this._dispatcher?.clearInterceptor(this)`
+- [x] Keep `stopImmediatePropagation()` in HotkeyRecorder `onKeyDown` — preserves documented "all keyboard input is blocked" contract (library pipeline is blocked structurally via return value; `stopImmediatePropagation` blocks non-library `window` capture listeners)
+- [x] Keep `preventDefault()` in HotkeyRecorder `onKeyDown` (prevents browser defaults during recording)
+- [x] Return `true` from `onKeyDown` as consumed signal to dispatcher
+- [x] Update `_stopAndRecord` — clear interceptor before firing callback
+- [x] Add `_onDispatcherDestroyed()` internal method — sets `_destroyed = true`, nulls dispatcher reference (called by EventDispatcher.destroy(), not cross-class private field mutation)
+- [x] Update `destroy()` — call `stop()`, then `untrackRecorder(this)`, then call `_onDispatcherDestroyed()` on self
+- [x] Guard against null dispatcher reference in `stop()` and `destroy()` — no-op if dispatcher was cleared by `manager.destroy()`
 
 ### Unhandled callback simplification
 
-- [ ] Remove `deferUnhandled` parameter from `_processKeyEvent`
-- [ ] Remove `emitUnhandled` parameter from `_processKeyEvent`
-- [ ] Move unhandled emission logic to EventDispatcher pipeline (step 4 for suspended, step 7 for not consumed)
-- [ ] EventDispatcher passes `forcedReason` to `emitUnhandled`: `UnhandledReason.Suspended` at step 4, `null` at step 7
-- [ ] Add `UnhandledReason.TargetMismatch` to enum in `library.ts`
-- [ ] Add `UnhandledReason.Suspended` to enum in `library.ts`
-- [ ] Update `skip-reason.ts` priority map — renumber all values: `NoMatch: 0`, `TargetMismatch: 1`, `RepeatIgnored: 2`, `InputSuppressed: 3`, `PopupSuppressed: 4`, `Disabled: 5`, `Suspended: 6`
+- [x] Remove `deferUnhandled` parameter from `_processKeyEvent`
+- [x] Remove `emitUnhandled` parameter from `_processKeyEvent`
+- [x] Move unhandled emission logic to EventDispatcher pipeline (step 4 for suspended, step 7 for not consumed)
+- [x] EventDispatcher passes `forcedReason` to `emitUnhandled`: `UnhandledReason.Suspended` at step 4, `null` at step 7
+- [x] Add `UnhandledReason.TargetMismatch` to enum in `library.ts`
+- [x] Add `UnhandledReason.Suspended` to enum in `library.ts`
+- [x] Update `skip-reason.ts` priority map — renumber all values: `NoMatch: 0`, `TargetMismatch: 1`, `RepeatIgnored: 2`, `InputSuppressed: 3`, `PopupSuppressed: 4`, `Disabled: 5`, `Suspended: 6`
 
 ### Tests
 
-- [ ] Unit: single guard blocks dispatch
-- [ ] Unit: nested guards require all releases before dispatch resumes
-- [ ] Unit: `destroy()` invalidates all guards safely
-- [ ] Unit: `release()` is idempotent
-- [ ] Unit: key state tracks during suspension
-- [ ] Unit: suspend does NOT `preventDefault` — browser defaults leak during suspension
-- [ ] Unit: suspended → unhandled fires with `Suspended` reason via `forcedReason` AND `skippedRegistration === undefined`
-- [ ] Unit: in-progress sequence times out during suspension — sequence started, guard acquired, wait > timeout, guard released, next key pressed → sequence does NOT complete
-- [ ] Unit: interceptor blocks hotkey dispatch
-- [ ] Unit: interceptor auto-clears on stop
-- [ ] Unit: key state tracks during interception
-- [ ] Unit: `clearInterceptor` is owner-safe
-- [ ] Unit: recorder `stopImmediatePropagation` blocks non-library window listeners during recording
-- [ ] Unit: interceptor replacement logs warning
-- [ ] Unit: multi-recorder contention — RecorderA starts, RecorderB replaces, RecorderA.onDetached() called, RecorderA.isRecording === false, RecorderA receives no events
-- [ ] Unit: destroy-while-recording — manager destroyed while recorder active, onDetached() called, recorder.isRecording === false, recorder.isDestroyed === true
-- [ ] Unit: target-scoped composedPath match
-- [ ] Unit: target-scoped composedPath miss
-- [ ] Unit: document registration priority over target-scoped
-- [ ] Unit: document match without stopPropagation + target match — both callbacks fire
-- [ ] Unit: nested targets — innermost wins for same key
-- [ ] Unit: nested targets — innermost wins even with `stopPropagation: false` (only innermost fires, outer does not)
-- [ ] Unit: nested targets — stopPropagation option on inner prevents outer (not callback `event.stopPropagation()`)
-- [ ] Unit: nested targets — different keys fire independently
-- [ ] Unit: unhandled fires synchronously (no deferred state)
-- [ ] Unit: full sequence consumed suppresses unhandled
-- [ ] Unit: partial sequence advance suppresses unhandled
-- [ ] Unit: target mismatch → unhandled with `TargetMismatch` reason
-- [ ] Unit: destroy removes all window listeners
-- [ ] Unit: re-create after destroy works
-- [ ] Unit: destroyed dispatcher safety — `setInterceptor`/`clearInterceptor` are no-ops, `suspendDispatch` throws
-- [ ] Unit: destroy marks tracked recorders as destroyed
-- [ ] Unit: recorder `stop()` after manager destroy — no throw (null dispatcher)
-- [ ] Unit: interceptor active + guard active → interceptor still receives events
-- [ ] Unit: same key registered as hotkey AND first step of sequence → both fire, unhandled suppressed
-- [ ] Regression: update nested-target tests from "fire all" to "innermost wins"
-- [ ] Regression: update recorder tests from `new HotkeyRecorder()` to `manager.createRecorder()`
-- [ ] Regression: update KeyStateTracker tests from `getInstance()` to `manager.getKeyStateTracker()`
-- [ ] Regression: update/remove ListenerRegistry tests
-- [ ] Regression: KeyStateTracker updates during recording — recorder active, press key, `getHeldKeys()` includes key (behavioral change from current: stale during recording)
-- [ ] Unit: reentrancy — hotkey callback calls `suspendDispatch()` → current event finishes normally, next event is suspended
-- [ ] Unit: `_processHotkeys` resets `_lastSkipInfo` at top — no stale data from previous events
-- [ ] Unit: third-party window capture listener + stopPropagation true — external window listener fires (same target), document listeners do NOT fire
-- [ ] Unit: third-party window capture listener + stopPropagation false — both external window and document listeners fire
-- [ ] Unit: third-party document capture listener + stopPropagation true — external document listener does NOT fire (event stopped at window)
-- [ ] Unit: third-party document bubble listener + stopPropagation true — external document listener does NOT fire
-- [ ] Unit: target-scoped with `target: document` — treated as target-scoped, lower priority than document-level registrations
-- [ ] Unit: target-scoped with same-origin iframe document — does NOT match events from parent document
-- [ ] Unit: composedPath fallback — empty composedPath falls back to `[event.target, document, window]`
-- [ ] Unit: suspend mid-sequence, release before timeout — sequence completes (pending state preserved)
-- [ ] Unit: onDetached is idempotent — calling on already-stopped recorder does not throw
-- [ ] Unit: setInterceptor replacement calls onDetached on prior interceptor synchronously
-- [ ] Unit: direct `new HotkeyRecorder()` without INTERNAL_TOKEN throws
-- [ ] Unit: direct `new KeyStateTracker()` without INTERNAL_TOKEN throws
-- [ ] Unit: recorder.destroy() removes from dispatcher tracking set (no leak)
+- [x] Unit: single guard blocks dispatch
+- [x] Unit: nested guards require all releases before dispatch resumes
+- [x] Unit: `destroy()` invalidates all guards safely
+- [x] Unit: `release()` is idempotent
+- [x] Unit: key state tracks during suspension
+- [x] Unit: suspend does NOT `preventDefault` — browser defaults leak during suspension
+- [x] Unit: suspended → unhandled fires with `Suspended` reason via `forcedReason` AND `skippedRegistration === undefined`
+- [x] Unit: in-progress sequence times out during suspension — sequence started, guard acquired, wait > timeout, guard released, next key pressed → sequence does NOT complete
+- [x] Unit: interceptor blocks hotkey dispatch
+- [x] Unit: interceptor auto-clears on stop
+- [x] Unit: key state tracks during interception
+- [x] Unit: `clearInterceptor` is owner-safe
+- [x] Unit: recorder `stopImmediatePropagation` blocks non-library window listeners during recording
+- [x] Unit: interceptor replacement logs warning
+- [x] Unit: multi-recorder contention — RecorderA starts, RecorderB replaces, RecorderA.onDetached() called, RecorderA.isRecording === false, RecorderA receives no events
+- [x] Unit: destroy-while-recording — manager destroyed while recorder active, onDetached() called, recorder.isRecording === false, recorder.isDestroyed === true
+- [x] Unit: target-scoped composedPath match
+- [x] Unit: target-scoped composedPath miss
+- [x] Unit: document registration priority over target-scoped
+- [x] Unit: document match without stopPropagation + target match — both callbacks fire
+- [x] Unit: nested targets — innermost wins for same key
+- [x] Unit: nested targets — innermost wins even with `stopPropagation: false` (only innermost fires, outer does not)
+- [x] Unit: nested targets — stopPropagation option on inner prevents outer (not callback `event.stopPropagation()`)
+- [x] Unit: nested targets — different keys fire independently
+- [x] Unit: unhandled fires synchronously (no deferred state)
+- [x] Unit: full sequence consumed suppresses unhandled
+- [x] Unit: partial sequence advance suppresses unhandled
+- [x] Unit: target mismatch → unhandled with `TargetMismatch` reason
+- [x] Unit: destroy removes all window listeners
+- [x] Unit: re-create after destroy works
+- [x] Unit: destroyed dispatcher safety — `setInterceptor`/`clearInterceptor` are no-ops, `suspendDispatch` throws
+- [x] Unit: destroy marks tracked recorders as destroyed
+- [x] Unit: recorder `stop()` after manager destroy — no throw (null dispatcher)
+- [x] Unit: interceptor active + guard active → interceptor still receives events
+- [x] Unit: same key registered as hotkey AND first step of sequence → both fire, unhandled suppressed
+- [x] Regression: update nested-target tests from "fire all" to "innermost wins"
+- [x] Regression: update recorder tests from `new HotkeyRecorder()` to `manager.createRecorder()`
+- [x] Regression: update KeyStateTracker tests from `getInstance()` to `manager.getKeyStateTracker()`
+- [x] Regression: update/remove ListenerRegistry tests
+- [x] Regression: KeyStateTracker updates during recording — recorder active, press key, `getHeldKeys()` includes key (behavioral change from current: stale during recording)
+- [x] Unit: reentrancy — hotkey callback calls `suspendDispatch()` → current event finishes normally, next event is suspended
+- [x] Unit: `_processHotkeys` resets `_lastEventContext` at top — no stale data from previous events
+- [x] Unit: third-party window capture listener + stopPropagation true — external window listener fires (same target), document listeners do NOT fire
+- [x] Unit: third-party window capture listener + stopPropagation false — both external window and document listeners fire
+- [x] Unit: third-party document capture listener + stopPropagation true — external document listener does NOT fire (event stopped at window)
+- [x] Unit: third-party document bubble listener + stopPropagation true — external document listener does NOT fire
+- [x] Unit: target-scoped with `target: document` — treated as target-scoped, lower priority than document-level registrations
+- [x] Unit: target-scoped with same-origin iframe document — does NOT match events from parent document
+- [x] Unit: composedPath fallback — empty composedPath falls back to `[event.target, document, window]`
+- [x] Unit: suspend mid-sequence, release before timeout — sequence completes (pending state preserved)
+- [x] Unit: onDetached is idempotent — calling on already-stopped recorder does not throw
+- [x] Unit: setInterceptor replacement calls onDetached on prior interceptor synchronously
+- [x] Unit: direct `new HotkeyRecorder()` without INTERNAL_TOKEN throws
+- [x] Unit: direct `new KeyStateTracker()` without INTERNAL_TOKEN throws
+- [x] Unit: recorder.destroy() removes from dispatcher tracking set (no leak)
 
 ### Documentation
 
-- [ ] Update `packages/hotkeys/README.md` — rewrite KeyStateTracker section (no longer standalone, accessed via manager or internal)
-- [ ] Update `packages/hotkeys/README.md` — rewrite HotkeyRecorder section (created via `manager.createRecorder()`, not `new HotkeyRecorder()`)
-- [ ] Update `packages/hotkeys/README.md` — add suspend guard API to HotkeyManager method table and usage examples
-- [ ] Update `packages/hotkeys/README.md` — add `createRecorder()` and `getKeyStateTracker()` to HotkeyManager method table
-- [ ] Update `packages/hotkeys/README.md` — update API Stability section (verify `HotkeyRecorder` and `KeyStateTracker` are not listed as stable imports — they currently aren't — and add a note that their constructors are internal)
-- [ ] Update `packages/hotkeys/README.md` — add new `UnhandledReason` values (`TargetMismatch`, `Suspended`) to enum docs
-- [ ] Update `packages/hotkeys/README.md` — update Quick Start if lifecycle examples change
-- [ ] Update `packages/hotkeys/README.md` — update Troubleshooting with suspend guard and interceptor scenarios
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — new module overview, updated event handling section, updated dispatch flow diagram
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — document EventDispatcher pipeline, guard API, interceptor mechanism
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — update project layout section (new files, deleted files)
-- [ ] Update `docs/hotkeys/ARCHITECTURE.md` — update edge cases table with new target-scoped behavior
-- [ ] Update `docs/hotkeys/SEQUENCES.md` — note that SequenceManager no longer called directly from HotkeyManager's listener
-- [ ] Update `docs/hotkeys/SEQUENCES.md` — document how sequence dispatch integrates with the EventDispatcher pipeline
-- [ ] Update `docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md` — update "Implications for Our Libraries" section (window vs document, single listener)
-- [ ] Update `docs/hotkeys/proposals/README.md` — link to this proposal
-- [ ] Update `HotkeyOptions.target` JSDoc in `types.ts` — remove note about "document capture listener fires before target capture listener" (priority is now enforced in the dispatch pipeline, not via DOM ordering)
-- [ ] Review and update all JSDoc on public API (`HotkeyManager`, `HotkeyRecorder`, `RegistrationGroup`, exported types)
-- [ ] Update demo app `Component.ts` and controllers to use `createRecorder()` factory if HotkeyRecorder is used
-- [ ] Update demo app `Main.controller.ts` to use `manager.getKeyStateTracker()` instead of `KeyStateTracker.getInstance()`
-- [ ] Verify all code examples in docs still compile and reflect the new API surface
+- [x] Update `packages/hotkeys/README.md` — rewrite KeyStateTracker section (no longer standalone, accessed via manager or internal)
+- [x] Update `packages/hotkeys/README.md` — rewrite HotkeyRecorder section (created via `manager.createRecorder()`, not `new HotkeyRecorder()`)
+- [x] Update `packages/hotkeys/README.md` — add suspend guard API to HotkeyManager method table and usage examples
+- [x] Update `packages/hotkeys/README.md` — add `createRecorder()` and `getKeyStateTracker()` to HotkeyManager method table
+- [x] Update `packages/hotkeys/README.md` — update API Stability section (verify `HotkeyRecorder` and `KeyStateTracker` are not listed as stable imports — they currently aren't — and add a note that their constructors are internal)
+- [x] Update `packages/hotkeys/README.md` — add new `UnhandledReason` values (`TargetMismatch`, `Suspended`) to enum docs
+- [x] Update `packages/hotkeys/README.md` — update Quick Start if lifecycle examples change
+- [x] Update `packages/hotkeys/README.md` — update Troubleshooting with suspend guard and interceptor scenarios
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — new module overview, updated event handling section, updated dispatch flow diagram
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — document EventDispatcher pipeline, guard API, interceptor mechanism
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — update project layout section (new files, deleted files)
+- [x] Update `docs/hotkeys/ARCHITECTURE.md` — update edge cases table with new target-scoped behavior
+- [x] Update `docs/hotkeys/SEQUENCES.md` — note that SequenceManager no longer called directly from HotkeyManager's listener
+- [x] Update `docs/hotkeys/SEQUENCES.md` — document how sequence dispatch integrates with the EventDispatcher pipeline
+- [x] Update `docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md` — update "Implications for Our Libraries" section (window vs document, single listener)
+- [x] Update `docs/hotkeys/proposals/README.md` — link to this proposal
+- [x] Update `HotkeyOptions.target` JSDoc in `types.ts` — remove note about "document capture listener fires before target capture listener" (priority is now enforced in the dispatch pipeline, not via DOM ordering)
+- [x] Review and update all JSDoc on public API (`HotkeyManager`, `HotkeyRecorder`, `RegistrationGroup`, exported types)
+- [x] Update demo app `Component.ts` and controllers to use `createRecorder()` factory if HotkeyRecorder is used
+- [x] Update demo app `Main.controller.ts` to use `manager.getKeyStateTracker()` instead of `KeyStateTracker.getInstance()`
+- [x] Verify all code examples in docs still compile and reflect the new API surface
 
 ## API Changes
 
@@ -1110,6 +1096,9 @@ There are no external consumers yet, so breaking changes are acceptable where th
 - **`HotkeyRecorder` no longer directly instantiated** — consumers use `manager.createRecorder(options)` factory instead of `new HotkeyRecorder(options)`. Direct instantiation throws at runtime (internal token guard), not just at the TypeScript level. Keeps EventDispatcher internal, consistent with `createGroup()` pattern. `HotkeyRecorder` and `KeyStateTracker` classes remain public type exports (consumers need them for variable type declarations like `const recorder: HotkeyRecorder = manager.createRecorder(...)`) but their constructors are no longer part of the public API (runtime token + `@internal` JSDoc). When a recorder's interceptor is replaced or the manager is destroyed, the recorder is notified via `onDetached()` and its `isRecording` state is reset to `false` — no stale state.
 - **`KeyStateTracker.getInstance()` removed** — the EventDispatcher owns the KeyStateTracker instance. Consumers access it via `manager.getKeyStateTracker()`. The class is still exported for type usage. The `destroy()` method is internal — consumers should not call it directly.
 - **`ListenerRegistry` removed** — both `internal/listener-registry.ts` and the public re-export `listener-registry.ts` are deleted. No replacement needed — functionality absorbed by EventDispatcher and `composedPath()` matching.
+- **`dispatch-core` public re-export removed** — the top-level `dispatch-core.ts` re-export wrapper is deleted. The internal module `internal/dispatch-core.ts` remains but is not part of the public API. Anyone importing `ui5/hotkeys/dispatch-core` will see a broken import.
+- **`dom` public re-export removed** — the top-level `dom.ts` re-export wrapper (`getEventTarget`, `isInputElement`) is deleted. These are internal dispatch utilities; consumers use the `ignoreInputs` option instead. Anyone importing `ui5/hotkeys/dom` will see a broken import.
+- **`skip-reason` public re-export removed** — the top-level `skip-reason.ts` re-export wrapper (`recordSkip`, `SkipInfo`, `DebugSkipEntry`) is deleted. These are internal debug/dispatch infrastructure with no consumer use case. Anyone importing `ui5/hotkeys/skip-reason` will see a broken import.
 - **Nested target-scoped registrations for the same key** — currently, when two nested targets both have registrations for the same key, both callbacks fire independently (outermost first during capture phase). In the new design, only the **innermost** matching target's callback fires — regardless of `stopPropagation`. The `stopPropagation` flag on a target-scoped registration controls whether outer target nodes are checked for debug/skip-reason tracking, NOT whether outer targets match (only the innermost ever fires). This is a deliberate behavioral change — the old "fire all" behavior was an artifact of having independent per-target DOM listeners, not an intentional design choice.
 - **Active-scope target registrations take precedence over global-scope targets** — currently, target listeners fire independently based on DOM capture order, so an active-scope and a global-scope target listener for the same key on different elements can both fire. In the new design, `_matchTargetRegistrations` uses scope-first ordering: active-scope targets are checked before global-scope targets, regardless of DOM position. A global-scope target registration only matches if no active-scope target matched. If existing code relies on both an active-scope and global-scope target callback firing for the same key, refactor to use a single scope or register both in the same scope at different nesting levels.
 - **Target-scoped hotkey callbacks now execute before sequence processing** — currently, document-level hotkey matching and sequence matching run at the document level, while target-scoped listeners fire later when DOM capture reaches each target element. In the new design, step 5 runs all hotkey matching (document + target-scoped) before step 6 runs sequence matching. Target-scoped callbacks now execute before sequences see the event.

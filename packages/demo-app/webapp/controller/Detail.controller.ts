@@ -3,7 +3,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
-import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
+import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 
 /**
  * Detail view controller — demonstrates same-key-different-scope pattern.
@@ -58,10 +58,15 @@ export default class Detail extends BaseController {
   onStartRecording(): void {
     if (this._recorder?.isRecording) return;
 
+    // Destroy the previous recorder to avoid leaking it in EventDispatcher._trackedRecorders
+    if (this._recorder && !this._recorder.isDestroyed) {
+      this._recorder.destroy();
+    }
+
     const stateModel = this.getStateModel();
     stateModel.setProperty("/isRecording", true);
 
-    this._recorder = new HotkeyRecorder({
+    this._recorder = this._manager.createRecorder({
       onRecord: (hotkey) => {
         stateModel.setProperty("/recordedShortcut", hotkey || "(cleared)");
         stateModel.setProperty("/isRecording", false);

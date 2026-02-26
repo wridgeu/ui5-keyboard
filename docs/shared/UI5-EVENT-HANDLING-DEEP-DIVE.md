@@ -317,7 +317,7 @@ From [GitHub Issue #2788](https://github.com/SAP/openui5/issues/2788):
 
 > "We can not provide a stable non-confusing implementation of focus-free shortcuts."
 
-**This is exactly why our HotkeyManager exists.** It uses a document-level `keydown` listener in capture phase, making it focus-independent and able to handle global shortcuts that CommandExecution cannot.
+**This is exactly why our HotkeyManager exists.** It uses a single `window`-level `keydown` listener in capture phase (via the centralized EventDispatcher), making it focus-independent and able to handle global shortcuts that CommandExecution cannot.
 
 ### Shortcut Validation
 
@@ -480,15 +480,15 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### HotkeyManager (`ui5.hotkeys`)
 
-| Aspect                          | Status                 | Notes                                                                                    |
-| ------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
-| Document-level capture listener | **Correct**            | Operates below UIArea, independent of focus — solves CommandExecution's focus limitation |
-| F6 conflict                     | **Should warn**        | F6 is reserved for fast navigation. Registering F6 as a hotkey breaks accessibility      |
-| UI5 tool shortcuts              | **Should warn**        | Ctrl+Alt+Shift+P/S are disallowed; Ctrl+Alt+Shift+T is handled at runtime                |
-| Browser-reserved shortcuts      | **Should warn**        | Ctrl+N/T/W etc. cannot be intercepted in Chrome                                          |
-| Fiori Elements conflict         | **Consider warning**   | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard                                           |
-| `keypress` event                | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`              |
-| AltGr handling                  | **Correct**            | Properly detected and skipped                                                            |
+| Aspect                        | Status                 | Notes                                                                                                                                                                                                                          |
+| ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Window-level capture listener | **Correct**            | Single `window` capture listener (via EventDispatcher) — fires before UIArea, independent of focus, solves CommandExecution's focus limitation. `stopPropagation` prevents events from reaching `document` listeners entirely. |
+| F6 conflict                   | **Should warn**        | F6 is reserved for fast navigation. Registering F6 as a hotkey breaks accessibility                                                                                                                                            |
+| UI5 tool shortcuts            | **Should warn**        | Ctrl+Alt+Shift+P/S are disallowed; Ctrl+Alt+Shift+T is handled at runtime                                                                                                                                                      |
+| Browser-reserved shortcuts    | **Should warn**        | Ctrl+N/T/W etc. cannot be intercepted in Chrome                                                                                                                                                                                |
+| Fiori Elements conflict       | **Consider warning**   | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard                                                                                                                                                                                 |
+| `keypress` event              | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`                                                                                                                                                    |
+| AltGr handling                | **Correct**            | Properly detected and skipped                                                                                                                                                                                                  |
 
 ### KioskKeyboard (`ui5.kiosk`)
 

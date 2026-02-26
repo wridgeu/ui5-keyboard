@@ -3,14 +3,18 @@ import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { fireKey } from "./test-helpers";
 
 const recorders: HotkeyRecorder[] = [];
+let manager: HotkeyManager;
 
-function createRecorder(options: ConstructorParameters<typeof HotkeyRecorder>[0]): HotkeyRecorder {
-  const recorder = new HotkeyRecorder(options);
+function createRecorder(options: { onRecord: (hotkey: string) => void; onCancel?: () => void }): HotkeyRecorder {
+  const recorder = manager.createRecorder(options);
   recorders.push(recorder);
   return recorder;
 }
 
 QUnit.module("HotkeyRecorder", {
+  beforeEach() {
+    manager = HotkeyManager.getInstance();
+  },
   afterEach() {
     for (const r of recorders) {
       if (!r.isDestroyed) r.destroy();
@@ -295,7 +299,6 @@ QUnit.test("onCancel: recorder is stopped before callback runs (resilient to err
 });
 
 QUnit.test("Recorder blocks HotkeyManager hotkeys while recording", (assert) => {
-  const manager = HotkeyManager.getInstance();
   let managerCallCount = 0;
   let cancelCallCount = 0;
 
@@ -319,4 +322,73 @@ QUnit.test("Recorder blocks HotkeyManager hotkeys while recording", (assert) => 
   assert.strictEqual(managerCallCount, 0, "HotkeyManager did not handle Escape during recording");
 
   handle.unregister();
+});
+
+// ──────────────────────────────────────────────
+// Interceptor & lifecycle tests
+// ──────────────────────────────────────────────
+
+QUnit.test("Direct instantiation throws without INTERNAL_TOKEN", (assert) => {
+  assert.throws(
+    () => {
+      new HotkeyRecorder({ onRecord: () => {} } as never, {} as never, Symbol() as never);
+    },
+    /cannot be instantiated directly/i,
+    "Direct construction is blocked",
+  );
+});
+
+QUnit.test("Multi-recorder contention: replacement calls onDetached", (assert) => {
+  let recordedA: string | null = null;
+  let recordedB: string | null = null;
+
+  const recorderA = createRecorder({
+    onRecord: (h) => {
+      recordedA = h;
+    },
+  });
+  const recorderB = createRecorder({
+    onRecord: (h) => {
+      recordedB = h;
+    },
+  });
+
+  recorderA.start();
+  assert.ok(recorderA.isRecording, "A is recording");
+
+  // Starting B replaces A's interceptor
+  recorderB.start();
+  assert.notOk(recorderA.isRecording, "A's isRecording is false after B replaces it");
+  assert.ok(recorderB.isRecording, "B is recording");
+
+  fireKey("F5");
+  assert.strictEqual(recordedA, null, "A did not receive the key");
+  assert.strictEqual(recordedB, "F5", "B received the key");
+});
+
+QUnit.test("Destroy-while-recording marks recorder as destroyed", (assert) => {
+  const recorder = createRecorder({ onRecord: () => {} });
+  recorder.start();
+  assert.ok(recorder.isRecording, "Recording before manager destroy");
+
+  manager.destroy();
+  assert.notOk(recorder.isRecording, "isRecording is false after manager destroy");
+  assert.ok(recorder.isDestroyed, "isDestroyed is true after manager destroy");
+
+  // stop() should not throw on destroyed recorder
+  recorder.stop();
+  assert.ok(true, "stop() on destroyed recorder does not throw");
+});
+
+QUnit.test("Key state tracks during recording", (assert) => {
+  const tracker = manager.getKeyStateTracker();
+  const recorder = createRecorder({ onRecord: () => {} });
+
+  recorder.start();
+  fireKey("Control", { ctrlKey: true });
+
+  // Key state tracking runs before interceptor in the pipeline
+  assert.ok(tracker.isKeyHeld("Control"), "Control is tracked during recording");
+
+  recorder.stop();
 });

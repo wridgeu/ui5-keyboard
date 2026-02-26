@@ -1,5 +1,8 @@
 import { MODIFIER_KEYS } from "./internal/constants";
+import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { keyboardEventToHotkey } from "./internal/parse";
+import type EventDispatcher from "./internal/event-dispatcher";
+import type { KeyEventInterceptor } from "./internal/event-dispatcher";
 
 /**
  * Options for the HotkeyRecorder.
@@ -15,38 +18,44 @@ export interface HotkeyRecorderOptions {
  * Records a keyboard shortcut from user input.
  *
  * Not a singleton — multiple recorders may exist (e.g., one per settings row).
+ * Created via `HotkeyManager.createRecorder()`.
  *
  * Usage:
- * 1. Create a recorder with callbacks
+ * 1. Create a recorder via `manager.createRecorder({ onRecord, onCancel })`
  * 2. Call `start()` to begin listening
  * 3. The recorder auto-stops after capturing one hotkey
  *
- * While recording, all keyboard input is blocked (preventDefault + stopPropagation
- * in capture phase). Listener is attached on `window` capture so it runs before
- * `document` capture listeners such as HotkeyManager. Keep the recording window short.
+ * While recording, all keyboard input is blocked (preventDefault + stopImmediatePropagation).
  *
  * Special keys:
  * - Escape → cancels recording
  * - Backspace/Delete (no modifiers) → records empty string (clear)
  * - Modifier-only presses → ignored (waits for action key)
  */
-export default class HotkeyRecorder {
+export default class HotkeyRecorder implements KeyEventInterceptor {
   private _options: HotkeyRecorderOptions;
   private _recording = false;
   private _destroyed = false;
-  private readonly _keydownHandler = this._onKeyDown.bind(this);
+  private _dispatcher: EventDispatcher | null;
 
-  constructor(options: HotkeyRecorderOptions) {
+  /**
+   * @internal — Do not instantiate directly. Use `HotkeyManager.createRecorder()`.
+   */
+  constructor(options: HotkeyRecorderOptions, dispatcher: EventDispatcher, token: symbol) {
+    if (token !== INTERNAL_TOKEN) {
+      throw new Error("HotkeyRecorder cannot be instantiated directly. Use HotkeyManager.createRecorder().");
+    }
     this._options = options;
+    this._dispatcher = dispatcher;
   }
 
   /**
-   * Start recording. Attaches a `window` capture-phase keydown listener.
+   * Start recording. Sets this recorder as the EventDispatcher's interceptor.
    */
   start(): void {
     if (this._destroyed || this._recording) return;
     this._recording = true;
-    window.addEventListener("keydown", this._keydownHandler, true);
+    this._dispatcher?.setInterceptor(this);
   }
 
   /**
@@ -55,7 +64,7 @@ export default class HotkeyRecorder {
   stop(): void {
     if (!this._recording) return;
     this._recording = false;
-    window.removeEventListener("keydown", this._keydownHandler, true);
+    this._dispatcher?.clearInterceptor(this);
   }
 
   /**
@@ -85,12 +94,23 @@ export default class HotkeyRecorder {
    */
   destroy(): void {
     if (this._destroyed) return;
-    this._destroyed = true;
     this.stop();
+    this._dispatcher?.untrackRecorder(this);
+    this._onDispatcherDestroyed();
   }
 
-  private _onKeyDown(event: KeyboardEvent): void {
-    // Prevent all default behavior while recording
+  // ──────────────────────────────────────────────
+  // KeyEventInterceptor implementation
+  // ──────────────────────────────────────────────
+
+  /**
+   * Intercept a keydown event during recording.
+   * Returns true to consume the event and block further dispatch.
+   */
+  onKeyDown(event: KeyboardEvent): boolean {
+    if (!this._recording) return false;
+
+    // Block all keyboard input during recording
     event.preventDefault();
     event.stopImmediatePropagation();
 
@@ -99,19 +119,19 @@ export default class HotkeyRecorder {
     // Escape → cancel
     if (key === "Escape") {
       this.cancel();
-      return;
+      return true;
     }
 
     // Backspace/Delete with no modifiers → clear
     const noModifiers = !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey;
     if ((key === "Backspace" || key === "Delete") && noModifiers) {
       this._stopAndRecord("");
-      return;
+      return true;
     }
 
     // Modifier-only → wait for action key
     if (MODIFIER_KEYS.has(key)) {
-      return;
+      return true;
     }
 
     // Valid combo — convert to hotkey string
@@ -119,12 +139,33 @@ export default class HotkeyRecorder {
     if (hotkey !== null) {
       this._stopAndRecord(hotkey);
     }
+
+    return true;
   }
 
-  /** Remove listener BEFORE callback (TanStack pattern — prevents race conditions). */
+  /**
+   * Called by the dispatcher when this interceptor is replaced or the dispatcher is destroyed.
+   * Idempotent.
+   */
+  onDetached(): void {
+    this._recording = false;
+  }
+
+  /**
+   * Called by EventDispatcher.destroy() to mark this recorder as destroyed
+   * and clear its dispatcher reference.
+   * @internal
+   */
+  _onDispatcherDestroyed(): void {
+    this._recording = false;
+    this._destroyed = true;
+    this._dispatcher = null;
+  }
+
+  /** Clear interceptor BEFORE callback (TanStack pattern — prevents race conditions). */
   private _stopAndRecord(hotkey: string): void {
     this._recording = false;
-    window.removeEventListener("keydown", this._keydownHandler, true);
+    this._dispatcher?.clearInterceptor(this);
     this._options.onRecord(hotkey);
   }
 }

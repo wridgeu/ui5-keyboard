@@ -228,12 +228,14 @@ export interface HotkeyOptions {
 
   /**
    * Bind the hotkey to a specific element instead of the document.
-   * The hotkey will only fire for events dispatched on this element.
-   * Scopes still apply — both target and scope must match.
+   * The hotkey will only fire when the target element appears in the event's
+   * `composedPath()`. Scopes still apply — both target and scope must match.
+   *
+   * For nested targets with the same key, the innermost matching target wins.
    *
    * **Note:** Document-level hotkeys with `stopPropagation: true` (the default)
    * will prevent target-bound hotkeys with the same key from firing, because
-   * the document capture listener fires before the target capture listener.
+   * the dispatch pipeline checks document-level registrations before target-scoped ones.
    * Set `stopPropagation: false` on the document-level registration to allow both.
    */
   target?: HTMLElement | Document;
@@ -336,10 +338,12 @@ export interface ResolvedHotkeyOptions {
  * Reason why a key event was not handled by any registration.
  *
  * - `"no_match"`: No registration matched the key combination in any scope.
+ * - `"target_mismatch"`: A registration matched the key combo but the event target is outside the registration's target element.
  * - `"disabled"`: A registration matched, but its `enabled` option resolved to `false`.
  * - `"input_suppressed"`: A registration matched, but was suppressed because the target is an input element.
  * - `"popup_suppressed"`: A registration matched, but was suppressed because a popup (dialog or popover) is open.
  * - `"repeat_ignored"`: A registration matched, but was skipped because the key is held (`event.repeat`).
+ * - `"suspended"`: Dispatch was suspended via a guard when the event arrived.
  */
 export type UnhandledReason = LibraryUnhandledReason;
 
@@ -359,7 +363,8 @@ export interface UnhandledContext {
   readonly isPopupOpen: boolean;
   /**
    * The registration that matched the key combination but was skipped.
-   * Present for all reasons except `"no_match"`.
+   * Present for all reasons except `"no_match"` and `"suspended"` (no
+   * specific registration is evaluated when dispatch is suspended).
    */
   readonly skippedRegistration?: HotkeyRegistrationInfo;
 }
@@ -372,6 +377,44 @@ export interface UnhandledContext {
  * debugging why a shortcut didn't fire.
  */
 export type UnhandledCallback = (context: UnhandledContext) => void;
+
+// ──────────────────────────────────────────────
+// KeyStateTracker (consumer-facing view)
+// ──────────────────────────────────────────────
+
+/**
+ * Read-only consumer view of the held-key tracker.
+ *
+ * The concrete `KeyStateTracker` class exposes additional lifecycle
+ * methods (`processKeyDown`, `processKeyUp`, `processBlur`, `destroy`)
+ * that are `@internal` — this interface hides them so that callers of
+ * `HotkeyManager.getKeyStateTracker()` cannot break dispatcher-owned state.
+ */
+export interface KeyStateTrackerApi {
+  /** Get a snapshot of currently held keys. */
+  getHeldKeys(): readonly string[];
+  /** Check whether a specific key is currently held. */
+  isKeyHeld(key: string): boolean;
+  /** Set a callback that fires whenever the held keys change. Pass `null` to remove. */
+  setChangeCallback(callback: ((keys: readonly string[]) => void) | null): void;
+}
+
+// ──────────────────────────────────────────────
+// Suspend guard
+// ──────────────────────────────────────────────
+
+/**
+ * RAII-style guard handle returned by `HotkeyManager.suspendDispatch()`.
+ *
+ * While active, all hotkey and sequence callbacks are blocked.
+ * Call `release()` to resume dispatch. Release is idempotent.
+ */
+export interface KeyboardDispatchGuard {
+  /** Release this guard. Idempotent — double-release does not throw. */
+  release(): void;
+  /** Whether this guard is still actively suspending dispatch. */
+  readonly isActive: boolean;
+}
 
 // ──────────────────────────────────────────────
 // Sequence types

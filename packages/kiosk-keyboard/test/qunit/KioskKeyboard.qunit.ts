@@ -2950,6 +2950,221 @@ QUnit.test("getFocusDomRef returns last focused key", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
+// Focus management — disabled / hidden state
+// ──────────────────────────────────────────────
+
+QUnit.test("getFocusInfo includes control id", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const info = kb.getFocusInfo() as { id: string; lastFocusedKeyId: string | null };
+  assert.strictEqual(info.id, kb.getId(), "id matches the control's ID");
+
+  kb.destroy();
+});
+
+QUnit.test("getFocusDomRef returns null when keyboard is disabled", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  assert.strictEqual(kb.getFocusDomRef(), null, "getFocusDomRef returns null when disabled");
+
+  kb.destroy();
+});
+
+QUnit.test("Programmatic focus() on disabled keyboard does not focus a key", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  kb.focus();
+  const dom = kb.getDomRef()!;
+  const active = document.activeElement;
+  assert.notOk(active && dom.contains(active), "No key inside the keyboard has focus");
+
+  kb.destroy();
+});
+
+QUnit.test("applyFocusInfo is a no-op when keyboard is disabled", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  tapKey(kb, "q");
+  const info = kb.getFocusInfo() as { lastFocusedKeyId: string };
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  kb.applyFocusInfo(info);
+
+  const dom = kb.getDomRef()!;
+  const focusableKeys = dom.querySelectorAll('.ui5KioskKey[tabindex="0"]');
+  assert.strictEqual(focusableKeys.length, 0, "No key has tabindex=0 after applyFocusInfo on disabled keyboard");
+
+  const active = document.activeElement;
+  assert.notOk(active && dom.contains(active), "No key inside the keyboard has focus");
+
+  kb.destroy();
+});
+
+QUnit.test("Re-render after setEnabled(false) does not leave a focusable key", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Focus a key so the framework will attempt focus restoration after re-render
+  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  firstKey.focus();
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  const dom = kb.getDomRef()!;
+  const focusableKeys = dom.querySelectorAll('.ui5KioskKey[tabindex="0"]');
+  assert.strictEqual(focusableKeys.length, 0, "No key has tabindex=0 on a disabled keyboard");
+
+  kb.destroy();
+});
+
+QUnit.test("getAccessibilityInfo reports focusable=false when disabled", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  assert.strictEqual(kb.getAccessibilityInfo().focusable, true, "focusable is true when enabled");
+
+  kb.setEnabled(false);
+  assert.strictEqual(kb.getAccessibilityInfo().focusable, false, "focusable is false when disabled");
+
+  kb.destroy();
+});
+
+QUnit.test("setEnabled(false) redirects focus to target input when a key has focus", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  // Focus a key on the keyboard
+  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  firstKey.focus();
+  assert.strictEqual(document.activeElement, firstKey, "Key has focus before disabling");
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  assert.strictEqual(
+    document.activeElement,
+    input.getFocusDomRef(),
+    "Focus redirected to target input after disabling",
+  );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("setEnabled(false) without focus on keyboard does not throw", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Focus is not on the keyboard
+  kb.setEnabled(false);
+  await waitForRender();
+
+  assert.ok(true, "No error when disabling a keyboard that does not have focus");
+
+  kb.destroy();
+});
+
+QUnit.test("setEnabled(false) keeps docked keyboard open but disabled", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+  kb.show();
+  assert.ok(kb.isOpen(), "Keyboard is open before disabling");
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  assert.ok(kb.isOpen(), "Docked keyboard stays open (visually greyed out)");
+  assert.ok(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--disabled"), "Disabled CSS class is applied");
+
+  // Re-enabling restores interaction without needing show()
+  kb.setEnabled(true);
+  await waitForRender();
+
+  assert.ok(kb.isOpen(), "Keyboard is still open after re-enabling");
+  assert.notOk(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--disabled"), "Disabled CSS class is removed");
+
+  kb.destroy();
+});
+
+QUnit.test("setVisible(false) redirects focus to target input when a key has focus", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  // Focus a key on the keyboard
+  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  firstKey.focus();
+  assert.strictEqual(document.activeElement, firstKey, "Key has focus before hiding");
+
+  kb.setVisible(false);
+  await waitForRender();
+
+  assert.strictEqual(document.activeElement, input.getFocusDomRef(), "Focus redirected to target input after hiding");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("setVisible(false) without focus on keyboard does not throw", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.setVisible(false);
+  await waitForRender();
+
+  assert.ok(true, "No error when hiding a keyboard that does not have focus");
+
+  kb.destroy();
+});
+
+QUnit.test("setEnabled(false) blurs key when no target input is set", async (assert) => {
+  const kb = new KioskKeyboard(); // no targetInput
+  await placeAndWait(kb);
+
+  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  firstKey.focus();
+  assert.strictEqual(document.activeElement, firstKey, "Key has focus before disabling");
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  const dom = kb.getDomRef()!;
+  assert.notOk(dom.contains(document.activeElement), "Focus is not inside the keyboard");
+
+  kb.destroy();
+});
+
+QUnit.test("setVisible(false) closes docked keyboard", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+  kb.show();
+  assert.ok(kb.isOpen(), "Keyboard is open before hiding");
+
+  kb.setVisible(false);
+  await waitForRender();
+
+  assert.notOk(kb.isOpen(), "Docked keyboard is closed after hiding");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
 // setAutoShow property setter
 // ──────────────────────────────────────────────
 
