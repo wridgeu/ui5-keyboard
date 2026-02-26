@@ -638,6 +638,64 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
+  // Public API — Property overrides
+  // ──────────────────────────────────────────────
+
+  /**
+   * Override `setEnabled` to proactively redirect focus to the target input
+   * before disabling. Without this, the framework's generic onfocusfail
+   * fallback would move focus to an arbitrary sibling.
+   */
+  setEnabled(bEnabled: boolean): this {
+    if (!bEnabled) {
+      this._redirectFocusToTargetIfOwned();
+      // Close the docked keyboard — a disabled keyboard should not remain open.
+      if (this.getDocked() && this._open) {
+        this.close();
+      }
+    }
+    return this.setProperty("enabled", bEnabled) as this;
+  }
+
+  /**
+   * Override `setVisible` to proactively redirect focus to the target input
+   * before hiding. Without this, the framework's generic onfocusfail
+   * fallback would move focus to an arbitrary sibling.
+   */
+  setVisible(bVisible: boolean): this {
+    if (!bVisible) {
+      this._redirectFocusToTargetIfOwned();
+    }
+    return super.setVisible(bVisible);
+  }
+
+  /**
+   * If focus is currently inside this keyboard's DOM, move it to the
+   * target input. Called before operations that would remove the keyboard
+   * from tab order (disable, hide) to avoid unpredictable focus fallback.
+   */
+  private _redirectFocusToTargetIfOwned(): void {
+    const myDom = this.getDomRef();
+    if (!myDom) return;
+
+    const active = document.activeElement;
+    if (!active || !myDom.contains(active)) return;
+
+    const targetElement = this._getTargetElement();
+    const focusRef = targetElement?.getFocusDomRef();
+    if (focusRef instanceof HTMLElement) {
+      focusRef.focus();
+      return;
+    }
+
+    // No target input: blur the current key so the framework's
+    // onfocusfail fallback starts from a clean state.
+    if (active instanceof HTMLElement) {
+      active.blur();
+    }
+  }
+
+  // ──────────────────────────────────────────────
   // Public API — Target & Docked Mode
   // ──────────────────────────────────────────────
 
@@ -1054,7 +1112,7 @@ export default class KioskKeyboard extends Control {
   // ──────────────────────────────────────────────
 
   getFocusDomRef(): globalThis.Element | null {
-    if (this._getResolvedLayout().length === 0) {
+    if (!this.getEnabled() || this._getResolvedLayout().length === 0) {
       return null;
     }
 
@@ -1065,11 +1123,17 @@ export default class KioskKeyboard extends Control {
     );
   }
 
-  getFocusInfo(): { lastFocusedKeyId: string | null } {
-    return { lastFocusedKeyId: this._lastFocusedKeyId };
+  getFocusInfo(): { id: string; lastFocusedKeyId: string | null } {
+    return { id: this.getId(), lastFocusedKeyId: this._lastFocusedKeyId };
   }
 
-  applyFocusInfo(oFocusInfo: { preventScroll?: boolean; lastFocusedKeyId?: string }): this {
+  applyFocusInfo(oFocusInfo: { id?: string; preventScroll?: boolean; lastFocusedKeyId?: string }): this {
+    // Disabled keyboard: the renderer set all keys to tabindex="-1".
+    // Do not restore focus — it would undo the renderer's decision.
+    if (!this.getEnabled()) {
+      return this;
+    }
+
     if (oFocusInfo.lastFocusedKeyId) {
       const el = document.getElementById(oFocusInfo.lastFocusedKeyId);
       if (el instanceof HTMLElement) {
@@ -1117,7 +1181,7 @@ export default class KioskKeyboard extends Control {
       role: "group",
       type: getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
       description: this.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
-      focusable: true,
+      focusable: this.getEnabled(),
       enabled: this.getEnabled(),
     };
   }
