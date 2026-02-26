@@ -645,6 +645,9 @@ export default class KioskKeyboard extends Control {
    * Override `setEnabled` to proactively redirect focus to the target input
    * before disabling. Without this, the framework's generic onfocusfail
    * fallback would move focus to an arbitrary sibling.
+   *
+   * Note: `setEnabled(true)` does not re-open a previously closed docked
+   * keyboard — call `show()` explicitly after re-enabling.
    */
   setEnabled(bEnabled: boolean): this {
     if (!bEnabled) {
@@ -661,10 +664,18 @@ export default class KioskKeyboard extends Control {
    * Override `setVisible` to proactively redirect focus to the target input
    * before hiding. Without this, the framework's generic onfocusfail
    * fallback would move focus to an arbitrary sibling.
+   *
+   * Note: `setVisible(true)` does not re-open a previously closed docked
+   * keyboard — call `show()` explicitly after making it visible again.
    */
   setVisible(bVisible: boolean): this {
     if (!bVisible) {
       this._redirectFocusToTargetIfOwned();
+      // Close the docked keyboard — a hidden keyboard should not retain
+      // open state (escape listener, native keyboard suppression).
+      if (this.getDocked() && this._open) {
+        this.close();
+      }
     }
     return super.setVisible(bVisible);
   }
@@ -685,11 +696,11 @@ export default class KioskKeyboard extends Control {
     const focusRef = targetElement?.getFocusDomRef();
     if (focusRef instanceof HTMLElement) {
       focusRef.focus();
-      return;
+      if (document.activeElement === focusRef) return;
     }
 
-    // No target input: blur the current key so the framework's
-    // onfocusfail fallback starts from a clean state.
+    // No target input or focus didn't move: blur the current key so
+    // the framework's onfocusfail fallback starts from a clean state.
     if (active instanceof HTMLElement) {
       active.blur();
     }

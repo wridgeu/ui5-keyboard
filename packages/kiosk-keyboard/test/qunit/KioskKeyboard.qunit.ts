@@ -3125,6 +3125,37 @@ QUnit.test("setVisible(false) without focus on keyboard does not throw", async (
   kb.destroy();
 });
 
+QUnit.test("setEnabled(false) blurs key when no target input is set", async (assert) => {
+  const kb = new KioskKeyboard(); // no targetInput
+  await placeAndWait(kb);
+
+  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  firstKey.focus();
+  assert.strictEqual(document.activeElement, firstKey, "Key has focus before disabling");
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  const dom = kb.getDomRef()!;
+  assert.notOk(dom.contains(document.activeElement), "Focus is not inside the keyboard");
+
+  kb.destroy();
+});
+
+QUnit.test("setVisible(false) closes docked keyboard", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+  kb.show();
+  assert.ok(kb.isOpen(), "Keyboard is open before hiding");
+
+  kb.setVisible(false);
+  await waitForRender();
+
+  assert.notOk(kb.isOpen(), "Docked keyboard is closed after hiding");
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // setAutoShow property setter
 // ──────────────────────────────────────────────
