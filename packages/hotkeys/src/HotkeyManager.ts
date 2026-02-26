@@ -884,11 +884,58 @@ export default class HotkeyManager extends BaseObject {
    */
   private _getEventPath(event: KeyboardEvent): EventTarget[] {
     const path = event.composedPath?.();
-    if (Array.isArray(path) && path.length > 0) {
-      return path;
+    const resolvedPath =
+      Array.isArray(path) && path.length > 0
+        ? [...path]
+        : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
+
+    // Hardening: some environments dispatch keyboard events on document/window
+    // even while an input still has focus. Include the active-element ancestry as
+    // an additional fallback so target-scoped matching remains stable.
+    const activeElement = document.activeElement;
+    if (activeElement && !resolvedPath.includes(activeElement)) {
+      for (const node of this._getActiveElementPath(activeElement)) {
+        if (!resolvedPath.includes(node)) {
+          resolvedPath.push(node);
+        }
+      }
     }
-    // Fallback for environments where composedPath() is unavailable or empty
-    return [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
+
+    return resolvedPath;
+  }
+
+  /**
+   * Build a composed-like ancestry path for document.activeElement.
+   */
+  private _getActiveElementPath(activeElement: Element): EventTarget[] {
+    const path: EventTarget[] = [];
+    let current: Node | null = activeElement;
+
+    while (current) {
+      path.push(current);
+
+      if (current.parentNode) {
+        current = current.parentNode;
+        continue;
+      }
+
+      const root = current.getRootNode?.();
+      if (root instanceof ShadowRoot && root.host) {
+        current = root.host;
+        continue;
+      }
+
+      current = null;
+    }
+
+    if (!path.includes(document)) {
+      path.push(document);
+    }
+    if (!path.includes(window)) {
+      path.push(window);
+    }
+
+    return path;
   }
 
   /**

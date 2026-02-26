@@ -154,8 +154,7 @@ export default class HotkeysTargetBubble extends BaseController {
     this._docFallbackHandle = this._manager.register(
       "Escape",
       () => {
-        this._addLogEntry("Escape", "outside nested target (refocus input)", "Information");
-        this._focusBubbleInput();
+        this._addLogEntry("Escape", "outside nested target", "Information");
       },
       {
         scope: Scope.HotkeysTargetBubble,
@@ -168,13 +167,6 @@ export default class HotkeysTargetBubble extends BaseController {
     this._boundInnerTargetId = nextInnerId;
     this._boundInnerWrapperTargetId = nextInnerWrapperId;
     this._boundBubbleEnabled = bubbleEnabled;
-
-    this._focusBubbleInput();
-  }
-
-  private _focusBubbleInput(): void {
-    const input = this.byId("bubbleInput") as Input | undefined;
-    input?.focus();
   }
 
   private _focusBubbleInputAfterNavigation(): void {

@@ -298,6 +298,29 @@ QUnit.test("Target-scoped: composedPath miss", (assert) => {
   other.remove();
 });
 
+QUnit.test("Target-scoped: activeElement fallback path match", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target },
+  );
+
+  input.focus();
+  fireKey("Escape");
+
+  assert.ok(fired, "Callback fires when activeElement is inside target even if event path is document-level");
+
+  target.remove();
+});
+
 QUnit.test("Target-scoped: stale target reference with same DOM id still matches", (assert) => {
   const original = document.createElement("div");
   original.id = "hk-stale-target";
