@@ -19,7 +19,10 @@ export default class HotkeysTargetBubble extends BaseController {
     this._manager = this.getTypedComponent().getHotkeyManager();
     const stateModel = this.getStateModel();
     stateModel.setProperty("/hotkeysBubbleEnabled", false);
-    stateModel.setProperty("/hotkeysBubbleLog", "Focus the inner input and press Escape.");
+    stateModel.setProperty(
+      "/hotkeysBubbleLog",
+      "Focus the inner input and press Escape.\nExpect only inner by default; enable allowBubble for inner+outer.",
+    );
   }
 
   onAfterRendering(): void {
@@ -52,8 +55,7 @@ export default class HotkeysTargetBubble extends BaseController {
     this._outerHandle = this._manager.register(
       "Escape",
       () => {
-        const current = (stateModel.getProperty("/hotkeysBubbleLog") as string) || "";
-        stateModel.setProperty("/hotkeysBubbleLog", `${current}\nouter target fired`);
+        this._appendLogLine("outer target fired");
       },
       {
         scope: Scope.HotkeysTargetBubble,
@@ -66,8 +68,7 @@ export default class HotkeysTargetBubble extends BaseController {
     this._innerHandle = this._manager.register(
       "Escape",
       () => {
-        const current = (stateModel.getProperty("/hotkeysBubbleLog") as string) || "";
-        stateModel.setProperty("/hotkeysBubbleLog", `${current}\ninner target fired`);
+        this._appendLogLine("inner target fired");
         stateModel.setProperty("/lastAction", "Target bubble demo fired");
         MessageToast.show("Inner target fired");
       },
@@ -79,11 +80,12 @@ export default class HotkeysTargetBubble extends BaseController {
         description: "Inner target Escape",
       },
     );
+  }
 
-    stateModel.setProperty(
-      "/hotkeysBubbleLog",
-      "Focus the inner input and press Escape.\nExpect only inner by default; enable allowBubble for inner+outer.",
-    );
+  private _appendLogLine(line: string): void {
+    const stateModel = this.getStateModel();
+    const current = (stateModel.getProperty("/hotkeysBubbleLog") as string) || "";
+    stateModel.setProperty("/hotkeysBubbleLog", current ? `${current}\n${line}` : line);
   }
 
   private _destroyHandles(): void {

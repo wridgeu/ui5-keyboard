@@ -32,7 +32,7 @@
 
             <Panel headerText="Event Log">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="{state>/hotkeysBubbleLog}" />
+                    <Text text="{state>/hotkeysBubbleLog}" renderWhitespace="true" />
                 </VBox>
             </Panel>
         </content>
