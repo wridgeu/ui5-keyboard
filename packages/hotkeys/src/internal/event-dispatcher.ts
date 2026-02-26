@@ -11,6 +11,7 @@ const LOG_COMPONENT = "ui5.hotkeys.EventDispatcher";
 /**
  * Interface that an interceptor must implement.
  * Used internally by HotkeyRecorder.
+ * @internal
  */
 export interface KeyEventInterceptor {
   /** Return true to consume the event and block further dispatch. */
@@ -40,6 +41,7 @@ export interface HotkeyDispatchHandler {
 
 /**
  * Internal guard implementation for suspend guards.
+ * @internal
  */
 class DispatchGuard implements KeyboardDispatchGuard {
   private _active = true;
@@ -64,6 +66,7 @@ class DispatchGuard implements KeyboardDispatchGuard {
 
   /**
    * Called by EventDispatcher.destroy() to invalidate without triggering release logic.
+   * @internal
    */
   _invalidate(): void {
     this._active = false;

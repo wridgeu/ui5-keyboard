@@ -316,7 +316,11 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   /**
-   * Access held-key state. Replaces `KeyStateTracker.getInstance()`.
+   * Access held-key state.
+   *
+   * The tracker is owned by the manager and shares its lifecycle — it is
+   * created and destroyed automatically. The `KeyStateTracker` class is
+   * exported for type declarations but its constructor is internal.
    */
   getKeyStateTracker(): KeyStateTracker {
     return this._dispatcher.keyStateTracker;

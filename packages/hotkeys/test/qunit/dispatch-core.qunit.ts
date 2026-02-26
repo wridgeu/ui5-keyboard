@@ -1,4 +1,5 @@
-import { findMatchInScope, resolveMatchedRegistration } from "ui5/hotkeys/dispatch-core";
+import { findMatchInScope } from "ui5/hotkeys/dispatch-core";
+import { resolveMatchedRegistration } from "ui5/hotkeys/internal/dispatch-core";
 import { parseHotkey } from "ui5/hotkeys/parse";
 import { UnhandledReason, GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { type SkipInfo, type DebugSkipEntry } from "ui5/hotkeys/skip-reason";

@@ -1,1 +1,1 @@
-export { findMatchInScope, resolveMatchedRegistration } from "./internal/dispatch-core";
+export { findMatchInScope } from "./internal/dispatch-core";
