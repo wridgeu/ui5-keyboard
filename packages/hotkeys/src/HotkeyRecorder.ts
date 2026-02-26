@@ -96,8 +96,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
     if (this._destroyed) return;
     this.stop();
     this._dispatcher?.untrackRecorder(this);
-    this._destroyed = true;
-    this._dispatcher = null;
+    this._onDispatcherDestroyed();
   }
 
   // ──────────────────────────────────────────────

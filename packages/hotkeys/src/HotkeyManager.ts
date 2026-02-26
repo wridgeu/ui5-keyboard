@@ -993,7 +993,9 @@ export default class HotkeyManager extends BaseObject {
 
     // Skip-reason pass for off-path targets: record TargetMismatch for
     // registrations whose key combo matches but target is not in the path.
-    if (skipInfo || debugSkips) {
+    // Only runs when no target match was found — a successful match means
+    // the event was handled and target-mismatch skips are irrelevant.
+    if (!result && (skipInfo || debugSkips)) {
       for (const scope of scopesToCheck) {
         const bucket = this._registrationsByScope.get(scope);
         if (!bucket) continue;

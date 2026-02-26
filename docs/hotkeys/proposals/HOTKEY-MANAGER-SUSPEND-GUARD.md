@@ -365,7 +365,7 @@ this._dispatcher = new EventDispatcher(
 
 This keeps the dispatch methods private on HotkeyManager while satisfying the interface contract.
 
-**Side-effect coupling:** `processHotkeys` returns `boolean` (consumed or not) but also stores skip information in `_lastSkipInfo` as a side effect. `emitUnhandled` reads `_lastSkipInfo` when `forcedReason` is null. This coupling is acceptable because both methods live on the same HotkeyManager instance and the call order is guaranteed by the EventDispatcher pipeline (step 5 before step 7). The alternative — returning a richer result type — was considered but rejected as over-engineering given the fixed call order.
+**Side-effect coupling:** `processHotkeys` returns `boolean` (consumed or not) but also stores the full evaluation context in `_lastEventContext` (active scope, input state, popup state, skip info) as a side effect. `emitUnhandled` reads `_lastEventContext` when `forcedReason` is null, avoiding redundant recomputation of scope and input state. This coupling is acceptable because both methods live on the same HotkeyManager instance and the call order is guaranteed by the EventDispatcher pipeline (step 5 before step 7). The alternative — returning a richer result type — was considered but rejected as over-engineering given the fixed call order.
 
 KeyStateTracker is not part of this interface — the dispatcher owns it directly and calls `processKeyDown`/`processKeyUp`/`processBlur` on the instance. The `HotkeyDispatchHandler` only contains things HotkeyManager provides.
 
@@ -488,9 +488,9 @@ Add to HotkeyManager:
 - `isDispatchSuspended()` — public, delegates to `_dispatcher.isDispatchSuspended()`.
 - `createRecorder(options)` — public factory, passes `_dispatcher` to `new HotkeyRecorder(options, dispatcher)`. Consistent with `createGroup()` pattern.
 - `getKeyStateTracker()` — public getter, returns `_dispatcher.keyStateTracker`. Replaces `KeyStateTracker.getInstance()` for consumers that need held-key state.
-- `_processHotkeys(event): boolean` — private, implements `HotkeyDispatchHandler.processHotkeys` via anonymous handler. Replaces `_processKeyEvent`. Returns `boolean` (consumed or not). Runs document-level registrations first, then target-scoped (innermost-first via `composedPath()`). Stores skip info in `_lastSkipInfo` for `_emitUnhandled`. See Phase 4 for detailed pseudocode.
+- `_processHotkeys(event): boolean` — private, implements `HotkeyDispatchHandler.processHotkeys` via anonymous handler. Replaces `_processKeyEvent`. Returns `boolean` (consumed or not). Runs document-level registrations first, then target-scoped (innermost-first via `composedPath()`). Stores the full evaluation context in `_lastEventContext` (active scope, input state, popup state, skip info) for `_emitUnhandled`. See Phase 4 for detailed pseudocode.
 - `_processSequences(event): boolean` — private, implements `HotkeyDispatchHandler.processSequences` via anonymous handler. Delegates to `_sequenceManager?.processKeyEvent(event) ?? false`.
-- `_emitUnhandled(event, forcedReason): void` — private, implements `HotkeyDispatchHandler.emitUnhandled` via anonymous handler. If `forcedReason` is non-null, uses it directly. Otherwise uses `_lastSkipInfo` for the most specific reason.
+- `_emitUnhandled(event, forcedReason): void` — private, implements `HotkeyDispatchHandler.emitUnhandled` via anonymous handler. If `forcedReason` is non-null, uses it directly. Otherwise reads `_lastEventContext` for the most specific reason and cached evaluation state.
 
 **Debug mode:** The existing `_logDebugEvent` method and `_debugMode` flag remain on HotkeyManager. Debug logging fires inside `_processHotkeys` (after matching) and inside `_emitUnhandled` (for unhandled events). The EventDispatcher has no knowledge of debug mode. **Dual-match logging:** When a document-level registration matches with `stopPropagation: false` AND a target-scoped registration also matches the same event, `_logDebugEvent` fires twice — once for each match. Each log entry includes the matched registration, so consumers can distinguish them. The current log shape (`_logDebugEvent(event, scope, isInput, popupOpen, match, debugSkips)`) is sufficient — the `match` parameter identifies which registration triggered the log. A future enhancement could merge both matches into a single log entry, but this is not required for the initial implementation.
 
@@ -564,7 +564,7 @@ private _executeMatch(event: KeyboardEvent, matched: HotkeyRegistration): void {
 _processHotkeys(event: KeyboardEvent): boolean {
   // Defensive reset — prevents stale data from a previous event leaking
   // into _emitUnhandled if a future code path reads it unexpectedly.
-  this._lastSkipInfo = null;
+  this._lastEventContext = null;
 
   const eventPath = event.composedPath();
   const activeScope = this.getActiveScope();
@@ -622,8 +622,8 @@ _processHotkeys(event: KeyboardEvent): boolean {
     this._logDebugEvent(event, activeScope, isInput, popupOpen, null, debugSkips);
   }
 
-  // Store skipInfo for _emitUnhandled (called by EventDispatcher in step 7)
-  this._lastSkipInfo = skipInfo;
+  // Store event context for _emitUnhandled (called by EventDispatcher in step 7)
+  this._lastEventContext = { activeScope, isInput, popupOpen, skipInfo };
 
   return false;
 }
@@ -799,7 +799,7 @@ if (!hotkeyConsumed && !sequenceConsumed) {
 }
 ```
 
-HotkeyManager's `_emitUnhandled(event, forcedReason)` implementation: if `forcedReason` is non-null, use it directly as the `UnhandledContext.reason` — the `skippedRegistration` field is omitted (undefined) because no registration was evaluated. If `forcedReason` is null, use `this._lastSkipInfo` (populated during `_processHotkeys`) to determine the most specific reason and skipped registration.
+HotkeyManager's `_emitUnhandled(event, forcedReason)` implementation: if `forcedReason` is non-null, use it directly as the `UnhandledContext.reason` — the `skippedRegistration` field is omitted (undefined) because no registration was evaluated. If `forcedReason` is null, use `this._lastEventContext` (populated during `_processHotkeys`) which caches the full evaluation context (active scope, input state, popup state, skip info) to determine the most specific reason and skipped registration without redundant recomputation.
 
 HotkeyManager's `_processHotkeys` returns `boolean`. SequenceManager's `processKeyEvent` already returns `boolean`.
 
@@ -913,11 +913,11 @@ New tests:
 
 - [x] Create anonymous `HotkeyDispatchHandler` object in constructor wrapping private methods (`_processHotkeys`, `_processSequences`, `_emitUnhandled`)
 - [x] Create `_dispatcher` field — instantiate in constructor with anonymous handler object, destroy in `destroy()`
-- [x] Refactor `_processKeyEvent` → `_processHotkeys` (private) — returns `boolean`, no `deferUnhandled`/`emitUnhandled` params, resets `_lastSkipInfo = null` at top, stores skip info in `_lastSkipInfo` on no-match path
+- [x] Refactor `_processKeyEvent` → `_processHotkeys` (private) — returns `boolean`, no `deferUnhandled`/`emitUnhandled` params, resets `_lastEventContext = null` at top, stores full evaluation context in `_lastEventContext` on no-match path
 - [x] Extract `_executeMatch(event, matched)` — encapsulates `preventDefault`, `stopPropagation`, callback try/catch (called from `_processHotkeys` and `_matchTargetRegistrations`)
 - [x] Ensure debug logging fires for ALL outcomes in `_processHotkeys` (document match, target match, and no match) — not just the no-match path
 - [x] Implement `_processSequences` (private) — delegates to `_sequenceManager?.processKeyEvent(event) ?? false`
-- [x] Implement `_emitUnhandled(event, forcedReason)` (private) — uses `forcedReason` if non-null, otherwise `_lastSkipInfo`
+- [x] Implement `_emitUnhandled(event, forcedReason)` (private) — uses `forcedReason` if non-null, otherwise `_lastEventContext`
 - [x] Add `getKeyStateTracker()` — public getter, returns `_dispatcher.keyStateTracker`
 - [x] Remove `_keydownHandler` field and `_onKeyDown()` method
 - [x] Remove `_attachListeners()` / `_detachListeners()`
@@ -1041,7 +1041,7 @@ New tests:
 - [x] Regression: update/remove ListenerRegistry tests
 - [x] Regression: KeyStateTracker updates during recording — recorder active, press key, `getHeldKeys()` includes key (behavioral change from current: stale during recording)
 - [x] Unit: reentrancy — hotkey callback calls `suspendDispatch()` → current event finishes normally, next event is suspended
-- [x] Unit: `_processHotkeys` resets `_lastSkipInfo` at top — no stale data from previous events
+- [x] Unit: `_processHotkeys` resets `_lastEventContext` at top — no stale data from previous events
 - [x] Unit: third-party window capture listener + stopPropagation true — external window listener fires (same target), document listeners do NOT fire
 - [x] Unit: third-party window capture listener + stopPropagation false — both external window and document listeners fire
 - [x] Unit: third-party document capture listener + stopPropagation true — external document listener does NOT fire (event stopped at window)
@@ -1096,6 +1096,7 @@ There are no external consumers yet, so breaking changes are acceptable where th
 - **`HotkeyRecorder` no longer directly instantiated** — consumers use `manager.createRecorder(options)` factory instead of `new HotkeyRecorder(options)`. Direct instantiation throws at runtime (internal token guard), not just at the TypeScript level. Keeps EventDispatcher internal, consistent with `createGroup()` pattern. `HotkeyRecorder` and `KeyStateTracker` classes remain public type exports (consumers need them for variable type declarations like `const recorder: HotkeyRecorder = manager.createRecorder(...)`) but their constructors are no longer part of the public API (runtime token + `@internal` JSDoc). When a recorder's interceptor is replaced or the manager is destroyed, the recorder is notified via `onDetached()` and its `isRecording` state is reset to `false` — no stale state.
 - **`KeyStateTracker.getInstance()` removed** — the EventDispatcher owns the KeyStateTracker instance. Consumers access it via `manager.getKeyStateTracker()`. The class is still exported for type usage. The `destroy()` method is internal — consumers should not call it directly.
 - **`ListenerRegistry` removed** — both `internal/listener-registry.ts` and the public re-export `listener-registry.ts` are deleted. No replacement needed — functionality absorbed by EventDispatcher and `composedPath()` matching.
+- **`dispatch-core` public re-export removed** — the top-level `dispatch-core.ts` re-export wrapper is deleted. The internal module `internal/dispatch-core.ts` remains but is not part of the public API. Anyone importing `ui5/hotkeys/dispatch-core` will see a broken import.
 - **Nested target-scoped registrations for the same key** — currently, when two nested targets both have registrations for the same key, both callbacks fire independently (outermost first during capture phase). In the new design, only the **innermost** matching target's callback fires — regardless of `stopPropagation`. The `stopPropagation` flag on a target-scoped registration controls whether outer target nodes are checked for debug/skip-reason tracking, NOT whether outer targets match (only the innermost ever fires). This is a deliberate behavioral change — the old "fire all" behavior was an artifact of having independent per-target DOM listeners, not an intentional design choice.
 - **Active-scope target registrations take precedence over global-scope targets** — currently, target listeners fire independently based on DOM capture order, so an active-scope and a global-scope target listener for the same key on different elements can both fire. In the new design, `_matchTargetRegistrations` uses scope-first ordering: active-scope targets are checked before global-scope targets, regardless of DOM position. A global-scope target registration only matches if no active-scope target matched. If existing code relies on both an active-scope and global-scope target callback firing for the same key, refactor to use a single scope or register both in the same scope at different nesting levels.
 - **Target-scoped hotkey callbacks now execute before sequence processing** — currently, document-level hotkey matching and sequence matching run at the document level, while target-scoped listeners fire later when DOM capture reaches each target element. In the new design, step 5 runs all hotkey matching (document + target-scoped) before step 6 runs sequence matching. Target-scoped callbacks now execute before sequences see the event.
