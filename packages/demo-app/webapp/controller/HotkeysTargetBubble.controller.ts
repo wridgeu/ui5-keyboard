@@ -43,6 +43,7 @@ export default class HotkeysTargetBubble extends BaseController {
 
     // Re-bind whenever the target container re-renders (DOM refs change)
     this.byId("outerTargetBox")!.addEventDelegate(this._renderDelegate);
+    this.byId("bubbleInput")!.addEventDelegate(this._renderDelegate);
     this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
@@ -62,6 +63,7 @@ export default class HotkeysTargetBubble extends BaseController {
 
   onExit(): void {
     this.byId("outerTargetBox")?.removeEventDelegate(this._renderDelegate);
+    this.byId("bubbleInput")?.removeEventDelegate(this._renderDelegate);
     this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
     this._setAppAutoFocus(true);
     this._clearFocusTimers();
@@ -72,7 +74,8 @@ export default class HotkeysTargetBubble extends BaseController {
     this._destroyHandles();
 
     const outerTarget = this.byId("outerTargetBox")?.getDomRef();
-    const innerTarget = (this.byId("bubbleInput") as Input | undefined)?.getDomRef();
+    const bubbleInput = this.byId("bubbleInput") as Input | undefined;
+    const innerTarget = bubbleInput?.getFocusDomRef() ?? bubbleInput?.getDomRef();
     if (!outerTarget || !innerTarget) {
       return;
     }
@@ -126,15 +129,20 @@ export default class HotkeysTargetBubble extends BaseController {
   }
 
   private _focusBubbleInput(): void {
+    const input = this.byId("bubbleInput") as Input | undefined;
+    input?.focus();
+
     this._clearFocusTimers();
-    const timer = window.setTimeout(() => {
-      if (this._manager.getActiveScope() !== Scope.HotkeysTargetBubble) {
-        return;
-      }
-      const input = this.byId("bubbleInput") as Input | undefined;
-      input?.focus();
-    }, 0);
-    this._focusTimers.push(timer);
+    const retries = [0, 100, 250];
+    for (const delay of retries) {
+      const timer = window.setTimeout(() => {
+        if (this._manager.getActiveScope() !== Scope.HotkeysTargetBubble) {
+          return;
+        }
+        input?.focus();
+      }, delay);
+      this._focusTimers.push(timer);
+    }
   }
 
   private _focusBubbleInputAfterNavigation(): void {
