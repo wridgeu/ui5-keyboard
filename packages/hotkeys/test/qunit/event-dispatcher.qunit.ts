@@ -298,6 +298,30 @@ QUnit.test("Target-scoped: composedPath miss", (assert) => {
   other.remove();
 });
 
+QUnit.test("Target-scoped: stale target reference with same DOM id still matches", (assert) => {
+  const original = document.createElement("div");
+  original.id = "hk-stale-target";
+  document.body.appendChild(original);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target: original },
+  );
+
+  const replacement = document.createElement("div");
+  replacement.id = "hk-stale-target";
+  original.replaceWith(replacement);
+
+  fireKeyOn(replacement, "Escape");
+  assert.ok(fired, "Callback still fires when target DOM node is replaced with same id");
+
+  replacement.remove();
+});
+
 QUnit.test("Target-scoped: target priority over document (stopPropagation: true)", (assert) => {
   const target = document.createElement("div");
   document.body.appendChild(target);

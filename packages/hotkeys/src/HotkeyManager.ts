@@ -977,7 +977,7 @@ export default class HotkeyManager extends BaseObject {
 
       // Iterate composedPath from index 0 (innermost) outward
       for (const node of eventPath) {
-        const ids = bucket.targets.get(node);
+        const ids = this._getTargetRegistrationIds(bucket.targets, node);
         if (!ids || ids.size === 0) continue;
 
         // Attempt matching against registrations bound to this target
@@ -1041,6 +1041,40 @@ export default class HotkeyManager extends BaseObject {
       if (reg) registrations.push(reg);
     }
     return registrations;
+  }
+
+  /**
+   * Resolve registration IDs for a composedPath node.
+   *
+   * First tries object-identity lookup. If no direct hit exists and the node is
+   * an Element with an id, falls back to id-based lookup. This makes target
+   * registrations resilient to DOM replacement during rerendering where the old
+   * node reference is stale but the rendered id remains stable.
+   */
+  private _getTargetRegistrationIds(targets: Map<EventTarget, Set<string>>, node: EventTarget): Set<string> | null {
+    const direct = targets.get(node);
+    if (direct && direct.size > 0) {
+      return direct;
+    }
+
+    if (!(node instanceof Element) || !node.id) {
+      return null;
+    }
+
+    let merged: Set<string> | null = null;
+    for (const [target, ids] of targets) {
+      if (!(target instanceof Element) || target.id !== node.id || ids.size === 0) {
+        continue;
+      }
+      if (!merged) {
+        merged = new Set<string>();
+      }
+      for (const id of ids) {
+        merged.add(id);
+      }
+    }
+
+    return merged;
   }
 
   // ──────────────────────────────────────────────
