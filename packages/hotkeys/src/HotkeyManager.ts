@@ -737,6 +737,7 @@ export default class HotkeyManager extends BaseObject {
     );
 
     if (targetMatch) {
+      this._executeMatch(event, targetMatch);
       if (this._debugMode) {
         this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatch, debugSkips);
       }
@@ -889,7 +890,7 @@ export default class HotkeyManager extends BaseObject {
    * Scope-first ordering: active scope targets checked before global scope targets.
    * Within a scope, the first (innermost) matching target wins.
    *
-   * Returns the matched registration (already executed via _executeMatch) or null.
+   * Returns the matched registration or null (caller is responsible for execution).
    */
   private _matchTargetRegistrations(
     event: KeyboardEvent,
@@ -926,7 +927,6 @@ export default class HotkeyManager extends BaseObject {
         });
 
         if (matched) {
-          this._executeMatch(event, matched);
           return matched;
         }
       }
