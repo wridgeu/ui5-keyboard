@@ -16,7 +16,7 @@ type AlertButtonDemoAlertEventParameters = {
 type AlertButton$DemoAlertEvent = UI5Event<AlertButtonDemoAlertEventParameters>;
 
 /**
- * Demonstrates the `inputIds` property — the keyboard only responds to
+ * Demonstrates the `inputIds` property - the keyboard only responds to
  * focus events from the listed input controls.
  *
  * @name demo.hotkeys.controller.KioskInputIds

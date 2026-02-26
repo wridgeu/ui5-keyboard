@@ -9,7 +9,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Keyboard behavior with sap.m.Dialog — two approaches:
+ * Keyboard behavior with sap.m.Dialog - two approaches:
  * A) Dialog without keyboard (docked auto-closes), and
  * B) Dialog with embedded inline keyboard.
  *

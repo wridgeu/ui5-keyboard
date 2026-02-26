@@ -6,7 +6,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Popover-mounted keyboard demo — opens a Popover containing a
+ * Popover-mounted keyboard demo - opens a Popover containing a
  * KioskKeyboard that targets the adjacent input field.
  *
  * The popover and keyboard are lazily created and reused across opens.

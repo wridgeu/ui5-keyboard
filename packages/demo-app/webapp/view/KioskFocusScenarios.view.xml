@@ -6,7 +6,7 @@
     <Page title="Focus Scenarios Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <MessageStrip
-                text="Interactive focus-transition testbed for the docked KioskKeyboard. Tab, click, or use the buttons to trigger focus changes and watch the event log update in real time."
+                text="Use these scenarios to verify focus transitions with the docked KioskKeyboard. Tab, click, or use the buttons and check the event log."
                 type="Information"
                 showIcon="true"
                 class="sapUiSmallMarginBottom" />
@@ -17,8 +17,8 @@
                         <FlexItemData growFactor="1" baseSize="20rem" />
                     </layoutData>
                     <VBox class="sapUiSmallMargin">
-                        <!-- 1. Multiple inputIds — keyboard stays open on tab -->
-                        <Label text="1. Tab between targeted inputs — keyboard stays open" design="Bold" class="sapUiTinyMarginBottom" />
+                        <!-- 1. Multiple inputIds - keyboard stays open on tab -->
+                        <Label text="1. Tab between targeted inputs - keyboard stays open" design="Bold" class="sapUiTinyMarginBottom" />
                         <HBox>
                             <VBox class="sapUiSmallMarginEnd">
                                 <Label text="Input 1 (targeted)" labelFor="focusInput1" />
@@ -30,19 +30,19 @@
                             </VBox>
                         </HBox>
 
-                        <!-- 2. Outside input — keyboard closes -->
-                        <Label text="2. Tab to non-targeted input — keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <!-- 2. Outside input - keyboard closes -->
+                        <Label text="2. Tab to non-targeted input - keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
                         <VBox>
                             <Label text="Outside Input (not targeted)" labelFor="outsideInput" />
                             <Input id="outsideInput" placeholder="Not in inputIds" width="14rem" />
                         </VBox>
 
-                        <!-- 3. Non-input focusable — keyboard closes -->
-                        <Label text="3. Focus a Button — keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <!-- 3. Non-input focusable - keyboard closes -->
+                        <Label text="3. Focus a button - keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
                         <Button id="adjacentButton" text="Adjacent Button (non-input)" press=".onAdjacentButtonPress" />
 
-                        <!-- 4. Composite control (StepInput) — ancestor resolution -->
-                        <Label text="4. Composite control — ancestor resolution picks up StepInput" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <!-- 4. Composite control (StepInput) - ancestor resolution -->
+                        <Label text="4. Composite control - ancestor resolution picks up StepInput" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
                         <VBox>
                             <Label text="StepInput (targeted)" labelFor="compositeStep" />
                             <StepInput id="compositeStep" min="0" max="100" value="42" width="14rem" />
@@ -60,9 +60,9 @@
                         </VBox>
 
                         <!-- 6. Escape key behavior -->
-                        <Label text="6. Escape — virtual key vs. target input" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <Label text="6. Escape - virtual key vs. target input" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
                         <MessageStrip
-                            text="Focus Input 1, press Escape on the virtual keyboard — input regains focus. Press Escape again while the input is focused — keyboard closes without refocusing."
+                            text="Focus Input 1 and press Escape on the virtual keyboard: input focus is restored. Press Escape again while the input is focused: the keyboard closes without refocusing."
                             type="Warning"
                             showIcon="true" />
                     </VBox>
@@ -84,7 +84,7 @@
                         <List
                             id="logList"
                             items="{log>/entries}"
-                            noDataText="No events yet — interact with the scenarios to the left">
+                            noDataText="No events yet. Interact with the scenarios on the left.">
                             <StandardListItem
                                 title="{log>event}"
                                 description="{log>detail}"

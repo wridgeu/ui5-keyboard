@@ -11,7 +11,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Full programmatic API showcase — demonstrates show/close, keyboard type
+ * Full programmatic API showcase - demonstrates show/close, keyboard type
  * switching, custom layout registration, and status tracking.
  *
  * @name demo.hotkeys.controller.KioskProgrammatic

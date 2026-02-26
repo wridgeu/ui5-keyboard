@@ -5,7 +5,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Two independent KioskKeyboard instances on one page — demonstrates
+ * Two independent KioskKeyboard instances on one page - demonstrates
  * instance isolation via `inputIds`.
  *
  * @name demo.hotkeys.controller.KioskMultiKeyboard

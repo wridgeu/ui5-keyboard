@@ -7,10 +7,10 @@ import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
 
 /**
- * Detail view controller — demonstrates same-key-different-scope pattern.
+ * Detail view controller - demonstrates same-key-different-scope pattern.
  * F5 fires a different handler here vs Main, resolved by the scope system.
  *
- * No scope management code needed — `enableRouterIntegration()` in
+ * No scope management code needed - `enableRouterIntegration()` in
  * the Component handles it.
  *
  * @name demo.hotkeys.controller.Detail
@@ -26,7 +26,7 @@ export default class Detail extends BaseController {
     this._hotkeys = this._manager.createGroup();
     const stateModel = this.getStateModel();
 
-    // Scope "detail" matches the route name — auto-activated by router integration
+    // Scope "detail" matches the route name - auto-activated by router integration
     this._hotkeys.register(
       "F5",
       () => {

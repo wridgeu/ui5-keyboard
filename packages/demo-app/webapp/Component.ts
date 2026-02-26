@@ -63,7 +63,7 @@ export default class Component extends UIComponent {
       });
 
     // Register global shortcuts (active across all views).
-    // Global scope is the default — no need to specify scope explicitly.
+    // Global scope is the default - no need to specify scope explicitly.
     this._hotkeys.register(
       "Mod+S",
       (_event, details) => {

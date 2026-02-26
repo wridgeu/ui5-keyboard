@@ -6,7 +6,7 @@
     xmlns:kiosk="ui5.kiosk">
     <Page title="Multi-Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Text text="Two independent KioskKeyboard instances on one page. Each keyboard targets its own input via inputIds — instance isolation prevents cross-claiming." class="sapUiSmallMarginBottom" />
+            <Text text="Two independent KioskKeyboard instances on one page. Each keyboard targets its own input via inputIds, so they do not cross-claim targets." class="sapUiSmallMarginBottom" />
 
             <l:Grid defaultSpan="L6 M12 S12">
                 <Panel headerText="Product Search (Docked Full Keyboard)">
