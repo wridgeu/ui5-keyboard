@@ -107,6 +107,8 @@ QUnit.test("ConflictBehavior.Error: failed registration does not pollute state",
 // enabled function returning false mid-sequence
 // ──────────────────────────────────────────────
 
+let clock: ReturnType<typeof sinon.useFakeTimers>;
+
 QUnit.module("Negative / Edge-Case — enabled() mid-sequence", {
   beforeEach() {
     try {
@@ -114,10 +116,10 @@ QUnit.module("Negative / Edge-Case — enabled() mid-sequence", {
     } catch {
       // Not initialized yet
     }
-    this.clock = sinon.useFakeTimers();
+    clock = sinon.useFakeTimers();
   },
   afterEach() {
-    (this as { clock: { restore: () => void } }).clock.restore();
+    clock.restore();
     try {
       HotkeyManager.getInstance().destroy();
     } catch {
@@ -126,8 +128,7 @@ QUnit.module("Negative / Edge-Case — enabled() mid-sequence", {
   },
 });
 
-QUnit.test("enabled function returning false mid-sequence drops pending match", function (assert) {
-  const clock = (this as unknown as { clock: { tick: (ms: number) => number } }).clock;
+QUnit.test("enabled function returning false mid-sequence drops pending match", (assert) => {
   const manager = HotkeyManager.getInstance();
   let sequenceFired = false;
   let isEnabled = true;
@@ -154,8 +155,7 @@ QUnit.test("enabled function returning false mid-sequence drops pending match", 
   assert.notOk(sequenceFired, "Sequence does not complete when enabled() returns false mid-sequence");
 });
 
-QUnit.test("enabled function returning false mid-sequence then re-enabled allows fresh start", function (assert) {
-  const clock = (this as unknown as { clock: { tick: (ms: number) => number } }).clock;
+QUnit.test("enabled function returning false mid-sequence then re-enabled allows fresh start", (assert) => {
   const manager = HotkeyManager.getInstance();
   let sequenceFired = false;
   let isEnabled = true;
@@ -185,8 +185,7 @@ QUnit.test("enabled function returning false mid-sequence then re-enabled allows
   assert.ok(sequenceFired, "Fresh sequence completes after re-enabling");
 });
 
-QUnit.test("enabled function throwing mid-sequence drops pending match", function (assert) {
-  const clock = (this as unknown as { clock: { tick: (ms: number) => number } }).clock;
+QUnit.test("enabled function throwing mid-sequence drops pending match", (assert) => {
   const manager = HotkeyManager.getInstance();
   let sequenceFired = false;
   let shouldThrow = false;
