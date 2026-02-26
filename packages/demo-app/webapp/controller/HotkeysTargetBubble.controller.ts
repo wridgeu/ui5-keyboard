@@ -28,6 +28,7 @@ export default class HotkeysTargetBubble extends BaseController {
   private _manager!: HotkeyManager;
   private _outerHandle: HotkeyRegistrationHandle | null = null;
   private _innerHandle: HotkeyRegistrationHandle | null = null;
+  private _innerWrapperHandle: HotkeyRegistrationHandle | null = null;
   private _docFallbackHandle: HotkeyRegistrationHandle | null = null;
   private _logModel!: JSONModel;
   private _renderDelegate = { onAfterRendering: () => this._bindTargetHotkeys() };
@@ -76,6 +77,7 @@ export default class HotkeysTargetBubble extends BaseController {
     const outerTarget = this.byId("outerTargetBox")?.getDomRef();
     const bubbleInput = this.byId("bubbleInput") as Input | undefined;
     const innerTarget = bubbleInput?.getFocusDomRef() ?? bubbleInput?.getDomRef();
+    const innerWrapperTarget = bubbleInput?.getDomRef();
     if (!outerTarget || !innerTarget) {
       return;
     }
@@ -124,6 +126,24 @@ export default class HotkeysTargetBubble extends BaseController {
         description: "Inner target Escape",
       },
     );
+
+    if (innerWrapperTarget && innerWrapperTarget !== innerTarget) {
+      this._innerWrapperHandle = this._manager.register(
+        "Escape",
+        () => {
+          this._addLogEntry("Escape", "inner target fired", "Success");
+          stateModel.setProperty("/lastAction", "Target bubble demo fired");
+          MessageToast.show("Inner target fired");
+        },
+        {
+          scope: Scope.HotkeysTargetBubble,
+          target: innerWrapperTarget as HTMLElement,
+          allowBubble: bubbleEnabled,
+          stopPropagation: !bubbleEnabled,
+          description: "Inner wrapper Escape",
+        },
+      );
+    }
 
     this._focusBubbleInput();
   }
@@ -219,6 +239,10 @@ export default class HotkeysTargetBubble extends BaseController {
     if (this._innerHandle) {
       this._innerHandle.unregister();
       this._innerHandle = null;
+    }
+    if (this._innerWrapperHandle) {
+      this._innerWrapperHandle.unregister();
+      this._innerWrapperHandle = null;
     }
   }
 }
