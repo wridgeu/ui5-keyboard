@@ -248,10 +248,10 @@ Per-element listeners are replaced by a `composedPath()` membership check during
 
 **Priority ordering:**
 
-1. Document-level registrations are checked first.
-2. If a document-level registration matches with `stopPropagation: true`, target-scoped registrations for the same key are skipped entirely.
-3. If no document match, or document matched without `stopPropagation`: target-scoped registrations are checked innermost-first via `composedPath()` order. If a document match without `stopPropagation` already fired, a target match for the same key also fires (both callbacks execute). This is intentional — document and target registrations serve different purposes (global vs. scoped) so "both fire" is correct. See pseudocode in Phase 4.
-4. For nested target-scoped registrations, only the **innermost** matching target fires — regardless of `stopPropagation`. The `stopPropagation` flag on a target-scoped registration controls whether outer target nodes are even checked: `stopPropagation: true` skips iteration of remaining outer targets (optimization + skip-reason suppression), `stopPropagation: false` still only fires the innermost match but continues iterating outer targets for debug/skip-reason tracking. This is different from the document→target rule above because two nested target registrations for the same key in the same scope is a conflict, not complementary usage.
+1. Target-scoped registrations are checked first, innermost-first via `composedPath()` order (active scope → global scope).
+2. If a target-scoped registration matches with `stopPropagation: true`, document-level registrations for the same key are skipped entirely.
+3. If no target match, or target matched without `stopPropagation`: document-level registrations are checked (active scope → global scope). If a target match without `stopPropagation` already fired, a document match for the same key also fires (both callbacks execute). This is intentional — target and document registrations serve different purposes (scoped vs. global) so "both fire" is correct. See pseudocode in Phase 4.
+4. For nested target-scoped registrations, only the **innermost** matching target fires — regardless of `stopPropagation`. The `stopPropagation` flag on a target-scoped registration controls whether outer target nodes are even checked: `stopPropagation: true` skips iteration of remaining outer targets (optimization + skip-reason suppression), `stopPropagation: false` still only fires the innermost match but continues iterating outer targets for debug/skip-reason tracking. This is different from the target→document rule above because two nested target registrations for the same key in the same scope is a conflict, not complementary usage.
 
 **Note on `target: document`:** If a registration uses `target: document`, it is treated as a target-scoped registration (indexed in `bucket.targets`, not `bucket.documentIds`). During `composedPath()` iteration `document` appears near the outermost end, so such a registration behaves like a very-outer target — not like a document-level registration. In practice `target: document` is unlikely (omitting `target` achieves the same effect with better priority), but the distinction exists.
 
@@ -488,11 +488,11 @@ Add to HotkeyManager:
 - `isDispatchSuspended()` — public, delegates to `_dispatcher.isDispatchSuspended()`.
 - `createRecorder(options)` — public factory, passes `_dispatcher` to `new HotkeyRecorder(options, dispatcher)`. Consistent with `createGroup()` pattern.
 - `getKeyStateTracker()` — public getter, returns `_dispatcher.keyStateTracker`. Replaces `KeyStateTracker.getInstance()` for consumers that need held-key state.
-- `_processHotkeys(event): boolean` — private, implements `HotkeyDispatchHandler.processHotkeys` via anonymous handler. Replaces `_processKeyEvent`. Returns `boolean` (consumed or not). Runs document-level registrations first, then target-scoped (innermost-first via `composedPath()`). Stores the full evaluation context in `_lastEventContext` (active scope, input state, popup state, skip info) for `_emitUnhandled`. See Phase 4 for detailed pseudocode.
+- `_processHotkeys(event): boolean` — private, implements `HotkeyDispatchHandler.processHotkeys` via anonymous handler. Replaces `_processKeyEvent`. Returns `boolean` (consumed or not). Runs target-scoped registrations first (innermost-first via `composedPath()`), then document-level. Stores the full evaluation context in `_lastEventContext` (active scope, input state, popup state, skip info) for `_emitUnhandled`. See Phase 4 for detailed pseudocode.
 - `_processSequences(event): boolean` — private, implements `HotkeyDispatchHandler.processSequences` via anonymous handler. Delegates to `_sequenceManager?.processKeyEvent(event) ?? false`.
 - `_emitUnhandled(event, forcedReason): void` — private, implements `HotkeyDispatchHandler.emitUnhandled` via anonymous handler. If `forcedReason` is non-null, uses it directly. Otherwise reads `_lastEventContext` for the most specific reason and cached evaluation state.
 
-**Debug mode:** The existing `_logDebugEvent` method and `_debugMode` flag remain on HotkeyManager. Debug logging fires inside `_processHotkeys` (after matching) and inside `_emitUnhandled` (for unhandled events). The EventDispatcher has no knowledge of debug mode. **Dual-match logging:** When a document-level registration matches with `stopPropagation: false` AND a target-scoped registration also matches the same event, `_logDebugEvent` fires twice — once for each match. Each log entry includes the matched registration, so consumers can distinguish them. The current log shape (`_logDebugEvent(event, scope, isInput, popupOpen, match, debugSkips)`) is sufficient — the `match` parameter identifies which registration triggered the log. A future enhancement could merge both matches into a single log entry, but this is not required for the initial implementation.
+**Debug mode:** The existing `_logDebugEvent` method and `_debugMode` flag remain on HotkeyManager. Debug logging fires inside `_processHotkeys` (after matching) and inside `_emitUnhandled` (for unhandled events). The EventDispatcher has no knowledge of debug mode. **Dual-match logging:** When a target-scoped registration matches with `stopPropagation: false` AND a document-level registration also matches the same event, `_logDebugEvent` fires twice — once for each match. Each log entry includes the matched registration, so consumers can distinguish them. The current log shape (`_logDebugEvent(event, scope, isInput, popupOpen, match, debugSkips)`) is sufficient — the `match` parameter identifies which registration triggered the log. A future enhancement could merge both matches into a single log entry, but this is not required for the initial implementation.
 
 ### Phase 3: New UnhandledReason values
 
@@ -558,7 +558,7 @@ private _executeMatch(event: KeyboardEvent, matched: HotkeyRegistration): void {
 }
 ```
 
-`_processHotkeys` enforces three-tier priority (document → innermost target → outer targets):
+`_processHotkeys` enforces three-tier priority (innermost target → outer targets → document):
 
 ```ts
 _processHotkeys(event: KeyboardEvent): boolean {
@@ -576,26 +576,7 @@ _processHotkeys(event: KeyboardEvent): boolean {
     : null;
   const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
 
-  // Pass 1: document-level registrations (no target)
-  const docMatch = this._matchDocumentRegistrations(
-    event, eventPath, activeScope, isInput, popupOpen, skipInfo, debugSkips,
-  );
-
-  if (docMatch) {
-    this._executeMatch(event, docMatch);
-    if (this._debugMode) {
-      this._logDebugEvent(event, activeScope, isInput, popupOpen, docMatch, debugSkips);
-    }
-    // If matched with stopPropagation, skip target-scoped registrations entirely.
-    // This is the ONLY case where a document-level match prevents target matching.
-    if (docMatch.options.stopPropagation) return true;
-    // NOTE: document match WITHOUT stopPropagation allows target-scoped matching
-    // to proceed. If a target also matches, BOTH callbacks fire. This is intentional:
-    // a document-level Ctrl+S (e.g., global save) with stopPropagation: false allows
-    // a panel-scoped Ctrl+S to also fire. To prevent this, use stopPropagation: true.
-  }
-
-  // Pass 2: target-scoped registrations — innermost target in composedPath wins.
+  // Pass 1: target-scoped registrations — innermost target in composedPath wins.
   // Iterate composedPath from index 0 (innermost) outward.
   // For each node that is a registered target, attempt matching.
   // Target-skipping is determined by the stopPropagation OPTION on the registration,
@@ -605,15 +586,34 @@ _processHotkeys(event: KeyboardEvent): boolean {
   );
 
   if (targetMatch) {
+    this._executeMatch(event, targetMatch);
     if (this._debugMode) {
       this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatch, debugSkips);
     }
-    return true;
   }
 
-  // Document match without stopPropagation still counts as consumed — callback already fired.
-  // Debug logging already emitted above with docMatch.
-  if (docMatch) {
+  // Pass 2: document-level registrations (only if no target match stopped propagation)
+  // NOTE: target match WITHOUT stopPropagation allows document-level matching
+  // to proceed. If a document also matches, BOTH callbacks fire. This is intentional:
+  // a panel-scoped Ctrl+S (target) with stopPropagation: false allows
+  // a document-level Ctrl+S (e.g., global save) to also fire. To prevent this,
+  // use stopPropagation: true on the target-scoped registration.
+  if (!targetMatch?.options.stopPropagation) {
+    const docMatch = this._matchDocumentRegistrations(
+      event, eventPath, activeScope, isInput, popupOpen, skipInfo, debugSkips,
+    );
+    if (docMatch) {
+      this._executeMatch(event, docMatch);
+      if (this._debugMode) {
+        this._logDebugEvent(event, activeScope, isInput, popupOpen, docMatch, debugSkips);
+      }
+      return true;
+    }
+  }
+
+  // Target match without stopPropagation still counts as consumed — callback already fired.
+  // Debug logging already emitted above with targetMatch.
+  if (targetMatch) {
     return true;
   }
 
@@ -839,8 +839,8 @@ New tests:
 | Interceptor: destroy-while-recording                                   | Recorder active → `manager.destroy()` → onDetached() called, recorder.isRecording === false, recorder.isDestroyed === true                                                                             |
 | Target-scoped: composedPath match                                      | Focus within target → callback fires                                                                                                                                                                   |
 | Target-scoped: composedPath miss                                       | Focus outside target → callback does NOT fire                                                                                                                                                          |
-| Target-scoped: document priority                                       | Document `stopPropagation: true` with same key → target-scoped skipped                                                                                                                                 |
-| Target-scoped: document without stopPropagation + target               | Both callbacks fire (doc first, then target)                                                                                                                                                           |
+| Target-scoped: document priority                                       | Target-scoped `stopPropagation: true` with same key → document-level skipped                                                                                                                           |
+| Target-scoped: target without stopPropagation + document               | Both callbacks fire (target first, then doc)                                                                                                                                                           |
 | Target-scoped: nested targets, innermost wins                          | Two nested targets, same key → only innermost callback fires                                                                                                                                           |
 | Target-scoped: nested targets, innermost wins (stopPropagation: false) | Inner `stopPropagation: false`, outer same key → only innermost fires (innermost-wins regardless of stopPropagation)                                                                                   |
 | Target-scoped: nested targets with stopPropagation                     | Inner target with `stopPropagation: true` → outer target callback does NOT fire                                                                                                                        |
@@ -1124,7 +1124,7 @@ There are no external consumers yet, so breaking changes are acceptable where th
 
 ### Changed (non-breaking)
 
-- **`stopPropagation` and target-scoped registrations** — document-level `stopPropagation: true` currently prevents target-listener keydown via DOM propagation. In the new design, it is enforced explicitly in the dispatch pipeline (document-level registrations checked first; if matched with `stopPropagation: true`, target-scoped registrations are skipped). Same observable behavior for the document→target case, explicit instead of implicit.
+- **`stopPropagation` and target-scoped registrations** — document-level `stopPropagation: true` currently prevents target-listener keydown via DOM propagation. In the new design, target-scoped registrations are checked first; if a target match has `stopPropagation: true`, document-level registrations are skipped. This inverts the old DOM-ordering-based priority (document→target) in favor of target-first priority, which is more natural for component-scoped UI patterns (inner/specific components override global handlers).
 - **KeyStateTracker now updates during HotkeyRecorder recording** — currently, HotkeyRecorder calls `stopImmediatePropagation()` on `window` capture, which prevents KeyStateTracker's `document` capture handlers from seeing keydown events. KeyStateTracker goes stale during recording. In the new design, step 1 (key state tracking) runs before step 2 (interceptor), so KeyStateTracker sees all keydown events including those consumed by the recorder. This is the correct behavior (held-key state should always be accurate), but it is a change. Consumers that observe KeyStateTracker state during recording and rely on it being frozen/stale would be affected.
 
 ## Alternatives Considered

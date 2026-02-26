@@ -1478,6 +1478,41 @@ QUnit.test("Focus fallback: focus bounces to body, Escape still matches previous
   target.remove();
 });
 
+QUnit.test("Focus fallback: blur-to-body fallback is one-shot for repeated Escape", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetCount = 0;
+  let docCount = 0;
+
+  manager.register("Escape", () => {
+    docCount++;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetCount++;
+    },
+    { target, stopPropagation: true },
+  );
+
+  input.focus();
+  input.blur();
+
+  fireKey("Escape");
+  assert.strictEqual(targetCount, 1, "First Escape uses blur fallback target handler");
+  assert.strictEqual(docCount, 0, "First Escape does not reach document-level handler");
+
+  fireKey("Escape");
+
+  assert.strictEqual(targetCount, 1, "First Escape uses blur fallback, second does not");
+  assert.strictEqual(docCount, 1, "Second Escape falls back to document-level handler");
+
+  target.remove();
+});
+
 QUnit.test("Focus fallback: focus moves to real non-target element → old target does NOT fire", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
