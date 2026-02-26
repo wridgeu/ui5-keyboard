@@ -3,7 +3,7 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page title="Focus Scenarios Demo" showNavButton="true" navButtonPress=".onNavBack">
+    <Page title="Focus Scenarios Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <MessageStrip
                 text="Interactive focus-transition testbed for the docked KioskKeyboard. Tab, click, or use the buttons to trigger focus changes and watch the event log update in real time."
@@ -11,80 +11,82 @@
                 showIcon="true"
                 class="sapUiSmallMarginBottom" />
 
-            <Panel id="scenarioArea" headerText="Scenarios">
-                <VBox class="sapUiSmallMargin">
-                    <!-- 1. Multiple inputIds — keyboard stays open on tab -->
-                    <Label text="1. Tab between targeted inputs — keyboard stays open" design="Bold" class="sapUiTinyMarginBottom" />
-                    <HBox>
-                        <VBox class="sapUiSmallMarginEnd">
-                            <Label text="Input 1 (targeted)" labelFor="focusInput1" />
-                            <Input id="focusInput1" placeholder="Targeted" width="14rem" />
-                        </VBox>
+            <HBox fitContainer="true" renderType="Bare">
+                <Panel id="scenarioArea" headerText="Scenarios" class="sapUiSmallMarginEnd" layoutData="{sap.m.FlexItemData: {growFactor: 1}}">
+                    <VBox class="sapUiSmallMargin">
+                        <!-- 1. Multiple inputIds — keyboard stays open on tab -->
+                        <Label text="1. Tab between targeted inputs — keyboard stays open" design="Bold" class="sapUiTinyMarginBottom" />
+                        <HBox>
+                            <VBox class="sapUiSmallMarginEnd">
+                                <Label text="Input 1 (targeted)" labelFor="focusInput1" />
+                                <Input id="focusInput1" placeholder="Targeted" width="14rem" />
+                            </VBox>
+                            <VBox>
+                                <Label text="Input 2 (targeted)" labelFor="focusInput2" />
+                                <Input id="focusInput2" placeholder="Targeted" width="14rem" />
+                            </VBox>
+                        </HBox>
+
+                        <!-- 2. Outside input — keyboard closes -->
+                        <Label text="2. Tab to non-targeted input — keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
                         <VBox>
-                            <Label text="Input 2 (targeted)" labelFor="focusInput2" />
-                            <Input id="focusInput2" placeholder="Targeted" width="14rem" />
+                            <Label text="Outside Input (not targeted)" labelFor="outsideInput" />
+                            <Input id="outsideInput" placeholder="Not in inputIds" width="14rem" />
                         </VBox>
-                    </HBox>
 
-                    <!-- 2. Outside input — keyboard closes -->
-                    <Label text="2. Tab to non-targeted input — keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
-                    <VBox>
-                        <Label text="Outside Input (not targeted)" labelFor="outsideInput" />
-                        <Input id="outsideInput" placeholder="Not in inputIds" width="14rem" />
+                        <!-- 3. Non-input focusable — keyboard closes -->
+                        <Label text="3. Focus a Button — keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <Button id="adjacentButton" text="Adjacent Button (non-input)" press=".onAdjacentButtonPress" />
+
+                        <!-- 4. Composite control (StepInput) — ancestor resolution -->
+                        <Label text="4. Composite control — ancestor resolution picks up StepInput" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <VBox>
+                            <Label text="StepInput (targeted)" labelFor="compositeStep" />
+                            <StepInput id="compositeStep" min="0" max="100" value="42" width="14rem" />
+                        </VBox>
+
+                        <!-- 5. Programmatic focus via setTimeout -->
+                        <Label text="5. Deferred focus move (relatedTarget === null)" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <VBox>
+                            <Text text="Focuses Input 1 immediately, then moves to Outside Input after 2 seconds via setTimeout." class="sapUiTinyMarginBottom" />
+                            <Button
+                                id="deferredFocusBtn"
+                                text="Start deferred focus move"
+                                type="Emphasized"
+                                press=".onDeferredFocus" />
+                        </VBox>
+
+                        <!-- 6. Escape key behavior -->
+                        <Label text="6. Escape — virtual key vs. target input" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
+                        <MessageStrip
+                            text="Focus Input 1, press Escape on the virtual keyboard — input regains focus. Press Escape again while the input is focused — keyboard closes without refocusing."
+                            type="Warning"
+                            showIcon="true" />
                     </VBox>
+                </Panel>
 
-                    <!-- 3. Non-input focusable — keyboard closes -->
-                    <Label text="3. Focus a Button — keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
-                    <Button id="adjacentButton" text="Adjacent Button (non-input)" press=".onAdjacentButtonPress" />
-
-                    <!-- 4. Composite control (StepInput) — ancestor resolution -->
-                    <Label text="4. Composite control — ancestor resolution picks up StepInput" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
-                    <VBox>
-                        <Label text="StepInput (targeted)" labelFor="compositeStep" />
-                        <StepInput id="compositeStep" min="0" max="100" value="42" width="14rem" />
-                    </VBox>
-
-                    <!-- 5. Programmatic focus via setTimeout -->
-                    <Label text="5. Deferred focus move (relatedTarget === null)" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
-                    <VBox>
-                        <Text text="Focuses Input 1 immediately, then moves to Outside Input after 2 seconds via setTimeout." class="sapUiTinyMarginBottom" />
-                        <Button
-                            id="deferredFocusBtn"
-                            text="Start deferred focus move"
-                            type="Emphasized"
-                            press=".onDeferredFocus" />
-                    </VBox>
-
-                    <!-- 6. Escape key behavior -->
-                    <Label text="6. Escape — virtual key vs. target input" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
-                    <MessageStrip
-                        text="Focus Input 1, press Escape on the virtual keyboard — input regains focus. Press Escape again while the input is focused — keyboard closes without refocusing."
-                        type="Warning"
-                        showIcon="true" />
-                </VBox>
-            </Panel>
-
-            <!-- Live event log -->
-            <Panel class="sapUiSmallMarginTop">
-                <headerToolbar>
-                    <OverflowToolbar>
-                        <Title text="Event Log" />
-                        <ToolbarSpacer />
-                        <Button icon="sap-icon://delete" tooltip="Clear log" press=".onClearLog" type="Transparent" />
-                    </OverflowToolbar>
-                </headerToolbar>
-                <List
-                    id="logList"
-                    items="{log>/entries}"
-                    noDataText="No events yet — interact with the scenarios above">
-                    <StandardListItem
-                        title="{log>event}"
-                        description="{log>detail}"
-                        info="{log>time}"
-                        infoState="{log>state}"
-                        type="Inactive" />
-                </List>
-            </Panel>
+                <!-- Live event log -->
+                <Panel layoutData="{sap.m.FlexItemData: {baseSize: '20rem'}}">
+                    <headerToolbar>
+                        <OverflowToolbar>
+                            <Title text="Event Log" />
+                            <ToolbarSpacer />
+                            <Button icon="sap-icon://delete" tooltip="Clear log" press=".onClearLog" type="Transparent" />
+                        </OverflowToolbar>
+                    </headerToolbar>
+                    <List
+                        id="logList"
+                        items="{log>/entries}"
+                        noDataText="No events yet — interact with the scenarios to the left">
+                        <StandardListItem
+                            title="{log>event}"
+                            description="{log>detail}"
+                            info="{log>time}"
+                            infoState="{log>state}"
+                            type="Inactive" />
+                    </List>
+                </Panel>
+            </HBox>
 
             <kiosk:KioskKeyboard
                 id="focusKeyboard"

@@ -35,16 +35,32 @@ export default class Component extends UIComponent {
     // Keep the state model's activeScope in sync with route changes.
     // enableRouterIntegration handles scope push/pop; this listener mirrors it to the model.
     const stateModel = this.getModel("state") as JSONModel;
+    const applyRuntimeState = () => {
+      const platform = this._hotkeyManager.getPlatform();
+      stateModel.setProperty("/platform", platform);
+      stateModel.setProperty("/saveLabel", formatForDisplay("Mod+S", platform));
+      stateModel.setProperty("/escapeLabel", formatForDisplay("Escape", platform));
+      stateModel.setProperty("/f5Label", formatForDisplay("F5", platform));
+      stateModel.setProperty("/navLabel", formatForDisplay("Mod+D", platform));
+    };
+
     this._routeMatchedHandler = () => {
       stateModel.setProperty("/activeScope", this._hotkeyManager.getActiveScope());
     };
     this.getRouter().attachRouteMatched(this._routeMatchedHandler, this);
-    const platform = this._hotkeyManager.getPlatform();
-    stateModel.setProperty("/platform", platform);
-    stateModel.setProperty("/saveLabel", formatForDisplay("Mod+S", platform));
-    stateModel.setProperty("/escapeLabel", formatForDisplay("Escape", platform));
-    stateModel.setProperty("/f5Label", formatForDisplay("F5", platform));
-    stateModel.setProperty("/navLabel", formatForDisplay("Mod+D", platform));
+
+    // Keep runtime-derived state stable when the JSONModel URI finishes async loading.
+    applyRuntimeState();
+    void stateModel
+      .dataLoaded()
+      .then(() => {
+        if (this.isDestroyed()) return;
+        applyRuntimeState();
+        this._routeMatchedHandler();
+      })
+      .catch(() => {
+        // Ignore load failures here; fixture issues are surfaced by JSONModel events/logs.
+      });
 
     // Register global shortcuts (active across all views).
     // Global scope is the default — no need to specify scope explicitly.

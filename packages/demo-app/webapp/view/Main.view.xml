@@ -12,7 +12,11 @@
                 </VBox>
             </Panel>
 
-            <List headerText="Choose a Demo Area" items="{state>/mainDemoEntries}" itemPress=".onMainEntryPress">
+            <List
+                headerText="Choose a Demo Area"
+                items="{state>/mainDemoEntries}"
+                itemPress=".onMainEntryPress"
+                inset="true">
                 <StandardListItem
                     title="{state>title}"
                     description="{state>description}"

@@ -4,7 +4,11 @@
     xmlns="sap.m">
     <Page title="Kiosk Keyboard Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <List headerText="Choose a Demo" items="{state>/kioskDemoEntries}" itemPress=".onScenarioPress">
+            <List
+                headerText="Choose a Demo"
+                items="{state>/kioskDemoEntries}"
+                itemPress=".onScenarioPress"
+                inset="true">
                 <StandardListItem
                     title="{state>title}"
                     description="{state>description}"

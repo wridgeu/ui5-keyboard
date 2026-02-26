@@ -4,7 +4,11 @@
     xmlns="sap.m">
     <Page title="Hotkey Manager Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <List headerText="Choose a Scenario" items="{state>/hotkeysDemoEntries}" itemPress=".onScenarioPress">
+            <List
+                headerText="Choose a Scenario"
+                items="{state>/hotkeysDemoEntries}"
+                itemPress=".onScenarioPress"
+                inset="true">
                 <StandardListItem
                     title="{state>title}"
                     description="{state>description}"
