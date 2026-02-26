@@ -1,4 +1,4 @@
-import { isInputElement, getEventTarget } from "ui5/hotkeys/dom";
+import { isInputElement, getEventTarget } from "ui5/hotkeys/internal/dom";
 
 QUnit.module("dom - isInputElement", {
   afterEach() {

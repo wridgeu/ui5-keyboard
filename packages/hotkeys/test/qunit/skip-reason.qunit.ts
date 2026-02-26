@@ -1,4 +1,4 @@
-import { recordSkip, type SkipInfo } from "ui5/hotkeys/skip-reason";
+import { recordSkip, type SkipInfo } from "ui5/hotkeys/internal/skip-reason";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import { parseHotkey } from "ui5/hotkeys/parse";
 
