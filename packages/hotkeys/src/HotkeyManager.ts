@@ -150,9 +150,9 @@ export default class HotkeyManager extends BaseObject {
 
   // Event context from the most recent _processHotkeys call — read by _emitUnhandled.
   private _lastEventContext: EventContext | null = null;
-  private _lastFocusedElement: Element | null = null;
+  private _lastFocusedElement: WeakRef<Element> | null = null;
   private _lastFocusedAt = 0;
-  private _lastBlurredElement: Element | null = null;
+  private _lastBlurredElement: WeakRef<Element> | null = null;
   private _lastBlurredAt = 0;
   private _blurSeq = 0;
   private _consumedBlurSeq = 0;
@@ -168,7 +168,7 @@ export default class HotkeyManager extends BaseObject {
     if (this._isGenericRootNode(target)) {
       return;
     }
-    this._lastFocusedElement = target;
+    this._lastFocusedElement = new WeakRef(target);
     this._lastFocusedAt = Date.now();
   };
   private _focusOutHandler = (event: FocusEvent): void => {
@@ -179,7 +179,7 @@ export default class HotkeyManager extends BaseObject {
     if (this._isGenericRootNode(target)) {
       return;
     }
-    this._lastBlurredElement = target;
+    this._lastBlurredElement = new WeakRef(target);
     this._lastBlurredAt = Date.now();
     this._blurSeq++;
   };
@@ -728,7 +728,9 @@ export default class HotkeyManager extends BaseObject {
    * bounces to one of these elements (e.g. during rendering transitions),
    * the hotkey manager treats it as if focus did not move.
    *
-   * The UI5 shell root (`#content`) is registered by default.
+   * `document`, `window`, `<html>`, `<body>`, and elements with
+   * `data-sap-ui-area` are detected automatically. Use this method
+   * to register additional custom IDs (e.g. `"content"`).
    */
   addGenericRootId(id: string): void {
     this._assertAlive("addGenericRootId");
@@ -1000,7 +1002,7 @@ export default class HotkeyManager extends BaseObject {
       return;
     }
 
-    const lastFocusedElement = this._lastFocusedElement;
+    const lastFocusedElement = this._lastFocusedElement?.deref();
     if (!lastFocusedElement || !lastFocusedElement.isConnected || resolvedPath.includes(lastFocusedElement)) {
       return;
     }
@@ -1008,9 +1010,12 @@ export default class HotkeyManager extends BaseObject {
     const now = Date.now();
     const hasRecentFocus = now - this._lastFocusedAt <= FOCUS_PATH_FALLBACK_TTL_MS;
     const hasRecentBlur =
-      this._areElementsRelated(this._lastBlurredElement, lastFocusedElement) &&
+      this._areElementsRelated(this._lastBlurredElement?.deref() ?? null, lastFocusedElement) &&
       now - this._lastBlurredAt <= FOCUS_PATH_FALLBACK_TTL_MS;
     const hasUnconsumedBlur = hasRecentBlur && this._consumedBlurSeq !== this._blurSeq;
+    // Augment when:
+    // (a) focus is recent and no related blur occurred yet — element is still focused, or
+    // (b) a related blur happened but hasn't been consumed — one-shot Escape fallback.
     const shouldAugment = (hasRecentFocus && !hasRecentBlur) || hasUnconsumedBlur;
 
     if (!shouldAugment) {

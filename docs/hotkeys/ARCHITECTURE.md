@@ -63,6 +63,8 @@ window.addEventListener("blur", handler); // bubble phase
 
 Using `window` capture ensures the library sees events before any `document` or element-level listeners. This is critical for `preventDefault()`, `stopPropagation()`, and the interceptor mechanism (used by `HotkeyRecorder`).
 
+> **Focus listeners live on HotkeyManager, not EventDispatcher.** The `focusin`/`focusout` listeners are attached to `document` in the capture phase and are owned by `HotkeyManager`. This is intentional: focus state is consumed exclusively by HotkeyManager's target-scoped matching logic (the focus-path fallback), so it stays co-located with the consumer rather than being routed through the dispatch pipeline.
+
 ### Dispatch Pipeline
 
 The EventDispatcher runs a deterministic 7-step pipeline on each `keydown`:

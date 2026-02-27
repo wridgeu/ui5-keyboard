@@ -110,6 +110,18 @@ QUnit.test("destroy() invalidates all guards", (assert) => {
   assert.ok(true, "release() on invalidated guards does not throw");
 });
 
+QUnit.test("suspendDispatch on destroyed manager throws", (assert) => {
+  const ref = manager;
+  ref.destroy();
+  assert.throws(
+    () => {
+      ref.suspendDispatch("after-destroy");
+    },
+    /destroyed/i,
+    "suspendDispatch() throws on a destroyed manager",
+  );
+});
+
 QUnit.test("Key state tracks during suspension", (assert) => {
   const tracker = manager.getKeyStateTracker();
   const guard = manager.suspendDispatch("test");
@@ -255,6 +267,29 @@ QUnit.test("Interceptor active + guard active → interceptor wins", (assert) =>
 
   recorder.destroy();
   guard.release();
+});
+
+QUnit.test("Interceptor error is isolated — pipeline keeps working", (assert) => {
+  const errorRecorder = manager.createRecorder({
+    onRecord: () => {
+      throw new Error("recorder boom");
+    },
+  });
+  errorRecorder.start();
+
+  // The throwing recorder should not crash the dispatch pipeline.
+  fireKey("F5");
+  assert.ok(true, "Dispatch pipeline survived recorder error");
+
+  errorRecorder.destroy();
+
+  // After the broken recorder is gone, normal hotkeys should still work.
+  let hotkeyFired = false;
+  manager.register("F6", () => {
+    hotkeyFired = true;
+  });
+  fireKey("F6");
+  assert.ok(hotkeyFired, "Hotkey dispatch works after broken recorder is removed");
 });
 
 // ──────────────────────────────────────────────
