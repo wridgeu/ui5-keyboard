@@ -136,13 +136,17 @@ export default class HotkeyManager extends BaseObject {
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
 
+  // User-registered element IDs treated as generic root nodes (focus fallback skips these).
+  private _genericRootIds = new Set<string>();
+
   // Event context from the most recent _processHotkeys call — read by _emitUnhandled.
   private _lastEventContext: EventContext | null = null;
   private _lastFocusedElement: Element | null = null;
   private _lastFocusedAt = 0;
   private _lastBlurredElement: Element | null = null;
   private _lastBlurredAt = 0;
-  private _lastConsumedBlurFallbackAt = 0;
+  private _blurSeq = 0;
+  private _consumedBlurSeq = 0;
   private _focusInHandler = (event: FocusEvent): void => {
     const target = event.target;
     if (!(target instanceof Element)) {
@@ -168,6 +172,7 @@ export default class HotkeyManager extends BaseObject {
     }
     this._lastBlurredElement = target;
     this._lastBlurredAt = Date.now();
+    this._blurSeq++;
   };
 
   /**
@@ -707,6 +712,28 @@ export default class HotkeyManager extends BaseObject {
     return this._debugMode;
   }
 
+  /**
+   * Register an element ID as a generic root node.
+   *
+   * Generic root nodes are ignored by the focus-tracking logic: when focus
+   * bounces to one of these elements (e.g. during rendering transitions),
+   * the hotkey manager treats it as if focus did not move.
+   *
+   * The UI5 shell root (`#content`) is registered by default.
+   */
+  addGenericRootId(id: string): void {
+    this._assertAlive("addGenericRootId");
+    this._genericRootIds.add(id);
+  }
+
+  /**
+   * Remove a previously registered generic root ID.
+   */
+  removeGenericRootId(id: string): void {
+    this._assertAlive("removeGenericRootId");
+    this._genericRootIds.delete(id);
+  }
+
   // ──────────────────────────────────────────────
   // Lifecycle
   // ──────────────────────────────────────────────
@@ -757,7 +784,9 @@ export default class HotkeyManager extends BaseObject {
     this._lastFocusedAt = 0;
     this._lastBlurredElement = null;
     this._lastBlurredAt = 0;
-    this._lastConsumedBlurFallbackAt = 0;
+    this._blurSeq = 0;
+    this._consumedBlurSeq = 0;
+    this._genericRootIds.clear();
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -917,50 +946,64 @@ export default class HotkeyManager extends BaseObject {
         ? [...path]
         : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
 
-    // Hardening: some environments dispatch keyboard events on document/window
-    // even while an input still has focus. Include the active-element ancestry as
-    // an additional fallback so target-scoped matching remains stable.
-    const activeElement = document.activeElement;
-    if (activeElement && !resolvedPath.includes(activeElement)) {
-      for (const node of this._getActiveElementPath(activeElement)) {
-        if (!resolvedPath.includes(node)) {
-          resolvedPath.push(node);
-        }
-      }
-    }
-
-    // Some browsers/extensions dispatch Escape after focus has already moved to
-    // body/content. Use the most recently focused element as a short-lived
-    // fallback to preserve target-scoped matching.
-    const shouldUseFocusFallback = this._shouldUseFocusPathFallback(event, resolvedPath);
-    const lastFocusedElement = this._lastFocusedElement;
-    const hasRecentFocusOnLastFocused =
-      !!lastFocusedElement && Date.now() - this._lastFocusedAt <= FOCUS_PATH_FALLBACK_TTL_MS;
-    const hasRecentBlurFromLastFocused =
-      !!lastFocusedElement &&
-      this._isSameElementOrAncestor(this._lastBlurredElement, lastFocusedElement) &&
-      Date.now() - this._lastBlurredAt <= FOCUS_PATH_FALLBACK_TTL_MS;
-    const hasUnconsumedRecentBlurFromLastFocused =
-      hasRecentBlurFromLastFocused && this._lastConsumedBlurFallbackAt !== this._lastBlurredAt;
-    const shouldUseFocusedElementFallback = hasRecentFocusOnLastFocused && !hasRecentBlurFromLastFocused;
-    if (
-      shouldUseFocusFallback &&
-      lastFocusedElement &&
-      lastFocusedElement.isConnected &&
-      (shouldUseFocusedElementFallback || hasUnconsumedRecentBlurFromLastFocused) &&
-      !resolvedPath.includes(lastFocusedElement)
-    ) {
-      for (const node of this._getActiveElementPath(lastFocusedElement)) {
-        if (!resolvedPath.includes(node)) {
-          resolvedPath.push(node);
-        }
-      }
-      if (hasUnconsumedRecentBlurFromLastFocused) {
-        this._lastConsumedBlurFallbackAt = this._lastBlurredAt;
-      }
-    }
+    this._augmentPathWithActiveElement(resolvedPath);
+    this._augmentPathWithFocusFallback(event, resolvedPath);
 
     return resolvedPath;
+  }
+
+  /**
+   * Include the active-element ancestry in the path. Some environments
+   * dispatch keyboard events on document/window even while an input
+   * still has focus.
+   */
+  private _augmentPathWithActiveElement(resolvedPath: EventTarget[]): void {
+    const activeElement = document.activeElement;
+    if (!activeElement || resolvedPath.includes(activeElement)) {
+      return;
+    }
+    for (const node of this._getActiveElementPath(activeElement)) {
+      if (!resolvedPath.includes(node)) {
+        resolvedPath.push(node);
+      }
+    }
+  }
+
+  /**
+   * Some browsers/extensions dispatch Escape after focus has already moved to
+   * body/content. Inject the most recently focused element's ancestry as a
+   * short-lived, one-shot fallback to preserve target-scoped matching.
+   */
+  private _augmentPathWithFocusFallback(event: KeyboardEvent, resolvedPath: EventTarget[]): void {
+    if (!this._shouldUseFocusPathFallback(event, resolvedPath)) {
+      return;
+    }
+
+    const lastFocusedElement = this._lastFocusedElement;
+    if (!lastFocusedElement || !lastFocusedElement.isConnected || resolvedPath.includes(lastFocusedElement)) {
+      return;
+    }
+
+    const now = Date.now();
+    const hasRecentFocus = now - this._lastFocusedAt <= FOCUS_PATH_FALLBACK_TTL_MS;
+    const hasRecentBlur =
+      this._areElementsRelated(this._lastBlurredElement, lastFocusedElement) &&
+      now - this._lastBlurredAt <= FOCUS_PATH_FALLBACK_TTL_MS;
+    const hasUnconsumedBlur = hasRecentBlur && this._consumedBlurSeq !== this._blurSeq;
+    const shouldAugment = (hasRecentFocus && !hasRecentBlur) || hasUnconsumedBlur;
+
+    if (!shouldAugment) {
+      return;
+    }
+
+    for (const node of this._getActiveElementPath(lastFocusedElement)) {
+      if (!resolvedPath.includes(node)) {
+        resolvedPath.push(node);
+      }
+    }
+    if (hasUnconsumedBlur) {
+      this._consumedBlurSeq = this._blurSeq;
+    }
   }
 
   /**
@@ -983,8 +1026,9 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Whether a node is a generic top-level dispatch target.
    *
-   * Includes `#content` — the UI5 shell root where focus bounces during
-   * rendering transitions.
+   * Matches document, window, html, body, UI5 UIArea root nodes
+   * (identified by the `data-sap-ui-area` attribute set by the
+   * framework), and any ID registered via {@link addGenericRootId}.
    */
   private _isGenericRootNode(node: EventTarget | null): boolean {
     if (!node) {
@@ -996,13 +1040,18 @@ export default class HotkeyManager extends BaseObject {
     if (!(node instanceof Element)) {
       return false;
     }
-    return node === document.documentElement || node === document.body || node.id === "content";
+    return (
+      node === document.documentElement ||
+      node === document.body ||
+      node.hasAttribute("data-sap-ui-area") ||
+      this._genericRootIds.has(node.id)
+    );
   }
 
   /**
-   * Whether the two elements are equal or in a direct ancestor relationship.
+   * Whether the two elements are equal or in any ancestor/descendant relationship.
    */
-  private _isSameElementOrAncestor(a: Element | null, b: Element | null): boolean {
+  private _areElementsRelated(a: Element | null, b: Element | null): boolean {
     if (!a || !b) {
       return false;
     }

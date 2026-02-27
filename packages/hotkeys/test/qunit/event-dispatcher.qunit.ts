@@ -13,6 +13,10 @@ declare const sinon: {
     called: boolean;
     restore: () => void;
   };
+  useFakeTimers: () => {
+    tick: (ms: number) => number;
+    restore: () => void;
+  };
 };
 
 let manager: HotkeyManager;
@@ -1446,10 +1450,27 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
 });
 
 // ──────────────────────────────────────────────
-// Focus fallback for Escape — generic root skip
+// Focus fallback for Escape
 // ──────────────────────────────────────────────
 
-QUnit.test("Focus fallback: focus bounces to body, Escape still matches previous target", (assert) => {
+let clock: ReturnType<typeof sinon.useFakeTimers>;
+
+QUnit.module("Focus fallback for Escape", {
+  beforeEach() {
+    clock = sinon.useFakeTimers();
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+    clock.restore();
+  },
+});
+
+QUnit.test("Focus bounces to body, Escape still matches previous target", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
@@ -1467,7 +1488,7 @@ QUnit.test("Focus fallback: focus bounces to body, Escape still matches previous
   // Focus the input (sets _lastFocusedElement = input via focusin handler)
   input.focus();
 
-  // Blur — focus goes to body (generic root → _focusInHandler skips it)
+  // Blur — focus goes to body (generic root — _focusInHandler skips it)
   input.blur();
 
   // Fire Escape from document level — fallback should reconstruct path from _lastFocusedElement
@@ -1478,7 +1499,7 @@ QUnit.test("Focus fallback: focus bounces to body, Escape still matches previous
   target.remove();
 });
 
-QUnit.test("Focus fallback: blur-to-body fallback is one-shot for repeated Escape", (assert) => {
+QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
@@ -1513,7 +1534,7 @@ QUnit.test("Focus fallback: blur-to-body fallback is one-shot for repeated Escap
   target.remove();
 });
 
-QUnit.test("Focus fallback: focus moves to real non-target element → old target does NOT fire", (assert) => {
+QUnit.test("Focus moves to real non-target element — old target does NOT fire", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   const outside = document.createElement("input");
@@ -1550,4 +1571,71 @@ QUnit.test("Focus fallback: focus moves to real non-target element → old targe
 
   target.remove();
   outside.remove();
+});
+
+QUnit.test("Fallback expires after TTL (1200 ms)", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetFired = false;
+  let docFired = false;
+
+  manager.register("Escape", () => {
+    docFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Focus and blur within TTL — fallback would normally work
+  input.focus();
+  input.blur();
+
+  // Advance time past the 1200ms TTL
+  clock.tick(1300);
+
+  fireKey("Escape");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after TTL expiry");
+  assert.ok(docFired, "Doc-level handler fires instead");
+
+  target.remove();
+});
+
+QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetFired = false;
+  let docFired = false;
+
+  manager.register("F5", () => {
+    docFired = true;
+  });
+  manager.register(
+    "F5",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Same setup as the blur-to-body test, but with F5 instead of Escape
+  input.focus();
+  input.blur();
+
+  fireKey("F5");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire for non-Escape via focus fallback");
+  assert.ok(docFired, "Doc-level handler fires for F5");
+
+  target.remove();
 });
