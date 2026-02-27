@@ -148,7 +148,12 @@ export default class HotkeyManager extends BaseObject {
   // User-registered element IDs treated as generic root nodes (focus fallback skips these).
   private _genericRootIds = new Set<string>();
 
-  // Event context from the most recent _processHotkeys call — read by _emitUnhandled.
+  /**
+   * Cached event context: set by `_processHotkeys` (step 5) when nothing matched,
+   * read by `_emitUnhandled` (step 7) to avoid recomputing scope/input/popup state.
+   * Ignored when `_emitUnhandled` receives a non-null `forcedReason` (e.g. Suspended).
+   * Reset to null on `destroy()` and `reset()`.
+   */
   private _lastEventContext: EventContext | null = null;
   private _lastFocusedElement: WeakRef<Element> | null = null;
   private _lastFocusedAt = 0;
@@ -1242,6 +1247,7 @@ export default class HotkeyManager extends BaseObject {
 
         for (const [targetNode, ids] of bucket.targets) {
           if (pathSet.has(targetNode)) continue; // Already checked in main pass
+          if (targetNode instanceof Element && !targetNode.isConnected) continue; // Skip detached DOM refs
 
           for (const id of ids) {
             const reg = this._registrations.get(id);

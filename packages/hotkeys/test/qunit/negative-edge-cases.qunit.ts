@@ -567,6 +567,32 @@ QUnit.test("onRecord callback throws — manager remains functional", (assert) =
   recorder.destroy();
 });
 
+QUnit.test("onCancel callback throws — recorder stops and manager remains functional", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const recorder = manager.createRecorder({
+    onRecord: () => {},
+    onCancel: () => {
+      throw new Error("Intentional onCancel error");
+    },
+  });
+
+  recorder.start();
+  // Escape triggers cancel() → onCancel throws → caught by pipeline try-catch
+  fireKey("Escape");
+
+  assert.notOk(recorder.isRecording, "Recorder stopped despite onCancel throw");
+
+  // Manager should still dispatch normally
+  let managerFired = false;
+  manager.register("F6", () => {
+    managerFired = true;
+  });
+  fireKey("F6");
+  assert.ok(managerFired, "Manager dispatches normally after onCancel callback throw");
+
+  recorder.destroy();
+});
+
 QUnit.test("Recorder start after manager destroy is a no-op", (assert) => {
   const manager = HotkeyManager.getInstance();
   const recorder = manager.createRecorder({ onRecord: () => {} });

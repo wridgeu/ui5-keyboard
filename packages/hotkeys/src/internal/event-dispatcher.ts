@@ -286,12 +286,7 @@ export default class EventDispatcher {
         if (this._interceptor.onKeyDown(event)) return;
       } catch (error) {
         Log.error(`Error in interceptor onKeyDown: ${error}`, undefined, LOG_COMPONENT);
-        // Ensure the event is suppressed even if the interceptor threw before
-        // calling preventDefault itself (defensive — HotkeyRecorder does call
-        // it early, but custom interceptors might not).
-        if (!event.defaultPrevented) {
-          event.preventDefault();
-        }
+        event.preventDefault(); // Defensive — idempotent if already called by the interceptor
         return;
       }
     }
