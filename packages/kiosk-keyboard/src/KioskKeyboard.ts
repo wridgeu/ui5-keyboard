@@ -654,6 +654,9 @@ export default class KioskKeyboard extends Control {
     if (!bEnabled) {
       this._redirectFocusToTargetIfOwned();
     }
+    // Intentionally bypasses super.setEnabled() — the renderer and
+    // _syncDockedDomState handle CSS classes and aria-disabled at
+    // render time, so the generic Control.setEnabled logic is not needed.
     return this.setProperty("enabled", bEnabled) as this;
   }
 
@@ -681,6 +684,9 @@ export default class KioskKeyboard extends Control {
    * If focus is currently inside this keyboard's DOM, move it to the
    * target input. Called before operations that would remove the keyboard
    * from tab order (disable, hide) to avoid unpredictable focus fallback.
+   *
+   * Note: Uses `document.activeElement` which does not pierce shadow DOM
+   * boundaries. This is fine because UI5 controls do not use shadow DOM.
    */
   private _redirectFocusToTargetIfOwned(): void {
     const myDom = this.getDomRef();

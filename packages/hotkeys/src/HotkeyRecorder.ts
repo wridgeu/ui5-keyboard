@@ -69,8 +69,10 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
 
   /**
    * Cancel recording — calls onCancel if provided.
+   * No-op if the recorder has been destroyed.
    */
   cancel(): void {
+    if (this._destroyed) return;
     this.stop();
     this._options.onCancel?.();
   }

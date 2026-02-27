@@ -21,22 +21,34 @@ export interface KeyEventInterceptor {
 }
 
 /**
+ * Result of {@link HotkeyDispatchHandler.processHotkeys}.
+ * Carries an opaque context that the dispatcher passes through to `emitUnhandled`
+ * without interpreting — avoids shared mutable state between the two methods.
+ * @internal
+ */
+export interface HotkeyDispatchResult {
+  consumed: boolean;
+  /** Opaque context for _emitUnhandled — dispatcher does not interpret this. */
+  eventContext?: unknown;
+}
+
+/**
  * Interface implemented by HotkeyManager (via anonymous handler object)
  * to receive dispatched events from the pipeline.
  * @internal
  */
 export interface HotkeyDispatchHandler {
-  /** Hotkey dispatch — receives pre-filtered, non-suspended keydowns. Returns true if consumed. */
-  processHotkeys(event: KeyboardEvent): boolean;
+  /** Hotkey dispatch — receives pre-filtered, non-suspended keydowns. */
+  processHotkeys(event: KeyboardEvent): HotkeyDispatchResult;
   /** Sequence dispatch — same contract. Returns true if consumed (full match OR partial advance). */
   processSequences(event: KeyboardEvent): boolean;
   /**
    * Unhandled emission — called when the event was not consumed.
    * `forcedReason` is set by the dispatcher when the event was blocked before reaching
    * the matching pipeline (e.g., `Suspended`). When null, HotkeyManager uses its own
-   * skip tracking to determine the most specific reason.
+   * skip tracking (passed through `eventContext`) to determine the most specific reason.
    */
-  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null): void;
+  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext?: unknown): void;
 }
 
 /**
@@ -274,7 +286,13 @@ export default class EventDispatcher {
         if (this._interceptor.onKeyDown(event)) return;
       } catch (error) {
         Log.error(`Error in interceptor onKeyDown: ${error}`, undefined, LOG_COMPONENT);
-        return; // Event was consumed by the interceptor (preventDefault already called)
+        // Ensure the event is suppressed even if the interceptor threw before
+        // calling preventDefault itself (defensive — HotkeyRecorder does call
+        // it early, but custom interceptors might not).
+        if (!event.defaultPrevented) {
+          event.preventDefault();
+        }
+        return;
       }
     }
 
@@ -288,14 +306,14 @@ export default class EventDispatcher {
     }
 
     // Step 5: Hotkey dispatch
-    const hotkeyConsumed = this._handler.processHotkeys(event);
+    const hotkeyResult = this._handler.processHotkeys(event);
 
     // Step 6: Sequence dispatch
     const sequenceConsumed = this._handler.processSequences(event);
 
-    // Step 7: Unhandled emission
-    if (!hotkeyConsumed && !sequenceConsumed) {
-      this._handler.emitUnhandled(event, null);
+    // Step 7: Unhandled emission — pass opaque context from processHotkeys through
+    if (!hotkeyResult.consumed && !sequenceConsumed) {
+      this._handler.emitUnhandled(event, null, hotkeyResult.eventContext);
     }
   }
 

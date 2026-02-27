@@ -11,26 +11,35 @@ declare const sinon: {
 
 const fixture = document.getElementById("qunit-fixture")!;
 
+/**
+ * Shared module hooks that ensure a clean HotkeyManager singleton
+ * before and after every test. The try-catch guards handle the case
+ * where the manager is not yet initialized or already destroyed.
+ */
+function freshManagerHooks() {
+  return {
+    beforeEach() {
+      try {
+        HotkeyManager.getInstance().destroy();
+      } catch {
+        /* not initialized yet */
+      }
+    },
+    afterEach() {
+      try {
+        HotkeyManager.getInstance().destroy();
+      } catch {
+        /* already destroyed */
+      }
+    },
+  };
+}
+
 // ──────────────────────────────────────────────
 // Conflict behavior edge cases
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Conflict behavior", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Conflict behavior", freshManagerHooks());
 
 QUnit.test("ConflictBehavior.Error: target-bound vs document-bound in same scope does not conflict", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -115,7 +124,7 @@ QUnit.module("Negative / Edge-Case — enabled() mid-sequence", {
     try {
       HotkeyManager.getInstance().destroy();
     } catch {
-      // Not initialized yet
+      /* not initialized yet */
     }
     clock = sinon.useFakeTimers();
   },
@@ -124,7 +133,7 @@ QUnit.module("Negative / Edge-Case — enabled() mid-sequence", {
     try {
       HotkeyManager.getInstance().destroy();
     } catch {
-      // Already destroyed
+      /* already destroyed */
     }
   },
 });
@@ -219,22 +228,7 @@ QUnit.test("enabled function throwing mid-sequence drops pending match", (assert
 // Callback throws during invocation
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Callback throws", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Callback throws", freshManagerHooks());
 
 QUnit.test("Throwing callback: same hotkey re-fires on subsequent keypress", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -333,22 +327,7 @@ QUnit.test("Throwing callback: registration and unregistration still work", (ass
 // Misc edge cases
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Misc", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Misc", freshManagerHooks());
 
 QUnit.test("Rapid register-unregister-fire cycle does not throw", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -388,22 +367,7 @@ QUnit.test("Unregistering inside own callback does not crash", (assert) => {
 // Suspend guard abuse
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Suspend guard abuse", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Suspend guard abuse", freshManagerHooks());
 
 QUnit.test("Stale guard from destroyed manager does not affect new manager", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -463,22 +427,7 @@ QUnit.test("isDispatchSuspended returns false after destroy", (assert) => {
 // Destroyed manager method calls
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Destroyed manager method calls", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Destroyed manager method calls", freshManagerHooks());
 
 QUnit.test("register() on destroyed manager throws", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -516,26 +465,22 @@ QUnit.test("createGroup() on destroyed manager throws", (assert) => {
   assert.throws(() => manager.createGroup(), /destroyed/i, "createGroup() throws on destroyed manager");
 });
 
+QUnit.test("setUnhandledHandler() on destroyed manager throws", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  manager.destroy();
+
+  assert.throws(
+    () => manager.setUnhandledHandler(() => {}),
+    /destroyed/i,
+    "setUnhandledHandler() throws on destroyed manager",
+  );
+});
+
 // ══════════════════════════════════════════════
 // Recorder abuse
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Recorder abuse", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Recorder abuse", freshManagerHooks());
 
 QUnit.test("Double-destroy recorder is idempotent", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -637,22 +582,7 @@ QUnit.test("Recorder start after manager destroy is a no-op", (assert) => {
 // Target-scoped edge cases
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Target-scoped", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Target-scoped", freshManagerHooks());
 
 QUnit.test("Target removed from DOM before keypress — hotkey does not fire", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -740,22 +670,7 @@ QUnit.test("Unregister target-scoped hotkey after target removed — no leak", (
 // Unhandled callback error resilience
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Unhandled callback errors", {
-  beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-  },
-  afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
-  },
-});
+QUnit.module("Negative / Edge-Case — Unhandled callback errors", freshManagerHooks());
 
 QUnit.test("Throwing unhandled callback does not break subsequent hotkey dispatch", (assert) => {
   const manager = HotkeyManager.getInstance();

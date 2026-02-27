@@ -178,7 +178,7 @@ export default class KeyStateTracker {
       changed = this._clearHeldKeyCompletely(held) || changed;
     }
 
-    for (const [code, held] of this._heldByCode) {
+    for (const [code, held] of Array.from(this._heldByCode)) {
       if (!MODIFIER_KEYS.has(held)) {
         this._heldByCode.delete(code);
       }

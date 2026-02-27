@@ -7,12 +7,12 @@ import SequenceManager from "./SequenceManager";
 import HotkeyRecorder from "./HotkeyRecorder";
 import type { HotkeyRecorderOptions } from "./HotkeyRecorder";
 import EventDispatcher from "./internal/event-dispatcher";
-import type { HotkeyDispatchHandler } from "./internal/event-dispatcher";
+import type { HotkeyDispatchHandler, HotkeyDispatchResult } from "./internal/event-dispatcher";
 import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { GLOBAL_SCOPE } from "./internal/constants";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
-import { keyboardEventToHotkey, parseHotkey } from "./internal/parse";
+import { keyboardEventToHotkey /* debug-mode only */, parseHotkey } from "./internal/parse";
 import { resolveRequiredScope, resolveScopeOrGlobal } from "./internal/scope";
 import { resetRuntimeCaches, runtimeHooks } from "./internal/runtime";
 import { findMatchInScope } from "./internal/dispatch-core";
@@ -53,8 +53,8 @@ interface ScopeRegistrationBucket {
 }
 
 /**
- * Cached per-event context from _processHotkeys, consumed by _emitUnhandled
- * to avoid redundant recomputation.
+ * Per-event context computed in _processHotkeys, passed through the dispatcher
+ * to _emitUnhandled via the opaque `eventContext` field.
  */
 interface EventContext {
   activeScope: string;
@@ -135,9 +135,6 @@ export default class HotkeyManager extends BaseObject {
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
 
-  // Event context from the most recent _processHotkeys call — read by _emitUnhandled.
-  private _lastEventContext: EventContext | null = null;
-
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
    */
@@ -148,7 +145,7 @@ export default class HotkeyManager extends BaseObject {
     const handler: HotkeyDispatchHandler = {
       processHotkeys: (e) => this._processHotkeys(e),
       processSequences: (e) => this._processSequences(e),
-      emitUnhandled: (e, r) => this._emitUnhandled(e, r),
+      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx as EventContext | undefined),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
 
@@ -716,7 +713,6 @@ export default class HotkeyManager extends BaseObject {
     resetRuntimeCaches();
     this._unhandledCallback = null;
     this._debugMode = false;
-    this._lastEventContext = null;
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -735,13 +731,10 @@ export default class HotkeyManager extends BaseObject {
    *   Pass 1: document-level registrations (active scope → global)
    *   Pass 2: target-scoped registrations via composedPath() (active scope → global)
    *
-   * Returns true if any registration consumed the event.
+   * Returns a result with `consumed` flag and, when not consumed, an opaque
+   * `eventContext` that the dispatcher passes through to `emitUnhandled`.
    */
-  private _processHotkeys(event: KeyboardEvent): boolean {
-    // Defensive reset — prevents stale data from a previous event leaking
-    // into _emitUnhandled if a future code path reads it unexpectedly.
-    this._lastEventContext = null;
-
+  private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult {
     const eventPath = this._getEventPath(event);
     const activeScope = this.getActiveScope();
     const target = getEventTarget(event);
@@ -764,7 +757,7 @@ export default class HotkeyManager extends BaseObject {
         this._logDebugEvent(event, activeScope, isInput, popupOpen, docMatch, debugSkips);
       }
       // If matched with stopPropagation, skip target-scoped registrations entirely.
-      if (docMatch.options.stopPropagation) return true;
+      if (docMatch.options.stopPropagation) return { consumed: true };
       // Document match WITHOUT stopPropagation allows target-scoped matching to proceed.
     }
 
@@ -784,12 +777,12 @@ export default class HotkeyManager extends BaseObject {
       if (this._debugMode) {
         this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatch, debugSkips);
       }
-      return true;
+      return { consumed: true };
     }
 
     // Document match without stopPropagation still counts as consumed — callback already fired.
     if (docMatch) {
-      return true;
+      return { consumed: true };
     }
 
     // Nothing matched at all
@@ -797,10 +790,8 @@ export default class HotkeyManager extends BaseObject {
       this._logDebugEvent(event, activeScope, isInput, popupOpen, null, debugSkips);
     }
 
-    // Store event context for _emitUnhandled (called by EventDispatcher in step 7)
-    this._lastEventContext = { activeScope, isInput, popupOpen, skipInfo };
-
-    return false;
+    // Return event context for _emitUnhandled (passed through by EventDispatcher in step 7)
+    return { consumed: false, eventContext: { activeScope, isInput, popupOpen, skipInfo } };
   }
 
   /**
@@ -815,10 +806,15 @@ export default class HotkeyManager extends BaseObject {
    * Emit an unhandled callback.
    *
    * When `forcedReason` is non-null (e.g., Suspended), it is used directly
-   * with no `skippedRegistration`. When null, uses `_lastEventContext` from
-   * the most recent `_processHotkeys` call (avoids redundant recomputation).
+   * with no `skippedRegistration`. When null, uses the `eventContext` passed
+   * through from `_processHotkeys` (avoids redundant recomputation and
+   * shared mutable state).
    */
-  private _emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null): void {
+  private _emitUnhandled(
+    event: KeyboardEvent,
+    forcedReason: UnhandledReason | null,
+    eventContext?: EventContext,
+  ): void {
     if (!this._unhandledCallback) return;
 
     let reason: UnhandledReason;
@@ -835,13 +831,12 @@ export default class HotkeyManager extends BaseObject {
       const target = getEventTarget(event);
       isInput = isInputElement(target);
       popupOpen = this._checkPopupOpen();
-    } else if (this._lastEventContext) {
-      // Reuse cached context from _processHotkeys
-      const ctx = this._lastEventContext;
-      activeScope = ctx.activeScope;
-      isInput = ctx.isInput;
-      popupOpen = ctx.popupOpen;
-      const skipInfo = ctx.skipInfo;
+    } else if (eventContext) {
+      // Reuse context from _processHotkeys (passed through by the dispatcher)
+      activeScope = eventContext.activeScope;
+      isInput = eventContext.isInput;
+      popupOpen = eventContext.popupOpen;
+      const skipInfo = eventContext.skipInfo;
       reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
       skippedRegistration = skipInfo && skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined;
     } else {
