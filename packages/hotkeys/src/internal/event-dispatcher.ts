@@ -287,6 +287,7 @@ export default class EventDispatcher {
       } catch (error) {
         Log.error(`Error in interceptor onKeyDown: ${error}`, undefined, LOG_COMPONENT);
         event.preventDefault(); // Defensive — idempotent if already called by the interceptor
+        event.stopPropagation(); // Fully consume the event to avoid half-consumed state
         return;
       }
     }

@@ -1917,3 +1917,109 @@ QUnit.test("activeElement inside shadow DOM matches host-level target", (assert)
 
   host.remove();
 });
+
+// ──────────────────────────────────────────────
+// ActiveElement augmentation (non-Escape)
+// ──────────────────────────────────────────────
+
+QUnit.module("ActiveElement path augmentation", {
+  beforeEach() {
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+  },
+});
+
+QUnit.test("Non-Escape key: activeElement inside target matches via augmentation (not focus fallback)", (assert) => {
+  // Uses F5 (not Escape) to ensure only the activeElement augmentation path
+  // is exercised — the focus fallback gates on event.key === "Escape".
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetFired = false;
+  let docFired = false;
+
+  manager.register("F5", () => {
+    docFired = true;
+  });
+  manager.register(
+    "F5",
+    () => {
+      targetFired = true;
+    },
+    { target, stopPropagation: true },
+  );
+
+  // Focus the input (activeElement = input, inside target)
+  input.focus();
+
+  // Dispatch from document — composedPath is [document, window] but
+  // activeElement is still the input inside target.
+  fireKey("F5");
+
+  assert.ok(targetFired, "Target-scoped F5 fires via activeElement augmentation");
+  assert.notOk(docFired, "Document-level F5 suppressed by stopPropagation");
+
+  target.remove();
+});
+
+// ──────────────────────────────────────────────
+// data-sap-ui-area generic root detection
+// ──────────────────────────────────────────────
+
+QUnit.module("UIArea generic root detection", {
+  beforeEach() {
+    clock = sinon.useFakeTimers();
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+    clock.restore();
+  },
+});
+
+QUnit.test("Element with data-sap-ui-area is treated as generic root for focus fallback", (assert) => {
+  // Simulate a UI5 UIArea root node
+  const uiArea = document.createElement("div");
+  uiArea.setAttribute("data-sap-ui-area", "");
+  uiArea.id = "uiAreaRoot";
+  document.body.appendChild(uiArea);
+
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  uiArea.appendChild(target);
+
+  let targetFired = false;
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Focus input, then blur — focus bounces to UIArea root
+  input.focus();
+  input.blur();
+
+  // Fire Escape on the UIArea root — should trigger focus fallback because
+  // data-sap-ui-area marks it as a generic root node.
+  fireKeyOn(uiArea, "Escape");
+
+  assert.ok(targetFired, "Target-scoped Escape fires via focus fallback when event target is a UIArea root");
+
+  target.remove();
+  uiArea.remove();
+});

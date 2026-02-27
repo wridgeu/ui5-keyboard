@@ -58,7 +58,14 @@ const idGen = createIdGenerator("hk_");
 interface ScopeRegistrationBucket {
   documentIds: Set<string>;
   targets: Map<EventTarget, Set<string>>;
-  /** Secondary index: element id -> registration ids. Enables O(1) fallback when DOM nodes are replaced during rerendering. */
+  /**
+   * Secondary index: element id → registration ids. Enables O(1) fallback
+   * when DOM nodes are replaced during rerendering.
+   *
+   * **Limitation:** If an element's `id` attribute is mutated after
+   * registration, the entry keyed under the old id becomes orphaned and
+   * persists until the registration is removed via `unregister()`.
+   */
   targetIdIndex: Map<string, Set<string>>;
 }
 
@@ -962,6 +969,9 @@ export default class HotkeyManager extends BaseObject {
         ? [...path]
         : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
 
+    // Order matters: activeElement augmentation must run first so that
+    // the focus fallback's `resolvedPath.includes(lastFocusedElement)` guard
+    // can detect elements already injected by the activeElement pass.
     this._augmentPathWithActiveElement(resolvedPath);
     this._augmentPathWithFocusFallback(event, resolvedPath);
 
@@ -987,14 +997,7 @@ export default class HotkeyManager extends BaseObject {
       return;
     }
 
-    // Find the first generic root in the existing path (document, body, etc.)
-    // and insert before it so inner targets precede outer/root targets.
-    const insertIdx = resolvedPath.findIndex((node) => this._isGenericRootNode(node));
-    if (insertIdx >= 0) {
-      resolvedPath.splice(insertIdx, 0, ...newNodes);
-    } else {
-      resolvedPath.push(...newNodes);
-    }
+    this._insertBeforeGenericRoot(resolvedPath, newNodes);
   }
 
   /**
@@ -1029,12 +1032,7 @@ export default class HotkeyManager extends BaseObject {
 
     const newNodes = this._getActiveElementPath(lastFocusedElement).filter((node) => !resolvedPath.includes(node));
     if (newNodes.length > 0) {
-      const insertIdx = resolvedPath.findIndex((node) => this._isGenericRootNode(node));
-      if (insertIdx >= 0) {
-        resolvedPath.splice(insertIdx, 0, ...newNodes);
-      } else {
-        resolvedPath.push(...newNodes);
-      }
+      this._insertBeforeGenericRoot(resolvedPath, newNodes);
     }
     if (hasUnconsumedBlur) {
       this._consumedBlurSeq = this._blurSeq;
@@ -1056,6 +1054,19 @@ export default class HotkeyManager extends BaseObject {
     }
 
     return eventPath.every((node) => this._isGenericRootNode(node));
+  }
+
+  /**
+   * Insert `newNodes` into `path` before the first generic root entry.
+   * Falls back to appending if no generic root is found.
+   */
+  private _insertBeforeGenericRoot(path: EventTarget[], newNodes: EventTarget[]): void {
+    const insertIdx = path.findIndex((node) => this._isGenericRootNode(node));
+    if (insertIdx >= 0) {
+      path.splice(insertIdx, 0, ...newNodes);
+    } else {
+      path.push(...newNodes);
+    }
   }
 
   /**
