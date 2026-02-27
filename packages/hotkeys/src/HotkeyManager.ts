@@ -1548,7 +1548,10 @@ export default class HotkeyManager extends BaseObject {
         }
       }
 
-      // Remove from secondary index
+      // Remove from secondary index.
+      // Note: uses the element's *current* id — if the id was mutated after
+      // registration, the entry keyed under the old id becomes orphaned.
+      // See the JSDoc on ScopeBucket.targetIdIndex for details.
       if (target instanceof Element && target.id) {
         const idxIds = bucket.targetIdIndex.get(target.id);
         if (idxIds) {

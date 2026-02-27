@@ -476,6 +476,28 @@ QUnit.test("setUnhandledHandler() on destroyed manager throws", (assert) => {
   );
 });
 
+QUnit.test("addGenericRootId() on destroyed manager throws", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  manager.destroy();
+
+  assert.throws(
+    () => manager.addGenericRootId("custom-root"),
+    /destroyed/i,
+    "addGenericRootId() throws on destroyed manager",
+  );
+});
+
+QUnit.test("removeGenericRootId() on destroyed manager throws", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  manager.destroy();
+
+  assert.throws(
+    () => manager.removeGenericRootId("custom-root"),
+    /destroyed/i,
+    "removeGenericRootId() throws on destroyed manager",
+  );
+});
+
 // ══════════════════════════════════════════════
 // Recorder abuse
 // ══════════════════════════════════════════════
@@ -564,6 +586,33 @@ QUnit.test("onRecord callback throws — manager remains functional", (assert) =
   fireKey("F6");
   assert.ok(managerFired, "Manager dispatches normally after recorder callback throw");
 
+  recorder.destroy();
+});
+
+QUnit.test("onRecord callback throws — external window-capture listeners do not see the event", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const recorder = manager.createRecorder({
+    onRecord: () => {
+      throw new Error("Intentional onRecord error");
+    },
+  });
+
+  // Register a window-capture listener AFTER the manager (so it would fire
+  // second). The recorder's own stopImmediatePropagation() call (pre-throw)
+  // plus the error-path defensive stopImmediatePropagation() in the
+  // EventDispatcher catch block ensure this listener never sees the event.
+  let externalSaw = false;
+  const externalListener = () => {
+    externalSaw = true;
+  };
+  window.addEventListener("keydown", externalListener, true);
+
+  recorder.start();
+  fireKey("F5");
+
+  assert.notOk(externalSaw, "External window-capture listener did NOT see the event after interceptor throw");
+
+  window.removeEventListener("keydown", externalListener, true);
   recorder.destroy();
 });
 

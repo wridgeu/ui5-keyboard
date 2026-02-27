@@ -1918,6 +1918,39 @@ QUnit.test("activeElement inside shadow DOM matches host-level target", (assert)
   host.remove();
 });
 
+QUnit.test("nested shadow DOM: target on outer host matches when focus is two shadow roots deep", (assert) => {
+  // outer host > shadow root > inner host > shadow root > input
+  const outerHost = document.createElement("div");
+  document.body.appendChild(outerHost);
+
+  const outerShadow = outerHost.attachShadow({ mode: "open" });
+  const innerHost = document.createElement("div");
+  outerShadow.appendChild(innerHost);
+
+  const innerShadow = innerHost.attachShadow({ mode: "open" });
+  const deepInput = document.createElement("input");
+  innerShadow.appendChild(deepInput);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target: outerHost },
+  );
+
+  // Focus the deeply nested input. The activeElement-augmentation path
+  // traverses both shadow boundaries via getRootNode().host, ultimately
+  // reaching the outer host which matches the target registration.
+  deepInput.focus();
+  fireKeyOn(outerHost, "Escape");
+
+  assert.ok(fired, "Target-scoped hotkey fires when focus is two shadow roots deep inside target host");
+
+  outerHost.remove();
+});
+
 // ──────────────────────────────────────────────
 // ActiveElement augmentation (non-Escape)
 // ──────────────────────────────────────────────
