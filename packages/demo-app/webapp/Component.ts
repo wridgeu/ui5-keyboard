@@ -1,4 +1,5 @@
 import UIComponent from "sap/ui/core/UIComponent";
+import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
@@ -58,8 +59,8 @@ export default class Component extends UIComponent {
         applyRuntimeState();
         this._routeMatchedHandler();
       })
-      .catch(() => {
-        // Ignore load failures here; fixture issues are surfaced by JSONModel events/logs.
+      .catch((err: unknown) => {
+        Log.warning(`State model fixture failed to load: ${err}`, undefined, "demo.hotkeys.Component");
       });
 
     // Register global shortcuts (active across all views).

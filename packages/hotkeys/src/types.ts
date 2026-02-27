@@ -237,6 +237,12 @@ export interface HotkeyOptions {
    * A target-scoped match with `stopPropagation: true` (the default) prevents
    * document-level handlers for the same key from firing. Set `stopPropagation: false`
    * on the target-scoped registration to allow both target and document handlers.
+   *
+   * **Focus fallback (Escape only):** When the browser moves focus to a generic
+   * root node (body, UIArea) before dispatching the keydown, the manager
+   * reconstructs the path from the most recently focused element. This
+   * fallback is limited to the Escape key and consumed after a single use.
+   * Other keys are not affected by this behavior.
    */
   target?: HTMLElement | Document;
 }

@@ -476,6 +476,13 @@ manager.register("Mod+S", () => savePanel(), {
 // Scopes still apply — both target and scope must match.
 ```
 
+> **Focus fallback (Escape only):** Some browsers and UI5 rendering transitions
+> move focus to a generic root node (body, UIArea container) before dispatching
+> the `keydown` event. For `Escape`, the manager reconstructs the composed path
+> from the most recently focused element so that target-scoped registrations
+> still fire. This fallback is one-shot (consumed after a single dispatch) and
+> expires after 1200 ms. Other keys are not affected by this behavior.
+
 ### Suspend Guard
 
 Temporarily suspend all hotkey and sequence dispatch (e.g., during onboarding overlays or guided tours):

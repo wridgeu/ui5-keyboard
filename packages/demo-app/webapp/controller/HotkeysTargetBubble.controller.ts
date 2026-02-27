@@ -41,6 +41,8 @@ export default class HotkeysTargetBubble extends BaseController {
     // Re-bind whenever the target container re-renders (DOM refs change)
     this.byId("outerTargetBox")!.addEventDelegate(this._renderDelegate);
     this.byId("bubbleInput")!.addEventDelegate(this._renderDelegate);
+    // Uses attachRouteMatched (not attachPatternMatched) because autoFocus
+    // must be restored when navigating to any other route, not just this one.
     this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 

@@ -1450,6 +1450,101 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
 });
 
 // ──────────────────────────────────────────────
+// activeElement path ordering (innermost-wins on document-level dispatch)
+// ──────────────────────────────────────────────
+
+QUnit.test("activeElement in inner target wins over outer target on document-level dispatch", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let innerFired = false;
+  let outerFired = false;
+
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner },
+  );
+
+  // Focus the input inside the inner target
+  input.focus();
+
+  // Dispatch on document — activeElement augmentation must place inner
+  // ancestry before outer/root entries to preserve innermost-wins.
+  fireKey("Escape");
+
+  assert.ok(innerFired, "Inner target fires (innermost-wins via activeElement augmentation)");
+  assert.notOk(outerFired, "Outer target does NOT fire");
+
+  outer.remove();
+});
+
+// ──────────────────────────────────────────────
+// Stale-ref + direct merge during rerender
+// ──────────────────────────────────────────────
+
+QUnit.test("Stale-ref registration found via id merge when fresh-ref has different key", (assert) => {
+  // Simulate rerender: register Escape on the old node, replace the node,
+  // register F5 on the new node. Pressing Escape on the new node must
+  // still find the stale-ref registration via the id-based index merge.
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+
+  const oldTarget = document.createElement("div");
+  oldTarget.id = "rerenderTarget";
+  container.appendChild(oldTarget);
+
+  let escapeFired = false;
+  let f5Fired = false;
+
+  // Register Escape on the old target (will become stale after rerender)
+  manager.register(
+    "Escape",
+    () => {
+      escapeFired = true;
+    },
+    { target: oldTarget },
+  );
+
+  // Simulate rerender: new node with the same id replaces old node
+  const newTarget = document.createElement("div");
+  newTarget.id = "rerenderTarget";
+  container.replaceChild(newTarget, oldTarget);
+
+  // Register F5 on the new target (direct-match entry exists for newTarget)
+  manager.register(
+    "F5",
+    () => {
+      f5Fired = true;
+    },
+    { target: newTarget },
+  );
+
+  // Press Escape on the new target. Without the id merge fix, the direct
+  // lookup finds newTarget's F5 registration and early-returns, missing
+  // the stale-ref Escape registration entirely.
+  fireKeyOn(newTarget, "Escape");
+
+  assert.ok(escapeFired, "Stale-ref Escape registration fires via id merge");
+  assert.notOk(f5Fired, "Fresh-ref F5 registration does NOT fire for Escape");
+
+  container.remove();
+});
+
+// ──────────────────────────────────────────────
 // Focus fallback for Escape
 // ──────────────────────────────────────────────
 
@@ -1638,4 +1733,152 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
   assert.ok(docFired, "Doc-level handler fires for F5");
 
   target.remove();
+});
+
+// ──────────────────────────────────────────────
+// Generic root ID API
+// ──────────────────────────────────────────────
+
+QUnit.module("Generic root ID API", {
+  beforeEach() {
+    clock = sinon.useFakeTimers();
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+    clock.restore();
+  },
+});
+
+QUnit.test("addGenericRootId makes element act as generic root for focus fallback", (assert) => {
+  // Create a custom container that acts as a generic root (e.g. a shell container)
+  const shell = document.createElement("div");
+  shell.id = "myShellRoot";
+  document.body.appendChild(shell);
+
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  shell.appendChild(target);
+
+  let targetFired = false;
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Register the shell as a generic root
+  manager.addGenericRootId("myShellRoot");
+
+  // Focus input, then blur to the shell (now a generic root)
+  input.focus();
+  input.blur();
+  shell.focus();
+
+  // Fire Escape on the shell — fallback should reconstruct path from last focused element
+  fireKeyOn(shell, "Escape");
+
+  assert.ok(targetFired, "Target-scoped hotkey fires because shell is treated as generic root");
+
+  target.remove();
+  shell.remove();
+});
+
+QUnit.test("removeGenericRootId restores normal behavior for element", (assert) => {
+  const container = document.createElement("div");
+  container.id = "tempRoot";
+  container.tabIndex = 0;
+  document.body.appendChild(container);
+
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  container.appendChild(target);
+
+  let targetFired = false;
+  let docFired = false;
+
+  manager.register("Escape", () => {
+    docFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Register then remove as generic root
+  manager.addGenericRootId("tempRoot");
+  manager.removeGenericRootId("tempRoot");
+
+  // Focus input then blur to the container (no longer generic root)
+  input.focus();
+  container.focus();
+
+  // Container is a real element now — fallback should NOT activate
+  fireKeyOn(container, "Escape");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after removeGenericRootId");
+  assert.ok(docFired, "Doc-level handler fires instead");
+
+  target.remove();
+  container.remove();
+});
+
+// ──────────────────────────────────────────────
+// Shadow DOM target matching
+// ──────────────────────────────────────────────
+
+QUnit.module("Shadow DOM target matching", {
+  beforeEach() {
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+  },
+});
+
+QUnit.test("activeElement inside shadow DOM matches host-level target", (assert) => {
+  // Create a host element with a shadow root containing an input
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+
+  const shadow = host.attachShadow({ mode: "open" });
+  const shadowInput = document.createElement("input");
+  shadow.appendChild(shadowInput);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target: host },
+  );
+
+  // Focus the shadow input. document.activeElement is the host (browser
+  // retargets across shadow boundaries), but the activeElement-augmentation
+  // path still includes the host, which matches the target registration.
+  shadowInput.focus();
+
+  // Dispatch on the host (how the browser surfaces the event outside the
+  // shadow boundary). composedPath includes [host, body, ...].
+  fireKeyOn(host, "Escape");
+
+  assert.ok(fired, "Target-scoped hotkey fires when focus is inside shadow DOM of target host");
+
+  host.remove();
 });

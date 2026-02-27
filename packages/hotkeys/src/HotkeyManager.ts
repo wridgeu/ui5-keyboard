@@ -43,6 +43,13 @@ type ValidateModule = typeof import("./validate");
 type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
+/**
+ * Maximum elapsed time (ms) between a blur event and a subsequent Escape
+ * keydown for the focus-fallback path to activate. Covers the typical UI5
+ * rerender cycle (~200-800ms) plus browser task-scheduling jitter. Values
+ * below 800ms miss slow rerenders; values above 2000ms risk stale matches
+ * after the user has mentally moved on.
+ */
 const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
 let instance: HotkeyManager | null = null;
@@ -51,6 +58,8 @@ const idGen = createIdGenerator("hk_");
 interface ScopeRegistrationBucket {
   documentIds: Set<string>;
   targets: Map<EventTarget, Set<string>>;
+  /** Secondary index: element id -> registration ids. Enables O(1) fallback when DOM nodes are replaced during rerendering. */
+  targetIdIndex: Map<string, Set<string>>;
 }
 
 /**
@@ -956,16 +965,28 @@ export default class HotkeyManager extends BaseObject {
    * Include the active-element ancestry in the path. Some environments
    * dispatch keyboard events on document/window even while an input
    * still has focus.
+   *
+   * Nodes are inserted before the first generic root entry so that
+   * innermost-wins ordering is preserved during target matching.
    */
   private _augmentPathWithActiveElement(resolvedPath: EventTarget[]): void {
     const activeElement = document.activeElement;
     if (!activeElement || resolvedPath.includes(activeElement)) {
       return;
     }
-    for (const node of this._getActiveElementPath(activeElement)) {
-      if (!resolvedPath.includes(node)) {
-        resolvedPath.push(node);
-      }
+
+    const newNodes = this._getActiveElementPath(activeElement).filter((node) => !resolvedPath.includes(node));
+    if (newNodes.length === 0) {
+      return;
+    }
+
+    // Find the first generic root in the existing path (document, body, etc.)
+    // and insert before it so inner targets precede outer/root targets.
+    const insertIdx = resolvedPath.findIndex((node) => this._isGenericRootNode(node));
+    if (insertIdx >= 0) {
+      resolvedPath.splice(insertIdx, 0, ...newNodes);
+    } else {
+      resolvedPath.push(...newNodes);
     }
   }
 
@@ -996,9 +1017,13 @@ export default class HotkeyManager extends BaseObject {
       return;
     }
 
-    for (const node of this._getActiveElementPath(lastFocusedElement)) {
-      if (!resolvedPath.includes(node)) {
-        resolvedPath.push(node);
+    const newNodes = this._getActiveElementPath(lastFocusedElement).filter((node) => !resolvedPath.includes(node));
+    if (newNodes.length > 0) {
+      const insertIdx = resolvedPath.findIndex((node) => this._isGenericRootNode(node));
+      if (insertIdx >= 0) {
+        resolvedPath.splice(insertIdx, 0, ...newNodes);
+      } else {
+        resolvedPath.push(...newNodes);
       }
     }
     if (hasUnconsumedBlur) {
@@ -1026,9 +1051,13 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Whether a node is a generic top-level dispatch target.
    *
-   * Matches document, window, html, body, UI5 UIArea root nodes
-   * (identified by the `data-sap-ui-area` attribute set by the
-   * framework), and any ID registered via {@link addGenericRootId}.
+   * Matches document, window, html, body, UI5 UIArea root nodes, and
+   * any ID registered via {@link addGenericRootId}.
+   *
+   * **UI5 dependency:** UIArea roots are detected via the
+   * `data-sap-ui-area` attribute that `sap.ui.core.UIArea` stamps on
+   * its root DOM element. This is a stable, public-facing attribute
+   * used by UI5's own CSS selectors and test infrastructure.
    */
   private _isGenericRootNode(node: EventTarget | null): boolean {
     if (!node) {
@@ -1177,7 +1206,7 @@ export default class HotkeyManager extends BaseObject {
 
       // Iterate composedPath from index 0 (innermost) outward
       for (const node of eventPath) {
-        const ids = this._getTargetRegistrationIds(bucket.targets, node);
+        const ids = this._getTargetRegistrationIds(bucket, node);
         if (!ids || ids.size === 0) continue;
 
         // Attempt matching against registrations bound to this target
@@ -1238,34 +1267,32 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Resolve registration IDs for a composedPath node.
    *
-   * First tries object-identity lookup. If no direct hit exists and the node is
-   * an Element with an id, falls back to id-based lookup. This makes target
-   * registrations resilient to DOM replacement during rerendering where the old
-   * node reference is stale but the rendered id remains stable.
+   * Merges object-identity hits with id-based index hits so that both
+   * fresh and stale DOM references for the same element id contribute
+   * registrations. This handles partial rerenders where the new DOM
+   * node already has its own registrations while the old (stale) node's
+   * registrations are still indexed by id.
    */
-  private _getTargetRegistrationIds(targets: Map<EventTarget, Set<string>>, node: EventTarget): Set<string> | null {
-    const direct = targets.get(node);
-    if (direct && direct.size > 0) {
-      return direct;
-    }
+  private _getTargetRegistrationIds(bucket: ScopeRegistrationBucket, node: EventTarget): Set<string> | null {
+    const direct = bucket.targets.get(node);
+    const hasElementId = node instanceof Element && !!node.id;
+    const indexed = hasElementId ? bucket.targetIdIndex.get(node.id) : undefined;
 
-    if (!(node instanceof Element) || !node.id) {
+    if (!direct?.size && !indexed?.size) {
       return null;
     }
-
-    let merged: Set<string> | null = null;
-    for (const [target, ids] of targets) {
-      if (!(target instanceof Element) || target.id !== node.id || ids.size === 0) {
-        continue;
-      }
-      if (!merged) {
-        merged = new Set<string>();
-      }
-      for (const id of ids) {
-        merged.add(id);
-      }
+    if (direct?.size && !indexed?.size) {
+      return direct;
+    }
+    if (!direct?.size && indexed?.size) {
+      return indexed;
     }
 
+    // Both sources have entries — merge and dedupe
+    const merged = new Set(direct!);
+    for (const id of indexed!) {
+      merged.add(id);
+    }
     return merged;
   }
 
@@ -1451,6 +1478,7 @@ export default class HotkeyManager extends BaseObject {
       bucket = {
         documentIds: new Set<string>(),
         targets: new Map<EventTarget, Set<string>>(),
+        targetIdIndex: new Map<string, Set<string>>(),
       };
       this._registrationsByScope.set(scope, bucket);
     }
@@ -1467,6 +1495,16 @@ export default class HotkeyManager extends BaseObject {
         bucket.targets.set(target, ids);
       }
       ids.add(registration.id);
+
+      // Maintain secondary index by element id for stale-reference fallback
+      if (target instanceof Element && target.id) {
+        let idxIds = bucket.targetIdIndex.get(target.id);
+        if (!idxIds) {
+          idxIds = new Set<string>();
+          bucket.targetIdIndex.set(target.id, idxIds);
+        }
+        idxIds.add(registration.id);
+      }
       return;
     }
 
@@ -1485,6 +1523,17 @@ export default class HotkeyManager extends BaseObject {
         ids.delete(registration.id);
         if (ids.size === 0) {
           bucket.targets.delete(target);
+        }
+      }
+
+      // Remove from secondary index
+      if (target instanceof Element && target.id) {
+        const idxIds = bucket.targetIdIndex.get(target.id);
+        if (idxIds) {
+          idxIds.delete(registration.id);
+          if (idxIds.size === 0) {
+            bucket.targetIdIndex.delete(target.id);
+          }
         }
       }
     } else {
