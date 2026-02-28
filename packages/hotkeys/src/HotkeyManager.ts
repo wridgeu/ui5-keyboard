@@ -56,7 +56,7 @@ let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
 
 interface ScopeRegistrationBucket {
-  documentIds: Set<string>;
+  untargetedIds: Set<string>;
   targets: Map<EventTarget, Set<string>>;
   /**
    * Secondary index: element id → registration ids. Enables O(1) fallback
@@ -159,7 +159,7 @@ export default class HotkeyManager extends BaseObject {
    * Cached event context: set by `_processHotkeys` (step 5) when nothing matched,
    * read by `_emitUnhandled` (step 7) to avoid recomputing scope/input/popup state.
    * Ignored when `_emitUnhandled` receives a non-null `forcedReason` (e.g. Suspended).
-   * Reset to null on `destroy()` and `reset()`.
+   * Reset to null on `destroy()`.
    */
   private _lastEventContext: EventContext | null = null;
   private _lastFocusedElement: WeakRef<Element> | null = null;
@@ -746,6 +746,10 @@ export default class HotkeyManager extends BaseObject {
    */
   addGenericRootId(id: string): void {
     this._assertAlive("addGenericRootId");
+    if (!id || !id.trim()) {
+      Log.warning("addGenericRootId: ignoring empty or whitespace-only id", undefined, LOG_COMPONENT);
+      return;
+    }
     this._genericRootIds.add(id);
   }
 
@@ -754,6 +758,10 @@ export default class HotkeyManager extends BaseObject {
    */
   removeGenericRootId(id: string): void {
     this._assertAlive("removeGenericRootId");
+    if (!id || !id.trim()) {
+      Log.warning("removeGenericRootId: ignoring empty or whitespace-only id", undefined, LOG_COMPONENT);
+      return;
+    }
     this._genericRootIds.delete(id);
   }
 
@@ -826,7 +834,7 @@ export default class HotkeyManager extends BaseObject {
    *
    * Two-pass matching:
    *   Pass 1: target-scoped registrations via composedPath() (active scope → global)
-   *   Pass 2: document-level registrations (active scope → global)
+   *   Pass 2: untargeted registrations (active scope → global)
    *
    * Returns a result with `consumed` flag and, when not consumed, an opaque
    * `eventContext` that the dispatcher passes through to `emitUnhandled`.
@@ -863,13 +871,20 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
-    // Pass 2: document-level registrations (only if no target match stopped propagation)
-    if (!targetMatch?.options.stopPropagation) {
-      const docMatch = this._matchDocumentRegistrations(event, activeScope, isInput, popupOpen, skipInfo, debugSkips);
-      if (docMatch) {
-        this._executeMatch(event, docMatch);
+    // Pass 2: untargeted registrations (only if no target match stopped propagation)
+    if (!targetMatch || !targetMatch.options.stopPropagation) {
+      const untargetedMatch = this._matchUntargetedRegistrations(
+        event,
+        activeScope,
+        isInput,
+        popupOpen,
+        skipInfo,
+        debugSkips,
+      );
+      if (untargetedMatch) {
+        this._executeMatch(event, untargetedMatch);
         if (this._debugMode) {
-          this._logDebugEvent(event, activeScope, isInput, popupOpen, docMatch, debugSkips);
+          this._logDebugEvent(event, activeScope, isInput, popupOpen, untargetedMatch, debugSkips);
         }
         return true;
       }
@@ -988,7 +1003,7 @@ export default class HotkeyManager extends BaseObject {
    */
   private _augmentPathWithActiveElement(resolvedPath: EventTarget[]): void {
     const activeElement = document.activeElement;
-    if (!activeElement || resolvedPath.includes(activeElement)) {
+    if (!activeElement || !activeElement.isConnected || resolvedPath.includes(activeElement)) {
       return;
     }
 
@@ -1161,9 +1176,9 @@ export default class HotkeyManager extends BaseObject {
   }
 
   /**
-   * Match document-level registrations (two-pass: active scope → global).
+   * Match untargeted registrations (two-pass: active scope → global).
    */
-  private _matchDocumentRegistrations(
+  private _matchUntargetedRegistrations(
     event: KeyboardEvent,
     activeScope: string,
     isInput: boolean,
@@ -1498,7 +1513,7 @@ export default class HotkeyManager extends BaseObject {
     let bucket = this._registrationsByScope.get(scope);
     if (!bucket) {
       bucket = {
-        documentIds: new Set<string>(),
+        untargetedIds: new Set<string>(),
         targets: new Map<EventTarget, Set<string>>(),
         targetIdIndex: new Map<string, Set<string>>(),
       };
@@ -1530,7 +1545,7 @@ export default class HotkeyManager extends BaseObject {
       return;
     }
 
-    bucket.documentIds.add(registration.id);
+    bucket.untargetedIds.add(registration.id);
   }
 
   private _deindexRegistration(registration: HotkeyRegistration): void {
@@ -1562,10 +1577,10 @@ export default class HotkeyManager extends BaseObject {
         }
       }
     } else {
-      bucket.documentIds.delete(registration.id);
+      bucket.untargetedIds.delete(registration.id);
     }
 
-    if (bucket.documentIds.size === 0 && bucket.targets.size === 0) {
+    if (bucket.untargetedIds.size === 0 && bucket.targets.size === 0) {
       this._registrationsByScope.delete(scope);
     }
   }
@@ -1574,7 +1589,7 @@ export default class HotkeyManager extends BaseObject {
     const bucket = this._registrationsByScope.get(scope);
     if (!bucket) return [];
 
-    const ids = targetElement === null ? bucket.documentIds : bucket.targets.get(targetElement);
+    const ids = targetElement === null ? bucket.untargetedIds : bucket.targets.get(targetElement);
     if (!ids || ids.size === 0) return [];
 
     const registrations: HotkeyRegistration[] = [];

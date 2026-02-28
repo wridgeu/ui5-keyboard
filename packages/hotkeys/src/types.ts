@@ -233,9 +233,9 @@ export interface HotkeyOptions {
    *
    * For nested targets with the same key, the innermost matching target fires.
    *
-   * **Dispatch order:** Target-scoped handlers fire before document-level handlers.
+   * **Dispatch order:** Target-scoped handlers fire before untargeted handlers.
    * A target-scoped match with `stopPropagation: true` (the default) prevents
-   * document-level handlers for the same key from firing. Set `stopPropagation: false`
+   * untargeted handlers for the same key from firing. Set `stopPropagation: false`
    * on the target-scoped registration to allow both target and document handlers.
    *
    * **Focus fallback (Escape only):** When the browser moves focus to a generic

@@ -86,7 +86,7 @@ keydown event (window capture)
   │
   ├─ Step 5: Hotkey dispatch (HotkeyManager._processHotkeys)
   │           Pass 1: target-scoped via composedPath() (active scope → global)
-  │           Pass 2: document-level registrations (active scope → global)
+  │           Pass 2: untargeted registrations (active scope → global)
   │
   ├─ Step 6: Sequence dispatch (SequenceManager.processKeyEvent)
   │           Returns true if full match OR partial advance
@@ -112,9 +112,9 @@ Each registration is checked against the following guards before the callback fi
 The two-pass approach is the core of the scope system. Target-scoped registrations are checked first:
 
 1. All target-scoped registrations whose target appears in the event's `composedPath()` are checked, innermost first (active scope → global scope).
-2. If no target match stopped propagation, all document-level registrations are checked (active scope → global scope).
+2. If no target match stopped propagation, all untargeted registrations are checked (active scope → global scope).
 
-A target-scoped match with `stopPropagation: true` (the default) prevents document-level registrations from firing.
+A target-scoped match with `stopPropagation: true` (the default) prevents untargeted registrations from firing.
 
 ### Target-Scoped Matching via composedPath()
 
@@ -322,7 +322,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 | Closed shadow root targets                     | composedPath() stops at boundary — no match            |
 | Detached targets                               | Not in composedPath() — inactive until reattached      |
 | Empty composedPath()                           | Fallback to `[event.target, document, window]`         |
-| stopPropagation on window capture              | Blocks document-level listeners (UI5, third-party)     |
+| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)         |
 
 ## Project Layout
 

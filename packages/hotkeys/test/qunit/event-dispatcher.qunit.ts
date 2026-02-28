@@ -355,7 +355,7 @@ QUnit.test("Target-scoped: activeElement fallback path match", (assert) => {
   input.focus();
   fireKey("Escape");
 
-  assert.ok(fired, "Callback fires when activeElement is inside target even if event path is document-level");
+  assert.ok(fired, "Callback fires when activeElement is inside target even if event path is untargeted");
 
   target.remove();
 });
@@ -395,7 +395,7 @@ QUnit.test("Target-scoped: target priority over document (stopPropagation: true)
   manager.register("Escape", () => {
     docFired = true;
   });
-  // Target-scoped with stopPropagation: true (default) → blocks document-level
+  // Target-scoped with stopPropagation: true (default) → blocks untargeted
   manager.register(
     "Escape",
     () => {
@@ -421,7 +421,7 @@ QUnit.test("Target-scoped: target without stopPropagation + document — both fi
   manager.register("Escape", () => {
     docFired = true;
   });
-  // Target-scoped with stopPropagation: false → allows document-level to fire too
+  // Target-scoped with stopPropagation: false → allows untargeted to fire too
   manager.register(
     "Escape",
     () => {
@@ -935,7 +935,7 @@ QUnit.test("Window capture listener fires even with stopPropagation: true", (ass
 // Target-scoped: target = document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped: target = document has higher priority than document-level", (assert) => {
+QUnit.test("Target-scoped: target = document has higher priority than untargeted", (assert) => {
   let docLevelFired = false;
   let targetDocFired = false;
 
@@ -1257,7 +1257,7 @@ QUnit.test("Target-scoped iframe document does NOT match parent document events"
 });
 
 // ──────────────────────────────────────────────
-// Three-tier target matching (inner + outer + doc-level)
+// Three-tier target matching (inner + outer + untargeted)
 // ──────────────────────────────────────────────
 
 QUnit.test("Three-tier: focus in inner → only inner fires", (assert) => {
@@ -1341,7 +1341,7 @@ QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) =>
   outer.remove();
 });
 
-QUnit.test("Three-tier: focus outside all targets → doc-level fires", (assert) => {
+QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   const outside = document.createElement("div");
@@ -1385,7 +1385,7 @@ QUnit.test("Three-tier: focus outside all targets → doc-level fires", (assert)
 // Focus transitions — repeated Escape scenarios
 // ──────────────────────────────────────────────
 
-QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → second fires doc-level", (assert) => {
+QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → second fires untargeted", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   const input = document.createElement("input");
@@ -1430,7 +1430,7 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
   fireKeyOn(outside, "Escape");
   assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire again");
   assert.strictEqual(outerCount, 0, "Second Escape: outer did not fire");
-  assert.strictEqual(docCount, 1, "Second Escape: doc-level fallback fired");
+  assert.strictEqual(docCount, 1, "Second Escape: untargeted fallback fired");
 
   outer.remove();
   outside.remove();
@@ -1485,10 +1485,10 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
 });
 
 // ──────────────────────────────────────────────
-// activeElement path ordering (innermost-wins on document-level dispatch)
+// activeElement path ordering (innermost-wins on untargeted dispatch)
 // ──────────────────────────────────────────────
 
-QUnit.test("activeElement in inner target wins over outer target on document-level dispatch", (assert) => {
+QUnit.test("activeElement in inner target wins over outer target on untargeted dispatch", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   const input = document.createElement("input");
@@ -1654,12 +1654,12 @@ QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => 
 
   fireKey("Escape");
   assert.strictEqual(targetCount, 1, "First Escape uses blur fallback target handler");
-  assert.strictEqual(docCount, 0, "First Escape does not reach document-level handler");
+  assert.strictEqual(docCount, 0, "First Escape does not reach untargeted handler");
 
   fireKey("Escape");
 
   assert.strictEqual(targetCount, 1, "First Escape uses blur fallback, second does not");
-  assert.strictEqual(docCount, 1, "Second Escape falls back to document-level handler");
+  assert.strictEqual(docCount, 1, "Second Escape falls back to untargeted handler");
 
   target.remove();
 });

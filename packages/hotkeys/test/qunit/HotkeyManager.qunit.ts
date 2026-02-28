@@ -1575,7 +1575,7 @@ QUnit.test("Target element: document and target coexist", (assert) => {
   fixture.appendChild(div);
 
   // Target-scoped handlers fire first; set stopPropagation: false on the target
-  // registration so the document-level handler can also fire as a fallback.
+  // registration so the untargeted handler can also fire as a fallback.
   manager.register("F8", () => {
     docCalled = true;
   });
