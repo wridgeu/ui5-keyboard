@@ -4,21 +4,6 @@ import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types"
 import type Log from "sap/base/Log";
 import { fireKey, fireKeyOn, fireKeyUp, fireBlur } from "./test-helpers";
 
-declare const sinon: {
-  spy: (
-    obj: object,
-    method: string,
-  ) => {
-    callCount: number;
-    called: boolean;
-    restore: () => void;
-  };
-  useFakeTimers: () => {
-    tick: (ms: number) => number;
-    restore: () => void;
-  };
-};
-
 let manager: HotkeyManager;
 
 QUnit.module("EventDispatcher & Suspend Guard", {

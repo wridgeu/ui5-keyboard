@@ -8,6 +8,10 @@ const fixture = document.getElementById("qunit-fixture")!;
 
 // ─── Helpers ─────────────────────────────────────
 
+/** @openui5/types marks Control as abstract, but runtime allows direct instantiation. */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+const createControl = (id: string): Control => new (Control as any)(id);
+
 /** Minimal UI5 Control wrapping a single <input> with configurable type/disabled/readOnly. */
 const TypedInput = (Control as any).extend("test.FcsTypedInput", {
   metadata: {
@@ -250,7 +254,7 @@ QUnit.test("Rejects input whose ID is not in inputIds", async (assert) => {
 QUnit.module("focus-claim-service — resolveInputIdsAncestor");
 
 QUnit.test("Returns control when its own ID matches", (assert) => {
-  const ctrl = new Control("fcs-self");
+  const ctrl = createControl("fcs-self");
 
   const svc = createService({
     getResolvedInputControlIds: () => new Set(["fcs-self"]),
@@ -262,8 +266,8 @@ QUnit.test("Returns control when its own ID matches", (assert) => {
 });
 
 QUnit.test("Traverses to parent when parent ID matches", (assert) => {
-  const parent = new Control("fcs-parent");
-  const child = new Control("fcs-child");
+  const parent = createControl("fcs-parent");
+  const child = createControl("fcs-child");
   parent.addDependent(child);
 
   const svc = createService({
@@ -276,9 +280,9 @@ QUnit.test("Traverses to parent when parent ID matches", (assert) => {
 });
 
 QUnit.test("Traverses multiple ancestor levels", (assert) => {
-  const grandparent = new Control("fcs-gp");
-  const mid = new Control("fcs-mid");
-  const child = new Control("fcs-leaf");
+  const grandparent = createControl("fcs-gp");
+  const mid = createControl("fcs-mid");
+  const child = createControl("fcs-leaf");
   grandparent.addDependent(mid);
   mid.addDependent(child);
 
@@ -292,9 +296,9 @@ QUnit.test("Traverses multiple ancestor levels", (assert) => {
 });
 
 QUnit.test("Returns closest matching ancestor when multiple ancestors match", (assert) => {
-  const grandparent = new Control("fcs-outer");
-  const parent = new Control("fcs-inner");
-  const child = new Control("fcs-deep");
+  const grandparent = createControl("fcs-outer");
+  const parent = createControl("fcs-inner");
+  const child = createControl("fcs-deep");
   grandparent.addDependent(parent);
   parent.addDependent(child);
 
@@ -308,8 +312,8 @@ QUnit.test("Returns closest matching ancestor when multiple ancestors match", (a
 });
 
 QUnit.test("Returns null when no ancestor matches", (assert) => {
-  const parent = new Control("fcs-nomatch-p");
-  const child = new Control("fcs-nomatch-c");
+  const parent = createControl("fcs-nomatch-p");
+  const child = createControl("fcs-nomatch-c");
   parent.addDependent(child);
 
   const svc = createService({
@@ -322,7 +326,7 @@ QUnit.test("Returns null when no ancestor matches", (assert) => {
 });
 
 QUnit.test("Returns null when resolved set is empty", (assert) => {
-  const ctrl = new Control("fcs-empty-set");
+  const ctrl = createControl("fcs-empty-set");
 
   const svc = createService({
     getResolvedInputControlIds: () => new Set(),
@@ -340,7 +344,7 @@ QUnit.test("Returns null when resolved set is empty", (assert) => {
 QUnit.module("focus-claim-service — isInInputIds");
 
 QUnit.test("Returns true when ancestor is in resolved set", (assert) => {
-  const ctrl = new Control("fcs-in");
+  const ctrl = createControl("fcs-in");
 
   const svc = createService({
     getResolvedInputControlIds: () => new Set(["fcs-in"]),
@@ -352,7 +356,7 @@ QUnit.test("Returns true when ancestor is in resolved set", (assert) => {
 });
 
 QUnit.test("Returns false when no ancestor matches", (assert) => {
-  const ctrl = new Control("fcs-out");
+  const ctrl = createControl("fcs-out");
 
   const svc = createService({
     getResolvedInputControlIds: () => new Set(["other"]),

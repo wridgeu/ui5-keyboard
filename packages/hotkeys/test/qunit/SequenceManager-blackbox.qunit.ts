@@ -1,13 +1,6 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { fireKey } from "./test-helpers";
 
-declare const sinon: {
-  useFakeTimers: () => {
-    tick: (ms: number) => number;
-    restore: () => void;
-  };
-};
-
 let clock: { tick: (ms: number) => number; restore: () => void };
 
 QUnit.module("SequenceManager — Black-Box Contracts", {

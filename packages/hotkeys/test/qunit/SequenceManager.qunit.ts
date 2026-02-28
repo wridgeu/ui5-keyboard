@@ -1,13 +1,6 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { fireKey, fireKeyOn } from "./test-helpers";
 
-declare const sinon: {
-  useFakeTimers: () => {
-    tick: (ms: number) => number;
-    restore: () => void;
-  };
-};
-
 const fixture = document.getElementById("qunit-fixture")!;
 let clock: { tick: (ms: number) => number; restore: () => void };
 
