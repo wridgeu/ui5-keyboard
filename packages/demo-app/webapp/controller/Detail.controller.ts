@@ -76,7 +76,7 @@ export default class Detail extends BaseController {
               stateModel.setProperty("/lastAction", `Custom shortcut: ${hotkey}`);
               MessageToast.show(`Custom shortcut fired: ${hotkey}`);
             },
-            { scope: Scope.Detail, description: `Custom: ${hotkey}` },
+            { scope: Scope.Detail, description: `Custom: ${hotkey}`, conflictBehavior: "replace" },
           );
         }
       },
