@@ -388,12 +388,12 @@ QUnit.test("Target-scoped: target priority over document (stopPropagation: true)
   const target = document.createElement("div");
   document.body.appendChild(target);
 
-  let docFired = false;
+  let untargetedFired = false;
   let targetFired = false;
 
-  // Document-level handler exists, but target-scoped fires first
+  // Untargeted handler exists, but target-scoped fires first
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   // Target-scoped with stopPropagation: true (default) → blocks untargeted
   manager.register(
@@ -406,7 +406,7 @@ QUnit.test("Target-scoped: target priority over document (stopPropagation: true)
 
   fireKeyOn(target, "Escape");
   assert.ok(targetFired, "Target-scoped callback fired (target has priority)");
-  assert.notOk(docFired, "Document-level callback skipped (target stopPropagation: true)");
+  assert.notOk(untargetedFired, "Untargeted callback skipped (target stopPropagation: true)");
 
   target.remove();
 });
@@ -415,11 +415,11 @@ QUnit.test("Target-scoped: target without stopPropagation + document — both fi
   const target = document.createElement("div");
   document.body.appendChild(target);
 
-  let docFired = false;
+  let untargetedFired = false;
   let targetFired = false;
 
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   // Target-scoped with stopPropagation: false → allows untargeted to fire too
   manager.register(
@@ -432,7 +432,7 @@ QUnit.test("Target-scoped: target without stopPropagation + document — both fi
 
   fireKeyOn(target, "Escape");
   assert.ok(targetFired, "Target-scoped callback fired first");
-  assert.ok(docFired, "Document-level callback also fired (target stopPropagation: false)");
+  assert.ok(untargetedFired, "Untargeted callback also fired (target stopPropagation: false)");
 
   target.remove();
 });
@@ -1252,12 +1252,12 @@ QUnit.test("Three-tier: focus in inner → only inner fires", (assert) => {
   outer.appendChild(inner);
   document.body.appendChild(outer);
 
-  let docFired = false;
+  let untargetedFired = false;
   let outerFired = false;
   let innerFired = false;
 
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "Escape",
@@ -1278,7 +1278,7 @@ QUnit.test("Three-tier: focus in inner → only inner fires", (assert) => {
 
   assert.ok(innerFired, "Inner target fired");
   assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
-  assert.notOk(docFired, "Doc-level did NOT fire (stopPropagation)");
+  assert.notOk(untargetedFired, "Untargeted did NOT fire (stopPropagation)");
 
   outer.remove();
 });
@@ -1293,12 +1293,12 @@ QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) =>
   outer.appendChild(outerButton);
   document.body.appendChild(outer);
 
-  let docFired = false;
+  let untargetedFired = false;
   let outerFired = false;
   let innerFired = false;
 
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "Escape",
@@ -1320,7 +1320,7 @@ QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) =>
 
   assert.ok(outerFired, "Outer target fired");
   assert.notOk(innerFired, "Inner target did NOT fire (event outside inner)");
-  assert.notOk(docFired, "Doc-level did NOT fire (stopPropagation)");
+  assert.notOk(untargetedFired, "Untargeted did NOT fire (stopPropagation)");
 
   outer.remove();
 });
@@ -1333,12 +1333,12 @@ QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert
   document.body.appendChild(outer);
   document.body.appendChild(outside);
 
-  let docFired = false;
+  let untargetedFired = false;
   let outerFired = false;
   let innerFired = false;
 
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "Escape",
@@ -1357,7 +1357,7 @@ QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert
 
   fireKeyOn(outside, "Escape");
 
-  assert.ok(docFired, "Doc-level fallback fired");
+  assert.ok(untargetedFired, "Untargeted fallback fired");
   assert.notOk(outerFired, "Outer target did NOT fire");
   assert.notOk(innerFired, "Inner target did NOT fire");
 
@@ -1381,10 +1381,10 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
 
   let innerCount = 0;
   let outerCount = 0;
-  let docCount = 0;
+  let untargetedCount = 0;
 
   manager.register("Escape", () => {
-    docCount++;
+    untargetedCount++;
   });
   manager.register(
     "Escape",
@@ -1405,7 +1405,7 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
   fireKeyOn(input, "Escape");
   assert.strictEqual(innerCount, 1, "First Escape: inner target fired");
   assert.strictEqual(outerCount, 0, "First Escape: outer did not fire");
-  assert.strictEqual(docCount, 0, "First Escape: doc did not fire");
+  assert.strictEqual(untargetedCount, 0, "First Escape: untargeted did not fire");
 
   // Simulate focus leaving to element outside all targets (like sap.m.Input blur)
   outside.focus();
@@ -1414,7 +1414,7 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
   fireKeyOn(outside, "Escape");
   assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire again");
   assert.strictEqual(outerCount, 0, "Second Escape: outer did not fire");
-  assert.strictEqual(docCount, 1, "Second Escape: untargeted fallback fired");
+  assert.strictEqual(untargetedCount, 1, "Second Escape: untargeted fallback fired");
 
   outer.remove();
   outside.remove();
@@ -1432,10 +1432,10 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
 
   let innerCount = 0;
   let outerCount = 0;
-  let docCount = 0;
+  let untargetedCount = 0;
 
   manager.register("Escape", () => {
-    docCount++;
+    untargetedCount++;
   });
   manager.register(
     "Escape",
@@ -1463,7 +1463,7 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
   fireKeyOn(outerButton, "Escape");
   assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire");
   assert.strictEqual(outerCount, 1, "Second Escape: outer target fired");
-  assert.strictEqual(docCount, 0, "Second Escape: doc did not fire (outer stopPropagation)");
+  assert.strictEqual(untargetedCount, 0, "Second Escape: untargeted did not fire (outer stopPropagation)");
 
   outer.remove();
 });
@@ -1620,10 +1620,10 @@ QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => 
   document.body.appendChild(target);
 
   let targetCount = 0;
-  let docCount = 0;
+  let untargetedCount = 0;
 
   manager.register("Escape", () => {
-    docCount++;
+    untargetedCount++;
   });
   manager.register(
     "Escape",
@@ -1638,12 +1638,12 @@ QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => 
 
   fireKey("Escape");
   assert.strictEqual(targetCount, 1, "First Escape uses blur fallback target handler");
-  assert.strictEqual(docCount, 0, "First Escape does not reach untargeted handler");
+  assert.strictEqual(untargetedCount, 0, "First Escape does not reach untargeted handler");
 
   fireKey("Escape");
 
   assert.strictEqual(targetCount, 1, "First Escape uses blur fallback, second does not");
-  assert.strictEqual(docCount, 1, "Second Escape falls back to untargeted handler");
+  assert.strictEqual(untargetedCount, 1, "Second Escape falls back to untargeted handler");
 
   target.remove();
 });
@@ -1657,10 +1657,10 @@ QUnit.test("Focus moves to real non-target element — old target does NOT fire"
   document.body.appendChild(outside);
 
   let targetFired = false;
-  let docFired = false;
+  let untargetedFired = false;
 
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "Escape",
@@ -1681,7 +1681,7 @@ QUnit.test("Focus moves to real non-target element — old target does NOT fire"
   fireKeyOn(outside, "Escape");
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire (focus genuinely moved away)");
-  assert.ok(docFired, "Doc-level fallback fires instead");
+  assert.ok(untargetedFired, "Untargeted fallback fires instead");
 
   target.remove();
   outside.remove();
@@ -1694,10 +1694,10 @@ QUnit.test("Fallback expires after TTL (1200 ms)", (assert) => {
   document.body.appendChild(target);
 
   let targetFired = false;
-  let docFired = false;
+  let untargetedFired = false;
 
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "Escape",
@@ -1717,7 +1717,7 @@ QUnit.test("Fallback expires after TTL (1200 ms)", (assert) => {
   fireKey("Escape");
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after TTL expiry");
-  assert.ok(docFired, "Doc-level handler fires instead");
+  assert.ok(untargetedFired, "Untargeted handler fires instead");
 
   target.remove();
 });
@@ -1729,10 +1729,10 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
   document.body.appendChild(target);
 
   let targetFired = false;
-  let docFired = false;
+  let untargetedFired = false;
 
   manager.register("F5", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "F5",
@@ -1749,7 +1749,7 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
   fireKey("F5");
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire for non-Escape via focus fallback");
-  assert.ok(docFired, "Doc-level handler fires for F5");
+  assert.ok(untargetedFired, "Untargeted handler fires for F5");
 
   target.remove();
 });
@@ -1822,10 +1822,10 @@ QUnit.test("removeGenericRootId restores normal behavior for element", (assert) 
   container.appendChild(target);
 
   let targetFired = false;
-  let docFired = false;
+  let untargetedFired = false;
 
   manager.register("Escape", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "Escape",
@@ -1847,7 +1847,7 @@ QUnit.test("removeGenericRootId restores normal behavior for element", (assert) 
   fireKeyOn(container, "Escape");
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after removeGenericRootId");
-  assert.ok(docFired, "Doc-level handler fires instead");
+  assert.ok(untargetedFired, "Untargeted handler fires instead");
 
   target.remove();
   container.remove();
@@ -2057,10 +2057,10 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
   document.body.appendChild(target);
 
   let targetFired = false;
-  let docFired = false;
+  let untargetedFired = false;
 
   manager.register("F5", () => {
-    docFired = true;
+    untargetedFired = true;
   });
   manager.register(
     "F5",
@@ -2078,7 +2078,7 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
   fireKey("F5");
 
   assert.ok(targetFired, "Target-scoped F5 fires via activeElement augmentation");
-  assert.notOk(docFired, "Document-level F5 suppressed by stopPropagation");
+  assert.notOk(untargetedFired, "Untargeted F5 suppressed by stopPropagation");
 
   target.remove();
 });

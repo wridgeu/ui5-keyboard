@@ -236,7 +236,7 @@ export interface HotkeyOptions {
    * **Dispatch order:** Target-scoped handlers fire before untargeted handlers.
    * A target-scoped match with `stopPropagation: true` (the default) prevents
    * untargeted handlers for the same key from firing. Set `stopPropagation: false`
-   * on the target-scoped registration to allow both target and document handlers.
+   * on the target-scoped registration to allow both target and untargeted handlers.
    *
    * **Focus fallback (Escape only):** When the browser moves focus to a generic
    * root node (body, UIArea) before dispatching the keydown, the manager

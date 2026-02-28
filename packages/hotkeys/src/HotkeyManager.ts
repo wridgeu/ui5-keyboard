@@ -1230,7 +1230,7 @@ export default class HotkeyManager extends BaseObject {
   private _handleConflict(
     normalizedHotkey: string,
     scope: string,
-    target: EventTarget | null,
+    target: HTMLElement | null,
     conflictBehavior: ConflictBehavior,
   ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
