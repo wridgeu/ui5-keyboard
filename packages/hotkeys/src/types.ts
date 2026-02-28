@@ -244,7 +244,7 @@ export interface HotkeyOptions {
    * fallback is limited to the Escape key and consumed after a single use.
    * Other keys are not affected by this behavior.
    */
-  target?: HTMLElement | Document;
+  target?: HTMLElement;
 }
 
 /**
@@ -333,7 +333,7 @@ export interface ResolvedHotkeyOptions {
   ignoreRepeat: boolean;
   suppressInPopups: boolean;
   conflictBehavior: ConflictBehavior;
-  target: HTMLElement | Document | null;
+  target: HTMLElement | null;
 }
 
 // ──────────────────────────────────────────────

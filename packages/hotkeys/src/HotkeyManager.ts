@@ -78,6 +78,17 @@ interface EventContext {
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
   const scope = resolveScopeOrGlobal(options?.scope);
+  let target: HTMLElement | null = options?.target ?? null;
+
+  // Runtime guard: document/window targets are meaningless — coerce to untargeted
+  if (target && ((target as unknown) === document || (target as unknown) === window)) {
+    Log.warning(
+      "target: document/window has no effect — omit target for untargeted dispatch",
+      undefined,
+      LOG_COMPONENT,
+    );
+    target = null;
+  }
 
   return {
     enabled: options?.enabled ?? true,
@@ -89,7 +100,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
-    target: options?.target ?? null,
+    target,
   };
 }
 
@@ -1216,15 +1227,6 @@ export default class HotkeyManager extends BaseObject {
   // Private: Conflict handling
   // ──────────────────────────────────────────────
 
-  private _isConflictingRegistration(
-    reg: HotkeyRegistration,
-    normalizedHotkey: string,
-    scope: string,
-    target: EventTarget | null,
-  ): boolean {
-    return reg.normalizedHotkey === normalizedHotkey && reg.options.scope === scope && reg.options.target === target;
-  }
-
   private _handleConflict(
     normalizedHotkey: string,
     scope: string,
@@ -1233,11 +1235,21 @@ export default class HotkeyManager extends BaseObject {
   ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
 
+    // Use scope-bucket lookup instead of iterating all registrations
+    const bucket = this._registrationsByScope.get(scope);
+    if (!bucket) return;
+    const ids = target === null ? bucket.untargetedIds : bucket.targets.get(target);
+    if (!ids || ids.size === 0) return;
+
+    // Find conflicts by matching normalizedHotkey within the bucket
+    const isConflicting = (reg: HotkeyRegistration): boolean => reg.normalizedHotkey === normalizedHotkey;
+
     if (conflictBehavior === ConflictBehavior.Replace) {
       // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
-      for (const reg of this._registrations.values()) {
-        if (this._isConflictingRegistration(reg, normalizedHotkey, scope, target)) {
+      for (const id of ids) {
+        const reg = this._registrations.get(id);
+        if (reg && isConflicting(reg)) {
           conflicts.push(reg);
         }
       }
@@ -1260,8 +1272,9 @@ export default class HotkeyManager extends BaseObject {
 
     // For "warn" and "error", first match is sufficient
     let conflicting: HotkeyRegistration | null = null;
-    for (const reg of this._registrations.values()) {
-      if (this._isConflictingRegistration(reg, normalizedHotkey, scope, target)) {
+    for (const id of ids) {
+      const reg = this._registrations.get(id);
+      if (reg && isConflicting(reg)) {
         conflicting = reg;
         break;
       }

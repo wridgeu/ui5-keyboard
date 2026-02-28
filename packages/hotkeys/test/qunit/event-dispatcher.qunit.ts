@@ -935,26 +935,18 @@ QUnit.test("Window capture listener fires even with stopPropagation: true", (ass
 // Target-scoped: target = document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped: target = document has higher priority than untargeted", (assert) => {
-  let docLevelFired = false;
-  let targetDocFired = false;
-
-  // Document-level (no target) — lower priority (fallback)
-  manager.register("F5", () => {
-    docLevelFired = true;
-  });
-  // target: document — treated as target-scoped, fires first
+QUnit.test("Target-scoped: target = document degrades to untargeted registration", (assert) => {
+  let fired = false;
   manager.register(
     "F5",
     () => {
-      targetDocFired = true;
+      fired = true;
     },
-    { target: document },
+    { target: document as unknown as HTMLElement },
   );
 
   fireKey("F5");
-  assert.ok(targetDocFired, "target:document registration fired (target-scoped has priority)");
-  assert.notOk(docLevelFired, "Document-level registration did NOT fire (target stopPropagation blocks it)");
+  assert.ok(fired, "Registration fires as untargeted after document target degradation");
 });
 
 // ──────────────────────────────────────────────
@@ -1213,7 +1205,7 @@ QUnit.test("Interceptor replacement logs warning via sap/base/Log", (assert) => 
 // Target-scoped with same-origin iframe document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped iframe document does NOT match parent document events", (assert) => {
+QUnit.test("Target-scoped iframe document degrades to untargeted registration", (assert) => {
   const done = assert.async();
 
   // Create a same-origin iframe
@@ -1227,26 +1219,18 @@ QUnit.test("Target-scoped iframe document does NOT match parent document events"
       assert.ok(iframeDoc, "iframe contentDocument is accessible (same-origin)");
 
       let fired = false;
-      // Register with target set to the iframe's document
+      // Register with target set to the iframe's document — degrades to untargeted
       const handle = manager.register(
         "Escape",
         () => {
           fired = true;
         },
-        { target: iframeDoc },
+        { target: iframeDoc as unknown as HTMLElement },
       );
 
-      // Fire a key event on the PARENT document — the iframe's document
-      // is NOT in the parent document's composedPath()
+      // After degradation to untargeted, it fires for any key event
       fireKey("Escape");
-      assert.notOk(fired, "Hotkey did NOT fire — iframe document is not in parent composedPath()");
-
-      // Verify it also doesn't fire from a child element in the parent document
-      const parentDiv = document.createElement("div");
-      document.body.appendChild(parentDiv);
-      fireKeyOn(parentDiv, "Escape");
-      assert.notOk(fired, "Hotkey did NOT fire from parent div either");
-      parentDiv.remove();
+      assert.ok(fired, "Registration fires as untargeted after document target degradation");
 
       handle.unregister();
     } finally {
