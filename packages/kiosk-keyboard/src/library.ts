@@ -57,6 +57,9 @@ export const KeyboardType = Object.freeze({
   Numpad: "Numpad",
 } as const);
 
+/** Value type derived from {@link KeyboardType}. */
+export type KeyboardTypeValue = (typeof KeyboardType)[keyof typeof KeyboardType];
+
 /**
  * Controls native keyboard behavior on mobile/touch devices.
  *
