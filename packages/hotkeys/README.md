@@ -237,7 +237,7 @@ manager.register(
 | `ignoreRepeat`     | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
 | `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
 | `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
-| `target`           | `HTMLElement \| Document`  | `null`         | Bind to a specific element instead of the document                                               |
+| `target`           | `HTMLElement`              | `null`         | Bind to a specific element instead of the document                                               |
 
 ### Registration Handle
 

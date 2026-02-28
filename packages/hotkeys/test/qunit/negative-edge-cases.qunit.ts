@@ -599,8 +599,8 @@ QUnit.test("onRecord callback throws — external window-capture listeners do no
 
   // Register a window-capture listener AFTER the manager (so it would fire
   // second). The recorder's own stopImmediatePropagation() call (pre-throw)
-  // plus the error-path defensive stopImmediatePropagation() in the
-  // EventDispatcher catch block ensure this listener never sees the event.
+  // ensures this listener never sees the event — the call happens before
+  // the onRecord callback that throws.
   let externalSaw = false;
   const externalListener = () => {
     externalSaw = true;

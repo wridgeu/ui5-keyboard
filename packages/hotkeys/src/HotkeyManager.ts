@@ -63,8 +63,8 @@ interface ScopeRegistrationBucket {
 }
 
 /**
- * Per-event context computed in _processHotkeys, passed through the dispatcher
- * to _emitUnhandled via the opaque `eventContext` field.
+ * Event context produced by _processHotkeys and forwarded to _emitUnhandled
+ * through the dispatcher pipeline return value — no mutable shared state.
  */
 interface EventContext {
   activeScope: string;
@@ -74,21 +74,29 @@ interface EventContext {
 }
 
 /**
+ * Normalize a target value: only HTMLElement instances are valid targets.
+ * Document, Window, and other non-HTMLElement EventTargets are degraded
+ * to untargeted (null) with a warning.
+ */
+function normalizeTarget(target: HTMLElement | null | undefined): HTMLElement | null {
+  if (target == null) return null;
+  if (target instanceof HTMLElement) return target;
+
+  // Non-HTMLElement target (Document, Window, iframe Document, SVGElement, etc.)
+  Log.warning(
+    `target must be an HTMLElement — received ${Object.prototype.toString.call(target)}, degrading to untargeted`,
+    undefined,
+    LOG_COMPONENT,
+  );
+  return null;
+}
+
+/**
  * Merge user-provided options with defaults.
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
   const scope = resolveScopeOrGlobal(options?.scope);
-  let target: HTMLElement | null = options?.target ?? null;
-
-  // Runtime guard: document/window targets are meaningless — coerce to untargeted
-  if (target && ((target as unknown) === document || (target as unknown) === window)) {
-    Log.warning(
-      "target: document/window has no effect — omit target for untargeted dispatch",
-      undefined,
-      LOG_COMPONENT,
-    );
-    target = null;
-  }
+  const target = normalizeTarget(options?.target);
 
   return {
     enabled: options?.enabled ?? true,
@@ -160,14 +168,6 @@ export default class HotkeyManager extends BaseObject {
   private _focusFallback: FocusFallbackTracker;
 
   /**
-   * Cached event context: set by `_processHotkeys` (step 5) when nothing matched,
-   * read by `_emitUnhandled` (step 7) to avoid recomputing scope/input/popup state.
-   * Ignored when `_emitUnhandled` receives a non-null `forcedReason` (e.g. Suspended).
-   * Reset to null on `destroy()`.
-   */
-  private _lastEventContext: EventContext | null = null;
-
-  /**
    * Private constructor — use `HotkeyManager.getInstance()`.
    */
   constructor() {
@@ -177,7 +177,7 @@ export default class HotkeyManager extends BaseObject {
     const handler: HotkeyDispatchHandler = {
       processHotkeys: (e) => this._processHotkeys(e),
       processSequences: (e) => this._processSequences(e),
-      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx as EventContext | undefined),
+      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx as EventContext | null),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
     this._focusFallback = new FocusFallbackTracker();
@@ -187,9 +187,14 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Get or create the singleton HotkeyManager instance.
+   *
+   * If the previous instance was destroyed (e.g., during FLP cross-app
+   * navigation via `Component.exit()`), a fresh instance is created
+   * automatically. Existing references to the destroyed instance remain
+   * permanently invalid — callers must re-acquire via `getInstance()`.
    */
   static getInstance(): HotkeyManager {
-    if (!instance) {
+    if (!instance || instance._destroyed) {
       instance = new HotkeyManager();
     }
     return instance;
@@ -286,10 +291,10 @@ export default class HotkeyManager extends BaseObject {
           throw new Error("Cannot change conflictBehavior via setOptions — unregister and re-register instead");
         }
         const opts = registration.options;
-        // Special case: target swap requires re-indexing + conflict management
+        // Special case: target swap requires normalization + re-indexing + conflict management
         if (newOptions.target !== undefined) {
           const currentTarget = opts.target;
-          const nextTarget = newOptions.target ?? null;
+          const nextTarget = normalizeTarget(newOptions.target);
           if (currentTarget !== nextTarget) {
             this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
             this._deindexRegistration(registration);
@@ -735,7 +740,12 @@ export default class HotkeyManager extends BaseObject {
    * Destroy the manager: remove all listeners, clear registrations,
    * and null the singleton reference.
    *
-   * Follows UI5 `BaseObject.destroy()` pattern.
+   * Follows UI5 `BaseObject.destroy()` pattern. Call from
+   * `Component.exit()` to ensure proper FLP cross-app cleanup.
+   *
+   * After destruction, all existing references become permanently
+   * invalid (methods throw via `_assertAlive`). A subsequent
+   * `getInstance()` creates a fresh manager with no registrations.
    */
   destroy(): void {
     this._destroyed = true;
@@ -771,7 +781,6 @@ export default class HotkeyManager extends BaseObject {
     resetRuntimeCaches();
     this._unhandledCallback = null;
     this._debugMode = false;
-    this._lastEventContext = null;
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -790,8 +799,7 @@ export default class HotkeyManager extends BaseObject {
    *   Pass 1: target-scoped registrations via composedPath() (active scope → global)
    *   Pass 2: untargeted registrations (active scope → global)
    *
-   * Returns a result with `consumed` flag and, when not consumed, an opaque
-   * `eventContext` that the dispatcher passes through to `emitUnhandled`.
+   * Returns a result with the consumed flag and event context for _emitUnhandled.
    */
   private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult {
     const eventPath = this._getEventPath(event);
@@ -840,18 +848,17 @@ export default class HotkeyManager extends BaseObject {
         if (this._debugMode) {
           this._logDebugEvent(event, activeScope, isInput, popupOpen, untargetedMatch, debugSkips);
         }
-        return true;
+        return { consumed: true, eventContext: null };
       }
     }
 
-    if (targetMatch) return true;
+    if (targetMatch) return { consumed: true, eventContext: null };
 
-    // Nothing matched at all
+    // Nothing matched — pass event context to emitUnhandled via return value
     if (this._debugMode) {
       this._logDebugEvent(event, activeScope, isInput, popupOpen, null, debugSkips);
     }
 
-    // Return event context for _emitUnhandled (passed through by EventDispatcher in step 7)
     return { consumed: false, eventContext: { activeScope, isInput, popupOpen, skipInfo } };
   }
 
@@ -867,14 +874,13 @@ export default class HotkeyManager extends BaseObject {
    * Emit an unhandled callback.
    *
    * When `forcedReason` is non-null (e.g., Suspended), it is used directly
-   * with no `skippedRegistration`. When null, uses the `eventContext` passed
-   * through from `_processHotkeys` (avoids redundant recomputation and
-   * shared mutable state).
+   * with no `skippedRegistration`. When null, uses `hotkeyContext` forwarded
+   * from `_processHotkeys` via the dispatcher pipeline return value.
    */
   private _emitUnhandled(
     event: KeyboardEvent,
     forcedReason: UnhandledReason | null,
-    eventContext?: EventContext,
+    hotkeyContext: EventContext | null,
   ): void {
     if (!this._unhandledCallback) return;
 
@@ -892,12 +898,12 @@ export default class HotkeyManager extends BaseObject {
       const target = getEventTarget(event);
       isInput = isInputElement(target);
       popupOpen = this._checkPopupOpen();
-    } else if (eventContext) {
-      // Reuse context from _processHotkeys (passed through by the dispatcher)
-      activeScope = eventContext.activeScope;
-      isInput = eventContext.isInput;
-      popupOpen = eventContext.popupOpen;
-      const skipInfo = eventContext.skipInfo;
+    } else if (hotkeyContext) {
+      // Use context forwarded from _processHotkeys
+      activeScope = hotkeyContext.activeScope;
+      isInput = hotkeyContext.isInput;
+      popupOpen = hotkeyContext.popupOpen;
+      const skipInfo = hotkeyContext.skipInfo;
       reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
       skippedRegistration = skipInfo && skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined;
     } else {

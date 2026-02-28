@@ -21,15 +21,16 @@ export interface KeyEventInterceptor {
 }
 
 /**
- * Result of {@link HotkeyDispatchHandler.processHotkeys}.
- * Carries an opaque context that the dispatcher passes through to `emitUnhandled`
- * without interpreting — avoids shared mutable state between the two methods.
+ * Result of processHotkeys — carries both the consumed flag and the
+ * event context that emitUnhandled needs. Eliminates the need for
+ * temporal coupling via a shared mutable field.
  * @internal
  */
 export interface HotkeyDispatchResult {
+  /** Whether the event was consumed by a hotkey registration. */
   consumed: boolean;
-  /** Opaque context for _emitUnhandled — dispatcher does not interpret this. */
-  eventContext?: unknown;
+  /** Opaque context from the hotkey pass, forwarded to emitUnhandled. */
+  eventContext: unknown;
 }
 
 /**
@@ -45,10 +46,10 @@ export interface HotkeyDispatchHandler {
   /**
    * Unhandled emission — called when the event was not consumed.
    * `forcedReason` is set by the dispatcher when the event was blocked before reaching
-   * the matching pipeline (e.g., `Suspended`). When null, HotkeyManager uses its own
-   * skip tracking (passed through `eventContext`) to determine the most specific reason.
+   * the matching pipeline (e.g., `Suspended`). When null, uses `eventContext` from
+   * processHotkeys to determine the most specific reason.
    */
-  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext?: unknown): void;
+  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext: unknown): void;
 }
 
 /**
@@ -286,8 +287,8 @@ export default class EventDispatcher {
         if (this._interceptor.onKeyDown(event)) return;
       } catch (error) {
         Log.error(`Error in interceptor onKeyDown: ${error}`, undefined, LOG_COMPONENT);
-        event.preventDefault(); // Defensive — idempotent if already called by the interceptor
-        event.stopImmediatePropagation(); // Fully consume the event to avoid half-consumed state
+        event.preventDefault();
+        // Do NOT stopImmediatePropagation — let analytics/a11y listeners still observe the event
         return;
       }
     }
@@ -297,7 +298,7 @@ export default class EventDispatcher {
 
     // Step 4: Suspend guard check
     if (this._guards.size > 0) {
-      this._handler.emitUnhandled(event, UnhandledReason.Suspended);
+      this._handler.emitUnhandled(event, UnhandledReason.Suspended, null);
       return;
     }
 
@@ -307,7 +308,7 @@ export default class EventDispatcher {
     // Step 6: Sequence dispatch
     const sequenceConsumed = this._handler.processSequences(event);
 
-    // Step 7: Unhandled emission — pass opaque context from processHotkeys through
+    // Step 7: Unhandled emission — passes eventContext from step 5 explicitly
     if (!hotkeyResult.consumed && !sequenceConsumed) {
       this._handler.emitUnhandled(event, null, hotkeyResult.eventContext);
     }

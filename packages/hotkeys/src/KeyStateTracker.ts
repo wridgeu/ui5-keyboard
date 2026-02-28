@@ -173,7 +173,7 @@ export default class KeyStateTracker {
   private _clearNonModifierKeys(): boolean {
     let changed = false;
 
-    for (const held of Array.from(this._heldKeys)) {
+    for (const held of this._heldKeys) {
       if (MODIFIER_KEYS.has(held)) continue;
       changed = this._clearHeldKeyCompletely(held) || changed;
     }
