@@ -26,11 +26,11 @@ export interface KeyEventInterceptor {
  * temporal coupling via a shared mutable field.
  * @internal
  */
-export interface HotkeyDispatchResult {
+export interface HotkeyDispatchResult<TContext = unknown> {
   /** Whether the event was consumed by a hotkey registration. */
   consumed: boolean;
-  /** Opaque context from the hotkey pass, forwarded to emitUnhandled. */
-  eventContext: unknown;
+  /** Context from the hotkey pass, forwarded to emitUnhandled. */
+  eventContext: TContext;
 }
 
 /**
@@ -38,9 +38,9 @@ export interface HotkeyDispatchResult {
  * to receive dispatched events from the pipeline.
  * @internal
  */
-export interface HotkeyDispatchHandler {
+export interface HotkeyDispatchHandler<TContext = unknown> {
   /** Hotkey dispatch — receives pre-filtered, non-suspended keydowns. */
-  processHotkeys(event: KeyboardEvent): HotkeyDispatchResult;
+  processHotkeys(event: KeyboardEvent): HotkeyDispatchResult<TContext>;
   /** Sequence dispatch — same contract. Returns true if consumed (full match OR partial advance). */
   processSequences(event: KeyboardEvent): boolean;
   /**
@@ -49,7 +49,7 @@ export interface HotkeyDispatchHandler {
    * the matching pipeline (e.g., `Suspended`). When null, uses `eventContext` from
    * processHotkeys to determine the most specific reason.
    */
-  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext: unknown): void;
+  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext: TContext): void;
 }
 
 /**

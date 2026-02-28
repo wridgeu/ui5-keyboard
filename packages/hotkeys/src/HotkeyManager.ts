@@ -174,10 +174,10 @@ export default class HotkeyManager extends BaseObject {
     super();
     this._platform = runtimeHooks.detectPlatform();
 
-    const handler: HotkeyDispatchHandler = {
+    const handler: HotkeyDispatchHandler<EventContext | null> = {
       processHotkeys: (e) => this._processHotkeys(e),
       processSequences: (e) => this._processSequences(e),
-      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx as EventContext | null),
+      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
     this._focusFallback = new FocusFallbackTracker();
@@ -801,7 +801,7 @@ export default class HotkeyManager extends BaseObject {
    *
    * Returns a result with the consumed flag and event context for _emitUnhandled.
    */
-  private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult {
+  private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult<EventContext | null> {
     const eventPath = this._getEventPath(event);
     const activeScope = this.getActiveScope();
     const target = getEventTarget(event);
