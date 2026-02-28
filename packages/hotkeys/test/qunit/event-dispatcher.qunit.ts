@@ -1854,6 +1854,102 @@ QUnit.test("removeGenericRootId restores normal behavior for element", (assert) 
 });
 
 // ──────────────────────────────────────────────
+// Disconnected activeElement guard
+// ──────────────────────────────────────────────
+
+QUnit.test("Disconnected activeElement does not augment path", (assert) => {
+  const target = document.createElement("div");
+  target.tabIndex = 0;
+  document.body.appendChild(target);
+
+  let fired = false;
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    { target },
+  );
+
+  // Focus the element, then detach it from the DOM.
+  // document.activeElement may still reference the detached element.
+  target.focus();
+  target.remove();
+
+  fireKey("F5");
+  assert.notOk(fired, "Hotkey does NOT fire when activeElement is disconnected from DOM");
+});
+
+// ──────────────────────────────────────────────
+// Rapid Escape one-shot guard
+// ──────────────────────────────────────────────
+
+QUnit.test("Rapid Escape within TTL fires target handler only once (one-shot)", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let callCount = 0;
+  manager.register(
+    "Escape",
+    () => {
+      callCount++;
+    },
+    { target, stopPropagation: false },
+  );
+
+  // Focus input inside target, then blur to body
+  input.focus();
+  input.blur();
+
+  // First Escape — fires via focus fallback, consuming _blurSeq
+  fireKey("Escape");
+  assert.strictEqual(callCount, 1, "First Escape fires via focus fallback");
+
+  // Second Escape immediately — hasUnconsumedBlur is false, fallback not used
+  fireKey("Escape");
+  assert.strictEqual(callCount, 1, "Second Escape does NOT fire — one-shot consumed");
+
+  target.remove();
+});
+
+// ──────────────────────────────────────────────
+// targetIdIndex merge dedup
+// ──────────────────────────────────────────────
+
+QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (assert) => {
+  const original = document.createElement("div");
+  original.id = "merge-dedup-test";
+  original.tabIndex = 0;
+  document.body.appendChild(original);
+
+  let callCount = 0;
+  manager.register(
+    "F7",
+    () => {
+      callCount++;
+    },
+    { target: original },
+  );
+
+  // Remove original, insert a new element with the same id
+  original.remove();
+  const replacement = document.createElement("div");
+  replacement.id = "merge-dedup-test";
+  replacement.tabIndex = 0;
+  document.body.appendChild(replacement);
+
+  // Focus the replacement and fire key — Set dedup prevents double-fire
+  replacement.focus();
+  fireKeyOn(replacement, "F7");
+
+  assert.strictEqual(callCount, 1, "Fires exactly once despite element replacement with same id");
+
+  replacement.remove();
+});
+
+// ──────────────────────────────────────────────
 // Shadow DOM target matching
 // ──────────────────────────────────────────────
 
