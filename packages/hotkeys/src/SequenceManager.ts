@@ -2,7 +2,7 @@ import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "./library";
-import { GLOBAL_SCOPE } from "./internal/constants";
+import { GLOBAL_SCOPE, normalizeKeyName } from "./internal/constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { matchesKeyboardEvent } from "./internal/match";
@@ -60,6 +60,7 @@ export default class SequenceManager extends BaseObject {
 
   private _registrations: Map<string, SequenceRegistration> = new Map();
   private _registrationState: Map<string, { active: boolean }> = new Map();
+  private _scopeKeyIndex: Map<string, Map<string, Set<SequenceRegistration>>> = new Map();
   private _activeMatches: ActiveMatch[] = [];
   private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
@@ -119,6 +120,7 @@ export default class SequenceManager extends BaseObject {
     };
 
     this._registrations.set(id, registration);
+    this._indexRegistration(registration);
     const state = { active: true };
     this._registrationState.set(id, state);
 
@@ -147,6 +149,8 @@ export default class SequenceManager extends BaseObject {
       unregister: () => {
         if (!state.active) return;
         state.active = false;
+        const reg = this._registrations.get(id);
+        if (reg) this._deindexRegistration(reg);
         this._registrations.delete(id);
         this._registrationState.delete(id);
         // Clear any active matches for this registration
@@ -231,6 +235,7 @@ export default class SequenceManager extends BaseObject {
     }
     this._registrations.clear();
     this._registrationState.clear();
+    this._scopeKeyIndex.clear();
     this._pendingCallback = null;
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
@@ -348,34 +353,101 @@ export default class SequenceManager extends BaseObject {
     }
   }
 
+  private _indexRegistration(reg: SequenceRegistration): void {
+    const firstKey = reg.parsedSteps[0].key;
+    let keyMap = this._scopeKeyIndex.get(reg.scope);
+    if (!keyMap) {
+      keyMap = new Map();
+      this._scopeKeyIndex.set(reg.scope, keyMap);
+    }
+    let regSet = keyMap.get(firstKey);
+    if (!regSet) {
+      regSet = new Set();
+      keyMap.set(firstKey, regSet);
+    }
+    regSet.add(reg);
+  }
+
+  private _deindexRegistration(reg: SequenceRegistration): void {
+    const firstKey = reg.parsedSteps[0].key;
+    const keyMap = this._scopeKeyIndex.get(reg.scope);
+    if (!keyMap) return;
+    const regSet = keyMap.get(firstKey);
+    if (!regSet) return;
+    regSet.delete(reg);
+    if (regSet.size === 0) {
+      keyMap.delete(firstKey);
+      if (keyMap.size === 0) {
+        this._scopeKeyIndex.delete(reg.scope);
+      }
+    }
+  }
+
+  /**
+   * Derive candidate keys from a keyboard event, mirroring the matching
+   * logic in matchesKeyboardEvent (match.ts).
+   */
+  private _deriveEventKeys(event: KeyboardEvent): string[] {
+    const keys: string[] = [];
+
+    const primary = normalizeKeyName(event.key);
+    keys.push(primary);
+
+    // Fallback: letter from event.code (macOS Option+letter)
+    if (event.code?.startsWith("Key")) {
+      const codeLetter = event.code.slice(3);
+      if (codeLetter.length === 1 && /^[A-Za-z]$/.test(codeLetter)) {
+        const upper = codeLetter.toUpperCase();
+        if (upper !== primary) keys.push(upper);
+      }
+    }
+
+    // Fallback: digit from event.code (Shift+digit)
+    if (event.code?.startsWith("Digit")) {
+      const codeDigit = event.code.slice(5);
+      if (codeDigit.length === 1 && /^[0-9]$/.test(codeDigit)) {
+        if (codeDigit !== primary) keys.push(codeDigit);
+      }
+    }
+
+    return keys;
+  }
+
   /**
    * Start new sequence matches for registrations in the given scope.
    */
   private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean): boolean {
+    const keyMap = this._scopeKeyIndex.get(scope);
+    if (!keyMap) return false;
+
     let started = false;
+    const candidateKeys = this._deriveEventKeys(event);
 
-    for (const reg of this._registrations.values()) {
-      if (reg.scope !== scope) continue;
+    for (const candidateKey of candidateKeys) {
+      const regSet = keyMap.get(candidateKey);
+      if (!regSet) continue;
 
-      const firstStep = reg.parsedSteps[0];
-      if (resolveIgnoreInputs(reg.ignoreInputs, firstStep.ctrl, firstStep.meta, firstStep.key) && isInput) continue;
+      for (const reg of regSet) {
+        const firstStep = reg.parsedSteps[0];
+        if (resolveIgnoreInputs(reg.ignoreInputs, firstStep.ctrl, firstStep.meta, firstStep.key) && isInput) continue;
 
-      if (!this._isRegistrationEnabled(reg)) continue;
+        if (!this._isRegistrationEnabled(reg)) continue;
 
-      if (!matchesKeyboardEvent(event, firstStep)) continue;
+        if (!matchesKeyboardEvent(event, firstStep)) continue;
 
-      const newMatch: ActiveMatch = {
-        registration: reg,
-        stepIndex: 1,
-        timerId: undefined,
-      };
-      newMatch.timerId = setTimeout(() => {
-        this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
-      }, reg.timeout);
-      this._activeMatches.push(newMatch);
-      started = true;
+        const newMatch: ActiveMatch = {
+          registration: reg,
+          stepIndex: 1,
+          timerId: undefined,
+        };
+        newMatch.timerId = setTimeout(() => {
+          this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
+        }, reg.timeout);
+        this._activeMatches.push(newMatch);
+        started = true;
 
-      this._firePendingCallback(reg, 1);
+        this._firePendingCallback(reg, 1);
+      }
     }
 
     return started;

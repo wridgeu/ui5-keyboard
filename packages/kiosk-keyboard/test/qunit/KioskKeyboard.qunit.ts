@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import type { LayoutDefinition } from "ui5/kiosk/types";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
@@ -2491,16 +2492,17 @@ QUnit.test("resetCustomLayouts removes all custom layouts", (assert) => {
   assert.ok(KioskKeyboard.getRegisteredLayout("qwerty"), "Built-in layout remains available");
 });
 
-QUnit.test("registerLayout rejects forbidden map keys", (assert) => {
+QUnit.test("registerLayout accepts formerly forbidden map keys (Map-safe)", (assert) => {
   for (const name of ["__proto__", "prototype", "constructor"]) {
-    KioskKeyboard.registerLayout(name, [[{ value: "x" }]]);
-    assert.strictEqual(KioskKeyboard.getRegisteredLayout(name), undefined, `Forbidden key "${name}" was rejected`);
+    const layout: LayoutDefinition = [[{ value: "x" }]];
+    KioskKeyboard.registerLayout(name, layout);
+    assert.deepEqual(KioskKeyboard.getRegisteredLayout(name), layout, `Key "${name}" is accepted`);
   }
 
   const names = KioskKeyboard.getRegisteredLayoutNames();
-  assert.notOk(names.includes("__proto__"), "Forbidden key __proto__ is not listed");
-  assert.notOk(names.includes("prototype"), "Forbidden key prototype is not listed");
-  assert.notOk(names.includes("constructor"), "Forbidden key constructor is not listed");
+  assert.ok(names.includes("__proto__"), "__proto__ is listed");
+  assert.ok(names.includes("prototype"), "prototype is listed");
+  assert.ok(names.includes("constructor"), "constructor is listed");
 });
 
 // ──────────────────────────────────────────────
@@ -2602,7 +2604,7 @@ QUnit.test("resetLocaleLayouts restores built-in locale mappings", (assert) => {
   }
 });
 
-QUnit.test("registerLocaleLayout rejects forbidden locale keys", (assert) => {
+QUnit.test("registerLocaleLayout accepts formerly forbidden locale keys (Map-safe)", (assert) => {
   const localization = Localization as unknown as {
     getLanguageTag: () => { language: string; region?: string | null };
   };
@@ -2614,13 +2616,13 @@ QUnit.test("registerLocaleLayout rejects forbidden locale keys", (assert) => {
 
   try {
     localization.getLanguageTag = () => ({ language: "__proto__", region: undefined });
-    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Forbidden locale key __proto__ is ignored");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "Locale key __proto__ resolves correctly");
 
     localization.getLanguageTag = () => ({ language: "prototype", region: undefined });
-    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Forbidden locale key prototype is ignored");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "Locale key prototype resolves correctly");
 
     localization.getLanguageTag = () => ({ language: "constructor", region: undefined });
-    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Forbidden locale key constructor is ignored");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "Locale key constructor resolves correctly");
   } finally {
     localization.getLanguageTag = originalGetLanguageTag;
   }
