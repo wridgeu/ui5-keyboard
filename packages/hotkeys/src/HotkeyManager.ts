@@ -10,6 +10,7 @@ import EventDispatcher from "./internal/event-dispatcher";
 import type { HotkeyDispatchHandler, HotkeyDispatchResult } from "./internal/event-dispatcher";
 import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { GLOBAL_SCOPE } from "./internal/constants";
+import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { keyboardEventToHotkey /* debug-mode only */, parseHotkey } from "./internal/parse";
@@ -43,14 +44,6 @@ type ValidateModule = typeof import("./validate");
 type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
-/**
- * Maximum elapsed time (ms) between a blur event and a subsequent Escape
- * keydown for the focus-fallback path to activate. Covers the typical UI5
- * rerender cycle (~200-800ms) plus browser task-scheduling jitter. Values
- * below 800ms miss slow rerenders; values above 2000ms risk stale matches
- * after the user has mentally moved on.
- */
-const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
 let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
@@ -152,8 +145,8 @@ export default class HotkeyManager extends BaseObject {
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
 
-  // User-registered element IDs treated as generic root nodes (focus fallback skips these).
-  private _genericRootIds = new Set<string>();
+  // Focus-tracking logic — extracted to its own class for maintainability.
+  private _focusFallback: FocusFallbackTracker;
 
   /**
    * Cached event context: set by `_processHotkeys` (step 5) when nothing matched,
@@ -162,39 +155,6 @@ export default class HotkeyManager extends BaseObject {
    * Reset to null on `destroy()`.
    */
   private _lastEventContext: EventContext | null = null;
-  private _lastFocusedElement: WeakRef<Element> | null = null;
-  private _lastFocusedAt = 0;
-  private _lastBlurredElement: WeakRef<Element> | null = null;
-  private _lastBlurredAt = 0;
-  private _blurSeq = 0;
-  private _consumedBlurSeq = 0;
-  private _focusInHandler = (event: FocusEvent): void => {
-    const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
-    // Skip generic root containers — focus bounces there as a side-effect of
-    // rendering and does not represent a meaningful user focus target.  Keeping
-    // the previous value ensures the fallback in _getEventPath still points at
-    // the real element the user was interacting with.
-    if (this._isGenericRootNode(target)) {
-      return;
-    }
-    this._lastFocusedElement = new WeakRef(target);
-    this._lastFocusedAt = Date.now();
-  };
-  private _focusOutHandler = (event: FocusEvent): void => {
-    const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
-    if (this._isGenericRootNode(target)) {
-      return;
-    }
-    this._lastBlurredElement = new WeakRef(target);
-    this._lastBlurredAt = Date.now();
-    this._blurSeq++;
-  };
 
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
@@ -209,8 +169,7 @@ export default class HotkeyManager extends BaseObject {
       emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx as EventContext | undefined),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
-    document.addEventListener("focusin", this._focusInHandler, true);
-    document.addEventListener("focusout", this._focusOutHandler, true);
+    this._focusFallback = new FocusFallbackTracker();
 
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
   }
@@ -746,11 +705,7 @@ export default class HotkeyManager extends BaseObject {
    */
   addGenericRootId(id: string): void {
     this._assertAlive("addGenericRootId");
-    if (!id || !id.trim()) {
-      Log.warning("addGenericRootId: ignoring empty or whitespace-only id", undefined, LOG_COMPONENT);
-      return;
-    }
-    this._genericRootIds.add(id);
+    this._focusFallback.addGenericRootId(id);
   }
 
   /**
@@ -758,11 +713,7 @@ export default class HotkeyManager extends BaseObject {
    */
   removeGenericRootId(id: string): void {
     this._assertAlive("removeGenericRootId");
-    if (!id || !id.trim()) {
-      Log.warning("removeGenericRootId: ignoring empty or whitespace-only id", undefined, LOG_COMPONENT);
-      return;
-    }
-    this._genericRootIds.delete(id);
+    this._focusFallback.removeGenericRootId(id);
   }
 
   // ──────────────────────────────────────────────
@@ -786,8 +737,7 @@ export default class HotkeyManager extends BaseObject {
     // Destroy the dispatcher first — removes all DOM listeners, invalidates
     // guards, notifies interceptor/recorders, destroys KeyStateTracker.
     this._dispatcher.destroy();
-    document.removeEventListener("focusin", this._focusInHandler, true);
-    document.removeEventListener("focusout", this._focusOutHandler, true);
+    this._focusFallback.destroy();
 
     for (const group of Array.from(this._groups)) {
       group._onManagerDestroy();
@@ -811,13 +761,6 @@ export default class HotkeyManager extends BaseObject {
     this._unhandledCallback = null;
     this._debugMode = false;
     this._lastEventContext = null;
-    this._lastFocusedElement = null;
-    this._lastFocusedAt = 0;
-    this._lastBlurredElement = null;
-    this._lastBlurredAt = 0;
-    this._blurSeq = 0;
-    this._consumedBlurSeq = 0;
-    this._genericRootIds.clear();
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -984,177 +927,9 @@ export default class HotkeyManager extends BaseObject {
         ? [...path]
         : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
 
-    // Order matters: activeElement augmentation must run first so that
-    // the focus fallback's `resolvedPath.includes(lastFocusedElement)` guard
-    // can detect elements already injected by the activeElement pass.
-    this._augmentPathWithActiveElement(resolvedPath);
-    this._augmentPathWithFocusFallback(event, resolvedPath);
+    this._focusFallback.augmentPath(event, resolvedPath);
 
     return resolvedPath;
-  }
-
-  /**
-   * Include the active-element ancestry in the path. Some environments
-   * dispatch keyboard events on document/window even while an input
-   * still has focus.
-   *
-   * Nodes are inserted before the first generic root entry so that
-   * innermost-wins ordering is preserved during target matching.
-   */
-  private _augmentPathWithActiveElement(resolvedPath: EventTarget[]): void {
-    const activeElement = document.activeElement;
-    if (!activeElement || !activeElement.isConnected || resolvedPath.includes(activeElement)) {
-      return;
-    }
-
-    const newNodes = this._getActiveElementPath(activeElement).filter((node) => !resolvedPath.includes(node));
-    if (newNodes.length === 0) {
-      return;
-    }
-
-    this._insertBeforeGenericRoot(resolvedPath, newNodes);
-  }
-
-  /**
-   * Some browsers/extensions dispatch Escape after focus has already moved to
-   * body/content. Inject the most recently focused element's ancestry as a
-   * short-lived, one-shot fallback to preserve target-scoped matching.
-   */
-  private _augmentPathWithFocusFallback(event: KeyboardEvent, resolvedPath: EventTarget[]): void {
-    if (!this._shouldUseFocusPathFallback(event, resolvedPath)) {
-      return;
-    }
-
-    const lastFocusedElement = this._lastFocusedElement?.deref();
-    if (!lastFocusedElement || !lastFocusedElement.isConnected || resolvedPath.includes(lastFocusedElement)) {
-      return;
-    }
-
-    const now = Date.now();
-    const hasRecentFocus = now - this._lastFocusedAt <= FOCUS_PATH_FALLBACK_TTL_MS;
-    const hasRecentBlur =
-      this._areElementsRelated(this._lastBlurredElement?.deref() ?? null, lastFocusedElement) &&
-      now - this._lastBlurredAt <= FOCUS_PATH_FALLBACK_TTL_MS;
-    const hasUnconsumedBlur = hasRecentBlur && this._consumedBlurSeq !== this._blurSeq;
-    // Augment when:
-    // (a) focus is recent and no related blur occurred yet — element is still focused, or
-    // (b) a related blur happened but hasn't been consumed — one-shot Escape fallback.
-    const shouldAugment = (hasRecentFocus && !hasRecentBlur) || hasUnconsumedBlur;
-
-    if (!shouldAugment) {
-      return;
-    }
-
-    const newNodes = this._getActiveElementPath(lastFocusedElement).filter((node) => !resolvedPath.includes(node));
-    if (newNodes.length > 0) {
-      this._insertBeforeGenericRoot(resolvedPath, newNodes);
-    }
-    if (hasUnconsumedBlur) {
-      this._consumedBlurSeq = this._blurSeq;
-    }
-  }
-
-  /**
-   * Detect generic root-target keyboard dispatches where composedPath lacks
-   * concrete focus ancestry (for example only #content/document/window).
-   */
-  private _shouldUseFocusPathFallback(event: KeyboardEvent, eventPath: EventTarget[]): boolean {
-    if (event.key !== "Escape") {
-      return false;
-    }
-
-    const eventTarget = getEventTarget(event);
-    if (this._isGenericRootNode(eventTarget)) {
-      return true;
-    }
-
-    return eventPath.every((node) => this._isGenericRootNode(node));
-  }
-
-  /**
-   * Insert `newNodes` into `path` before the first generic root entry.
-   * Falls back to appending if no generic root is found.
-   */
-  private _insertBeforeGenericRoot(path: EventTarget[], newNodes: EventTarget[]): void {
-    const insertIdx = path.findIndex((node) => this._isGenericRootNode(node));
-    if (insertIdx >= 0) {
-      path.splice(insertIdx, 0, ...newNodes);
-    } else {
-      path.push(...newNodes);
-    }
-  }
-
-  /**
-   * Whether a node is a generic top-level dispatch target.
-   *
-   * Matches document, window, html, body, UI5 UIArea root nodes, and
-   * any ID registered via {@link addGenericRootId}.
-   *
-   * **UI5 dependency:** UIArea roots are detected via the
-   * `data-sap-ui-area` attribute that `sap.ui.core.UIArea` stamps on
-   * its root DOM element. This is a stable, public-facing attribute
-   * used by UI5's own CSS selectors and test infrastructure.
-   */
-  private _isGenericRootNode(node: EventTarget | null): boolean {
-    if (!node) {
-      return true;
-    }
-    if (node === document || node === window) {
-      return true;
-    }
-    if (!(node instanceof Element)) {
-      return false;
-    }
-    return (
-      node === document.documentElement ||
-      node === document.body ||
-      node.hasAttribute("data-sap-ui-area") ||
-      this._genericRootIds.has(node.id)
-    );
-  }
-
-  /**
-   * Whether the two elements are equal or in any ancestor/descendant relationship.
-   */
-  private _areElementsRelated(a: Element | null, b: Element | null): boolean {
-    if (!a || !b) {
-      return false;
-    }
-    return a === b || a.contains(b) || b.contains(a);
-  }
-
-  /**
-   * Build a composed-like ancestry path for document.activeElement.
-   */
-  private _getActiveElementPath(activeElement: Element): EventTarget[] {
-    const path: EventTarget[] = [];
-    let current: Node | null = activeElement;
-
-    while (current) {
-      path.push(current);
-
-      if (current.parentNode) {
-        current = current.parentNode;
-        continue;
-      }
-
-      const root = current.getRootNode?.();
-      if (root instanceof ShadowRoot && root.host) {
-        current = root.host;
-        continue;
-      }
-
-      current = null;
-    }
-
-    if (!path.includes(document)) {
-      path.push(document);
-    }
-    if (!path.includes(window)) {
-      path.push(window);
-    }
-
-    return path;
   }
 
   /**
