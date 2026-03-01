@@ -233,3 +233,94 @@ QUnit.test("Handles returned by group are normal handles", (assert) => {
   handle.unregister();
   assert.notOk(handle.isActive, "Handle is inactive after unregister");
 });
+
+// ──────────────────────────────────────────────
+// Per-registration onPending callback
+// ──────────────────────────────────────────────
+
+QUnit.test("onPending fires on intermediate key and dies with unregister", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const group = manager.createGroup();
+  const calls: string[] = [];
+
+  const handle = group.registerSequence(["G", "I"], () => {}, {
+    onPending: () => {
+      calls.push("pending");
+    },
+  });
+
+  fireKey("g");
+  assert.strictEqual(calls.length, 1, "onPending fires on intermediate key");
+
+  handle.unregister();
+
+  // New sequence without onPending — should not fire the old callback
+  group.registerSequence(["G", "I"], () => {});
+  fireKey("g");
+  assert.strictEqual(calls.length, 1, "onPending does not fire after unregister");
+  group.destroyAll();
+});
+
+QUnit.test("onPending dies with group.destroyAll", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const group = manager.createGroup();
+  const calls: string[] = [];
+
+  group.registerSequence(["G", "I"], () => {}, {
+    onPending: () => {
+      calls.push("pending");
+    },
+  });
+
+  fireKey("g");
+  assert.strictEqual(calls.length, 1, "Fires before destroyAll");
+
+  group.destroyAll();
+
+  // New sequence on fresh group — old onPending must not fire
+  const group2 = manager.createGroup();
+  group2.registerSequence(["G", "I"], () => {});
+  fireKey("g");
+  assert.strictEqual(calls.length, 1, "Does not fire after destroyAll");
+  group2.destroyAll();
+});
+
+QUnit.test("onPending takes precedence over global setSequencePendingHandler", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const group = manager.createGroup();
+  const calls: string[] = [];
+
+  manager.setSequencePendingHandler(() => {
+    calls.push("global");
+  });
+
+  group.registerSequence(["G", "I"], () => {}, {
+    onPending: () => {
+      calls.push("per-reg");
+    },
+  });
+
+  fireKey("g");
+  assert.deepEqual(calls, ["per-reg"], "Per-registration callback wins over global");
+
+  group.destroyAll();
+  manager.setSequencePendingHandler(null);
+});
+
+QUnit.test("global pending handler fires when onPending is not set", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const group = manager.createGroup();
+  const calls: string[] = [];
+
+  manager.setSequencePendingHandler(() => {
+    calls.push("global");
+  });
+
+  group.registerSequence(["G", "I"], () => {});
+
+  fireKey("g");
+  assert.deepEqual(calls, ["global"], "Global handler fires as fallback");
+
+  group.destroyAll();
+  manager.setSequencePendingHandler(null);
+});

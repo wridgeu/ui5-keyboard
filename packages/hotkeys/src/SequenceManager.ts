@@ -117,6 +117,7 @@ export default class SequenceManager extends BaseObject {
       ignoreInputs: options?.ignoreInputs ?? "auto",
       preventDefault: options?.preventDefault ?? true,
       stopPropagation: options?.stopPropagation ?? true,
+      onPending: options?.onPending ?? null,
     };
 
     this._registrations.set(id, registration);
@@ -178,6 +179,7 @@ export default class SequenceManager extends BaseObject {
         if (newOptions.ignoreInputs !== undefined) reg.ignoreInputs = newOptions.ignoreInputs;
         if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
         if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
+        if (newOptions.onPending !== undefined) reg.onPending = newOptions.onPending ?? null;
       },
     };
   }
@@ -454,10 +456,11 @@ export default class SequenceManager extends BaseObject {
   }
 
   private _firePendingCallback(reg: SequenceRegistration, stepIndex: number): void {
-    if (!this._pendingCallback) return;
+    const callback = reg.onPending ?? this._pendingCallback;
+    if (!callback) return;
 
     try {
-      this._pendingCallback({
+      callback({
         sequence: [...reg.sequence],
         completedSteps: stepIndex,
         totalSteps: reg.parsedSteps.length,

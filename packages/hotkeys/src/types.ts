@@ -450,6 +450,16 @@ export interface SequenceOptions {
   preventDefault?: boolean;
   /** Stop propagation on the final key. @default true */
   stopPropagation?: boolean;
+  /**
+   * Per-registration callback for mid-sequence progress.
+   *
+   * Fires after each intermediate key with progress info (completed steps,
+   * total steps, next expected key). When set, takes precedence over the
+   * global `setSequencePendingHandler` for this registration.
+   *
+   * Dies with the registration — no manual cleanup needed.
+   */
+  onPending?: SequencePendingCallback;
 }
 
 /**
@@ -500,6 +510,7 @@ export interface SequenceRegistration {
   ignoreInputs: boolean | "auto";
   preventDefault: boolean;
   stopPropagation: boolean;
+  onPending: SequencePendingCallback | null;
 }
 
 /**

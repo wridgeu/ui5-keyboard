@@ -1,7 +1,6 @@
 import MessageToast from "sap/m/MessageToast";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
-import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 
 /**
@@ -10,16 +9,16 @@ import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
  * @name demo.hotkeys.controller.HotkeysSequences
  */
 export default class HotkeysSequences extends BaseController {
-  private _manager!: HotkeyManager;
   private _hotkeys!: RegistrationGroup;
   private _pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
   onInit(): void {
-    this._manager = this.getTypedComponent().getHotkeyManager();
-    this._hotkeys = this._manager.createGroup();
+    this._hotkeys = this.getTypedComponent().getHotkeyManager().createGroup();
 
     const stateModel = this.getStateModel();
     stateModel.setProperty("/sequenceStatus", "");
+
+    const onPending = this._createPendingHandler(stateModel);
 
     this._hotkeys.registerSequence(
       ["G", "I"],
@@ -28,7 +27,7 @@ export default class HotkeysSequences extends BaseController {
         stateModel.setProperty("/sequenceStatus", "");
         MessageToast.show("Sequence G I fired");
       },
-      { scope: Scope.HotkeysSequences, description: "Go to Inbox" },
+      { scope: Scope.HotkeysSequences, description: "Go to Inbox", onPending },
     );
 
     this._hotkeys.registerSequence(
@@ -38,10 +37,24 @@ export default class HotkeysSequences extends BaseController {
         stateModel.setProperty("/sequenceStatus", "");
         MessageToast.show("Sequence G S fired");
       },
-      { scope: Scope.HotkeysSequences, description: "Go to Settings" },
+      { scope: Scope.HotkeysSequences, description: "Go to Settings", onPending },
     );
+  }
 
-    this._manager.setSequencePendingHandler((info) => {
+  onNavBack(): void {
+    this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
+  }
+
+  onExit(): void {
+    this._hotkeys.destroyAll();
+    if (this._pendingTimer) {
+      clearTimeout(this._pendingTimer);
+      this._pendingTimer = null;
+    }
+  }
+
+  private _createPendingHandler(stateModel: import("sap/ui/model/json/JSONModel").default) {
+    return (info: { completedSteps: number; totalSteps: number; nextKey: string }) => {
       if (this._pendingTimer) {
         clearTimeout(this._pendingTimer);
       }
@@ -53,19 +66,6 @@ export default class HotkeysSequences extends BaseController {
         stateModel.setProperty("/sequenceStatus", "");
         this._pendingTimer = null;
       }, 1500);
-    });
-  }
-
-  onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
-  }
-
-  onExit(): void {
-    this._hotkeys.destroyAll();
-    this._manager.setSequencePendingHandler(null);
-    if (this._pendingTimer) {
-      clearTimeout(this._pendingTimer);
-      this._pendingTimer = null;
-    }
+    };
   }
 }

@@ -79,7 +79,7 @@ interface EventContext {
  * to untargeted (null) with a warning.
  */
 function normalizeTarget(target: HTMLElement | null | undefined): HTMLElement | null {
-  if (target == null) return null;
+  if (target == null) return null; // eslint-disable-line eqeqeq -- intentional nullish check
   if (target instanceof HTMLElement) return target;
 
   // Non-HTMLElement target (Document, Window, iframe Document, SVGElement, etc.)
