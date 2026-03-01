@@ -14,7 +14,9 @@ library.ts                UI5 Lib.init(), enum registration
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
 layout-registry.ts        Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
-internal/i18n.ts          getText() helper for library resource bundle
+internal/i18n.ts          getText() facade — thin re-export of i18n-registry
+internal/i18n-registry.ts i18n resolution chain: base bundle + enhancement bundles
+                          + override hook, async loading with generation counter
 internal/detect-keyboard-type.ts  Auto-type detection helpers
 internal/input-operations.ts      Target input text operations
 internal/target-input-session.ts  Per-target dirty/value/change handling
@@ -529,9 +531,11 @@ packages/kiosk-keyboard/
                                plus KeyName constants
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition
     layout-registry.ts        Layout registration and locale resolution
+    i18n-registry.ts          i18n re-export for test imports
     internal/
       dom.ts                  DOM/key ID utilities + input resolver
-      i18n.ts                 I18n helper
+      i18n.ts                 i18n facade (re-exports from i18n-registry)
+      i18n-registry.ts        i18n resolution chain, config, hook, async loading
       detect-keyboard-type.ts Auto-type detection
       input-operations.ts     Text insertion/backspace/enter ops
       target-input-session.ts Target state + commit handling

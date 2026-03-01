@@ -36,6 +36,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Accessibility](#accessibility)
 - [Theming](#theming)
 - [Internationalization (i18n)](#internationalization-i18n)
+  - [i18n Extension API](#i18n-extension-api)
 - [Library Enums & Constants](#library-enums--constants)
 - [Further Reading](#further-reading)
 - [Troubleshooting](#troubleshooting)
@@ -979,6 +980,67 @@ ARIA_KEYBOARD_CLOSED=Clavier virtuel fermé
 ```
 
 The UI5 resource bundle mechanism (`Lib.getResourceBundleFor("ui5.kiosk")`) automatically resolves the correct bundle based on the active UI5 locale.
+
+### i18n Extension API
+
+Consumers can extend or override the keyboard's translatable texts without modifying the library package. Two mechanisms are available:
+
+**Enhancement bundles** — provide additional locales or override built-in texts via standard `.properties` files:
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+
+// Add French and Spanish translations via a consumer bundle
+await KioskKeyboard.configureI18n({
+  supportedLocales: ["", "de", "fr", "es"],
+  fallbackLocale: "en",
+  enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
+});
+
+// Or use a URL instead of a module name
+await KioskKeyboard.configureI18n({
+  enhanceWith: [{ bundleUrl: "/i18n/kiosk/messagebundle.properties" }],
+});
+```
+
+**Override hook** — programmatically replace resolved texts for tenant-specific wording:
+
+```ts
+KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
+  if (key === "KIOSK_KEYBOARD_LABEL") {
+    return "Terminal Keyboard";
+  }
+  return undefined; // keep resolvedText for all other keys
+});
+```
+
+**Resolution order:** base library bundle → enhancement bundles (last wins) → override hook → hardcoded fallback.
+
+**FLP cleanup** — call both reset methods in `Component.destroy()` to prevent cross-app leakage:
+
+```ts
+export default class Component extends UIComponent {
+  async init(): Promise<void> {
+    super.init();
+    KioskKeyboard.configureI18n({
+      enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
+    });
+  }
+
+  destroy(): void {
+    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.resetI18nConfiguration();
+    super.destroy();
+  }
+}
+```
+
+| Method                                 | Description                                 |
+| -------------------------------------- | ------------------------------------------- |
+| `configureI18n(config): Promise<void>` | Set enhancement bundles and locale metadata |
+| `resetI18nConfiguration(): void`       | Clear enhancement config (not the hook)     |
+| `setI18nOverrideHook(fn): void`        | Register a per-key text override hook       |
+| `clearI18nOverrideHook(): void`        | Remove the override hook                    |
 
 ---
 
