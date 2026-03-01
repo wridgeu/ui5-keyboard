@@ -10,6 +10,8 @@ import XMLView from "sap/ui/core/mvc/XMLView";
 import Localization from "sap/base/i18n/Localization";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
+import ResourceBundle from "sap/base/i18n/ResourceBundle";
+import Lib from "sap/ui/core/Lib";
 import {
   placeAndWait,
   waitForRender,
@@ -4195,3 +4197,69 @@ QUnit.test("getTargetControl returns null when no target is associated", async (
 });
 
 // keyboardTypeChange and RTL tests moved to KioskKeyboard-events.qunit.ts
+
+// ──────────────────────────────────────────────
+// i18n integration tests
+// ──────────────────────────────────────────────
+
+const i18nSandbox = sinon.createSandbox();
+
+QUnit.module("KioskKeyboard — i18n integration", {
+  afterEach() {
+    i18nSandbox.restore();
+    KioskKeyboard.resetI18nConfiguration();
+    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.resetCustomLayouts();
+    KioskKeyboard.resetLocaleLayouts();
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+QUnit.test("Override hook can change KIOSK_KEYBOARD_LABEL on rendered control", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  KioskKeyboard.setI18nOverrideHook((ctx) => {
+    if (ctx.key === "KIOSK_KEYBOARD_LABEL") {
+      return "Custom Keyboard Label";
+    }
+    return undefined;
+  });
+  await waitForRender();
+
+  const dom = kb.getDomRef();
+  assert.ok(dom, "Keyboard is rendered");
+  const ariaLabel = dom?.getAttribute("aria-label");
+  assert.strictEqual(ariaLabel, "Custom Keyboard Label", "aria-label reflects override hook");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Clearing hook restores non-overridden behaviour", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const originalLabel = kb.getDomRef()?.getAttribute("aria-label");
+
+  KioskKeyboard.setI18nOverrideHook((ctx) => {
+    if (ctx.key === "KIOSK_KEYBOARD_LABEL") return "Overridden";
+    return undefined;
+  });
+  await waitForRender();
+
+  assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), "Overridden", "Hook applied");
+
+  KioskKeyboard.clearI18nOverrideHook();
+  await waitForRender();
+
+  assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), originalLabel, "Original label restored");
+
+  input.destroy();
+  kb.destroy();
+});

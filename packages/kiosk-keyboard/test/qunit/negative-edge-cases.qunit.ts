@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
+import Log from "sap/base/Log";
 import { placeAndWait, waitForRender, tapKey, isShiftActive, isCapsLock } from "./test-helpers";
 
 // ──────────────────────────────────────────────
@@ -399,4 +400,76 @@ QUnit.test("Multiple backspaces on empty TextArea are silent no-ops", async (ass
 
   textarea.destroy();
   kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// i18n API negative paths
+// ──────────────────────────────────────────────
+
+const i18nSandbox = sinon.createSandbox();
+
+QUnit.module("Negative / Edge-Case — i18n API", {
+  afterEach() {
+    i18nSandbox.restore();
+    KioskKeyboard.resetI18nConfiguration();
+    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.resetCustomLayouts();
+    KioskKeyboard.resetLocaleLayouts();
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+QUnit.test("configureI18n(null) logs warning, no crash", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n(null as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for null config");
+  assert.ok(true, "No crash");
+});
+
+QUnit.test('configureI18n("string") logs warning, no crash', async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n("string" as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for string config");
+  assert.ok(true, "No crash");
+});
+
+QUnit.test("configureI18n with entry missing bundleName/bundleUrl skips entry", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{} as never],
+  });
+
+  assert.ok(spy.calledOnce, "Warning logged for invalid entry");
+});
+
+QUnit.test("configureI18n with entry having both bundleName and bundleUrl skips entry", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "x", bundleUrl: "y" } as never],
+  });
+
+  assert.ok(spy.calledOnce, "Warning logged for entry with both");
+});
+
+QUnit.test("setI18nOverrideHook(null) logs warning, does not set hook", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  KioskKeyboard.setI18nOverrideHook(null as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for null hook");
+});
+
+QUnit.test("setI18nOverrideHook(42) logs warning, does not set hook", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  KioskKeyboard.setI18nOverrideHook(42 as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for number hook");
 });
