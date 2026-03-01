@@ -193,6 +193,12 @@ const manager = HotkeyManager.getInstance();
 | `setUnhandledHandler(callback)`        | Set callback for unhandled key events                 |
 | `setDebugMode(enabled)`                | Enable/disable detailed keypress logging              |
 | `isDebugMode()`                        | Check if debug mode is on                             |
+| `registerSequence(seq, cb, opts?)`     | Register a multi-key sequence, returns a handle       |
+| `getSequenceRegistrations()`           | Get all active sequence registrations                 |
+| `getSequenceRegistrationsForScope(id)` | Filter sequence registrations by scope                |
+| `setSequencePendingHandler(callback)`  | Set global callback for mid-sequence progress         |
+| `addGenericRootId(id)`                 | Register an element ID as a generic focus root        |
+| `removeGenericRootId(id)`              | Remove a previously registered generic root ID        |
 | `destroy()`                            | Remove all listeners, clear state, null the singleton |
 
 ### Registration

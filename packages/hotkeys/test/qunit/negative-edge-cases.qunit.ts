@@ -85,6 +85,64 @@ QUnit.test("ConflictBehavior.Error: same target in same scope DOES conflict", (a
   );
 });
 
+QUnit.test("ConflictBehavior.Error: re-rendered element with same id conflicts via id-index", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const original = document.createElement("div");
+  original.id = "hk-conflict-rerender";
+  original.tabIndex = 0;
+  fixture.appendChild(original);
+
+  manager.register("F8", () => {}, { target: original, conflictBehavior: "error" });
+
+  // Simulate re-render: new DOM node with same id
+  const replacement = document.createElement("div");
+  replacement.id = "hk-conflict-rerender";
+  replacement.tabIndex = 0;
+  original.replaceWith(replacement);
+
+  assert.throws(
+    () => manager.register("F8", () => {}, { target: replacement, conflictBehavior: "error" }),
+    /already registered/,
+    "Detects conflict via targetIdIndex when DOM node is replaced with same id",
+  );
+});
+
+QUnit.test("ConflictBehavior.Replace: re-rendered element with same id replaces via id-index", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let oldCalled = false;
+  let newCalled = false;
+
+  const original = document.createElement("div");
+  original.id = "hk-replace-rerender";
+  original.tabIndex = 0;
+  fixture.appendChild(original);
+
+  manager.register(
+    "F8",
+    () => {
+      oldCalled = true;
+    },
+    { target: original, conflictBehavior: "replace" },
+  );
+
+  const replacement = document.createElement("div");
+  replacement.id = "hk-replace-rerender";
+  replacement.tabIndex = 0;
+  original.replaceWith(replacement);
+
+  manager.register(
+    "F8",
+    () => {
+      newCalled = true;
+    },
+    { target: replacement, conflictBehavior: "replace" },
+  );
+
+  fireKeyOn(replacement, "F8");
+  assert.notOk(oldCalled, "Old registration was replaced");
+  assert.ok(newCalled, "New registration fires on replacement element");
+});
+
 QUnit.test("ConflictBehavior.Error: failed registration does not pollute state", (assert) => {
   const manager = HotkeyManager.getInstance();
   let firstCalled = false;

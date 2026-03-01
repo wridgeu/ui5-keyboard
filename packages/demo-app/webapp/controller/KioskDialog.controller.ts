@@ -144,8 +144,7 @@ export default class KioskDialog extends BaseController {
       const dialog = this._dialogA;
       this._dialogA = null;
       if (dialog.isOpen()) {
-        dialog.attachEventOnce("afterClose", () => dialog.destroy());
-        dialog.close();
+        dialog.close(); // inline afterClose handler will destroy
       } else {
         dialog.destroy();
       }
@@ -154,8 +153,7 @@ export default class KioskDialog extends BaseController {
       const dialog = this._dialogB;
       this._dialogB = null;
       if (dialog.isOpen()) {
-        dialog.attachEventOnce("afterClose", () => dialog.destroy());
-        dialog.close();
+        dialog.close(); // inline afterClose handler will destroy
       } else {
         dialog.destroy();
       }

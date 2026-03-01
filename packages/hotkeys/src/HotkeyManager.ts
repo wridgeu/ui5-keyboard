@@ -1249,7 +1249,7 @@ export default class HotkeyManager extends BaseObject {
     // Use scope-bucket lookup instead of iterating all registrations
     const bucket = this._registrationsByScope.get(scope);
     if (!bucket) return;
-    const ids = target === null ? bucket.untargetedIds : bucket.targets.get(target);
+    const ids = target === null ? bucket.untargetedIds : this._getTargetRegistrationIds(bucket, target);
     if (!ids || ids.size === 0) return;
 
     // Find conflicts by matching normalizedHotkey within the bucket
