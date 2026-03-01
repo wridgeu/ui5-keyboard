@@ -166,11 +166,3 @@ export function reloadBundles(): Promise<void> {
 
   return loadBundles();
 }
-
-/** @internal Test-only: reset all state. */
-export function _resetForTest(): void {
-  activeConfig = null;
-  enhancementBundles = null;
-  generation = 0;
-  overrideHook = null;
-}
