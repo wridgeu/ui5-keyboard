@@ -1,6 +1,8 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$KeyboardTypeChangeEvent } from "ui5/kiosk/KioskKeyboard";
 import type UI5Event from "sap/ui/base/Event";
+import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
+import JSONModel from "sap/ui/model/json/JSONModel";
 import MessageToast from "sap/m/MessageToast";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
@@ -16,28 +18,42 @@ type AlertButtonDemoAlertEventParameters = {
 type AlertButton$DemoAlertEvent = UI5Event<AlertButtonDemoAlertEventParameters>;
 
 /**
- * Demonstrates the `inputIds` property — the keyboard only responds to
+ * Demonstrates the `inputIds` property - the keyboard only responds to
  * focus events from the listed input controls.
  *
  * @name demo.hotkeys.controller.KioskInputIds
  */
 export default class KioskInputIds extends BaseController {
+  private static readonly _MODEL_NAME = "inputIds";
+
   onInit(): void {
-    const stateModel = this.getStateModel();
-    stateModel.setProperty("/kioskCurrentTarget", "None");
-    stateModel.setProperty("/kioskAutoType", false);
-    stateModel.setProperty("/kioskKeyboardType", "Full");
+    this.getView()!.setModel(
+      new JSONModel({
+        kioskCurrentTarget: "None",
+        kioskAutoType: false,
+        kioskKeyboardType: "Full",
+        kioskLastKey: "None",
+      }),
+      KioskInputIds._MODEL_NAME,
+    );
 
     // Track target changes via afterOpen/key events
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
     kb.attachEvent("afterOpen", () => {
       this._updateTargetStatus();
     });
+
+    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+  }
+
+  onExit(): void {
+    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this._setRouteActive(false);
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
     this._updateTargetStatus();
-    this.getStateModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
+    this._getViewModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
   }
 
   onDemoAlert(event: AlertButton$DemoAlertEvent): void {
@@ -50,16 +66,43 @@ export default class KioskInputIds extends BaseController {
   }
 
   onKeyboardTypeChange(event: KioskKeyboard$KeyboardTypeChangeEvent): void {
-    this.getStateModel().setProperty("/kioskKeyboardType", event.getParameter("keyboardType"));
+    this._getViewModel().setProperty("/kioskKeyboardType", event.getParameter("keyboardType"));
   }
 
   onNavBack(): void {
+    this._setRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+  }
+
+  private _onRouteMatched(event: Router$RouteMatchedEvent): void {
+    this._setRouteActive(event.getParameter("name") === Scope.KioskInputIds);
+  }
+
+  private _setRouteActive(active: boolean): void {
+    const kb = this.byId("inputIdsKeyboard") as KioskKeyboard | undefined;
+    if (!kb) return;
+
+    if (active) {
+      kb.setAutoShow(true);
+      return;
+    }
+
+    kb.close();
+    kb.setAutoShow(false);
+    const viewModel = this._getViewModel();
+    viewModel.setProperty("/kioskLastKey", "None");
+    viewModel.setProperty("/kioskCurrentTarget", "None");
+    viewModel.setProperty("/kioskKeyboardType", "Full");
+    viewModel.setProperty("/kioskAutoType", false);
   }
 
   private _updateTargetStatus(): void {
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
     const targetId = kb.getTargetInput();
-    this.getStateModel().setProperty("/kioskCurrentTarget", targetId || "None");
+    this._getViewModel().setProperty("/kioskCurrentTarget", targetId || "None");
+  }
+
+  private _getViewModel(): JSONModel {
+    return this.getView()!.getModel(KioskInputIds._MODEL_NAME) as JSONModel;
   }
 }

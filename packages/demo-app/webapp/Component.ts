@@ -1,4 +1,5 @@
 import UIComponent from "sap/ui/core/UIComponent";
+import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
@@ -35,19 +36,35 @@ export default class Component extends UIComponent {
     // Keep the state model's activeScope in sync with route changes.
     // enableRouterIntegration handles scope push/pop; this listener mirrors it to the model.
     const stateModel = this.getModel("state") as JSONModel;
+    const applyRuntimeState = () => {
+      const platform = this._hotkeyManager.getPlatform();
+      stateModel.setProperty("/platform", platform);
+      stateModel.setProperty("/saveLabel", formatForDisplay("Mod+S", platform));
+      stateModel.setProperty("/escapeLabel", formatForDisplay("Escape", platform));
+      stateModel.setProperty("/f5Label", formatForDisplay("F5", platform));
+      stateModel.setProperty("/navLabel", formatForDisplay("Mod+D", platform));
+    };
+
     this._routeMatchedHandler = () => {
       stateModel.setProperty("/activeScope", this._hotkeyManager.getActiveScope());
     };
     this.getRouter().attachRouteMatched(this._routeMatchedHandler, this);
-    const platform = this._hotkeyManager.getPlatform();
-    stateModel.setProperty("/platform", platform);
-    stateModel.setProperty("/saveLabel", formatForDisplay("Mod+S", platform));
-    stateModel.setProperty("/escapeLabel", formatForDisplay("Escape", platform));
-    stateModel.setProperty("/f5Label", formatForDisplay("F5", platform));
-    stateModel.setProperty("/navLabel", formatForDisplay("Mod+D", platform));
+
+    // Keep runtime-derived state stable when the JSONModel URI finishes async loading.
+    applyRuntimeState();
+    void stateModel
+      .dataLoaded()
+      .then(() => {
+        if (this.isDestroyed()) return;
+        applyRuntimeState();
+        this._routeMatchedHandler();
+      })
+      .catch((err: unknown) => {
+        Log.warning(`State model fixture failed to load: ${err}`, undefined, "demo.hotkeys.Component");
+      });
 
     // Register global shortcuts (active across all views).
-    // Global scope is the default — no need to specify scope explicitly.
+    // Global scope is the default - no need to specify scope explicitly.
     this._hotkeys.register(
       "Mod+S",
       (_event, details) => {
@@ -71,7 +88,7 @@ export default class Component extends UIComponent {
       },
     );
 
-    // Track physical keyboard presses into the state model for demo event logs
+    // Track physical keyboard presses separately from kiosk virtual key events.
     this._keyDownHandler = (e: KeyboardEvent) => {
       if (e.key === "Unidentified" || e.key === "Process") return;
       const parts: string[] = [];
@@ -80,7 +97,7 @@ export default class Component extends UIComponent {
       if (e.shiftKey) parts.push("Shift");
       if (e.metaKey) parts.push("Meta");
       if (!["Control", "Alt", "Shift", "Meta"].includes(e.key)) parts.push(e.key);
-      if (parts.length) stateModel.setProperty("/kioskLastKey", parts.join(" + "));
+      if (parts.length) stateModel.setProperty("/physicalLastKey", parts.join(" + "));
     };
     document.addEventListener("keydown", this._keyDownHandler, true);
 

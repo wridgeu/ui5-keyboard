@@ -2,13 +2,6 @@ import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import { fireKey, fireKeyOn } from "./test-helpers";
 
-declare const sinon: {
-  useFakeTimers: () => {
-    tick: (ms: number) => number;
-    restore: () => void;
-  };
-};
-
 const fixture = document.getElementById("qunit-fixture")!;
 
 /**
@@ -90,6 +83,64 @@ QUnit.test("ConflictBehavior.Error: same target in same scope DOES conflict", (a
     /already registered/,
     "Same hotkey on same target in same scope throws",
   );
+});
+
+QUnit.test("ConflictBehavior.Error: re-rendered element with same id conflicts via id-index", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const original = document.createElement("div");
+  original.id = "hk-conflict-rerender";
+  original.tabIndex = 0;
+  fixture.appendChild(original);
+
+  manager.register("F8", () => {}, { target: original, conflictBehavior: "error" });
+
+  // Simulate re-render: new DOM node with same id
+  const replacement = document.createElement("div");
+  replacement.id = "hk-conflict-rerender";
+  replacement.tabIndex = 0;
+  original.replaceWith(replacement);
+
+  assert.throws(
+    () => manager.register("F8", () => {}, { target: replacement, conflictBehavior: "error" }),
+    /already registered/,
+    "Detects conflict via targetIdIndex when DOM node is replaced with same id",
+  );
+});
+
+QUnit.test("ConflictBehavior.Replace: re-rendered element with same id replaces via id-index", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  let oldCalled = false;
+  let newCalled = false;
+
+  const original = document.createElement("div");
+  original.id = "hk-replace-rerender";
+  original.tabIndex = 0;
+  fixture.appendChild(original);
+
+  manager.register(
+    "F8",
+    () => {
+      oldCalled = true;
+    },
+    { target: original, conflictBehavior: "replace" },
+  );
+
+  const replacement = document.createElement("div");
+  replacement.id = "hk-replace-rerender";
+  replacement.tabIndex = 0;
+  original.replaceWith(replacement);
+
+  manager.register(
+    "F8",
+    () => {
+      newCalled = true;
+    },
+    { target: replacement, conflictBehavior: "replace" },
+  );
+
+  fireKeyOn(replacement, "F8");
+  assert.notOk(oldCalled, "Old registration was replaced");
+  assert.ok(newCalled, "New registration fires on replacement element");
 });
 
 QUnit.test("ConflictBehavior.Error: failed registration does not pollute state", (assert) => {
@@ -476,6 +527,28 @@ QUnit.test("setUnhandledHandler() on destroyed manager throws", (assert) => {
   );
 });
 
+QUnit.test("addGenericRootId() on destroyed manager throws", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  manager.destroy();
+
+  assert.throws(
+    () => manager.addGenericRootId("custom-root"),
+    /destroyed/i,
+    "addGenericRootId() throws on destroyed manager",
+  );
+});
+
+QUnit.test("removeGenericRootId() on destroyed manager throws", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  manager.destroy();
+
+  assert.throws(
+    () => manager.removeGenericRootId("custom-root"),
+    /destroyed/i,
+    "removeGenericRootId() throws on destroyed manager",
+  );
+});
+
 // ══════════════════════════════════════════════
 // Recorder abuse
 // ══════════════════════════════════════════════
@@ -491,7 +564,6 @@ QUnit.test("Double-destroy recorder is idempotent", (assert) => {
 
   recorder.destroy(); // Second destroy — must not throw
   assert.ok(recorder.isDestroyed, "Still destroyed after double call");
-  assert.ok(true, "No error on double destroy");
 });
 
 QUnit.test("cancel() on destroyed recorder does not throw", (assert) => {
@@ -567,6 +639,59 @@ QUnit.test("onRecord callback throws — manager remains functional", (assert) =
   recorder.destroy();
 });
 
+QUnit.test("onRecord callback throws — external window-capture listeners do not see the event", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const recorder = manager.createRecorder({
+    onRecord: () => {
+      throw new Error("Intentional onRecord error");
+    },
+  });
+
+  // Register a window-capture listener AFTER the manager (so it would fire
+  // second). The recorder's own stopImmediatePropagation() call (pre-throw)
+  // ensures this listener never sees the event — the call happens before
+  // the onRecord callback that throws.
+  let externalSaw = false;
+  const externalListener = () => {
+    externalSaw = true;
+  };
+  window.addEventListener("keydown", externalListener, true);
+
+  recorder.start();
+  fireKey("F5");
+
+  assert.notOk(externalSaw, "External window-capture listener did NOT see the event after interceptor throw");
+
+  window.removeEventListener("keydown", externalListener, true);
+  recorder.destroy();
+});
+
+QUnit.test("onCancel callback throws — recorder stops and manager remains functional", (assert) => {
+  const manager = HotkeyManager.getInstance();
+  const recorder = manager.createRecorder({
+    onRecord: () => {},
+    onCancel: () => {
+      throw new Error("Intentional onCancel error");
+    },
+  });
+
+  recorder.start();
+  // Escape triggers cancel() → onCancel throws → caught by pipeline try-catch
+  fireKey("Escape");
+
+  assert.notOk(recorder.isRecording, "Recorder stopped despite onCancel throw");
+
+  // Manager should still dispatch normally
+  let managerFired = false;
+  manager.register("F6", () => {
+    managerFired = true;
+  });
+  fireKey("F6");
+  assert.ok(managerFired, "Manager dispatches normally after onCancel callback throw");
+
+  recorder.destroy();
+});
+
 QUnit.test("Recorder start after manager destroy is a no-op", (assert) => {
   const manager = HotkeyManager.getInstance();
   const recorder = manager.createRecorder({ onRecord: () => {} });
@@ -587,7 +712,7 @@ QUnit.module("Negative / Edge-Case — Target-scoped", freshManagerHooks());
 QUnit.test("Target removed from DOM before keypress — hotkey does not fire", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let fired = false;
   manager.register(
@@ -626,7 +751,7 @@ QUnit.test("Target never added to DOM — hotkey does not fire", (assert) => {
 QUnit.test("Target removed and re-added — hotkey resumes", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let callCount = 0;
   manager.register(
@@ -645,17 +770,15 @@ QUnit.test("Target removed and re-added — hotkey resumes", (assert) => {
   assert.strictEqual(callCount, 1, "Does NOT fire while target is detached");
 
   // Re-add to DOM
-  document.body.appendChild(target);
+  fixture.appendChild(target);
   fireKeyOn(target, "Escape");
   assert.strictEqual(callCount, 2, "Fires again after target is re-added to DOM");
-
-  target.remove();
 });
 
 QUnit.test("Unregister target-scoped hotkey after target removed — no leak", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   const handle = manager.register("F5", () => {}, { target });
   target.remove();

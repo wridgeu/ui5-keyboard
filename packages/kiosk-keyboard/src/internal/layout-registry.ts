@@ -1,27 +1,43 @@
 import Localization from "sap/base/i18n/Localization";
 import Log from "sap/base/Log";
 import type { LayoutDefinition } from "../types";
-import layouts from "../layouts/index";
 import DEFAULT_LAYOUT from "../layouts/default-layout";
+import qwerty from "../layouts/qwerty";
+import qwertzDe from "../layouts/qwertz-de";
+import numeric from "../layouts/numeric";
+import special from "../layouts/special";
+import numpad from "../layouts/numpad";
+import fkeys from "../layouts/fkeys";
+import nav from "../layouts/nav";
+import qwertyFk from "../layouts/qwerty-fk";
+import qwertzDeFk from "../layouts/qwertz-de-fk";
+import qwertyNav from "../layouts/qwerty-nav";
+import qwertzDeNav from "../layouts/qwertz-de-nav";
+
+const layouts: Map<string, LayoutDefinition> = new Map([
+  ["qwerty", qwerty],
+  ["qwertz-de", qwertzDe],
+  ["numeric", numeric],
+  ["special", special],
+  ["numpad", numpad],
+  ["fkeys", fkeys],
+  ["nav", nav],
+  ["qwerty-fk", qwertyFk],
+  ["qwertz-de-fk", qwertzDeFk],
+  ["qwerty-nav", qwertyNav],
+  ["qwertz-de-nav", qwertzDeNav],
+]);
 
 /** Built-in layout names that cannot be overwritten by registerLayout. */
-const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(Object.keys(layouts));
+const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
 
-const FORBIDDEN_KEYS: ReadonlySet<string> = new Set(["__proto__", "prototype", "constructor"]);
-
-const DEFAULT_LOCALE_LAYOUT_MAP: Readonly<Record<string, string>> = Object.freeze({
-  de: "qwertz-de",
-});
+const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([["de", "qwertz-de"]]);
 
 /** BCP-47 language prefix -> layout name. Checked after exact match. */
-const LOCALE_LAYOUT_MAP: Record<string, string> = Object.assign(Object.create(null), DEFAULT_LOCALE_LAYOUT_MAP);
-
-function isSafeMapKey(key: string): boolean {
-  return key.length > 0 && !FORBIDDEN_KEYS.has(key);
-}
+const LOCALE_LAYOUT_MAP: Map<string, string> = new Map(DEFAULT_LOCALE_LAYOUT_MAP);
 
 function isRegisteredLayout(layout: string): boolean {
-  return Object.hasOwn(layouts, layout);
+  return layouts.has(layout);
 }
 
 /**
@@ -43,7 +59,7 @@ function normalizeLowerString(value: unknown, argName: string): string | undefin
 }
 
 function resolveLocaleMappedLayout(locale: string): string | null {
-  const mappedLayout = LOCALE_LAYOUT_MAP[locale];
+  const mappedLayout = LOCALE_LAYOUT_MAP.get(locale);
   if (!mappedLayout) return null;
   return isRegisteredLayout(mappedLayout) ? mappedLayout : null;
 }
@@ -62,11 +78,6 @@ function resolveLocaleMappedLayout(locale: string): string | null {
 export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return;
-
-  if (!isSafeMapKey(name)) {
-    Log.warning(`Invalid layout name "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
 
   if (BUILTIN_LAYOUTS.has(name)) {
     Log.warning(
@@ -92,7 +103,7 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
     return;
   }
 
-  layouts[name] = oDefinition;
+  layouts.set(name, oDefinition);
 }
 
 /**
@@ -103,26 +114,21 @@ export function unregisterLayout(sName: string): void {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return;
 
-  if (!isSafeMapKey(name)) {
-    Log.warning(`Invalid layout name "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
-
   if (BUILTIN_LAYOUTS.has(name)) {
     Log.warning(`Cannot remove built-in layout "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
     return;
   }
 
-  delete layouts[name];
+  layouts.delete(name);
 }
 
 /**
  * Removes all custom layouts and keeps built-in layouts intact.
  */
 export function resetCustomLayouts(): void {
-  for (const layoutName of Object.keys(layouts)) {
+  for (const layoutName of layouts.keys()) {
     if (!BUILTIN_LAYOUTS.has(layoutName)) {
-      delete layouts[layoutName];
+      layouts.delete(layoutName);
     }
   }
 }
@@ -134,7 +140,7 @@ export function resetCustomLayouts(): void {
 export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return undefined;
-  return Object.hasOwn(layouts, name) ? layouts[name] : undefined;
+  return layouts.get(name);
 }
 
 /**
@@ -143,13 +149,15 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
  */
 export function getLayoutOrDefault(sName: string): LayoutDefinition {
   const name = normalizeLowerString(sName, "layout name");
-  if (!name) return layouts[DEFAULT_LAYOUT];
-  return (Object.hasOwn(layouts, name) ? layouts[name] : undefined) ?? layouts[DEFAULT_LAYOUT];
+  const fallback = layouts.get(DEFAULT_LAYOUT);
+  if (!fallback) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
+  if (!name) return fallback;
+  return layouts.get(name) ?? fallback;
 }
 
 /** Returns the names of all registered layouts (built-in + custom). */
 export function getRegisteredLayoutNames(): string[] {
-  return Object.keys(layouts);
+  return [...layouts.keys()];
 }
 
 /** Returns whether the given layout name is a built-in layout. */
@@ -175,16 +183,6 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
   const layout = normalizeLowerString(sLayout, "layout map value");
   if (!locale || !layout) return;
 
-  if (!isSafeMapKey(locale)) {
-    Log.warning(`Invalid locale map key "${locale}".`, undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
-
-  if (!isSafeMapKey(layout)) {
-    Log.warning(`Invalid layout map value "${layout}".`, undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
-
   if (!isRegisteredLayout(layout)) {
     Log.warning(
       `Locale "${locale}" maps to unknown layout "${layout}". It will be used once the layout is registered.`,
@@ -193,7 +191,7 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
     );
   }
 
-  LOCALE_LAYOUT_MAP[locale] = layout;
+  LOCALE_LAYOUT_MAP.set(locale, layout);
 }
 
 /**
@@ -203,22 +201,17 @@ export function unregisterLocaleLayout(sLocale: string): void {
   const locale = normalizeLowerString(sLocale, "locale map key");
   if (!locale) return;
 
-  if (!isSafeMapKey(locale)) {
-    Log.warning(`Invalid locale map key "${locale}".`, undefined, "ui5.kiosk.KioskKeyboard");
-    return;
-  }
-
-  delete LOCALE_LAYOUT_MAP[locale];
+  LOCALE_LAYOUT_MAP.delete(locale);
 }
 
 /**
  * Resets locale mappings to the built-in defaults.
  */
 export function resetLocaleLayouts(): void {
-  for (const key of Object.keys(LOCALE_LAYOUT_MAP)) {
-    delete LOCALE_LAYOUT_MAP[key];
+  LOCALE_LAYOUT_MAP.clear();
+  for (const [k, v] of DEFAULT_LOCALE_LAYOUT_MAP) {
+    LOCALE_LAYOUT_MAP.set(k, v);
   }
-  Object.assign(LOCALE_LAYOUT_MAP, DEFAULT_LOCALE_LAYOUT_MAP);
 }
 
 /**

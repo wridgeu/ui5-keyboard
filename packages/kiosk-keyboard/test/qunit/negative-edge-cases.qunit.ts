@@ -1,7 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
-import type { LayoutDefinition } from "ui5/kiosk/types";
 import { placeAndWait, waitForRender, tapKey, isShiftActive, isCapsLock } from "./test-helpers";
 
 // ──────────────────────────────────────────────

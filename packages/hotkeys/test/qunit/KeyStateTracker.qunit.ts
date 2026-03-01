@@ -206,6 +206,7 @@ QUnit.test("Keyup removes held key by code when key value changed", (assert) => 
 QUnit.test("Direct instantiation throws without INTERNAL_TOKEN", (assert) => {
   assert.throws(
     () => {
+      // eslint-disable-next-line no-new -- assert.throws requires the side effect
       new KeyStateTracker(Platform.Windows, Symbol() as never);
     },
     /cannot be instantiated directly/i,

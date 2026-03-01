@@ -6,7 +6,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Component-level keyboard demo — the keyboard is created once, placed
+ * Component-level keyboard demo - the keyboard is created once, placed
  * in the `sap-ui-static` UIArea, and reused while this controller instance lives.
  *
  * @name demo.hotkeys.controller.KioskComponent
@@ -18,10 +18,8 @@ export default class KioskComponent extends BaseController {
 
   onInit(): void {
     const stateModel = this.getStateModel();
-    stateModel.setProperty("/kioskIsOpen", false);
-    stateModel.setProperty("/kioskLastKey", "None");
 
-    // Lazily create the keyboard once — it lives in sap-ui-static
+    // Lazily create the keyboard once - it lives in sap-ui-static
     if (!KioskComponent._keyboard) {
       KioskComponent._keyboard = new KioskKeyboard({
         docked: true,

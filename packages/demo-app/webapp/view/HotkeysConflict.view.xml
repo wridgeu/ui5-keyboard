@@ -1,0 +1,45 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.HotkeysConflict"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="Hotkeys Demo - Conflict Behavior" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <content>
+            <Panel headerText="What to Test on This Page" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <MessageStrip
+                        type="Information"
+                        showIcon="true"
+                        text="Purpose: compare duplicate-hotkey conflict strategies for the same hotkey and scope." />
+                    <Text
+                        text="Use the strategy buttons to register duplicate Ctrl+Shift+K handlers, then press Ctrl+Shift+K and observe Status/Last Action." class="sapUiSmallMarginTop" />
+                    <Text text="Expected: Warn logs a warning and keeps existing priority; Allow permits duplicates; Replace swaps existing with the latest registration." />
+                    <Text text="Expected: Error rejects the second registration and shows a failure status while the first registration remains active. Reset clears all conflict-demo handlers." />
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Conflict Strategy" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="Configure duplicate Ctrl+Shift+K registrations and test behavior." />
+                    <HBox class="sapUiSmallMarginTop" wrap="Wrap">
+                        <Button text="Warn" press=".onConflictWarn" class="sapUiTinyMarginEnd sapUiTinyMarginBottom" />
+                        <Button text="Allow" press=".onConflictAllow" class="sapUiTinyMarginEnd sapUiTinyMarginBottom" />
+                        <Button text="Replace" press=".onConflictReplace" class="sapUiTinyMarginEnd sapUiTinyMarginBottom" />
+                        <Button text="Error" press=".onConflictError" type="Reject"
+                            class="sapUiTinyMarginEnd sapUiTinyMarginBottom" />
+                        <Button text="Reset" press=".onConflictReset" class="sapUiTinyMarginBottom" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Status">
+                <VBox class="sapUiSmallMargin">
+                    <ObjectStatus text="{state>/conflictStatus}" state="{state>/conflictState}" />
+                    <HBox class="sapUiSmallMarginTop">
+                        <Label text="Last Action:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/lastAction}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>

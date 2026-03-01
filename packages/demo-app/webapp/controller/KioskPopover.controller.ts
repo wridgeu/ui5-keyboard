@@ -6,7 +6,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Popover-mounted keyboard demo — opens a Popover containing a
+ * Popover-mounted keyboard demo - opens a Popover containing a
  * KioskKeyboard that targets the adjacent input field.
  *
  * The popover and keyboard are lazily created and reused across opens.
@@ -14,13 +14,8 @@ import BaseController from "./BaseController";
  * @name demo.hotkeys.controller.KioskPopover
  */
 export default class KioskPopover extends BaseController {
-  private _popover!: Popover | null;
-  private _keyboard!: KioskKeyboard | null;
-
-  onInit(): void {
-    this._popover = null;
-    this._keyboard = null;
-  }
+  private _popover: Popover | null = null;
+  private _keyboard: KioskKeyboard | null = null;
 
   onOpenKeyboard(event: Button$PressEvent): void {
     const button = event.getSource();

@@ -75,7 +75,7 @@ const LAYOUT_DESCRIPTIONS: Record<string, string> = {
 };
 
 /**
- * Custom layouts gallery — three LayoutDefinitions registered via
+ * Custom layouts gallery - three LayoutDefinitions registered via
  * registerLayout(), switchable via buttons.
  *
  * @name demo.hotkeys.controller.KioskCustomLayouts

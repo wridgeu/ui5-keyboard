@@ -5,6 +5,23 @@
     xmlns:kiosk="ui5.kiosk">
     <Page title="Form Workflow Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Active Field:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/formActiveField}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Keyboard Type:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/formKeyboardType}" state="Success" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{state>/formLastKey}" state="Information" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
             <Panel headerText="Self-Service Check-In" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Tap a field to begin. Press Enter on the keyboard to advance to the next field. The keyboard auto-switches between Full and Numpad based on input type." />
@@ -53,23 +70,6 @@
                         type="Emphasized"
                         press=".onSubmit"
                         class="sapUiSmallMarginTop" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Status" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <HBox>
-                        <Label text="Active Field:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/formActiveField}" state="Information" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Keyboard Type:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/formKeyboardType}" state="Success" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/formLastKey}" state="Information" />
-                    </HBox>
                 </VBox>
             </Panel>
 

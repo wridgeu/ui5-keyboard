@@ -2,9 +2,7 @@
 
 ## Executive Summary
 
-This library is architecturally superior to both a real-world production warehouse app's hand-rolled ShortcutHandler and UI5's built-in `CommandExecution`. The LIFO scope stack with two-pass matching, smart `ignoreInputs: "auto"`, lazy dialog detection, and router integration form a cohesive design that addresses real pain points that UI5's own solution fails to solve (focus requirement, key bombing, no scope stack). TanStack Hotkeys validates many of the design choices (singleton, conflict behaviors, cross-platform Mod).
-
----
+Compared with a production hand-rolled ShortcutHandler and UI5's built-in `CommandExecution`, this library provides a broader feature set: LIFO scope stack with two-pass matching, smart `ignoreInputs: "auto"`, lazy dialog detection, and router integration. TanStack Hotkeys also aligns with several design choices used here (singleton, conflict behaviors, cross-platform Mod).
 
 ## 1. Comparison: UI5 CommandExecution
 
@@ -28,8 +26,6 @@ This library is architecturally superior to both a real-world production warehou
 | Router integration   | None                       | `enableRouterIntegration()`            |
 | Input suppression    | None                       | Smart `ignoreInputs: "auto"`           |
 
----
-
 ## 2. Comparison: TanStack Hotkeys
 
 ### Key Differences
@@ -43,8 +39,6 @@ This library is architecturally superior to both a real-world production warehou
 | Key state tracking | `KeyStateTracker`                 | `KeyStateTracker`                          |
 | Hotkey recording   | `HotkeyRecorder`                  | `HotkeyRecorder`                           |
 | Type safety        | Template literal union type       | Template literal union type (`Hotkey`)     |
-
----
 
 ## 3. Implementation Status
 
@@ -62,7 +56,7 @@ This library is architecturally superior to both a real-world production warehou
 | 8   | Key state tracking                                   | Done — `KeyStateTracker` class                                                 |
 | 9   | Disallowed shortcut warnings at registration time    | Done — logged via `_logValidationWarnings()` on register                       |
 | 10  | AltGr guard (Windows)                                | Done — tracks `event.location` for right-Alt                                   |
-| 11  | Target element binding                               | Done — `target` option with ref-counted listeners                              |
+| 11  | Target element binding                               | Done — `target` option with `composedPath()`-based matching (innermost wins)   |
 | 12  | Unhandled key callback                               | Done — `setUnhandledHandler()` with reason enum                                |
 | 13  | Router integration                                   | Done — `enableRouterIntegration()` with `beforeRouteMatched`                   |
 | 14  | Dialog scope lifecycle                               | Done — manual `pushScope`/`popScope` for non-route scopes                      |
@@ -76,8 +70,6 @@ This library is architecturally superior to both a real-world production warehou
 | 3   | `ShortcutHintsMixin` integration for UI5 controls           | Medium | Low    |
 | 4   | `requireReset` option (fire once, require full key release) | Low    | Low    |
 
----
-
 ## 4. FLP & Standalone Compatibility
 
 The library works in both standalone and FLP because:
@@ -88,8 +80,6 @@ The library works in both standalone and FLP because:
 - Scope stack is manual, not tied to FLP shell
 
 FLP-reserved shortcuts (F6, Shift+F6, Alt+0) are included in `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS` blocklists. Registration warnings are logged when these are used.
-
----
 
 ## References
 

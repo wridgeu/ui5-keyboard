@@ -9,6 +9,7 @@
 ## History
 
 - [Black-Box Test Plan](./history/BLACKBOX-TEST-PLAN.md)
+- [Centralized EventDispatcher & Suspend Guard](./history/implemented-proposals/HOTKEY-MANAGER-SUSPEND-GUARD.md)
 
 ## Proposals
 

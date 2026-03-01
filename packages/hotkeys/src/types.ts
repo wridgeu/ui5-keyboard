@@ -231,14 +231,20 @@ export interface HotkeyOptions {
    * The hotkey will only fire when the target element appears in the event's
    * `composedPath()`. Scopes still apply — both target and scope must match.
    *
-   * For nested targets with the same key, the innermost matching target wins.
+   * For nested targets with the same key, the innermost matching target fires.
    *
-   * **Note:** Document-level hotkeys with `stopPropagation: true` (the default)
-   * will prevent target-bound hotkeys with the same key from firing, because
-   * the dispatch pipeline checks document-level registrations before target-scoped ones.
-   * Set `stopPropagation: false` on the document-level registration to allow both.
+   * **Dispatch order:** Target-scoped handlers fire before untargeted handlers.
+   * A target-scoped match with `stopPropagation: true` (the default) prevents
+   * untargeted handlers for the same key from firing. Set `stopPropagation: false`
+   * on the target-scoped registration to allow both target and untargeted handlers.
+   *
+   * **Focus fallback (Escape only):** When the browser moves focus to a generic
+   * root node (body, UIArea) before dispatching the keydown, the manager
+   * reconstructs the path from the most recently focused element. This
+   * fallback is limited to the Escape key and consumed after a single use.
+   * Other keys are not affected by this behavior.
    */
-  target?: HTMLElement | Document;
+  target?: HTMLElement | null;
 }
 
 /**
@@ -327,7 +333,7 @@ export interface ResolvedHotkeyOptions {
   ignoreRepeat: boolean;
   suppressInPopups: boolean;
   conflictBehavior: ConflictBehavior;
-  target: HTMLElement | Document | null;
+  target: HTMLElement | null;
 }
 
 // ──────────────────────────────────────────────
@@ -444,6 +450,16 @@ export interface SequenceOptions {
   preventDefault?: boolean;
   /** Stop propagation on the final key. @default true */
   stopPropagation?: boolean;
+  /**
+   * Per-registration callback for mid-sequence progress.
+   *
+   * Fires after each intermediate key with progress info (completed steps,
+   * total steps, next expected key). When set, takes precedence over the
+   * global `setSequencePendingHandler` for this registration.
+   *
+   * Dies with the registration — no manual cleanup needed.
+   */
+  onPending?: SequencePendingCallback;
 }
 
 /**
@@ -494,6 +510,7 @@ export interface SequenceRegistration {
   ignoreInputs: boolean | "auto";
   preventDefault: boolean;
   stopPropagation: boolean;
+  onPending: SequencePendingCallback | null;
 }
 
 /**

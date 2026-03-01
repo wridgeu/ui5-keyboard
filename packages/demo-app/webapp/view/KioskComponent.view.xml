@@ -6,7 +6,7 @@
         <content>
             <Panel headerText="Persistent Keyboard" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="This keyboard is created in the controller and placed in the sap-ui-static UIArea. It persists across navigation. Click 'Round-Trip Navigation' to navigate away and auto-return after 2 seconds — the keyboard stays visible the whole time." />
+                    <Text text="This keyboard is created in the controller and placed in the sap-ui-static UIArea. It persists across navigation. Click 'Round-Trip Navigation' to navigate away and return after 2 seconds; the keyboard stays visible throughout." />
                     <Label text="Input Field" labelFor="compInput" class="sapUiSmallMarginTop" />
                     <Input id="compInput" placeholder="Type here..." width="100%" />
                     <HBox class="sapUiSmallMarginTop">

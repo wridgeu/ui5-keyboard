@@ -4,57 +4,14 @@
     xmlns="sap.m">
     <Page title="Kiosk Keyboard Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <List headerText="Choose a Demo">
+            <List
+                headerText="Choose a Demo"
+                items="{state>/kioskDemoEntries}"
+                itemPress=".onScenarioPress">
                 <StandardListItem
-                    title="Docked Keyboard"
-                    description="Auto-show, auto-type, layout switching, event log"
-                    type="Navigation"
-                    press=".onNavToDocked" />
-                <StandardListItem
-                    title="Form Workflow"
-                    description="Self-service check-in form with Enter-to-advance and auto-type"
-                    type="Navigation"
-                    press=".onNavToFormWorkflow" />
-                <StandardListItem
-                    title="Multi-Keyboard"
-                    description="Independent keyboard isolation plus shared-target inputmode ref-count visualization"
-                    type="Navigation"
-                    press=".onNavToMultiKeyboard" />
-                <StandardListItem
-                    title="Popover Keyboard"
-                    description="Keyboard inside a Popover, targeting individual inputs"
-                    type="Navigation"
-                    press=".onNavToPopover" />
-                <StandardListItem
-                    title="Dialog Integration"
-                    description="Keyboard behavior with sap.m.Dialog — auto-close and embedded approaches"
-                    type="Navigation"
-                    press=".onNavToDialog" />
-                <StandardListItem
-                    title="Input IDs Targeting"
-                    description="Selective input targeting with inputIds, native UI5 Web Components, and custom-element bridge integration"
-                    type="Navigation"
-                    press=".onNavToInputIds" />
-                <StandardListItem
-                    title="Programmatic Control"
-                    description="Full API: show, close, set type, custom layouts"
-                    type="Navigation"
-                    press=".onNavToProgrammatic" />
-                <StandardListItem
-                    title="Custom Layouts Gallery"
-                    description="Emoji picker, IP address pad, currency pad — custom LayoutDefinitions"
-                    type="Navigation"
-                    press=".onNavToCustomLayouts" />
-                <StandardListItem
-                    title="Component-Level Keyboard"
-                    description="Keyboard persists across navigation via static UIArea"
-                    type="Navigation"
-                    press=".onNavToComponent" />
-                <StandardListItem
-                    title="Focus Scenarios"
-                    description="Focus transitions, deferred close, composite controls, and live event log"
-                    type="Navigation"
-                    press=".onNavToFocusScenarios" />
+                    title="{state>title}"
+                    description="{state>description}"
+                    type="Navigation" />
             </List>
         </content>
     </Page>

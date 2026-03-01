@@ -11,7 +11,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n";
 import { KEY_ID_SUFFIX_RE, keyElementId, resolveInputOrTextarea } from "./internal/dom";
-import { KeyboardType, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, type KeyboardTypeValue, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
   unregisterLayout as registryUnregisterLayout,
@@ -28,8 +28,6 @@ import {
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
-
-type KeyboardTypeValue = (typeof KeyboardType)[keyof typeof KeyboardType];
 
 type InputFocusDelegation = {
   onfocusin: () => void;
@@ -81,7 +79,7 @@ export default class KioskKeyboard extends Control {
   declare private _inputFocusDelegation: InputFocusDelegation;
   declare private _registeredInputControlById: Map<string, string>;
   declare private _resolvedInputControlIds: Set<string>;
-  declare private _hasUnresolvedInputIds: boolean;
+
   declare private _delegatedInstances: Map<string, Control>;
   declare private _keyHighlightDelegation: KeyHighlightDelegation;
   declare private _highlightTargetId: string | null;
@@ -529,7 +527,6 @@ export default class KioskKeyboard extends Control {
     this._boundFocusOut = this._onDocumentFocusOut.bind(this);
     this._registeredInputControlById = new Map();
     this._resolvedInputControlIds = new Set();
-    this._hasUnresolvedInputIds = false;
     this._delegatedInstances = new Map();
     this._inputFocusDelegation = {
       onfocusin: () => {
@@ -1043,7 +1040,6 @@ export default class KioskKeyboard extends Control {
     const nextCountsByControlId = new Map<string, number>();
     const prevCountsByControlId = new Map<string, number>();
     const resolvedControlIds = new Set<string>();
-    let hasUnresolved = false;
 
     for (const controlId of this._registeredInputControlById.values()) {
       prevCountsByControlId.set(controlId, (prevCountsByControlId.get(controlId) ?? 0) + 1);
@@ -1052,10 +1048,7 @@ export default class KioskKeyboard extends Control {
     // Resolve current IDs to canonical control IDs.
     for (const inputId of ids) {
       const control = this._findControlById(inputId);
-      if (!control) {
-        hasUnresolved = true;
-        continue;
-      }
+      if (!control) continue;
 
       const controlId = control.getId();
       nextByInputId.set(inputId, controlId);
@@ -1092,7 +1085,6 @@ export default class KioskKeyboard extends Control {
 
     this._registeredInputControlById = nextByInputId;
     this._resolvedInputControlIds = resolvedControlIds;
-    this._hasUnresolvedInputIds = hasUnresolved;
   }
 
   private _teardownInputIds(): void {
@@ -1102,7 +1094,6 @@ export default class KioskKeyboard extends Control {
     this._delegatedInstances.clear();
     this._registeredInputControlById.clear();
     this._resolvedInputControlIds.clear();
-    this._hasUnresolvedInputIds = false;
   }
 
   private _findControlById(targetId: string): Control | null {

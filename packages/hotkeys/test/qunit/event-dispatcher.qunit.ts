@@ -1,24 +1,19 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
+import { FOCUS_PATH_FALLBACK_TTL_MS } from "ui5/hotkeys/internal/FocusFallbackTracker";
 import type Log from "sap/base/Log";
 import { fireKey, fireKeyOn, fireKeyUp, fireBlur } from "./test-helpers";
-
-declare const sinon: {
-  spy: (
-    obj: object,
-    method: string,
-  ) => {
-    callCount: number;
-    called: boolean;
-    restore: () => void;
-  };
-};
 
 let manager: HotkeyManager;
 
 QUnit.module("EventDispatcher & Suspend Guard", {
   beforeEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Not initialized yet
+    }
     manager = HotkeyManager.getInstance();
   },
   afterEach() {
@@ -106,6 +101,18 @@ QUnit.test("destroy() invalidates all guards", (assert) => {
   assert.ok(true, "release() on invalidated guards does not throw");
 });
 
+QUnit.test("suspendDispatch on destroyed manager throws", (assert) => {
+  const ref = manager;
+  ref.destroy();
+  assert.throws(
+    () => {
+      ref.suspendDispatch("after-destroy");
+    },
+    /destroyed/i,
+    "suspendDispatch() throws on a destroyed manager",
+  );
+});
+
 QUnit.test("Key state tracks during suspension", (assert) => {
   const tracker = manager.getKeyStateTracker();
   const guard = manager.suspendDispatch("test");
@@ -146,7 +153,7 @@ QUnit.test("Suspended → unhandled fires with Suspended reason", (assert) => {
 });
 
 QUnit.test("In-progress sequence times out during suspension", (assert) => {
-  const done = assert.async();
+  const clock = sinon.useFakeTimers();
   let seqFired = false;
 
   manager.registerSequence(
@@ -163,18 +170,18 @@ QUnit.test("In-progress sequence times out during suspension", (assert) => {
   // Suspend immediately
   const guard = manager.suspendDispatch("test");
 
-  // Wait for timeout to expire during suspension
-  setTimeout(() => {
-    guard.release();
-    fireKey("I"); // Should not complete sequence — timed out
+  // Advance past the sequence timeout while suspended
+  clock.tick(200);
 
-    assert.notOk(seqFired, "Sequence did NOT complete (timed out during suspension)");
-    done();
-  }, 200);
+  guard.release();
+  fireKey("I"); // Should not complete sequence — timed out
+
+  assert.notOk(seqFired, "Sequence did NOT complete (timed out during suspension)");
+  clock.restore();
 });
 
 QUnit.test("Suspend mid-sequence, release before timeout — sequence completes", (assert) => {
-  const done = assert.async();
+  const clock = sinon.useFakeTimers();
   let seqFired = false;
 
   manager.registerSequence(
@@ -191,12 +198,13 @@ QUnit.test("Suspend mid-sequence, release before timeout — sequence completes"
   // Suspend briefly
   const guard = manager.suspendDispatch("test");
 
-  setTimeout(() => {
-    guard.release();
-    fireKey("I");
-    assert.ok(seqFired, "Sequence completed after brief suspension");
-    done();
-  }, 50);
+  // Advance time but stay within sequence timeout
+  clock.tick(50);
+
+  guard.release();
+  fireKey("I");
+  assert.ok(seqFired, "Sequence completed after brief suspension");
+  clock.restore();
 });
 
 // ──────────────────────────────────────────────
@@ -253,6 +261,29 @@ QUnit.test("Interceptor active + guard active → interceptor wins", (assert) =>
   guard.release();
 });
 
+QUnit.test("Interceptor error is isolated — pipeline keeps working", (assert) => {
+  const errorRecorder = manager.createRecorder({
+    onRecord: () => {
+      throw new Error("recorder boom");
+    },
+  });
+  errorRecorder.start();
+
+  // The throwing recorder should not crash the dispatch pipeline.
+  fireKey("F5");
+  assert.notOk(errorRecorder.isRecording, "Recorder stopped despite callback throw");
+
+  errorRecorder.destroy();
+
+  // After the broken recorder is gone, normal hotkeys should still work.
+  let hotkeyFired = false;
+  manager.register("F6", () => {
+    hotkeyFired = true;
+  });
+  fireKey("F6");
+  assert.ok(hotkeyFired, "Hotkey dispatch works after broken recorder is removed");
+});
+
 // ──────────────────────────────────────────────
 // Target-scoped matching via composedPath()
 // ──────────────────────────────────────────────
@@ -298,46 +329,65 @@ QUnit.test("Target-scoped: composedPath miss", (assert) => {
   other.remove();
 });
 
-QUnit.test("Target-scoped: document priority (stopPropagation: true)", (assert) => {
+QUnit.test("Target-scoped: activeElement fallback path match", (assert) => {
   const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
   document.body.appendChild(target);
 
-  let docFired = false;
-  let targetFired = false;
-
-  // Document-level with stopPropagation: true (default) → blocks target-scoped
-  manager.register("Escape", () => {
-    docFired = true;
-  });
+  let fired = false;
   manager.register(
     "Escape",
     () => {
-      targetFired = true;
+      fired = true;
     },
     { target },
   );
 
-  fireKeyOn(target, "Escape");
-  assert.ok(docFired, "Document-level callback fired");
-  assert.notOk(targetFired, "Target-scoped callback skipped (document stopPropagation: true)");
+  input.focus();
+  fireKey("Escape");
+
+  assert.ok(fired, "Callback fires when activeElement is inside target even if event path is untargeted");
 
   target.remove();
 });
 
-QUnit.test("Target-scoped: document without stopPropagation + target — both fire", (assert) => {
-  const target = document.createElement("div");
-  document.body.appendChild(target);
+QUnit.test("Target-scoped: stale target reference with same DOM id still matches", (assert) => {
+  const original = document.createElement("div");
+  original.id = "hk-stale-target";
+  document.body.appendChild(original);
 
-  let docFired = false;
-  let targetFired = false;
-
+  let fired = false;
   manager.register(
     "Escape",
     () => {
-      docFired = true;
+      fired = true;
     },
-    { stopPropagation: false },
+    { target: original },
   );
+
+  const replacement = document.createElement("div");
+  replacement.id = "hk-stale-target";
+  original.replaceWith(replacement);
+
+  fireKeyOn(replacement, "Escape");
+  assert.ok(fired, "Callback still fires when target DOM node is replaced with same id");
+
+  replacement.remove();
+});
+
+QUnit.test("Target-scoped: target priority over document (stopPropagation: true)", (assert) => {
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+
+  let untargetedFired = false;
+  let targetFired = false;
+
+  // Untargeted handler exists, but target-scoped fires first
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  // Target-scoped with stopPropagation: true (default) → blocks untargeted
   manager.register(
     "Escape",
     () => {
@@ -347,8 +397,34 @@ QUnit.test("Target-scoped: document without stopPropagation + target — both fi
   );
 
   fireKeyOn(target, "Escape");
-  assert.ok(docFired, "Document-level callback fired");
-  assert.ok(targetFired, "Target-scoped callback also fired (doc stopPropagation: false)");
+  assert.ok(targetFired, "Target-scoped callback fired (target has priority)");
+  assert.notOk(untargetedFired, "Untargeted callback skipped (target stopPropagation: true)");
+
+  target.remove();
+});
+
+QUnit.test("Target-scoped: target without stopPropagation + document — both fire", (assert) => {
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+
+  let untargetedFired = false;
+  let targetFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  // Target-scoped with stopPropagation: false → allows untargeted to fire too
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target, stopPropagation: false },
+  );
+
+  fireKeyOn(target, "Escape");
+  assert.ok(targetFired, "Target-scoped callback fired first");
+  assert.ok(untargetedFired, "Untargeted callback also fired (target stopPropagation: false)");
 
   target.remove();
 });
@@ -610,7 +686,7 @@ QUnit.test("clearInterceptor is owner-safe — wrong owner cannot clear", (asser
 // Nested targets — stopPropagation edge cases
 // ──────────────────────────────────────────────
 
-QUnit.test("Nested targets — innermost wins even with stopPropagation: false", (assert) => {
+QUnit.test("Nested targets — default remains innermost with stopPropagation: false", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -636,12 +712,12 @@ QUnit.test("Nested targets — innermost wins even with stopPropagation: false",
 
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
-  assert.notOk(outerFired, "Outer target callback did NOT fire (innermost wins regardless of stopPropagation)");
+  assert.notOk(outerFired, "Outer target callback did NOT fire (no bubbling by default)");
 
   outer.remove();
 });
 
-QUnit.test("Nested targets — stopPropagation option on inner does not change innermost-wins behavior", (assert) => {
+QUnit.test("Nested targets — stopPropagation on inner does not change default non-bubbling", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -666,7 +742,7 @@ QUnit.test("Nested targets — stopPropagation option on inner does not change i
   );
 
   fireKeyOn(inner, "Escape");
-  assert.ok(innerFired, "Inner callback fired (innermost wins)");
+  assert.ok(innerFired, "Inner callback fired");
   assert.notOk(outerFired, "Outer callback did NOT fire");
 
   outer.remove();
@@ -676,7 +752,7 @@ QUnit.test("Nested targets — stopPropagation option on inner does not change i
 // Target-scoped: stopPropagation option vs callback
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped: stopPropagation option governs, not callback event.stopPropagation()", (assert) => {
+QUnit.test("Target-scoped: option governs bubbling, not callback event.stopPropagation()", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -696,9 +772,8 @@ QUnit.test("Target-scoped: stopPropagation option governs, not callback event.st
     "Escape",
     (event) => {
       innerFired = true;
-      // Callback explicitly calls event.stopPropagation(), but the OPTION is false.
-      // The pipeline should ignore the DOM state and still check outer targets
-      // for skip-reason tracking (though innermost still wins for execution).
+      // Callback explicitly calls event.stopPropagation(), but option-based
+      // dispatch behavior is controlled by registration options.
       event.stopPropagation();
     },
     { target: inner, stopPropagation: false },
@@ -706,10 +781,7 @@ QUnit.test("Target-scoped: stopPropagation option governs, not callback event.st
 
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
-  // Outer still does NOT fire because innermost-wins — but the key point is that
-  // the pipeline did NOT short-circuit before checking outer targets (it continued
-  // iterating for skip-reason tracking because option was false).
-  assert.notOk(outerFired, "Outer target did NOT fire (innermost wins regardless)");
+  assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
 
   outer.remove();
 });
@@ -855,26 +927,18 @@ QUnit.test("Window capture listener fires even with stopPropagation: true", (ass
 // Target-scoped: target = document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped: target = document is lower priority than document-level", (assert) => {
-  let docLevelFired = false;
-  let targetDocFired = false;
-
-  // Document-level (no target) — higher priority
-  manager.register("F5", () => {
-    docLevelFired = true;
-  });
-  // target: document — treated as target-scoped, lower priority
+QUnit.test("Target-scoped: target = document degrades to untargeted registration", (assert) => {
+  let fired = false;
   manager.register(
     "F5",
     () => {
-      targetDocFired = true;
+      fired = true;
     },
-    { target: document },
+    { target: document as unknown as HTMLElement },
   );
 
   fireKey("F5");
-  assert.ok(docLevelFired, "Document-level registration fired");
-  assert.notOk(targetDocFired, "target:document registration did NOT fire (doc-level stopPropagation blocks it)");
+  assert.ok(fired, "Registration fires as untargeted after document target degradation");
 });
 
 // ──────────────────────────────────────────────
@@ -1067,22 +1131,7 @@ QUnit.test("composedPath fallback — event with empty composedPath uses target 
     { target },
   );
 
-  // Create a keyboard event and override composedPath to return empty
-  const event = new KeyboardEvent("keydown", {
-    key: "Escape",
-    bubbles: true,
-    cancelable: true,
-  });
-  Object.defineProperty(event, "composedPath", { value: () => [] });
-  Object.defineProperty(event, "target", { value: target });
-
-  // Dispatch on target — the fallback should use [event.target, document, window]
-  // so target should be in the path
-  target.dispatchEvent(event);
-
-  // Note: when dispatched on target, the real composedPath is used by the browser,
-  // not our mock. So we test via document dispatch where we control the event.
-  fired = false;
+  // Dispatch via window where we can control composedPath via mock
   const event2 = new KeyboardEvent("keydown", {
     key: "Escape",
     bubbles: true,
@@ -1133,7 +1182,7 @@ QUnit.test("Interceptor replacement logs warning via sap/base/Log", (assert) => 
 // Target-scoped with same-origin iframe document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped iframe document does NOT match parent document events", (assert) => {
+QUnit.test("Target-scoped iframe document degrades to untargeted registration", (assert) => {
   const done = assert.async();
 
   // Create a same-origin iframe
@@ -1147,26 +1196,18 @@ QUnit.test("Target-scoped iframe document does NOT match parent document events"
       assert.ok(iframeDoc, "iframe contentDocument is accessible (same-origin)");
 
       let fired = false;
-      // Register with target set to the iframe's document
+      // Register with target set to the iframe's document — degrades to untargeted
       const handle = manager.register(
         "Escape",
         () => {
           fired = true;
         },
-        { target: iframeDoc },
+        { target: iframeDoc as unknown as HTMLElement },
       );
 
-      // Fire a key event on the PARENT document — the iframe's document
-      // is NOT in the parent document's composedPath()
+      // After degradation to untargeted, it fires for any key event
       fireKey("Escape");
-      assert.notOk(fired, "Hotkey did NOT fire — iframe document is not in parent composedPath()");
-
-      // Verify it also doesn't fire from a child element in the parent document
-      const parentDiv = document.createElement("div");
-      document.body.appendChild(parentDiv);
-      fireKeyOn(parentDiv, "Escape");
-      assert.notOk(fired, "Hotkey did NOT fire from parent div either");
-      parentDiv.remove();
+      assert.ok(fired, "Registration fires as untargeted after document target degradation");
 
       handle.unregister();
     } finally {
@@ -1174,4 +1215,904 @@ QUnit.test("Target-scoped iframe document does NOT match parent document events"
       done();
     }
   });
+});
+
+// ──────────────────────────────────────────────
+// Three-tier target matching (inner + outer + untargeted)
+// ──────────────────────────────────────────────
+
+QUnit.test("Three-tier: focus in inner → only inner fires", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let untargetedFired = false;
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  fireKeyOn(input, "Escape");
+
+  assert.ok(innerFired, "Inner target fired");
+  assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
+  assert.notOk(untargetedFired, "Untargeted did NOT fire (stopPropagation)");
+
+  outer.remove();
+});
+
+QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  const outerButton = document.createElement("button");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  outer.appendChild(outerButton);
+  document.body.appendChild(outer);
+
+  let untargetedFired = false;
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  // Fire from sibling inside outer but outside inner
+  fireKeyOn(outerButton, "Escape");
+
+  assert.ok(outerFired, "Outer target fired");
+  assert.notOk(innerFired, "Inner target did NOT fire (event outside inner)");
+  assert.notOk(untargetedFired, "Untargeted did NOT fire (stopPropagation)");
+
+  outer.remove();
+});
+
+QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const outside = document.createElement("div");
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+  document.body.appendChild(outside);
+
+  let untargetedFired = false;
+  let outerFired = false;
+  let innerFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner },
+  );
+
+  fireKeyOn(outside, "Escape");
+
+  assert.ok(untargetedFired, "Untargeted fallback fired");
+  assert.notOk(outerFired, "Outer target did NOT fire");
+  assert.notOk(innerFired, "Inner target did NOT fire");
+
+  outer.remove();
+  outside.remove();
+});
+
+// ──────────────────────────────────────────────
+// Focus transitions — repeated Escape scenarios
+// ──────────────────────────────────────────────
+
+QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → second fires untargeted", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  const outside = document.createElement("input");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+  document.body.appendChild(outside);
+
+  let innerCount = 0;
+  let outerCount = 0;
+  let untargetedCount = 0;
+
+  manager.register("Escape", () => {
+    untargetedCount++;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerCount++;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerCount++;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  // First Escape — event originates inside inner target
+  fireKeyOn(input, "Escape");
+  assert.strictEqual(innerCount, 1, "First Escape: inner target fired");
+  assert.strictEqual(outerCount, 0, "First Escape: outer did not fire");
+  assert.strictEqual(untargetedCount, 0, "First Escape: untargeted did not fire");
+
+  // Simulate focus leaving to element outside all targets (like sap.m.Input blur)
+  outside.focus();
+
+  // Second Escape — from outside element
+  fireKeyOn(outside, "Escape");
+  assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire again");
+  assert.strictEqual(outerCount, 0, "Second Escape: outer did not fire");
+  assert.strictEqual(untargetedCount, 1, "Second Escape: untargeted fallback fired");
+
+  outer.remove();
+  outside.remove();
+});
+
+QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → second fires outer", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  const outerButton = document.createElement("button");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  outer.appendChild(outerButton);
+  document.body.appendChild(outer);
+
+  let innerCount = 0;
+  let outerCount = 0;
+  let untargetedCount = 0;
+
+  manager.register("Escape", () => {
+    untargetedCount++;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      outerCount++;
+    },
+    { target: outer, stopPropagation: true },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerCount++;
+    },
+    { target: inner, stopPropagation: true },
+  );
+
+  // First Escape — from inner target
+  fireKeyOn(input, "Escape");
+  assert.strictEqual(innerCount, 1, "First Escape: inner target fired");
+
+  // Focus moves to sibling inside outer
+  outerButton.focus();
+
+  // Second Escape — from outer target area
+  fireKeyOn(outerButton, "Escape");
+  assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire");
+  assert.strictEqual(outerCount, 1, "Second Escape: outer target fired");
+  assert.strictEqual(untargetedCount, 0, "Second Escape: untargeted did not fire (outer stopPropagation)");
+
+  outer.remove();
+});
+
+// ──────────────────────────────────────────────
+// activeElement path ordering (innermost-wins on untargeted dispatch)
+// ──────────────────────────────────────────────
+
+QUnit.test("activeElement in inner target wins over outer target on untargeted dispatch", (assert) => {
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const input = document.createElement("input");
+  inner.appendChild(input);
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  let innerFired = false;
+  let outerFired = false;
+
+  manager.register(
+    "Escape",
+    () => {
+      outerFired = true;
+    },
+    { target: outer },
+  );
+  manager.register(
+    "Escape",
+    () => {
+      innerFired = true;
+    },
+    { target: inner },
+  );
+
+  // Focus the input inside the inner target
+  input.focus();
+
+  // Dispatch on document — activeElement augmentation must place inner
+  // ancestry before outer/root entries to preserve innermost-wins.
+  fireKey("Escape");
+
+  assert.ok(innerFired, "Inner target fires (innermost-wins via activeElement augmentation)");
+  assert.notOk(outerFired, "Outer target does NOT fire");
+
+  outer.remove();
+});
+
+// ──────────────────────────────────────────────
+// Stale-ref + direct merge during rerender
+// ──────────────────────────────────────────────
+
+QUnit.test("Stale-ref registration found via id merge when fresh-ref has different key", (assert) => {
+  // Simulate rerender: register Escape on the old node, replace the node,
+  // register F5 on the new node. Pressing Escape on the new node must
+  // still find the stale-ref registration via the id-based index merge.
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+
+  const oldTarget = document.createElement("div");
+  oldTarget.id = "rerenderTarget";
+  container.appendChild(oldTarget);
+
+  let escapeFired = false;
+  let f5Fired = false;
+
+  // Register Escape on the old target (will become stale after rerender)
+  manager.register(
+    "Escape",
+    () => {
+      escapeFired = true;
+    },
+    { target: oldTarget },
+  );
+
+  // Simulate rerender: new node with the same id replaces old node
+  const newTarget = document.createElement("div");
+  newTarget.id = "rerenderTarget";
+  container.replaceChild(newTarget, oldTarget);
+
+  // Register F5 on the new target (direct-match entry exists for newTarget)
+  manager.register(
+    "F5",
+    () => {
+      f5Fired = true;
+    },
+    { target: newTarget },
+  );
+
+  // Press Escape on the new target. Without the id merge fix, the direct
+  // lookup finds newTarget's F5 registration and early-returns, missing
+  // the stale-ref Escape registration entirely.
+  fireKeyOn(newTarget, "Escape");
+
+  assert.ok(escapeFired, "Stale-ref Escape registration fires via id merge");
+  assert.notOk(f5Fired, "Fresh-ref F5 registration does NOT fire for Escape");
+
+  container.remove();
+});
+
+// ──────────────────────────────────────────────
+// Focus fallback for Escape
+// ──────────────────────────────────────────────
+
+let clock: ReturnType<typeof sinon.useFakeTimers>;
+
+QUnit.module("Focus fallback for Escape", {
+  beforeEach() {
+    clock = sinon.useFakeTimers();
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+    clock.restore();
+  },
+});
+
+QUnit.test("Focus bounces to body, Escape still matches previous target", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target },
+  );
+
+  // Focus the input (sets _lastFocusedElement = input via focusin handler)
+  input.focus();
+
+  // Blur — focus goes to body (generic root — _focusInHandler skips it)
+  input.blur();
+
+  // Fire Escape from document level — fallback should reconstruct path from _lastFocusedElement
+  fireKey("Escape");
+
+  assert.ok(fired, "Target-scoped hotkey fires via focus fallback after blur to body");
+
+  target.remove();
+});
+
+QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetCount = 0;
+  let untargetedCount = 0;
+
+  manager.register("Escape", () => {
+    untargetedCount++;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetCount++;
+    },
+    { target, stopPropagation: true },
+  );
+
+  input.focus();
+  input.blur();
+
+  fireKey("Escape");
+  assert.strictEqual(targetCount, 1, "First Escape uses blur fallback target handler");
+  assert.strictEqual(untargetedCount, 0, "First Escape does not reach untargeted handler");
+
+  fireKey("Escape");
+
+  assert.strictEqual(targetCount, 1, "First Escape uses blur fallback, second does not");
+  assert.strictEqual(untargetedCount, 1, "Second Escape falls back to untargeted handler");
+
+  target.remove();
+});
+
+QUnit.test("Focus moves to real non-target element — old target does NOT fire", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  const outside = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+  document.body.appendChild(outside);
+
+  let targetFired = false;
+  let untargetedFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Focus the input (sets _lastFocusedElement = input)
+  input.focus();
+
+  // Focus moves to a REAL element outside the target (not a generic root)
+  // _lastFocusedElement updates to 'outside'
+  outside.focus();
+
+  // Fire Escape on the outside element — target should NOT match
+  fireKeyOn(outside, "Escape");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire (focus genuinely moved away)");
+  assert.ok(untargetedFired, "Untargeted fallback fires instead");
+
+  target.remove();
+  outside.remove();
+});
+
+QUnit.test(`Fallback expires after TTL (${FOCUS_PATH_FALLBACK_TTL_MS} ms)`, (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetFired = false;
+  let untargetedFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Focus and blur within TTL — fallback would normally work
+  input.focus();
+  input.blur();
+
+  // Advance time past the TTL
+  clock.tick(FOCUS_PATH_FALLBACK_TTL_MS + 100);
+
+  fireKey("Escape");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after TTL expiry");
+  assert.ok(untargetedFired, "Untargeted handler fires instead");
+
+  target.remove();
+});
+
+QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetFired = false;
+  let untargetedFired = false;
+
+  manager.register("F5", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "F5",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Same setup as the blur-to-body test, but with F5 instead of Escape
+  input.focus();
+  input.blur();
+
+  fireKey("F5");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire for non-Escape via focus fallback");
+  assert.ok(untargetedFired, "Untargeted handler fires for F5");
+
+  target.remove();
+});
+
+// ──────────────────────────────────────────────
+// Generic root ID API
+// ──────────────────────────────────────────────
+
+QUnit.module("Generic root ID API", {
+  beforeEach() {
+    clock = sinon.useFakeTimers();
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+    clock.restore();
+  },
+});
+
+QUnit.test("addGenericRootId makes element act as generic root for focus fallback", (assert) => {
+  // Create a custom container that acts as a generic root (e.g. a shell container)
+  const shell = document.createElement("div");
+  shell.id = "myShellRoot";
+  document.body.appendChild(shell);
+
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  shell.appendChild(target);
+
+  let targetFired = false;
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Register the shell as a generic root
+  manager.addGenericRootId("myShellRoot");
+
+  // Make shell focusable so shell.focus() actually moves focus there
+  shell.tabIndex = -1;
+
+  // Focus input, then blur to the shell (now a generic root)
+  input.focus();
+  input.blur();
+  shell.focus();
+
+  // Fire Escape on the shell — fallback should reconstruct path from last focused element
+  fireKeyOn(shell, "Escape");
+
+  assert.ok(targetFired, "Target-scoped hotkey fires because shell is treated as generic root");
+
+  target.remove();
+  shell.remove();
+});
+
+QUnit.test("removeGenericRootId restores normal behavior for element", (assert) => {
+  const container = document.createElement("div");
+  container.id = "tempRoot";
+  container.tabIndex = 0;
+  document.body.appendChild(container);
+
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  container.appendChild(target);
+
+  let targetFired = false;
+  let untargetedFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Register then remove as generic root
+  manager.addGenericRootId("tempRoot");
+  manager.removeGenericRootId("tempRoot");
+
+  // Focus input then blur to the container (no longer generic root)
+  input.focus();
+  container.focus();
+
+  // Container is a real element now — fallback should NOT activate
+  fireKeyOn(container, "Escape");
+
+  assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after removeGenericRootId");
+  assert.ok(untargetedFired, "Untargeted handler fires instead");
+
+  target.remove();
+  container.remove();
+});
+
+// ──────────────────────────────────────────────
+// Disconnected activeElement guard
+// ──────────────────────────────────────────────
+
+QUnit.test("Disconnected activeElement does not augment path", (assert) => {
+  const target = document.createElement("div");
+  target.tabIndex = 0;
+  document.body.appendChild(target);
+
+  let fired = false;
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    { target },
+  );
+
+  // Focus the element, then detach it from the DOM.
+  // document.activeElement may still reference the detached element.
+  target.focus();
+  target.remove();
+
+  fireKey("F5");
+  assert.notOk(fired, "Hotkey does NOT fire when activeElement is disconnected from DOM");
+});
+
+// ──────────────────────────────────────────────
+// Rapid Escape one-shot guard
+// ──────────────────────────────────────────────
+
+QUnit.test("Rapid Escape within TTL fires target handler only once (one-shot)", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let callCount = 0;
+  manager.register(
+    "Escape",
+    () => {
+      callCount++;
+    },
+    { target, stopPropagation: false },
+  );
+
+  // Focus input inside target, then blur to body
+  input.focus();
+  input.blur();
+
+  // First Escape — fires via focus fallback, consuming _blurSeq
+  fireKey("Escape");
+  assert.strictEqual(callCount, 1, "First Escape fires via focus fallback");
+
+  // Second Escape immediately — hasUnconsumedBlur is false, fallback not used
+  fireKey("Escape");
+  assert.strictEqual(callCount, 1, "Second Escape does NOT fire — one-shot consumed");
+
+  target.remove();
+});
+
+// ──────────────────────────────────────────────
+// targetIdIndex merge dedup
+// ──────────────────────────────────────────────
+
+QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (assert) => {
+  const original = document.createElement("div");
+  original.id = "merge-dedup-test";
+  original.tabIndex = 0;
+  document.body.appendChild(original);
+
+  let callCount = 0;
+  manager.register(
+    "F7",
+    () => {
+      callCount++;
+    },
+    { target: original },
+  );
+
+  // Remove original, insert a new element with the same id
+  original.remove();
+  const replacement = document.createElement("div");
+  replacement.id = "merge-dedup-test";
+  replacement.tabIndex = 0;
+  document.body.appendChild(replacement);
+
+  // Focus the replacement and fire key — Set dedup prevents double-fire
+  replacement.focus();
+  fireKeyOn(replacement, "F7");
+
+  assert.strictEqual(callCount, 1, "Fires exactly once despite element replacement with same id");
+
+  replacement.remove();
+});
+
+// ──────────────────────────────────────────────
+// Shadow DOM target matching
+// ──────────────────────────────────────────────
+
+QUnit.module("Shadow DOM target matching", {
+  beforeEach() {
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+  },
+});
+
+QUnit.test("activeElement inside shadow DOM matches host-level target", (assert) => {
+  // Create a host element with a shadow root containing an input
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+
+  const shadow = host.attachShadow({ mode: "open" });
+  const shadowInput = document.createElement("input");
+  shadow.appendChild(shadowInput);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target: host },
+  );
+
+  // Focus the shadow input. document.activeElement is the host (browser
+  // retargets across shadow boundaries), but the activeElement-augmentation
+  // path still includes the host, which matches the target registration.
+  shadowInput.focus();
+
+  // Dispatch on the host (how the browser surfaces the event outside the
+  // shadow boundary). composedPath includes [host, body, ...].
+  fireKeyOn(host, "Escape");
+
+  assert.ok(fired, "Target-scoped hotkey fires when focus is inside shadow DOM of target host");
+
+  host.remove();
+});
+
+QUnit.test("nested shadow DOM: target on outer host matches when focus is two shadow roots deep", (assert) => {
+  // outer host > shadow root > inner host > shadow root > input
+  const outerHost = document.createElement("div");
+  document.body.appendChild(outerHost);
+
+  const outerShadow = outerHost.attachShadow({ mode: "open" });
+  const innerHost = document.createElement("div");
+  outerShadow.appendChild(innerHost);
+
+  const innerShadow = innerHost.attachShadow({ mode: "open" });
+  const deepInput = document.createElement("input");
+  innerShadow.appendChild(deepInput);
+
+  let fired = false;
+  manager.register(
+    "Escape",
+    () => {
+      fired = true;
+    },
+    { target: outerHost },
+  );
+
+  // Focus the deeply nested input. The activeElement-augmentation path
+  // traverses both shadow boundaries via getRootNode().host, ultimately
+  // reaching the outer host which matches the target registration.
+  deepInput.focus();
+  fireKeyOn(outerHost, "Escape");
+
+  assert.ok(fired, "Target-scoped hotkey fires when focus is two shadow roots deep inside target host");
+
+  outerHost.remove();
+});
+
+// ──────────────────────────────────────────────
+// ActiveElement augmentation (non-Escape)
+// ──────────────────────────────────────────────
+
+QUnit.module("ActiveElement path augmentation", {
+  beforeEach() {
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+  },
+});
+
+QUnit.test("Non-Escape key: activeElement inside target matches via augmentation (not focus fallback)", (assert) => {
+  // Uses F5 (not Escape) to ensure only the activeElement augmentation path
+  // is exercised — the focus fallback gates on event.key === "Escape".
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  document.body.appendChild(target);
+
+  let targetFired = false;
+  let untargetedFired = false;
+
+  manager.register("F5", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "F5",
+    () => {
+      targetFired = true;
+    },
+    { target, stopPropagation: true },
+  );
+
+  // Focus the input (activeElement = input, inside target)
+  input.focus();
+
+  // Dispatch from document — composedPath is [document, window] but
+  // activeElement is still the input inside target.
+  fireKey("F5");
+
+  assert.ok(targetFired, "Target-scoped F5 fires via activeElement augmentation");
+  assert.notOk(untargetedFired, "Untargeted F5 suppressed by stopPropagation");
+
+  target.remove();
+});
+
+// ──────────────────────────────────────────────
+// data-sap-ui-area generic root detection
+// ──────────────────────────────────────────────
+
+QUnit.module("UIArea generic root detection", {
+  beforeEach() {
+    clock = sinon.useFakeTimers();
+    manager = HotkeyManager.getInstance();
+  },
+  afterEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Already destroyed
+    }
+    clock.restore();
+  },
+});
+
+QUnit.test("Element with data-sap-ui-area is treated as generic root for focus fallback", (assert) => {
+  // Simulate a UI5 UIArea root node
+  const uiArea = document.createElement("div");
+  uiArea.setAttribute("data-sap-ui-area", "");
+  uiArea.id = "uiAreaRoot";
+  document.body.appendChild(uiArea);
+
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  uiArea.appendChild(target);
+
+  let targetFired = false;
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target },
+  );
+
+  // Focus input, then blur — focus bounces to UIArea root
+  input.focus();
+  input.blur();
+
+  // Fire Escape on the UIArea root — should trigger focus fallback because
+  // data-sap-ui-area marks it as a generic root node.
+  fireKeyOn(uiArea, "Escape");
+
+  assert.ok(targetFired, "Target-scoped Escape fires via focus fallback when event target is a UIArea root");
+
+  target.remove();
+  uiArea.remove();
 });

@@ -3,6 +3,8 @@
     xmlns="sap.m"
     displayBlock="true">
     <Shell>
-        <App id="appControl" />
+        <App id="appControl" initialPage="bootPage">
+            <Page id="bootPage" showHeader="false" />
+        </App>
     </Shell>
 </mvc:View>

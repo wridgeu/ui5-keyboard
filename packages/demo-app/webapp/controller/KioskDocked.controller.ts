@@ -1,4 +1,5 @@
 import Item from "sap/ui/core/Item";
+import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
@@ -8,19 +9,25 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Enhanced docked keyboard demo — ports the original Kiosk view and adds
+ * Enhanced docked keyboard demo - ports the original Kiosk view and adds
  * a controls panel for enabled, mobileKeyboard, and layout switching.
  *
  * @name demo.hotkeys.controller.KioskDocked
  */
 export default class KioskDocked extends BaseController {
+  private static readonly _MODEL_NAME = "docked";
+
   onInit(): void {
-    const stateModel = this.getStateModel();
-    stateModel.setProperty("/kioskLastKey", "None");
-    stateModel.setProperty("/kioskLayout", "qwerty");
-    stateModel.setProperty("/kioskEnabled", true);
-    stateModel.setProperty("/kioskMobileKeyboard", "Custom");
-    stateModel.setProperty("/kioskFKeyMode", "Virtual");
+    this.getView()!.setModel(
+      new JSONModel({
+        kioskEnabled: true,
+        kioskMobileKeyboard: "Custom",
+        kioskFKeyMode: "Virtual",
+        kioskLastKey: "None",
+        kioskLayout: "qwerty",
+      }),
+      KioskDocked._MODEL_NAME,
+    );
 
     // Populate layout select with all registered layout names
     const select = this.byId("layoutSelect") as Select;
@@ -39,12 +46,12 @@ export default class KioskDocked extends BaseController {
   }
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    this.getStateModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
+    this._getViewModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
   }
 
   onDockedLayoutChange(event: KioskKeyboard$LayoutChangeEvent): void {
     const layout = event.getParameter("layout") ?? "";
-    this.getStateModel().setProperty("/kioskLayout", layout);
+    this._getViewModel().setProperty("/kioskLayout", layout);
   }
 
   onMobileKeyboardChange(event: SegmentedButton$SelectionChangeEvent): void {
@@ -64,7 +71,7 @@ export default class KioskDocked extends BaseController {
     const key = event.getParameter("item")!.getKey();
     const kb = this.byId("dockedKeyboard") as KioskKeyboard;
     kb.setFKeyMode(key as "Virtual" | "Native");
-    this.getStateModel().setProperty("/kioskFKeyMode", key);
+    this._getViewModel().setProperty("/kioskFKeyMode", key);
   }
 
   onNavBack(): void {
@@ -88,5 +95,19 @@ export default class KioskDocked extends BaseController {
 
     keyboard.close();
     keyboard.setAutoShow(false);
+    keyboard.setLayout("qwerty");
+    keyboard.setFKeyMode("Virtual");
+    keyboard.setMobileKeyboard("Custom");
+
+    const viewModel = this._getViewModel();
+    viewModel.setProperty("/kioskEnabled", true);
+    viewModel.setProperty("/kioskMobileKeyboard", "Custom");
+    viewModel.setProperty("/kioskFKeyMode", "Virtual");
+    viewModel.setProperty("/kioskLastKey", "None");
+    viewModel.setProperty("/kioskLayout", "qwerty");
+  }
+
+  private _getViewModel(): JSONModel {
+    return this.getView()!.getModel(KioskDocked._MODEL_NAME) as JSONModel;
   }
 }

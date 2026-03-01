@@ -22,7 +22,7 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
   - [Unhandled Key Callback](#unhandled-key-callback)
   - [Target Elements](#target-elements)
   - [Suspend Guard](#suspend-guard)
-- [SequenceManager](#sequencemanager)
+- [Sequences](#sequences)
 - [KeyStateTracker](#keystatetracker)
 - [HotkeyRecorder](#hotkeyrecorder)
 - [Validation](#validation)
@@ -32,8 +32,6 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - [Type-safe Hotkey Strings](#type-safe-hotkey-strings)
 - [Troubleshooting](#troubleshooting)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
-
----
 
 ## Features
 
@@ -75,8 +73,6 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - Key repeat filtering (on by default)
 - Callback error isolation (errors in handlers don't crash the manager)
 
----
-
 ## Installation
 
 > This package is currently workspace-only (`private: true`) and not published to npm.
@@ -104,8 +100,6 @@ Add the library to your application's `manifest.json`:
 ```
 
 Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unnecessary — the library is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
-
----
 
 ## Quick Start
 
@@ -165,7 +159,7 @@ import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 
 `HotkeyRecorder` and `KeyStateTracker` classes are exported for type declarations (e.g., `const tracker: KeyStateTracker = manager.getKeyStateTracker()`), but their constructors are internal — use `manager.createRecorder()` and `manager.getKeyStateTracker()` respectively.
 
-Advanced utility modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. This also includes modules such as `ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/dom`, `ui5/hotkeys/platform`, and `ui5/hotkeys/validate`.
+Advanced modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. Non-stable top-level paths currently include re-export entry points (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`) plus advanced utility helpers (`ui5/hotkeys/format`).
 
 ## HotkeyManager
 
@@ -199,6 +193,12 @@ const manager = HotkeyManager.getInstance();
 | `setUnhandledHandler(callback)`        | Set callback for unhandled key events                 |
 | `setDebugMode(enabled)`                | Enable/disable detailed keypress logging              |
 | `isDebugMode()`                        | Check if debug mode is on                             |
+| `registerSequence(seq, cb, opts?)`     | Register a multi-key sequence, returns a handle       |
+| `getSequenceRegistrations()`           | Get all active sequence registrations                 |
+| `getSequenceRegistrationsForScope(id)` | Filter sequence registrations by scope                |
+| `setSequencePendingHandler(callback)`  | Set global callback for mid-sequence progress         |
+| `addGenericRootId(id)`                 | Register an element ID as a generic focus root        |
+| `removeGenericRootId(id)`              | Remove a previously registered generic root ID        |
 | `destroy()`                            | Remove all listeners, clear state, null the singleton |
 
 ### Registration
@@ -243,7 +243,7 @@ manager.register(
 | `ignoreRepeat`     | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
 | `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
 | `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
-| `target`           | `HTMLElement \| Document`  | `null`         | Bind to a specific element instead of the document                                               |
+| `target`           | `HTMLElement`              | `null`         | Bind to a specific element instead of the document                                               |
 
 ### Registration Handle
 
@@ -476,12 +476,18 @@ manager.register("Mod+S", () => savePanel(), {
 });
 
 // This hotkey only fires when the event's composedPath() includes the panel element.
-// Document-level registrations with stopPropagation: true (the default) block
-// target-scoped registrations with the same key. Set stopPropagation: false
-// on the document-level registration to allow both.
-// For nested targets with the same key, the innermost matching target wins.
+// For nested targets with the same key, the innermost match fires.
+// A target-scoped match with stopPropagation: true (the default) prevents
+// document-level handlers for the same key from firing.
 // Scopes still apply — both target and scope must match.
 ```
+
+> **Focus fallback (Escape only):** Some browsers and UI5 rendering transitions
+> move focus to a generic root node (body, UIArea container) before dispatching
+> the `keydown` event. For `Escape`, the manager reconstructs the composed path
+> from the most recently focused element so that target-scoped registrations
+> still fire. This fallback is one-shot (consumed after a single dispatch) and
+> expires after 1200 ms. Other keys are not affected by this behavior.
 
 ### Suspend Guard
 
@@ -505,9 +511,7 @@ g1.release(); // still suspended — g2 active
 g2.release(); // dispatch resumes
 ```
 
----
-
-## SequenceManager
+## Sequences
 
 Multi-key sequences like Vim-style `G` then `E` for "go to editor":
 
@@ -534,19 +538,31 @@ manager.registerSequence(
   { description: "Save all (VS Code style)" },
 );
 
-// Get progress updates mid-sequence
+// Per-registration progress callback — dies with the registration
+manager.registerSequence(
+  ["G", "I"],
+  (event) => {
+    router.navTo("inbox");
+  },
+  {
+    description: "Go to inbox",
+    onPending: (info) => {
+      statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
+    },
+  },
+);
+
+// Global fallback for sequences without onPending
 manager.setSequencePendingHandler((info) => {
   statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
 });
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"` — suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"` — suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback, takes precedence over the global handler).
 
 > [!NOTE]
 > `scope` must be a non-empty string when provided.
 > Uses HotkeyManager's scope stack — sequences respect the active scope.
-
----
 
 ## KeyStateTracker
 
@@ -578,8 +594,6 @@ The tracker is owned by `HotkeyManager` and shares its lifecycle — it is creat
 
 > [!NOTE]
 > Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
-
----
 
 ## HotkeyRecorder
 
@@ -621,8 +635,6 @@ recorder.destroy();
 
 > [!TIP]
 > Not a singleton — create one per settings row via `manager.createRecorder()`. The `HotkeyRecorder` class is exported for type declarations but its constructor is internal.
-
----
 
 ## Validation
 
@@ -668,8 +680,6 @@ assertValidHotkey(""); // throws Error
 | `"Ctrl+S+X"`   | `Invalid hotkey "Ctrl+S+X": unexpected segment "X" after key "S"` |
 
 Unknown key names (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw — they are allowed for forward compatibility.
-
----
 
 ## Utility Functions
 
@@ -723,18 +733,6 @@ document.addEventListener("keydown", (event) => {
 });
 ```
 
-### DOM Utilities
-
-```ts
-import { isInputElement, getEventTarget } from "ui5/hotkeys/dom";
-
-// Check if a target is an editable input
-isInputElement(document.activeElement); // true for <input type="text">, <textarea>, contentEditable
-
-// Get the real event target (handles Shadow DOM retargeting)
-const target = getEventTarget(event);
-```
-
 ### Platform Detection
 
 ```ts
@@ -747,8 +745,6 @@ resolveModifier("Mod", Platform.Mac); // "Meta"
 resolveModifier("Mod", Platform.Windows); // "Control"
 resolveModifier("Shift"); // "Shift" (non-Mod modifiers pass through)
 ```
-
----
 
 ## Library Enums & Constants
 
@@ -806,8 +802,6 @@ manager.register("Mod+S", handlerB, { conflictBehavior: ConflictBehavior.Allow }
 // Both active, no console output
 ```
 
----
-
 ## Type-safe Hotkey Strings
 
 The `Hotkey` type provides IDE autocomplete for known key combinations while still accepting any string:
@@ -826,16 +820,12 @@ Supported key categories: Letters (A-Z), Digits (0-9), Function keys (F1-F24), S
 
 Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `Cmd`, `Command`, `Option`.
 
----
-
 ## Further Reading
 
 - [Architecture & Internals](../../docs/hotkeys/ARCHITECTURE.md) — two-pass matching, scope stack, listener design
 - [Multi-key Sequence Design](../../docs/hotkeys/SEQUENCES.md) — how the sequence system works
 - [Alternatives Research](../../docs/hotkeys/ALTERNATIVES-RESEARCH.md) — comparison with other keyboard shortcut approaches
 - [UI5 Event Handling Deep Dive](../../docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
-
----
 
 ## Troubleshooting
 
@@ -865,8 +855,6 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 - If `enabled()` throws an error, the registration is silently treated as disabled. Check the browser console for `Log.warning` messages from `ui5.hotkeys.HotkeyManager`.
 
----
-
 ## When NOT to Use This Library
 
 Use UI5's built-in keyboard handling instead when:
@@ -878,8 +866,6 @@ Use UI5's built-in keyboard handling instead when:
 | List/table arrow key navigation          | `sap.ui.core.delegate.ItemNavigation`                           |
 | F6 group navigation                      | `data-sap-ui-fastnavgroup` attribute                            |
 | Simple view-scoped with guaranteed focus | `sap.ui.core.CommandExecution` in manifest.json                 |
-
----
 
 ## License
 

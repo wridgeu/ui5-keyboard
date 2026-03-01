@@ -9,7 +9,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Keyboard behavior with sap.m.Dialog — two approaches:
+ * Keyboard behavior with sap.m.Dialog - two approaches:
  * A) Dialog without keyboard (docked auto-closes), and
  * B) Dialog with embedded inline keyboard.
  *
@@ -70,8 +70,8 @@ export default class KioskDialog extends BaseController {
           this._dialogA = null;
         }
         // Re-focus page input so docked keyboard resumes
-        const pageInput = this.byId("pageInput") as Input;
-        pageInput.focus();
+        const pageInput = this.byId("pageInput") as Input | undefined;
+        pageInput?.focus();
       },
     });
 
@@ -120,8 +120,8 @@ export default class KioskDialog extends BaseController {
         if (isCurrentDialog) {
           this._dialogB = null;
         }
-        const pageInput = this.byId("pageInput") as Input;
-        pageInput.focus();
+        const pageInput = this.byId("pageInput") as Input | undefined;
+        pageInput?.focus();
       },
     });
 
@@ -141,12 +141,22 @@ export default class KioskDialog extends BaseController {
 
   private _closeDialogs(): void {
     if (this._dialogA) {
-      this._dialogA.destroy();
+      const dialog = this._dialogA;
       this._dialogA = null;
+      if (dialog.isOpen()) {
+        dialog.close(); // inline afterClose handler will destroy
+      } else {
+        dialog.destroy();
+      }
     }
     if (this._dialogB) {
-      this._dialogB.destroy();
+      const dialog = this._dialogB;
       this._dialogB = null;
+      if (dialog.isOpen()) {
+        dialog.close(); // inline afterClose handler will destroy
+      } else {
+        dialog.destroy();
+      }
     }
   }
 }

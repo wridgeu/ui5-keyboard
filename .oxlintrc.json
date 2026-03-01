@@ -26,7 +26,7 @@
     {
       "files": [
         "packages/hotkeys/src/HotkeyManager.ts",
-        "packages/hotkeys/src/SequenceManager.ts",
+        "packages/hotkeys/src/internal/SequenceManager.ts",
         "packages/hotkeys/src/library.ts",
         "packages/kiosk-keyboard/src/KioskKeyboard.ts",
         "packages/kiosk-keyboard/src/library.ts"

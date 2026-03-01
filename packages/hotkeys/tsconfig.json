@@ -6,7 +6,7 @@
     "paths": {
       "ui5/hotkeys/*": ["./src/*"]
     },
-    "types": ["@openui5/types", "@types/qunit"],
+    "types": ["@openui5/types", "@types/qunit", "@types/sinon"],
     "noEmit": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],

@@ -68,21 +68,18 @@ And evaluate what is currently covered by this repository's demos.
 - Removed deprecated `sap.ui.webc.main` dependencies/usages from app/library config and demo XML.
 - Replaced wrapper-based interop examples with:
   - standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`, `sap.m.TextArea`) for inputIds targeting
-  - custom-element bridge example in demo app
-- Added a standalone web components page at `packages/demo-app/webapp/standalone-webc/`.
-  - `main.js` imports `@ui5/webcomponents/dist/*` modules directly from npm package names.
-  - `index.html` maps `@ui5/` to `/resources/@ui5/`.
-  - `ui5-tooling-modules` middleware/task serves and builds npm module resources.
+  - native UI5 Web Component input usage in XML (`xmlns:webc="@ui5/webcomponents/dist"`)
+  - custom-element bridge controls in `packages/demo-app/webapp/control/`
+- Kept `ui5-tooling-modules` middleware/task so npm web-component modules resolve correctly in the UI5 app.
 - Updated interop e2e harness to avoid deprecated/global-core access patterns.
-- Re-ran UI5 linter: clean for both projects.
 
 ## Standalone Scenario Status
 
-Short answer: **no** — the standalone scenario is now covered.
+Short answer: **not currently** — this repo does not include a dedicated standalone web-components page (`index.html` + direct ESM imports) at the moment.
 
 - We demonstrate custom-element integration inside a UI5 app via bridge.
-- We also demonstrate pure standalone UI5 Web Components usage (npm imports + `<ui5-*>`) outside UI5 wrappers.
-- Consumption is local and reproducible via project dependencies (`npm install`) rather than vendored snapshots.
+- We demonstrate native UI5 Web Component usage inside the UI5 app (`@ui5/webcomponents/dist` namespace in XML).
+- Standalone consumption guidance in this document remains valid, but a runnable standalone sample is currently out of scope for this repository.
 
 ## Key Learnings from Community Posts
 
@@ -121,21 +118,21 @@ So the bridge is a targeted integration tool, not a universal recommendation.
 
 ## What This Means for Our Demo App
 
-The demo now covers both modern paths clearly:
+The demo currently focuses on UI5-app integration paths:
 
-- **Inside UI5 app:** custom/external web component integration example (already present as bridge pattern).
+- **Inside UI5 app:** native UI5 Web Component usage in XML (`@ui5/webcomponents/dist`) plus custom/external web component bridge examples.
 - **Inside UI5 app (native custom elements):** example using package namespace + custom element tag in XML.
-- **Standalone page:** direct `@ui5/webcomponents` usage without UI5 wrappers.
+- **Outside UI5 app:** no dedicated standalone sample page is currently included.
 
-This split avoids deprecated `sap.ui.webc.main` while still demonstrating web component interoperability.
+This avoids deprecated `sap.ui.webc.main` while still demonstrating practical web component interoperability for UI5 applications.
 
-## Operational Notes (Standalone Page)
+## Operational Notes (Current Demo Scope)
 
 1. Install dependencies at repo root (`npm install`).
 2. Start demo app (`npm start`).
-3. Open `http://localhost:8080/standalone-webc/index.html`.
+3. Open `http://localhost:8080/index.html#/kiosk/input-ids`.
 
-This keeps standalone Web Components consumption fully npm-based and avoids keeping third-party package snapshots in app source.
+This keeps interoperability examples reproducible in the main UI5 demo app.
 
 ## Practical Rule-of-Thumb
 

@@ -4,12 +4,13 @@ import BaseController from "./BaseController";
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
+import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
 
 /**
- * Detail view controller — demonstrates same-key-different-scope pattern.
+ * Detail view controller - demonstrates same-key-different-scope pattern.
  * F5 fires a different handler here vs Main, resolved by the scope system.
  *
- * No scope management code needed — `enableRouterIntegration()` in
+ * No scope management code needed - `enableRouterIntegration()` in
  * the Component handles it.
  *
  * @name demo.hotkeys.controller.Detail
@@ -17,16 +18,15 @@ import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 export default class Detail extends BaseController {
   private _manager!: HotkeyManager;
   private _hotkeys!: RegistrationGroup;
-  private _recorder!: HotkeyRecorder | null;
+  private _recorder: HotkeyRecorder | null = null;
+  private _dynamicHandle: HotkeyRegistrationHandle | null = null;
 
   onInit(): void {
-    this._recorder = null;
-
     this._manager = this.getTypedComponent().getHotkeyManager();
     this._hotkeys = this._manager.createGroup();
     const stateModel = this.getStateModel();
 
-    // Scope "detail" matches the route name — auto-activated by router integration
+    // Scope "detail" matches the route name - auto-activated by router integration
     this._hotkeys.register(
       "F5",
       () => {
@@ -57,11 +57,7 @@ export default class Detail extends BaseController {
 
   onStartRecording(): void {
     if (this._recorder?.isRecording) return;
-
-    // Destroy the previous recorder to avoid leaking it in EventDispatcher._trackedRecorders
-    if (this._recorder && !this._recorder.isDestroyed) {
-      this._recorder.destroy();
-    }
+    this._destroyRecorder();
 
     const stateModel = this.getStateModel();
     stateModel.setProperty("/isRecording", true);
@@ -70,6 +66,19 @@ export default class Detail extends BaseController {
       onRecord: (hotkey) => {
         stateModel.setProperty("/recordedShortcut", hotkey || "(cleared)");
         stateModel.setProperty("/isRecording", false);
+
+        this._unregisterDynamic();
+
+        if (hotkey) {
+          this._dynamicHandle = this._hotkeys.register(
+            hotkey,
+            () => {
+              stateModel.setProperty("/lastAction", `Custom shortcut: ${hotkey}`);
+              MessageToast.show(`Custom shortcut fired: ${hotkey}`);
+            },
+            { scope: Scope.Detail, description: `Custom: ${hotkey}`, conflictBehavior: "replace" },
+          );
+        }
       },
       onCancel: () => {
         stateModel.setProperty("/isRecording", false);
@@ -79,15 +88,36 @@ export default class Detail extends BaseController {
     this._recorder.start();
   }
 
+  onResetRecording(): void {
+    this._unregisterDynamic();
+    this._destroyRecorder();
+
+    const stateModel = this.getStateModel();
+    stateModel.setProperty("/recordedShortcut", "");
+    stateModel.setProperty("/isRecording", false);
+  }
+
   onExit(): void {
+    this._destroyRecorder();
+    // destroyAll() unregisters every handle in the group, including _dynamicHandle
     this._hotkeys.destroyAll();
-    if (this._recorder) {
-      this._recorder.destroy();
-      this._recorder = null;
+  }
+
+  private _unregisterDynamic(): void {
+    if (this._dynamicHandle?.isActive) {
+      this._dynamicHandle.unregister();
     }
+    this._dynamicHandle = null;
+  }
+
+  private _destroyRecorder(): void {
+    if (this._recorder && !this._recorder.isDestroyed) {
+      this._recorder.destroy();
+    }
+    this._recorder = null;
   }
 
   private _navBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.Main);
+    this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
   }
 }

@@ -2,8 +2,22 @@
     controllerName="demo.hotkeys.controller.Detail"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="ui5.hotkeys Demo — Detail View" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page title="ui5.hotkeys Demo - Detail View" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
+            <Panel headerText="What to Test on This Page" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <MessageStrip
+                        type="Information"
+                        showIcon="true"
+                        text="Purpose: verify route-scoped shortcuts and HotkeyRecorder behavior in one place." />
+                    <Text
+                        text="1) Scope check: Active Scope should show the detail route while this page is open." class="sapUiSmallMarginTop" />
+                    <Text text="2) Shortcut check: F5 should trigger the detail-specific action; Ctrl/Cmd+S should still work globally." />
+                    <Text
+                        text="3) Recorder check: Record captures one hotkey event; Escape cancels; Backspace/Delete clears the value." />
+                </VBox>
+            </Panel>
+
             <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
@@ -19,15 +33,20 @@
 
             <Panel headerText="Detail View Shortcuts" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="F5 here triggers 'Refresh (Detail View)' — different from Main View." />
+                    <Text text="F5 here triggers 'Refresh (Detail View)' - different from Main View." />
                     <Text text="Ctrl+S / Cmd+S still works (global scope)." />
-                    <Text text="Press the back button or Mod+B to return to Main." />
+                    <Text text="Press the back button or Mod+B to return to the Hotkeys Hub." />
                 </VBox>
             </Panel>
 
             <Panel headerText="Record a Shortcut (HotkeyRecorder)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="Click Record, then press any key combination. Press Escape to cancel, Backspace/Delete to clear." />
+                    <Text text="Click Record, then press one hotkey (one action key with optional modifiers)." />
+                    <Text text="After recording, the shortcut is active. Press it to trigger a MessageToast." class="sapUiTinyMarginTop" />
+                    <Text text="Use Reset to clear the shortcut and record a new one." />
+                    <Text text="Examples that work: G, F5, Ctrl+Shift+K, Alt+ArrowDown." class="sapUiTinyMarginTop" />
+                    <Text text="Not supported as one hotkey: G+K (two action keys) or sequences like G then K." />
+                    <Text text="Tip: prefer modifier-based shortcuts for app actions; single letters are often suppressed in inputs with default settings." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Recorded:" class="sapUiSmallMarginEnd" />
                         <Input value="{state>/recordedShortcut}" editable="false" width="200px" />
@@ -35,6 +54,12 @@
                             text="{= ${state>/isRecording} ? 'Recording...' : 'Record'}"
                             press=".onStartRecording"
                             type="{= ${state>/isRecording} ? 'Reject' : 'Accept'}"
+                            class="sapUiSmallMarginBegin" />
+                        <Button
+                            text="Reset"
+                            press=".onResetRecording"
+                            type="Default"
+                            enabled="{= !!${state>/recordedShortcut} &amp;&amp; !${state>/isRecording}}"
                             class="sapUiSmallMarginBegin" />
                     </HBox>
                 </VBox>

@@ -15,6 +15,14 @@ class CustomAlertButton extends HTMLElement {
     this._render();
   }
 
+  disconnectedCallback(): void {
+    if (this._button && this._onClick) {
+      this._button.removeEventListener("click", this._onClick);
+    }
+    this._onClick = null;
+    this._button = null;
+  }
+
   attributeChangedCallback(): void {
     this._render();
   }

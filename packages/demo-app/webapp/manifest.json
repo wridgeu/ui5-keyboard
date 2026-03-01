@@ -22,7 +22,7 @@
       "cozy": true
     },
     "dependencies": {
-      "minUI5Version": "1.144.0",
+      "minUI5Version": "1.145.0",
       "libs": {
         "sap.m": {},
         "sap.ui.core": {},
@@ -55,6 +55,31 @@
           "name": "detail",
           "pattern": "detail",
           "target": "detail"
+        },
+        {
+          "name": "integration",
+          "pattern": "integration",
+          "target": "integration"
+        },
+        {
+          "name": "hotkeysHub",
+          "pattern": "hotkeys",
+          "target": "hotkeysHub"
+        },
+        {
+          "name": "hotkeysSequences",
+          "pattern": "hotkeys/sequences",
+          "target": "hotkeysSequences"
+        },
+        {
+          "name": "hotkeysTargetBubble",
+          "pattern": "hotkeys/target-bubbling",
+          "target": "hotkeysTargetBubble"
+        },
+        {
+          "name": "hotkeysConflict",
+          "pattern": "hotkeys/conflict",
+          "target": "hotkeysConflict"
         },
         {
           "name": "kioskHub",
@@ -121,6 +146,26 @@
           "id": "detail",
           "name": "Detail"
         },
+        "integration": {
+          "id": "integration",
+          "name": "Integration"
+        },
+        "hotkeysHub": {
+          "id": "hotkeysHub",
+          "name": "HotkeysHub"
+        },
+        "hotkeysSequences": {
+          "id": "hotkeysSequences",
+          "name": "HotkeysSequences"
+        },
+        "hotkeysTargetBubble": {
+          "id": "hotkeysTargetBubble",
+          "name": "HotkeysTargetBubble"
+        },
+        "hotkeysConflict": {
+          "id": "hotkeysConflict",
+          "name": "HotkeysConflict"
+        },
         "kioskHub": {
           "id": "kioskHub",
           "name": "KioskHub"
@@ -170,34 +215,7 @@
     "models": {
       "state": {
         "type": "sap.ui.model.json.JSONModel",
-        "settings": {
-          "lastAction": "None",
-          "activeScope": "__global__",
-          "platform": "",
-          "saveLabel": "",
-          "escapeLabel": "",
-          "f5Label": "",
-          "navLabel": "",
-          "sequenceStatus": "",
-          "heldKeys": "None",
-          "canSave": true,
-          "printLabel": "",
-          "conflictStatus": "",
-          "conflictState": "Information",
-          "targetStatus": "",
-          "comboText": "",
-          "comboStatus": "",
-          "recordedShortcut": "",
-          "isRecording": false,
-          "kioskLastKey": "None",
-          "kioskLayout": "qwerty",
-          "kioskEnabled": true,
-          "kioskMobileKeyboard": "Custom",
-          "kioskIsOpen": false,
-          "kioskKeyboardType": "Full",
-          "kioskCurrentTarget": "None",
-          "kioskAutoType": false
-        }
+        "uri": "model/fixtures/state.json"
       }
     }
   }

@@ -5,27 +5,45 @@
     xmlns:kiosk="ui5.kiosk">
     <Page title="Custom Layouts Gallery" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Layout Switcher" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <Text text="Three custom LayoutDefinitions registered via registerLayout(). Each showcases different KeyDefinition options — width, type, icon, Unicode values, and label overrides." />
-                    <HBox class="sapUiSmallMarginTop">
-                        <Button
-                            text="Emoji Picker"
-                            press=".onUseEmoji"
-                            type="{= ${state>/customActiveLayout} === 'emoji' ? 'Emphasized' : 'Default'}"
-                            class="sapUiSmallMarginEnd" />
-                        <Button
-                            text="IP Address Pad"
-                            press=".onUseIpAddress"
-                            type="{= ${state>/customActiveLayout} === 'ip-address' ? 'Emphasized' : 'Default'}"
-                            class="sapUiSmallMarginEnd" />
-                        <Button
-                            text="Currency Pad"
-                            press=".onUseCurrency"
-                            type="{= ${state>/customActiveLayout} === 'currency' ? 'Emphasized' : 'Default'}" />
-                    </HBox>
-                </VBox>
-            </Panel>
+            <HBox class="sapUiSmallMarginBottom" gap="1rem">
+                <Panel headerText="Layout Switcher">
+                    <VBox class="sapUiSmallMargin">
+                        <Text text="Three custom LayoutDefinitions are registered via registerLayout(). They demonstrate KeyDefinition options such as width, type, icon, unicode values, and label overrides." />
+                        <HBox class="sapUiSmallMarginTop">
+                            <Button
+                                text="Emoji Picker"
+                                press=".onUseEmoji"
+                                type="{= ${state>/customActiveLayout} === 'emoji' ? 'Emphasized' : 'Default'}"
+                                class="sapUiSmallMarginEnd" />
+                            <Button
+                                text="IP Address Pad"
+                                press=".onUseIpAddress"
+                                type="{= ${state>/customActiveLayout} === 'ip-address' ? 'Emphasized' : 'Default'}"
+                                class="sapUiSmallMarginEnd" />
+                            <Button
+                                text="Currency Pad"
+                                press=".onUseCurrency"
+                                type="{= ${state>/customActiveLayout} === 'currency' ? 'Emphasized' : 'Default'}" />
+                        </HBox>
+                    </VBox>
+                </Panel>
+                <Panel headerText="Status">
+                    <VBox class="sapUiSmallMargin">
+                        <HBox>
+                            <Label text="Active Layout:" class="sapUiSmallMarginEnd" />
+                            <ObjectStatus text="{state>/customActiveLayout}" state="Success" />
+                        </HBox>
+                        <HBox>
+                            <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                            <ObjectStatus text="{state>/customLastKey}" state="Information" />
+                        </HBox>
+                        <HBox>
+                            <Label text="Description:" class="sapUiSmallMarginEnd" />
+                            <Text text="{state>/customDescription}" />
+                        </HBox>
+                    </VBox>
+                </Panel>
+            </HBox>
 
             <Panel headerText="Target Input" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
@@ -40,23 +58,6 @@
                         targetInput="customInput"
                         keyPress=".onKeyPress"
                         ariaLabel="Custom Layout Keyboard" />
-                </VBox>
-            </Panel>
-
-            <Panel headerText="Status" class="sapUiSmallMarginBottom">
-                <VBox class="sapUiSmallMargin">
-                    <HBox>
-                        <Label text="Active Layout:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/customActiveLayout}" state="Success" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
-                        <ObjectStatus text="{state>/customLastKey}" state="Information" />
-                    </HBox>
-                    <HBox>
-                        <Label text="Description:" class="sapUiSmallMarginEnd" />
-                        <Text text="{state>/customDescription}" />
-                    </HBox>
                 </VBox>
             </Panel>
         </content>

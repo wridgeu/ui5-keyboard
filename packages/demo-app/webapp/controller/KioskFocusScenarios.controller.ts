@@ -11,14 +11,14 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 interface LogEntry {
-  time: string;
+  time: Date;
   event: string;
   detail: string;
   state: string;
 }
 
 /**
- * Focus scenarios demo — interactive testbed for verifying docked KioskKeyboard
+ * Focus scenarios demo - interactive testbed for verifying docked KioskKeyboard
  * focus transitions, auto-show/close behavior, and deferred focus handling.
  *
  * @name demo.hotkeys.controller.KioskFocusScenarios
@@ -106,6 +106,15 @@ export default class KioskFocusScenarios extends BaseController {
     this._logModel.setProperty("/entries", []);
   }
 
+  formatLogTime(value: Date | string | null): string {
+    if (!value) return "";
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const pad = (n: number, size: number): string => String(n).padStart(size, "0");
+    return `${pad(date.getHours(), 2)}:${pad(date.getMinutes(), 2)}:${pad(date.getSeconds(), 2)}.${pad(date.getMilliseconds(), 3)}`;
+  }
+
   onNavBack(): void {
     this._setKeyboardRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
@@ -156,23 +165,10 @@ export default class KioskFocusScenarios extends BaseController {
 
   private _addLogEntry(event: string, detail: string, state: string): void {
     const entries = this._logModel.getProperty("/entries") as LogEntry[];
-    entries.unshift({ time: this._timestamp(), event, detail, state });
+    entries.unshift({ time: new Date(), event, detail, state });
     if (entries.length > KioskFocusScenarios._MAX_LOG) {
       entries.length = KioskFocusScenarios._MAX_LOG;
     }
     this._logModel.setProperty("/entries", entries);
-  }
-
-  private _timestamp(): string {
-    const d = new Date();
-    return (
-      String(d.getHours()).padStart(2, "0") +
-      ":" +
-      String(d.getMinutes()).padStart(2, "0") +
-      ":" +
-      String(d.getSeconds()).padStart(2, "0") +
-      "." +
-      String(d.getMilliseconds()).padStart(3, "0")
-    );
   }
 }

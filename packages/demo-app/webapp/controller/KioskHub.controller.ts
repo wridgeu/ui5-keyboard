@@ -1,3 +1,4 @@
+import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -11,43 +12,10 @@ export default class KioskHub extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.Main);
   }
 
-  onNavToDocked(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskDocked);
-  }
-
-  onNavToFormWorkflow(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskFormWorkflow);
-  }
-
-  onNavToMultiKeyboard(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskMultiKeyboard);
-  }
-
-  onNavToPopover(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskPopover);
-  }
-
-  onNavToDialog(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskDialog);
-  }
-
-  onNavToInputIds(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskInputIds);
-  }
-
-  onNavToProgrammatic(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskProgrammatic);
-  }
-
-  onNavToCustomLayouts(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskCustomLayouts);
-  }
-
-  onNavToComponent(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskComponent);
-  }
-
-  onNavToFocusScenarios(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskFocusScenarios);
+  onScenarioPress(event: ListBase$ItemPressEvent): void {
+    const item = event.getParameter("listItem");
+    const route = item?.getBindingContext("state")?.getProperty("route") as string | undefined;
+    if (!route) return;
+    this.getTypedComponent().getRouter().navTo(route);
   }
 }

@@ -1574,25 +1574,20 @@ QUnit.test("Target element: document and target coexist", (assert) => {
   div.tabIndex = 0;
   fixture.appendChild(div);
 
-  // Doc registration must not stop propagation, otherwise the capture-phase
-  // document listener fires first (capture goes top-down: document → div)
-  // and stopPropagation prevents the event from reaching div's listener.
-  manager.register(
-    "F8",
-    () => {
-      docCalled = true;
-    },
-    { stopPropagation: false },
-  );
+  // Target-scoped handlers fire first; set stopPropagation: false on the target
+  // registration so the untargeted handler can also fire as a fallback.
+  manager.register("F8", () => {
+    docCalled = true;
+  });
   manager.register(
     "F8",
     () => {
       targetCalled = true;
     },
-    { target: div },
+    { target: div, stopPropagation: false },
   );
 
-  // Fire on div — both doc and target listeners see it (capture phase: document first, then div)
+  // Fire on div — both target and doc listeners fire (target first, then document fallback)
   const divEvent = new KeyboardEvent("keydown", {
     key: "F8",
     bubbles: true,

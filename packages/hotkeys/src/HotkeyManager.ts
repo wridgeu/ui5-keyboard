@@ -3,13 +3,14 @@ import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
 import { ConflictBehavior, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
-import SequenceManager from "./SequenceManager";
+import SequenceManager from "./internal/SequenceManager";
 import HotkeyRecorder from "./HotkeyRecorder";
 import type { HotkeyRecorderOptions } from "./HotkeyRecorder";
 import EventDispatcher from "./internal/event-dispatcher";
 import type { HotkeyDispatchHandler, HotkeyDispatchResult } from "./internal/event-dispatcher";
 import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { GLOBAL_SCOPE } from "./internal/constants";
+import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { keyboardEventToHotkey /* debug-mode only */, parseHotkey } from "./internal/parse";
@@ -48,13 +49,22 @@ let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
 
 interface ScopeRegistrationBucket {
-  documentIds: Set<string>;
+  untargetedIds: Set<string>;
   targets: Map<EventTarget, Set<string>>;
+  /**
+   * Secondary index: element id → registration ids. Enables O(1) fallback
+   * when DOM nodes are replaced during rerendering.
+   *
+   * **Limitation:** If an element's `id` attribute is mutated after
+   * registration, the entry keyed under the old id becomes orphaned and
+   * persists until the registration is removed via `unregister()`.
+   */
+  targetIdIndex: Map<string, Set<string>>;
 }
 
 /**
- * Per-event context computed in _processHotkeys, passed through the dispatcher
- * to _emitUnhandled via the opaque `eventContext` field.
+ * Event context produced by _processHotkeys and forwarded to _emitUnhandled
+ * through the dispatcher pipeline return value — no mutable shared state.
  */
 interface EventContext {
   activeScope: string;
@@ -64,10 +74,29 @@ interface EventContext {
 }
 
 /**
+ * Normalize a target value: only HTMLElement instances are valid targets.
+ * Document, Window, and other non-HTMLElement EventTargets are degraded
+ * to untargeted (null) with a warning.
+ */
+function normalizeTarget(target: HTMLElement | null | undefined): HTMLElement | null {
+  if (target == null) return null; // eslint-disable-line eqeqeq -- intentional nullish check
+  if (target instanceof HTMLElement) return target;
+
+  // Non-HTMLElement target (Document, Window, iframe Document, SVGElement, etc.)
+  Log.warning(
+    `target must be an HTMLElement — received ${Object.prototype.toString.call(target)}, degrading to untargeted`,
+    undefined,
+    LOG_COMPONENT,
+  );
+  return null;
+}
+
+/**
  * Merge user-provided options with defaults.
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
   const scope = resolveScopeOrGlobal(options?.scope);
+  const target = normalizeTarget(options?.target);
 
   return {
     enabled: options?.enabled ?? true,
@@ -79,7 +108,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
-    target: options?.target ?? null,
+    target,
   };
 }
 
@@ -135,6 +164,9 @@ export default class HotkeyManager extends BaseObject {
   // Lazily created SequenceManager (created on first registerSequence call)
   private _sequenceManager: SequenceManager | null = null;
 
+  // Focus-tracking logic — extracted to its own class for maintainability.
+  private _focusFallback: FocusFallbackTracker;
+
   /**
    * Private constructor — use `HotkeyManager.getInstance()`.
    */
@@ -142,21 +174,27 @@ export default class HotkeyManager extends BaseObject {
     super();
     this._platform = runtimeHooks.detectPlatform();
 
-    const handler: HotkeyDispatchHandler = {
+    const handler: HotkeyDispatchHandler<EventContext | null> = {
       processHotkeys: (e) => this._processHotkeys(e),
       processSequences: (e) => this._processSequences(e),
-      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx as EventContext | undefined),
+      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
+    this._focusFallback = new FocusFallbackTracker();
 
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
   }
 
   /**
    * Get or create the singleton HotkeyManager instance.
+   *
+   * If the previous instance was destroyed (e.g., during FLP cross-app
+   * navigation via `Component.exit()`), a fresh instance is created
+   * automatically. Existing references to the destroyed instance remain
+   * permanently invalid — callers must re-acquire via `getInstance()`.
    */
   static getInstance(): HotkeyManager {
-    if (!instance) {
+    if (!instance || instance._destroyed) {
       instance = new HotkeyManager();
     }
     return instance;
@@ -253,10 +291,10 @@ export default class HotkeyManager extends BaseObject {
           throw new Error("Cannot change conflictBehavior via setOptions — unregister and re-register instead");
         }
         const opts = registration.options;
-        // Special case: target swap requires re-indexing + conflict management
+        // Special case: target swap requires normalization + re-indexing + conflict management
         if (newOptions.target !== undefined) {
           const currentTarget = opts.target;
-          const nextTarget = newOptions.target ?? null;
+          const nextTarget = normalizeTarget(newOptions.target);
           if (currentTarget !== nextTarget) {
             this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
             this._deindexRegistration(registration);
@@ -670,6 +708,30 @@ export default class HotkeyManager extends BaseObject {
     return this._debugMode;
   }
 
+  /**
+   * Register an element ID as a generic root node.
+   *
+   * Generic root nodes are ignored by the focus-tracking logic: when focus
+   * bounces to one of these elements (e.g. during rendering transitions),
+   * the hotkey manager treats it as if focus did not move.
+   *
+   * `document`, `window`, `<html>`, `<body>`, and elements with
+   * `data-sap-ui-area` are detected automatically. Use this method
+   * to register additional custom IDs (e.g. `"content"`).
+   */
+  addGenericRootId(id: string): void {
+    this._assertAlive("addGenericRootId");
+    this._focusFallback.addGenericRootId(id);
+  }
+
+  /**
+   * Remove a previously registered generic root ID.
+   */
+  removeGenericRootId(id: string): void {
+    this._assertAlive("removeGenericRootId");
+    this._focusFallback.removeGenericRootId(id);
+  }
+
   // ──────────────────────────────────────────────
   // Lifecycle
   // ──────────────────────────────────────────────
@@ -678,7 +740,12 @@ export default class HotkeyManager extends BaseObject {
    * Destroy the manager: remove all listeners, clear registrations,
    * and null the singleton reference.
    *
-   * Follows UI5 `BaseObject.destroy()` pattern.
+   * Follows UI5 `BaseObject.destroy()` pattern. Call from
+   * `Component.exit()` to ensure proper FLP cross-app cleanup.
+   *
+   * After destruction, all existing references become permanently
+   * invalid (methods throw via `_assertAlive`). A subsequent
+   * `getInstance()` creates a fresh manager with no registrations.
    */
   destroy(): void {
     this._destroyed = true;
@@ -691,6 +758,7 @@ export default class HotkeyManager extends BaseObject {
     // Destroy the dispatcher first — removes all DOM listeners, invalidates
     // guards, notifies interceptor/recorders, destroys KeyStateTracker.
     this._dispatcher.destroy();
+    this._focusFallback.destroy();
 
     for (const group of Array.from(this._groups)) {
       group._onManagerDestroy();
@@ -728,13 +796,12 @@ export default class HotkeyManager extends BaseObject {
    * Process hotkeys for a pre-filtered, non-suspended keydown event.
    *
    * Two-pass matching:
-   *   Pass 1: document-level registrations (active scope → global)
-   *   Pass 2: target-scoped registrations via composedPath() (active scope → global)
+   *   Pass 1: target-scoped registrations via composedPath() (active scope → global)
+   *   Pass 2: untargeted registrations (active scope → global)
    *
-   * Returns a result with `consumed` flag and, when not consumed, an opaque
-   * `eventContext` that the dispatcher passes through to `emitUnhandled`.
+   * Returns a result with the consumed flag and event context for _emitUnhandled.
    */
-  private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult {
+  private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult<EventContext | null> {
     const eventPath = this._getEventPath(event);
     const activeScope = this.getActiveScope();
     const target = getEventTarget(event);
@@ -748,20 +815,7 @@ export default class HotkeyManager extends BaseObject {
     const skipInfo: SkipInfo | null = needsSkipTracking ? { reason: UnhandledReason.NoMatch } : null;
     const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
 
-    // Pass 1: document-level registrations (no target)
-    const docMatch = this._matchDocumentRegistrations(event, activeScope, isInput, popupOpen, skipInfo, debugSkips);
-
-    if (docMatch) {
-      this._executeMatch(event, docMatch);
-      if (this._debugMode) {
-        this._logDebugEvent(event, activeScope, isInput, popupOpen, docMatch, debugSkips);
-      }
-      // If matched with stopPropagation, skip target-scoped registrations entirely.
-      if (docMatch.options.stopPropagation) return { consumed: true };
-      // Document match WITHOUT stopPropagation allows target-scoped matching to proceed.
-    }
-
-    // Pass 2: target-scoped registrations — innermost target in composedPath wins.
+    // Pass 1: target-scoped registrations — innermost match wins.
     const targetMatch = this._matchTargetRegistrations(
       event,
       eventPath,
@@ -777,20 +831,34 @@ export default class HotkeyManager extends BaseObject {
       if (this._debugMode) {
         this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatch, debugSkips);
       }
-      return { consumed: true };
     }
 
-    // Document match without stopPropagation still counts as consumed — callback already fired.
-    if (docMatch) {
-      return { consumed: true };
+    // Pass 2: untargeted registrations (only if no target match stopped propagation)
+    if (!targetMatch || !targetMatch.options.stopPropagation) {
+      const untargetedMatch = this._matchUntargetedRegistrations(
+        event,
+        activeScope,
+        isInput,
+        popupOpen,
+        skipInfo,
+        debugSkips,
+      );
+      if (untargetedMatch) {
+        this._executeMatch(event, untargetedMatch);
+        if (this._debugMode) {
+          this._logDebugEvent(event, activeScope, isInput, popupOpen, untargetedMatch, debugSkips);
+        }
+        return { consumed: true, eventContext: null };
+      }
     }
 
-    // Nothing matched at all
+    if (targetMatch) return { consumed: true, eventContext: null };
+
+    // Nothing matched — pass event context to emitUnhandled via return value
     if (this._debugMode) {
       this._logDebugEvent(event, activeScope, isInput, popupOpen, null, debugSkips);
     }
 
-    // Return event context for _emitUnhandled (passed through by EventDispatcher in step 7)
     return { consumed: false, eventContext: { activeScope, isInput, popupOpen, skipInfo } };
   }
 
@@ -806,14 +874,13 @@ export default class HotkeyManager extends BaseObject {
    * Emit an unhandled callback.
    *
    * When `forcedReason` is non-null (e.g., Suspended), it is used directly
-   * with no `skippedRegistration`. When null, uses the `eventContext` passed
-   * through from `_processHotkeys` (avoids redundant recomputation and
-   * shared mutable state).
+   * with no `skippedRegistration`. When null, uses `hotkeyContext` forwarded
+   * from `_processHotkeys` via the dispatcher pipeline return value.
    */
   private _emitUnhandled(
     event: KeyboardEvent,
     forcedReason: UnhandledReason | null,
-    eventContext?: EventContext,
+    hotkeyContext: EventContext | null,
   ): void {
     if (!this._unhandledCallback) return;
 
@@ -831,15 +898,20 @@ export default class HotkeyManager extends BaseObject {
       const target = getEventTarget(event);
       isInput = isInputElement(target);
       popupOpen = this._checkPopupOpen();
-    } else if (eventContext) {
-      // Reuse context from _processHotkeys (passed through by the dispatcher)
-      activeScope = eventContext.activeScope;
-      isInput = eventContext.isInput;
-      popupOpen = eventContext.popupOpen;
-      const skipInfo = eventContext.skipInfo;
+    } else if (hotkeyContext) {
+      // Use context forwarded from _processHotkeys
+      activeScope = hotkeyContext.activeScope;
+      isInput = hotkeyContext.isInput;
+      popupOpen = hotkeyContext.popupOpen;
+      const skipInfo = hotkeyContext.skipInfo;
       reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
       skippedRegistration = skipInfo && skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined;
     } else {
+      Log.warning(
+        "_emitUnhandled called without forcedReason or hotkeyContext — this should not happen",
+        undefined,
+        LOG_COMPONENT,
+      );
       reason = UnhandledReason.NoMatch;
       activeScope = this.getActiveScope();
       const target = getEventTarget(event);
@@ -872,11 +944,14 @@ export default class HotkeyManager extends BaseObject {
    */
   private _getEventPath(event: KeyboardEvent): EventTarget[] {
     const path = event.composedPath?.();
-    if (Array.isArray(path) && path.length > 0) {
-      return path;
-    }
-    // Fallback for environments where composedPath() is unavailable or empty
-    return [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
+    const resolvedPath =
+      Array.isArray(path) && path.length > 0
+        ? [...path]
+        : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
+
+    this._focusFallback.augmentPath(event, resolvedPath);
+
+    return resolvedPath;
   }
 
   /**
@@ -898,9 +973,9 @@ export default class HotkeyManager extends BaseObject {
   }
 
   /**
-   * Match document-level registrations (two-pass: active scope → global).
+   * Match untargeted registrations (two-pass: active scope → global).
    */
-  private _matchDocumentRegistrations(
+  private _matchUntargetedRegistrations(
     event: KeyboardEvent,
     activeScope: string,
     isInput: boolean,
@@ -942,9 +1017,9 @@ export default class HotkeyManager extends BaseObject {
    * Match target-scoped registrations via composedPath(), innermost-first.
    *
    * Scope-first ordering: active scope targets checked before global scope targets.
-   * Within a scope, the first (innermost) matching target wins.
+   * The innermost matching target wins — once a match is found, return immediately.
    *
-   * Returns the matched registration or null (caller is responsible for execution).
+   * Returns the single matched registration, or null.
    */
   private _matchTargetRegistrations(
     event: KeyboardEvent,
@@ -958,15 +1033,13 @@ export default class HotkeyManager extends BaseObject {
     const pathSet = new Set(eventPath);
     const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
 
-    let result: HotkeyRegistration | null = null;
-
     for (const scope of scopesToCheck) {
       const bucket = this._registrationsByScope.get(scope);
       if (!bucket || bucket.targets.size === 0) continue;
 
       // Iterate composedPath from index 0 (innermost) outward
       for (const node of eventPath) {
-        const ids = bucket.targets.get(node);
+        const ids = this._getTargetRegistrationIds(bucket, node);
         if (!ids || ids.size === 0) continue;
 
         // Attempt matching against registrations bound to this target
@@ -982,30 +1055,22 @@ export default class HotkeyManager extends BaseObject {
           logComponent: LOG_COMPONENT,
         });
 
-        if (matched && !result) {
-          result = matched;
-          // stopPropagation: true → skip remaining outer targets entirely
-          if (matched.options.stopPropagation) return result;
-          // stopPropagation: false → innermost still wins, but continue
-          // iterating outer targets for debug/skip-reason tracking
+        if (matched) {
+          return matched;
         }
       }
-
-      // If a match was found in this scope, don't check lower-priority scopes
-      if (result) break;
     }
 
     // Skip-reason pass for off-path targets: record TargetMismatch for
     // registrations whose key combo matches but target is not in the path.
-    // Only runs when no target match was found — a successful match means
-    // the event was handled and target-mismatch skips are irrelevant.
-    if (!result && (skipInfo || debugSkips)) {
+    if (skipInfo || debugSkips) {
       for (const scope of scopesToCheck) {
         const bucket = this._registrationsByScope.get(scope);
         if (!bucket) continue;
 
         for (const [targetNode, ids] of bucket.targets) {
           if (pathSet.has(targetNode)) continue; // Already checked in main pass
+          if (targetNode instanceof Element && !targetNode.isConnected) continue; // Skip detached DOM refs
 
           for (const id of ids) {
             const reg = this._registrations.get(id);
@@ -1018,7 +1083,7 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
-    return result;
+    return null;
   }
 
   /**
@@ -1031,6 +1096,38 @@ export default class HotkeyManager extends BaseObject {
       if (reg) registrations.push(reg);
     }
     return registrations;
+  }
+
+  /**
+   * Resolve registration IDs for a composedPath node.
+   *
+   * Merges object-identity hits with id-based index hits so that both
+   * fresh and stale DOM references for the same element id contribute
+   * registrations. This handles partial rerenders where the new DOM
+   * node already has its own registrations while the old (stale) node's
+   * registrations are still indexed by id.
+   */
+  private _getTargetRegistrationIds(bucket: ScopeRegistrationBucket, node: EventTarget): Set<string> | null {
+    const direct = bucket.targets.get(node);
+    const hasElementId = node instanceof Element && !!node.id;
+    const indexed = hasElementId ? bucket.targetIdIndex.get(node.id) : undefined;
+
+    if (!direct?.size && !indexed?.size) {
+      return null;
+    }
+    if (direct?.size && !indexed?.size) {
+      return direct;
+    }
+    if (!direct?.size && indexed?.size) {
+      return indexed;
+    }
+
+    // Both sources have entries — merge and dedupe
+    const merged = new Set(direct!);
+    for (const id of indexed!) {
+      merged.add(id);
+    }
+    return merged;
   }
 
   // ──────────────────────────────────────────────
@@ -1141,28 +1238,29 @@ export default class HotkeyManager extends BaseObject {
   // Private: Conflict handling
   // ──────────────────────────────────────────────
 
-  private _isConflictingRegistration(
-    reg: HotkeyRegistration,
-    normalizedHotkey: string,
-    scope: string,
-    target: EventTarget | null,
-  ): boolean {
-    return reg.normalizedHotkey === normalizedHotkey && reg.options.scope === scope && reg.options.target === target;
-  }
-
   private _handleConflict(
     normalizedHotkey: string,
     scope: string,
-    target: EventTarget | null,
+    target: HTMLElement | null,
     conflictBehavior: ConflictBehavior,
   ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
 
+    // Use scope-bucket lookup instead of iterating all registrations
+    const bucket = this._registrationsByScope.get(scope);
+    if (!bucket) return;
+    const ids = target === null ? bucket.untargetedIds : this._getTargetRegistrationIds(bucket, target);
+    if (!ids || ids.size === 0) return;
+
+    // Find conflicts by matching normalizedHotkey within the bucket
+    const isConflicting = (reg: HotkeyRegistration): boolean => reg.normalizedHotkey === normalizedHotkey;
+
     if (conflictBehavior === ConflictBehavior.Replace) {
       // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
-      for (const reg of this._registrations.values()) {
-        if (this._isConflictingRegistration(reg, normalizedHotkey, scope, target)) {
+      for (const id of ids) {
+        const reg = this._registrations.get(id);
+        if (reg && isConflicting(reg)) {
           conflicts.push(reg);
         }
       }
@@ -1185,8 +1283,9 @@ export default class HotkeyManager extends BaseObject {
 
     // For "warn" and "error", first match is sufficient
     let conflicting: HotkeyRegistration | null = null;
-    for (const reg of this._registrations.values()) {
-      if (this._isConflictingRegistration(reg, normalizedHotkey, scope, target)) {
+    for (const id of ids) {
+      const reg = this._registrations.get(id);
+      if (reg && isConflicting(reg)) {
         conflicting = reg;
         break;
       }
@@ -1213,8 +1312,9 @@ export default class HotkeyManager extends BaseObject {
     let bucket = this._registrationsByScope.get(scope);
     if (!bucket) {
       bucket = {
-        documentIds: new Set<string>(),
+        untargetedIds: new Set<string>(),
         targets: new Map<EventTarget, Set<string>>(),
+        targetIdIndex: new Map<string, Set<string>>(),
       };
       this._registrationsByScope.set(scope, bucket);
     }
@@ -1231,10 +1331,20 @@ export default class HotkeyManager extends BaseObject {
         bucket.targets.set(target, ids);
       }
       ids.add(registration.id);
+
+      // Maintain secondary index by element id for stale-reference fallback
+      if (target instanceof Element && target.id) {
+        let idxIds = bucket.targetIdIndex.get(target.id);
+        if (!idxIds) {
+          idxIds = new Set<string>();
+          bucket.targetIdIndex.set(target.id, idxIds);
+        }
+        idxIds.add(registration.id);
+      }
       return;
     }
 
-    bucket.documentIds.add(registration.id);
+    bucket.untargetedIds.add(registration.id);
   }
 
   private _deindexRegistration(registration: HotkeyRegistration): void {
@@ -1251,11 +1361,25 @@ export default class HotkeyManager extends BaseObject {
           bucket.targets.delete(target);
         }
       }
+
+      // Remove from secondary index.
+      // Note: uses the element's *current* id — if the id was mutated after
+      // registration, the entry keyed under the old id becomes orphaned.
+      // See the JSDoc on ScopeBucket.targetIdIndex for details.
+      if (target instanceof Element && target.id) {
+        const idxIds = bucket.targetIdIndex.get(target.id);
+        if (idxIds) {
+          idxIds.delete(registration.id);
+          if (idxIds.size === 0) {
+            bucket.targetIdIndex.delete(target.id);
+          }
+        }
+      }
     } else {
-      bucket.documentIds.delete(registration.id);
+      bucket.untargetedIds.delete(registration.id);
     }
 
-    if (bucket.documentIds.size === 0 && bucket.targets.size === 0) {
+    if (bucket.untargetedIds.size === 0 && bucket.targets.size === 0) {
       this._registrationsByScope.delete(scope);
     }
   }
@@ -1264,7 +1388,7 @@ export default class HotkeyManager extends BaseObject {
     const bucket = this._registrationsByScope.get(scope);
     if (!bucket) return [];
 
-    const ids = targetElement === null ? bucket.documentIds : bucket.targets.get(targetElement);
+    const ids = targetElement === null ? bucket.untargetedIds : bucket.targets.get(targetElement);
     if (!ids || ids.size === 0) return [];
 
     const registrations: HotkeyRegistration[] = [];

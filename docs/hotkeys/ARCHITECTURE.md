@@ -9,7 +9,7 @@ The library is split into focused, single-responsibility modules:
 ```
 HotkeyManager.ts     Singleton manager, scope stack, hotkey/sequence dispatch
 RegistrationGroup.ts Scoped batch registration with auto-cleanup
-SequenceManager.ts   Multi-key sequence matching (e.g., G then E)
+internal/SequenceManager.ts Multi-key sequence matching (e.g., G then E)
 KeyStateTracker.ts   Held-key state tracking with macOS stuck-key fix
 HotkeyRecorder.ts    Keyboard shortcut recorder for settings UIs
 validate.ts          Hotkey validation + browser/SAP conflict blocklists
@@ -17,9 +17,9 @@ types.ts             All TypeScript interfaces, types, and option defaults
 constants.ts         Key/modifier aliases, display symbols, normalization
 parse.ts             Hotkey string parsing ("Mod+Shift+S" -> structured object)
 match.ts             KeyboardEvent matching against parsed hotkeys
-dom.ts               Input element detection (text fields, textareas, contentEditable)
+internal/dom.ts      Input element detection (text fields, textareas, contentEditable)
 platform.ts          Platform detection (mac/windows/linux) and Mod resolution
-format.ts            Platform-aware display formatting
+format.ts            Platform-aware display formatting (advanced helper re-export)
 library.ts           UI5 library entry point (Lib.init)
 internal/event-dispatcher.ts Centralized DOM listener + 7-step dispatch pipeline
 internal/dispatch-core.ts    Dispatch pipeline helpers and skip handling
@@ -30,6 +30,8 @@ internal/idgen.ts            Internal registration ID generator
 ```
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`) — their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
+
+Some top-level entry points are importable but not part of the semver-stable consumer contract. This currently includes utility/helper modules (`parse.ts`, `match.ts`, `platform.ts`, `validate.ts`, `constants.ts`, `format.ts`). Higher-level implementation modules (for example `SequenceManager.ts`) are consumed via `HotkeyManager` and are not a supported direct import surface.
 
 ## UI5 Integration
 
@@ -63,6 +65,8 @@ window.addEventListener("blur", handler); // bubble phase
 
 Using `window` capture ensures the library sees events before any `document` or element-level listeners. This is critical for `preventDefault()`, `stopPropagation()`, and the interceptor mechanism (used by `HotkeyRecorder`).
 
+> **Focus listeners live on HotkeyManager, not EventDispatcher.** The `focusin`/`focusout` listeners are attached to `document` in the capture phase and are owned by `HotkeyManager`. This is intentional: focus state is consumed exclusively by HotkeyManager's target-scoped matching logic (the focus-path fallback), so it stays co-located with the consumer rather than being routed through the dispatch pipeline.
+
 ### Dispatch Pipeline
 
 The EventDispatcher runs a deterministic 7-step pipeline on each `keydown`:
@@ -83,8 +87,8 @@ keydown event (window capture)
   │           If any guard active → emit unhandled(Suspended), stop
   │
   ├─ Step 5: Hotkey dispatch (HotkeyManager._processHotkeys)
-  │           Pass 1: document-level registrations (active scope → global)
-  │           Pass 2: target-scoped via composedPath() (active scope → global)
+  │           Pass 1: target-scoped via composedPath() (active scope → global)
+  │           Pass 2: untargeted registrations (active scope → global)
   │
   ├─ Step 6: Sequence dispatch (SequenceManager.processKeyEvent)
   │           Returns true if full match OR partial advance
@@ -107,22 +111,22 @@ Each registration is checked against the following guards before the callback fi
 
 ### Two-Pass Matching
 
-The two-pass approach is the core of the scope system. Document-level registrations are checked first:
+The two-pass approach is the core of the scope system. Target-scoped registrations are checked first:
 
-1. All document-level registrations in the **active scope** (top of the stack) are checked first.
-2. If no match is found, all **global scope** document-level registrations are checked.
+1. All target-scoped registrations whose target appears in the event's `composedPath()` are checked, innermost first (active scope → global scope).
+2. If no target match stopped propagation, all untargeted registrations are checked (active scope → global scope).
 
-If a document-level match is found with `stopPropagation: true` (the default), target-scoped registrations are skipped entirely.
+A target-scoped match with `stopPropagation: true` (the default) prevents untargeted registrations from firing.
 
 ### Target-Scoped Matching via composedPath()
 
-Target-scoped registrations use `event.composedPath()` for membership checks instead of per-element DOM listeners. The matching follows scope-first, innermost-wins semantics:
+Target-scoped registrations use `event.composedPath()` for membership checks instead of per-element DOM listeners. The matching follows scope-first, innermost-first semantics:
 
-1. **Active scope pass**: iterate `composedPath()` from index 0 (innermost) outward. For each node, check if it has target-scoped registrations in the active scope's bucket. The first match wins.
+1. **Active scope pass**: iterate `composedPath()` from index 0 (innermost) outward. For each node, check if it has target-scoped registrations in the active scope's bucket. The first (innermost) match wins.
 2. **Global scope pass**: only if no active-scope target matched and active scope is not `GLOBAL_SCOPE`.
 3. **Skip-reason pass**: for unhandled tracking, iterate off-path targets whose key combo matches the event and record `TargetMismatch`.
 
-For nested targets with the same key, only the **innermost** matching target fires — regardless of `stopPropagation` settings. This is a deliberate design choice, not an artifact of DOM listener ordering.
+For nested targets with the same key, only the **innermost** matching target fires.
 
 Registrations within each scope are matched in FIFO order (first registered, first matched).
 
@@ -320,7 +324,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 | Closed shadow root targets                     | composedPath() stops at boundary — no match            |
 | Detached targets                               | Not in composedPath() — inactive until reattached      |
 | Empty composedPath()                           | Fallback to `[event.target, document, window]`         |
-| stopPropagation on window capture              | Blocks document-level listeners (UI5, third-party)     |
+| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)         |
 
 ## Project Layout
 
@@ -330,7 +334,6 @@ packages/hotkeys/
     library.ts           UI5 Lib.init() entry point, apiVersion 2
     HotkeyManager.ts     Core singleton, scope stack, dispatch routing
     RegistrationGroup.ts Scoped batch registration with auto-cleanup
-    SequenceManager.ts   Multi-key sequence matching
     KeyStateTracker.ts   Held-key state tracking
     HotkeyRecorder.ts    Keyboard shortcut recorder
     validate.ts          Validation + browser/SAP blocklists
@@ -338,12 +341,14 @@ packages/hotkeys/
     constants.ts         Alias maps, display symbols, normalization
     parse.ts             Hotkey string parsing
     match.ts             KeyboardEvent matching
-    dom.ts               Input element detection
+    internal/dom.ts      Input element detection
     platform.ts          Platform detection and Mod resolution
-    format.ts            Display formatting
+    format.ts            Display formatting helper re-export
     internal/
+      SequenceManager.ts   Multi-key sequence matching
       event-dispatcher.ts  Centralized DOM listener + 7-step pipeline
       dispatch-core.ts     Internal dispatch helpers
+      format.ts            Display formatting implementation
       internal-token.ts    Runtime instantiation guard symbol
       scope.ts             Scope string resolution and validation
       skip-reason.ts       Internal skip-reason models
