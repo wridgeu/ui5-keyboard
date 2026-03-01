@@ -54,17 +54,30 @@ Sequences use the same two-pass matching as `HotkeyManager`: active scope first,
 
 ### Pending Callback
 
-Applications can display progress indicators by setting a pending callback:
+Applications can display mid-sequence progress using the per-registration `onPending` callback:
 
 ```ts
-manager.setSequencePendingHandler((info) => {
-  // info.completedSteps: number of matched keys so far
-  // info.totalSteps: total keys in the sequence
-  // info.nextKey: the next expected key string
-  // info.sequence: the full sequence array
-  statusBar.setText(`${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
-});
+manager.registerSequence(
+  ["G", "E"],
+  (event) => {
+    router.navTo("editor");
+  },
+  {
+    description: "Go to editor",
+    onPending: (info) => {
+      // info.completedSteps: number of matched keys so far
+      // info.totalSteps: total keys in the sequence
+      // info.nextKey: the next expected key string
+      // info.sequence: the full sequence array
+      statusBar.setText(`${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
+    },
+  },
+);
 ```
+
+`onPending` dies with the registration — no manual cleanup needed. When the handle is unregistered (or the group is destroyed), the callback is gone.
+
+A global fallback is available via `manager.setSequencePendingHandler()` for cases where a single handler covers all sequences. Per-registration `onPending` takes precedence over the global handler when both are set.
 
 ### Options
 
@@ -77,6 +90,7 @@ manager.setSequencePendingHandler((info) => {
 | `ignoreInputs`    | `boolean \| "auto"`        | `"auto"`       | Suppress in inputs; auto allows Ctrl/Meta combos and Escape   |
 | `preventDefault`  | `boolean`                  | `true`         | Call `event.preventDefault()` when the full sequence matches  |
 | `stopPropagation` | `boolean`                  | `true`         | Call `event.stopPropagation()` when the full sequence matches |
+| `onPending`       | `SequencePendingCallback`  | —              | Per-registration mid-sequence progress callback               |
 
 ## Design Decisions
 

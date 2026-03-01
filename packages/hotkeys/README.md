@@ -532,13 +532,27 @@ manager.registerSequence(
   { description: "Save all (VS Code style)" },
 );
 
-// Get progress updates mid-sequence
+// Per-registration progress callback — dies with the registration
+manager.registerSequence(
+  ["G", "I"],
+  (event) => {
+    router.navTo("inbox");
+  },
+  {
+    description: "Go to inbox",
+    onPending: (info) => {
+      statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
+    },
+  },
+);
+
+// Global fallback for sequences without onPending
 manager.setSequencePendingHandler((info) => {
   statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
 });
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"` — suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"` — suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback, takes precedence over the global handler).
 
 > [!NOTE]
 > `scope` must be a non-empty string when provided.
