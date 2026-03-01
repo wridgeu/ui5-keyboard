@@ -214,3 +214,82 @@ export type KeyRow = KeyDefinition[];
  * @public
  */
 export type LayoutDefinition = KeyRow[];
+
+// ── i18n extensibility types ──────────────────────
+
+/**
+ * A single enhancement bundle descriptor.
+ *
+ * Exactly one of `bundleName` or `bundleUrl` is required.
+ * `bundleName` follows the UI5 module-path convention
+ * (e.g. `"my.app.i18n.kiosk"`).
+ */
+export type KioskI18nEnhancement =
+  | {
+      readonly bundleName: string;
+      readonly bundleUrl?: never;
+      readonly supportedLocales?: readonly string[];
+      readonly fallbackLocale?: string;
+    }
+  | {
+      readonly bundleName?: never;
+      readonly bundleUrl: string;
+      readonly supportedLocales?: readonly string[];
+      readonly fallbackLocale?: string;
+    };
+
+/**
+ * Configuration object for {@link KioskKeyboard.configureI18n}.
+ */
+export interface KioskI18nConfig {
+  /**
+   * Locales that the enhancement bundles provide translations for.
+   * Applies as default `supportedLocales` for enhancement entries
+   * that do not declare their own.
+   *
+   * Does **not** reconfigure the base library bundle — its locale
+   * list is determined by shipped `.properties` files.
+   */
+  readonly supportedLocales?: readonly string[];
+
+  /**
+   * Default fallback locale for enhancement entries that do not
+   * declare their own.
+   */
+  readonly fallbackLocale?: string;
+
+  /**
+   * Additional resource bundles whose texts take precedence over
+   * the base library bundle.  Evaluated in array order; the last
+   * entry that provides a given key wins.
+   */
+  readonly enhanceWith?: readonly KioskI18nEnhancement[];
+}
+
+/**
+ * Context passed to the i18n override hook.
+ */
+export interface KioskI18nOverrideContext {
+  /** The message key (e.g. `"KIOSK_KEYBOARD_LABEL"`). */
+  readonly key: string;
+  /**
+   * Current locale string (BCP47 format, e.g. `"de"`, `"en-US"`).
+   * Derived via a version-safe utility — see implementation notes.
+   */
+  readonly locale: string;
+  /** Hardcoded fallback passed by the call site. */
+  readonly defaultText: string;
+  /**
+   * Text resolved through the full bundle chain
+   * (base + enhancements) *before* the hook runs.
+   */
+  readonly resolvedText: string;
+}
+
+/**
+ * Override hook signature.
+ *
+ * Return a string to replace `resolvedText`.
+ * Return `undefined` to keep the resolved text as-is.
+ */
+export type KioskI18nOverrideHook = (ctx: KioskI18nOverrideContext) => string | undefined;

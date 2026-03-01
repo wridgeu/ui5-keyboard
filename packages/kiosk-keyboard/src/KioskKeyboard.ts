@@ -25,6 +25,14 @@ import {
   resetLocaleLayouts as registryResetLocales,
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
+import {
+  configureI18n as registryConfigureI18n,
+  resetI18nConfiguration as registryResetI18n,
+  setI18nOverrideHook as registrySetOverrideHook,
+  clearI18nOverrideHook as registryClearOverrideHook,
+  reloadBundles as registryReloadBundles,
+} from "./internal/i18n-registry";
+import type { KioskI18nConfig, KioskI18nOverrideHook } from "./types";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
@@ -501,6 +509,100 @@ export default class KioskKeyboard extends Control {
     return registryGetLocaleLayout();
   }
 
+  // ──────────────────────────────────────────────
+  // Static delegates — i18n registry (see internal/i18n-registry.ts)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Configure i18n enhancement bundles and locale metadata.
+   *
+   * Enhancement bundles provide additional or overriding translations
+   * for the keyboard's built-in text keys.  Useful for adding support
+   * for locales not shipped with the library, or for tenant-specific
+   * wording.
+   *
+   * Replaces any previous configuration (not incremental).
+   *
+   * Enhancement bundles are loaded asynchronously.  The returned
+   * Promise resolves when all bundles are ready.  The control
+   * renders immediately with base-bundle text, then re-renders
+   * when enhancements are available.
+   *
+   * Call {@link resetI18nConfiguration} and
+   * {@link clearI18nOverrideHook} in `Component.destroy()` to prevent
+   * cross-app leakage in FLP scenarios.
+   *
+   * @param config  Enhancement bundle descriptors and locale metadata.
+   * @returns Resolves when all enhancement bundles are loaded.
+   * @since 1.x.0
+   * @public
+   * @static
+   */
+  static configureI18n(config: KioskI18nConfig): Promise<void> {
+    KioskKeyboard._invalidateAllInstances();
+
+    const loaded = registryConfigureI18n(config);
+
+    void loaded.then(() => KioskKeyboard._invalidateAllInstances());
+
+    return loaded;
+  }
+
+  /**
+   * Reset i18n enhancement configuration to library defaults.
+   *
+   * Clears all enhancement bundles and cancels any in-flight bundle
+   * loads.  Does not affect the override hook — call
+   * {@link clearI18nOverrideHook} separately if needed.
+   *
+   * @since 1.x.0
+   * @public
+   * @static
+   */
+  static resetI18nConfiguration(): void {
+    registryResetI18n();
+    KioskKeyboard._invalidateAllInstances();
+  }
+
+  /**
+   * Register a programmatic override hook for resolved i18n texts.
+   *
+   * The hook runs after the base bundle and all enhancement bundles
+   * have been consulted.  Return a string to replace the resolved
+   * text, or `undefined` to keep it.
+   *
+   * Only one hook is active at a time.  Calling this method again
+   * replaces the previous hook.
+   *
+   * @param fn  The override function.
+   * @since 1.x.0
+   * @public
+   * @static
+   */
+  static setI18nOverrideHook(fn: KioskI18nOverrideHook): void {
+    registrySetOverrideHook(fn);
+    KioskKeyboard._invalidateAllInstances();
+  }
+
+  /**
+   * Remove the i18n override hook.
+   *
+   * @since 1.x.0
+   * @public
+   * @static
+   */
+  static clearI18nOverrideHook(): void {
+    registryClearOverrideHook();
+    KioskKeyboard._invalidateAllInstances();
+  }
+
+  /** Invalidate all living KioskKeyboard instances to pick up i18n changes. */
+  private static _invalidateAllInstances(): void {
+    for (const instance of KioskKeyboard._instances) {
+      instance.invalidate();
+    }
+  }
+
   /**
    * Injects the locale-detected layout when constructor settings are
    * provided but no explicit `layout` is included.
@@ -571,6 +673,15 @@ export default class KioskKeyboard extends Control {
     if (localeLayout !== DEFAULT_LAYOUT) {
       this.setLayout(localeLayout);
     }
+  }
+
+  onLocalizationChanged(): void {
+    void registryReloadBundles().then(() => {
+      if (!this.isDestroyed()) {
+        KioskKeyboard._invalidateAllInstances();
+      }
+    });
+    this.invalidate();
   }
 
   onAfterRendering(): void {
