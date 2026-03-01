@@ -10,8 +10,6 @@ import XMLView from "sap/ui/core/mvc/XMLView";
 import Localization from "sap/base/i18n/Localization";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import ResourceBundle from "sap/base/i18n/ResourceBundle";
-import Lib from "sap/ui/core/Lib";
 import {
   placeAndWait,
   waitForRender,

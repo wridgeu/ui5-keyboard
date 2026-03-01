@@ -788,34 +788,23 @@ Log a warning and ignore. Do not set `overrideHook` to a non-function
 value. TS consumers are guarded by the type signature; this protects
 JS consumers.
 
-### 8.8 Locale String for Hook Context — Version-Safe Utility
+### 8.8 Locale String for Hook Context
 
-The override hook context needs a `locale` string. Since
-`Localization.getLanguageTag()` requires 1.120 and the library targets
-1.118, use a version-safe utility:
+The override hook context needs a `locale` string. Since the
+layout-registry already uses `Localization.getLanguageTag()` (1.120+),
+the library's effective minimum is already 1.120. Use the framework API:
 
 ```ts
+import Localization from "sap/base/i18n/Localization";
+
 function getCurrentLocale(): string {
-  // navigator.language reflects the browser's BCP47 locale.
-  // This is the same source UI5 auto-detects from when no explicit
-  // sap-language is configured.
-  //
-  // Caveat: when the app sets sap-language=XX explicitly,
-  // navigator.language won't reflect it.  For the hook context
-  // this is acceptable — the locale field is informational, and
-  // apps with explicit language requirements should use the hook's
-  // key/resolvedText fields for decision-making, not the locale.
-  return navigator.language || "en";
+  return Localization.getLanguage() || "en";
 }
 ```
 
-The caveat is consistent with the backward compat proposal for
-`getLocaleLayout()`, which uses the same `navigator.language` approach.
-
-If the backward compat work is not done and the library's effective
-minimum remains 1.120+ at implementation time, `Localization
-.getLanguageTag().toString()` can be used instead. The utility is
-easily swapped.
+This uses the framework's configured language rather than
+`navigator.language`, ensuring the locale reflects `sap-language` URL
+parameters and explicit `Localization.setLanguage()` calls.
 
 ### 8.9 `loadBundles` Passes Conditional Properties
 
@@ -1013,18 +1002,18 @@ Exit criteria: docs reviewed and aligned with final API names.
 
 Decisions settled by comparing both plans:
 
-| Question                                  | Resolution                                                                                                                                                                                                    |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `resetI18nConfiguration` clears hook?     | **No.** Config and hook are independent concerns. FLP cleanup calls both explicitly.                                                                                                                          |
-| Invalidate live instances on API calls?   | **Yes.** All four methods call `_invalidateAllInstances()`. Labels must be visually consistent.                                                                                                               |
-| `enhanceWith` order semantics?            | **Last wins.** Given `[A, B]`, B's text is used if both provide the same key. Reverse iteration, break.                                                                                                       |
-| Language change mechanism?                | **`onLocalizationChanged` hook** — per-instance, 1.118 compatible, canonical UI5 control pattern. No static listener management.                                                                              |
-| `getText` ownership?                      | **Registry owns full resolution.** `i18n.ts` is a thin re-export for import stability.                                                                                                                        |
-| Standalone public re-export module?       | **No.** APIs live on `KioskKeyboard` only — no standalone import use case.                                                                                                                                    |
-| Replace vs merge on `configureI18n`?      | **Replace.** Simple mental model, no ordering ambiguity.                                                                                                                                                      |
-| Warning log component?                    | **`"ui5.kiosk.KioskKeyboard"`** — consistent with existing codebase convention.                                                                                                                               |
-| Type design for enhancement source?       | **Discriminated union with `never`** + `readonly` on all config properties.                                                                                                                                   |
-| Sync vs async `ResourceBundle.create`?    | **Async (`{ async: true }`).** Avoids the sync deprecation (since 1.135). Eager loading in `configureI18n`, generation counter for race safety, `getText` reads only loaded bundles.                          |
-| `bundleName` + `bundleUrl` both provided? | **Rejected at our level.** UI5 silently resolves (`bundleName` wins) but our types and runtime validation enforce xor.                                                                                        |
-| Locale string source?                     | **`navigator.language`** — version-safe (1.118+), consistent with backward compat proposal for `getLocaleLayout()`. Swappable to `Localization.getLanguageTag().toString()` if min version rises above 1.120. |
-| Minimum UI5 version?                      | **1.118.** No dependency on `sap/base/i18n/Localization` methods (1.120+) in library source. `onLocalizationChanged` hook + `navigator.language` + async `ResourceBundle.create` all work at 1.118.           |
+| Question                                  | Resolution                                                                                                                                                                                                                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `resetI18nConfiguration` clears hook?     | **No.** Config and hook are independent concerns. FLP cleanup calls both explicitly.                                                                                                                                                                               |
+| Invalidate live instances on API calls?   | **Yes.** All four methods call `_invalidateAllInstances()`. Labels must be visually consistent.                                                                                                                                                                    |
+| `enhanceWith` order semantics?            | **Last wins.** Given `[A, B]`, B's text is used if both provide the same key. Reverse iteration, break.                                                                                                                                                            |
+| Language change mechanism?                | **`onLocalizationChanged` hook** — per-instance, 1.118 compatible, canonical UI5 control pattern. No static listener management.                                                                                                                                   |
+| `getText` ownership?                      | **Registry owns full resolution.** `i18n.ts` is a thin re-export for import stability.                                                                                                                                                                             |
+| Standalone public re-export module?       | **No.** APIs live on `KioskKeyboard` only — no standalone import use case.                                                                                                                                                                                         |
+| Replace vs merge on `configureI18n`?      | **Replace.** Simple mental model, no ordering ambiguity.                                                                                                                                                                                                           |
+| Warning log component?                    | **`"ui5.kiosk.KioskKeyboard"`** — consistent with existing codebase convention.                                                                                                                                                                                    |
+| Type design for enhancement source?       | **Discriminated union with `never`** + `readonly` on all config properties.                                                                                                                                                                                        |
+| Sync vs async `ResourceBundle.create`?    | **Async (`{ async: true }`).** Avoids the sync deprecation (since 1.135). Eager loading in `configureI18n`, generation counter for race safety, `getText` reads only loaded bundles.                                                                               |
+| `bundleName` + `bundleUrl` both provided? | **Rejected at our level.** UI5 silently resolves (`bundleName` wins) but our types and runtime validation enforce xor.                                                                                                                                             |
+| Locale string source?                     | **`Localization.getLanguage()`** (1.120+) — uses the framework's configured language, respects `sap-language` URL parameters. The layout-registry already depends on `Localization.getLanguageTag()` (1.120+), so no additional version requirement is introduced. |
+| Minimum UI5 version?                      | **1.120** (effective). The layout-registry already uses `Localization.getLanguageTag()` (1.120+). `onLocalizationChanged` hook + `Localization.getLanguage()` + async `ResourceBundle.create` all work at 1.120.                                                   |

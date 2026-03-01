@@ -1,4 +1,5 @@
 import ResourceBundle from "sap/base/i18n/ResourceBundle";
+import Localization from "sap/base/i18n/Localization";
 import Lib from "sap/ui/core/Lib";
 import Log from "sap/base/Log";
 import type { KioskI18nConfig, KioskI18nOverrideContext, KioskI18nOverrideHook } from "../types";
@@ -11,7 +12,7 @@ let generation = 0;
 let overrideHook: KioskI18nOverrideHook | null = null;
 
 function getCurrentLocale(): string {
-  return navigator.language || "en";
+  return Localization.getLanguage() || "en";
 }
 
 function loadBundles(): Promise<void> {
