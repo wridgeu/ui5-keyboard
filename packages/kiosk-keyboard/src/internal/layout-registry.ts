@@ -149,8 +149,10 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
  */
 export function getLayoutOrDefault(sName: string): LayoutDefinition {
   const name = normalizeLowerString(sName, "layout name");
-  if (!name) return layouts.get(DEFAULT_LAYOUT)!;
-  return layouts.get(name) ?? layouts.get(DEFAULT_LAYOUT)!;
+  const fallback = layouts.get(DEFAULT_LAYOUT);
+  if (!fallback) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
+  if (!name) return fallback;
+  return layouts.get(name) ?? fallback;
 }
 
 /** Returns the names of all registered layouts (built-in + custom). */
@@ -207,7 +209,9 @@ export function unregisterLocaleLayout(sLocale: string): void {
  */
 export function resetLocaleLayouts(): void {
   LOCALE_LAYOUT_MAP.clear();
-  DEFAULT_LOCALE_LAYOUT_MAP.forEach((v, k) => LOCALE_LAYOUT_MAP.set(k, v));
+  for (const [k, v] of DEFAULT_LOCALE_LAYOUT_MAP) {
+    LOCALE_LAYOUT_MAP.set(k, v);
+  }
 }
 
 /**

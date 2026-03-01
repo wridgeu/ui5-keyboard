@@ -506,7 +506,6 @@ QUnit.test("Double-destroy recorder is idempotent", (assert) => {
 
   recorder.destroy(); // Second destroy — must not throw
   assert.ok(recorder.isDestroyed, "Still destroyed after double call");
-  assert.ok(true, "No error on double destroy");
 });
 
 QUnit.test("cancel() on destroyed recorder does not throw", (assert) => {
@@ -655,7 +654,7 @@ QUnit.module("Negative / Edge-Case — Target-scoped", freshManagerHooks());
 QUnit.test("Target removed from DOM before keypress — hotkey does not fire", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let fired = false;
   manager.register(
@@ -694,7 +693,7 @@ QUnit.test("Target never added to DOM — hotkey does not fire", (assert) => {
 QUnit.test("Target removed and re-added — hotkey resumes", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let callCount = 0;
   manager.register(
@@ -713,17 +712,15 @@ QUnit.test("Target removed and re-added — hotkey resumes", (assert) => {
   assert.strictEqual(callCount, 1, "Does NOT fire while target is detached");
 
   // Re-add to DOM
-  document.body.appendChild(target);
+  fixture.appendChild(target);
   fireKeyOn(target, "Escape");
   assert.strictEqual(callCount, 2, "Fires again after target is re-added to DOM");
-
-  target.remove();
 });
 
 QUnit.test("Unregister target-scoped hotkey after target removed — no leak", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   const handle = manager.register("F5", () => {}, { target });
   target.remove();

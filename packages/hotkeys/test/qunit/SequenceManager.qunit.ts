@@ -595,7 +595,7 @@ QUnit.test("setOptions: timeout validation rejects invalid values", (assert) => 
 // ignoreInputs: "auto" (default)
 // ──────────────────────────────────────────────
 
-QUnit.test("ignoreInputs: auto suppresses single-key sequence in input", (assert) => {
+QUnit.test("ignoreInputs: auto suppresses plain-key sequence in input", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
 
@@ -610,7 +610,7 @@ QUnit.test("ignoreInputs: auto suppresses single-key sequence in input", (assert
   fireKeyOn(input, "g");
   clock.tick(50);
   fireKeyOn(input, "e");
-  assert.notOk(called, "Single-key sequence suppressed in input with auto");
+  assert.notOk(called, "Plain-key sequence suppressed in input with auto");
 });
 
 QUnit.test("ignoreInputs: auto allows Ctrl sequence in input", (assert) => {

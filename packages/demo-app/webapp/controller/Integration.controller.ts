@@ -2,7 +2,6 @@ import MessageToast from "sap/m/MessageToast";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
-import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 
@@ -14,14 +13,13 @@ import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 export default class Integration extends BaseController {
   private static readonly COMBO_HOTKEY = "Ctrl+Shift+M";
 
-  private _manager!: HotkeyManager;
   private _hotkeys!: RegistrationGroup;
 
   onInit(): void {
     this.getView()!.setModel(new JSONModel({ lastKioskKey: "None" }), "integration");
 
-    this._manager = this.getTypedComponent().getHotkeyManager();
-    this._hotkeys = this._manager.createGroup();
+    const manager = this.getTypedComponent().getHotkeyManager();
+    this._hotkeys = manager.createGroup();
 
     const stateModel = this.getStateModel();
     stateModel.setProperty("/comboStatus", `Try ${Integration.COMBO_HOTKEY} or type with the virtual keyboard.`);

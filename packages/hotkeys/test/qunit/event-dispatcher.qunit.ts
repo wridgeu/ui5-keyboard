@@ -1,6 +1,7 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
+import { FOCUS_PATH_FALLBACK_TTL_MS } from "ui5/hotkeys/internal/FocusFallbackTracker";
 import type Log from "sap/base/Log";
 import { fireKey, fireKeyOn, fireKeyUp, fireBlur } from "./test-helpers";
 
@@ -8,6 +9,11 @@ let manager: HotkeyManager;
 
 QUnit.module("EventDispatcher & Suspend Guard", {
   beforeEach() {
+    try {
+      HotkeyManager.getInstance().destroy();
+    } catch {
+      // Not initialized yet
+    }
     manager = HotkeyManager.getInstance();
   },
   afterEach() {
@@ -147,7 +153,7 @@ QUnit.test("Suspended → unhandled fires with Suspended reason", (assert) => {
 });
 
 QUnit.test("In-progress sequence times out during suspension", (assert) => {
-  const done = assert.async();
+  const clock = sinon.useFakeTimers();
   let seqFired = false;
 
   manager.registerSequence(
@@ -164,18 +170,18 @@ QUnit.test("In-progress sequence times out during suspension", (assert) => {
   // Suspend immediately
   const guard = manager.suspendDispatch("test");
 
-  // Wait for timeout to expire during suspension
-  setTimeout(() => {
-    guard.release();
-    fireKey("I"); // Should not complete sequence — timed out
+  // Advance past the sequence timeout while suspended
+  clock.tick(200);
 
-    assert.notOk(seqFired, "Sequence did NOT complete (timed out during suspension)");
-    done();
-  }, 200);
+  guard.release();
+  fireKey("I"); // Should not complete sequence — timed out
+
+  assert.notOk(seqFired, "Sequence did NOT complete (timed out during suspension)");
+  clock.restore();
 });
 
 QUnit.test("Suspend mid-sequence, release before timeout — sequence completes", (assert) => {
-  const done = assert.async();
+  const clock = sinon.useFakeTimers();
   let seqFired = false;
 
   manager.registerSequence(
@@ -192,12 +198,13 @@ QUnit.test("Suspend mid-sequence, release before timeout — sequence completes"
   // Suspend briefly
   const guard = manager.suspendDispatch("test");
 
-  setTimeout(() => {
-    guard.release();
-    fireKey("I");
-    assert.ok(seqFired, "Sequence completed after brief suspension");
-    done();
-  }, 50);
+  // Advance time but stay within sequence timeout
+  clock.tick(50);
+
+  guard.release();
+  fireKey("I");
+  assert.ok(seqFired, "Sequence completed after brief suspension");
+  clock.restore();
 });
 
 // ──────────────────────────────────────────────
@@ -264,7 +271,7 @@ QUnit.test("Interceptor error is isolated — pipeline keeps working", (assert) 
 
   // The throwing recorder should not crash the dispatch pipeline.
   fireKey("F5");
-  assert.ok(true, "Dispatch pipeline survived recorder error");
+  assert.notOk(errorRecorder.isRecording, "Recorder stopped despite callback throw");
 
   errorRecorder.destroy();
 
@@ -1124,22 +1131,7 @@ QUnit.test("composedPath fallback — event with empty composedPath uses target 
     { target },
   );
 
-  // Create a keyboard event and override composedPath to return empty
-  const event = new KeyboardEvent("keydown", {
-    key: "Escape",
-    bubbles: true,
-    cancelable: true,
-  });
-  Object.defineProperty(event, "composedPath", { value: () => [] });
-  Object.defineProperty(event, "target", { value: target });
-
-  // Dispatch on target — the fallback should use [event.target, document, window]
-  // so target should be in the path
-  target.dispatchEvent(event);
-
-  // Note: when dispatched on target, the real composedPath is used by the browser,
-  // not our mock. So we test via document dispatch where we control the event.
-  fired = false;
+  // Dispatch via window where we can control composedPath via mock
   const event2 = new KeyboardEvent("keydown", {
     key: "Escape",
     bubbles: true,
@@ -1672,7 +1664,7 @@ QUnit.test("Focus moves to real non-target element — old target does NOT fire"
   outside.remove();
 });
 
-QUnit.test("Fallback expires after TTL (1200 ms)", (assert) => {
+QUnit.test(`Fallback expires after TTL (${FOCUS_PATH_FALLBACK_TTL_MS} ms)`, (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
@@ -1696,8 +1688,8 @@ QUnit.test("Fallback expires after TTL (1200 ms)", (assert) => {
   input.focus();
   input.blur();
 
-  // Advance time past the 1200ms TTL
-  clock.tick(1300);
+  // Advance time past the TTL
+  clock.tick(FOCUS_PATH_FALLBACK_TTL_MS + 100);
 
   fireKey("Escape");
 
@@ -1780,6 +1772,9 @@ QUnit.test("addGenericRootId makes element act as generic root for focus fallbac
 
   // Register the shell as a generic root
   manager.addGenericRootId("myShellRoot");
+
+  // Make shell focusable so shell.focus() actually moves focus there
+  shell.tabIndex = -1;
 
   // Focus input, then blur to the shell (now a generic root)
   input.focus();

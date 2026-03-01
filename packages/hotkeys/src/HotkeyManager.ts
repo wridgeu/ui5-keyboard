@@ -907,6 +907,11 @@ export default class HotkeyManager extends BaseObject {
       reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
       skippedRegistration = skipInfo && skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined;
     } else {
+      Log.warning(
+        "_emitUnhandled called without forcedReason or hotkeyContext — this should not happen",
+        undefined,
+        LOG_COMPONENT,
+      );
       reason = UnhandledReason.NoMatch;
       activeScope = this.getActiveScope();
       const target = getEventTarget(event);

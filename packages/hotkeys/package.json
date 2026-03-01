@@ -39,7 +39,6 @@
     "start:qunit": "ui5 serve --port 8081 -o \"test-resources/sap/ui/qunit/testrunner.html?testpage=%2Ftest-resources%2Fui5%2Fhotkeys%2Fqunit%2Ftestsuite.qunit.html&autostart=true\"",
     "test:qunit": "wdio run test/qunit/wdio.conf.ts",
     "test": "npm run test:qunit",
-    "test:all": "npm run test:qunit",
     "typecheck": "tsc --noEmit",
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },

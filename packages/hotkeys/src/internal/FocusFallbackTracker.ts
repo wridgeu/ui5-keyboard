@@ -10,7 +10,8 @@ const LOG_COMPONENT = "ui5.hotkeys.FocusFallbackTracker";
  * below 800ms miss slow rerenders; values above 2000ms risk stale matches
  * after the user has mentally moved on.
  */
-const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
+/** @internal — exported for testing only */
+export const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
 /**
  * Tracks focus/blur state and augments keyboard event paths for
@@ -50,19 +51,15 @@ export default class FocusFallbackTracker {
   }
 
   addGenericRootId(id: string): void {
-    if (!id || !id.trim()) {
-      Log.warning("addGenericRootId: ignoring empty or whitespace-only id", undefined, LOG_COMPONENT);
-      return;
-    }
-    this._genericRootIds.add(id);
+    const trimmed = this._validateId(id, "addGenericRootId");
+    if (!trimmed) return;
+    this._genericRootIds.add(trimmed);
   }
 
   removeGenericRootId(id: string): void {
-    if (!id || !id.trim()) {
-      Log.warning("removeGenericRootId: ignoring empty or whitespace-only id", undefined, LOG_COMPONENT);
-      return;
-    }
-    this._genericRootIds.delete(id);
+    const trimmed = this._validateId(id, "removeGenericRootId");
+    if (!trimmed) return;
+    this._genericRootIds.delete(trimmed);
   }
 
   destroy(): void {
@@ -209,6 +206,14 @@ export default class FocusFallbackTracker {
     }
   }
 
+  private _validateId(id: string, method: string): string | null {
+    if (!id || !id.trim()) {
+      Log.warning(`${method}: ignoring empty or whitespace-only id`, undefined, LOG_COMPONENT);
+      return null;
+    }
+    return id.trim();
+  }
+
   /**
    * Whether a node is a generic top-level dispatch target.
    *
@@ -254,8 +259,10 @@ export default class FocusFallbackTracker {
   private _getActiveElementPath(activeElement: Element): EventTarget[] {
     const path: EventTarget[] = [];
     let current: Node | null = activeElement;
+    let depth = 0;
+    const MAX_DEPTH = 1000;
 
-    while (current) {
+    while (current && depth++ < MAX_DEPTH) {
       path.push(current);
 
       if (current.parentNode) {
