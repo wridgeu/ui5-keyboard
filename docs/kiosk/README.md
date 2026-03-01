@@ -12,6 +12,7 @@
 - [Backward Compatibility](./proposals/BACKWARD-COMPATIBILITY.md)
 - [Tab and Done Keys](./proposals/TAB-AND-DONE-KEYS.md)
 - [i18n Extensibility](./proposals/I18N-EXTENSIBILITY.md)
+- [i18n Extensibility Implementation Plan](./proposals/I18N-EXTENSIBILITY-IMPLEMENTATION-PLAN.md)
 - [Web Component Package](./proposals/WEBCOMPONENT-PACKAGE.md)
 
 ## History
