@@ -1,6 +1,6 @@
 # Multi-Key Sequences
 
-> **Status: Implemented** — `SequenceManager` class in `src/SequenceManager.ts`.
+> **Status: Implemented** — `SequenceManager` class in `src/internal/SequenceManager.ts`.
 
 Multi-key sequence support for vim-style `g g`, Emacs-style `C-x C-s`, and VS Code-style `Ctrl+K Ctrl+S` patterns.
 

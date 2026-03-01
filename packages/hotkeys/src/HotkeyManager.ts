@@ -3,7 +3,7 @@ import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
 import { ConflictBehavior, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
-import SequenceManager from "./SequenceManager";
+import SequenceManager from "./internal/SequenceManager";
 import HotkeyRecorder from "./HotkeyRecorder";
 import type { HotkeyRecorderOptions } from "./HotkeyRecorder";
 import EventDispatcher from "./internal/event-dispatcher";

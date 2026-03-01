@@ -22,7 +22,7 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
   - [Unhandled Key Callback](#unhandled-key-callback)
   - [Target Elements](#target-elements)
   - [Suspend Guard](#suspend-guard)
-- [SequenceManager](#sequencemanager)
+- [Sequences](#sequences)
 - [KeyStateTracker](#keystatetracker)
 - [HotkeyRecorder](#hotkeyrecorder)
 - [Validation](#validation)
@@ -159,7 +159,7 @@ import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 
 `HotkeyRecorder` and `KeyStateTracker` classes are exported for type declarations (e.g., `const tracker: KeyStateTracker = manager.getKeyStateTracker()`), but their constructors are internal — use `manager.createRecorder()` and `manager.getKeyStateTracker()` respectively.
 
-Advanced utility modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. This also includes modules such as `ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/dom`, `ui5/hotkeys/platform`, and `ui5/hotkeys/validate`.
+Advanced modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. Non-stable top-level paths currently include re-export entry points (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`) plus advanced utility helpers (`ui5/hotkeys/format`).
 
 ## HotkeyManager
 
@@ -511,7 +511,7 @@ g1.release(); // still suspended — g2 active
 g2.release(); // dispatch resumes
 ```
 
-## SequenceManager
+## Sequences
 
 Multi-key sequences like Vim-style `G` then `E` for "go to editor":
 
@@ -731,18 +731,6 @@ document.addEventListener("keydown", (event) => {
     // This event matches Ctrl+S
   }
 });
-```
-
-### DOM Utilities
-
-```ts
-import { isInputElement, getEventTarget } from "ui5/hotkeys/dom";
-
-// Check if a target is an editable input
-isInputElement(document.activeElement); // true for <input type="text">, <textarea>, contentEditable
-
-// Get the real event target (handles Shadow DOM retargeting)
-const target = getEventTarget(event);
 ```
 
 ### Platform Detection

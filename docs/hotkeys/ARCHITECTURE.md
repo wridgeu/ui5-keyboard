@@ -9,7 +9,7 @@ The library is split into focused, single-responsibility modules:
 ```
 HotkeyManager.ts     Singleton manager, scope stack, hotkey/sequence dispatch
 RegistrationGroup.ts Scoped batch registration with auto-cleanup
-SequenceManager.ts   Multi-key sequence matching (e.g., G then E)
+internal/SequenceManager.ts Multi-key sequence matching (e.g., G then E)
 KeyStateTracker.ts   Held-key state tracking with macOS stuck-key fix
 HotkeyRecorder.ts    Keyboard shortcut recorder for settings UIs
 validate.ts          Hotkey validation + browser/SAP conflict blocklists
@@ -17,9 +17,9 @@ types.ts             All TypeScript interfaces, types, and option defaults
 constants.ts         Key/modifier aliases, display symbols, normalization
 parse.ts             Hotkey string parsing ("Mod+Shift+S" -> structured object)
 match.ts             KeyboardEvent matching against parsed hotkeys
-dom.ts               Input element detection (text fields, textareas, contentEditable)
+internal/dom.ts      Input element detection (text fields, textareas, contentEditable)
 platform.ts          Platform detection (mac/windows/linux) and Mod resolution
-format.ts            Platform-aware display formatting
+format.ts            Platform-aware display formatting (advanced helper re-export)
 library.ts           UI5 library entry point (Lib.init)
 internal/event-dispatcher.ts Centralized DOM listener + 7-step dispatch pipeline
 internal/dispatch-core.ts    Dispatch pipeline helpers and skip handling
@@ -30,6 +30,8 @@ internal/idgen.ts            Internal registration ID generator
 ```
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`) — their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
+
+Some top-level entry points are importable but not part of the semver-stable consumer contract. This currently includes utility/helper modules (`parse.ts`, `match.ts`, `platform.ts`, `validate.ts`, `constants.ts`, `format.ts`). Higher-level implementation modules (for example `SequenceManager.ts`) are consumed via `HotkeyManager` and are not a supported direct import surface.
 
 ## UI5 Integration
 
@@ -332,7 +334,6 @@ packages/hotkeys/
     library.ts           UI5 Lib.init() entry point, apiVersion 2
     HotkeyManager.ts     Core singleton, scope stack, dispatch routing
     RegistrationGroup.ts Scoped batch registration with auto-cleanup
-    SequenceManager.ts   Multi-key sequence matching
     KeyStateTracker.ts   Held-key state tracking
     HotkeyRecorder.ts    Keyboard shortcut recorder
     validate.ts          Validation + browser/SAP blocklists
@@ -340,12 +341,14 @@ packages/hotkeys/
     constants.ts         Alias maps, display symbols, normalization
     parse.ts             Hotkey string parsing
     match.ts             KeyboardEvent matching
-    dom.ts               Input element detection
+    internal/dom.ts      Input element detection
     platform.ts          Platform detection and Mod resolution
-    format.ts            Display formatting
+    format.ts            Display formatting helper re-export
     internal/
+      SequenceManager.ts   Multi-key sequence matching
       event-dispatcher.ts  Centralized DOM listener + 7-step pipeline
       dispatch-core.ts     Internal dispatch helpers
+      format.ts            Display formatting implementation
       internal-token.ts    Runtime instantiation guard symbol
       scope.ts             Scope string resolution and validation
       skip-reason.ts       Internal skip-reason models

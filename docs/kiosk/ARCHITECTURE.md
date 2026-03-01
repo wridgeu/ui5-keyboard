@@ -9,7 +9,8 @@ KioskKeyboard.ts          UI5 Control — state, event delegation, target input 
                           locale detection, auto-type, mobile keyboard suppression
 KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
-                          (KeyboardLayout, KeyboardType, MobileKeyboard)
+                          (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
+                          plus key-name constants (`KeyName`)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
 layout-registry.ts        Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
@@ -524,7 +525,8 @@ packages/kiosk-keyboard/
     KioskKeyboard.ts          UI5 Control with state, event handling,
                                locale detection, auto-type, mobile suppression
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
-    library.ts                Lib.init(), KeyboardLayout, KeyboardType, MobileKeyboard enums
+    library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
+                               plus KeyName constants
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition
     layout-registry.ts        Layout registration and locale resolution
     internal/

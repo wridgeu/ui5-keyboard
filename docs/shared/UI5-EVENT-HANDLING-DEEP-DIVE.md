@@ -402,7 +402,7 @@ Applications should avoid conflicting with these standard Fiori Elements shortcu
 
 Re-rendering destroys and recreates DOM nodes. Without `getFocusInfo()`/`applyFocusInfo()`, focus is lost.
 
-**KioskKeyboard implements both** (`getFocusInfo` at line ~426, `applyFocusInfo` at line ~436) to preserve the focused key across re-renders.
+**KioskKeyboard implements both** (`getFocusInfo` and `applyFocusInfo`) to preserve the focused key across re-renders.
 
 ## 10. ItemNavigation Delegate
 

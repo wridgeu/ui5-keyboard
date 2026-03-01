@@ -56,7 +56,7 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 | 8   | Key state tracking                                   | Done — `KeyStateTracker` class                                                 |
 | 9   | Disallowed shortcut warnings at registration time    | Done — logged via `_logValidationWarnings()` on register                       |
 | 10  | AltGr guard (Windows)                                | Done — tracks `event.location` for right-Alt                                   |
-| 11  | Target element binding                               | Done — `target` option with ref-counted listeners                              |
+| 11  | Target element binding                               | Done — `target` option with `composedPath()`-based matching (innermost wins)   |
 | 12  | Unhandled key callback                               | Done — `setUnhandledHandler()` with reason enum                                |
 | 13  | Router integration                                   | Done — `enableRouterIntegration()` with `beforeRouteMatched`                   |
 | 14  | Dialog scope lifecycle                               | Done — manual `pushScope`/`popScope` for non-route scopes                      |
