@@ -11,8 +11,6 @@
 
 - [Backward Compatibility](./proposals/BACKWARD-COMPATIBILITY.md)
 - [Tab and Done Keys](./proposals/TAB-AND-DONE-KEYS.md)
-- [i18n Extensibility](./proposals/I18N-EXTENSIBILITY.md)
-- [i18n Extensibility Implementation Plan](./proposals/I18N-EXTENSIBILITY-IMPL-PLAN.md)
 - [Web Component Package](./proposals/WEBCOMPONENT-PACKAGE.md)
 
 ## History
@@ -22,6 +20,8 @@
 - [Escape Key Handling and Stable Height](./history/ESCAPE-AND-STABLE-HEIGHT.md)
 - [Function Key Row (F1-F12)](./history/FUNCTION-KEYS.md)
 - [Grapheme-Aware Editing](./history/GRAPHEME-AWARE-EDITING.md)
+- [i18n Extensibility](./history/I18N-EXTENSIBILITY.md)
+- [i18n Extensibility Implementation Plan](./history/I18N-EXTENSIBILITY-IMPL-PLAN.md)
 - [Native F-Key Mode](./history/NATIVE-FKEY-MODE.md)
 
 ## Notes
