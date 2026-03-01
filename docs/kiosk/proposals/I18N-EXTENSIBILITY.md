@@ -1,6 +1,6 @@
 # Feature Proposal: Configurable i18n Extensibility for `ui5.kiosk`
 
-> Detailed implementation planning: [I18N-EXTENSIBILITY-IMPLEMENTATION-PLAN.md](./I18N-EXTENSIBILITY-IMPLEMENTATION-PLAN.md)
+> Detailed implementation planning: [I18N-EXTENSIBILITY-IMPL-PLAN.md](./I18N-EXTENSIBILITY-IMPL-PLAN.md)
 
 ## Why
 
