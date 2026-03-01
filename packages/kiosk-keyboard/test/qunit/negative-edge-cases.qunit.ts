@@ -473,3 +473,39 @@ QUnit.test("setI18nOverrideHook(42) logs warning, does not set hook", async (ass
 
   assert.ok(spy.calledOnce, "Warning logged for number hook");
 });
+
+QUnit.test("configureI18n with non-array supportedLocales logs warning", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n({ supportedLocales: "de" } as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for non-array supportedLocales");
+});
+
+QUnit.test("configureI18n with non-string fallbackLocale logs warning", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n({ fallbackLocale: 42 } as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for non-string fallbackLocale");
+});
+
+QUnit.test("configureI18n entry with non-array supportedLocales skips entry", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "x", supportedLocales: "de" } as never],
+  });
+
+  assert.ok(spy.calledOnce, "Warning logged for entry with non-array supportedLocales");
+});
+
+QUnit.test("configureI18n entry with non-string fallbackLocale skips entry", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "x", fallbackLocale: 42 } as never],
+  });
+
+  assert.ok(spy.calledOnce, "Warning logged for entry with non-string fallbackLocale");
+});

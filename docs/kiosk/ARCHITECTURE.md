@@ -531,7 +531,6 @@ packages/kiosk-keyboard/
                                plus KeyName constants
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition
     layout-registry.ts        Layout registration and locale resolution
-    i18n-registry.ts          i18n re-export for test imports
     internal/
       dom.ts                  DOM/key ID utilities + input resolver
       i18n.ts                 i18n facade (re-exports from i18n-registry)

@@ -1,5 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { LayoutDefinition } from "ui5/kiosk/types";
+import ResourceBundle from "sap/base/i18n/ResourceBundle";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
@@ -4257,6 +4258,113 @@ QUnit.test("Clearing hook restores non-overridden behaviour", async (assert) => 
   await waitForRender();
 
   assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), originalLabel, "Original label restored");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Enhancement bundle updates aria-label and aria-roledescription", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const fakeBundle = {
+    getText(key: string) {
+      const map: Record<string, string> = {
+        KIOSK_KEYBOARD_LABEL: "Custom Label",
+        KIOSK_KEYBOARD_ROLEDESCRIPTION: "custom-role",
+      };
+      return map[key] ?? null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.bundle" }],
+  });
+  await waitForRender();
+
+  const dom = kb.getDomRef();
+  assert.strictEqual(dom?.getAttribute("aria-label"), "Custom Label", "aria-label reflects enhancement");
+  assert.strictEqual(
+    dom?.getAttribute("aria-roledescription"),
+    "custom-role",
+    "aria-roledescription reflects enhancement",
+  );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Special key labels reflect enhancement text", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const fakeBundle = {
+    getText(key: string) {
+      const map: Record<string, string> = {
+        KEY_SHIFT: "Umschalt",
+        KEY_ENTER: "Eingabe",
+        KEY_BACKSPACE: "Löschen",
+      };
+      return map[key] ?? null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.keys" }],
+  });
+  await waitForRender();
+
+  const dom = kb.getDomRef()!;
+  const shiftKey = dom.querySelector('[data-key="{shift}"]');
+  const enterKey = dom.querySelector('[data-key="{enter}"]');
+  const backspaceKey = dom.querySelector('[data-key="{backspace}"]');
+
+  assert.strictEqual(shiftKey?.getAttribute("aria-label"), "Umschalt", "Shift key label enhanced");
+  assert.strictEqual(enterKey?.getAttribute("aria-label"), "Eingabe", "Enter key label enhanced");
+  assert.strictEqual(backspaceKey?.getAttribute("aria-label"), "Löschen", "Backspace key label enhanced");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Language switch re-renders with updated labels", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  let bundleVersion = "v1";
+  const fakeBundle = {
+    getText(key: string) {
+      if (key === "KIOSK_KEYBOARD_LABEL") return `Label-${bundleVersion}`;
+      return null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.locale" }],
+  });
+  await waitForRender();
+
+  assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), "Label-v1", "Initial enhanced label");
+
+  // Simulate language change — creates new bundles
+  bundleVersion = "v2";
+  (kb as unknown as { onLocalizationChanged(): void }).onLocalizationChanged();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await waitForRender();
+
+  assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), "Label-v2", "Label updated after locale change");
 
   input.destroy();
   kb.destroy();

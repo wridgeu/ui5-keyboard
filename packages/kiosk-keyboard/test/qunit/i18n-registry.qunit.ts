@@ -5,7 +5,7 @@ import {
   clearI18nOverrideHook,
   getText,
   reloadBundles,
-} from "ui5/kiosk/i18n-registry";
+} from "ui5/kiosk/internal/i18n-registry";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import ResourceBundle from "sap/base/i18n/ResourceBundle";
@@ -147,6 +147,44 @@ QUnit.test("Logs warning for invalid entries", async (assert) => {
   assert.strictEqual(spy.callCount, 1, "One warning for the invalid entry");
 });
 
+QUnit.test("Rejects non-array supportedLocales", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({ supportedLocales: "de" } as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for non-array supportedLocales");
+  assert.ok(spy.firstCall.args[0].includes("supportedLocales"), "Warning mentions supportedLocales");
+});
+
+QUnit.test("Rejects non-string fallbackLocale", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({ fallbackLocale: 42 } as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for non-string fallbackLocale");
+  assert.ok(spy.firstCall.args[0].includes("fallbackLocale"), "Warning mentions fallbackLocale");
+});
+
+QUnit.test("Rejects entry with non-array supportedLocales", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({
+    enhanceWith: [{ bundleName: "x", supportedLocales: "de" } as never],
+  });
+
+  assert.ok(spy.calledOnce, "Warning logged for entry with non-array supportedLocales");
+});
+
+QUnit.test("Rejects entry with non-string fallbackLocale", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({
+    enhanceWith: [{ bundleName: "x", fallbackLocale: 42 } as never],
+  });
+
+  assert.ok(spy.calledOnce, "Warning logged for entry with non-string fallbackLocale");
+});
+
 // ──────────────────────────────────────────────────
 // async bundle loading
 // ──────────────────────────────────────────────────
@@ -228,6 +266,27 @@ QUnit.test("resetI18nConfiguration cancels in-flight loads (generation guard)", 
   await loading;
 
   assert.strictEqual(getText("KEY", "fallback"), "base", "Stale load discarded after reset");
+});
+
+QUnit.test("Empty config cancels in-flight loads (generation guard)", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  let resolveBundle!: (b: ResourceBundle) => void;
+  sandbox.stub(ResourceBundle, "create").returns(
+    new Promise((r) => {
+      resolveBundle = r as (b: ResourceBundle) => void;
+    }) as never,
+  );
+
+  const loading = configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+
+  // Second call with no enhanceWith — should invalidate the in-flight load
+  await configureI18n({});
+
+  resolveBundle(makeBundleStub({ KEY: "stale" }));
+  await loading;
+
+  assert.strictEqual(getText("KEY", "fallback"), "base", "Stale load discarded after empty config");
 });
 
 QUnit.test("reloadBundles re-creates bundles for current locale", async (assert) => {

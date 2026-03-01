@@ -16,13 +16,12 @@ function getCurrentLocale(): string {
 }
 
 function loadBundles(): Promise<void> {
+  const loadGeneration = ++generation;
   const entries = activeConfig?.enhanceWith;
   if (!entries?.length) {
     enhancementBundles = [];
     return Promise.resolve();
   }
-
-  const loadGeneration = ++generation;
   const topSupportedLocales = activeConfig?.supportedLocales;
   const topFallbackLocale = activeConfig?.fallbackLocale;
 
@@ -60,7 +59,7 @@ export function getText(key: string, fallback: string): string {
   const bundle = Lib.getResourceBundleFor("ui5.kiosk");
   const baseText = bundle ? (bundle.getText(key, undefined, true) ?? fallback) : fallback;
 
-  if (!activeConfig && !overrideHook) {
+  if (!activeConfig?.enhanceWith?.length && !overrideHook) {
     return baseText;
   }
 
@@ -108,6 +107,16 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
     return Promise.resolve();
   }
 
+  if (config.supportedLocales !== undefined && !Array.isArray(config.supportedLocales)) {
+    Log.warning("configureI18n: supportedLocales must be an array.", undefined, LOG_COMPONENT);
+    return Promise.resolve();
+  }
+
+  if (config.fallbackLocale !== undefined && typeof config.fallbackLocale !== "string") {
+    Log.warning("configureI18n: fallbackLocale must be a string.", undefined, LOG_COMPONENT);
+    return Promise.resolve();
+  }
+
   const validEntries = config.enhanceWith?.filter((entry) => {
     if (!entry || typeof entry !== "object") {
       Log.warning("configureI18n: enhancement entry must be an object.", undefined, LOG_COMPONENT);
@@ -129,6 +138,14 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
         undefined,
         LOG_COMPONENT,
       );
+      return false;
+    }
+    if (entry.supportedLocales !== undefined && !Array.isArray(entry.supportedLocales)) {
+      Log.warning("configureI18n: entry supportedLocales must be an array. Skipping.", undefined, LOG_COMPONENT);
+      return false;
+    }
+    if (entry.fallbackLocale !== undefined && typeof entry.fallbackLocale !== "string") {
+      Log.warning("configureI18n: entry fallbackLocale must be a string. Skipping.", undefined, LOG_COMPONENT);
       return false;
     }
     return true;

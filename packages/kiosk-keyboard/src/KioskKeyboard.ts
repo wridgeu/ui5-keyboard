@@ -534,7 +534,7 @@ export default class KioskKeyboard extends Control {
    *
    * @param config  Enhancement bundle descriptors and locale metadata.
    * @returns Resolves when all enhancement bundles are loaded.
-   * @since 1.x.0
+   * @since ${version}
    * @public
    * @static
    */
@@ -555,7 +555,7 @@ export default class KioskKeyboard extends Control {
    * loads.  Does not affect the override hook — call
    * {@link clearI18nOverrideHook} separately if needed.
    *
-   * @since 1.x.0
+   * @since ${version}
    * @public
    * @static
    */
@@ -575,7 +575,7 @@ export default class KioskKeyboard extends Control {
    * replaces the previous hook.
    *
    * @param fn  The override function.
-   * @since 1.x.0
+   * @since ${version}
    * @public
    * @static
    */
@@ -587,7 +587,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Remove the i18n override hook.
    *
-   * @since 1.x.0
+   * @since ${version}
    * @public
    * @static
    */
@@ -675,6 +675,9 @@ export default class KioskKeyboard extends Control {
     }
   }
 
+  // With N instances, this hook is called N times. Each call triggers
+  // reloadBundles(); the generation counter ensures only the latest
+  // load's result is stored — the extra N-1 loads are harmless no-ops.
   onLocalizationChanged(): void {
     void registryReloadBundles().then(() => {
       if (!this.isDestroyed()) {
