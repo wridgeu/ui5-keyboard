@@ -83,7 +83,7 @@ export function getText(key: string, fallback: string): string {
   if (enhancementBundles) {
     for (let i = enhancementBundles.length - 1; i >= 0; i--) {
       const enhanced = enhancementBundles[i].getText(key, undefined, true);
-      if (enhanced != null) {
+      if (enhanced !== null && enhanced !== undefined) {
         resolved = enhanced;
         break;
       }
@@ -252,11 +252,19 @@ export function reloadBundles(): Promise<void> {
     return pendingReload;
   }
 
-  const reloadPromise = (async () => {
+  let reloadPromise: Promise<void> | null = null;
+  reloadPromise = (async () => {
     while (activeConfig?.enhanceWith?.length) {
       const localeAtLoopStart: string | null = pendingReloadRequestedLocale;
       enhancementBundles = null;
       await loadBundles();
+
+      // configureI18n/resetI18nConfiguration can detach an in-flight reload
+      // by nulling pendingReload. Abort immediately so a detached loop cannot
+      // start another cycle and invalidate a newer configureI18n load.
+      if (pendingReload !== reloadPromise) {
+        return;
+      }
 
       // Catch up with locale churn: if locale changed while this load was in
       // flight, run one more reload cycle. Loop until latest requested locale

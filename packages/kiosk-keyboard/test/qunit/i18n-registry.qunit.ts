@@ -417,6 +417,58 @@ QUnit.test("reloadBundles without enhancements returns a stable no-op promise", 
   await first;
 });
 
+QUnit.test("configureI18n detaches in-flight reload without invalidating its own load", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  const pendingCreates: Array<(bundle: ResourceBundle) => void> = [];
+  const createStub = sandbox.stub(ResourceBundle, "create").callsFake(
+    () =>
+      new Promise<ResourceBundle>((resolve) => {
+        pendingCreates.push(resolve);
+      }) as never,
+  );
+
+  async function waitForCreateCalls(count: number): Promise<void> {
+    for (let i = 0; i < 50; i++) {
+      if (pendingCreates.length >= count) return;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    throw new Error(`Timed out waiting for ${count} ResourceBundle.create calls`);
+  }
+
+  const initialLoad = configureI18n({ enhanceWith: [{ bundleName: "initial.bundle" }] });
+  await waitForCreateCalls(1);
+  pendingCreates.shift()!(makeBundleStub({ KEY: "initial" }));
+  await initialLoad;
+  assert.strictEqual(getText("KEY", "fallback"), "initial", "Initial enhancement bundle is active");
+
+  const staleReload = reloadBundles();
+  await waitForCreateCalls(1);
+
+  const configured = configureI18n({ enhanceWith: [{ bundleName: "new.bundle" }] });
+  await waitForCreateCalls(2);
+
+  // Resolve the detached reload first. Without a detach guard in reloadBundles,
+  // this can trigger a second stale cycle that bumps generation and invalidates
+  // the in-flight configureI18n load.
+  pendingCreates.shift()!(makeBundleStub({ KEY: "stale-reload" }));
+  await Promise.resolve();
+
+  pendingCreates.shift()!(makeBundleStub({ KEY: "configured" }));
+  await configured;
+
+  // Allow any unexpected follow-up cycle to enqueue, then drain leftovers so
+  // the detached reload promise can settle cleanly.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  while (pendingCreates.length) {
+    pendingCreates.shift()!(makeBundleStub({ KEY: "unexpected-extra" }));
+  }
+  await staleReload;
+
+  assert.strictEqual(getText("KEY", "fallback"), "configured", "configureI18n keeps its own bundle active");
+  assert.strictEqual(createStub.callCount, 3, "Detached reload does not start an extra load cycle");
+});
+
 // ──────────────────────────────────────────────────
 // enhancement bundle precedence
 // ──────────────────────────────────────────────────
