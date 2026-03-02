@@ -675,9 +675,9 @@ export default class KioskKeyboard extends Control {
     }
   }
 
-  // With N instances, this hook is called N times. Each call triggers
-  // reloadBundles(); the generation counter ensures only the latest
-  // load's result is stored — the extra N-1 loads are harmless no-ops.
+  // With N instances, this hook is called N times. reloadBundles()
+  // deduplicates concurrent calls — the first triggers the reload,
+  // subsequent calls share the same promise.
   onLocalizationChanged(): void {
     void registryReloadBundles().then(() => {
       if (!this.isDestroyed()) {

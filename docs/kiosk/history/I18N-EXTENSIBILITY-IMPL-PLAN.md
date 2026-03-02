@@ -32,18 +32,20 @@ No new control properties, events, or aggregations.
 
 ### 1.1 Minimum Version Constraint
 
-The library targets **UI5 1.118** as its minimum supported version.
-All APIs used in this feature must be available at 1.118 or have a
-documented fallback. Key implications:
+The library's effective minimum supported version is **UI5 1.120**.
+The `layout-registry` already depends on `Localization.getLanguageTag()`
+(1.120+), so no additional version requirement is introduced by this
+feature. Key implications:
 
 - `Localization.attachChange` / `detachChange` (since 1.120) — **not
   used**. Language change detection uses the `onLocalizationChanged`
   control lifecycle hook instead (available since earliest UI5 versions).
-- `Localization.getLanguageTag()` / `getLanguage()` (since 1.120) —
-  **not used** in library source. The hook context's `locale` field
-  uses a version-safe utility (see section 8.8).
+- `Localization.getLanguageTag()` (since 1.120) — used by
+  `layout-registry` for locale-based layout resolution.
+- `Localization.getLanguage()` (since 1.120) — used by
+  `i18n-registry` for the override hook context's `locale` field.
 - Async `ResourceBundle.create({ async: true })` — available since
-  well before 1.118. No version concern.
+  well before 1.120. No version concern.
 
 ---
 

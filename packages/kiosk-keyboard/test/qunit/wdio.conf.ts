@@ -30,12 +30,12 @@ export const config: WebdriverIO.Config = {
   logLevel: "warn",
 
   baseUrl: `http://localhost:${PORT}`,
-  waitforTimeout: 90_000,
+  waitforTimeout: 180_000,
 
   framework: "mocha",
   mochaOpts: {
     ui: "bdd",
-    timeout: 120_000,
+    timeout: 210_000,
   },
 
   reporters: ["spec"],

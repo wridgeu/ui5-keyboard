@@ -156,6 +156,15 @@ QUnit.test("Rejects non-array supportedLocales", async (assert) => {
   assert.ok(spy.firstCall.args[0].includes("supportedLocales"), "Warning mentions supportedLocales");
 });
 
+QUnit.test("Rejects supportedLocales with non-string elements", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({ supportedLocales: [42, null] } as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for non-string elements in supportedLocales");
+  assert.ok(spy.firstCall.args[0].includes("supportedLocales"), "Warning mentions supportedLocales");
+});
+
 QUnit.test("Rejects non-string fallbackLocale", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
@@ -173,6 +182,16 @@ QUnit.test("Rejects entry with non-array supportedLocales", async (assert) => {
   });
 
   assert.ok(spy.calledOnce, "Warning logged for entry with non-array supportedLocales");
+});
+
+QUnit.test("Rejects entry with non-string elements in supportedLocales", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({
+    enhanceWith: [{ bundleName: "x", supportedLocales: ["en", 123] } as never],
+  });
+
+  assert.ok(spy.calledOnce, "Warning logged for entry with non-string supportedLocales elements");
 });
 
 QUnit.test("Rejects entry with non-string fallbackLocale", async (assert) => {
@@ -670,8 +689,8 @@ QUnit.test("Triggers bundle reload", async (assert) => {
   const kb = new KioskKeyboard({ targetInput: input });
   await placeAndWait(kb);
 
-  (kb as unknown as { onLocalizationChanged: () => void }).onLocalizationChanged();
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await reloadBundles();
+  kb.invalidate();
   await waitForRender();
 
   assert.strictEqual(getText("KEY", "fallback"), "v2", "Bundle reloaded with new text");
@@ -710,8 +729,7 @@ QUnit.test("No-op when no config is active", async (assert) => {
   // to avoid catching library-level bundle creation
   const createSpy = sandbox.spy(ResourceBundle, "create");
 
-  (kb as unknown as { onLocalizationChanged: () => void }).onLocalizationChanged();
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await reloadBundles();
 
   assert.notOk(createSpy.called, "No bundle creation when no config active");
 

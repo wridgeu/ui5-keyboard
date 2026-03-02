@@ -59,11 +59,11 @@ export function createServerManager(port: number, packageRoot: string) {
       if (await isPortInUse(port)) return;
       serverProcess = spawn(npxCommand, ["ui5", "serve", "--port", String(port)], {
         cwd: packageRoot,
-        stdio: "pipe",
+        stdio: ["ignore", "pipe", "inherit"],
         shell: useShell,
         windowsHide: useShell,
       });
-      await waitForServer(port);
+      await waitForServer(port, 60_000);
     },
 
     async onComplete() {

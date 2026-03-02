@@ -6,6 +6,10 @@ import type { KioskI18nConfig, KioskI18nOverrideContext, KioskI18nOverrideHook }
 
 const LOG_COMPONENT = "ui5.kiosk.KioskKeyboard";
 
+function isStringArray(value: unknown[]): value is string[] {
+  return value.every((item) => typeof item === "string");
+}
+
 let activeConfig: KioskI18nConfig | null = null;
 let enhancementBundles: ResourceBundle[] | null = null;
 let generation = 0;
@@ -55,6 +59,14 @@ function loadBundles(): Promise<void> {
   });
 }
 
+/**
+ * Resolve a single i18n key through the full resolution chain:
+ * base library bundle → enhancement bundles (last wins) → override hook.
+ *
+ * @param key       Resource bundle key (e.g. `"KIOSK_KEYBOARD_LABEL"`).
+ * @param fallback  Hardcoded fallback returned when no bundle contains the key.
+ * @returns The resolved text.
+ */
 export function getText(key: string, fallback: string): string {
   const bundle = Lib.getResourceBundleFor("ui5.kiosk");
   const baseText = bundle ? (bundle.getText(key, undefined, true) ?? fallback) : fallback;
@@ -96,6 +108,17 @@ export function getText(key: string, fallback: string): string {
   return resolved;
 }
 
+/**
+ * Apply an i18n enhancement configuration.
+ *
+ * Validates the config, stores it, and asynchronously loads all
+ * enhancement bundles.  Replaces any previous configuration.
+ * Uses a generation counter to discard stale loads when
+ * `configureI18n` is called again before a previous load completes.
+ *
+ * @param config  Enhancement bundle descriptors and locale metadata.
+ * @returns Resolves when all enhancement bundles have been loaded.
+ */
 export function configureI18n(config: KioskI18nConfig): Promise<void> {
   if (!config || typeof config !== "object" || Array.isArray(config)) {
     Log.warning("configureI18n: config must be a plain object.", undefined, LOG_COMPONENT);
@@ -107,8 +130,11 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
     return Promise.resolve();
   }
 
-  if (config.supportedLocales !== undefined && !Array.isArray(config.supportedLocales)) {
-    Log.warning("configureI18n: supportedLocales must be an array.", undefined, LOG_COMPONENT);
+  if (
+    config.supportedLocales !== undefined &&
+    (!Array.isArray(config.supportedLocales) || !isStringArray(config.supportedLocales))
+  ) {
+    Log.warning("configureI18n: supportedLocales must be an array of strings.", undefined, LOG_COMPONENT);
     return Promise.resolve();
   }
 
@@ -140,8 +166,15 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
       );
       return false;
     }
-    if (entry.supportedLocales !== undefined && !Array.isArray(entry.supportedLocales)) {
-      Log.warning("configureI18n: entry supportedLocales must be an array. Skipping.", undefined, LOG_COMPONENT);
+    if (
+      entry.supportedLocales !== undefined &&
+      (!Array.isArray(entry.supportedLocales) || !isStringArray(entry.supportedLocales))
+    ) {
+      Log.warning(
+        "configureI18n: entry supportedLocales must be an array of strings. Skipping.",
+        undefined,
+        LOG_COMPONENT,
+      );
       return false;
     }
     if (entry.fallbackLocale !== undefined && typeof entry.fallbackLocale !== "string") {
@@ -157,12 +190,25 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
   return loadBundles();
 }
 
+/**
+ * Reset to library defaults — clears all enhancement bundles and
+ * increments the generation counter to cancel any in-flight loads.
+ */
 export function resetI18nConfiguration(): void {
   activeConfig = null;
   enhancementBundles = null;
   generation++;
 }
 
+/**
+ * Register a programmatic override hook.
+ *
+ * The hook is called after base and enhancement bundle resolution.
+ * Only one hook may be active; calling again replaces the previous one.
+ *
+ * @param hook  Override function. Return a string to replace, or
+ *              `undefined` to keep the resolved text.
+ */
 export function setI18nOverrideHook(hook: KioskI18nOverrideHook): void {
   if (typeof hook !== "function") {
     Log.warning("setI18nOverrideHook: argument must be a function.", undefined, LOG_COMPONENT);
@@ -171,16 +217,31 @@ export function setI18nOverrideHook(hook: KioskI18nOverrideHook): void {
   overrideHook = hook;
 }
 
+/** Remove the active i18n override hook, if any. */
 export function clearI18nOverrideHook(): void {
   overrideHook = null;
 }
 
+let pendingReload: Promise<void> | null = null;
+
+/**
+ * Reload all enhancement bundles for the current locale.
+ *
+ * Called on locale change (`onLocalizationChanged`).
+ * Coalesces concurrent calls via a pending-promise guard.
+ *
+ * @returns Resolves when bundles are reloaded.
+ */
 export function reloadBundles(): Promise<void> {
+  if (pendingReload) return pendingReload;
   enhancementBundles = null;
 
   if (!activeConfig?.enhanceWith?.length) {
     return Promise.resolve();
   }
 
-  return loadBundles();
+  pendingReload = loadBundles().then(() => {
+    pendingReload = null;
+  });
+  return pendingReload;
 }
