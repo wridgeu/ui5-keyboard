@@ -15,6 +15,8 @@ let enhancementBundles: ResourceBundle[] | null = null;
 let generation = 0;
 let overrideHook: KioskI18nOverrideHook | null = null;
 let pendingReload: Promise<void> | null = null;
+let pendingReloadRequestedLocale: string | null = null;
+const NO_RELOAD_NEEDED: Promise<void> = Promise.resolve();
 
 function getCurrentLocale(): string {
   return Localization.getLanguageTag().toString();
@@ -192,6 +194,7 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
   activeConfig = { ...config, enhanceWith: validEntries };
   enhancementBundles = null;
   pendingReload = null;
+  pendingReloadRequestedLocale = null;
 
   return loadBundles();
 }
@@ -204,6 +207,7 @@ export function resetI18nConfiguration(): void {
   activeConfig = null;
   enhancementBundles = null;
   pendingReload = null;
+  pendingReloadRequestedLocale = null;
   generation++;
 }
 
@@ -239,15 +243,41 @@ export function clearI18nOverrideHook(): void {
  * @returns Resolves when bundles are reloaded.
  */
 export function reloadBundles(): Promise<void> {
-  if (pendingReload) return pendingReload;
-  enhancementBundles = null;
-
   if (!activeConfig?.enhanceWith?.length) {
-    return Promise.resolve();
+    return NO_RELOAD_NEEDED;
   }
 
-  pendingReload = loadBundles().finally(() => {
-    pendingReload = null;
+  pendingReloadRequestedLocale = getCurrentLocale();
+  if (pendingReload) {
+    return pendingReload;
+  }
+
+  const reloadPromise = (async () => {
+    while (activeConfig?.enhanceWith?.length) {
+      const localeAtLoopStart: string | null = pendingReloadRequestedLocale;
+      enhancementBundles = null;
+      await loadBundles();
+
+      // Catch up with locale churn: if locale changed while this load was in
+      // flight, run one more reload cycle. Loop until latest requested locale
+      // matches the locale at the start of a completed cycle.
+      if (pendingReloadRequestedLocale === localeAtLoopStart) {
+        break;
+      }
+    }
+  })();
+
+  pendingReload = reloadPromise;
+
+  void reloadPromise.finally(() => {
+    // configureI18n/resetI18nConfiguration can detach an in-flight reload by
+    // nulling pendingReload. Only clear module state if this promise is still
+    // the active one.
+    if (pendingReload === reloadPromise) {
+      pendingReload = null;
+      pendingReloadRequestedLocale = null;
+    }
   });
-  return pendingReload;
+
+  return reloadPromise;
 }

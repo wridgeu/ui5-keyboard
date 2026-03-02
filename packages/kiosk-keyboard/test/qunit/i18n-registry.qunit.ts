@@ -9,6 +9,7 @@ import {
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import ResourceBundle from "sap/base/i18n/ResourceBundle";
+import Localization from "sap/base/i18n/Localization";
 import Lib from "sap/ui/core/Lib";
 import Log from "sap/base/Log";
 import { placeAndWait, waitForRender } from "./test-helpers";
@@ -360,6 +361,60 @@ QUnit.test("reloadBundles coalesces concurrent calls (same promise returned)", a
 
   assert.strictEqual(createStub.callCount, 1, "ResourceBundle.create called only once despite 3 reloadBundles calls");
   assert.strictEqual(getText("KEY", "fallback"), "v2", "Reloaded text available");
+});
+
+QUnit.test("reloadBundles queues a follow-up reload when locale changes mid-flight", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  const pendingCreates: Array<(bundle: ResourceBundle) => void> = [];
+  const createStub = sandbox.stub(ResourceBundle, "create").callsFake(
+    () =>
+      new Promise<ResourceBundle>((resolve) => {
+        pendingCreates.push(resolve);
+      }) as never,
+  );
+
+  async function waitForCreateCalls(count: number): Promise<void> {
+    for (let i = 0; i < 50; i++) {
+      if (pendingCreates.length >= count) return;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    throw new Error(`Timed out waiting for ${count} ResourceBundle.create calls`);
+  }
+
+  let locale = "en";
+  sandbox.stub(Localization, "getLanguageTag").callsFake(() => ({ toString: () => locale }) as never);
+
+  const initialLoad = configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+  await waitForCreateCalls(1);
+  pendingCreates.shift()!(makeBundleStub({ KEY: "en-initial" }));
+  await initialLoad;
+  assert.strictEqual(getText("KEY", "fallback"), "en-initial", "Initial enhancement bundle is active");
+
+  const firstReload = reloadBundles();
+  await waitForCreateCalls(1);
+
+  locale = "de";
+  const secondCall = reloadBundles();
+  assert.strictEqual(secondCall, firstReload, "Second call returns same pending promise");
+
+  pendingCreates.shift()!(makeBundleStub({ KEY: "en-stale" }));
+
+  await waitForCreateCalls(1);
+  pendingCreates.shift()!(makeBundleStub({ KEY: "de-latest" }));
+
+  await firstReload;
+
+  assert.strictEqual(getText("KEY", "fallback"), "de-latest", "Latest locale bundle is applied");
+  assert.strictEqual(createStub.callCount, 3, "configure + two reload cycles");
+});
+
+QUnit.test("reloadBundles without enhancements returns a stable no-op promise", async (assert) => {
+  const first = reloadBundles();
+  const second = reloadBundles();
+
+  assert.strictEqual(first, second, "No-config path returns the same promise instance");
+  await first;
 });
 
 // ──────────────────────────────────────────────────
