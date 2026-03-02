@@ -62,6 +62,7 @@ let overrideHook: KioskI18nOverrideHook | null = null;
 let pendingReload: Promise<void> | null = null;
 let pendingReloadRequestedLocale: string | null = null;
 const NO_RELOAD_NEEDED: Promise<void> = Promise.resolve();
+const MAX_RELOAD_CYCLES = 5;
 
 function getCurrentLocale(): string {
   return Localization.getLanguageTag().toString();
@@ -343,7 +344,17 @@ export function reloadBundles(): Promise<void> {
 
   let reloadPromise: Promise<void> | null = null;
   reloadPromise = (async () => {
+    let cycles = 0;
     while (activeConfig?.enhanceWith?.length) {
+      if (++cycles > MAX_RELOAD_CYCLES) {
+        Log.warning(
+          `reloadBundles: exceeded ${MAX_RELOAD_CYCLES} reload cycles (locale churn). Aborting.`,
+          undefined,
+          LOG_COMPONENT,
+        );
+        break;
+      }
+
       const localeAtLoopStart: string | null = pendingReloadRequestedLocale;
       enhancementBundles = null;
       await loadBundles();

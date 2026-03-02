@@ -990,10 +990,12 @@ Consumers can extend or override the keyboard's translatable texts without modif
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 
-// Add French and Spanish translations via a consumer bundle
+// Add French and Spanish translations via a consumer bundle.
+// Use "" as the fallback locale when your base file is
+// messagebundle.properties (no locale suffix).
 await KioskKeyboard.configureI18n({
   supportedLocales: ["", "de", "fr", "es"],
-  fallbackLocale: "en",
+  fallbackLocale: "",
   enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
 });
 
@@ -1014,7 +1016,7 @@ KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
 });
 ```
 
-**Resolution order:** base library bundle → enhancement bundles (last wins) → override hook → hardcoded fallback.
+**Resolution order:** base library bundle (with built-in fallback) → enhancement bundles (last wins) → override hook.
 
 **Validation behavior:** invalid top-level configuration (for example `null`, non-array `enhanceWith`, non-string `fallbackLocale`) logs a warning and rejects the returned Promise.
 

@@ -112,8 +112,6 @@ QUnit.test("Disabled state renders correctly", async (assert) => {
   kb.destroy();
 });
 
-// Layout resolution tests moved to KioskKeyboard-layout.qunit.ts
-
 // ──────────────────────────────────────────────
 // Key labels and shift
 // ──────────────────────────────────────────────
@@ -402,8 +400,6 @@ QUnit.test("fireLiveChange is called on target", async (assert) => {
   kb.destroy();
 });
 
-// Layout switching tests moved to KioskKeyboard-layout.qunit.ts
-
 // ──────────────────────────────────────────────
 // Enabled / disabled
 // ──────────────────────────────────────────────
@@ -480,9 +476,6 @@ QUnit.test("setTargetInput does not trigger re-render", async (assert) => {
   input.destroy();
   kb.destroy();
 });
-
-// Accessibility tests moved to KioskKeyboard-a11y.qunit.ts
-// Docked mode tests moved to KioskKeyboard-docked.qunit.ts
 
 // ──────────────────────────────────────────────
 // Auto-show
@@ -708,8 +701,6 @@ QUnit.test("change NOT fired for TextArea on close", async (assert) => {
   textarea.destroy();
   kb.destroy();
 });
-
-// Focus and navigation tests moved to KioskKeyboard-focus.qunit.ts
 
 // ──────────────────────────────────────────────
 // Physical keyboard highlighting
@@ -1037,8 +1028,6 @@ QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (asse
   kb.destroy();
 });
 
-// QWERTZ layout, base layout, custom layout, locale layout tests moved to KioskKeyboard-layout.qunit.ts
-
 // ──────────────────────────────────────────────
 // Highlight fix for shifted characters
 // ──────────────────────────────────────────────
@@ -1115,11 +1104,6 @@ QUnit.test("Layout switching works inside a Popover", async (assert) => {
   trigger.remove();
 });
 
-// autoType and mobile keyboard tests moved to KioskKeyboard-autotype-mobile.qunit.ts
-// autoShow tests moved to KioskKeyboard-autoshow.qunit.ts
-// Registration validation, static API tests moved to KioskKeyboard-layout.qunit.ts
-// Focus save/restore, disabled/hidden state tests moved to KioskKeyboard-focus.qunit.ts
-
 // ──────────────────────────────────────────────
 // setAutoShow property setter
 // ──────────────────────────────────────────────
@@ -1161,8 +1145,6 @@ QUnit.test("setAutoShow(false) deactivates auto-show listeners", async (assert) 
   input.destroy();
   kb.destroy();
 });
-
-// setDocked transitions and toggling tests moved to KioskKeyboard-docked.qunit.ts
 
 // ──────────────────────────────────────────────
 // Backspace with selection
@@ -1276,8 +1258,6 @@ QUnit.test("Programmatic setValue while unfocused resets cached cursor to end", 
   kb.destroy();
 });
 
-// ARIA live region tests moved to KioskKeyboard-a11y.qunit.ts
-
 // ──────────────────────────────────────────────
 // Tap cancellation (drag away)
 // ──────────────────────────────────────────────
@@ -1378,8 +1358,6 @@ QUnit.test("Typing with no target input does not throw", async (assert) => {
   kb.destroy();
 });
 
-// ARIA Associations and aria-controls tests moved to KioskKeyboard-a11y.qunit.ts
-
 // ──────────────────────────────────────────────
 // QWERTZ-DE Shift Symbols Highlight
 // ──────────────────────────────────────────────
@@ -1475,8 +1453,6 @@ QUnit.test('Physical "\u00FC" (lowercase) highlights its own key directly', asyn
   input.destroy();
   kb.destroy();
 });
-
-// applyFocusInfo preventScroll tests moved to KioskKeyboard-focus.qunit.ts
 
 // ──────────────────────────────────────────────
 // Target Input Destroyed While Open
@@ -1616,12 +1592,6 @@ QUnit.test("Prior shift state does not leak into Numpad rendering", async (asser
   kb.destroy();
 });
 
-// Rapid cycling and setDocked toggling tests moved to KioskKeyboard-docked.qunit.ts
-// getKeyIcon and getKeyAriaLabel tests moved to KioskKeyboard-a11y.qunit.ts
-// Cross-layout consistency tests moved to KioskKeyboard-layout.qunit.ts
-
-// autoShow detection and deferred-close tests moved to KioskKeyboard-autoshow.qunit.ts
-
 // ──────────────────────────────────────────────
 // Custom Control Targeting (DOM Fallback)
 // ──────────────────────────────────────────────
@@ -1705,6 +1675,3 @@ QUnit.test("getTargetControl returns null when no target is associated", async (
 
   kb.destroy();
 });
-
-// keyboardTypeChange and RTL tests moved to KioskKeyboard-events.qunit.ts
-// i18n integration tests moved to KioskKeyboard-i18n.qunit.ts

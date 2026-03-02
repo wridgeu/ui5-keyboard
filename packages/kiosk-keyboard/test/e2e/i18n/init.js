@@ -94,7 +94,7 @@ sap.ui.define(
         resetI18n();
         KioskKeyboard.setI18nOverrideHook(function (ctx) {
           if (ctx.key === "KIOSK_KEYBOARD_LABEL") {
-            return "Custom Keyboard";
+            return "\u2328\uFE0F " + ctx.resolvedText;
           }
           if (ctx.key.startsWith("KEY_")) {
             return ctx.resolvedText.toUpperCase();

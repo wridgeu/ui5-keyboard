@@ -175,7 +175,7 @@ export function generateQUnitSpecs(testIds: string[], outputDir: string, urlFn: 
     fs.writeFileSync(
       specPath,
       [
-        `describe("QUnit: ${id}", function () {`,
+        `describe(${JSON.stringify("QUnit: " + id)}, function () {`,
         `  it("should pass QUnit tests", async function () {`,
         `    await browser.url(${JSON.stringify(url)});`,
         `    await browser.getQUnitResults();`,
