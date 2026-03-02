@@ -1064,6 +1064,12 @@ const config = KioskKeyboard.getI18nConfiguration();
 console.log(config?.enhanceWith); // read-only — mutations throw
 ```
 
+**TypeScript types** — import the config and context types for type-safe usage:
+
+```ts
+import type { KioskI18nConfig, KioskI18nOverrideContext } from "ui5/kiosk/types";
+```
+
 | Method                                                    | Description                                          |
 | --------------------------------------------------------- | ---------------------------------------------------- |
 | `configureI18n(config): Promise<void>`                    | Set enhancement bundles and locale metadata          |
