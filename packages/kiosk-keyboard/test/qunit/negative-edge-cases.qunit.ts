@@ -403,7 +403,11 @@ QUnit.test("Multiple backspaces on empty TextArea are silent no-ops", async (ass
 });
 
 // ──────────────────────────────────────────────
-// i18n API negative paths
+// i18n API negative paths (facade smoke test)
+//
+// Detailed validation coverage is in i18n-registry.qunit.ts.
+// This module only verifies that the KioskKeyboard facade
+// delegates validation to the registry (no crash, warning logged).
 // ──────────────────────────────────────────────
 
 const i18nSandbox = sinon.createSandbox();
@@ -420,92 +424,18 @@ QUnit.module("Negative / Edge-Case — i18n API", {
   },
 });
 
-QUnit.test("configureI18n(null) logs warning, no crash", async (assert) => {
+QUnit.test("configureI18n(null) delegates to registry — logs warning, no crash", async (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
   await KioskKeyboard.configureI18n(null as never);
 
   assert.ok(spy.calledOnce, "Warning logged for null config");
-  assert.ok(true, "No crash");
 });
 
-QUnit.test('configureI18n("string") logs warning, no crash', async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  await KioskKeyboard.configureI18n("string" as never);
-
-  assert.ok(spy.calledOnce, "Warning logged for string config");
-  assert.ok(true, "No crash");
-});
-
-QUnit.test("configureI18n with entry missing bundleName/bundleUrl skips entry", async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  await KioskKeyboard.configureI18n({
-    enhanceWith: [{} as never],
-  });
-
-  assert.ok(spy.calledOnce, "Warning logged for invalid entry");
-});
-
-QUnit.test("configureI18n with entry having both bundleName and bundleUrl skips entry", async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  await KioskKeyboard.configureI18n({
-    enhanceWith: [{ bundleName: "x", bundleUrl: "y" } as never],
-  });
-
-  assert.ok(spy.calledOnce, "Warning logged for entry with both");
-});
-
-QUnit.test("setI18nOverrideHook(null) logs warning, does not set hook", async (assert) => {
+QUnit.test("setI18nOverrideHook(null) delegates to registry — logs warning, no crash", (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
   KioskKeyboard.setI18nOverrideHook(null as never);
 
   assert.ok(spy.calledOnce, "Warning logged for null hook");
-});
-
-QUnit.test("setI18nOverrideHook(42) logs warning, does not set hook", async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  KioskKeyboard.setI18nOverrideHook(42 as never);
-
-  assert.ok(spy.calledOnce, "Warning logged for number hook");
-});
-
-QUnit.test("configureI18n with non-array supportedLocales logs warning", async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  await KioskKeyboard.configureI18n({ supportedLocales: "de" } as never);
-
-  assert.ok(spy.calledOnce, "Warning logged for non-array supportedLocales");
-});
-
-QUnit.test("configureI18n with non-string fallbackLocale logs warning", async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  await KioskKeyboard.configureI18n({ fallbackLocale: 42 } as never);
-
-  assert.ok(spy.calledOnce, "Warning logged for non-string fallbackLocale");
-});
-
-QUnit.test("configureI18n entry with non-array supportedLocales skips entry", async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  await KioskKeyboard.configureI18n({
-    enhanceWith: [{ bundleName: "x", supportedLocales: "de" } as never],
-  });
-
-  assert.ok(spy.calledOnce, "Warning logged for entry with non-array supportedLocales");
-});
-
-QUnit.test("configureI18n entry with non-string fallbackLocale skips entry", async (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  await KioskKeyboard.configureI18n({
-    enhanceWith: [{ bundleName: "x", fallbackLocale: 42 } as never],
-  });
-
-  assert.ok(spy.calledOnce, "Warning logged for entry with non-string fallbackLocale");
 });

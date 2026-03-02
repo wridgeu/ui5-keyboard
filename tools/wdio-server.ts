@@ -1,5 +1,6 @@
 import net from "node:net";
 import fs from "node:fs";
+import path from "node:path";
 import { type ChildProcess, spawn } from "node:child_process";
 import ts from "typescript";
 import treeKill from "tree-kill";
@@ -134,4 +135,41 @@ export function readQUnitTestIds(testsuitePath: string): string[] {
   }
 
   return ids;
+}
+
+/**
+ * Generate one spec file per QUnit test ID so that WebdriverIO can distribute
+ * them across parallel browser instances via `maxInstances`.
+ *
+ * Each generated file navigates to the QUnit HTML page for a single test
+ * and uses `browser.getQUnitResults()` (provided by wdio-qunit-service).
+ *
+ * @param testIds    Test IDs extracted from the testsuite file.
+ * @param outputDir  Directory to write the generated `.spec.js` files into.
+ * @param urlFn      Function that maps a test ID to its QUnit HTML URL path.
+ * @returns Array of absolute file paths for generated spec files.
+ */
+export function generateQUnitSpecs(testIds: string[], outputDir: string, urlFn: (name: string) => string): string[] {
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  // Write spec files idempotently — no cleanup needed since the file set
+  // is deterministic.  Worker processes may reload this config concurrently,
+  // so we must avoid deleting files that other workers are already reading.
+  return testIds.map((id) => {
+    const specPath = path.join(outputDir, `${id}.spec.js`);
+    const url = urlFn(id);
+    fs.writeFileSync(
+      specPath,
+      [
+        `describe("QUnit: ${id}", function () {`,
+        `  it("should pass QUnit tests", async function () {`,
+        `    await browser.url(${JSON.stringify(url)});`,
+        `    await browser.getQUnitResults();`,
+        `  });`,
+        `});`,
+        ``,
+      ].join("\n"),
+    );
+    return specPath;
+  });
 }

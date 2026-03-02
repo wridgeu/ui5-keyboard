@@ -31,6 +31,7 @@ import {
   setI18nOverrideHook as registrySetOverrideHook,
   clearI18nOverrideHook as registryClearOverrideHook,
   reloadBundles as registryReloadBundles,
+  VALIDATION_REJECTED as registryValidationRejected,
 } from "./internal/i18n-registry";
 import type { KioskI18nConfig, KioskI18nOverrideHook } from "./types";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
@@ -388,6 +389,9 @@ export default class KioskKeyboard extends Control {
   /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
+  /** Tracks the current reload promise to avoid duplicate post-reload invalidation across N instances. */
+  private static _lastReloadPromise: Promise<void> | null = null;
+
   /** Native actions executed in `fKeyMode="Native"` when not prevented. */
   private static readonly _NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
     F5: () => {
@@ -534,15 +538,16 @@ export default class KioskKeyboard extends Control {
    *
    * @param config  Enhancement bundle descriptors and locale metadata.
    * @returns Resolves when all enhancement bundles are loaded.
-   * @since ${version}
    * @public
    * @static
    */
   static configureI18n(config: KioskI18nConfig): Promise<void> {
-    KioskKeyboard._invalidateAllInstances();
-
     const loaded = registryConfigureI18n(config);
+    if (loaded === registryValidationRejected) {
+      return loaded;
+    }
 
+    KioskKeyboard._invalidateAllInstances();
     void loaded.then(() => KioskKeyboard._invalidateAllInstances());
 
     return loaded;
@@ -555,7 +560,6 @@ export default class KioskKeyboard extends Control {
    * loads.  Does not affect the override hook — call
    * {@link clearI18nOverrideHook} separately if needed.
    *
-   * @since ${version}
    * @public
    * @static
    */
@@ -575,19 +579,18 @@ export default class KioskKeyboard extends Control {
    * replaces the previous hook.
    *
    * @param fn  The override function.
-   * @since ${version}
    * @public
    * @static
    */
   static setI18nOverrideHook(fn: KioskI18nOverrideHook): void {
-    registrySetOverrideHook(fn);
-    KioskKeyboard._invalidateAllInstances();
+    if (registrySetOverrideHook(fn)) {
+      KioskKeyboard._invalidateAllInstances();
+    }
   }
 
   /**
    * Remove the i18n override hook.
    *
-   * @since ${version}
    * @public
    * @static
    */
@@ -676,14 +679,17 @@ export default class KioskKeyboard extends Control {
   }
 
   // With N instances, this hook is called N times. reloadBundles()
-  // deduplicates concurrent calls — the first triggers the reload,
-  // subsequent calls share the same promise.
+  // coalesces concurrent calls — only the first triggers the reload.
+  // The static sentinel avoids registering N duplicate .then() callbacks.
   onLocalizationChanged(): void {
-    void registryReloadBundles().then(() => {
-      if (!this.isDestroyed()) {
+    const reload = registryReloadBundles();
+    if (reload !== KioskKeyboard._lastReloadPromise) {
+      KioskKeyboard._lastReloadPromise = reload;
+      void reload.then(() => {
+        KioskKeyboard._lastReloadPromise = null;
         KioskKeyboard._invalidateAllInstances();
-      }
-    });
+      });
+    }
     this.invalidate();
   }
 

@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>KioskKeyboard i18n Extensibility Demo</title>
+    <script
+      id="sap-ui-bootstrap"
+      src="../../../../../resources/sap-ui-core.js"
+      data-sap-ui-theme="sap_horizon"
+      data-sap-ui-libs="sap.m, ui5.kiosk"
+      data-sap-ui-compat-version="edge"
+      data-sap-ui-resource-roots='{"ui5.kiosk": "../../../../../resources/ui5/kiosk/", "i18n-demo": "./"}'
+      data-sap-ui-async="true"
+      data-sap-ui-on-init="module:i18n-demo/init"
+    ></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "72", Arial, sans-serif;
+        background: #f5f6f7;
+      }
+      .section {
+        margin-bottom: 40px;
+      }
+      .section h2 {
+        font-size: 16px;
+        color: #32363a;
+        margin-bottom: 4px;
+      }
+      .section p {
+        font-size: 13px;
+        color: #556b82;
+        margin: 0 0 12px;
+        max-width: 700px;
+      }
+      .keyboard-container {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        display: inline-block;
+      }
+      pre.code {
+        background: #1e1e2e;
+        color: #cdd6f4;
+        padding: 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        overflow-x: auto;
+        max-width: 700px;
+        margin: 0 0 12px;
+      }
+      .controls {
+        margin-bottom: 12px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="font-size: 20px; color: #32363a">KioskKeyboard i18n Extensibility Demo</h1>
+
+    <!-- Section 1: Baseline -->
+    <div class="section">
+      <h2>1. Baseline (no customization)</h2>
+      <p>
+        The keyboard renders with the library's built-in English labels. Shift, Enter, Backspace, and Space use the
+        default translations. The root element has <code>aria-label="Virtual Keyboard"</code>.
+      </p>
+      <div id="input-baseline" style="margin-bottom: 12px"></div>
+      <div class="keyboard-container" id="kb-baseline"></div>
+    </div>
+
+    <!-- Section 2: New language via enhancement bundle -->
+    <div class="section">
+      <h2>2. New language via enhancement bundle (French)</h2>
+      <p>
+        Adds French translations using <code>configureI18n</code> with a <code>bundleUrl</code> pointing to a local
+        <code>.properties</code> file. All key labels and ARIA attributes update to French.
+      </p>
+      <pre class="code">
+KioskKeyboard.configureI18n({
+  enhanceWith: [{
+    bundleUrl: "./i18n/messagebundle.properties",
+    supportedLocales: [""],
+    fallbackLocale: ""
+  }]
+});</pre
+      >
+      <div class="controls" id="controls-french"></div>
+      <div id="input-french" style="margin-bottom: 12px"></div>
+      <div class="keyboard-container" id="kb-french"></div>
+    </div>
+
+    <!-- Section 3: Override existing labels -->
+    <div class="section">
+      <h2>3. Override existing English labels via enhancement bundle</h2>
+      <p>
+        Replaces specific English labels with custom wording: "Enter" &rarr; "Go", "Backspace" &rarr; "Delete", and the
+        root label becomes "Touch Keyboard". Keys not in the override bundle keep their base text.
+      </p>
+      <pre class="code">
+KioskKeyboard.configureI18n({
+  enhanceWith: [{
+    bundleUrl: "./i18n-override/messagebundle.properties",
+    supportedLocales: [""],
+    fallbackLocale: ""
+  }]
+});</pre
+      >
+      <div class="controls" id="controls-override"></div>
+      <div id="input-override" style="margin-bottom: 12px"></div>
+      <div class="keyboard-container" id="kb-override"></div>
+    </div>
+
+    <!-- Section 4: Programmatic override hook -->
+    <div class="section">
+      <h2>4. Programmatic override hook</h2>
+      <p>
+        Uses <code>setI18nOverrideHook</code> to dynamically replace text at runtime. The hook receives context (key,
+        locale, resolved text) and can return a replacement string per key. Here it uppercases all special-key labels
+        and adds an emoji prefix to the keyboard label.
+      </p>
+      <pre class="code">
+KioskKeyboard.setI18nOverrideHook(function (ctx) {
+  if (ctx.key === "KIOSK_KEYBOARD_LABEL") {
+    return "\u2328\uFE0F " + ctx.resolvedText;
+  }
+  if (ctx.key.startsWith("KEY_")) {
+    return ctx.resolvedText.toUpperCase();
+  }
+});</pre
+      >
+      <div class="controls" id="controls-hook"></div>
+      <div id="input-hook" style="margin-bottom: 12px"></div>
+      <div class="keyboard-container" id="kb-hook"></div>
+    </div>
+  </body>
+</html>

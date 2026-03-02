@@ -5,6 +5,7 @@ dist/
 *.tsbuildinfo
 coverage/
 __screenshots__/
+.generated-specs/
 
 # IDE
 .idea/

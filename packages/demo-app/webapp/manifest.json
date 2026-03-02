@@ -135,6 +135,11 @@
           "name": "kioskFocusScenarios",
           "pattern": "kiosk/focus-scenarios",
           "target": "kioskFocusScenarios"
+        },
+        {
+          "name": "kioskI18nExtensibility",
+          "pattern": "kiosk/i18n-extensibility",
+          "target": "kioskI18nExtensibility"
         }
       ],
       "targets": {
@@ -209,6 +214,10 @@
         "kioskFocusScenarios": {
           "id": "kioskFocusScenarios",
           "name": "KioskFocusScenarios"
+        },
+        "kioskI18nExtensibility": {
+          "id": "kioskI18nExtensibility",
+          "name": "KioskI18nExtensibility"
         }
       }
     },

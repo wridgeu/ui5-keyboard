@@ -90,6 +90,11 @@
       "title": "Focus Scenarios",
       "description": "Focus transitions, deferred close, composite controls, and live event log",
       "route": "kioskFocusScenarios"
+    },
+    {
+      "title": "i18n Extensibility",
+      "description": "New language bundles, label overrides, and programmatic override hooks",
+      "route": "kioskI18nExtensibility"
     }
   ],
   "platform": "",

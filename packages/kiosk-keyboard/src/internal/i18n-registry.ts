@@ -14,9 +14,10 @@ let activeConfig: KioskI18nConfig | null = null;
 let enhancementBundles: ResourceBundle[] | null = null;
 let generation = 0;
 let overrideHook: KioskI18nOverrideHook | null = null;
+let pendingReload: Promise<void> | null = null;
 
 function getCurrentLocale(): string {
-  return Localization.getLanguage() || "en";
+  return Localization.getLanguageTag().toString();
 }
 
 function loadBundles(): Promise<void> {
@@ -108,6 +109,9 @@ export function getText(key: string, fallback: string): string {
   return resolved;
 }
 
+/** Sentinel returned by `configureI18n` when validation rejects the config. @internal */
+export const VALIDATION_REJECTED: Promise<void> = Promise.resolve();
+
 /**
  * Apply an i18n enhancement configuration.
  *
@@ -117,17 +121,18 @@ export function getText(key: string, fallback: string): string {
  * `configureI18n` is called again before a previous load completes.
  *
  * @param config  Enhancement bundle descriptors and locale metadata.
- * @returns Resolves when all enhancement bundles have been loaded.
+ * @returns Resolves when all enhancement bundles have been loaded
+ *          (or `VALIDATION_REJECTED` when the config is invalid).
  */
 export function configureI18n(config: KioskI18nConfig): Promise<void> {
   if (!config || typeof config !== "object" || Array.isArray(config)) {
     Log.warning("configureI18n: config must be a plain object.", undefined, LOG_COMPONENT);
-    return Promise.resolve();
+    return VALIDATION_REJECTED;
   }
 
   if (config.enhanceWith !== undefined && !Array.isArray(config.enhanceWith)) {
     Log.warning("configureI18n: enhanceWith must be an array.", undefined, LOG_COMPONENT);
-    return Promise.resolve();
+    return VALIDATION_REJECTED;
   }
 
   if (
@@ -135,12 +140,12 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
     (!Array.isArray(config.supportedLocales) || !isStringArray(config.supportedLocales))
   ) {
     Log.warning("configureI18n: supportedLocales must be an array of strings.", undefined, LOG_COMPONENT);
-    return Promise.resolve();
+    return VALIDATION_REJECTED;
   }
 
   if (config.fallbackLocale !== undefined && typeof config.fallbackLocale !== "string") {
     Log.warning("configureI18n: fallbackLocale must be a string.", undefined, LOG_COMPONENT);
-    return Promise.resolve();
+    return VALIDATION_REJECTED;
   }
 
   const validEntries = config.enhanceWith?.filter((entry) => {
@@ -211,20 +216,19 @@ export function resetI18nConfiguration(): void {
  * @param hook  Override function. Return a string to replace, or
  *              `undefined` to keep the resolved text.
  */
-export function setI18nOverrideHook(hook: KioskI18nOverrideHook): void {
+export function setI18nOverrideHook(hook: KioskI18nOverrideHook): boolean {
   if (typeof hook !== "function") {
     Log.warning("setI18nOverrideHook: argument must be a function.", undefined, LOG_COMPONENT);
-    return;
+    return false;
   }
   overrideHook = hook;
+  return true;
 }
 
 /** Remove the active i18n override hook, if any. */
 export function clearI18nOverrideHook(): void {
   overrideHook = null;
 }
-
-let pendingReload: Promise<void> | null = null;
 
 /**
  * Reload all enhancement bundles for the current locale.
@@ -242,7 +246,7 @@ export function reloadBundles(): Promise<void> {
     return Promise.resolve();
   }
 
-  pendingReload = loadBundles().then(() => {
+  pendingReload = loadBundles().finally(() => {
     pendingReload = null;
   });
   return pendingReload;

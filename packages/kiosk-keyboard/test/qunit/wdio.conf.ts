@@ -1,26 +1,38 @@
+import os from "node:os";
 import url from "node:url";
 import path from "node:path";
-import { createServerManager, readQUnitTestIds } from "../../../../tools/wdio-server.js";
+import { createServerManager, readQUnitTestIds, generateQUnitSpecs } from "../../../../tools/wdio-server.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8082;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const TESTSUITE_FILE = path.resolve(__dirname, "testsuite.qunit.ts");
+const SPECS_DIR = path.resolve(__dirname, ".generated-specs");
 
 const server = createServerManager(PORT, PACKAGE_ROOT);
 const testIds = readQUnitTestIds(TESTSUITE_FILE);
+
+const cpus = (os.availableParallelism?.() ?? os.cpus().length) || 4;
+const parallel = Math.min(cpus, 5);
+
+// Generate one spec file per QUnit test so WDIO can run them in parallel.
+const specs = generateQUnitSpecs(
+  testIds,
+  SPECS_DIR,
+  (name) =>
+    `/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=${name}`,
+);
 
 export const config: WebdriverIO.Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
 
-  maxInstances: 1,
-  maxInstancesPerCapability: 1,
+  specs,
+  maxInstances: parallel,
 
   capabilities: [
     {
       browserName: "chrome",
-      maxInstances: 1,
       "goog:chromeOptions": {
         args: ["--headless=new", "--window-size=1440,900", "--disable-gpu", "--no-sandbox"],
       },
@@ -40,17 +52,8 @@ export const config: WebdriverIO.Config = {
 
   reporters: ["spec"],
 
-  services: [
-    [
-      "qunit",
-      {
-        paths: testIds.map(
-          (name) =>
-            `/test-resources/ui5/kiosk/qunit/Test.qunit.html?testsuite=test-resources/ui5/kiosk/qunit/testsuite.qunit&test=${name}`,
-        ),
-      },
-    ],
-  ],
+  // Keep the qunit service (no paths) so it registers browser.getQUnitResults().
+  services: [["qunit", {}]],
 
   onPrepare: () => server.onPrepare(),
   onComplete: () => server.onComplete(),

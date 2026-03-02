@@ -273,8 +273,8 @@ export interface KioskI18nOverrideContext {
   /** The message key (e.g. `"KIOSK_KEYBOARD_LABEL"`). */
   readonly key: string;
   /**
-   * Current locale string (BCP47 format, e.g. `"de"`, `"en-US"`).
-   * Derived via a version-safe utility — see implementation notes.
+   * Current locale as a BCP47 language tag (e.g. `"de"`, `"en-US"`).
+   * Derived from `Localization.getLanguageTag()`.
    */
   readonly locale: string;
   /** Hardcoded fallback passed by the call site. */
@@ -291,5 +291,7 @@ export interface KioskI18nOverrideContext {
  *
  * Return a string to replace `resolvedText`.
  * Return `undefined` to keep the resolved text as-is.
+ *
+ * If the hook throws, the error is logged and `resolvedText` is used.
  */
 export type KioskI18nOverrideHook = (ctx: KioskI18nOverrideContext) => string | undefined;

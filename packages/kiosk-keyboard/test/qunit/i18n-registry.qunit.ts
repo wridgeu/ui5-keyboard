@@ -100,6 +100,23 @@ QUnit.test("Rejects non-object config (string)", async (assert) => {
   assert.ok(spy.calledOnce, "Warning logged for string config");
 });
 
+QUnit.test("Rejects non-array enhanceWith (string)", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({ enhanceWith: "bad" } as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for string enhanceWith");
+  assert.ok(spy.firstCall.args[0].includes("enhanceWith"), "Warning mentions enhanceWith");
+});
+
+QUnit.test("Rejects non-array enhanceWith (object)", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({ enhanceWith: { bundleName: "x" } } as never);
+
+  assert.ok(spy.calledOnce, "Warning logged for object enhanceWith");
+});
+
 QUnit.test("Rejects enhancement entry with neither bundleName nor bundleUrl", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
@@ -321,6 +338,30 @@ QUnit.test("reloadBundles re-creates bundles for current locale", async (assert)
   assert.strictEqual(getText("KEY", "fallback"), "v2", "Reloaded bundle used");
 });
 
+QUnit.test("reloadBundles coalesces concurrent calls (same promise returned)", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+  const createStub = sandbox.stub(ResourceBundle, "create");
+
+  createStub.returns(Promise.resolve(makeBundleStub({ KEY: "v1" })) as never);
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+
+  // Reset stub to track only reload calls
+  createStub.resetHistory();
+  createStub.returns(Promise.resolve(makeBundleStub({ KEY: "v2" })) as never);
+
+  const first = reloadBundles();
+  const second = reloadBundles();
+  const third = reloadBundles();
+
+  assert.strictEqual(first, second, "Second call returns same promise");
+  assert.strictEqual(second, third, "Third call returns same promise");
+
+  await first;
+
+  assert.strictEqual(createStub.callCount, 1, "ResourceBundle.create called only once despite 3 reloadBundles calls");
+  assert.strictEqual(getText("KEY", "fallback"), "v2", "Reloaded text available");
+});
+
 // ──────────────────────────────────────────────────
 // enhancement bundle precedence
 // ──────────────────────────────────────────────────
@@ -361,6 +402,21 @@ QUnit.test("Enhancement that does not provide a key falls through to base", asyn
 
   assert.strictEqual(getText("KEY", "fallback"), "base", "Missing key falls through to base");
   assert.strictEqual(getText("OTHER", "fallback"), "other-enhanced", "Provided key is enhanced");
+});
+
+QUnit.test("bundleUrl entry loads and resolves text", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+  const createStub = stubBundleCreate(makeBundleStub({ KEY: "from-url" }));
+
+  await configureI18n({
+    enhanceWith: [{ bundleUrl: "https://example.com/i18n/messagebundle.properties" }],
+  });
+
+  assert.strictEqual(getText("KEY", "fallback"), "from-url", "bundleUrl entry text resolved");
+  assert.ok(createStub.calledOnce, "ResourceBundle.create called once");
+  const params = createStub.firstCall.args[0] as Record<string, unknown>;
+  assert.strictEqual(params.url, "https://example.com/i18n/messagebundle.properties", "URL passed correctly");
+  assert.notOk("bundleName" in params, "bundleName not set for URL entry");
 });
 
 QUnit.test("Enhancement bundle error does not break resolution", async (assert) => {

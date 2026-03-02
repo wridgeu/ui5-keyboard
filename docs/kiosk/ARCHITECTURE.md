@@ -11,7 +11,8 @@ KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
                           plus key-name constants (`KeyName`)
-types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
+types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces,
+                          KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook types
 layout-registry.ts        Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
 internal/i18n.ts          getText() facade — thin re-export of i18n-registry
@@ -529,7 +530,8 @@ packages/kiosk-keyboard/
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
                                plus KeyName constants
-    types.ts                  KeyDefinition, KeyRow, LayoutDefinition
+    types.ts                  KeyDefinition, KeyRow, LayoutDefinition,
+                              KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook
     layout-registry.ts        Layout registration and locale resolution
     internal/
       dom.ts                  DOM/key ID utilities + input resolver
