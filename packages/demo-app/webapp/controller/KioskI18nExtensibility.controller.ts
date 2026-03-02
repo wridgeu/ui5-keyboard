@@ -90,7 +90,7 @@ export default class KioskI18nExtensibility extends BaseController {
     void KioskKeyboard.configureI18n({
       enhanceWith: [
         {
-          bundleName: "demo.hotkeys.i18n-kiosk-fr.messagebundle",
+          bundleName: "demo.hotkeys.i18n-kiosk.messagebundle-fr",
           supportedLocales: [""],
           fallbackLocale: "",
         },
@@ -103,7 +103,7 @@ export default class KioskI18nExtensibility extends BaseController {
     void KioskKeyboard.configureI18n({
       enhanceWith: [
         {
-          bundleName: "demo.hotkeys.i18n-kiosk-override.messagebundle",
+          bundleName: "demo.hotkeys.i18n-kiosk.messagebundle-override",
           supportedLocales: [""],
           fallbackLocale: "",
         },

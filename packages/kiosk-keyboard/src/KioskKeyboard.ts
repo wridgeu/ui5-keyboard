@@ -68,6 +68,7 @@ type InputModeSuppressionState = {
  * @namespace ui5.kiosk
  * @extends sap.ui.core.Control
  * @public
+ * @since ${version}
  */
 export default class KioskKeyboard extends Control {
   // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures
@@ -428,6 +429,9 @@ export default class KioskKeyboard extends Control {
    *
    * @param sName Layout identifier (e.g. "azerty-fr").
    * @param oDefinition Layout rows and key definitions.
+   * @public
+   * @static
+   * @since ${version}
    */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
     registryRegisterLayout(sName, oDefinition);
@@ -439,6 +443,9 @@ export default class KioskKeyboard extends Control {
    * Built-in layouts cannot be removed.
    *
    * @param sName Layout identifier.
+   * @public
+   * @static
+   * @since ${version}
    */
   static unregisterLayout(sName: string): void {
     registryUnregisterLayout(sName);
@@ -446,6 +453,10 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Remove all custom layouts and keep built-in layouts intact.
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static resetCustomLayouts(): void {
     registryResetCustomLayouts();
@@ -456,6 +467,9 @@ export default class KioskKeyboard extends Control {
    *
    * @param sName Layout identifier.
    * @returns The layout definition, or undefined if not found.
+   * @public
+   * @static
+   * @since ${version}
    */
   static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
     return registryGetLayout(sName);
@@ -463,6 +477,10 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Get all registered layout names (built-in and custom).
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static getRegisteredLayoutNames(): string[] {
     return registryGetLayoutNames();
@@ -472,6 +490,9 @@ export default class KioskKeyboard extends Control {
    * Check whether a layout name belongs to a built-in layout.
    *
    * @param sName Layout identifier.
+   * @public
+   * @static
+   * @since ${version}
    */
   static isBuiltInLayout(sName: string): boolean {
     return registryIsBuiltIn(sName);
@@ -484,6 +505,9 @@ export default class KioskKeyboard extends Control {
    *
    * @param sLocale BCP-47 locale key or prefix (e.g. "de", "de-at").
    * @param sLayout Target layout name.
+   * @public
+   * @static
+   * @since ${version}
    */
   static registerLocaleLayout(sLocale: string, sLayout: string): void {
     registryRegisterLocale(sLocale, sLayout);
@@ -493,6 +517,9 @@ export default class KioskKeyboard extends Control {
    * Remove a locale-to-layout mapping.
    *
    * @param sLocale Locale key or prefix.
+   * @public
+   * @static
+   * @since ${version}
    */
   static unregisterLocaleLayout(sLocale: string): void {
     registryUnregisterLocale(sLocale);
@@ -500,6 +527,10 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Reset locale mappings back to built-in defaults.
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static resetLocaleLayouts(): void {
     registryResetLocales();
@@ -509,6 +540,10 @@ export default class KioskKeyboard extends Control {
    * Resolve the layout name for the current UI5 locale.
    *
    * Uses exact locale match, then language-prefix match, then fallback.
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static getLocaleLayout(): string {
     return registryGetLocaleLayout();
@@ -544,6 +579,7 @@ export default class KioskKeyboard extends Control {
    * @returns Resolves when all enhancement bundles are loaded.
    * @public
    * @static
+   * @since ${version}
    */
   static configureI18n(config: KioskI18nConfig): Promise<void> {
     const { accepted, promise: loaded } = registryConfigureI18nWithStatus(config);
@@ -572,6 +608,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
+   * @since ${version}
    */
   static resetI18nConfiguration(): void {
     registryResetI18n();
@@ -591,6 +628,7 @@ export default class KioskKeyboard extends Control {
    * @param fn  The override function.
    * @public
    * @static
+   * @since ${version}
    */
   static setI18nOverrideHook(fn: KioskI18nOverrideHook): void {
     if (registrySetOverrideHook(fn)) {
@@ -603,6 +641,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
+   * @since ${version}
    */
   static clearI18nOverrideHook(): void {
     registryClearOverrideHook();
@@ -1051,6 +1090,7 @@ export default class KioskKeyboard extends Control {
    * based on the focused input's metadata again.
    *
    * @public
+   * @since ${version}
    */
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
@@ -1421,6 +1461,7 @@ export default class KioskKeyboard extends Control {
    * @param sKeyValue Key value (e.g. "{shift}", "{enter}")
    * @public
    * @static
+   * @since ${version}
    */
   static getKeyIcon(sKeyValue: string): string | undefined {
     return KioskKeyboard.SPECIAL_KEY_ICONS[sKeyValue];
