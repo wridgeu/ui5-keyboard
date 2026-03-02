@@ -5,6 +5,7 @@ import {
   clearI18nOverrideHook,
   getText,
   reloadBundles,
+  reloadIfStale,
 } from "ui5/kiosk/internal/i18n-registry";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
@@ -571,6 +572,39 @@ QUnit.test("configureI18n detaches in-flight reload without invalidating its own
 
   assert.strictEqual(getText("KEY", "fallback"), "configured", "configureI18n keeps its own bundle active");
   assert.strictEqual(createStub.callCount, 3, "Detached reload does not start an extra load cycle");
+});
+
+QUnit.test("reloadIfStale detects stale bundles when locale changes mid-load", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  let resolveInitial!: (b: ResourceBundle) => void;
+  const createStub = sandbox.stub(ResourceBundle, "create");
+  createStub.onCall(0).returns(
+    new Promise((r) => {
+      resolveInitial = r as (b: ResourceBundle) => void;
+    }) as never,
+  );
+
+  let locale = "en";
+  sandbox.stub(Localization, "getLanguageTag").callsFake(() => ({ toString: () => locale }) as never);
+
+  const loading = configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+
+  // Locale changes while initial load is in-flight
+  locale = "de";
+
+  resolveInitial(makeBundleStub({ KEY: "en-text" }));
+  await loading;
+
+  // bundlesLoadedLocale should be "en" (the snapshot), not "de" (current),
+  // so reloadIfStale must detect the mismatch.
+  createStub.onCall(1).returns(Promise.resolve(makeBundleStub({ KEY: "de-text" })) as never);
+
+  const reloadPromise = reloadIfStale();
+  assert.ok(reloadPromise !== null, "reloadIfStale returns a Promise (bundles detected as stale)");
+
+  await reloadPromise;
+  assert.strictEqual(getText("KEY", "fallback"), "de-text", "After reload, text matches new locale bundle");
 });
 
 // ──────────────────────────────────────────────────

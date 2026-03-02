@@ -110,6 +110,7 @@ function loadBundles(): Promise<void> {
   const topSupportedLocales = activeConfig?.supportedLocales;
   const topFallbackLocale = activeConfig?.fallbackLocale;
 
+  const requestedLocale = getCurrentLocale();
   const promises = entries.map((entry) => {
     const createParams: Record<string, unknown> = {
       async: true,
@@ -130,7 +131,7 @@ function loadBundles(): Promise<void> {
       return;
     }
     enhancementBundles = results.filter((b): b is ResourceBundle => b !== null);
-    bundlesLoadedLocale = getCurrentLocale();
+    bundlesLoadedLocale = requestedLocale;
   });
 }
 
