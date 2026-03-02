@@ -7,12 +7,13 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 const MODE_DESCRIPTIONS: Record<string, string> = {
-  default: "Using the library's built-in English labels (no customization).",
+  default:
+    "Built-in English aria-labels (no customization). Special keys show icons; their text is only exposed to screen readers.",
   french:
-    "French translations loaded via configureI18n() with a bundleName pointing to a .properties file shipped with this app.",
+    "French aria-labels loaded via configureI18n() with a bundleName. Shift → Maj, Enter → Entrée, Space → Espace (visible on key).",
   override:
-    'English labels partially overridden: "Enter" → "Go", "Backspace" → "Delete", root label → "Touch Keyboard".',
-  hook: 'Programmatic override hook uppercases all special-key labels (Shift → SHIFT, Enter → ENTER, etc.) and changes the aria-label to "Custom Keyboard".',
+    'Partial English overrides via enhancement bundle. Enter → "Go", Backspace → "Delete", keyboard aria-label → "Touch Keyboard".',
+  hook: 'Programmatic override hook. Uppercases special-key aria-labels (SHIFT, ENTER, etc.) and sets the keyboard aria-label to "Custom Keyboard".',
 };
 
 /**
