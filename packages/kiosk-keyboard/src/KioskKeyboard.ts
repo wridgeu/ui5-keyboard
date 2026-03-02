@@ -548,7 +548,13 @@ export default class KioskKeyboard extends Control {
     }
 
     KioskKeyboard._invalidateAllInstances();
-    void loaded.then(() => KioskKeyboard._invalidateAllInstances());
+    void loaded
+      .then(() => {
+        KioskKeyboard._invalidateAllInstances();
+      })
+      .catch((e) => {
+        Log.warning(`configureI18n: failed to load enhancement bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+      });
 
     return loaded;
   }
@@ -685,10 +691,22 @@ export default class KioskKeyboard extends Control {
     const reload = registryReloadBundles();
     if (reload !== KioskKeyboard._lastReloadPromise) {
       KioskKeyboard._lastReloadPromise = reload;
-      void reload.then(() => {
-        KioskKeyboard._lastReloadPromise = null;
-        KioskKeyboard._invalidateAllInstances();
-      });
+      void reload
+        .then(() => {
+          KioskKeyboard._invalidateAllInstances();
+        })
+        .catch((e) => {
+          Log.warning(
+            `onLocalizationChanged: failed to reload i18n enhancement bundles: ${e}`,
+            undefined,
+            "ui5.kiosk.KioskKeyboard",
+          );
+        })
+        .finally(() => {
+          if (KioskKeyboard._lastReloadPromise === reload) {
+            KioskKeyboard._lastReloadPromise = null;
+          }
+        });
     }
     this.invalidate();
   }

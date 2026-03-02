@@ -2,7 +2,7 @@ import ResourceBundle from "sap/base/i18n/ResourceBundle";
 import Localization from "sap/base/i18n/Localization";
 import Lib from "sap/ui/core/Lib";
 import Log from "sap/base/Log";
-import type { KioskI18nConfig, KioskI18nOverrideContext, KioskI18nOverrideHook } from "../types";
+import type { KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideContext, KioskI18nOverrideHook } from "../types";
 
 const LOG_COMPONENT = "ui5.kiosk.KioskKeyboard";
 
@@ -20,6 +20,27 @@ const NO_RELOAD_NEEDED: Promise<void> = Promise.resolve();
 
 function getCurrentLocale(): string {
   return Localization.getLanguageTag().toString();
+}
+
+function createEnhancementBundle(
+  entry: KioskI18nEnhancement,
+  createParams: Record<string, unknown>,
+): Promise<ResourceBundle | null> {
+  const onError = (error: unknown): null => {
+    Log.warning(
+      `Failed to create i18n enhancement bundle (${entry.bundleName ?? entry.bundleUrl}): ${error}`,
+      undefined,
+      LOG_COMPONENT,
+    );
+    return null;
+  };
+
+  try {
+    const created = ResourceBundle.create(createParams) as ResourceBundle | Promise<ResourceBundle>;
+    return Promise.resolve(created).catch(onError);
+  } catch (e) {
+    return Promise.resolve(onError(e));
+  }
 }
 
 function loadBundles(): Promise<void> {
@@ -44,14 +65,7 @@ function loadBundles(): Promise<void> {
       createParams.url = entry.bundleUrl;
     }
 
-    return (ResourceBundle.create(createParams) as Promise<ResourceBundle>).catch((e): null => {
-      Log.warning(
-        `Failed to create i18n enhancement bundle (${entry.bundleName ?? entry.bundleUrl}): ${e}`,
-        undefined,
-        LOG_COMPONENT,
-      );
-      return null;
-    });
+    return createEnhancementBundle(entry, createParams);
   });
 
   return Promise.all(promises).then((results) => {

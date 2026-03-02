@@ -256,6 +256,40 @@ QUnit.test("getText returns enhanced text after Promise resolves", async (assert
   assert.strictEqual(getText("KEY", "fallback"), "enhanced", "Enhanced text returned after load");
 });
 
+QUnit.test("configureI18n tolerates synchronous ResourceBundle.create throws", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+  const warningSpy = sandbox.spy(Log, "warning");
+  sandbox.stub(ResourceBundle, "create").throws(new Error("sync create fail"));
+
+  await configureI18n({ enhanceWith: [{ bundleName: "broken.bundle" }] });
+
+  assert.strictEqual(getText("KEY", "fallback"), "base", "Falls back to base text when create throws synchronously");
+  assert.ok(warningSpy.calledOnce, "Warning logged for synchronous bundle-create failure");
+  assert.ok(warningSpy.firstCall.args[0].includes("Failed to create"), "Warning message mentions create failure");
+});
+
+QUnit.test("reloadBundles tolerates synchronous ResourceBundle.create throws", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  const createStub = sandbox.stub(ResourceBundle, "create");
+  createStub.onCall(0).returns(Promise.resolve(makeBundleStub({ KEY: "v1" })) as never);
+
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+  assert.strictEqual(getText("KEY", "fallback"), "v1", "Initial load uses enhancement bundle");
+
+  const warningSpy = sandbox.spy(Log, "warning");
+  createStub.onCall(1).throws(new Error("sync reload fail"));
+
+  await reloadBundles();
+
+  assert.strictEqual(
+    getText("KEY", "fallback"),
+    "base",
+    "Falls back to base text when reload create throws synchronously",
+  );
+  assert.ok(warningSpy.calledOnce, "Warning logged for synchronous reload failure");
+});
+
 QUnit.test("Rapid reconfiguration: only latest generation is stored", async (assert) => {
   stubBaseBundle({ KEY: "base" });
 
