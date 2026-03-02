@@ -79,10 +79,10 @@
   },
   "lint-staged": {
     "*.ts": [
-      "oxfmt --ignore-path .oxfmtignore",
+      "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
       "oxlint --fix"
     ],
-    "*.{json,yaml,yml,md,html,css,less}": "oxfmt --ignore-path .oxfmtignore"
+    "*.{json,yaml,yml,md,html,css,less}": "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern"
   },
   "engines": {
     "node": ">=22"
