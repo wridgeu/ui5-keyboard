@@ -186,6 +186,7 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
 
   activeConfig = { ...config, enhanceWith: validEntries };
   enhancementBundles = null;
+  pendingReload = null;
 
   return loadBundles();
 }
@@ -197,6 +198,7 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
 export function resetI18nConfiguration(): void {
   activeConfig = null;
   enhancementBundles = null;
+  pendingReload = null;
   generation++;
 }
 
