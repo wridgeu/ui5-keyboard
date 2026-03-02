@@ -32,6 +32,7 @@ import {
   clearI18nOverrideHook as registryClearOverrideHook,
   hasConfiguredEnhancements as registryHasConfiguredEnhancements,
   reloadBundles as registryReloadBundles,
+  reloadIfStale as registryReloadIfStale,
 } from "./internal/i18n-registry";
 import type { KioskI18nConfig, KioskI18nOverrideHook } from "./types";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
@@ -684,6 +685,18 @@ export default class KioskKeyboard extends Control {
     this._baseLayout = localeLayout;
     if (localeLayout !== DEFAULT_LAYOUT) {
       this.setLayout(localeLayout);
+    }
+
+    // If the locale changed while no instances existed,
+    // onLocalizationChanged was never called. Reload stale bundles
+    // now and re-render once they arrive.
+    const staleReload = registryReloadIfStale();
+    if (staleReload) {
+      void staleReload
+        .then(() => KioskKeyboard._invalidateAllInstances())
+        .catch((e) => {
+          Log.warning(`init: failed to reload stale i18n bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+        });
     }
   }
 

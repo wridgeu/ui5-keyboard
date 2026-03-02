@@ -57,6 +57,7 @@ function validateTopLevelConfig(config: unknown): string | null {
 
 let activeConfig: KioskI18nConfig | null = null;
 let enhancementBundles: ResourceBundle[] | null = null;
+let bundlesLoadedLocale: string | null = null;
 let generation = 0;
 let overrideHook: KioskI18nOverrideHook | null = null;
 let pendingReload: Promise<void> | null = null;
@@ -66,6 +67,16 @@ const MAX_RELOAD_CYCLES = 5;
 
 function getCurrentLocale(): string {
   return Localization.getLanguageTag().toString();
+}
+
+/**
+ * Returns true when loaded enhancement bundles belong to a different
+ * locale than the framework's current locale.  This happens when the
+ * locale changes while no KioskKeyboard instances exist, so
+ * `onLocalizationChanged` never fires and `reloadBundles` is not called.
+ */
+function areBundlesStale(): boolean {
+  return bundlesLoadedLocale !== null && bundlesLoadedLocale !== getCurrentLocale();
 }
 
 function createEnhancementBundle(
@@ -119,6 +130,7 @@ function loadBundles(): Promise<void> {
       return;
     }
     enhancementBundles = results.filter((b): b is ResourceBundle => b !== null);
+    bundlesLoadedLocale = getCurrentLocale();
   });
 }
 
@@ -242,6 +254,7 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
     enhanceWith: config.enhanceWith ? validEntries : undefined,
   };
   enhancementBundles = null;
+  bundlesLoadedLocale = null;
   pendingReload = null;
   pendingReloadRequestedLocale = null;
 
@@ -296,6 +309,7 @@ export function hasConfiguredEnhancements(): boolean {
 export function resetI18nConfiguration(): void {
   activeConfig = null;
   enhancementBundles = null;
+  bundlesLoadedLocale = null;
   pendingReload = null;
   pendingReloadRequestedLocale = null;
   generation++;
@@ -325,9 +339,25 @@ export function clearI18nOverrideHook(): void {
 }
 
 /**
+ * If enhancement bundles are configured but were loaded for a
+ * different locale, trigger a reload.  Returns the reload promise
+ * when a reload was needed, `null` otherwise.
+ *
+ * Called from `KioskKeyboard.init()` to cover the window where
+ * the locale changed while no instances existed.
+ * @internal
+ */
+export function reloadIfStale(): Promise<void> | null {
+  if (!activeConfig?.enhanceWith?.length) return null;
+  if (!areBundlesStale()) return null;
+  return reloadBundles();
+}
+
+/**
  * Reload all enhancement bundles for the current locale.
  *
- * Called on locale change (`onLocalizationChanged`).
+ * Called on locale change (`onLocalizationChanged`) and from
+ * `reloadIfStale` when stale bundles are detected at init time.
  * Coalesces concurrent calls via a pending-promise guard.
  *
  * @returns Resolves when bundles are reloaded.
