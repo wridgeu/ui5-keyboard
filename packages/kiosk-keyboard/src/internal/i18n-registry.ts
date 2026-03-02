@@ -105,7 +105,7 @@ function loadBundles(): Promise<void> {
   const entries = activeConfig?.enhanceWith;
   if (!entries?.length) {
     enhancementBundles = [];
-    return Promise.resolve();
+    return NO_RELOAD_NEEDED;
   }
   const topSupportedLocales = activeConfig?.supportedLocales;
   const topFallbackLocale = activeConfig?.fallbackLocale;
@@ -304,6 +304,40 @@ export function hasConfiguredEnhancements(): boolean {
 }
 
 /**
+ * Returns a frozen deep copy of the active i18n configuration,
+ * or `null` when no configuration has been applied.
+ *
+ * Intended for debugging, logging, and test assertions.
+ * @internal
+ */
+export function getI18nConfiguration(): Readonly<KioskI18nConfig> | null {
+  if (!activeConfig) return null;
+  const copy: KioskI18nConfig = {
+    supportedLocales: activeConfig.supportedLocales ? [...activeConfig.supportedLocales] : undefined,
+    fallbackLocale: activeConfig.fallbackLocale,
+    enhanceWith: activeConfig.enhanceWith
+      ? activeConfig.enhanceWith.map((entry) => ({
+          ...entry,
+          supportedLocales: entry.supportedLocales ? [...entry.supportedLocales] : undefined,
+        }))
+      : undefined,
+  };
+  if (copy.supportedLocales) {
+    Object.freeze(copy.supportedLocales);
+  }
+  if (copy.enhanceWith) {
+    for (const entry of copy.enhanceWith) {
+      if (entry.supportedLocales) {
+        Object.freeze(entry.supportedLocales);
+      }
+      Object.freeze(entry);
+    }
+    Object.freeze(copy.enhanceWith);
+  }
+  return Object.freeze(copy);
+}
+
+/**
  * Reset to library defaults — clears all enhancement bundles and
  * increments the generation counter to cancel any in-flight loads.
  */
@@ -334,9 +368,11 @@ export function setI18nOverrideHook(hook: KioskI18nOverrideHook): boolean {
   return true;
 }
 
-/** Remove the active i18n override hook, if any. */
-export function clearI18nOverrideHook(): void {
+/** Remove the active i18n override hook, if any. Returns true when a hook was actually removed. */
+export function clearI18nOverrideHook(): boolean {
+  if (!overrideHook) return false;
   overrideHook = null;
+  return true;
 }
 
 /**
@@ -373,7 +409,12 @@ export function reloadBundles(): Promise<void> {
     return pendingReload;
   }
 
-  let reloadPromise: Promise<void> | null = null;
+  // Assign to pendingReload before the IIFE so the detach guard
+  // (pendingReload !== reloadPromise) inside the loop body can
+  // reference it without a TS2454 "used before assigned" error.
+  // The IIFE starts synchronous execution up to the first await,
+  // then yields — by which point pendingReload is already set.
+  let reloadPromise!: Promise<void>;
   reloadPromise = (async () => {
     let cycles = 0;
     while (activeConfig?.enhanceWith?.length) {

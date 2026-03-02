@@ -30,6 +30,7 @@ import {
   resetI18nConfiguration as registryResetI18n,
   setI18nOverrideHook as registrySetOverrideHook,
   clearI18nOverrideHook as registryClearOverrideHook,
+  getI18nConfiguration as registryGetI18nConfiguration,
   hasConfiguredEnhancements as registryHasConfiguredEnhancements,
   reloadBundles as registryReloadBundles,
   reloadIfStale as registryReloadIfStale,
@@ -644,8 +645,26 @@ export default class KioskKeyboard extends Control {
    * @since ${version}
    */
   static clearI18nOverrideHook(): void {
-    registryClearOverrideHook();
-    KioskKeyboard._invalidateAllInstances();
+    if (registryClearOverrideHook()) {
+      KioskKeyboard._invalidateAllInstances();
+    }
+  }
+
+  /**
+   * Returns a frozen snapshot of the active i18n configuration, or
+   * `null` when no configuration has been applied.
+   *
+   * Intended for debugging, logging, and test assertions.
+   * The returned object is a deep copy — mutations do not affect
+   * internal state.
+   *
+   * @returns Frozen configuration snapshot or `null`.
+   * @public
+   * @static
+   * @since ${version}
+   */
+  static getI18nConfiguration(): Readonly<KioskI18nConfig> | null {
+    return registryGetI18nConfiguration();
   }
 
   /** Invalidate all living KioskKeyboard instances to pick up i18n changes. */
@@ -729,12 +748,21 @@ export default class KioskKeyboard extends Control {
     // If the locale changed while no instances existed,
     // onLocalizationChanged was never called. Reload stale bundles
     // now and re-render once they arrive.
+    // Use the same _lastReloadPromise sentinel as onLocalizationChanged
+    // to avoid registering duplicate .then() callbacks when multiple
+    // instances init simultaneously.
     const staleReload = registryReloadIfStale();
-    if (staleReload) {
+    if (staleReload && staleReload !== KioskKeyboard._lastReloadPromise) {
+      KioskKeyboard._lastReloadPromise = staleReload;
       void staleReload
         .then(() => KioskKeyboard._invalidateAllInstances())
         .catch((e) => {
           Log.warning(`init: failed to reload stale i18n bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+        })
+        .finally(() => {
+          if (KioskKeyboard._lastReloadPromise === staleReload) {
+            KioskKeyboard._lastReloadPromise = null;
+          }
         });
     }
   }

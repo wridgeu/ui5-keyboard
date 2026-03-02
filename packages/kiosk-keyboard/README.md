@@ -957,9 +957,9 @@ The library ships with an English resource bundle for all accessibility labels a
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`               |
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`              |
 
-**Adding translations:**
+**Adding translations (library contributors):**
 
-Create a properties file following the standard UI5 i18n naming convention in the library's `i18n/` folder. For example, to add French:
+To add a new locale to the library itself, create a properties file following the standard UI5 i18n naming convention in the library's `i18n/` folder. For example, to add French:
 
 ```
 packages/kiosk-keyboard/src/i18n/messagebundle_fr.properties
@@ -991,17 +991,28 @@ Consumers can extend or override the keyboard's translatable texts without modif
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 
 // Add French and Spanish translations via a consumer bundle.
+// supportedLocales / fallbackLocale are set per entry.
 // Use "" as the fallback locale when your base file is
 // messagebundle.properties (no locale suffix).
 await KioskKeyboard.configureI18n({
-  supportedLocales: ["", "de", "fr", "es"],
-  fallbackLocale: "",
-  enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
+  enhanceWith: [
+    {
+      bundleName: "my.app.i18n.kiosk",
+      supportedLocales: ["", "de", "fr", "es"],
+      fallbackLocale: "",
+    },
+  ],
 });
 
 // Or use a URL instead of a module name
 await KioskKeyboard.configureI18n({
-  enhanceWith: [{ bundleUrl: "/i18n/kiosk/messagebundle.properties" }],
+  enhanceWith: [
+    {
+      bundleUrl: "/i18n/kiosk/messagebundle.properties",
+      supportedLocales: [""],
+      fallbackLocale: "",
+    },
+  ],
 });
 ```
 
@@ -1026,6 +1037,8 @@ KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
 export default class Component extends UIComponent {
   async init(): Promise<void> {
     super.init();
+    // Fire-and-forget — the keyboard re-renders automatically once bundles load.
+    // Await the returned Promise only if you need guaranteed bundle availability.
     KioskKeyboard.configureI18n({
       enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
     });
@@ -1039,12 +1052,13 @@ export default class Component extends UIComponent {
 }
 ```
 
-| Method                                 | Description                                 |
-| -------------------------------------- | ------------------------------------------- |
-| `configureI18n(config): Promise<void>` | Set enhancement bundles and locale metadata |
-| `resetI18nConfiguration(): void`       | Clear enhancement config (not the hook)     |
-| `setI18nOverrideHook(fn): void`        | Register a per-key text override hook       |
-| `clearI18nOverrideHook(): void`        | Remove the override hook                    |
+| Method                                                    | Description                                          |
+| --------------------------------------------------------- | ---------------------------------------------------- |
+| `configureI18n(config): Promise<void>`                    | Set enhancement bundles and locale metadata          |
+| `resetI18nConfiguration(): void`                          | Clear enhancement config (not the hook)              |
+| `setI18nOverrideHook(fn): void`                           | Register a per-key text override hook                |
+| `clearI18nOverrideHook(): void`                           | Remove the override hook                             |
+| `getI18nConfiguration(): Readonly<KioskI18nConfig>\|null` | Frozen snapshot of the active config (for debugging) |
 
 ---
 

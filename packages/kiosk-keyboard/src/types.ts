@@ -235,20 +235,64 @@ export type LayoutDefinition = KeyRow[];
  */
 export type KioskI18nEnhancement =
   | {
+      /** UI5 module name for the resource bundle (e.g. `"my.app.i18n.kiosk"`). */
       readonly bundleName: string;
       readonly bundleUrl?: never;
+      /**
+       * Locales this bundle provides translations for, as UI5 locale
+       * codes (e.g. `["", "de", "fr"]`). Use `""` for the root (fallback)
+       * locale. When omitted, inherits from the top-level config.
+       */
       readonly supportedLocales?: readonly string[];
+      /**
+       * Locale to use when the current UI5 locale is not in `supportedLocales`.
+       * Typically `""` (root) or a specific locale code like `"en"`.
+       * When omitted, inherits from the top-level config.
+       */
       readonly fallbackLocale?: string;
     }
   | {
       readonly bundleName?: never;
+      /** Absolute or relative URL to a `.properties` file. */
       readonly bundleUrl: string;
+      /**
+       * Locales this bundle provides translations for, as UI5 locale
+       * codes (e.g. `["", "de", "fr"]`). Use `""` for the root (fallback)
+       * locale. When omitted, inherits from the top-level config.
+       */
       readonly supportedLocales?: readonly string[];
+      /**
+       * Locale to use when the current UI5 locale is not in `supportedLocales`.
+       * Typically `""` (root) or a specific locale code like `"en"`.
+       * When omitted, inherits from the top-level config.
+       */
       readonly fallbackLocale?: string;
     };
 
 /**
  * Configuration object for {@link KioskKeyboard.configureI18n}.
+ *
+ * @example Enhancement bundle by module name
+ * ```ts
+ * await KioskKeyboard.configureI18n({
+ *   enhanceWith: [{
+ *     bundleName: "my.app.i18n.kiosk",
+ *     supportedLocales: ["", "de", "fr"],
+ *     fallbackLocale: "",
+ *   }],
+ * });
+ * ```
+ *
+ * @example Enhancement bundle by URL
+ * ```ts
+ * await KioskKeyboard.configureI18n({
+ *   enhanceWith: [{
+ *     bundleUrl: "/i18n/kiosk/messagebundle.properties",
+ *     supportedLocales: [""],
+ *     fallbackLocale: "",
+ *   }],
+ * });
+ * ```
  *
  * @public
  * @since ${version}
@@ -292,7 +336,11 @@ export interface KioskI18nOverrideContext {
    * Derived from `Localization.getLanguageTag()`.
    */
   readonly locale: string;
-  /** Hardcoded fallback passed by the call site. */
+  /**
+   * Hardcoded fallback text used when no bundle (base or enhancement)
+   * contains the key. This is the second argument of the internal
+   * `getText(key, fallback)` call, not the base-bundle text.
+   */
   readonly defaultText: string;
   /**
    * Text resolved through the full bundle chain
@@ -306,6 +354,9 @@ export interface KioskI18nOverrideContext {
  *
  * Return a string to replace `resolvedText`.
  * Return `undefined` to keep the resolved text as-is.
+ *
+ * The hook must be synchronous — async hooks are not supported.
+ * Returning a `Promise` is treated as a non-string value and ignored.
  *
  * If the hook throws, the error is logged and `resolvedText` is used.
  *

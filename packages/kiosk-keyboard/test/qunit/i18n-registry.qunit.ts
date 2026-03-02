@@ -3,6 +3,8 @@ import {
   resetI18nConfiguration,
   setI18nOverrideHook,
   clearI18nOverrideHook,
+  getI18nConfiguration,
+  hasConfiguredEnhancements,
   getText,
   reloadBundles,
   reloadIfStale,
@@ -1075,4 +1077,325 @@ QUnit.test("Override hook does not leak across simulated app sessions", (assert)
 
   // App 2
   assert.strictEqual(getText("KEY", "fallback"), "base", "Hook not leaked to app 2");
+});
+
+// ──────────────────────────────────────────────────
+// MAX_RELOAD_CYCLES safety valve
+// ──────────────────────────────────────────────────
+
+QUnit.module("i18n-registry — MAX_RELOAD_CYCLES safety valve", { afterEach: commonAfterEach });
+
+QUnit.test("reloadBundles aborts after exceeding MAX_RELOAD_CYCLES", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  // Track create calls and auto-resolve with a 1-tick delay so there
+  // is a window to trigger locale churn between iterations.
+  let createCount = 0;
+  sandbox.stub(ResourceBundle, "create").callsFake(
+    () =>
+      new Promise<ResourceBundle>((resolve) => {
+        createCount++;
+        // Resolve asynchronously (1 tick) to allow the while-loop's
+        // await to yield control back to us.
+        setTimeout(() => resolve(makeBundleStub({ KEY: `v${createCount}` })), 0);
+      }) as never,
+  );
+
+  let locale = "en";
+  sandbox.stub(Localization, "getLanguageTag").callsFake(() => ({ toString: () => locale }) as never);
+
+  // Initial configure
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+
+  const warningSpy = sandbox.spy(Log, "warning");
+  createCount = 0;
+
+  // Start a reload. The IIFE inside reloadBundles runs a while-loop:
+  // each iteration does `await loadBundles()`, then checks whether
+  // pendingReloadRequestedLocale changed. We hook into the create stub
+  // to trigger churn on every cycle by intercepting loadBundles.
+  //
+  // Strategy: override the create stub to change locale + call
+  // reloadBundles() on each invocation. Since reloadBundles() coalesces,
+  // it just updates pendingReloadRequestedLocale, causing the loop to retry.
+  (ResourceBundle.create as sinon.SinonStub).callsFake(
+    () =>
+      new Promise<ResourceBundle>((resolve) => {
+        createCount++;
+        // Change locale to simulate locale churn
+        locale = `churn-${createCount}`;
+        // Update pendingReloadRequestedLocale so the loop retries
+        reloadBundles();
+        setTimeout(() => resolve(makeBundleStub({ KEY: `v${createCount}` })), 0);
+      }) as never,
+  );
+
+  const reload = reloadBundles();
+  await reload;
+
+  assert.ok(createCount > 5, `More than 5 create calls triggered (got ${createCount})`);
+  assert.ok(warningSpy.calledWithMatch(sinon.match("exceeded")), "Warning logged about exceeding MAX_RELOAD_CYCLES");
+});
+
+// ──────────────────────────────────────────────────
+// getText edge cases
+// ──────────────────────────────────────────────────
+
+QUnit.module("i18n-registry — getText edge cases", { afterEach: commonAfterEach });
+
+QUnit.test("getText returns fallback when base bundle is unavailable (null)", (assert) => {
+  sandbox.stub(Lib, "getResourceBundleFor").returns(null as never);
+
+  assert.strictEqual(getText("KEY", "fallback"), "fallback", "Fallback returned when base bundle is null");
+});
+
+QUnit.test("getText returns fallback when base bundle is undefined", (assert) => {
+  sandbox.stub(Lib, "getResourceBundleFor").returns(undefined as never);
+
+  assert.strictEqual(getText("MISSING", "fallback"), "fallback", "Fallback returned when base bundle is undefined");
+});
+
+QUnit.test("Partial bundle failure: one succeeds, one fails", async (assert) => {
+  stubBaseBundle({ KEY: "base", OTHER: "other-base" });
+
+  const createStub = sandbox.stub(ResourceBundle, "create");
+  createStub.onCall(0).returns(Promise.resolve(makeBundleStub({ KEY: "enhanced-key" })) as never);
+  createStub.onCall(1).returns(Promise.reject(new Error("load failed")) as never);
+
+  await configureI18n({
+    enhanceWith: [{ bundleName: "good.bundle" }, { bundleName: "broken.bundle" }],
+  });
+
+  assert.strictEqual(getText("KEY", "fallback"), "enhanced-key", "Successful bundle text is applied");
+  assert.strictEqual(getText("OTHER", "fallback"), "other-base", "Base text used for key not in successful bundle");
+});
+
+QUnit.test("Override hook returning empty string applies empty string", (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  setI18nOverrideHook(() => "");
+
+  assert.strictEqual(getText("KEY", "fallback"), "", "Empty string from hook is applied (typeof 'string')");
+});
+
+// ──────────────────────────────────────────────────
+// getI18nConfiguration
+// ──────────────────────────────────────────────────
+
+QUnit.module("i18n-registry — getI18nConfiguration", { afterEach: commonAfterEach });
+
+QUnit.test("Returns null when no configuration is applied", (assert) => {
+  assert.strictEqual(getI18nConfiguration(), null, "null before any config");
+});
+
+QUnit.test("Returns frozen snapshot of active config", async (assert) => {
+  stubBundleCreate(makeBundleStub({}));
+
+  await configureI18n({
+    supportedLocales: ["", "de"],
+    fallbackLocale: "",
+    enhanceWith: [{ bundleName: "test.bundle", supportedLocales: ["", "fr"] }],
+  });
+
+  const config = getI18nConfiguration();
+  assert.ok(config, "Config is not null");
+  assert.ok(Object.isFrozen(config), "Config is frozen");
+  assert.deepEqual(config!.supportedLocales, ["", "de"], "supportedLocales matches");
+  assert.strictEqual(config!.fallbackLocale, "", "fallbackLocale matches");
+  assert.strictEqual(config!.enhanceWith?.length, 1, "One enhancement entry");
+  assert.strictEqual(
+    (config!.enhanceWith![0] as { bundleName: string }).bundleName,
+    "test.bundle",
+    "bundleName matches",
+  );
+});
+
+QUnit.test("Returned snapshot is frozen and mutation attempts do not affect internal state", async (assert) => {
+  stubBundleCreate(makeBundleStub({}));
+
+  await configureI18n({
+    supportedLocales: ["", "de"],
+    enhanceWith: [{ bundleName: "test.bundle" }],
+  });
+
+  const config1 = getI18nConfiguration();
+  assert.ok(config1, "Config is not null");
+
+  // Attempting to mutate the frozen snapshot should throw.
+  assert.throws(
+    () => {
+      (config1!.supportedLocales as string[]).push("it");
+    },
+    /extensible|readonly|read only/i,
+    "Mutation attempt throws for frozen snapshot",
+  );
+
+  const config2 = getI18nConfiguration();
+  assert.deepEqual(config2!.supportedLocales, ["", "de"], "Internal state not affected by snapshot mutation");
+});
+
+QUnit.test("Returns null after resetI18nConfiguration", async (assert) => {
+  stubBundleCreate(makeBundleStub({}));
+
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+  assert.ok(getI18nConfiguration(), "Config exists before reset");
+
+  resetI18nConfiguration();
+  assert.strictEqual(getI18nConfiguration(), null, "null after reset");
+});
+
+QUnit.test("Static KioskKeyboard.getI18nConfiguration delegates to registry", async (assert) => {
+  stubBundleCreate(makeBundleStub({}));
+
+  assert.strictEqual(KioskKeyboard.getI18nConfiguration(), null, "null before config");
+
+  await KioskKeyboard.configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+  const config = KioskKeyboard.getI18nConfiguration();
+  assert.ok(config, "Config returned via facade");
+  assert.strictEqual(config!.enhanceWith?.length, 1, "Enhancement entry present");
+
+  KioskKeyboard.resetI18nConfiguration();
+  assert.strictEqual(KioskKeyboard.getI18nConfiguration(), null, "null after facade reset");
+});
+
+// ──────────────────────────────────────────────────
+// hasConfiguredEnhancements
+// ──────────────────────────────────────────────────
+
+QUnit.module("i18n-registry — hasConfiguredEnhancements", { afterEach: commonAfterEach });
+
+QUnit.test("Returns false when no config is active", (assert) => {
+  assert.notOk(hasConfiguredEnhancements(), "No config = no enhancements");
+});
+
+QUnit.test("Returns true when config with enhanceWith is active", async (assert) => {
+  stubBundleCreate(makeBundleStub({}));
+
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+  assert.ok(hasConfiguredEnhancements(), "Enhancements configured");
+});
+
+QUnit.test("Returns false when config without enhanceWith is active", async (assert) => {
+  await configureI18n({ supportedLocales: ["en"] });
+  assert.notOk(hasConfiguredEnhancements(), "No enhanceWith = no enhancements");
+});
+
+QUnit.test("Returns false after reset", async (assert) => {
+  stubBundleCreate(makeBundleStub({}));
+
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+  resetI18nConfiguration();
+  assert.notOk(hasConfiguredEnhancements(), "No enhancements after reset");
+});
+
+// ──────────────────────────────────────────────────
+// clearI18nOverrideHook conditional invalidation
+// ──────────────────────────────────────────────────
+
+QUnit.module("i18n-registry — clearI18nOverrideHook conditional invalidation", {
+  afterEach() {
+    sandbox.restore();
+    KioskKeyboard.resetI18nConfiguration();
+    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.resetCustomLayouts();
+    KioskKeyboard.resetLocaleLayouts();
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+QUnit.test("clearI18nOverrideHook does NOT invalidate when no hook was set", async (assert) => {
+  stubBaseBundle({});
+
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const invalidateSpy = sandbox.spy(kb, "invalidate");
+
+  KioskKeyboard.clearI18nOverrideHook();
+  assert.strictEqual(invalidateSpy.callCount, 0, "No invalidation when no hook was set");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("clearI18nOverrideHook invalidates when a hook was set", async (assert) => {
+  stubBaseBundle({});
+
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  KioskKeyboard.setI18nOverrideHook(() => undefined);
+
+  const invalidateSpy = sandbox.spy(kb, "invalidate");
+  KioskKeyboard.clearI18nOverrideHook();
+  assert.ok(invalidateSpy.callCount >= 1, "Invalidation triggered when hook was cleared");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────────
+// onLocalizationChanged dedup with multiple instances
+// ──────────────────────────────────────────────────
+
+QUnit.module("i18n-registry — onLocalizationChanged dedup", {
+  afterEach() {
+    sandbox.restore();
+    KioskKeyboard.resetI18nConfiguration();
+    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.resetCustomLayouts();
+    KioskKeyboard.resetLocaleLayouts();
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+QUnit.test("Multiple instances calling onLocalizationChanged register only one .then() callback", async (assert) => {
+  stubBaseBundle({});
+  const createStub = sandbox.stub(ResourceBundle, "create");
+  createStub.returns(Promise.resolve(makeBundleStub({})) as never);
+
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+
+  const input1 = new Input({ value: "" });
+  const input2 = new Input({ value: "" });
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+  const kb1 = new KioskKeyboard({ targetInput: input1 });
+  const kb2 = new KioskKeyboard({ targetInput: input2 });
+  await placeAndWait(kb1);
+  kb2.placeAt("qunit-fixture");
+  await waitForRender();
+
+  // Reset stubs to track only reload activity
+  createStub.resetHistory();
+  createStub.returns(Promise.resolve(makeBundleStub({})) as never);
+
+  const invalidateAll = sandbox.spy(
+    KioskKeyboard as unknown as { _invalidateAllInstances: () => void },
+    "_invalidateAllInstances",
+  );
+
+  // Simulate onLocalizationChanged on both instances (as UI5 framework would)
+  const onLc = "onLocalizationChanged";
+  (kb1 as unknown as Record<string, () => void>)[onLc]();
+  (kb2 as unknown as Record<string, () => void>)[onLc]();
+
+  // Wait for the reload promise to resolve
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // The sentinel dedup should mean _invalidateAllInstances is called once
+  // for the post-reload callback (plus 0 or more from the immediate invalidate() calls)
+  assert.strictEqual(createStub.callCount, 1, "ResourceBundle.create called only once despite two instances");
+
+  input1.destroy();
+  input2.destroy();
+  kb1.destroy();
+  kb2.destroy();
+  invalidateAll.restore();
 });
