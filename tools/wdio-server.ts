@@ -8,6 +8,18 @@ import treeKill from "tree-kill";
 
 const require = createRequire(import.meta.url);
 
+function resolveUi5CliEntry(packageRoot: string): string {
+  try {
+    return require.resolve("@ui5/cli/bin/ui5.js", { paths: [packageRoot] });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Unable to resolve @ui5/cli for '${packageRoot}'. Install dependencies before running tests. ${reason}`,
+      { cause: error },
+    );
+  }
+}
+
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.createConnection(port, "localhost");
@@ -55,11 +67,11 @@ function killProcessTree(pid: number): Promise<void> {
  */
 export function createServerManager(port: number, packageRoot: string) {
   let serverProcess: ChildProcess | undefined;
-  const ui5CliEntry = require.resolve("@ui5/cli/bin/ui5.js", { paths: [packageRoot] });
 
   return {
     async onPrepare() {
       if (await isPortInUse(port)) return;
+      const ui5CliEntry = resolveUi5CliEntry(packageRoot);
       serverProcess = spawn(process.execPath, [ui5CliEntry, "serve", "--port", String(port)], {
         cwd: packageRoot,
         stdio: ["ignore", "pipe", "inherit"],

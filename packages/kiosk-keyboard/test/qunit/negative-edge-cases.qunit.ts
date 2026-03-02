@@ -424,7 +424,7 @@ QUnit.module("Negative / Edge-Case — i18n API", {
   },
 });
 
-QUnit.test("configureI18n(null) delegates to registry — logs warning, no crash", async (assert) => {
+QUnit.test("configureI18n(null) delegates to registry — logs warning and rejects Promise", async (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
   let rejection: unknown;

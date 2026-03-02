@@ -5,6 +5,12 @@ import Log from "sap/base/Log";
 import type { KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideContext, KioskI18nOverrideHook } from "../types";
 
 const LOG_COMPONENT = "ui5.kiosk.KioskKeyboard";
+const VALIDATION_REJECTED_MESSAGE = "configureI18n: configuration validation failed.";
+
+type ConfigureI18nResult = {
+  accepted: boolean;
+  promise: Promise<void>;
+};
 
 function isStringArray(value: readonly unknown[]): value is readonly string[] {
   return value.every((item) => typeof item === "string");
@@ -21,10 +27,33 @@ function createHandledRejectedPromise(error: Error): Promise<void> {
   return rejected;
 }
 
-/** Sentinel returned by `configureI18n` when validation rejects the config. @internal */
-export const VALIDATION_REJECTED: Promise<void> = createHandledRejectedPromise(
-  new TypeError("configureI18n: configuration validation failed."),
-);
+function createValidationRejectedPromise(): Promise<void> {
+  return createHandledRejectedPromise(new TypeError(VALIDATION_REJECTED_MESSAGE));
+}
+
+function validateTopLevelConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return "configureI18n: config must be a plain object.";
+  }
+
+  const candidate = config as KioskI18nConfig;
+  if (candidate.enhanceWith !== undefined && !Array.isArray(candidate.enhanceWith)) {
+    return "configureI18n: enhanceWith must be an array.";
+  }
+
+  if (
+    candidate.supportedLocales !== undefined &&
+    (!Array.isArray(candidate.supportedLocales) || !isStringArray(candidate.supportedLocales))
+  ) {
+    return "configureI18n: supportedLocales must be an array of strings.";
+  }
+
+  if (candidate.fallbackLocale !== undefined && typeof candidate.fallbackLocale !== "string") {
+    return "configureI18n: fallbackLocale must be a string.";
+  }
+
+  return null;
+}
 
 let activeConfig: KioskI18nConfig | null = null;
 let enhancementBundles: ResourceBundle[] | null = null;
@@ -141,42 +170,7 @@ export function getText(key: string, fallback: string): string {
   return resolved;
 }
 
-/**
- * Apply an i18n enhancement configuration.
- *
- * Validates the config, stores it, and asynchronously loads all
- * enhancement bundles.  Replaces any previous configuration.
- * Uses a generation counter to discard stale loads when
- * `configureI18n` is called again before a previous load completes.
- *
- * @param config  Enhancement bundle descriptors and locale metadata.
- * @returns Resolves when all enhancement bundles have been loaded
- *          (or `VALIDATION_REJECTED` when the config is invalid).
- */
-export function configureI18n(config: KioskI18nConfig): Promise<void> {
-  if (!config || typeof config !== "object" || Array.isArray(config)) {
-    Log.warning("configureI18n: config must be a plain object.", undefined, LOG_COMPONENT);
-    return VALIDATION_REJECTED;
-  }
-
-  if (config.enhanceWith !== undefined && !Array.isArray(config.enhanceWith)) {
-    Log.warning("configureI18n: enhanceWith must be an array.", undefined, LOG_COMPONENT);
-    return VALIDATION_REJECTED;
-  }
-
-  if (
-    config.supportedLocales !== undefined &&
-    (!Array.isArray(config.supportedLocales) || !isStringArray(config.supportedLocales))
-  ) {
-    Log.warning("configureI18n: supportedLocales must be an array of strings.", undefined, LOG_COMPONENT);
-    return VALIDATION_REJECTED;
-  }
-
-  if (config.fallbackLocale !== undefined && typeof config.fallbackLocale !== "string") {
-    Log.warning("configureI18n: fallbackLocale must be a string.", undefined, LOG_COMPONENT);
-    return VALIDATION_REJECTED;
-  }
-
+function applyConfiguration(config: KioskI18nConfig): Promise<void> {
   const validEntries: KioskI18nEnhancement[] = [];
   for (const entry of config.enhanceWith ?? []) {
     if (!entry || typeof entry !== "object") {
@@ -251,6 +245,42 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
   pendingReloadRequestedLocale = null;
 
   return loadBundles();
+}
+
+/**
+ * Apply an i18n enhancement configuration.
+ *
+ * Validates the config, stores it, and asynchronously loads all
+ * enhancement bundles. Replaces any previous configuration.
+ * Uses a generation counter to discard stale loads when
+ * `configureI18n` is called again before a previous load completes.
+ *
+ * @param config  Enhancement bundle descriptors and locale metadata.
+ * @returns Resolves when all enhancement bundles have been loaded,
+ *          rejects when top-level validation fails.
+ */
+export function configureI18n(config: KioskI18nConfig): Promise<void> {
+  return configureI18nWithStatus(config).promise;
+}
+
+/**
+ * Configure i18n and return whether top-level validation accepted the config.
+ * @internal
+ */
+export function configureI18nWithStatus(config: KioskI18nConfig): ConfigureI18nResult {
+  const validationError = validateTopLevelConfig(config);
+  if (validationError) {
+    Log.warning(validationError, undefined, LOG_COMPONENT);
+    return {
+      accepted: false,
+      promise: createValidationRejectedPromise(),
+    };
+  }
+
+  return {
+    accepted: true,
+    promise: applyConfiguration(config),
+  };
 }
 
 /** Returns true when enhancement bundles are currently configured. @internal */

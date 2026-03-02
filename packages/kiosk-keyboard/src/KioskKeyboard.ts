@@ -26,13 +26,12 @@ import {
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
 import {
-  configureI18n as registryConfigureI18n,
+  configureI18nWithStatus as registryConfigureI18nWithStatus,
   resetI18nConfiguration as registryResetI18n,
   setI18nOverrideHook as registrySetOverrideHook,
   clearI18nOverrideHook as registryClearOverrideHook,
   hasConfiguredEnhancements as registryHasConfiguredEnhancements,
   reloadBundles as registryReloadBundles,
-  VALIDATION_REJECTED as registryValidationRejected,
 } from "./internal/i18n-registry";
 import type { KioskI18nConfig, KioskI18nOverrideHook } from "./types";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
@@ -546,8 +545,8 @@ export default class KioskKeyboard extends Control {
    * @static
    */
   static configureI18n(config: KioskI18nConfig): Promise<void> {
-    const loaded = registryConfigureI18n(config);
-    if (loaded === registryValidationRejected) {
+    const { accepted, promise: loaded } = registryConfigureI18nWithStatus(config);
+    if (!accepted) {
       return loaded;
     }
 

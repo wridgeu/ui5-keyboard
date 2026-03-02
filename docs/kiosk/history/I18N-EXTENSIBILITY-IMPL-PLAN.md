@@ -900,8 +900,8 @@ i18n-registry — FLP lifecycle simulation
 
 **`negative-edge-cases.qunit.ts`** — add:
 
-- `configureI18n(null)` logs warning, no crash.
-- `configureI18n("string")` logs warning, no crash.
+- `configureI18n(null)` logs warning and rejects the returned Promise (no crash).
+- `configureI18n("string")` logs warning and rejects the returned Promise (no crash).
 - `configureI18n({ enhanceWith: [{}] })` skips invalid entry with
   neither `bundleName` nor `bundleUrl`.
 - `configureI18n({ enhanceWith: [{ bundleName: "x", bundleUrl: "y" }] })`
