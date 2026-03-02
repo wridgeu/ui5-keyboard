@@ -48,6 +48,24 @@ function stubBaseBundle(texts: Record<string, string>): sinon.SinonStub {
   return sandbox.stub(Lib, "getResourceBundleFor").returns(makeBundleStub(texts));
 }
 
+async function expectValidationRejected(
+  assert: { ok: (value: unknown, message?: string) => void },
+  promise: Promise<void>,
+  message: string,
+): Promise<void> {
+  let rejection: unknown;
+  try {
+    await promise;
+  } catch (error) {
+    rejection = error;
+  }
+
+  assert.ok(rejection instanceof TypeError, `${message} (rejects with TypeError)`);
+  if (rejection instanceof Error) {
+    assert.ok(rejection.message.includes("validation failed"), `${message} (error message)`);
+  }
+}
+
 // ──────────────────────────────────────────────────
 // configureI18n validation
 // ──────────────────────────────────────────────────
@@ -79,7 +97,7 @@ QUnit.test("Accepts config without enhanceWith (locale-only)", async (assert) =>
 QUnit.test("Rejects non-object config (null)", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n(null as never);
+  await expectValidationRejected(assert, configureI18n(null as never), "Invalid null config rejects");
 
   assert.ok(spy.calledOnce, "Warning logged for null config");
   assert.ok(spy.firstCall.args[0].includes("plain object"), "Warning mentions plain object");
@@ -88,7 +106,7 @@ QUnit.test("Rejects non-object config (null)", async (assert) => {
 QUnit.test("Rejects non-object config (array)", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n([] as never);
+  await expectValidationRejected(assert, configureI18n([] as never), "Invalid array config rejects");
 
   assert.ok(spy.calledOnce, "Warning logged for array config");
 });
@@ -96,7 +114,7 @@ QUnit.test("Rejects non-object config (array)", async (assert) => {
 QUnit.test("Rejects non-object config (string)", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n("bad" as never);
+  await expectValidationRejected(assert, configureI18n("bad" as never), "Invalid string config rejects");
 
   assert.ok(spy.calledOnce, "Warning logged for string config");
 });
@@ -104,7 +122,11 @@ QUnit.test("Rejects non-object config (string)", async (assert) => {
 QUnit.test("Rejects non-array enhanceWith (string)", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n({ enhanceWith: "bad" } as never);
+  await expectValidationRejected(
+    assert,
+    configureI18n({ enhanceWith: "bad" } as never),
+    "Invalid non-array enhanceWith rejects",
+  );
 
   assert.ok(spy.calledOnce, "Warning logged for string enhanceWith");
   assert.ok(spy.firstCall.args[0].includes("enhanceWith"), "Warning mentions enhanceWith");
@@ -113,7 +135,11 @@ QUnit.test("Rejects non-array enhanceWith (string)", async (assert) => {
 QUnit.test("Rejects non-array enhanceWith (object)", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n({ enhanceWith: { bundleName: "x" } } as never);
+  await expectValidationRejected(
+    assert,
+    configureI18n({ enhanceWith: { bundleName: "x" } } as never),
+    "Invalid object enhanceWith rejects",
+  );
 
   assert.ok(spy.calledOnce, "Warning logged for object enhanceWith");
 });
@@ -168,7 +194,11 @@ QUnit.test("Logs warning for invalid entries", async (assert) => {
 QUnit.test("Rejects non-array supportedLocales", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n({ supportedLocales: "de" } as never);
+  await expectValidationRejected(
+    assert,
+    configureI18n({ supportedLocales: "de" } as never),
+    "Invalid supportedLocales rejects",
+  );
 
   assert.ok(spy.calledOnce, "Warning logged for non-array supportedLocales");
   assert.ok(spy.firstCall.args[0].includes("supportedLocales"), "Warning mentions supportedLocales");
@@ -177,7 +207,11 @@ QUnit.test("Rejects non-array supportedLocales", async (assert) => {
 QUnit.test("Rejects supportedLocales with non-string elements", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n({ supportedLocales: [42, null] } as never);
+  await expectValidationRejected(
+    assert,
+    configureI18n({ supportedLocales: [42, null] } as never),
+    "Invalid supportedLocales element types reject",
+  );
 
   assert.ok(spy.calledOnce, "Warning logged for non-string elements in supportedLocales");
   assert.ok(spy.firstCall.args[0].includes("supportedLocales"), "Warning mentions supportedLocales");
@@ -186,7 +220,11 @@ QUnit.test("Rejects supportedLocales with non-string elements", async (assert) =
 QUnit.test("Rejects non-string fallbackLocale", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  await configureI18n({ fallbackLocale: 42 } as never);
+  await expectValidationRejected(
+    assert,
+    configureI18n({ fallbackLocale: 42 } as never),
+    "Invalid fallbackLocale rejects",
+  );
 
   assert.ok(spy.calledOnce, "Warning logged for non-string fallbackLocale");
   assert.ok(spy.firstCall.args[0].includes("fallbackLocale"), "Warning mentions fallbackLocale");
@@ -371,6 +409,38 @@ QUnit.test("reloadBundles re-creates bundles for current locale", async (assert)
   createStub.returns(Promise.resolve(makeBundleStub({ KEY: "v2" })) as never);
   await reloadBundles();
   assert.strictEqual(getText("KEY", "fallback"), "v2", "Reloaded bundle used");
+});
+
+QUnit.test("configureI18n snapshots config to avoid caller-side mutation", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  const createStub = sandbox.stub(ResourceBundle, "create");
+  createStub.onCall(0).returns(Promise.resolve(makeBundleStub({ KEY: "v1" })) as never);
+  createStub.onCall(1).returns(Promise.resolve(makeBundleStub({ KEY: "v2" })) as never);
+
+  const mutableConfig = {
+    supportedLocales: ["", "en"],
+    enhanceWith: [
+      {
+        bundleName: "initial.bundle",
+        supportedLocales: ["", "de"],
+      },
+    ],
+  };
+
+  await configureI18n(mutableConfig as Parameters<typeof configureI18n>[0]);
+  assert.strictEqual(getText("KEY", "fallback"), "v1", "Initial enhancement bundle is active");
+
+  mutableConfig.enhanceWith[0].bundleName = "mutated.bundle";
+  mutableConfig.supportedLocales.push("it");
+  mutableConfig.enhanceWith[0].supportedLocales.push("fr");
+
+  await reloadBundles();
+
+  const params = createStub.getCall(1).args[0] as Record<string, unknown>;
+  assert.strictEqual(params.bundleName, "initial.bundle", "Reload uses snapshotted bundleName");
+  assert.deepEqual(params.supportedLocales, ["", "de"], "Reload uses snapshotted entry locales");
+  assert.strictEqual(getText("KEY", "fallback"), "v2", "Reload still succeeds");
 });
 
 QUnit.test("reloadBundles coalesces concurrent calls (same promise returned)", async (assert) => {
@@ -909,6 +979,8 @@ QUnit.test("Invalidates instance immediately", async (assert) => {
   (kb as unknown as { onLocalizationChanged: () => void }).onLocalizationChanged();
 
   assert.ok(invalidateSpy.calledOnce, "Instance invalidated immediately");
+  await Promise.resolve();
+  assert.strictEqual(invalidateSpy.callCount, 1, "No deferred global invalidation without enhancement config");
 
   input.destroy();
   kb.destroy();

@@ -6,9 +6,25 @@ import type { KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideContext, K
 
 const LOG_COMPONENT = "ui5.kiosk.KioskKeyboard";
 
-function isStringArray(value: unknown[]): value is string[] {
+function isStringArray(value: readonly unknown[]): value is readonly string[] {
   return value.every((item) => typeof item === "string");
 }
+
+function cloneStringArray(value: readonly string[] | undefined): string[] | undefined {
+  return value ? [...value] : undefined;
+}
+
+function createHandledRejectedPromise(error: Error): Promise<void> {
+  const rejected = Promise.reject(error);
+  // Keep fire-and-forget usage safe while still allowing callers to await/catch.
+  void rejected.catch(() => undefined);
+  return rejected;
+}
+
+/** Sentinel returned by `configureI18n` when validation rejects the config. @internal */
+export const VALIDATION_REJECTED: Promise<void> = createHandledRejectedPromise(
+  new TypeError("configureI18n: configuration validation failed."),
+);
 
 let activeConfig: KioskI18nConfig | null = null;
 let enhancementBundles: ResourceBundle[] | null = null;
@@ -125,9 +141,6 @@ export function getText(key: string, fallback: string): string {
   return resolved;
 }
 
-/** Sentinel returned by `configureI18n` when validation rejects the config. @internal */
-export const VALIDATION_REJECTED: Promise<void> = Promise.resolve();
-
 /**
  * Apply an i18n enhancement configuration.
  *
@@ -164,29 +177,36 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
     return VALIDATION_REJECTED;
   }
 
-  const validEntries = config.enhanceWith?.filter((entry) => {
+  const validEntries: KioskI18nEnhancement[] = [];
+  for (const entry of config.enhanceWith ?? []) {
     if (!entry || typeof entry !== "object") {
       Log.warning("configureI18n: enhancement entry must be an object.", undefined, LOG_COMPONENT);
-      return false;
+      continue;
     }
-    const hasBundleName = typeof entry.bundleName === "string" && entry.bundleName;
-    const hasBundleUrl = typeof entry.bundleUrl === "string" && entry.bundleUrl;
+
+    const bundleName = typeof entry.bundleName === "string" ? entry.bundleName : undefined;
+    const bundleUrl = typeof entry.bundleUrl === "string" ? entry.bundleUrl : undefined;
+    const hasBundleName = Boolean(bundleName);
+    const hasBundleUrl = Boolean(bundleUrl);
+
     if (hasBundleName && hasBundleUrl) {
       Log.warning(
         "configureI18n: enhancement entry must have bundleName or bundleUrl, not both. Skipping.",
         undefined,
         LOG_COMPONENT,
       );
-      return false;
+      continue;
     }
+
     if (!hasBundleName && !hasBundleUrl) {
       Log.warning(
         "configureI18n: enhancement entry must have bundleName or bundleUrl. Skipping.",
         undefined,
         LOG_COMPONENT,
       );
-      return false;
+      continue;
     }
+
     if (
       entry.supportedLocales !== undefined &&
       (!Array.isArray(entry.supportedLocales) || !isStringArray(entry.supportedLocales))
@@ -196,21 +216,46 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
         undefined,
         LOG_COMPONENT,
       );
-      return false;
+      continue;
     }
+
     if (entry.fallbackLocale !== undefined && typeof entry.fallbackLocale !== "string") {
       Log.warning("configureI18n: entry fallbackLocale must be a string. Skipping.", undefined, LOG_COMPONENT);
-      return false;
+      continue;
     }
-    return true;
-  });
 
-  activeConfig = { ...config, enhanceWith: validEntries };
+    const supportedLocales = cloneStringArray(entry.supportedLocales);
+    if (bundleName) {
+      validEntries.push({
+        bundleName,
+        supportedLocales,
+        fallbackLocale: entry.fallbackLocale,
+      });
+      continue;
+    }
+
+    validEntries.push({
+      bundleUrl: bundleUrl as string,
+      supportedLocales,
+      fallbackLocale: entry.fallbackLocale,
+    });
+  }
+
+  activeConfig = {
+    supportedLocales: cloneStringArray(config.supportedLocales),
+    fallbackLocale: config.fallbackLocale,
+    enhanceWith: config.enhanceWith ? validEntries : undefined,
+  };
   enhancementBundles = null;
   pendingReload = null;
   pendingReloadRequestedLocale = null;
 
   return loadBundles();
+}
+
+/** Returns true when enhancement bundles are currently configured. @internal */
+export function hasConfiguredEnhancements(): boolean {
+  return Boolean(activeConfig?.enhanceWith?.length);
 }
 
 /**

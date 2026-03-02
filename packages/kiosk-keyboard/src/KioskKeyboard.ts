@@ -30,6 +30,7 @@ import {
   resetI18nConfiguration as registryResetI18n,
   setI18nOverrideHook as registrySetOverrideHook,
   clearI18nOverrideHook as registryClearOverrideHook,
+  hasConfiguredEnhancements as registryHasConfiguredEnhancements,
   reloadBundles as registryReloadBundles,
   VALIDATION_REJECTED as registryValidationRejected,
 } from "./internal/i18n-registry";
@@ -532,6 +533,9 @@ export default class KioskKeyboard extends Control {
    * renders immediately with base-bundle text, then re-renders
    * when enhancements are available.
    *
+   * Invalid configs are rejected via the returned Promise after
+   * logging a warning.
+   *
    * Call {@link resetI18nConfiguration} and
    * {@link clearI18nOverrideHook} in `Component.destroy()` to prevent
    * cross-app leakage in FLP scenarios.
@@ -688,26 +692,29 @@ export default class KioskKeyboard extends Control {
   // coalesces concurrent calls — only the first triggers the reload.
   // The static sentinel avoids registering N duplicate .then() callbacks.
   onLocalizationChanged(): void {
-    const reload = registryReloadBundles();
-    if (reload !== KioskKeyboard._lastReloadPromise) {
-      KioskKeyboard._lastReloadPromise = reload;
-      void reload
-        .then(() => {
-          KioskKeyboard._invalidateAllInstances();
-        })
-        .catch((e) => {
-          Log.warning(
-            `onLocalizationChanged: failed to reload i18n enhancement bundles: ${e}`,
-            undefined,
-            "ui5.kiosk.KioskKeyboard",
-          );
-        })
-        .finally(() => {
-          if (KioskKeyboard._lastReloadPromise === reload) {
-            KioskKeyboard._lastReloadPromise = null;
-          }
-        });
+    if (registryHasConfiguredEnhancements()) {
+      const reload = registryReloadBundles();
+      if (reload !== KioskKeyboard._lastReloadPromise) {
+        KioskKeyboard._lastReloadPromise = reload;
+        void reload
+          .then(() => {
+            KioskKeyboard._invalidateAllInstances();
+          })
+          .catch((e) => {
+            Log.warning(
+              `onLocalizationChanged: failed to reload i18n enhancement bundles: ${e}`,
+              undefined,
+              "ui5.kiosk.KioskKeyboard",
+            );
+          })
+          .finally(() => {
+            if (KioskKeyboard._lastReloadPromise === reload) {
+              KioskKeyboard._lastReloadPromise = null;
+            }
+          });
+      }
     }
+
     this.invalidate();
   }
 

@@ -427,7 +427,17 @@ QUnit.module("Negative / Edge-Case — i18n API", {
 QUnit.test("configureI18n(null) delegates to registry — logs warning, no crash", async (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
-  await KioskKeyboard.configureI18n(null as never);
+  let rejection: unknown;
+  try {
+    await KioskKeyboard.configureI18n(null as never);
+  } catch (error) {
+    rejection = error;
+  }
+
+  assert.ok(rejection instanceof TypeError, "Invalid config rejects via returned Promise");
+  if (rejection instanceof Error) {
+    assert.ok(rejection.message.includes("validation failed"), "Validation rejection message is preserved");
+  }
 
   assert.ok(spy.calledOnce, "Warning logged for null config");
 });

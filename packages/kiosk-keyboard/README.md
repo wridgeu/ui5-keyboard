@@ -1016,6 +1016,8 @@ KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
 
 **Resolution order:** base library bundle → enhancement bundles (last wins) → override hook → hardcoded fallback.
 
+**Validation behavior:** invalid top-level configuration (for example `null`, non-array `enhanceWith`, non-string `fallbackLocale`) logs a warning and rejects the returned Promise.
+
 **FLP cleanup** — call both reset methods in `Component.destroy()` to prevent cross-app leakage:
 
 ```ts

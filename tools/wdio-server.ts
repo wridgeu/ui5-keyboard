@@ -1,9 +1,12 @@
 import net from "node:net";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { type ChildProcess, spawn } from "node:child_process";
 import ts from "typescript";
 import treeKill from "tree-kill";
+
+const require = createRequire(import.meta.url);
 
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -52,17 +55,16 @@ function killProcessTree(pid: number): Promise<void> {
  */
 export function createServerManager(port: number, packageRoot: string) {
   let serverProcess: ChildProcess | undefined;
-  const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
-  const useShell = process.platform === "win32";
+  const ui5CliEntry = require.resolve("@ui5/cli/bin/ui5.js", { paths: [packageRoot] });
 
   return {
     async onPrepare() {
       if (await isPortInUse(port)) return;
-      serverProcess = spawn(npxCommand, ["ui5", "serve", "--port", String(port)], {
+      serverProcess = spawn(process.execPath, [ui5CliEntry, "serve", "--port", String(port)], {
         cwd: packageRoot,
         stdio: ["ignore", "pipe", "inherit"],
-        shell: useShell,
-        windowsHide: useShell,
+        shell: false,
+        windowsHide: process.platform === "win32",
       });
       await waitForServer(port, 60_000);
     },
