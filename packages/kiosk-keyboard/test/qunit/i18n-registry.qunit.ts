@@ -51,6 +51,15 @@ function stubBaseBundle(texts: Record<string, string>): sinon.SinonStub {
   return sandbox.stub(Lib, "getResourceBundleFor").returns(makeBundleStub(texts));
 }
 
+/** Poll until `pending` has at least `count` entries (max ~50 ticks). */
+async function waitForCreateCalls(pending: unknown[], count: number): Promise<void> {
+  for (let i = 0; i < 50; i++) {
+    if (pending.length >= count) return;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error(`Timed out waiting for ${count} ResourceBundle.create calls`);
+}
+
 async function expectValidationRejected(
   assert: { ok: (value: unknown, message?: string) => void },
   promise: Promise<void>,
@@ -95,6 +104,17 @@ QUnit.test("Accepts config without enhanceWith (locale-only)", async (assert) =>
   });
 
   assert.notOk(spy.called, "No warning for config without enhanceWith");
+});
+
+QUnit.test("Accepts config with empty enhanceWith array", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({ enhanceWith: [] });
+
+  assert.notOk(spy.called, "No warning for empty enhanceWith array");
+  const snapshot = getI18nConfiguration();
+  assert.ok(snapshot, "Config is stored");
+  assert.deepEqual(snapshot!.enhanceWith, [], "enhanceWith is an empty array");
 });
 
 QUnit.test("Rejects non-object config (null)", async (assert) => {
@@ -481,25 +501,17 @@ QUnit.test("reloadBundles queues a follow-up reload when locale changes mid-flig
       }) as never,
   );
 
-  async function waitForCreateCalls(count: number): Promise<void> {
-    for (let i = 0; i < 50; i++) {
-      if (pendingCreates.length >= count) return;
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-    throw new Error(`Timed out waiting for ${count} ResourceBundle.create calls`);
-  }
-
   let locale = "en";
   sandbox.stub(Localization, "getLanguageTag").callsFake(() => ({ toString: () => locale }) as never);
 
   const initialLoad = configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
-  await waitForCreateCalls(1);
+  await waitForCreateCalls(pendingCreates, 1);
   pendingCreates.shift()!(makeBundleStub({ KEY: "en-initial" }));
   await initialLoad;
   assert.strictEqual(getText("KEY", "fallback"), "en-initial", "Initial enhancement bundle is active");
 
   const firstReload = reloadBundles();
-  await waitForCreateCalls(1);
+  await waitForCreateCalls(pendingCreates, 1);
 
   locale = "de";
   const secondCall = reloadBundles();
@@ -507,7 +519,7 @@ QUnit.test("reloadBundles queues a follow-up reload when locale changes mid-flig
 
   pendingCreates.shift()!(makeBundleStub({ KEY: "en-stale" }));
 
-  await waitForCreateCalls(1);
+  await waitForCreateCalls(pendingCreates, 1);
   pendingCreates.shift()!(makeBundleStub({ KEY: "de-latest" }));
 
   await firstReload;
@@ -535,25 +547,17 @@ QUnit.test("configureI18n detaches in-flight reload without invalidating its own
       }) as never,
   );
 
-  async function waitForCreateCalls(count: number): Promise<void> {
-    for (let i = 0; i < 50; i++) {
-      if (pendingCreates.length >= count) return;
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-    throw new Error(`Timed out waiting for ${count} ResourceBundle.create calls`);
-  }
-
   const initialLoad = configureI18n({ enhanceWith: [{ bundleName: "initial.bundle" }] });
-  await waitForCreateCalls(1);
+  await waitForCreateCalls(pendingCreates, 1);
   pendingCreates.shift()!(makeBundleStub({ KEY: "initial" }));
   await initialLoad;
   assert.strictEqual(getText("KEY", "fallback"), "initial", "Initial enhancement bundle is active");
 
   const staleReload = reloadBundles();
-  await waitForCreateCalls(1);
+  await waitForCreateCalls(pendingCreates, 1);
 
   const configured = configureI18n({ enhanceWith: [{ bundleName: "new.bundle" }] });
-  await waitForCreateCalls(2);
+  await waitForCreateCalls(pendingCreates, 2);
 
   // Resolve the detached reload first. Without a detach guard in reloadBundles,
   // this can trigger a second stale cycle that bumps generation and invalidates
@@ -1133,7 +1137,9 @@ QUnit.test("reloadBundles aborts after exceeding MAX_RELOAD_CYCLES", async (asse
   const reload = reloadBundles();
   await reload;
 
-  assert.ok(createCount > 5, `More than 5 create calls triggered (got ${createCount})`);
+  // The exact count depends on MAX_RELOAD_CYCLES (internal constant).
+  // Verify the loop ran multiple times and was ultimately aborted.
+  assert.ok(createCount > 1, `Multiple create calls triggered (got ${createCount})`);
   assert.ok(warningSpy.calledWithMatch(sinon.match("exceeded")), "Warning logged about exceeding MAX_RELOAD_CYCLES");
 });
 

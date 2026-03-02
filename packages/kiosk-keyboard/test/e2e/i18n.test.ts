@@ -16,8 +16,15 @@ async function clickButton(containerId: string, text: string): Promise<void> {
   const container = await $(`#${containerId}`);
   const btn = await container.$(`span=${text}`);
   await btn.click();
-  // Allow UI5 re-render + async bundle load to settle
-  await browser.pause(500);
+}
+
+/** Wait until the keyboard's aria-label matches the expected value after an async action. */
+async function waitForLabel(containerId: string, expected: string, timeout = 5_000): Promise<void> {
+  const kb = getKeyboard(containerId);
+  await browser.waitUntil(async () => (await kb.getAttribute("aria-label")) === expected, {
+    timeout,
+    timeoutMsg: `aria-label in #${containerId} did not become "${expected}" within ${timeout}ms`,
+  });
 }
 
 describe("KioskKeyboard i18n e2e", () => {
@@ -46,11 +53,9 @@ describe("KioskKeyboard i18n e2e", () => {
   describe("2. French enhancement bundle", () => {
     it("should update labels to French after applying bundle", async () => {
       await clickButton("controls-french", "Apply French bundle");
+      await waitForLabel("kb-french", "Clavier virtuel");
 
       const kb = await getKeyboard("kb-french");
-      const label = await kb.getAttribute("aria-label");
-      await expect(label).toBe("Clavier virtuel");
-
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
       const shiftLabel = await shiftKey.getAttribute("aria-label");
       await expect(shiftLabel).toBe("Maj");
@@ -58,22 +63,18 @@ describe("KioskKeyboard i18n e2e", () => {
 
     it("should restore English labels after reset", async () => {
       await clickButton("controls-french", "Apply French bundle");
+      await waitForLabel("kb-french", "Clavier virtuel");
       await clickButton("controls-french", "Reset to defaults");
-
-      const kb = await getKeyboard("kb-french");
-      const label = await kb.getAttribute("aria-label");
-      await expect(label).toBe("Virtual Keyboard");
+      await waitForLabel("kb-french", "Virtual Keyboard");
     });
   });
 
   describe("3. Override existing English labels", () => {
     it("should apply custom overrides", async () => {
       await clickButton("controls-override", "Apply overrides");
+      await waitForLabel("kb-override", "Touch Keyboard");
 
       const kb = await getKeyboard("kb-override");
-      const label = await kb.getAttribute("aria-label");
-      await expect(label).toBe("Touch Keyboard");
-
       const enterKey = await kb.$('[data-key="\\{enter\\}"]');
       const enterLabel = await enterKey.getAttribute("aria-label");
       await expect(enterLabel).toBe("Go");
@@ -85,6 +86,7 @@ describe("KioskKeyboard i18n e2e", () => {
 
     it("should keep non-overridden keys at base text", async () => {
       await clickButton("controls-override", "Apply overrides");
+      await waitForLabel("kb-override", "Touch Keyboard");
 
       const kb = await getKeyboard("kb-override");
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
@@ -99,9 +101,11 @@ describe("KioskKeyboard i18n e2e", () => {
       await clickButton("controls-hook", "Set override hook");
 
       const kb = await getKeyboard("kb-hook");
-      const label = await kb.getAttribute("aria-label");
-      // Hook prepends keyboard emoji to the label
-      await expect(label).toContain("\u2328");
+      // Hook prepends keyboard emoji — wait for it
+      await browser.waitUntil(async () => ((await kb.getAttribute("aria-label")) ?? "").includes("\u2328"), {
+        timeout: 5_000,
+        timeoutMsg: "Hook did not update aria-label in time",
+      });
 
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
       const shiftLabel = await shiftKey.getAttribute("aria-label");
@@ -111,12 +115,14 @@ describe("KioskKeyboard i18n e2e", () => {
 
     it("should restore defaults after reset", async () => {
       await clickButton("controls-hook", "Set override hook");
+      await browser.waitUntil(
+        async () => ((await getKeyboard("kb-hook").getAttribute("aria-label")) ?? "").includes("\u2328"),
+        { timeout: 5_000 },
+      );
       await clickButton("controls-hook", "Reset to defaults");
+      await waitForLabel("kb-hook", "Virtual Keyboard");
 
       const kb = await getKeyboard("kb-hook");
-      const label = await kb.getAttribute("aria-label");
-      await expect(label).toBe("Virtual Keyboard");
-
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
       const shiftLabel = await shiftKey.getAttribute("aria-label");
       await expect(shiftLabel).toBe("Shift");

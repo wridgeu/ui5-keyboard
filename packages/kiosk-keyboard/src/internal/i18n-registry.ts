@@ -107,8 +107,10 @@ function loadBundles(): Promise<void> {
     enhancementBundles = [];
     return NO_RELOAD_NEEDED;
   }
-  const topSupportedLocales = activeConfig?.supportedLocales;
-  const topFallbackLocale = activeConfig?.fallbackLocale;
+  // activeConfig is guaranteed non-null here: entries is non-empty,
+  // and entries is derived from activeConfig.enhanceWith above.
+  const topSupportedLocales = activeConfig!.supportedLocales;
+  const topFallbackLocale = activeConfig!.fallbackLocale;
 
   const requestedLocale = getCurrentLocale();
   const promises = entries.map((entry) => {
@@ -247,6 +249,14 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
       supportedLocales,
       fallbackLocale: entry.fallbackLocale,
     });
+  }
+
+  if (config.enhanceWith?.length && validEntries.length === 0) {
+    Log.warning(
+      "configureI18n: all enhancement entries were invalid and skipped. Configuration has no effect.",
+      undefined,
+      LOG_COMPONENT,
+    );
   }
 
   activeConfig = {
@@ -409,11 +419,10 @@ export function reloadBundles(): Promise<void> {
     return pendingReload;
   }
 
-  // Assign to pendingReload before the IIFE so the detach guard
-  // (pendingReload !== reloadPromise) inside the loop body can
-  // reference it without a TS2454 "used before assigned" error.
-  // The IIFE starts synchronous execution up to the first await,
-  // then yields — by which point pendingReload is already set.
+  // The IIFE executes synchronously up to the first `await`, then
+  // yields — by which point `pendingReload = reloadPromise` (below)
+  // has already run.  The definite-assignment assertion (`!`) avoids
+  // a TS2454 error in the detach guard inside the loop body.
   let reloadPromise!: Promise<void>;
   reloadPromise = (async () => {
     let cycles = 0;
@@ -428,7 +437,9 @@ export function reloadBundles(): Promise<void> {
       }
 
       const localeAtLoopStart: string | null = pendingReloadRequestedLocale;
-      enhancementBundles = null;
+      // Keep stale bundles in place — loadBundles() overwrites them
+      // atomically (guarded by the generation counter), so getText()
+      // keeps returning enhancement text during the async load.
       await loadBundles();
 
       // configureI18n/resetI18nConfiguration can detach an in-flight reload

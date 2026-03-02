@@ -283,19 +283,24 @@ For full generated typings (including property/event accessors from UI5 metadata
 
 ### Static Methods (Complete)
 
-| Method                                 | Returns             | Description                                                                   |
-| -------------------------------------- | ------------------- | ----------------------------------------------------------------------------- |
-| `registerLayout(name, definition)`     | `void`              | Register a custom layout. Built-in layouts cannot be overwritten.             |
-| `unregisterLayout(name)`               | `void`              | Remove a previously registered custom layout. Built-in layouts are protected. |
-| `resetCustomLayouts()`                 | `void`              | Remove all custom layouts and keep built-in layouts.                          |
-| `getRegisteredLayout(name)`            | `LayoutDefinition?` | Get the definition for a layout name, or `undefined`.                         |
-| `getRegisteredLayoutNames()`           | `string[]`          | List all registered layout names (built-in + custom).                         |
-| `isBuiltInLayout(name)`                | `boolean`           | Whether the given name is a built-in layout.                                  |
-| `getLocaleLayout()`                    | `string`            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.  |
-| `registerLocaleLayout(locale, layout)` | `void`              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.         |
-| `unregisterLocaleLayout(locale)`       | `void`              | Remove one locale-to-layout mapping.                                          |
-| `resetLocaleLayouts()`                 | `void`              | Reset locale mappings to built-in defaults.                                   |
-| `getKeyIcon(keyValue)`                 | `string?`           | Default icon URI for a special key value, or `undefined` if none.             |
+| Method                                 | Returns                             | Description                                                                   |
+| -------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| `registerLayout(name, definition)`     | `void`                              | Register a custom layout. Built-in layouts cannot be overwritten.             |
+| `unregisterLayout(name)`               | `void`                              | Remove a previously registered custom layout. Built-in layouts are protected. |
+| `resetCustomLayouts()`                 | `void`                              | Remove all custom layouts and keep built-in layouts.                          |
+| `getRegisteredLayout(name)`            | `LayoutDefinition?`                 | Get the definition for a layout name, or `undefined`.                         |
+| `getRegisteredLayoutNames()`           | `string[]`                          | List all registered layout names (built-in + custom).                         |
+| `isBuiltInLayout(name)`                | `boolean`                           | Whether the given name is a built-in layout.                                  |
+| `getLocaleLayout()`                    | `string`                            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.  |
+| `registerLocaleLayout(locale, layout)` | `void`                              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.         |
+| `unregisterLocaleLayout(locale)`       | `void`                              | Remove one locale-to-layout mapping.                                          |
+| `resetLocaleLayouts()`                 | `void`                              | Reset locale mappings to built-in defaults.                                   |
+| `getKeyIcon(keyValue)`                 | `string?`                           | Default icon URI for a special key value, or `undefined` if none.             |
+| `configureI18n(config)`                | `Promise<void>`                     | Set enhancement bundles and locale metadata for i18n extensibility.           |
+| `resetI18nConfiguration()`             | `void`                              | Clear enhancement config and cancel in-flight loads (not the hook).           |
+| `setI18nOverrideHook(fn)`              | `void`                              | Register a per-key text override hook (replaces any previous hook).           |
+| `clearI18nOverrideHook()`              | `void`                              | Remove the active i18n override hook.                                         |
+| `getI18nConfiguration()`               | `Readonly<KioskI18nConfig> \| null` | Frozen snapshot of the active i18n config (for debugging).                    |
 
 ---
 
@@ -1050,6 +1055,13 @@ export default class Component extends UIComponent {
     super.destroy();
   }
 }
+```
+
+**Inspecting active config** — `getI18nConfiguration()` returns a frozen deep copy of the active configuration, or `null` when none has been applied. Useful for debugging and test assertions:
+
+```ts
+const config = KioskKeyboard.getI18nConfiguration();
+console.log(config?.enhanceWith); // read-only — mutations throw
 ```
 
 | Method                                                    | Description                                          |

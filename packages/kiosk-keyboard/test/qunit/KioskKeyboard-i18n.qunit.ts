@@ -142,6 +142,57 @@ QUnit.test("Special key labels reflect enhancement text", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Enhancement bundle + override hook combined on rendered control", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  // Enhancement bundle provides a custom label
+  const fakeBundle = {
+    getText(key: string) {
+      const map: Record<string, string> = {
+        KIOSK_KEYBOARD_LABEL: "Enhanced Label",
+        KEY_SHIFT: "Umschalt",
+      };
+      return map[key] ?? null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.combined" }],
+  });
+  await waitForRender();
+
+  assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), "Enhanced Label", "Enhancement applied");
+
+  // Override hook further modifies the enhanced text
+  KioskKeyboard.setI18nOverrideHook((ctx) => {
+    if (ctx.key === "KIOSK_KEYBOARD_LABEL") {
+      return ctx.resolvedText + " (hooked)";
+    }
+    if (ctx.key === "KEY_SHIFT") {
+      return ctx.resolvedText.toUpperCase();
+    }
+    return undefined;
+  });
+  await waitForRender();
+
+  assert.strictEqual(
+    kb.getDomRef()?.getAttribute("aria-label"),
+    "Enhanced Label (hooked)",
+    "Hook receives enhanced text as resolvedText and further modifies it",
+  );
+
+  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  assert.strictEqual(shiftKey?.getAttribute("aria-label"), "UMSCHALT", "Hook uppercases enhanced shift label");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Language switch re-renders with updated labels", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");

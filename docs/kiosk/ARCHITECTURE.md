@@ -12,7 +12,8 @@ library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
                           plus key-name constants (`KeyName`)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces,
-                          KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook types
+                          KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
+                          KioskI18nOverrideContext types
 layout-registry.ts        Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
 internal/i18n.ts          getText() facade — thin re-export of i18n-registry
@@ -595,4 +596,5 @@ packages/kiosk-keyboard/
     focus.test.ts              Focus/auto-show behavior
     autotype.test.ts           Auto-type keyboard switching
     interop.test.ts            StepInput + UI5 Web Components interop
+    i18n.test.ts               i18n extensibility e2e tests
 ```
