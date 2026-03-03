@@ -172,18 +172,19 @@ npm run test:qunit          # Run all library QUnit tests
 npm run test:hotkeys        # Hotkeys QUnit tests
 npm run test:kiosk          # Kiosk QUnit + e2e tests
 npm run test:kiosk:e2e      # Kiosk e2e tests only
-npm run test:kiosk:e2e:update # Update kiosk visual baselines
+npm run test:kiosk:e2e:update # Update kiosk visual baselines (explicit only)
+npm run test:kiosk:e2e:docs # Regenerate README kiosk screenshots
 ```
 
 ### Code Quality
 
 ```bash
-npm run check               # fmt:check + lint + lint:ui5 + typecheck + test:guardrails + test (CI gate)
+npm run check               # fmt:check + lint + lint:ui5 + typecheck + test:guardrails + test (project quality gate)
 npm run fmt                 # Format (oxfmt)
 npm run lint                # Lint (oxlint)
 npm run lint:ui5            # UI5 linter across all workspaces
-npm run typecheck           # Typecheck all workspaces (kiosk includes generated typings)
-npm run test:guardrails     # Fails on browser.pause/hard-wait anti-patterns in e2e tests
+npm run typecheck           # Typecheck all workspaces (includes kiosk e2e tests)
+npm run test:guardrails     # Fails on hard-wait anti-patterns in test code
 ```
 
 ## Project Structure

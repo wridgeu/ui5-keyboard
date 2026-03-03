@@ -10,7 +10,7 @@ This folder contains the screenshots embedded in:
 From repository root:
 
 ```bash
-npx wdio run packages/kiosk-keyboard/test/e2e/wdio.conf.ts --spec packages/kiosk-keyboard/test/e2e/readme-screenshots.test.ts
+npm run test:kiosk:e2e:docs
 ```
 
 What this does:

@@ -23,7 +23,7 @@ function getKeyboard(containerId: string) {
 async function isKeyboardOpen(containerId: string): Promise<boolean> {
   const kb = await getKeyboard(containerId);
   const classes = await kb.getAttribute("class");
-  return !classes.includes("ui5KioskKeyboard--closed");
+  return !(classes?.includes("ui5KioskKeyboard--closed") ?? false);
 }
 
 describe("inputmode suppression", () => {

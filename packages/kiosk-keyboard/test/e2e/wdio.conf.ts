@@ -1,5 +1,6 @@
 import url from "node:url";
 import path from "node:path";
+import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
@@ -9,14 +10,17 @@ const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const server = createServerManager(PORT, PACKAGE_ROOT);
 
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
+const runReadmeScreenshots = process.argv.includes("--readme-screenshots");
+const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 const chromeArgs = ["--window-size=1440,900", "--disable-gpu", "--no-sandbox"];
 if (headless) chromeArgs.unshift("--headless=new");
 
-export const config: WebdriverIO.Config = {
+export const config: wdi5Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
 
   specs: [path.resolve(__dirname, "**/*.test.ts")],
+  exclude: runReadmeScreenshots ? [] : [path.resolve(__dirname, "readme-screenshots.test.ts")],
 
   maxInstances: 1,
   maxInstancesPerCapability: 1,
@@ -24,7 +28,6 @@ export const config: WebdriverIO.Config = {
   capabilities: [
     {
       browserName: "chrome",
-      maxInstances: 1,
       "goog:chromeOptions": {
         args: chromeArgs,
       },
@@ -56,7 +59,7 @@ export const config: WebdriverIO.Config = {
         baselineFolder: path.resolve(__dirname, "__baselines__"),
         formatImageName: "{tag}-{logName}-{width}x{height}",
         screenshotPath: path.resolve(__dirname, "__screenshots__"),
-        autoSaveBaseline: !process.env.CI,
+        autoSaveBaseline: updateVisualBaseline,
         disableCSSAnimation: true,
         hideScrollBars: true,
         waitForFontsLoaded: true,

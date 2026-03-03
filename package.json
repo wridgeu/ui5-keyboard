@@ -41,15 +41,17 @@
     "test:kiosk:e2e": "npm run test:e2e -w packages/kiosk-keyboard",
     "test:kiosk:e2e:open": "npm run test:e2e:open -w packages/kiosk-keyboard",
     "test:kiosk:e2e:update": "npm run test:e2e:update -w packages/kiosk-keyboard",
+    "test:kiosk:e2e:docs": "npm run test:e2e:docs -w packages/kiosk-keyboard",
     "test:guardrails": "node ./tools/check-test-hard-waits.mjs",
     "lint": "oxlint packages/ tools/",
     "lint:ui5": "npm run lint:ui5 --workspaces --if-present",
     "lint:fix": "oxlint --fix packages/ tools/",
     "fmt": "oxfmt --ignore-path .oxfmtignore .",
     "fmt:check": "oxfmt --ignore-path .oxfmtignore --check .",
-    "typecheck": "npm run typecheck:hotkeys && npm run typecheck:kiosk && npm run typecheck:demo && npm run typecheck:tools",
+    "typecheck": "npm run typecheck:hotkeys && npm run typecheck:kiosk && npm run typecheck:kiosk:e2e && npm run typecheck:demo && npm run typecheck:tools",
     "typecheck:hotkeys": "npm run typecheck -w packages/hotkeys",
     "typecheck:kiosk": "npm run typecheck -w packages/kiosk-keyboard",
+    "typecheck:kiosk:e2e": "npm run typecheck:e2e -w packages/kiosk-keyboard",
     "typecheck:demo": "npm run typecheck -w packages/demo-app",
     "typecheck:tools": "tsc -p tools/tsconfig.json --noEmit",
     "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:guardrails && npm test",
@@ -82,6 +84,7 @@
       "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
       "oxlint --fix"
     ],
+    "*.{js,mjs,cjs}": "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
     "*.{json,yaml,yml,md,html,css,less}": "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern"
   },
   "engines": {
