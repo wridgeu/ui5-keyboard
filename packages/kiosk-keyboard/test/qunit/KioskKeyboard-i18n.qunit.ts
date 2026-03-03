@@ -1,7 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import ResourceBundle from "sap/base/i18n/ResourceBundle";
-import { reloadBundles } from "ui5/kiosk/internal/i18n-registry";
+import { reloadBundles, getI18nConfiguration, hasConfiguredEnhancements } from "ui5/kiosk/internal/i18n-registry";
 import { placeAndWait, waitForRender } from "./test-helpers";
 
 // ──────────────────────────────────────────────
@@ -263,4 +263,80 @@ QUnit.test("resetI18nConfiguration reverts rendered keyboard to base labels", as
 
   input.destroy();
   kb.destroy();
+});
+
+QUnit.test("Destroying last instance auto-resets i18n config and hook", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const fakeBundle = {
+    getText(key: string) {
+      if (key === "KIOSK_KEYBOARD_LABEL") return "Enhanced";
+      return null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.bundle" }],
+  });
+  KioskKeyboard.setI18nOverrideHook(() => "Hooked");
+
+  assert.ok(hasConfiguredEnhancements(), "Enhancements active before destroy");
+  assert.ok(getI18nConfiguration() !== null, "Config active before destroy");
+
+  input.destroy();
+  kb.destroy();
+
+  assert.strictEqual(getI18nConfiguration(), null, "Config auto-cleared after last instance destroyed");
+  assert.ok(!hasConfiguredEnhancements(), "Enhancements auto-cleared after last instance destroyed");
+});
+
+QUnit.test("Re-created instance works after auto-reset when configureI18n is re-applied", async (assert) => {
+  // Phase 1: create, configure, destroy → triggers auto-reset
+  const input1 = new Input({ value: "" });
+  input1.placeAt("qunit-fixture");
+  const kb1 = new KioskKeyboard({ targetInput: input1 });
+  await placeAndWait(kb1);
+
+  const fakeBundle = {
+    getText(key: string) {
+      if (key === "KIOSK_KEYBOARD_LABEL") return "Enhanced";
+      return null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.bundle" }],
+  });
+
+  input1.destroy();
+  kb1.destroy();
+
+  assert.strictEqual(getI18nConfiguration(), null, "Config cleared after last instance destroyed");
+
+  // Phase 2: re-create and re-configure
+  const input2 = new Input({ value: "" });
+  input2.placeAt("qunit-fixture");
+  const kb2 = new KioskKeyboard({ targetInput: input2 });
+  await placeAndWait(kb2);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.bundle" }],
+  });
+  await waitForRender();
+
+  assert.strictEqual(
+    kb2.getDomRef()?.getAttribute("aria-label"),
+    "Enhanced",
+    "Re-created instance picks up re-applied config",
+  );
+
+  input2.destroy();
+  kb2.destroy();
 });

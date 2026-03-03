@@ -572,9 +572,11 @@ export default class KioskKeyboard extends Control {
    * Invalid configs are rejected via the returned Promise after
    * logging a warning.
    *
-   * Call {@link resetI18nConfiguration} and
-   * {@link clearI18nOverrideHook} in `Component.destroy()` to prevent
-   * cross-app leakage in FLP scenarios.
+   * Both the enhancement configuration and the override hook are
+   * auto-cleared when the last KioskKeyboard instance is destroyed,
+   * preventing cross-app leakage in FLP scenarios.  Call
+   * {@link resetI18nConfiguration} / {@link clearI18nOverrideHook}
+   * explicitly if earlier cleanup is needed.
    *
    * @param config  Enhancement bundle descriptors and locale metadata.
    * @returns Resolves when all enhancement bundles are loaded.
@@ -625,6 +627,14 @@ export default class KioskKeyboard extends Control {
    *
    * Only one hook is active at a time.  Calling this method again
    * replaces the previous hook.
+   *
+   * **Lifecycle note:** The hook is stored in a module-level singleton
+   * that survives individual control destruction.  If the hook closes
+   * over Component, Controller, or View references, those object
+   * graphs cannot be garbage-collected until the hook is cleared.
+   * The hook is auto-cleared when the last KioskKeyboard instance is
+   * destroyed; call {@link clearI18nOverrideHook} explicitly if
+   * earlier cleanup is needed.
    *
    * @param fn  The override function.
    * @returns `true` when the hook was accepted, `false` when rejected
@@ -854,6 +864,16 @@ export default class KioskKeyboard extends Control {
 
   exit(): void {
     KioskKeyboard._instances.delete(this);
+
+    // When the last living instance is destroyed, auto-reset i18n state
+    // to prevent cross-app leakage in FLP scenarios.  The override hook
+    // is especially critical: it may close over Component/Controller
+    // references that would otherwise never be garbage-collected.
+    if (KioskKeyboard._instances.size === 0) {
+      registryResetI18n();
+      registryClearOverrideHook();
+    }
+
     this._cancelDeferredFocusOutClose();
     this._disableAutoShow();
     this._teardownInputIds();
