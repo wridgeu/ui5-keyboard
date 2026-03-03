@@ -1,0 +1,178 @@
+import { browser, $, $$, expect } from "@wdio/globals";
+
+const FLP_PAGE = "/test/flp.html";
+
+/**
+ * Wait for the FLP shell to fully render (header + at least one tile).
+ */
+async function waitForFlpShell(): Promise<void> {
+  await browser.url(FLP_PAGE);
+  await $("#shell-header").waitForExist({ timeout: 30_000 });
+  await browser.waitUntil(async () => (await $$(".sapMGT").length) > 0, {
+    timeout: 30_000,
+    timeoutMsg: "FLP home page tiles did not render",
+  });
+}
+
+/**
+ * Click the demo-app tile in the FLP launchpad.
+ * Uses the Generic Tile (.sapMGT) which is the actual clickable element.
+ * Waits for the app's NavContainer to appear.
+ */
+async function openAppTile(): Promise<void> {
+  const tile = await $(".sapMGT");
+  await tile.click();
+  // sap.m.App extends NavContainer → rendered with class "sapMNav"
+  await $(".sapMNav").waitForExist({ timeout: 30_000 });
+}
+
+/**
+ * Navigate using the FLP shell's hasher.
+ */
+async function navigateToHash(hash: string): Promise<void> {
+  await browser.execute((h: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).hasher.setHash(h);
+  }, hash);
+}
+
+/**
+ * Navigate to the i18n-extensibility page inside the demo app.
+ * In FLP, inner app routes are appended after "&/".
+ * Waits for the KioskKeyboard on that page to render.
+ */
+async function navigateToI18nPage(): Promise<void> {
+  await navigateToHash("DemoApp-display&/kiosk/i18n-extensibility");
+  await $(".ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
+}
+
+/**
+ * Navigate back to FLP home, triggering Component.destroy() → auto-reset.
+ * Waits until the FLP tile reappears.
+ */
+async function navigateToFlpHome(): Promise<void> {
+  await navigateToHash("Shell-home");
+  await browser.waitUntil(async () => (await $$(".sapMGT").length) > 0, {
+    timeout: 15_000,
+    timeoutMsg: "FLP home tiles did not reappear after navigation",
+  });
+}
+
+/**
+ * Get the keyboard element on the i18n page.
+ */
+function getKeyboard() {
+  return $(".ui5KioskKeyboard");
+}
+
+/**
+ * Click a SegmentedButtonItem by its visible text on the i18n page.
+ * SegmentedButton renders items as `<li role="option">` — wdio's `li=` selector matches by text.
+ */
+async function selectI18nMode(text: string): Promise<void> {
+  const item = await $(`li=${text}`);
+  await item.click();
+}
+
+/**
+ * Wait until the keyboard's aria-label matches the expected value.
+ */
+async function waitForKeyboardLabel(expected: string, timeout = 10_000): Promise<void> {
+  const kb = getKeyboard();
+  await browser.waitUntil(async () => (await kb.getAttribute("aria-label")) === expected, {
+    timeout,
+    timeoutMsg: `Keyboard aria-label did not become "${expected}" within ${timeout}ms`,
+  });
+}
+
+/**
+ * Focus the first input on the i18n page to trigger keyboard open.
+ */
+async function focusFirstInput(): Promise<void> {
+  await browser.execute(() => {
+    const input = document.querySelector<HTMLElement>("[id$='i18nNameInput'] input, [id$='i18nNameInput-inner']");
+    input?.focus();
+  });
+  // Wait for keyboard to be visible
+  await getKeyboard().waitForDisplayed({ timeout: 5_000 });
+}
+
+// ─── Test Scenarios ──────────────────────────────────────────
+
+describe("FLP lifecycle — i18n auto-reset", () => {
+  before(async () => {
+    await waitForFlpShell();
+  });
+
+  describe("Scenario 1: Component leave clears i18n bundle", () => {
+    it("should show French labels after applying French bundle", async () => {
+      await openAppTile();
+      await navigateToI18nPage();
+      await focusFirstInput();
+
+      // Apply French mode
+      await selectI18nMode("French");
+      await waitForKeyboardLabel("Clavier virtuel");
+
+      const kb = await getKeyboard();
+      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
+      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      await expect(shiftLabel).toBe("Maj");
+    });
+
+    it("should show default English labels after Component re-enter", async () => {
+      // Leave app → Component.destroy() → auto-reset
+      await navigateToFlpHome();
+
+      // Re-enter app
+      await openAppTile();
+      await navigateToI18nPage();
+      await focusFirstInput();
+
+      // Keyboard should show default English labels (i18n was auto-reset)
+      await waitForKeyboardLabel("Virtual Keyboard");
+
+      const kb = await getKeyboard();
+      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
+      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      await expect(shiftLabel).toBe("Shift");
+    });
+  });
+
+  describe("Scenario 2: Component leave clears override hook", () => {
+    it("should show uppercased labels after applying hook", async () => {
+      // Navigate to FLP home first to ensure clean state
+      await navigateToFlpHome();
+      await openAppTile();
+      await navigateToI18nPage();
+      await focusFirstInput();
+
+      // Apply Hook mode (uppercases special-key labels)
+      await selectI18nMode("Hook");
+      await waitForKeyboardLabel("Custom Keyboard");
+
+      const kb = await getKeyboard();
+      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
+      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      await expect(shiftLabel).toBe("SHIFT");
+    });
+
+    it("should show default labels after Component re-enter", async () => {
+      // Leave app → Component.destroy() → auto-reset clears hook
+      await navigateToFlpHome();
+
+      // Re-enter app
+      await openAppTile();
+      await navigateToI18nPage();
+      await focusFirstInput();
+
+      // Hook should be cleared — default labels restored
+      await waitForKeyboardLabel("Virtual Keyboard");
+
+      const kb = await getKeyboard();
+      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
+      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      await expect(shiftLabel).toBe("Shift");
+    });
+  });
+});

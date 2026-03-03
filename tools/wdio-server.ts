@@ -65,20 +65,22 @@ function killProcessTree(pid: number): Promise<void> {
  * Creates wdio lifecycle hooks that auto-start a UI5 dev server
  * if the target port is not already in use, and tear it down on completion.
  */
-export function createServerManager(port: number, packageRoot: string) {
+export function createServerManager(port: number, packageRoot: string, configFile?: string, startupTimeout = 60_000) {
   let serverProcess: ChildProcess | undefined;
 
   return {
     async onPrepare() {
       if (await isPortInUse(port)) return;
       const ui5CliEntry = resolveUi5CliEntry(packageRoot);
-      serverProcess = spawn(process.execPath, [ui5CliEntry, "serve", "--port", String(port)], {
+      const args = [ui5CliEntry, "serve", "--port", String(port)];
+      if (configFile) args.push("--config", configFile);
+      serverProcess = spawn(process.execPath, args, {
         cwd: packageRoot,
         stdio: ["ignore", "pipe", "inherit"],
         shell: false,
         windowsHide: process.platform === "win32",
       });
-      await waitForServer(port, 60_000);
+      await waitForServer(port, startupTimeout);
     },
 
     async onComplete() {

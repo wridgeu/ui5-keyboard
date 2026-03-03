@@ -150,13 +150,14 @@ npm install                 # Install all workspaces
 
 ### Dev Servers
 
-| Command                      | Description                          | Port |
-| ---------------------------- | ------------------------------------ | ---- |
-| `npm start`                  | Demo app                             | 8080 |
-| `npm run start:demo`         | Demo app (explicit alias)            | 8080 |
-| `npm run start:hotkeys`      | Hotkeys library + test runner        | 8081 |
-| `npm run start:kiosk`        | Kiosk keyboard library + test runner | 8082 |
-| `npm run start:kiosk:visual` | Kiosk visual test page               | 8082 |
+| Command                      | Description                               | Port |
+| ---------------------------- | ----------------------------------------- | ---- |
+| `npm start`                  | Demo app                                  | 8080 |
+| `npm run start:demo`         | Demo app (explicit alias)                 | 8080 |
+| `npm run start:flp`          | Demo app in FLP sandbox (SAPUI5 + ushell) | 8080 |
+| `npm run start:hotkeys`      | Hotkeys library + test runner             | 8081 |
+| `npm run start:kiosk`        | Kiosk keyboard library + test runner      | 8082 |
+| `npm run start:kiosk:visual` | Kiosk visual test page                    | 8082 |
 
 ### Build & Test
 
@@ -172,6 +173,7 @@ npm run test:qunit          # Run all library QUnit tests
 npm run test:hotkeys        # Hotkeys QUnit tests
 npm run test:kiosk          # Kiosk QUnit + e2e tests
 npm run test:kiosk:e2e      # Kiosk e2e tests only
+npm run test:kiosk:e2e:flp  # FLP lifecycle e2e tests (SAPUI5 sandbox)
 npm run test:kiosk:e2e:update # Update kiosk visual baselines (explicit only)
 npm run test:kiosk:e2e:docs # Regenerate README kiosk screenshots
 ```
@@ -195,6 +197,9 @@ ui5-keyboard/
 │   ├── hotkeys/               # ui5-lib-hotkeys (ui5.hotkeys namespace)
 │   ├── kiosk-keyboard/        # ui5-lib-kiosk-keyboard (ui5.kiosk namespace)
 │   └── demo-app/              # Demo application
+│       ├── ui5.yaml           # OpenUI5 dev server config (default)
+│       └── ui5-flp.yaml       # SAPUI5 + FLP sandbox config (preview-middleware)
+├── tools/                     # Shared test infrastructure (wdio server, QUnit helpers)
 └── docs/                      # Architecture & design documents
 ```
 
