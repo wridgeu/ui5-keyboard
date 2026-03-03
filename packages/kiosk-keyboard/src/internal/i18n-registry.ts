@@ -264,7 +264,11 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
     fallbackLocale: config.fallbackLocale,
     enhanceWith: config.enhanceWith ? validEntries : undefined,
   };
-  // Old bundles are invalid for the new config; loadBundles() will replace them.
+  // Old bundles are invalid for the new config; null them so getText()
+  // falls back to base-bundle text during the async load.  This differs
+  // from reloadBundles(), which preserves stale bundles: on a locale
+  // change the keys are still valid (just wrong language), so showing
+  // stale enhanced text is better than dropping to the hardcoded fallback.
   enhancementBundles = null;
   bundlesLoadedLocale = null;
   pendingReload = null;
