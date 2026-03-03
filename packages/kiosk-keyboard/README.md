@@ -298,7 +298,7 @@ For full generated typings (including property/event accessors from UI5 metadata
 | `getKeyIcon(keyValue)`                 | `string?`                           | Default icon URI for a special key value, or `undefined` if none.             |
 | `configureI18n(config)`                | `Promise<void>`                     | Set enhancement bundles and locale metadata for i18n extensibility.           |
 | `resetI18nConfiguration()`             | `void`                              | Clear enhancement config and cancel in-flight loads (not the hook).           |
-| `setI18nOverrideHook(fn)`              | `void`                              | Register a per-key text override hook (replaces any previous hook).           |
+| `setI18nOverrideHook(fn)`              | `boolean`                           | Register a per-key text override hook (replaces any previous hook).           |
 | `clearI18nOverrideHook()`              | `void`                              | Remove the active i18n override hook.                                         |
 | `getI18nConfiguration()`               | `Readonly<KioskI18nConfig> \| null` | Frozen snapshot of the active i18n config (for debugging).                    |
 
@@ -1074,7 +1074,7 @@ import type { KioskI18nConfig, KioskI18nOverrideContext } from "ui5/kiosk/types"
 | --------------------------------------------------------- | ---------------------------------------------------- |
 | `configureI18n(config): Promise<void>`                    | Set enhancement bundles and locale metadata          |
 | `resetI18nConfiguration(): void`                          | Clear enhancement config (not the hook)              |
-| `setI18nOverrideHook(fn): void`                           | Register a per-key text override hook                |
+| `setI18nOverrideHook(fn): boolean`                        | Register a per-key text override hook                |
 | `clearI18nOverrideHook(): void`                           | Remove the override hook                             |
 | `getI18nConfiguration(): Readonly<KioskI18nConfig>\|null` | Frozen snapshot of the active config (for debugging) |
 

@@ -194,8 +194,8 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
       continue;
     }
 
-    const bundleName = typeof entry.bundleName === "string" ? entry.bundleName : undefined;
-    const bundleUrl = typeof entry.bundleUrl === "string" ? entry.bundleUrl : undefined;
+    const bundleName = typeof entry.bundleName === "string" ? entry.bundleName.trim() : undefined;
+    const bundleUrl = typeof entry.bundleUrl === "string" ? entry.bundleUrl.trim() : undefined;
     const hasBundleName = Boolean(bundleName);
     const hasBundleUrl = Boolean(bundleUrl);
 

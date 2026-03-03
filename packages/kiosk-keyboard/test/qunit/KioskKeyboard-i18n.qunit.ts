@@ -227,3 +227,40 @@ QUnit.test("Language switch re-renders with updated labels", async (assert) => {
   input.destroy();
   kb.destroy();
 });
+
+QUnit.test("resetI18nConfiguration reverts rendered keyboard to base labels", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const originalLabel = kb.getDomRef()?.getAttribute("aria-label");
+
+  const fakeBundle = {
+    getText(key: string) {
+      if (key === "KIOSK_KEYBOARD_LABEL") return "Enhanced Label";
+      return null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.bundle" }],
+  });
+  await waitForRender();
+
+  assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), "Enhanced Label", "Enhanced label applied");
+
+  KioskKeyboard.resetI18nConfiguration();
+  await waitForRender();
+
+  assert.strictEqual(
+    kb.getDomRef()?.getAttribute("aria-label"),
+    originalLabel,
+    "Label reverts to base after resetI18nConfiguration",
+  );
+
+  input.destroy();
+  kb.destroy();
+});

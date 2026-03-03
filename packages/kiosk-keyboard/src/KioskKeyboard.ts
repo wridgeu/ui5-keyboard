@@ -627,14 +627,18 @@ export default class KioskKeyboard extends Control {
    * replaces the previous hook.
    *
    * @param fn  The override function.
+   * @returns `true` when the hook was accepted, `false` when rejected
+   *          (e.g. non-function argument).
    * @public
    * @static
    * @since ${version}
    */
-  static setI18nOverrideHook(fn: KioskI18nOverrideHook): void {
-    if (registrySetOverrideHook(fn)) {
+  static setI18nOverrideHook(fn: KioskI18nOverrideHook): boolean {
+    const accepted = registrySetOverrideHook(fn);
+    if (accepted) {
       KioskKeyboard._invalidateAllInstances();
     }
+    return accepted;
   }
 
   /**

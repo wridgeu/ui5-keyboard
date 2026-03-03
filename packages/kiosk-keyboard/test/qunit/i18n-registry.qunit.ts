@@ -174,7 +174,7 @@ QUnit.test("Rejects enhancement entry with neither bundleName nor bundleUrl", as
     enhanceWith: [{} as never],
   });
 
-  assert.ok(spy.calledOnce, "Warning logged for entry without bundleName or bundleUrl");
+  assert.strictEqual(spy.callCount, 2, "Per-entry warning + aggregate all-invalid warning");
   assert.ok(
     spy.firstCall.args[0].includes("bundleName or bundleUrl"),
     "Warning message references bundleName/bundleUrl",
@@ -188,7 +188,7 @@ QUnit.test("Rejects enhancement entry with both bundleName and bundleUrl", async
     enhanceWith: [{ bundleName: "x", bundleUrl: "y" } as never],
   });
 
-  assert.ok(spy.calledOnce, "Warning logged for entry with both");
+  assert.strictEqual(spy.callCount, 2, "Per-entry warning + aggregate all-invalid warning");
   assert.ok(spy.firstCall.args[0].includes("not both"), "Warning message says not both");
 });
 
@@ -260,7 +260,7 @@ QUnit.test("Rejects entry with non-array supportedLocales", async (assert) => {
     enhanceWith: [{ bundleName: "x", supportedLocales: "de" } as never],
   });
 
-  assert.ok(spy.calledOnce, "Warning logged for entry with non-array supportedLocales");
+  assert.strictEqual(spy.callCount, 2, "Per-entry warning + aggregate all-invalid warning");
 });
 
 QUnit.test("Rejects entry with non-string elements in supportedLocales", async (assert) => {
@@ -270,7 +270,7 @@ QUnit.test("Rejects entry with non-string elements in supportedLocales", async (
     enhanceWith: [{ bundleName: "x", supportedLocales: ["en", 123] } as never],
   });
 
-  assert.ok(spy.calledOnce, "Warning logged for entry with non-string supportedLocales elements");
+  assert.strictEqual(spy.callCount, 2, "Per-entry warning + aggregate all-invalid warning");
 });
 
 QUnit.test("Rejects entry with non-string fallbackLocale", async (assert) => {
@@ -280,7 +280,33 @@ QUnit.test("Rejects entry with non-string fallbackLocale", async (assert) => {
     enhanceWith: [{ bundleName: "x", fallbackLocale: 42 } as never],
   });
 
-  assert.ok(spy.calledOnce, "Warning logged for entry with non-string fallbackLocale");
+  assert.strictEqual(spy.callCount, 2, "Per-entry warning + aggregate all-invalid warning");
+});
+
+QUnit.test("Rejects enhancement entry with empty-string bundleName", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({
+    enhanceWith: [{ bundleName: "" } as never],
+  });
+
+  assert.strictEqual(spy.callCount, 2, "Per-entry warning + aggregate all-invalid warning");
+  assert.ok(
+    spy.firstCall.args[0].includes("bundleName or bundleUrl"),
+    "Warning references missing bundleName/bundleUrl",
+  );
+});
+
+QUnit.test("All enhanceWith entries invalid triggers aggregate warning", async (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  await configureI18n({
+    enhanceWith: [{} as never, { bundleName: "x", bundleUrl: "y" } as never],
+  });
+
+  const aggregateCall = spy.getCalls().find((c) => (c.args[0] as string).includes("all enhancement entries"));
+  assert.ok(aggregateCall, "Aggregate all-invalid warning logged");
+  assert.ok(!hasConfiguredEnhancements(), "No enhancements active after all-invalid config");
 });
 
 // ──────────────────────────────────────────────────
@@ -296,7 +322,7 @@ QUnit.test("configureI18n returns a Promise that resolves after loading", async 
 
   assert.ok(result instanceof Promise, "Returns a Promise");
   await result;
-  assert.ok(true, "Promise resolved");
+  assert.ok(hasConfiguredEnhancements(), "Enhancements are active after load");
 });
 
 QUnit.test("getText returns base text while bundles are loading", (assert) => {
@@ -613,6 +639,17 @@ QUnit.test("reloadIfStale detects stale bundles when locale changes mid-load", a
   assert.strictEqual(getText("KEY", "fallback"), "de-text", "After reload, text matches new locale bundle");
 });
 
+QUnit.test("reloadIfStale returns null when bundles are current", async (assert) => {
+  stubBaseBundle({ KEY: "base" });
+  stubBundleCreate(makeBundleStub({ KEY: "enhanced" }));
+  sandbox.stub(Localization, "getLanguageTag").callsFake(() => ({ toString: () => "en" }) as never);
+
+  await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+
+  const result = reloadIfStale();
+  assert.strictEqual(result, null, "reloadIfStale returns null when locale has not changed");
+});
+
 // ──────────────────────────────────────────────────
 // enhancement bundle precedence
 // ──────────────────────────────────────────────────
@@ -643,6 +680,23 @@ QUnit.test("Last enhancement wins when multiple provide same key", async (assert
   });
 
   assert.strictEqual(getText("KEY", "fallback"), "second", "Last enhancement wins");
+});
+
+QUnit.test("Three bundles with partial overlap — last providing bundle wins per key", async (assert) => {
+  stubBaseBundle({ K1: "base1", K2: "base2", K3: "base3" });
+  stubBundleCreateMultiple([
+    makeBundleStub({ K1: "b1-k1", K2: "b1-k2" }),
+    makeBundleStub({ K2: "b2-k2", K3: "b2-k3" }),
+    makeBundleStub({ K1: "b3-k1" }),
+  ]);
+
+  await configureI18n({
+    enhanceWith: [{ bundleName: "b1" }, { bundleName: "b2" }, { bundleName: "b3" }],
+  });
+
+  assert.strictEqual(getText("K1", "fallback"), "b3-k1", "K1 from bundle 3 (last provider)");
+  assert.strictEqual(getText("K2", "fallback"), "b2-k2", "K2 from bundle 2 (last provider)");
+  assert.strictEqual(getText("K3", "fallback"), "b2-k3", "K3 from bundle 2 (only provider)");
 });
 
 QUnit.test("Enhancement that does not provide a key falls through to base", async (assert) => {
@@ -736,6 +790,19 @@ QUnit.test("Hook runs after enhancement resolution", async (assert) => {
 
   getText("KEY", "fallback");
   assert.strictEqual(receivedResolved, "enhanced", "Hook sees enhanced text as resolvedText");
+});
+
+QUnit.test("Hook returning non-string truthy value falls back to resolved text", (assert) => {
+  stubBaseBundle({ KEY: "base" });
+
+  setI18nOverrideHook((() => 42) as never);
+  assert.strictEqual(getText("KEY", "fallback"), "base", "Number return ignored, resolved text kept");
+
+  setI18nOverrideHook((() => ({ text: "obj" })) as never);
+  assert.strictEqual(getText("KEY", "fallback"), "base", "Object return ignored, resolved text kept");
+
+  setI18nOverrideHook((() => true) as never);
+  assert.strictEqual(getText("KEY", "fallback"), "base", "Boolean return ignored, resolved text kept");
 });
 
 QUnit.test("Hook error is caught, resolved text used", (assert) => {
@@ -835,7 +902,7 @@ QUnit.test("Subsequent getText returns base bundle text only", async (assert) =>
 QUnit.test("Idempotent — double reset does not error", (assert) => {
   resetI18nConfiguration();
   resetI18nConfiguration();
-  assert.ok(true, "No error on double reset");
+  assert.strictEqual(getI18nConfiguration(), null, "Still null after double reset");
 });
 
 QUnit.test("New configureI18n after reset works correctly", async (assert) => {
