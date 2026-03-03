@@ -1057,6 +1057,8 @@ export default class Component extends UIComponent {
 }
 ```
 
+> **Note:** The library automatically resets the i18n configuration and clears the override hook when the last `KioskKeyboard` instance is destroyed. Explicit cleanup in `Component.destroy()` is still recommended for apps that manage keyboard instances outside the normal view tree.
+
 **Inspecting active config** — `getI18nConfiguration()` returns a frozen deep copy of the active configuration, or `null` when none has been applied. Useful for debugging and test assertions:
 
 ```ts

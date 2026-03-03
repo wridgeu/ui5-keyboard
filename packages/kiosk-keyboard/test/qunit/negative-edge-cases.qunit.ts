@@ -449,7 +449,6 @@ QUnit.test("configureI18n(null) delegates to registry — logs warning and rejec
 QUnit.test("setI18nOverrideHook(null) delegates to registry — logs warning, no crash", (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
-  KioskKeyboard.setI18nOverrideHook(null as never);
-
+  assert.strictEqual(KioskKeyboard.setI18nOverrideHook(null as never), false, "Returns false for null");
   assert.ok(spy.calledOnce, "Warning logged for null hook");
 });

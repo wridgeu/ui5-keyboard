@@ -821,8 +821,16 @@ QUnit.test("Hook error is caught, resolved text used", (assert) => {
 QUnit.test("setI18nOverrideHook replaces previous hook", (assert) => {
   stubBaseBundle({ KEY: "base" });
 
-  setI18nOverrideHook(() => "first");
-  setI18nOverrideHook(() => "second");
+  assert.strictEqual(
+    setI18nOverrideHook(() => "first"),
+    true,
+    "First hook accepted",
+  );
+  assert.strictEqual(
+    setI18nOverrideHook(() => "second"),
+    true,
+    "Second hook accepted",
+  );
 
   assert.strictEqual(getText("KEY", "fallback"), "second", "Second hook replaces first");
 });
@@ -830,8 +838,7 @@ QUnit.test("setI18nOverrideHook replaces previous hook", (assert) => {
 QUnit.test("setI18nOverrideHook rejects non-function (null)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  setI18nOverrideHook(null as never);
-
+  assert.strictEqual(setI18nOverrideHook(null as never), false, "Returns false for null");
   assert.ok(spy.calledOnce, "Warning logged for null");
   assert.ok(spy.firstCall.args[0].includes("must be a function"), "Warning mentions function");
 });
@@ -839,16 +846,14 @@ QUnit.test("setI18nOverrideHook rejects non-function (null)", (assert) => {
 QUnit.test("setI18nOverrideHook rejects non-function (string)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  setI18nOverrideHook("bad" as never);
-
+  assert.strictEqual(setI18nOverrideHook("bad" as never), false, "Returns false for string");
   assert.ok(spy.calledOnce, "Warning logged for string");
 });
 
 QUnit.test("setI18nOverrideHook rejects non-function (number)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  setI18nOverrideHook(42 as never);
-
+  assert.strictEqual(setI18nOverrideHook(42 as never), false, "Returns false for number");
   assert.ok(spy.calledOnce, "Warning logged for number");
 });
 
@@ -858,8 +863,9 @@ QUnit.test("clearI18nOverrideHook removes hook", (assert) => {
   setI18nOverrideHook(() => "overridden");
   assert.strictEqual(getText("KEY", "fallback"), "overridden", "Hook active");
 
-  clearI18nOverrideHook();
+  assert.strictEqual(clearI18nOverrideHook(), true, "Returns true when hook was set");
   assert.strictEqual(getText("KEY", "fallback"), "base", "Hook removed");
+  assert.strictEqual(clearI18nOverrideHook(), false, "Returns false when no hook to clear");
 });
 
 // ──────────────────────────────────────────────────

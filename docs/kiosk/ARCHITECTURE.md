@@ -532,7 +532,8 @@ packages/kiosk-keyboard/
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
                                plus KeyName constants
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition,
-                              KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook
+                              KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
+                              KioskI18nOverrideContext
     layout-registry.ts        Layout registration and locale resolution
     internal/
       dom.ts                  DOM/key ID utilities + input resolver

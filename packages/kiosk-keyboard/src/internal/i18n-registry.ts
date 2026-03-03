@@ -264,6 +264,7 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
     fallbackLocale: config.fallbackLocale,
     enhanceWith: config.enhanceWith ? validEntries : undefined,
   };
+  // Old bundles are invalid for the new config; loadBundles() will replace them.
   enhancementBundles = null;
   bundlesLoadedLocale = null;
   pendingReload = null;
