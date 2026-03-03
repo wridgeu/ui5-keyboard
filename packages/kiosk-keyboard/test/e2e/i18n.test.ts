@@ -32,6 +32,20 @@ describe("KioskKeyboard i18n e2e", () => {
     await openPage();
   });
 
+  afterEach(async () => {
+    // Reset i18n state between tests to prevent ordering dependencies
+    await browser.executeAsync((done: () => void) => {
+      sap.ui.require(
+        ["ui5/kiosk/KioskKeyboard"],
+        (KioskKeyboard: { resetI18nConfiguration: () => void; clearI18nOverrideHook: () => void }) => {
+          KioskKeyboard.resetI18nConfiguration();
+          KioskKeyboard.clearI18nOverrideHook();
+          done();
+        },
+      );
+    });
+  });
+
   describe("1. Baseline (no customization)", () => {
     it("should render with default English aria-label", async () => {
       const kb = await getKeyboard("kb-baseline");

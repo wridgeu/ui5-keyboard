@@ -1465,8 +1465,8 @@ QUnit.test("Multiple instances calling onLocalizationChanged register only one .
   (kb1 as unknown as Record<string, () => void>)[onLc]();
   (kb2 as unknown as Record<string, () => void>)[onLc]();
 
-  // Wait for the reload promise to resolve
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  // Await the coalesced reload promise (reloadBundles returns the pending promise)
+  await reloadBundles();
 
   // The sentinel dedup should mean _invalidateAllInstances is called once
   // for the post-reload callback (plus 0 or more from the immediate invalidate() calls)

@@ -872,6 +872,7 @@ export default class KioskKeyboard extends Control {
     if (KioskKeyboard._instances.size === 0) {
       registryResetI18n();
       registryClearOverrideHook();
+      KioskKeyboard._lastReloadPromise = null;
     }
 
     this._cancelDeferredFocusOutClose();

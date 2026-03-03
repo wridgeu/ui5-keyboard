@@ -140,9 +140,12 @@ describe("FLP lifecycle — i18n auto-reset", () => {
   });
 
   describe("Scenario 2: Component leave clears override hook", () => {
-    it("should show uppercased labels after applying hook", async () => {
-      // Navigate to FLP home first to ensure clean state
+    before(async () => {
+      // Ensure clean FLP home state regardless of Scenario 1 outcome
       await navigateToFlpHome();
+    });
+
+    it("should show uppercased labels after applying hook", async () => {
       await openAppTile();
       await navigateToI18nPage();
       await focusFirstInput();

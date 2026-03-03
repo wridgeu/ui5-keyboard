@@ -598,4 +598,6 @@ packages/kiosk-keyboard/
     autotype.test.ts           Auto-type keyboard switching
     interop.test.ts            StepInput + UI5 Web Components interop
     i18n.test.ts               i18n extensibility e2e tests
+    flp-lifecycle.test.ts      FLP lifecycle i18n auto-reset tests
+    wdio-flp.conf.ts           WebdriverIO config for FLP tests
 ```
