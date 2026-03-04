@@ -679,38 +679,147 @@ with SAP Horizon theming, typing works into the target input.
 
 ### Step 9: Testing
 
-#### Unit tests
+#### Testing tooling
 
-Test the core modules independently:
+Three test layers, each chosen for its strengths:
+
+| Layer                      | Tool                                            | Why                                                                                      |
+| -------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Unit tests (pure logic)    | **Vitest 3.x** (jsdom)                          | Fast, no browser needed. Sufficient for framework-agnostic modules with no shadow DOM.   |
+| Component tests (rendered) | **@web/test-runner** + **@open-wc/testing 4.x** | Runs in a real browser — shadow DOM, custom elements, CSS variables all work natively.   |
+| E2E + visual regression    | **WebdriverIO 9** + **@wdio/visual-service**    | Consistent with existing `kiosk-keyboard` infra. Proven theme-switching + baseline flow. |
+
+**Why not Vitest for component tests?** Vitest + jsdom/happy-dom cannot
+reliably render web components with shadow DOM. The UI5 Web Components
+team's own test suite states: _"vitest and jsdom are not supported for
+component development."_ (`@ui5/webcomponents/test/unit/vitest.test.js`).
+Shadow DOM lifecycle callbacks, `adoptedStyleSheets`, and
+`ElementInternals` are missing or broken in simulated environments.
+
+**Why @web/test-runner instead of Cypress?** The official UI5 WC repo uses
+Cypress 15.x for component testing, but `@web/test-runner` +
+`@open-wc/testing` is the broader industry standard for web component
+libraries (used by Lit, Shoelace, open-wc). It's lightweight (no
+Electron/browser UI), runs in headless Chrome via Playwright launcher,
+and pairs naturally with `fixture()` / `oneEvent()` / `waitUntil()`
+helpers from `@open-wc/testing-helpers`. Either tool works — this is a
+preference call, not a hard constraint.
+
+**Dependencies to add in `packages/kiosk-keyboard-webc/`:**
+
+```json
+{
+  "devDependencies": {
+    "vitest": "^3.0.0",
+    "@web/test-runner": "^0.20.0",
+    "@web/test-runner-playwright": "^0.11.0",
+    "@open-wc/testing": "^4.0.0"
+  }
+}
+```
+
+E2E / visual regression dependencies are shared at root level (already
+installed: `@wdio/cli`, `@wdio/local-runner`, `@wdio/visual-service`).
+
+#### Unit tests (Vitest)
+
+Test the core modules independently — no browser, no shadow DOM:
 
 - `shift-state.test.ts` — three-state cycle, auto-release, reset
 - `layout-registry.test.ts` — register, resolve, locale mapping
 - `input-operations.test.ts` — insert, backspace, navigation on mock inputs
 - `keyboard-type-detector.test.ts` — inputmode/type detection
+- `grapheme.test.ts` — grapheme length before/after with emoji, CJK, etc.
 
-Use a lightweight test runner (vitest or web-test-runner) — no UI5 test
-infrastructure needed since these are framework-agnostic modules.
+Config (`vitest.config.ts`):
 
-#### Component tests
+```ts
+export default defineConfig({
+  test: {
+    include: ["test/unit/**/*.test.ts"],
+    globals: true,
+    environment: "jsdom", // sufficient for pure DOM mocks (no shadow DOM)
+  },
+});
+```
+
+#### Component tests (@web/test-runner + @open-wc/testing)
+
+Test the rendered web component in a real browser:
+
+```ts
+import { fixture, html, expect, oneEvent } from "@open-wc/testing";
+import "../src/KioskKeyboard.js";
+
+it("renders keys in shadow DOM", async () => {
+  const el = await fixture(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+  const keys = el.shadowRoot!.querySelectorAll('[role="button"]');
+  expect(keys.length).to.be.greaterThan(0);
+});
+
+it("dispatches key-press on click", async () => {
+  const el = await fixture(html`<kiosk-keyboard layout="numeric"></kiosk-keyboard>`);
+  const key = el.shadowRoot!.querySelector('[data-key="1"]')!;
+  setTimeout(() => key.click());
+  const { detail } = await oneEvent(el, "key-press");
+  expect(detail.key).to.equal("1");
+});
+```
+
+**Shadow DOM querying:** In `@web/test-runner`, tests run in a real
+browser so `el.shadowRoot.querySelector(...)` works natively. No special
+piercing utilities needed.
+
+**Event simulation:** Synthetic events dispatched on shadow DOM elements
+propagate out when `composed: true` is set on the component's event.
+For focus-related tests, use `el.shadowRoot.querySelector(...).focus()`
+directly — real browser focus semantics apply.
+
+Test cases:
 
 - Render test: component creates shadow DOM with expected structure
 - Property reflection: attribute changes update properties and re-render
-- Keyboard interaction: mouse/touch events on keys produce `key-press` events
+- Key interaction: click/touch on keys produce `key-press` events
 - Target integration: text appears in target input after key press
 - Shift/caps: visual state and output change correctly
 - Layout switching: `{layout:numeric}` switches to numeric layout
 - Docked mode: open/close with slide animation
 - Auto-show: focusin/focusout on target input triggers show/close
-- Theme compliance: component renders without errors in all Horizon themes
+- Focus steal prevention: mousedown on key keeps focus on target input
+- i18n: key labels render in correct locale, resolver overrides apply
 - Accessibility: ARIA roles, labels, roving tabindex
+- Accessibility audit: `await expect(el).to.be.accessible()` (axe-core
+  via `chai-a11y-axe` included in `@open-wc/testing`)
 
-#### Visual regression
+Config (`web-test-runner.config.mjs`):
 
-Reuse the existing WebdriverIO visual regression infrastructure. Add
-screenshot comparisons for the web component variant in all four Horizon
+```js
+import { playwrightLauncher } from "@web/test-runner-playwright";
+
+export default {
+  files: "test/component/**/*.test.ts",
+  nodeResolve: true,
+  browsers: [playwrightLauncher({ product: "chromium" })],
+};
+```
+
+#### E2E + visual regression (WebdriverIO)
+
+Reuse the existing WebdriverIO visual regression infrastructure from
+`kiosk-keyboard`. Add a test suite for the web component variant:
+
+- Standalone HTML test page (`test/pages/index.html`) that loads the
+  web component without UI5 — validates framework-independent usage
+- Screenshot comparisons in all four Horizon theme variants
+- Theme switching: parameterize tests with `sap_horizon`,
+  `sap_horizon_dark`, `sap_horizon_hcb`, `sap_horizon_hcw`
+- Compare against the existing UI5 control baselines for visual parity
+
+The demo app integration (Step 8) also serves as an E2E test surface —
+the web component consumed inside a UI5 app validates the bridge pattern.
+
+**Acceptance:** All test layers pass. Visual baselines captured for all
 themes.
-
-**Acceptance:** All tests pass. Visual baselines captured for all themes.
 
 ### Step 10: Build and bundle configuration
 
@@ -781,12 +890,9 @@ Features included in the first implementation:
 | `inputmode` suppression/restore    | Yes                   | Yes (same ref-counted static map, pure DOM)      |
 | Physical keyboard highlight        | Yes (UI5 delegate)    | Yes (native `keydown`/`keyup` listeners)         |
 | `change` event on target           | Yes (`fireChange`)    | Partial (dispatches native `input`/`change`)     |
+| i18n extensibility                 | Yes (3-layer chain)   | Yes (2-layer: WC i18n + resolver callback)       |
 
-Feature **deferred** to a later version:
-
-| Feature                                                 | Reason for deferral                                                      |
-| ------------------------------------------------------- | ------------------------------------------------------------------------ |
-| i18n extensibility (enhancement bundles, override hook) | Opportunity for a fresh design; does not need to mirror the UI5 approach |
+All features included in v1. No features deferred.
 
 ### v1 feature implementation notes
 
@@ -824,49 +930,64 @@ target DOM element. This is the web-standard equivalent — frameworks
 listening for `input`/`change` events on the target element will work
 naturally.
 
-### Deferred feature: i18n extensibility
+### v1 implementation: i18n extensibility
 
 The UI5 control implements a three-layer i18n resolution chain:
 base library bundle → enhancement bundles (`configureI18n`) → override hook
 (`setI18nOverrideHook`). This was designed around UI5's `ResourceBundle`
-infrastructure and carries complexity from that (generation counters for
-stale async loads, `Lib.getResourceBundleFor()`, locale churn retry loops).
+infrastructure and carries complexity (generation counters for stale async
+loads, `Lib.getResourceBundleFor()`, locale churn retry loops).
 
-This does **not** need to be ported 1:1. The web component is an opportunity
-to design a simpler, more web-native i18n extensibility API.
+The web component replaces this with a **two-layer design** that leverages
+the native UI5 WC i18n system and adds a single resolver callback:
 
-**Possible directions (to be evaluated during implementation):**
+#### Layer 1: UI5 WC i18n system (base translations)
 
-1. **Simple override map** — A static `Map<string, string>` or
-   `Record<string, string>` that consumers populate. No async loading,
-   no `.properties` parsing. Consumers own the loading strategy.
+The component uses `@i18n("kiosk-keyboard-webc")` to load its default
+message bundles via the framework's `registerI18nLoader()`. This gives:
 
-   ```ts
-   KioskKeyboard.setI18nOverrides({ KIOSK_KEYBOARD_LABEL: "Clavier" });
-   ```
+- Automatic locale detection and bundle loading
+- Runtime locale switching (via `languageAware: true`)
+- Consumers can override bundles globally using the framework's native
+  `registerI18nLoader("kiosk-keyboard-webc", "de", async () => { ... })`
 
-2. **Callback-based resolution** — A single hook that receives the key
-   and base text, returns the override or `undefined`. Subsumes both
-   enhancement bundles and the override hook from the UI5 control into
-   one simpler primitive.
+This is the standard pattern used by all official UI5 Web Components.
+The override mechanism is automatically available — no custom code needed.
 
-   ```ts
-   KioskKeyboard.setI18nResolver((key, baseText, locale) => {
-     return myTranslations[locale]?.[key];
-   });
-   ```
+#### Layer 2: Resolver callback (programmatic overrides)
 
-3. **WC i18n asset registration** — The UI5 WC framework supports
-   registering additional i18n assets per package via
-   `registerI18nLoader()`. This is the most "framework-native" approach
-   but ties consumers to the WC i18n asset format.
+A single static callback that receives the key and base text, returning
+an override or `undefined`. This subsumes both the enhancement bundles
+and the override hook from the UI5 control into one simpler primitive:
 
-The right design depends on the actual consumer needs when the web
-component is in use. Deferring this lets us make that decision with
-real usage context rather than speculatively mirroring the UI5 approach.
+```ts
+KioskKeyboard.setI18nResolver((key, baseText, locale) => {
+  return myTranslations[locale]?.[key];
+});
+```
 
-**Effort:** Medium. The implementation itself is straightforward for any
-of the above options; the design decision is the main open question.
+Resolution order: resolver callback → WC i18n bundle → default text.
+If the resolver returns `undefined`, the framework's bundle is used.
+If no bundle is loaded (e.g. unsupported locale), the English default
+text from the `i18n-defaults.ts` generated module is used.
+
+**Why this design:**
+
+| Concern                       | UI5 control (3-layer)                                       | Web component (2-layer)                     |
+| ----------------------------- | ----------------------------------------------------------- | ------------------------------------------- |
+| Base translations             | `ResourceBundle` via `Lib.getResourceBundleFor`             | UI5 WC `@i18n` decorator (framework-native) |
+| Locale-keyed bundle override  | `configureI18n({ enhanceWith })` custom API                 | `registerI18nLoader()` (framework-native)   |
+| Programmatic per-key override | `setI18nOverrideHook()` custom API                          | `setI18nResolver()` (single callback)       |
+| Async loading complexity      | Generation counters, retry loops                            | None (framework handles async loading)      |
+| Number of custom APIs         | 3 (`configureI18n`, `setI18nOverrideHook`, `getI18nBundle`) | 1 (`setI18nResolver`)                       |
+
+The three-layer complexity of the UI5 control collapses into the framework's
+built-in i18n (layer 1) plus a single callback (layer 2). The resolver
+callback is strictly optional — most consumers will only need the base
+translations or the framework-native `registerI18nLoader` override.
+
+**Effort:** Low-medium. The UI5 WC i18n integration is standard scaffolding.
+The resolver callback is ~15 lines of code in the `getText()` wrapper.
 
 ### v1 implementation: multi-keyboard instance isolation
 
