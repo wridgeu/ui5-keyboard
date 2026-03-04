@@ -145,7 +145,6 @@ packages/kiosk-keyboard-webc/
   .ui5rc.yaml                           # UI5 WC build config (if needed)
   src/
     KioskKeyboard.ts                     # Main component (extends UI5Element)
-    KioskKeyboard.css                    # Component styles (CSS with SAP vars)
     KioskKeyboardTemplate.tsx            # JSX template (preact renderer)
     bundle.esm.ts                        # ESM entry point
     Assets.ts                            # Theme + i18n asset registration
@@ -424,6 +423,14 @@ private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {
 For shadow DOM scenarios (e.g. the target input is inside another web
 component), `setTargetElement()` accepts the inner DOM element directly.
 
+**UI5 consumption note:** In a UI5 XML view, `<Input id="foo">` gets a
+DOM ID like `container-app---View--foo` (view-prefixed). The `for`
+attribute with `"foo"` won't find this via `document.getElementById()`.
+For UI5 consumption, use `setTargetElement()` programmatically from the
+controller, or let the auto-generated wrapper / bridge handle ID
+resolution. The `for` attribute is primarily for standalone HTML usage
+where DOM IDs are stable and predictable.
+
 #### Focus steal prevention
 
 Same pattern as the UI5 control: `mousedown`/`touchstart` handler on key
@@ -584,9 +591,8 @@ Add a new demo page showing the web component consumed inside the UI5 app.
       <Input id="wcTarget" placeholder="Type here via web component keyboard" />
     </VBox>
 
-    <!-- Native web component consumed in UI5 XML view -->
-    <kiosk:kiosk-keyboard
-      for="wcTarget"
+    <!-- Web component consumed via auto-generated UI5 wrapper -->
+    <kiosk:KioskKeyboard
       docked="true"
       auto-show="true"
       auto-type="true" />
@@ -612,9 +618,11 @@ Minimal controller showing programmatic interaction:
 import BaseController from "./BaseController";
 
 export default class KioskWebComponent extends BaseController {
-  onInit(): void {
-    // The web component handles everything declaratively.
-    // Controller only needed for programmatic interaction examples.
+  onAfterRendering(): void {
+    // Wire target input: UI5 prefixes DOM IDs, so use setTargetElement()
+    const input = this.byId("wcTarget")?.getFocusDomRef() as HTMLInputElement;
+    const kb = document.querySelector("kiosk-keyboard");
+    kb?.setTargetElement(input ?? null);
   }
 
   onRegisterCustomLayout(): void {
@@ -681,7 +689,7 @@ infrastructure needed since these are framework-agnostic modules.
 
 - Render test: component creates shadow DOM with expected structure
 - Property reflection: attribute changes update properties and re-render
-- Keyboard interaction: pointer events on keys produce `key-press` events
+- Keyboard interaction: mouse/touch events on keys produce `key-press` events
 - Target integration: text appears in target input after key press
 - Shift/caps: visual state and output change correctly
 - Layout switching: `{layout:numeric}` switches to numeric layout
@@ -875,10 +883,8 @@ class KioskKeyboard extends UI5Element {
 
   onExitDOM(): void {
     KioskKeyboard._instances.delete(this);
-    // If last instance: clean up static i18n state (FLP safety)
-    if (KioskKeyboard._instances.size === 0) {
-      resetI18nConfiguration();
-    }
+    // Future: when i18n extensibility is added, clean up static
+    // i18n state here if this is the last instance (FLP safety).
   }
 
   private _isTargetOfOther(inputId: string): boolean {
