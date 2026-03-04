@@ -380,6 +380,37 @@ QUnit.test("Destroying one of two instances does NOT auto-reset i18n", async (as
   assert.ok(!hasConfiguredEnhancements(), "Enhancements auto-cleared after last instance destroyed");
 });
 
+QUnit.test("init() without i18n config does not spuriously invalidate existing instances", async (assert) => {
+  // First keyboard, fully rendered
+  const input1 = new Input({ value: "" });
+  input1.placeAt("qunit-fixture");
+  const kb1 = new KioskKeyboard({ targetInput: input1 });
+  await placeAndWait(kb1);
+
+  // Spy on kb1's invalidate AFTER it's fully rendered
+  const invalidateSpy = i18nSandbox.spy(kb1, "invalidate");
+
+  // Create a second keyboard — no i18n enhancements configured
+  const input2 = new Input({ value: "" });
+  input2.placeAt("qunit-fixture");
+  const kb2 = new KioskKeyboard({ targetInput: input2 });
+  await placeAndWait(kb2);
+
+  // Let any stale-reload microtasks settle
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.strictEqual(
+    invalidateSpy.callCount,
+    0,
+    "Existing instance not spuriously invalidated when new keyboard inits without i18n config",
+  );
+
+  input1.destroy();
+  kb1.destroy();
+  input2.destroy();
+  kb2.destroy();
+});
+
 QUnit.test("onLocalizationChanged triggers bundle reload and re-render", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
