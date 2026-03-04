@@ -161,6 +161,7 @@ packages/kiosk-keyboard-webc/
       shift-state.ts                     # Shift / Caps Lock state machine
     layouts/
       index.ts                           # Layout registry with all built-ins
+      default-layout.ts                  # Default layout resolution (locale → layout)
       qwerty.ts                          # Standard QWERTY
       qwertz-de.ts                       # German QWERTZ
       numeric.ts                         # Numeric layout
@@ -390,7 +391,7 @@ class KioskKeyboard extends UI5Element {
 The component manages:
 
 - **Shift state** — via `ShiftState` instance (step 3e)
-- **Open state** — `_open` boolean, synced to `open` property
+- **Open state** — the reactive `open` property (no separate `_open` boolean needed; `@property` handles reactivity)
 - **Layout resolution** — delegates to `layout-registry`
 - **Target element** — resolved via `for` attribute + `document.getElementById()`
   or via `setTargetElement()`. No UI5 association needed.
@@ -425,10 +426,12 @@ component), `setTargetElement()` accepts the inner DOM element directly.
 
 #### Focus steal prevention
 
-Same pattern as the UI5 control: `pointerdown` handler on key elements
-calls `preventDefault()` to prevent focus transfer away from the target
-input. The web component uses native `pointerdown` instead of UI5's
-`ontouchstart` event delegation.
+Same pattern as the UI5 control: `mousedown`/`touchstart` handler on key
+elements calls `preventDefault()` to prevent focus transfer away from
+the target input. **Do not use `pointerdown`** — per the Pointer Events
+spec, canceling `pointerdown` suppresses compatibility mouse events
+including `click`. The web component uses native `mousedown` instead of
+UI5's `ontouchstart` event delegation.
 
 #### Event dispatch
 
@@ -470,8 +473,9 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               data-key={key.value}
               data-shift-value={key.shiftValue}
               aria-label={this._getKeyAriaLabel(key)}
-              onPointerDown={this._onKeyPointerDown}
-              onPointerUp={this._onKeyPointerUp}
+              onMouseDown={this._onKeyMouseDown}
+              onTouchStart={this._onKeyTouchStart}
+              onClick={this._onKeyClick}
             >
               {renderKeyContent(key, shifted)}
             </div>
@@ -880,7 +884,8 @@ class KioskKeyboard extends UI5Element {
   private _isTargetOfOther(inputId: string): boolean {
     for (const other of KioskKeyboard._instances) {
       if (other === this) continue;
-      if (other.for === inputId) return true;
+      // Check both the `for` attribute and the currently auto-shown target
+      if (other.for === inputId || other._currentTargetId === inputId) return true;
     }
     return false;
   }
