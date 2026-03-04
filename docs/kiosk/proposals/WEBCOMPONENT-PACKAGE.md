@@ -74,6 +74,7 @@ Analysis of the existing `kiosk-keyboard` package internals:
 | `types.ts` (KeyDefinition, KeyRow, LayoutDefinition, KeyWidth, KeyType) | 100%      | Copy verbatim                                                  |
 | `layouts/*.ts` (all layout definitions)                                 | 100%      | Copy verbatim                                                  |
 | `internal/dom.ts` (input guards, key ID utils)                          | 100%      | Copy verbatim                                                  |
+| `internal/grapheme.ts` (grapheme-aware cursor utils)                    | 100%      | Copy verbatim (uses `Intl.Segmenter` only)                     |
 | `internal/input-operations.ts` (text insert, backspace, caret)          | ~65%      | Copy pure DOM functions, drop UI5 Element wrappers             |
 | `internal/detect-keyboard-type.ts` (auto-type heuristics)               | ~85%      | Keep DOM-based checks, drop UI5 control introspection          |
 | `internal/layout-registry.ts` (layout store, locale mapping)            | ~85%      | Replace `sap/base/i18n/Localization` with `navigator.language` |
@@ -154,6 +155,7 @@ packages/kiosk-keyboard-webc/
     types.ts                             # Shared type definitions
     core/
       dom-utils.ts                       # Input/textarea guards, key ID utils
+      grapheme.ts                        # Grapheme-aware cursor utils (Intl.Segmenter)
       input-operations.ts                # Pure DOM text manipulation
       keyboard-type-detector.ts          # DOM-based auto-type detection
       layout-registry.ts                 # Layout storage + locale resolution
@@ -283,12 +285,16 @@ Copy verbatim. Already 100% framework-agnostic. Provides:
 - `keyElementId()` for key grid element IDs
 - `KEY_ID_SUFFIX_RE` for parsing grid positions
 
-#### 3b. `input-operations.ts`
+#### 3b. `grapheme.ts` + `input-operations.ts`
 
-Copy the pure DOM functions:
+Copy `grapheme.ts` verbatim — it provides `graphemeLengthBefore()` and
+`graphemeLengthAfter()` using `Intl.Segmenter`, with zero framework
+dependencies. `input-operations.ts` imports it for backspace handling.
+
+Copy the pure DOM functions from `input-operations.ts`:
 
 - `insertText(dom, text)` — splice text at cursor position
-- `handleBackspace(dom)` — grapheme-aware backspace
+- `handleBackspace(dom)` — grapheme-aware backspace (uses `grapheme.ts`)
 - `handleNavigation(dom, key)` — arrow/home/end handling
 
 **Drop** the UI5-specific wrappers (`setTargetValue`, `fireTargetChange`).
@@ -566,7 +572,7 @@ Use the UI5 Web Components i18n system:
 
 Port the existing message bundles from `kiosk-keyboard/src/i18n/`:
 
-- `messagebundle.properties` (English, ~17 keys for ARIA labels)
+- `messagebundle.properties` (English, 11 keys for ARIA labels)
 - `messagebundle_de.properties` (German)
 
 **Acceptance:** Key labels and ARIA texts render in the correct locale.
