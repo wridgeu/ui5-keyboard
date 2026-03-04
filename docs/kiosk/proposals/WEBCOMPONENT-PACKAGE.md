@@ -81,6 +81,56 @@ Analysis of the existing `kiosk-keyboard` package internals:
 | `internal/i18n-registry.ts` (UI5 ResourceBundle chain)                  | 0%        | Not extracted. Use UI5 WC i18n system instead.                 |
 | `themes/base/KioskKeyboard.less` (SAP LESS params)                      | ~95%      | Translate LESS params to CSS variable equivalents              |
 
+## Shared Core Candidates (Future Reference)
+
+The modules below were identified as candidates for a future shared-core
+package that both the UI5 control and the web component could consume.
+This extraction is **not part of the current plan** (see "Why a separate
+package, not a shared-core refactor?" above), but is documented here so
+the information is not lost.
+
+### Tier 1: Extract immediately (zero dependencies, pure data/utilities)
+
+| Module                         | Source location                      | What it provides                                                                                                     | Notes                                                                              |
+| ------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `types.ts` (layout types only) | `kiosk-keyboard/src/types.ts`        | `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `SECONDARY_LAYOUTS`         | 100% framework-agnostic. i18n types (`KioskI18nConfig` etc.) stay in each package. |
+| All layout definitions         | `kiosk-keyboard/src/layouts/*.ts`    | 14 layout files (qwerty, qwertz-de, numeric, special, numpad, fkeys, nav, fkey-row, nav-row, and composite variants) | Pure data — `LayoutDefinition` arrays with no imports beyond local types.          |
+| DOM utilities                  | `kiosk-keyboard/src/internal/dom.ts` | `isInputOrTextarea()`, `resolveInputOrTextarea()`, `keyElementId()`, `KEY_ID_SUFFIX_RE`                              | Zero `sap/*` imports. Works with any DOM environment.                              |
+
+### Tier 2: Extract with thin adapter interface
+
+| Module                  | Source location                                                                                                   | UI5-coupled parts                                                                                                                                            | Adaptation needed                                                                                                                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Input operations        | `kiosk-keyboard/src/internal/input-operations.ts`                                                                 | `setTargetValue()` calls `element.getMetadata()`, `element.setValue()`, `element.fireEvent()`. `fireTargetChange()` uses `element.getMetadata().hasEvent()`. | Split into pure DOM functions (`insertText`, `handleBackspace`, `handleNavigation`) and a `TargetValueSync` adapter interface. The UI5 control passes its `Element`-based adapter; the WC passes a DOM-only adapter. |
+| Keyboard type detection | `kiosk-keyboard/src/internal/detect-keyboard-type.ts`                                                             | Steps 1-2: `control.getType()`, `control.isA("sap.m.InputBase")`, parent-chain walking via `getParent()`.                                                    | Extract DOM-based detection (steps 3-4: `inputmode` attribute, HTML `type` attribute) as shared. UI5-specific checks stay in the UI5 control as an additional detection layer.                                       |
+| Layout registry         | `kiosk-keyboard/src/internal/layout-registry.ts`                                                                  | `Localization.getLanguageTag()` for locale resolution, `Log.warning()` for diagnostics.                                                                      | Accept locale as a parameter (`getLocaleLayout(locale: string)`) instead of reading it internally. Each consumer provides the locale from its own framework.                                                         |
+| Target input session    | `kiosk-keyboard/src/internal/target-input-session.ts`                                                             | Constructor takes `() => Element \| null` callback. `fireChangeIfDirty()` assumes `Element.fireEvent()`.                                                     | Generalize callback to return an interface `{ getFocusDomRef(): HTMLElement, fireEvent?(name: string): void }`. The WC adapter omits `fireEvent` and dispatches native `input`/`change` events instead.              |
+| Shift state machine     | Inlined in `kiosk-keyboard/src/KioskKeyboard.ts` (`_shiftActive`, `_capsLock` fields + toggle/auto-release logic) | None — pure boolean state machine.                                                                                                                           | Extract as standalone `ShiftState` class. Currently coupled to the control only because it was never factored out.                                                                                                   |
+
+### Tier 3: Not shareable (framework-specific by nature)
+
+| Module                            | Reason                                                                                                                                                                                  |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KioskKeyboardRenderer.ts`        | Uses UI5 `RenderManager` API (`rm.openStart`, `rm.class`, `rm.icon`, `rm.accessibilityState`). The WC uses JSX templates instead.                                                       |
+| `internal/i18n-registry.ts`       | Deeply coupled to `sap/base/i18n/ResourceBundle`, `sap/ui/core/Lib`, and `sap/base/i18n/Localization`. The WC uses the UI5 WC i18n system.                                              |
+| `internal/focus-claim-service.ts` | Uses `Element.closestTo()` to resolve DOM → UI5 control, and `ManagedObject.getParent()` to walk the UI5 control tree. The WC resolves targets via `document.getElementById()` instead. |
+
+### How a future shared-core extraction would work
+
+1. Create `packages/kiosk-keyboard-core/` with Tier 1 modules and the
+   pure parts of Tier 2 modules.
+2. Define adapter interfaces (e.g. `TargetValueSync`, `LocaleProvider`)
+   that each consumer implements.
+3. Update `kiosk-keyboard` (UI5 control) to import from the shared core
+   and provide UI5-specific adapters.
+4. Update `kiosk-keyboard-webc` to import from the shared core and
+   provide DOM/WC-specific adapters.
+5. Add cross-package integration tests verifying behavioral parity.
+
+The main risk is step 3: refactoring the UI5 control's imports without
+breaking existing tests. This should only be attempted after the web
+component is stable and the shared interfaces are proven.
+
 ## Package Structure
 
 ```
@@ -703,7 +753,7 @@ Features included in the first implementation:
 | F-key mode                         | Yes                  | Yes                                              |
 | Function key / nav key layouts     | Yes                  | Yes                                              |
 
-Features **deferred** to a later version:
+Features **deferred** to a later version (with implementation approach):
 
 | Feature                                                 | Reason for deferral                                                                     |
 | ------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -713,6 +763,271 @@ Features **deferred** to a later version:
 | `inputmode` suppression/restore                         | Add alongside mobile detection                                                          |
 | Physical keyboard highlight delegation                  | UI5-specific delegate pattern; needs WC equivalent                                      |
 | `change` event firing on target                         | UI5-specific (`fireLiveChange`, `fireChange`); DOM `input`/`change` events used instead |
+
+### Deferred feature: i18n extensibility
+
+The UI5 control implements a three-layer i18n resolution chain:
+base library bundle → enhancement bundles (`configureI18n`) → override hook
+(`setI18nOverrideHook`). This relies heavily on `sap/base/i18n/ResourceBundle`
+and `sap/ui/core/Lib.getResourceBundleFor()`.
+
+**Web component approach:**
+
+The UI5 WC framework has its own i18n system (`@ui5/webcomponents-base/dist/i18nBundle.js`)
+that supports `getI18nBundle()` for async bundle loading. It does **not** have
+a built-in enhancement/override chain like the UI5 control's `configureI18n`.
+
+Implement a custom resolution layer on top of the WC i18n system:
+
+```ts
+// Static API matching the UI5 control's surface
+static configureI18n(config: KioskI18nConfig): Promise<void> {
+  // 1. Validate config (reuse the same validation logic)
+  // 2. Store enhancement bundle URLs/fetchers
+  // 3. Fetch .properties files via fetch() and parse them into
+  //    a Map<string, string> per locale
+  // 4. On getText(), check enhancement maps (last wins) before
+  //    falling back to the WC i18n bundle
+}
+
+static setI18nOverrideHook(hook: KioskI18nOverrideHook): void {
+  // Same pattern: store the hook, call it in getText() after
+  // enhancement resolution, before returning the final text
+}
+```
+
+The `.properties` file format is trivial to parse (key=value lines with
+`#` comments). A lightweight parser (~30 lines) replaces the dependency on
+`sap/base/i18n/ResourceBundle`. Locale detection uses `navigator.language`
+
+- the WC framework's locale tracking (it fires `languageChange` events
+  internally).
+
+The generation counter pattern from the UI5 control (to discard stale
+async loads) transfers directly — it's just an incrementing number.
+
+**Effort:** Medium. The architecture is clear but needs careful testing
+around locale change races and the interaction with the WC i18n system's
+own bundle loading.
+
+### Deferred feature: multi-keyboard instance isolation
+
+The UI5 control uses a static `_instances: Set<KioskKeyboard>` to track all
+living instances. Auto-show checks `_isTargetOfOther()` before claiming an
+input, preventing a docked keyboard from stealing inputs owned by an inline
+keyboard.
+
+**Web component approach:**
+
+Same pattern, directly portable:
+
+```ts
+class KioskKeyboard extends UI5Element {
+  private static readonly _instances = new Set<KioskKeyboard>();
+
+  onEnterDOM(): void {
+    KioskKeyboard._instances.add(this);
+  }
+
+  onExitDOM(): void {
+    KioskKeyboard._instances.delete(this);
+    // If last instance: clean up static i18n state (FLP safety)
+    if (KioskKeyboard._instances.size === 0) {
+      resetI18nConfiguration();
+    }
+  }
+
+  private _isTargetOfOther(inputId: string): boolean {
+    for (const other of KioskKeyboard._instances) {
+      if (other === this) continue;
+      if (other.for === inputId) return true;
+    }
+    return false;
+  }
+}
+```
+
+The `onEnterDOM()` / `onExitDOM()` lifecycle hooks are the UI5 WC equivalent
+of `init()` / `exit()`. The logic is identical to the UI5 control.
+
+**Effort:** Low. Direct port, no design decisions needed.
+
+### Deferred feature: mobile keyboard detection
+
+The UI5 control uses `sap/ui/Device` to detect phones, tablets, and combi
+devices (laptops with touchscreens). The `_shouldDeferToNative()` method
+returns `true` on mobile devices so the native virtual keyboard is used
+instead of the kiosk keyboard.
+
+**Web component approach:**
+
+Replace `sap/ui/Device` with standard web APIs:
+
+```ts
+private _shouldDeferToNative(): boolean {
+  const mode = this.mobileKeyboard; // "Auto" | "Custom" | "Native"
+  if (mode === "Custom") return false;
+  if (mode === "Native") return true;
+
+  // "Auto": use coarse pointer detection (more reliable than UA sniffing)
+  const isTouch = matchMedia("(pointer: coarse)").matches;
+  const hasFineMouse = matchMedia("(pointer: fine)").matches;
+
+  // Coarse-only = phone/tablet → defer to native keyboard
+  // Coarse + fine = combi device (laptop with touchscreen) → use kiosk
+  return isTouch && !hasFineMouse;
+}
+```
+
+`pointer: coarse` is supported in all evergreen browsers and is more
+reliable than user-agent parsing. The `coarse && !fine` check handles
+combi devices the same way the UI5 control's `tablet && !desktop` check
+does.
+
+For more granular detection (phone vs tablet), `navigator.maxTouchPoints`
+and viewport width heuristics can supplement the pointer query. But for
+the kiosk keyboard's purpose (should we show or defer?), the pointer
+media query is sufficient.
+
+**Effort:** Low. The media query approach is simpler than the UI5 Device API.
+
+### Deferred feature: `inputmode` suppression/restore
+
+When the kiosk keyboard opens, the UI5 control sets `inputmode="none"` on
+the target input to prevent the native virtual keyboard from appearing. It
+uses a ref-counted static map (`_inputModeSuppressions`) so multiple keyboard
+instances targeting the same input don't clobber each other's restore.
+
+**Web component approach:**
+
+The ref-counting pattern is framework-agnostic and ports directly:
+
+```ts
+private static readonly _inputModeSuppressions = new Map<string, {
+  originalInputMode: string | null;
+  refCount: number;
+}>();
+
+private _suppressedInputId: string | null = null;
+
+private _suppressNativeKeyboard(): void {
+  if (this._shouldDeferToNative()) return;
+
+  const target = this._resolveTarget();
+  if (!target?.id) return;
+
+  // Restore previous target first (if switching targets while open)
+  this._restoreNativeKeyboard();
+
+  const state = KioskKeyboard._inputModeSuppressions.get(target.id);
+  if (state) {
+    state.refCount += 1;
+  } else {
+    KioskKeyboard._inputModeSuppressions.set(target.id, {
+      originalInputMode: target.getAttribute("inputmode"),
+      refCount: 1,
+    });
+  }
+
+  target.setAttribute("inputmode", "none");
+  this._suppressedInputId = target.id;
+}
+
+private _restoreNativeKeyboard(): void {
+  const inputId = this._suppressedInputId;
+  if (!inputId) return;
+
+  const state = KioskKeyboard._inputModeSuppressions.get(inputId);
+  if (!state) { this._suppressedInputId = null; return; }
+
+  state.refCount -= 1;
+  if (state.refCount > 0) {
+    // Another instance still claims this input
+    this._suppressedInputId = null;
+    return;
+  }
+
+  const dom = document.getElementById(inputId) as HTMLInputElement | null;
+  if (dom) {
+    if (state.originalInputMode !== null) {
+      dom.setAttribute("inputmode", state.originalInputMode);
+    } else {
+      dom.removeAttribute("inputmode");
+    }
+  }
+
+  KioskKeyboard._inputModeSuppressions.delete(inputId);
+  this._suppressedInputId = null;
+}
+```
+
+Integration points are the same as the UI5 control: call `_suppress` in
+`show()` and on target switch, call `_restore` in `close()` and
+`onExitDOM()`.
+
+**Effort:** Low. Direct port with no UI5 dependencies — the entire
+implementation uses DOM APIs.
+
+### Deferred feature: physical keyboard highlight delegation
+
+When a physical key is pressed on the target input, the UI5 control
+highlights the corresponding on-screen key by toggling a CSS class.
+This uses UI5's `addEventDelegate()` to attach `onkeydown`/`onkeyup`
+handlers to the target control.
+
+**Web component approach:**
+
+Replace UI5 event delegation with native DOM event listeners on the
+target element:
+
+```ts
+private _highlightCleanup: (() => void) | null = null;
+
+private _addHighlightDelegation(): void {
+  const target = this._resolveTarget();
+  if (!target) return;
+
+  const onKeyDown = (e: KeyboardEvent) => this._highlightKey(e.key, true);
+  const onKeyUp = (e: KeyboardEvent) => this._highlightKey(e.key, false);
+
+  target.addEventListener("keydown", onKeyDown);
+  target.addEventListener("keyup", onKeyUp);
+
+  this._highlightCleanup = () => {
+    target.removeEventListener("keydown", onKeyDown);
+    target.removeEventListener("keyup", onKeyUp);
+  };
+}
+
+private _removeHighlightDelegation(): void {
+  this._highlightCleanup?.();
+  this._highlightCleanup = null;
+}
+
+private _highlightKey(key: string, add: boolean): void {
+  const root = this.shadowRoot;
+  if (!root) return;
+
+  // Map physical key to data-key value (same lookup table as UI5 control)
+  const mapped = KEY_TO_DATA_KEY[key];
+  const el =
+    root.querySelector(`[data-key="${CSS.escape(mapped ?? key)}"]`) ??
+    (key.length === 1
+      ? root.querySelector(`[data-key="${CSS.escape(key.toLowerCase())}"]`)
+      : null) ??
+    root.querySelector(`[data-shift-value="${CSS.escape(key)}"]`);
+
+  el?.classList.toggle("kiosk-keyboard__key--highlight", add);
+}
+```
+
+The only difference from the UI5 control: `this.shadowRoot.querySelector()`
+instead of `this.getDomRef().querySelector()`, and native `addEventListener`
+instead of UI5's `addEventDelegate`. The key-to-data-key mapping table and
+the CSS class toggle logic are identical.
+
+**Effort:** Low. Direct port — actually simpler than the UI5 version since
+native `addEventListener` is more straightforward than the delegate pattern.
 
 ## Risks and Mitigations
 
