@@ -81,13 +81,18 @@ Analysis of the existing `kiosk-keyboard` package internals:
 | `internal/i18n-registry.ts` (UI5 ResourceBundle chain)                  | 0%        | Not extracted. Use UI5 WC i18n system instead.                 |
 | `themes/base/KioskKeyboard.less` (SAP LESS params)                      | ~95%      | Translate LESS params to CSS variable equivalents              |
 
-## Shared Core Candidates (Future Reference)
+## Shared Core Candidates (Informational Only)
 
-The modules below were identified as candidates for a future shared-core
-package that both the UI5 control and the web component could consume.
-This extraction is **not part of the current plan** (see "Why a separate
-package, not a shared-core refactor?" above), but is documented here so
-the information is not lost.
+> **Status:** This section is a reference snapshot from the initial
+> analysis. There is no commitment to build a shared-core package —
+> the value is unclear given the maintenance overhead of keeping two
+> consumers in sync through adapter interfaces. It is preserved here
+> so the extractability analysis is not lost if the question comes up
+> again later.
+
+The modules below were identified as candidates for a hypothetical
+shared-core package that both the UI5 control and the web component
+could consume.
 
 ### Tier 1: Extract immediately (zero dependencies, pure data/utilities)
 
@@ -193,18 +198,19 @@ packages/kiosk-keyboard-webc/
 
 ### Properties (via `@property` decorator)
 
-| Property       | Attribute       | Type                                     | Default                        | Description                                 |
-| -------------- | --------------- | ---------------------------------------- | ------------------------------ | ------------------------------------------- |
-| `layout`       | `layout`        | `String`                                 | `""` (auto-detect from locale) | Active layout name                          |
-| `keyboardType` | `keyboard-type` | `String` (`Full` / `Numpad` / `Numeric`) | `Full`                         | Keyboard type                               |
-| `docked`       | `docked`        | `Boolean`                                | `false`                        | Fixed to viewport bottom                    |
-| `open`         | `open`          | `Boolean`                                | `false`                        | Visible state (docked mode)                 |
-| `disabled`     | `disabled`      | `Boolean`                                | `false`                        | Disables all interaction                    |
-| `stableHeight` | `stable-height` | `Boolean`                                | `false`                        | Maintain height across layouts              |
-| `autoShow`     | `auto-show`     | `Boolean`                                | `false`                        | Auto show/close on focus                    |
-| `autoType`     | `auto-type`     | `Boolean`                                | `false`                        | Auto-detect numpad vs full                  |
-| `for`          | `for`           | `String`                                 | `""`                           | Target input element ID                     |
-| `inputIds`     | `input-ids`     | `String`                                 | `""`                           | Comma-separated IDs for auto-show filtering |
+| Property         | Attribute         | Type                                     | Default                        | Description                                 |
+| ---------------- | ----------------- | ---------------------------------------- | ------------------------------ | ------------------------------------------- |
+| `layout`         | `layout`          | `String`                                 | `""` (auto-detect from locale) | Active layout name                          |
+| `keyboardType`   | `keyboard-type`   | `String` (`Full` / `Numpad` / `Numeric`) | `Full`                         | Keyboard type                               |
+| `docked`         | `docked`          | `Boolean`                                | `false`                        | Fixed to viewport bottom                    |
+| `open`           | `open`            | `Boolean`                                | `false`                        | Visible state (docked mode)                 |
+| `disabled`       | `disabled`        | `Boolean`                                | `false`                        | Disables all interaction                    |
+| `stableHeight`   | `stable-height`   | `Boolean`                                | `false`                        | Maintain height across layouts              |
+| `autoShow`       | `auto-show`       | `Boolean`                                | `false`                        | Auto show/close on focus                    |
+| `autoType`       | `auto-type`       | `Boolean`                                | `false`                        | Auto-detect numpad vs full                  |
+| `for`            | `for`             | `String`                                 | `""`                           | Target input element ID                     |
+| `inputIds`       | `input-ids`       | `String`                                 | `""`                           | Comma-separated IDs for auto-show filtering |
+| `mobileKeyboard` | `mobile-keyboard` | `String` (`Auto` / `Custom` / `Native`)  | `Auto`                         | Native keyboard deferral strategy           |
 
 ### Methods
 
@@ -728,89 +734,123 @@ Add to root `package.json`:
 
 Features included in the first implementation:
 
-| Feature                            | UI5 Control          | Web Component v1                                 |
-| ---------------------------------- | -------------------- | ------------------------------------------------ |
-| Full keyboard layout               | Yes                  | Yes                                              |
-| Numpad layout                      | Yes                  | Yes                                              |
-| Numeric layout                     | Yes                  | Yes                                              |
-| Special characters layout          | Yes                  | Yes                                              |
-| Custom layout registration         | Yes                  | Yes                                              |
-| Shift / Caps Lock                  | Yes                  | Yes                                              |
-| Layout switching                   | Yes                  | Yes                                              |
-| Docked mode                        | Yes                  | Yes                                              |
-| Auto-show                          | Yes                  | Yes                                              |
-| Auto-type detection                | Yes                  | Partial (DOM-only, no UI5 control introspection) |
-| Target input by ID (`for`)         | Yes (association)    | Yes (attribute)                                  |
-| Target filtering (`inputIds`)      | Yes                  | Yes                                              |
-| Keyboard navigation (arrow keys)   | Yes                  | Yes                                              |
-| SAP theming (all Horizon variants) | Yes (LESS)           | Yes (CSS variables)                              |
-| i18n (key labels, ARIA)            | Yes (ResourceBundle) | Yes (UI5 WC i18n)                                |
-| Stable height                      | Yes                  | Yes                                              |
-| Focus steal prevention             | Yes                  | Yes                                              |
-| `key-press` event                  | Yes                  | Yes                                              |
-| `after-open` / `after-close`       | Yes                  | Yes                                              |
-| `layout-change` event              | Yes                  | Yes                                              |
-| F-key mode                         | Yes                  | Yes                                              |
-| Function key / nav key layouts     | Yes                  | Yes                                              |
+| Feature                            | UI5 Control           | Web Component v1                                 |
+| ---------------------------------- | --------------------- | ------------------------------------------------ |
+| Full keyboard layout               | Yes                   | Yes                                              |
+| Numpad layout                      | Yes                   | Yes                                              |
+| Numeric layout                     | Yes                   | Yes                                              |
+| Special characters layout          | Yes                   | Yes                                              |
+| Custom layout registration         | Yes                   | Yes                                              |
+| Shift / Caps Lock                  | Yes                   | Yes                                              |
+| Layout switching                   | Yes                   | Yes                                              |
+| Docked mode                        | Yes                   | Yes                                              |
+| Auto-show                          | Yes                   | Yes                                              |
+| Auto-type detection                | Yes                   | Partial (DOM-only, no UI5 control introspection) |
+| Target input by ID (`for`)         | Yes (association)     | Yes (attribute)                                  |
+| Target filtering (`inputIds`)      | Yes                   | Yes                                              |
+| Keyboard navigation (arrow keys)   | Yes                   | Yes                                              |
+| SAP theming (all Horizon variants) | Yes (LESS)            | Yes (CSS variables)                              |
+| i18n (key labels, ARIA)            | Yes (ResourceBundle)  | Yes (UI5 WC i18n)                                |
+| Stable height                      | Yes                   | Yes                                              |
+| Focus steal prevention             | Yes                   | Yes                                              |
+| `key-press` event                  | Yes                   | Yes                                              |
+| `after-open` / `after-close`       | Yes                   | Yes                                              |
+| `layout-change` event              | Yes                   | Yes                                              |
+| F-key mode                         | Yes                   | Yes                                              |
+| Function key / nav key layouts     | Yes                   | Yes                                              |
+| Multi-keyboard instance isolation  | Yes                   | Yes (static `Set<KioskKeyboard>`, same pattern)  |
+| Mobile keyboard detection          | Yes (`sap/ui/Device`) | Yes (`pointer: coarse` media query)              |
+| `inputmode` suppression/restore    | Yes                   | Yes (same ref-counted static map, pure DOM)      |
+| Physical keyboard highlight        | Yes (UI5 delegate)    | Yes (native `keydown`/`keyup` listeners)         |
+| `change` event on target           | Yes (`fireChange`)    | Partial (dispatches native `input`/`change`)     |
 
-Features **deferred** to a later version (with implementation approach):
+Feature **deferred** to a later version:
 
-| Feature                                                 | Reason for deferral                                                                     |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| i18n extensibility (enhancement bundles, override hook) | Complex; requires design for WC i18n system                                             |
-| Multi-keyboard instance isolation                       | Requires static registry; add when needed                                               |
-| Mobile keyboard detection (`_shouldDeferToNative`)      | Needs `sap/ui/Device` equivalent or `navigator.userAgent` heuristics                    |
-| `inputmode` suppression/restore                         | Add alongside mobile detection                                                          |
-| Physical keyboard highlight delegation                  | UI5-specific delegate pattern; needs WC equivalent                                      |
-| `change` event firing on target                         | UI5-specific (`fireLiveChange`, `fireChange`); DOM `input`/`change` events used instead |
+| Feature                                                 | Reason for deferral                                                      |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| i18n extensibility (enhancement bundles, override hook) | Opportunity for a fresh design; does not need to mirror the UI5 approach |
+
+### v1 feature implementation notes
+
+The following features were initially considered for deferral but are
+low-effort direct ports and are included in v1.
+
+#### Multi-keyboard instance isolation
+
+Direct port. See implementation sketch below.
+
+#### Mobile keyboard detection
+
+Replace `sap/ui/Device` with `pointer: coarse` / `pointer: fine` media
+queries. Simpler than the UI5 approach and more reliable than UA sniffing.
+See implementation sketch below.
+
+#### `inputmode` suppression/restore
+
+The ref-counted static map pattern is 100% DOM-based already in the UI5
+control. Direct port with zero framework dependencies. See implementation
+sketch below.
+
+#### Physical keyboard highlight delegation
+
+Replace UI5's `addEventDelegate()` with native `addEventListener` on the
+target element. Actually simpler than the UI5 version. See implementation
+sketch below.
+
+#### `change` event on target
+
+The UI5 control calls `fireLiveChange()` and `fireChange()` on the UI5
+control instance. The web component dispatches native `InputEvent` (on
+each keystroke) and `Event('change')` (on Enter / target switch) on the
+target DOM element. This is the web-standard equivalent — frameworks
+listening for `input`/`change` events on the target element will work
+naturally.
 
 ### Deferred feature: i18n extensibility
 
 The UI5 control implements a three-layer i18n resolution chain:
 base library bundle → enhancement bundles (`configureI18n`) → override hook
-(`setI18nOverrideHook`). This relies heavily on `sap/base/i18n/ResourceBundle`
-and `sap/ui/core/Lib.getResourceBundleFor()`.
+(`setI18nOverrideHook`). This was designed around UI5's `ResourceBundle`
+infrastructure and carries complexity from that (generation counters for
+stale async loads, `Lib.getResourceBundleFor()`, locale churn retry loops).
 
-**Web component approach:**
+This does **not** need to be ported 1:1. The web component is an opportunity
+to design a simpler, more web-native i18n extensibility API.
 
-The UI5 WC framework has its own i18n system (`@ui5/webcomponents-base/dist/i18nBundle.js`)
-that supports `getI18nBundle()` for async bundle loading. It does **not** have
-a built-in enhancement/override chain like the UI5 control's `configureI18n`.
+**Possible directions (to be evaluated during implementation):**
 
-Implement a custom resolution layer on top of the WC i18n system:
+1. **Simple override map** — A static `Map<string, string>` or
+   `Record<string, string>` that consumers populate. No async loading,
+   no `.properties` parsing. Consumers own the loading strategy.
 
-```ts
-// Static API matching the UI5 control's surface
-static configureI18n(config: KioskI18nConfig): Promise<void> {
-  // 1. Validate config (reuse the same validation logic)
-  // 2. Store enhancement bundle URLs/fetchers
-  // 3. Fetch .properties files via fetch() and parse them into
-  //    a Map<string, string> per locale
-  // 4. On getText(), check enhancement maps (last wins) before
-  //    falling back to the WC i18n bundle
-}
+   ```ts
+   KioskKeyboard.setI18nOverrides({ KIOSK_KEYBOARD_LABEL: "Clavier" });
+   ```
 
-static setI18nOverrideHook(hook: KioskI18nOverrideHook): void {
-  // Same pattern: store the hook, call it in getText() after
-  // enhancement resolution, before returning the final text
-}
-```
+2. **Callback-based resolution** — A single hook that receives the key
+   and base text, returns the override or `undefined`. Subsumes both
+   enhancement bundles and the override hook from the UI5 control into
+   one simpler primitive.
 
-The `.properties` file format is trivial to parse (key=value lines with
-`#` comments). A lightweight parser (~30 lines) replaces the dependency on
-`sap/base/i18n/ResourceBundle`. Locale detection uses `navigator.language`
+   ```ts
+   KioskKeyboard.setI18nResolver((key, baseText, locale) => {
+     return myTranslations[locale]?.[key];
+   });
+   ```
 
-- the WC framework's locale tracking (it fires `languageChange` events
-  internally).
+3. **WC i18n asset registration** — The UI5 WC framework supports
+   registering additional i18n assets per package via
+   `registerI18nLoader()`. This is the most "framework-native" approach
+   but ties consumers to the WC i18n asset format.
 
-The generation counter pattern from the UI5 control (to discard stale
-async loads) transfers directly — it's just an incrementing number.
+The right design depends on the actual consumer needs when the web
+component is in use. Deferring this lets us make that decision with
+real usage context rather than speculatively mirroring the UI5 approach.
 
-**Effort:** Medium. The architecture is clear but needs careful testing
-around locale change races and the interaction with the WC i18n system's
-own bundle loading.
+**Effort:** Medium. The implementation itself is straightforward for any
+of the above options; the design decision is the main open question.
 
-### Deferred feature: multi-keyboard instance isolation
+### v1 implementation: multi-keyboard instance isolation
 
 The UI5 control uses a static `_instances: Set<KioskKeyboard>` to track all
 living instances. Auto-show checks `_isTargetOfOther()` before claiming an
@@ -852,7 +892,7 @@ of `init()` / `exit()`. The logic is identical to the UI5 control.
 
 **Effort:** Low. Direct port, no design decisions needed.
 
-### Deferred feature: mobile keyboard detection
+### v1 implementation: mobile keyboard detection
 
 The UI5 control uses `sap/ui/Device` to detect phones, tablets, and combi
 devices (laptops with touchscreens). The `_shouldDeferToNative()` method
@@ -891,7 +931,7 @@ media query is sufficient.
 
 **Effort:** Low. The media query approach is simpler than the UI5 Device API.
 
-### Deferred feature: `inputmode` suppression/restore
+### v1 implementation: `inputmode` suppression/restore
 
 When the kiosk keyboard opens, the UI5 control sets `inputmode="none"` on
 the target input to prevent the native virtual keyboard from appearing. It
@@ -968,7 +1008,7 @@ Integration points are the same as the UI5 control: call `_suppress` in
 **Effort:** Low. Direct port with no UI5 dependencies — the entire
 implementation uses DOM APIs.
 
-### Deferred feature: physical keyboard highlight delegation
+### v1 implementation: physical keyboard highlight delegation
 
 When a physical key is pressed on the target input, the UI5 control
 highlights the corresponding on-screen key by toggling a CSS class.
