@@ -9,7 +9,7 @@ import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
-import { getText } from "./internal/i18n";
+import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, keyElementId, resolveInputOrTextarea } from "./internal/dom";
 import { KeyboardType, type KeyboardTypeValue, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
@@ -25,6 +25,17 @@ import {
   resetLocaleLayouts as registryResetLocales,
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
+import {
+  configureI18nWithStatus as registryConfigureI18nWithStatus,
+  resetI18nConfiguration as registryResetI18n,
+  setI18nOverrideHook as registrySetOverrideHook,
+  clearI18nOverrideHook as registryClearOverrideHook,
+  getI18nConfiguration as registryGetI18nConfiguration,
+  hasConfiguredEnhancements as registryHasConfiguredEnhancements,
+  reloadBundles as registryReloadBundles,
+  reloadIfStale as registryReloadIfStale,
+} from "./internal/i18n-registry";
+import type { KioskI18nConfig, KioskI18nOverrideHook } from "./types";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
@@ -58,6 +69,7 @@ type InputModeSuppressionState = {
  * @namespace ui5.kiosk
  * @extends sap.ui.core.Control
  * @public
+ * @since ${version}
  */
 export default class KioskKeyboard extends Control {
   // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures
@@ -380,6 +392,9 @@ export default class KioskKeyboard extends Control {
   /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
+  /** Tracks the current reload promise to avoid duplicate post-reload invalidation across N instances. */
+  private static _lastReloadPromise: Promise<void> | null = null;
+
   /** Native actions executed in `fKeyMode="Native"` when not prevented. */
   private static readonly _NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
     F5: () => {
@@ -415,6 +430,9 @@ export default class KioskKeyboard extends Control {
    *
    * @param sName Layout identifier (e.g. "azerty-fr").
    * @param oDefinition Layout rows and key definitions.
+   * @public
+   * @static
+   * @since ${version}
    */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
     registryRegisterLayout(sName, oDefinition);
@@ -426,6 +444,9 @@ export default class KioskKeyboard extends Control {
    * Built-in layouts cannot be removed.
    *
    * @param sName Layout identifier.
+   * @public
+   * @static
+   * @since ${version}
    */
   static unregisterLayout(sName: string): void {
     registryUnregisterLayout(sName);
@@ -433,6 +454,10 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Remove all custom layouts and keep built-in layouts intact.
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static resetCustomLayouts(): void {
     registryResetCustomLayouts();
@@ -443,6 +468,9 @@ export default class KioskKeyboard extends Control {
    *
    * @param sName Layout identifier.
    * @returns The layout definition, or undefined if not found.
+   * @public
+   * @static
+   * @since ${version}
    */
   static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
     return registryGetLayout(sName);
@@ -450,6 +478,10 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Get all registered layout names (built-in and custom).
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static getRegisteredLayoutNames(): string[] {
     return registryGetLayoutNames();
@@ -459,6 +491,9 @@ export default class KioskKeyboard extends Control {
    * Check whether a layout name belongs to a built-in layout.
    *
    * @param sName Layout identifier.
+   * @public
+   * @static
+   * @since ${version}
    */
   static isBuiltInLayout(sName: string): boolean {
     return registryIsBuiltIn(sName);
@@ -471,6 +506,9 @@ export default class KioskKeyboard extends Control {
    *
    * @param sLocale BCP-47 locale key or prefix (e.g. "de", "de-at").
    * @param sLayout Target layout name.
+   * @public
+   * @static
+   * @since ${version}
    */
   static registerLocaleLayout(sLocale: string, sLayout: string): void {
     registryRegisterLocale(sLocale, sLayout);
@@ -480,6 +518,9 @@ export default class KioskKeyboard extends Control {
    * Remove a locale-to-layout mapping.
    *
    * @param sLocale Locale key or prefix.
+   * @public
+   * @static
+   * @since ${version}
    */
   static unregisterLocaleLayout(sLocale: string): void {
     registryUnregisterLocale(sLocale);
@@ -487,6 +528,10 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Reset locale mappings back to built-in defaults.
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static resetLocaleLayouts(): void {
     registryResetLocales();
@@ -496,9 +541,151 @@ export default class KioskKeyboard extends Control {
    * Resolve the layout name for the current UI5 locale.
    *
    * Uses exact locale match, then language-prefix match, then fallback.
+   *
+   * @public
+   * @static
+   * @since ${version}
    */
   static getLocaleLayout(): string {
     return registryGetLocaleLayout();
+  }
+
+  // ──────────────────────────────────────────────
+  // Static delegates — i18n registry (see internal/i18n-registry.ts)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Configure i18n enhancement bundles and locale metadata.
+   *
+   * Enhancement bundles provide additional or overriding translations
+   * for the keyboard's built-in text keys.  Useful for adding support
+   * for locales not shipped with the library, or for tenant-specific
+   * wording.
+   *
+   * Replaces any previous configuration (not incremental).
+   *
+   * Enhancement bundles are loaded asynchronously.  The returned
+   * Promise resolves when all bundles are ready.  The control
+   * renders immediately with base-bundle text, then re-renders
+   * when enhancements are available.
+   *
+   * Invalid configs are rejected via the returned Promise after
+   * logging a warning.
+   *
+   * Both the enhancement configuration and the override hook are
+   * auto-cleared when the last KioskKeyboard instance is destroyed,
+   * preventing cross-app leakage in FLP scenarios.  Call
+   * {@link resetI18nConfiguration} / {@link clearI18nOverrideHook}
+   * explicitly if earlier cleanup is needed.
+   *
+   * @param config  Enhancement bundle descriptors and locale metadata.
+   * @returns Resolves when all enhancement bundles are loaded.
+   * @public
+   * @static
+   * @since ${version}
+   */
+  static configureI18n(config: KioskI18nConfig): Promise<void> {
+    const { accepted, promise: loaded } = registryConfigureI18nWithStatus(config);
+    if (!accepted) {
+      return loaded;
+    }
+
+    KioskKeyboard._invalidateAllInstances();
+    void loaded
+      .then(() => {
+        KioskKeyboard._invalidateAllInstances();
+      })
+      .catch((e) => {
+        Log.warning(`configureI18n: failed to load enhancement bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+      });
+
+    return loaded;
+  }
+
+  /**
+   * Reset i18n enhancement configuration to library defaults.
+   *
+   * Clears all enhancement bundles and cancels any in-flight bundle
+   * loads.  Does not affect the override hook — call
+   * {@link clearI18nOverrideHook} separately if needed.
+   *
+   * @public
+   * @static
+   * @since ${version}
+   */
+  static resetI18nConfiguration(): void {
+    registryResetI18n();
+    KioskKeyboard._invalidateAllInstances();
+  }
+
+  /**
+   * Register a programmatic override hook for resolved i18n texts.
+   *
+   * The hook runs after the base bundle and all enhancement bundles
+   * have been consulted.  Return a string to replace the resolved
+   * text, or `undefined` to keep it.
+   *
+   * Only one hook is active at a time.  Calling this method again
+   * replaces the previous hook.
+   *
+   * **Lifecycle note:** The hook is stored in a module-level singleton
+   * that survives individual control destruction.  If the hook closes
+   * over Component, Controller, or View references, those object
+   * graphs cannot be garbage-collected until the hook is cleared.
+   * The hook is auto-cleared when the last KioskKeyboard instance is
+   * destroyed; call {@link clearI18nOverrideHook} explicitly if
+   * earlier cleanup is needed.
+   *
+   * @param fn  The override function.
+   * @returns `true` when the hook was accepted, `false` when rejected
+   *          (e.g. non-function argument).
+   * @public
+   * @static
+   * @since ${version}
+   */
+  static setI18nOverrideHook(fn: KioskI18nOverrideHook): boolean {
+    const accepted = registrySetOverrideHook(fn);
+    if (accepted) {
+      KioskKeyboard._invalidateAllInstances();
+    }
+    return accepted;
+  }
+
+  /**
+   * Remove the i18n override hook.
+   *
+   * @public
+   * @static
+   * @since ${version}
+   */
+  static clearI18nOverrideHook(): void {
+    if (registryClearOverrideHook()) {
+      KioskKeyboard._invalidateAllInstances();
+    }
+  }
+
+  /**
+   * Returns a frozen snapshot of the active i18n configuration, or
+   * `null` when no configuration has been applied.
+   *
+   * Intended for debugging, logging, and test assertions.
+   * The returned object is a deep copy — mutations do not affect
+   * internal state.
+   *
+   * @returns Frozen configuration snapshot or `null`.
+   * @public
+   * @static
+   * @since ${version}
+   */
+  static getI18nConfiguration(): Readonly<KioskI18nConfig> | null {
+    return registryGetI18nConfiguration();
+  }
+
+  /** Invalidate all living KioskKeyboard instances to pick up i18n changes. */
+  private static _invalidateAllInstances(): void {
+    for (const instance of KioskKeyboard._instances) {
+      instance.invalidate();
+    }
   }
 
   /**
@@ -571,6 +758,59 @@ export default class KioskKeyboard extends Control {
     if (localeLayout !== DEFAULT_LAYOUT) {
       this.setLayout(localeLayout);
     }
+
+    // If the locale changed while no instances existed,
+    // onLocalizationChanged was never called. Reload stale bundles
+    // now and re-render once they arrive.
+    // Use the same _lastReloadPromise sentinel as onLocalizationChanged
+    // to avoid registering duplicate .then() callbacks when multiple
+    // instances init simultaneously.
+    if (registryHasConfiguredEnhancements()) {
+      const staleReload = registryReloadIfStale();
+      if (staleReload !== KioskKeyboard._lastReloadPromise) {
+        KioskKeyboard._lastReloadPromise = staleReload;
+        void staleReload
+          .then(() => KioskKeyboard._invalidateAllInstances())
+          .catch((e) => {
+            Log.warning(`init: failed to reload stale i18n bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+          })
+          .finally(() => {
+            if (KioskKeyboard._lastReloadPromise === staleReload) {
+              KioskKeyboard._lastReloadPromise = null;
+            }
+          });
+      }
+    }
+  }
+
+  // With N instances, this hook is called N times. reloadBundles()
+  // coalesces concurrent calls — only the first triggers the reload.
+  // The static sentinel avoids registering N duplicate .then() callbacks.
+  onLocalizationChanged(): void {
+    if (registryHasConfiguredEnhancements()) {
+      const reload = registryReloadBundles();
+      if (reload !== KioskKeyboard._lastReloadPromise) {
+        KioskKeyboard._lastReloadPromise = reload;
+        void reload
+          .then(() => {
+            KioskKeyboard._invalidateAllInstances();
+          })
+          .catch((e) => {
+            Log.warning(
+              `onLocalizationChanged: failed to reload i18n enhancement bundles: ${e}`,
+              undefined,
+              "ui5.kiosk.KioskKeyboard",
+            );
+          })
+          .finally(() => {
+            if (KioskKeyboard._lastReloadPromise === reload) {
+              KioskKeyboard._lastReloadPromise = null;
+            }
+          });
+      }
+    }
+
+    this.invalidate();
   }
 
   onAfterRendering(): void {
@@ -626,6 +866,17 @@ export default class KioskKeyboard extends Control {
 
   exit(): void {
     KioskKeyboard._instances.delete(this);
+
+    // When the last living instance is destroyed, auto-reset i18n state
+    // to prevent cross-app leakage in FLP scenarios.  The override hook
+    // is especially critical: it may close over Component/Controller
+    // references that would otherwise never be garbage-collected.
+    if (KioskKeyboard._instances.size === 0) {
+      registryResetI18n();
+      registryClearOverrideHook();
+      KioskKeyboard._lastReloadPromise = null;
+    }
+
     this._cancelDeferredFocusOutClose();
     this._disableAutoShow();
     this._teardownInputIds();
@@ -894,6 +1145,7 @@ export default class KioskKeyboard extends Control {
    * based on the focused input's metadata again.
    *
    * @public
+   * @since ${version}
    */
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
@@ -1264,6 +1516,7 @@ export default class KioskKeyboard extends Control {
    * @param sKeyValue Key value (e.g. "{shift}", "{enter}")
    * @public
    * @static
+   * @since ${version}
    */
   static getKeyIcon(sKeyValue: string): string | undefined {
     return KioskKeyboard.SPECIAL_KEY_ICONS[sKeyValue];

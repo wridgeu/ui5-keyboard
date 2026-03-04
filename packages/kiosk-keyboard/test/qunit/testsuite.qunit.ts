@@ -58,6 +58,24 @@ sap.ui.define([], () => {
       "layout-registry": {
         title: "QUnit tests for ui5.kiosk - layout-registry",
       },
+      "i18n-registry": {
+        title: "QUnit tests for ui5.kiosk - i18n-registry",
+      },
+      "KioskKeyboard-layout": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Layout Management",
+      },
+      "KioskKeyboard-docked": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Docked Mode",
+      },
+      "KioskKeyboard-a11y": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Accessibility",
+      },
+      "KioskKeyboard-focus": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Focus & Navigation",
+      },
+      "KioskKeyboard-i18n": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard i18n Integration",
+      },
       "negative-edge-cases": {
         title: "QUnit tests for ui5.kiosk - Negative-path & edge-case tests",
       },

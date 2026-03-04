@@ -6,6 +6,24 @@
     "title": "UI5 Keyboard Libraries Demo",
     "applicationVersion": {
       "version": "0.1.0"
+    },
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [""],
+      "fallbackLocale": ""
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "DemoApp-display": {
+          "semanticObject": "DemoApp",
+          "action": "display",
+          "title": "{{appTitle}}",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
   },
   "sap.ui": {
@@ -135,6 +153,11 @@
           "name": "kioskFocusScenarios",
           "pattern": "kiosk/focus-scenarios",
           "target": "kioskFocusScenarios"
+        },
+        {
+          "name": "kioskI18nExtensibility",
+          "pattern": "kiosk/i18n-extensibility",
+          "target": "kioskI18nExtensibility"
         }
       ],
       "targets": {
@@ -209,10 +232,22 @@
         "kioskFocusScenarios": {
           "id": "kioskFocusScenarios",
           "name": "KioskFocusScenarios"
+        },
+        "kioskI18nExtensibility": {
+          "id": "kioskI18nExtensibility",
+          "name": "KioskI18nExtensibility"
         }
       }
     },
     "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "demo.hotkeys.i18n.i18n",
+          "supportedLocales": [""],
+          "fallbackLocale": ""
+        }
+      },
       "state": {
         "type": "sap.ui.model.json.JSONModel",
         "uri": "model/fixtures/state.json"

@@ -46,8 +46,11 @@
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
     "test:e2e:open": "wdio run test/e2e/wdio.conf.ts -- --headed",
     "test:e2e:update": "wdio run test/e2e/wdio.conf.ts -- --update-visual-baseline",
+    "test:e2e:flp": "wdio run test/e2e/wdio-flp.conf.ts",
+    "test:e2e:docs": "wdio run test/e2e/wdio.conf.ts --spec test/e2e/readme-screenshots.test.ts -- --readme-screenshots",
     "pretypecheck": "npm run generate",
     "typecheck": "tsc --noEmit",
+    "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit",
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },
   "devDependencies": {

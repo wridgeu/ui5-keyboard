@@ -36,6 +36,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Accessibility](#accessibility)
 - [Theming](#theming)
 - [Internationalization (i18n)](#internationalization-i18n)
+  - [i18n Extension API](#i18n-extension-api)
 - [Library Enums & Constants](#library-enums--constants)
 - [Further Reading](#further-reading)
 - [Troubleshooting](#troubleshooting)
@@ -282,19 +283,24 @@ For full generated typings (including property/event accessors from UI5 metadata
 
 ### Static Methods (Complete)
 
-| Method                                 | Returns             | Description                                                                   |
-| -------------------------------------- | ------------------- | ----------------------------------------------------------------------------- |
-| `registerLayout(name, definition)`     | `void`              | Register a custom layout. Built-in layouts cannot be overwritten.             |
-| `unregisterLayout(name)`               | `void`              | Remove a previously registered custom layout. Built-in layouts are protected. |
-| `resetCustomLayouts()`                 | `void`              | Remove all custom layouts and keep built-in layouts.                          |
-| `getRegisteredLayout(name)`            | `LayoutDefinition?` | Get the definition for a layout name, or `undefined`.                         |
-| `getRegisteredLayoutNames()`           | `string[]`          | List all registered layout names (built-in + custom).                         |
-| `isBuiltInLayout(name)`                | `boolean`           | Whether the given name is a built-in layout.                                  |
-| `getLocaleLayout()`                    | `string`            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.  |
-| `registerLocaleLayout(locale, layout)` | `void`              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.         |
-| `unregisterLocaleLayout(locale)`       | `void`              | Remove one locale-to-layout mapping.                                          |
-| `resetLocaleLayouts()`                 | `void`              | Reset locale mappings to built-in defaults.                                   |
-| `getKeyIcon(keyValue)`                 | `string?`           | Default icon URI for a special key value, or `undefined` if none.             |
+| Method                                 | Returns                             | Description                                                                   |
+| -------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| `registerLayout(name, definition)`     | `void`                              | Register a custom layout. Built-in layouts cannot be overwritten.             |
+| `unregisterLayout(name)`               | `void`                              | Remove a previously registered custom layout. Built-in layouts are protected. |
+| `resetCustomLayouts()`                 | `void`                              | Remove all custom layouts and keep built-in layouts.                          |
+| `getRegisteredLayout(name)`            | `LayoutDefinition?`                 | Get the definition for a layout name, or `undefined`.                         |
+| `getRegisteredLayoutNames()`           | `string[]`                          | List all registered layout names (built-in + custom).                         |
+| `isBuiltInLayout(name)`                | `boolean`                           | Whether the given name is a built-in layout.                                  |
+| `getLocaleLayout()`                    | `string`                            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.  |
+| `registerLocaleLayout(locale, layout)` | `void`                              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.         |
+| `unregisterLocaleLayout(locale)`       | `void`                              | Remove one locale-to-layout mapping.                                          |
+| `resetLocaleLayouts()`                 | `void`                              | Reset locale mappings to built-in defaults.                                   |
+| `getKeyIcon(keyValue)`                 | `string?`                           | Default icon URI for a special key value, or `undefined` if none.             |
+| `configureI18n(config)`                | `Promise<void>`                     | Set enhancement bundles and locale metadata for i18n extensibility.           |
+| `resetI18nConfiguration()`             | `void`                              | Clear enhancement config and cancel in-flight loads (not the hook).           |
+| `setI18nOverrideHook(fn)`              | `boolean`                           | Register a per-key text override hook (replaces any previous hook).           |
+| `clearI18nOverrideHook()`              | `void`                              | Remove the active i18n override hook.                                         |
+| `getI18nConfiguration()`               | `Readonly<KioskI18nConfig> \| null` | Frozen snapshot of the active i18n config (for debugging).                    |
 
 ---
 
@@ -956,9 +962,9 @@ The library ships with an English resource bundle for all accessibility labels a
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`               |
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`              |
 
-**Adding translations:**
+**Adding translations (library contributors):**
 
-Create a properties file following the standard UI5 i18n naming convention in the library's `i18n/` folder. For example, to add French:
+To add a new locale to the library itself, create a properties file following the standard UI5 i18n naming convention in the library's `i18n/` folder. For example, to add French:
 
 ```
 packages/kiosk-keyboard/src/i18n/messagebundle_fr.properties
@@ -979,6 +985,107 @@ ARIA_KEYBOARD_CLOSED=Clavier virtuel fermé
 ```
 
 The UI5 resource bundle mechanism (`Lib.getResourceBundleFor("ui5.kiosk")`) automatically resolves the correct bundle based on the active UI5 locale.
+
+### i18n Extension API
+
+Consumers can extend or override the keyboard's translatable texts without modifying the library package. Two mechanisms are available:
+
+**Enhancement bundles** — provide additional locales or override built-in texts via standard `.properties` files:
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+
+// Add French and Spanish translations via a consumer bundle.
+// supportedLocales / fallbackLocale are set per entry.
+// Use "" as the fallback locale when your base file is
+// messagebundle.properties (no locale suffix).
+await KioskKeyboard.configureI18n({
+  enhanceWith: [
+    {
+      bundleName: "my.app.i18n.kiosk",
+      supportedLocales: ["", "de", "fr", "es"],
+      fallbackLocale: "",
+    },
+  ],
+});
+
+// Or use a URL instead of a module name
+await KioskKeyboard.configureI18n({
+  enhanceWith: [
+    {
+      bundleUrl: "/i18n/kiosk/messagebundle.properties",
+      supportedLocales: [""],
+      fallbackLocale: "",
+    },
+  ],
+});
+```
+
+**Override hook** — programmatically replace resolved texts for tenant-specific wording:
+
+```ts
+KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
+  if (key === "KIOSK_KEYBOARD_LABEL") {
+    return "Terminal Keyboard";
+  }
+  return undefined; // keep resolvedText for all other keys
+});
+```
+
+**Resolution order:** base library bundle (with built-in fallback) → enhancement bundles (last wins) → override hook.
+
+**Locale reactivity:** when the UI5 locale changes at runtime (e.g. via `Localization.setLanguage()`), all live `KioskKeyboard` instances automatically reload their enhancement bundles and re-render with the updated texts.
+
+**Validation behavior:** invalid top-level configuration (for example `null`, non-array `enhanceWith`, non-string `fallbackLocale`) logs a warning and rejects the returned Promise.
+
+**FLP cleanup** — call both reset methods in `Component.destroy()` to prevent cross-app leakage:
+
+```ts
+export default class Component extends UIComponent {
+  async init(): Promise<void> {
+    super.init();
+    // Fire-and-forget — the keyboard re-renders automatically once bundles load.
+    // Await the returned Promise only if you need guaranteed bundle availability.
+    KioskKeyboard.configureI18n({
+      enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
+    });
+  }
+
+  destroy(): void {
+    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.resetI18nConfiguration();
+    super.destroy();
+  }
+}
+```
+
+> **Note:** The library automatically resets the i18n configuration and clears the override hook when the last `KioskKeyboard` instance is destroyed. Explicit cleanup in `Component.destroy()` is still recommended for apps that manage keyboard instances outside the normal view tree.
+
+**Inspecting active config** — `getI18nConfiguration()` returns a frozen deep copy of the active configuration, or `null` when none has been applied. Useful for debugging and test assertions:
+
+```ts
+const config = KioskKeyboard.getI18nConfiguration();
+console.log(config?.enhanceWith); // read-only — mutations throw
+```
+
+**TypeScript types** — import the config and context types for type-safe usage:
+
+```ts
+import type {
+  KioskI18nConfig,
+  KioskI18nEnhancement,
+  KioskI18nOverrideHook,
+  KioskI18nOverrideContext,
+} from "ui5/kiosk/types";
+```
+
+| Method                                                    | Description                                          |
+| --------------------------------------------------------- | ---------------------------------------------------- |
+| `configureI18n(config): Promise<void>`                    | Set enhancement bundles and locale metadata          |
+| `resetI18nConfiguration(): void`                          | Clear enhancement config (not the hook)              |
+| `setI18nOverrideHook(fn): boolean`                        | Register a per-key text override hook                |
+| `clearI18nOverrideHook(): void`                           | Remove the override hook                             |
+| `getI18nConfiguration(): Readonly<KioskI18nConfig>\|null` | Frozen snapshot of the active config (for debugging) |
 
 ---
 

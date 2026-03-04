@@ -1,5 +1,7 @@
 # Feature Proposal: Configurable i18n Extensibility for `ui5.kiosk`
 
+> Detailed implementation planning: [I18N-EXTENSIBILITY-IMPL-PLAN.md](./I18N-EXTENSIBILITY-IMPL-PLAN.md)
+
 ## Why
 
 `KioskKeyboard` currently resolves texts from the library bundle only (`ui5.kiosk`).

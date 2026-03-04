@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
+import Log from "sap/base/Log";
 import { placeAndWait, waitForRender, tapKey, isShiftActive, isCapsLock } from "./test-helpers";
 
 // ──────────────────────────────────────────────
@@ -137,10 +138,14 @@ QUnit.test("Keyboard stays functional after target control is destroyed", async 
 
   // Keyboard should not throw when tapping keys after target is destroyed
   assert.ok(kb.getDomRef(), "Keyboard is still rendered");
-  tapKey(kb, "e");
-  tapKey(kb, "{backspace}");
-  tapKey(kb, "{shift}");
-  assert.ok(true, "Key taps after target destruction do not throw");
+  try {
+    tapKey(kb, "e");
+    tapKey(kb, "{backspace}");
+    tapKey(kb, "{shift}");
+  } catch (e) {
+    assert.ok(false, `Key taps after target destruction threw: ${e}`);
+  }
+  assert.ok(kb.getDomRef(), "Keyboard still rendered after key taps on destroyed target");
 
   kb.destroy();
 });
@@ -399,4 +404,51 @@ QUnit.test("Multiple backspaces on empty TextArea are silent no-ops", async (ass
 
   textarea.destroy();
   kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// i18n API negative paths (facade smoke test)
+//
+// Detailed validation coverage is in i18n-registry.qunit.ts.
+// This module only verifies that the KioskKeyboard facade
+// delegates validation to the registry (no crash, warning logged).
+// ──────────────────────────────────────────────
+
+const i18nSandbox = sinon.createSandbox();
+
+QUnit.module("Negative / Edge-Case — i18n API", {
+  afterEach() {
+    i18nSandbox.restore();
+    KioskKeyboard.resetI18nConfiguration();
+    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.resetCustomLayouts();
+    KioskKeyboard.resetLocaleLayouts();
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+QUnit.test("configureI18n(null) delegates to registry — logs warning and rejects Promise", async (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  let rejection: unknown;
+  try {
+    await KioskKeyboard.configureI18n(null as never);
+  } catch (error) {
+    rejection = error;
+  }
+
+  assert.ok(rejection instanceof TypeError, "Invalid config rejects via returned Promise");
+  if (rejection instanceof Error) {
+    assert.ok(rejection.message.includes("validation failed"), "Validation rejection message is preserved");
+  }
+
+  assert.ok(spy.calledOnce, "Warning logged for null config");
+});
+
+QUnit.test("setI18nOverrideHook(null) delegates to registry — logs warning, no crash", (assert) => {
+  const spy = i18nSandbox.spy(Log, "warning");
+
+  assert.strictEqual(KioskKeyboard.setI18nOverrideHook(null as never), false, "Returns false for null");
+  assert.ok(spy.calledOnce, "Warning logged for null hook");
 });

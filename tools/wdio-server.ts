@@ -1,17 +1,41 @@
 import net from "node:net";
 import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
 import { type ChildProcess, spawn } from "node:child_process";
 import ts from "typescript";
 import treeKill from "tree-kill";
 
+const require = createRequire(import.meta.url);
+
+function resolveUi5CliEntry(packageRoot: string): string {
+  try {
+    return require.resolve("@ui5/cli/bin/ui5.js", { paths: [packageRoot] });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Unable to resolve @ui5/cli for '${packageRoot}'. Install dependencies before running tests. ${reason}`,
+      { cause: error },
+    );
+  }
+}
+
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.createConnection(port, "localhost");
+    socket.setTimeout(5_000);
     socket.once("connect", () => {
       socket.destroy();
       resolve(true);
     });
-    socket.once("error", () => resolve(false));
+    socket.once("timeout", () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.once("error", () => {
+      socket.destroy();
+      resolve(false);
+    });
   });
 }
 
@@ -25,6 +49,7 @@ function waitForServer(port: number, timeout = 30_000): Promise<void> {
         resolve();
       });
       socket.once("error", () => {
+        socket.destroy();
         if (Date.now() - start > timeout) {
           reject(new Error(`Server not ready on port ${port} after ${timeout}ms`));
         } else {
@@ -49,21 +74,22 @@ function killProcessTree(pid: number): Promise<void> {
  * Creates wdio lifecycle hooks that auto-start a UI5 dev server
  * if the target port is not already in use, and tear it down on completion.
  */
-export function createServerManager(port: number, packageRoot: string) {
+export function createServerManager(port: number, packageRoot: string, configFile?: string, startupTimeout = 60_000) {
   let serverProcess: ChildProcess | undefined;
-  const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
-  const useShell = process.platform === "win32";
 
   return {
     async onPrepare() {
       if (await isPortInUse(port)) return;
-      serverProcess = spawn(npxCommand, ["ui5", "serve", "--port", String(port)], {
+      const ui5CliEntry = resolveUi5CliEntry(packageRoot);
+      const args = [ui5CliEntry, "serve", "--port", String(port)];
+      if (configFile) args.push("--config", configFile);
+      serverProcess = spawn(process.execPath, args, {
         cwd: packageRoot,
-        stdio: "pipe",
-        shell: useShell,
-        windowsHide: useShell,
+        stdio: ["ignore", "pipe", "inherit"],
+        shell: false,
+        windowsHide: process.platform === "win32",
       });
-      await waitForServer(port);
+      await waitForServer(port, startupTimeout);
     },
 
     async onComplete() {
@@ -134,4 +160,41 @@ export function readQUnitTestIds(testsuitePath: string): string[] {
   }
 
   return ids;
+}
+
+/**
+ * Generate one spec file per QUnit test ID so that WebdriverIO can distribute
+ * them across parallel browser instances via `maxInstances`.
+ *
+ * Each generated file navigates to the QUnit HTML page for a single test
+ * and uses `browser.getQUnitResults()` (provided by wdio-qunit-service).
+ *
+ * @param testIds    Test IDs extracted from the testsuite file.
+ * @param outputDir  Directory to write the generated `.spec.js` files into.
+ * @param urlFn      Function that maps a test ID to its QUnit HTML URL path.
+ * @returns Array of absolute file paths for generated spec files.
+ */
+export function generateQUnitSpecs(testIds: string[], outputDir: string, urlFn: (name: string) => string): string[] {
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  // Write spec files idempotently — no cleanup needed since the file set
+  // is deterministic.  Worker processes may reload this config concurrently,
+  // so we must avoid deleting files that other workers are already reading.
+  return testIds.map((id) => {
+    const specPath = path.join(outputDir, `${id}.spec.js`);
+    const url = urlFn(id);
+    fs.writeFileSync(
+      specPath,
+      [
+        `describe(${JSON.stringify("QUnit: " + id)}, function () {`,
+        `  it("should pass QUnit tests", async function () {`,
+        `    await browser.url(${JSON.stringify(url)});`,
+        `    await browser.getQUnitResults();`,
+        `  });`,
+        `});`,
+        ``,
+      ].join("\n"),
+    );
+    return specPath;
+  });
 }

@@ -11,10 +11,13 @@ KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
                           plus key-name constants (`KeyName`)
-types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces
+types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces,
+                          KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
+                          KioskI18nOverrideContext types
 layout-registry.ts        Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
-internal/i18n.ts          getText() helper for library resource bundle
+internal/i18n-registry.ts i18n resolution chain: base bundle + enhancement bundles
+                          + override hook, async loading with generation counter
 internal/detect-keyboard-type.ts  Auto-type detection helpers
 internal/input-operations.ts      Target input text operations
 internal/target-input-session.ts  Per-target dirty/value/change handling
@@ -516,6 +519,12 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | `inputmode` restore on destroy          | `exit()` calls `_restoreNativeKeyboard()`                                        |
 | Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop             |
 | `show()` without target input           | `_suppressNativeKeyboard()` is a no-op when no target element exists             |
+| Enhancement bundle load failure         | `createEnhancementBundle` catches, logs warning, returns `null`; filtered out    |
+| Override hook throws                    | `getText` catches, logs warning, keeps pre-hook `resolvedText`                   |
+| Locale change with no living instances  | `reloadIfStale()` in `init()` detects stale bundles and reloads on next create   |
+| Rapid sequential `configureI18n` calls  | Generation counter discards stale async loads; only latest config is applied     |
+| Locale churn during bundle reload       | `reloadBundles` loop retries up to `MAX_RELOAD_CYCLES` (5), then aborts          |
+| Last `KioskKeyboard` instance destroyed | `exit()` auto-resets i18n config and clears override hook (FLP safety)           |
 
 ## Project Layout
 
@@ -527,11 +536,13 @@ packages/kiosk-keyboard/
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
                                plus KeyName constants
-    types.ts                  KeyDefinition, KeyRow, LayoutDefinition
+    types.ts                  KeyDefinition, KeyRow, LayoutDefinition,
+                              KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
+                              KioskI18nOverrideContext
     layout-registry.ts        Layout registration and locale resolution
     internal/
       dom.ts                  DOM/key ID utilities + input resolver
-      i18n.ts                 I18n helper
+      i18n-registry.ts        i18n resolution chain, config, hook, async loading
       detect-keyboard-type.ts Auto-type detection
       input-operations.ts     Text insertion/backspace/enter ops
       target-input-session.ts Target state + commit handling
@@ -560,9 +571,29 @@ packages/kiosk-keyboard/
     manifest.json             Library manifest (v2.0.0)
     .library                  UI5 library metadata
   test/qunit/
-    KioskKeyboard.qunit.ts   Control tests
-    testsuite.qunit.ts        Test suite runner
-    test-helpers.ts            Shared test utilities
+    KioskKeyboard.qunit.ts               Core control tests (init, properties, typing)
+    KioskKeyboard-a11y.qunit.ts          Accessibility (ARIA, roving tabindex)
+    KioskKeyboard-docked.qunit.ts        Docked mode tests
+    KioskKeyboard-events.qunit.ts        Event delegation tests
+    KioskKeyboard-focus.qunit.ts         Focus management tests
+    KioskKeyboard-i18n.qunit.ts          i18n extension API integration tests
+    KioskKeyboard-layout.qunit.ts        Layout switching tests
+    KioskKeyboard-autoshow.qunit.ts      Auto-show unit tests
+    KioskKeyboard-autoshow-blackbox.qunit.ts  Auto-show black-box tests
+    KioskKeyboard-autotype-mobile.qunit.ts    Auto-type / mobile tests
+    KioskKeyboard-input-blackbox.qunit.ts     Input operation black-box tests
+    KioskKeyboard-renderer-blackbox.qunit.ts  Renderer black-box tests
+    i18n-registry.qunit.ts               i18n registry unit tests
+    layout-registry.qunit.ts             Layout registry unit tests
+    focus-claim-service.qunit.ts         Focus claim service tests
+    input-operations.qunit.ts            Input operations tests
+    target-input-session.qunit.ts        Target input session tests
+    negative-edge-cases.qunit.ts         Negative / edge-case tests
+    FKeys.qunit.ts                       Function key tests
+    NavKeys.qunit.ts                     Navigation key tests
+    Grapheme.qunit.ts                    Grapheme-aware editing tests
+    testsuite.qunit.ts                   Test suite runner
+    test-helpers.ts                      Shared test utilities
   test/e2e/
     wdio.conf.ts               WebdriverIO configuration
     visual.test.ts             Visual regression tests
@@ -570,4 +601,7 @@ packages/kiosk-keyboard/
     focus.test.ts              Focus/auto-show behavior
     autotype.test.ts           Auto-type keyboard switching
     interop.test.ts            StepInput + UI5 Web Components interop
+    i18n.test.ts               i18n extensibility e2e tests
+    flp-lifecycle.test.ts      FLP lifecycle i18n auto-reset tests
+    wdio-flp.conf.ts           WebdriverIO config for FLP tests
 ```

@@ -21,4 +21,5 @@ export const Scope = {
   KioskDialog: "kioskDialog",
   KioskCustomLayouts: "kioskCustomLayouts",
   KioskFocusScenarios: "kioskFocusScenarios",
+  KioskI18nExtensibility: "kioskI18nExtensibility",
 } as const;
