@@ -1069,15 +1069,225 @@ the CSS class toggle logic are identical.
 **Effort:** Low. Direct port — actually simpler than the UI5 version since
 native `addEventListener` is more straightforward than the delegate pattern.
 
+## Research: Shadow DOM Focus and Caret Handling
+
+The keyboard's shadow DOM keys must interact with a target input in the
+light DOM. This crosses the shadow boundary for focus, caret, and event
+handling. Research confirms all required operations work reliably.
+
+### Focus steal prevention
+
+`mousedown.preventDefault()` on a key element inside the shadow root
+prevents focus transfer away from the light DOM input. This is the same
+mechanism the UI5 control uses (via `ontouchstart`) and works identically
+across the shadow boundary — the browser's focus-on-click behavior
+respects `preventDefault()` regardless of DOM tree location.
+
+**Important:** Use `mousedown`/`touchstart`, not `pointerdown`. Per the
+Pointer Events spec, canceling `pointerdown` suppresses compatibility
+mouse events including `click`. The UI5 control already follows this
+pattern for the same reason.
+
+Browser support: Chrome, Firefox, Safari — all confirmed.
+
+### selectionStart/selectionEnd access
+
+`selectionStart`, `selectionEnd`, and `setSelectionRange()` are properties
+on the `HTMLInputElement`/`HTMLTextAreaElement` interface. They are entirely
+unrelated to `window.getSelection()` and the Shadow DOM Selection proposal.
+JavaScript inside a shadow root can freely read/write these on any input
+element it holds a reference to, regardless of DOM tree location:
+
+```ts
+// Inside shadow root code — works without restriction:
+const externalInput = this._resolveTarget(); // light DOM <input>
+const start = externalInput.selectionStart;
+externalInput.setSelectionRange(5, 10);
+```
+
+No same-origin or encapsulation restrictions apply. The shadow DOM boundary
+is a DOM tree boundary, not a security boundary for property access on
+referenced elements.
+
+Caveats (already handled by the UI5 control's patterns):
+
+- `type="number"` inputs throw on `selectionStart` access — wrap in
+  try/catch (existing pattern in `input-operations.ts`)
+- Unfocused inputs may return stale positions — the cursor-position caching
+  pattern from `TargetInputSession` carries over
+
+### document.activeElement and shadow DOM
+
+When focus is inside a shadow tree, `document.activeElement` returns the
+shadow host, not the internal element. For the keyboard scenario this is
+largely a non-issue because `mousedown.preventDefault()` keeps focus on
+the target input (so `document.activeElement` returns the input, not the
+keyboard host).
+
+For the deferred focus-out check (when `relatedTarget` is null), use
+recursive traversal instead of `document.activeElement`:
+
+```ts
+function getDeepActiveElement(root: Document | ShadowRoot = document): Element | null {
+  const active = root.activeElement;
+  if (!active) return null;
+  if (active.shadowRoot) return getDeepActiveElement(active.shadowRoot);
+  return active;
+}
+```
+
+### FocusEvent.relatedTarget across shadow boundaries
+
+When `focusout` fires on the light DOM input and focus moves into the
+keyboard's shadow root, `relatedTarget` is **retargeted to the shadow
+host** (`<kiosk-keyboard>` element). The internal shadow element is never
+leaked. This means the auto-show `focusout` handler can check:
+
+```ts
+private _onDocumentFocusOut(event: FocusEvent): void {
+  const related = event.relatedTarget as HTMLElement | null;
+
+  // relatedTarget retargeted to host — user clicked a keyboard key
+  if (related === this) return; // don't close
+
+  // null edge case (iframe transitions, window blur, Safari quirks)
+  if (!related) {
+    this._scheduleDeferredFocusOutClose();
+    return;
+  }
+
+  this.close();
+}
+```
+
+The existing deferred-close pattern from the UI5 control (one-tick
+`setTimeout` fallback when `relatedTarget` is null) is the correct
+approach for shadow DOM as well.
+
+### Synthetic event dispatching
+
+`dispatchEvent()` on a light DOM element works without restriction
+regardless of where the calling code lives. The event originates on the
+target element, not inside the shadow root:
+
+```ts
+// Inside shadow root code — dispatches ON the external input:
+target.dispatchEvent(
+  new InputEvent("input", {
+    bubbles: true,
+    inputType: "insertText",
+    data: text,
+  }),
+);
+```
+
+No special `composed` flag needed since the event originates in the light
+DOM. Browser support: uniform across Chrome, Firefox, Safari.
+
+### Summary
+
+| Operation                                             | Works from shadow DOM? | Notes                                              |
+| ----------------------------------------------------- | ---------------------- | -------------------------------------------------- |
+| `mousedown.preventDefault()` prevents focus           | Yes                    | Use `mousedown`/`touchstart`, not `pointerdown`    |
+| `selectionStart`/`selectionEnd` on light DOM input    | Yes, no restrictions   | `type="number"` throws (handle with try/catch)     |
+| `setSelectionRange()` on light DOM input              | Yes, no restrictions   | —                                                  |
+| `document.activeElement`                              | Returns shadow host    | Use recursive `shadowRoot.activeElement` traversal |
+| `focusout.relatedTarget`                              | Retargeted to host     | Handle null with deferred check (existing pattern) |
+| `dispatchEvent(new InputEvent())` on external element | Yes, no restrictions   | Event originates in light DOM                      |
+
+## Research: Demo App Integration (UI5 Consumption)
+
+The demo app needs to consume `<kiosk-keyboard>` inside a UI5 XML view.
+Research confirms two proven paths, both available in this monorepo today.
+
+### Path A: Auto-generated wrappers (recommended)
+
+`ui5-tooling-modules` (v3.34.6, already installed) auto-detects a
+`"customElements"` field in a package's `package.json`, parses the Custom
+Elements Manifest, and generates `sap.ui.core.webc.WebComponent.extend()`
+wrappers at dev-serve and build time.
+
+Requirements:
+
+1. The package's `package.json` must declare:
+
+   ```json
+   { "customElements": "dist/custom-elements.json" }
+   ```
+
+2. The `custom-elements.json` follows the
+   [Custom Elements Manifest](https://github.com/webcomponents/custom-elements-manifest)
+   schema. The `@ui5/webcomponents-tools` build generates this
+   automatically for `UI5Element`-based components.
+
+3. Add `"kiosk-keyboard-webc": "file:../kiosk-keyboard-webc"` to the
+   demo app's `package.json` dependencies. npm workspaces ensure it is
+   resolvable from `node_modules`.
+
+Once set up, XML views consume the component directly:
+
+```xml
+<mvc:View xmlns:kiosk="kiosk-keyboard-webc/dist">
+  <kiosk:KioskKeyboard
+    docked="true"
+    auto-show="true"
+    for="myInput" />
+</mvc:View>
+```
+
+This is the same pattern the demo app already uses for
+`xmlns:webc="@ui5/webcomponents/dist"` in `KioskInputIds.view.xml`.
+
+### Path B: Manual WebComponent.extend() bridge (fallback)
+
+Already proven in `webapp/control/KioskInput.ts`. A manual bridge gives
+full control over property mapping, event transformation, and method
+delegation. Use this if the auto-generated wrapper needs customization:
+
+```ts
+import WebComponent from "sap/ui/core/webc/WebComponent";
+
+const KioskKeyboardBridge = WebComponent.extend("demo.hotkeys.control.KioskKeyboardBridge", {
+  metadata: {
+    tag: "kiosk-keyboard",
+    properties: {
+      layout: { type: "string", mapping: "property" },
+      docked: { type: "boolean", mapping: "property" },
+      autoShow: { type: "boolean", mapping: { type: "property", to: "auto-show" } },
+      // ...
+    },
+    events: {
+      keyPress: { mapping: { to: "key-press" } },
+      afterOpen: { mapping: { to: "after-open" } },
+      // ...
+    },
+    methods: ["show", "close", "registerLayout"],
+  },
+});
+```
+
+### Theme CSS variable inheritance
+
+SAP theme CSS variables (`--sapButton_Background`, `--sapTextColor`, etc.)
+are injected at the document `:root` level by the UI5 runtime. CSS custom
+properties **naturally inherit through shadow DOM boundaries** per the CSS
+spec. No special setup is needed — the web component's shadow DOM styles
+referencing `var(--sapButton_Background)` receive the active theme's values
+automatically, and update instantly on runtime theme switch.
+
+This is confirmed by the
+[UI5 Web Components styling docs](https://ui5.github.io/webcomponents/docs/advanced/styles):
+"While global CSS does not cascade into the Shadow DOM, CSS variables do!"
+
 ## Risks and Mitigations
 
-| Risk                                        | Impact     | Mitigation                                                        |
-| ------------------------------------------- | ---------- | ----------------------------------------------------------------- |
-| Feature drift between UI5 control and WC    | Medium     | Explicit parity matrix; shared layout data                        |
-| Shadow DOM focus/caret edge cases           | Medium     | Extensive cross-browser testing; `composed: true` events          |
-| `@ui5/webcomponents-tools` build complexity | Low-Medium | Can fall back to manual Vite/Rollup build if tooling is too rigid |
-| Bundle size concern for standalone use      | Low        | ~30-40 KB for base is acceptable; tree-shaking available          |
-| Demo app namespace resolution for WC        | Low        | Fallback to `WebComponent.extend()` bridge (proven pattern)       |
+| Risk                                        | Impact     | Mitigation                                                                                                                    |
+| ------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Feature drift between UI5 control and WC    | Medium     | Explicit parity matrix; shared layout data                                                                                    |
+| Shadow DOM focus/caret edge cases           | Low        | Research confirms all operations work cross-boundary; existing patterns transfer (see research section)                       |
+| `@ui5/webcomponents-tools` build complexity | Low-Medium | Can fall back to manual Vite/Rollup build if tooling is too rigid                                                             |
+| Bundle size concern for standalone use      | Low        | ~30-40 KB for base is acceptable; tree-shaking available                                                                      |
+| Demo app integration                        | Low        | Two proven paths: auto-wrapper via `customElements` manifest, or manual `WebComponent.extend()` bridge (see research section) |
 
 ## Suggested Implementation Order
 
