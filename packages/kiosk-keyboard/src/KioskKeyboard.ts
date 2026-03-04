@@ -766,7 +766,7 @@ export default class KioskKeyboard extends Control {
     // to avoid registering duplicate .then() callbacks when multiple
     // instances init simultaneously.
     const staleReload = registryReloadIfStale();
-    if (staleReload && staleReload !== KioskKeyboard._lastReloadPromise) {
+    if (staleReload !== KioskKeyboard._lastReloadPromise) {
       KioskKeyboard._lastReloadPromise = staleReload;
       void staleReload
         .then(() => KioskKeyboard._invalidateAllInstances())

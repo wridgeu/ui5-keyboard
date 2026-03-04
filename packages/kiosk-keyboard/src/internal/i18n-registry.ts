@@ -20,15 +20,11 @@ function cloneStringArray(value: readonly string[] | undefined): string[] | unde
   return value ? [...value] : undefined;
 }
 
-function createHandledRejectedPromise(error: Error): Promise<void> {
-  const rejected = Promise.reject(error);
+function createValidationRejectedPromise(): Promise<void> {
+  const rejected = Promise.reject(new TypeError(VALIDATION_REJECTED_MESSAGE));
   // Keep fire-and-forget usage safe while still allowing callers to await/catch.
   void rejected.catch(() => undefined);
   return rejected;
-}
-
-function createValidationRejectedPromise(): Promise<void> {
-  return createHandledRejectedPromise(new TypeError(VALIDATION_REJECTED_MESSAGE));
 }
 
 function validateTopLevelConfig(config: unknown): string | null {
@@ -179,7 +175,7 @@ export function getText(key: string, fallback: string): string {
         resolved = hooked;
       }
     } catch (e) {
-      Log.warning(`i18n override hook threw: ${e}`, undefined, LOG_COMPONENT);
+      Log.warning(`i18n override hook threw: ${e instanceof Error ? e.message : String(e)}`, undefined, LOG_COMPONENT);
     }
   }
 
@@ -235,20 +231,10 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
     }
 
     const supportedLocales = cloneStringArray(entry.supportedLocales);
-    if (bundleName) {
-      validEntries.push({
-        bundleName,
-        supportedLocales,
-        fallbackLocale: entry.fallbackLocale,
-      });
-      continue;
-    }
-
-    validEntries.push({
-      bundleUrl: bundleUrl as string,
-      supportedLocales,
-      fallbackLocale: entry.fallbackLocale,
-    });
+    const bundle: KioskI18nEnhancement = bundleName
+      ? { bundleName, supportedLocales, fallbackLocale: entry.fallbackLocale }
+      : { bundleUrl: bundleUrl!, supportedLocales, fallbackLocale: entry.fallbackLocale };
+    validEntries.push(bundle);
   }
 
   if (config.enhanceWith?.length && validEntries.length === 0) {
@@ -285,9 +271,14 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
  * Uses a generation counter to discard stale loads when
  * `configureI18n` is called again before a previous load completes.
  *
+ * **Graceful degradation:** individual enhancement bundles that fail to
+ * load (network error, wrong path) are silently skipped with a
+ * `Log.warning`.  The returned promise still resolves — only top-level
+ * validation failures cause a rejection.
+ *
  * @param config  Enhancement bundle descriptors and locale metadata.
- * @returns Resolves when all enhancement bundles have been loaded,
- *          rejects when top-level validation fails.
+ * @returns Resolves when all enhancement bundles have been loaded
+ *          (or individually failed), rejects when top-level validation fails.
  */
 export function configureI18n(config: KioskI18nConfig): Promise<void> {
   return configureI18nWithStatus(config).promise;
@@ -392,16 +383,16 @@ export function clearI18nOverrideHook(): boolean {
 
 /**
  * If enhancement bundles are configured but were loaded for a
- * different locale, trigger a reload.  Returns the reload promise
- * when a reload was needed, `null` otherwise.
+ * different locale, trigger a reload.  Returns `NO_RELOAD_NEEDED`
+ * when bundles are current, the reload promise otherwise.
  *
  * Called from `KioskKeyboard.init()` to cover the window where
  * the locale changed while no instances existed.
  * @internal
  */
-export function reloadIfStale(): Promise<void> | null {
-  if (!activeConfig?.enhanceWith?.length) return null;
-  if (!areBundlesStale()) return null;
+export function reloadIfStale(): Promise<void> {
+  if (!activeConfig?.enhanceWith?.length) return NO_RELOAD_NEEDED;
+  if (!areBundlesStale()) return NO_RELOAD_NEEDED;
   return reloadBundles();
 }
 

@@ -633,21 +633,24 @@ QUnit.test("reloadIfStale detects stale bundles when locale changes mid-load", a
   createStub.onCall(1).returns(Promise.resolve(makeBundleStub({ KEY: "de-text" })) as never);
 
   const reloadPromise = reloadIfStale();
-  assert.ok(reloadPromise !== null, "reloadIfStale returns a Promise (bundles detected as stale)");
+  assert.ok(reloadPromise instanceof Promise, "reloadIfStale returns a Promise (bundles detected as stale)");
 
   await reloadPromise;
   assert.strictEqual(getText("KEY", "fallback"), "de-text", "After reload, text matches new locale bundle");
 });
 
-QUnit.test("reloadIfStale returns null when bundles are current", async (assert) => {
+QUnit.test("reloadIfStale resolves immediately when bundles are current", async (assert) => {
   stubBaseBundle({ KEY: "base" });
-  stubBundleCreate(makeBundleStub({ KEY: "enhanced" }));
+  const createStub = stubBundleCreate(makeBundleStub({ KEY: "enhanced" }));
   sandbox.stub(Localization, "getLanguageTag").callsFake(() => ({ toString: () => "en" }) as never);
 
   await configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
+  const callCountBefore = createStub.callCount;
 
   const result = reloadIfStale();
-  assert.strictEqual(result, null, "reloadIfStale returns null when locale has not changed");
+  assert.ok(result instanceof Promise, "reloadIfStale returns a Promise");
+  await result;
+  assert.strictEqual(createStub.callCount, callCountBefore, "No new bundle load triggered when locale has not changed");
 });
 
 // ──────────────────────────────────────────────────
