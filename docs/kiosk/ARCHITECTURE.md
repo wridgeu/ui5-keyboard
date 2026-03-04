@@ -16,7 +16,6 @@ types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces,
                           KioskI18nOverrideContext types
 layout-registry.ts        Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
-internal/i18n.ts          getText() facade — thin re-export of i18n-registry
 internal/i18n-registry.ts i18n resolution chain: base bundle + enhancement bundles
                           + override hook, async loading with generation counter
 internal/detect-keyboard-type.ts  Auto-type detection helpers
@@ -543,7 +542,6 @@ packages/kiosk-keyboard/
     layout-registry.ts        Layout registration and locale resolution
     internal/
       dom.ts                  DOM/key ID utilities + input resolver
-      i18n.ts                 i18n facade (re-exports from i18n-registry)
       i18n-registry.ts        i18n resolution chain, config, hook, async loading
       detect-keyboard-type.ts Auto-type detection
       input-operations.ts     Text insertion/backspace/enter ops

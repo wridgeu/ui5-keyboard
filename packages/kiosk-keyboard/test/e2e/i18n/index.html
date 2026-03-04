@@ -124,9 +124,9 @@ KioskKeyboard.configureI18n({
         and adds an emoji prefix to the keyboard label.
       </p>
       <pre class="code">
-KioskKeyboard.setI18nOverrideHook(function (ctx) {
+KioskKeyboard.setI18nOverrideHook((ctx) => {
   if (ctx.key === "KIOSK_KEYBOARD_LABEL") {
-    return "\u2328\uFE0F " + ctx.resolvedText;
+    return `⌨️ ${ctx.resolvedText}`;
   }
   if (ctx.key.startsWith("KEY_")) {
     return ctx.resolvedText.toUpperCase();
