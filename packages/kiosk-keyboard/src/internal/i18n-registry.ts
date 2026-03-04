@@ -410,6 +410,9 @@ export function reloadBundles(): Promise<void> {
     return NO_RELOAD_NEEDED;
   }
 
+  // Update the requested locale BEFORE checking the guard so that
+  // the in-flight reload loop can detect locale drift and run another
+  // cycle (see the `localeAtLoopStart` comparison inside the loop).
   pendingReloadRequestedLocale = getCurrentLocale();
   if (pendingReload) {
     return pendingReload;

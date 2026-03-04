@@ -86,7 +86,10 @@
       "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
       "oxlint --fix"
     ],
-    "*.{js,mjs,cjs}": "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
+    "*.{js,mjs,cjs}": [
+      "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
+      "oxlint --fix"
+    ],
     "*.{json,yaml,yml,md,html,css,less}": "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern"
   },
   "engines": {

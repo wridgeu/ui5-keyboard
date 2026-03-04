@@ -3,6 +3,12 @@
 Based on the [I18N-EXTENSIBILITY proposal](./I18N-EXTENSIBILITY.md).
 Incorporates findings from a colleague's plan (merged and superseded).
 
+> **Implementation note:** This plan envisioned keeping `src/internal/i18n.ts`
+> as a thin re-export facade for import stability. During implementation the
+> facade was removed — `KioskKeyboard.ts` and `KioskKeyboardRenderer.ts`
+> import directly from `src/internal/i18n-registry.ts`. The public API is
+> unchanged: consumers use the static methods on `KioskKeyboard`.
+
 ---
 
 ## 1. Scope

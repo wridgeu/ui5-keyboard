@@ -23,11 +23,19 @@ function resolveUi5CliEntry(packageRoot: string): string {
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.createConnection(port, "localhost");
+    socket.setTimeout(5_000);
     socket.once("connect", () => {
       socket.destroy();
       resolve(true);
     });
-    socket.once("error", () => resolve(false));
+    socket.once("timeout", () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.once("error", () => {
+      socket.destroy();
+      resolve(false);
+    });
   });
 }
 
@@ -41,6 +49,7 @@ function waitForServer(port: number, timeout = 30_000): Promise<void> {
         resolve();
       });
       socket.once("error", () => {
+        socket.destroy();
         if (Date.now() - start > timeout) {
           reject(new Error(`Server not ready on port ${port} after ${timeout}ms`));
         } else {
