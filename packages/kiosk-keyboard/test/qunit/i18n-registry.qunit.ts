@@ -1213,9 +1213,9 @@ QUnit.test("reloadBundles aborts after exceeding MAX_RELOAD_CYCLES", async (asse
   const reload = reloadBundles();
   await reload;
 
-  // The exact count depends on MAX_RELOAD_CYCLES (internal constant).
-  // Verify the loop ran multiple times and was ultimately aborted.
-  assert.ok(createCount > 1, `Multiple create calls triggered (got ${createCount})`);
+  // MAX_RELOAD_CYCLES is 5 internally. The initial configureI18n load plus
+  // up to 5 retry cycles means at least 6 create calls before the abort.
+  assert.ok(createCount >= 6, `At least 6 create calls expected (got ${createCount})`);
   assert.ok(warningSpy.calledWithMatch(sinon.match("exceeded")), "Warning logged about exceeding MAX_RELOAD_CYCLES");
 });
 
@@ -1239,6 +1239,7 @@ QUnit.test("getText returns fallback when base bundle is undefined", (assert) =>
 
 QUnit.test("Partial bundle failure: one succeeds, one fails", async (assert) => {
   stubBaseBundle({ KEY: "base", OTHER: "other-base" });
+  const warningSpy = sandbox.spy(Log, "warning");
 
   const createStub = sandbox.stub(ResourceBundle, "create");
   createStub.onCall(0).returns(Promise.resolve(makeBundleStub({ KEY: "enhanced-key" })) as never);
@@ -1250,6 +1251,10 @@ QUnit.test("Partial bundle failure: one succeeds, one fails", async (assert) => 
 
   assert.strictEqual(getText("KEY", "fallback"), "enhanced-key", "Successful bundle text is applied");
   assert.strictEqual(getText("OTHER", "fallback"), "other-base", "Base text used for key not in successful bundle");
+  assert.ok(
+    warningSpy.getCalls().some((c) => String(c.args[0]).includes("Failed to create i18n enhancement bundle")),
+    "Warning logged for the failed bundle",
+  );
 });
 
 QUnit.test("Override hook returning empty string applies empty string", (assert) => {

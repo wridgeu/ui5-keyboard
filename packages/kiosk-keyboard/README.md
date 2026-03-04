@@ -1034,6 +1034,8 @@ KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
 
 **Resolution order:** base library bundle (with built-in fallback) → enhancement bundles (last wins) → override hook.
 
+**Locale reactivity:** when the UI5 locale changes at runtime (e.g. via `Localization.setLanguage()`), all live `KioskKeyboard` instances automatically reload their enhancement bundles and re-render with the updated texts.
+
 **Validation behavior:** invalid top-level configuration (for example `null`, non-array `enhanceWith`, non-string `fallbackLocale`) logs a warning and rejects the returned Promise.
 
 **FLP cleanup** — call both reset methods in `Component.destroy()` to prevent cross-app leakage:
@@ -1069,7 +1071,12 @@ console.log(config?.enhanceWith); // read-only — mutations throw
 **TypeScript types** — import the config and context types for type-safe usage:
 
 ```ts
-import type { KioskI18nConfig, KioskI18nOverrideContext } from "ui5/kiosk/types";
+import type {
+  KioskI18nConfig,
+  KioskI18nEnhancement,
+  KioskI18nOverrideHook,
+  KioskI18nOverrideContext,
+} from "ui5/kiosk/types";
 ```
 
 | Method                                                    | Description                                          |

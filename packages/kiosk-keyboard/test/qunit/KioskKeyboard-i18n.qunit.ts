@@ -286,7 +286,7 @@ QUnit.test("Destroying last instance auto-resets i18n config and hook", async (a
   KioskKeyboard.setI18nOverrideHook(() => "Hooked");
 
   assert.ok(hasConfiguredEnhancements(), "Enhancements active before destroy");
-  assert.ok(getI18nConfiguration() !== null, "Config active before destroy");
+  assert.notStrictEqual(getI18nConfiguration(), null, "Config active before destroy");
 
   input.destroy();
   kb.destroy();
@@ -339,4 +339,83 @@ QUnit.test("Re-created instance works after auto-reset when configureI18n is re-
 
   input2.destroy();
   kb2.destroy();
+});
+
+QUnit.test("Destroying one of two instances does NOT auto-reset i18n", async (assert) => {
+  const input1 = new Input({ value: "" });
+  const input2 = new Input({ value: "" });
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+  const kb1 = new KioskKeyboard({ targetInput: input1 });
+  const kb2 = new KioskKeyboard({ targetInput: input2 });
+  await placeAndWait(kb1);
+  await placeAndWait(kb2);
+
+  const fakeBundle = {
+    getText(key: string) {
+      if (key === "KIOSK_KEYBOARD_LABEL") return "Enhanced";
+      return null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.bundle" }],
+  });
+  KioskKeyboard.setI18nOverrideHook(() => "Hooked");
+
+  // Destroy first instance — second still alive, so NO auto-reset
+  input1.destroy();
+  kb1.destroy();
+
+  assert.ok(hasConfiguredEnhancements(), "Enhancements still active after destroying one of two instances");
+  assert.notStrictEqual(getI18nConfiguration(), null, "Config still active after destroying one of two instances");
+
+  // Destroy second instance — now auto-reset triggers
+  input2.destroy();
+  kb2.destroy();
+
+  assert.strictEqual(getI18nConfiguration(), null, "Config auto-cleared after last instance destroyed");
+  assert.ok(!hasConfiguredEnhancements(), "Enhancements auto-cleared after last instance destroyed");
+});
+
+QUnit.test("onLocalizationChanged triggers bundle reload and re-render", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  let bundleVersion = "v1";
+  const fakeBundle = {
+    getText(key: string) {
+      if (key === "KIOSK_KEYBOARD_LABEL") return `Label-${bundleVersion}`;
+      return null;
+    },
+  } as ResourceBundle;
+
+  i18nSandbox.stub(ResourceBundle, "create").returns(Promise.resolve(fakeBundle) as never);
+
+  await KioskKeyboard.configureI18n({
+    enhanceWith: [{ bundleName: "test.locale" }],
+  });
+  await waitForRender();
+
+  assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), "Label-v1", "Initial enhanced label");
+
+  // Simulate language change through the actual lifecycle hook
+  bundleVersion = "v2";
+  kb.onLocalizationChanged();
+  // Wait for the async reload + re-render triggered by the hook
+  await reloadBundles();
+  await waitForRender();
+
+  assert.strictEqual(
+    kb.getDomRef()?.getAttribute("aria-label"),
+    "Label-v2",
+    "Label updated after onLocalizationChanged",
+  );
+
+  input.destroy();
+  kb.destroy();
 });

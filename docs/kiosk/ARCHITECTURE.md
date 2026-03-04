@@ -520,6 +520,12 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | `inputmode` restore on destroy          | `exit()` calls `_restoreNativeKeyboard()`                                        |
 | Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop             |
 | `show()` without target input           | `_suppressNativeKeyboard()` is a no-op when no target element exists             |
+| Enhancement bundle load failure         | `createEnhancementBundle` catches, logs warning, returns `null`; filtered out    |
+| Override hook throws                    | `getText` catches, logs warning, keeps pre-hook `resolvedText`                   |
+| Locale change with no living instances  | `reloadIfStale()` in `init()` detects stale bundles and reloads on next create   |
+| Rapid sequential `configureI18n` calls  | Generation counter discards stale async loads; only latest config is applied     |
+| Locale churn during bundle reload       | `reloadBundles` loop retries up to `MAX_RELOAD_CYCLES` (5), then aborts          |
+| Last `KioskKeyboard` instance destroyed | `exit()` auto-resets i18n config and clears override hook (FLP safety)           |
 
 ## Project Layout
 
