@@ -765,19 +765,21 @@ export default class KioskKeyboard extends Control {
     // Use the same _lastReloadPromise sentinel as onLocalizationChanged
     // to avoid registering duplicate .then() callbacks when multiple
     // instances init simultaneously.
-    const staleReload = registryReloadIfStale();
-    if (staleReload !== KioskKeyboard._lastReloadPromise) {
-      KioskKeyboard._lastReloadPromise = staleReload;
-      void staleReload
-        .then(() => KioskKeyboard._invalidateAllInstances())
-        .catch((e) => {
-          Log.warning(`init: failed to reload stale i18n bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
-        })
-        .finally(() => {
-          if (KioskKeyboard._lastReloadPromise === staleReload) {
-            KioskKeyboard._lastReloadPromise = null;
-          }
-        });
+    if (registryHasConfiguredEnhancements()) {
+      const staleReload = registryReloadIfStale();
+      if (staleReload !== KioskKeyboard._lastReloadPromise) {
+        KioskKeyboard._lastReloadPromise = staleReload;
+        void staleReload
+          .then(() => KioskKeyboard._invalidateAllInstances())
+          .catch((e) => {
+            Log.warning(`init: failed to reload stale i18n bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+          })
+          .finally(() => {
+            if (KioskKeyboard._lastReloadPromise === staleReload) {
+              KioskKeyboard._lastReloadPromise = null;
+            }
+          });
+      }
     }
   }
 
