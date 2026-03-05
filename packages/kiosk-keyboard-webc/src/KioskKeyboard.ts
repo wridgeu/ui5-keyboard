@@ -203,7 +203,7 @@ export default class KioskKeyboard extends UI5Element {
   private _escapeListenerAttached = false;
 
   // ── Physical keyboard highlight ──
-  private _highlightTargetId: string | null = null;
+  private _highlightTarget: HTMLElement | null = null;
 
   // ── Bound listeners (document-level) ──
   private readonly _boundFocusIn = this._onDocumentFocusIn.bind(this);
@@ -664,8 +664,12 @@ export default class KioskKeyboard extends UI5Element {
   /** Resolve a native input/textarea from an element, using the custom resolver if set. */
   private _resolveInputFrom(el: HTMLElement): HTMLInputElement | HTMLTextAreaElement | null {
     if (this._targetResolver) {
-      const custom = this._targetResolver(el);
-      if (custom) return custom;
+      try {
+        const custom = this._targetResolver(el);
+        if (custom) return custom;
+      } catch (err) {
+        console.warn("[kiosk-keyboard] Custom target resolver threw:", err);
+      }
     }
     return resolveInputOrTextarea(el);
   }
@@ -738,14 +742,19 @@ export default class KioskKeyboard extends UI5Element {
   private _onDocumentFocusOut(_e: FocusEvent): void {
     if (!this._open || !this.autoShow) return;
 
+    if (this._deferredFocusOutCloseId !== null) {
+      cancelAnimationFrame(this._deferredFocusOutCloseId);
+    }
+
     this._deferredFocusOutCloseId = requestAnimationFrame(() => {
       this._deferredFocusOutCloseId = null;
+      if (!this.isConnected) return;
       const active = document.activeElement;
 
       if (active && (this.shadowRoot!.contains(active) || this.contains(active))) return;
-      if (active && resolveInputOrTextarea(active)) {
+      if (active instanceof HTMLElement && this._resolveInputFrom(active)) {
         const ids = this._inputIdsList;
-        if (ids.length === 0 || this._matchesInputIds(active as HTMLElement, ids)) return;
+        if (ids.length === 0 || this._matchesInputIds(active, ids)) return;
       }
 
       this.close();
@@ -886,19 +895,15 @@ export default class KioskKeyboard extends UI5Element {
 
   private _syncPhysicalKeyHighlight(): void {
     const target = this._resolveTarget();
-    const targetId = target?.id ?? null;
 
-    if (targetId === this._highlightTargetId) return;
+    if (target === this._highlightTarget) return;
 
-    if (this._highlightTargetId) {
-      const oldEl = document.getElementById(this._highlightTargetId);
-      if (oldEl) {
-        oldEl.removeEventListener("keydown", this._boundPhysicalKeyDown);
-        oldEl.removeEventListener("keyup", this._boundPhysicalKeyUp);
-      }
+    if (this._highlightTarget) {
+      this._highlightTarget.removeEventListener("keydown", this._boundPhysicalKeyDown);
+      this._highlightTarget.removeEventListener("keyup", this._boundPhysicalKeyUp);
     }
 
-    this._highlightTargetId = targetId;
+    this._highlightTarget = target;
 
     if (target) {
       target.addEventListener("keydown", this._boundPhysicalKeyDown);
@@ -907,13 +912,10 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   private _teardownPhysicalKeyHighlight(): void {
-    if (this._highlightTargetId) {
-      const el = document.getElementById(this._highlightTargetId);
-      if (el) {
-        el.removeEventListener("keydown", this._boundPhysicalKeyDown);
-        el.removeEventListener("keyup", this._boundPhysicalKeyUp);
-      }
-      this._highlightTargetId = null;
+    if (this._highlightTarget) {
+      this._highlightTarget.removeEventListener("keydown", this._boundPhysicalKeyDown);
+      this._highlightTarget.removeEventListener("keyup", this._boundPhysicalKeyUp);
+      this._highlightTarget = null;
     }
   }
 }
