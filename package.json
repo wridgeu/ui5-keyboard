@@ -35,6 +35,7 @@
     "start:kiosk": "npm run start:qunit -w packages/kiosk-keyboard",
     "start:kiosk:qunit": "npm run start:qunit -w packages/kiosk-keyboard",
     "start:kiosk:visual": "npm run start:visual -w packages/kiosk-keyboard",
+    "start:kiosk-webc": "npm run start -w packages/kiosk-keyboard-webc",
     "test": "npm run test:hotkeys && npm run test:kiosk && npm run test:kiosk-webc",
     "test:qunit": "npm run test:hotkeys:qunit && npm run test:kiosk:qunit",
     "test:hotkeys": "npm test -w packages/hotkeys",

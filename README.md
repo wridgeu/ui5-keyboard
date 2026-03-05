@@ -179,6 +179,7 @@ npm install                 # Install all workspaces
 | `npm run start:hotkeys`      | Hotkeys library + test runner             | 8081 |
 | `npm run start:kiosk`        | Kiosk keyboard library + test runner      | 8082 |
 | `npm run start:kiosk:visual` | Kiosk visual test page                    | 8082 |
+| `npm run start:kiosk-webc`   | Kiosk web component standalone demo       | 8084 |
 
 ### Build & Test
 

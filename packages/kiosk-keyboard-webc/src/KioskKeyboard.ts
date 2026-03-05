@@ -730,28 +730,28 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Checks whether the focused element matches one of the configured inputIds.
+   * Checks whether the focused element (or a close ancestor) matches one
+   * of the configured inputIds.
    *
-   * Supports exact DOM id match as well as UI5-style prefixed IDs where the
-   * control id appears as a `--{id}` or `--{id}-inner` suffix on the native
-   * element (e.g. `"container-app---view--myInput-inner"` matches `"myInput"`).
+   * Supports:
+   * - Exact DOM id match (plain HTML)
+   * - UI5-style prefixed IDs: walks up the DOM and strips the view prefix
+   *   (`*--`) from each ancestor's id, matching the unprefixed control id
+   *   (e.g. `"container-app---view--myInput"` matches `"myInput"`)
    */
   private _matchesInputIds(el: HTMLElement, ids: string[]): boolean {
-    const domId = el.id;
-    if (!domId) return false;
-
-    // Exact match
-    if (ids.includes(domId)) return true;
-
-    // UI5 prefixed match: strip `-inner` suffix, then check if any id
-    // appears as the last `--{id}` segment.
-    const normalized = domId.endsWith("-inner") ? domId.slice(0, -6) : domId;
-    const lastSepIdx = normalized.lastIndexOf("--");
-    if (lastSepIdx !== -1) {
-      const suffix = normalized.slice(lastSepIdx + 2);
-      if (ids.includes(suffix)) return true;
+    let current: HTMLElement | null = el;
+    // Walk up at most 5 levels (input → inner wrapper → control root)
+    for (let i = 0; i < 5 && current; i++) {
+      const domId = current.id;
+      if (domId) {
+        if (ids.includes(domId)) return true;
+        // Strip UI5 view prefix: everything up to and including the last "--"
+        const sepIdx = domId.lastIndexOf("--");
+        if (sepIdx !== -1 && ids.includes(domId.slice(sepIdx + 2))) return true;
+      }
+      current = current.parentElement;
     }
-
     return false;
   }
 
