@@ -15,10 +15,11 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 export function graphemeLengthBefore(value: string, offset: number): number {
   if (offset <= 0) return 0;
 
-  // Only examine the last few characters — no grapheme cluster exceeds ~20
-  // code units, so slicing avoids iterating the entire string for long values.
+  // Only examine a trailing window — slicing avoids iterating the entire
+  // string for long values. 40 code units covers all real-world grapheme
+  // clusters including long emoji tag sequences and combining-mark runs.
   const clampedOffset = Math.min(offset, value.length);
-  const tail = value.slice(Math.max(0, clampedOffset - 20), clampedOffset);
+  const tail = value.slice(Math.max(0, clampedOffset - 40), clampedOffset);
 
   let last: Intl.SegmentData | undefined;
   for (const seg of segmenter.segment(tail)) {
