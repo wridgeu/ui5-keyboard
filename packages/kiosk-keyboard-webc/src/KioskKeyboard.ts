@@ -193,6 +193,7 @@ export default class KioskKeyboard extends UI5Element {
   _lastFocusedKeyId: string | null = null;
   _maxHeight = 0;
   _highlightedKey: string | null = null;
+  _layoutSwitchedByUser = false;
   _pendingAnnouncement: string | null = null;
   _deferredFocusOutCloseId: number | null = null;
 
@@ -327,6 +328,7 @@ export default class KioskKeyboard extends UI5Element {
     }
     if (name === "keyboardType") {
       this._keyboardTypeExplicit = true;
+      this._layoutSwitchedByUser = false;
       this.fireDecoratorEvent("keyboard-type-change", { keyboardType: this.keyboardType });
     }
     if (name === "docked" || name === "autoShow") {
@@ -378,6 +380,10 @@ export default class KioskKeyboard extends UI5Element {
   // ── Template helpers (used by KioskKeyboardTemplate) ──
 
   _getResolvedLayout(): LayoutDefinition {
+    // An explicit layout switch (via {layout:...} key) takes precedence,
+    // even when keyboardType constrains the default layout.
+    if (this._layoutSwitchedByUser) return getLayoutOrDefault(this._currentLayout);
+
     const type = this.keyboardType;
     if (type === "Numpad") return getLayoutOrDefault("numpad");
     if (type === "Numeric") return getLayoutOrDefault("numeric");
@@ -450,8 +456,10 @@ export default class KioskKeyboard extends UI5Element {
       const layoutName = value.slice(8, -1);
       if (layoutName === "base") {
         this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
+        this._layoutSwitchedByUser = false;
       } else {
         this._currentLayout = layoutName;
+        this._layoutSwitchedByUser = true;
       }
       this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
       return;
