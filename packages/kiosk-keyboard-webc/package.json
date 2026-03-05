@@ -34,24 +34,33 @@
       "types": "./dist/KioskKeyboard.d.ts",
       "default": "./dist/KioskKeyboard.js"
     },
-    "./dist/*": "./dist/*",
-    "./dist/Assets.js": "./dist/Assets.js"
+    "./dist/*": "./dist/*"
   },
   "scripts": {
-    "clean": "rimraf dist",
-    "build": "tsc",
+    "clean": "rimraf dist src/generated",
+    "generate": "ui5nps generate",
+    "build": "npm run generate && tsc && npm run build:bundle",
+    "build:bundle": "vite build",
+    "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:component": "web-test-runner",
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@ui5/webcomponents": "^2.15.1",
     "@ui5/webcomponents-base": "^2.19.2",
+    "@ui5/webcomponents-icons": "^2.15.1",
     "@ui5/webcomponents-theming": "^2.19.2"
   },
   "devDependencies": {
+    "@open-wc/testing": "^4.0.0",
     "@ui5/webcomponents-tools": "^2.19.2",
+    "@web/dev-server-esbuild": "^1.0.5",
+    "@web/test-runner": "^0.20.2",
+    "@web/test-runner-playwright": "^0.11.1",
     "jsdom": "^26.0.0",
     "vitest": "^3.0.0"
   }

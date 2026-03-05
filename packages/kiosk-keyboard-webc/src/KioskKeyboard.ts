@@ -1,6 +1,13 @@
+import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
+import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
+import property from "@ui5/webcomponents-base/dist/decorators/property.js";
+import event from "@ui5/webcomponents-base/dist/decorators/event-strict.js";
+import jsxRenderer from "@ui5/webcomponents-base/dist/renderer/JsxRenderer.js";
+import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
+
 import { ShiftState } from "./core/shift-state.js";
 import { resolveInputOrTextarea, keyElementId, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
-import { insertText, handleBackspace } from "./core/input-operations.js";
+import { insertText, handleBackspace, handleNavigation } from "./core/input-operations.js";
 import { detectKeyboardType } from "./core/keyboard-type-detector.js";
 import {
   getLayoutOrDefault,
@@ -16,23 +23,69 @@ import {
   resetLocaleLayouts,
 } from "./core/layout-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
-import type { LayoutDefinition, KeyDefinition } from "./types.js";
-import cssText from "./themes/KioskKeyboard.css.js";
+import type {
+  LayoutDefinition,
+  KeyDefinition,
+  KeyPressEventDetail,
+  LayoutChangeEventDetail,
+  KeyboardTypeChangeEventDetail,
+} from "./types.js";
 
-// ── Icon SVGs for built-in special keys ──
-const ICON_SHIFT =
-  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 2l6 7h-4v5H6V9H2z"/></svg>';
-const ICON_SHIFT_LOCKED =
-  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l6 7h-4v3H6V8H2z"/><rect x="5" y="12" width="6" height="3" rx="0.5"/></svg>';
-const ICON_ENTER =
-  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M13 3v5H5.5l2.3-2.3L7 5l-4 4 4 4 .8-.7L5.5 10H14V3z"/></svg>';
-const ICON_BACKSPACE =
-  '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M14 3H5L1 8l4 5h9V3zm-3.3 6.3l-.7.7L8 8l-2 2-.7-.7L7.3 8 5.3 6l.7-.7L8 7.3l2-2.3.7.7L8.7 8z"/></svg>';
+import KioskKeyboardTemplate from "./KioskKeyboardTemplate.js";
+import styles from "./generated/themes/KioskKeyboard.css.js";
 
+// ── Register ui5-icon + needed icons so they resolve inside shadow DOM ──
+import "@ui5/webcomponents/dist/Icon.js";
+import "@ui5/webcomponents-icons/dist/arrow-top.js";
+import "@ui5/webcomponents-icons/dist/arrow-left.js";
+import "@ui5/webcomponents-icons/dist/accept.js";
+import "@ui5/webcomponents-icons/dist/locked.js";
+
+// ── Icon name map (used by the template to render <ui5-icon>) ──
 const ICON_MAP: Record<string, string> = {
-  "{shift}": ICON_SHIFT,
-  "{enter}": ICON_ENTER,
-  "{backspace}": ICON_BACKSPACE,
+  "{shift}": "arrow-top",
+  "{enter}": "accept",
+  "{backspace}": "arrow-left",
+};
+
+const ICON_SHIFT_LOCKED = "locked";
+
+// ── Native-dispatchable key allowlist ──
+const NATIVE_DISPATCHABLE_KEYS = new Set([
+  "F1",
+  "F2",
+  "F3",
+  "F4",
+  "F5",
+  "F6",
+  "F7",
+  "F8",
+  "F9",
+  "F10",
+  "F11",
+  "F12",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+]);
+
+// ── Built-in native actions for F-keys ──
+const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
+  F5: () => {
+    location.reload();
+  },
+  F11: () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.().catch(() => undefined);
+    } else {
+      void document.documentElement.requestFullscreen?.().catch(() => undefined);
+    }
+  },
 };
 
 /** ARIA labels for icon-only special keys. */
@@ -43,32 +96,38 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
   " ": "KEY_SPACE",
 };
 
-// ── Reusable elements for safe HTML/attribute escaping ──
-const _escDiv = document.createElement("div");
-const _escTextNode = document.createTextNode("");
-_escDiv.appendChild(_escTextNode);
-
-/** Escape a string for safe use as HTML text content. */
-function escHtml(s: string): string {
-  _escTextNode.data = s;
-  return _escDiv.innerHTML;
-}
-
-/** Escape a string for safe use inside a double-quoted HTML attribute value. */
-function escAttr(s: string): string {
-  return escHtml(s).replaceAll('"', "&quot;");
-}
-
 /**
  * `<kiosk-keyboard>` — Native web component for on-screen virtual keyboard.
  *
- * Built on standard custom elements (no UI5 runtime required). Consumable in
- * any framework (HTML, React, Vue, Angular) and inside UI5 apps via
+ * Built on the UI5 Web Components framework (`UI5Element`) for automatic SAP
+ * theming, reactive properties, and JSX-based rendering. Consumable in any
+ * framework (HTML, React, Vue, Angular) and inside UI5 apps via
  * `WebComponent.extend()` bridge.
  *
  * @tagname kiosk-keyboard
  */
-export default class KioskKeyboard extends HTMLElement {
+@customElement({
+  tag: "kiosk-keyboard",
+  renderer: jsxRenderer,
+  template: KioskKeyboardTemplate,
+  styles,
+  languageAware: true,
+  themeAware: true,
+})
+@event("key-press", { bubbles: true, cancelable: true })
+@event("after-open", { bubbles: true })
+@event("after-close", { bubbles: true })
+@event("layout-change", { bubbles: true })
+@event("keyboard-type-change", { bubbles: true })
+export default class KioskKeyboard extends UI5Element {
+  declare eventDetails: {
+    "key-press": KeyPressEventDetail;
+    "after-open": void;
+    "after-close": void;
+    "layout-change": LayoutChangeEventDetail;
+    "keyboard-type-change": KeyboardTypeChangeEventDetail;
+  };
+
   // ── Static registry delegates ──
   static registerLayout = registerLayout;
   static unregisterLayout = unregisterLayout;
@@ -82,173 +141,100 @@ export default class KioskKeyboard extends HTMLElement {
   static getLocaleLayout = getLocaleLayout;
   static setI18nResolver = setI18nResolver;
 
-  // ── Observed attributes ──
-  static get observedAttributes(): string[] {
-    return [
-      "layout",
-      "keyboard-type",
-      "docked",
-      "open",
-      "auto-show",
-      "auto-type",
-      "disabled",
-      "for",
-      "aria-label",
-      "input-ids",
-      "stable-height",
-    ];
-  }
+  // ── Public reactive properties (synced with attributes) ──
 
-  // ── All living instances (for multi-keyboard isolation) ──
-  private static readonly _instances = new Set<KioskKeyboard>();
+  @property()
+  layout = "";
 
-  // ── Internal state ──
-  private _shiftState = new ShiftState();
-  private _baseLayout = "";
-  private _currentLayout = "";
-  private _keyboardTypeExplicit = false;
-  private _open = false;
-  private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
-  private _lastFocusedKeyId: string | null = null;
-  private _maxHeight = 0;
-  private _deferredFocusOutCloseId: number | null = null;
+  @property()
+  keyboardType = "Full";
+
+  @property({ type: Boolean })
+  docked = false;
+
+  @property({ type: Boolean })
+  autoShow = false;
+
+  @property({ type: Boolean })
+  autoType = false;
+
+  @property({ type: Boolean })
+  disabled = false;
+
+  @property()
+  for = "";
+
+  @property()
+  inputIds = "";
+
+  @property({ type: Boolean })
+  stableHeight = false;
+
+  @property()
+  mobileKeyboard = "Auto";
+
+  @property()
+  fKeyMode = "Event";
+
+  // ── Internal reactive state (triggers re-render, no attribute) ──
+
+  @property({ type: Boolean, noAttribute: true })
+  _open = false;
+
+  @property({ noAttribute: true })
+  _currentLayout = "";
+
+  @property({ type: Boolean, noAttribute: true })
+  _shifted = false;
+
+  @property({ type: Boolean, noAttribute: true })
+  _capsLock = false;
+
+  // ── Non-reactive internal state ──
+
+  _shiftState = new ShiftState();
+  _baseLayout = "";
+  _keyboardTypeExplicit = false;
+  _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
+  _lastFocusedKeyId: string | null = null;
+  _maxHeight = 0;
+  _highlightedKey: string | null = null;
+  _pendingAnnouncement: string | null = null;
+  _deferredFocusOutCloseId: number | null = null;
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   private static readonly _inputModeSuppressions = new Map<string, { original: string | null; refCount: number }>();
   private _suppressedInputId: string | null = null;
 
+  // ── Multi-keyboard instance isolation ──
+  private static readonly _instances = new Set<KioskKeyboard>();
+
   // ── Physical keyboard highlight ──
   private _highlightTargetId: string | null = null;
 
-  // ── Shadow DOM ──
-  private readonly _shadow: ShadowRoot;
+  // ── Bound listeners (document-level) ──
+  private readonly _boundFocusIn = this._onDocumentFocusIn.bind(this);
+  private readonly _boundFocusOut = this._onDocumentFocusOut.bind(this);
+  private readonly _boundEscape = (e: Event) => this._onDocumentEscape(e as KeyboardEvent);
+  private readonly _boundPhysicalKeyDown = (e: Event) => this._highlightKey((e as KeyboardEvent).key, true);
+  private readonly _boundPhysicalKeyUp = (e: Event) => this._highlightKey((e as KeyboardEvent).key, false);
+  private readonly _boundTouchStart = (e: Event) => {
+    const target = (e.target as HTMLElement).closest?.(".kiosk-key");
+    if (target) this._onKeyMouseDown(e);
+  };
 
-  // ── Bound listeners ──
-  private readonly _boundFocusIn: (e: FocusEvent) => void;
-  private readonly _boundFocusOut: (e: FocusEvent) => void;
-  private readonly _boundEscape: EventListener;
-  private readonly _boundPhysicalKeyDown: EventListener;
-  private readonly _boundPhysicalKeyUp: EventListener;
+  // ── Pre-bound template handlers (avoids per-render allocation) ──
+  readonly _boundOnKeyClick = this._onKeyClick.bind(this);
+  readonly _boundOnKeyMouseDown = this._onKeyMouseDown.bind(this);
+  readonly _boundOnKeyDown = this._onKeyDown.bind(this);
 
-  private static _sheet: CSSStyleSheet | null = null;
+  // ── Convenience property aliases ──
 
-  private static _getSheet(): CSSStyleSheet {
-    if (!KioskKeyboard._sheet) {
-      KioskKeyboard._sheet = new CSSStyleSheet();
-      KioskKeyboard._sheet.replaceSync(cssText);
-    }
-    return KioskKeyboard._sheet;
+  get enabled(): boolean {
+    return !this.disabled;
   }
-
-  constructor() {
-    super();
-    this._shadow = this.attachShadow({ mode: "open" });
-    this._shadow.adoptedStyleSheets = [KioskKeyboard._getSheet()];
-
-    this._boundFocusIn = this._onDocumentFocusIn.bind(this);
-    this._boundFocusOut = this._onDocumentFocusOut.bind(this);
-    this._boundEscape = (e: Event) => this._onDocumentEscape(e as KeyboardEvent);
-    this._boundPhysicalKeyDown = (e: Event) => this._highlightKey((e as KeyboardEvent).key, true);
-    this._boundPhysicalKeyUp = (e: Event) => this._highlightKey((e as KeyboardEvent).key, false);
-
-    // Delegate events on the shadow root once — avoids re-attaching on every render
-    this._shadow.addEventListener("click", (e) => {
-      const target = (e.target as HTMLElement).closest?.(".kiosk-key");
-      if (target) this._onKeyClick(e);
-    });
-    this._shadow.addEventListener("mousedown", (e) => {
-      const target = (e.target as HTMLElement).closest?.(".kiosk-key");
-      if (target) this._onKeyMouseDown(e);
-    });
-    this._shadow.addEventListener(
-      "touchstart",
-      (e) => {
-        const target = (e.target as HTMLElement).closest?.(".kiosk-key");
-        if (target) this._onKeyMouseDown(e);
-      },
-      { passive: false },
-    );
-    this._shadow.addEventListener("keydown", (e) => {
-      const target = (e.target as HTMLElement).closest?.(".kiosk-key");
-      if (target) this._onKeyDown(e as KeyboardEvent);
-    });
-  }
-
-  // ── Lifecycle ──
-
-  connectedCallback(): void {
-    KioskKeyboard._instances.add(this);
-
-    // Set locale-based default layout if none specified
-    if (!this._baseLayout) {
-      this._baseLayout = getLocaleLayout();
-      if (!this.getAttribute("layout")) {
-        this._currentLayout = this._baseLayout;
-      }
-    }
-
-    this._render();
-    this._syncAutoShow();
-    this._syncPhysicalKeyHighlight();
-
-    if (this.docked) {
-      document.addEventListener("keydown", this._boundEscape);
-    }
-  }
-
-  disconnectedCallback(): void {
-    KioskKeyboard._instances.delete(this);
-    this._teardownAutoShow();
-    this._teardownPhysicalKeyHighlight();
-    this._restoreInputMode();
-    document.removeEventListener("keydown", this._boundEscape);
-
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-      this._deferredFocusOutCloseId = null;
-    }
-
-    this._lastFocusedKeyId = null;
-  }
-
-  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    if (oldValue === newValue) return;
-    this._render();
-
-    if (name === "auto-show" || name === "docked") this._syncAutoShow();
-    if (name === "docked") {
-      if (newValue !== null) {
-        document.addEventListener("keydown", this._boundEscape);
-      } else {
-        document.removeEventListener("keydown", this._boundEscape);
-      }
-    }
-  }
-
-  // ── Property accessors (reflect to/from attributes) ──
-
-  get layout(): string {
-    return this.getAttribute("layout") ?? "";
-  }
-  set layout(val: string) {
-    this.setAttribute("layout", val);
-    this._baseLayout = val;
-    this._currentLayout = val;
-  }
-
-  get keyboardType(): string {
-    return this.getAttribute("keyboard-type") ?? "Full";
-  }
-  set keyboardType(val: string) {
-    this.setAttribute("keyboard-type", val);
-    this._keyboardTypeExplicit = true;
-  }
-
-  get docked(): boolean {
-    return this.hasAttribute("docked");
-  }
-  set docked(val: boolean) {
-    this.toggleAttribute("docked", val);
+  set enabled(val: boolean) {
+    this.disabled = !val;
   }
 
   get open(): boolean {
@@ -259,101 +245,137 @@ export default class KioskKeyboard extends HTMLElement {
     else this.close();
   }
 
-  get autoShow(): boolean {
-    return this.hasAttribute("auto-show");
-  }
-  set autoShow(val: boolean) {
-    this.toggleAttribute("auto-show", val);
-  }
-
-  get autoType(): boolean {
-    return this.hasAttribute("auto-type");
-  }
-  set autoType(val: boolean) {
-    this.toggleAttribute("auto-type", val);
-  }
-
-  get enabled(): boolean {
-    return !this.hasAttribute("disabled");
-  }
-  set enabled(val: boolean) {
-    this.toggleAttribute("disabled", !val);
-  }
-
-  get for(): string {
-    return this.getAttribute("for") ?? "";
-  }
-  set for(val: string) {
-    this.setAttribute("for", val);
-  }
-
-  get inputIds(): string[] {
-    const attr = this.getAttribute("input-ids");
-    return attr
-      ? attr
+  get _inputIdsList(): string[] {
+    return this.inputIds
+      ? this.inputIds
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
   }
-  set inputIds(val: string[]) {
-    this.setAttribute("input-ids", val.join(","));
+
+  get _componentId(): string {
+    return this.id || "kiosk-kb";
   }
 
-  get stableHeight(): boolean {
-    return this.hasAttribute("stable-height");
+  // ── Lifecycle ──
+
+  onEnterDOM(): void {
+    KioskKeyboard._instances.add(this);
+
+    if (!this._baseLayout) {
+      this._baseLayout = getLocaleLayout();
+      if (!this.layout) {
+        this._currentLayout = this._baseLayout;
+      }
+    }
+
+    this._syncAutoShow();
+    this._syncPhysicalKeyHighlight();
+
+    if (this.docked) {
+      document.addEventListener("keydown", this._boundEscape);
+    }
+
+    // Touchstart needs { passive: false } which JSX can't express
+    this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false });
   }
-  set stableHeight(val: boolean) {
-    this.toggleAttribute("stable-height", val);
+
+  onExitDOM(): void {
+    KioskKeyboard._instances.delete(this);
+    this._teardownAutoShow();
+    this._teardownPhysicalKeyHighlight();
+    this._restoreInputMode();
+    document.removeEventListener("keydown", this._boundEscape);
+    this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
+
+    if (this._deferredFocusOutCloseId !== null) {
+      cancelAnimationFrame(this._deferredFocusOutCloseId);
+      this._deferredFocusOutCloseId = null;
+    }
+
+    this._lastFocusedKeyId = null;
+  }
+
+  onAfterRendering(): void {
+    // Announce pending live region text (from show/close/shift)
+    if (this._pendingAnnouncement) {
+      const region = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard__live-region");
+      if (region) region.textContent = this._pendingAnnouncement;
+      this._pendingAnnouncement = null;
+    }
+
+    // Stable height
+    if (this.stableHeight && !this.docked) {
+      const root = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard");
+      if (root) {
+        const h = root.offsetHeight;
+        if (h > this._maxHeight) this._maxHeight = h;
+        if (this._maxHeight > 0) root.style.minHeight = `${this._maxHeight}px`;
+      }
+    }
+  }
+
+  onInvalidation(changeInfo: ChangeInfo): void {
+    const { name } = changeInfo;
+
+    if (name === "layout") {
+      this._baseLayout = this.layout;
+      this._currentLayout = this.layout;
+    }
+    if (name === "keyboardType") {
+      this._keyboardTypeExplicit = true;
+      this.fireDecoratorEvent("keyboard-type-change", { keyboardType: this.keyboardType });
+    }
+    if (name === "docked" || name === "autoShow") {
+      this._syncAutoShow();
+    }
+    if (name === "docked") {
+      if (this.docked) document.addEventListener("keydown", this._boundEscape);
+      else document.removeEventListener("keydown", this._boundEscape);
+    }
   }
 
   // ── Public API ──
 
+  /** Opens the docked keyboard. No-op if not docked or already open. */
   show(): void {
-    if (!this.docked) return;
+    if (!this.docked || this._shouldDeferToNative()) return;
+    if (this._open) return;
     this._open = true;
-    this._render();
     this._suppressInputMode();
-    this._announceLiveRegion(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
-    this.dispatchEvent(new CustomEvent("after-open", { bubbles: true, composed: true }));
+    this._pendingAnnouncement = getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened");
+    this.fireDecoratorEvent("after-open");
   }
 
+  /** Closes the docked keyboard. No-op if not docked or already closed. */
   close(): void {
-    if (!this.docked) return;
+    if (!this.docked || !this._open) return;
     this._open = false;
-    this._render();
     this._restoreInputMode();
-    this._announceLiveRegion(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
-    this.dispatchEvent(new CustomEvent("after-close", { bubbles: true, composed: true }));
+    this._pendingAnnouncement = getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed");
+    this.fireDecoratorEvent("after-close");
   }
 
+  /** Returns whether the docked keyboard is currently open. */
+  isOpen(): boolean {
+    return this._open;
+  }
+
+  /** Programmatically sets the input element that receives typed characters. */
   setTargetElement(el: HTMLInputElement | HTMLTextAreaElement | null): void {
     this._targetElement = el;
   }
 
+  /** Resets `keyboardType` to `"Full"` and clears the explicit-type flag. */
   resetKeyboardType(): void {
     this._keyboardTypeExplicit = false;
-    this.removeAttribute("keyboard-type");
-    this._render();
+    this.keyboardType = "Full";
   }
 
-  // ── Target resolution ──
+  // ── Template helpers (used by KioskKeyboardTemplate) ──
 
-  private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {
-    if (this._targetElement) return this._targetElement;
-
-    const forId = this.for;
-    if (forId) {
-      const el = document.getElementById(forId);
-      return resolveInputOrTextarea(el);
-    }
-
-    return null;
-  }
-
-  // ── Layout resolution ──
-
-  private _getResolvedLayout(): LayoutDefinition {
+  _getResolvedLayout(): LayoutDefinition {
     const type = this.keyboardType;
     if (type === "Numpad") return getLayoutOrDefault("numpad");
     if (type === "Numeric") return getLayoutOrDefault("numeric");
@@ -361,33 +383,97 @@ export default class KioskKeyboard extends HTMLElement {
     return getLayoutOrDefault(name);
   }
 
-  // ── Key interaction ──
+  _getKeyLabel(key: KeyDefinition): string {
+    if (this._shifted) {
+      if (key.shiftLabel) return key.shiftLabel;
+      if (key.shiftValue) return key.shiftValue;
+      if (key.value.length === 1) return key.value.toUpperCase();
+    }
+    return key.label ?? key.value;
+  }
 
-  private _onKeyClick(e: Event): void {
-    if (!this.enabled) return;
+  _getKeyAriaLabel(key: KeyDefinition): string {
+    const i18nKey = SPECIAL_KEY_LABELS[key.value];
+    if (i18nKey) return getText(i18nKey, key.value);
+    return this._getKeyLabel(key);
+  }
+
+  _getKeyIcon(key: KeyDefinition): string | null {
+    if (key.icon) return key.icon; // custom text icon — rendered as label
+    if (key.value === "{shift}" && this._capsLock) return ICON_SHIFT_LOCKED;
+    return ICON_MAP[key.value] ?? null;
+  }
+
+  get _ariaLabel(): string {
+    return this.getAttribute("aria-label") || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard");
+  }
+
+  get _roleDescription(): string {
+    return getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard");
+  }
+
+  get _liveRegionText(): string {
+    if (this._capsLock) return getText("ARIA_CAPS_LOCK_ON", "Caps Lock on");
+    if (this._shifted) return getText("ARIA_SHIFT_ON", "Shift on");
+    return "";
+  }
+
+  _getFocusPosition(): { row: number; col: number } {
+    if (this._lastFocusedKeyId) {
+      const match = this._lastFocusedKeyId.match(KEY_ID_SUFFIX_RE);
+      if (match) {
+        const layout = this._getResolvedLayout();
+        const r = Number.parseInt(match[1], 10);
+        const c = Number.parseInt(match[2], 10);
+        if (layout[r]?.[c]) return { row: r, col: c };
+      }
+    }
+    return { row: 0, col: 0 };
+  }
+
+  // ── Event handlers (used by template + delegation) ──
+
+  _onKeyClick(e: Event): void {
+    if (this.disabled) return;
 
     const keyEl = (e.target as HTMLElement).closest<HTMLElement>("[data-key]");
     if (!keyEl) return;
 
     const value = keyEl.dataset.key!;
-    const shifted = this._shiftState.isShifted;
+    const shifted = this._shifted;
     const shiftValue = keyEl.dataset.shiftValue;
 
-    // Fire key-press event (can be canceled)
-    const keyPressEvent = new CustomEvent("key-press", {
-      detail: { key: value, shiftKey: shifted },
-      bubbles: true,
-      composed: true,
-      cancelable: true,
-    });
-    if (!this.dispatchEvent(keyPressEvent)) return;
+    // Layout switches don't fire key-press
+    if (value.startsWith("{layout:")) {
+      const layoutName = value.slice(8, -1);
+      if (layoutName === "base") {
+        this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
+      } else {
+        this._currentLayout = layoutName;
+      }
+      this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
+      return;
+    }
+
+    // F-keys fire key-press with the extracted key name (e.g. "F5", not "{fkey:F5}")
+    if (value.startsWith("{fkey:")) {
+      const fkeyName = value.slice(6, -1);
+      const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
+      if (!allowed) return;
+      this._handleFKey(fkeyName, shifted);
+      this._autoReleaseShift();
+      return;
+    }
+
+    // All other keys fire key-press with the raw value
+    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
+    if (!allowed) return;
 
     const target = this._resolveTarget();
 
-    // Handle special keys
     if (value === "{shift}") {
       this._shiftState.toggle();
-      this._render();
+      this._syncShiftState();
       return;
     }
 
@@ -409,30 +495,6 @@ export default class KioskKeyboard extends HTMLElement {
       return;
     }
 
-    if (value.startsWith("{layout:")) {
-      const layoutName = value.slice(8, -1);
-      if (layoutName === "base") {
-        this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
-      } else {
-        this._currentLayout = layoutName;
-      }
-      this.dispatchEvent(
-        new CustomEvent("layout-change", {
-          detail: { layout: this._currentLayout },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      this._render();
-      return;
-    }
-
-    if (value.startsWith("{fkey:")) {
-      // F-key: no text insertion, just the event
-      this._autoReleaseShift();
-      return;
-    }
-
     // Regular character key
     if (target) {
       const char = shifted ? (shiftValue ?? value.toUpperCase()) : value;
@@ -441,36 +503,11 @@ export default class KioskKeyboard extends HTMLElement {
     this._autoReleaseShift();
   }
 
-  private _autoReleaseShift(): void {
-    if (this._shiftState.autoRelease()) {
-      this._render();
-    }
-  }
-
-  /** Focus steal prevention: mousedown/touchstart on keys prevents focus transfer. */
-  private _onKeyMouseDown(e: Event): void {
+  _onKeyMouseDown(e: Event): void {
     e.preventDefault();
   }
 
-  /** Physical keyboard highlight: add/remove pressed class on matching key. */
-  private _highlightKey(physicalKey: string, pressed: boolean): void {
-    const root = this._shadow;
-    const lowerKey = physicalKey.toLowerCase();
-
-    if (pressed) {
-      const selector = `[data-key="${CSS.escape(lowerKey)}"], [data-shift-value="${CSS.escape(physicalKey)}"]`;
-      const el = root.querySelector<HTMLElement>(selector);
-      if (el) el.classList.add("kiosk-key--highlight");
-    } else {
-      root
-        .querySelectorAll<HTMLElement>(".kiosk-key--highlight")
-        .forEach((el) => el.classList.remove("kiosk-key--highlight"));
-    }
-  }
-
-  // ── Roving tabindex / keyboard navigation ──
-
-  private _onKeyDown(e: KeyboardEvent): void {
+  _onKeyDown(e: KeyboardEvent): void {
     const keyEl = (e.target as HTMLElement).closest<HTMLElement>("[data-key]");
     if (!keyEl) return;
 
@@ -519,7 +556,7 @@ export default class KioskKeyboard extends HTMLElement {
     if (moved) {
       e.preventDefault();
       const id = keyElementId(this._componentId, row, col);
-      const nextEl = this._shadow.getElementById(id);
+      const nextEl = this.shadowRoot!.getElementById(id);
       if (nextEl) {
         keyEl.setAttribute("tabindex", "-1");
         nextEl.setAttribute("tabindex", "0");
@@ -529,7 +566,85 @@ export default class KioskKeyboard extends HTMLElement {
     }
   }
 
-  // ── Auto-show (focusin/focusout) ──
+  // ── F-key / navigation key handling ──
+
+  private _handleFKey(fkeyName: string, shiftKey: boolean): void {
+    const mode = this.fKeyMode;
+    if (mode === "None") return;
+
+    let nativeAllowed = true;
+
+    if (mode === "Native") {
+      if (NATIVE_DISPATCHABLE_KEYS.has(fkeyName)) {
+        nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
+        if (nativeAllowed) {
+          const action = NATIVE_FKEY_ACTIONS[fkeyName];
+          if (action) action();
+        }
+      } else {
+        nativeAllowed = false;
+      }
+    }
+
+    // Move cursor in target input for navigation keys (when not suppressed)
+    if (nativeAllowed) {
+      const target = this._resolveTarget();
+      if (target) {
+        handleNavigation(target, fkeyName);
+      }
+    }
+  }
+
+  private _dispatchNativeFKeydown(fkeyName: string, shiftKey: boolean): boolean {
+    const target = this._resolveNativeFKeyTarget();
+    const nativeEvent = new KeyboardEvent("keydown", {
+      key: fkeyName,
+      code: fkeyName,
+      bubbles: true,
+      cancelable: true,
+      shiftKey,
+    });
+    return target.dispatchEvent(nativeEvent);
+  }
+
+  private _resolveNativeFKeyTarget(): EventTarget {
+    const target = this._resolveTarget();
+    if (target) return target;
+    if (document.activeElement instanceof HTMLElement) return document.activeElement;
+    return document;
+  }
+
+  // ── Internal helpers ──
+
+  private _syncShiftState(): void {
+    this._shifted = this._shiftState.isShifted;
+    this._capsLock = this._shiftState.isCapsLock;
+  }
+
+  private _autoReleaseShift(): void {
+    if (this._shiftState.autoRelease()) {
+      this._syncShiftState();
+    }
+  }
+
+  private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {
+    if (this._targetElement) return this._targetElement;
+    const forId = this.for;
+    if (forId) {
+      const el = document.getElementById(forId);
+      return resolveInputOrTextarea(el);
+    }
+    return null;
+  }
+
+  private _shouldDeferToNative(): boolean {
+    const mode = this.mobileKeyboard;
+    if (mode === "Custom") return false;
+    if (mode === "Native") return true;
+    return window.matchMedia("(pointer: coarse)").matches;
+  }
+
+  // ── Auto-show ──
 
   private _syncAutoShow(): void {
     if (this.autoShow && this.docked) {
@@ -546,22 +661,17 @@ export default class KioskKeyboard extends HTMLElement {
   }
 
   private _onDocumentFocusIn(e: FocusEvent): void {
-    if (!this.enabled || !this.docked || !this.autoShow) return;
+    if (this.disabled || !this.docked || !this.autoShow) return;
 
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
-
-    // Skip if focus is inside our own shadow
-    if (this._shadow.contains(target) || this.contains(target)) return;
+    if (this.shadowRoot!.contains(target) || this.contains(target)) return;
 
     const inputEl = resolveInputOrTextarea(target);
     if (!inputEl) return;
-
-    // Skip if this input is targeted by another keyboard
     if (this._isTargetOfOther(inputEl)) return;
 
-    // Check inputIds filter — only match by direct element ID, not ancestors
-    const ids = this.inputIds;
+    const ids = this._inputIdsList;
     if (ids.length > 0) {
       const targetId = inputEl.id;
       if (!targetId || !ids.includes(targetId)) return;
@@ -569,15 +679,13 @@ export default class KioskKeyboard extends HTMLElement {
 
     this._targetElement = inputEl;
 
-    // Auto-type detection
     if (this.autoType && !this._keyboardTypeExplicit) {
       const detected = detectKeyboardType(target);
       if (detected !== this.keyboardType) {
-        this.setAttribute("keyboard-type", detected);
+        this.keyboardType = detected;
       }
     }
 
-    // Cancel any pending close
     if (this._deferredFocusOutCloseId !== null) {
       cancelAnimationFrame(this._deferredFocusOutCloseId);
       this._deferredFocusOutCloseId = null;
@@ -589,15 +697,11 @@ export default class KioskKeyboard extends HTMLElement {
   private _onDocumentFocusOut(_e: FocusEvent): void {
     if (!this._open) return;
 
-    // Defer close to next frame so focusin on another input cancels it
     this._deferredFocusOutCloseId = requestAnimationFrame(() => {
       this._deferredFocusOutCloseId = null;
       const active = document.activeElement;
 
-      // Don't close if focus moved to our shadow DOM
-      if (active && (this._shadow.contains(active) || this.contains(active))) return;
-
-      // Don't close if focus moved to another input
+      if (active && (this.shadowRoot!.contains(active) || this.contains(active))) return;
       if (active && resolveInputOrTextarea(active)) return;
 
       this.close();
@@ -665,6 +769,25 @@ export default class KioskKeyboard extends HTMLElement {
 
   // ── Physical keyboard highlight ──
 
+  private _highlightKey(physicalKey: string, pressed: boolean): void {
+    const shadow = this.shadowRoot!;
+    const lowerKey = physicalKey.toLowerCase();
+
+    // Immediate DOM manipulation for instant visual feedback
+    if (pressed) {
+      const selector = `[data-key="${CSS.escape(lowerKey)}"], [data-shift-value="${CSS.escape(physicalKey)}"]`;
+      const el = shadow.querySelector<HTMLElement>(selector);
+      if (el) el.classList.add("kiosk-key--highlight");
+    } else {
+      shadow
+        .querySelectorAll<HTMLElement>(".kiosk-key--highlight")
+        .forEach((el) => el.classList.remove("kiosk-key--highlight"));
+    }
+
+    // Track state so it persists across re-renders
+    this._highlightedKey = pressed ? lowerKey : null;
+  }
+
   private _syncPhysicalKeyHighlight(): void {
     const target = this._resolveTarget();
     const targetId = target?.id ?? null;
@@ -697,153 +820,6 @@ export default class KioskKeyboard extends HTMLElement {
       this._highlightTargetId = null;
     }
   }
-
-  // ── Key label/icon helpers ──
-
-  private _getKeyLabel(key: KeyDefinition): string {
-    if (this._shiftState.isShifted) {
-      if (key.shiftLabel) return key.shiftLabel;
-      if (key.shiftValue) return key.shiftValue;
-      if (key.value.length === 1) return key.value.toUpperCase();
-    }
-    return key.label ?? key.value;
-  }
-
-  private _getKeyAriaLabel(key: KeyDefinition): string {
-    const i18nKey = SPECIAL_KEY_LABELS[key.value];
-    if (i18nKey) return getText(i18nKey, key.value);
-    return this._getKeyLabel(key);
-  }
-
-  private _getKeyIcon(key: KeyDefinition): string | null {
-    if (key.icon) return escHtml(key.icon);
-    if (key.value === "{shift}" && this._shiftState.isCapsLock) return ICON_SHIFT_LOCKED;
-    return ICON_MAP[key.value] ?? null;
-  }
-
-  private get _componentId(): string {
-    return this.id || "kiosk-kb";
-  }
-
-  // ── Rendering ──
-
-  private _render(): void {
-    const layout = this._getResolvedLayout();
-    const type = this.keyboardType;
-
-    const rootClasses = ["kiosk-keyboard"];
-    if (type === "Numpad") rootClasses.push("kiosk-keyboard--numpad");
-    if (type === "Numeric") rootClasses.push("kiosk-keyboard--numeric");
-    if (this.docked) rootClasses.push("kiosk-keyboard--docked");
-    if (this.docked && !this._open) rootClasses.push("kiosk-keyboard--closed");
-    if (!this.enabled) rootClasses.push("kiosk-keyboard--disabled");
-
-    // Resolve focus target (roving tabindex)
-    let focusRow = 0;
-    let focusCol = 0;
-    if (this._lastFocusedKeyId) {
-      const match = this._lastFocusedKeyId.match(KEY_ID_SUFFIX_RE);
-      if (match) {
-        const r = Number.parseInt(match[1], 10);
-        const c = Number.parseInt(match[2], 10);
-        if (layout[r]?.[c]) {
-          focusRow = r;
-          focusCol = c;
-        }
-      }
-    }
-
-    const ariaLabel = this.getAttribute("aria-label") || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard");
-    const roleDesc = getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard");
-
-    let html = `<div class="${rootClasses.join(" ")}" role="group" aria-label="${escAttr(ariaLabel)}" aria-roledescription="${escAttr(roleDesc)}">`;
-
-    for (let ri = 0; ri < layout.length; ri++) {
-      const row = layout[ri];
-      html += '<div class="kiosk-row">';
-
-      for (let ci = 0; ci < row.length; ci++) {
-        const key = row[ci];
-        const keyClasses = this._buildKeyClasses(key);
-        const id = keyElementId(this._componentId, ri, ci);
-        const isFocusTarget = ri === focusRow && ci === focusCol;
-        const tabindex = this.enabled && isFocusTarget ? "0" : "-1";
-
-        const isShiftKey = key.value === "{shift}";
-        const ariaPressed = isShiftKey ? ` aria-pressed="${this._shiftState.isShifted}"` : "";
-        const ariaDisabled = !this.enabled ? ' aria-disabled="true"' : "";
-        const dataShiftValue = key.shiftValue ? ` data-shift-value="${escAttr(key.shiftValue)}"` : "";
-
-        const keyAriaLabel =
-          isShiftKey && this._shiftState.isCapsLock
-            ? getText("ARIA_CAPS_LOCK", "Caps Lock")
-            : this._getKeyAriaLabel(key);
-
-        html += `<div id="${id}" class="${keyClasses}" role="button" tabindex="${tabindex}" data-key="${escAttr(key.value)}"${dataShiftValue}${ariaPressed}${ariaDisabled} aria-label="${escAttr(keyAriaLabel)}">`;
-
-        const icon = this._getKeyIcon(key);
-        if (icon) {
-          html += `<span class="kiosk-key__icon">${icon}</span>`;
-        } else {
-          html += escHtml(this._getKeyLabel(key));
-        }
-
-        html += "</div>";
-      }
-
-      html += "</div>";
-    }
-
-    // Live region for shift/caps announcements
-    let liveText = "";
-    if (this._shiftState.isCapsLock) {
-      liveText = getText("ARIA_CAPS_LOCK_ON", "Caps Lock on");
-    } else if (this._shiftState.isShifted) {
-      liveText = getText("ARIA_SHIFT_ON", "Shift on");
-    }
-    html += `<span class="kiosk-keyboard__live-region" role="status" aria-live="polite">${escHtml(liveText)}</span>`;
-
-    html += "</div>";
-
-    this._shadow.innerHTML = html;
-
-    const root = this._shadow.querySelector<HTMLElement>(".kiosk-keyboard");
-
-    // Stable height
-    if (this.stableHeight && !this.docked && root) {
-      const h = root.offsetHeight;
-      if (h > this._maxHeight) this._maxHeight = h;
-      if (this._maxHeight > 0) root.style.minHeight = `${this._maxHeight}px`;
-    }
-  }
-
-  private _announceLiveRegion(text: string): void {
-    const region = this._shadow.querySelector<HTMLElement>(".kiosk-keyboard__live-region");
-    if (region) region.textContent = text;
-  }
-
-  private _buildKeyClasses(key: KeyDefinition): string {
-    const classes = ["kiosk-key"];
-
-    if (key.width === "space") {
-      classes.push("kiosk-key--space");
-    } else if (key.width) {
-      classes.push(`kiosk-key--w${key.width.replace(".", "-")}`);
-    }
-
-    if (key.type === "modifier") classes.push("kiosk-key--modifier");
-    if (key.type === "action") classes.push("kiosk-key--action");
-
-    if (key.value === "{shift}" && this._shiftState.isShifted) {
-      classes.push("kiosk-key--active");
-      if (this._shiftState.isCapsLock) {
-        classes.push("kiosk-key--capsLock");
-      }
-    }
-
-    return classes.join(" ");
-  }
 }
 
-// Register the custom element
-customElements.define("kiosk-keyboard", KioskKeyboard);
+KioskKeyboard.define();

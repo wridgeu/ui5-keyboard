@@ -1,6 +1,3 @@
-/** Layouts that serve as secondary views (not base alphabetic layouts). @internal */
-export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
-
 /**
  * Valid width values for keys.
  *
@@ -71,3 +68,20 @@ export type KeyRow = KeyDefinition[];
 
 /** Complete layout definition — an ordered array of rows. */
 export type LayoutDefinition = KeyRow[];
+
+// ── Event detail types ──
+
+export interface KeyPressEventDetail {
+  key: string;
+  shiftKey: boolean;
+}
+export interface LayoutChangeEventDetail {
+  layout: string;
+}
+export interface KeyboardTypeChangeEventDetail {
+  keyboardType: string;
+}
+
+// ── F-key mode ──
+
+export type FKeyMode = "Event" | "Native" | "None";
