@@ -97,13 +97,14 @@ const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
 
 ## Methods
 
-| Method                 | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `show()`               | Opens the docked keyboard.                       |
-| `close()`              | Closes the docked keyboard.                      |
-| `isOpen()`             | Returns whether the docked keyboard is open.     |
-| `setTargetElement(el)` | Programmatically sets the target input/textarea. |
-| `resetKeyboardType()`  | Resets keyboard type to `"Full"`.                |
+| Method                  | Description                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `show()`                | Opens the docked keyboard.                                                                              |
+| `close()`               | Closes the docked keyboard.                                                                             |
+| `isOpen()`              | Returns whether the docked keyboard is open.                                                            |
+| `setTargetElement(el)`  | Programmatically sets the target input/textarea.                                                        |
+| `setTargetResolver(fn)` | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear. |
+| `resetKeyboardType()`   | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                    |
 
 ## Static API
 
@@ -163,6 +164,32 @@ interface KeyDefinition {
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // Custom text icon (rendered as label, not <ui5-icon>)
 }
+```
+
+## Custom Target Resolver
+
+By default, the keyboard finds the native `<input>` or `<textarea>` inside a host element by traversing light DOM and up to 3 levels of shadow DOM. This covers standard HTML inputs, UI5 web components (`<ui5-input>`, `<ui5-step-input>`, `<ui5-textarea>`), and similar.
+
+For custom controls with non-standard DOM structures, set a **target resolver** callback:
+
+```ts
+const kb = document.querySelector("kiosk-keyboard");
+
+kb.setTargetResolver((el) => {
+  // Custom control: find the deeply nested input
+  return el.querySelector(".my-wrapper .inner-editor input");
+});
+```
+
+The callback receives the focused `HTMLElement` (the host element) and must return:
+
+- The native `<input>` or `<textarea>` to type into, **or**
+- `null` to fall back to the built-in resolver
+
+Pass `null` to clear the custom resolver:
+
+```ts
+kb.setTargetResolver(null);
 ```
 
 ## CSS Custom Properties

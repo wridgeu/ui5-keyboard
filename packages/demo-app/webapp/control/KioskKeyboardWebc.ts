@@ -5,6 +5,11 @@ import WebComponent from "sap/ui/core/webc/WebComponent";
  *
  * Uses `WebComponent.extend()` to map attributes/properties so the element
  * can be consumed in XML views and participate in UI5 data binding.
+ *
+ * Note: For primitive types (string, boolean), `mapping.type = "property"`
+ * renders values as HTML attributes on the custom tag. The `to` field must
+ * use kebab-case attribute names (e.g. "keyboard-type") which the UI5 Web
+ * Components `@property()` decorator reflects to camelCase JS properties.
  */
 const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboardWebc", {
   metadata: {
@@ -76,7 +81,7 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
         mapping: { type: "property", to: "f-key-mode" },
       },
     },
-    methods: ["show", "close", "isOpen", "setTargetElement", "resetKeyboardType"],
+    methods: ["show", "close", "isOpen", "setTargetElement", "setTargetResolver", "resetKeyboardType"],
   },
 }) as typeof WebComponent;
 

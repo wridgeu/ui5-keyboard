@@ -1,5 +1,5 @@
 import Element from "sap/ui/core/Element";
-import { resolveInputOrTextarea } from "./dom";
+import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
@@ -156,7 +156,7 @@ export function handleNavigation(
  * Falls back to setting the DOM value directly for custom controls without
  * a `value` metadata property. Also fires `liveChange` when the event exists.
  */
-export function setTargetValue(element: Element, newValue: string): void {
+export function setTargetValue(element: Element, newValue: string, customResolver?: TargetResolverFn | null): void {
   const metadata = element.getMetadata();
   if ("setValue" in element && typeof element.setValue === "function") {
     (element.setValue as (v: string) => unknown).call(element, newValue);
@@ -165,7 +165,7 @@ export function setTargetValue(element: Element, newValue: string): void {
   } else {
     // Fallback for custom controls without a "value" metadata property:
     // set the inner DOM input value directly so typing still works.
-    const dom = resolveInputOrTextarea(element.getFocusDomRef());
+    const dom = resolveWithCustomResolver(element.getFocusDomRef(), customResolver ?? null);
     if (dom) {
       dom.value = newValue;
     }

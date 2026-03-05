@@ -23,6 +23,9 @@ export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTex
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 
+/** Callback type for custom target resolution. */
+export type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
+
 /**
  * Resolve an editable input/textarea element from a control's focus DOM ref.
  *
@@ -30,25 +33,53 @@ export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTex
  * - direct native input/textarea
  * - host elements that expose an inner input/textarea in light DOM
  * - host elements that expose an inner input/textarea in shadow DOM
+ * - nested web components (e.g. ui5-step-input → ui5-input → native input)
+ *   up to `maxDepth` levels of shadow DOM nesting
  */
-export function resolveInputOrTextarea(el: unknown): HTMLInputElement | HTMLTextAreaElement | null {
+export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElement | HTMLTextAreaElement | null {
   if (isInputOrTextarea(el)) {
     return el;
   }
 
-  if (!(el instanceof HTMLElement)) {
+  if (!(el instanceof HTMLElement) || maxDepth <= 0) {
     return null;
   }
 
+  // Check light DOM children
   const lightDom = el.querySelector("input,textarea");
   if (isInputOrTextarea(lightDom)) {
     return lightDom;
   }
 
-  const shadowDom = el.shadowRoot?.querySelector("input,textarea");
-  if (isInputOrTextarea(shadowDom)) {
-    return shadowDom;
+  // Check shadow DOM — direct native input/textarea first, then recurse into nested web components
+  const shadow = el.shadowRoot;
+  if (shadow) {
+    const shadowInput = shadow.querySelector("input,textarea");
+    if (isInputOrTextarea(shadowInput)) {
+      return shadowInput;
+    }
+
+    for (const child of shadow.querySelectorAll("*")) {
+      if (child instanceof HTMLElement && child.shadowRoot) {
+        const nested = resolveInputOrTextarea(child, maxDepth - 1);
+        if (nested) return nested;
+      }
+    }
   }
 
   return null;
+}
+
+/**
+ * Resolve using a custom resolver first, falling back to the built-in resolver.
+ */
+export function resolveWithCustomResolver(
+  el: unknown,
+  customResolver: TargetResolverFn | null,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  if (customResolver && el instanceof HTMLElement) {
+    const custom = customResolver(el);
+    if (custom) return custom;
+  }
+  return resolveInputOrTextarea(el);
 }

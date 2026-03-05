@@ -24,24 +24,39 @@ function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaEl
  * - direct native input/textarea
  * - host elements that expose an inner input/textarea in light DOM
  * - host elements that expose an inner input/textarea in shadow DOM
+ * - nested web components (e.g. ui5-step-input → ui5-input → native input)
+ *   up to `maxDepth` levels of shadow DOM nesting
  */
-export function resolveInputOrTextarea(el: unknown): HTMLInputElement | HTMLTextAreaElement | null {
+export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElement | HTMLTextAreaElement | null {
   if (isInputOrTextarea(el)) {
     return el;
   }
 
-  if (!(el instanceof HTMLElement)) {
+  if (!(el instanceof HTMLElement) || maxDepth <= 0) {
     return null;
   }
 
+  // Check light DOM children
   const lightDom = el.querySelector("input,textarea");
   if (isInputOrTextarea(lightDom)) {
     return lightDom;
   }
 
-  const shadowDom = el.shadowRoot?.querySelector("input,textarea");
-  if (isInputOrTextarea(shadowDom)) {
-    return shadowDom;
+  // Check shadow DOM — direct native input/textarea first, then recurse into nested web components
+  const shadow = el.shadowRoot;
+  if (shadow) {
+    const shadowInput = shadow.querySelector("input,textarea");
+    if (isInputOrTextarea(shadowInput)) {
+      return shadowInput;
+    }
+
+    // Recurse into nested custom elements (e.g. ui5-step-input wraps ui5-input)
+    for (const child of shadow.querySelectorAll("*")) {
+      if (child instanceof HTMLElement && child.shadowRoot) {
+        const nested = resolveInputOrTextarea(child, maxDepth - 1);
+        if (nested) return nested;
+      }
+    }
   }
 
   return null;

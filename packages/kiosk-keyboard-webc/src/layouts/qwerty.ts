@@ -74,7 +74,7 @@ const qwerty: LayoutDefinition = [
       type: "modifier",
     },
     { value: ",", shiftLabel: "<", shiftValue: "<" },
-    { value: " ", width: "space", type: "space" },
+    { value: " ", label: "Space", width: "space", type: "space" },
     { value: ".", shiftLabel: ">", shiftValue: ">" },
     {
       value: "{layout:fkeys}",

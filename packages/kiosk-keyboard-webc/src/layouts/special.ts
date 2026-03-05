@@ -55,7 +55,7 @@ const special: LayoutDefinition = [
       width: "1.5",
       type: "modifier",
     },
-    { value: " ", width: "space", type: "space" },
+    { value: " ", label: "Space", width: "space", type: "space" },
     {
       value: "{enter}",
       width: "1.5",

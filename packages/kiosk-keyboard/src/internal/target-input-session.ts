@@ -1,5 +1,5 @@
 import Element from "sap/ui/core/Element";
-import { isInputOrTextarea, resolveInputOrTextarea } from "./dom";
+import { isInputOrTextarea, resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import {
   insertText as opsInsertText,
   handleBackspace as opsHandleBackspace,
@@ -15,7 +15,13 @@ export default class TargetInputSession {
   private _lastKnownValue: string | null = null;
   private _targetDirty = false;
 
+  private _customResolver: TargetResolverFn | null = null;
+
   constructor(private readonly _getTargetElement: () => Element | null) {}
+
+  setTargetResolver(resolver: TargetResolverFn | null): void {
+    this._customResolver = resolver;
+  }
 
   resetForTargetSwitch(): void {
     this._cursorPos = null;
@@ -112,7 +118,7 @@ export default class TargetInputSession {
     const element = this._getTargetElement();
     if (!element) return null;
 
-    const dom = resolveInputOrTextarea(element.getFocusDomRef());
+    const dom = resolveWithCustomResolver(element.getFocusDomRef(), this._customResolver);
     if (!dom) {
       return null;
     }

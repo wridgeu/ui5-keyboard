@@ -10,7 +10,7 @@ import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n-registry";
-import { KEY_ID_SUFFIX_RE, keyElementId, resolveInputOrTextarea } from "./internal/dom";
+import { KEY_ID_SUFFIX_RE, keyElementId, resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
 import { KeyboardType, type KeyboardTypeValue, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
@@ -105,6 +105,7 @@ export default class KioskKeyboard extends Control {
   declare private _targetSession: TargetInputSession;
   declare private _deferredFocusOutCloseId: number | null;
   declare private _rendererApi: RendererInternalApi | null;
+  declare private _targetResolverInstance: TargetResolverFn | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -417,6 +418,41 @@ export default class KioskKeyboard extends Control {
 
   /** Ref-counted inputmode suppressions shared across keyboard instances. */
   private static readonly _inputModeSuppressions = new Map<string, InputModeSuppressionState>();
+
+  /** Global target resolver applied to all instances (lowest priority). */
+  private static _globalTargetResolver: TargetResolverFn | null = null;
+
+  // ──────────────────────────────────────────────
+  // Static delegates — target resolver
+  // ──────────────────────────────────────────────
+
+  /**
+   * Sets a global custom resolver used by **all** KioskKeyboard instances
+   * to locate the native `<input>` or `<textarea>` inside a host element.
+   *
+   * An instance-level resolver (set via `setTargetResolver()`) takes
+   * precedence over the global resolver. Pass `null` to clear.
+   *
+   * The callback receives the focus DOM ref (`HTMLElement`) and must return
+   * the native input/textarea to type into, or `null` to fall back to
+   * the built-in resolver.
+   *
+   * @param fnResolver Custom resolver function, or `null` to clear.
+   * @public
+   * @static
+   */
+  static setGlobalTargetResolver(fnResolver: TargetResolverFn | null): void {
+    KioskKeyboard._globalTargetResolver = fnResolver;
+  }
+
+  /**
+   * Returns the currently set global target resolver, or `null`.
+   * @public
+   * @static
+   */
+  static getGlobalTargetResolver(): TargetResolverFn | null {
+    return KioskKeyboard._globalTargetResolver;
+  }
 
   // ──────────────────────────────────────────────
   // Static delegates — layout registry (see internal/layout-registry.ts)
@@ -748,6 +784,7 @@ export default class KioskKeyboard extends Control {
       () => this._shouldDeferToNative(),
       (id) => this._isTargetOfOther(id),
     );
+    this._targetResolverInstance = null;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
 
     // Detect locale-appropriate default layout. This covers the case
@@ -1047,7 +1084,7 @@ export default class KioskKeyboard extends Control {
 
         // Dev-time check: warn if the control won't work as a target
         const focusRef = next.getFocusDomRef?.();
-        if (focusRef && !resolveInputOrTextarea(focusRef)) {
+        if (focusRef && !resolveWithCustomResolver(focusRef, this._getEffectiveResolver())) {
           Log.warning(
             `KioskKeyboard: targetInput "${newId}" does not have a textual input DOM ref — ` +
               "key taps will have no effect. Expected (or containing) HTMLInputElement/HTMLTextAreaElement.",
@@ -1169,6 +1206,43 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Sets a custom resolver for this keyboard instance that locates the
+   * native `<input>` or `<textarea>` inside a host element.
+   *
+   * Takes precedence over the global resolver set via
+   * `KioskKeyboard.setGlobalTargetResolver()`. Pass `null` to clear
+   * and fall back to the global resolver (if any) or the built-in one.
+   *
+   * The callback receives the focus DOM ref (`HTMLElement`) and must
+   * return the native input/textarea to type into, or `null` to fall
+   * back to the next resolver in the chain.
+   *
+   * @param fnResolver Custom resolver function, or `null` to clear.
+   * @public
+   */
+  setTargetResolver(fnResolver: TargetResolverFn | null): this {
+    this._targetResolverInstance = fnResolver;
+    this._targetSession.setTargetResolver(this._getEffectiveResolver());
+    return this;
+  }
+
+  /**
+   * Returns the instance-level target resolver, or `null`.
+   * @public
+   */
+  getTargetResolver(): TargetResolverFn | null {
+    return this._targetResolverInstance;
+  }
+
+  /**
+   * Returns the effective resolver: instance-level first, then global, then `null`.
+   * @private
+   */
+  private _getEffectiveResolver(): TargetResolverFn | null {
+    return this._targetResolverInstance ?? KioskKeyboard._globalTargetResolver;
+  }
+
+  /**
    * Custom setter for docked — manages CSS on the existing DOM
    * rather than re-rendering (which would disrupt transitions).
    */
@@ -1270,7 +1344,9 @@ export default class KioskKeyboard extends Control {
     const target = eventTarget instanceof HTMLElement ? eventTarget : null;
     const myDom = this.getDomRef();
     const focusDomRef = this._getTargetElement()?.getFocusDomRef();
-    const inputDom = resolveInputOrTextarea(focusDomRef) ?? (focusDomRef instanceof HTMLElement ? focusDomRef : null);
+    const inputDom =
+      resolveWithCustomResolver(focusDomRef, this._getEffectiveResolver()) ??
+      (focusDomRef instanceof HTMLElement ? focusDomRef : null);
     const isOnKeyboard = target ? Boolean(myDom?.contains(target)) : false;
 
     event.preventDefault();
@@ -1746,7 +1822,7 @@ export default class KioskKeyboard extends Control {
     // Auto-detect keyboard type from input metadata.
     // Skip if re-entrancy (from deferred change handler) superseded this target.
     if (this.getAutoType() && !this._keyboardTypeExplicit && this.getTargetInput() === ui5Control.getId()) {
-      const detected = detectKbType(ui5Control);
+      const detected = detectKbType(ui5Control, this._getEffectiveResolver());
       const previous = this.getKeyboardType();
       this.setProperty("keyboardType", detected);
       if (detected !== previous) {
@@ -2053,7 +2129,7 @@ export default class KioskKeyboard extends Control {
   /** Best-effort event target used for synthetic native F-key dispatch. */
   private _resolveNativeFKeyTarget(): EventTarget {
     const target = this._getTargetElement()?.getFocusDomRef();
-    const textual = resolveInputOrTextarea(target);
+    const textual = resolveWithCustomResolver(target, this._getEffectiveResolver());
     if (textual) return textual;
     if (target instanceof HTMLElement) return target;
     if (document.activeElement instanceof HTMLElement) return document.activeElement;
@@ -2084,7 +2160,7 @@ export default class KioskKeyboard extends Control {
   private _resolveInputDomById(inputId: string): HTMLInputElement | HTMLTextAreaElement | null {
     const target = Element.getElementById(inputId);
     if (!target) return null;
-    return resolveInputOrTextarea(target.getFocusDomRef());
+    return resolveWithCustomResolver(target.getFocusDomRef(), this._getEffectiveResolver());
   }
 
   /**
