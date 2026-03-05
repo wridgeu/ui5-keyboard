@@ -42,7 +42,9 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "wdio run test/e2e/wdio.conf.ts",
+    "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@ui5/webcomponents-base": "^2.19.2",
