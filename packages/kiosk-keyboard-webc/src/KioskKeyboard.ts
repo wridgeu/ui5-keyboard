@@ -74,13 +74,10 @@ const NATIVE_DISPATCHABLE_KEYS = new Set([
   "PageDown",
 ]);
 
-// ── Built-in native actions for F-keys ──
-// Intentionally empty — consumers handle F-key side effects via the
-// "key-press" event. F5 (reload) and F11 (fullscreen) were removed
-// because silently triggering page-level actions from a keyboard
-// component is unexpected. Apps that need these can listen for
-// key-press and implement the behavior themselves.
-const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {};
+// Note: Built-in F-key native actions (F5 reload, F11 fullscreen) were
+// intentionally removed — silently triggering page-level actions from a
+// keyboard component is unexpected. Consumers handle F-key side effects
+// via the "key-press" event.
 
 /** ARIA labels for icon-only special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
@@ -235,10 +232,11 @@ export default class KioskKeyboard extends UI5Element {
     this.disabled = !val;
   }
 
-  /** Whether the docked keyboard is open. No-op when `docked` is false. */
+  /** Whether the docked keyboard panel is currently visible. */
   get open(): boolean {
     return this._open;
   }
+  /** Opens or closes the docked keyboard. No-op when `docked` is false. */
   set open(val: boolean) {
     if (val) this.show();
     else this.close();
@@ -612,10 +610,6 @@ export default class KioskKeyboard extends UI5Element {
     if (mode === "Native") {
       if (NATIVE_DISPATCHABLE_KEYS.has(fkeyName)) {
         nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
-        if (nativeAllowed) {
-          const action = NATIVE_FKEY_ACTIONS[fkeyName];
-          if (action) action();
-        }
       } else {
         nativeAllowed = false;
       }
