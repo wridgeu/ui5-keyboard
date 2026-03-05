@@ -677,6 +677,7 @@ export default class KioskKeyboard extends UI5Element {
       if (!targetId || !ids.includes(targetId)) return;
     }
 
+    const targetChanged = this._targetElement !== inputEl;
     this._targetElement = inputEl;
 
     if (this.autoType && !this._keyboardTypeExplicit) {
@@ -691,7 +692,13 @@ export default class KioskKeyboard extends UI5Element {
       this._deferredFocusOutCloseId = null;
     }
 
-    if (!this._open) this.show();
+    if (!this._open) {
+      this.show();
+    } else if (targetChanged) {
+      this._restoreInputMode();
+      this._suppressInputMode();
+      this._syncPhysicalKeyHighlight();
+    }
   }
 
   private _onDocumentFocusOut(_e: FocusEvent): void {

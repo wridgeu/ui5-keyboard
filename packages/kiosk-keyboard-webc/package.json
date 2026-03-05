@@ -46,6 +46,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:component": "web-test-runner",
+    "pretest:e2e": "npm run build",
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit"
   },
