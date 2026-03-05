@@ -5,6 +5,7 @@ import BaseController from "./BaseController";
 
 // Register the <kiosk-keyboard> custom element (resolved by ui5-tooling-modules)
 import "kiosk-keyboard-webc/dist/bundle.esm.js";
+import type KioskKeyboardElement from "kiosk-keyboard-webc/dist/KioskKeyboard.js";
 
 /**
  * Controller for the native `<kiosk-keyboard>` web component demo page.
@@ -55,9 +56,7 @@ export default class KioskWebComponent extends BaseController {
     }
 
     // Deactivate: close keyboard and detach events
-    if (typeof (host as HTMLElement & { close?: () => void }).close === "function") {
-      (host as HTMLElement & { close: () => void }).close();
-    }
+    host.close();
     host.removeAttribute("auto-show");
     this._detachKeyboardEvents();
 
@@ -92,9 +91,9 @@ export default class KioskWebComponent extends BaseController {
     host.removeEventListener("layout-change", this._onLayoutChange);
   }
 
-  private _getKeyboardHost(): HTMLElement | null {
+  private _getKeyboardHost(): KioskKeyboardElement | null {
     const control = this.byId("webcKeyboard");
-    return control?.getDomRef() as HTMLElement | null;
+    return (control?.getDomRef() as KioskKeyboardElement) ?? null;
   }
 
   private _getViewModel(): JSONModel {

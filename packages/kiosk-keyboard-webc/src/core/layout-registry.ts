@@ -15,13 +15,10 @@ const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([["de", "
 /** BCP-47 language prefix -> layout name. Checked after exact match. */
 const LOCALE_LAYOUT_MAP: Map<string, string> = new Map(DEFAULT_LOCALE_LAYOUT_MAP);
 
-function isRegisteredLayout(layout: string): boolean {
-  return layouts.has(layout);
-}
-
 /**
  * Normalizes an input to a trimmed lowercase string.
  * Returns `undefined` for non-string or empty-after-trim values, logging a warning.
+ * Used by public APIs to guard against plain-JS callers passing non-strings.
  */
 function normalizeLowerString(value: unknown, argName: string): string | undefined {
   if (typeof value !== "string") {
@@ -40,7 +37,7 @@ function normalizeLowerString(value: unknown, argName: string): string | undefin
 function resolveLocaleMappedLayout(locale: string): string | null {
   const mappedLayout = LOCALE_LAYOUT_MAP.get(locale);
   if (!mappedLayout) return null;
-  return isRegisteredLayout(mappedLayout) ? mappedLayout : null;
+  return layouts.has(mappedLayout) ? mappedLayout : null;
 }
 
 /**
@@ -117,9 +114,9 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
  * the default layout when the name is not registered.
  */
 export function getLayoutOrDefault(sName: string): LayoutDefinition {
-  const name = normalizeLowerString(sName, "layout name");
   const fallback = layouts.get(DEFAULT_LAYOUT);
   if (!fallback) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
+  const name = normalizeLowerString(sName, "layout name");
   if (!name) return fallback;
   return layouts.get(name) ?? fallback;
 }
@@ -144,7 +141,7 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
   const layout = normalizeLowerString(sLayout, "layout map value");
   if (!locale || !layout) return;
 
-  if (!isRegisteredLayout(layout)) {
+  if (!layouts.has(layout)) {
     console.warn(
       `[kiosk-keyboard] Locale "${locale}" maps to unknown layout "${layout}". It will be used once the layout is registered.`,
     );

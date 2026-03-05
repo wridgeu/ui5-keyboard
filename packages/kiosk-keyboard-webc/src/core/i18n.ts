@@ -23,6 +23,10 @@ type I18nResolver = (key: string, locale: string, defaultText: string) => string
 let _resolver: I18nResolver | null = null;
 let _bundle: I18nBundle | null = null;
 
+function _getLanguage(): string {
+  return new Intl.Locale(navigator.language).language;
+}
+
 /**
  * Initialize the i18n bundle. Called once during component registration.
  * Uses the UI5 WC framework's async bundle loading.
@@ -74,11 +78,10 @@ export function getText(key: string, fallback: string): string {
   // Apply resolver override if set
   if (_resolver) {
     try {
-      const locale = new Intl.Locale(navigator.language).language;
-      const override = _resolver(key, locale, resolved);
+      const override = _resolver(key, _getLanguage(), resolved);
       if (typeof override === "string") return override;
-    } catch {
-      // Resolver threw — use resolved text
+    } catch (err) {
+      console.warn("[kiosk-keyboard] i18n resolver threw:", err);
     }
   }
 

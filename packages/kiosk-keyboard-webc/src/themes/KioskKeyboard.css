@@ -51,6 +51,11 @@
   & .kiosk-key {
     min-width: var(--kiosk-keyboard-numpad-key-min-width);
   }
+
+  & .kiosk-key--modifier,
+  & .kiosk-key--action {
+    font-size: var(--kiosk-keyboard-key-font-size);
+  }
 }
 
 /* ---- Mode: Numeric ---- */
@@ -134,7 +139,7 @@
     transition:
       background 0.1s ease,
       box-shadow 0.1s ease,
-      transform 0.05s ease;
+      transform 0.1s ease;
   }
 
   &:active {
@@ -145,12 +150,16 @@
     box-shadow: none;
     transition:
       background 0.1s ease,
-      transform 0.05s ease;
+      transform 0.1s ease;
   }
 
-  &:focus-visible {
+  &:focus {
     outline: var(--sapContent_FocusWidth, 2px) var(--sapContent_FocusStyle, solid) var(--sapContent_FocusColor, #000);
     outline-offset: 1px;
+  }
+
+  &:focus:not(:focus-visible) {
+    outline: none;
   }
 }
 
@@ -162,7 +171,7 @@
   box-shadow: none;
   transition:
     background 0.1s ease,
-    transform 0.05s ease;
+    transform 0.1s ease;
 }
 
 /* ---- Width classes: proportional flex grow ---- */
@@ -184,7 +193,7 @@
 .kiosk-key--w2-75 {
   flex: 2.75 1 0;
 }
-.kiosk-key--space {
+.kiosk-key--wspace {
   flex: 6 1 0;
 }
 

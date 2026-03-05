@@ -1,7 +1,7 @@
 import { resolveInputOrTextarea } from "./dom-utils.js";
 
 /** Keyboard type values for the web component. */
-export type KeyboardTypeValue = "Full" | "Numpad" | "Numeric";
+type KeyboardTypeValue = "Full" | "Numpad" | "Numeric";
 
 /** Numeric input modes that map to Numpad keyboard. */
 const NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "tel"]);

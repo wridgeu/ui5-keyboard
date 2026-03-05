@@ -74,11 +74,6 @@ const NATIVE_DISPATCHABLE_KEYS = new Set([
   "PageDown",
 ]);
 
-// Note: Built-in F-key native actions (F5 reload, F11 fullscreen) were
-// intentionally removed — silently triggering page-level actions from a
-// keyboard component is unexpected. Consumers handle F-key side effects
-// via the "key-press" event.
-
 /** ARIA labels for icon-only special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
   "{shift}": "KEY_SHIFT",
@@ -186,7 +181,6 @@ export default class KioskKeyboard extends UI5Element {
   _shiftState = new ShiftState();
   _baseLayout = "";
   _keyboardTypeExplicit = false;
-  _autoDetecting = false;
   _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
   _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   _lastFocusedKeyId: string | null = null;
@@ -198,11 +192,15 @@ export default class KioskKeyboard extends UI5Element {
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   private static readonly _inputModeSuppressions = new Map<string, { original: string | null; refCount: number }>();
+  private static _nextTempId = 0;
   private _suppressedInputId: string | null = null;
 
   // ── Multi-keyboard instance isolation ──
   private static readonly _instances = new Set<KioskKeyboard>();
   private static _nextAutoId = 0;
+
+  // ── Escape listener tracking ──
+  private _escapeListenerAttached = false;
 
   // ── Physical keyboard highlight ──
   private _highlightTargetId: string | null = null;
@@ -210,9 +208,9 @@ export default class KioskKeyboard extends UI5Element {
   // ── Bound listeners (document-level) ──
   private readonly _boundFocusIn = this._onDocumentFocusIn.bind(this);
   private readonly _boundFocusOut = this._onDocumentFocusOut.bind(this);
-  private readonly _boundEscape = (e: Event) => this._onDocumentEscape(e as KeyboardEvent);
-  private readonly _boundPhysicalKeyDown = (e: Event) => this._highlightKey((e as KeyboardEvent).key, true);
-  private readonly _boundPhysicalKeyUp = (e: Event) => this._highlightKey((e as KeyboardEvent).key, false);
+  private readonly _boundEscape = this._onDocumentEscape.bind(this) as EventListener;
+  private readonly _boundPhysicalKeyDown = ((e: KeyboardEvent) => this._highlightKey(e.key, true)) as EventListener;
+  private readonly _boundPhysicalKeyUp = ((e: KeyboardEvent) => this._highlightKey(e.key, false)) as EventListener;
   private readonly _boundTouchStart = (e: Event) => {
     const target = (e.target as HTMLElement).closest?.(".kiosk-key");
     if (target) this._onKeyMouseDown(e);
@@ -222,15 +220,6 @@ export default class KioskKeyboard extends UI5Element {
   readonly _boundOnKeyClick = this._onKeyClick.bind(this);
   readonly _boundOnKeyMouseDown = this._onKeyMouseDown.bind(this);
   readonly _boundOnKeyDown = this._onKeyDown.bind(this);
-
-  // ── Convenience property aliases ──
-
-  get enabled(): boolean {
-    return !this.disabled;
-  }
-  set enabled(val: boolean) {
-    this.disabled = !val;
-  }
 
   /** Whether the docked keyboard panel is currently visible. */
   get open(): boolean {
@@ -277,7 +266,7 @@ export default class KioskKeyboard extends UI5Element {
     this._syncPhysicalKeyHighlight();
 
     if (this.docked) {
-      document.addEventListener("keydown", this._boundEscape);
+      this._attachEscapeListener();
     }
 
     // Touchstart needs { passive: false } which JSX can't express
@@ -289,7 +278,7 @@ export default class KioskKeyboard extends UI5Element {
     this._teardownAutoShow();
     this._teardownPhysicalKeyHighlight();
     this._restoreInputMode();
-    document.removeEventListener("keydown", this._boundEscape);
+    this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
 
     if (this._deferredFocusOutCloseId !== null) {
@@ -327,7 +316,8 @@ export default class KioskKeyboard extends UI5Element {
       this._currentLayout = this.layout;
     }
     if (name === "keyboardType") {
-      if (!this._autoDetecting) this._keyboardTypeExplicit = true;
+      this._keyboardTypeExplicit = true;
+      // Reset user layout switch — a keyboardType change implies a new layout context
       this._layoutSwitchedByUser = false;
       this.fireDecoratorEvent("keyboard-type-change", { keyboardType: this.keyboardType });
     }
@@ -335,8 +325,8 @@ export default class KioskKeyboard extends UI5Element {
       this._syncAutoShow();
     }
     if (name === "docked") {
-      if (this.docked) document.addEventListener("keydown", this._boundEscape);
-      else document.removeEventListener("keydown", this._boundEscape);
+      if (this.docked) this._attachEscapeListener();
+      else this._detachEscapeListener();
     }
   }
 
@@ -363,7 +353,7 @@ export default class KioskKeyboard extends UI5Element {
 
   /** Returns whether the docked keyboard is currently open. */
   isOpen(): boolean {
-    return this._open;
+    return this.open;
   }
 
   /** Programmatically sets the input element that receives typed characters. */
@@ -394,10 +384,7 @@ export default class KioskKeyboard extends UI5Element {
 
   /** Resets `keyboardType` to `"Full"` and clears the explicit-type flag. */
   resetKeyboardType(): void {
-    this._autoDetecting = true;
-    this._keyboardTypeExplicit = false;
-    this.keyboardType = "Full";
-    this._autoDetecting = false;
+    this._setKeyboardTypeInternal("Full");
   }
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
@@ -474,27 +461,13 @@ export default class KioskKeyboard extends UI5Element {
     const shifted = this._shifted;
     const shiftValue = keyEl.dataset.shiftValue;
 
-    // Layout switches don't fire key-press
     if (value.startsWith("{layout:")) {
-      const layoutName = value.slice(8, -1);
-      if (layoutName === "base") {
-        this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
-        this._layoutSwitchedByUser = false;
-      } else {
-        this._currentLayout = layoutName;
-        this._layoutSwitchedByUser = true;
-      }
-      this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
+      this._handleLayoutSwitch(value);
       return;
     }
 
-    // F-keys fire key-press with the extracted key name (e.g. "F5", not "{fkey:F5}")
     if (value.startsWith("{fkey:")) {
-      const fkeyName = value.slice(6, -1);
-      const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
-      if (!allowed) return;
-      this._handleFKey(fkeyName, shifted);
-      this._autoReleaseShift();
+      this._handleFKeyPress(value, shifted);
       return;
     }
 
@@ -599,7 +572,27 @@ export default class KioskKeyboard extends UI5Element {
     }
   }
 
-  // ── F-key / navigation key handling ──
+  // ── Layout switch / F-key handling ──
+
+  private _handleLayoutSwitch(value: string): void {
+    const layoutName = value.slice(8, -1);
+    if (layoutName === "base") {
+      this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
+      this._layoutSwitchedByUser = false;
+    } else {
+      this._currentLayout = layoutName;
+      this._layoutSwitchedByUser = true;
+    }
+    this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
+  }
+
+  private _handleFKeyPress(value: string, shifted: boolean): void {
+    const fkeyName = value.slice(6, -1);
+    const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
+    if (!allowed) return;
+    this._handleFKey(fkeyName, shifted);
+    this._autoReleaseShift();
+  }
 
   private _handleFKey(fkeyName: string, shiftKey: boolean): void {
     const mode = this.fKeyMode;
@@ -625,7 +618,8 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   private _dispatchNativeFKeydown(fkeyName: string, shiftKey: boolean): boolean {
-    const target = this._resolveNativeFKeyTarget();
+    const target = this._resolveTarget() ?? document.activeElement;
+    if (!target) return true;
     const nativeEvent = new KeyboardEvent("keydown", {
       key: fkeyName,
       code: fkeyName,
@@ -636,14 +630,14 @@ export default class KioskKeyboard extends UI5Element {
     return target.dispatchEvent(nativeEvent);
   }
 
-  private _resolveNativeFKeyTarget(): EventTarget {
-    const target = this._resolveTarget();
-    if (target) return target;
-    if (document.activeElement instanceof HTMLElement) return document.activeElement;
-    return document;
-  }
-
   // ── Internal helpers ──
+
+  /** Sets keyboardType without marking it as explicit (for auto-detection). */
+  private _setKeyboardTypeInternal(value: string): void {
+    this.keyboardType = value;
+    // onInvalidation sets _keyboardTypeExplicit = true; undo that for auto-detect
+    this._keyboardTypeExplicit = false;
+  }
 
   private _syncShiftState(): void {
     this._shifted = this._shiftState.isShifted;
@@ -721,11 +715,9 @@ export default class KioskKeyboard extends UI5Element {
     // Detect keyboard type before open — this may trigger onInvalidation for
     // keyboardType, but the target is already set so subsequent logic is safe.
     if (this.autoType && !this._keyboardTypeExplicit) {
-      const detected = detectKeyboardType(target);
+      const detected = detectKeyboardType(inputEl);
       if (detected !== this.keyboardType) {
-        this._autoDetecting = true;
-        this.keyboardType = detected;
-        this._autoDetecting = false;
+        this._setKeyboardTypeInternal(detected);
       }
     }
 
@@ -783,7 +775,7 @@ export default class KioskKeyboard extends UI5Element {
    */
   private _matchesInputIds(el: HTMLElement, ids: string[]): boolean {
     let current: HTMLElement | null = el;
-    // Walk up at most 5 levels (input → inner wrapper → control root)
+    // Walk up at most 5 levels: input → inner wrapper → control root (+ margin for deeper UI5 nesting)
     for (let i = 0; i < 5 && current; i++) {
       const domId = current.id;
       if (domId) {
@@ -797,6 +789,18 @@ export default class KioskKeyboard extends UI5Element {
     return false;
   }
 
+  private _attachEscapeListener(): void {
+    if (this._escapeListenerAttached) return;
+    document.addEventListener("keydown", this._boundEscape);
+    this._escapeListenerAttached = true;
+  }
+
+  private _detachEscapeListener(): void {
+    if (!this._escapeListenerAttached) return;
+    document.removeEventListener("keydown", this._boundEscape);
+    this._escapeListenerAttached = false;
+  }
+
   private _onDocumentEscape(e: KeyboardEvent): void {
     if (e.key === "Escape" && this._open) {
       this.close();
@@ -807,7 +811,11 @@ export default class KioskKeyboard extends UI5Element {
 
   private _suppressInputMode(): void {
     const target = this._resolveTarget();
-    if (!target || !target.id) return;
+    if (!target) return;
+
+    if (!target.id) {
+      target.id = `kiosk-kb-tmp-${KioskKeyboard._nextTempId++}`;
+    }
 
     const id = target.id;
     const existing = KioskKeyboard._inputModeSuppressions.get(id);

@@ -124,13 +124,13 @@ describe("kiosk-keyboard", () => {
       expect(el.autoType).to.be.true;
     });
 
-    it("reflects disabled attribute to enabled property", async () => {
+    it("reflects disabled attribute to property", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard disabled></kiosk-keyboard>
         `,
       );
-      expect(el.enabled).to.be.false;
+      expect(el.disabled).to.be.true;
     });
 
     it("reflects for attribute", async () => {
@@ -158,14 +158,13 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      const keysBefore = queryKeys(el).length;
+      expect(queryKey(el, "q"), "qwerty has q key").to.not.be.null;
 
       el.setAttribute("keyboard-type", "Numpad");
       await nextRender();
 
-      const keysAfter = queryKeys(el).length;
-      expect(keysAfter).to.be.greaterThan(0);
-      expect(keysAfter).to.not.equal(keysBefore);
+      expect(queryKey(el, "q"), "numpad should not have q key").to.be.null;
+      expect(queryKey(el, "7"), "numpad should have 7 key").to.not.be.null;
     });
   });
 
@@ -188,18 +187,21 @@ describe("kiosk-keyboard", () => {
       expect(detail.shiftKey).to.be.false;
     });
 
-    it("key-press event is cancelable", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="numeric"></kiosk-keyboard>
-        `,
-      );
+    it("canceling key-press prevents text insertion", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="cancel-target" type="text" />
+          <kiosk-keyboard layout="numeric" for="cancel-target"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#cancel-target")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
       await nextRender();
-      el.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
 
-      const key = queryKey(el, "1")!;
-      key.click();
-      // No error thrown = success (canceled event doesn't trigger further action)
+      kb.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
+      queryKey(kb, "1")!.click();
+
+      expect(input.value).to.equal("");
     });
 
     it("does not dispatch key-press when disabled", async () => {
@@ -374,13 +376,13 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
 
-      // Find a layout switch key (e.g. {layout:special})
-      const layoutKey = queryKey(el, "{layout:special}");
-      if (!layoutKey) return; // skip if no layout switch key in qwerty
+      // qwerty has a {layout:numeric} key in the bottom row
+      const layoutKey = queryKey(el, "{layout:numeric}");
+      expect(layoutKey, "layout switch key should exist in qwerty").to.not.be.null;
 
-      setTimeout(() => layoutKey.click());
+      setTimeout(() => layoutKey!.click());
       const { detail } = await oneEvent(el, "layout-change");
-      expect(detail.layout).to.equal("special");
+      expect(detail.layout).to.equal("numeric");
     });
   });
 
@@ -716,9 +718,10 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       // Activate shift
-      queryKey(el, "{shift}")!.click();
+      const shiftKey = queryKey(el, "{shift}")!;
+      shiftKey.click();
       await nextRender();
-      expect(el._shifted).to.be.true;
+      expect(shiftKey.getAttribute("aria-pressed")).to.equal("true");
 
       // Switch to fkeys layout
       queryKey(el, "{layout:fkeys}")!.click();
@@ -728,8 +731,11 @@ describe("kiosk-keyboard", () => {
       queryKey(el, "{fkey:F1}")!.click();
       await nextRender();
 
-      // Shift should have auto-released
-      expect(el._shifted).to.be.false;
+      // Shift should have auto-released — switch back to check shift key state
+      queryKey(el, "{layout:base}")!.click();
+      await nextRender();
+      const shiftAfter = queryKey(el, "{shift}")!;
+      expect(shiftAfter.getAttribute("aria-pressed")).to.not.equal("true");
     });
   });
 

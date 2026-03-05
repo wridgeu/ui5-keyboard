@@ -22,10 +22,10 @@ const special: LayoutDefinition = [
     { value: "~" },
     { value: "<" },
     { value: ">" },
-    { value: "\u20AC", label: "\u20AC" },
-    { value: "\u00A3", label: "\u00A3" },
-    { value: "\u00A5", label: "\u00A5" },
-    { value: "\u2022", label: "\u2022" },
+    { value: "\u20AC" },
+    { value: "\u00A3" },
+    { value: "\u00A5" },
+    { value: "\u2022" },
   ],
   // Row 3
   [
