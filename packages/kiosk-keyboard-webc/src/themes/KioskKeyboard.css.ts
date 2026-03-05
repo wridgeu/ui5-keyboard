@@ -1,0 +1,203 @@
+// Generated from KioskKeyboard.css — keep in sync.
+// When a bundler is configured, this can be replaced with a CSS import assertion.
+const css = /* css */ `
+:host {
+  display: block;
+  --kiosk-keyboard-padding: 0.75rem;
+  --kiosk-keyboard-key-gap: 0.375rem;
+  --kiosk-keyboard-key-height: 3rem;
+  --kiosk-keyboard-key-font-size: 1.125rem;
+  --kiosk-keyboard-key-shadow: 0 1px 2px rgba(0,0,0,.1);
+  --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0,0,0,.15);
+  --kiosk-keyboard-docked-max-width: 1024px;
+  --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0,0,0,.2);
+  --kiosk-keyboard-docked-z-index: 100;
+  --kiosk-keyboard-numpad-max-width: 20rem;
+  --kiosk-keyboard-numpad-key-min-width: 4rem;
+}
+.kiosk-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kiosk-keyboard-key-gap);
+  padding: var(--kiosk-keyboard-padding);
+  background: var(--sapGroup_ContentBackground, #fff);
+  border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
+  border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.kiosk-keyboard--numpad {
+  max-width: var(--kiosk-keyboard-numpad-max-width);
+  --kiosk-keyboard-key-height: 3.5rem;
+  --kiosk-keyboard-key-font-size: 1.375rem;
+}
+.kiosk-keyboard--numpad .kiosk-key {
+  min-width: var(--kiosk-keyboard-numpad-key-min-width);
+}
+.kiosk-keyboard--numeric {
+  --kiosk-keyboard-key-font-size: 1.25rem;
+}
+.kiosk-keyboard--docked {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--kiosk-keyboard-docked-z-index);
+  max-width: var(--kiosk-keyboard-docked-max-width);
+  margin-inline: auto;
+  border-radius: var(--sapElement_BorderCornerRadius, 0.75rem) var(--sapElement_BorderCornerRadius, 0.75rem) 0 0;
+  border-bottom: none;
+  box-shadow: var(--kiosk-keyboard-docked-shadow);
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kiosk-keyboard--closed {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+.kiosk-keyboard--disabled {
+  opacity: var(--sapContent_DisabledOpacity, 0.4);
+  pointer-events: none;
+}
+.kiosk-row {
+  display: flex;
+  gap: var(--kiosk-keyboard-key-gap);
+  justify-content: center;
+}
+.kiosk-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  height: var(--kiosk-keyboard-key-height);
+  padding: 0 0.25rem;
+  border: 1px solid var(--sapButton_BorderColor, #bfbfbf);
+  border-radius: var(--sapButton_BorderCornerRadius, 0.5rem);
+  background: var(--sapButton_Background, #fff);
+  color: var(--sapButton_TextColor, #32363a);
+  font-family: var(--sapFontFamily, "72", "72full", Arial, Helvetica, sans-serif);
+  font-size: var(--kiosk-keyboard-key-font-size);
+  cursor: pointer;
+  box-sizing: border-box;
+  box-shadow: var(--kiosk-keyboard-key-shadow);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kiosk-key:hover {
+  background: var(--sapButton_Hover_Background, #eaecee);
+  border-color: var(--sapButton_Hover_BorderColor, #0064d9);
+  transform: translateY(-1px);
+  box-shadow: var(--kiosk-keyboard-key-shadow-hover);
+  transition: background 0.1s ease, box-shadow 0.1s ease, transform 0.05s ease;
+}
+.kiosk-key:active,
+.kiosk-key--pressed,
+.kiosk-key--highlight {
+  background: var(--sapButton_Active_Background, #0064d9);
+  color: var(--sapButton_Active_TextColor, #fff);
+  border-color: var(--sapButton_Active_BorderColor, #0064d9);
+  transform: scale(0.96) translateY(1px);
+  box-shadow: none;
+  transition: background 0.1s ease, transform 0.05s ease;
+}
+.kiosk-key:focus-visible {
+  outline: var(--sapContent_FocusWidth, 2px) var(--sapContent_FocusStyle, solid) var(--sapContent_FocusColor, #000);
+  outline-offset: 1px;
+}
+.kiosk-key--w1-25 { flex: 1.25 1 0; }
+.kiosk-key--w1-5  { flex: 1.5 1 0; }
+.kiosk-key--w1-75 { flex: 1.75 1 0; }
+.kiosk-key--w2    { flex: 2 1 0; }
+.kiosk-key--w2-25 { flex: 2.25 1 0; }
+.kiosk-key--w2-75 { flex: 2.75 1 0; }
+.kiosk-key--space  { flex: 6 1 0; }
+.kiosk-key--modifier {
+  background: var(--sapButton_Lite_Background, transparent);
+  color: var(--sapButton_Lite_TextColor, #32363a);
+  border-color: var(--sapButton_Lite_BorderColor, transparent);
+  font-size: var(--sapFontSize, 0.875rem);
+}
+.kiosk-key--modifier:hover {
+  background: var(--sapButton_Lite_Hover_Background, #eaecee);
+  border-color: var(--sapButton_Lite_Hover_BorderColor, #0064d9);
+}
+.kiosk-key--modifier:active,
+.kiosk-key--modifier.kiosk-key--pressed,
+.kiosk-key--modifier.kiosk-key--highlight {
+  background: var(--sapButton_Lite_Active_Background, #0064d9);
+  color: var(--sapButton_Active_TextColor, #fff);
+  border-color: var(--sapButton_Lite_Active_BorderColor, #0064d9);
+}
+.kiosk-key--action {
+  background: var(--sapButton_Emphasized_Background, #0070f2);
+  color: var(--sapButton_Emphasized_TextColor, #fff);
+  border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+  font-size: var(--sapFontSize, 0.875rem);
+  font-weight: bold;
+}
+.kiosk-key--action:hover {
+  background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
+  border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+}
+.kiosk-key--action:active,
+.kiosk-key--action.kiosk-key--pressed,
+.kiosk-key--action.kiosk-key--highlight {
+  background: var(--sapButton_Emphasized_Active_Background, #0053b8);
+  color: var(--sapButton_Emphasized_Active_TextColor, #fff);
+  border-color: var(--sapButton_Emphasized_Active_BorderColor, #0053b8);
+}
+.kiosk-key--active {
+  background: var(--sapButton_Emphasized_Background, #0070f2);
+  color: var(--sapButton_Emphasized_TextColor, #fff);
+  border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+}
+.kiosk-key--active:hover {
+  background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
+  border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+}
+.kiosk-key--capsLock {
+  box-shadow: 0 0 0 2px var(--sapButton_Emphasized_Background, #0070f2);
+}
+:host([data-ui5-compact-size]),
+:host-context(.sapUiSizeCompact) {
+  --kiosk-keyboard-padding: 0.5rem;
+  --kiosk-keyboard-key-gap: 0.25rem;
+  --kiosk-keyboard-key-height: 2rem;
+  --kiosk-keyboard-key-font-size: var(--sapFontSize, 0.875rem);
+}
+:host([data-ui5-compact-size]) .kiosk-keyboard--numpad,
+:host-context(.sapUiSizeCompact) .kiosk-keyboard--numpad {
+  --kiosk-keyboard-numpad-key-min-width: 3rem;
+  --kiosk-keyboard-key-height: 2.75rem;
+  --kiosk-keyboard-key-font-size: 1.125rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-key, .kiosk-keyboard--docked { transition: none; }
+  .kiosk-key:hover, .kiosk-key:active, .kiosk-key--pressed, .kiosk-key--highlight { transform: none; }
+}
+@media (forced-colors: active) {
+  .kiosk-key { border-color: ButtonText; }
+  .kiosk-key:active, .kiosk-key.kiosk-key--pressed, .kiosk-key.kiosk-key--highlight, .kiosk-key.kiosk-key--active { border-color: Highlight; }
+  .kiosk-key:focus-visible { outline-color: Highlight; }
+}
+.kiosk-keyboard__live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.kiosk-key__icon { display: flex; align-items: center; justify-content: center; }
+.kiosk-key__icon svg { width: 1em; height: 1em; }
+`;
+
+export default css;
