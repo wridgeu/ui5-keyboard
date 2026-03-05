@@ -1,0 +1,52 @@
+{
+  "name": "kiosk-keyboard-webc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native web component variant of the kiosk keyboard, built on UI5 Web Components framework",
+  "keywords": [
+    "custom-element",
+    "kiosk",
+    "on-screen-keyboard",
+    "touchscreen",
+    "virtual-keyboard",
+    "web-component"
+  ],
+  "homepage": "https://github.com/wridgeu/ui5-lib-keyboard/tree/main/packages/kiosk-keyboard-webc",
+  "bugs": "https://github.com/wridgeu/ui5-lib-keyboard/issues",
+  "license": "MIT",
+  "author": "Marco Beier",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wridgeu/ui5-lib-keyboard.git",
+    "directory": "packages/kiosk-keyboard-webc"
+  },
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "dist/KioskKeyboard.js",
+  "types": "dist/KioskKeyboard.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/KioskKeyboard.d.ts",
+      "default": "./dist/KioskKeyboard.js"
+    },
+    "./dist/*": "./dist/*",
+    "./dist/Assets.js": "./dist/Assets.js"
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ui5/webcomponents-base": "^2.19.2",
+    "@ui5/webcomponents-theming": "^2.19.2"
+  },
+  "devDependencies": {
+    "@ui5/webcomponents-tools": "^2.19.2"
+  }
+}

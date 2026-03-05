@@ -6,7 +6,6 @@
     "strict": true,
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
-    "allowUmdGlobalAccess": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
@@ -18,12 +17,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "composite": true
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "rootDir": "src",
+    "outDir": "dist"
   },
-  "files": [],
-  "references": [
-    { "path": "packages/hotkeys" },
-    { "path": "packages/kiosk-keyboard" },
-    { "path": "packages/kiosk-keyboard-webc" }
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }
