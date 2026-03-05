@@ -290,6 +290,7 @@ export default class KioskKeyboard extends HTMLElement {
     this._open = true;
     this._render();
     this._suppressInputMode();
+    this._announceLiveRegion(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
     this.dispatchEvent(new CustomEvent("after-open", { bubbles: true, composed: true }));
   }
 
@@ -298,6 +299,7 @@ export default class KioskKeyboard extends HTMLElement {
     this._open = false;
     this._render();
     this._restoreInputMode();
+    this._announceLiveRegion(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
     this.dispatchEvent(new CustomEvent("after-close", { bubbles: true, composed: true }));
   }
 
@@ -690,7 +692,7 @@ export default class KioskKeyboard extends HTMLElement {
   }
 
   private _getKeyIcon(key: KeyDefinition): string | null {
-    if (key.icon) return key.icon;
+    if (key.icon) return escHtml(key.icon);
     if (key.value === "{shift}" && this._shiftState.isCapsLock) return ICON_SHIFT_LOCKED;
     return ICON_MAP[key.value] ?? null;
   }
@@ -796,6 +798,11 @@ export default class KioskKeyboard extends HTMLElement {
       if (h > this._maxHeight) this._maxHeight = h;
       if (this._maxHeight > 0) root.style.minHeight = `${this._maxHeight}px`;
     }
+  }
+
+  private _announceLiveRegion(text: string): void {
+    const region = this._shadow.querySelector<HTMLElement>(".kiosk-keyboard__live-region");
+    if (region) region.textContent = text;
   }
 
   private _buildKeyClasses(key: KeyDefinition): string {

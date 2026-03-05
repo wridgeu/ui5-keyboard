@@ -7,10 +7,10 @@ const css = /* css */ `
   --kiosk-keyboard-key-gap: 0.375rem;
   --kiosk-keyboard-key-height: 3rem;
   --kiosk-keyboard-key-font-size: 1.125rem;
-  --kiosk-keyboard-key-shadow: 0 1px 2px rgba(0,0,0,.1);
-  --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0,0,0,.15);
+  --kiosk-keyboard-key-shadow: 0 1px 2px color-mix(in srgb, var(--sapContent_Shadow0, rgba(0,0,0,.1)) 10%, transparent);
+  --kiosk-keyboard-key-shadow-hover: 0 2px 4px color-mix(in srgb, var(--sapContent_Shadow0, rgba(0,0,0,.15)) 15%, transparent);
   --kiosk-keyboard-docked-max-width: 1024px;
-  --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0,0,0,.2);
+  --kiosk-keyboard-docked-shadow: 0 -4px 20px color-mix(in srgb, var(--sapContent_Shadow0, rgba(0,0,0,.2)) 20%, transparent);
   --kiosk-keyboard-docked-z-index: 100;
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;

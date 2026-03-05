@@ -95,6 +95,11 @@
       "title": "i18n Extensibility",
       "description": "New language bundles, label overrides, and programmatic override hooks",
       "route": "kioskI18nExtensibility"
+    },
+    {
+      "title": "Web Component (Native)",
+      "description": "Native <kiosk-keyboard> web component consumed via WebComponent.extend() bridge",
+      "route": "kioskWebComponent"
     }
   ],
   "platform": "",
