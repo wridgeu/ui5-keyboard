@@ -40,13 +40,17 @@
   "scripts": {
     "clean": "rimraf dist",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@ui5/webcomponents-base": "^2.19.2",
     "@ui5/webcomponents-theming": "^2.19.2"
   },
   "devDependencies": {
-    "@ui5/webcomponents-tools": "^2.19.2"
+    "@ui5/webcomponents-tools": "^2.19.2",
+    "jsdom": "^26.0.0",
+    "vitest": "^3.0.0"
   }
 }
