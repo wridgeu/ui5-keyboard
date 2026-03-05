@@ -189,7 +189,9 @@ export default class KioskKeyboard extends UI5Element {
   _shiftState = new ShiftState();
   _baseLayout = "";
   _keyboardTypeExplicit = false;
+  _autoDetecting = false;
   _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
+  _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   _lastFocusedKeyId: string | null = null;
   _maxHeight = 0;
   _highlightedKey: string | null = null;
@@ -327,7 +329,7 @@ export default class KioskKeyboard extends UI5Element {
       this._currentLayout = this.layout;
     }
     if (name === "keyboardType") {
-      this._keyboardTypeExplicit = true;
+      if (!this._autoDetecting) this._keyboardTypeExplicit = true;
       this._layoutSwitchedByUser = false;
       this.fireDecoratorEvent("keyboard-type-change", { keyboardType: this.keyboardType });
     }
@@ -371,10 +373,33 @@ export default class KioskKeyboard extends UI5Element {
     this._targetElement = el;
   }
 
+  /**
+   * Sets a custom resolver that the keyboard uses to locate the native
+   * input/textarea inside a host element. Called during auto-show focus
+   * handling and `for` resolution with the focused (or looked-up) element.
+   *
+   * Return the native `<input>` or `<textarea>` to type into, or `null`
+   * to fall back to the built-in resolver (which traverses light DOM and
+   * up to 3 levels of shadow DOM).
+   *
+   * @example
+   * ```ts
+   * keyboard.setTargetResolver((el) => {
+   *   // Custom control with deeply nested input
+   *   return el.querySelector('.my-inner-wrapper input');
+   * });
+   * ```
+   */
+  setTargetResolver(resolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null): void {
+    this._targetResolver = resolver;
+  }
+
   /** Resets `keyboardType` to `"Full"` and clears the explicit-type flag. */
   resetKeyboardType(): void {
+    this._autoDetecting = true;
     this._keyboardTypeExplicit = false;
     this.keyboardType = "Full";
+    this._autoDetecting = false;
   }
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
@@ -642,9 +667,19 @@ export default class KioskKeyboard extends UI5Element {
     const forId = this.for;
     if (forId) {
       const el = document.getElementById(forId);
-      return resolveInputOrTextarea(el);
+      if (!el) return null;
+      return this._resolveInputFrom(el);
     }
     return null;
+  }
+
+  /** Resolve a native input/textarea from an element, using the custom resolver if set. */
+  private _resolveInputFrom(el: HTMLElement): HTMLInputElement | HTMLTextAreaElement | null {
+    if (this._targetResolver) {
+      const custom = this._targetResolver(el);
+      if (custom) return custom;
+    }
+    return resolveInputOrTextarea(el);
   }
 
   private _shouldDeferToNative(): boolean {
@@ -677,13 +712,13 @@ export default class KioskKeyboard extends UI5Element {
     if (!(target instanceof HTMLElement)) return;
     if (this.shadowRoot!.contains(target) || this.contains(target)) return;
 
-    const inputEl = resolveInputOrTextarea(target);
+    const inputEl = this._resolveInputFrom(target);
     if (!inputEl) return;
     if (this._isTargetOfOther(inputEl)) return;
 
     const ids = this._inputIdsList;
     if (ids.length > 0) {
-      if (!this._matchesInputIds(inputEl, ids)) return;
+      if (!this._matchesInputIds(target, ids)) return;
     }
 
     const targetChanged = this._targetElement !== inputEl;
@@ -694,7 +729,9 @@ export default class KioskKeyboard extends UI5Element {
     if (this.autoType && !this._keyboardTypeExplicit) {
       const detected = detectKeyboardType(target);
       if (detected !== this.keyboardType) {
+        this._autoDetecting = true;
         this.keyboardType = detected;
+        this._autoDetecting = false;
       }
     }
 
@@ -720,7 +757,10 @@ export default class KioskKeyboard extends UI5Element {
       const active = document.activeElement;
 
       if (active && (this.shadowRoot!.contains(active) || this.contains(active))) return;
-      if (active && resolveInputOrTextarea(active)) return;
+      if (active && resolveInputOrTextarea(active)) {
+        const ids = this._inputIdsList;
+        if (ids.length === 0 || this._matchesInputIds(active as HTMLElement, ids)) return;
+      }
 
       this.close();
       this._targetElement = null;
@@ -813,13 +853,23 @@ export default class KioskKeyboard extends UI5Element {
 
   // ── Physical keyboard highlight ──
 
+  /** Maps a physical KeyboardEvent.key to the data-key value used in the layout. */
+  private _physicalKeyToDataKey(physicalKey: string): string {
+    const lower = physicalKey.toLowerCase();
+    if (lower === "backspace") return "{backspace}";
+    if (lower === "enter") return "{enter}";
+    if (lower === "shift") return "{shift}";
+    if (NATIVE_DISPATCHABLE_KEYS.has(physicalKey)) return `{fkey:${physicalKey}}`;
+    return lower;
+  }
+
   private _highlightKey(physicalKey: string, pressed: boolean): void {
     const shadow = this.shadowRoot!;
-    const lowerKey = physicalKey.toLowerCase();
+    const dataKey = this._physicalKeyToDataKey(physicalKey);
 
     // Immediate DOM manipulation for instant visual feedback
     if (pressed) {
-      const selector = `[data-key="${CSS.escape(lowerKey)}"], [data-shift-value="${CSS.escape(physicalKey)}"]`;
+      const selector = `[data-key="${CSS.escape(dataKey)}"], [data-shift-value="${CSS.escape(physicalKey)}"]`;
       const el = shadow.querySelector<HTMLElement>(selector);
       if (el) el.classList.add("kiosk-key--highlight");
     } else {
@@ -828,8 +878,8 @@ export default class KioskKeyboard extends UI5Element {
         .forEach((el) => el.classList.remove("kiosk-key--highlight"));
     }
 
-    // Track state so it persists across re-renders
-    this._highlightedKey = pressed ? lowerKey : null;
+    // Track state so it persists across re-renders (lowercased for template comparison)
+    this._highlightedKey = pressed ? dataKey.toLowerCase() : null;
   }
 
   private _syncPhysicalKeyHighlight(): void {
