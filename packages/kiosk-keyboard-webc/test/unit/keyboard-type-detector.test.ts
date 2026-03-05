@@ -54,4 +54,29 @@ describe("detectKeyboardType", () => {
     el.setAttribute("inputmode", "numeric");
     expect(detectKeyboardType(el)).toBe("Numpad");
   });
+
+  it("returns Numpad for type=number even with inputmode=text (non-numpad inputmode does not override type)", () => {
+    const el = document.createElement("input");
+    el.type = "number";
+    el.setAttribute("inputmode", "text");
+    // inputmode="text" is not a numpad mode, so it falls through to type check
+    expect(detectKeyboardType(el)).toBe("Numpad");
+  });
+
+  it("returns Full for inputmode=email", () => {
+    const el = document.createElement("input");
+    el.setAttribute("inputmode", "email");
+    expect(detectKeyboardType(el)).toBe("Full");
+  });
+
+  it("returns Full for inputmode=url", () => {
+    const el = document.createElement("input");
+    el.setAttribute("inputmode", "url");
+    expect(detectKeyboardType(el)).toBe("Full");
+  });
+
+  it("returns Full for input with no type or inputmode", () => {
+    const el = document.createElement("input");
+    expect(detectKeyboardType(el)).toBe("Full");
+  });
 });

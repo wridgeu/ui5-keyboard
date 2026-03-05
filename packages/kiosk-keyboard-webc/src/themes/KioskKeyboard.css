@@ -301,3 +301,18 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* ============================= */
+/* Key icon                      */
+/* ============================= */
+
+.kiosk-key__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kiosk-key__icon svg {
+  width: 1em;
+  height: 1em;
+}

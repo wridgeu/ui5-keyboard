@@ -123,22 +123,46 @@ describe("layout-registry", () => {
   });
 
   describe("locale layouts", () => {
-    it("registerLocaleLayout adds a mapping", () => {
-      registerLayout("azerty", CUSTOM_LAYOUT);
+    it("registerLocaleLayout warns for unknown layout but does not throw", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout("fr", "azerty");
-      // Can't easily test getLocaleLayout without mocking navigator.language,
-      // but at least verify no error is thrown
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("unknown layout"));
+      spy.mockRestore();
     });
 
-    it("unregisterLocaleLayout removes a mapping", () => {
+    it("registerLocaleLayout does not warn for known layout", () => {
+      registerLayout("azerty", CUSTOM_LAYOUT);
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      registerLocaleLayout("fr", "azerty");
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it("unregisterLocaleLayout removes a mapping without error", () => {
       registerLocaleLayout("fr", "azerty");
       unregisterLocaleLayout("fr");
+      // Re-registering should warn again (mapping was removed)
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      registerLocaleLayout("fr", "azerty");
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("unknown layout"));
+      spy.mockRestore();
     });
 
-    it("resetLocaleLayouts restores defaults", () => {
+    it("resetLocaleLayouts restores defaults and removes custom mappings", () => {
       registerLocaleLayout("fr", "azerty");
       resetLocaleLayouts();
-      // After reset, only the default "de" → "qwertz-de" mapping should exist
+      // After reset, re-registering "fr" should warn again (custom removed)
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      registerLocaleLayout("fr", "azerty");
+      expect(spy).toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it("rejects empty locale string", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      registerLocaleLayout("", "qwerty");
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("non-empty string"));
+      spy.mockRestore();
     });
   });
 });

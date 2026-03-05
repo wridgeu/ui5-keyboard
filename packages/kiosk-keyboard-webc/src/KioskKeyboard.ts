@@ -150,6 +150,28 @@ export default class KioskKeyboard extends HTMLElement {
     this._boundEscape = (e: Event) => this._onDocumentEscape(e as KeyboardEvent);
     this._boundPhysicalKeyDown = (e: Event) => this._highlightKey((e as KeyboardEvent).key, true);
     this._boundPhysicalKeyUp = (e: Event) => this._highlightKey((e as KeyboardEvent).key, false);
+
+    // Delegate events on the shadow root once — avoids re-attaching on every render
+    this._shadow.addEventListener("click", (e) => {
+      const target = (e.target as HTMLElement).closest?.(".kiosk-key");
+      if (target) this._onKeyClick(e);
+    });
+    this._shadow.addEventListener("mousedown", (e) => {
+      const target = (e.target as HTMLElement).closest?.(".kiosk-key");
+      if (target) this._onKeyMouseDown(e);
+    });
+    this._shadow.addEventListener(
+      "touchstart",
+      (e) => {
+        const target = (e.target as HTMLElement).closest?.(".kiosk-key");
+        if (target) this._onKeyMouseDown(e);
+      },
+      { passive: false },
+    );
+    this._shadow.addEventListener("keydown", (e) => {
+      const target = (e.target as HTMLElement).closest?.(".kiosk-key");
+      if (target) this._onKeyDown(e as KeyboardEvent);
+    });
   }
 
   // ── Lifecycle ──
@@ -185,13 +207,15 @@ export default class KioskKeyboard extends HTMLElement {
       cancelAnimationFrame(this._deferredFocusOutCloseId);
       this._deferredFocusOutCloseId = null;
     }
+
+    this._lastFocusedKeyId = null;
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
     this._render();
 
-    if (name === "auto-show") this._syncAutoShow();
+    if (name === "auto-show" || name === "docked") this._syncAutoShow();
     if (name === "docked") {
       if (newValue !== null) {
         document.addEventListener("keydown", this._boundEscape);
@@ -536,10 +560,10 @@ export default class KioskKeyboard extends HTMLElement {
     // Skip if this input is targeted by another keyboard
     if (this._isTargetOfOther(inputEl)) return;
 
-    // Check inputIds filter
+    // Check inputIds filter — only match by direct element ID, not ancestors
     const ids = this.inputIds;
     if (ids.length > 0) {
-      const targetId = target.id || target.closest("[id]")?.id;
+      const targetId = inputEl.id;
       if (!targetId || !ids.includes(targetId)) return;
     }
 
@@ -783,14 +807,7 @@ export default class KioskKeyboard extends HTMLElement {
 
     this._shadow.innerHTML = html;
 
-    // Attach event listeners to the root
     const root = this._shadow.querySelector<HTMLElement>(".kiosk-keyboard");
-    if (root) {
-      root.addEventListener("click", (e) => this._onKeyClick(e));
-      root.addEventListener("mousedown", (e) => this._onKeyMouseDown(e));
-      root.addEventListener("touchstart", (e) => this._onKeyMouseDown(e), { passive: false });
-      root.addEventListener("keydown", (e) => this._onKeyDown(e));
-    }
 
     // Stable height
     if (this.stableHeight && !this.docked && root) {
