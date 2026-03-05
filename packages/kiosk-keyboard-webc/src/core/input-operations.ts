@@ -46,6 +46,8 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
+  const inputType = text === "\n" ? "insertLineBreak" : "insertText";
+  dom.dispatchEvent(new InputEvent("input", { bubbles: true, inputType, data: text }));
   return [newPos, newPos];
 }
 
@@ -79,6 +81,7 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
+  dom.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContentBackward" }));
   return [newPos, newPos];
 }
 

@@ -41,6 +41,56 @@ describe("insertText", () => {
     expect(el.value).toBe("abc");
     expect(pos).toEqual([2, 2]);
   });
+
+  it("dispatches input event with insertText type", () => {
+    const el = mockInput("a", 1);
+    let fired: InputEvent | null = null;
+    el.addEventListener(
+      "input",
+      (e) => {
+        fired = e as InputEvent;
+      },
+      { once: true },
+    );
+    insertText(el, "b");
+    expect(fired).not.toBeNull();
+    expect(fired!.inputType).toBe("insertText");
+    expect(fired!.data).toBe("b");
+  });
+
+  it("dispatches input event with insertLineBreak type for newline", () => {
+    const el = document.createElement("textarea");
+    el.value = "ab";
+    el.setSelectionRange(2, 2);
+    let fired: InputEvent | null = null;
+    el.addEventListener(
+      "input",
+      (e) => {
+        fired = e as InputEvent;
+      },
+      { once: true },
+    );
+    insertText(el, "\n");
+    expect(fired).not.toBeNull();
+    expect(fired!.inputType).toBe("insertLineBreak");
+  });
+
+  it("input event bubbles", () => {
+    const el = mockInput("a", 1);
+    let bubbled = false;
+    // Attach to a parent to verify bubbling
+    const wrapper = document.createElement("div");
+    wrapper.appendChild(el);
+    wrapper.addEventListener(
+      "input",
+      () => {
+        bubbled = true;
+      },
+      { once: true },
+    );
+    insertText(el, "b");
+    expect(bubbled).toBe(true);
+  });
 });
 
 describe("handleBackspace", () => {
@@ -69,6 +119,66 @@ describe("handleBackspace", () => {
     const pos = handleBackspace(el);
     expect(el.value).toBe("ab");
     expect(pos).toEqual([1, 1]);
+  });
+
+  it("dispatches input event with deleteContentBackward type", () => {
+    const el = mockInput("abc", 2);
+    let fired: InputEvent | null = null;
+    el.addEventListener(
+      "input",
+      (e) => {
+        fired = e as InputEvent;
+      },
+      { once: true },
+    );
+    handleBackspace(el);
+    expect(fired).not.toBeNull();
+    expect(fired!.inputType).toBe("deleteContentBackward");
+  });
+
+  it("dispatches input event with deleteContentBackward when deleting selection", () => {
+    const el = mockInput("abcd", 1, 3);
+    let fired: InputEvent | null = null;
+    el.addEventListener(
+      "input",
+      (e) => {
+        fired = e as InputEvent;
+      },
+      { once: true },
+    );
+    handleBackspace(el);
+    expect(fired).not.toBeNull();
+    expect(fired!.inputType).toBe("deleteContentBackward");
+  });
+
+  it("does not dispatch input event when nothing is deleted", () => {
+    const el = mockInput("abc", 0);
+    let fired = false;
+    el.addEventListener(
+      "input",
+      () => {
+        fired = true;
+      },
+      { once: true },
+    );
+    handleBackspace(el);
+    expect(fired).toBe(false);
+  });
+
+  it("input event bubbles", () => {
+    const el = mockInput("abc", 2);
+    let bubbled = false;
+    const wrapper = document.createElement("div");
+    wrapper.appendChild(el);
+    wrapper.addEventListener(
+      "input",
+      () => {
+        bubbled = true;
+      },
+      { once: true },
+    );
+    handleBackspace(el);
+    expect(bubbled).toBe(true);
   });
 });
 
@@ -113,5 +223,18 @@ describe("handleNavigation", () => {
 
   it("returns null for unknown keys", () => {
     expect(handleNavigation(el, "Tab")).toBeNull();
+  });
+
+  it("does not dispatch input event (no value change)", () => {
+    let fired = false;
+    el.addEventListener(
+      "input",
+      () => {
+        fired = true;
+      },
+      { once: true },
+    );
+    handleNavigation(el, "ArrowRight");
+    expect(fired).toBe(false);
   });
 });

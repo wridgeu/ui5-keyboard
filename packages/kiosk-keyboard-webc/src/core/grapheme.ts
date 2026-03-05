@@ -15,10 +15,13 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 export function graphemeLengthBefore(value: string, offset: number): number {
   if (offset <= 0) return 0;
 
-  const before = value.slice(0, Math.min(offset, value.length));
+  // Only examine the last few characters — no grapheme cluster exceeds ~20
+  // code units, so slicing avoids iterating the entire string for long values.
+  const clampedOffset = Math.min(offset, value.length);
+  const tail = value.slice(Math.max(0, clampedOffset - 20), clampedOffset);
 
   let last: Intl.SegmentData | undefined;
-  for (const seg of segmenter.segment(before)) {
+  for (const seg of segmenter.segment(tail)) {
     last = seg;
   }
   return last ? last.segment.length : 0;

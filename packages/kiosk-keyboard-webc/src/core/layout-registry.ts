@@ -2,6 +2,9 @@ import type { LayoutDefinition } from "../types.js";
 import DEFAULT_LAYOUT from "../layouts/default-layout.js";
 import builtInLayouts from "../layouts/index.js";
 
+// Module-level singleton — shared across all component instances (and across
+// micro-frontends if they import the same module). This is intentional so
+// that layouts registered once are available to all <kiosk-keyboard> elements.
 const layouts: Map<string, LayoutDefinition> = new Map(builtInLayouts);
 
 /** Built-in layout names that cannot be overwritten by registerLayout. */

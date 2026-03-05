@@ -75,18 +75,12 @@ const NATIVE_DISPATCHABLE_KEYS = new Set([
 ]);
 
 // ── Built-in native actions for F-keys ──
-const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
-  F5: () => {
-    location.reload();
-  },
-  F11: () => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen?.().catch(() => undefined);
-    } else {
-      void document.documentElement.requestFullscreen?.().catch(() => undefined);
-    }
-  },
-};
+// Intentionally empty — consumers handle F-key side effects via the
+// "key-press" event. F5 (reload) and F11 (fullscreen) were removed
+// because silently triggering page-level actions from a keyboard
+// component is unexpected. Apps that need these can listen for
+// key-press and implement the behavior themselves.
+const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {};
 
 /** ARIA labels for icon-only special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
@@ -208,6 +202,7 @@ export default class KioskKeyboard extends UI5Element {
 
   // ── Multi-keyboard instance isolation ──
   private static readonly _instances = new Set<KioskKeyboard>();
+  private static _nextAutoId = 0;
 
   // ── Physical keyboard highlight ──
   private _highlightTargetId: string | null = null;
@@ -237,6 +232,7 @@ export default class KioskKeyboard extends UI5Element {
     this.disabled = !val;
   }
 
+  /** Whether the docked keyboard is open. No-op when `docked` is false. */
   get open(): boolean {
     return this._open;
   }
@@ -254,8 +250,14 @@ export default class KioskKeyboard extends UI5Element {
       : [];
   }
 
+  private _autoId: string | null = null;
+
   get _componentId(): string {
-    return this.id || "kiosk-kb";
+    if (this.id) return this.id;
+    if (!this._autoId) {
+      this._autoId = `kiosk-kb-${KioskKeyboard._nextAutoId++}`;
+    }
+    return this._autoId;
   }
 
   // ── Lifecycle ──
@@ -680,6 +682,8 @@ export default class KioskKeyboard extends UI5Element {
     const targetChanged = this._targetElement !== inputEl;
     this._targetElement = inputEl;
 
+    // Detect keyboard type before open — this may trigger onInvalidation for
+    // keyboardType, but the target is already set so subsequent logic is safe.
     if (this.autoType && !this._keyboardTypeExplicit) {
       const detected = detectKeyboardType(target);
       if (detected !== this.keyboardType) {
@@ -702,7 +706,7 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   private _onDocumentFocusOut(_e: FocusEvent): void {
-    if (!this._open) return;
+    if (!this._open || !this.autoShow) return;
 
     this._deferredFocusOutCloseId = requestAnimationFrame(() => {
       this._deferredFocusOutCloseId = null;

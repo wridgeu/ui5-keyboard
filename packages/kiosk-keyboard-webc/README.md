@@ -25,8 +25,10 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 
 ## Installation
 
+This package is part of the [`ui5-lib-keyboard`](https://github.com/wridgeu/ui5-lib-keyboard) monorepo and is not published to npm. Install it as a workspace dependency:
+
 ```bash
-npm install kiosk-keyboard-webc
+npm install kiosk-keyboard-webc --workspace=packages/demo-app
 ```
 
 ## Usage
