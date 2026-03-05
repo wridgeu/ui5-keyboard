@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prestart": "npx --yes kill-port 8080",
     "start": "ui5 serve --port 8080 -o index.html",
+    "prestart:flp": "npx --yes kill-port 8080",
     "start:flp": "ui5 serve --config ui5-flp.yaml --port 8080 -o test/flp.html",
     "build": "ui5 build --clean-dest",
     "clean": "rimraf dist",
