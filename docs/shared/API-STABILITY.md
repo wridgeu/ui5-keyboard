@@ -17,6 +17,7 @@ Use these imports for application code:
 - `ui5/hotkeys/RegistrationGroup`
 - `ui5/hotkeys/KeyStateTracker` (type import; construct via `manager.getKeyStateTracker()`)
 - `ui5/hotkeys/HotkeyRecorder` (type import; construct via `manager.createRecorder()`)
+- `ui5/hotkeys/format`
 - `ui5/hotkeys/library`
 - `ui5/hotkeys/types`
 
@@ -36,7 +37,7 @@ Modules under `ui5/hotkeys/internal/*` and `ui5/kiosk/internal/*` are internal i
 - They can be removed without deprecation.
 - They are not a supported integration surface.
 
-Some non-`internal/*` modules are currently importable but non-stable. In `ui5.hotkeys`, this currently includes top-level utility/helper paths (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`, `ui5/hotkeys/format`). Unless explicitly listed in the stable API above, treat them as advanced/unsupported. Higher-level implementation modules (for example `SequenceManager`) are consumed via `HotkeyManager` and are not part of the supported direct import surface.
+Some non-`internal/*` modules are currently importable but non-stable. In `ui5.hotkeys`, this currently includes top-level utility/helper paths (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`). Unless explicitly listed in the stable API above, treat them as advanced/unsupported. Higher-level implementation modules (for example `SequenceManager`) are consumed via `HotkeyManager` and are not part of the supported direct import surface.
 
 For `ui5.kiosk`, these two layout row modules are additionally treated as stable for custom layout composition:
 

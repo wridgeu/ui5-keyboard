@@ -14,7 +14,7 @@ library.ts                UI5 Lib.init(), enum registration
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces,
                           KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
                           KioskI18nOverrideContext types
-layout-registry.ts        Layout registration/reset + locale-based layout resolution
+internal/layout-registry.ts  Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
 internal/i18n-registry.ts i18n resolution chain: base bundle + enhancement bundles
                           + override hook, async loading with generation counter
@@ -539,7 +539,7 @@ packages/kiosk-keyboard/
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition,
                               KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
                               KioskI18nOverrideContext
-    layout-registry.ts        Layout registration and locale resolution
+    internal/layout-registry.ts  Layout registration and locale resolution
     internal/
       dom.ts                  DOM/key ID utilities + input resolver
       i18n-registry.ts        i18n resolution chain, config, hook, async loading

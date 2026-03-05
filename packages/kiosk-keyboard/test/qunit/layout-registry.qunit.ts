@@ -9,7 +9,7 @@ import {
   unregisterLocaleLayout,
   resetLocaleLayouts,
   getLocaleLayout,
-} from "ui5/kiosk/layout-registry";
+} from "ui5/kiosk/internal/layout-registry";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import type { LayoutDefinition } from "ui5/kiosk/types";
