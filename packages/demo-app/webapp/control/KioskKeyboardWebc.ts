@@ -17,7 +17,7 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
       },
       keyboardType: {
         type: "string",
-        defaultValue: "",
+        defaultValue: "Full",
         mapping: { type: "property", to: "keyboard-type" },
       },
       docked: {
@@ -65,8 +65,18 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
         defaultValue: false,
         mapping: { type: "property", to: "stable-height" },
       },
+      mobileKeyboard: {
+        type: "string",
+        defaultValue: "Auto",
+        mapping: { type: "property", to: "mobile-keyboard" },
+      },
+      fKeyMode: {
+        type: "string",
+        defaultValue: "Event",
+        mapping: { type: "property", to: "f-key-mode" },
+      },
     },
-    methods: ["show", "close", "setTargetElement", "resetKeyboardType"],
+    methods: ["show", "close", "isOpen", "setTargetElement", "resetKeyboardType"],
   },
 }) as typeof WebComponent;
 

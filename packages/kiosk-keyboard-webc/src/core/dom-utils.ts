@@ -13,7 +13,7 @@ export function keyElementId(controlId: string, row: number, col: number): strin
 }
 
 /** Type guard: returns true if the value is an HTMLInputElement or HTMLTextAreaElement. */
-export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
+function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 

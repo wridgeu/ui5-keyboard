@@ -3,6 +3,9 @@ import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
+// Register the <kiosk-keyboard> custom element (resolved by ui5-tooling-modules)
+import "kiosk-keyboard-webc/dist/bundle.esm.js";
+
 /**
  * Controller for the native `<kiosk-keyboard>` web component demo page.
  *

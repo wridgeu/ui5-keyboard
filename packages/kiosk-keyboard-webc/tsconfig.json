@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "strict": true,
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
@@ -18,7 +18,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "preact",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "jsxImportSource": "@ui5/webcomponents-base",
     "rootDir": "src",
     "outDir": "dist"
   },

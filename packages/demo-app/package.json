@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ui5/webcomponents": "2.15.1",
+    "kiosk-keyboard-webc": "file:../kiosk-keyboard-webc",
     "ui5-lib-hotkeys": "file:../hotkeys",
     "ui5-lib-kiosk-keyboard": "file:../kiosk-keyboard"
   },

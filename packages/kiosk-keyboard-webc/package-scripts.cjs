@@ -1,0 +1,44 @@
+/**
+ * NPS (nps-utils) build scripts for kiosk-keyboard-webc.
+ *
+ * Uses @ui5/webcomponents-tools to process:
+ *   - CSS:  src/themes/KioskKeyboard.css → src/generated/themes/KioskKeyboard.css.ts
+ *   - CSS:  src/themes/{theme}/parameters-bundle.css → src/generated/themes/{theme}/parameters-bundle.css.ts
+ *   - i18n: src/i18n/messagebundle*.properties → src/generated/i18n/i18n-defaults.ts
+ *   - i18n: src/i18n/messagebundle*.properties → dist/generated/assets/i18n/*.json
+ *
+ * Entry point: `ui5nps generate` (called from `npm run generate`).
+ *
+ * @see https://github.com/nicknisi/nps-utils
+ * @see https://github.com/SAP/ui5-webcomponents/tree/main/packages/tools
+ */
+
+const path = require("node:path");
+const LIB = path.join(path.dirname(require.resolve("@ui5/webcomponents-tools/package.json")), "lib");
+
+const scripts = {
+  __ui5envs: {
+    UI5_TS: "true",
+  },
+
+  generate: {
+    default: "ui5nps generate.styles generate.i18n generate.jsonImports",
+    styles: {
+      default: "ui5nps generate.styles.components generate.styles.themes",
+      components: `ui5nps-script "${LIB}/css-processors/css-processor-components.mjs"`,
+      themes: `ui5nps-script "${LIB}/css-processors/css-processor-themes.mjs"`,
+    },
+    i18n: {
+      default: "ui5nps generate.i18n.defaults generate.i18n.json",
+      defaults: `ui5nps-script "${LIB}/i18n/defaults.js" src/i18n src/generated/i18n`,
+      json: `ui5nps-script "${LIB}/i18n/toJSON.js" src/i18n dist/generated/assets/i18n`,
+    },
+    jsonImports: {
+      default: "ui5nps generate.jsonImports.i18n generate.jsonImports.themes",
+      i18n: `ui5nps-script "${LIB}/generate-json-imports/i18n.js" src/i18n src/generated/json-imports`,
+      themes: `ui5nps-script "${LIB}/generate-json-imports/themes.js" src/themes src/generated/json-imports`,
+    },
+  },
+};
+
+module.exports = { scripts };

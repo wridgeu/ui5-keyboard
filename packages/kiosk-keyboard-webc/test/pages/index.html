@@ -5,162 +5,315 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>KioskKeyboard Web Component — Standalone Test Page</title>
     <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
         padding: 20px;
         font-family: "72", Arial, Helvetica, sans-serif;
         background: #f5f6f7;
+        color: #32363a;
       }
-      h1 {
+      header {
+        margin-bottom: 24px;
+      }
+      header h1 {
         font-size: 20px;
-        color: #32363a;
+        margin: 0 0 4px;
       }
-      .section {
-        margin-bottom: 40px;
+      header p {
+        color: #666;
+        font-size: 13px;
+        margin: 0;
       }
-      .section h2 {
-        font-size: 16px;
-        color: #32363a;
-        margin-bottom: 12px;
+
+      /* Grid layout — 2 columns on wide screens */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
       }
-      .keyboard-container {
+      @media (max-width: 1100px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Card */
+      .card {
         background: #fff;
-        padding: 20px;
         border-radius: 8px;
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-        display: inline-block;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card h2 {
+        font-size: 14px;
+        margin: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e5e5e5;
+      }
+      .card--full {
+        grid-column: 1 / -1;
+      }
+
+      /* Input fields */
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .input-group label {
+        font-size: 12px;
+        color: #666;
       }
       input,
       textarea {
         font-family: inherit;
         font-size: 14px;
-        padding: 8px;
+        padding: 8px 10px;
         border: 1px solid #bfbfbf;
         border-radius: 4px;
-        width: 300px;
-        display: block;
-        margin-bottom: 8px;
+        width: 100%;
       }
-      label {
-        display: block;
-        margin-bottom: 4px;
-        color: #32363a;
+      input:focus,
+      textarea:focus {
+        outline: 2px solid #0070f2;
+        outline-offset: -1px;
+        border-color: #0070f2;
+      }
+
+      /* Buttons */
+      button {
+        font-family: inherit;
         font-size: 13px;
+        padding: 6px 16px;
+        border: 1px solid #0070f2;
+        border-radius: 4px;
+        background: #0070f2;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0064d9;
+      }
+
+      /* Event log — sticky sidebar on wide screens */
+      .layout-with-log {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 1100px) {
+        .layout-with-log {
+          grid-template-columns: 1fr;
+        }
+      }
+      .event-log-panel {
+        position: sticky;
+        top: 20px;
+      }
+      .event-log-panel h2 {
+        font-size: 14px;
+        margin: 0 0 8px;
       }
       #event-log {
-        font-family: monospace;
-        font-size: 12px;
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 11px;
         background: #1a1a2e;
         color: #0f0;
         padding: 12px;
-        border-radius: 4px;
-        max-height: 200px;
+        border-radius: 6px;
+        height: 400px;
         overflow-y: auto;
         white-space: pre-wrap;
+        line-height: 1.5;
+      }
+      #event-log:empty::before {
+        content: "Events will appear here…";
+        color: #555;
+      }
+      .log-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .log-actions button {
+        font-size: 11px;
+        padding: 4px 10px;
+        background: #333;
+        border-color: #555;
+      }
+      .log-actions button:hover {
+        background: #444;
       }
     </style>
     <script type="module">
-      import "../../dist/KioskKeyboard.js";
+      import "../../dist/kiosk-keyboard.bundle.js";
 
-      // Event log
+      // ── Global event log ──
       const log = document.getElementById("event-log");
-      function appendLog(msg) {
-        log.textContent += msg + "\n";
+      function appendLog(source, msg) {
+        const ts = new Date().toLocaleTimeString("en-GB", { hour12: false });
+        log.textContent += `[${ts}] ${source}: ${msg}\n`;
         log.scrollTop = log.scrollHeight;
       }
 
-      // Wire event listeners on docked keyboard
-      const docked = document.getElementById("kb-docked");
-      docked.addEventListener("key-press", (e) => {
-        appendLog(`key-press: key="${e.detail.key}" shift=${e.detail.shiftKey}`);
+      document.getElementById("clear-log").addEventListener("click", () => {
+        log.textContent = "";
       });
-      docked.addEventListener("layout-change", (e) => {
-        appendLog(`layout-change: layout="${e.detail.layout}"`);
+
+      // Wire all keyboards for event logging
+      document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
+        const name = kb.id || kb.getAttribute("keyboard-type") || "keyboard";
+        kb.addEventListener("key-press", (e) => {
+          const d = e.detail;
+          appendLog(name, `key-press key="${d.key}" shift=${d.shiftKey}`);
+        });
+        kb.addEventListener("layout-change", (e) => {
+          appendLog(name, `layout-change layout="${e.detail.layout}"`);
+        });
+        kb.addEventListener("after-open", () => appendLog(name, "after-open"));
+        kb.addEventListener("after-close", () => appendLog(name, "after-close"));
       });
-      docked.addEventListener("after-open", () => appendLog("after-open"));
-      docked.addEventListener("after-close", () => appendLog("after-close"));
 
       // Toggle docked keyboard
       document.getElementById("toggle-docked").addEventListener("click", () => {
+        const docked = document.getElementById("kb-docked");
         if (docked.open) docked.close();
         else docked.show();
       });
     </script>
   </head>
   <body>
-    <h1>KioskKeyboard Web Component — Standalone</h1>
-    <p style="color: #666; font-size: 13px">No UI5 runtime. Pure custom element usage.</p>
+    <header>
+      <h1>KioskKeyboard Web Component — Standalone</h1>
+      <p>No UI5 runtime. Pure custom element usage.</p>
+    </header>
 
-    <div class="section">
-      <h2>1. Full QWERTY (inline)</h2>
-      <div class="keyboard-container">
-        <kiosk-keyboard id="kb-qwerty" layout="qwerty"></kiosk-keyboard>
+    <!-- Docked Mode — at the top for easy access -->
+    <div class="card" style="margin-bottom: 20px">
+      <h2>Docked Mode (auto-show + auto-type)</h2>
+      <p style="font-size: 12px; color: #666; margin: 0">
+        Click an input below to open the docked keyboard at the bottom of the screen.
+      </p>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: end">
+        <div class="input-group" style="flex: 1; min-width: 200px">
+          <label for="docked-input-name">Full Name</label>
+          <input id="docked-input-name" type="text" placeholder="John Doe" />
+        </div>
+        <div class="input-group" style="flex: 1; min-width: 200px">
+          <label for="docked-input-email">Email</label>
+          <input id="docked-input-email" type="email" placeholder="john@example.com" />
+        </div>
+        <div class="input-group" style="width: 120px">
+          <label for="docked-input-age">Age</label>
+          <input id="docked-input-age" type="number" placeholder="25" />
+        </div>
+        <button id="toggle-docked">Toggle Docked</button>
       </div>
-    </div>
-
-    <div class="section">
-      <h2>2. With Input Target</h2>
-      <label for="text-input">Target Input</label>
-      <input id="text-input" type="text" placeholder="Type here via keyboard" />
-      <div class="keyboard-container">
-        <kiosk-keyboard layout="qwerty" for="text-input" auto-type></kiosk-keyboard>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>3. Numpad</h2>
-      <div class="keyboard-container">
-        <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>4. Numeric</h2>
-      <div class="keyboard-container">
-        <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>5. Disabled State</h2>
-      <div class="keyboard-container">
-        <kiosk-keyboard layout="qwerty" disabled></kiosk-keyboard>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>6. QWERTZ-DE</h2>
-      <div class="keyboard-container">
-        <kiosk-keyboard layout="qwertz-de"></kiosk-keyboard>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>7. Narrow (320px container)</h2>
-      <div class="keyboard-container" style="width: 320px">
-        <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>8. Docked Mode (auto-show + auto-type)</h2>
-      <label for="docked-input-name">Full Name</label>
-      <input id="docked-input-name" type="text" placeholder="John Doe" />
-      <label for="docked-input-age">Age (numpad auto-type)</label>
-      <input id="docked-input-age" type="number" placeholder="25" />
-      <button id="toggle-docked" style="padding: 8px 16px; cursor: pointer; margin-bottom: 8px">Toggle Docked</button>
       <kiosk-keyboard
         id="kb-docked"
         docked
         auto-show
         auto-type
-        input-ids="docked-input-name,docked-input-age"
+        mobile-keyboard="Custom"
+        input-ids="docked-input-name,docked-input-email,docked-input-age"
       ></kiosk-keyboard>
     </div>
 
-    <div class="section">
-      <h2>9. Event Log</h2>
-      <div id="event-log"></div>
+    <div class="layout-with-log">
+      <div>
+        <div class="grid">
+          <!-- 1. QWERTY with input -->
+          <div class="card">
+            <h2>QWERTY</h2>
+            <div class="input-group">
+              <label for="qwerty-input">Target Input</label>
+              <input id="qwerty-input" type="text" placeholder="Type here…" />
+            </div>
+            <kiosk-keyboard id="kb-qwerty" layout="qwerty" for="qwerty-input" auto-type></kiosk-keyboard>
+          </div>
+
+          <!-- 2. QWERTZ-DE with input -->
+          <div class="card">
+            <h2>QWERTZ-DE</h2>
+            <div class="input-group">
+              <label for="qwertz-input">Target Input</label>
+              <input id="qwertz-input" type="text" placeholder="Hier tippen…" />
+            </div>
+            <kiosk-keyboard id="kb-qwertz" layout="qwertz-de" for="qwertz-input" auto-type></kiosk-keyboard>
+          </div>
+
+          <!-- 3. Numpad with input -->
+          <div class="card">
+            <h2>Numpad</h2>
+            <div class="input-group">
+              <label for="numpad-input">Amount</label>
+              <input id="numpad-input" type="text" placeholder="0.00" />
+            </div>
+            <kiosk-keyboard id="kb-numpad" keyboard-type="Numpad" for="numpad-input" auto-type></kiosk-keyboard>
+          </div>
+
+          <!-- 4. Numeric with input -->
+          <div class="card">
+            <h2>Numeric</h2>
+            <div class="input-group">
+              <label for="numeric-input">PIN / Code</label>
+              <input id="numeric-input" type="text" placeholder="Enter code…" />
+            </div>
+            <kiosk-keyboard id="kb-numeric" keyboard-type="Numeric" for="numeric-input" auto-type></kiosk-keyboard>
+          </div>
+
+          <!-- 5. Disabled State -->
+          <div class="card">
+            <h2>Disabled State</h2>
+            <div class="input-group">
+              <label for="disabled-input">Readonly field</label>
+              <input id="disabled-input" type="text" value="Cannot type" readonly />
+            </div>
+            <kiosk-keyboard layout="qwerty" disabled></kiosk-keyboard>
+          </div>
+
+          <!-- 6. Narrow (320px) -->
+          <div class="card">
+            <h2>Narrow (320px container)</h2>
+            <div class="input-group">
+              <label for="narrow-input">Narrow input</label>
+              <input id="narrow-input" type="text" placeholder="Narrow…" />
+            </div>
+            <div style="max-width: 320px">
+              <kiosk-keyboard id="kb-narrow" layout="qwerty" for="narrow-input" auto-type></kiosk-keyboard>
+            </div>
+          </div>
+
+          <!-- 7. With Input Target (legacy for E2E compat) -->
+          <div class="card">
+            <h2>With Input Target (for= attribute)</h2>
+            <div class="input-group">
+              <label for="text-input">Target Input</label>
+              <input id="text-input" type="text" placeholder="Type here via keyboard" />
+            </div>
+            <kiosk-keyboard layout="qwerty" for="text-input" auto-type></kiosk-keyboard>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky event log sidebar -->
+      <div class="event-log-panel">
+        <h2>Event Log</h2>
+        <div id="event-log"></div>
+        <div class="log-actions">
+          <button id="clear-log">Clear</button>
+        </div>
+      </div>
     </div>
   </body>
 </html>

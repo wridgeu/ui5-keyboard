@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ShiftState } from "../../src/core/shift-state.js";
 
 describe("ShiftState", () => {
@@ -13,24 +13,36 @@ describe("ShiftState", () => {
     expect(state.isCapsLock).toBe(false);
   });
 
-  describe("toggle cycle: off → shift → caps → off", () => {
+  describe("single click → shift", () => {
     it("first toggle activates shift", () => {
       state.toggle();
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(false);
     });
 
-    it("second toggle activates caps lock", () => {
-      state.toggle();
-      state.toggle();
+    it("single click after timeout deactivates shift and re-activates", () => {
+      state.toggle(); // shift on
+      // Simulate time passing beyond double-click threshold
+      vi.spyOn(Date, "now").mockReturnValue(Date.now() + ShiftState.DOUBLE_CLICK_MS + 100);
+      state.toggle(); // stale shift → new shift (not caps lock)
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(false);
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe("double-click → caps lock", () => {
+    it("rapid double-click activates caps lock", () => {
+      state.toggle(); // shift on
+      state.toggle(); // double-click → caps lock
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(true);
     });
 
-    it("third toggle returns to off", () => {
+    it("click while caps-locked turns everything off", () => {
       state.toggle();
-      state.toggle();
-      state.toggle();
+      state.toggle(); // caps lock
+      state.toggle(); // off
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
     });
