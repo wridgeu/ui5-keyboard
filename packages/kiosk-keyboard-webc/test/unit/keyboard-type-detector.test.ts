@@ -43,11 +43,6 @@ describe("detectKeyboardType", () => {
     expect(detectKeyboardType(el)).toBe("Full");
   });
 
-  it("returns Full for non-input element", () => {
-    const el = document.createElement("div");
-    expect(detectKeyboardType(el)).toBe("Full");
-  });
-
   it("inputmode takes priority over type", () => {
     const el = document.createElement("input");
     el.type = "text";

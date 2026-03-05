@@ -1,5 +1,3 @@
-import { resolveInputOrTextarea } from "./dom-utils.js";
-
 /** Keyboard type values for the web component. */
 type KeyboardTypeValue = "Full" | "Numpad" | "Numeric";
 
@@ -8,13 +6,13 @@ const NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "
 const NUMPAD_HTML_TYPES: ReadonlySet<string> = new Set(["number", "tel"]);
 
 /**
- * Detects whether the target element should use a Numpad or Full
+ * Detects whether the target input should use a Numpad or Full
  * keyboard type. Checks DOM inputmode and HTML type attributes.
+ *
+ * Expects an already-resolved native input/textarea — callers should
+ * resolve the target via `resolveInputOrTextarea` before calling.
  */
-export function detectKeyboardType(el: HTMLElement): KeyboardTypeValue {
-  const dom = resolveInputOrTextarea(el);
-  if (!dom) return "Full";
-
+export function detectKeyboardType(dom: HTMLInputElement | HTMLTextAreaElement): KeyboardTypeValue {
   // Check inputmode attribute
   const inputmode = dom.getAttribute("inputmode");
   if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return "Numpad";

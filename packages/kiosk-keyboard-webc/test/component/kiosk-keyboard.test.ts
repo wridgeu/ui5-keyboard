@@ -262,6 +262,32 @@ describe("kiosk-keyboard", () => {
       expect(input.value).to.equal("b");
     });
 
+    it("uses custom target resolver from setTargetResolver", async () => {
+      const container = await fixture(html`
+        <div>
+          <div id="resolver-host"></div>
+          <kiosk-keyboard layout="qwerty" for="resolver-host"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      // Without resolver, no input is found inside the empty div — typing is a no-op
+      queryKey(kb, "a")!.click();
+
+      // Set a custom resolver that provides a detached input
+      const customInput = document.createElement("input");
+      document.body.appendChild(customInput);
+
+      kb.setTargetResolver(() => customInput);
+      queryKey(kb, "b")!.click();
+      expect(customInput.value).to.equal("b");
+
+      // Cleanup
+      kb.setTargetResolver(null);
+      customInput.remove();
+    });
+
     it("handles backspace on target input", async () => {
       const container = await fixture(html`
         <div>
@@ -437,6 +463,30 @@ describe("kiosk-keyboard", () => {
       el.show();
       expect(el.open).to.be.true;
 
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(el.open).to.be.false;
+    });
+
+    it("properly manages escape listener across docked toggles", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
+        `,
+      );
+      el.show();
+      expect(el.open).to.be.true;
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(el.open).to.be.false;
+
+      // Toggle docked off and back on
+      el.docked = false;
+      await nextRender();
+      el.docked = true;
+      await nextRender();
+
+      // Escape should still work after re-enabling docked
+      el.show();
+      expect(el.open).to.be.true;
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       expect(el.open).to.be.false;
     });

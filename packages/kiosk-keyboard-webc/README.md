@@ -79,7 +79,7 @@ const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
 | `auto-show`       | `autoShow`       | `boolean` | `false`   | Auto open/close when target inputs gain/lose focus (requires `docked`).        |
 | `auto-type`       | `autoType`       | `boolean` | `false`   | Auto-detect keyboard type from focused input's type/inputmode.                 |
 | `disabled`        | `disabled`       | `boolean` | `false`   | Disables all key interaction.                                                  |
-| `for`             | `for`            | `string`  | `""`      | ID of the target input element.                                                |
+| `for`             | `for`            | `string`  | `""`      | ID of the target element (native input or host with nested input).             |
 | `input-ids`       | `inputIds`       | `string`  | `""`      | Comma-separated IDs to restrict auto-show to specific inputs.                  |
 | `stable-height`   | `stableHeight`   | `boolean` | `false`   | Maintains the maximum observed height (prevents layout shifts).                |
 | `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`  | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                |
@@ -99,7 +99,7 @@ const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
 
 | Method                  | Description                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `show()`                | Opens the docked keyboard.                                                                              |
+| `show()`                | Opens the docked keyboard. Logs a warning if `docked` is `false`.                                       |
 | `close()`               | Closes the docked keyboard.                                                                             |
 | `isOpen()`              | Returns whether the docked keyboard is open.                                                            |
 | `setTargetElement(el)`  | Programmatically sets the target input/textarea.                                                        |
@@ -186,11 +186,15 @@ The callback receives the focused `HTMLElement` (the host element) and must retu
 - The native `<input>` or `<textarea>` to type into, **or**
 - `null` to fall back to the built-in resolver
 
+If the callback throws, the error is caught and logged, and the built-in resolver is used as fallback.
+
 Pass `null` to clear the custom resolver:
 
 ```ts
 kb.setTargetResolver(null);
 ```
+
+> **Note on events:** Virtual key presses dispatch `InputEvent("input")` on the target, matching native keyboard behavior. The `"change"` event is _not_ dispatched on character input — it fires only on Enter (for single-line inputs), consistent with how browsers handle `"change"` (on blur/commit).
 
 ## CSS Custom Properties
 
@@ -211,6 +215,16 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-numpad-key-min-width` | `4rem`     | Minimum key width in numpad layout              |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
+
+Shadow custom properties use SAP theme tokens via `color-mix()` when supported, with static `rgba()` fallbacks for older browsers.
+
+### Compact Density
+
+Compact density is activated via the `data-ui5-compact-size` attribute (set automatically by the UI5 Web Components framework):
+
+```html
+<kiosk-keyboard data-ui5-compact-size></kiosk-keyboard>
+```
 
 ## Development
 
