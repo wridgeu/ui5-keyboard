@@ -675,8 +675,7 @@ export default class KioskKeyboard extends UI5Element {
 
     const ids = this._inputIdsList;
     if (ids.length > 0) {
-      const targetId = inputEl.id;
-      if (!targetId || !ids.includes(targetId)) return;
+      if (!this._matchesInputIds(inputEl, ids)) return;
     }
 
     const targetChanged = this._targetElement !== inputEl;
@@ -727,6 +726,32 @@ export default class KioskKeyboard extends UI5Element {
       const kbFor = kb.for;
       if (kbFor && document.getElementById(kbFor) === inputEl) return true;
     }
+    return false;
+  }
+
+  /**
+   * Checks whether the focused element matches one of the configured inputIds.
+   *
+   * Supports exact DOM id match as well as UI5-style prefixed IDs where the
+   * control id appears as a `--{id}` or `--{id}-inner` suffix on the native
+   * element (e.g. `"container-app---view--myInput-inner"` matches `"myInput"`).
+   */
+  private _matchesInputIds(el: HTMLElement, ids: string[]): boolean {
+    const domId = el.id;
+    if (!domId) return false;
+
+    // Exact match
+    if (ids.includes(domId)) return true;
+
+    // UI5 prefixed match: strip `-inner` suffix, then check if any id
+    // appears as the last `--{id}` segment.
+    const normalized = domId.endsWith("-inner") ? domId.slice(0, -6) : domId;
+    const lastSepIdx = normalized.lastIndexOf("--");
+    if (lastSepIdx !== -1) {
+      const suffix = normalized.slice(lastSepIdx + 2);
+      if (ids.includes(suffix)) return true;
+    }
+
     return false;
   }
 
