@@ -38,7 +38,6 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             const iconName = this._getKeyIcon(key);
             const isBuiltInIcon = !key.icon && iconName !== null;
             const isShift = key.value === "{shift}";
-            const isSpace = key.value === " ";
 
             return (
               <div
@@ -46,11 +45,11 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 id={id}
                 class={{
                   "kiosk-key": true,
-                  [`kiosk-key--${key.type ?? "default"}`]: true,
+                  "kiosk-key--modifier": key.type === "modifier",
+                  "kiosk-key--action": key.type === "action",
                   [`kiosk-key--w${(key.width ?? "").replace(".", "-")}`]: !!key.width,
                   "kiosk-key--shift-active": isShift && this._shifted,
                   "kiosk-key--caps-lock": isShift && this._capsLock,
-                  "kiosk-key--space": isSpace,
                   "kiosk-key--highlight": this._highlightedKey === key.value.toLowerCase(),
                 }}
                 role="button"
