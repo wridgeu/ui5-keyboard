@@ -1,11 +1,10 @@
 import { fixture, html, expect, oneEvent, waitUntil } from "@open-wc/testing";
+import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import "../../src/KioskKeyboard.js";
 import type KioskKeyboard from "../../src/KioskKeyboard.js";
 
-/** Wait for UI5Element async render cycle (microtask-based). */
-async function nextRender(): Promise<void> {
-  await new Promise((r) => setTimeout(r, 100));
-}
+/** Wait for UI5Element async render cycle. */
+const nextRender = renderFinished;
 
 function queryKeys(el: KioskKeyboard): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[role="button"]');
@@ -219,7 +218,7 @@ describe("kiosk-keyboard", () => {
       const key = queryKey(el, "1")!;
       key.click();
 
-      await new Promise((r) => setTimeout(r, 100));
+      await renderFinished();
       expect(fired).to.be.false;
     });
   });
