@@ -24,7 +24,11 @@ let _resolver: I18nResolver | null = null;
 let _bundle: I18nBundle | null = null;
 
 function _getLanguage(): string {
-  return new Intl.Locale(navigator.language).language;
+  try {
+    return new Intl.Locale(navigator.language).language;
+  } catch {
+    return "en";
+  }
 }
 
 /**

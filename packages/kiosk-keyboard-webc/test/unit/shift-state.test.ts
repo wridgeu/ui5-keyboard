@@ -23,7 +23,7 @@ describe("ShiftState", () => {
     it("single click after timeout deactivates shift and re-activates", () => {
       state.toggle(); // shift on
       // Simulate time passing beyond double-click threshold
-      vi.spyOn(Date, "now").mockReturnValue(Date.now() + ShiftState.DOUBLE_CLICK_MS + 100);
+      vi.spyOn(performance, "now").mockReturnValue(performance.now() + ShiftState.DOUBLE_CLICK_MS + 100);
       state.toggle(); // stale shift → new shift (not caps lock)
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(false);

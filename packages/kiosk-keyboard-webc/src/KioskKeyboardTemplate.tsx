@@ -9,7 +9,7 @@ import { keyElementId } from "./core/dom-utils.js";
 export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const layout = this._getResolvedLayout();
   const isDockedHidden = this.docked && !this._open;
-  const focusPos = this._getFocusPosition();
+  const focusPos = this._getFocusPosition(layout);
   const kbType = this.keyboardType;
 
   return (
@@ -26,6 +26,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       aria-label={this._ariaLabel}
       aria-roledescription={this._roleDescription}
       aria-hidden={isDockedHidden ? "true" : undefined}
+      aria-disabled={this.disabled ? "true" : undefined}
       onClick={this._boundOnKeyClick}
       onMouseDown={this._boundOnKeyMouseDown}
       onKeyDown={this._boundOnKeyDown}

@@ -316,6 +316,8 @@ export default class KioskKeyboard extends UI5Element {
     this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
 
+    this._targetElement = null;
+
     if (this._deferredFocusOutCloseId !== null) {
       cancelAnimationFrame(this._deferredFocusOutCloseId);
       this._deferredFocusOutCloseId = null;
@@ -347,10 +349,14 @@ export default class KioskKeyboard extends UI5Element {
     const { name } = changeInfo;
 
     if (name === "layout") {
+      // A programmatic layout change overrides any user-driven layout switch
+      this._layoutSwitchedByUser = false;
       if (!SECONDARY_LAYOUTS.has(this.layout)) {
         this._baseLayout = this.layout;
       }
       this._currentLayout = this.layout;
+      this._shiftState.reset();
+      this._syncShiftState();
       this._resetStableHeight();
     }
     if (name === "keyboardType") {
@@ -366,8 +372,10 @@ export default class KioskKeyboard extends UI5Element {
       if (!autoDetected) {
         this._keyboardTypeExplicit = true;
       }
-      // Reset user layout switch — a keyboardType change implies a new layout context
+      // Reset user layout switch and shift state — a keyboardType change implies a new layout context
       this._layoutSwitchedByUser = false;
+      this._shiftState.reset();
+      this._syncShiftState();
       this.fireDecoratorEvent("keyboard-type-change", {
         keyboardType: this.keyboardType,
         previousKeyboardType: (changeInfo.oldValue as string) ?? "Full",
@@ -537,11 +545,10 @@ export default class KioskKeyboard extends UI5Element {
     return "";
   }
 
-  _getFocusPosition(): { row: number; col: number } {
+  _getFocusPosition(layout: LayoutDefinition): { row: number; col: number } {
     if (this._lastFocusedKeyId) {
       const match = this._lastFocusedKeyId.match(KEY_ID_SUFFIX_RE);
       if (match) {
-        const layout = this._getResolvedLayout();
         const r = Number.parseInt(match[1], 10);
         const c = Number.parseInt(match[2], 10);
         if (layout[r]?.[c]) return { row: r, col: c };

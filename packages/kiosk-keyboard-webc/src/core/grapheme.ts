@@ -37,9 +37,10 @@ export function graphemeLengthBefore(value: string, offset: number): number {
  * the end of the string (nothing ahead).
  */
 export function graphemeLengthAfter(value: string, offset: number): number {
-  if (offset >= value.length) return 0;
+  const clamped = Math.max(0, offset);
+  if (clamped >= value.length) return 0;
 
-  const after = value.slice(offset);
+  const after = value.slice(clamped);
   const first = segmenter.segment(after)[Symbol.iterator]().next();
   return first.done ? 0 : first.value.segment.length;
 }

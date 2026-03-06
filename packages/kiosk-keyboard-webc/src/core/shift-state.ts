@@ -29,7 +29,7 @@ export class ShiftState {
    * - Otherwise → activate one-shot shift.
    */
   toggle(): void {
-    const now = Date.now();
+    const now = performance.now();
 
     if (this._capsLock) {
       // Caps lock → off

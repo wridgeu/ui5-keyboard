@@ -164,6 +164,8 @@
   &:focus-visible {
     outline: var(--sapContent_FocusWidth, 2px) var(--sapContent_FocusStyle, solid) var(--sapContent_FocusColor, #000);
     outline-offset: 1px;
+    transform: translateY(-1px);
+    box-shadow: var(--kiosk-keyboard-key-shadow-hover);
   }
 }
 
@@ -302,11 +304,24 @@
     &.kiosk-key--highlight,
     &.kiosk-key--shift-active {
       border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
     }
 
     &:focus-visible {
       outline-color: Highlight;
     }
+  }
+
+  .kiosk-key--caps-lock {
+    border-color: Highlight;
+  }
+}
+
+@media (hover: none) {
+  .kiosk-key:hover {
+    transform: none;
+    box-shadow: var(--kiosk-keyboard-key-shadow);
   }
 }
 
