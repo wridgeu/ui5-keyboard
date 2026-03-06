@@ -116,6 +116,15 @@ describe("kiosk-keyboard web component", () => {
   });
 
   describe("nav layout and arrow keys", () => {
+    before(async () => {
+      // Close docked keyboard to prevent auto-show interference on focus
+      await browser.execute(() => {
+        const docked = document.getElementById("kb-docked") as HTMLElement & { close(): void };
+        if (docked) docked.close();
+      });
+      await browser.pause(200);
+    });
+
     it("renders nav layout with navigation keys", async () => {
       const keys = await browser.execute(() => {
         const kb = document.getElementById("kb-nav");
@@ -126,63 +135,63 @@ describe("kiosk-keyboard web component", () => {
           "{fkey:ArrowRight}",
           "{fkey:Home}",
           "{fkey:End}",
+          "{fkey:PageUp}",
+          "{fkey:PageDown}",
         ];
         return navKeys.filter((k) => kb?.shadowRoot?.querySelector(`[data-key="${CSS.escape(k)}"]`) !== null);
       });
-      expect(keys.length).toBe(6);
+      expect(keys.length).toBe(8);
     });
 
-    it("arrow keys move cursor in target input", async () => {
-      // Set cursor to position 5 ("hello| world")
-      await browser.execute(() => {
+    it("ArrowRight moves cursor one position right", async () => {
+      const result = await browser.execute((dataKey: string) => {
         const input = document.getElementById("nav-input") as HTMLInputElement;
         input.value = "hello world";
         input.focus();
         input.setSelectionRange(5, 5);
-      });
 
-      // Click ArrowRight to move cursor to position 6
-      const cursorAfter = await browser.execute(() => {
         const kb = document.getElementById("kb-nav");
-        const key = kb?.shadowRoot?.querySelector('[data-key="\\{fkey:ArrowRight\\}"]') as HTMLElement | null;
-        key?.click();
-        return (document.getElementById("nav-input") as HTMLInputElement).selectionStart;
-      });
-      expect(cursorAfter).toBe(6);
+        const key = kb?.shadowRoot?.querySelector(`[data-key="${CSS.escape(dataKey)}"]`) as HTMLElement | null;
+        if (!key) return { error: `Key ${dataKey} not found` };
+        key.click();
+        return { cursor: input.selectionStart };
+      }, "{fkey:ArrowRight}");
+      expect(result).not.toHaveProperty("error");
+      expect((result as { cursor: number }).cursor).toBe(6);
     });
 
-    it("Home key moves cursor to start", async () => {
-      await browser.execute(() => {
+    it("Home moves cursor to start", async () => {
+      const result = await browser.execute((dataKey: string) => {
         const input = document.getElementById("nav-input") as HTMLInputElement;
         input.value = "hello world";
         input.focus();
         input.setSelectionRange(5, 5);
-      });
 
-      const cursorAfter = await browser.execute(() => {
         const kb = document.getElementById("kb-nav");
-        const key = kb?.shadowRoot?.querySelector('[data-key="\\{fkey:Home\\}"]') as HTMLElement | null;
-        key?.click();
-        return (document.getElementById("nav-input") as HTMLInputElement).selectionStart;
-      });
-      expect(cursorAfter).toBe(0);
+        const key = kb?.shadowRoot?.querySelector(`[data-key="${CSS.escape(dataKey)}"]`) as HTMLElement | null;
+        if (!key) return { error: `Key ${dataKey} not found` };
+        key.click();
+        return { cursor: input.selectionStart };
+      }, "{fkey:Home}");
+      expect(result).not.toHaveProperty("error");
+      expect((result as { cursor: number }).cursor).toBe(0);
     });
 
-    it("End key moves cursor to end", async () => {
-      await browser.execute(() => {
+    it("End moves cursor to end", async () => {
+      const result = await browser.execute((dataKey: string) => {
         const input = document.getElementById("nav-input") as HTMLInputElement;
         input.value = "hello world";
         input.focus();
         input.setSelectionRange(3, 3);
-      });
 
-      const cursorAfter = await browser.execute(() => {
         const kb = document.getElementById("kb-nav");
-        const key = kb?.shadowRoot?.querySelector('[data-key="\\{fkey:End\\}"]') as HTMLElement | null;
-        key?.click();
-        return (document.getElementById("nav-input") as HTMLInputElement).selectionStart;
-      });
-      expect(cursorAfter).toBe(11);
+        const key = kb?.shadowRoot?.querySelector(`[data-key="${CSS.escape(dataKey)}"]`) as HTMLElement | null;
+        if (!key) return { error: `Key ${dataKey} not found` };
+        key.click();
+        return { cursor: input.selectionStart };
+      }, "{fkey:End}");
+      expect(result).not.toHaveProperty("error");
+      expect((result as { cursor: number }).cursor).toBe(11);
     });
   });
 
