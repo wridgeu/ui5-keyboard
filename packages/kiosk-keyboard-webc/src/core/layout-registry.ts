@@ -92,7 +92,8 @@ export function unregisterLayout(sName: string): void {
  * Removes all custom layouts and keeps built-in layouts intact.
  */
 export function resetCustomLayouts(): void {
-  for (const layoutName of layouts.keys()) {
+  // eslint-disable-next-line unicorn/no-useless-spread -- snapshot keys before deleting during iteration
+  for (const layoutName of [...layouts.keys()]) {
     if (!BUILTIN_LAYOUTS.has(layoutName)) {
       layouts.delete(layoutName);
     }
@@ -182,19 +183,24 @@ export function resetLocaleLayouts(): void {
  * 3. Default layout fallback ("qwerty")
  */
 export function getLocaleLayout(): string {
-  const locale = new Intl.Locale(navigator.language);
-  const lang = locale.language.toLowerCase();
-  const region = locale.region;
+  try {
+    const locale = new Intl.Locale(navigator.language);
+    const lang = locale.language.toLowerCase();
+    const region = locale.region;
 
-  // Exact match: "de-at", "pt-br", etc.
-  if (region) {
-    const exact = resolveLocaleMappedLayout(`${lang}-${region.toLowerCase()}`);
-    if (exact) return exact;
+    // Exact match: "de-at", "pt-br", etc.
+    if (region) {
+      const exact = resolveLocaleMappedLayout(`${lang}-${region.toLowerCase()}`);
+      if (exact) return exact;
+    }
+
+    // Language prefix: "de", "fr", etc.
+    const prefix = resolveLocaleMappedLayout(lang);
+    if (prefix) return prefix;
+  } catch {
+    // navigator.language can be empty or malformed in embedded contexts;
+    // Intl.Locale() throws RangeError for invalid BCP-47 tags.
   }
-
-  // Language prefix: "de", "fr", etc.
-  const prefix = resolveLocaleMappedLayout(lang);
-  if (prefix) return prefix;
 
   return DEFAULT_LAYOUT;
 }

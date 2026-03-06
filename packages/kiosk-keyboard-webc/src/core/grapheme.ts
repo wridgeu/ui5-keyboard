@@ -7,6 +7,9 @@
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
+/** 40 code units covers all known grapheme clusters (longest: subdivision flag tags at ~28). */
+const GRAPHEME_TAIL_WINDOW = 40;
+
 /**
  * Returns the code-unit length of the grapheme cluster ending at the
  * given code-unit offset. Returns 0 when offset is at or before
@@ -19,7 +22,7 @@ export function graphemeLengthBefore(value: string, offset: number): number {
   // string for long values. 40 code units covers all real-world grapheme
   // clusters including long emoji tag sequences and combining-mark runs.
   const clampedOffset = Math.min(offset, value.length);
-  const tail = value.slice(Math.max(0, clampedOffset - 40), clampedOffset);
+  const tail = value.slice(Math.max(0, clampedOffset - GRAPHEME_TAIL_WINDOW), clampedOffset);
 
   let last: Intl.SegmentData | undefined;
   for (const seg of segmenter.segment(tail)) {
