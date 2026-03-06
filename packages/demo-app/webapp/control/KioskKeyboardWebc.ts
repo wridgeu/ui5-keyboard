@@ -77,7 +77,7 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
       },
       fKeyMode: {
         type: "string",
-        defaultValue: "Event",
+        defaultValue: "Virtual",
         mapping: { type: "property", to: "f-key-mode" },
       },
     },

@@ -115,6 +115,77 @@ describe("kiosk-keyboard web component", () => {
     });
   });
 
+  describe("nav layout and arrow keys", () => {
+    it("renders nav layout with navigation keys", async () => {
+      const keys = await browser.execute(() => {
+        const kb = document.getElementById("kb-nav");
+        const navKeys = [
+          "{fkey:ArrowUp}",
+          "{fkey:ArrowDown}",
+          "{fkey:ArrowLeft}",
+          "{fkey:ArrowRight}",
+          "{fkey:Home}",
+          "{fkey:End}",
+        ];
+        return navKeys.filter((k) => kb?.shadowRoot?.querySelector(`[data-key="${CSS.escape(k)}"]`) !== null);
+      });
+      expect(keys.length).toBe(6);
+    });
+
+    it("arrow keys move cursor in target input", async () => {
+      // Set cursor to position 5 ("hello| world")
+      await browser.execute(() => {
+        const input = document.getElementById("nav-input") as HTMLInputElement;
+        input.value = "hello world";
+        input.focus();
+        input.setSelectionRange(5, 5);
+      });
+
+      // Click ArrowRight to move cursor to position 6
+      const cursorAfter = await browser.execute(() => {
+        const kb = document.getElementById("kb-nav");
+        const key = kb?.shadowRoot?.querySelector('[data-key="\\{fkey:ArrowRight\\}"]') as HTMLElement | null;
+        key?.click();
+        return (document.getElementById("nav-input") as HTMLInputElement).selectionStart;
+      });
+      expect(cursorAfter).toBe(6);
+    });
+
+    it("Home key moves cursor to start", async () => {
+      await browser.execute(() => {
+        const input = document.getElementById("nav-input") as HTMLInputElement;
+        input.value = "hello world";
+        input.focus();
+        input.setSelectionRange(5, 5);
+      });
+
+      const cursorAfter = await browser.execute(() => {
+        const kb = document.getElementById("kb-nav");
+        const key = kb?.shadowRoot?.querySelector('[data-key="\\{fkey:Home\\}"]') as HTMLElement | null;
+        key?.click();
+        return (document.getElementById("nav-input") as HTMLInputElement).selectionStart;
+      });
+      expect(cursorAfter).toBe(0);
+    });
+
+    it("End key moves cursor to end", async () => {
+      await browser.execute(() => {
+        const input = document.getElementById("nav-input") as HTMLInputElement;
+        input.value = "hello world";
+        input.focus();
+        input.setSelectionRange(3, 3);
+      });
+
+      const cursorAfter = await browser.execute(() => {
+        const kb = document.getElementById("kb-nav");
+        const key = kb?.shadowRoot?.querySelector('[data-key="\\{fkey:End\\}"]') as HTMLElement | null;
+        key?.click();
+        return (document.getElementById("nav-input") as HTMLInputElement).selectionStart;
+      });
+      expect(cursorAfter).toBe(11);
+    });
+  });
+
   describe("accessibility", () => {
     it("keys have role=button", async () => {
       const allHaveRole = await browser.execute(() => {

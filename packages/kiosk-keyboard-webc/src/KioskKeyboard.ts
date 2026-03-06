@@ -80,6 +80,23 @@ const NATIVE_DISPATCHABLE_KEYS = new Set([
   "PageDown",
 ]);
 
+/** Built-in native actions executed in fKeyMode="Native" when not prevented. */
+const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
+  F5: () => {
+    location.reload();
+  },
+  F11: () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.().catch(() => undefined);
+    } else {
+      void document.documentElement.requestFullscreen?.().catch(() => undefined);
+    }
+  },
+};
+
+/** Tracks unsupported fkey names that have already been warned about. */
+const warnedUnsupportedFKeys = new Set<string>();
+
 /** ARIA labels for icon-only special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
   "{shift}": "KEY_SHIFT",
@@ -688,8 +705,18 @@ export default class KioskKeyboard extends UI5Element {
     if (mode === "Native") {
       if (NATIVE_DISPATCHABLE_KEYS.has(fkeyName)) {
         nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
+        if (nativeAllowed) {
+          NATIVE_FKEY_ACTIONS[fkeyName]?.();
+        }
       } else {
         nativeAllowed = false;
+        if (!warnedUnsupportedFKeys.has(fkeyName)) {
+          warnedUnsupportedFKeys.add(fkeyName);
+          console.warn(
+            `[kiosk-keyboard] Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
+              "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
+          );
+        }
       }
     }
 
