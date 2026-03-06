@@ -51,6 +51,11 @@ const ICON_MAP: Record<string, string> = {
 
 const ICON_SHIFT_LOCKED = "locked";
 
+// ── Valid enum values for string properties ──
+const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(["Full", "Numpad", "Numeric"]);
+const VALID_FKEY_MODES: ReadonlySet<string> = new Set(["Virtual", "Native", "None"]);
+const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(["Auto", "Native", "Custom"]);
+
 // ── Native-dispatchable key allowlist ──
 const NATIVE_DISPATCHABLE_KEYS = new Set([
   "F1",
@@ -186,7 +191,7 @@ export default class KioskKeyboard extends UI5Element {
   private _shiftState = new ShiftState();
   private _baseLayout = "";
   private _keyboardTypeExplicit = false;
-  private _autoDetectInProgress = false;
+  private _lastAutoDetectedType: string | null = null;
   private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   private _lastFocusedKeyId: string | null = null;
@@ -215,9 +220,15 @@ export default class KioskKeyboard extends UI5Element {
   // ── Bound listeners (document-level) ──
   private readonly _boundFocusIn = this._onDocumentFocusIn.bind(this);
   private readonly _boundFocusOut = this._onDocumentFocusOut.bind(this);
-  private readonly _boundEscape = this._onDocumentEscape.bind(this) as EventListener;
-  private readonly _boundPhysicalKeyDown = ((e: KeyboardEvent) => this._highlightKey(e.key, true)) as EventListener;
-  private readonly _boundPhysicalKeyUp = ((e: KeyboardEvent) => this._highlightKey(e.key, false)) as EventListener;
+  private readonly _boundEscape = (e: Event) => {
+    if (e instanceof KeyboardEvent) this._onDocumentEscape(e);
+  };
+  private readonly _boundPhysicalKeyDown = (e: Event) => {
+    if (e instanceof KeyboardEvent) this._highlightKey(e.key, true);
+  };
+  private readonly _boundPhysicalKeyUp = (e: Event) => {
+    if (e instanceof KeyboardEvent) this._highlightKey(e.key, false);
+  };
   private readonly _boundTouchStart = (e: Event) => {
     const target = (e.target as HTMLElement).closest?.(".kiosk-key");
     if (target) this._onKeyMouseDown(e);
@@ -323,9 +334,18 @@ export default class KioskKeyboard extends UI5Element {
         this._baseLayout = this.layout;
       }
       this._currentLayout = this.layout;
+      this._resetStableHeight();
     }
     if (name === "keyboardType") {
-      const autoDetected = this._autoDetectInProgress;
+      if (!VALID_KEYBOARD_TYPES.has(this.keyboardType)) {
+        console.warn(
+          `[kiosk-keyboard] Invalid keyboardType "${this.keyboardType}". Valid values: ${[...VALID_KEYBOARD_TYPES].join(", ")}.`,
+        );
+        this.keyboardType = "Full";
+        return;
+      }
+      const autoDetected = this._lastAutoDetectedType === this.keyboardType;
+      this._lastAutoDetectedType = null;
       if (!autoDetected) {
         this._keyboardTypeExplicit = true;
       }
@@ -336,6 +356,21 @@ export default class KioskKeyboard extends UI5Element {
         previousKeyboardType: (changeInfo.oldValue as string) ?? "Full",
         autoDetected,
       });
+      this._resetStableHeight();
+    }
+    if (name === "fKeyMode" && !VALID_FKEY_MODES.has(this.fKeyMode)) {
+      console.warn(
+        `[kiosk-keyboard] Invalid fKeyMode "${this.fKeyMode}". Valid values: ${[...VALID_FKEY_MODES].join(", ")}.`,
+      );
+      this.fKeyMode = "Virtual";
+      return;
+    }
+    if (name === "mobileKeyboard" && !VALID_MOBILE_KEYBOARDS.has(this.mobileKeyboard)) {
+      console.warn(
+        `[kiosk-keyboard] Invalid mobileKeyboard "${this.mobileKeyboard}". Valid values: ${[...VALID_MOBILE_KEYBOARDS].join(", ")}.`,
+      );
+      this.mobileKeyboard = "Auto";
+      return;
     }
     if (name === "docked" || name === "autoShow") {
       this._syncAutoShow();
@@ -682,11 +717,19 @@ export default class KioskKeyboard extends UI5Element {
 
   // ── Internal helpers ──
 
+  /** Resets stable height tracking so onAfterRendering re-measures from zero. */
+  private _resetStableHeight(): void {
+    if (!this.stableHeight) return;
+    this._maxHeight = 0;
+    const root = this.shadowRoot?.querySelector<HTMLElement>(".kiosk-keyboard");
+    if (root) root.style.minHeight = "";
+  }
+
   /** Sets keyboardType without marking it as explicit (for auto-detection). */
   private _setKeyboardTypeInternal(value: string): void {
-    this._autoDetectInProgress = true;
+    if (value === this.keyboardType) return;
+    this._lastAutoDetectedType = value;
     this.keyboardType = value;
-    this._autoDetectInProgress = false;
   }
 
   private _syncShiftState(): void {
