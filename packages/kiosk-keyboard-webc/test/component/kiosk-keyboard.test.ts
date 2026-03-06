@@ -364,6 +364,28 @@ describe("kiosk-keyboard", () => {
       expect(shift.getAttribute("aria-pressed")).to.equal("false");
     });
 
+    it("preserves non-default layout after shift toggle", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwertz-de"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      // QWERTZ-DE has ü, ö, ä, ß — QWERTY does not
+      expect(queryKey(el, "\u00FC"), "ü key before shift").to.not.be.null;
+      expect(queryKey(el, "\u00F6"), "ö key before shift").to.not.be.null;
+      expect(queryKey(el, "\u00DF"), "ß key before shift").to.not.be.null;
+
+      queryKey(el, "{shift}")!.click();
+      await nextRender();
+
+      // After shift, layout-specific keys must still be present
+      expect(queryKey(el, "\u00FC"), "ü key after shift").to.not.be.null;
+      expect(queryKey(el, "\u00F6"), "ö key after shift").to.not.be.null;
+      expect(queryKey(el, "\u00DF"), "ß key after shift").to.not.be.null;
+    });
+
     it("caps lock stays on after typing", async () => {
       const container = await fixture(html`
         <div>

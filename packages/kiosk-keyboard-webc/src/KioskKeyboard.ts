@@ -263,7 +263,7 @@ export default class KioskKeyboard extends UI5Element {
     KioskKeyboard._instances.add(this);
 
     if (!this._baseLayout) {
-      this._baseLayout = getLocaleLayout();
+      this._baseLayout = this.layout || getLocaleLayout();
       if (!this.layout) {
         this._currentLayout = this._baseLayout;
       }
