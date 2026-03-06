@@ -246,6 +246,9 @@ export default class KioskKeyboard extends UI5Element {
   private readonly _boundPhysicalKeyUp = (e: Event) => {
     if (e instanceof KeyboardEvent) this._highlightKey(e.key, false);
   };
+  private readonly _boundPhysicalBlur = () => {
+    this._clearHighlight();
+  };
   private readonly _boundTouchStart = (e: Event) => {
     const target = (e.target as HTMLElement).closest?.(".kiosk-key");
     if (target) this._onKeyMouseDown(e);
@@ -571,6 +574,7 @@ export default class KioskKeyboard extends UI5Element {
 
     if (value.startsWith("{layout:")) {
       this._handleLayoutSwitch(value);
+      this._autoReleaseShift();
       return;
     }
 
@@ -1021,13 +1025,18 @@ export default class KioskKeyboard extends UI5Element {
       const el = shadow.querySelector<HTMLElement>(selector);
       if (el) el.classList.add("kiosk-key--highlight");
     } else {
-      shadow
-        .querySelectorAll<HTMLElement>(".kiosk-key--highlight")
-        .forEach((el) => el.classList.remove("kiosk-key--highlight"));
+      this._clearHighlight();
     }
 
     // Track state so it persists across re-renders (lowercased for template comparison)
     this._highlightedKey = pressed ? dataKey.toLowerCase() : null;
+  }
+
+  private _clearHighlight(): void {
+    this.shadowRoot!.querySelectorAll<HTMLElement>(".kiosk-key--highlight").forEach((el) =>
+      el.classList.remove("kiosk-key--highlight"),
+    );
+    this._highlightedKey = null;
   }
 
   private _syncPhysicalKeyHighlight(): void {
@@ -1039,6 +1048,7 @@ export default class KioskKeyboard extends UI5Element {
     if (this._highlightTarget) {
       this._highlightTarget.removeEventListener("keydown", this._boundPhysicalKeyDown);
       this._highlightTarget.removeEventListener("keyup", this._boundPhysicalKeyUp);
+      this._highlightTarget.removeEventListener("blur", this._boundPhysicalBlur);
     }
 
     this._highlightTarget = target;
@@ -1046,6 +1056,7 @@ export default class KioskKeyboard extends UI5Element {
     if (target) {
       target.addEventListener("keydown", this._boundPhysicalKeyDown);
       target.addEventListener("keyup", this._boundPhysicalKeyUp);
+      target.addEventListener("blur", this._boundPhysicalBlur);
     }
   }
 
@@ -1053,8 +1064,10 @@ export default class KioskKeyboard extends UI5Element {
     if (this._highlightTarget) {
       this._highlightTarget.removeEventListener("keydown", this._boundPhysicalKeyDown);
       this._highlightTarget.removeEventListener("keyup", this._boundPhysicalKeyUp);
+      this._highlightTarget.removeEventListener("blur", this._boundPhysicalBlur);
       this._highlightTarget = null;
     }
+    this._clearHighlight();
   }
 }
 

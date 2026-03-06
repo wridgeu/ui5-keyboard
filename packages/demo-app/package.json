@@ -13,9 +13,9 @@
   },
   "dependencies": {
     "@ui5/webcomponents": "^2.19.2",
-    "kiosk-keyboard-webc": "0.1.0",
-    "ui5-lib-hotkeys": "0.1.0",
-    "ui5-lib-kiosk-keyboard": "0.1.0"
+    "kiosk-keyboard-webc": "*",
+    "ui5-lib-hotkeys": "*",
+    "ui5-lib-kiosk-keyboard": "*"
   },
   "devDependencies": {
     "@sap-ux/preview-middleware": "^0.23.0",

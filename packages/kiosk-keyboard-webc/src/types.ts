@@ -4,14 +4,14 @@ export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "speci
 /**
  * Valid width values for keys.
  *
- * - Numeric values (`"1.25"`, `"1.5"`, etc.) set proportional flex-grow.
+ * - Numeric values (`"1.5"`, `"1.75"`, etc.) set proportional flex-grow.
  *   A key with `"2"` is twice as wide as a standard key.
  * - `"space"` gives the spacebar extra-wide flex (6x).
  * - `undefined` (default) gives a standard 1x flex-grow.
  *
  * Each numeric value maps to a CSS class (e.g. `"1.5"` → `.kioskKey--w1-5`).
  */
-export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space";
+export type KeyWidth = "1.5" | "1.75" | "2" | "2.25" | "space";
 
 /**
  * Key type determines the visual styling of the key.

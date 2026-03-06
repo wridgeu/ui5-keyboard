@@ -204,7 +204,7 @@ interface KeyDefinition {
   label?: string; // Display label (defaults to value)
   shiftLabel?: string; // Label when shifted
   shiftValue?: string; // Value when shifted (defaults to value.toUpperCase() for single chars)
-  width?: KeyWidth; // "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space"
+  width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // Custom text icon (rendered as label, not <ui5-icon>)
 }

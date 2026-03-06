@@ -181,9 +181,6 @@
 }
 
 /* ---- Width classes: proportional flex grow ---- */
-.kiosk-key--w1-25 {
-  flex: 1.25 1 0;
-}
 .kiosk-key--w1-5 {
   flex: 1.5 1 0;
 }
@@ -195,9 +192,6 @@
 }
 .kiosk-key--w2-25 {
   flex: 2.25 1 0;
-}
-.kiosk-key--w2-75 {
-  flex: 2.75 1 0;
 }
 .kiosk-key--wspace {
   flex: 6 1 0;
