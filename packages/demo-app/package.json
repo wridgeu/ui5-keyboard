@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prestart": "npx --yes kill-port 8080",
     "start": "ui5 serve --port 8080 -o index.html",
-    "prestart:flp": "npx --yes kill-port 8080",
     "start:flp": "ui5 serve --config ui5-flp.yaml --port 8080 -o test/flp.html",
     "build": "ui5 build --clean-dest",
     "clean": "rimraf dist",
@@ -15,9 +13,9 @@
   },
   "dependencies": {
     "@ui5/webcomponents": "^2.19.2",
-    "kiosk-keyboard-webc": "file:../kiosk-keyboard-webc",
-    "ui5-lib-hotkeys": "file:../hotkeys",
-    "ui5-lib-kiosk-keyboard": "file:../kiosk-keyboard"
+    "kiosk-keyboard-webc": "0.1.0",
+    "ui5-lib-hotkeys": "0.1.0",
+    "ui5-lib-kiosk-keyboard": "0.1.0"
   },
   "devDependencies": {
     "@sap-ux/preview-middleware": "^0.23.0",

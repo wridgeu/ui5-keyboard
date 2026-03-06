@@ -41,7 +41,7 @@
     "generate": "ui5nps generate",
     "build": "npm run generate && tsc && npm run build:bundle",
     "build:bundle": "vite build",
-    "prestart": "npx --yes kill-port 8084 && npm run build",
+    "prestart": "npm run build",
     "start": "vite --port 8084 --open /test/pages/index.html",
     "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build",
     "typecheck": "npm run generate && tsc --noEmit",
