@@ -26,7 +26,8 @@ export function detectKeyboardType(control: Control, customResolver?: TargetReso
   // 2. Control name — walk up the parent chain because composite controls
   //    (e.g. sap.m.StepInput) wrap an inner sap.m.Input. Element.closestTo()
   //    returns the inner Input, but we need to match the outer StepInput.
-  for (let parent: ManagedObject | null = control; parent; parent = parent.getParent()) {
+  let parent: ManagedObject | null = control;
+  for (let depth = 0; parent && depth < 100; depth++, parent = parent.getParent()) {
     if (parent instanceof Control) {
       const name = parent.getMetadata().getName();
       if (NUMPAD_CONTROL_NAMES.has(name)) return KeyboardType.Numpad;

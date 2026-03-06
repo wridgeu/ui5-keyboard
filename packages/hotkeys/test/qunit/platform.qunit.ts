@@ -1,4 +1,5 @@
-import { resolveModifier, detectPlatform, _resetPlatformCache } from "ui5/hotkeys/platform";
+import { resolveModifier, detectPlatform } from "ui5/hotkeys/platform";
+import { _resetPlatformCache } from "ui5/hotkeys/internal/platform";
 
 QUnit.module("platform - resolveModifier");
 

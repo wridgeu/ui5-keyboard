@@ -69,31 +69,47 @@ const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
 });
 ```
 
+### Choosing between the UI5 control and the web component
+
+| Criterion         | `ui5-lib-kiosk-keyboard` (UI5 control)                | `kiosk-keyboard-webc` (web component)                 |
+| ----------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| **Framework**     | SAPUI5 / OpenUI5 only                                 | Any (plain HTML, React, Vue, Angular, UI5 via bridge) |
+| **Theming**       | LESS variables (`@sapUiButton*`)                      | CSS custom properties + SAP theme token fallbacks     |
+| **i18n**          | UI5 ResourceBundle with `configureI18n()` API         | Built-in EN/DE + `setI18nResolver()` callback         |
+| **Target inputs** | UI5 associations (`targetInput`) + `setTargetInput()` | `for` attribute + `setTargetElement()`                |
+| **Density**       | UI5 content density (`sapUiSizeCompact`)              | `data-ui5-compact-size` attribute                     |
+
+Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), layout registry API (`registerLayout`, `registerLocaleLayout`), and special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). Custom layouts work identically across both.
+
+Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. Event payloads are structurally identical.
+
+See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for general guidance on web component consumption patterns inside UI5 apps.
+
 ## Attributes / Properties
 
-| Attribute         | Property         | Type      | Default   | Description                                                                    |
-| ----------------- | ---------------- | --------- | --------- | ------------------------------------------------------------------------------ |
-| `layout`          | `layout`         | `string`  | `""`      | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.     |
-| `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`  | `"Full"`, `"Numpad"`, or `"Numeric"`.                                          |
-| `docked`          | `docked`         | `boolean` | `false`   | Fixed-position mode at bottom of viewport.                                     |
-| `auto-show`       | `autoShow`       | `boolean` | `false`   | Auto open/close when target inputs gain/lose focus (requires `docked`).        |
-| `auto-type`       | `autoType`       | `boolean` | `false`   | Auto-detect keyboard type from focused input's type/inputmode.                 |
-| `disabled`        | `disabled`       | `boolean` | `false`   | Disables all key interaction.                                                  |
-| `for`             | `for`            | `string`  | `""`      | ID of the target element (native input or host with nested input).             |
-| `input-ids`       | `inputIds`       | `string`  | `""`      | Comma-separated IDs to restrict auto-show to specific inputs.                  |
-| `stable-height`   | `stableHeight`   | `boolean` | `false`   | Maintains the maximum observed height (prevents layout shifts).                |
-| `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`  | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                |
-| `f-key-mode`      | `fKeyMode`       | `string`  | `"Event"` | `"Event"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`. |
+| Attribute         | Property         | Type      | Default     | Description                                                                      |
+| ----------------- | ---------------- | --------- | ----------- | -------------------------------------------------------------------------------- |
+| `layout`          | `layout`         | `string`  | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.       |
+| `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                            |
+| `docked`          | `docked`         | `boolean` | `false`     | Fixed-position mode at bottom of viewport.                                       |
+| `auto-show`       | `autoShow`       | `boolean` | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).          |
+| `auto-type`       | `autoType`       | `boolean` | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                   |
+| `disabled`        | `disabled`       | `boolean` | `false`     | Disables all key interaction.                                                    |
+| `for`             | `for`            | `string`  | `""`        | ID of the target element (native input or host with nested input).               |
+| `input-ids`       | `inputIds`       | `string`  | `""`        | Comma-separated IDs to restrict auto-show to specific inputs.                    |
+| `stable-height`   | `stableHeight`   | `boolean` | `false`     | Maintains the maximum observed height (prevents layout shifts).                  |
+| `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                  |
+| `f-key-mode`      | `fKeyMode`       | `string`  | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`. |
 
 ## Events
 
-| Event                  | Detail                               | Description                         |
-| ---------------------- | ------------------------------------ | ----------------------------------- |
-| `key-press`            | `{ key: string, shiftKey: boolean }` | Fired on key click. Cancelable.     |
-| `after-open`           | —                                    | Fired after docked keyboard opens.  |
-| `after-close`          | —                                    | Fired after docked keyboard closes. |
-| `layout-change`        | `{ layout: string }`                 | Fired when layout switches.         |
-| `keyboard-type-change` | `{ keyboardType: string }`           | Fired when keyboard type changes.   |
+| Event                  | Detail                                                                          | Description                         |
+| ---------------------- | ------------------------------------------------------------------------------- | ----------------------------------- |
+| `key-press`            | `{ key: string, shiftKey: boolean }`                                            | Fired on key click. Cancelable.     |
+| `after-open`           | —                                                                               | Fired after docked keyboard opens.  |
+| `after-close`          | —                                                                               | Fired after docked keyboard closes. |
+| `layout-change`        | `{ layout: string }`                                                            | Fired when layout switches.         |
+| `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.   |
 
 ## Methods
 

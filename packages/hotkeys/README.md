@@ -172,35 +172,36 @@ import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 const manager = HotkeyManager.getInstance();
 ```
 
-| Method                                 | Description                                           |
-| -------------------------------------- | ----------------------------------------------------- |
-| `getInstance()`                        | Get or create the singleton                           |
-| `register(hotkey, callback, options?)` | Register a shortcut, returns a handle                 |
-| `createGroup()`                        | Create a registration group for collective cleanup    |
-| `pushScope(scopeId)`                   | Push a scope onto the stack                           |
-| `popScope(scopeId)`                    | Pop the top scope (ID must match current top)         |
-| `getActiveScope()`                     | Get the current top-of-stack scope                    |
-| `resetToGlobalScope()`                 | Pop all non-global scopes in one call                 |
-| `enableRouterIntegration(router)`      | Auto-manage view scopes via router events             |
-| `disableRouterIntegration()`           | Detach router handler without destroying the manager  |
-| `hasRouterIntegration()`               | Check whether router integration is currently active  |
-| `getRegistrations()`                   | Get all active registrations                          |
-| `getRegistrationsForScope(scopeId)`    | Filter registrations by scope                         |
-| `getPlatform()`                        | Get the detected platform                             |
-| `suspendDispatch(reason?)`             | Suspend dispatch, returns a guard handle              |
-| `isDispatchSuspended()`                | Whether dispatch is currently suspended               |
-| `createRecorder(options)`              | Create a HotkeyRecorder instance                      |
-| `getKeyStateTracker()`                 | Access the held-key state tracker                     |
-| `setUnhandledHandler(callback)`        | Set callback for unhandled key events                 |
-| `setDebugMode(enabled)`                | Enable/disable detailed keypress logging              |
-| `isDebugMode()`                        | Check if debug mode is on                             |
-| `registerSequence(seq, cb, opts?)`     | Register a multi-key sequence, returns a handle       |
-| `getSequenceRegistrations()`           | Get all active sequence registrations                 |
-| `getSequenceRegistrationsForScope(id)` | Filter sequence registrations by scope                |
-| `setSequencePendingHandler(callback)`  | Set global callback for mid-sequence progress         |
-| `addGenericRootId(id)`                 | Register an element ID as a generic focus root        |
-| `removeGenericRootId(id)`              | Remove a previously registered generic root ID        |
-| `destroy()`                            | Remove all listeners, clear state, null the singleton |
+| Method                                 | Description                                            |
+| -------------------------------------- | ------------------------------------------------------ |
+| `getInstance()`                        | Get or create the singleton                            |
+| `register(hotkey, callback, options?)` | Register a shortcut, returns a handle                  |
+| `createGroup()`                        | Create a registration group for collective cleanup     |
+| `pushScope(scopeId)`                   | Push a scope onto the stack                            |
+| `popScope(scopeId)`                    | Pop the top scope (ID must match current top)          |
+| `getActiveScope()`                     | Get the current top-of-stack scope                     |
+| `getScopeStack()`                      | Get a snapshot of the full scope stack (bottom-to-top) |
+| `resetToGlobalScope()`                 | Pop all non-global scopes in one call                  |
+| `enableRouterIntegration(router)`      | Auto-manage view scopes via router events              |
+| `disableRouterIntegration()`           | Detach router handler without destroying the manager   |
+| `hasRouterIntegration()`               | Check whether router integration is currently active   |
+| `getRegistrations()`                   | Get all active registrations                           |
+| `getRegistrationsForScope(scopeId)`    | Filter registrations by scope                          |
+| `getPlatform()`                        | Get the detected platform                              |
+| `suspendDispatch(reason?)`             | Suspend dispatch, returns a guard handle               |
+| `isDispatchSuspended()`                | Whether dispatch is currently suspended                |
+| `createRecorder(options)`              | Create a HotkeyRecorder instance                       |
+| `getKeyStateTracker()`                 | Access the held-key state tracker                      |
+| `setUnhandledHandler(callback)`        | Set callback for unhandled key events                  |
+| `setDebugMode(enabled)`                | Enable/disable detailed keypress logging               |
+| `isDebugMode()`                        | Check if debug mode is on                              |
+| `registerSequence(seq, cb, opts?)`     | Register a multi-key sequence, returns a handle        |
+| `getSequenceRegistrations()`           | Get all active sequence registrations                  |
+| `getSequenceRegistrationsForScope(id)` | Filter sequence registrations by scope                 |
+| `setSequencePendingHandler(callback)`  | Set global callback for mid-sequence progress          |
+| `addGenericRootId(id)`                 | Register an element ID as a generic focus root         |
+| `removeGenericRootId(id)`              | Remove a previously registered generic root ID         |
+| `destroy()`                            | Remove all listeners, clear state, null the singleton  |
 
 ### Registration
 

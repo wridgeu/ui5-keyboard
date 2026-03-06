@@ -251,7 +251,7 @@ ui5-keyboard/
 | [Kiosk Backward Compatibility Proposal](./docs/kiosk/proposals/BACKWARD-COMPATIBILITY.md)        | Planned compatibility work             |
 | [Tab and Done Keys Proposal](./docs/kiosk/proposals/TAB-AND-DONE-KEYS.md)                        | Proposed special-key behavior          |
 | [Kiosk i18n Extensibility Notes](./docs/kiosk/history/I18N-EXTENSIBILITY.md)                     | Historical i18n extension notes        |
-| [Kiosk Web Component Package Proposal](./docs/kiosk/proposals/WEBCOMPONENT-PACKAGE.md)           | Proposed web component package         |
+| [Kiosk Web Component Package (History)](./docs/kiosk/history/WEBCOMPONENT-PACKAGE.md)            | Web component package design notes     |
 | [Kiosk History Notes](./docs/kiosk/history/)                                                     | Archived implementation design notes   |
 
 ## License

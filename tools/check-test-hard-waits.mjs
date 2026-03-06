@@ -5,6 +5,7 @@ const repoRoot = process.cwd();
 const testRoots = [
   path.join(repoRoot, "packages", "hotkeys", "test"),
   path.join(repoRoot, "packages", "kiosk-keyboard", "test"),
+  path.join(repoRoot, "packages", "kiosk-keyboard-webc", "test"),
 ];
 
 const fileExtensions = new Set([".ts", ".js", ".mjs", ".cjs"]);

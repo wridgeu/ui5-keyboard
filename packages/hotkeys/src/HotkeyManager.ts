@@ -434,6 +434,25 @@ export default class HotkeyManager extends BaseObject {
   }
 
   /**
+   * Get a snapshot of the current scope stack (bottom-to-top).
+   *
+   * The first element is always `GLOBAL_SCOPE`. Each subsequent entry
+   * is a scope pushed via `pushScope()` or router integration.
+   *
+   * Returns a copy — mutating the array has no effect on the manager.
+   *
+   * @example
+   * ```ts
+   * manager.pushScope("editor");
+   * manager.pushScope("dialog");
+   * manager.getScopeStack(); // ["__global__", "editor", "dialog"]
+   * ```
+   */
+  getScopeStack(): readonly string[] {
+    return [...this._scopeStack];
+  }
+
+  /**
    * Pop all non-global scopes, returning the stack to its initial state.
    *
    * Useful for centralized cleanup on route changes, FLP cross-navigation,

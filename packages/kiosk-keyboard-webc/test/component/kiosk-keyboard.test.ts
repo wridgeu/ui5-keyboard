@@ -645,7 +645,7 @@ describe("kiosk-keyboard", () => {
       expect(input.selectionStart).to.equal(2);
     });
 
-    it("fKeyMode=Event (default) moves cursor for nav keys", async () => {
+    it("fKeyMode=Virtual (default) moves cursor for nav keys", async () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-event-target" type="text" value="hello" />
@@ -662,7 +662,7 @@ describe("kiosk-keyboard", () => {
       expect(input.selectionStart).to.equal(3);
     });
 
-    it("fKeyMode=Event moves cursor to start with Home", async () => {
+    it("fKeyMode=Virtual moves cursor to start with Home", async () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-home-target" type="text" value="hello" />
@@ -679,7 +679,7 @@ describe("kiosk-keyboard", () => {
       expect(input.selectionStart).to.equal(0);
     });
 
-    it("fKeyMode=Event moves cursor to end with End", async () => {
+    it("fKeyMode=Virtual moves cursor to end with End", async () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-end-target" type="text" value="hello" />

@@ -23,12 +23,13 @@ import {
   resetLocaleLayouts,
 } from "./core/layout-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
-import type {
-  LayoutDefinition,
-  KeyDefinition,
-  KeyPressEventDetail,
-  LayoutChangeEventDetail,
-  KeyboardTypeChangeEventDetail,
+import {
+  SECONDARY_LAYOUTS,
+  type LayoutDefinition,
+  type KeyDefinition,
+  type KeyPressEventDetail,
+  type LayoutChangeEventDetail,
+  type KeyboardTypeChangeEventDetail,
 } from "./types.js";
 
 import KioskKeyboardTemplate from "./KioskKeyboardTemplate.js";
@@ -160,7 +161,7 @@ export default class KioskKeyboard extends UI5Element {
   mobileKeyboard = "Auto";
 
   @property()
-  fKeyMode = "Event";
+  fKeyMode = "Virtual";
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
@@ -314,16 +315,23 @@ export default class KioskKeyboard extends UI5Element {
     const { name } = changeInfo;
 
     if (name === "layout") {
-      this._baseLayout = this.layout;
+      if (!SECONDARY_LAYOUTS.has(this.layout)) {
+        this._baseLayout = this.layout;
+      }
       this._currentLayout = this.layout;
     }
     if (name === "keyboardType") {
-      if (!this._autoDetectInProgress) {
+      const autoDetected = this._autoDetectInProgress;
+      if (!autoDetected) {
         this._keyboardTypeExplicit = true;
       }
       // Reset user layout switch — a keyboardType change implies a new layout context
       this._layoutSwitchedByUser = false;
-      this.fireDecoratorEvent("keyboard-type-change", { keyboardType: this.keyboardType });
+      this.fireDecoratorEvent("keyboard-type-change", {
+        keyboardType: this.keyboardType,
+        previousKeyboardType: (changeInfo.oldValue as string) ?? "Full",
+        autoDetected,
+      });
     }
     if (name === "docked" || name === "autoShow") {
       this._syncAutoShow();
@@ -815,13 +823,13 @@ export default class KioskKeyboard extends UI5Element {
 
   private _attachEscapeListener(): void {
     if (this._escapeListenerAttached) return;
-    document.addEventListener("keydown", this._boundEscape);
+    document.addEventListener("keydown", this._boundEscape, true);
     this._escapeListenerAttached = true;
   }
 
   private _detachEscapeListener(): void {
     if (!this._escapeListenerAttached) return;
-    document.removeEventListener("keydown", this._boundEscape);
+    document.removeEventListener("keydown", this._boundEscape, true);
     this._escapeListenerAttached = false;
   }
 
@@ -869,6 +877,10 @@ export default class KioskKeyboard extends UI5Element {
             el.setAttribute("inputmode", state.original);
           } else {
             el.removeAttribute("inputmode");
+          }
+          // Clean up temp IDs assigned by _suppressInputMode
+          if (el.id.startsWith("kiosk-kb-tmp-")) {
+            el.removeAttribute("id");
           }
         }
         KioskKeyboard._inputModeSuppressions.delete(id);

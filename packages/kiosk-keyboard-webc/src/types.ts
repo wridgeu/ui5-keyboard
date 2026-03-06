@@ -1,3 +1,6 @@
+/** Layouts that serve as secondary views (not base alphabetic layouts). @internal */
+export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
+
 /**
  * Valid width values for keys.
  *
@@ -80,8 +83,10 @@ export interface LayoutChangeEventDetail {
 }
 export interface KeyboardTypeChangeEventDetail {
   keyboardType: string;
+  previousKeyboardType: string;
+  autoDetected: boolean;
 }
 
 // ── F-key mode ──
 
-export type FKeyMode = "Event" | "Native" | "None";
+export type FKeyMode = "Virtual" | "Native" | "None";
