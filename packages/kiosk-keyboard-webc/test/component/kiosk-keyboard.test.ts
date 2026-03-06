@@ -789,6 +789,74 @@ describe("kiosk-keyboard", () => {
     });
   });
 
+  // ── Instance layout registration ──
+
+  describe("instance layout registration", () => {
+    it("registerLayout on instance makes layout available for rendering", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard></kiosk-keyboard>
+        `,
+      );
+      el.registerLayout("test-pin", [
+        [{ value: "1" }, { value: "2" }, { value: "3" }],
+        [{ value: "4" }, { value: "5" }, { value: "6" }],
+      ]);
+      el.layout = "test-pin";
+      await nextRender();
+
+      const keys = queryKeys(el);
+      const values = Array.from(keys).map((k) => k.dataset.key);
+      expect(values).to.include("1");
+      expect(values).to.include("6");
+      expect(values).to.have.lengthOf(6);
+
+      // Clean up
+      el.unregisterLayout("test-pin");
+    });
+
+    it("layout registered on one instance is visible to another", async () => {
+      const container = await fixture(html`
+        <div>
+          <kiosk-keyboard id="kb-a"></kiosk-keyboard>
+          <kiosk-keyboard id="kb-b"></kiosk-keyboard>
+        </div>
+      `);
+      const kbA = container.querySelector<KioskKeyboard>("#kb-a")!;
+      const kbB = container.querySelector<KioskKeyboard>("#kb-b")!;
+
+      kbA.registerLayout("shared-test", [[{ value: "x" }, { value: "y" }]]);
+      kbB.layout = "shared-test";
+      await nextRender();
+
+      const keys = queryKeys(kbB);
+      const values = Array.from(keys).map((k) => k.dataset.key);
+      expect(values).to.include("x");
+      expect(values).to.include("y");
+
+      // Clean up
+      kbA.unregisterLayout("shared-test");
+    });
+
+    it("unregisterLayout on instance removes layout", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard></kiosk-keyboard>
+        `,
+      );
+      el.registerLayout("temp-layout", [[{ value: "a" }]]);
+      el.unregisterLayout("temp-layout");
+
+      // Should fall back to default since temp-layout is gone
+      el.layout = "temp-layout";
+      await nextRender();
+
+      const keys = queryKeys(el);
+      // Default layout has more than 1 key
+      expect(keys.length).to.be.greaterThan(1);
+    });
+  });
+
   // ── Accessibility ──
 
   describe("accessibility", () => {

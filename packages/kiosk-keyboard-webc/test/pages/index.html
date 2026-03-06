@@ -196,6 +196,15 @@
         else docked.show();
       });
 
+      // Custom layout via instance method (no class import needed)
+      const kbCustom = document.getElementById("kb-custom");
+      kbCustom.registerLayout("demo-pin", [
+        [{ value: "1" }, { value: "2" }, { value: "3" }],
+        [{ value: "4" }, { value: "5" }, { value: "6" }],
+        [{ value: "7" }, { value: "8" }, { value: "9" }],
+        [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
+      ]);
+
       // Auto-type toggle
       document.getElementById("auto-type-switch").addEventListener("change", (e) => {
         const enabled = e.target.checked;
@@ -334,7 +343,17 @@
             <kiosk-keyboard layout="qwerty" for="text-input"></kiosk-keyboard>
           </div>
 
-          <!-- 8. ui5-textarea -->
+          <!-- 8. Custom Layout (instance registration) -->
+          <div class="card">
+            <h2>Custom Layout (instance registration)</h2>
+            <div class="input-group">
+              <label for="custom-layout-input">PIN</label>
+              <input id="custom-layout-input" type="text" placeholder="Enter PIN…" />
+            </div>
+            <kiosk-keyboard id="kb-custom" layout="demo-pin" for="custom-layout-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 9. ui5-textarea -->
           <div class="card">
             <h2>ui5-textarea</h2>
             <div class="input-group">

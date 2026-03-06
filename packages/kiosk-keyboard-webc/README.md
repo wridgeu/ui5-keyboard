@@ -50,6 +50,8 @@ npm install kiosk-keyboard-webc --workspace=packages/demo-app
 import { KioskKeyboard } from "kiosk-keyboard-webc/dist/bundle.esm.js";
 ```
 
+> **Bundle note:** The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `dist/KioskKeyboard.js` entry point to avoid duplicating framework code.
+
 ### Inside a UI5 app
 
 Use the `WebComponent.extend()` bridge (see `packages/demo-app` for a working example):
@@ -113,14 +115,18 @@ See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPON
 
 ## Methods
 
-| Method                  | Description                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `show()`                | Opens the docked keyboard. Logs a warning if `docked` is `false`.                                       |
-| `close()`               | Closes the docked keyboard.                                                                             |
-| `isOpen()`              | Returns whether the docked keyboard is open.                                                            |
-| `setTargetElement(el)`  | Programmatically sets the target input/textarea.                                                        |
-| `setTargetResolver(fn)` | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear. |
-| `resetKeyboardType()`   | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                    |
+| Method                                 | Description                                                                                             |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `show()`                               | Opens the docked keyboard. Logs a warning if `docked` is `false`.                                       |
+| `close()`                              | Closes the docked keyboard.                                                                             |
+| `isOpen()`                             | Returns whether the docked keyboard is open.                                                            |
+| `setTargetElement(el)`                 | Programmatically sets the target input/textarea.                                                        |
+| `setTargetResolver(fn)`                | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear. |
+| `resetKeyboardType()`                  | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                    |
+| `registerLayout(name, definition)`     | Registers a custom layout (delegates to shared registry).                                               |
+| `unregisterLayout(name)`               | Removes a custom layout (delegates to shared registry).                                                 |
+| `registerLocaleLayout(locale, layout)` | Maps a BCP-47 locale to a layout name (delegates to shared registry).                                   |
+| `unregisterLocaleLayout(locale)`       | Removes a locale mapping (delegates to shared registry).                                                |
 
 ## Static API
 
@@ -132,6 +138,7 @@ See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPON
 | `KioskKeyboard.getRegisteredLayout(name)`            | Returns a layout definition by name.               |
 | `KioskKeyboard.getRegisteredLayoutNames()`           | Returns all registered layout names.               |
 | `KioskKeyboard.isBuiltInLayout(name)`                | Checks if a layout is built-in.                    |
+| `KioskKeyboard.isSecondaryLayout(name)`              | Checks if a layout is secondary (non-alphabetic).  |
 | `KioskKeyboard.registerLocaleLayout(locale, layout)` | Maps a BCP-47 locale to a layout name.             |
 | `KioskKeyboard.unregisterLocaleLayout(locale)`       | Removes a locale mapping.                          |
 | `KioskKeyboard.resetLocaleLayouts()`                 | Resets locale mappings to defaults.                |
@@ -167,6 +174,27 @@ KioskKeyboard.registerLayout("my-layout", [
   ],
 ]);
 ```
+
+Or via DOM (no ES import needed):
+
+```html
+<script type="module" src="kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js"></script>
+
+<input id="my-input" type="text" />
+<kiosk-keyboard id="kb" layout="pin-pad" for="my-input"></kiosk-keyboard>
+
+<script>
+  const kb = document.querySelector("#kb");
+  kb.registerLayout("pin-pad", [
+    [{ value: "1" }, { value: "2" }, { value: "3" }],
+    [{ value: "4" }, { value: "5" }, { value: "6" }],
+    [{ value: "7" }, { value: "8" }, { value: "9" }],
+    [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
+  ]);
+</script>
+```
+
+> **Note:** The layout registry is shared across all `<kiosk-keyboard>` instances on the page. A layout registered on one element is available to all others.
 
 Each key is a `KeyDefinition`:
 

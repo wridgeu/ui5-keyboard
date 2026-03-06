@@ -15,6 +15,23 @@ This folder is organized by library area and document lifecycle.
 - `proposals/` docs describe planned work; they can become stale if plans change.
 - `history/` docs are implementation-era notes kept for context and traceability.
 
+### Proposal Status Convention
+
+Each proposal doc should include a status line near the top:
+
+```
+> Status: <status>
+```
+
+| Status          | Meaning                                                |
+| --------------- | ------------------------------------------------------ |
+| **Proposal**    | Idea documented, not yet committed to                  |
+| **Accepted**    | Approved for implementation                            |
+| **In Progress** | Implementation underway                                |
+| **Implemented** | Completed — move to `history/`                         |
+| **Deferred**    | Postponed, may revisit later                           |
+| **Rejected**    | Will not implement — move to `history/` with rationale |
+
 ## Naming Conventions
 
 - Use `README.md` for folder entry points.

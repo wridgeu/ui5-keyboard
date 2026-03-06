@@ -61,10 +61,11 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 aria-disabled={this.disabled ? "true" : undefined}
                 aria-label={this._getKeyAriaLabel(key)}
               >
-                {isBuiltInIcon
-                  ? <ui5-icon class="kiosk-key__icon" name={iconName!} mode="Decorative" />
-                  : <span class="kiosk-key__label">{iconName ?? this._getKeyLabel(key)}</span>
-                }
+                {isBuiltInIcon ? (
+                  <ui5-icon class="kiosk-key__icon" name={iconName!} mode="Decorative" />
+                ) : (
+                  <span class="kiosk-key__label">{iconName ?? this._getKeyLabel(key)}</span>
+                )}
               </div>
             );
           })}

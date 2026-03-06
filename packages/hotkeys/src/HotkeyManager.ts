@@ -572,6 +572,27 @@ export default class HotkeyManager extends BaseObject {
   }
 
   /**
+   * Find registrations matching a predicate.
+   *
+   * Useful for checking if a specific hotkey is registered or for building
+   * filtered shortcut cheatsheets.
+   *
+   * @example
+   * ```ts
+   * // Find all Mod+S registrations
+   * const saves = manager.findRegistrations(r => r.normalizedHotkey === "Control+S");
+   *
+   * // Check if F5 is registered in any scope
+   * const hasF5 = manager.findRegistrations(r => r.hotkey === "F5").length > 0;
+   * ```
+   */
+  findRegistrations(predicate: (info: HotkeyRegistrationInfo) => boolean): ReadonlyArray<HotkeyRegistrationInfo> {
+    return Array.from(this._registrations.values())
+      .map((r) => this._toRegistrationInfo(r))
+      .filter(predicate);
+  }
+
+  /**
    * Get the detected platform.
    */
   getPlatform(): Platform {

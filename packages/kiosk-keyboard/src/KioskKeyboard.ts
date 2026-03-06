@@ -536,6 +536,23 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Check whether a layout is a secondary (non-alphabetic) layout.
+   *
+   * Secondary layouts (`numeric`, `special`, `fkeys`, `nav`) serve as
+   * auxiliary views switched to via `{layout:name}` keys. They cannot
+   * become the base layout — the keyboard tracks the last non-secondary
+   * layout as the base and returns to it when `{layout:base}` is pressed.
+   *
+   * @param sName Layout identifier.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
+  static isSecondaryLayout(sName: string): boolean {
+    return SECONDARY_LAYOUTS.has(sName);
+  }
+
+  /**
    * Register a locale-to-layout mapping.
    *
    * Mapping is used when no explicit `layout` is provided.

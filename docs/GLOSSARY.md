@@ -96,6 +96,41 @@ dialogGuard.release();
 
 While suspended, the EventDispatcher pipeline skips hotkey matching, sequence matching, and unhandled emission (steps 5–7). Instead, it emits an unhandled event with reason `Suspended`. Key state tracking (step 1) still runs, so `getHeldKeys()` remains accurate.
 
+## Scope (Hotkey Scope Stack)
+
+A **scope** is a named activation context that determines which hotkey registrations are eligible to fire. Scopes form a LIFO (last-in, first-out) **stack**.
+
+### How it works
+
+- The stack always has `GLOBAL_SCOPE` (`"__global__"`) at the bottom.
+- `pushScope("editor")` pushes a new scope onto the stack.
+- `popScope("editor")` removes it (the ID must match the current top).
+- `getActiveScope()` returns the current top of the stack.
+- `getScopeStack()` returns a snapshot of the full stack.
+
+### Two-pass matching
+
+When a key event arrives, the dispatcher uses a **two-pass matching** strategy:
+
+1. **Pass 1 — Scoped match**: Check registrations in the active (top-of-stack) scope first. If a match is found, it fires and matching stops.
+2. **Pass 2 — Global fallback**: If no scoped match is found, check `GLOBAL_SCOPE` registrations. If a match is found, it fires.
+
+This means a scoped registration always shadows a global registration for the same key. For example, if both `GLOBAL_SCOPE` and `"editor"` have a handler for `Escape`, and `"editor"` is the active scope, only the editor handler fires.
+
+### Router integration
+
+When `enableRouterIntegration(router)` is active, route changes automatically reset to global scope and push the new route name as the active scope. Dialog scopes still require manual `pushScope`/`popScope`.
+
+## Suppression
+
+**Suppression** refers to conditions that prevent a matched hotkey from firing, even though the key combination and scope both match.
+
+- **Input suppression** (`ignoreInputs`): Single-key hotkeys are suppressed when focus is in a text field. Ctrl/Meta combos and Escape are not suppressed. Controlled by the `ignoreInputs` option (`"auto"` by default).
+- **Popup suppression** (`suppressInPopups`): Hotkeys are suppressed when a UI5 popup (dialog or popover) is open. Off by default.
+- **Repeat suppression** (`ignoreRepeat`): Held-key repeat events are ignored. On by default.
+
+When a hotkey is suppressed, the unhandled callback fires with the corresponding reason (`InputSuppressed`, `PopupSuppressed`, `RepeatIgnored`).
+
 ## AltGr (Alternate Graphic)
 
 **AltGr** is the right-side Alt key on non-US keyboard layouts (German, French, etc.). It is used to type special characters like `@`, `€`, `{`, `}`, `~`, etc.

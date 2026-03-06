@@ -122,6 +122,10 @@ export default class KioskKeyboard extends UI5Element {
   static getRegisteredLayout = getRegisteredLayout;
   static getRegisteredLayoutNames = getRegisteredLayoutNames;
   static isBuiltInLayout = isBuiltInLayout;
+  /** Check whether a layout is secondary (non-alphabetic). Secondary layouts cannot become the base layout. */
+  static isSecondaryLayout(name: string): boolean {
+    return SECONDARY_LAYOUTS.has(name);
+  }
   static registerLocaleLayout = registerLocaleLayout;
   static unregisterLocaleLayout = unregisterLocaleLayout;
   static resetLocaleLayouts = resetLocaleLayouts;
@@ -340,6 +344,35 @@ export default class KioskKeyboard extends UI5Element {
       if (this.docked) this._attachEscapeListener();
       else this._detachEscapeListener();
     }
+  }
+
+  // ── Public API ── Layout registry (instance delegates) ──
+  //
+  // These delegate to the shared module-level registry so that DOM-based
+  // consumers (no ES import) can call them via querySelector:
+  //   document.querySelector('kiosk-keyboard').registerLayout(…)
+  //
+  // The registry is shared — layouts registered on one instance are
+  // visible to all <kiosk-keyboard> elements on the page.
+
+  /** Registers a custom layout. Delegates to the shared layout registry. */
+  registerLayout(name: string, definition: LayoutDefinition): void {
+    registerLayout(name, definition);
+  }
+
+  /** Removes a custom layout. Delegates to the shared layout registry. */
+  unregisterLayout(name: string): void {
+    unregisterLayout(name);
+  }
+
+  /** Registers a locale-to-layout mapping. Delegates to the shared layout registry. */
+  registerLocaleLayout(locale: string, layout: string): void {
+    registerLocaleLayout(locale, layout);
+  }
+
+  /** Removes a locale-to-layout mapping. Delegates to the shared layout registry. */
+  unregisterLocaleLayout(locale: string): void {
+    unregisterLocaleLayout(locale);
   }
 
   // ── Public API ──

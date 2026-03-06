@@ -187,6 +187,7 @@ const manager = HotkeyManager.getInstance();
 | `hasRouterIntegration()`               | Check whether router integration is currently active   |
 | `getRegistrations()`                   | Get all active registrations                           |
 | `getRegistrationsForScope(scopeId)`    | Filter registrations by scope                          |
+| `findRegistrations(predicate)`         | Find registrations matching a predicate function       |
 | `getPlatform()`                        | Get the detected platform                              |
 | `suspendDispatch(reason?)`             | Suspend dispatch, returns a guard handle               |
 | `isDispatchSuspended()`                | Whether dispatch is currently suspended                |

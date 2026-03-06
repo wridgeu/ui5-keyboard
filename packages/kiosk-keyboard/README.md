@@ -294,6 +294,7 @@ For full generated typings (including property/event accessors from UI5 metadata
 | `getRegisteredLayout(name)`            | `LayoutDefinition?`                 | Get the definition for a layout name, or `undefined`.                          |
 | `getRegisteredLayoutNames()`           | `string[]`                          | List all registered layout names (built-in + custom).                          |
 | `isBuiltInLayout(name)`                | `boolean`                           | Whether the given name is a built-in layout.                                   |
+| `isSecondaryLayout(name)`              | `boolean`                           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).     |
 | `getLocaleLayout()`                    | `string`                            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.   |
 | `registerLocaleLayout(locale, layout)` | `void`                              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.          |
 | `unregisterLocaleLayout(locale)`       | `void`                              | Remove one locale-to-layout mapping.                                           |
