@@ -4,6 +4,9 @@
 
 Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
 
+> [!IMPORTANT]
+> **Minimum UI5 version: 1.120.0** — This library uses `Lib.init()` for library initialization, which was introduced in OpenUI5/SAPUI5 1.120.0.
+
 A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard shortcuts with scope-based activation, cross-platform modifier normalization, multi-key sequences, hotkey recording, and proper UI5 lifecycle integration.
 
 ## Table of Contents

@@ -96,7 +96,7 @@ function createEnhancementBundle(
   }
 }
 
-function loadBundles(): Promise<void> {
+async function loadBundles(): Promise<void> {
   const loadGeneration = ++generation;
   const entries = activeConfig?.enhanceWith;
   if (!entries?.length) {
@@ -124,13 +124,12 @@ function loadBundles(): Promise<void> {
     return createEnhancementBundle(entry, createParams);
   });
 
-  return Promise.all(promises).then((results) => {
-    if (loadGeneration !== generation) {
-      return;
-    }
-    enhancementBundles = results.filter((b): b is ResourceBundle => b !== null);
-    bundlesLoadedLocale = requestedLocale;
-  });
+  const results = await Promise.all(promises);
+  if (loadGeneration !== generation) {
+    return;
+  }
+  enhancementBundles = results.filter((b): b is ResourceBundle => b !== null);
+  bundlesLoadedLocale = requestedLocale;
 }
 
 /**
