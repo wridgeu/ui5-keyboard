@@ -3,21 +3,11 @@ import path from "node:path";
 import ts from "typescript";
 
 const repoRoot = process.cwd();
-const testRoots = [
-  path.join(repoRoot, "packages", "hotkeys", "test"),
-  path.join(repoRoot, "packages", "kiosk-keyboard", "test"),
-  path.join(repoRoot, "packages", "kiosk-keyboard-webc", "test"),
-];
 
-const fileExtensions = new Set([".ts", ".js", ".mjs", ".cjs"]);
+// Auto-discover test directories from workspace packages
+const testRoots = fs.globSync("packages/*/test", { cwd: repoRoot }).map((p) => path.join(repoRoot, p));
 
-function toPosixPath(filePath) {
-  return filePath.split(path.sep).join("/");
-}
-
-function isE2ETestFile(filePath) {
-  return toPosixPath(filePath).includes("/test/e2e/");
-}
+const testFileGlob = "**/*.{ts,js,mjs,cjs}";
 
 // ── AST helpers ──
 
@@ -34,11 +24,9 @@ function isMethodCall(node, objName, methodName) {
  * where N > 0.
  */
 function isAwaitedSetTimeoutSleep(node) {
-  // Must be an await expression
   if (!ts.isAwaitExpression(node)) return false;
   const inner = node.expression;
 
-  // Must be `new Promise(...)`
   if (!ts.isNewExpression(inner)) return false;
   if (!ts.isIdentifier(inner.expression) || inner.expression.text !== "Promise") return false;
 
@@ -46,11 +34,9 @@ function isAwaitedSetTimeoutSleep(node) {
   if (!args || args.length !== 1) return false;
   const callback = args[0];
 
-  // Arrow or function: (resolve) => setTimeout(resolve, N)
   if (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback)) return false;
 
   const body = callback.body;
-  // Body is the setTimeout call directly (concise arrow) or a block with a single statement
   let callExpr;
   if (ts.isCallExpression(body)) {
     callExpr = body;
@@ -62,7 +48,6 @@ function isAwaitedSetTimeoutSleep(node) {
   }
   if (!callExpr) return false;
 
-  // Must be setTimeout(resolve, N)
   if (!ts.isIdentifier(callExpr.expression) || callExpr.expression.text !== "setTimeout") return false;
   const stArgs = callExpr.arguments;
   if (!stArgs || stArgs.length < 2) return false;
@@ -83,25 +68,28 @@ const rules = [
   {
     name: "await setTimeout sleep",
     message: "Use waitUntil/waitFor* conditions instead of fixed setTimeout sleeps in e2e tests.",
-    fileFilter: isE2ETestFile,
+    fileFilter: (filePath) => filePath.includes("/e2e/"),
     match: (node) => isAwaitedSetTimeoutSleep(node),
   },
 ];
 
-// ── File walker ──
+// ── AST visitor ──
 
-function walkDir(dir) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...walkDir(fullPath));
-    } else if (entry.isFile() && fileExtensions.has(path.extname(entry.name))) {
-      files.push(fullPath);
+function collectViolations(sourceFile, applicableRules) {
+  const hits = [];
+
+  function visit(node) {
+    for (const rule of applicableRules) {
+      if (rule.match(node)) {
+        const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+        hits.push({ line: line + 1, name: rule.name, message: rule.message });
+      }
     }
+    ts.forEachChild(node, visit);
   }
-  return files;
+
+  visit(sourceFile);
+  return hits;
 }
 
 // ── Main ──
@@ -109,42 +97,29 @@ function walkDir(dir) {
 const violations = [];
 
 for (const root of testRoots) {
-  if (!fs.existsSync(root)) continue;
+  const files = fs.globSync(testFileGlob, { cwd: root }).map((f) => path.join(root, f));
 
-  for (const filePath of walkDir(root)) {
+  for (const filePath of files) {
+    const posixPath = filePath.split(path.sep).join("/");
+    const applicableRules = rules.filter((r) => !r.fileFilter || r.fileFilter(posixPath));
+    if (applicableRules.length === 0) continue;
+
     const source = fs.readFileSync(filePath, "utf8");
     const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true);
 
-    const applicableRules = rules.filter((r) => !r.fileFilter || r.fileFilter(filePath));
-    if (applicableRules.length === 0) continue;
-
-    function visit(node) {
-      for (const rule of applicableRules) {
-        if (rule.match(node)) {
-          const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
-          violations.push({
-            filePath,
-            line: line + 1, // 1-based
-            name: rule.name,
-            message: rule.message,
-          });
-        }
-      }
-      ts.forEachChild(node, visit);
+    for (const hit of collectViolations(sourceFile, applicableRules)) {
+      violations.push({ filePath, ...hit });
     }
-
-    visit(sourceFile);
   }
 }
 
 if (violations.length === 0) {
   console.log("No test hard-wait violations found.");
-  process.exit(0);
+  process.exitCode = 0;
+} else {
+  console.error("Test hard-wait violations found:");
+  for (const v of violations) {
+    console.error(`- ${path.relative(repoRoot, v.filePath)}:${v.line} (${v.name}) ${v.message}`);
+  }
+  process.exitCode = 1;
 }
-
-console.error("Test hard-wait violations found:");
-for (const violation of violations) {
-  const relative = path.relative(repoRoot, violation.filePath);
-  console.error(`- ${relative}:${violation.line} (${violation.name}) ${violation.message}`);
-}
-process.exit(1);
