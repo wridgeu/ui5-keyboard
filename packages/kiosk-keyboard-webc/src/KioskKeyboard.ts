@@ -184,6 +184,9 @@ export default class KioskKeyboard extends UI5Element {
   stableHeight = false;
 
   @property()
+  accessibleName = "";
+
+  @property()
   mobileKeyboard = "Auto";
 
   @property()
@@ -586,7 +589,7 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   get _ariaLabel(): string {
-    return this.getAttribute("aria-label") || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard");
+    return this.accessibleName || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard");
   }
 
   get _roleDescription(): string {

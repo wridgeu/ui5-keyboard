@@ -79,12 +79,14 @@ Events are declared with the `event-strict` decorator and typed via `eventDetail
 @event("key-press", { bubbles: true, cancelable: true })
 @event("after-open", { bubbles: true })
 export default class KioskKeyboard extends UI5Element {
-  declare eventDetails: {
+  eventDetails!: {
     "key-press": KeyPressEventDetail;
     "after-open": void;
   };
 }
 ```
+
+The `!:` (definite assignment assertion) is the canonical pattern used by all official UI5 Web Components. Do **not** use `declare eventDetails:` — `declare` emits no runtime field and may interact differently with the framework's type checking.
 
 Events are fired via `this.fireDecoratorEvent("key-press", detail)`, which returns `false` if `preventDefault()` was called (for cancelable events).
 
