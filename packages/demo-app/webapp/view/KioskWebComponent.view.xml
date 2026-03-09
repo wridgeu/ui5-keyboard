@@ -49,7 +49,9 @@
                 autoShow="true"
                 autoType="true"
                 inputIds="wcNameInput,wcEmailInput,wcAgeInput"
-                ariaLabel="Web Component Keyboard" />
+                ariaLabel="Web Component Keyboard"
+                keyPress=".onKeyPress"
+                layoutChange=".onLayoutChange" />
         </content>
     </Page>
 </mvc:View>

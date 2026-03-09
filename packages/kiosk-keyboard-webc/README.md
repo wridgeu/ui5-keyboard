@@ -17,7 +17,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Docked mode** — fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show** — opens/closes automatically when target inputs receive/lose focus
 - **Auto-type detection** — switches to Numpad for `type="number"`, `inputmode="numeric"`, `data-keyboard-type="Numpad"`, etc.
-- **F-key and navigation key support** — configurable modes: `Event`, `Native`, `None`
+- **F-key and navigation key support** — configurable modes: `Virtual`, `Native`, `None`
 - **Grapheme-aware** — correct backspace/navigation for emoji and multi-code-unit characters
 - **Accessible** — ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
 - **i18n** — built-in English/German, extensible via custom resolver

@@ -129,7 +129,7 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
 @event("layout-change", { bubbles: true })
 @event("keyboard-type-change", { bubbles: true })
 export default class KioskKeyboard extends UI5Element {
-  declare eventDetails: {
+  eventDetails!: {
     "key-press": KeyPressEventDetail;
     "after-open": void;
     "after-close": void;

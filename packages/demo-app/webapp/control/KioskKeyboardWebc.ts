@@ -84,7 +84,8 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
     },
     events: {
       keyPress: {
-        detail: {
+        allowPreventDefault: true,
+        parameters: {
           key: { type: "string" },
           shiftKey: { type: "boolean" },
           char: { type: "string" },
@@ -93,12 +94,12 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
       afterOpen: {},
       afterClose: {},
       layoutChange: {
-        detail: {
+        parameters: {
           layout: { type: "string" },
         },
       },
       keyboardTypeChange: {
-        detail: {
+        parameters: {
           keyboardType: { type: "string" },
           previousKeyboardType: { type: "string" },
           autoDetected: { type: "boolean" },

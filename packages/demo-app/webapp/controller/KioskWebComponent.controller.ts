@@ -1,17 +1,19 @@
 import JSONModel from "sap/ui/model/json/JSONModel";
+import type Event from "sap/ui/base/Event";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 // Register the <kiosk-keyboard> custom element (resolved by ui5-tooling-modules)
 import "kiosk-keyboard-webc/dist/bundle.esm.js";
-import type KioskKeyboardElement from "kiosk-keyboard-webc/dist/KioskKeyboard.js";
 
 /**
  * Controller for the native `<kiosk-keyboard>` web component demo page.
  *
- * Wires the web component's events via the DOM (since bridge controls
- * forward DOM events) and manages lifecycle around route matching.
+ * Events are bound declaratively in the XML view via the bridge control's
+ * event metadata (e.g. `keyPress=".onKeyPress"`). The bridge automatically
+ * converts the web component's `CustomEvent.detail` into UI5 event
+ * parameters accessible via `oEvent.getParameter()`.
  *
  * @name demo.hotkeys.controller.KioskWebComponent
  */
@@ -32,7 +34,6 @@ export default class KioskWebComponent extends BaseController {
 
   onExit(): void {
     this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
-    this._detachKeyboardEvents();
   }
 
   onNavBack(): void {
@@ -40,60 +41,42 @@ export default class KioskWebComponent extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
+  // ── Bridge event handlers (bound in XML view) ──
+
+  onKeyPress(event: Event<{ key: string; shiftKey: boolean; char?: string }>): void {
+    const key = event.getParameter("key") ?? "";
+    const shift = event.getParameter("shiftKey") ?? false;
+    this._getViewModel().setProperty("/lastKey", shift ? `${key} (Shift)` : key);
+  }
+
+  onLayoutChange(event: Event<{ layout: string }>): void {
+    const layout = event.getParameter("layout") ?? "";
+    this._getViewModel().setProperty("/layout", layout);
+  }
+
+  // ── Route lifecycle ──
+
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
     const routeName = event.getParameter("name");
     this._setKeyboardRouteActive(routeName === Scope.KioskWebComponent);
   }
 
   private _setKeyboardRouteActive(active: boolean): void {
-    const host = this._getKeyboardHost();
-    if (!host) return;
+    const control = this.byId("webcKeyboard");
+    if (!control) return;
 
     if (active) {
-      host.setAttribute("auto-show", "");
-      this._attachKeyboardEvents();
+      control.setProperty("autoShow", true);
       return;
     }
 
-    // Deactivate: close keyboard and detach events
-    host.close();
-    host.removeAttribute("auto-show");
-    this._detachKeyboardEvents();
+    // Deactivate: close keyboard and disable auto-show
+    (control as { close?: () => void }).close?.();
+    control.setProperty("autoShow", false);
 
     const viewModel = this._getViewModel();
     viewModel.setProperty("/lastKey", "None");
     viewModel.setProperty("/layout", "qwerty");
-  }
-
-  private _onKeyPress = (e: Event): void => {
-    const detail = (e as CustomEvent).detail ?? {};
-    const key = detail.key ?? "";
-    const shift = detail.shiftKey ?? false;
-    this._getViewModel().setProperty("/lastKey", shift ? `${key} (Shift)` : key);
-  };
-
-  private _onLayoutChange = (e: Event): void => {
-    const detail = (e as CustomEvent).detail ?? {};
-    this._getViewModel().setProperty("/layout", detail.layout ?? "");
-  };
-
-  private _attachKeyboardEvents(): void {
-    const host = this._getKeyboardHost();
-    if (!host) return;
-    host.addEventListener("key-press", this._onKeyPress);
-    host.addEventListener("layout-change", this._onLayoutChange);
-  }
-
-  private _detachKeyboardEvents(): void {
-    const host = this._getKeyboardHost();
-    if (!host) return;
-    host.removeEventListener("key-press", this._onKeyPress);
-    host.removeEventListener("layout-change", this._onLayoutChange);
-  }
-
-  private _getKeyboardHost(): KioskKeyboardElement | null {
-    const control = this.byId("webcKeyboard");
-    return (control?.getDomRef() as KioskKeyboardElement) ?? null;
   }
 
   private _getViewModel(): JSONModel {
