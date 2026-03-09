@@ -253,6 +253,46 @@ describe("kiosk-keyboard", () => {
       expect(input.value).to.equal("5");
     });
 
+    it("touch drift: types lift-off key, not touchstart key (regression)", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="drift-target" type="text" />
+          <kiosk-keyboard layout="numeric" for="drift-target"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      const startKey = queryKey(kb, "4")!;
+      const endKey = queryKey(kb, "5")!;
+
+      const startRect = startKey.getBoundingClientRect();
+      const endRect = endKey.getBoundingClientRect();
+
+      // touchstart on key "4"
+      const startTouch = new Touch({
+        identifier: 0,
+        target: startKey,
+        clientX: startRect.left + startRect.width / 2,
+        clientY: startRect.top + startRect.height / 2,
+      });
+      startKey.dispatchEvent(new TouchEvent("touchstart", { touches: [startTouch], cancelable: true, bubbles: true }));
+
+      // touchend with coordinates over key "5" (finger drifted)
+      // Per spec, touchend target is still the touchstart element, but
+      // changedTouches coordinates reflect where the finger lifted off.
+      const endTouch = new Touch({
+        identifier: 0,
+        target: startKey,
+        clientX: endRect.left + endRect.width / 2,
+        clientY: endRect.top + endRect.height / 2,
+      });
+      startKey.dispatchEvent(new TouchEvent("touchend", { changedTouches: [endTouch], bubbles: true }));
+
+      const input = container.querySelector<HTMLInputElement>("#drift-target")!;
+      expect(input.value).to.equal("5");
+    });
+
     it("canceling key-press prevents text insertion", async () => {
       const container = await fixture(html`
         <div>
