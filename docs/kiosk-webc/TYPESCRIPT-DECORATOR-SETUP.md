@@ -39,7 +39,7 @@ The decorator intercepts reads/writes to trigger re-renders and reflect to/from 
 
 ### `@property()` on getter/setter pairs
 
-Used when a property change has **side effects** (e.g., opening/closing the keyboard). This follows the same pattern used by `@ui5/webcomponents` Popup/Dialog for their `open` property:
+Used when a property change has **side effects** (e.g., opening/closing the keyboard). This follows the same pattern used by `@ui5/webcomponents` [Popup](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Popup.ts) / [Dialog](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Dialog.ts) for their `open` property:
 
 ```typescript
 // Plain backing field (NOT decorated — no reactivity of its own)
@@ -86,9 +86,14 @@ export default class KioskKeyboard extends UI5Element {
 }
 ```
 
-The `!:` (definite assignment assertion) is the canonical pattern used by all official UI5 Web Components. Do **not** use `declare eventDetails:` — `declare` emits no runtime field and may interact differently with the framework's type checking.
+The `!:` (definite assignment assertion) is the canonical pattern used by all official UI5 Web Components (see [Button.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Button.ts), [Popup.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Popup.ts), [Input.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Input.ts)). Do **not** use `declare eventDetails:` — `declare` emits no runtime field and may interact differently with the framework's type checking.
 
-Events are fired via `this.fireDecoratorEvent("key-press", detail)`, which returns `false` if `preventDefault()` was called (for cancelable events).
+Events are fired via `this.fireDecoratorEvent("key-press", detail)` (not the deprecated `fireEvent()`), which returns `false` if `preventDefault()` was called (for cancelable events). See the [UI5 Web Components development docs](https://ui5.github.io/webcomponents/docs/advanced/) for current API reference.
+
+**Deprecated patterns to avoid:**
+
+- `import event from ".../decorators/event.js"` → use `event-strict.js` instead
+- `this.fireEvent("name", data, cancelable, bubbles)` → use `this.fireDecoratorEvent("name", data)` (bubbles/cancelable are read from the decorator metadata automatically)
 
 ## UI5 bridge integration
 

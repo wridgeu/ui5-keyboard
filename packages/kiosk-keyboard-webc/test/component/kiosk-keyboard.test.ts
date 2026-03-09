@@ -1171,4 +1171,246 @@ describe("kiosk-keyboard", () => {
       expect(nextFocused).to.not.equal(firstKey);
     });
   });
+
+  // ── keyboard-type-change event ──
+
+  describe("keyboard-type-change event", () => {
+    it("fires when keyboardType property changes", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      setTimeout(() => {
+        el.keyboardType = "Numpad";
+      });
+      const { detail } = await oneEvent(el, "keyboard-type-change");
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.previousKeyboardType).to.equal("Full");
+      expect(detail.autoDetected).to.be.false;
+    });
+
+    it("fires with autoDetected=true for auto-type detection", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="numtype-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type input-ids="numtype-input"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#numtype-input")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      setTimeout(() => {
+        input.focus();
+        input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      });
+      const { detail } = await oneEvent(kb, "keyboard-type-change");
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
+    it("does not fire when keyboardType is set to same value", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      let fired = false;
+      el.addEventListener("keyboard-type-change", () => {
+        fired = true;
+      });
+      el.keyboardType = "Full"; // same as default
+      await nextRender();
+      expect(fired).to.be.false;
+    });
+
+    it("fires with correct previous type on sequential changes", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      setTimeout(() => {
+        el.keyboardType = "Numpad";
+      });
+      const first = await oneEvent(el, "keyboard-type-change");
+      expect(first.detail.previousKeyboardType).to.equal("Full");
+
+      setTimeout(() => {
+        el.keyboardType = "Numeric";
+      });
+      const second = await oneEvent(el, "keyboard-type-change");
+      expect(second.detail.previousKeyboardType).to.equal("Numpad");
+      expect(second.detail.keyboardType).to.equal("Numeric");
+    });
+  });
+
+  // ── Invalid value clamping ──
+
+  describe("invalid value clamping", () => {
+    it("clamps invalid keyboardType to 'Full'", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      el.keyboardType = "InvalidType";
+      await nextRender();
+      expect(el.keyboardType).to.equal("Full");
+    });
+
+    it("clamps invalid fKeyMode to 'Virtual'", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      el.fKeyMode = "InvalidMode";
+      await nextRender();
+      expect(el.fKeyMode).to.equal("Virtual");
+    });
+
+    it("clamps invalid mobileKeyboard to 'Auto'", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      el.mobileKeyboard = "InvalidValue";
+      await nextRender();
+      expect(el.mobileKeyboard).to.equal("Auto");
+    });
+  });
+
+  // ── Additional property reflection ──
+
+  describe("additional property reflection", () => {
+    it("reflects accessible-name attribute to property", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard accessible-name="My Custom Keyboard"></kiosk-keyboard>
+        `,
+      );
+      expect(el.accessibleName).to.equal("My Custom Keyboard");
+    });
+
+    it("accessibleName renders as aria-label on the root group", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" accessible-name="Custom Label"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const group = rootDiv(el);
+      expect(group.getAttribute("aria-label")).to.equal("Custom Label");
+    });
+
+    it("accessibleName change triggers re-render", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" accessible-name="Label A"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      expect(rootDiv(el).getAttribute("aria-label")).to.equal("Label A");
+
+      el.accessibleName = "Label B";
+      await nextRender();
+      expect(rootDiv(el).getAttribute("aria-label")).to.equal("Label B");
+    });
+
+    it("falls back to i18n default when accessibleName is empty", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const label = rootDiv(el).getAttribute("aria-label")!;
+      expect(label.length).to.be.greaterThan(0);
+      // Default English text is "Virtual Keyboard"
+      expect(label).to.equal("Virtual Keyboard");
+    });
+
+    it("reflects stable-height boolean attribute", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard stable-height></kiosk-keyboard>
+        `,
+      );
+      expect(el.stableHeight).to.be.true;
+    });
+
+    it("reflects mobile-keyboard attribute to property", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard mobile-keyboard="Native"></kiosk-keyboard>
+        `,
+      );
+      expect(el.mobileKeyboard).to.equal("Native");
+    });
+  });
+
+  // ── Additional public API ──
+
+  describe("additional public API", () => {
+    it("resetKeyboardType() resets to Full and re-enables auto-detection", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reset-type-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type input-ids="reset-type-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      // Explicitly set a type
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      expect(kb.keyboardType).to.equal("Numpad");
+
+      // Reset should go back to Full
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(kb.keyboardType).to.equal("Full");
+    });
+
+    it("isOpen() returns current open state", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      expect(el.isOpen()).to.be.false;
+
+      el.show();
+      expect(el.isOpen()).to.be.true;
+
+      el.close();
+      expect(el.isOpen()).to.be.false;
+    });
+
+    it("isSecondaryLayout() identifies secondary layouts", async () => {
+      const { default: KK } = await import("../../src/KioskKeyboard.js");
+      expect(KK.isSecondaryLayout("numeric")).to.be.true;
+      expect(KK.isSecondaryLayout("special")).to.be.true;
+      expect(KK.isSecondaryLayout("fkeys")).to.be.true;
+      expect(KK.isSecondaryLayout("nav")).to.be.true;
+      expect(KK.isSecondaryLayout("numpad")).to.be.false;
+      expect(KK.isSecondaryLayout("qwerty")).to.be.false;
+      expect(KK.isSecondaryLayout("qwertz-de")).to.be.false;
+      expect(KK.isSecondaryLayout("nonexistent")).to.be.false;
+    });
+  });
 });
