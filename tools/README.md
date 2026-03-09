@@ -72,7 +72,7 @@ Generates one `.spec.js` file per QUnit test ID so WebdriverIO can distribute th
 | --------------------------------------------------- | --------------------------------------------------------------- | ---- |
 | `packages/hotkeys/test/qunit/wdio.conf.ts`          | `createServerManager`, `readQUnitTestIds`                       | 8081 |
 | `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`   | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`     | `createServerManager`                                           | 8083 |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`     | `createServerManager`                                           | 8082 |
 | `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts` | `createServerManager`                                           | 8083 |
 
 Note: `packages/kiosk-keyboard-webc` does not use `wdio-server.ts` — its e2e config uses an inline `node:http` static server since it doesn't need the UI5 CLI toolchain.
