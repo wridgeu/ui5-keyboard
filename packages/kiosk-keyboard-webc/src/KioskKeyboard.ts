@@ -255,7 +255,19 @@ export default class KioskKeyboard extends UI5Element {
   };
   private readonly _boundTouchStart = (e: Event) => {
     const target = (e.target as HTMLElement).closest?.(".kiosk-key");
-    if (target) this._onKeyMouseDown(e);
+    if (!target) return;
+    // Prevent the input from losing focus when the user taps a virtual key.
+    // This also suppresses the browser's synthesized mouse events (mousedown,
+    // mouseup, click), so we handle the key press directly on touchend.
+    e.preventDefault();
+  };
+  private readonly _boundTouchEnd = (e: Event) => {
+    const te = e as TouchEvent;
+    const touch = te.changedTouches[0];
+    if (!touch) return;
+    const el = this.shadowRoot!.elementFromPoint(touch.clientX, touch.clientY);
+    const keyEl = (el as HTMLElement | null)?.closest?.("[data-key]");
+    if (keyEl) this._onKeyClick(e);
   };
 
   // ── Pre-bound template handlers (avoids per-render allocation) ──
@@ -332,8 +344,11 @@ export default class KioskKeyboard extends UI5Element {
       this._performOpen();
     }
 
-    // Touchstart needs { passive: false } which JSX can't express
+    // Touch events need { passive: false } for preventDefault() which JSX can't express.
+    // touchstart prevents input blur; touchend processes the key press (because
+    // preventDefault on touchstart suppresses the browser's synthesized click).
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false });
+    this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd);
   }
 
   onExitDOM(): void {
@@ -343,6 +358,7 @@ export default class KioskKeyboard extends UI5Element {
     this._restoreInputMode();
     this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
+    this.shadowRoot!.removeEventListener("touchend", this._boundTouchEnd);
 
     // Fire after-close before disconnecting so direct listeners still see it.
     // Cannot use `this.open = false` here — isConnected is already false,

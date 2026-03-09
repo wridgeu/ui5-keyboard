@@ -158,6 +158,7 @@
     box-shadow: none;
     transition:
       background 0.1s ease,
+      border-color 0.1s ease,
       transform 0.1s ease;
   }
 
@@ -177,6 +178,7 @@
   box-shadow: none;
   transition:
     background 0.1s ease,
+    border-color 0.1s ease,
     transform 0.1s ease;
 }
 
@@ -235,6 +237,10 @@
     background: var(--sapButton_Emphasized_Active_Background, #0053b8);
     color: var(--sapButton_Emphasized_Active_TextColor, #fff);
     border-color: var(--sapButton_Emphasized_Active_BorderColor, #0053b8);
+  }
+
+  &:focus-visible {
+    outline-color: var(--sapContent_ContrastFocusColor, #fff);
   }
 }
 
@@ -295,6 +301,10 @@
   .kiosk-key {
     border-color: ButtonText;
 
+    &:hover {
+      border-color: Highlight;
+    }
+
     &:active,
     &.kiosk-key--highlight,
     &.kiosk-key--shift-active {
@@ -310,6 +320,10 @@
 
   .kiosk-key--caps-lock {
     border-color: Highlight;
+    /* box-shadow is forced to none in forced-colors mode, so use outline
+       as the visible indicator for caps lock instead. */
+    outline: 2px solid Highlight;
+    outline-offset: -1px;
   }
 }
 
@@ -326,7 +340,8 @@
     border-color: var(--sapButton_Lite_BorderColor, transparent);
   }
 
-  .kiosk-key--action:hover {
+  .kiosk-key--action:hover,
+  .kiosk-key--shift-active:hover {
     background: var(--sapButton_Emphasized_Background, #0070f2);
     border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
   }

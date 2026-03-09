@@ -38,7 +38,12 @@ function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): 
  * without relying on the DOM's `selectionStart`/`selectionEnd` which
  * may be unreliable on unfocused inputs in some environments.
  */
-export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: string, cursor?: CursorPos): CursorPos {
+export function insertText(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  text: string,
+  cursor?: CursorPos,
+  customResolver?: TargetResolverFn | null,
+): CursorPos {
   const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
   const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
@@ -46,7 +51,7 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
 
   const element = Element.closestTo(dom);
   if (element) {
-    setTargetValue(element, newValue);
+    setTargetValue(element, newValue, customResolver);
   } else {
     // Target control destroyed — fall back to raw DOM value
     dom.value = newValue;
@@ -66,7 +71,11 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
  * Returns the new cursor position, or `null` when nothing was deleted
  * (cursor already at position 0 with no selection).
  */
-export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos | null {
+export function handleBackspace(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  cursor?: CursorPos,
+  customResolver?: TargetResolverFn | null,
+): CursorPos | null {
   const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
 
@@ -86,7 +95,7 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
 
   const element = Element.closestTo(dom);
   if (element) {
-    setTargetValue(element, newValue);
+    setTargetValue(element, newValue, customResolver);
   } else {
     dom.value = newValue;
   }

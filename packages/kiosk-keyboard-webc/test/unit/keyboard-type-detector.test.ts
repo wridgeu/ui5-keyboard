@@ -124,5 +124,53 @@ describe("detectKeyboardType", () => {
       el.setAttribute("data-keyboard-type", "");
       expect(detectKeyboardType(el)).toBe("Full");
     });
+
+    it("detects data-keyboard-type across shadow DOM boundaries", () => {
+      // Simulate: <div data-keyboard-type="Numpad"> #shadow <input>
+      const host = document.createElement("div");
+      host.setAttribute("data-keyboard-type", "Numpad");
+      const shadow = host.attachShadow({ mode: "open" });
+      const input = document.createElement("input");
+      shadow.appendChild(input);
+      document.body.appendChild(host);
+      try {
+        expect(detectKeyboardType(input)).toBe("Numpad");
+      } finally {
+        host.remove();
+      }
+    });
+
+    it("detects data-keyboard-type across nested shadow DOM boundaries", () => {
+      // Simulate: <div data-keyboard-type="Full"> #shadow <inner-host> #shadow <input type="number">
+      const outer = document.createElement("div");
+      outer.setAttribute("data-keyboard-type", "Full");
+      const outerShadow = outer.attachShadow({ mode: "open" });
+      const inner = document.createElement("div");
+      outerShadow.appendChild(inner);
+      const innerShadow = inner.attachShadow({ mode: "open" });
+      const input = document.createElement("input");
+      input.type = "number"; // would be Numpad without the override
+      innerShadow.appendChild(input);
+      document.body.appendChild(outer);
+      try {
+        expect(detectKeyboardType(input)).toBe("Full");
+      } finally {
+        outer.remove();
+      }
+    });
+
+    it("falls through to inputmode when no data-keyboard-type ancestor exists in shadow DOM", () => {
+      const host = document.createElement("div");
+      const shadow = host.attachShadow({ mode: "open" });
+      const input = document.createElement("input");
+      input.setAttribute("inputmode", "numeric");
+      shadow.appendChild(input);
+      document.body.appendChild(host);
+      try {
+        expect(detectKeyboardType(input)).toBe("Numpad");
+      } finally {
+        host.remove();
+      }
+    });
   });
 });

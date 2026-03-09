@@ -444,6 +444,12 @@ export default class KioskKeyboard extends Control {
    */
   static setGlobalTargetResolver(fnResolver: TargetResolverFn | null): void {
     KioskKeyboard._globalTargetResolver = fnResolver;
+    // Propagate to existing instances that don't have an instance-level override
+    for (const instance of KioskKeyboard._instances) {
+      if (!instance._targetResolverInstance) {
+        instance._targetSession.setTargetResolver(instance._getEffectiveResolver());
+      }
+    }
   }
 
   /**

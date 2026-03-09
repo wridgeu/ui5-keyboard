@@ -74,7 +74,9 @@ export function getText(key: string, fallback: string): string {
   let resolved = defaultText;
   if (_bundle && i18nText) {
     const bundleText = _bundle.getText(i18nText);
-    if (bundleText && bundleText !== key) {
+    // When no translation exists, the bundle returns the key identifier as-is.
+    // Compare against the bundle's internal key, not the JS export name.
+    if (bundleText && bundleText !== i18nText.key) {
       resolved = bundleText;
     }
   }

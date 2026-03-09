@@ -223,6 +223,36 @@ describe("kiosk-keyboard", () => {
       expect(detail.char).to.equal("A");
     });
 
+    it("fires key-press on touch interaction (touchstart + touchend)", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="touch-target" type="text" />
+          <kiosk-keyboard layout="numeric" for="touch-target"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      const key = queryKey(kb, "5")!;
+      const rect = key.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      const touch = new Touch({
+        identifier: 0,
+        target: key,
+        clientX: cx,
+        clientY: cy,
+      });
+
+      // Simulate full touch gesture: touchstart (prevents blur) → touchend (fires key press)
+      key.dispatchEvent(new TouchEvent("touchstart", { touches: [touch], cancelable: true, bubbles: true }));
+      key.dispatchEvent(new TouchEvent("touchend", { changedTouches: [touch], bubbles: true }));
+
+      const input = container.querySelector<HTMLInputElement>("#touch-target")!;
+      expect(input.value).to.equal("5");
+    });
+
     it("canceling key-press prevents text insertion", async () => {
       const container = await fixture(html`
         <div>
@@ -667,12 +697,14 @@ describe("kiosk-keyboard", () => {
     });
 
     it("fires after-open when open attribute is set in markup", async () => {
+      // Create the element and attach the listener before it connects to the DOM,
+      // because after-open fires during onEnterDOM (before fixture() resolves).
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("layout", "qwerty");
+      el.setAttribute("docked", "");
+      el.setAttribute("open", "");
+
       let openFired = false;
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty" docked open></kiosk-keyboard>
-        `,
-      );
       el.addEventListener(
         "after-open",
         () => {
@@ -680,11 +712,18 @@ describe("kiosk-keyboard", () => {
         },
         { once: true },
       );
+
+      // Connect to DOM — this triggers onEnterDOM → _performOpen → after-open
+      const container = await fixture(
+        html`
+          <div></div>
+        `,
+      );
+      container.appendChild(el);
       await nextRender();
 
-      // The keyboard should be open (attribute set before connection,
-      // handled in onEnterDOM like ui5-dialog).
       expect(el.open, "keyboard should be open from attribute").to.be.true;
+      expect(openFired, "after-open should have fired during connection").to.be.true;
     });
   });
 
@@ -1065,6 +1104,7 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
       const keys = el.shadowRoot!.querySelectorAll(".kiosk-key");
+      expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
       for (const key of keys) {
         expect(key.getAttribute("role")).to.equal("button");
       }
@@ -1142,6 +1182,7 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
       const keys = queryKeys(el);
+      expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
       for (const key of keys) {
         expect(key.getAttribute("aria-disabled")).to.equal("true");
       }

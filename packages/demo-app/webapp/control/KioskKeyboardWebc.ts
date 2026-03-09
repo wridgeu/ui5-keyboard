@@ -11,6 +11,10 @@ import WebComponent from "sap/ui/core/webc/WebComponent";
  * use kebab-case attribute names (e.g. "keyboard-type") which the UI5 Web
  * Components `@property()` decorator reflects to camelCase JS properties.
  *
+ * Event mappings: Since UI5 >= 1.138, the WebComponent bridge auto-converts
+ * camelCase event names to kebab-case DOM events via `sap/base/strings/hyphenate`
+ * (e.g. `keyPress` → `key-press`). Explicit `mapping: { to: "..." }` is not
+ * needed as long as `minUI5Version` in manifest.json is >= 1.138.
  */
 const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboardWebc", {
   metadata: {

@@ -227,12 +227,16 @@ describe("kiosk-keyboard web component", () => {
 
   describe("accessibility", () => {
     it("keys have role=button", async () => {
-      const allHaveRole = await browser.execute(() => {
+      const result = await browser.execute(() => {
         const kb = document.getElementById("kb-qwerty");
-        const keys = kb?.shadowRoot?.querySelectorAll(".kiosk-key") ?? [];
-        return Array.from(keys).every((k) => k.getAttribute("role") === "button");
+        const keys = Array.from(kb?.shadowRoot?.querySelectorAll(".kiosk-key") ?? []);
+        return {
+          count: keys.length,
+          allHaveRole: keys.every((k) => k.getAttribute("role") === "button"),
+        };
       });
-      expect(allHaveRole).toBe(true);
+      expect(result.count).toBeGreaterThan(0);
+      expect(result.allHaveRole).toBe(true);
     });
 
     it("special keys have aria-label", async () => {
