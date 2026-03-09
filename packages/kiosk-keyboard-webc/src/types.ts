@@ -74,6 +74,12 @@ export type LayoutDefinition = KeyRow[];
 export interface KeyPressEventDetail {
   key: string;
   shiftKey: boolean;
+  /**
+   * The character that would be inserted (after shift resolution).
+   * `undefined` for action keys (`{shift}`, `{backspace}`, `{enter}`,
+   * `{layout:…}`) and function/navigation keys (`{fkey:…}`).
+   */
+  char?: string;
 }
 export interface LayoutChangeEventDetail {
   layout: string;

@@ -184,6 +184,43 @@ describe("kiosk-keyboard", () => {
       const { detail } = await oneEvent(el, "key-press");
       expect(detail.key).to.equal("1");
       expect(detail.shiftKey).to.be.false;
+      expect(detail.char).to.equal("1");
+    });
+
+    it("key-press char is undefined for action keys", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const bksp = queryKey(el, "{backspace}")!;
+      expect(bksp).to.not.be.null;
+      setTimeout(() => bksp.click());
+      const { detail } = await oneEvent(el, "key-press");
+      expect(detail.key).to.equal("{backspace}");
+      expect(detail.char).to.be.undefined;
+    });
+
+    it("key-press char reflects shifted value", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      // Activate shift
+      queryKey(el, "{shift}")!.click();
+      await nextRender();
+
+      const keyA = queryKey(el, "a")!;
+      setTimeout(() => keyA.click());
+      const { detail } = await oneEvent(el, "key-press");
+      expect(detail.key).to.equal("a");
+      expect(detail.shiftKey).to.be.true;
+      expect(detail.char).to.equal("A");
     });
 
     it("canceling key-press prevents text insertion", async () => {
@@ -558,6 +595,95 @@ describe("kiosk-keyboard", () => {
       expect(el.open).to.be.true;
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       expect(el.open).to.be.false;
+    });
+
+    it("opens via open property (reactive attribute)", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      expect(el.open).to.be.false;
+
+      el.open = true;
+      await nextRender();
+      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.false;
+
+      el.open = false;
+      await nextRender();
+      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.true;
+    });
+
+    it("does not fire spurious after-close when open=true is rejected (non-docked)", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      let closeFired = false;
+      el.addEventListener(
+        "after-close",
+        () => {
+          closeFired = true;
+        },
+        { once: true },
+      );
+
+      // open=true on a non-docked keyboard should be rejected silently —
+      // it must NOT fire after-close since the keyboard never opened.
+      el.open = true;
+      await nextRender();
+
+      expect(el.open, "open should remain false when not docked").to.be.false;
+      expect(closeFired, "after-close should NOT fire when open was rejected").to.be.false;
+    });
+
+    it("does not fire spurious after-close when show() is called on non-docked keyboard", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      let closeFired = false;
+      el.addEventListener(
+        "after-close",
+        () => {
+          closeFired = true;
+        },
+        { once: true },
+      );
+
+      el.show();
+      await nextRender();
+
+      expect(el.open, "open should remain false when not docked").to.be.false;
+      expect(closeFired, "after-close should NOT fire when show() was rejected").to.be.false;
+    });
+
+    it("fires after-open when open attribute is set in markup", async () => {
+      let openFired = false;
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked open></kiosk-keyboard>
+        `,
+      );
+      el.addEventListener(
+        "after-open",
+        () => {
+          openFired = true;
+        },
+        { once: true },
+      );
+      await nextRender();
+
+      // The keyboard should be open (attribute set before connection,
+      // handled in onEnterDOM like ui5-dialog).
+      expect(el.open, "keyboard should be open from attribute").to.be.true;
     });
   });
 

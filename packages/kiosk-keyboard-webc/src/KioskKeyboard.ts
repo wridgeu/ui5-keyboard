@@ -191,9 +191,6 @@ export default class KioskKeyboard extends UI5Element {
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
-  @property({ type: Boolean, noAttribute: true })
-  _open = false;
-
   @property({ noAttribute: true })
   _currentLayout = "";
 
@@ -202,6 +199,9 @@ export default class KioskKeyboard extends UI5Element {
 
   @property({ type: Boolean, noAttribute: true })
   _capsLock = false;
+
+  // ── Backing field for `open` (see getter/setter below) ──
+  _open = false;
 
   // ── Non-reactive internal state ──
 
@@ -260,14 +260,30 @@ export default class KioskKeyboard extends UI5Element {
   readonly _boundOnKeyMouseDown = this._onKeyMouseDown.bind(this);
   readonly _boundOnKeyDown = this._onKeyDown.bind(this);
 
-  /** Whether the docked keyboard panel is currently visible. */
+  /**
+   * Whether the docked keyboard panel is currently visible.
+   *
+   * Setting `open = true` opens the keyboard (equivalent to `show()`),
+   * setting it to `false` closes it (equivalent to `close()`).
+   *
+   * Follows the same reactive-property-on-setter pattern used by
+   * `@ui5/webcomponents` Popup/Dialog (the `@property` decorator makes
+   * the attribute observable so UI5 bridge controls can bind to it).
+   */
+  @property({ type: Boolean })
+  set open(value: boolean) {
+    if (this._open === value) return;
+    this._open = value;
+    if (!this.isConnected) return; // handled in onEnterDOM
+    if (value) {
+      this._performOpen();
+    } else {
+      this._performClose();
+    }
+  }
+
   get open(): boolean {
     return this._open;
-  }
-  /** Opens or closes the docked keyboard. No-op when `docked` is false. */
-  set open(val: boolean) {
-    if (val) this.show();
-    else this.close();
   }
 
   private get _inputIdsList(): string[] {
@@ -308,6 +324,11 @@ export default class KioskKeyboard extends UI5Element {
       this._attachEscapeListener();
     }
 
+    // Handle open=true set before DOM connection (same pattern as ui5-dialog)
+    if (this._open && this.docked) {
+      this._performOpen();
+    }
+
     // Touchstart needs { passive: false } which JSX can't express
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false });
   }
@@ -320,7 +341,9 @@ export default class KioskKeyboard extends UI5Element {
     this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
 
-    // Fire after-close before disconnecting so direct listeners still see it
+    // Fire after-close before disconnecting so direct listeners still see it.
+    // Cannot use `this.open = false` here — isConnected is already false,
+    // so the setter skips side effects. Handle cleanup manually.
     if (this._open) {
       this._open = false;
       this.fireDecoratorEvent("after-close");
@@ -415,14 +438,9 @@ export default class KioskKeyboard extends UI5Element {
       if (this.docked) {
         this._attachEscapeListener();
       } else {
-        // Close the keyboard before detaching — avoids stuck _open state
+        // Close the keyboard before detaching — avoids stuck open state
         // and leaked inputmode suppression when docked is toggled off while open.
-        if (this._open) {
-          this._open = false;
-          this._restoreInputMode();
-          this._pendingAnnouncement = getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed");
-          this.fireDecoratorEvent("after-close");
-        }
+        this.open = false;
         this._detachEscapeListener();
       }
     }
@@ -459,32 +477,45 @@ export default class KioskKeyboard extends UI5Element {
 
   // ── Public API ──
 
-  /** Opens the docked keyboard. No-op if not docked or already open. */
+  /** Opens the docked keyboard. Equivalent to setting `open = true`. */
   show(): void {
-    if (!this.docked) {
-      console.warn("[kiosk-keyboard] show() has no effect when docked=false.");
-      return;
-    }
-    if (this._shouldDeferToNative()) return;
-    if (this._open) return;
-    this._open = true;
-    this._suppressInputMode();
-    this._pendingAnnouncement = getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened");
-    this.fireDecoratorEvent("after-open");
+    this.open = true;
   }
 
-  /** Closes the docked keyboard. No-op if not docked or already closed. */
+  /** Closes the docked keyboard. Equivalent to setting `open = false`. */
   close(): void {
-    if (!this.docked || !this._open) return;
-    this._open = false;
-    this._restoreInputMode();
-    this._pendingAnnouncement = getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed");
-    this.fireDecoratorEvent("after-close");
+    this.open = false;
   }
 
   /** Returns whether the docked keyboard is currently open. */
   isOpen(): boolean {
     return this.open;
+  }
+
+  /** Executes the open side effects. Called from the `open` setter. */
+  private _performOpen(): void {
+    if (!this.docked) {
+      console.warn("[kiosk-keyboard] open has no effect when docked=false.");
+      // Write backing field directly — going through the setter would trigger
+      // _performClose() and fire a spurious after-close for a keyboard that
+      // never actually opened (same pattern as ui5-dialog's openPopup rejection).
+      this._open = false;
+      return;
+    }
+    if (this._shouldDeferToNative()) {
+      this._open = false;
+      return;
+    }
+    this._suppressInputMode();
+    this._pendingAnnouncement = getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened");
+    this.fireDecoratorEvent("after-open");
+  }
+
+  /** Executes the close side effects. Called from the `open` setter. */
+  private _performClose(): void {
+    this._restoreInputMode();
+    this._pendingAnnouncement = getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed");
+    this.fireDecoratorEvent("after-close");
   }
 
   /** Programmatically sets the input element that receives typed characters. */
@@ -614,8 +645,12 @@ export default class KioskKeyboard extends UI5Element {
       return;
     }
 
+    // Resolve the character that would be inserted (undefined for action keys)
+    const isAction = value === "{backspace}" || value === "{enter}";
+    const char = isAction ? undefined : shifted ? (shiftValue ?? value.toUpperCase()) : value;
+
     // All other keys fire key-press with the current shift state
-    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
+    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;
 
     const target = this._resolveTarget();
@@ -641,8 +676,7 @@ export default class KioskKeyboard extends UI5Element {
     // Regular character key — dispatches "input" event (not "change", which
     // fires on blur, matching native keyboard behavior).
     if (target) {
-      const char = shifted ? (shiftValue ?? value.toUpperCase()) : value;
-      insertText(target, char);
+      insertText(target, char!);
     }
     this._autoReleaseShift();
   }

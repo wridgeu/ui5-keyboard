@@ -74,4 +74,55 @@ describe("detectKeyboardType", () => {
     const el = document.createElement("input");
     expect(detectKeyboardType(el)).toBe("Full");
   });
+
+  // ── data-keyboard-type override ──
+
+  describe("data-keyboard-type override", () => {
+    it("returns Numpad when data-keyboard-type=Numpad is on the input", () => {
+      const el = document.createElement("input");
+      el.setAttribute("data-keyboard-type", "Numpad");
+      expect(detectKeyboardType(el)).toBe("Numpad");
+    });
+
+    it("returns Full when data-keyboard-type=Full is on the input", () => {
+      const el = document.createElement("input");
+      el.type = "number"; // would normally be Numpad
+      el.setAttribute("data-keyboard-type", "Full");
+      expect(detectKeyboardType(el)).toBe("Full");
+    });
+
+    it("detects data-keyboard-type on a parent element", () => {
+      const wrapper = document.createElement("div");
+      wrapper.setAttribute("data-keyboard-type", "Numpad");
+      const el = document.createElement("input");
+      wrapper.appendChild(el);
+      document.body.appendChild(wrapper);
+      try {
+        expect(detectKeyboardType(el)).toBe("Numpad");
+      } finally {
+        wrapper.remove();
+      }
+    });
+
+    it("data-keyboard-type takes priority over inputmode", () => {
+      const el = document.createElement("input");
+      el.setAttribute("inputmode", "numeric"); // would be Numpad
+      el.setAttribute("data-keyboard-type", "Full");
+      expect(detectKeyboardType(el)).toBe("Full");
+    });
+
+    it("ignores invalid data-keyboard-type values", () => {
+      const el = document.createElement("input");
+      el.type = "number";
+      el.setAttribute("data-keyboard-type", "Numeric"); // not a valid override
+      // Falls through to type check
+      expect(detectKeyboardType(el)).toBe("Numpad");
+    });
+
+    it("ignores empty data-keyboard-type", () => {
+      const el = document.createElement("input");
+      el.setAttribute("data-keyboard-type", "");
+      expect(detectKeyboardType(el)).toBe("Full");
+    });
+  });
 });

@@ -16,7 +16,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Shift / Caps Lock** — single-click for one-shot shift, double-click for caps lock
 - **Docked mode** — fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show** — opens/closes automatically when target inputs receive/lose focus
-- **Auto-type detection** — switches to Numpad for `type="number"`, `inputmode="numeric"`, etc.
+- **Auto-type detection** — switches to Numpad for `type="number"`, `inputmode="numeric"`, `data-keyboard-type="Numpad"`, etc.
 - **F-key and navigation key support** — configurable modes: `Event`, `Native`, `None`
 - **Grapheme-aware** — correct backspace/navigation for emoji and multi-code-unit characters
 - **Accessible** — ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
@@ -93,6 +93,7 @@ See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPON
 | ----------------- | ---------------- | --------- | ----------- | -------------------------------------------------------------------------------- |
 | `layout`          | `layout`         | `string`  | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.       |
 | `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                            |
+| `open`            | `open`           | `boolean` | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.              |
 | `docked`          | `docked`         | `boolean` | `false`     | Fixed-position mode at bottom of viewport.                                       |
 | `auto-show`       | `autoShow`       | `boolean` | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).          |
 | `auto-type`       | `autoType`       | `boolean` | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                   |
@@ -103,22 +104,38 @@ See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPON
 | `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                  |
 | `f-key-mode`      | `fKeyMode`       | `string`  | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`. |
 
+### Keyboard type override via `data-keyboard-type`
+
+When `auto-type` is enabled, the keyboard detects the type from `inputmode` and `type` attributes. For cases where these don't convey the right keyboard type (e.g., composite web component hosts), you can set an explicit override via the `data-keyboard-type` attribute on the input or any ancestor element:
+
+```html
+<!-- Force Numpad for a custom control -->
+<my-amount-field data-keyboard-type="Numpad">
+  <input type="text" />
+</my-amount-field>
+
+<!-- Force Full keyboard even for type="number" -->
+<input type="number" data-keyboard-type="Full" />
+```
+
+Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmode` and `type` detection.
+
 ## Events
 
-| Event                  | Detail                                                                          | Description                         |
-| ---------------------- | ------------------------------------------------------------------------------- | ----------------------------------- |
-| `key-press`            | `{ key: string, shiftKey: boolean }`                                            | Fired on key click. Cancelable.     |
-| `after-open`           | —                                                                               | Fired after docked keyboard opens.  |
-| `after-close`          | —                                                                               | Fired after docked keyboard closes. |
-| `layout-change`        | `{ layout: string }`                                                            | Fired when layout switches.         |
-| `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.   |
+| Event                  | Detail                                                                          | Description                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `key-press`            | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys. |
+| `after-open`           | —                                                                               | Fired after docked keyboard opens.                                                                             |
+| `after-close`          | —                                                                               | Fired after docked keyboard closes.                                                                            |
+| `layout-change`        | `{ layout: string }`                                                            | Fired when layout switches.                                                                                    |
+| `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                              |
 
 ## Methods
 
 | Method                                 | Description                                                                                             |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `show()`                               | Opens the docked keyboard. Logs a warning if `docked` is `false`.                                       |
-| `close()`                              | Closes the docked keyboard.                                                                             |
+| `show()`                               | Opens the docked keyboard (sets `open = true`). Logs a warning if `docked` is `false`.                  |
+| `close()`                              | Closes the docked keyboard (sets `open = false`).                                                       |
 | `isOpen()`                             | Returns whether the docked keyboard is open.                                                            |
 | `setTargetElement(el)`                 | Programmatically sets the target input/textarea.                                                        |
 | `setTargetResolver(fn)`                | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear. |

@@ -10,6 +10,7 @@ import WebComponent from "sap/ui/core/webc/WebComponent";
  * renders values as HTML attributes on the custom tag. The `to` field must
  * use kebab-case attribute names (e.g. "keyboard-type") which the UI5 Web
  * Components `@property()` decorator reflects to camelCase JS properties.
+ *
  */
 const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboardWebc", {
   metadata: {
@@ -80,6 +81,33 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
         defaultValue: "Virtual",
         mapping: { type: "property", to: "f-key-mode" },
       },
+    },
+    events: {
+      keyPress: {
+        detail: {
+          key: { type: "string" },
+          shiftKey: { type: "boolean" },
+          char: { type: "string" },
+        },
+      },
+      afterOpen: {},
+      afterClose: {},
+      layoutChange: {
+        detail: {
+          layout: { type: "string" },
+        },
+      },
+      keyboardTypeChange: {
+        detail: {
+          keyboardType: { type: "string" },
+          previousKeyboardType: { type: "string" },
+          autoDetected: { type: "boolean" },
+        },
+      },
+    },
+    associations: {
+      ariaLabelledBy: { type: "sap.ui.core.Control", multiple: true, singularName: "ariaLabelledBy" },
+      ariaDescribedBy: { type: "sap.ui.core.Control", multiple: true, singularName: "ariaDescribedBy" },
     },
     methods: ["show", "close", "isOpen", "setTargetElement", "setTargetResolver", "resetKeyboardType"],
   },

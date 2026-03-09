@@ -8,7 +8,7 @@ import { keyElementId } from "./core/dom-utils.js";
  */
 export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const layout = this._getResolvedLayout();
-  const isDockedHidden = this.docked && !this._open;
+  const isDockedHidden = this.docked && !this.open;
   const focusPos = this._getFocusPosition(layout);
   const kbType = this.keyboardType;
 

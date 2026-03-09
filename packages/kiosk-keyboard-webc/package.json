@@ -39,6 +39,7 @@
       "default": "./dist/bundle.esm.js"
     },
     "./Assets": {
+      "types": "./dist/Assets.d.ts",
       "default": "./dist/Assets.js"
     },
     "./dist/*": "./dist/*"

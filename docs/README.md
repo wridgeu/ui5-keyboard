@@ -6,6 +6,7 @@ This folder is organized by library area and document lifecycle.
 
 - [Hotkeys](./hotkeys/README.md)
 - [Kiosk Keyboard](./kiosk/README.md)
+- [Kiosk Keyboard Web Component](./kiosk-webc/README.md)
 - [Shared](./shared/README.md)
 - [Glossary](./GLOSSARY.md)
 
