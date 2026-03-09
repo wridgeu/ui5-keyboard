@@ -341,8 +341,10 @@ export default class KioskKeyboard extends UI5Element {
       this._attachEscapeListener();
     }
 
-    // Handle open=true set before DOM connection (same pattern as ui5-dialog)
-    if (this._open && this.docked) {
+    // Handle open=true set before DOM connection (same pattern as ui5-dialog).
+    // Delegate unconditionally — _performOpen() already resets _open when
+    // !docked or native-deferred, preventing stale open state.
+    if (this._open) {
       this._performOpen();
     }
 

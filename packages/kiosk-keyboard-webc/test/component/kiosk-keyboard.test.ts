@@ -395,6 +395,31 @@ describe("kiosk-keyboard", () => {
       }
     });
 
+    it("falls back to built-in resolver when custom resolver throws", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="throw-input" type="text" />
+          <kiosk-keyboard layout="qwerty" for="throw-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#throw-input")!;
+      await nextRender();
+
+      // Set a resolver that always throws — typing should still work
+      // because _resolveInputFrom catches the error and falls back.
+      kb.setTargetResolver(() => {
+        throw new Error("resolver bug");
+      });
+
+      try {
+        queryKey(kb, "x")!.click();
+        expect(input.value, "built-in resolver should find the input despite throwing custom resolver").to.equal("x");
+      } finally {
+        kb.setTargetResolver(null);
+      }
+    });
+
     it("handles backspace on target input", async () => {
       const container = await fixture(html`
         <div>
@@ -764,6 +789,43 @@ describe("kiosk-keyboard", () => {
 
       expect(el.open, "keyboard should be open from attribute").to.be.true;
       expect(openFired, "after-open should have fired during connection").to.be.true;
+    });
+
+    it("resets open to false when open attribute is set in markup without docked", async () => {
+      // Regression: open=true set before connect on a non-docked keyboard
+      // must be normalized to false during onEnterDOM, not left as stale true.
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("layout", "qwerty");
+      el.setAttribute("open", ""); // open without docked
+
+      let openFired = false;
+      let closeFired = false;
+      el.addEventListener("after-open", () => {
+        openFired = true;
+      });
+      el.addEventListener("after-close", () => {
+        closeFired = true;
+      });
+
+      const container = await fixture(
+        html`
+          <div></div>
+        `,
+      );
+      container.appendChild(el);
+      await nextRender();
+
+      expect(el.open, "open should be false — non-docked keyboard cannot be open").to.be.false;
+      expect(openFired, "after-open should NOT fire for non-docked keyboard").to.be.false;
+      expect(closeFired, "after-close should NOT fire — keyboard was never open").to.be.false;
+
+      // Removing from DOM should also not fire spurious after-close
+      let closeFiredOnRemove = false;
+      el.addEventListener("after-close", () => {
+        closeFiredOnRemove = true;
+      });
+      el.remove();
+      expect(closeFiredOnRemove, "after-close should NOT fire on remove for keyboard that was never open").to.be.false;
     });
   });
 

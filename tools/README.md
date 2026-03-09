@@ -50,6 +50,19 @@ await server.onPrepare();
 // server is automatically stopped when the scope exits
 ```
 
+### `createStaticServerManager(port, root)`
+
+Creates wdio lifecycle hooks that start a lightweight `node:http` static file server for packages that do not need the UI5 CLI toolchain. Reuses the same `probePort` check (skip if port already in use) and implements proper error handling on both `listen()` and `close()`.
+
+```ts
+const server = createStaticServerManager(8084, PACKAGE_ROOT);
+
+export const config: WebdriverIO.Config = {
+  onPrepare: () => server.onPrepare(),
+  onComplete: () => server.onComplete(),
+};
+```
+
 ### `readQUnitTestIds(testsuitePath)`
 
 Extracts test IDs from a `testsuite.qunit.ts` file using TypeScript AST parsing. Returns keys from the `tests` object in declaration order.
@@ -68,14 +81,13 @@ Generates one `.spec.js` file per QUnit test ID so WebdriverIO can distribute th
 
 ### `wdio-server.ts`
 
-| Consumer                                            | Imports                                                         | Port |
-| --------------------------------------------------- | --------------------------------------------------------------- | ---- |
-| `packages/hotkeys/test/qunit/wdio.conf.ts`          | `createServerManager`, `readQUnitTestIds`                       | 8081 |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`   | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`     | `createServerManager`                                           | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts` | `createServerManager`                                           | 8083 |
-
-Note: `packages/kiosk-keyboard-webc` does not use `wdio-server.ts` — its e2e config uses an inline `node:http` static server since it doesn't need the UI5 CLI toolchain.
+| Consumer                                             | Imports                                                         | Port |
+| ---------------------------------------------------- | --------------------------------------------------------------- | ---- |
+| `packages/hotkeys/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`                       | 8081 |
+| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`    | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082 |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`      | `createServerManager`                                           | 8082 |
+| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`  | `createServerManager`                                           | 8083 |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts` | `createStaticServerManager`                                     | 8084 |
 
 ## `tsconfig.json`
 

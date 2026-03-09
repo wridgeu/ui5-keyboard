@@ -1,3 +1,4 @@
+import http from "node:http";
 import net from "node:net";
 import fs from "node:fs";
 import path from "node:path";
@@ -84,6 +85,84 @@ export function createServerManager(port: number, packageRoot: string, configFil
     const pid = serverProcess.pid;
     serverProcess = undefined;
     await killProcessTree(pid);
+  }
+
+  return {
+    onPrepare: start,
+    onComplete: stop,
+    [Symbol.asyncDispose]: stop,
+  };
+}
+
+/**
+ * Creates wdio lifecycle hooks that start a lightweight `node:http` static
+ * file server for packages that do not need the UI5 CLI toolchain
+ * (e.g. kiosk-keyboard-webc).
+ *
+ * Mirrors the `createServerManager` API so consumers use the same pattern.
+ */
+export function createStaticServerManager(port: number, root: string) {
+  let server: http.Server | undefined;
+
+  const MIME_TYPES: Record<string, string> = {
+    ".html": "text/html",
+    ".js": "application/javascript",
+    ".mjs": "application/javascript",
+    ".css": "text/css",
+    ".json": "application/json",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+  };
+
+  const handler: http.RequestListener = (req, res) => {
+    const urlPath = new URL(req.url ?? "/", `http://localhost:${port}`).pathname;
+    let filePath = path.join(root, urlPath);
+
+    if (filePath.endsWith(path.sep) || (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory())) {
+      filePath = path.join(filePath, "index.html");
+    }
+
+    if (!fs.existsSync(filePath)) {
+      res.writeHead(404);
+      res.end("Not found");
+      return;
+    }
+
+    const ext = path.extname(filePath);
+    const mime = MIME_TYPES[ext] ?? "application/octet-stream";
+    res.writeHead(200, { "Content-Type": mime });
+    fs.createReadStream(filePath).pipe(res);
+  };
+
+  async function start(): Promise<void> {
+    if (await probePort(port)) {
+      console.log(`[wdio-server] Port ${port} already in use — reusing existing server.`);
+      return;
+    }
+
+    server = http.createServer(handler);
+
+    await new Promise<void>((resolve, reject) => {
+      server!.once("error", reject);
+      server!.listen(port, () => {
+        server!.removeListener("error", reject);
+        resolve();
+      });
+    });
+  }
+
+  async function stop(): Promise<void> {
+    if (!server) return;
+    const s = server;
+    server = undefined;
+    await new Promise<void>((resolve) => {
+      s.close((err) => {
+        if (err) console.warn(`[wdio-server] Server close error on port ${port}:`, err.message);
+        resolve();
+      });
+    });
   }
 
   return {
