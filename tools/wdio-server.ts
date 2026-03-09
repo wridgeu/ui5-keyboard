@@ -1,6 +1,7 @@
 import net from "node:net";
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { createRequire } from "node:module";
 import { type ChildProcess, spawn } from "node:child_process";
 import ts from "typescript";
@@ -20,45 +21,29 @@ function resolveUi5CliEntry(packageRoot: string): string {
   }
 }
 
-function isPortInUse(port: number): Promise<boolean> {
+/** Probes whether a TCP connection to localhost:port succeeds within the given timeout. */
+function probePort(port: number, timeout = 1_000): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.createConnection(port, "localhost");
-    socket.setTimeout(5_000);
-    socket.once("connect", () => {
+    socket.setTimeout(timeout);
+    const done = (result: boolean) => {
       socket.destroy();
-      resolve(true);
-    });
-    socket.once("timeout", () => {
-      socket.destroy();
-      resolve(false);
-    });
-    socket.once("error", () => {
-      socket.destroy();
-      resolve(false);
-    });
+      resolve(result);
+    };
+    socket.once("connect", () => done(true));
+    socket.once("timeout", () => done(false));
+    socket.once("error", () => done(false));
   });
 }
 
-function waitForServer(port: number, timeout = 30_000): Promise<void> {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    function check() {
-      const socket = net.createConnection(port, "localhost");
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve();
-      });
-      socket.once("error", () => {
-        socket.destroy();
-        if (Date.now() - start > timeout) {
-          reject(new Error(`Server not ready on port ${port} after ${timeout}ms`));
-        } else {
-          setTimeout(check, 500);
-        }
-      });
-    }
-    check();
-  });
+/** Polls until the server on the given port accepts TCP connections. */
+async function waitForServer(port: number, timeout: number): Promise<void> {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (await probePort(port)) return;
+    await delay(500);
+  }
+  throw new Error(`Server not ready on port ${port} after ${timeout}ms`);
 }
 
 function killProcessTree(pid: number): Promise<void> {
@@ -73,31 +58,38 @@ function killProcessTree(pid: number): Promise<void> {
 /**
  * Creates wdio lifecycle hooks that auto-start a UI5 dev server
  * if the target port is not already in use, and tear it down on completion.
+ *
+ * The returned object also implements `Symbol.asyncDispose` so it can be
+ * used with `await using` for automatic cleanup.
  */
 export function createServerManager(port: number, packageRoot: string, configFile?: string, startupTimeout = 60_000) {
   let serverProcess: ChildProcess | undefined;
 
-  return {
-    async onPrepare() {
-      if (await isPortInUse(port)) return;
-      const ui5CliEntry = resolveUi5CliEntry(packageRoot);
-      const args = [ui5CliEntry, "serve", "--port", String(port)];
-      if (configFile) args.push("--config", configFile);
-      serverProcess = spawn(process.execPath, args, {
-        cwd: packageRoot,
-        stdio: ["ignore", "pipe", "inherit"],
-        shell: false,
-        windowsHide: process.platform === "win32",
-      });
-      await waitForServer(port, startupTimeout);
-    },
+  async function start(): Promise<void> {
+    if (await probePort(port)) return;
+    const ui5CliEntry = resolveUi5CliEntry(packageRoot);
+    const args = [ui5CliEntry, "serve", "--port", String(port)];
+    if (configFile) args.push("--config", configFile);
+    serverProcess = spawn(process.execPath, args, {
+      cwd: packageRoot,
+      stdio: ["ignore", "pipe", "inherit"],
+      shell: false,
+      windowsHide: process.platform === "win32",
+    });
+    await waitForServer(port, startupTimeout);
+  }
 
-    async onComplete() {
-      if (!serverProcess?.pid) return;
-      const pid = serverProcess.pid;
-      serverProcess = undefined;
-      await killProcessTree(pid);
-    },
+  async function stop(): Promise<void> {
+    if (!serverProcess?.pid) return;
+    const pid = serverProcess.pid;
+    serverProcess = undefined;
+    await killProcessTree(pid);
+  }
+
+  return {
+    onPrepare: start,
+    onComplete: stop,
+    [Symbol.asyncDispose]: stop,
   };
 }
 
@@ -185,15 +177,13 @@ export function generateQUnitSpecs(testIds: string[], outputDir: string, urlFn: 
     const url = urlFn(id);
     fs.writeFileSync(
       specPath,
-      [
-        `describe(${JSON.stringify("QUnit: " + id)}, function () {`,
-        `  it("should pass QUnit tests", async function () {`,
-        `    await browser.url(${JSON.stringify(url)});`,
-        `    await browser.getQUnitResults();`,
-        `  });`,
-        `});`,
-        ``,
-      ].join("\n"),
+      `describe(${JSON.stringify("QUnit: " + id)}, function () {
+  it("should pass QUnit tests", async function () {
+    await browser.url(${JSON.stringify(url)});
+    await browser.getQUnitResults();
+  });
+});
+`,
     );
     return specPath;
   });
