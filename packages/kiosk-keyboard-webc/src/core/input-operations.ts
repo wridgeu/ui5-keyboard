@@ -10,7 +10,8 @@ function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): 
   const currentLineStart = value.lastIndexOf("\n", Math.max(0, pos - 1)) + 1;
   const currentLineEndRaw = value.indexOf("\n", pos);
   const currentLineEnd = currentLineEndRaw === -1 ? len : currentLineEndRaw;
-  const column = pos - currentLineStart;
+  // Clamp: pos can precede currentLineStart when caret sits before a leading "\n"
+  const column = Math.max(0, pos - currentLineStart);
 
   if (direction < 0) {
     if (currentLineStart === 0) return 0;
@@ -35,12 +36,12 @@ function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): 
  * Returns the new cursor position.
  */
 export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: string, cursor?: CursorPos): CursorPos {
-  const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
+  const value = dom.value;
+  const start = cursor ? cursor[0] : (dom.selectionStart ?? value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
-  const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
   const newPos = start + text.length;
 
-  dom.value = newValue;
+  dom.value = value.slice(0, start) + text + value.slice(end);
   try {
     dom.setSelectionRange(newPos, newPos);
   } catch {
@@ -58,18 +59,19 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
  * Returns the new cursor position, or `null` when nothing was deleted.
  */
 export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos | null {
-  const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
+  const value = dom.value;
+  const start = cursor ? cursor[0] : (dom.selectionStart ?? value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
 
   let newValue: string;
   let newPos: number;
 
   if (start !== end) {
-    newValue = dom.value.slice(0, start) + dom.value.slice(end);
+    newValue = value.slice(0, start) + value.slice(end);
     newPos = start;
   } else if (start > 0) {
-    const deleteLen = graphemeLengthBefore(dom.value, start);
-    newValue = dom.value.slice(0, start - deleteLen) + dom.value.slice(start);
+    const deleteLen = graphemeLengthBefore(value, start);
+    newValue = value.slice(0, start - deleteLen) + value.slice(start);
     newPos = start - deleteLen;
   } else {
     return null;

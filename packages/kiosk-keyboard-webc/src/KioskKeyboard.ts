@@ -319,6 +319,12 @@ export default class KioskKeyboard extends UI5Element {
     this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
 
+    // Fire after-close before disconnecting so direct listeners still see it
+    if (this._open) {
+      this._open = false;
+      this.fireDecoratorEvent("after-close");
+    }
+
     this._targetElement = null;
 
     if (this._deferredFocusOutCloseId !== null) {
@@ -404,8 +410,19 @@ export default class KioskKeyboard extends UI5Element {
       this._syncAutoShow();
     }
     if (name === "docked") {
-      if (this.docked) this._attachEscapeListener();
-      else this._detachEscapeListener();
+      if (this.docked) {
+        this._attachEscapeListener();
+      } else {
+        // Close the keyboard before detaching — avoids stuck _open state
+        // and leaked inputmode suppression when docked is toggled off while open.
+        if (this._open) {
+          this._open = false;
+          this._restoreInputMode();
+          this._pendingAnnouncement = getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed");
+          this.fireDecoratorEvent("after-close");
+        }
+        this._detachEscapeListener();
+      }
     }
   }
 
@@ -871,7 +888,7 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   private _onDocumentFocusOut(_e: FocusEvent): void {
-    if (!this._open || !this.autoShow) return;
+    if (!this.autoShow) return;
 
     if (this._deferredFocusOutCloseId !== null) {
       cancelAnimationFrame(this._deferredFocusOutCloseId);
@@ -888,7 +905,7 @@ export default class KioskKeyboard extends UI5Element {
         if (ids.length === 0 || this._matchesInputIds(active, ids)) return;
       }
 
-      this.close();
+      if (this._open) this.close();
       this._targetElement = null;
     });
   }

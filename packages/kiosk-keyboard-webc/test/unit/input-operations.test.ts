@@ -221,6 +221,70 @@ describe("handleNavigation", () => {
     expect(pos).toEqual([4, 4]);
   });
 
+  it("ArrowUp moves to previous line at same column", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "abc\ndef\nghi";
+    ta.setSelectionRange(5, 5); // "e" on line 2
+    const pos = handleNavigation(ta, "ArrowUp");
+    expect(pos).toEqual([1, 1]); // "b" on line 1
+  });
+
+  it("ArrowDown moves to next line at same column", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "abc\ndef\nghi";
+    ta.setSelectionRange(5, 5); // "e" on line 2
+    const pos = handleNavigation(ta, "ArrowDown");
+    expect(pos).toEqual([9, 9]); // "h" on line 3
+  });
+
+  it("ArrowUp clamps column to shorter previous line", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "ab\ndefgh";
+    ta.setSelectionRange(7, 7); // "g" on line 2, column 4
+    const pos = handleNavigation(ta, "ArrowUp");
+    expect(pos).toEqual([2, 2]); // end of line 1 (length 2)
+  });
+
+  it("ArrowDown clamps column to shorter next line", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "abcde\nfg";
+    ta.setSelectionRange(4, 4); // "e" on line 1, column 4
+    const pos = handleNavigation(ta, "ArrowDown");
+    expect(pos).toEqual([8, 8]); // end of line 2 (length 2)
+  });
+
+  it("ArrowUp at first line stays at start", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "abc\ndef";
+    ta.setSelectionRange(2, 2); // "c" on line 1
+    const pos = handleNavigation(ta, "ArrowUp");
+    expect(pos).toEqual([0, 0]);
+  });
+
+  it("ArrowDown at last line stays at end", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "abc\ndef";
+    ta.setSelectionRange(5, 5); // "e" on line 2
+    const pos = handleNavigation(ta, "ArrowDown");
+    expect(pos).toEqual([7, 7]);
+  });
+
+  it("ArrowDown with caret at 0 and leading newline moves to line 2", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "\nfoo\nbar";
+    ta.setSelectionRange(0, 0); // before the leading newline
+    const pos = handleNavigation(ta, "ArrowDown");
+    expect(pos).toEqual([1, 1]); // start of "foo"
+  });
+
+  it("ArrowUp with caret at 0 and leading newline stays at 0", () => {
+    const ta = document.createElement("textarea");
+    ta.value = "\nfoo";
+    ta.setSelectionRange(0, 0);
+    const pos = handleNavigation(ta, "ArrowUp");
+    expect(pos).toEqual([0, 0]);
+  });
+
   it("returns null for unknown keys", () => {
     expect(handleNavigation(el, "Tab")).toBeNull();
   });

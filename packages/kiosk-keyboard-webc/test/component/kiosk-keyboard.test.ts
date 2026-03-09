@@ -488,6 +488,54 @@ describe("kiosk-keyboard", () => {
       expect(el.open).to.be.false;
     });
 
+    it("fires after-close and resets state when docked is set to false while open", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
+        `,
+      );
+      el.show();
+      expect(el.open).to.be.true;
+
+      let closeFired = false;
+      el.addEventListener(
+        "after-close",
+        () => {
+          closeFired = true;
+        },
+        { once: true },
+      );
+
+      el.docked = false;
+      await nextRender();
+
+      expect(closeFired, "after-close should fire when docked toggled off while open").to.be.true;
+      expect(el.open, "open should be false after docked toggled off").to.be.false;
+    });
+
+    it("fires after-close when element is removed from DOM while open", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
+        `,
+      );
+      el.show();
+      expect(el.open).to.be.true;
+
+      let closeFired = false;
+      el.addEventListener(
+        "after-close",
+        () => {
+          closeFired = true;
+        },
+        { once: true },
+      );
+
+      el.remove();
+
+      expect(closeFired, "after-close should fire when element removed while open").to.be.true;
+    });
+
     it("properly manages escape listener across docked toggles", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
