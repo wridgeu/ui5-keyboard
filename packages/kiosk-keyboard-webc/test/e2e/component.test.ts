@@ -1,3 +1,33 @@
+/** Waits until the given keyboard has rendered at least one key in its shadow DOM. */
+async function waitForKeys(kbId: string, timeout = 5000): Promise<void> {
+  await browser.waitUntil(
+    async () =>
+      browser.execute((id: string) => {
+        const kb = document.getElementById(id);
+        return (kb?.shadowRoot?.querySelectorAll('[role="button"]').length ?? 0) > 0;
+      }, kbId),
+    { timeout, timeoutMsg: `${kbId} did not render keys within ${timeout}ms` },
+  );
+}
+
+/** Waits until the docked keyboard reaches the expected hidden/visible state. */
+async function waitForDockedState(kbId: string, hidden: boolean, timeout = 5000): Promise<void> {
+  await browser.waitUntil(
+    async () =>
+      browser.execute(
+        (id: string, expectHidden: boolean) => {
+          const kb = document.getElementById(id);
+          const isHidden =
+            kb?.shadowRoot?.querySelector(".kiosk-keyboard")?.classList.contains("kiosk-keyboard--hidden") ?? true;
+          return isHidden === expectHidden;
+        },
+        kbId,
+        hidden,
+      ),
+    { timeout, timeoutMsg: `${kbId} did not become ${hidden ? "hidden" : "visible"} within ${timeout}ms` },
+  );
+}
+
 describe("kiosk-keyboard web component", () => {
   before(async () => {
     await browser.url("/test/pages/index.html");
@@ -7,7 +37,7 @@ describe("kiosk-keyboard web component", () => {
       timeoutMsg: "kiosk-keyboard not registered",
     });
     // Wait for initial render
-    await browser.pause(500);
+    await waitForKeys("kb-qwerty");
   });
 
   describe("rendering", () => {
@@ -45,7 +75,7 @@ describe("kiosk-keyboard web component", () => {
         const docked = document.getElementById("kb-docked") as HTMLElement & { close(): void };
         if (docked) docked.close();
       });
-      await browser.pause(200);
+      await waitForDockedState("kb-docked", true);
 
       // Focus the text input
       const input = await $("#text-input");
@@ -77,7 +107,7 @@ describe("kiosk-keyboard web component", () => {
       await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
         timeout: 10_000,
       });
-      await browser.pause(500);
+      await waitForKeys("kb-qwerty");
 
       const isHidden = await browser.execute(() => {
         const kb = document.getElementById("kb-docked");
@@ -91,7 +121,7 @@ describe("kiosk-keyboard web component", () => {
         const kb = document.getElementById("kb-docked") as HTMLElement & { show(): void };
         kb.show();
       });
-      await browser.pause(200);
+      await waitForDockedState("kb-docked", false);
 
       const isHidden = await browser.execute(() => {
         const kb = document.getElementById("kb-docked");
@@ -105,7 +135,7 @@ describe("kiosk-keyboard web component", () => {
         const kb = document.getElementById("kb-docked") as HTMLElement & { close(): void };
         kb.close();
       });
-      await browser.pause(200);
+      await waitForDockedState("kb-docked", true);
 
       const isHidden = await browser.execute(() => {
         const kb = document.getElementById("kb-docked");
@@ -122,7 +152,7 @@ describe("kiosk-keyboard web component", () => {
         const docked = document.getElementById("kb-docked") as HTMLElement & { close(): void };
         if (docked) docked.close();
       });
-      await browser.pause(200);
+      await waitForDockedState("kb-docked", true);
     });
 
     it("renders nav layout with navigation keys", async () => {

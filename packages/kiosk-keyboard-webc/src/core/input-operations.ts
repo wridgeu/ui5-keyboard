@@ -33,9 +33,15 @@ function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): 
  * Inserts text at the given cursor position (or the DOM selection when
  * omitted) in the given input/textarea, replacing any active selection.
  *
- * Returns the new cursor position.
+ * Returns the new cursor position, or `null` when the element is
+ * read-only or disabled.
  */
-export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: string, cursor?: CursorPos): CursorPos {
+export function insertText(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  text: string,
+  cursor?: CursorPos,
+): CursorPos | null {
+  if (dom.readOnly || dom.disabled) return null;
   const value = dom.value;
   const start = cursor ? cursor[0] : (dom.selectionStart ?? value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
@@ -56,9 +62,11 @@ export function insertText(dom: HTMLInputElement | HTMLTextAreaElement, text: st
  * Deletes the grapheme cluster before the cursor, or removes the
  * active selection, in the given input/textarea.
  *
- * Returns the new cursor position, or `null` when nothing was deleted.
+ * Returns the new cursor position, or `null` when nothing was deleted
+ * or the element is read-only/disabled.
  */
 export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos | null {
+  if (dom.readOnly || dom.disabled) return null;
   const value = dom.value;
   const start = cursor ? cursor[0] : (dom.selectionStart ?? value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);

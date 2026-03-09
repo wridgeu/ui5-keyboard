@@ -13,8 +13,8 @@ const NUMPAD_HTML_TYPES: ReadonlySet<string> = new Set(["number", "tel"]);
  * keyboard type.
  *
  * Detection order:
- * 1. Explicit `data-keyboard-type` attribute on the element or a
- *    close ancestor (up to 5 levels). Allows framework-agnostic
+ * 1. Explicit `data-keyboard-type` attribute on the element or any
+ *    ancestor (uses `Element.closest()`). Allows framework-agnostic
  *    override for composite controls (e.g. web component hosts).
  * 2. DOM `inputmode` attribute (`numeric`, `decimal`, `tel`).
  * 3. HTML `type` attribute (`number`, `tel`).

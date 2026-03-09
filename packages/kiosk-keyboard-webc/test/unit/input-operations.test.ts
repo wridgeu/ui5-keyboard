@@ -91,6 +91,37 @@ describe("insertText", () => {
     insertText(el, "b");
     expect(bubbled).toBe(true);
   });
+
+  it("returns null and does not modify a readOnly input", () => {
+    const el = mockInput("abc", 1);
+    el.readOnly = true;
+    const result = insertText(el, "X");
+    expect(result).toBeNull();
+    expect(el.value).toBe("abc");
+  });
+
+  it("returns null and does not modify a disabled input", () => {
+    const el = mockInput("abc", 1);
+    el.disabled = true;
+    const result = insertText(el, "X");
+    expect(result).toBeNull();
+    expect(el.value).toBe("abc");
+  });
+
+  it("does not dispatch input event on readOnly input", () => {
+    const el = mockInput("abc", 1);
+    el.readOnly = true;
+    let fired = false;
+    el.addEventListener(
+      "input",
+      () => {
+        fired = true;
+      },
+      { once: true },
+    );
+    insertText(el, "X");
+    expect(fired).toBe(false);
+  });
 });
 
 describe("handleBackspace", () => {
@@ -179,6 +210,37 @@ describe("handleBackspace", () => {
     );
     handleBackspace(el);
     expect(bubbled).toBe(true);
+  });
+
+  it("returns null and does not modify a readOnly input", () => {
+    const el = mockInput("abc", 2);
+    el.readOnly = true;
+    const result = handleBackspace(el);
+    expect(result).toBeNull();
+    expect(el.value).toBe("abc");
+  });
+
+  it("returns null and does not modify a disabled input", () => {
+    const el = mockInput("abc", 2);
+    el.disabled = true;
+    const result = handleBackspace(el);
+    expect(result).toBeNull();
+    expect(el.value).toBe("abc");
+  });
+
+  it("does not dispatch input event on readOnly input", () => {
+    const el = mockInput("abc", 2);
+    el.readOnly = true;
+    let fired = false;
+    el.addEventListener(
+      "input",
+      () => {
+        fired = true;
+      },
+      { once: true },
+    );
+    handleBackspace(el);
+    expect(fired).toBe(false);
   });
 });
 

@@ -51,7 +51,7 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
         defaultValue: false,
         mapping: { type: "property", to: "disabled" },
       },
-      ariaLabel: {
+      accessibleName: {
         type: "string",
         defaultValue: "",
         mapping: { type: "property", to: "accessible-name" },

@@ -315,13 +315,14 @@ describe("kiosk-keyboard", () => {
       const customInput = document.createElement("input");
       document.body.appendChild(customInput);
 
-      kb.setTargetResolver(() => customInput);
-      queryKey(kb, "b")!.click();
-      expect(customInput.value).to.equal("b");
-
-      // Cleanup
-      kb.setTargetResolver(null);
-      customInput.remove();
+      try {
+        kb.setTargetResolver(() => customInput);
+        queryKey(kb, "b")!.click();
+        expect(customInput.value).to.equal("b");
+      } finally {
+        kb.setTargetResolver(null);
+        customInput.remove();
+      }
     });
 
     it("handles backspace on target input", async () => {
@@ -752,17 +753,18 @@ describe("kiosk-keyboard", () => {
         return undefined;
       });
 
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-        `,
-      );
-      await nextRender();
-      const shift = queryKey(el, "{shift}")!;
-      expect(shift.getAttribute("aria-label")).to.equal("Custom Shift");
-
-      // Clean up resolver
-      KK.setI18nResolver(null);
+      try {
+        const el = await fixture<KioskKeyboard>(
+          html`
+            <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+          `,
+        );
+        await nextRender();
+        const shift = queryKey(el, "{shift}")!;
+        expect(shift.getAttribute("aria-label")).to.equal("Custom Shift");
+      } finally {
+        KK.setI18nResolver(null);
+      }
     });
   });
 

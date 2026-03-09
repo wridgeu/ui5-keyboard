@@ -57,21 +57,18 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLayout("qwerty", CUSTOM_LAYOUT);
       expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
     });
 
     it("rejects empty layout name", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLayout("", CUSTOM_LAYOUT);
       expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
     });
 
     it("rejects invalid layout definition", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLayout("bad", [] as unknown as LayoutDefinition);
       expect(getRegisteredLayout("bad")).toBeUndefined();
-      spy.mockRestore();
     });
 
     it("normalizes name to lowercase", () => {
@@ -91,7 +88,6 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       unregisterLayout("qwerty");
       expect(getRegisteredLayout("qwerty")).toBeDefined();
-      spy.mockRestore();
     });
   });
 
@@ -128,7 +124,6 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout("fr", "azerty");
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("unknown layout"));
-      spy.mockRestore();
     });
 
     it("registerLocaleLayout does not warn for known layout", () => {
@@ -136,7 +131,6 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout("fr", "azerty");
       expect(spy).not.toHaveBeenCalled();
-      spy.mockRestore();
     });
 
     it("unregisterLocaleLayout removes a mapping without error", () => {
@@ -146,7 +140,6 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout("fr", "azerty");
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("unknown layout"));
-      spy.mockRestore();
     });
 
     it("resetLocaleLayouts restores defaults and removes custom mappings", () => {
@@ -156,14 +149,12 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout("fr", "azerty");
       expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
     });
 
     it("rejects empty locale string", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout("", "qwerty");
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("non-empty string"));
-      spy.mockRestore();
     });
   });
 
@@ -207,14 +198,12 @@ describe("layout-registry", () => {
       registerLayout(42 as unknown as string, CUSTOM_LAYOUT);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
       expect(getRegisteredLayout("42")).toBeUndefined();
-      spy.mockRestore();
     });
 
     it("rejects whitespace-only name", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLayout("   ", CUSTOM_LAYOUT);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("non-empty string"));
-      spy.mockRestore();
     });
 
     it("rejects layout with empty row", () => {
@@ -222,7 +211,6 @@ describe("layout-registry", () => {
       registerLayout("bad-rows", [[]] as unknown as LayoutDefinition);
       expect(getRegisteredLayout("bad-rows")).toBeUndefined();
       expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
     });
 
     it("rejects layout with key missing value", () => {
@@ -230,7 +218,6 @@ describe("layout-registry", () => {
       registerLayout("bad-key", [[{ label: "x" }]] as unknown as LayoutDefinition);
       expect(getRegisteredLayout("bad-key")).toBeUndefined();
       expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
     });
 
     it("rejects non-array layout definition", () => {
@@ -238,7 +225,6 @@ describe("layout-registry", () => {
       registerLayout("bad-type", "not-an-array" as unknown as LayoutDefinition);
       expect(getRegisteredLayout("bad-type")).toBeUndefined();
       expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
     });
   });
 
@@ -247,7 +233,6 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       unregisterLayout(null as unknown as string);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-      spy.mockRestore();
     });
 
     it("is a no-op for unregistered layout name", () => {
@@ -262,7 +247,6 @@ describe("layout-registry", () => {
       const layout = getLayoutOrDefault(undefined as unknown as string);
       expect(layout).toBeDefined();
       expect(layout.length).toBeGreaterThan(0);
-      spy.mockRestore();
     });
 
     it("returns default for whitespace-only name", () => {
@@ -270,7 +254,6 @@ describe("layout-registry", () => {
       const layout = getLayoutOrDefault("   ");
       expect(layout).toBeDefined();
       expect(layout.length).toBeGreaterThan(0);
-      spy.mockRestore();
     });
   });
 
@@ -278,7 +261,6 @@ describe("layout-registry", () => {
     it("returns false for non-string argument", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       expect(isBuiltInLayout(123 as unknown as string)).toBe(false);
-      spy.mockRestore();
     });
   });
 
@@ -287,21 +269,18 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout(42 as unknown as string, "qwerty");
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-      spy.mockRestore();
     });
 
     it("registerLocaleLayout rejects non-string layout", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout("fr", null as unknown as string);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-      spy.mockRestore();
     });
 
     it("unregisterLocaleLayout rejects non-string locale", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       unregisterLocaleLayout(undefined as unknown as string);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-      spy.mockRestore();
     });
   });
 });

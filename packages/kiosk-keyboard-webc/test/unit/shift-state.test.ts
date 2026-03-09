@@ -27,7 +27,6 @@ describe("ShiftState", () => {
       state.toggle(); // stale shift → new shift (not caps lock)
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(false);
-      vi.restoreAllMocks();
     });
   });
 

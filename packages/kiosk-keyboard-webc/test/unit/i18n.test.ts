@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // Mock only the UI5 WC i18n bundle — i18n-defaults.js is a generated file
 // with plain object exports that works fine without mocking.
@@ -15,10 +15,6 @@ describe("i18n", () => {
     setI18nResolver(null);
     mockGetText.mockReset();
     await initI18n();
-  });
-
-  afterEach(() => {
-    setI18nResolver(null);
   });
 
   it("returns default text from i18n-defaults for known key", () => {
@@ -65,7 +61,6 @@ describe("i18n", () => {
 
     expect(getText("KEY_SHIFT", "fallback")).toBe("BundleText");
     expect(warnSpy).toHaveBeenCalledWith("[kiosk-keyboard] i18n resolver threw:", expect.any(Error));
-    warnSpy.mockRestore();
   });
 
   it("clearing resolver with null disables override", () => {
