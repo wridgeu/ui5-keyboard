@@ -136,18 +136,18 @@
   box-sizing: border-box;
   box-shadow: var(--kiosk-keyboard-key-shadow);
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  transition:
+    background 0.1s ease,
+    border-color 0.1s ease,
+    box-shadow 0.1s ease,
+    transform 0.05s ease;
 
   &:hover {
     background: var(--sapButton_Hover_Background, #eaecee);
     border-color: var(--sapButton_Hover_BorderColor, #0064d9);
     transform: translateY(-1px);
     box-shadow: var(--kiosk-keyboard-key-shadow-hover);
-    transition:
-      background 0.1s ease,
-      box-shadow 0.1s ease,
-      transform 0.05s ease;
   }
 
   &:active {
@@ -169,7 +169,7 @@
   }
 }
 
-.kiosk-key--highlight {
+.kiosk-key.kiosk-key--highlight {
   background: var(--sapButton_Active_Background, #0064d9);
   color: var(--sapButton_Active_TextColor, #fff);
   border-color: var(--sapButton_Active_BorderColor, #0064d9);
@@ -285,7 +285,8 @@
 
   .kiosk-key:hover,
   .kiosk-key:active,
-  .kiosk-key--highlight {
+  .kiosk-key:focus-visible,
+  .kiosk-key.kiosk-key--highlight {
     transform: none;
   }
 }
@@ -314,8 +315,20 @@
 
 @media (hover: none) {
   .kiosk-key:hover {
+    background: var(--sapButton_Background, #fff);
+    border-color: var(--sapButton_BorderColor, #bfbfbf);
     transform: none;
     box-shadow: var(--kiosk-keyboard-key-shadow);
+  }
+
+  .kiosk-key--modifier:hover {
+    background: var(--sapButton_Lite_Background, transparent);
+    border-color: var(--sapButton_Lite_BorderColor, transparent);
+  }
+
+  .kiosk-key--action:hover {
+    background: var(--sapButton_Emphasized_Background, #0070f2);
+    border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
   }
 }
 
@@ -331,6 +344,7 @@
   margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }

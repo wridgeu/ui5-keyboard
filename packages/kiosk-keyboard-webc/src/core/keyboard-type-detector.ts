@@ -1,5 +1,5 @@
-/** Keyboard type values for the web component. */
-type KeyboardTypeValue = "Full" | "Numpad" | "Numeric";
+/** Keyboard type values that auto-detection can return. "Numeric" is only set programmatically via the keyboardType property. */
+type KeyboardTypeValue = "Full" | "Numpad";
 
 /** Numeric input modes that map to Numpad keyboard. */
 const NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "tel"]);

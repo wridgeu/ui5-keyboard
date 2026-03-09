@@ -10,6 +10,9 @@ const layouts: Map<string, LayoutDefinition> = new Map(builtInLayouts);
 /** Built-in layout names that cannot be overwritten by registerLayout. */
 const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
 
+/** Layouts that serve as secondary views (not base alphabetic layouts). */
+export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
+
 const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([["de", "qwertz-de"]]);
 
 /** BCP-47 language prefix -> layout name. Checked after exact match. */

@@ -10,6 +10,7 @@ import { resolveInputOrTextarea, keyElementId, KEY_ID_SUFFIX_RE } from "./core/d
 import { insertText, handleBackspace, handleNavigation } from "./core/input-operations.js";
 import { detectKeyboardType } from "./core/keyboard-type-detector.js";
 import {
+  SECONDARY_LAYOUTS,
   getLayoutOrDefault,
   getLocaleLayout,
   registerLayout,
@@ -24,7 +25,6 @@ import {
 } from "./core/layout-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
-  SECONDARY_LAYOUTS,
   type LayoutDefinition,
   type KeyDefinition,
   type KeyPressEventDetail,
@@ -210,6 +210,7 @@ export default class KioskKeyboard extends UI5Element {
   private _keyboardTypeExplicit = false;
   private _lastAutoDetectedType: string | null = null;
   private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
+  private _targetFromAutoShow = false;
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   private _lastFocusedKeyId: string | null = null;
   private _maxHeight = 0;
@@ -326,6 +327,7 @@ export default class KioskKeyboard extends UI5Element {
     }
 
     this._targetElement = null;
+    this._targetFromAutoShow = false;
 
     if (this._deferredFocusOutCloseId !== null) {
       cancelAnimationFrame(this._deferredFocusOutCloseId);
@@ -488,6 +490,7 @@ export default class KioskKeyboard extends UI5Element {
   /** Programmatically sets the input element that receives typed characters. */
   setTargetElement(el: HTMLInputElement | HTMLTextAreaElement | null): void {
     this._targetElement = el;
+    this._targetFromAutoShow = false;
   }
 
   /**
@@ -600,17 +603,22 @@ export default class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // All other keys fire key-press with the raw value
-    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
-    if (!allowed) return;
-
-    const target = this._resolveTarget();
-
+    // Shift is handled separately: shiftKey reports the *resulting* state
+    // (what shift will become after toggle), not the pre-toggle state.
     if (value === "{shift}") {
+      const nextShifted = !this._capsLock;
+      const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: nextShifted });
+      if (!allowed) return;
       this._shiftState.toggle();
       this._syncShiftState();
       return;
     }
+
+    // All other keys fire key-press with the current shift state
+    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
+    if (!allowed) return;
+
+    const target = this._resolveTarget();
 
     if (value === "{backspace}") {
       if (target) handleBackspace(target);
@@ -799,7 +807,14 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {
-    if (this._targetElement) return this._targetElement;
+    if (this._targetElement) {
+      if (!this._targetElement.isConnected) {
+        this._targetElement = null;
+        this._targetFromAutoShow = false;
+      } else {
+        return this._targetElement;
+      }
+    }
     const forId = this.for;
     if (forId) {
       const el = document.getElementById(forId);
@@ -863,6 +878,7 @@ export default class KioskKeyboard extends UI5Element {
 
     const targetChanged = this._targetElement !== inputEl;
     this._targetElement = inputEl;
+    this._targetFromAutoShow = true;
 
     // Detect keyboard type before open — this may trigger onInvalidation for
     // keyboardType, but the target is already set so subsequent logic is safe.
@@ -880,6 +896,7 @@ export default class KioskKeyboard extends UI5Element {
 
     if (!this._open) {
       this.show();
+      this._syncPhysicalKeyHighlight();
     } else if (targetChanged) {
       this._restoreInputMode();
       this._suppressInputMode();
@@ -906,7 +923,10 @@ export default class KioskKeyboard extends UI5Element {
       }
 
       if (this._open) this.close();
-      this._targetElement = null;
+      if (this._targetFromAutoShow) {
+        this._targetElement = null;
+        this._targetFromAutoShow = false;
+      }
     });
   }
 
