@@ -265,9 +265,11 @@ export default class KioskKeyboard extends UI5Element {
     const te = e as TouchEvent;
     const touch = te.changedTouches[0];
     if (!touch) return;
+    // Resolve the key under the finger at lift-off, not e.target (which is
+    // the touchstart target per spec and may differ if the finger drifted).
     const el = this.shadowRoot!.elementFromPoint(touch.clientX, touch.clientY);
-    const keyEl = (el as HTMLElement | null)?.closest?.("[data-key]");
-    if (keyEl) this._onKeyClick(e);
+    const keyEl = (el as HTMLElement | null)?.closest<HTMLElement>("[data-key]");
+    if (keyEl) keyEl.click();
   };
 
   // ── Pre-bound template handlers (avoids per-render allocation) ──
