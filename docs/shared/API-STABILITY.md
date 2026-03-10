@@ -1,9 +1,10 @@
 # API Stability Policy
 
-This repository ships two UI5 libraries:
+This repository ships three library packages:
 
-- `ui5.hotkeys`
-- `ui5.kiosk`
+- `ui5.hotkeys` - UI5 library for keyboard shortcut management
+- `ui5.kiosk` - UI5 library providing a virtual keyboard control
+- `kiosk-keyboard-webc` - Native web component variant of the kiosk keyboard, built on UI5 Web Components
 
 The public API contract is intentionally small. Anything outside that contract may change without a semver-stable compatibility guarantee.
 
@@ -29,7 +30,30 @@ Use these imports for application code:
 - `ui5/kiosk/library`
 - `ui5/kiosk/types`
 
+### `kiosk-keyboard-webc`
+
+The stable consumer surface consists of the package entry points and the `<kiosk-keyboard>` custom element:
+
+- `kiosk-keyboard-webc/bundle` - ESM entry point that registers the custom element and re-exports the class and public types
+- `kiosk-keyboard-webc` - bare component class (without asset registration); prefer the bundle entry for most use cases
+
+Stable exports from the bundle entry:
+
+- `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
+- Type exports: `FKeyMode`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`
+
+Static methods on `KioskKeyboard` (layout and locale registry):
+
+- `registerLayout` / `unregisterLayout` / `resetCustomLayouts`
+- `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
+- `registerLocaleLayout` / `unregisterLocaleLayout` / `resetLocaleLayouts` / `getLocaleLayout`
+- `setI18nResolver`
+
+Instance convenience methods that delegate to the same shared registry are also stable (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`).
+
 ## Internal Modules
+
+### `ui5.hotkeys` and `ui5.kiosk`
 
 Modules under `ui5/hotkeys/internal/*` and `ui5/kiosk/internal/*` are internal implementation details.
 
@@ -44,10 +68,22 @@ For `ui5.kiosk`, these two layout row modules are additionally treated as stable
 - `ui5/kiosk/layouts/fkey-row`
 - `ui5/kiosk/layouts/nav-row`
 
+### `kiosk-keyboard-webc`
+
+Modules under `core/*` (`shift-state`, `dom-utils`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
+
+The `layouts/*` directory contains built-in layout definitions. Individual layout files (e.g. `layouts/qwerty`, `layouts/numeric`) are not a stable import surface; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules are additionally treated as stable for composing custom variant layouts:
+
+- `kiosk-keyboard-webc/dist/layouts/fkey-row.js`
+- `kiosk-keyboard-webc/dist/layouts/nav-row.js`
+
+The `generated/*` directory (themes, i18n bundles) is build output and must never be imported directly.
+
 ## Maintainer Guidance
 
 When adding new code:
 
-- Put implementation-only modules in `src/internal/`.
+- In the UI5 packages, put implementation-only modules in `src/internal/`.
+- In `kiosk-keyboard-webc`, put implementation-only modules in `src/core/`.
 - Keep stable exports and examples focused on the supported imports above.
 - Prefer adding wrappers/facades rather than exposing low-level helpers directly.
