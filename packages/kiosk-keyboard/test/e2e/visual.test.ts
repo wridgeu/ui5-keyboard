@@ -80,6 +80,16 @@ describe("KioskKeyboard Interactive States", () => {
     await openVisualPage();
   });
 
+  it("should match key hover state", async () => {
+    const kb = await getKeyboard("kb-qwerty");
+    const key = await kb.$('[data-key="f"]');
+    await key.moveTo();
+    await expect(kb).toMatchElementSnapshot("kb-key-hovered");
+    // Move away to reset hover
+    const body = await $("body");
+    await body.moveTo({ xOffset: 0, yOffset: 0 });
+  });
+
   it("should match Shift active state", async () => {
     const kb = await getKeyboard("kb-shift");
     const shiftKey = await kb.$('[data-key="\\{shift\\}"]');

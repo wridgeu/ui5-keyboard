@@ -61,6 +61,16 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     await openTestPage();
   });
 
+  it("should match key hover state", async () => {
+    const kb = await getKeyboardRoot("kb-qwerty");
+    const key = await $(`#kb-qwerty`).$('>>>[data-key="f"]');
+    await key.moveTo();
+    await expect(kb).toMatchElementSnapshot("webc-key-hovered");
+    // Move away to reset hover
+    const body = await $("body");
+    await body.moveTo({ xOffset: 0, yOffset: 0 });
+  });
+
   it("should match Shift active state", async () => {
     // Click shift on the QWERTY keyboard
     const shiftKey = await browser.execute(() => {
