@@ -96,7 +96,7 @@ function createEnhancementBundle(
   }
 }
 
-function loadBundles(): Promise<void> {
+async function loadBundles(): Promise<void> {
   const loadGeneration = ++generation;
   const entries = activeConfig?.enhanceWith;
   if (!entries?.length) {
@@ -124,13 +124,12 @@ function loadBundles(): Promise<void> {
     return createEnhancementBundle(entry, createParams);
   });
 
-  return Promise.all(promises).then((results) => {
-    if (loadGeneration !== generation) {
-      return;
-    }
-    enhancementBundles = results.filter((b): b is ResourceBundle => b !== null);
-    bundlesLoadedLocale = requestedLocale;
-  });
+  const results = await Promise.all(promises);
+  if (loadGeneration !== generation) {
+    return;
+  }
+  enhancementBundles = results.filter((b): b is ResourceBundle => b !== null);
+  bundlesLoadedLocale = requestedLocale;
 }
 
 /**
@@ -273,7 +272,7 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
  *
  * **Graceful degradation:** individual enhancement bundles that fail to
  * load (network error, wrong path) are silently skipped with a
- * `Log.warning`.  The returned promise still resolves — only top-level
+ * `Log.warning`.  The returned promise still resolves - only top-level
  * validation failures cause a rejection.
  *
  * @param config  Enhancement bundle descriptors and locale metadata.
@@ -344,7 +343,7 @@ export function getI18nConfiguration(): Readonly<KioskI18nConfig> | null {
 }
 
 /**
- * Reset to library defaults — clears all enhancement bundles and
+ * Reset to library defaults - clears all enhancement bundles and
  * increments the generation counter to cancel any in-flight loads.
  */
 export function resetI18nConfiguration(): void {
@@ -419,7 +418,7 @@ export function reloadBundles(): Promise<void> {
   }
 
   // The IIFE executes synchronously up to the first `await`, then
-  // yields — by which point `pendingReload = reloadPromise` (below)
+  // yields - by which point `pendingReload = reloadPromise` (below)
   // has already run.  The definite-assignment assertion (`!`) avoids
   // a TS2454 error in the detach guard inside the loop body.
   let reloadPromise!: Promise<void>;
@@ -436,7 +435,7 @@ export function reloadBundles(): Promise<void> {
       }
 
       const localeAtLoopStart: string | null = pendingReloadRequestedLocale;
-      // Keep stale bundles in place — loadBundles() overwrites them
+      // Keep stale bundles in place - loadBundles() overwrites them
       // atomically (guarded by the generation counter), so getText()
       // keeps returning enhancement text during the async load.
       await loadBundles();

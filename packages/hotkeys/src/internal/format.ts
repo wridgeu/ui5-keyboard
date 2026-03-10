@@ -6,8 +6,8 @@ import { detectPlatform } from "./platform";
 /**
  * Format a hotkey string for display, using platform-appropriate symbols.
  *
- * - **macOS**: Uses symbols without separators — `⇧⌘S`
- * - **Windows/Linux**: Uses text labels with `+` separators — `Ctrl+Shift+S`
+ * - **macOS**: Uses symbols without separators - `⇧⌘S`
+ * - **Windows/Linux**: Uses text labels with `+` separators - `Ctrl+Shift+S`
  *
  * Special keys (arrows, Enter, Escape, etc.) are replaced with display symbols
  * or short labels.

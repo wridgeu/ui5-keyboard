@@ -932,7 +932,7 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   popover.openBy(trigger);
   await waitForRender();
 
-  // Tap several keys — popover should remain open
+  // Tap several keys - popover should remain open
   tapKey(kb, "a");
   tapKey(kb, "b");
   tapKey(kb, "c");
@@ -1341,14 +1341,14 @@ QUnit.test("Touch handlers ignore non-element event targets", async (assert) => 
 });
 
 // ──────────────────────────────────────────────
-// No target input — typing does not throw
+// No target input - typing does not throw
 // ──────────────────────────────────────────────
 
 QUnit.test("Typing with no target input does not throw", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // No target set — tap should not throw
+  // No target set - tap should not throw
   tapKey(kb, "a");
   tapKey(kb, "{backspace}");
   tapKey(kb, "{enter}");
@@ -1494,7 +1494,7 @@ QUnit.test("New input focused after target destroyed adopts correctly via autoSh
   // Destroy input1 while keyboard is open
   input1.destroy();
 
-  // Focus input2 — autoShow should adopt it without error
+  // Focus input2 - autoShow should adopt it without error
   (input2.getFocusDomRef() as HTMLElement).focus();
   await waitForRender();
 

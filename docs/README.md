@@ -6,6 +6,7 @@ This folder is organized by library area and document lifecycle.
 
 - [Hotkeys](./hotkeys/README.md)
 - [Kiosk Keyboard](./kiosk/README.md)
+- [Kiosk Keyboard Web Component](./kiosk-webc/README.md)
 - [Shared](./shared/README.md)
 - [Glossary](./GLOSSARY.md)
 
@@ -14,6 +15,23 @@ This folder is organized by library area and document lifecycle.
 - `Current` docs describe the active architecture and consumer guidance.
 - `proposals/` docs describe planned work; they can become stale if plans change.
 - `history/` docs are implementation-era notes kept for context and traceability.
+
+### Proposal Status Convention
+
+Each proposal doc should include a status line near the top:
+
+```
+> Status: <status>
+```
+
+| Status          | Meaning                                               |
+| --------------- | ----------------------------------------------------- |
+| **Proposal**    | Idea documented, not yet committed to                 |
+| **Accepted**    | Approved for implementation                           |
+| **In Progress** | Implementation underway                               |
+| **Implemented** | Completed. Move to `history/`                         |
+| **Deferred**    | Postponed, may revisit later                          |
+| **Rejected**    | Will not implement. Move to `history/` with rationale |
 
 ## Naming Conventions
 

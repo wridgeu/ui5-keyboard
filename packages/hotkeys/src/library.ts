@@ -54,16 +54,16 @@ export type UnhandledReason = (typeof UnhandledReason)[keyof typeof UnhandledRea
  * @public
  */
 export const Platform = Object.freeze({
-  /** macOS — uses Meta (Command) as the primary modifier. */
+  /** macOS - uses Meta (Command) as the primary modifier. */
   Mac: "mac",
-  /** Windows — uses Control as the primary modifier. */
+  /** Windows - uses Control as the primary modifier. */
   Windows: "windows",
-  /** Linux — uses Control as the primary modifier. */
+  /** Linux - uses Control as the primary modifier. */
   Linux: "linux",
 } as const);
 export type Platform = (typeof Platform)[keyof typeof Platform];
 
-// Re-export from constants — single source of truth
+// Re-export from constants - single source of truth
 export { GLOBAL_SCOPE } from "./internal/constants";
 
 // ──────────────────────────────────────────────

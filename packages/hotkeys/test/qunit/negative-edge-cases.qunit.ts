@@ -32,7 +32,7 @@ function freshManagerHooks() {
 // Conflict behavior edge cases
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Conflict behavior", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Conflict behavior", freshManagerHooks());
 
 QUnit.test("ConflictBehavior.Error: target-bound vs document-bound in same scope does not conflict", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -43,7 +43,7 @@ QUnit.test("ConflictBehavior.Error: target-bound vs document-bound in same scope
   // Register on document (target: null)
   manager.register("F3", () => {}, { conflictBehavior: "error" });
 
-  // Register on specific target — different target, same scope: should NOT throw
+  // Register on specific target - different target, same scope: should NOT throw
   manager.register("F3", () => {}, { target: div, conflictBehavior: "error" });
 
   assert.strictEqual(manager.getRegistrations().length, 2, "Both registrations co-exist");
@@ -170,7 +170,7 @@ QUnit.test("ConflictBehavior.Error: failed registration does not pollute state",
 
 let clock: ReturnType<typeof sinon.useFakeTimers>;
 
-QUnit.module("Negative / Edge-Case — enabled() mid-sequence", {
+QUnit.module("Negative / Edge-Case - enabled() mid-sequence", {
   beforeEach() {
     try {
       HotkeyManager.getInstance().destroy();
@@ -279,7 +279,7 @@ QUnit.test("enabled function throwing mid-sequence drops pending match", (assert
 // Callback throws during invocation
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Callback throws", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Callback throws", freshManagerHooks());
 
 QUnit.test("Throwing callback: same hotkey re-fires on subsequent keypress", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -378,7 +378,7 @@ QUnit.test("Throwing callback: registration and unregistration still work", (ass
 // Misc edge cases
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Misc", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Misc", freshManagerHooks());
 
 QUnit.test("Rapid register-unregister-fire cycle does not throw", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -418,7 +418,7 @@ QUnit.test("Unregistering inside own callback does not crash", (assert) => {
 // Suspend guard abuse
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Suspend guard abuse", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Suspend guard abuse", freshManagerHooks());
 
 QUnit.test("Stale guard from destroyed manager does not affect new manager", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -435,12 +435,12 @@ QUnit.test("Stale guard from destroyed manager does not affect new manager", (as
     fired = true;
   });
 
-  // Stale guard release should be a no-op — must NOT affect new manager
+  // Stale guard release should be a no-op - must NOT affect new manager
   guard.release();
   assert.notOk(newManager.isDispatchSuspended(), "New manager is NOT suspended by stale guard release");
 
   fireKey("F5");
-  assert.ok(fired, "Hotkey fires on new manager — stale guard had no effect");
+  assert.ok(fired, "Hotkey fires on new manager - stale guard had no effect");
 });
 
 QUnit.test("Guard release during unhandled callback does not affect current event", (assert) => {
@@ -454,12 +454,12 @@ QUnit.test("Guard release during unhandled callback does not affect current even
     guard.release();
   });
 
-  // First event — guard is active, so Suspended reason is emitted
+  // First event - guard is active, so Suspended reason is emitted
   fireKey("F5");
   assert.strictEqual(reasons[0], UnhandledReason.Suspended, "First event: Suspended");
   assert.notOk(manager.isDispatchSuspended(), "Guard released inside callback");
 
-  // Second event — guard was released, so now it's NoMatch (no registrations)
+  // Second event - guard was released, so now it's NoMatch (no registrations)
   fireKey("F5");
   assert.strictEqual(reasons[1], UnhandledReason.NoMatch, "Second event: NoMatch (guard released)");
 });
@@ -478,7 +478,7 @@ QUnit.test("isDispatchSuspended returns false after destroy", (assert) => {
 // Destroyed manager method calls
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Destroyed manager method calls", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Destroyed manager method calls", freshManagerHooks());
 
 QUnit.test("register() on destroyed manager throws", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -553,7 +553,7 @@ QUnit.test("removeGenericRootId() on destroyed manager throws", (assert) => {
 // Recorder abuse
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Recorder abuse", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Recorder abuse", freshManagerHooks());
 
 QUnit.test("Double-destroy recorder is idempotent", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -562,7 +562,7 @@ QUnit.test("Double-destroy recorder is idempotent", (assert) => {
   recorder.destroy();
   assert.ok(recorder.isDestroyed, "Destroyed after first call");
 
-  recorder.destroy(); // Second destroy — must not throw
+  recorder.destroy(); // Second destroy - must not throw
   assert.ok(recorder.isDestroyed, "Still destroyed after double call");
 });
 
@@ -576,7 +576,7 @@ QUnit.test("cancel() on destroyed recorder does not throw", (assert) => {
   recorder.start();
   recorder.destroy();
 
-  // cancel() after destroy — stop() is a no-op (already not recording)
+  // cancel() after destroy - stop() is a no-op (already not recording)
   recorder.cancel();
   assert.ok(true, "cancel() on destroyed recorder does not throw");
 });
@@ -596,7 +596,7 @@ QUnit.test("Rapid start/stop cycling does not leak interceptor state", (assert) 
     recorder.stop();
   }
 
-  // Final start — should work cleanly
+  // Final start - should work cleanly
   recorder.start();
   fireKey("F5");
   assert.strictEqual(recordCount, 1, "Recorder works after rapid start/stop cycles");
@@ -613,7 +613,7 @@ QUnit.test("Rapid start/stop cycling does not leak interceptor state", (assert) 
   recorder.destroy();
 });
 
-QUnit.test("onRecord callback throws — manager remains functional", (assert) => {
+QUnit.test("onRecord callback throws - manager remains functional", (assert) => {
   const manager = HotkeyManager.getInstance();
   const recorder = manager.createRecorder({
     onRecord: () => {
@@ -639,7 +639,7 @@ QUnit.test("onRecord callback throws — manager remains functional", (assert) =
   recorder.destroy();
 });
 
-QUnit.test("onRecord callback throws — external window-capture listeners do not see the event", (assert) => {
+QUnit.test("onRecord callback throws - external window-capture listeners do not see the event", (assert) => {
   const manager = HotkeyManager.getInstance();
   const recorder = manager.createRecorder({
     onRecord: () => {
@@ -649,7 +649,7 @@ QUnit.test("onRecord callback throws — external window-capture listeners do no
 
   // Register a window-capture listener AFTER the manager (so it would fire
   // second). The recorder's own stopImmediatePropagation() call (pre-throw)
-  // ensures this listener never sees the event — the call happens before
+  // ensures this listener never sees the event - the call happens before
   // the onRecord callback that throws.
   let externalSaw = false;
   const externalListener = () => {
@@ -666,7 +666,7 @@ QUnit.test("onRecord callback throws — external window-capture listeners do no
   recorder.destroy();
 });
 
-QUnit.test("onCancel callback throws — recorder stops and manager remains functional", (assert) => {
+QUnit.test("onCancel callback throws - recorder stops and manager remains functional", (assert) => {
   const manager = HotkeyManager.getInstance();
   const recorder = manager.createRecorder({
     onRecord: () => {},
@@ -707,9 +707,9 @@ QUnit.test("Recorder start after manager destroy is a no-op", (assert) => {
 // Target-scoped edge cases
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Target-scoped", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Target-scoped", freshManagerHooks());
 
-QUnit.test("Target removed from DOM before keypress — hotkey does not fire", (assert) => {
+QUnit.test("Target removed from DOM before keypress - hotkey does not fire", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
   fixture.appendChild(target);
@@ -723,14 +723,14 @@ QUnit.test("Target removed from DOM before keypress — hotkey does not fire", (
     { target },
   );
 
-  // Remove target from DOM — composedPath() of a global keypress won't include it
+  // Remove target from DOM - composedPath() of a global keypress won't include it
   target.remove();
 
   fireKey("Escape");
   assert.notOk(fired, "Hotkey does NOT fire when target is detached from DOM");
 });
 
-QUnit.test("Target never added to DOM — hotkey does not fire", (assert) => {
+QUnit.test("Target never added to DOM - hotkey does not fire", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
   // Never appended to document
@@ -748,7 +748,7 @@ QUnit.test("Target never added to DOM — hotkey does not fire", (assert) => {
   assert.notOk(fired, "Hotkey does NOT fire when target was never in DOM");
 });
 
-QUnit.test("Target removed and re-added — hotkey resumes", (assert) => {
+QUnit.test("Target removed and re-added - hotkey resumes", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
   fixture.appendChild(target);
@@ -775,7 +775,7 @@ QUnit.test("Target removed and re-added — hotkey resumes", (assert) => {
   assert.strictEqual(callCount, 2, "Fires again after target is re-added to DOM");
 });
 
-QUnit.test("Unregister target-scoped hotkey after target removed — no leak", (assert) => {
+QUnit.test("Unregister target-scoped hotkey after target removed - no leak", (assert) => {
   const manager = HotkeyManager.getInstance();
   const target = document.createElement("div");
   fixture.appendChild(target);
@@ -783,7 +783,7 @@ QUnit.test("Unregister target-scoped hotkey after target removed — no leak", (
   const handle = manager.register("F5", () => {}, { target });
   target.remove();
 
-  // Unregister after target is gone — should not throw
+  // Unregister after target is gone - should not throw
   handle.unregister();
   assert.notOk(handle.isActive, "Handle is inactive after unregister");
   assert.strictEqual(manager.getRegistrations().length, 0, "No registrations remain");
@@ -793,7 +793,7 @@ QUnit.test("Unregister target-scoped hotkey after target removed — no leak", (
 // Unhandled callback error resilience
 // ══════════════════════════════════════════════
 
-QUnit.module("Negative / Edge-Case — Unhandled callback errors", freshManagerHooks());
+QUnit.module("Negative / Edge-Case - Unhandled callback errors", freshManagerHooks());
 
 QUnit.test("Throwing unhandled callback does not break subsequent hotkey dispatch", (assert) => {
   const manager = HotkeyManager.getInstance();
@@ -804,7 +804,7 @@ QUnit.test("Throwing unhandled callback does not break subsequent hotkey dispatc
     throw new Error("Intentional unhandled callback error");
   });
 
-  // Fire unmatched key — unhandled throws, but error is caught and logged
+  // Fire unmatched key - unhandled throws, but error is caught and logged
   fireKey("F9");
   assert.strictEqual(throwCount, 1, "Unhandled callback was invoked");
 
@@ -827,7 +827,7 @@ QUnit.test("Throwing unhandled callback while suspended does not corrupt guard s
     throw new Error("Intentional throw during suspension");
   });
 
-  // Error is caught and logged — guard state must remain intact
+  // Error is caught and logged - guard state must remain intact
   fireKey("F5");
 
   // Guard should still be active and functional
@@ -846,7 +846,7 @@ QUnit.test("Throwing unhandled callback while suspended does not corrupt guard s
   assert.ok(fired, "Manager dispatches normally after suspended unhandled throw");
 });
 
-QUnit.test("enabled() function throwing on hotkey — other hotkeys still fire", (assert) => {
+QUnit.test("enabled() function throwing on hotkey - other hotkeys still fire", (assert) => {
   const manager = HotkeyManager.getInstance();
   let safeFired = false;
 
@@ -860,7 +860,7 @@ QUnit.test("enabled() function throwing on hotkey — other hotkeys still fire",
     safeFired = true;
   });
 
-  // F1 has throwing enabled() — treated as disabled, error logged, pipeline continues
+  // F1 has throwing enabled() - treated as disabled, error logged, pipeline continues
   fireKey("F1");
 
   fireKey("F2");

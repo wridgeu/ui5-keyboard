@@ -27,7 +27,7 @@ function makeRegistration(id: string): Registration {
   };
 }
 
-/** Minimal toRegistrationInfo stub — only the id is inspected in assertions. */
+/** Minimal toRegistrationInfo stub - only the id is inspected in assertions. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toInfo: Parameters<typeof recordSkip>[3] = (reg) => ({ id: reg.id }) as any;
 
@@ -35,7 +35,7 @@ const toInfo: Parameters<typeof recordSkip>[3] = (reg) => ({ id: reg.id }) as an
 // Tests
 // ──────────────────────────────────────────────
 
-QUnit.module("skip-reason — recordSkip");
+QUnit.module("skip-reason - recordSkip");
 
 QUnit.test("No-op when skipInfo is null", (assert) => {
   recordSkip(null, UnhandledReason.Disabled, makeRegistration("a"), toInfo);

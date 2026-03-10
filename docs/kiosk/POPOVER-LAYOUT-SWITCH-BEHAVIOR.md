@@ -19,7 +19,7 @@ if (bFromResize
 }
 ```
 
-`jQuery.rect()` returns **document-absolute** coordinates (includes scroll offset), but the check compares them against the **viewport height**. On a scrolled page, the trigger element's absolute `top` (e.g. 3374px) exceeds the viewport height (e.g. 893px), so the Popover considers the trigger "off-screen" and closes — even though it is perfectly visible in the viewport.
+`jQuery.rect()` returns **document-absolute** coordinates (includes scroll offset), but the check compares them against the **viewport height**. On a scrolled page, the trigger element's absolute `top` (e.g. 3374px) exceeds the viewport height (e.g. 893px), so the Popover considers the trigger "off-screen" and closes, even though it is perfectly visible in the viewport.
 
 **Sequence of events**:
 

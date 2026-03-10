@@ -10,7 +10,7 @@ const LOG_COMPONENT = "ui5.hotkeys.FocusFallbackTracker";
  * below 800ms miss slow rerenders; values above 2000ms risk stale matches
  * after the user has mentally moved on.
  */
-/** @internal — exported for testing only */
+/** @internal - exported for testing only */
 export const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
 /**
@@ -262,7 +262,8 @@ export default class FocusFallbackTracker {
     let depth = 0;
     const MAX_DEPTH = 1000;
 
-    while (current && depth++ < MAX_DEPTH) {
+    while (current && depth < MAX_DEPTH) {
+      depth++;
       path.push(current);
 
       if (current.parentNode) {
@@ -277,6 +278,10 @@ export default class FocusFallbackTracker {
       }
 
       current = null;
+    }
+
+    if (depth >= MAX_DEPTH) {
+      console.warn("[ui5-lib-hotkeys] FocusFallbackTracker: MAX_DEPTH reached while building active-element path.");
     }
 
     if (!path.includes(document)) {

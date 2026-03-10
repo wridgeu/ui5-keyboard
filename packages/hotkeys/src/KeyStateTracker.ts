@@ -9,14 +9,14 @@ const LOG_COMPONENT = "ui5.hotkeys.KeyStateTracker";
  * Tracks which keys are currently held down.
  *
  * Receives events from EventDispatcher via `processKeyDown`, `processKeyUp`,
- * and `processBlur` — does NOT own any DOM listeners.
+ * and `processBlur` - does NOT own any DOM listeners.
  *
  * Includes a macOS fix for stuck keys when a modifier is released
  * (Cmd+Tab swallows the Tab keyup on macOS).
  *
- * Plain class — no UI5 lifecycle dependency.
+ * Plain class - no UI5 lifecycle dependency.
  *
- * @public — exported for type usage. Obtain an instance via
+ * @public - exported for type usage. Obtain an instance via
  * `HotkeyManager.getKeyStateTracker()`.
  */
 export default class KeyStateTracker {
@@ -27,7 +27,7 @@ export default class KeyStateTracker {
   private _changeCallback: ((keys: readonly string[]) => void) | null = null;
 
   /**
-   * @internal — Do not instantiate directly. Use `HotkeyManager.getKeyStateTracker()`.
+   * @internal - Do not instantiate directly. Use `HotkeyManager.getKeyStateTracker()`.
    */
   constructor(platform: Platform, token: symbol) {
     if (token !== INTERNAL_TOKEN) {
@@ -65,7 +65,7 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Process a keydown event — maps `code` to `key`, ref-counts held keys.
+   * Process a keydown event - maps `code` to `key`, ref-counts held keys.
    * Called by EventDispatcher (step 1 of the dispatch pipeline).
    * @internal
    */
@@ -95,7 +95,7 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Process a keyup event — decrements ref-count, includes macOS stuck-key fix.
+   * Process a keyup event - decrements ref-count, includes macOS stuck-key fix.
    * Called by EventDispatcher.
    * @internal
    */
@@ -129,7 +129,7 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Process a blur event (window lost focus) — clears all held keys.
+   * Process a blur event (window lost focus) - clears all held keys.
    * Called by EventDispatcher.
    * @internal
    */
@@ -148,7 +148,7 @@ export default class KeyStateTracker {
 
   /**
    * Reset all state and clear callbacks.
-   * @internal — Called by EventDispatcher.destroy(), not by consumers.
+   * @internal - Called by EventDispatcher.destroy(), not by consumers.
    */
   destroy(): void {
     this._heldKeys.clear();

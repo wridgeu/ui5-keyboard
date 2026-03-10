@@ -63,7 +63,7 @@ QUnit.test("Nested guards require all releases before dispatch resumes", (assert
   assert.strictEqual(callCount, 0, "Blocked by both guards");
 
   guard1.release();
-  assert.ok(manager.isDispatchSuspended(), "Still suspended — guard2 active");
+  assert.ok(manager.isDispatchSuspended(), "Still suspended - guard2 active");
 
   fireKey("F5");
   assert.strictEqual(callCount, 0, "Still blocked by guard2");
@@ -80,7 +80,7 @@ QUnit.test("release() is idempotent", (assert) => {
 
   const guard = manager.suspendDispatch("test");
   guard.release();
-  guard.release(); // Double release — should not throw or decrement below zero
+  guard.release(); // Double release - should not throw or decrement below zero
 
   assert.notOk(guard.isActive, "Guard still inactive");
   assert.notOk(manager.isDispatchSuspended(), "Dispatch still not suspended");
@@ -126,7 +126,7 @@ QUnit.test("Key state tracks during suspension", (assert) => {
   guard.release();
 });
 
-QUnit.test("Suspend does NOT preventDefault — browser defaults leak", (assert) => {
+QUnit.test("Suspend does NOT preventDefault - browser defaults leak", (assert) => {
   const guard = manager.suspendDispatch("test");
 
   const event = fireKey("F5");
@@ -174,13 +174,13 @@ QUnit.test("In-progress sequence times out during suspension", (assert) => {
   clock.tick(200);
 
   guard.release();
-  fireKey("I"); // Should not complete sequence — timed out
+  fireKey("I"); // Should not complete sequence - timed out
 
   assert.notOk(seqFired, "Sequence did NOT complete (timed out during suspension)");
   clock.restore();
 });
 
-QUnit.test("Suspend mid-sequence, release before timeout — sequence completes", (assert) => {
+QUnit.test("Suspend mid-sequence, release before timeout - sequence completes", (assert) => {
   const clock = sinon.useFakeTimers();
   let seqFired = false;
 
@@ -261,7 +261,7 @@ QUnit.test("Interceptor active + guard active → interceptor wins", (assert) =>
   guard.release();
 });
 
-QUnit.test("Interceptor error is isolated — pipeline keeps working", (assert) => {
+QUnit.test("Interceptor error is isolated - pipeline keeps working", (assert) => {
   const errorRecorder = manager.createRecorder({
     onRecord: () => {
       throw new Error("recorder boom");
@@ -403,7 +403,7 @@ QUnit.test("Target-scoped: target priority over document (stopPropagation: true)
   target.remove();
 });
 
-QUnit.test("Target-scoped: target without stopPropagation + document — both fire", (assert) => {
+QUnit.test("Target-scoped: target without stopPropagation + document - both fire", (assert) => {
   const target = document.createElement("div");
   document.body.appendChild(target);
 
@@ -600,7 +600,7 @@ QUnit.test("Destroy marks tracked recorders as destroyed", (assert) => {
   assert.notOk(recorder.isRecording, "Recorder is not recording after manager destroy");
 });
 
-QUnit.test("Recorder stop after manager destroy — no throw", (assert) => {
+QUnit.test("Recorder stop after manager destroy - no throw", (assert) => {
   const recorder = manager.createRecorder({ onRecord: () => {} });
   recorder.start();
   manager.destroy();
@@ -657,7 +657,7 @@ QUnit.test("Blur clears KeyStateTracker via dispatcher", (assert) => {
 // clearInterceptor owner-safety
 // ──────────────────────────────────────────────
 
-QUnit.test("clearInterceptor is owner-safe — wrong owner cannot clear", (assert) => {
+QUnit.test("clearInterceptor is owner-safe - wrong owner cannot clear", (assert) => {
   let recordedA: string | null = null;
 
   const recorderA = manager.createRecorder({
@@ -672,7 +672,7 @@ QUnit.test("clearInterceptor is owner-safe — wrong owner cannot clear", (asser
   recorderA.start();
 
   // recorderB tries to stop() (which calls clearInterceptor with itself as owner)
-  // but recorderB is NOT the current interceptor — should be a no-op
+  // but recorderB is NOT the current interceptor - should be a no-op
   recorderB.stop();
 
   // recorderA should still be the active interceptor
@@ -683,10 +683,10 @@ QUnit.test("clearInterceptor is owner-safe — wrong owner cannot clear", (asser
 });
 
 // ──────────────────────────────────────────────
-// Nested targets — stopPropagation edge cases
+// Nested targets - stopPropagation edge cases
 // ──────────────────────────────────────────────
 
-QUnit.test("Nested targets — default remains innermost with stopPropagation: false", (assert) => {
+QUnit.test("Nested targets - default remains innermost with stopPropagation: false", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -717,7 +717,7 @@ QUnit.test("Nested targets — default remains innermost with stopPropagation: f
   outer.remove();
 });
 
-QUnit.test("Nested targets — stopPropagation on inner does not change default non-bubbling", (assert) => {
+QUnit.test("Nested targets - stopPropagation on inner does not change default non-bubbling", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
@@ -803,7 +803,7 @@ QUnit.test("Destroyed manager: suspendDispatch throws", (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// Event context reset — no stale data
+// Event context reset - no stale data
 // ──────────────────────────────────────────────
 
 QUnit.test("Unhandled reason is fresh per event (no stale skip info)", (assert) => {
@@ -908,7 +908,7 @@ QUnit.test("Window capture listener fires even with stopPropagation: true", (ass
   const winListener = () => {
     windowCaptureCount++;
   };
-  // Add our listener AFTER the dispatcher's (same target, same phase — insertion order)
+  // Add our listener AFTER the dispatcher's (same target, same phase - insertion order)
   window.addEventListener("keydown", winListener, true);
 
   manager.register("F5", () => {}); // default stopPropagation: true
@@ -951,9 +951,9 @@ QUnit.test("onDetached is idempotent on already-stopped recorder", (assert) => {
   recorder.stop();
   assert.notOk(recorder.isRecording, "Recorder stopped");
 
-  // Simulate a second onDetached call (e.g., from destroy) — should not throw
+  // Simulate a second onDetached call (e.g., from destroy) - should not throw
   // We test this by starting another recorder (which would call onDetached on
-  // the previous interceptor if it were still set — but it isn't because stop() cleared it)
+  // the previous interceptor if it were still set - but it isn't because stop() cleared it)
   const recorder2 = manager.createRecorder({ onRecord: () => {} });
   recorder2.start();
   assert.ok(recorder2.isRecording, "Second recorder started without error");
@@ -984,7 +984,7 @@ QUnit.test("setInterceptor replacement calls onDetached synchronously", (assert)
   recorderA.start();
   assert.ok(recorderA.isRecording, "A recording");
 
-  // Starting B replaces A — onDetached called synchronously before start() returns
+  // Starting B replaces A - onDetached called synchronously before start() returns
   recorderB.start();
   assert.notOk(recorderA.isRecording, "A.isRecording is false synchronously after B.start()");
   assert.ok(recorderB.isRecording, "B is recording");
@@ -997,10 +997,10 @@ QUnit.test("setInterceptor replacement calls onDetached synchronously", (assert)
 // Recorder tracking leak prevention
 // ──────────────────────────────────────────────
 
-QUnit.test("recorder.destroy() untracks from dispatcher — no double-destroy on manager teardown", (assert) => {
+QUnit.test("recorder.destroy() untracks from dispatcher - no double-destroy on manager teardown", (assert) => {
   const recorder = manager.createRecorder({ onRecord: () => {} });
 
-  // Destroy the recorder first — this should untrack it from the dispatcher
+  // Destroy the recorder first - this should untrack it from the dispatcher
   recorder.destroy();
   assert.ok(recorder.isDestroyed, "Recorder is destroyed after its own destroy()");
 
@@ -1042,7 +1042,7 @@ QUnit.test("Active-scope target takes precedence over global-scope target", (ass
     },
     { target: innerTarget },
   );
-  // Active-scope target on outer element — should win due to scope precedence
+  // Active-scope target on outer element - should win due to scope precedence
   manager.register(
     "Escape",
     () => {
@@ -1117,7 +1117,7 @@ QUnit.test("Recorder stopImmediatePropagation blocks non-library window listener
 // composedPath fallback
 // ──────────────────────────────────────────────
 
-QUnit.test("composedPath fallback — event with empty composedPath uses target fallback", (assert) => {
+QUnit.test("composedPath fallback - event with empty composedPath uses target fallback", (assert) => {
   const target = document.createElement("div");
   document.body.appendChild(target);
 
@@ -1153,7 +1153,7 @@ QUnit.test("composedPath fallback — event with empty composedPath uses target 
 // ──────────────────────────────────────────────
 
 QUnit.test("Interceptor replacement logs warning via sap/base/Log", (assert) => {
-  // Load sap/base/Log synchronously — module is already loaded by the library
+  // Load sap/base/Log synchronously - module is already loaded by the library
   const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
   assert.ok(LogModule, "sap/base/Log loaded synchronously");
 
@@ -1196,7 +1196,7 @@ QUnit.test("Target-scoped iframe document degrades to untargeted registration", 
       assert.ok(iframeDoc, "iframe contentDocument is accessible (same-origin)");
 
       let fired = false;
-      // Register with target set to the iframe's document — degrades to untargeted
+      // Register with target set to the iframe's document - degrades to untargeted
       const handle = manager.register(
         "Escape",
         () => {
@@ -1343,7 +1343,7 @@ QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert
 });
 
 // ──────────────────────────────────────────────
-// Focus transitions — repeated Escape scenarios
+// Focus transitions - repeated Escape scenarios
 // ──────────────────────────────────────────────
 
 QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → second fires untargeted", (assert) => {
@@ -1378,7 +1378,7 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
     { target: inner, stopPropagation: true },
   );
 
-  // First Escape — event originates inside inner target
+  // First Escape - event originates inside inner target
   fireKeyOn(input, "Escape");
   assert.strictEqual(innerCount, 1, "First Escape: inner target fired");
   assert.strictEqual(outerCount, 0, "First Escape: outer did not fire");
@@ -1387,7 +1387,7 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
   // Simulate focus leaving to element outside all targets (like sap.m.Input blur)
   outside.focus();
 
-  // Second Escape — from outside element
+  // Second Escape - from outside element
   fireKeyOn(outside, "Escape");
   assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire again");
   assert.strictEqual(outerCount, 0, "Second Escape: outer did not fire");
@@ -1429,14 +1429,14 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
     { target: inner, stopPropagation: true },
   );
 
-  // First Escape — from inner target
+  // First Escape - from inner target
   fireKeyOn(input, "Escape");
   assert.strictEqual(innerCount, 1, "First Escape: inner target fired");
 
   // Focus moves to sibling inside outer
   outerButton.focus();
 
-  // Second Escape — from outer target area
+  // Second Escape - from outer target area
   fireKeyOn(outerButton, "Escape");
   assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire");
   assert.strictEqual(outerCount, 1, "Second Escape: outer target fired");
@@ -1478,7 +1478,7 @@ QUnit.test("activeElement in inner target wins over outer target on untargeted d
   // Focus the input inside the inner target
   input.focus();
 
-  // Dispatch on document — activeElement augmentation must place inner
+  // Dispatch on document - activeElement augmentation must place inner
   // ancestry before outer/root entries to preserve innermost-wins.
   fireKey("Escape");
 
@@ -1579,10 +1579,10 @@ QUnit.test("Focus bounces to body, Escape still matches previous target", (asser
   // Focus the input (sets _lastFocusedElement = input via focusin handler)
   input.focus();
 
-  // Blur — focus goes to body (generic root — _focusInHandler skips it)
+  // Blur - focus goes to body (generic root - _focusInHandler skips it)
   input.blur();
 
-  // Fire Escape from document level — fallback should reconstruct path from _lastFocusedElement
+  // Fire Escape from document level - fallback should reconstruct path from _lastFocusedElement
   fireKey("Escape");
 
   assert.ok(fired, "Target-scoped hotkey fires via focus fallback after blur to body");
@@ -1625,7 +1625,7 @@ QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => 
   target.remove();
 });
 
-QUnit.test("Focus moves to real non-target element — old target does NOT fire", (assert) => {
+QUnit.test("Focus moves to real non-target element - old target does NOT fire", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   const outside = document.createElement("input");
@@ -1654,7 +1654,7 @@ QUnit.test("Focus moves to real non-target element — old target does NOT fire"
   // _lastFocusedElement updates to 'outside'
   outside.focus();
 
-  // Fire Escape on the outside element — target should NOT match
+  // Fire Escape on the outside element - target should NOT match
   fireKeyOn(outside, "Escape");
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire (focus genuinely moved away)");
@@ -1684,7 +1684,7 @@ QUnit.test(`Fallback expires after TTL (${FOCUS_PATH_FALLBACK_TTL_MS} ms)`, (ass
     { target },
   );
 
-  // Focus and blur within TTL — fallback would normally work
+  // Focus and blur within TTL - fallback would normally work
   input.focus();
   input.blur();
 
@@ -1781,7 +1781,7 @@ QUnit.test("addGenericRootId makes element act as generic root for focus fallbac
   input.blur();
   shell.focus();
 
-  // Fire Escape on the shell — fallback should reconstruct path from last focused element
+  // Fire Escape on the shell - fallback should reconstruct path from last focused element
   fireKeyOn(shell, "Escape");
 
   assert.ok(targetFired, "Target-scoped hotkey fires because shell is treated as generic root");
@@ -1823,7 +1823,7 @@ QUnit.test("removeGenericRootId restores normal behavior for element", (assert) 
   input.focus();
   container.focus();
 
-  // Container is a real element now — fallback should NOT activate
+  // Container is a real element now - fallback should NOT activate
   fireKeyOn(container, "Escape");
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after removeGenericRootId");
@@ -1883,13 +1883,13 @@ QUnit.test("Rapid Escape within TTL fires target handler only once (one-shot)", 
   input.focus();
   input.blur();
 
-  // First Escape — fires via focus fallback, consuming _blurSeq
+  // First Escape - fires via focus fallback, consuming _blurSeq
   fireKey("Escape");
   assert.strictEqual(callCount, 1, "First Escape fires via focus fallback");
 
-  // Second Escape immediately — hasUnconsumedBlur is false, fallback not used
+  // Second Escape immediately - hasUnconsumedBlur is false, fallback not used
   fireKey("Escape");
-  assert.strictEqual(callCount, 1, "Second Escape does NOT fire — one-shot consumed");
+  assert.strictEqual(callCount, 1, "Second Escape does NOT fire - one-shot consumed");
 
   target.remove();
 });
@@ -1920,7 +1920,7 @@ QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (
   replacement.tabIndex = 0;
   document.body.appendChild(replacement);
 
-  // Focus the replacement and fire key — Set dedup prevents double-fire
+  // Focus the replacement and fire key - Set dedup prevents double-fire
   replacement.focus();
   fireKeyOn(replacement, "F7");
 
@@ -2030,7 +2030,7 @@ QUnit.module("ActiveElement path augmentation", {
 
 QUnit.test("Non-Escape key: activeElement inside target matches via augmentation (not focus fallback)", (assert) => {
   // Uses F5 (not Escape) to ensure only the activeElement augmentation path
-  // is exercised — the focus fallback gates on event.key === "Escape".
+  // is exercised - the focus fallback gates on event.key === "Escape".
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
@@ -2053,7 +2053,7 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
   // Focus the input (activeElement = input, inside target)
   input.focus();
 
-  // Dispatch from document — composedPath is [document, window] but
+  // Dispatch from document - composedPath is [document, window] but
   // activeElement is still the input inside target.
   fireKey("F5");
 
@@ -2103,11 +2103,11 @@ QUnit.test("Element with data-sap-ui-area is treated as generic root for focus f
     { target },
   );
 
-  // Focus input, then blur — focus bounces to UIArea root
+  // Focus input, then blur - focus bounces to UIArea root
   input.focus();
   input.blur();
 
-  // Fire Escape on the UIArea root — should trigger focus fallback because
+  // Fire Escape on the UIArea root - should trigger focus fallback because
   // data-sap-ui-area marks it as a generic root node.
   fireKeyOn(uiArea, "Escape");
 

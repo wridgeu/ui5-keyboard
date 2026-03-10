@@ -40,13 +40,13 @@ QUnit.test("Dialog scope push/pop with same hotkey", (assert) => {
     { scope: "dialog" },
   );
 
-  // Push dialog scope — dialog Escape should take priority
+  // Push dialog scope - dialog Escape should take priority
   manager.pushScope("dialog");
   fireKey("Escape");
   assert.ok(dialogEscapeCalled, "Dialog-scoped Escape fired");
   assert.notOk(globalEscapeCalled, "Global Escape suppressed by dialog scope");
 
-  // Pop dialog scope — global Escape should fire again
+  // Pop dialog scope - global Escape should fire again
   dialogEscapeCalled = false;
   manager.popScope("dialog");
   fireKey("Escape");
@@ -146,12 +146,12 @@ QUnit.test("Dialog scope with global fallthrough", (assert) => {
   const manager = HotkeyManager.getInstance();
   let globalCtrlSCalled = false;
 
-  // Global Ctrl+S — no dialog-scoped version
+  // Global Ctrl+S - no dialog-scoped version
   manager.register("Ctrl+S", () => {
     globalCtrlSCalled = true;
   });
 
-  // Push dialog scope — no Ctrl+S registered there
+  // Push dialog scope - no Ctrl+S registered there
   manager.pushScope("myDialog");
   fireKey("s", { ctrlKey: true });
   assert.ok(globalCtrlSCalled, "Global Ctrl+S fires as fallthrough when no dialog-scoped match");

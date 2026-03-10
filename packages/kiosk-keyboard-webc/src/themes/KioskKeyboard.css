@@ -1,0 +1,383 @@
+/* ============================= */
+/* KioskKeyboard base styles     */
+/* ============================= */
+
+:host {
+  display: block;
+
+  /* ---- Custom property defaults ---- */
+  --kiosk-keyboard-padding: 0.75rem;
+  --kiosk-keyboard-key-gap: 0.375rem;
+  --kiosk-keyboard-key-height: 3rem;
+  --kiosk-keyboard-key-font-size: 1.125rem;
+  --kiosk-keyboard-key-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --kiosk-keyboard-docked-max-width: 1024px;
+  --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  --kiosk-keyboard-docked-z-index: 100;
+  --kiosk-keyboard-numpad-max-width: 20rem;
+  --kiosk-keyboard-numpad-key-min-width: 4rem;
+}
+
+/* ---- Theme-aware shadows (requires color-mix support) ---- */
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  :host {
+    --kiosk-keyboard-key-shadow: 0 1px 2px
+      color-mix(in srgb, var(--sapContent_Shadow0, rgba(0, 0, 0, 0.1)) 10%, transparent);
+    --kiosk-keyboard-key-shadow-hover: 0 2px 4px
+      color-mix(in srgb, var(--sapContent_Shadow0, rgba(0, 0, 0, 0.15)) 15%, transparent);
+    --kiosk-keyboard-docked-shadow: 0 -4px 20px
+      color-mix(in srgb, var(--sapContent_Shadow0, rgba(0, 0, 0, 0.2)) 20%, transparent);
+  }
+}
+
+/* ============================= */
+/* Keyboard container            */
+/* ============================= */
+
+.kiosk-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kiosk-keyboard-key-gap);
+  padding: var(--kiosk-keyboard-padding);
+  background: var(--sapGroup_ContentBackground, #fff);
+  border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
+  border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
+  user-select: none;
+  touch-action: manipulation;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* ---- Mode: Numpad ---- */
+.kiosk-keyboard--numpad {
+  max-width: var(--kiosk-keyboard-numpad-max-width);
+  --kiosk-keyboard-key-height: 3.5rem;
+  --kiosk-keyboard-key-font-size: 1.375rem;
+
+  & .kiosk-key {
+    min-width: var(--kiosk-keyboard-numpad-key-min-width);
+  }
+
+  & .kiosk-key--modifier,
+  & .kiosk-key--action {
+    font-size: var(--kiosk-keyboard-key-font-size);
+  }
+}
+
+/* ---- Mode: Numeric ---- */
+.kiosk-keyboard--numeric {
+  --kiosk-keyboard-key-font-size: 1.25rem;
+}
+
+/* ---- Mode: Docked ---- */
+.kiosk-keyboard--docked {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--kiosk-keyboard-docked-z-index);
+  max-width: var(--kiosk-keyboard-docked-max-width);
+  margin-inline: auto;
+  border-radius: var(--sapElement_BorderCornerRadius, 0.75rem) var(--sapElement_BorderCornerRadius, 0.75rem) 0 0;
+  border-bottom: none;
+  box-shadow: var(--kiosk-keyboard-docked-shadow);
+  transform: translateY(0);
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0s;
+}
+
+/* ---- State: Hidden (docked + closed) ---- */
+.kiosk-keyboard--hidden {
+  transform: translateY(100%);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.3s;
+}
+
+/* ---- State: Disabled ---- */
+.kiosk-keyboard--disabled {
+  opacity: var(--sapContent_DisabledOpacity, 0.4);
+  pointer-events: none;
+}
+
+/* ============================= */
+/* Row                           */
+/* ============================= */
+
+.kiosk-row {
+  display: flex;
+  gap: var(--kiosk-keyboard-key-gap);
+  justify-content: center;
+}
+
+/* ============================= */
+/* Key                           */
+/* ============================= */
+
+.kiosk-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  height: var(--kiosk-keyboard-key-height);
+  padding: 0 0.25rem;
+  border: 1px solid var(--sapButton_BorderColor, #bfbfbf);
+  border-radius: var(--sapButton_BorderCornerRadius, 0.5rem);
+  background: var(--sapButton_Background, #fff);
+  color: var(--sapButton_TextColor, #32363a);
+  font-family: var(--sapFontFamily, "72", "72full", Arial, Helvetica, sans-serif);
+  font-size: var(--kiosk-keyboard-key-font-size);
+  cursor: pointer;
+  box-sizing: border-box;
+  box-shadow: var(--kiosk-keyboard-key-shadow);
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    background 0.1s ease,
+    border-color 0.1s ease,
+    box-shadow 0.1s ease,
+    transform 0.05s ease;
+
+  &:hover {
+    background: var(--sapButton_Hover_Background, #eaecee);
+    border-color: var(--sapButton_Hover_BorderColor, #0064d9);
+    transform: translateY(-1px);
+    box-shadow: var(--kiosk-keyboard-key-shadow-hover);
+  }
+
+  &:active {
+    background: var(--sapButton_Active_Background, #0064d9);
+    color: var(--sapButton_Active_TextColor, #fff);
+    border-color: var(--sapButton_Active_BorderColor, #0064d9);
+    transform: scale(0.96) translateY(1px);
+    box-shadow: none;
+    transition:
+      background 0.1s ease,
+      border-color 0.1s ease,
+      transform 0.1s ease;
+  }
+
+  &:focus-visible {
+    outline: var(--sapContent_FocusWidth, 2px) var(--sapContent_FocusStyle, solid) var(--sapContent_FocusColor, #000);
+    outline-offset: 1px;
+    transform: translateY(-1px);
+    box-shadow: var(--kiosk-keyboard-key-shadow-hover);
+  }
+}
+
+.kiosk-key.kiosk-key--highlight {
+  background: var(--sapButton_Active_Background, #0064d9);
+  color: var(--sapButton_Active_TextColor, #fff);
+  border-color: var(--sapButton_Active_BorderColor, #0064d9);
+  transform: scale(0.96) translateY(1px);
+  box-shadow: none;
+  transition:
+    background 0.1s ease,
+    border-color 0.1s ease,
+    transform 0.1s ease;
+}
+
+/* ---- Width classes: proportional flex grow ---- */
+.kiosk-key--w1-5 {
+  flex: 1.5 1 0;
+}
+.kiosk-key--w1-75 {
+  flex: 1.75 1 0;
+}
+.kiosk-key--w2 {
+  flex: 2 1 0;
+}
+.kiosk-key--w2-25 {
+  flex: 2.25 1 0;
+}
+.kiosk-key--wspace {
+  flex: 6 1 0;
+}
+
+/* ---- Variant: Modifier keys (Shift, layout switches) ---- */
+.kiosk-key--modifier {
+  background: var(--sapButton_Lite_Background, transparent);
+  color: var(--sapButton_Lite_TextColor, #32363a);
+  border-color: var(--sapButton_Lite_BorderColor, transparent);
+  font-size: var(--sapFontSize, 0.875rem);
+
+  &:hover {
+    background: var(--sapButton_Lite_Hover_Background, #eaecee);
+    border-color: var(--sapButton_Lite_Hover_BorderColor, #0064d9);
+  }
+
+  &:active,
+  &.kiosk-key--highlight {
+    background: var(--sapButton_Lite_Active_Background, #0064d9);
+    color: var(--sapButton_Active_TextColor, #fff);
+    border-color: var(--sapButton_Lite_Active_BorderColor, #0064d9);
+  }
+}
+
+/* ---- Variant: Action keys (Enter, Backspace) ---- */
+.kiosk-key--action {
+  background: var(--sapButton_Emphasized_Background, #0070f2);
+  color: var(--sapButton_Emphasized_TextColor, #fff);
+  border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+  font-size: var(--sapFontSize, 0.875rem);
+  font-weight: bold;
+
+  &:hover {
+    background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
+    border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+  }
+
+  &:active,
+  &.kiosk-key--highlight {
+    background: var(--sapButton_Emphasized_Active_Background, #0053b8);
+    color: var(--sapButton_Emphasized_Active_TextColor, #fff);
+    border-color: var(--sapButton_Emphasized_Active_BorderColor, #0053b8);
+  }
+
+  &:focus-visible {
+    outline-color: var(--sapContent_ContrastFocusColor, #fff);
+  }
+}
+
+/* ---- Variant: Active Shift indicator ---- */
+.kiosk-key--shift-active {
+  background: var(--sapButton_Emphasized_Background, #0070f2);
+  color: var(--sapButton_Emphasized_TextColor, #fff);
+  border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+
+  &:hover {
+    background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
+    border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+  }
+}
+
+/* ---- Variant: Caps Lock indicator ---- */
+.kiosk-key--caps-lock {
+  box-shadow: 0 0 0 2px var(--sapButton_Emphasized_Background, #0070f2);
+}
+
+/* ============================= */
+/* Compact density               */
+/* ============================= */
+
+:host([data-ui5-compact-size]) {
+  --kiosk-keyboard-padding: 0.5rem;
+  --kiosk-keyboard-key-gap: 0.25rem;
+  --kiosk-keyboard-key-height: 2rem;
+  --kiosk-keyboard-key-font-size: var(--sapFontSize, 0.875rem);
+}
+
+:host([data-ui5-compact-size]) .kiosk-keyboard--numpad {
+  --kiosk-keyboard-numpad-key-min-width: 3rem;
+  --kiosk-keyboard-key-height: 2.75rem;
+  --kiosk-keyboard-key-font-size: 1.125rem;
+}
+
+/* ============================= */
+/* Accessibility                 */
+/* ============================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-key,
+  .kiosk-keyboard--docked,
+  .kiosk-keyboard--hidden {
+    transition: none;
+  }
+
+  .kiosk-key:hover,
+  .kiosk-key:active,
+  .kiosk-key:focus-visible,
+  .kiosk-key.kiosk-key--highlight {
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .kiosk-key {
+    border-color: ButtonText;
+
+    &:hover {
+      border-color: Highlight;
+    }
+
+    &:active,
+    &.kiosk-key--highlight,
+    &.kiosk-key--shift-active {
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+
+    &:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+
+  .kiosk-key--caps-lock {
+    border-color: Highlight;
+    /* box-shadow is forced to none in forced-colors mode, so use outline
+       as the visible indicator for caps lock instead. */
+    outline: 2px solid Highlight;
+    outline-offset: -1px;
+  }
+}
+
+@media (hover: none) {
+  .kiosk-key:hover {
+    background: var(--sapButton_Background, #fff);
+    border-color: var(--sapButton_BorderColor, #bfbfbf);
+    transform: none;
+    box-shadow: var(--kiosk-keyboard-key-shadow);
+  }
+
+  .kiosk-key--modifier:hover {
+    background: var(--sapButton_Lite_Background, transparent);
+    border-color: var(--sapButton_Lite_BorderColor, transparent);
+  }
+
+  .kiosk-key--action:hover,
+  .kiosk-key--shift-active:hover {
+    background: var(--sapButton_Emphasized_Background, #0070f2);
+    border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+  }
+}
+
+/* ============================= */
+/* Live region (screen readers)  */
+/* ============================= */
+
+.kiosk-keyboard__live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================= */
+/* Key icon                      */
+/* ============================= */
+
+.kiosk-key__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kiosk-key__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25em;
+  height: 1.25em;
+  color: inherit;
+}

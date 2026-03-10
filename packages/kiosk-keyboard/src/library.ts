@@ -69,9 +69,9 @@ export type KeyboardTypeValue = (typeof KeyboardType)[keyof typeof KeyboardType]
 export const MobileKeyboard = Object.freeze({
   /** Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. Best for dedicated kiosk terminals without a physical keyboard. */
   Custom: "Custom",
-  /** Always defer to the native keyboard — KioskKeyboard will not open on focus. */
+  /** Always defer to the native keyboard - KioskKeyboard will not open on focus. */
   Native: "Native",
-  /** Desktop browsers use KioskKeyboard, phones/tablets defer to native. Note: on a regular laptop/desktop with a physical keyboard the virtual keyboard will still appear — use `Native` if that is not desired. */
+  /** Desktop browsers use KioskKeyboard, phones/tablets defer to native. Note: on a regular laptop/desktop with a physical keyboard the virtual keyboard will still appear - use `Native` if that is not desired. */
   Auto: "Auto",
 } as const);
 
@@ -93,12 +93,12 @@ export const FKeyMode = Object.freeze({
  *
  * Regular character keys fire their literal value (e.g. `"a"`, `"A"`, `"1"`,
  * `"!"`). This enum covers all **non-character** key names that the keyboard
- * can fire — action keys, function keys, and navigation keys.
+ * can fire - action keys, function keys, and navigation keys.
  *
  * Values align with the standard {@link https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key | KeyboardEvent.key}
  * names where applicable.
  *
- * @example <caption>TypeScript — intercept Enter in a keyPress handler</caption>
+ * @example <caption>TypeScript - intercept Enter in a keyPress handler</caption>
  * import { KeyName } from "ui5/kiosk/library";
  *
  * keyboard.attachKeyPress((event) => {
@@ -132,21 +132,21 @@ export const KeyName = Object.freeze({
   /** Function key F12. */ F12: "F12",
 
   // Navigation keys
-  /** Left arrow — moves caret one character left. */
+  /** Left arrow - moves caret one character left. */
   ArrowLeft: "ArrowLeft",
-  /** Right arrow — moves caret one character right. */
+  /** Right arrow - moves caret one character right. */
   ArrowRight: "ArrowRight",
-  /** Up arrow — moves caret up one line (textarea only). */
+  /** Up arrow - moves caret up one line (textarea only). */
   ArrowUp: "ArrowUp",
-  /** Down arrow — moves caret down one line (textarea only). */
+  /** Down arrow - moves caret down one line (textarea only). */
   ArrowDown: "ArrowDown",
-  /** Home — moves caret to start of text. */
+  /** Home - moves caret to start of text. */
   Home: "Home",
-  /** End — moves caret to end of text. */
+  /** End - moves caret to end of text. */
   End: "End",
-  /** Page Up — moves caret to start of text. */
+  /** Page Up - moves caret to start of text. */
   PageUp: "PageUp",
-  /** Page Down — moves caret to end of text. */
+  /** Page Down - moves caret to end of text. */
   PageDown: "PageDown",
 } as const);
 

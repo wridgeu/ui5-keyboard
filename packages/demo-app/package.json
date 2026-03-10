@@ -12,9 +12,10 @@
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },
   "dependencies": {
-    "@ui5/webcomponents": "2.15.1",
-    "ui5-lib-hotkeys": "file:../hotkeys",
-    "ui5-lib-kiosk-keyboard": "file:../kiosk-keyboard"
+    "@ui5/webcomponents": "^2.19.2",
+    "kiosk-keyboard-webc": "*",
+    "ui5-lib-hotkeys": "*",
+    "ui5-lib-kiosk-keyboard": "*"
   },
   "devDependencies": {
     "@sap-ux/preview-middleware": "^0.23.0",

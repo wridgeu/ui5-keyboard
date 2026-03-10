@@ -4,11 +4,12 @@ UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications
 
 ## Packages
 
-| Package                                               | Description                                                                                                        |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| [`ui5-lib-hotkeys`](./packages/hotkeys)               | Declarative keyboard shortcut management — scopes, multi-key sequences, cross-platform modifiers, hotkey recording |
-| [`ui5-lib-kiosk-keyboard`](./packages/kiosk-keyboard) | On-screen virtual keyboard control — SAP theming, multiple layouts, docked/auto-show mode, touch support           |
-| [`demo-hotkeys-app`](./packages/demo-app)             | Demo application showcasing both libraries                                                                         |
+| Package                                                 | Description                                                                                                       |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [`ui5-lib-hotkeys`](./packages/hotkeys)                 | Declarative keyboard shortcut management: scopes, multi-key sequences, cross-platform modifiers, hotkey recording |
+| [`ui5-lib-kiosk-keyboard`](./packages/kiosk-keyboard)   | On-screen virtual keyboard UI5 control: SAP theming, multiple layouts, docked/auto-show mode, touch support       |
+| [`kiosk-keyboard-webc`](./packages/kiosk-keyboard-webc) | Native web component variant of the kiosk keyboard: framework-agnostic, built on UI5 Web Components               |
+| [`demo-hotkeys-app`](./packages/demo-app)               | Demo application showcasing all libraries                                                                         |
 
 ## Kiosk Keyboard Theme Preview
 
@@ -36,6 +37,7 @@ For full API details, see:
 
 - **[ui5-lib-hotkeys README](./packages/hotkeys/README.md)**
 - **[ui5-lib-kiosk-keyboard README](./packages/kiosk-keyboard/README.md)**
+- **[kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md)**
 
 ### Consumption Modes (Both Libraries)
 
@@ -102,7 +104,7 @@ const hotkeys = manager.createGroup();
 hotkeys.register("Mod+S", () => onSave(), { description: "Save" });
 ```
 
-### Kiosk Keyboard
+### Kiosk Keyboard (UI5 Control)
 
 ```bash
 npm install ui5-lib-kiosk-keyboard
@@ -115,9 +117,28 @@ npm install ui5-lib-kiosk-keyboard
 </mvc:View>
 ```
 
-## Using Both Libraries Together
+### Kiosk Keyboard (Web Component)
 
-The two libraries are independent — neither depends on the other — but they complement each other well. A typical kiosk application uses hotkeys for global shortcuts and the virtual keyboard for text input:
+The web component variant (`kiosk-keyboard-webc`) provides the same virtual keyboard as a native custom element, usable in any framework (plain HTML, React, Vue, Angular) and inside UI5 apps via the `WebComponent.extend()` bridge.
+
+```bash
+npm install kiosk-keyboard-webc
+```
+
+```html
+<script type="module">
+  import "kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js";
+</script>
+
+<input id="my-input" type="text" />
+<kiosk-keyboard layout="qwerty" for="my-input"></kiosk-keyboard>
+```
+
+See the [kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md) for full API reference, attributes, events, and custom layout examples.
+
+## Using Hotkeys and the UI5 Kiosk Keyboard Together
+
+The two libraries are independent (neither depends on the other) but they complement each other well. A typical kiosk application uses hotkeys for global shortcuts and the virtual keyboard for text input:
 
 ```xml
 <mvc:View xmlns:kiosk="ui5.kiosk" xmlns:m="sap.m" xmlns:mvc="sap.ui.core.mvc">
@@ -127,7 +148,7 @@ The two libraries are independent — neither depends on the other — but they 
 ```
 
 ```ts
-// Controller — register hotkeys alongside the virtual keyboard
+// Controller - register hotkeys alongside the virtual keyboard
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
 onInit(): void {
@@ -158,24 +179,29 @@ npm install                 # Install all workspaces
 | `npm run start:hotkeys`      | Hotkeys library + test runner             | 8081 |
 | `npm run start:kiosk`        | Kiosk keyboard library + test runner      | 8082 |
 | `npm run start:kiosk:visual` | Kiosk visual test page                    | 8082 |
+| `npm run start:kiosk-webc`   | Kiosk web component standalone demo       | 8084 |
 
 ### Build & Test
 
 ```bash
-npm run build               # Build both libraries
-npm run build:hotkeys       # Build hotkeys only
-npm run build:kiosk         # Build kiosk-keyboard only
-npm run build:demo          # Build demo app only
-npm run build:all           # Build libraries + demo app
+npm run build                  # Build all libraries (hotkeys + kiosk + kiosk-webc)
+npm run build:hotkeys          # Build hotkeys only
+npm run build:kiosk            # Build kiosk-keyboard only
+npm run build:kiosk-webc       # Build kiosk-keyboard-webc only
+npm run build:demo             # Build demo app only
+npm run build:all              # Build libraries + demo app
 
-npm test                    # Run all tests (headless)
-npm run test:qunit          # Run all library QUnit tests
-npm run test:hotkeys        # Hotkeys QUnit tests
-npm run test:kiosk          # Kiosk QUnit + e2e tests
-npm run test:kiosk:e2e      # Kiosk e2e tests only
-npm run test:kiosk:e2e:flp  # FLP lifecycle e2e tests (SAPUI5 sandbox)
-npm run test:kiosk:e2e:update # Update kiosk visual baselines (explicit only)
-npm run test:kiosk:e2e:docs # Regenerate README kiosk screenshots
+npm test                       # Run all tests (headless)
+npm run test:qunit             # Run all library QUnit tests
+npm run test:hotkeys           # Hotkeys QUnit tests
+npm run test:kiosk             # Kiosk QUnit + e2e tests
+npm run test:kiosk:e2e         # Kiosk e2e tests only
+npm run test:kiosk:e2e:flp     # FLP lifecycle e2e tests (SAPUI5 sandbox)
+npm run test:kiosk:e2e:update  # Update kiosk visual baselines (explicit only)
+npm run test:kiosk:e2e:docs    # Regenerate README kiosk screenshots
+npm run test:kiosk-webc        # Kiosk web component unit tests (Vitest)
+npm run test:kiosk-webc:component  # Kiosk web component tests (Web Test Runner)
+npm run test:kiosk-webc:e2e    # Kiosk web component e2e tests (WebdriverIO)
 ```
 
 ### Code Quality
@@ -196,6 +222,7 @@ ui5-keyboard/
 ├── packages/
 │   ├── hotkeys/               # ui5-lib-hotkeys (ui5.hotkeys namespace)
 │   ├── kiosk-keyboard/        # ui5-lib-kiosk-keyboard (ui5.kiosk namespace)
+│   ├── kiosk-keyboard-webc/   # kiosk-keyboard-webc (native web component)
 │   └── demo-app/              # Demo application
 │       ├── ui5.yaml           # OpenUI5 dev server config (default)
 │       └── ui5-flp.yaml       # SAPUI5 + FLP sandbox config (preview-middleware)
@@ -205,27 +232,29 @@ ui5-keyboard/
 
 ## Documentation
 
-| Document                                                                                         | Description                            |
-| ------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                           | Internal design of the hotkeys library |
-| [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                                      | Internal design of the kiosk keyboard  |
-| [Kiosk Error Handling and DX](./docs/kiosk/ERROR-HANDLING-DX.md)                                 | Error handling consistency proposal    |
-| [Docs Index & Conventions](./docs/README.md)                                                     | Doc structure, naming, and lifecycle   |
-| [Glossary](./docs/GLOSSARY.md)                                                                   | Shared terms and concepts              |
-| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                               | Sequence system design and rationale   |
-| [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                                 | Comparison with alternative approaches |
-| [Kiosk Popover Layout Switch Behavior](./docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)           | Known popover behavior and mitigation  |
-| [UI5 Transpile Crash Deep Dive](./docs/kiosk/AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)          | Tooling crash analysis and fixes       |
-| [API Stability Policy](./docs/shared/API-STABILITY.md)                                           | Stable vs internal import boundaries   |
-| [UI5 Event Handling Deep Dive](./docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md)                    | How UI5 processes keyboard events      |
-| [UI5 TypeScript Event Typing](./docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)                      | TypeScript patterns for UI5 events     |
-| [UI5 Web Component Consumption Research](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption guidance |
-| [Hotkeys Backward Compatibility Proposal](./docs/hotkeys/proposals/BACKWARD-COMPATIBILITY.md)    | Planned compatibility work             |
-| [Kiosk Backward Compatibility Proposal](./docs/kiosk/proposals/BACKWARD-COMPATIBILITY.md)        | Planned compatibility work             |
-| [Tab and Done Keys Proposal](./docs/kiosk/proposals/TAB-AND-DONE-KEYS.md)                        | Proposed special-key behavior          |
-| [Kiosk i18n Extensibility Notes](./docs/kiosk/history/I18N-EXTENSIBILITY.md)                     | Historical i18n extension notes        |
-| [Kiosk Web Component Package Proposal](./docs/kiosk/proposals/WEBCOMPONENT-PACKAGE.md)           | Proposed web component package         |
-| [Kiosk History Notes](./docs/kiosk/history/)                                                     | Archived implementation design notes   |
+| Document                                                                                         | Description                                |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                           | Internal design of the hotkeys library     |
+| [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                                      | Internal design of the kiosk keyboard      |
+| [Kiosk Web Component Architecture](./docs/kiosk-webc/ARCHITECTURE.md)                            | Internal design of the kiosk web component |
+| [TypeScript Decorator Setup](./docs/kiosk-webc/TYPESCRIPT-DECORATOR-SETUP.md)                    | UI5 WC TypeScript and decorator config     |
+| [Kiosk Error Handling and DX](./docs/kiosk/ERROR-HANDLING-DX.md)                                 | Error handling consistency proposal        |
+| [Docs Index & Conventions](./docs/README.md)                                                     | Doc structure, naming, and lifecycle       |
+| [Glossary](./docs/GLOSSARY.md)                                                                   | Shared terms and concepts                  |
+| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                               | Sequence system design and rationale       |
+| [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                                 | Comparison with alternative approaches     |
+| [Kiosk Popover Layout Switch Behavior](./docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)           | Known popover behavior and mitigation      |
+| [UI5 Transpile Crash Deep Dive](./docs/kiosk/AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)          | Tooling crash analysis and fixes           |
+| [API Stability Policy](./docs/shared/API-STABILITY.md)                                           | Stable vs internal import boundaries       |
+| [UI5 Event Handling Deep Dive](./docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md)                    | How UI5 processes keyboard events          |
+| [UI5 TypeScript Event Typing](./docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)                      | TypeScript patterns for UI5 events         |
+| [UI5 Web Component Consumption Research](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption guidance     |
+| [Hotkeys Backward Compatibility Proposal](./docs/hotkeys/proposals/BACKWARD-COMPATIBILITY.md)    | Planned compatibility work                 |
+| [Kiosk Backward Compatibility Proposal](./docs/kiosk/proposals/BACKWARD-COMPATIBILITY.md)        | Planned compatibility work                 |
+| [Tab and Done Keys Proposal](./docs/kiosk/proposals/TAB-AND-DONE-KEYS.md)                        | Proposed special-key behavior              |
+| [Kiosk i18n Extensibility Notes](./docs/kiosk/history/I18N-EXTENSIBILITY.md)                     | Historical i18n extension notes            |
+| [Kiosk Web Component Package (History)](./docs/kiosk/history/WEBCOMPONENT-PACKAGE.md)            | Web component package design notes         |
+| [Kiosk History Notes](./docs/kiosk/history/)                                                     | Archived implementation design notes       |
 
 ## License
 

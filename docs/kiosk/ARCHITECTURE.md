@@ -5,9 +5,9 @@ This document describes the internal architecture, design decisions, and edge ca
 ## Module Overview
 
 ```
-KioskKeyboard.ts          UI5 Control — state, event delegation, target input integration,
+KioskKeyboard.ts          UI5 Control: state, event delegation, target input integration,
                           locale detection, auto-type, mobile keyboard suppression
-KioskKeyboardRenderer.ts  Renderer object — flat DOM output, apiVersion 4
+KioskKeyboardRenderer.ts  Renderer object: flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
                           plus key-name constants (`KeyName`)
@@ -52,7 +52,7 @@ themes/
 
 ### Library Initialization
 
-The library uses `Lib.init()` with `apiVersion: 2` and declares dependencies on both `sap.ui.core` and `sap.m`. Unlike the hotkeys library, this library **requires CSS** (`noLibraryCSS: false`) — this is the hard blocker that forced it into a separate library from `ui5.hotkeys`.
+The library uses `Lib.init()` with `apiVersion: 2` and declares dependencies on both `sap.ui.core` and `sap.m`. Unlike the hotkeys library, this library **requires CSS** (`noLibraryCSS: false`), which is the hard blocker that forced it into a separate library from `ui5.hotkeys`.
 
 The `sap.m` dependency is required because the control uses `sap.ui.core.Element.closestTo()` for resolving DOM elements to UI5 controls, and the target inputs are typically `sap.m.Input` or `sap.m.TextArea`.
 
@@ -79,13 +79,13 @@ init(): void {
 
 `KioskKeyboardRenderer` is a plain object (not a class) with `apiVersion: 4` (semantic rendering). This tells the framework the control's output depends only on its own properties, so re-rendering can be skipped when only the parent changes.
 
-> **Note:** The UI5 linter does not recognize `apiVersion: 4`. This is a known gap — the renderer works correctly at runtime.
+> **Note:** The UI5 linter does not recognize `apiVersion: 4`. This is a known gap, but the renderer works correctly at runtime.
 
 ## Control Architecture
 
 ### Flat DOM, No Child Controls
 
-The keyboard renders as a flat DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. There are no child UI5 controls — every key is a plain DOM element with `role="button"`.
+The keyboard renders as a flat DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. There are no child UI5 controls; every key is a plain DOM element with `role="button"`.
 
 This design was chosen for:
 
@@ -103,7 +103,7 @@ The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) in
 ontouchstart
   |
   +-- Resolve: find closest .ui5KioskKey element
-  +-- preventDefault() — prevents focus transfer away from target input
+  +-- preventDefault() - prevents focus transfer away from target input
   +-- Track pressed key, add --pressed CSS class
 
 ontouchend
@@ -123,7 +123,7 @@ ontouchend
 
 ### Focus Steal Prevention
 
-`ontouchstart` calls `preventDefault()` on the underlying mouse/touch event when a key element is pressed. This prevents the browser from transferring focus away from the target input — critical for maintaining the cursor position in the input field. UI5's `EventSimulation` fires `ontouchstart` for both mouse and touch interactions.
+`ontouchstart` calls `preventDefault()` on the underlying mouse/touch event when a key element is pressed. This prevents the browser from transferring focus away from the target input, which is critical for maintaining the cursor position in the input field. UI5's `EventSimulation` fires `ontouchstart` for both mouse and touch interactions.
 
 ## Target Input Integration
 
@@ -147,22 +147,22 @@ For controller code that needs the control instance (not the ID), use `getTarget
 
 ```
 setTargetInput(newInput)
-  1. captureAndClearDirty()        — snapshot old target's change data, clear dirty flag
-  2. _removeHighlightDelegation()  — remove key highlight from old target
-  3. _restoreNativeKeyboard()      — restore old target's inputmode (if keyboard is open)
-  4. resetForTargetSwitch()        — reset cursor state
-  5. setAssociation(newInput)      — update the association
-  6. add highlight delegation      — attach to new target
-  7. _suppressNativeKeyboard()     — suppress new target's inputmode (if keyboard is open)
-  8. fireDeferredChange()          — fire "change" on the OLD target (captured in step 1)
+  1. captureAndClearDirty()        - snapshot old target's change data, clear dirty flag
+  2. _removeHighlightDelegation()  - remove key highlight from old target
+  3. _restoreNativeKeyboard()      - restore old target's inputmode (if keyboard is open)
+  4. resetForTargetSwitch()        - reset cursor state
+  5. setAssociation(newInput)      - update the association
+  6. add highlight delegation      - attach to new target
+  7. _suppressNativeKeyboard()     - suppress new target's inputmode (if keyboard is open)
+  8. fireDeferredChange()          - fire "change" on the OLD target (captured in step 1)
 ```
 
-**Re-entrant flow** — when the deferred `change` handler focuses another input:
+**Re-entrant flow**: when the deferred `change` handler focuses another input:
 
 This happens when autoShow is active and a consumer's `change` handler synchronously focuses a third input (e.g. a validation-then-advance pattern in form-heavy apps).
 
 ```
-setTargetInput(inputB)          — target was inputA
+setTargetInput(inputB)          - target was inputA
   1. capture inputA's change data, clear dirty
   2. remove inputA's highlight delegation
   3. restore inputA's inputmode
@@ -173,14 +173,14 @@ setTargetInput(inputB)          — target was inputA
   8. fire deferred change on inputA
      └─ handler calls inputC.focus()
         └─ focusin → _onDocumentFocusIn → setTargetInput(inputC)
-             1. capture (nothing — not dirty)
+             1. capture (nothing - not dirty)
              2. remove inputB's highlight delegation
              3. restore inputB's inputmode
              4. reset cursor
              5. set association → inputC
              6. add highlight delegation → inputC
              7. suppress inputC's inputmode
-             8. fire deferred change (null — no-op)
+             8. fire deferred change (null - no-op)
              ← returns
         ← handler returns
      ← change event returns
@@ -191,7 +191,7 @@ Final state: target = inputC, delegation on inputC, suppression on inputC ✓
 
 The key insight: all state transitions (steps 2-7) complete **before** the change event fires (step 8). So when the inner call starts, it sees fully settled state and can cleanly transition from inputB to inputC. The outer call has no more state work after step 8.
 
-**Why the change event must be deferred** — if it fired eagerly at step 1 (the original design), the inner call would set up inputC, then the outer call would resume at step 2 and tear down inputC's delegation, restore inputC's suppression, and overwrite the association to inputB.
+**Why the change event must be deferred**: if it fired eagerly at step 1 (the original design), the inner call would set up inputC, then the outer call would resume at step 2 and tear down inputC's delegation, restore inputC's suppression, and overwrite the association to inputB.
 
 ### Value Manipulation
 
@@ -205,7 +205,7 @@ After modifying the DOM value, the keyboard calls the UI5 control's `setValue()`
 
 ### Cursor Initialization
 
-When the target input hasn't been focused yet (e.g. set programmatically via `setTargetInput`), `selectionStart` defaults to 0. On first access per target, `_getTargetDomRef()` calls `setSelectionRange()` to position the cursor at the end of the value — but only when the input is **not** already the active element, so a user-placed cursor is never overwritten.
+When the target input hasn't been focused yet (e.g. set programmatically via `setTargetInput`), `selectionStart` defaults to 0. On first access per target, `_getTargetDomRef()` calls `setSelectionRange()` to position the cursor at the end of the value, but only when the input is **not** already the active element, so a user-placed cursor is never overwritten.
 
 Critically, this does **not** call `dom.focus()`. This avoids stealing focus from surrounding containers (e.g. a `sap.m.Popover` that contains the keyboard while the target input is outside). Selection state persists on unfocused inputs in all modern browsers per the HTML Living Standard. A `_cursorInitialized` flag (reset on `setTargetInput()`) ensures this runs once per target.
 
@@ -318,7 +318,7 @@ Detection uses static `ReadonlySet` constants for each check, avoiding repeated 
 
 A private `_keyboardTypeExplicit` flag tracks whether the developer explicitly set `keyboardType`. The custom `setKeyboardType()` setter sets this flag to `true`. Auto-detection uses `setProperty("keyboardType", ...)` directly to bypass the flag.
 
-Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" }` in the constructor will call `setKeyboardType("Numpad")` which sets the flag — auto-detection is disabled.
+Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" }` in the constructor will call `setKeyboardType("Numpad")` which sets the flag, so auto-detection is disabled.
 
 ### Integration Point
 
@@ -349,16 +349,16 @@ private _shouldDeferToNative(): boolean {
 }
 ```
 
-- `"Custom"` — always returns `false` (use the kiosk keyboard).
-- `"Native"` — always returns `true` (defer on every device, disabling auto-show entirely).
-- `"Auto"` — uses `sap/ui/Device` for device detection. The `tablet && !desktop` check handles combi devices (laptops with touchscreens) — these report both `tablet: true` and `desktop: true`, and should use the custom keyboard.
+- `"Custom"`: always returns `false` (use the kiosk keyboard).
+- `"Native"`: always returns `true` (defer on every device, disabling auto-show entirely).
+- `"Auto"`: uses `sap/ui/Device` for device detection. The `tablet && !desktop` check handles combi devices (laptops with touchscreens). These report both `tablet: true` and `desktop: true`, and should use the custom keyboard.
 
 ### Native Keyboard Suppression
 
 When the KioskKeyboard shows and `_shouldDeferToNative()` returns `false`, it sets `inputmode="none"` on the target input's DOM element. This is the standard web API for preventing the native virtual keyboard.
 
-- `_suppressNativeKeyboard()` — saves original `inputmode`, sets `"none"`. Called by `show()`.
-- `_restoreNativeKeyboard()` — restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()` and `exit()`.
+- `_suppressNativeKeyboard()`: saves original `inputmode`, sets `"none"`. Called by `show()`.
+- `_restoreNativeKeyboard()`: restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()` and `exit()`.
 
 State is tracked via:
 
@@ -369,7 +369,7 @@ This makes suppression safe for multi-keyboard setups targeting the same input: 
 
 ### Integration Points
 
-1. **`_onDocumentFocusIn`**: Checks `_shouldDeferToNative()` first. If `true`, returns early — the native keyboard handles input.
+1. **`_onDocumentFocusIn`**: Checks `_shouldDeferToNative()` first. If `true`, returns early. The native keyboard handles input.
 2. **`show()`**: Calls `_suppressNativeKeyboard()`.
 3. **`close()`**: Calls `_restoreNativeKeyboard()`.
 4. **`exit()`**: Calls `_restoreNativeKeyboard()` for cleanup.
@@ -390,7 +390,7 @@ The open/close state is managed via CSS classes rather than re-rendering:
 
 ### Event Timing
 
-`afterOpen` and `afterClose` events fire synchronously when `show()` and `close()` are called — they signal the state change, not the animation completion. The CSS transition plays independently. This avoids fragile `transitionend` listener logic and ensures deterministic event timing regardless of animation state, `prefers-reduced-motion`, or test environments.
+`afterOpen` and `afterClose` events fire synchronously when `show()` and `close()` are called. They signal the state change, not the animation completion. The CSS transition plays independently. This avoids fragile `transitionend` listener logic and ensures deterministic event timing regardless of animation state, `prefers-reduced-motion`, or test environments.
 
 ### onAfterRendering Sync
 
@@ -402,7 +402,7 @@ Auto-show uses document-level `focusin`/`focusout` listeners in the capture phas
 
 ### Instance Isolation
 
-A static `_instances` set tracks all living `KioskKeyboard` instances. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any **other** KioskKeyboard instance already has that input as its `targetInput`. If so, auto-show bails out — the input belongs to that keyboard.
+A static `_instances` set tracks all living `KioskKeyboard` instances. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any **other** KioskKeyboard instance already has that input as its `targetInput`. If so, auto-show bails out because the input belongs to that keyboard.
 
 This prevents a docked auto-show keyboard from stealing inputs that are explicitly assigned to an inline keyboard (e.g. a numpad paired with a numeric field).
 
@@ -427,7 +427,7 @@ focusin event
   |                   show()
 ```
 
-The instance isolation and `inputIds` filter checks run inside `_resolveClaimableControl()`. When `inputIds` is set, only inputs in that list pass the filter — focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally. During each auto-show `focusin`, `_setupInputIds()` reconciles delegates by resolved control IDs so aggregation-bound input recreation (destroy/create churn) is picked up immediately.
+The instance isolation and `inputIds` filter checks run inside `_resolveClaimableControl()`. When `inputIds` is set, only inputs in that list pass the filter, and focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally. During each auto-show `focusin`, `_setupInputIds()` reconciles delegates by resolved control IDs so aggregation-bound input recreation (destroy/create churn) is picked up immediately.
 
 ### Focus-Out Logic
 
@@ -470,7 +470,7 @@ themes/
     library.source.less     Imports base + SAP Horizon theme globals
 ```
 
-The base stylesheet references SAP theme parameters exclusively — no hardcoded colors. This ensures automatic theming support for all Horizon variants (light, dark, HCB, HCW).
+The base stylesheet references SAP theme parameters exclusively, with no hardcoded colors. This ensures automatic theming support for all Horizon variants (light, dark, HCB, HCW).
 
 ### Key Styling
 
@@ -485,7 +485,7 @@ Keys use SAP button parameters for visual consistency with the rest of the UI:
 
 ### Responsive Sizing
 
-Keys use `flex: <grow> 1 0` for proportional sizing within rows. Width classes (`--w1-5`, `--w2`, `--space`) set the flex-grow factor. This makes the keyboard naturally responsive — keys scale proportionally to the container width.
+Keys use `flex: <grow> 1 0` for proportional sizing within rows. Width classes (`--w1-5`, `--w2`, `--space`) set the flex-grow factor. This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
 
 ### Content Density
 

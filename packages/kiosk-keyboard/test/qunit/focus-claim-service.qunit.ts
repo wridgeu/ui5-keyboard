@@ -59,7 +59,7 @@ function createService(
 // isTextualInput filtering (via resolveClaimableControl)
 // ──────────────────────────────────────────────────
 
-QUnit.module("focus-claim-service — isTextualInput filtering", {
+QUnit.module("focus-claim-service - isTextualInput filtering", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -148,7 +148,7 @@ QUnit.test("Accepts textarea", async (assert) => {
 // resolveClaimableControl
 // ──────────────────────────────────────────────────
 
-QUnit.module("focus-claim-service — resolveClaimableControl", {
+QUnit.module("focus-claim-service - resolveClaimableControl", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -251,7 +251,7 @@ QUnit.test("Rejects input whose ID is not in inputIds", async (assert) => {
 // resolveInputIdsAncestor
 // ──────────────────────────────────────────────────
 
-QUnit.module("focus-claim-service — resolveInputIdsAncestor");
+QUnit.module("focus-claim-service - resolveInputIdsAncestor");
 
 QUnit.test("Returns control when its own ID matches", (assert) => {
   const ctrl = createControl("fcs-self");
@@ -341,7 +341,7 @@ QUnit.test("Returns null when resolved set is empty", (assert) => {
 // isInInputIds
 // ──────────────────────────────────────────────────
 
-QUnit.module("focus-claim-service — isInInputIds");
+QUnit.module("focus-claim-service - isInInputIds");
 
 QUnit.test("Returns true when ancestor is in resolved set", (assert) => {
   const ctrl = createControl("fcs-in");

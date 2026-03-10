@@ -122,7 +122,7 @@ QUnit.test("enabled as function: evaluated on each keypress", (assert) => {
     { enabled: () => canFire },
   );
 
-  // First press: enabled returns false — should not fire
+  // First press: enabled returns false - should not fire
   fireKey("Escape");
   assert.strictEqual(callCount, 0, "Not called when enabled() returns false");
 
@@ -179,7 +179,7 @@ QUnit.test("Scope: hotkey only fires in active scope", (assert) => {
     { scope: "editor" },
   );
 
-  // Editor scope is not active — only global should fire
+  // Editor scope is not active - only global should fire
   fireKey("Escape");
   assert.ok(globalCalled, "Global scope callback fired");
   assert.notOk(editorCalled, "Editor scope callback did not fire");
@@ -291,7 +291,7 @@ QUnit.test("Scoped handler takes priority over global for same key", (assert) =>
     { scope: "editor" },
   );
 
-  // Push editor scope — editor Escape should take priority
+  // Push editor scope - editor Escape should take priority
   manager.pushScope("editor");
   fireKey("Escape");
   assert.ok(editorCalled, "Editor scope Escape fired");
@@ -354,7 +354,7 @@ QUnit.test("pushScope allows duplicate scope and pops correctly", (assert) => {
   assert.ok(editorCalled, "Editor handler fires with duplicate scope on stack");
   assert.notOk(globalCalled, "Global handler suppressed");
 
-  // First pop — still in editor
+  // First pop - still in editor
   editorCalled = false;
   manager.popScope("editor");
   assert.strictEqual(manager.getActiveScope(), "editor", "Still editor after first pop");
@@ -362,7 +362,7 @@ QUnit.test("pushScope allows duplicate scope and pops correctly", (assert) => {
   fireKey("F5");
   assert.ok(editorCalled, "Editor handler still fires after first pop");
 
-  // Second pop — back to global
+  // Second pop - back to global
   editorCalled = false;
   globalCalled = false;
   manager.popScope("editor");
@@ -385,7 +385,7 @@ QUnit.test("Conflict behavior: warn (default) allows both", (assert) => {
     firstCalled = true;
   });
 
-  // Second registration with same hotkey — should warn but succeed
+  // Second registration with same hotkey - should warn but succeed
   manager.register("Escape", () => {
     // This would fire if first-match-wins didn't apply
   });
@@ -474,7 +474,7 @@ QUnit.test("auto ignoreInputs: single key suppressed in text input", (assert) =>
   const manager = HotkeyManager.getInstance();
   let called = false;
 
-  // F5 with default ignoreInputs: "auto" — should suppress in input
+  // F5 with default ignoreInputs: "auto" - should suppress in input
   manager.register("F5", () => {
     called = true;
   });
@@ -491,7 +491,7 @@ QUnit.test("auto ignoreInputs: Ctrl combo fires in text input", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
 
-  // Ctrl+S with default ignoreInputs: "auto" — should fire even in input
+  // Ctrl+S with default ignoreInputs: "auto" - should fire even in input
   manager.register("Ctrl+S", () => {
     called = true;
   });
@@ -633,7 +633,7 @@ QUnit.test("Callback error is caught and does not crash", (assert) => {
     throw new Error("Intentional test error");
   });
 
-  // Should not throw — the error is caught and logged
+  // Should not throw - the error is caught and logged
   fireKey("F1");
 
   // Verify the manager is still operational after the error
@@ -808,7 +808,7 @@ QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => 
     firstCalled = true;
   });
 
-  // Second registration with "allow" — no warning, no error
+  // Second registration with "allow" - no warning, no error
   manager.register("Escape", () => {}, { conflictBehavior: "allow" });
 
   fireKey("Escape");
@@ -848,7 +848,7 @@ QUnit.test("Pure modifier key presses are ignored", (assert) => {
   const manager = HotkeyManager.getInstance();
   let called = false;
 
-  // Register Ctrl+S — pressing Ctrl alone should not fire anything
+  // Register Ctrl+S - pressing Ctrl alone should not fire anything
   manager.register("Ctrl+S", () => {
     called = true;
   });
@@ -1216,12 +1216,12 @@ QUnit.test("setOptions: toggle enabled", (assert) => {
   // Disable via setOptions
   handle.setOptions({ enabled: false });
   fireKey("Escape");
-  assert.strictEqual(count, 0, "Disabled via setOptions — not called");
+  assert.strictEqual(count, 0, "Disabled via setOptions - not called");
 
   // Re-enable
   handle.setOptions({ enabled: true });
   fireKey("Escape");
-  assert.strictEqual(count, 1, "Re-enabled via setOptions — called once");
+  assert.strictEqual(count, 1, "Re-enabled via setOptions - called once");
 });
 
 QUnit.test("setOptions: update description", (assert) => {
@@ -1297,7 +1297,7 @@ QUnit.test("setOptions: update ignoreInputs", (assert) => {
   const manager = HotkeyManager.getInstance();
   let count = 0;
 
-  // Register with default ignoreInputs: "auto" — single key suppressed in inputs
+  // Register with default ignoreInputs: "auto" - single key suppressed in inputs
   const handle = manager.register("F5", () => {
     count++;
   });
@@ -1483,7 +1483,7 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
     called = true;
   });
 
-  // No prior Alt keydown — _lastAltLocation stays 0
+  // No prior Alt keydown - _lastAltLocation stays 0
   fireKey("e", { ctrlKey: true, altKey: true });
   assert.ok(called, "Ctrl+Alt+E fires without prior Alt (location=0)");
 });
@@ -1560,7 +1560,7 @@ QUnit.test("Target element: document events don't fire target hotkey", (assert) 
     { target: div },
   );
 
-  // Fire on document — should NOT trigger target-bound hotkey
+  // Fire on document - should NOT trigger target-bound hotkey
   fireKey("F7");
   assert.notOk(targetCalled, "Target hotkey does not fire from document event");
 });
@@ -1587,7 +1587,7 @@ QUnit.test("Target element: document and target coexist", (assert) => {
     { target: div, stopPropagation: false },
   );
 
-  // Fire on div — both target and doc listeners fire (target first, then document fallback)
+  // Fire on div - both target and doc listeners fire (target first, then document fallback)
   const divEvent = new KeyboardEvent("keydown", {
     key: "F8",
     bubbles: true,
@@ -1598,7 +1598,7 @@ QUnit.test("Target element: document and target coexist", (assert) => {
   assert.ok(targetCalled, "Target hotkey fired from element event");
   assert.ok(docCalled, "Doc hotkey also fires (capture phase, stopPropagation: false)");
 
-  // Now fire on document directly — only doc should fire
+  // Now fire on document directly - only doc should fire
   targetCalled = false;
   docCalled = false;
   fireKey("F8");
@@ -1622,7 +1622,7 @@ QUnit.test("Target element: with scope", (assert) => {
     { target: div, scope: "editor" },
   );
 
-  // Fire without editor scope — should not fire
+  // Fire without editor scope - should not fire
   const event1 = new KeyboardEvent("keydown", {
     key: "F9",
     bubbles: true,
@@ -1665,7 +1665,7 @@ QUnit.test("Target element: setOptions swaps target", (assert) => {
   // Swap target from div1 to div2
   handle.setOptions({ target: div2 });
 
-  // Fire on old target — should NOT fire
+  // Fire on old target - should NOT fire
   const event1 = new KeyboardEvent("keydown", {
     key: "F11",
     bubbles: true,
@@ -1674,7 +1674,7 @@ QUnit.test("Target element: setOptions swaps target", (assert) => {
   div1.dispatchEvent(event1);
   assert.notOk(called, "Hotkey does not fire on old target after setOptions");
 
-  // Fire on new target — should fire
+  // Fire on new target - should fire
   const event2 = new KeyboardEvent("keydown", {
     key: "F11",
     bubbles: true,
@@ -1708,7 +1708,7 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
     { target: div1, conflictBehavior: "error" },
   );
 
-  // Retarget to div2 — should throw because F9 is already registered on div2
+  // Retarget to div2 - should throw because F9 is already registered on div2
   assert.throws(
     () => handle.setOptions({ target: div2 }),
     /already registered/,
@@ -1752,7 +1752,7 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
     { target: div1, conflictBehavior: "replace" },
   );
 
-  // Retarget to div2 — should replace the existing registration
+  // Retarget to div2 - should replace the existing registration
   handle.setOptions({ target: div2 });
 
   assert.notOk(existingHandle.isActive, "Existing registration deactivated after replace");
@@ -1798,7 +1798,7 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
   div.tabIndex = 0;
   fixture.appendChild(div);
 
-  // Register on target element — this adds a capture listener on div
+  // Register on target element - this adds a capture listener on div
   manager.register(
     "F10",
     () => {
@@ -1828,7 +1828,7 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
   assert.notOk(oldCalled, "Old target registration was replaced and does not fire");
   assert.ok(newCalled, "New target registration fires");
 
-  // Now unregister the new one — ref count should go to 0, removing the listener.
+  // Now unregister the new one - ref count should go to 0, removing the listener.
   newHandle.unregister();
   newCalled = false;
 
@@ -1945,7 +1945,7 @@ QUnit.test("Target element: two registrations on same target, unregister one", (
     { target: div },
   );
 
-  // Unregister the first — the target listener should remain (ref count > 0)
+  // Unregister the first - the target listener should remain (ref count > 0)
   h1.unregister();
 
   // F3 should no longer fire
@@ -1953,7 +1953,7 @@ QUnit.test("Target element: two registrations on same target, unregister one", (
   div.dispatchEvent(event1);
   assert.notOk(firstCalled, "Unregistered F3 does not fire");
 
-  // F4 should still fire — the target listener was NOT removed
+  // F4 should still fire - the target listener was NOT removed
   const event2 = new KeyboardEvent("keydown", { key: "F4", bubbles: true, cancelable: true });
   div.dispatchEvent(event2);
   assert.ok(secondCalled, "F4 still fires on same target after sibling unregister");

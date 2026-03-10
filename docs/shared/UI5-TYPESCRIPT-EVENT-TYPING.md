@@ -14,7 +14,7 @@ onKeyPress(event: UI5Event<{ key: string; shiftKey: boolean }>): void {
 ```
 
 This compiles, IDE autocomplete works, and it _feels_ safe. But the generic
-parameter provides **zero runtime safety** — it's a **disguised type assertion**.
+parameter provides **zero runtime safety**; it is a **disguised type assertion**.
 
 ## Why It's a Disguised Type Assertion
 
@@ -35,7 +35,7 @@ class Event<
 
 The `ParamsType` generic **does** appear in the constructor's `oParameters`
 argument, so technically it's not a "return-only" generic. But here's the catch:
-**you never construct the Event yourself — UI5 does.** When the framework calls
+**you never construct the Event yourself. UI5 does.** When the framework calls
 `element.fireEvent("keyPress", { key, shiftKey })`, it constructs the Event
 internally. Your handler just _receives_ it.
 
@@ -49,12 +49,12 @@ Compare these two approaches:
 ```ts
 // Approach A: Disguised assertion via generic
 onKeyPress(event: UI5Event<{ key: string; shiftKey: boolean }>): void {
-  const key = event.getParameter("key"); // string — looks safe
+  const key = event.getParameter("key"); // string - looks safe
 }
 
 // Approach B: Explicit assertion
 onKeyPress(event: { getParameter(name: string): unknown }): void {
-  const key = event.getParameter("key") as string; // string — honest about the cast
+  const key = event.getParameter("key") as string; // string - honest about the cast
 }
 ```
 
@@ -71,14 +71,14 @@ The same pattern was proposed for `this.byId()` in UI5 TypeScript:
 // Proposed: disguised assertion
 this.byId<Button>("submitButton").setText("OK");
 
-// What it really means — same as:
+// What it really means - same as:
 (this.byId("submitButton") as Button).setText("OK");
 ```
 
 This was discussed in
 [SAP-samples/ui5-cap-event-app#5](https://github.com/SAP-samples/ui5-cap-event-app/pull/5)
 and ultimately rejected. The generic `T` only appears in the return type, not in
-the input parameters — the textbook definition of an unnecessary generic.
+the input parameters, which is the textbook definition of an unnecessary generic.
 
 ## What the TypeScript Community Says
 
@@ -95,7 +95,7 @@ From the [DefinitelyTyped README](https://github.com/DefinitelyTyped/DefinitelyT
 From
 [Microsoft/dtslint](https://github.com/Microsoft/dtslint/blob/master/docs/no-unnecessary-generics.md):
 
-> Type parameters that are used only once serve no purpose — they relate nothing.
+> Type parameters that are used only once serve no purpose; they relate nothing.
 > A generic parameter is meant to _relate_ the type of one thing to another (e.g.
 > input to output, or one parameter to another). When it appears only once, it
 > could be replaced with its constraint or a concrete type.
@@ -105,11 +105,11 @@ The rule identifies two patterns:
 ```ts
 // BAD: T only constrains the return type
 function parse<T>(): T;
-// Callers write: parse<number>() — this is just parse() as number in disguise
+// Callers write: parse<number>() - this is just parse() as number in disguise
 
 // GOOD: T relates input to output
 function identity<T>(x: T): T;
-// T appears in both parameter and return — it actually constrains something
+// T appears in both parameter and return, so it actually constrains something
 ```
 
 ### akudev (Andreas Kunz, SAP UI5 Team)
@@ -133,8 +133,8 @@ onKeyPress(event: { getParameter(name: string): unknown }): void {
 
 This approach:
 
-- Is **honest** about the type assertion — `as string` is visible at the usage site
-- Uses **structural typing** — works with any object that has `getParameter()`,
+- Is **honest** about the type assertion. `as string` is visible at the usage site
+- Uses **structural typing**. Works with any object that has `getParameter()`,
   not just `sap/ui/base/Event`
 - Avoids importing `sap/ui/base/Event` just for typing (one less module dependency)
 - Matches the pattern used in SAP's own TypeScript samples
@@ -147,7 +147,7 @@ UI5's type generator produces named event type aliases like:
 type Route$MatchedEvent = Event<Route$MatchedEventParameters, Route>;
 ```
 
-These are useful when **the framework defines them** — they're generated from the
+These are useful when **the framework defines them**. They are generated from the
 control's metadata and represent the canonical parameter shape. If an event type
 alias exists for your event, use it:
 
@@ -166,5 +166,5 @@ the actual event shape, not a type you made up yourself.
 
 - [DefinitelyTyped: Common Mistakes](https://github.com/DefinitelyTyped/DefinitelyTyped#common-mistakes)
 - [dtslint: no-unnecessary-generics](https://github.com/Microsoft/dtslint/blob/master/docs/no-unnecessary-generics.md)
-- [SAP-samples/ui5-cap-event-app#5](https://github.com/SAP-samples/ui5-cap-event-app/pull/5) — `byId<T>()` proposal and rejection
+- [SAP-samples/ui5-cap-event-app#5](https://github.com/SAP-samples/ui5-cap-event-app/pull/5), `byId<T>()` proposal and rejection
 - [akudev's comment on disguised type assertions](https://github.com/SAP-samples/ui5-cap-event-app/pull/5#issuecomment-855343402)

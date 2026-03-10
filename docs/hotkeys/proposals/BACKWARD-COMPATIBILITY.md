@@ -1,4 +1,4 @@
-# Feature: Backward Compatibility — Hotkeys Library
+# Feature: Backward Compatibility: Hotkeys Library
 
 > Status: Proposal
 
@@ -31,7 +31,7 @@ Global APIs:
 
 ### Source files with zero direct UI5 dependency
 
-`constants.ts`, `idgen.ts`, `types.ts`, `match.ts`, `validate.ts`, `HotkeyRecorder.ts`, `RegistrationGroup.ts` — these files import no UI5 modules at all (some import the `Platform` enum from `library.ts`, which triggers `Lib.init()` as a side effect but calls no UI5 APIs themselves).
+`constants.ts`, `idgen.ts`, `types.ts`, `match.ts`, `validate.ts`, `HotkeyRecorder.ts`, `RegistrationGroup.ts`, these files import no UI5 modules at all (some import the `Platform` enum from `library.ts`, which triggers `Lib.init()` as a side effect but calls no UI5 APIs themselves).
 
 ### Conclusion
 
@@ -62,7 +62,7 @@ This is the enforcement mechanism: if a developer imports `Element.getElementByI
 ### 3. Keep `ui5.yaml` framework version at latest for development
 
 ```yaml
-# packages/hotkeys/ui5.yaml — no change
+# packages/hotkeys/ui5.yaml - no change
 framework:
   name: OpenUI5
   version: "1.144.0" # dev server uses latest
@@ -82,12 +82,12 @@ Ensure both `manifest.json` and `.library` declare the same minimum.
 
 ### 5. Testing strategy
 
-| Layer            | Version     | Purpose                                           |
-| ---------------- | ----------- | ------------------------------------------------- |
-| TypeScript types | **1.118.0** | Compile-time: prevents >1.118 API usage           |
-| Dev server       | **1.144.0** | Convenient for local development                  |
-| CI (primary)     | **1.144.0** | Main test run — ensures forward compatibility     |
-| CI (compat)      | **1.118.0** | Backward compat run — catches runtime-only issues |
+| Layer            | Version     | Purpose                                          |
+| ---------------- | ----------- | ------------------------------------------------ |
+| TypeScript types | **1.118.0** | Compile-time: prevents >1.118 API usage          |
+| Dev server       | **1.144.0** | Convenient for local development                 |
+| CI (primary)     | **1.144.0** | Main test run, ensures forward compatibility     |
+| CI (compat)      | **1.118.0** | Backward compat run, catches runtime-only issues |
 
 The CI compat run can override the framework version:
 
@@ -118,7 +118,7 @@ Test source files (in `test/`) do **not** need to be 1.118-compatible since they
 
 ## Considerations
 
-- **Types version vs runtime version**: Pinning types to 1.118 means IDE autocompletion won't show newer APIs. This is intentional — it's a feature, not a bug. Developers get immediate feedback when they accidentally use a too-new API.
+- **Types version vs runtime version**: Pinning types to 1.118 means IDE autocompletion won't show newer APIs. This is intentional. It is a feature, not a bug. Developers get immediate feedback when they accidentally use a too-new API.
 - **Type definitions availability**: Verify that `@openui5/types@1.118.0` exists on npm and includes the `sap/ui/core/Lib` typings. If that exact patch version doesn't exist, use the closest available 1.118.x version.
 - **Shared types in monorepo**: If `@openui5/types` is shared at the root level, pinning to 1.118 would also constrain the kiosk-keyboard library. Consider moving it to per-package `devDependencies` if the two libraries need different minimum versions.
 

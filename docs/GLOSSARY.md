@@ -4,7 +4,7 @@ Technical concepts used across the `ui5-lib-keyboard` libraries.
 
 ## IME (Input Method Editor)
 
-**IME** stands for **Input Method Editor**. It is system-level software that allows typing characters from languages that have more characters than can fit on a physical keyboard — primarily Chinese, Japanese, and Korean (CJK).
+**IME** stands for **Input Method Editor**. It is system-level software that allows typing characters from languages that have more characters than can fit on a physical keyboard, primarily Chinese, Japanese, and Korean (CJK).
 
 ### How it works
 
@@ -21,14 +21,14 @@ During this process the browser fires `compositionstart`, `compositionupdate`, a
 
 ### Relevance for hotkeys
 
-Hotkey matching must **not** interfere with IME composition. If a user is typing Chinese text and presses `S` as part of a pinyin sequence, that keystroke is not a hotkey attempt — it is part of character composition.
+Hotkey matching must **not** interfere with IME composition. If a user is typing Chinese text and presses `S` as part of a pinyin sequence, that keystroke is not a hotkey attempt; it is part of character composition.
 
 The EventDispatcher's pre-filter step (`_preFilterEvent`) checks for `event.isComposing` and `event.keyCode === 229`, silently dropping these events before they reach the hotkey matching pipeline.
 
 ### Edge cases
 
 - Some IME implementations fire a `keydown` with `key: "Process"` instead of the actual key value.
-- On older browsers, `isComposing` may not be set — the `keyCode === 229` check provides a fallback.
+- On older browsers, `isComposing` may not be set, so the `keyCode === 229` check provides a fallback.
 - IME composition can be active inside any editable element (`<input>`, `<textarea>`, `contenteditable`).
 
 ## RAII-style Guard Pattern
@@ -45,7 +45,7 @@ This pattern is used by `KeyboardDispatchGuard`, the handle returned from `Hotke
 Without RAII guards, suspending and resuming dispatch would use paired start/stop calls:
 
 ```ts
-// Fragile — easy to forget the resume call
+// Fragile - easy to forget the resume call
 manager.suspendDispatch();
 try {
   doSomething();
@@ -70,31 +70,66 @@ guard.release();
 Key properties:
 
 - **Reference-counted**: Multiple guards can be active simultaneously. Dispatch only resumes when **all** guards are released. This prevents one caller from accidentally resuming dispatch while another still needs it suspended.
-- **Idempotent release**: Calling `guard.release()` twice is safe — the second call is a no-op.
+- **Idempotent release**: Calling `guard.release()` twice is safe. The second call is a no-op.
 - **Invalidation on destroy**: When `HotkeyManager.destroy()` is called, all outstanding guards are invalidated (`isActive` set to `false`). No stale guards can interfere with a fresh manager instance.
 - **Observable state**: `guard.isActive` indicates whether the guard is still suspending dispatch. `manager.isDispatchSuspended()` indicates whether any guard is active.
 
 ### Nested guards example
 
 ```ts
-// Dialog opens — suspend dispatch
+// Dialog opens - suspend dispatch
 const dialogGuard = manager.suspendDispatch("dialog");
 
-// Confirmation popover opens inside dialog — suspend again
+// Confirmation popover opens inside dialog - suspend again
 const popoverGuard = manager.suspendDispatch("confirmation");
 
 // User closes popover
 popoverGuard.release();
-// Still suspended — dialogGuard is active
+// Still suspended - dialogGuard is active
 
 // User closes dialog
 dialogGuard.release();
-// Now dispatch resumes — both guards released
+// Now dispatch resumes - both guards released
 ```
 
 ### What happens during suspension
 
 While suspended, the EventDispatcher pipeline skips hotkey matching, sequence matching, and unhandled emission (steps 5–7). Instead, it emits an unhandled event with reason `Suspended`. Key state tracking (step 1) still runs, so `getHeldKeys()` remains accurate.
+
+## Scope (Hotkey Scope Stack)
+
+A **scope** is a named activation context that determines which hotkey registrations are eligible to fire. Scopes form a LIFO (last-in, first-out) **stack**.
+
+### How it works
+
+- The stack always has `GLOBAL_SCOPE` (`"__global__"`) at the bottom.
+- `pushScope("editor")` pushes a new scope onto the stack.
+- `popScope("editor")` removes it (the ID must match the current top).
+- `getActiveScope()` returns the current top of the stack.
+- `getScopeStack()` returns a snapshot of the full stack.
+
+### Two-pass matching
+
+When a key event arrives, the dispatcher uses a **two-pass matching** strategy:
+
+1. **Pass 1 - Scoped match**: Check registrations in the active (top-of-stack) scope first. If a match is found, it fires and matching stops.
+2. **Pass 2 - Global fallback**: If no scoped match is found, check `GLOBAL_SCOPE` registrations. If a match is found, it fires.
+
+This means a scoped registration always shadows a global registration for the same key. For example, if both `GLOBAL_SCOPE` and `"editor"` have a handler for `Escape`, and `"editor"` is the active scope, only the editor handler fires.
+
+### Router integration
+
+When `enableRouterIntegration(router)` is active, route changes automatically reset to global scope and push the new route name as the active scope. Dialog scopes still require manual `pushScope`/`popScope`.
+
+## Suppression
+
+**Suppression** refers to conditions that prevent a matched hotkey from firing, even though the key combination and scope both match.
+
+- **Input suppression** (`ignoreInputs`): Single-key hotkeys are suppressed when focus is in a text field. Ctrl/Meta combos and Escape are not suppressed. Controlled by the `ignoreInputs` option (`"auto"` by default).
+- **Popup suppression** (`suppressInPopups`): Hotkeys are suppressed when a UI5 popup (dialog or popover) is open. Off by default.
+- **Repeat suppression** (`ignoreRepeat`): Held-key repeat events are ignored. On by default.
+
+When a hotkey is suppressed, the unhandled callback fires with the corresponding reason (`InputSuppressed`, `PopupSuppressed`, `RepeatIgnored`).
 
 ## AltGr (Alternate Graphic)
 
@@ -108,8 +143,8 @@ On Windows, pressing AltGr sends **both** `ctrlKey: true` and `altKey: true` sim
 
 The EventDispatcher detects AltGr via two mechanisms:
 
-1. `event.getModifierState("AltGraph")` — the modern, reliable check.
-2. Tracking `event.location` on Alt keydowns — if the last Alt press was on the right side (`location === 2`) and both `ctrlKey` and `altKey` are active, treat it as AltGr.
+1. `event.getModifierState("AltGraph")`, the modern, reliable check.
+2. Tracking `event.location` on Alt keydowns. If the last Alt press was on the right side (`location === 2`) and both `ctrlKey` and `altKey` are active, treat it as AltGr.
 
 Events identified as AltGr are silently dropped in the pre-filter step, preventing false hotkey matches.
 

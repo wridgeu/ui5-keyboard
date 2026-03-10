@@ -6,8 +6,8 @@
 
 The kiosk keyboard has no way to dismiss a docked keyboard via the physical keyboard. When a virtual key has focus (e.g. after arrow-key navigation), pressing Escape does nothing. The only ways to close a docked keyboard are:
 
-- Blur the input (tap outside) — not keyboard-accessible
-- Call `close()` programmatically — requires app code
+- Blur the input (tap outside), not keyboard-accessible
+- Call `close()` programmatically, requires app code
 
 This is a keyboard accessibility gap. WCAG 2.1 SC 2.1.1 (Keyboard) requires that all functionality be operable through a keyboard interface. A docked overlay that can only be dismissed by pointer interaction fails this criterion.
 
@@ -46,9 +46,9 @@ onkeydown(event: KeyboardEvent): void {
 - Escape only acts when the keyboard is docked and open
 - After closing, focus returns to the target input (not lost to `<body>`)
 - The `afterClose` event fires as usual
-- If focus is on the target input (not the keyboard), Escape is not intercepted — it propagates normally. This prevents the keyboard from swallowing Escape when the user is in an input field and wants Escape for other purposes (e.g. closing a value help).
+- If focus is on the target input (not the keyboard), Escape is not intercepted and propagates normally. This prevents the keyboard from swallowing Escape when the user is in an input field and wants Escape for other purposes (e.g. closing a value help).
 
-**Why not a `{escape}` layout key?** An Escape key in the layout would be unusual — physical keyboards have Escape in the top-left corner, far from the main key area. Users don't expect it on a virtual keyboard. The physical Escape key (when keyboard has focus) is the correct affordance.
+**Why not a `{escape}` layout key?** An Escape key in the layout would be unusual. Physical keyboards have Escape in the top-left corner, far from the main key area. Users don't expect it on a virtual keyboard. The physical Escape key (when keyboard has focus) is the correct affordance.
 
 ## Problem 2: `_maxHeight` only grows, never shrinks
 
@@ -71,7 +71,7 @@ This prevents:
 
 However, the height only ratchets upward. If a custom layout with 7 rows is used once, then removed, the keyboard permanently retains that height. There's no reset mechanism.
 
-More fundamentally, this behavior is **always on** for non-docked Full keyboards. Consumers who don't use Popover — for example, keyboards embedded in a page section — pay the cost of a height that never shrinks, for a bug they'll never encounter.
+More fundamentally, this behavior is **always on** for non-docked Full keyboards. Consumers who don't use Popover (for example, keyboards embedded in a page section) pay the cost of a height that never shrinks, for a bug they'll never encounter.
 
 ## Proposal 2: Opt-in `stableHeight` property
 
@@ -89,7 +89,7 @@ Convert the implicit height stabilization into an explicit opt-in property.
  * Only effective for non-docked Full keyboards. Docked keyboards
  * always minimize their footprint.
  *
- * @example <caption>XML view — keyboard inside a Popover</caption>
+ * @example <caption>XML view - keyboard inside a Popover</caption>
  * <Popover>
  *   <kiosk:KioskKeyboard stableHeight="true" targetInput="myInput" />
  * </Popover>
@@ -139,7 +139,7 @@ This is technically a behavior change for non-docked keyboards that previously b
 
 1. Document the change in CHANGELOG
 2. Add a note in the Popover section of the README recommending `stableHeight="true"` for Popover usage
-3. Consider whether the Popover bug has been fixed in newer UI5 versions (1.144.0+) — if so, the workaround may no longer be needed at all
+3. Consider whether the Popover bug has been fixed in newer UI5 versions (1.144.0+). If so, the workaround may no longer be needed at all
 
 ## Scope
 
@@ -162,8 +162,8 @@ This is technically a behavior change for non-docked keyboards that previously b
 
 ### Out of scope
 
-- `{escape}` as a layout key (not needed — physical Escape is the right affordance)
-- Automatic Popover detection (checking if keyboard is inside a Popover to auto-enable stable height — too magical, explicit opt-in is clearer)
+- `{escape}` as a layout key (not needed, physical Escape is the right affordance)
+- Automatic Popover detection (checking if keyboard is inside a Popover to auto-enable stable height, too magical, explicit opt-in is clearer)
 
 ## Migration
 

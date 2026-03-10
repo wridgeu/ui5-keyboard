@@ -128,12 +128,12 @@ QUnit.test("Modifier-only waits for action key", (assert) => {
 
   recorder.start();
 
-  // Press just Control — should not record
+  // Press just Control - should not record
   fireKey("Control", { ctrlKey: true });
   assert.strictEqual(recorded, null, "Control alone was not recorded");
   assert.ok(recorder.isRecording, "Still recording after modifier-only press");
 
-  // Now press S with Ctrl — should record
+  // Now press S with Ctrl - should record
   fireKey("s", { ctrlKey: true });
   assert.ok(recorded !== null, "Recorded after action key");
 });
@@ -229,7 +229,7 @@ QUnit.test("start() while already recording is a no-op", (assert) => {
 QUnit.test("stop() while not recording is a no-op", (assert) => {
   const recorder = createRecorder({ onRecord: () => {} });
 
-  // Not recording yet — stop should not throw
+  // Not recording yet - stop should not throw
   recorder.stop();
   assert.notOk(recorder.isRecording, "Still not recording");
 });

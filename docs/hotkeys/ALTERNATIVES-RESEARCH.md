@@ -1,4 +1,4 @@
-# ui5-lib-hotkeys — Review & Comparison
+# ui5-lib-hotkeys: Review & Comparison
 
 ## Executive Summary
 
@@ -44,22 +44,22 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 
 ### Completed Features
 
-| #   | Feature                                              | Status                                                                         |
-| --- | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 1   | Debug mode with console logging                      | Done — `setDebugMode()` with per-keypress logging                              |
-| 2   | External conflict detection (browser/SAP blocklists) | Done — `validate.ts` with `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS`              |
-| 3   | Hotkey validation API (`validateHotkey()`)           | Done — `validate.ts` with `validateHotkey`, `assertValidHotkey`, `checkHotkey` |
-| 4   | Handle mutation (`setOptions()`)                     | Done — all fields except `scope` updatable                                     |
-| 5   | Type-safe hotkey strings                             | Done — `Hotkey` template literal union type                                    |
-| 6   | Multi-key sequences                                  | Done — separate `SequenceManager` class                                        |
-| 7   | Hotkey recording                                     | Done — `HotkeyRecorder` class                                                  |
-| 8   | Key state tracking                                   | Done — `KeyStateTracker` class                                                 |
-| 9   | Disallowed shortcut warnings at registration time    | Done — logged via `_logValidationWarnings()` on register                       |
-| 10  | AltGr guard (Windows)                                | Done — tracks `event.location` for right-Alt                                   |
-| 11  | Target element binding                               | Done — `target` option with `composedPath()`-based matching (innermost wins)   |
-| 12  | Unhandled key callback                               | Done — `setUnhandledHandler()` with reason enum                                |
-| 13  | Router integration                                   | Done — `enableRouterIntegration()` with `beforeRouteMatched`                   |
-| 14  | Dialog scope lifecycle                               | Done — manual `pushScope`/`popScope` for non-route scopes                      |
+| #   | Feature                                              | Status                                                                        |
+| --- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1   | Debug mode with console logging                      | Done. `setDebugMode()` with per-keypress logging                              |
+| 2   | External conflict detection (browser/SAP blocklists) | Done. `validate.ts` with `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS`              |
+| 3   | Hotkey validation API (`validateHotkey()`)           | Done. `validate.ts` with `validateHotkey`, `assertValidHotkey`, `checkHotkey` |
+| 4   | Handle mutation (`setOptions()`)                     | Done. all fields except `scope` updatable                                     |
+| 5   | Type-safe hotkey strings                             | Done. `Hotkey` template literal union type                                    |
+| 6   | Multi-key sequences                                  | Done. separate `SequenceManager` class                                        |
+| 7   | Hotkey recording                                     | Done. `HotkeyRecorder` class                                                  |
+| 8   | Key state tracking                                   | Done. `KeyStateTracker` class                                                 |
+| 9   | Disallowed shortcut warnings at registration time    | Done. logged via `_logValidationWarnings()` on register                       |
+| 10  | AltGr guard (Windows)                                | Done. tracks `event.location` for right-Alt                                   |
+| 11  | Target element binding                               | Done. `target` option with `composedPath()`-based matching (innermost wins)   |
+| 12  | Unhandled key callback                               | Done. `setUnhandledHandler()` with reason enum                                |
+| 13  | Router integration                                   | Done. `enableRouterIntegration()` with `beforeRouteMatched`                   |
+| 14  | Dialog scope lifecycle                               | Done. manual `pushScope`/`popScope` for non-route scopes                      |
 
 ### Remaining Ideas (Nice to Have)
 
@@ -74,9 +74,9 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 
 The library works in both standalone and FLP because:
 
-- Document-level capture phase listener — independent of UI5's focus system
+- Document-level capture phase listener, independent of UI5's focus system
 - No manifest.json coupling for shortcuts
-- Lazy `sap.m` loading — no hard dependency
+- Lazy `sap.m` loading, no hard dependency
 - Scope stack is manual, not tied to FLP shell
 
 FLP-reserved shortcuts (F6, Shift+F6, Alt+0) are included in `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS` blocklists. Registration warnings are logged when these are used.

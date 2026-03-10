@@ -2,5 +2,11 @@
 # because oxfmt cannot converge on a stable format for their JSDoc style.
 *.gen.d.ts
 
+# Auto-generated asset files (CSS-as-TS, i18n defaults, UI5 WC tools output)
+**/src/generated/
+
+# Build output
+dist/
+
 # ui5-tooling-modules cache output (generated during serve/build)
 .ui5-tooling-modules/

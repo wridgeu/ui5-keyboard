@@ -1,5 +1,5 @@
 import Element from "sap/ui/core/Element";
-import { isInputOrTextarea, resolveInputOrTextarea } from "./dom";
+import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import {
   insertText as opsInsertText,
   handleBackspace as opsHandleBackspace,
@@ -15,7 +15,13 @@ export default class TargetInputSession {
   private _lastKnownValue: string | null = null;
   private _targetDirty = false;
 
+  private _customResolver: TargetResolverFn | null = null;
+
   constructor(private readonly _getTargetElement: () => Element | null) {}
+
+  setTargetResolver(resolver: TargetResolverFn | null): void {
+    this._customResolver = resolver;
+  }
 
   resetForTargetSwitch(): void {
     this._cursorPos = null;
@@ -25,7 +31,7 @@ export default class TargetInputSession {
   insertText(text: string): void {
     const dom = this._getTargetDomRef();
     if (!dom) return;
-    this._cursorPos = opsInsertText(dom, text, this._cursorPos ?? undefined);
+    this._cursorPos = opsInsertText(dom, text, this._cursorPos ?? undefined, this._customResolver);
     this._lastKnownValue = dom.value;
     this._targetDirty = true;
   }
@@ -34,7 +40,7 @@ export default class TargetInputSession {
     const dom = this._getTargetDomRef();
     if (!dom) return;
 
-    const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined);
+    const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined, this._customResolver);
     if (!pos) return;
 
     this._cursorPos = pos;
@@ -49,7 +55,7 @@ export default class TargetInputSession {
       // insert a newline and must not mark the session dirty for change firing.
       // Textareas never emit change on Enter, and fireChangeIfDirty() also
       // skips textarea targets by design.
-      this._cursorPos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
+      this._cursorPos = opsInsertText(dom, "\n", this._cursorPos ?? undefined, this._customResolver);
       this._lastKnownValue = dom.value;
       return;
     }
@@ -77,9 +83,9 @@ export default class TargetInputSession {
     const element = this._getTargetElement();
     if (!element) return;
 
-    const dom = element.getFocusDomRef();
+    const dom = resolveWithCustomResolver(element.getFocusDomRef(), this._customResolver);
     if (dom instanceof HTMLTextAreaElement) return;
-    if (isInputOrTextarea(dom)) {
+    if (dom) {
       opsFireTargetChange(element, dom.value);
     }
   }
@@ -99,9 +105,9 @@ export default class TargetInputSession {
     const element = this._getTargetElement();
     if (!element) return null;
 
-    const dom = element.getFocusDomRef();
+    const dom = resolveWithCustomResolver(element.getFocusDomRef(), this._customResolver);
     if (dom instanceof HTMLTextAreaElement) return null;
-    if (isInputOrTextarea(dom)) {
+    if (dom) {
       const value = dom.value;
       return () => opsFireTargetChange(element, value);
     }
@@ -112,7 +118,7 @@ export default class TargetInputSession {
     const element = this._getTargetElement();
     if (!element) return null;
 
-    const dom = resolveInputOrTextarea(element.getFocusDomRef());
+    const dom = resolveWithCustomResolver(element.getFocusDomRef(), this._customResolver);
     if (!dom) {
       return null;
     }

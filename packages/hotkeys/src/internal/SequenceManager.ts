@@ -43,7 +43,7 @@ interface ActiveMatch {
 /**
  * Internal key sequence manager for UI5 applications.
  *
- * Not intended for direct use — access sequence functionality through
+ * Not intended for direct use - access sequence functionality through
  * {@link HotkeyManager.registerSequence} and related facade methods.
  *
  * Receives pre-filtered key events from HotkeyManager's document listener
@@ -168,11 +168,11 @@ export default class SequenceManager extends BaseObject {
           throw new Error(`Cannot setOptions on unregistered sequence (id: ${id})`);
         }
         if ((newOptions as Record<string, unknown>).scope !== undefined) {
-          throw new Error("Cannot change scope via setOptions — unregister and re-register instead");
+          throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
         }
         const reg = this._registrations.get(id);
         if (!reg) return;
-        // Type-safe field merge — no casts, compiler catches typos
+        // Type-safe field merge - no casts, compiler catches typos
         if (newOptions.enabled !== undefined) reg.enabled = newOptions.enabled;
         if (newOptions.description !== undefined) reg.description = newOptions.description;
         if (newOptions.timeout !== undefined) reg.timeout = assertValidTimeout(newOptions.timeout);
@@ -193,7 +193,7 @@ export default class SequenceManager extends BaseObject {
 
   /**
    * Get all active registrations.
-   * Info objects are flat snapshots — no closures or parsed internals leak.
+   * Info objects are flat snapshots - no closures or parsed internals leak.
    */
   getRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
     return Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
@@ -283,7 +283,7 @@ export default class SequenceManager extends BaseObject {
             fullMatch = { registration: reg, event };
           }
         } else {
-          // Mid-sequence — advance
+          // Mid-sequence - advance
           const newMatch: ActiveMatch = {
             registration: reg,
             stepIndex: match.stepIndex + 1,

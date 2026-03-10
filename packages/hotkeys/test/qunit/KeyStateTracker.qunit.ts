@@ -115,7 +115,7 @@ QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
   assert.ok(tracker.isKeyHeld("Meta"), "Meta held");
   assert.ok(tracker.isKeyHeld("Tab"), "Tab held");
 
-  // Release Meta — should clear Tab too (macOS Cmd+Tab fix)
+  // Release Meta - should clear Tab too (macOS Cmd+Tab fix)
   fireKeyUp("Meta");
 
   assert.notOk(tracker.isKeyHeld("Meta"), "Meta released");

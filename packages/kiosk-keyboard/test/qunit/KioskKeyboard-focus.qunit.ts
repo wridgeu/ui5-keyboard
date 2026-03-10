@@ -228,7 +228,7 @@ QUnit.test("Focusing a registered input sets it as target", async (assert) => {
   });
   await placeAndWait(kb);
 
-  // Focus input2 — should become the target
+  // Focus input2 - should become the target
   const dom2 = input2.getFocusDomRef() as HTMLElement;
   dom2.focus();
   // Wait for delegation to propagate
@@ -279,7 +279,7 @@ QUnit.test("inputIds resolves view-local IDs when keyboard is inside a View", as
   const kb = view.byId("kb") as KioskKeyboard;
   const input = view.byId("localInput") as Input;
 
-  // Focus the input — delegation should set it as target
+  // Focus the input - delegation should set it as target
   const dom = input.getFocusDomRef() as HTMLElement;
   dom.focus();
   await nextUIUpdate();
@@ -332,7 +332,7 @@ QUnit.test("inputIds falls back to global when not inside a View", async (assert
   });
   await placeAndWait(kb);
 
-  // Focus the input — delegation should set it as target via global fallback
+  // Focus the input - delegation should set it as target via global fallback
   const dom = globalInput.getFocusDomRef() as HTMLElement;
   dom.focus();
   await nextUIUpdate();
@@ -356,7 +356,7 @@ QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
   });
   await placeAndWait(kb);
 
-  // Focus the real input — should still work despite the bad ID
+  // Focus the real input - should still work despite the bad ID
   const dom = input.getFocusDomRef() as HTMLElement;
   dom.focus();
   await nextUIUpdate();
@@ -369,7 +369,7 @@ QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
 
 QUnit.test("inputIds deduplicates delegates when aliased IDs resolve to the same control", async (assert) => {
   // Create a view so that "localInput" resolves via view.byId AND via
-  // global registry as "myView--localInput" — both should map to the
+  // global registry as "myView--localInput" - both should map to the
   // same sap.m.Input instance.
   const view = await XMLView.create({
     id: "myView",
@@ -427,13 +427,13 @@ QUnit.test("inputIds removal of one alias keeps delegate when another alias rema
     return origRemove(...args);
   };
 
-  // Remove one alias — delegate should NOT be removed since the other alias still covers it
+  // Remove one alias - delegate should NOT be removed since the other alias still covers it
   kb.setInputIds(["sharedInput"]);
   await nextUIUpdate();
 
   assert.strictEqual(removeCount, 0, "removeEventDelegate not called when another alias still covers the control");
 
-  // Focus the input — should still work as a registered inputIds target
+  // Focus the input - should still work as a registered inputIds target
   const dom = input.getFocusDomRef() as HTMLElement;
   dom.focus();
   await nextUIUpdate();
@@ -452,7 +452,7 @@ QUnit.test("inputIds works with composite controls (StepInput)", async (assert) 
   });
   await placeAndWait(kb);
 
-  // Focus the inner input of StepInput — delegation should resolve to StepInput
+  // Focus the inner input of StepInput - delegation should resolve to StepInput
   const innerDom = stepInput.getFocusDomRef() as HTMLElement;
   innerDom.focus();
   await nextUIUpdate();
@@ -470,7 +470,7 @@ QUnit.test("inputIds rebinds delegate when control is destroyed and recreated wi
   const input1 = new Input("recreate-input");
   box.addItem(input1);
 
-  // Inline (non-docked, no autoShow) keyboard — only _inputFocusDelegation sets target
+  // Inline (non-docked, no autoShow) keyboard - only _inputFocusDelegation sets target
   const kb = new KioskKeyboard({
     inputIds: ["recreate-input"],
   });
@@ -492,7 +492,7 @@ QUnit.test("inputIds rebinds delegate when control is destroyed and recreated wi
   // Trigger reconciliation so the new instance gets the delegate
   kb.setInputIds(["recreate-input"]);
 
-  // Focus the new input — delegate should fire on the new instance
+  // Focus the new input - delegate should fire on the new instance
   (input2.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
   assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target updated to recreated input instance");
@@ -591,7 +591,7 @@ QUnit.test("getFocusDomRef returns last focused key", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// Focus management — disabled / hidden state
+// Focus management - disabled / hidden state
 // ──────────────────────────────────────────────
 
 QUnit.test("getFocusInfo includes control id", async (assert) => {

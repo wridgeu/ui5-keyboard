@@ -7,11 +7,11 @@ Comprehensive reference for UI5 keyboard events, touch event simulation, pseudo 
 ## Table of Contents
 
 1. [Event Architecture Overview](#1-event-architecture-overview)
-2. [ControlEvents — UIArea Auto-Delegation](#2-controlevents--uiarea-auto-delegation)
-3. [PseudoEvents — Semantic Keyboard Events](#3-pseudoevents--semantic-keyboard-events)
-4. [EventSimulation — saptouchstart / saptouchend](#4-eventsimulation--saptouchstart--saptouchend)
+2. [ControlEvents: UIArea Auto-Delegation](#2-controlevents-uiarea-auto-delegation)
+3. [PseudoEvents: Semantic Keyboard Events](#3-pseudoevents-semantic-keyboard-events)
+4. [EventSimulation: saptouchstart / saptouchend](#4-eventsimulation-saptouchstart--saptouchend)
 5. [F6 Fast Navigation](#5-f6-fast-navigation)
-6. [CommandExecution — UI5's Built-in Shortcut System](#6-commandexecution--ui5s-built-in-shortcut-system)
+6. [CommandExecution: UI5's Built-in Shortcut System](#6-commandexecution-ui5s-built-in-shortcut-system)
 7. [UI5 Reserved / Disallowed Shortcuts](#7-ui5-reserved--disallowed-shortcuts)
 8. [SAP Fiori Elements Standard Shortcuts](#8-sap-fiori-elements-standard-shortcuts)
 9. [Focus Handling](#9-focus-handling)
@@ -55,7 +55,7 @@ When an event fires, `_handleEvent()`:
 3. Dispatches to each control's `on<eventName>` methods
 4. Bubbles up the control hierarchy
 
-## 2. ControlEvents — UIArea Auto-Delegation
+## 2. ControlEvents: UIArea Auto-Delegation
 
 **Module:** `sap/ui/events/ControlEvents` (public since 1.58)
 
@@ -78,11 +78,11 @@ Controls implement `on<eventName>(oEvent)` methods to handle these. UIArea regis
 
 **API:**
 
-- `ControlEvents.events` — the array of event names
-- `ControlEvents.bindAnyEvent(fn)` — bind callback for ALL events on `document`
-- `ControlEvents.unbindAnyEvent(fn)` — unbind callback
+- `ControlEvents.events`: the array of event names
+- `ControlEvents.bindAnyEvent(fn)`: bind callback for ALL events on `document`
+- `ControlEvents.unbindAnyEvent(fn)`: unbind callback
 
-## 3. PseudoEvents — Semantic Keyboard Events
+## 3. PseudoEvents: Semantic Keyboard Events
 
 **Module:** `sap/ui/events/PseudoEvents` (public since 1.58)
 
@@ -90,7 +90,7 @@ Pseudo events are **semantically enriched keyboard events**. They:
 
 - Are classified from `keydown` (or `keypress`/`click`) events
 - Are dispatched via UIArea alongside the original event
-- Can ONLY be handled via `on<eventName>()` methods — **NOT** via `jQuery.on()`
+- Can ONLY be handled via `on<eventName>()` methods, **NOT** via `jQuery.on()`
 - Are checked via `event.getPseudoTypes()` and `event.isPseudoType(name)`
 
 ### Complete List (51 events)
@@ -177,13 +177,13 @@ Pseudo events are **semantically enriched keyboard events**. They:
 | `sapplus`               | keypress | `+` character (experimental since 1.25) |
 | `sapdelayeddoubleclick` | click    | Two clicks 300-1300ms apart             |
 
-## 4. EventSimulation — saptouchstart / saptouchend
+## 4. EventSimulation: saptouchstart / saptouchend
 
 **Module:** `sap/ui/events/jquery/EventSimulation` (internal, but stable)
 
 ### Status: NOT deprecated, still fully supported in OpenUI5 1.144.0
 
-These are **simulated unified touch events** — NOT pseudo events. They are created by `EventSimulation.js` as jQuery special events and dynamically added to `ControlEvents.events`.
+These are **simulated unified touch events**, NOT pseudo events. They are created by `EventSimulation.js` as jQuery special events and dynamically added to `ControlEvents.events`.
 
 ### How They Work
 
@@ -260,7 +260,7 @@ this.data("sap-ui-fastnavgroup", "true", true); // CustomData approach
 
 **F6 is in the disallowed shortcuts list** (see section 7). Our HotkeyManager should warn if someone registers F6 as a hotkey since it conflicts with UI5's built-in fast navigation.
 
-## 6. CommandExecution — UI5's Built-in Shortcut System
+## 6. CommandExecution: UI5's Built-in Shortcut System
 
 **Module:** `sap/ui/core/CommandExecution` (public since 1.70)
 
@@ -307,7 +307,7 @@ From [GitHub Issue #2788](https://github.com/SAP/openui5/issues/2788):
 
 ### Shortcut Validation
 
-The `Shortcut` module validates key combinations using two regexes — one for the full shortcut string format and one for the key part alone:
+The `Shortcut` module validates key combinations using two regexes, one for the full shortcut string format and one for the key part alone:
 
 ```
 // Full shortcut string (e.g. "Ctrl+Shift+S"):
@@ -321,7 +321,7 @@ Platform adaptation: `Ctrl` → `Cmd` on macOS.
 
 ## 7. UI5 Reserved / Disallowed Shortcuts
 
-**Source:** `sap/ui/core/util/ShortcutHelper.js` — `mDisallowedShortcuts`
+**Source:** `sap/ui/core/util/ShortcutHelper.js`, `mDisallowedShortcuts`
 
 These shortcuts are **blocked by UI5's CommandExecution** and should also be warned about by our HotkeyManager:
 
@@ -412,18 +412,18 @@ Provides arrow key, Home/End, PageUp/PageDown navigation for list-like controls 
 
 ### Keyboard Events Handled (via pseudo events)
 
-- `onsapnext` / `onsapprevious` — ArrowDown/Right / ArrowUp/Left
-- `onsaphome` / `onsapend` — Home / End
-- `onsappageup` / `onsappagedown` — PageUp / PageDown
-- `onkeyup` (F2) — Toggle between action mode and navigation mode
+- `onsapnext` / `onsapprevious`: ArrowDown/Right / ArrowUp/Left
+- `onsaphome` / `onsapend`: Home / End
+- `onsappageup` / `onsappagedown`: PageUp / PageDown
+- `onkeyup` (F2): Toggle between action mode and navigation mode
 
 ### Configuration
 
-- `setCycling(boolean)` — wrap at boundaries
-- `setColumns(n)` — grid/table layout
-- `setPageSize(n)` — enable PageUp/PageDown
-- `setTableMode(boolean)` — row/column grid navigation
-- `setDisabledModifiers(obj)` — selectively suppress modifier combos
+- `setCycling(boolean)`: wrap at boundaries
+- `setColumns(n)`: grid/table layout
+- `setPageSize(n)`: enable PageUp/PageDown
+- `setTableMode(boolean)`: row/column grid navigation
+- `setDisabledModifiers(obj)`: selectively suppress modifier combos
 
 ### Relevance to KioskKeyboard
 
@@ -443,7 +443,7 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### Rules for Control Developers
 
-1. **Do NOT implement both `onmouse*` and `ontouch*`** — use `ontouchstart`/`ontouchend` instead (EventSimulation handles both)
+1. **Do NOT implement both `onmouse*` and `ontouch*`**, use `ontouchstart`/`ontouchend` instead (EventSimulation handles both)
 2. For explicit `addEventListener()` registrations, check the delayed mouse event marker:
    ```js
    if (oEvent.isMarked("delayedMouseEvent")) return; // Skip emulated event
@@ -454,25 +454,25 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### HotkeyManager (`ui5.hotkeys`)
 
-| Aspect                        | Status                 | Notes                                                                                                                                                                                                                          |
-| ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Window-level capture listener | **Correct**            | Single `window` capture listener (via EventDispatcher) — fires before UIArea, independent of focus, solves CommandExecution's focus limitation. `stopPropagation` prevents events from reaching `document` listeners entirely. |
-| F6 conflict                   | **Should warn**        | F6 is reserved for fast navigation. Registering F6 as a hotkey breaks accessibility                                                                                                                                            |
-| UI5 tool shortcuts            | **Should warn**        | Ctrl+Alt+Shift+P/S are disallowed; Ctrl+Alt+Shift+T is handled at runtime                                                                                                                                                      |
-| Browser-reserved shortcuts    | **Should warn**        | Ctrl+N/T/W etc. cannot be intercepted in Chrome                                                                                                                                                                                |
-| Fiori Elements conflict       | **Consider warning**   | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard                                                                                                                                                                                 |
-| `keypress` event              | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`                                                                                                                                                    |
-| AltGr handling                | **Correct**            | Properly detected and skipped                                                                                                                                                                                                  |
+| Aspect                        | Status                 | Notes                                                                                                                                                                                                                         |
+| ----------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Window-level capture listener | **Correct**            | Single `window` capture listener (via EventDispatcher), fires before UIArea, independent of focus, solves CommandExecution's focus limitation. `stopPropagation` prevents events from reaching `document` listeners entirely. |
+| F6 conflict                   | **Should warn**        | F6 is reserved for fast navigation. Registering F6 as a hotkey breaks accessibility                                                                                                                                           |
+| UI5 tool shortcuts            | **Should warn**        | Ctrl+Alt+Shift+P/S are disallowed; Ctrl+Alt+Shift+T is handled at runtime                                                                                                                                                     |
+| Browser-reserved shortcuts    | **Should warn**        | Ctrl+N/T/W etc. cannot be intercepted in Chrome                                                                                                                                                                               |
+| Fiori Elements conflict       | **Consider warning**   | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard                                                                                                                                                                                |
+| `keypress` event              | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`                                                                                                                                                   |
+| AltGr handling                | **Correct**            | Properly detected and skipped                                                                                                                                                                                                 |
 
 ### KioskKeyboard (`ui5.kiosk`)
 
-| Aspect                      | Status                      | Notes                                                                          |
-| --------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
-| `ontouchstart`/`ontouchend` | **Correct, not deprecated** | Unified mouse+touch via EventSimulation, matches sap.m control pattern         |
-| `apiVersion: 4` renderer    | **Correct**                 | Semantic rendering — output depends only on control's own properties and state |
-| Focus handling              | **Correct**                 | Implements `getFocusInfo()`/`applyFocusInfo()`                                 |
-| Roving tabindex             | **Correct**                 | Custom impl (not ItemNavigation) — appropriate for variable-width rows         |
-| F6 group                    | **Correct**                 | Renderer sets `data-sap-ui-fastnavgroup="true"` on the root element            |
+| Aspect                      | Status                      | Notes                                                                         |
+| --------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `ontouchstart`/`ontouchend` | **Correct, not deprecated** | Unified mouse+touch via EventSimulation, matches sap.m control pattern        |
+| `apiVersion: 4` renderer    | **Correct**                 | Semantic rendering, output depends only on control's own properties and state |
+| Focus handling              | **Correct**                 | Implements `getFocusInfo()`/`applyFocusInfo()`                                |
+| Roving tabindex             | **Correct**                 | Custom impl (not ItemNavigation), appropriate for variable-width rows         |
+| F6 group                    | **Correct**                 | Renderer sets `data-sap-ui-fastnavgroup="true"` on the root element           |
 
 ### Deprecated API Avoidance (OpenUI5 2.x readiness)
 
@@ -482,7 +482,7 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 | `jQuery.sap.ControlEvents`           | `sap/ui/events/ControlEvents` | N/A                                       |
 | `jQuery.sap.keycodes`                | `sap/ui/events/KeyCodes`      | N/A (we use `event.key` strings)          |
 | `jQuery.sap.handleF6GroupNavigation` | `sap/ui/events/F6Navigation`  | N/A                                       |
-| `UIEvent.which` / `UIEvent.keyCode`  | `KeyboardEvent.key`           | **Correct** — we use `event.key`          |
+| `UIEvent.which` / `UIEvent.keyCode`  | `KeyboardEvent.key`           | **Correct**. We use `event.key`           |
 
 ## Sources
 

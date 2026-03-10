@@ -29,7 +29,7 @@ internal/skip-reason.ts      Internal dispatch skip-reason types
 internal/idgen.ts            Internal registration ID generator
 ```
 
-`HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`) — their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
+`HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`). Their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
 
 Some top-level entry points are importable but not part of the semver-stable consumer contract. This currently includes utility/helper modules (`parse.ts`, `match.ts`, `platform.ts`, `validate.ts`, `constants.ts`, `format.ts`). Higher-level implementation modules (for example `SequenceManager.ts`) are consumed via `HotkeyManager` and are not a supported direct import surface.
 
@@ -75,7 +75,7 @@ The EventDispatcher runs a deterministic 7-step pipeline on each `keydown`:
 keydown event (window capture)
   │
   ├─ Step 1: Key state tracking (KeyStateTracker.processKeyDown)
-  │           Always runs — even for modifiers, IME, suspended state
+  │           Always runs, even for modifiers, IME, suspended state
   │
   ├─ Step 2: Interceptor check (e.g., HotkeyRecorder)
   │           If interceptor returns true → event consumed, pipeline stops
@@ -99,7 +99,7 @@ keydown event (window capture)
 
 ### Suspend Guard
 
-`manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5–7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted — all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`.
+`manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5–7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted; all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`.
 
 Each registration is checked against the following guards before the callback fires:
 
@@ -134,9 +134,9 @@ Registrations within each scope are matched in FIFO order (first registered, fir
 
 A **scope** is an arbitrary string identifier that groups related hotkeys by context. In practice, scopes map to UI5 application concepts:
 
-- **Route names** — view-level scopes like `"main"` or `"detail"` (managed automatically by router integration)
-- **Dialog IDs** — dialog-level scopes like `"confirmDialog"` or `"settingsDialog"` (managed manually via `pushScope`/`popScope`)
-- **Fragment or component IDs** — any string that meaningfully groups a set of shortcuts
+- **Route names**: view-level scopes like `"main"` or `"detail"` (managed automatically by router integration)
+- **Dialog IDs**: dialog-level scopes like `"confirmDialog"` or `"settingsDialog"` (managed manually via `pushScope`/`popScope`)
+- **Fragment or component IDs**: any string that meaningfully groups a set of shortcuts
 
 Scopes are not a UI5 framework concept; they are a library-level abstraction. The global scope (`"__global__"`) is always present at the bottom of the stack.
 
@@ -321,8 +321,8 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 | Nested target-scoped same key                  | Innermost target in composedPath() wins                |
 | Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                |
 | Dispatch suspended via guard                   | Steps 5–7 skipped, UnhandledReason.Suspended reported  |
-| Closed shadow root targets                     | composedPath() stops at boundary — no match            |
-| Detached targets                               | Not in composedPath() — inactive until reattached      |
+| Closed shadow root targets                     | composedPath() stops at boundary, no match             |
+| Detached targets                               | Not in composedPath(), inactive until reattached       |
 | Empty composedPath()                           | Fallback to `[event.target, document, window]`         |
 | stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)         |
 
@@ -390,11 +390,11 @@ Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key even
 
 ### KeyStateTracker
 
-Tracks which keys are currently held down. Owned by the EventDispatcher — created and destroyed as part of its lifecycle. Accessed via `manager.getKeyStateTracker()`. Receives events from the EventDispatcher pipeline (step 1) — always runs, even during recording or suspension. Includes a macOS fix for stuck keys when a modifier is released (Cmd+Tab swallows the Tab keyup).
+Tracks which keys are currently held down. Owned by the EventDispatcher, created and destroyed as part of its lifecycle. Accessed via `manager.getKeyStateTracker()`. Receives events from the EventDispatcher pipeline (step 1), always runs, even during recording or suspension. Includes a macOS fix for stuck keys when a modifier is released (Cmd+Tab swallows the Tab keyup).
 
 ### HotkeyRecorder
 
-Records a single keyboard shortcut from user input for "press a key" settings UIs. Created via `manager.createRecorder()`. Implements the `KeyEventInterceptor` interface — when recording, it is set as the EventDispatcher's interceptor (step 2) and blocks all subsequent pipeline steps. Multiple recorders can coexist but only one can be active at a time (starting a second recorder detaches the first).
+Records a single keyboard shortcut from user input for "press a key" settings UIs. Created via `manager.createRecorder()`. Implements the `KeyEventInterceptor` interface. When recording, it is set as the EventDispatcher's interceptor (step 2) and blocks all subsequent pipeline steps. Multiple recorders can coexist but only one can be active at a time (starting a second recorder detaches the first).
 
 ### validate.ts
 

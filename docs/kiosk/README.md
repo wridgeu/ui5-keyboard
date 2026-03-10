@@ -11,7 +11,6 @@
 
 - [Backward Compatibility](./proposals/BACKWARD-COMPATIBILITY.md)
 - [Tab and Done Keys](./proposals/TAB-AND-DONE-KEYS.md)
-- [Web Component Package](./proposals/WEBCOMPONENT-PACKAGE.md)
 
 ## History
 
@@ -23,6 +22,7 @@
 - [i18n Extensibility](./history/I18N-EXTENSIBILITY.md)
 - [i18n Extensibility Implementation Plan](./history/I18N-EXTENSIBILITY-IMPL-PLAN.md)
 - [Native F-Key Mode](./history/NATIVE-FKEY-MODE.md)
+- [Web Component Package](./history/WEBCOMPONENT-PACKAGE.md)
 
 ## Notes
 

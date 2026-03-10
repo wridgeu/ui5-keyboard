@@ -32,7 +32,7 @@ function makeTextarea(value: string, cursor: CursorPos): HTMLTextAreaElement {
 // insertText
 // ──────────────────────────────────────────────
 
-QUnit.module("input-operations — insertText", {
+QUnit.module("input-operations - insertText", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -95,7 +95,7 @@ QUnit.test("Inserts multi-character text", (assert) => {
 });
 
 QUnit.test("Falls back to dom.value when no UI5 element", (assert) => {
-  // Raw DOM input not attached to any UI5 control — Element.closestTo returns null
+  // Raw DOM input not attached to any UI5 control - Element.closestTo returns null
   const input = makeInput("test", [0, 0]);
   const result = insertText(input, "A", [0, 0]);
 
@@ -115,7 +115,7 @@ QUnit.test("Works in a textarea with newlines", (assert) => {
 // handleBackspace
 // ──────────────────────────────────────────────
 
-QUnit.module("input-operations — handleBackspace", {
+QUnit.module("input-operations - handleBackspace", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -133,7 +133,7 @@ QUnit.test("Returns null at position 0 with no selection", (assert) => {
   const input = makeInput("abc", [0, 0]);
   const result = handleBackspace(input, [0, 0]);
 
-  assert.strictEqual(result, null, "Returns null — nothing to delete");
+  assert.strictEqual(result, null, "Returns null - nothing to delete");
   assert.strictEqual(input.value, "abc", "Value unchanged");
 });
 
@@ -211,7 +211,7 @@ QUnit.test("Selection removal takes precedence over grapheme deletion", (assert)
 // handleNavigation
 // ──────────────────────────────────────────────
 
-QUnit.module("input-operations — handleNavigation", {
+QUnit.module("input-operations - handleNavigation", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -407,7 +407,7 @@ QUnit.test("ArrowUp collapses selection and moves from start position", (assert)
 // setTargetValue
 // ──────────────────────────────────────────────
 
-QUnit.module("input-operations — setTargetValue", {
+QUnit.module("input-operations - setTargetValue", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -545,7 +545,7 @@ QUnit.test("Does not fire liveChange when not supported", (assert) => {
 // fireTargetChange
 // ──────────────────────────────────────────────
 
-QUnit.module("input-operations — fireTargetChange");
+QUnit.module("input-operations - fireTargetChange");
 
 QUnit.test("Fires change event when supported", (assert) => {
   let firedEvent = "";

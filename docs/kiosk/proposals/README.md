@@ -4,4 +4,3 @@ These documents describe forward-looking design ideas and may diverge from the c
 
 - [Backward Compatibility](./BACKWARD-COMPATIBILITY.md)
 - [Tab and Done Keys](./TAB-AND-DONE-KEYS.md)
-- [Web Component Package](./WEBCOMPONENT-PACKAGE.md)

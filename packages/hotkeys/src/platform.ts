@@ -1,1 +1,1 @@
-export { detectPlatform, resolveModifier, _resetPlatformCache } from "./internal/platform";
+export { detectPlatform, resolveModifier } from "./internal/platform";

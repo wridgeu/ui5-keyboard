@@ -126,7 +126,8 @@ export function unregisterLayout(sName: string): void {
  * Removes all custom layouts and keeps built-in layouts intact.
  */
 export function resetCustomLayouts(): void {
-  for (const layoutName of layouts.keys()) {
+  // eslint-disable-next-line unicorn/no-useless-spread -- snapshot keys before deleting during iteration
+  for (const layoutName of [...layouts.keys()]) {
     if (!BUILTIN_LAYOUTS.has(layoutName)) {
       layouts.delete(layoutName);
     }

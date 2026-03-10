@@ -59,7 +59,7 @@ describe("inputmode suppression", () => {
       const input = await getInput("input-native");
       await input.click();
 
-      // Verify keyboard does NOT open — wait briefly then assert
+      // Verify keyboard does NOT open - wait briefly then assert
       try {
         await browser.waitUntil(() => isKeyboardOpen("kb-native"), { timeout: 500 });
         expect(false).toBe(true); // Should not reach here

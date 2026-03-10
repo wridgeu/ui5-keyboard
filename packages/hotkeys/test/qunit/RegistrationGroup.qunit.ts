@@ -140,7 +140,7 @@ QUnit.test("destroyAll is idempotent", (assert) => {
 
   group.register("F5", () => {});
   group.destroyAll();
-  group.destroyAll(); // second call — no throw
+  group.destroyAll(); // second call - no throw
 
   assert.ok(group.isDestroyed, "Still destroyed after second call");
   assert.strictEqual(group.size, 0, "Size is 0");
@@ -254,7 +254,7 @@ QUnit.test("onPending fires on intermediate key and dies with unregister", (asse
 
   handle.unregister();
 
-  // New sequence without onPending — should not fire the old callback
+  // New sequence without onPending - should not fire the old callback
   group.registerSequence(["G", "I"], () => {});
   fireKey("g");
   assert.strictEqual(calls.length, 1, "onPending does not fire after unregister");
@@ -277,7 +277,7 @@ QUnit.test("onPending dies with group.destroyAll", (assert) => {
 
   group.destroyAll();
 
-  // New sequence on fresh group — old onPending must not fire
+  // New sequence on fresh group - old onPending must not fire
   const group2 = manager.createGroup();
   group2.registerSequence(["G", "I"], () => {});
   fireKey("g");

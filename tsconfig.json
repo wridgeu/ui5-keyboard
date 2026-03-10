@@ -21,5 +21,9 @@
     "composite": true
   },
   "files": [],
-  "references": [{ "path": "packages/hotkeys" }, { "path": "packages/kiosk-keyboard" }]
+  "references": [
+    { "path": "packages/hotkeys" },
+    { "path": "packages/kiosk-keyboard" },
+    { "path": "packages/kiosk-keyboard-webc" }
+  ]
 }

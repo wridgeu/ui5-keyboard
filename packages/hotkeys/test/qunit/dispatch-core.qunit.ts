@@ -52,7 +52,7 @@ function mockKeyEvent(overrides: { key: string } & Partial<KeyboardEvent>): Keyb
   } as unknown as KeyboardEvent;
 }
 
-/** Minimal toRegistrationInfo stub — only the id is inspected in assertions. */
+/** Minimal toRegistrationInfo stub - only the id is inspected in assertions. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toInfo: Parameters<typeof findMatchInScope>[0]["toRegistrationInfo"] = (reg) => ({ id: reg.id }) as any;
 
@@ -62,7 +62,7 @@ const LOG_COMPONENT = "test.dispatch-core";
 // findMatchInScope
 // ──────────────────────────────────────────────
 
-QUnit.module("dispatch-core — findMatchInScope");
+QUnit.module("dispatch-core - findMatchInScope");
 
 QUnit.test("Returns matching registration when all conditions pass", (assert) => {
   const reg = makeRegistration("esc", "Escape");
@@ -114,10 +114,10 @@ QUnit.test("Returns first matching registration in order", (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// findMatchInScope — skip reasons
+// findMatchInScope - skip reasons
 // ──────────────────────────────────────────────
 
-QUnit.module("dispatch-core — findMatchInScope skip reasons");
+QUnit.module("dispatch-core - findMatchInScope skip reasons");
 
 QUnit.test("Skips disabled registration (boolean false)", (assert) => {
   const reg = makeRegistration("dis", "Escape", { enabled: false });

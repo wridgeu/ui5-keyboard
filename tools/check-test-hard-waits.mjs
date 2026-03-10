@@ -1,100 +1,125 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 const repoRoot = process.cwd();
-const testRoots = [
-  path.join(repoRoot, "packages", "hotkeys", "test"),
-  path.join(repoRoot, "packages", "kiosk-keyboard", "test"),
-];
 
-const fileExtensions = new Set([".ts", ".js", ".mjs", ".cjs"]);
+// Auto-discover test directories from workspace packages
+const testRoots = fs.globSync("packages/*/test", { cwd: repoRoot }).map((p) => path.join(repoRoot, p));
 
-function toPosixPath(filePath) {
-  return filePath.split(path.sep).join("/");
+const testFileGlob = "**/*.{ts,js,mjs,cjs}";
+
+// ── AST helpers ──
+
+/** Returns true if the node is a property-access call like `obj.method(...)`. */
+function isMethodCall(node, objName, methodName) {
+  if (!ts.isCallExpression(node)) return false;
+  const expr = node.expression;
+  if (!ts.isPropertyAccessExpression(expr)) return false;
+  return ts.isIdentifier(expr.expression) && expr.expression.text === objName && expr.name.text === methodName;
 }
 
-function isE2ETestFile(filePath) {
-  return toPosixPath(filePath).includes("/test/e2e/");
+/**
+ * Returns true if the node is `await new Promise(resolve => setTimeout(resolve, N))`
+ * where N > 0.
+ */
+function isAwaitedSetTimeoutSleep(node) {
+  if (!ts.isAwaitExpression(node)) return false;
+  const inner = node.expression;
+
+  if (!ts.isNewExpression(inner)) return false;
+  if (!ts.isIdentifier(inner.expression) || inner.expression.text !== "Promise") return false;
+
+  const args = inner.arguments;
+  if (!args || args.length !== 1) return false;
+  const callback = args[0];
+
+  if (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback)) return false;
+
+  const body = callback.body;
+  let callExpr;
+  if (ts.isCallExpression(body)) {
+    callExpr = body;
+  } else if (ts.isBlock(body) && body.statements.length === 1) {
+    const stmt = body.statements[0];
+    if (ts.isExpressionStatement(stmt) && ts.isCallExpression(stmt.expression)) {
+      callExpr = stmt.expression;
+    }
+  }
+  if (!callExpr) return false;
+
+  if (!ts.isIdentifier(callExpr.expression) || callExpr.expression.text !== "setTimeout") return false;
+  const stArgs = callExpr.arguments;
+  if (!stArgs || stArgs.length < 2) return false;
+
+  const delay = stArgs[1];
+  if (!ts.isNumericLiteral(delay)) return false;
+  return Number.parseInt(delay.text, 10) > 0;
 }
 
-const hardWaitPatterns = [
+// ── Rule definitions ──
+
+const rules = [
   {
     name: "browser.pause",
-    regex: /\bbrowser\.pause\s*\(/g,
     message: "Use waitUntil/waitFor* conditions instead of browser.pause().",
+    match: (node) => isMethodCall(node, "browser", "pause"),
   },
   {
     name: "await setTimeout sleep",
-    regex:
-      /await\s+new\s+Promise\s*\(\s*(?:\(\s*resolve\s*\)|resolve)\s*=>\s*setTimeout\s*\(\s*resolve\s*,\s*(\d+)\s*\)\s*\)\s*;?/g,
     message: "Use waitUntil/waitFor* conditions instead of fixed setTimeout sleeps in e2e tests.",
-    fileFilter: isE2ETestFile,
-    shouldReport: (match) => Number.parseInt(match[1], 10) > 0,
+    fileFilter: (filePath) => filePath.includes("/e2e/"),
+    match: (node) => isAwaitedSetTimeoutSleep(node),
   },
 ];
 
-function walk(dir) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...walk(fullPath));
-      continue;
+// ── AST visitor ──
+
+function collectViolations(sourceFile, applicableRules) {
+  const hits = [];
+
+  function visit(node) {
+    for (const rule of applicableRules) {
+      if (rule.match(node)) {
+        const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+        hits.push({ line: line + 1, name: rule.name, message: rule.message });
+      }
     }
-    if (entry.isFile() && fileExtensions.has(path.extname(entry.name))) {
-      files.push(fullPath);
-    }
+    ts.forEachChild(node, visit);
   }
-  return files;
+
+  visit(sourceFile);
+  return hits;
 }
 
-function getLineNumber(source, index) {
-  let line = 1;
-  for (let i = 0; i < index; i++) {
-    if (source[i] === "\n") line++;
-  }
-  return line;
-}
+// ── Main ──
 
 const violations = [];
 
 for (const root of testRoots) {
-  if (!fs.existsSync(root)) continue;
+  const files = fs.globSync(testFileGlob, { cwd: root }).map((f) => path.join(root, f));
 
-  for (const filePath of walk(root)) {
+  for (const filePath of files) {
+    const posixPath = filePath.split(path.sep).join("/");
+    const applicableRules = rules.filter((r) => !r.fileFilter || r.fileFilter(posixPath));
+    if (applicableRules.length === 0) continue;
+
     const source = fs.readFileSync(filePath, "utf8");
-    for (const pattern of hardWaitPatterns) {
-      if (pattern.fileFilter && !pattern.fileFilter(filePath)) {
-        continue;
-      }
+    const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true);
 
-      pattern.regex.lastIndex = 0;
-      let match;
-      while ((match = pattern.regex.exec(source)) !== null) {
-        if (pattern.shouldReport && !pattern.shouldReport(match)) {
-          continue;
-        }
-
-        violations.push({
-          filePath,
-          line: getLineNumber(source, match.index),
-          name: pattern.name,
-          message: pattern.message,
-        });
-      }
+    for (const hit of collectViolations(sourceFile, applicableRules)) {
+      violations.push({ filePath, ...hit });
     }
   }
 }
 
 if (violations.length === 0) {
   console.log("No test hard-wait violations found.");
-  process.exit(0);
+  process.exitCode = 0;
+} else {
+  console.error("Test hard-wait violations found:");
+  for (const v of violations) {
+    console.error(`- ${path.relative(repoRoot, v.filePath)}:${v.line} (${v.name}) ${v.message}`);
+  }
+  process.exitCode = 1;
 }
-
-console.error("Test hard-wait violations found:");
-for (const violation of violations) {
-  const relative = path.relative(repoRoot, violation.filePath);
-  console.error(`- ${relative}:${violation.line} (${violation.name}) ${violation.message}`);
-}
-process.exit(1);

@@ -107,7 +107,7 @@ QUnit.test("setLayout with unregistered name is ignored and keeps current layout
   assert.strictEqual(resolved.length, 5, "QWERTY layout has 5 rows");
 
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("q"), "QWERTY keys rendered — unregistered name had no effect");
+  assert.ok(keys.includes("q"), "QWERTY keys rendered - unregistered name had no effect");
 
   kb.destroy();
 });
@@ -134,7 +134,7 @@ QUnit.test("Layout switch updates rendered keys", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // Initially QWERTY — has alphabetic keys
+  // Initially QWERTY - has alphabetic keys
   let keys = getKeyElements(kb);
   const initialKeyValues = Array.from(keys).map((k) => k.dataset.key);
   assert.ok(initialKeyValues.includes("q"), "QWERTY has 'q' key");

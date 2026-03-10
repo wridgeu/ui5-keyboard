@@ -7,10 +7,10 @@ import type { CanonicalModifier, ParsedHotkey } from "../types";
  * Parse a hotkey string into its constituent parts.
  *
  * Supports formats like:
- * - `"Mod+S"` — platform-aware modifier
- * - `"Ctrl+Shift+K"` — explicit modifiers
- * - `"Escape"` — standalone key
- * - `"Mod++"` — literal "+" key (last segment after split)
+ * - `"Mod+S"` - platform-aware modifier
+ * - `"Ctrl+Shift+K"` - explicit modifiers
+ * - `"Escape"` - standalone key
+ * - `"Mod++"` - literal "+" key (last segment after split)
  *
  * @param hotkey - The hotkey string to parse.
  * @param platform - Override platform for Mod resolution. Defaults to detected platform.

@@ -158,6 +158,11 @@
           "name": "kioskI18nExtensibility",
           "pattern": "kiosk/i18n-extensibility",
           "target": "kioskI18nExtensibility"
+        },
+        {
+          "name": "kioskWebComponent",
+          "pattern": "kiosk/web-component",
+          "target": "kioskWebComponent"
         }
       ],
       "targets": {
@@ -236,6 +241,10 @@
         "kioskI18nExtensibility": {
           "id": "kioskI18nExtensibility",
           "name": "KioskI18nExtensibility"
+        },
+        "kioskWebComponent": {
+          "id": "kioskWebComponent",
+          "name": "KioskWebComponent"
         }
       }
     },

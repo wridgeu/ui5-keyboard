@@ -1,4 +1,4 @@
-# Feature: Backward Compatibility — Kiosk Keyboard Library
+# Feature: Backward Compatibility: Kiosk Keyboard Library
 
 > Status: Proposal
 
@@ -74,7 +74,7 @@ static getLocaleLayout(): string {
 }
 ```
 
-**Replacement** — parse BCP-47 tag from `navigator.language`:
+**Replacement**: parse BCP-47 tag from `navigator.language`:
 
 ```ts
 static getLocaleLayout(): string {
@@ -101,12 +101,12 @@ static getLocaleLayout(): string {
 
 **Why `navigator.language` instead of a UI5 API:**
 
-- `getLocaleLayout()` is a static method called before/during control construction — no UI5 core dependency needed.
+- `getLocaleLayout()` is a static method called before/during control construction, so no UI5 core dependency needed.
 - `navigator.language` reflects the same browser locale that UI5 auto-detects from when no explicit `sap-language` is configured.
 - For explicit `sap-language` URL parameter scenarios, apps should set the layout explicitly via the `layout` property anyway (the locale-detection is a sensible default, not a contract).
 - Eliminates the `sap/base/i18n/Localization` import entirely from the library source.
 
-**Alternative** — import from `sap/ui/core/Configuration` (deprecated at 1.120, available at 1.118):
+**Alternative**: import from `sap/ui/core/Configuration` (deprecated at 1.120, available at 1.118):
 
 ```ts
 import Configuration from "sap/ui/core/Configuration";
@@ -124,23 +124,23 @@ import Element from "sap/ui/core/Element";
 const el = Element.getElementById(id);
 ```
 
-**Replacement** — use `Element.registry.get()`:
+**Replacement**: use `Element.registry.get()`:
 
 ```ts
 import Element from "sap/ui/core/Element";
 const el = Element.registry.get(id);
 ```
 
-`Element.registry` is a `Map`-like object exposed since ~1.67 and is the underlying store that `getElementById()` wraps. It's not deprecated — `getElementById()` was added as a convenience wrapper in 1.119.
+`Element.registry` is a `Map`-like object exposed since ~1.67 and is the underlying store that `getElementById()` wraps. It's not deprecated. `getElementById()` was added as a convenience wrapper in 1.119.
 
 **Call sites to update:**
 
 | Line | Context                                      | Current                                           | Replacement                                     |
 | ---- | -------------------------------------------- | ------------------------------------------------- | ----------------------------------------------- |
-| 646  | `setTargetInput` — resolve new target        | `Element.getElementById(newId)`                   | `Element.registry.get(newId)`                   |
-| 839  | `_resolveTarget` — global registry fallback  | `Element.getElementById(targetId)`                | `Element.registry.get(targetId)`                |
-| 1315 | `_getTargetElement` — get associated element | `Element.getElementById(id)`                      | `Element.registry.get(id)`                      |
-| 1420 | `_removeHighlightDelegation` — cleanup       | `Element.getElementById(this._highlightTargetId)` | `Element.registry.get(this._highlightTargetId)` |
+| 646  | `setTargetInput` - resolve new target        | `Element.getElementById(newId)`                   | `Element.registry.get(newId)`                   |
+| 839  | `_resolveTarget` - global registry fallback  | `Element.getElementById(targetId)`                | `Element.registry.get(targetId)`                |
+| 1315 | `_getTargetElement` - get associated element | `Element.getElementById(id)`                      | `Element.registry.get(id)`                      |
+| 1420 | `_removeHighlightDelegation` - cleanup       | `Element.getElementById(this._highlightTargetId)` | `Element.registry.get(this._highlightTargetId)` |
 
 ### 3. Replace `Element.getActiveElement()` (1 call site)
 
@@ -153,7 +153,7 @@ if (delegateTarget instanceof Control) {
 }
 ```
 
-**Replacement** — DOM-based lookup via `Element.closestTo()` (since 1.106):
+**Replacement**: DOM-based lookup via `Element.closestTo()` (since 1.106):
 
 ```ts
 const activeDom = document.activeElement;
@@ -204,8 +204,8 @@ This provides compile-time enforcement: any API not present at 1.118 produces a 
 | ---------------- | ----------- | ------------------------------------------------- |
 | TypeScript types | **1.118.0** | Compile-time: prevents >1.118 API usage in source |
 | Dev server       | **1.144.0** | Convenient for local development                  |
-| CI (primary)     | **1.144.0** | Main test run — forward compatibility             |
-| CI (compat)      | **1.118.0** | Backward compat — catches runtime issues          |
+| CI (primary)     | **1.144.0** | Main test run, forward compatibility              |
+| CI (compat)      | **1.118.0** | Backward compat, catches runtime issues           |
 
 Test source files (`test/`) use `Localization.getLanguage()` (1.120+), `XMLView.create()`, and other newer APIs. These don't ship and only need to work against the runtime they execute on. For the CI compat run against 1.118:
 
@@ -232,11 +232,11 @@ Test source files (`test/`) use `Localization.getLanguage()` (1.120+), `XMLView.
 
 ## Considerations
 
-- **`navigator.language` vs UI5 Localization**: When an app explicitly sets `sap-language=XX` in the URL, `navigator.language` won't reflect it but `Localization.getLanguageTag()` would. This is acceptable because `getLocaleLayout()` is a sensible default — apps with explicit language requirements should set the `layout` property directly. Document this in the JSDoc.
+- **`navigator.language` vs UI5 Localization**: When an app explicitly sets `sap-language=XX` in the URL, `navigator.language` won't reflect it but `Localization.getLanguageTag()` would. This is acceptable because `getLocaleLayout()` is a sensible default, and apps with explicit language requirements should set the `layout` property directly. Document this in the JSDoc.
 - **`Element.registry` availability**: `Element.registry` has been public API since at least 1.80 and is used extensively in UI5's own codebase. It's not deprecated and won't be removed (it's the underlying store for all element registrations).
 - **Shared types in monorepo**: If both libraries target 1.118, a single `@openui5/types@1.118.0` at the root works. If they diverge, move types to per-package `devDependencies`.
 - **Renderer apiVersion fallback**: Going from 4 to 2 has no visual or functional impact. The difference is that apiVersion 4 can skip re-rendering when only the parent context changes. For a keyboard control that rarely has parent-context-only changes, this optimization is negligible.
 
 ## Migration
 
-Non-breaking for consumers. The public API surface is unchanged — only internal implementation details change. The lower `minUI5Version` strictly expands compatibility.
+Non-breaking for consumers. The public API surface is unchanged; only internal implementation details change. The lower `minUI5Version` strictly expands compatibility.

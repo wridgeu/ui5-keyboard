@@ -14,9 +14,9 @@ newValue = dom.value.slice(0, start - 1) + dom.value.slice(start);
 newPos = start - 1;
 ```
 
-JavaScript strings are UTF-16 encoded. Characters outside the Basic Multilingual Plane (most emojis, some CJK, mathematical symbols) are stored as **surrogate pairs** — two code units for one visible character. The `- 1` deletes only half the pair, leaving an orphaned surrogate that renders as an unrecognized symbol (often `�` or a blank box). The user must press backspace a second time to remove the other half.
+JavaScript strings are UTF-16 encoded. Characters outside the Basic Multilingual Plane (most emojis, some CJK, mathematical symbols) are stored as **surrogate pairs**, two code units for one visible character. The `- 1` deletes only half the pair, leaving an orphaned surrogate that renders as an unrecognized symbol (often `�` or a blank box). The user must press backspace a second time to remove the other half.
 
-This directly affects the demo app's emoji custom layout, where every emoji except `⭐` (U+2B50) and `✅` (U+2705) is a surrogate pair. The `❤️` (U+2764 + U+FE0F variation selector) is even worse — three code units, requiring three backspace presses.
+This directly affects the demo app's emoji custom layout, where every emoji except `⭐` (U+2B50) and `✅` (U+2705) is a surrogate pair. The `❤️` (U+2764 + U+FE0F variation selector) is even worse: three code units, requiring three backspace presses.
 
 The problem extends beyond emojis. A general-purpose virtual keyboard must handle all of Unicode correctly. Examples of multi-code-unit grapheme clusters:
 
@@ -49,13 +49,13 @@ When the caret lands between two halves of a surrogate pair, subsequent typing o
 
 ### Why this is a library concern, not a consumer concern
 
-The keyboard control inserts multi-code-unit characters as a single operation via `insertText()`. Backspace should symmetrically delete them as a single operation. This is what every real keyboard — physical and virtual — does. A layout author providing `{ value: "\u{1F600}" }` has every right to expect that one backspace removes it. Pushing grapheme-awareness onto the consumer or layout definition would be a DX failure.
+The keyboard control inserts multi-code-unit characters as a single operation via `insertText()`. Backspace should symmetrically delete them as a single operation. This is what every real keyboard, physical and virtual, does. A layout author providing `{ value: "\u{1F600}" }` has every right to expect that one backspace removes it. Pushing grapheme-awareness onto the consumer or layout definition would be a DX failure.
 
 ## Proposal
 
 ### Use `Intl.Segmenter` for grapheme boundary detection
 
-The `Intl.Segmenter` API with `granularity: "grapheme"` correctly handles all of the above cases — surrogate pairs, variation selectors, ZWJ sequences, combining marks, and regional indicators. It is supported in all browsers that the kiosk keyboard targets (Chrome 87+, Edge 87+, Safari 15.4+, Firefox 125+).
+The `Intl.Segmenter` API with `granularity: "grapheme"` correctly handles all of the above cases: surrogate pairs, variation selectors, ZWJ sequences, combining marks, and regional indicators. It is supported in all browsers that the kiosk keyboard targets (Chrome 87+, Edge 87+, Safari 15.4+, Firefox 125+).
 
 Create a small utility module that segments a string into grapheme clusters and resolves boundary offsets:
 
@@ -74,7 +74,7 @@ export function graphemeLengthBefore(value: string, offset: number): number {
   const before = value.slice(0, offset);
   const segments = segmenter.segment(before);
 
-  // Walk to last segment — Intl.Segmenter is iterable but not indexable
+  // Walk to last segment - Intl.Segmenter is iterable but not indexable
   let last: Intl.SegmentData | undefined;
   for (const seg of segments) {
     last = seg;
@@ -106,7 +106,7 @@ Replace the fixed `- 1` with a grapheme-length lookup:
 }
 ```
 
-One backspace now removes the entire grapheme cluster — whether it is 1, 2, 4, or 8 code units.
+One backspace now removes the entire grapheme cluster, whether it is 1, 2, 4, or 8 code units.
 
 ### Patch `handleNavigation()`
 
@@ -137,7 +137,7 @@ case "ArrowRight":
 
 ### No change to `resolveVerticalCaret()`
 
-ArrowUp/ArrowDown use `resolveVerticalCaret()` which operates on line boundaries (`\n` positions). Newlines are always single code units, so the line-start/line-end calculations remain correct. The column clamping (`Math.min(column, lineLen)`) may land inside a grapheme cluster at line edges, but this is consistent with how native textareas handle vertical caret movement — they also use code-unit columns, not grapheme columns. Changing this would be over-engineering for an edge case that doesn't arise in practice (kiosk keyboards rarely have multi-line emoji input).
+ArrowUp/ArrowDown use `resolveVerticalCaret()` which operates on line boundaries (`\n` positions). Newlines are always single code units, so the line-start/line-end calculations remain correct. The column clamping (`Math.min(column, lineLen)`) may land inside a grapheme cluster at line edges, but this is consistent with how native textareas handle vertical caret movement; they also use code-unit columns, not grapheme columns. Changing this would be over-engineering for an edge case that doesn't arise in practice (kiosk keyboards rarely have multi-line emoji input).
 
 ## Scope
 
@@ -158,15 +158,15 @@ ArrowUp/ArrowDown use `resolveVerticalCaret()` which operates on line boundaries
 
 ### Out of scope
 
-- `resolveVerticalCaret()` (ArrowUp/ArrowDown) — line-boundary logic is unaffected
-- `insertText()` — already correct
-- `Ctrl+Backspace` (word-level deletion) — the kiosk keyboard does not support modifier+backspace
-- Grapheme cluster display width in the keyboard layout rendering — keys already render emoji correctly via CSS
+- `resolveVerticalCaret()` (ArrowUp/ArrowDown): line-boundary logic is unaffected
+- `insertText()`: already correct
+- `Ctrl+Backspace` (word-level deletion): the kiosk keyboard does not support modifier+backspace
+- Grapheme cluster display width in the keyboard layout rendering: keys already render emoji correctly via CSS
 
 ## Considerations
 
 - **`Intl.Segmenter` availability**: Fully supported in Chrome 87+ (2020), Edge 87+ (2020), Safari 15.4+ (2022), Firefox 125+ (2024). Since the kiosk keyboard targets embedded Chromium kiosks, this is a non-issue. OpenUI5 1.120+ already dropped IE11.
-- **Performance**: `Intl.Segmenter` is instantiated once at module level (singleton). Per-keystroke cost is segmenting the substring before the cursor — negligible for input field lengths.
+- **Performance**: `Intl.Segmenter` is instantiated once at module level (singleton). Per-keystroke cost is segmenting the substring before the cursor, negligible for input field lengths.
 - **Fallback**: The implementation now uses a defensive fallback to single code-unit steps when `Intl.Segmenter` is unavailable or throws at runtime. This avoids module-init/runtime failures in constrained environments while preserving grapheme-aware behavior in modern browsers.
 - **Selection deletion**: When there is an active selection (`start !== end`), backspace already correctly deletes the entire selection regardless of grapheme boundaries. No change needed for this path.
 

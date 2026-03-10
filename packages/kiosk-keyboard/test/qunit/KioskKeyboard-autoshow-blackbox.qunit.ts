@@ -178,7 +178,7 @@ QUnit.test(
     assert.strictEqual(
       kb.getTargetInput(),
       inputC.getId(),
-      "Target is inputC — re-entrant setTargetInput from change handler wins",
+      "Target is inputC - re-entrant setTargetInput from change handler wins",
     );
 
     inputA.destroy();
@@ -226,11 +226,11 @@ QUnit.test(
     (inputB.getFocusDomRef() as HTMLElement).focus();
     await nextUIUpdate();
 
-    assert.strictEqual(kb.getTargetInput(), inputC.getId(), "Target is inputC — re-entrant call wins");
+    assert.strictEqual(kb.getTargetInput(), inputC.getId(), "Target is inputC - re-entrant call wins");
     assert.strictEqual(
       kb.getKeyboardType(),
       "Numpad",
-      "Keyboard type is Numpad from inputC — outer call did not overwrite",
+      "Keyboard type is Numpad from inputC - outer call did not overwrite",
     );
 
     inputA.destroy();

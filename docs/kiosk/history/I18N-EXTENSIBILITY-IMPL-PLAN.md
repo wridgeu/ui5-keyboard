@@ -5,7 +5,7 @@ Incorporates findings from a colleague's plan (merged and superseded).
 
 > **Implementation note:** This plan envisioned keeping `src/internal/i18n.ts`
 > as a thin re-export facade for import stability. During implementation the
-> facade was removed — `KioskKeyboard.ts` and `KioskKeyboardRenderer.ts`
+> facade was removed; `KioskKeyboard.ts` and `KioskKeyboardRenderer.ts`
 > import directly from `src/internal/i18n-registry.ts`. The public API is
 > unchanged: consumers use the static methods on `KioskKeyboard`.
 
@@ -31,7 +31,7 @@ New public surface:
 `configureI18n` returns `Promise<void>`. Enhancement bundles are
 loaded asynchronously to avoid the sync `ResourceBundle.create`
 deprecation (since UI5 1.135). Consumers can `await` for guaranteed
-bundle availability, or fire-and-forget — the control re-renders
+bundle availability, or fire-and-forget; the control re-renders
 automatically when bundles finish loading.
 
 No new control properties, events, or aggregations.
@@ -43,14 +43,14 @@ The `layout-registry` already depends on `Localization.getLanguageTag()`
 (1.120+), so no additional version requirement is introduced by this
 feature. Key implications:
 
-- `Localization.attachChange` / `detachChange` (since 1.120) — **not
+- `Localization.attachChange` / `detachChange` (since 1.120): **not
   used**. Language change detection uses the `onLocalizationChanged`
   control lifecycle hook instead (available since earliest UI5 versions).
-- `Localization.getLanguageTag()` (since 1.120) — used by
+- `Localization.getLanguageTag()` (since 1.120): used by
   `layout-registry` for locale-based layout resolution.
-- `Localization.getLanguageTag()` (since 1.120) — also used by
+- `Localization.getLanguageTag()` (since 1.120): also used by
   `i18n-registry` for the override hook context's `locale` field.
-- Async `ResourceBundle.create({ async: true })` — available since
+- Async `ResourceBundle.create({ async: true })`: available since
   well before 1.120. No version concern.
 
 ---
@@ -63,7 +63,7 @@ All paths relative to `packages/kiosk-keyboard/`.
 | ----------------------------------------- | ------- | --------------------------------------------------------------------- |
 | `src/types.ts`                            | modify  | Export i18n config/hook/context types                                 |
 | `src/internal/i18n-registry.ts`           | **new** | Full resolution logic, config/hook storage, async loading, validation |
-| `src/internal/i18n.ts`                    | modify  | Thin facade — delegates to registry                                   |
+| `src/internal/i18n.ts`                    | modify  | Thin facade: delegates to registry                                    |
 | `src/KioskKeyboard.ts`                    | modify  | Static facade methods + `onLocalizationChanged` hook                  |
 | `test/qunit/i18n-registry.qunit.ts`       | **new** | Registry unit tests                                                   |
 | `test/qunit/KioskKeyboard.qunit.ts`       | modify  | Integration tests for rendered labels/ARIA with i18n config           |
@@ -112,7 +112,7 @@ export interface KioskI18nConfig {
    * Applies as default `supportedLocales` for enhancement entries
    * that do not declare their own.
    *
-   * Does **not** reconfigure the base library bundle — its locale
+   * Does **not** reconfigure the base library bundle; its locale
    * list is determined by shipped `.properties` files.
    */
   readonly supportedLocales?: readonly string[];
@@ -139,7 +139,7 @@ export interface KioskI18nOverrideContext {
   readonly key: string;
   /**
    * Current locale string (BCP47 format, e.g. `"de"`, `"en-US"`).
-   * Derived via a version-safe utility — see implementation notes.
+   * Derived via a version-safe utility; see implementation notes.
    */
   readonly locale: string;
   /** Hardcoded fallback passed by the call site. */
@@ -168,11 +168,11 @@ Design notes:
   misconfiguration at compile time for TS consumers. Runtime
   validation still guards JS consumers.
 - `interface` for shapes (`KioskI18nConfig`, `KioskI18nOverrideContext`),
-  `type` for unions and function signatures — follows TS conventions.
+  `type` for unions and function signatures: follows TS conventions.
 
 ---
 
-## 4. Internal Registry — `src/internal/i18n-registry.ts`
+## 4. Internal Registry: `src/internal/i18n-registry.ts`
 
 Blueprint: `internal/layout-registry.ts`. Owns all resolution logic;
 `i18n.ts` becomes a thin import-stable facade.
@@ -224,10 +224,10 @@ export function getText(key: string, fallback: string): string;
 export function reloadBundles(): Promise<void>;
 ```
 
-### 4.3 `getText` — Full Resolution Owned by Registry
+### 4.3 `getText`: Full Resolution Owned by Registry
 
 The registry owns the complete lookup. `i18n.ts` delegates entirely.
-`getText` is a **pure synchronous read** — it never triggers bundle
+`getText` is a **pure synchronous read**; it never triggers bundle
 loading. It reads whatever `enhancementBundles` are available (which
 may be `null` during the loading gap after `configureI18n` or a
 locale change).
@@ -245,7 +245,7 @@ export function getText(key: string, fallback: string): string {
 
   let resolved = baseText;
 
-  // Enhancement bundles (last entry wins) — only if already loaded
+  // Enhancement bundles (last entry wins) - only if already loaded
   if (enhancementBundles) {
     for (let i = enhancementBundles.length - 1; i >= 0; i--) {
       const enhanced = enhancementBundles[i].getText(key, undefined, true);
@@ -281,11 +281,11 @@ export function getText(key: string, fallback: string): string {
 
 Resolution order matches the proposal:
 
-1. **Base library bundle** — `Lib.getResourceBundleFor("ui5.kiosk")`.
-2. **Enhancement bundles** — iterated in reverse; first hit from the
+1. **Base library bundle**: `Lib.getResourceBundleFor("ui5.kiosk")`.
+2. **Enhancement bundles**: iterated in reverse; first hit from the
    end wins. Skipped if bundles are still loading (`null`).
-3. **Override hook** — may replace or keep the resolved text.
-4. **Hardcoded fallback** — the caller's `fallback` parameter, used
+3. **Override hook**: may replace or keep the resolved text.
+4. **Hardcoded fallback**: the caller's `fallback` parameter, used
    when the base bundle has no entry.
 
 During the brief loading gap after `configureI18n()` or a locale
@@ -294,12 +294,12 @@ override hook remain available, only enhancement texts are temporarily
 absent. Once the async load completes, the control re-renders with
 the full chain.
 
-### 4.4 `configureI18n` — Validation and Async Loading
+### 4.4 `configureI18n`: Validation and Async Loading
 
 Follow existing kiosk DX: `Log.warning` + skip for recoverable issues,
 never throw.
 
-1. `config` must be a plain object — reject `null`, arrays, primitives.
+1. `config` must be a plain object; reject `null`, arrays, primitives.
 2. If `enhanceWith` is present, it must be an array.
 3. Each enhancement entry must have exactly one of `bundleName` or
    `bundleUrl` (not both, not neither). Skip invalid entries.
@@ -321,11 +321,11 @@ export function configureI18n(config: KioskI18nConfig): Promise<void> {
 }
 ```
 
-A deep freeze is unnecessary — `readonly` types guard TS consumers,
+A deep freeze is unnecessary; `readonly` types guard TS consumers,
 and the layout-registry stores definitions by reference without
 freezing. Keeping the same pattern here avoids inconsistency.
 
-#### `setI18nOverrideHook` — Validation
+#### `setI18nOverrideHook`: Validation
 
 Validate that the argument is a `function`. If not (e.g. `null`,
 `undefined`, non-function), log a warning and ignore the call. This
@@ -384,13 +384,13 @@ function loadBundles(): Promise<void> {
 
 Design choices:
 
-- **Async `ResourceBundle.create({ async: true })`** — avoids the
+- **Async `ResourceBundle.create({ async: true })`**: avoids the
   sync deprecation (since UI5 1.135). Async `ResourceBundle.create`
-  has been available since well before 1.118 — no version concern.
+  has been available since well before 1.118; no version concern.
 
   For **`bundleName`** bundles that are already in the preload cache
   (typical for component-preloaded consumer bundles), the Promise
-  resolves in the next microtask — the loading gap is invisible.
+  resolves in the next microtask; the loading gap is invisible.
 
   For **`bundleUrl`** bundles loaded over the network, there is a
   brief gap where the control renders with base-bundle text. Once
@@ -398,20 +398,20 @@ Design choices:
   the enhanced text. This is the standard async pattern for any
   resource loading.
 
-- **Generation counter** — prevents a classic async race: if the
+- **Generation counter**: prevents a classic async race: if the
   consumer calls `configureI18n` twice rapidly, only the latest
   load's results are stored. Earlier loads that resolve later are
   silently discarded.
 
-- **`Promise.all` + `catch` per entry** — one broken bundle does not
+- **`Promise.all` + `catch` per entry**: one broken bundle does not
   block or break the chain. Failed entries are filtered out.
 
-- **Conditional config object** — avoids passing `bundleName:
+- **Conditional config object**: avoids passing `bundleName:
 undefined` or `url: undefined` to `ResourceBundle.create`.
 
 ### 4.6 `resetI18nConfiguration`
 
-Resets enhancement config only. Does **not** clear the override hook —
+Resets enhancement config only. Does **not** clear the override hook;
 they are independent concerns. FLP cleanup calls both explicitly.
 
 Increments the generation counter to invalidate any in-flight async
@@ -446,7 +446,7 @@ When no config is active, this is a no-op.
 
 ---
 
-## 5. Thin Facade — `src/internal/i18n.ts`
+## 5. Thin Facade: `src/internal/i18n.ts`
 
 ```ts
 /**
@@ -477,7 +477,7 @@ via `KioskKeyboard._instances`.
 
 ```ts
 // ──────────────────────────────────────────────
-// Static delegates — i18n registry (see internal/i18n-registry.ts)
+// Static delegates - i18n registry (see internal/i18n-registry.ts)
 // ──────────────────────────────────────────────
 
 /**
@@ -506,12 +506,12 @@ via `KioskKeyboard._instances`.
  * @static
  */
 static configureI18n(config: KioskI18nConfig): Promise<void> {
-  // Immediate invalidation — clears stale enhancement texts
+  // Immediate invalidation - clears stale enhancement texts
   KioskKeyboard._invalidateAllInstances();
 
   const loaded = registryConfigureI18n(config);
 
-  // Deferred invalidation — picks up newly loaded enhancements
+  // Deferred invalidation - picks up newly loaded enhancements
   void loaded.then(() => KioskKeyboard._invalidateAllInstances());
 
   return loaded;
@@ -521,7 +521,7 @@ static configureI18n(config: KioskI18nConfig): Promise<void> {
  * Reset i18n enhancement configuration to library defaults.
  *
  * Clears all enhancement bundles and cancels any in-flight bundle
- * loads.  Does not affect the override hook — call
+ * loads.  Does not affect the override hook; call
  * {@link clearI18nOverrideHook} separately if needed.
  *
  * @since 1.x.0
@@ -585,17 +585,17 @@ import {
 } from "./internal/i18n-registry";
 ```
 
-### `configureI18n` — Double Invalidation
+### `configureI18n`: Double Invalidation
 
 The facade performs two invalidations:
 
-1. **Immediate** (sync) — clears stale enhancement texts from the
+1. **Immediate** (sync): clears stale enhancement texts from the
    previous config. The next render uses base-bundle-only text.
-2. **Deferred** (after Promise) — picks up the newly loaded
+2. **Deferred** (after Promise): picks up the newly loaded
    enhancements. The control re-renders with the full chain.
 
 For `bundleName` bundles in the preload cache, the Promise resolves
-in the next microtask — before the browser paints. The two
+in the next microtask, before the browser paints. The two
 invalidations are batched by UI5 into a single render, so the
 loading gap is invisible.
 
@@ -607,7 +607,7 @@ any async resource loading works in UI5.
 
 ## 7. UI5 and FLP Lifecycle
 
-### 7.1 Language Change — `onLocalizationChanged` Hook
+### 7.1 Language Change: `onLocalizationChanged` Hook
 
 When UI5's language changes at runtime, enhancement bundles must be
 re-created for the new locale and live controls must re-render so
@@ -621,18 +621,18 @@ documented in the `Localization.setLanguage` API docs:
 > _"Elements or Controls that implement the `onLocalizationChanged`
 > hook"_
 
-This hook is available since earliest UI5 versions — well before 1.118.
+This hook is available since earliest UI5 versions, well before 1.118.
 It does **not** require importing `sap/base/i18n/Localization`.
 
 ```ts
-// In KioskKeyboard.ts — instance method
+// In KioskKeyboard.ts - instance method
 
 /**
  * Called by UI5 framework when the language/locale changes.
  * Re-creates enhancement bundles for the new locale and
  * triggers a re-render.
  *
- * Note: not formally typed on sap.ui.core.Control — this is
+ * Note: not formally typed on sap.ui.core.Control; this is
  * a convention-based lifecycle hook (duck typing).
  */
 onLocalizationChanged(): void {
@@ -652,10 +652,10 @@ onLocalizationChanged(): void {
 
 Advantages over `Localization.attachChange`:
 
-- **1.118 compatible** — no dependency on 1.120+ APIs.
-- **Per-instance** — no static listener management, no ref-counting,
+- **1.118 compatible**: no dependency on 1.120+ APIs.
+- **Per-instance**: no static listener management, no ref-counting,
   no attach/detach in `init()`/`exit()`.
-- **Idiomatic** — this is the canonical UI5 pattern for controls
+- **Idiomatic**: this is the canonical UI5 pattern for controls
   reacting to locale changes.
 
 **Multiple instances:** If N keyboards exist, `onLocalizationChanged`
@@ -665,13 +665,13 @@ increments `generation` and starts loading; subsequent calls see the
 same `generation` and start new loads that resolve to the same result.
 Only the latest generation's result is stored.
 
-**Behavior change note:** This is a **new behavior** — previously,
+**Behavior change note:** This is a **new behavior**; previously,
 the keyboard did not react to locale changes and labels would only
 update on the next natural re-render. This is a correctness
 improvement (labels and ARIA text stay in sync with the active
 language) but should be acknowledged in release notes.
 
-### 7.2 FLP — Recommended Consumer Pattern
+### 7.2 FLP: Recommended Consumer Pattern
 
 ```ts
 // Component.ts
@@ -680,7 +680,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 export default class Component extends UIComponent {
   async init(): Promise<void> {
     super.init();
-    // Fire-and-forget is fine — the keyboard renders with base text
+    // Fire-and-forget is fine - the keyboard renders with base text
     // immediately, then re-renders when enhancement bundles load.
     KioskKeyboard.configureI18n({
       enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
@@ -704,9 +704,9 @@ export default class Component extends UIComponent {
 
 - `resetI18nConfiguration()` clears config only.
   `clearI18nOverrideHook()` clears the hook only.
-  They are independent concerns — a consumer may want to change their
+  They are independent concerns; a consumer may want to change their
   enhancement bundles without losing their hook, or vice versa.
-- Both are **idempotent** — calling either twice is harmless.
+- Both are **idempotent**: calling either twice is harmless.
 - `resetI18nConfiguration()` increments the generation counter,
   ensuring any in-flight async loads from the previous config are
   discarded when they resolve.
@@ -725,7 +725,7 @@ Rationale:
   of patches).
 - Avoids ordering ambiguities when multiple callers configure
   independently.
-- Mirrors how UI5's own `manifest.json` `i18n` section works — a
+- Mirrors how UI5's own `manifest.json` `i18n` section works: a
   declaration, not a delta.
 
 If a consumer needs to build up the config incrementally, they can
@@ -764,7 +764,7 @@ fallback in the renderer (`getText("KEY", "Fallback")`) runs upstream,
 so `resolvedText` is already non-empty. If the hook returns `""`,
 that is respected.
 
-### 8.4 `configureI18n({})` — Empty Config
+### 8.4 `configureI18n({})`: Empty Config
 
 Valid. No enhancement bundles are created (`loadBundles` short-circuits
 with an empty array). The resolution chain runs but only the base
@@ -831,7 +831,7 @@ object in `loadBundles()` (section 4.5).
 Structure mirrors `layout-registry.qunit.ts`.
 
 ```
-i18n-registry — configureI18n validation
+i18n-registry: configureI18n validation
   ├─ Accepts valid config with enhanceWith
   ├─ Accepts config without enhanceWith (locale-only)
   ├─ Rejects non-object config (null, array, string)
@@ -840,7 +840,7 @@ i18n-registry — configureI18n validation
   ├─ Skips invalid entries, keeps valid ones
   └─ Logs warning for invalid entries
 
-i18n-registry — async bundle loading
+i18n-registry: async bundle loading
   ├─ configureI18n returns a Promise that resolves after loading
   ├─ getText returns base text while bundles are loading
   ├─ getText returns enhanced text after Promise resolves
@@ -848,14 +848,14 @@ i18n-registry — async bundle loading
   ├─ resetI18nConfiguration cancels in-flight loads (generation guard)
   └─ reloadBundles re-creates bundles for current locale
 
-i18n-registry — enhancement bundle precedence
+i18n-registry: enhancement bundle precedence
   ├─ Base bundle text used when no enhancements configured
   ├─ Single enhancement overrides base bundle text
   ├─ Last enhancement wins when multiple provide same key
   ├─ Enhancement that does not provide a key falls through to base
   └─ Enhancement bundle error does not break resolution
 
-i18n-registry — override hook
+i18n-registry: override hook
   ├─ Hook receives correct context (key, locale, defaultText, resolvedText)
   ├─ Hook return replaces resolved text
   ├─ Hook returning undefined keeps resolved text
@@ -865,14 +865,14 @@ i18n-registry — override hook
   ├─ setI18nOverrideHook rejects non-function (null, string, number)
   └─ clearI18nOverrideHook removes hook
 
-i18n-registry — resetI18nConfiguration
+i18n-registry: resetI18nConfiguration
   ├─ Clears enhancement bundles
   ├─ Does NOT clear override hook
   ├─ Subsequent getText returns base bundle text only
-  ├─ Idempotent — double reset does not error
+  ├─ Idempotent: double reset does not error
   └─ New configureI18n after reset works correctly
 
-i18n-registry — KioskKeyboard facade
+i18n-registry: KioskKeyboard facade
   ├─ Static configureI18n returns Promise
   ├─ Static configureI18n performs double invalidation (immediate + deferred)
   ├─ Static resetI18nConfiguration clears config state
@@ -880,20 +880,20 @@ i18n-registry — KioskKeyboard facade
   ├─ getText reflects facade-configured enhancements (after await)
   └─ All four methods invalidate live instances
 
-i18n-registry — onLocalizationChanged
+i18n-registry: onLocalizationChanged
   ├─ Triggers bundle reload
   ├─ Invalidates instance immediately
   ├─ Re-renders with enhanced text after reload completes
   └─ No-op when no config is active
 
-i18n-registry — FLP lifecycle simulation
+i18n-registry: FLP lifecycle simulation
   ├─ Configure + hook in init, cleanup in destroy, next app sees defaults
   └─ Override hook does not leak across simulated app sessions
 ```
 
-### 9.2 Integration Tests — Existing Files
+### 9.2 Integration Tests: Existing Files
 
-**`KioskKeyboard.qunit.ts`** — add:
+**`KioskKeyboard.qunit.ts`**: add:
 
 - Root `aria-label` and `aria-roledescription` reflect enhancement text
   after `await configureI18n(...)`.
@@ -905,7 +905,7 @@ i18n-registry — FLP lifecycle simulation
 - Language switch re-renders existing control labels (not only new
   instances).
 
-**`negative-edge-cases.qunit.ts`** — add:
+**`negative-edge-cases.qunit.ts`**: add:
 
 - `configureI18n(null)` logs warning and rejects the returned Promise (no crash).
 - `configureI18n("string")` logs warning and rejects the returned Promise (no crash).
@@ -915,18 +915,18 @@ i18n-registry — FLP lifecycle simulation
   skips entry with both.
 - `setI18nOverrideHook(null)` logs warning, does not set hook.
 - `setI18nOverrideHook(42)` logs warning, does not set hook.
-- Cleanup in `afterEach` — verify no leftover config/hook.
+- Cleanup in `afterEach`: verify no leftover config/hook.
 
 ### 9.3 Test Helpers
 
 Stub `ResourceBundle.create` via sinon to return Promises that resolve
 with bundles providing controlled `getText()` responses. Avoids file
 I/O and is reliable in CI. The layout-registry tests already use
-sinon stubs for `Localization.getLanguageTag` — same pattern.
+sinon stubs for `Localization.getLanguageTag`; same pattern.
 
 For async tests, use sinon fake timers or `await` the returned
 `Promise` from `configureI18n`. The `onLocalizationChanged` tests
-need to await the deferred `reloadBundles` Promise — expose it
+need to await the deferred `reloadBundles` Promise; expose it
 via a test helper or resolve via `Promise.resolve().then()` chaining.
 
 ### 9.4 Backward Compatibility
@@ -946,7 +946,7 @@ add `resetI18nConfiguration()` + `clearI18nOverrideHook()` to
 
 ## 10. Phased Rollout
 
-### Phase 1 — Types and Skeleton
+### Phase 1: Types and Skeleton
 
 - Add types to `src/types.ts`.
 - Add static methods on `KioskKeyboard` with no-op internals.
@@ -954,7 +954,7 @@ add `resetI18nConfiguration()` + `clearI18nOverrideHook()` to
 
 Exit criteria: build and typecheck pass; no behaviour regressions.
 
-### Phase 2 — Registry Core
+### Phase 2: Registry Core
 
 - Implement config validation, async enhancement loading (with
   generation counter), resolution chain, hook execution.
@@ -963,7 +963,7 @@ Exit criteria: build and typecheck pass; no behaviour regressions.
 
 Exit criteria: `i18n-registry.qunit.ts` green.
 
-### Phase 3 — Lifecycle Wiring
+### Phase 3: Lifecycle Wiring
 
 - Implement `onLocalizationChanged` hook on `KioskKeyboard`.
 - Wire double invalidation in `configureI18n` facade (immediate +
@@ -973,7 +973,7 @@ Exit criteria: `i18n-registry.qunit.ts` green.
 
 Exit criteria: integration tests for runtime language switch green.
 
-### Phase 4 — Documentation
+### Phase 4: Documentation
 
 - Update README with i18n extension API section and FLP cleanup
   snippet.
@@ -982,7 +982,7 @@ Exit criteria: integration tests for runtime language switch green.
 
 Exit criteria: docs reviewed and aligned with final API names.
 
-### Phase 5 — Hardening
+### Phase 5: Hardening
 
 - Negative-path tests and regression sweep.
 - Map-safety tests (`__proto__`, `constructor`) where relevant.
@@ -992,14 +992,14 @@ Exit criteria: docs reviewed and aligned with final API names.
 
 ## 11. What This Plan Does NOT Cover
 
-- **Proposal promotion** — the proposal has been moved to
+- **Proposal promotion**: the proposal has been moved to
   `docs/kiosk/history/` alongside this plan.
-- **Demo app integration** — an i18n configuration example in the demo
+- **Demo app integration**: an i18n configuration example in the demo
   app is a follow-up.
-- **Read-only inspection API** (`getI18nConfiguration`) — potentially
+- **Read-only inspection API** (`getI18nConfiguration`): potentially
   useful for diagnostics but out of scope for v1. Can be added later
   without breaking changes.
-- **Backward compat changes** — the 1.118 backward compat work
+- **Backward compat changes**: the 1.118 backward compat work
   (replacing `Localization.getLanguageTag()`, `Element.getElementById`,
   etc.) is tracked separately in the backward compat proposal. This
   plan's 1.118 design is compatible with those changes but does not
@@ -1011,18 +1011,18 @@ Exit criteria: docs reviewed and aligned with final API names.
 
 Decisions settled by comparing both plans:
 
-| Question                                  | Resolution                                                                                                                                                                                                                                                                           |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `resetI18nConfiguration` clears hook?     | **No.** Config and hook are independent concerns. FLP cleanup calls both explicitly.                                                                                                                                                                                                 |
-| Invalidate live instances on API calls?   | **Yes.** All four methods call `_invalidateAllInstances()`. Labels must be visually consistent.                                                                                                                                                                                      |
-| `enhanceWith` order semantics?            | **Last wins.** Given `[A, B]`, B's text is used if both provide the same key. Reverse iteration, break.                                                                                                                                                                              |
-| Language change mechanism?                | **`onLocalizationChanged` hook** — per-instance, 1.118 compatible, canonical UI5 control pattern. No static listener management.                                                                                                                                                     |
-| `getText` ownership?                      | **Registry owns full resolution.** `i18n.ts` is a thin re-export for import stability.                                                                                                                                                                                               |
-| Standalone public re-export module?       | **No.** APIs live on `KioskKeyboard` only — no standalone import use case.                                                                                                                                                                                                           |
-| Replace vs merge on `configureI18n`?      | **Replace.** Simple mental model, no ordering ambiguity.                                                                                                                                                                                                                             |
-| Warning log component?                    | **`"ui5.kiosk.KioskKeyboard"`** — consistent with existing codebase convention.                                                                                                                                                                                                      |
-| Type design for enhancement source?       | **Discriminated union with `never`** + `readonly` on all config properties.                                                                                                                                                                                                          |
-| Sync vs async `ResourceBundle.create`?    | **Async (`{ async: true }`).** Avoids the sync deprecation (since 1.135). Eager loading in `configureI18n`, generation counter for race safety, `getText` reads only loaded bundles.                                                                                                 |
-| `bundleName` + `bundleUrl` both provided? | **Rejected at our level.** UI5 silently resolves (`bundleName` wins) but our types and runtime validation enforce xor.                                                                                                                                                               |
-| Locale string source?                     | **`Localization.getLanguageTag().toString()`** (1.120+) — uses the framework's configured language tag, respects `sap-language` URL parameters. The layout-registry already depends on `Localization.getLanguageTag()` (1.120+), so no additional version requirement is introduced. |
-| Minimum UI5 version?                      | **1.120** (effective). The layout-registry already uses `Localization.getLanguageTag()` (1.120+). `onLocalizationChanged` hook + `Localization.getLanguageTag()` + async `ResourceBundle.create` all work at 1.120.                                                                  |
+| Question                                  | Resolution                                                                                                                                                                                                                                                                          |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resetI18nConfiguration` clears hook?     | **No.** Config and hook are independent concerns. FLP cleanup calls both explicitly.                                                                                                                                                                                                |
+| Invalidate live instances on API calls?   | **Yes.** All four methods call `_invalidateAllInstances()`. Labels must be visually consistent.                                                                                                                                                                                     |
+| `enhanceWith` order semantics?            | **Last wins.** Given `[A, B]`, B's text is used if both provide the same key. Reverse iteration, break.                                                                                                                                                                             |
+| Language change mechanism?                | **`onLocalizationChanged` hook**: per-instance, 1.118 compatible, canonical UI5 control pattern. No static listener management.                                                                                                                                                     |
+| `getText` ownership?                      | **Registry owns full resolution.** `i18n.ts` is a thin re-export for import stability.                                                                                                                                                                                              |
+| Standalone public re-export module?       | **No.** APIs live on `KioskKeyboard` only; no standalone import use case.                                                                                                                                                                                                           |
+| Replace vs merge on `configureI18n`?      | **Replace.** Simple mental model, no ordering ambiguity.                                                                                                                                                                                                                            |
+| Warning log component?                    | **`"ui5.kiosk.KioskKeyboard"`**: consistent with existing codebase convention.                                                                                                                                                                                                      |
+| Type design for enhancement source?       | **Discriminated union with `never`** + `readonly` on all config properties.                                                                                                                                                                                                         |
+| Sync vs async `ResourceBundle.create`?    | **Async (`{ async: true }`).** Avoids the sync deprecation (since 1.135). Eager loading in `configureI18n`, generation counter for race safety, `getText` reads only loaded bundles.                                                                                                |
+| `bundleName` + `bundleUrl` both provided? | **Rejected at our level.** UI5 silently resolves (`bundleName` wins) but our types and runtime validation enforce xor.                                                                                                                                                              |
+| Locale string source?                     | **`Localization.getLanguageTag().toString()`** (1.120+): uses the framework's configured language tag, respects `sap-language` URL parameters. The layout-registry already depends on `Localization.getLanguageTag()` (1.120+), so no additional version requirement is introduced. |
+| Minimum UI5 version?                      | **1.120** (effective). The layout-registry already uses `Localization.getLanguageTag()` (1.120+). `onLocalizationChanged` hook + `Localization.getLanguageTag()` + async `ResourceBundle.create` all work at 1.120.                                                                 |

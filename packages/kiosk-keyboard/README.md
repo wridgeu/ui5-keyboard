@@ -4,6 +4,9 @@
 
 On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applications.
 
+> [!IMPORTANT]
+> **Minimum UI5 version: 1.120**: requires `Lib.init()` (1.118), `DataType.registerEnum()` and `Localization.getLanguageTag()` (both 1.120).
+
 A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virtual keyboard that types into any UI5 input control. Supports multiple layouts, Shift/Caps Lock, docked mode with auto-show, and integrates with SAP Horizon theming.
 
 ## Table of Contents
@@ -31,6 +34,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - [Interop Cookbook](#interop-cookbook)
 - [Auto-Type](#auto-type)
 - [inputIds](#inputids)
+- [Custom Target Resolver](#custom-target-resolver)
 - [Mobile Keyboard Detection](#mobile-keyboard-detection)
 - [Shift & Caps Lock](#shift--caps-lock)
 - [Accessibility](#accessibility)
@@ -234,8 +238,8 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 | `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
 | `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                                                                      |
 | `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
-| `afterOpen`          | —                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
-| `afterClose`         | —                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
+| `afterOpen`          | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
+| `afterClose`         | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
 
 ### Public Methods (Common)
 
@@ -259,48 +263,53 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 
 Complete list of KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
 
-| Method                     | Returns           | Description                                                                 |
-| -------------------------- | ----------------- | --------------------------------------------------------------------------- |
-| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                   |
-| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.           |
-| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                     |
-| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type. |
-| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).             |
-| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                   |
-| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).              |
-| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.          |
-| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                        |
-| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                       |
-| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                      |
-| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                              |
-| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).   |
-| `getFocusDomRef()`         | `Element \| null` | Returns the keyboard root DOM reference used for focus handling.            |
-| `getFocusInfo()`           | `object`          | Returns focus state snapshot for UI5 focus restoration.                     |
-| `applyFocusInfo(info)`     | `this`            | Restores focus state snapshot previously returned by `getFocusInfo()`.      |
-| `getAccessibilityInfo()`   | `object`          | Returns UI5 accessibility metadata for assistive technologies.              |
+| Method                     | Returns           | Description                                                                             |
+| -------------------------- | ----------------- | --------------------------------------------------------------------------------------- |
+| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                               |
+| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.                       |
+| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                                 |
+| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.             |
+| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).                         |
+| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                               |
+| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).                          |
+| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.                      |
+| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                                    |
+| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                                   |
+| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                                  |
+| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                                          |
+| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).               |
+| `getFocusDomRef()`         | `Element \| null` | Returns the keyboard root DOM reference used for focus handling.                        |
+| `getFocusInfo()`           | `object`          | Returns focus state snapshot for UI5 focus restoration.                                 |
+| `applyFocusInfo(info)`     | `this`            | Restores focus state snapshot previously returned by `getFocusInfo()`.                  |
+| `getAccessibilityInfo()`   | `object`          | Returns UI5 accessibility metadata for assistive technologies.                          |
+| `setTargetResolver(fn)`    | `this`            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear. |
+| `getTargetResolver()`      | `Function\|null`  | Returns the instance-level target resolver, or `null`.                                  |
 
 For full generated typings (including property/event accessors from UI5 metadata), see `packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts`.
 
 ### Static Methods (Complete)
 
-| Method                                 | Returns                             | Description                                                                   |
-| -------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
-| `registerLayout(name, definition)`     | `void`                              | Register a custom layout. Built-in layouts cannot be overwritten.             |
-| `unregisterLayout(name)`               | `void`                              | Remove a previously registered custom layout. Built-in layouts are protected. |
-| `resetCustomLayouts()`                 | `void`                              | Remove all custom layouts and keep built-in layouts.                          |
-| `getRegisteredLayout(name)`            | `LayoutDefinition?`                 | Get the definition for a layout name, or `undefined`.                         |
-| `getRegisteredLayoutNames()`           | `string[]`                          | List all registered layout names (built-in + custom).                         |
-| `isBuiltInLayout(name)`                | `boolean`                           | Whether the given name is a built-in layout.                                  |
-| `getLocaleLayout()`                    | `string`                            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.  |
-| `registerLocaleLayout(locale, layout)` | `void`                              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.         |
-| `unregisterLocaleLayout(locale)`       | `void`                              | Remove one locale-to-layout mapping.                                          |
-| `resetLocaleLayouts()`                 | `void`                              | Reset locale mappings to built-in defaults.                                   |
-| `getKeyIcon(keyValue)`                 | `string?`                           | Default icon URI for a special key value, or `undefined` if none.             |
-| `configureI18n(config)`                | `Promise<void>`                     | Set enhancement bundles and locale metadata for i18n extensibility.           |
-| `resetI18nConfiguration()`             | `void`                              | Clear enhancement config and cancel in-flight loads (not the hook).           |
-| `setI18nOverrideHook(fn)`              | `boolean`                           | Register a per-key text override hook (replaces any previous hook).           |
-| `clearI18nOverrideHook()`              | `void`                              | Remove the active i18n override hook.                                         |
-| `getI18nConfiguration()`               | `Readonly<KioskI18nConfig> \| null` | Frozen snapshot of the active i18n config (for debugging).                    |
+| Method                                 | Returns                             | Description                                                                    |
+| -------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------ |
+| `registerLayout(name, definition)`     | `void`                              | Register a custom layout. Built-in layouts cannot be overwritten.              |
+| `unregisterLayout(name)`               | `void`                              | Remove a previously registered custom layout. Built-in layouts are protected.  |
+| `resetCustomLayouts()`                 | `void`                              | Remove all custom layouts and keep built-in layouts.                           |
+| `getRegisteredLayout(name)`            | `LayoutDefinition?`                 | Get the definition for a layout name, or `undefined`.                          |
+| `getRegisteredLayoutNames()`           | `string[]`                          | List all registered layout names (built-in + custom).                          |
+| `isBuiltInLayout(name)`                | `boolean`                           | Whether the given name is a built-in layout.                                   |
+| `isSecondaryLayout(name)`              | `boolean`                           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).     |
+| `getLocaleLayout()`                    | `string`                            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.   |
+| `registerLocaleLayout(locale, layout)` | `void`                              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.          |
+| `unregisterLocaleLayout(locale)`       | `void`                              | Remove one locale-to-layout mapping.                                           |
+| `resetLocaleLayouts()`                 | `void`                              | Reset locale mappings to built-in defaults.                                    |
+| `getKeyIcon(keyValue)`                 | `string?`                           | Default icon URI for a special key value, or `undefined` if none.              |
+| `configureI18n(config)`                | `Promise<void>`                     | Set enhancement bundles and locale metadata for i18n extensibility.            |
+| `resetI18nConfiguration()`             | `void`                              | Clear enhancement config and cancel in-flight loads (not the hook).            |
+| `setI18nOverrideHook(fn)`              | `boolean`                           | Register a per-key text override hook (replaces any previous hook).            |
+| `clearI18nOverrideHook()`              | `void`                              | Remove the active i18n override hook.                                          |
+| `getI18nConfiguration()`               | `Readonly<KioskI18nConfig> \| null` | Frozen snapshot of the active i18n config (for debugging).                     |
+| `setGlobalTargetResolver(fn)`          | `void`                              | Set a global custom resolver for locating native inputs. Pass `null` to clear. |
+| `getGlobalTargetResolver()`            | `Function \| null`                  | Returns the global target resolver, or `null`.                                 |
 
 ---
 
@@ -331,9 +340,9 @@ Layout switching is driven by special key values in the layout definition:
 
 The `keyboardType` property provides a shortcut for common configurations:
 
-- **`Full`** — renders the active `layout` property (default: QWERTY)
-- **`Numeric`** — renders the numeric layout regardless of the `layout` property
-- **`Numpad`** — renders the numpad layout regardless of the `layout` property
+- **`Full`**: renders the active `layout` property (default: QWERTY)
+- **`Numeric`**: renders the numeric layout regardless of the `layout` property
+- **`Numpad`**: renders the numpad layout regardless of the `layout` property
 
 Programmatic base-layout helpers make layout round-trips explicit:
 
@@ -349,7 +358,7 @@ kb.resetLayout(); // back to qwertz-de
 
 ### Stable Height
 
-The `stableHeight` property enables consistent minimum height across layout switches. When enabled, switching from QWERTY (5 rows) to numeric (4 rows) does not shrink the keyboard — the rows expand to fill the available space, providing larger touch targets and preventing layout shifts.
+The `stableHeight` property enables consistent minimum height across layout switches. When enabled, switching from QWERTY (5 rows) to numeric (4 rows) does not shrink the keyboard: the rows expand to fill the available space, providing larger touch targets and preventing layout shifts.
 
 This is **opt-in** (`false` by default) and only effective for non-docked Full keyboards. Docked keyboards always minimize their footprint.
 
@@ -357,7 +366,7 @@ This is **opt-in** (`false` by default) and only effective for non-docked Full k
 >
 > Enable `stableHeight="true"` when the keyboard is rendered inside a **`sap.m.Popover`** or any container that reacts to content height changes. `sap.m.Popover` in particular will close automatically when its content height changes during a resize event on scrolled pages (due to a coordinate-system mismatch in `_applyPosition`). The stable height prevents this by ensuring layout switches never change the keyboard's outer dimensions.
 >
-> For keyboards embedded **inline on a page** (not in a Popover), `stableHeight` is typically not needed — the surrounding layout can accommodate height changes naturally.
+> For keyboards embedded **inline on a page** (not in a Popover), `stableHeight` is typically not needed; the surrounding layout can accommodate height changes naturally.
 
 ```xml
 <!-- Recommended: keyboard inside a Popover -->
@@ -407,7 +416,7 @@ SAP GUI transactions rely heavily on function keys (F1 Help, F3 Back, F4 Value H
 
 ### Approach 1: Fn button on base layouts
 
-The `qwerty` and `qwertz-de` layouts include an **Fn** button on the bottom row. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default — no configuration needed.
+The `qwerty` and `qwertz-de` layouts include an **Fn** button on the bottom row. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default, no configuration needed.
 
 ### Approach 2: Variant layouts with F-key row
 
@@ -489,7 +498,7 @@ This mirrors how SAP GUI intercepts physical F-keys and maps them to transaction
 
 ### Custom F-key variant layouts
 
-Import the shared `fkey-row` module to compose custom layouts with an F-key row on top — the same row used by the built-in `qwerty-fk` and `qwertz-de-fk` layouts:
+Import the shared `fkey-row` module to compose custom layouts with an F-key row on top, the same row used by the built-in `qwerty-fk` and `qwertz-de-fk` layouts:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
@@ -590,7 +599,7 @@ keyboard.show(); // slides in
 keyboard.close(); // slides out
 ```
 
-Both `show()` and `close()` are idempotent — calling them multiple times has no effect. They fire `afterOpen` and `afterClose` immediately as state-change hooks (not after CSS transition completion).
+Both `show()` and `close()` are idempotent; calling them multiple times has no effect. They fire `afterOpen` and `afterClose` immediately as state-change hooks (not after CSS transition completion).
 
 The docked keyboard uses `position: fixed` with `z-index: 100` and a `box-shadow` for visual separation.
 
@@ -621,9 +630,9 @@ For routed applications with cached views, still prefer one of these patterns fo
 
 The keyboard recognizes input elements through a two-layer check: **DOM-level detection** (what triggers open/close) and **UI5-level resolution** (what the keyboard types into).
 
-**1. DOM layer — what triggers auto-show:**
+**1. DOM layer: what triggers auto-show:**
 
-The `focusin` handler checks whether the focused DOM element is a **text-entry** `HTMLInputElement` or `HTMLTextAreaElement`. Non-textual input types (checkbox, radio, file, range, color, button, submit, reset, image) and `readonly` inputs are filtered out. Additionally, the element must be owned by a UI5 control (`Element.closestTo()` must resolve) — raw DOM inputs without a UI5 control wrapper are ignored.
+The `focusin` handler checks whether the focused DOM element is a **text-entry** `HTMLInputElement` or `HTMLTextAreaElement`. Non-textual input types (checkbox, radio, file, range, color, button, submit, reset, image) and `readonly` inputs are filtered out. Additionally, the element must be owned by a UI5 control (`Element.closestTo()` must resolve); raw DOM inputs without a UI5 control wrapper are ignored.
 
 | DOM element                                                      | Detected? | Notes                                                 |
 | ---------------------------------------------------------------- | --------- | ----------------------------------------------------- |
@@ -642,7 +651,7 @@ In docked mode, pressing physical Escape closes the keyboard regardless of
 where focus currently is. Inner-input resolution from `getFocusDomRef()` is
 still used for focus return behavior when Escape is pressed on a virtual key.
 
-**2. UI5 layer — what the keyboard types into:**
+**2. UI5 layer: what the keyboard types into:**
 
 Once an `<input>` or `<textarea>` receives focus, the keyboard uses `Element.closestTo(domElement)` to resolve the owning UI5 control. This resolved control becomes the `targetInput`. For typing to work, the control must:
 
@@ -766,10 +775,10 @@ When `autoType="true"` (requires `autoShow="true"`), the keyboard inspects the f
 
 **Detection order** (first match wins):
 
-1. UI5 control `getType()` — `"Number"` or `"Tel"` → Numpad
-2. UI5 control name — `sap.m.StepInput` → Numpad
-3. DOM `inputmode` attribute — `"numeric"`, `"decimal"`, or `"tel"` → Numpad
-4. HTML `type` attribute — `"number"` or `"tel"` → Numpad
+1. UI5 control `getType()`: `"Number"` or `"Tel"` → Numpad
+2. UI5 control name: `sap.m.StepInput` → Numpad
+3. DOM `inputmode` attribute: `"numeric"`, `"decimal"`, or `"tel"` → Numpad
+4. HTML `type` attribute: `"number"` or `"tel"` → Numpad
 5. Fallback → Full
 
 When the user tabs from a numeric input to a text input, the keyboard switches back to Full automatically.
@@ -804,9 +813,9 @@ The `inputIds` property provides declarative multi-input targeting. Instead of m
 
 1. The keyboard attaches a focus delegation to each resolved control.
 2. When any of them receives focus, the keyboard sets it as the `targetInput`. In docked + `autoShow` mode, the keyboard also opens automatically.
-3. When `autoShow` is active, `inputIds` acts as a filter — only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
-4. IDs are resolved against the parent View first (view-local IDs), then globally — safe for XML views where IDs are prefixed.
-5. **Composite controls** (e.g. `sap.m.StepInput`) are supported — when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
+3. When `autoShow` is active, `inputIds` acts as a filter: only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
+4. IDs are resolved against the parent View first (view-local IDs), then globally, safe for XML views where IDs are prefixed.
+5. **Composite controls** (e.g. `sap.m.StepInput`) are supported: when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
 
 **`inputIds` vs `targetInput`:**
 
@@ -816,7 +825,7 @@ The `inputIds` property provides declarative multi-input targeting. Instead of m
 | Multiple inputs in a form             | `inputIds="field1,field2,field3"`       |
 | Dynamic input (determined at runtime) | `setTargetInput(control)` in controller |
 
-When `inputIds` is set, there is no need to also set `targetInput` — the keyboard updates the target association automatically based on focus.
+When `inputIds` is set, there is no need to also set `targetInput`; the keyboard updates the target association automatically based on focus.
 
 **TypeScript:**
 
@@ -828,6 +837,66 @@ new KioskKeyboard({
 
 ---
 
+## Custom Target Resolver
+
+By default, the keyboard calls `getFocusDomRef()` on the target control and checks whether the returned element is a native `<input>` or `<textarea>`. For standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`, `sap.m.TextArea`), this already returns the native input directly, so no further traversal is needed.
+
+For custom controls with non-standard DOM structures, you can set a **target resolver** callback, either per instance or globally for all instances.
+
+### Instance Resolver
+
+An instance-level resolver applies only to a single KioskKeyboard:
+
+```ts
+const kb = this.byId("myKeyboard") as KioskKeyboard;
+
+kb.setTargetResolver((el: HTMLElement) => {
+  // Custom control: find the deeply nested input
+  return el.querySelector(".my-wrapper .inner-editor input") as HTMLInputElement;
+});
+```
+
+Pass `null` to clear:
+
+```ts
+kb.setTargetResolver(null);
+```
+
+### Global Resolver
+
+A global resolver applies to **all** KioskKeyboard instances that don't have their own instance resolver:
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+
+KioskKeyboard.setGlobalTargetResolver((el: HTMLElement) => {
+  // App-wide custom resolution logic
+  const inner = el.querySelector<HTMLInputElement>(".custom-input-wrapper input");
+  return inner ?? null; // return null to fall back to built-in resolution
+});
+```
+
+Pass `null` to clear:
+
+```ts
+KioskKeyboard.setGlobalTargetResolver(null);
+```
+
+### Resolver Precedence
+
+1. **Instance resolver**: checked first (`setTargetResolver`)
+2. **Global resolver**: checked if no instance resolver is set (`setGlobalTargetResolver`)
+3. **Built-in resolver**: default DOM traversal (light DOM → shadow DOM, up to 3 levels)
+
+At each level, if the resolver returns `null`, the next level is tried.
+
+The callback receives the focused `HTMLElement` (the host element / DOM ref of the control) and must return:
+
+- The native `<input>` or `<textarea>` to type into, **or**
+- `null` to fall back to the next resolver in the chain
+
+---
+
 ## Mobile Keyboard Detection
 
 The `mobileKeyboard` property controls whether the KioskKeyboard or the native on-screen keyboard is used.
@@ -835,10 +904,10 @@ The `mobileKeyboard` property controls whether the KioskKeyboard or the native o
 | Value      | Behavior                                                                                | Use when                                         |
 | ---------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.** | Dedicated kiosk terminal (no physical keyboard)  |
-| `"Native"` | Always defer to the native keyboard — KioskKeyboard does not open on focus.             | Desktop/mobile app where desktops have keyboards |
+| `"Native"` | Always defer to the native keyboard; KioskKeyboard does not open on focus.              | Desktop/mobile app where desktops have keyboards |
 | `"Auto"`   | Desktop browsers → use KioskKeyboard. Phone/tablet → defer to native.                   | Kiosk terminal that also serves mobile visitors  |
 
-> **Note:** `"Auto"` relies on `sap/ui/Device` for device detection. Browsers cannot detect whether a physical keyboard is attached, so on any desktop browser — including a regular laptop — the virtual keyboard **will** appear. Use `"Native"` if that is not desired.
+> **Note:** `"Auto"` relies on `sap/ui/Device` for device detection. Browsers cannot detect whether a physical keyboard is attached, so on any desktop browser, including a regular laptop, the virtual keyboard **will** appear. Use `"Native"` if that is not desired.
 
 ```xml
 <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
@@ -858,9 +927,9 @@ When the KioskKeyboard is active, it sets `inputmode="none"` on the focused inpu
 
 The Shift key follows a three-state cycle:
 
-1. **Off** — default state
-2. **Shift** (single tap) — next character is uppercase, then auto-releases
-3. **Caps Lock** (double tap) — all characters uppercase until toggled off
+1. **Off**: default state
+2. **Shift** (single tap): next character is uppercase, then auto-releases
+3. **Caps Lock** (double tap): all characters uppercase until toggled off
 
 ```
 Tap Shift  →  Shift active (single character)
@@ -990,7 +1059,7 @@ The UI5 resource bundle mechanism (`Lib.getResourceBundleFor("ui5.kiosk")`) auto
 
 Consumers can extend or override the keyboard's translatable texts without modifying the library package. Two mechanisms are available:
 
-**Enhancement bundles** — provide additional locales or override built-in texts via standard `.properties` files:
+**Enhancement bundles**: provide additional locales or override built-in texts via standard `.properties` files:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
@@ -1021,7 +1090,7 @@ await KioskKeyboard.configureI18n({
 });
 ```
 
-**Override hook** — programmatically replace resolved texts for tenant-specific wording:
+**Override hook**: programmatically replace resolved texts for tenant-specific wording:
 
 ```ts
 KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
@@ -1038,13 +1107,13 @@ KioskKeyboard.setI18nOverrideHook(({ key, resolvedText }) => {
 
 **Validation behavior:** invalid top-level configuration (for example `null`, non-array `enhanceWith`, non-string `fallbackLocale`) logs a warning and rejects the returned Promise.
 
-**FLP cleanup** — call both reset methods in `Component.destroy()` to prevent cross-app leakage:
+**FLP cleanup**: call both reset methods in `Component.destroy()` to prevent cross-app leakage:
 
 ```ts
 export default class Component extends UIComponent {
   async init(): Promise<void> {
     super.init();
-    // Fire-and-forget — the keyboard re-renders automatically once bundles load.
+    // Fire-and-forget - the keyboard re-renders automatically once bundles load.
     // Await the returned Promise only if you need guaranteed bundle availability.
     KioskKeyboard.configureI18n({
       enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
@@ -1061,14 +1130,14 @@ export default class Component extends UIComponent {
 
 > **Note:** The library automatically resets the i18n configuration and clears the override hook when the last `KioskKeyboard` instance is destroyed. Explicit cleanup in `Component.destroy()` is still recommended for apps that manage keyboard instances outside the normal view tree.
 
-**Inspecting active config** — `getI18nConfiguration()` returns a frozen deep copy of the active configuration, or `null` when none has been applied. Useful for debugging and test assertions:
+**Inspecting active config**: `getI18nConfiguration()` returns a frozen deep copy of the active configuration, or `null` when none has been applied. Useful for debugging and test assertions:
 
 ```ts
 const config = KioskKeyboard.getI18nConfiguration();
-console.log(config?.enhanceWith); // read-only — mutations throw
+console.log(config?.enhanceWith); // read-only - mutations throw
 ```
 
-**TypeScript types** — import the config and context types for type-safe usage:
+**TypeScript types**: import the config and context types for type-safe usage:
 
 ```ts
 import type {
@@ -1096,7 +1165,7 @@ The library exports frozen `const` objects for type-safe comparisons. The UI5 pr
 ```ts
 import { KeyboardLayout, KeyboardType, KeyName, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";
 
-// KeyboardLayout — built-in layout identifiers
+// KeyboardLayout - built-in layout identifiers
 KeyboardLayout.Qwerty; // "qwerty"
 KeyboardLayout.QwertzDe; // "qwertz-de"
 KeyboardLayout.Numeric; // "numeric"
@@ -1109,21 +1178,21 @@ KeyboardLayout.QwertzDeFk; // "qwertz-de-fk"
 KeyboardLayout.QwertyNav; // "qwerty-nav"
 KeyboardLayout.QwertzDeNav; // "qwertz-de-nav"
 
-// KeyboardType — keyboard display type
+// KeyboardType - keyboard display type
 KeyboardType.Full; // "Full"
 KeyboardType.Numeric; // "Numeric"
 KeyboardType.Numpad; // "Numpad"
 
-// MobileKeyboard — native keyboard behavior
+// MobileKeyboard - native keyboard behavior
 MobileKeyboard.Custom; // "Custom"
 MobileKeyboard.Native; // "Native"
 MobileKeyboard.Auto; // "Auto"
 
-// FKeyMode — F-key dispatch mode
+// FKeyMode - F-key dispatch mode
 FKeyMode.Virtual; // "Virtual"
 FKeyMode.Native; // "Native"
 
-// KeyName — key names for the keyPress event's `key` parameter
+// KeyName - key names for the keyPress event's `key` parameter
 // Action keys
 KeyName.Enter; // "Enter"
 KeyName.Backspace; // "Backspace"
@@ -1140,13 +1209,13 @@ KeyName.PageUp; // "PageUp"
 KeyName.PageDown; // "PageDown"
 ```
 
-> **Note:** `KeyName` is not a UI5 DataType enum — it is a consumer convenience for type-safe comparisons in `keyPress` event handlers. Regular character keys fire their literal value (e.g. `"a"`, `"A"`, `"1"`) and are not covered by `KeyName`. Custom `{fkey:CustomAction}` keys fire their action name directly — use a string literal for those.
+> **Note:** `KeyName` is not a UI5 DataType enum; it is a consumer convenience for type-safe comparisons in `keyPress` event handlers. Regular character keys fire their literal value (e.g. `"a"`, `"A"`, `"1"`) and are not covered by `KeyName`. Custom `{fkey:CustomAction}` keys fire their action name directly; use a string literal for those.
 
 ---
 
 ## Further Reading
 
-- [Architecture & Internals](../../docs/kiosk/ARCHITECTURE.md) — control design, rendering, theming approach
+- [Architecture & Internals](../../docs/kiosk/ARCHITECTURE.md): control design, rendering, theming approach
 
 ---
 
@@ -1167,7 +1236,7 @@ KeyName.PageDown; // "PageDown"
 **Native keyboard appears alongside the virtual keyboard:**
 
 - Set `mobileKeyboard="Custom"` (the default) to suppress native keyboard via `inputmode="none"`
-- If the target control re-renders while the keyboard is open, the suppression may be lost — see [Mobile Keyboard Detection](#mobile-keyboard-detection)
+- If the target control re-renders while the keyboard is open, the suppression may be lost; see [Mobile Keyboard Detection](#mobile-keyboard-detection)
 
 **Layout switches cause the keyboard to change size:**
 

@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KioskKeyboard Web Component — Standalone Test Page</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "72", Arial, Helvetica, sans-serif;
+        background: #f5f6f7;
+        color: #32363a;
+      }
+      header {
+        margin-bottom: 24px;
+      }
+      header h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      header p {
+        color: #666;
+        font-size: 13px;
+        margin: 0;
+      }
+
+      /* Main layout — content + sticky event log sidebar */
+      .page-layout {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 1100px) {
+        .page-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Grid layout — 2 columns for keyboard cards */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      @media (max-width: 1100px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Card */
+      .card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card h2 {
+        font-size: 14px;
+        margin: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e5e5e5;
+      }
+
+      /* Input fields */
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .input-group label {
+        font-size: 12px;
+        color: #666;
+      }
+      input,
+      textarea {
+        font-family: inherit;
+        font-size: 14px;
+        padding: 8px 10px;
+        border: 1px solid #bfbfbf;
+        border-radius: 4px;
+        width: 100%;
+      }
+      input:focus,
+      textarea:focus {
+        outline: 2px solid #0070f2;
+        outline-offset: -1px;
+        border-color: #0070f2;
+      }
+
+      /* Event log sidebar */
+      .event-log-panel {
+        position: sticky;
+        top: 20px;
+      }
+      .event-log-panel h2 {
+        font-size: 14px;
+        margin: 0 0 8px;
+      }
+      #event-log {
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 11px;
+        background: #1a1a2e;
+        color: #0f0;
+        padding: 12px;
+        border-radius: 6px;
+        height: 500px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        line-height: 1.5;
+      }
+      #event-log:empty::before {
+        content: "Events will appear here…";
+        color: #555;
+      }
+      .log-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      /* Toggle row */
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* Docked card inputs row */
+      .docked-inputs {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto auto auto;
+        gap: 12px;
+        align-items: end;
+      }
+      @media (max-width: 900px) {
+        .docked-inputs {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+    <script type="module">
+      import "../../dist/kiosk-keyboard.bundle.js";
+
+      // UI5 Web Components used on the demo page
+      import "@ui5/webcomponents/dist/Input.js";
+      import "@ui5/webcomponents/dist/StepInput.js";
+      import "@ui5/webcomponents/dist/Label.js";
+      import "@ui5/webcomponents/dist/Button.js";
+      import "@ui5/webcomponents/dist/Switch.js";
+      import "@ui5/webcomponents/dist/TextArea.js";
+
+      // ── Global event log ──
+      const log = document.getElementById("event-log");
+      function appendLog(source, msg) {
+        const ts = new Date().toLocaleTimeString("en-GB", { hour12: false });
+        log.textContent += `[${ts}] ${source}: ${msg}\n`;
+        log.scrollTop = log.scrollHeight;
+      }
+
+      document.getElementById("clear-log").addEventListener("click", () => {
+        log.textContent = "";
+      });
+
+      // Wire all keyboards for event logging
+      document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
+        const name = kb.id || kb.getAttribute("keyboard-type") || "keyboard";
+        kb.addEventListener("key-press", (e) => {
+          const d = e.detail;
+          appendLog(name, `key-press key="${d.key}" shift=${d.shiftKey}`);
+        });
+        kb.addEventListener("layout-change", (e) => {
+          appendLog(name, `layout-change layout="${e.detail.layout}"`);
+        });
+        kb.addEventListener("keyboard-type-change", (e) => {
+          appendLog(name, `keyboard-type-change type="${e.detail.keyboardType}"`);
+        });
+        kb.addEventListener("after-open", () => appendLog(name, "after-open"));
+        kb.addEventListener("after-close", () => appendLog(name, "after-close"));
+      });
+
+      // Toggle docked keyboard
+      document.getElementById("toggle-docked").addEventListener("click", () => {
+        const docked = document.getElementById("kb-docked");
+        if (docked.open) docked.close();
+        else docked.show();
+      });
+
+      // Custom layout via instance method (no class import needed)
+      const kbCustom = document.getElementById("kb-custom");
+      kbCustom.registerLayout("demo-pin", [
+        [{ value: "1" }, { value: "2" }, { value: "3" }],
+        [{ value: "4" }, { value: "5" }, { value: "6" }],
+        [{ value: "7" }, { value: "8" }, { value: "9" }],
+        [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
+      ]);
+
+      // Auto-type toggle
+      document.getElementById("auto-type-switch").addEventListener("change", (e) => {
+        const enabled = e.target.checked;
+        const kb = document.getElementById("kb-docked");
+        kb.autoType = enabled;
+        if (!enabled) kb.resetKeyboardType();
+        appendLog("kb-docked", `autoType ${enabled ? "enabled" : "disabled"}`);
+      });
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>KioskKeyboard Web Component — Standalone</h1>
+      <p>No UI5 runtime. Pure custom element usage with native HTML inputs and UI5 Web Components.</p>
+    </header>
+
+    <div class="page-layout">
+      <!-- Left column: all content -->
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        <!-- Docked Mode -->
+        <div class="card">
+          <h2>Docked Mode (auto-show + auto-type)</h2>
+          <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+            <span style="font-size: 12px; color: #666; flex: 1; min-width: 200px">
+              Click an input to open the docked keyboard. Auto-switches between Full/Numpad based on input type.
+            </span>
+            <div class="toggle-row">
+              <ui5-label>Auto-Type:</ui5-label>
+              <ui5-switch id="auto-type-switch" checked text-on="On" text-off="Off"></ui5-switch>
+            </div>
+            <ui5-button id="toggle-docked" design="Emphasized">Toggle Docked</ui5-button>
+          </div>
+          <div class="docked-inputs">
+            <div class="input-group">
+              <ui5-label for="docked-input-name" show-colon>Full Name (ui5-input)</ui5-label>
+              <ui5-input id="docked-input-name" placeholder="John Doe"></ui5-input>
+            </div>
+            <div class="input-group">
+              <ui5-label for="docked-input-email" show-colon>Email (ui5-input)</ui5-label>
+              <ui5-input id="docked-input-email" type="Email" placeholder="john@example.com"></ui5-input>
+            </div>
+            <div class="input-group">
+              <ui5-label for="docked-input-age" show-colon>Age (step-input)</ui5-label>
+              <ui5-step-input id="docked-input-age" value="25" min="0" max="120"></ui5-step-input>
+            </div>
+            <div class="input-group">
+              <label for="docked-input-zip">ZIP (native)</label>
+              <input id="docked-input-zip" type="number" placeholder="12345" />
+            </div>
+            <div class="input-group">
+              <label for="docked-input-notes">Notes (native)</label>
+              <textarea id="docked-input-notes" rows="1" placeholder="Notes…"></textarea>
+            </div>
+          </div>
+          <kiosk-keyboard
+            id="kb-docked"
+            docked
+            auto-show
+            auto-type
+            mobile-keyboard="Custom"
+            input-ids="docked-input-name,docked-input-email,docked-input-age,docked-input-zip,docked-input-notes"
+          ></kiosk-keyboard>
+        </div>
+
+        <!-- Keyboard cards grid -->
+        <div class="grid">
+          <!-- 1. QWERTY with native input -->
+          <div class="card">
+            <h2>QWERTY (native input)</h2>
+            <div class="input-group">
+              <label for="qwerty-input">Target Input</label>
+              <input id="qwerty-input" type="text" placeholder="Type here…" />
+            </div>
+            <kiosk-keyboard id="kb-qwerty" layout="qwerty" for="qwerty-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 2. QWERTZ-DE with ui5-input -->
+          <div class="card">
+            <h2>QWERTZ-DE (ui5-input)</h2>
+            <div class="input-group">
+              <ui5-label for="qwertz-input" show-colon>Target Input</ui5-label>
+              <ui5-input id="qwertz-input" placeholder="Hier tippen…"></ui5-input>
+            </div>
+            <kiosk-keyboard id="kb-qwertz" layout="qwertz-de" for="qwertz-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 3. Numpad with ui5-input (Number) -->
+          <div class="card">
+            <h2>Numpad (ui5-input Number)</h2>
+            <div class="input-group">
+              <ui5-label for="numpad-input" show-colon>Amount</ui5-label>
+              <ui5-input id="numpad-input" type="Number" placeholder="0.00"></ui5-input>
+            </div>
+            <kiosk-keyboard id="kb-numpad" keyboard-type="Numpad" for="numpad-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 4. Numeric with native input -->
+          <div class="card">
+            <h2>Numeric (native input)</h2>
+            <div class="input-group">
+              <label for="numeric-input">PIN / Code</label>
+              <input id="numeric-input" type="text" placeholder="Enter code…" />
+            </div>
+            <kiosk-keyboard id="kb-numeric" keyboard-type="Numeric" for="numeric-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 5. Disabled State -->
+          <div class="card">
+            <h2>Disabled State</h2>
+            <div class="input-group">
+              <ui5-label for="disabled-input" show-colon>Readonly field</ui5-label>
+              <ui5-input id="disabled-input" value="Cannot type" readonly></ui5-input>
+            </div>
+            <kiosk-keyboard layout="qwerty" disabled></kiosk-keyboard>
+          </div>
+
+          <!-- 6. Narrow (320px) with native textarea -->
+          <div class="card">
+            <h2>Narrow (320px, native textarea)</h2>
+            <div class="input-group">
+              <label for="narrow-input">Narrow textarea</label>
+              <textarea id="narrow-input" rows="2" placeholder="Type here…"></textarea>
+            </div>
+            <div style="max-width: 320px">
+              <kiosk-keyboard id="kb-narrow" layout="qwerty" for="narrow-input"></kiosk-keyboard>
+            </div>
+          </div>
+
+          <!-- 7. With Input Target (legacy for E2E compat) -->
+          <div class="card">
+            <h2>With Input Target (for= attribute)</h2>
+            <div class="input-group">
+              <label for="text-input">Target Input (native)</label>
+              <input id="text-input" type="text" placeholder="Type here via keyboard" />
+            </div>
+            <kiosk-keyboard layout="qwerty" for="text-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 8. Custom Layout (instance registration) -->
+          <div class="card">
+            <h2>Custom Layout (instance registration)</h2>
+            <div class="input-group">
+              <label for="custom-layout-input">PIN</label>
+              <input id="custom-layout-input" type="text" placeholder="Enter PIN…" />
+            </div>
+            <kiosk-keyboard id="kb-custom" layout="demo-pin" for="custom-layout-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 9. ui5-textarea -->
+          <div class="card">
+            <h2>ui5-textarea</h2>
+            <div class="input-group">
+              <ui5-label for="ui5-textarea" show-colon>Notes</ui5-label>
+              <ui5-textarea id="ui5-textarea" placeholder="Multi-line input…" rows="3"></ui5-textarea>
+            </div>
+            <kiosk-keyboard id="kb-textarea" layout="qwerty" for="ui5-textarea"></kiosk-keyboard>
+          </div>
+
+          <!-- 10. Navigation layout -->
+          <div class="card">
+            <h2>Navigation (nav layout)</h2>
+            <div class="input-group">
+              <label for="nav-input">Cursor movement</label>
+              <input id="nav-input" type="text" value="hello world" />
+            </div>
+            <kiosk-keyboard id="kb-nav" layout="nav" for="nav-input"></kiosk-keyboard>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: sticky event log -->
+      <div class="event-log-panel">
+        <h2>Event Log</h2>
+        <div id="event-log"></div>
+        <div class="log-actions">
+          <ui5-button id="clear-log" design="Transparent">Clear</ui5-button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

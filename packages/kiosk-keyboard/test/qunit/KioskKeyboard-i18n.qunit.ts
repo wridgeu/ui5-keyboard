@@ -10,7 +10,7 @@ import { placeAndWait, waitForRender } from "./test-helpers";
 
 const i18nSandbox = sinon.createSandbox();
 
-QUnit.module("KioskKeyboard — i18n integration", {
+QUnit.module("KioskKeyboard - i18n integration", {
   afterEach() {
     i18nSandbox.restore();
     KioskKeyboard.resetI18nConfiguration();
@@ -216,7 +216,7 @@ QUnit.test("Language switch re-renders with updated labels", async (assert) => {
 
   assert.strictEqual(kb.getDomRef()?.getAttribute("aria-label"), "Label-v1", "Initial enhanced label");
 
-  // Simulate language change — reload bundles deterministically
+  // Simulate language change - reload bundles deterministically
   bundleVersion = "v2";
   await reloadBundles();
   kb.invalidate();
@@ -295,6 +295,27 @@ QUnit.test("Destroying last instance auto-resets i18n config and hook", async (a
   assert.ok(!hasConfiguredEnhancements(), "Enhancements auto-cleared after last instance destroyed");
 });
 
+QUnit.test("Destroying last instance clears global target resolver", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const fakeResolver = (el: HTMLElement) => el.querySelector<HTMLInputElement>("input");
+  KioskKeyboard.setGlobalTargetResolver(fakeResolver);
+
+  assert.strictEqual(KioskKeyboard.getGlobalTargetResolver(), fakeResolver, "Resolver set before destroy");
+
+  input.destroy();
+  kb.destroy();
+
+  assert.strictEqual(
+    KioskKeyboard.getGlobalTargetResolver(),
+    null,
+    "Resolver auto-cleared after last instance destroyed",
+  );
+});
+
 QUnit.test("Re-created instance works after auto-reset when configureI18n is re-applied", async (assert) => {
   // Phase 1: create, configure, destroy → triggers auto-reset
   const input1 = new Input({ value: "" });
@@ -365,14 +386,14 @@ QUnit.test("Destroying one of two instances does NOT auto-reset i18n", async (as
   });
   KioskKeyboard.setI18nOverrideHook(() => "Hooked");
 
-  // Destroy first instance — second still alive, so NO auto-reset
+  // Destroy first instance - second still alive, so NO auto-reset
   input1.destroy();
   kb1.destroy();
 
   assert.ok(hasConfiguredEnhancements(), "Enhancements still active after destroying one of two instances");
   assert.notStrictEqual(getI18nConfiguration(), null, "Config still active after destroying one of two instances");
 
-  // Destroy second instance — now auto-reset triggers
+  // Destroy second instance - now auto-reset triggers
   input2.destroy();
   kb2.destroy();
 
@@ -390,7 +411,7 @@ QUnit.test("init() without i18n config does not spuriously invalidate existing i
   // Spy on kb1's invalidate AFTER it's fully rendered
   const invalidateSpy = i18nSandbox.spy(kb1, "invalidate");
 
-  // Create a second keyboard — no i18n enhancements configured
+  // Create a second keyboard - no i18n enhancements configured
   const input2 = new Input({ value: "" });
   input2.placeAt("qunit-fixture");
   const kb2 = new KioskKeyboard({ targetInput: input2 });

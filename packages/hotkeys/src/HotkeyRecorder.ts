@@ -17,7 +17,7 @@ export interface HotkeyRecorderOptions {
 /**
  * Records a keyboard shortcut from user input.
  *
- * Not a singleton — multiple recorders may exist (e.g., one per settings row).
+ * Not a singleton - multiple recorders may exist (e.g., one per settings row).
  * Created via `HotkeyManager.createRecorder()`.
  *
  * Usage:
@@ -39,7 +39,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
   private _dispatcher: EventDispatcher | null;
 
   /**
-   * @internal — Do not instantiate directly. Use `HotkeyManager.createRecorder()`.
+   * @internal - Do not instantiate directly. Use `HotkeyManager.createRecorder()`.
    */
   constructor(options: HotkeyRecorderOptions, dispatcher: EventDispatcher, token: symbol) {
     if (token !== INTERNAL_TOKEN) {
@@ -68,7 +68,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
   }
 
   /**
-   * Cancel recording — calls onCancel if provided.
+   * Cancel recording - calls onCancel if provided.
    * No-op if the recorder has been destroyed.
    */
   cancel(): void {
@@ -136,7 +136,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
       return true;
     }
 
-    // Valid combo — convert to hotkey string
+    // Valid combo - convert to hotkey string
     const hotkey = keyboardEventToHotkey(event);
     if (hotkey !== null) {
       this._stopAndRecord(hotkey);
@@ -164,7 +164,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
     this._dispatcher = null;
   }
 
-  /** Clear interceptor BEFORE callback (TanStack pattern — prevents race conditions). */
+  /** Clear interceptor BEFORE callback (TanStack pattern - prevents race conditions). */
   private _stopAndRecord(hotkey: string): void {
     this._recording = false;
     this._dispatcher?.clearInterceptor(this);

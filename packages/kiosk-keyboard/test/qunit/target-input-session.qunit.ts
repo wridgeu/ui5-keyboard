@@ -52,18 +52,18 @@ function changeEvents(mock: ReturnType<typeof makeMockElement>): FiredEvent[] {
 // resetForTargetSwitch
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — resetForTargetSwitch", {
+QUnit.module("target-input-session - resetForTargetSwitch", {
   afterEach() {
     fixture.innerHTML = "";
   },
 });
 
-QUnit.test("Clears cached cursor — next insert goes to end of value", (assert) => {
+QUnit.test("Clears cached cursor - next insert goes to end of value", (assert) => {
   const input = makeInput("abcde");
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
 
-  // Move cursor to start, then insert — establishes cursor at position 1
+  // Move cursor to start, then insert - establishes cursor at position 1
   session.handleNavigationKey("Home");
   session.insertText("x");
   assert.strictEqual(input.value, "xabcde", "Pre-reset: 'x' inserted at start");
@@ -76,7 +76,7 @@ QUnit.test("Clears cached cursor — next insert goes to end of value", (assert)
   assert.strictEqual(input.value, "xabcdez", "Post-reset: 'z' appended at end");
 });
 
-QUnit.test("Clears _lastKnownValue — value-divergence detection starts fresh", (assert) => {
+QUnit.test("Clears _lastKnownValue - value-divergence detection starts fresh", (assert) => {
   const input = makeInput("aaa");
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
@@ -106,14 +106,14 @@ QUnit.test("Does not clear dirty flag (handled separately by captureAndClearDirt
   session.resetForTargetSwitch(); // cursor + lastKnownValue cleared, dirty preserved
 
   session.fireChangeIfDirty();
-  assert.strictEqual(changeEvents(mock).length, 1, "Change event fired — dirty flag survived reset");
+  assert.strictEqual(changeEvents(mock).length, 1, "Change event fired - dirty flag survived reset");
 });
 
 // ──────────────────────────────────────────────────
-// _getTargetDomRef — cursor recovery
+// _getTargetDomRef - cursor recovery
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — cursor recovery", {
+QUnit.module("target-input-session - cursor recovery", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -139,7 +139,7 @@ QUnit.test("Detects programmatic setValue and resets cursor to end", (assert) =>
   session.insertText(">"); // ">hello!", cursor [1,1]
   assert.strictEqual(input.value, ">hello!", "Cursor was at start before divergence");
 
-  // Simulate programmatic setValue — value diverges from _lastKnownValue
+  // Simulate programmatic setValue - value diverges from _lastKnownValue
   input.value = "world";
 
   // Session detects divergence → resets cursor to end of new value
@@ -164,7 +164,7 @@ QUnit.test("Reads cursor from focused DOM element", (assert) => {
 // insertText
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — insertText", {
+QUnit.module("target-input-session - insertText", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -202,7 +202,7 @@ QUnit.test("No-op when target has no resolvable DOM ref", (assert) => {
 // handleBackspace
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — handleBackspace", {
+QUnit.module("target-input-session - handleBackspace", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -221,18 +221,18 @@ QUnit.test("Deletes character and marks session dirty", (assert) => {
   assert.notStrictEqual(cb, null, "Session is dirty after backspace");
 });
 
-QUnit.test("No-op at position 0 — does not mark dirty", (assert) => {
+QUnit.test("No-op at position 0 - does not mark dirty", (assert) => {
   const input = makeInput("abc");
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
 
   session.handleNavigationKey("Home"); // cursor → [0,0]
-  session.handleBackspace(); // returns null — nothing to delete
+  session.handleBackspace(); // returns null - nothing to delete
 
   assert.strictEqual(input.value, "abc", "Value unchanged");
 
   const cb = session.captureAndClearDirty();
-  assert.strictEqual(cb, null, "Not dirty — backspace was a no-op");
+  assert.strictEqual(cb, null, "Not dirty - backspace was a no-op");
 });
 
 QUnit.test("No-op when target element is null", (assert) => {
@@ -246,7 +246,7 @@ QUnit.test("No-op when target element is null", (assert) => {
 // handleEnter
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — handleEnter", {
+QUnit.module("target-input-session - handleEnter", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -257,7 +257,7 @@ QUnit.test("Input: fires change event and clears dirty flag", (assert) => {
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
 
-  session.insertText("!"); // "hello!" — marks dirty
+  session.insertText("!"); // "hello!" - marks dirty
 
   session.handleEnter();
 
@@ -265,7 +265,7 @@ QUnit.test("Input: fires change event and clears dirty flag", (assert) => {
   assert.strictEqual(changes.length, 1, "Change event fired on Enter");
   assert.strictEqual(changes[0].params.value, "hello!", "Change event carries current value");
 
-  // Dirty flag cleared — captureAndClearDirty should return null
+  // Dirty flag cleared - captureAndClearDirty should return null
   const cb = session.captureAndClearDirty();
   assert.strictEqual(cb, null, "Dirty flag cleared by handleEnter");
 });
@@ -275,7 +275,7 @@ QUnit.test("Input: fires change even when session was not dirty", (assert) => {
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
 
-  // No prior insertText — session is clean
+  // No prior insertText - session is clean
   session.handleEnter();
 
   const changes = changeEvents(mock);
@@ -321,7 +321,7 @@ QUnit.test("No-op when target has no DOM ref", (assert) => {
 // handleNavigationKey
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — handleNavigationKey", {
+QUnit.module("target-input-session - handleNavigationKey", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -365,7 +365,7 @@ QUnit.test("No-op when target element is null", (assert) => {
 // fireChangeIfDirty
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — fireChangeIfDirty", {
+QUnit.module("target-input-session - fireChangeIfDirty", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -405,7 +405,7 @@ QUnit.test("Skips HTMLTextAreaElement even when dirty", (assert) => {
   assert.strictEqual(changeEvents(mock).length, 0, "No change event for textarea");
 });
 
-QUnit.test("Clears dirty flag after firing — second call is a no-op", (assert) => {
+QUnit.test("Clears dirty flag after firing - second call is a no-op", (assert) => {
   const input = makeInput("test");
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
@@ -416,7 +416,7 @@ QUnit.test("Clears dirty flag after firing — second call is a no-op", (assert)
   assert.strictEqual(changeEvents(mock).length, 1, "First call fires");
 
   session.fireChangeIfDirty();
-  assert.strictEqual(changeEvents(mock).length, 1, "Second call does not fire — dirty was cleared");
+  assert.strictEqual(changeEvents(mock).length, 1, "Second call does not fire - dirty was cleared");
 });
 
 QUnit.test("No-op when target element becomes null after dirty", (assert) => {
@@ -435,7 +435,7 @@ QUnit.test("No-op when target element becomes null after dirty", (assert) => {
 // captureAndClearDirty
 // ──────────────────────────────────────────────────
 
-QUnit.module("target-input-session — captureAndClearDirty", {
+QUnit.module("target-input-session - captureAndClearDirty", {
   afterEach() {
     fixture.innerHTML = "";
   },
@@ -446,12 +446,12 @@ QUnit.test("Returns deferred callback that fires change event", (assert) => {
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
 
-  session.insertText("!"); // "hello!" — dirty
+  session.insertText("!"); // "hello!" - dirty
 
   const cb = session.captureAndClearDirty();
   assert.notStrictEqual(cb, null, "Returns a callback");
 
-  // No event fired yet — deferred
+  // No event fired yet - deferred
   assert.strictEqual(changeEvents(mock).length, 0, "Change not fired until callback invoked");
 
   cb!();
@@ -467,7 +467,7 @@ QUnit.test("Returns null when session is not dirty", (assert) => {
   const session = new TargetInputSession(() => mock as any);
 
   const cb = session.captureAndClearDirty();
-  assert.strictEqual(cb, null, "Returns null — nothing to fire");
+  assert.strictEqual(cb, null, "Returns null - nothing to fire");
 });
 
 QUnit.test("Returns null for textarea target even when dirty", (assert) => {
@@ -478,10 +478,10 @@ QUnit.test("Returns null for textarea target even when dirty", (assert) => {
   session.insertText("!"); // marks dirty
 
   const cb = session.captureAndClearDirty();
-  assert.strictEqual(cb, null, "Returns null for textarea — change events are input-only");
+  assert.strictEqual(cb, null, "Returns null for textarea - change events are input-only");
 });
 
-QUnit.test("Clears dirty flag — second call returns null", (assert) => {
+QUnit.test("Clears dirty flag - second call returns null", (assert) => {
   const input = makeInput("test");
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
@@ -492,7 +492,7 @@ QUnit.test("Clears dirty flag — second call returns null", (assert) => {
   assert.notStrictEqual(cb1, null, "First call returns callback");
 
   const cb2 = session.captureAndClearDirty();
-  assert.strictEqual(cb2, null, "Second call returns null — dirty was cleared");
+  assert.strictEqual(cb2, null, "Second call returns null - dirty was cleared");
 });
 
 QUnit.test("Deferred callback fires with captured value, not current DOM value", (assert) => {
@@ -500,7 +500,7 @@ QUnit.test("Deferred callback fires with captured value, not current DOM value",
   const mock = makeMockElement(input);
   const session = new TargetInputSession(() => mock as any);
 
-  session.insertText("!"); // "original!" — dirty
+  session.insertText("!"); // "original!" - dirty
 
   const cb = session.captureAndClearDirty(); // captures value "original!"
 
