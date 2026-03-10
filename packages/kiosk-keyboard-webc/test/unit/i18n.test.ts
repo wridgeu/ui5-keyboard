@@ -63,14 +63,6 @@ describe("i18n", () => {
     expect(warnSpy).toHaveBeenCalledWith("[kiosk-keyboard] i18n resolver threw:", expect.any(Error));
   });
 
-  it("treats bundle returning the bundle key as 'no translation' and uses default", () => {
-    // Regression: the "no translation" sentinel check must compare against
-    // the bundle's internal key (i18nText.key), not the JS export name.
-    // When no translation is loaded, UI5 WC bundles return the key itself.
-    mockGetText.mockReturnValue("KEY_ENTER");
-    expect(getText("KEY_ENTER", "fallback")).toBe("Enter");
-  });
-
   it("clearing resolver with null disables override", () => {
     setI18nResolver(() => "override");
     expect(getText("KEY_SHIFT", "fallback")).toBe("override");

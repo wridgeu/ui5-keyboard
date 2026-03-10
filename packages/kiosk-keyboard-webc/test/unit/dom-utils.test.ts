@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { resolveInputOrTextarea } from "../../src/core/dom-utils.js";
+import { describe, it, expect, vi } from "vitest";
+import { resolveInputOrTextarea, resolveWithCustomResolver } from "../../src/core/dom-utils.js";
 
 describe("resolveInputOrTextarea", () => {
   it("returns native input directly", () => {
@@ -98,5 +98,55 @@ describe("resolveInputOrTextarea", () => {
     shadow.appendChild(shadowInput);
 
     expect(resolveInputOrTextarea(host)).toBe(lightInput);
+  });
+});
+
+describe("resolveWithCustomResolver", () => {
+  it("uses custom resolver result when it returns an input", () => {
+    const wrapper = document.createElement("div");
+    const builtInInput = document.createElement("input");
+    wrapper.appendChild(builtInInput);
+
+    const customInput = document.createElement("input");
+    expect(resolveWithCustomResolver(wrapper, () => customInput)).toBe(customInput);
+  });
+
+  it("falls back to built-in when custom resolver returns null", () => {
+    const wrapper = document.createElement("div");
+    const input = document.createElement("input");
+    wrapper.appendChild(input);
+
+    expect(resolveWithCustomResolver(wrapper, () => null)).toBe(input);
+  });
+
+  it("falls back to built-in when no custom resolver is set", () => {
+    const wrapper = document.createElement("div");
+    const input = document.createElement("input");
+    wrapper.appendChild(input);
+
+    expect(resolveWithCustomResolver(wrapper, null)).toBe(input);
+  });
+
+  it("rejects non-input return from custom resolver via type guard", () => {
+    const wrapper = document.createElement("div");
+    const input = document.createElement("input");
+    wrapper.appendChild(input);
+
+    const div = document.createElement("div");
+    expect(resolveWithCustomResolver(wrapper, () => div as unknown as HTMLInputElement)).toBe(input);
+  });
+
+  it("catches throwing resolver and falls back to built-in", () => {
+    const wrapper = document.createElement("div");
+    const input = document.createElement("input");
+    wrapper.appendChild(input);
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = resolveWithCustomResolver(wrapper, () => {
+      throw new Error("resolver bug");
+    });
+
+    expect(result).toBe(input);
+    expect(warnSpy).toHaveBeenCalledWith("[kiosk-keyboard] Custom target resolver threw:", expect.any(Error));
   });
 });

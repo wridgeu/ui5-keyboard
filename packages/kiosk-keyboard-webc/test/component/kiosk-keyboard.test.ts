@@ -396,49 +396,56 @@ describe("kiosk-keyboard", () => {
     });
 
     it("falls back to built-in resolver when custom resolver throws", async () => {
+      // Use a wrapper div as the for-target so the built-in resolver must
+      // actually traverse the DOM to find the <input> inside it.
       const container = await fixture(html`
         <div>
-          <input id="throw-input" type="text" />
-          <kiosk-keyboard layout="qwerty" for="throw-input"></kiosk-keyboard>
+          <div id="throw-host"><input type="text" /></div>
+          <kiosk-keyboard layout="qwerty" for="throw-host"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
-      const input = container.querySelector<HTMLInputElement>("#throw-input")!;
+      const input = container.querySelector<HTMLInputElement>("input")!;
       await nextRender();
 
-      // Set a resolver that always throws — typing should still work
-      // because _resolveInputFrom catches the error and falls back.
+      // Suppress the expected console.warn from resolveWithCustomResolver.
+      const originalWarn = console.warn;
+      console.warn = () => {};
       kb.setTargetResolver(() => {
         throw new Error("resolver bug");
       });
 
       try {
         queryKey(kb, "x")!.click();
-        expect(input.value, "built-in resolver should find the input despite throwing custom resolver").to.equal("x");
+        expect(input.value, "built-in resolver should find the nested input after resolver threw").to.equal("x");
       } finally {
+        console.warn = originalWarn;
         kb.setTargetResolver(null);
       }
     });
 
     it("falls back to built-in resolver when custom resolver returns non-input element", async () => {
+      // Use a wrapper div as the for-target so the built-in resolver must
+      // traverse the DOM to find the <input> (not receive it directly).
       const container = await fixture(html`
         <div>
-          <input id="fallback-input" type="text" />
-          <kiosk-keyboard layout="qwerty" for="fallback-input"></kiosk-keyboard>
+          <div id="fallback-host"><input type="text" /></div>
+          <kiosk-keyboard layout="qwerty" for="fallback-host"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
-      const input = container.querySelector<HTMLInputElement>("#fallback-input")!;
+      const input = container.querySelector<HTMLInputElement>("input")!;
       await nextRender();
 
-      // Resolver returns a <div> — should be rejected and fall through to
-      // the built-in resolver which finds the real <input>.
+      // Resolver returns a <div> — should be rejected by the type guard
+      // and fall through to the built-in resolver which finds the <input>
+      // inside the wrapper.
       const badDiv = document.createElement("div");
       kb.setTargetResolver(() => badDiv as unknown as HTMLInputElement);
 
       try {
         queryKey(kb, "z")!.click();
-        expect(input.value, "built-in resolver should find the input despite wrong-type resolver").to.equal("z");
+        expect(input.value, "built-in resolver should find the nested input despite wrong-type resolver").to.equal("z");
       } finally {
         kb.setTargetResolver(null);
       }
