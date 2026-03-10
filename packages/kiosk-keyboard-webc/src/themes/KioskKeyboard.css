@@ -135,7 +135,6 @@
   cursor: pointer;
   box-sizing: border-box;
   box-shadow: var(--kiosk-keyboard-key-shadow);
-  overflow: hidden;
   white-space: nowrap;
 
   /* Transitions are scoped to interactive states so that Lit re-renders
@@ -364,10 +363,6 @@
 /* ============================= */
 /* Key icon                      */
 /* ============================= */
-
-.kiosk-key__label {
-  min-width: 0;
-}
 
 .kiosk-key__icon {
   display: flex;
