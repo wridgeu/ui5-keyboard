@@ -64,7 +64,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 {isBuiltInIcon ? (
                   <ui5-icon class="kiosk-key__icon" name={iconName!} mode="Decorative" />
                 ) : (
-                  iconName ?? this._getKeyLabel(key)
+                  <span class="kiosk-key__label">{iconName ?? this._getKeyLabel(key)}</span>
                 )}
               </div>
             );

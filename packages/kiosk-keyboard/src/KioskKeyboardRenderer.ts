@@ -250,7 +250,9 @@ const KioskKeyboardRenderer = {
       if (icon) {
         rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
       } else {
+        rm.openStart("span").class("ui5KioskKey__label").openEnd();
         rm.text(_getKeyLabel(key));
+        rm.close("span");
       }
     }
   },

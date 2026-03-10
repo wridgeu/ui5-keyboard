@@ -1,5 +1,5 @@
 import { browser, $, expect } from "@wdio/globals";
-import { openTestPage, getKeyboardRoot } from "./test-helpers.js";
+import { openTestPage, getKeyboardRoot, forceHoverState, clearForcedHoverState } from "./test-helpers.js";
 
 describe("KioskKeyboard Web Component - Visual Regression", () => {
   before(async () => {
@@ -49,13 +49,9 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
 
   it("should match key hover state", async () => {
     const kb = await getKeyboardRoot("kb-qwerty");
-    const key = await $(`#kb-qwerty`).$('>>>[data-key="f"]');
-    await key.waitForClickable({ timeout: 5_000 });
-    await key.moveTo();
+    await forceHoverState("kb-qwerty", '[data-key="f"]');
     await expect(kb).toMatchElementSnapshot("webc-key-hovered");
-    // Move away to reset hover
-    const body = await $("body");
-    await body.moveTo({ xOffset: 0, yOffset: 0 });
+    await clearForcedHoverState("kb-qwerty", '[data-key="f"]');
   });
 
   it("should match Shift active state", async () => {

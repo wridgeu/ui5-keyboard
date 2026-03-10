@@ -141,7 +141,6 @@
   box-sizing: border-box;
   box-shadow: var(--ui5KioskKeyboard-keyShadow);
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 
   /* Transitions are scoped to interactive states so that renderer-driven
@@ -199,6 +198,11 @@
   }
   &--space {
     flex: 6 1 0;
+  }
+
+  /* ---- Label inside key ---- */
+  &__label {
+    min-width: 0;
   }
 
   /* ---- Icon inside key ---- */

@@ -41,3 +41,55 @@ export async function setEmulatedMediaFeatures(features: Array<{ name: string; v
 export async function clearEmulatedMediaFeatures(): Promise<void> {
   await setEmulatedMediaFeatures([]);
 }
+
+/**
+ * Resolve a shadow DOM element's CDP node ID by traversing the DOM tree.
+ *
+ * Uses the DOM domain to find the shadow host, descend into its shadow root,
+ * and query for the target selector.
+ */
+async function resolveShadowNodeId(
+  cdp: Awaited<ReturnType<Awaited<ReturnType<typeof browser.getPuppeteer>>["pages"]>[0]["client"]>,
+  hostId: string,
+  selector: string,
+): Promise<number> {
+  const { root } = await cdp.send("DOM.getDocument", { depth: 0, pierce: true });
+  const { nodeId: hostNodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: `#${hostId}` });
+  const { node: hostNode } = await cdp.send("DOM.describeNode", { nodeId: hostNodeId, depth: 1, pierce: true });
+  const shadowRootId = hostNode.shadowRoots?.[0]?.nodeId;
+  if (!shadowRootId) throw new Error(`No shadow root found on #${hostId}`);
+  const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: shadowRootId, selector });
+  if (!nodeId) throw new Error(`Element ${selector} not found in #${hostId} shadow DOM`);
+  return nodeId;
+}
+
+/**
+ * Force the CSS `:hover` pseudo-state on a shadow DOM element via CDP.
+ *
+ * Synthetic mouse events (both WDIO `moveTo()` and Puppeteer `mouse.move()`)
+ * do not reliably trigger `:hover` inside shadow roots in headless Chrome.
+ * This helper uses `CSS.forcePseudoState`, the same mechanism Chrome DevTools
+ * uses for its "Force element state" feature, which is fully deterministic.
+ */
+export async function forceHoverState(hostId: string, selector: string): Promise<void> {
+  const puppeteer = await browser.getPuppeteer();
+  const [page] = await puppeteer.pages();
+  const cdp = page.client();
+
+  await cdp.send("DOM.enable");
+  const nodeId = await resolveShadowNodeId(cdp, hostId, selector);
+  await cdp.send("CSS.enable");
+  await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: ["hover"] });
+}
+
+/** Clear all forced pseudo-states on a shadow DOM element via CDP. */
+export async function clearForcedHoverState(hostId: string, selector: string): Promise<void> {
+  const puppeteer = await browser.getPuppeteer();
+  const [page] = await puppeteer.pages();
+  const cdp = page.client();
+
+  await cdp.send("DOM.enable");
+  const nodeId = await resolveShadowNodeId(cdp, hostId, selector);
+  await cdp.send("CSS.enable");
+  await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
+}

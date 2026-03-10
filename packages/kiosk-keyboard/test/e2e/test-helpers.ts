@@ -31,3 +31,38 @@ export async function setEmulatedMediaFeatures(features: Array<{ name: string; v
 export async function clearEmulatedMediaFeatures(): Promise<void> {
   await setEmulatedMediaFeatures([]);
 }
+
+/**
+ * Force the CSS `:hover` pseudo-state on a DOM element via CDP.
+ *
+ * WDIO's `moveTo()` positioning can be non-deterministic across
+ * multi-worker runs. This uses `CSS.forcePseudoState` (the same
+ * mechanism as Chrome DevTools "Force element state") for fully
+ * deterministic hover state testing.
+ */
+export async function forceHoverState(selector: string): Promise<void> {
+  const puppeteer = await browser.getPuppeteer();
+  const [page] = await puppeteer.pages();
+  const cdp = page.client();
+
+  await cdp.send("DOM.enable");
+  const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
+  const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector });
+  if (!nodeId) throw new Error(`Element ${selector} not found`);
+  await cdp.send("CSS.enable");
+  await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: ["hover"] });
+}
+
+/** Clear all forced pseudo-states on a DOM element via CDP. */
+export async function clearForcedHoverState(selector: string): Promise<void> {
+  const puppeteer = await browser.getPuppeteer();
+  const [page] = await puppeteer.pages();
+  const cdp = page.client();
+
+  await cdp.send("DOM.enable");
+  const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
+  const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector });
+  if (!nodeId) throw new Error(`Element ${selector} not found`);
+  await cdp.send("CSS.enable");
+  await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
+}
