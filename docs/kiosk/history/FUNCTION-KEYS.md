@@ -9,7 +9,7 @@ Adds an optional row of function keys (F1 through F12) to the kiosk keyboard. Fu
 ## Motivation
 
 - SAP GUI transactions map heavily to F-keys (F1 Help, F3 Back, F4 Value Help, F5 Refresh, F8 Execute, etc.)
-- Kiosk/terminal setups often lack physical keyboards — the virtual keyboard must provide F-key access
+- Kiosk/terminal setups often lack physical keyboards, so the virtual keyboard must provide F-key access
 - Touch devices in warehouse/shop-floor scenarios need F-keys for SAP transaction navigation
 
 ## Design
@@ -48,7 +48,7 @@ export default fkeys;
 
 ### Key behavior
 
-F-keys are **not** text-insertion keys. They fire the `keyPress` event with `key: "F1"` through `key: "F12"` but do **not** insert text into the target input. This matches how physical F-keys behave — the consuming application decides what action to take.
+F-keys are **not** text-insertion keys. They fire the `keyPress` event with `key: "F1"` through `key: "F12"` but do **not** insert text into the target input. This matches how physical F-keys behave. The consuming application decides what action to take.
 
 This requires a change in the key-press handler. Currently all non-special keys call `_insertText()`. F-keys need to:
 
@@ -74,7 +74,7 @@ Layout definition then becomes:
 
 The handler matches `{fkey:*}`, fires `keyPress` with the extracted key name, and does not insert text.
 
-**Alternative**: Use plain `value: "F1"` and detect multi-char values that start with `F` followed by digits. This is simpler but fragile — it conflates key identity with text content. The `{fkey:*}` pattern is explicit and consistent with existing `{layout:*}` convention.
+**Alternative**: Use plain `value: "F1"` and detect multi-char values that start with `F` followed by digits. This is simpler but fragile because it conflates key identity with text content. The `{fkey:*}` pattern is explicit and consistent with existing `{layout:*}` convention.
 
 ### Integration with existing layouts
 
@@ -126,16 +126,16 @@ Add `"fkeys"` to `_BUILTIN_LAYOUTS` in `KioskKeyboard.ts` and to `SECONDARY_LAYO
 
 ### Out of scope (future)
 
-- Modifier combos (Ctrl+F4, Alt+F5) — would need a Ctrl/Alt modifier key first
-- Configurable F-key labels (e.g. "Help" on F1, "Back" on F3) — apps can use `registerLayout` with custom labels today
-- Escape / Tab / arrow keys — separate feature
+- Modifier combos (Ctrl+F4, Alt+F5): would need a Ctrl/Alt modifier key first
+- Configurable F-key labels (e.g. "Help" on F1, "Back" on F3). Apps can use `registerLayout` with custom labels today
+- Escape / Tab / arrow keys: separate feature
 
 ## Files to change
 
 | File                            | Change                                                          |
 | ------------------------------- | --------------------------------------------------------------- |
 | `src/types.ts`                  | Add `{fkey:${string}}` to `SpecialKeyValue`                     |
-| `src/layouts/fkeys.ts`          | New file — layout definition                                    |
+| `src/layouts/fkeys.ts`          | New file, layout definition                                     |
 | `src/layouts/index.ts`          | Export `fkeys` layout                                           |
 | `src/KioskKeyboard.ts`          | Handle `{fkey:*}` in key-press logic; add to `_BUILTIN_LAYOUTS` |
 | `src/layouts/qwerty.ts`         | Add `Fn` button to bottom row                                   |

@@ -17,7 +17,7 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
 };
 
 /**
- * i18n extensibility demo — shows all three customization vectors:
+ * i18n extensibility demo - shows all three customization vectors:
  * 1. New language via enhancement bundle (French)
  * 2. Overriding existing labels via enhancement bundle
  * 3. Programmatic override hook

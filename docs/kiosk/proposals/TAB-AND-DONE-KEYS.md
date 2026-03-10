@@ -6,7 +6,7 @@
 
 ### No form navigation from the virtual keyboard
 
-The kiosk keyboard has no Tab key. Pure-touch kiosk users cannot move between form fields using the virtual keyboard alone — they must tap each input directly. This is friction in form-heavy scenarios (registration screens, data entry, POS checkout).
+The kiosk keyboard has no Tab key. Pure-touch kiosk users cannot move between form fields using the virtual keyboard alone; they must tap each input directly. This is friction in form-heavy scenarios (registration screens, data entry, POS checkout).
 
 KioskBoard addresses a related need with `keysEnterCanClose`, which at least signals "I'm done with this field". simple-keyboard has no built-in solution either.
 
@@ -21,7 +21,7 @@ But there's no way for users to signal "I'm done editing this textarea". On phys
 
 ## Proposal
 
-### 1. `{tab}` special key — form field navigation
+### 1. `{tab}` special key: form field navigation
 
 Add a new special key value `{tab}` that moves focus to the next focusable input in DOM order.
 
@@ -71,12 +71,12 @@ private _handleTab(): void {
 **Layout integration:**
 
 ```ts
-// In built-in layouts (optional — not all layouts need it)
+// In built-in layouts (optional - not all layouts need it)
 // Bottom row of QWERTY could include:
 { value: "{tab}", label: "Tab", icon: "sap-icon://journey-arrive", width: "1.5", type: "modifier" }
 ```
 
-Tab is **not** added to built-in layouts by default — it's opt-in via custom layouts. Kiosk scenarios vary widely: some want Tab, many don't. Built-in layouts stay minimal.
+Tab is **not** added to built-in layouts by default; it's opt-in via custom layouts. Kiosk scenarios vary widely: some want Tab, many don't. Built-in layouts stay minimal.
 
 **Custom layout example:**
 
@@ -93,7 +93,7 @@ const formLayout: LayoutDefinition = [
 ];
 ```
 
-### 2. `{done}` special key — completion signal
+### 2. `{done}` special key: completion signal
 
 Add a new special key value `{done}` that signals "I'm finished with this input" without inserting text.
 

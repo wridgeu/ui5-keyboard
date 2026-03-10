@@ -18,7 +18,7 @@ const GRAPHEME_TAIL_WINDOW = 40;
 export function graphemeLengthBefore(value: string, offset: number): number {
   if (offset <= 0) return 0;
 
-  // Only examine a trailing window — slicing avoids iterating the entire
+  // Only examine a trailing window - slicing avoids iterating the entire
   // string for long values. 40 code units covers all real-world grapheme
   // clusters including long emoji tag sequences and combining-mark runs.
   const clampedOffset = Math.min(offset, value.length);

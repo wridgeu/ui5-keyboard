@@ -147,7 +147,7 @@ export function createStaticServerManager(port: number, root: string) {
 
   async function start(): Promise<void> {
     if (await probePort(port)) {
-      console.log(`[wdio-server] Port ${port} already in use — reusing existing server.`);
+      console.log(`[wdio-server] Port ${port} already in use - reusing existing server.`);
       return;
     }
 
@@ -257,7 +257,7 @@ export function readQUnitTestIds(testsuitePath: string): string[] {
 export function generateQUnitSpecs(testIds: string[], outputDir: string, urlFn: (name: string) => string): string[] {
   fs.mkdirSync(outputDir, { recursive: true });
 
-  // Write spec files idempotently — no cleanup needed since the file set
+  // Write spec files idempotently - no cleanup needed since the file set
   // is deterministic.  Worker processes may reload this config concurrently,
   // so we must avoid deleting files that other workers are already reading.
   return testIds.map((id) => {

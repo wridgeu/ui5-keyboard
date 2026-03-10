@@ -235,7 +235,7 @@ QUnit.test("setSequencePendingHandler fires on mid-sequence progress", (assert) 
   const pendingCalls: { completedSteps: number; totalSteps: number; nextKey: string }[] = [];
 
   manager.registerSequence(["G", "E", "X"], () => {
-    // Full sequence callback — not relevant for this test
+    // Full sequence callback - not relevant for this test
   });
 
   manager.setSequencePendingHandler((info) => {

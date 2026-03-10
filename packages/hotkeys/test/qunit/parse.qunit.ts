@@ -167,7 +167,7 @@ QUnit.test("Multi-modifier: Meta+Shift+S to Mod+Shift+S on Mac", (assert) => {
 });
 
 QUnit.test("No conversion for non-platform modifier", (assert) => {
-  // Meta+S on Windows is NOT the platform modifier — should not convert
+  // Meta+S on Windows is NOT the platform modifier - should not convert
   assert.strictEqual(convertToModFormat("Meta+S", "windows"), "Meta+S");
 });
 

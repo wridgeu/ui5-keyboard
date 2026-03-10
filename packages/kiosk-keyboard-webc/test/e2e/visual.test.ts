@@ -15,7 +15,7 @@ async function getKeyboardRoot(hostId: string) {
   return $(`#${hostId}`).$(">>>.kiosk-keyboard");
 }
 
-describe("KioskKeyboard Web Component — Visual Regression", () => {
+describe("KioskKeyboard Web Component - Visual Regression", () => {
   before(async () => {
     await openTestPage();
   });
@@ -56,7 +56,7 @@ describe("KioskKeyboard Web Component — Visual Regression", () => {
   });
 });
 
-describe("KioskKeyboard Web Component — Interactive States", () => {
+describe("KioskKeyboard Web Component - Interactive States", () => {
   before(async () => {
     await openTestPage();
   });

@@ -67,7 +67,7 @@ function getKeyboard() {
 
 /**
  * Click a SegmentedButtonItem by its visible text on the i18n page.
- * SegmentedButton renders items as `<li role="option">` — wdio's `li=` selector matches by text.
+ * SegmentedButton renders items as `<li role="option">` - wdio's `li=` selector matches by text.
  */
 async function selectI18nMode(text: string): Promise<void> {
   const item = await $(`li=${text}`);
@@ -99,7 +99,7 @@ async function focusFirstInput(): Promise<void> {
 
 // ─── Test Scenarios ──────────────────────────────────────────
 
-describe("FLP lifecycle — i18n auto-reset", () => {
+describe("FLP lifecycle - i18n auto-reset", () => {
   before(async () => {
     await waitForFlpShell();
   });
@@ -169,7 +169,7 @@ describe("FLP lifecycle — i18n auto-reset", () => {
       await navigateToI18nPage();
       await focusFirstInput();
 
-      // Hook should be cleared — default labels restored
+      // Hook should be cleared - default labels restored
       await waitForKeyboardLabel("Virtual Keyboard");
 
       const kb = await getKeyboard();

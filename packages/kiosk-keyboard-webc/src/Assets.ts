@@ -21,7 +21,7 @@ import "./generated/json-imports/i18n.js";
 // Register theme parameter bundle loaders (generated from src/themes/*/parameters-bundle.css)
 import "./generated/json-imports/Themes.js";
 
-// Fetch the i18n bundle (async, fire-and-forget — texts use English defaults until loaded)
+// Fetch the i18n bundle (async, fire-and-forget - texts use English defaults until loaded)
 import { initI18n } from "./core/i18n.js";
 
 void initI18n();

@@ -21,7 +21,7 @@ export interface KeyEventInterceptor {
 }
 
 /**
- * Result of processHotkeys — carries both the consumed flag and the
+ * Result of processHotkeys - carries both the consumed flag and the
  * event context that emitUnhandled needs. Eliminates the need for
  * temporal coupling via a shared mutable field.
  * @internal
@@ -39,12 +39,12 @@ export interface HotkeyDispatchResult<TContext = unknown> {
  * @internal
  */
 export interface HotkeyDispatchHandler<TContext = unknown> {
-  /** Hotkey dispatch — receives pre-filtered, non-suspended keydowns. */
+  /** Hotkey dispatch - receives pre-filtered, non-suspended keydowns. */
   processHotkeys(event: KeyboardEvent): HotkeyDispatchResult<TContext>;
-  /** Sequence dispatch — same contract. Returns true if consumed (full match OR partial advance). */
+  /** Sequence dispatch - same contract. Returns true if consumed (full match OR partial advance). */
   processSequences(event: KeyboardEvent): boolean;
   /**
-   * Unhandled emission — called when the event was not consumed.
+   * Unhandled emission - called when the event was not consumed.
    * `forcedReason` is set by the dispatcher when the event was blocked before reaching
    * the matching pipeline (e.g., `Suspended`). When null, uses `eventContext` from
    * processHotkeys to determine the most specific reason.
@@ -93,9 +93,9 @@ class DispatchGuard implements KeyboardDispatchGuard {
  * Owns all DOM listeners (`window` capture for keydown/keyup, `window` bubble for blur),
  * provides a deterministic 7-step dispatch pipeline, and exposes an RAII-style suspend guard.
  *
- * Instantiated and owned by HotkeyManager — not a singleton.
+ * Instantiated and owned by HotkeyManager - not a singleton.
  *
- * @internal — not part of the public API.
+ * @internal - not part of the public API.
  */
 export default class EventDispatcher {
   private _handler: HotkeyDispatchHandler;
@@ -111,7 +111,7 @@ export default class EventDispatcher {
   // Recorder tracking for lifecycle management
   private readonly _trackedRecorders: Set<HotkeyRecorder> = new Set();
 
-  // AltGr detection — tracks location of last Alt keydown
+  // AltGr detection - tracks location of last Alt keydown
   private _lastAltLocation = 0;
   private _platform: Platform;
 
@@ -176,7 +176,7 @@ export default class EventDispatcher {
   }
 
   /**
-   * Called by DispatchGuard.release() — removes the guard from the set.
+   * Called by DispatchGuard.release() - removes the guard from the set.
    * @internal
    */
   _releaseGuard(guard: DispatchGuard): void {
@@ -194,7 +194,7 @@ export default class EventDispatcher {
   setInterceptor(interceptor: KeyEventInterceptor): void {
     if (this._destroyed) return;
     if (this._interceptor && this._interceptor !== interceptor) {
-      Log.warning("Replacing active interceptor — previous interceptor will be detached", undefined, LOG_COMPONENT);
+      Log.warning("Replacing active interceptor - previous interceptor will be detached", undefined, LOG_COMPONENT);
       this._interceptor.onDetached();
     }
     this._interceptor = interceptor;
@@ -275,20 +275,20 @@ export default class EventDispatcher {
   // ──────────────────────────────────────────────
 
   private _onKeyDown(event: KeyboardEvent): void {
-    // Step 1: Key state tracking — ALWAYS, even for modifiers/IME
+    // Step 1: Key state tracking - ALWAYS, even for modifiers/IME
     this._keyStateTracker.processKeyDown(event);
 
     // Step 2: Interceptor (modal capture)
     // Interceptor handles its own DOM event manipulation (preventDefault, etc.)
     // Wrapped in try-catch so a throwing onRecord/onCancel callback does not
-    // kill the pipeline — matches the isolation pattern used by _executeMatch.
+    // kill the pipeline - matches the isolation pattern used by _executeMatch.
     if (this._interceptor) {
       try {
         if (this._interceptor.onKeyDown(event)) return;
       } catch (error) {
         Log.error(`Error in interceptor onKeyDown: ${error}`, undefined, LOG_COMPONENT);
         event.preventDefault();
-        // Do NOT stopImmediatePropagation — let analytics/a11y listeners still observe the event
+        // Do NOT stopImmediatePropagation - let analytics/a11y listeners still observe the event
         return;
       }
     }
@@ -308,7 +308,7 @@ export default class EventDispatcher {
     // Step 6: Sequence dispatch
     const sequenceConsumed = this._handler.processSequences(event);
 
-    // Step 7: Unhandled emission — passes eventContext from step 5 explicitly
+    // Step 7: Unhandled emission - passes eventContext from step 5 explicitly
     if (!hotkeyResult.consumed && !sequenceConsumed) {
       this._handler.emitUnhandled(event, null, hotkeyResult.eventContext);
     }
@@ -343,10 +343,10 @@ export default class EventDispatcher {
       this._lastAltLocation = 0;
     }
 
-    // IME composition — not a hotkey attempt
+    // IME composition - not a hotkey attempt
     if (event.isComposing || event.keyCode === 229) return true;
 
-    // Pure modifier key press — not a hotkey attempt
+    // Pure modifier key press - not a hotkey attempt
     if (MODIFIER_KEYS.has(event.key)) return true;
 
     // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.

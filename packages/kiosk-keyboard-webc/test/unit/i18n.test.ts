@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Mock only the UI5 WC i18n bundle — i18n-defaults.js is a generated file
+// Mock only the UI5 WC i18n bundle - i18n-defaults.js is a generated file
 // with plain object exports that works fine without mocking.
 const mockGetText = vi.fn();
 vi.mock("@ui5/webcomponents-base/dist/i18nBundle.js", () => ({

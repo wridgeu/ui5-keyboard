@@ -378,7 +378,7 @@ describe("kiosk-keyboard", () => {
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
       await nextRender();
 
-      // Without resolver, no input is found inside the empty div — typing is a no-op
+      // Without resolver, no input is found inside the empty div - typing is a no-op
       queryKey(kb, "a")!.click();
 
       // Set a custom resolver that provides a detached input
@@ -437,7 +437,7 @@ describe("kiosk-keyboard", () => {
       const input = container.querySelector<HTMLInputElement>("input")!;
       await nextRender();
 
-      // Resolver returns a <div> — should be rejected by the type guard
+      // Resolver returns a <div> - should be rejected by the type guard
       // and fall through to the built-in resolver which finds the <input>
       // inside the wrapper.
       const badDiv = document.createElement("div");
@@ -536,7 +536,7 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
 
-      // QWERTZ-DE has ü, ö, ä, ß — QWERTY does not
+      // QWERTZ-DE has ü, ö, ä, ß - QWERTY does not
       expect(queryKey(el, "\u00FC"), "ü key before shift").to.not.be.null;
       expect(queryKey(el, "\u00F6"), "ö key before shift").to.not.be.null;
       expect(queryKey(el, "\u00DF"), "ß key before shift").to.not.be.null;
@@ -759,7 +759,7 @@ describe("kiosk-keyboard", () => {
         { once: true },
       );
 
-      // open=true on a non-docked keyboard should be rejected silently —
+      // open=true on a non-docked keyboard should be rejected silently -
       // it must NOT fire after-close since the keyboard never opened.
       el.open = true;
       await nextRender();
@@ -809,7 +809,7 @@ describe("kiosk-keyboard", () => {
         { once: true },
       );
 
-      // Connect to DOM — this triggers onEnterDOM → _performOpen → after-open
+      // Connect to DOM - this triggers onEnterDOM → _performOpen → after-open
       const container = await fixture(
         html`
           <div></div>
@@ -846,9 +846,9 @@ describe("kiosk-keyboard", () => {
       container.appendChild(el);
       await nextRender();
 
-      expect(el.open, "open should be false — non-docked keyboard cannot be open").to.be.false;
+      expect(el.open, "open should be false - non-docked keyboard cannot be open").to.be.false;
       expect(openFired, "after-open should NOT fire for non-docked keyboard").to.be.false;
-      expect(closeFired, "after-close should NOT fire — keyboard was never open").to.be.false;
+      expect(closeFired, "after-close should NOT fire - keyboard was never open").to.be.false;
 
       // Removing from DOM should also not fire spurious after-close
       let closeFiredOnRemove = false;
@@ -1150,7 +1150,7 @@ describe("kiosk-keyboard", () => {
       queryKey(el, "{fkey:F1}")!.click();
       await nextRender();
 
-      // Shift should have auto-released — switch back to check shift key state
+      // Shift should have auto-released - switch back to check shift key state
       queryKey(el, "{layout:base}")!.click();
       await nextRender();
       const shiftAfter = queryKey(el, "{shift}")!;

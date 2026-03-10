@@ -312,10 +312,10 @@ QUnit.test("Escape does nothing when keyboard is not docked", async (assert) => 
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
-  // Non-docked keyboard — Escape listener is never attached (only show()/close() manage it)
+  // Non-docked keyboard - Escape listener is never attached (only show()/close() manage it)
   firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
-  assert.strictEqual(document.activeElement, firstKey, "Focus unchanged — Escape not intercepted");
+  assert.strictEqual(document.activeElement, firstKey, "Focus unchanged - Escape not intercepted");
 
   kb.destroy();
 });
@@ -324,7 +324,7 @@ QUnit.test("Escape does nothing when docked keyboard is already closed", async (
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
 
-  // Keyboard is docked but closed (default state) — Escape listener not attached
+  // Keyboard is docked but closed (default state) - Escape listener not attached
   assert.notOk(kb.isOpen(), "Keyboard starts closed");
 
   const firstKey = kb.getDomRef()!.querySelector<HTMLElement>(".ui5KioskKey")!;
@@ -336,7 +336,7 @@ QUnit.test("Escape does nothing when docked keyboard is already closed", async (
 
   firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
-  assert.notOk(closeFired, "afterClose not fired — keyboard was already closed");
+  assert.notOk(closeFired, "afterClose not fired - keyboard was already closed");
 
   kb.destroy();
 });
@@ -409,7 +409,7 @@ QUnit.test("setDocked(true) resets open state", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // Starts undocked — set docked should ensure closed
+  // Starts undocked - set docked should ensure closed
   kb.setDocked(true);
   assert.notOk(kb.isOpen(), "Keyboard is closed after switching to docked mode");
 

@@ -53,7 +53,7 @@ export function insertText(
   if (element) {
     setTargetValue(element, newValue, customResolver);
   } else {
-    // Target control destroyed — fall back to raw DOM value
+    // Target control destroyed - fall back to raw DOM value
     dom.value = newValue;
   }
   try {
@@ -160,7 +160,7 @@ export function handleNavigation(
  *
  * Prefers the typed `setValue()` method (e.g. `InputBase.setValue`) over
  * `setProperty("value")` because direct setProperty only updates the property
- * bag — InputBase.getValue() reads from the DOM when rendered, causing desync.
+ * bag - InputBase.getValue() reads from the DOM when rendered, causing desync.
  *
  * Falls back to setting the DOM value directly for custom controls without
  * a `value` metadata property. Also fires `liveChange` when the event exists.

@@ -189,7 +189,7 @@ QUnit.test("disableRouterIntegration: disable stops scope updates", (assert) => 
 
   manager.disableRouterIntegration();
   router.fireRouteMatched("detail");
-  // Scope should NOT change — router is detached
+  // Scope should NOT change - router is detached
   assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after disable");
 });
 

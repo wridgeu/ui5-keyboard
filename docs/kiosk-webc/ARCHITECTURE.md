@@ -1,15 +1,15 @@
 # Kiosk Keyboard Web Component Architecture
 
-This document describes the internal architecture, design decisions, and edge case handling of the `kiosk-keyboard-webc` package — the native web component variant built on the UI5 Web Components framework.
+This document describes the internal architecture, design decisions, and edge case handling of the `kiosk-keyboard-webc` package, the native web component variant built on the UI5 Web Components framework.
 
 ## Module Overview
 
 ```
-KioskKeyboard.ts          Web component — state, event delegation, target input integration,
+KioskKeyboard.ts          Web component: state, event delegation, target input integration,
                           locale detection, auto-type, mobile keyboard suppression
-KioskKeyboardTemplate.tsx JSX template — Preact-based, UI5 WC jsxRenderer
+KioskKeyboardTemplate.tsx JSX template: Preact-based, UI5 WC jsxRenderer
 Assets.ts                 Registers theme parameter bundles and i18n loaders
-bundle.esm.ts             ESM entry point — imports Assets, re-exports component + public types
+bundle.esm.ts             ESM entry point: imports Assets, re-exports component + public types
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, FKeyMode,
                           SpecialKeyValue, KeyWidth, KeyType, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
@@ -69,9 +69,9 @@ themes/
 })
 ```
 
-- `jsxRenderer` — Preact-based JSX rendering engine provided by UI5 WC
-- `languageAware: true` — re-renders on UI5 language change (keeps ARIA labels current)
-- `themeAware: true` — re-renders on theme change
+- `jsxRenderer`: Preact-based JSX rendering engine provided by UI5 WC
+- `languageAware: true`: re-renders on UI5 language change (keeps ARIA labels current)
+- `themeAware: true`: re-renders on theme change
 
 Events are declared with `@event` from `event-strict.js`:
 
@@ -87,10 +87,10 @@ Events are declared with `@event` from `event-strict.js`:
 
 The framework requires specific TS settings:
 
-- `experimentalDecorators: true` — UI5 WC decorators are not TC39 decorators
-- `useDefineForClassFields: false` — avoids the class field initializer trap where `declare` would be needed for every property
-- `jsx: "react-jsx"` + `jsxImportSource: "@ui5/webcomponents-base"` — routes JSX to the UI5 WC Preact-based runtime
-- `strictPropertyInitialization: false` — framework-managed properties are initialized by the decorator system, not in the constructor
+- `experimentalDecorators: true`: UI5 WC decorators are not TC39 decorators
+- `useDefineForClassFields: false`: avoids the class field initializer trap where `declare` would be needed for every property
+- `jsx: "react-jsx"` + `jsxImportSource: "@ui5/webcomponents-base"`: routes JSX to the UI5 WC Preact-based runtime
+- `strictPropertyInitialization: false`: framework-managed properties are initialized by the decorator system, not in the constructor
 
 ## Component Architecture
 
@@ -124,19 +124,19 @@ This design was chosen for:
 
 Internal reactive properties (no HTML attribute, trigger re-render):
 
-- `_currentLayout` — currently active layout name
-- `_shifted` — whether shift is active
-- `_capsLock` — whether caps lock is active
+- `_currentLayout`: currently active layout name
+- `_shifted`: whether shift is active
+- `_capsLock`: whether caps lock is active
 
 ### Event Handling
 
 The component uses three event strategies:
 
-1. **JSX event handlers** — `onClick`, `onMouseDown`, `onKeyDown` on the keyboard root, using event delegation via `closest("[data-key]")` to resolve the pressed key.
+1. **JSX event handlers**: `onClick`, `onMouseDown`, `onKeyDown` on the keyboard root, using event delegation via `closest("[data-key]")` to resolve the pressed key.
 
-2. **Native touch listeners** — `touchstart` and `touchend` attached directly on the `shadowRoot` in `onEnterDOM()`. Touch events are handled natively (not via JSX) because `preventDefault()` on `touchstart` is needed to prevent focus steal, and the `touchend` handler uses `elementFromPoint()` to resolve the key under the finger at lift-off (handling finger drift).
+2. **Native touch listeners**: `touchstart` and `touchend` attached directly on the `shadowRoot` in `onEnterDOM()`. Touch events are handled natively (not via JSX) because `preventDefault()` on `touchstart` is needed to prevent focus steal, and the `touchend` handler uses `elementFromPoint()` to resolve the key under the finger at lift-off (handling finger drift).
 
-3. **Document-level listeners** — `focusin` and `focusout` in capture phase for auto-show behavior.
+3. **Document-level listeners**: `focusin` and `focusout` in capture phase for auto-show behavior.
 
 ### Key Press Flow
 
@@ -160,7 +160,7 @@ click / touchend
 
 ### Focus Steal Prevention
 
-`touchstart` and `mousedown` call `preventDefault()` when a key element is pressed. This prevents the browser from transferring focus away from the target input — critical for maintaining cursor position. The `onMouseDown` handler in JSX and the native `touchstart` listener both implement this.
+`touchstart` and `mousedown` call `preventDefault()` when a key element is pressed. This prevents the browser from transferring focus away from the target input, which is critical for maintaining cursor position. The `onMouseDown` handler in JSX and the native `touchstart` listener both implement this.
 
 ## Target Input Integration
 
@@ -168,9 +168,9 @@ click / touchend
 
 The `for` attribute specifies a target element ID. Resolution uses `resolveInputOrTextarea()` which searches:
 
-1. Direct element — is it an `<input>` or `<textarea>`?
-2. Light DOM — `querySelector("input, textarea")`
-3. Shadow DOM — recursive search up to 3 levels deep into nested shadow roots
+1. Direct element: is it an `<input>` or `<textarea>`?
+2. Light DOM: `querySelector("input, textarea")`
+3. Shadow DOM: recursive search up to 3 levels deep into nested shadow roots
 
 This handles web components that wrap native inputs (e.g., UI5 `<ui5-input>` containing `<input>` in its shadow DOM).
 
@@ -302,7 +302,7 @@ Open/close is managed via CSS classes:
 
 ### Event Timing
 
-`after-open` and `after-close` fire synchronously on state change — they signal the state transition, not animation completion. This avoids fragile `transitionend` listener logic.
+`after-open` and `after-close` fire synchronously on state change. They signal the state transition, not animation completion. This avoids fragile `transitionend` listener logic.
 
 ## Auto-Show
 
@@ -399,7 +399,7 @@ Allows consumers to override translations without modifying the bundle files.
 
 ### CSS Architecture
 
-A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fallback values. No hardcoded colors — automatic theming support for all Horizon variants.
+A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fallback values, with no hardcoded colors. Automatic theming support for all Horizon variants.
 
 ### Component-Level Custom Properties
 
@@ -426,9 +426,9 @@ A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fall
 
 ### Accessibility CSS
 
-- `@media (prefers-reduced-motion: reduce)` — disables transitions and transforms
-- `@media (forced-colors: active)` — uses system colors (ButtonText, Highlight, HighlightText)
-- `@media (hover: none)` — disables hover effects on touch-only devices
+- `@media (prefers-reduced-motion: reduce)`: disables transitions and transforms
+- `@media (forced-colors: active)`: uses system colors (ButtonText, Highlight, HighlightText)
+- `@media (hover: none)`: disables hover effects on touch-only devices
 
 ### Content Density
 
@@ -436,7 +436,7 @@ A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fall
 
 ### Theme Parameter Bundles
 
-Four Horizon variant bundles exist (required by the UI5 WC build tooling) but are empty — the component uses global SAP CSS variables that are already provided by the theme infrastructure.
+Four Horizon variant bundles exist (required by the UI5 WC build tooling) but are empty. The component uses global SAP CSS variables that are already provided by the theme infrastructure.
 
 ## Build Pipeline
 

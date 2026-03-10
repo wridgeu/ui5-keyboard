@@ -1,6 +1,6 @@
 # Multi-Key Sequences
 
-> **Status: Implemented** — `SequenceManager` class in `src/internal/SequenceManager.ts`.
+> **Status: Implemented.** `SequenceManager` class in `src/internal/SequenceManager.ts`.
 
 Multi-key sequence support for vim-style `g g`, Emacs-style `C-x C-s`, and VS Code-style `Ctrl+K Ctrl+S` patterns.
 
@@ -36,7 +36,7 @@ manager.registerSequence(
 );
 ```
 
-`SequenceManager` is an internal class managed by `HotkeyManager` — access sequence functionality through `HotkeyManager.registerSequence()` and related facade methods. It receives pre-filtered key events from the EventDispatcher pipeline (step 6, after hotkey matching) and reads the active scope from `HotkeyManager` for scope-based filtering.
+`SequenceManager` is an internal class managed by `HotkeyManager`. Access sequence functionality through `HotkeyManager.registerSequence()` and related facade methods. It receives pre-filtered key events from the EventDispatcher pipeline (step 6, after hotkey matching) and reads the active scope from `HotkeyManager` for scope-based filtering.
 
 ## Architecture
 
@@ -69,13 +69,13 @@ manager.registerSequence(
       // info.totalSteps: total keys in the sequence
       // info.nextKey: the next expected key string
       // info.sequence: the full sequence array
-      statusBar.setText(`${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
+      statusBar.setText(`${info.completedSteps}/${info.totalSteps} - next: ${info.nextKey}`);
     },
   },
 );
 ```
 
-`onPending` dies with the registration — no manual cleanup needed. When the handle is unregistered (or the group is destroyed), the callback is gone.
+`onPending` dies with the registration, so no manual cleanup needed. When the handle is unregistered (or the group is destroyed), the callback is gone.
 
 A global fallback is available via `manager.setSequencePendingHandler()` for cases where a single handler covers all sequences. Per-registration `onPending` takes precedence over the global handler when both are set.
 
@@ -90,17 +90,17 @@ A global fallback is available via `manager.setSequencePendingHandler()` for cas
 | `ignoreInputs`    | `boolean \| "auto"`        | `"auto"`       | Suppress in inputs; auto allows Ctrl/Meta combos and Escape   |
 | `preventDefault`  | `boolean`                  | `true`         | Call `event.preventDefault()` when the full sequence matches  |
 | `stopPropagation` | `boolean`                  | `true`         | Call `event.stopPropagation()` when the full sequence matches |
-| `onPending`       | `SequencePendingCallback`  | —              | Per-registration mid-sequence progress callback               |
+| `onPending`       | `SequencePendingCallback`  | -              | Per-registration mid-sequence progress callback               |
 
 ## Design Decisions
 
 ### Separate Class (not on HotkeyManager)
 
-Sequences are implemented as a separate `SequenceManager` class with its own matching algorithm. This keeps the core `HotkeyManager` focused on single-chord hotkeys. The two systems share scope state and the centralized EventDispatcher — step 6 of the dispatch pipeline calls `SequenceManager.processKeyEvent()` after hotkey matching (step 5).
+Sequences are implemented as a separate `SequenceManager` class with its own matching algorithm. This keeps the core `HotkeyManager` focused on single-chord hotkeys. The two systems share scope state and the centralized EventDispatcher. Step 6 of the dispatch pipeline calls `SequenceManager.processKeyEvent()` after hotkey matching (step 5).
 
 ### No Standalone Hotkey Conflict Resolution
 
-The current implementation does not delay standalone hotkeys when they share a prefix with a sequence. If `G` is registered as a standalone hotkey and `G G` as a sequence, pressing `G` fires the standalone immediately — the sequence is tracked independently by `SequenceManager`. This avoids adding latency to standalone hotkeys.
+The current implementation does not delay standalone hotkeys when they share a prefix with a sequence. If `G` is registered as a standalone hotkey and `G G` as a sequence, pressing `G` fires the standalone immediately. The sequence is tracked independently by `SequenceManager`. This avoids adding latency to standalone hotkeys.
 
 ### Overlapping Sequences
 

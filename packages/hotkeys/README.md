@@ -5,7 +5,7 @@
 Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
 
 > [!IMPORTANT]
-> **Minimum UI5 version: 1.120** — requires `Lib.init()` (1.118) and `DataType.registerEnum()` (1.120).
+> **Minimum UI5 version: 1.120**: requires `Lib.init()` (1.118) and `DataType.registerEnum()` (1.120).
 
 A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard shortcuts with scope-based activation, cross-platform modifier normalization, multi-key sequences, hotkey recording, and proper UI5 lifecycle integration.
 
@@ -102,7 +102,7 @@ Add the library to your application's `manifest.json`:
 }
 ```
 
-Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unnecessary — the library is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
+Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unnecessary; the library is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
 
 ## Quick Start
 
@@ -161,7 +161,7 @@ import { ConflictBehavior, GLOBAL_SCOPE, UnhandledReason } from "ui5/hotkeys/lib
 import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 ```
 
-`HotkeyRecorder` and `KeyStateTracker` classes are exported for type declarations (e.g., `const tracker: KeyStateTracker = manager.getKeyStateTracker()`), but their constructors are internal — use `manager.createRecorder()` and `manager.getKeyStateTracker()` respectively.
+`HotkeyRecorder` and `KeyStateTracker` classes are exported for type declarations (e.g., `const tracker: KeyStateTracker = manager.getKeyStateTracker()`), but their constructors are internal: use `manager.createRecorder()` and `manager.getKeyStateTracker()` respectively.
 
 Advanced modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. Non-stable top-level paths currently include re-export entry points (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`).
 
@@ -258,8 +258,8 @@ manager.register(
 ```ts
 const handle = manager.register("Mod+S", saveHandler, { description: "Save" });
 
-handle.id; // "hk_1" — unique registration ID
-handle.isActive; // true — not yet unregistered
+handle.id; // "hk_1" - unique registration ID
+handle.isActive; // true - not yet unregistered
 
 // Update options without re-registering
 handle.setOptions({ enabled: false });
@@ -321,7 +321,7 @@ onExit(): void {
 | `size`                       | Number of currently active registrations                 |
 | `isDestroyed`                | Whether `destroyAll()` has been called                   |
 
-Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle` — `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
+Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle`. `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 
 Group-level introspection can drive scoped shortcut UIs:
 
@@ -355,7 +355,7 @@ manager.register("Escape", () => closeApp(), { scope: GLOBAL_SCOPE });
 manager.register("Escape", () => closeDialog(), { scope: "confirmDialog" });
 manager.register("Escape", () => exitEditMode(), { scope: "editor" });
 
-// Push a scope — it becomes the active scope
+// Push a scope - it becomes the active scope
 manager.pushScope("editor");
 // Now pressing Escape calls exitEditMode()
 // Global Escape is suppressed (scoped match takes priority)
@@ -366,7 +366,7 @@ manager.pushScope("confirmDialog");
 
 // Close the dialog
 manager.popScope("confirmDialog");
-// Back to editor — Escape calls exitEditMode() again
+// Back to editor - Escape calls exitEditMode() again
 
 // Reset everything to just the global scope
 manager.resetToGlobalScope();
@@ -379,7 +379,7 @@ manager.resetToGlobalScope();
 > ```ts
 > manager.register("Mod+S", () => save()); // global
 > manager.pushScope("editor");
-> // Mod+S still fires — no editor-scoped Mod+S shadows it
+> // Mod+S still fires - no editor-scoped Mod+S shadows it
 > ```
 
 ### Router Integration
@@ -394,7 +394,7 @@ this.getRouter().initialize();
 ```
 
 ```ts
-// Main.controller.ts — route name is "main"
+// Main.controller.ts - route name is "main"
 manager.register("F5", () => this.onRefresh(), {
   scope: "main",
   description: "Refresh main list",
@@ -402,7 +402,7 @@ manager.register("F5", () => this.onRefresh(), {
 ```
 
 ```ts
-// Detail.controller.ts — route name is "detail"
+// Detail.controller.ts - route name is "detail"
 manager.register("F5", () => this.onRefreshDetail(), {
   scope: "detail",
   description: "Refresh detail view",
@@ -485,7 +485,7 @@ manager.register("Mod+S", () => savePanel(), {
 // For nested targets with the same key, the innermost match fires.
 // A target-scoped match with stopPropagation: true (the default) prevents
 // document-level handlers for the same key from firing.
-// Scopes still apply — both target and scope must match.
+// Scopes still apply - both target and scope must match.
 ```
 
 > **Focus fallback (Escape only):** Some browsers and UI5 rendering transitions
@@ -500,7 +500,7 @@ manager.register("Mod+S", () => savePanel(), {
 Temporarily suspend all hotkey and sequence dispatch (e.g., during onboarding overlays or guided tours):
 
 ```ts
-// Acquire a guard — dispatch is suspended while any guard is active
+// Acquire a guard - dispatch is suspended while any guard is active
 const guard = manager.suspendDispatch("onboarding-overlay");
 
 // Key state tracking continues normally.
@@ -508,12 +508,12 @@ const guard = manager.suspendDispatch("onboarding-overlay");
 // Unhandled callback fires with reason "suspended".
 
 // Release the guard to resume dispatch
-guard.release(); // idempotent — safe to call multiple times
+guard.release(); // idempotent - safe to call multiple times
 
 // Nested guards: all must be released before dispatch resumes
 const g1 = manager.suspendDispatch("outer");
 const g2 = manager.suspendDispatch("inner");
-g1.release(); // still suspended — g2 active
+g1.release(); // still suspended - g2 active
 g2.release(); // dispatch resumes
 ```
 
@@ -544,7 +544,7 @@ manager.registerSequence(
   { description: "Save all (VS Code style)" },
 );
 
-// Per-registration progress callback — dies with the registration
+// Per-registration progress callback - dies with the registration
 manager.registerSequence(
   ["G", "I"],
   (event) => {
@@ -553,22 +553,22 @@ manager.registerSequence(
   {
     description: "Go to inbox",
     onPending: (info) => {
-      statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
+      statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps}  - next: ${info.nextKey}`);
     },
   },
 );
 
 // Global fallback for sequences without onPending
 manager.setSequencePendingHandler((info) => {
-  statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps} — next: ${info.nextKey}`);
+  statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps}  - next: ${info.nextKey}`);
 });
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"` — suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback, takes precedence over the global handler).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback, takes precedence over the global handler).
 
 > [!NOTE]
 > `scope` must be a non-empty string when provided.
-> Uses HotkeyManager's scope stack — sequences respect the active scope.
+> Uses HotkeyManager's scope stack: sequences respect the active scope.
 
 ## KeyStateTracker
 
@@ -592,18 +592,18 @@ tracker.setChangeCallback((keys) => {
   console.log("Currently held:", keys);
 });
 
-// Clean up (remove callback — tracker lifecycle is owned by the manager)
+// Clean up (remove callback - tracker lifecycle is owned by the manager)
 tracker.setChangeCallback(null);
 ```
 
-The tracker is owned by `HotkeyManager` and shares its lifecycle — it is created and destroyed automatically. Access it via `manager.getKeyStateTracker()`. The `KeyStateTracker` class is exported for type declarations but its constructor is internal.
+The tracker is owned by `HotkeyManager` and shares its lifecycle: it is created and destroyed automatically. Access it via `manager.getKeyStateTracker()`. The `KeyStateTracker` class is exported for type declarations but its constructor is internal.
 
 > [!NOTE]
 > Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
 
 ## HotkeyRecorder
 
-Capture a keyboard shortcut from user input — for "press a key to set shortcut" settings UIs:
+Capture a keyboard shortcut from user input, for "press a key to set shortcut" settings UIs:
 
 ```ts
 import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
@@ -640,7 +640,7 @@ recorder.destroy();
 > While recording, **all keyboard input is blocked** (`preventDefault` + `stopImmediatePropagation`). Keep the recording window short.
 
 > [!TIP]
-> Not a singleton — create one per settings row via `manager.createRecorder()`. The `HotkeyRecorder` class is exported for type declarations but its constructor is internal.
+> Not a singleton: create one per settings row via `manager.createRecorder()`. The `HotkeyRecorder` class is exported for type declarations but its constructor is internal.
 
 ## Validation
 
@@ -685,7 +685,7 @@ assertValidHotkey(""); // throws Error
 | `"Ctrl+Shift"` | `Invalid hotkey "Ctrl+Shift": no non-modifier key found`          |
 | `"Ctrl+S+X"`   | `Invalid hotkey "Ctrl+S+X": unexpected segment "X" after key "S"` |
 
-Unknown key names (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw — they are allowed for forward compatibility.
+Unknown key names (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw; they are allowed for forward compatibility.
 
 ## Utility Functions
 
@@ -759,27 +759,27 @@ The library registers proper UI5 enums via `DataType.registerEnum()`:
 ```ts
 import { ConflictBehavior, UnhandledReason, Platform, GLOBAL_SCOPE } from "ui5/hotkeys/library";
 
-// ConflictBehavior — strategy for duplicate registrations
-ConflictBehavior.Warn; // "warn" — log warning, allow both (default)
-ConflictBehavior.Error; // "error" — throw, prevent new registration
-ConflictBehavior.Replace; // "replace" — unregister existing, register new
-ConflictBehavior.Allow; // "allow" — allow silently, no feedback
+// ConflictBehavior - strategy for duplicate registrations
+ConflictBehavior.Warn; // "warn" - log warning, allow both (default)
+ConflictBehavior.Error; // "error" - throw, prevent new registration
+ConflictBehavior.Replace; // "replace" - unregister existing, register new
+ConflictBehavior.Allow; // "allow" - allow silently, no feedback
 
-// UnhandledReason — why a key event was not handled
+// UnhandledReason - why a key event was not handled
 UnhandledReason.NoMatch; // "no_match"
-UnhandledReason.TargetMismatch; // "target_mismatch" — key matched but target element was not in composedPath
+UnhandledReason.TargetMismatch; // "target_mismatch" - key matched but target element was not in composedPath
 UnhandledReason.Disabled; // "disabled"
 UnhandledReason.InputSuppressed; // "input_suppressed"
 UnhandledReason.PopupSuppressed; // "popup_suppressed"
 UnhandledReason.RepeatIgnored; // "repeat_ignored"
-UnhandledReason.Suspended; // "suspended" — dispatch was suspended via suspendDispatch()
+UnhandledReason.Suspended; // "suspended" - dispatch was suspended via suspendDispatch()
 
-// Platform — detected platform
+// Platform - detected platform
 Platform.Mac; // "mac"
 Platform.Windows; // "windows"
 Platform.Linux; // "linux"
 
-// GLOBAL_SCOPE — the default scope constant (instead of hardcoding "__global__")
+// GLOBAL_SCOPE - the default scope constant (instead of hardcoding "__global__")
 GLOBAL_SCOPE; // "__global__"
 ```
 
@@ -828,30 +828,30 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 ## Further Reading
 
-- [Architecture & Internals](../../docs/hotkeys/ARCHITECTURE.md) — two-pass matching, scope stack, listener design
-- [Multi-key Sequence Design](../../docs/hotkeys/SEQUENCES.md) — how the sequence system works
-- [Alternatives Research](../../docs/hotkeys/ALTERNATIVES-RESEARCH.md) — comparison with other keyboard shortcut approaches
-- [UI5 Event Handling Deep Dive](../../docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md) — how UI5 processes keyboard events
+- [Architecture & Internals](../../docs/hotkeys/ARCHITECTURE.md): two-pass matching, scope stack, listener design
+- [Multi-key Sequence Design](../../docs/hotkeys/SEQUENCES.md): how the sequence system works
+- [Alternatives Research](../../docs/hotkeys/ALTERNATIVES-RESEARCH.md): comparison with other keyboard shortcut approaches
+- [UI5 Event Handling Deep Dive](../../docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md): how UI5 processes keyboard events
 
 ## Troubleshooting
 
 **Hotkey doesn't fire:**
 
-1. Check if the correct scope is active — use `manager.getActiveScope()` or enable debug mode
+1. Check if the correct scope is active: use `manager.getActiveScope()` or enable debug mode
 2. If focus is in a text field, single-key hotkeys are suppressed by default (`ignoreInputs: "auto"`). Use `Ctrl`/`Mod` combos or set `ignoreInputs: false`
-3. Check if the registration is disabled — `handle.setOptions({ enabled: true })`
-4. Check for popup suppression — `suppressInPopups: true` blocks hotkeys when a dialog is open
+3. Check if the registration is disabled: `handle.setOptions({ enabled: true })`
+4. Check for popup suppression: `suppressInPopups: true` blocks hotkeys when a dialog is open
 5. Enable debug mode (`manager.setDebugMode(true)`) and check the browser console for detailed per-keypress logs
 
 **Hotkey fires the wrong handler:**
 
 - The active scope's handler always wins over global. Use `getRegistrations()` to inspect all active registrations and their scopes
-- With router integration, the scope matches the route name — check that your route names match your scope strings
+- With router integration, the scope matches the route name. Check that your route names match your scope strings
 
 **Hotkeys stopped firing unexpectedly:**
 
 - Check if dispatch is suspended: `manager.isDispatchSuspended()`. A suspend guard may not have been released
-- Check if a recorder is active — while recording, all hotkey dispatch is blocked
+- Check if a recorder is active: while recording, all hotkey dispatch is blocked
 
 **AltGr characters trigger hotkeys on Windows:**
 

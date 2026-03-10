@@ -8,20 +8,20 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 
 ## Features
 
-- **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework — plain HTML, React, Vue, Angular
-- **SAP theming** — Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
-- **UI5 app integration** — consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
-- **Multiple layouts** — QWERTY, QWERTZ-DE, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
-- **Locale-aware** — auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`)
-- **Shift / Caps Lock** — single-click for one-shot shift, double-click for caps lock
-- **Docked mode** — fixed-position keyboard at bottom of viewport with slide animation
-- **Auto-show** — opens/closes automatically when target inputs receive/lose focus
-- **Auto-type detection** — switches to Numpad for `type="number"`, `inputmode="numeric"`, `data-keyboard-type="Numpad"`, etc.
-- **F-key and navigation key support** — configurable modes: `Virtual`, `Native`, `None`
-- **Grapheme-aware** — correct backspace/navigation for emoji and multi-code-unit characters
-- **Accessible** — ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
-- **i18n** — built-in English/German, extensible via custom resolver
-- **Custom layouts** — register/unregister layouts at runtime
+- **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework: plain HTML, React, Vue, Angular
+- **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
+- **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
+- **Multiple layouts**: QWERTY, QWERTZ-DE, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
+- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`)
+- **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
+- **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
+- **Auto-show**: opens/closes automatically when target inputs receive/lose focus
+- **Auto-type detection**: switches to Numpad for `type="number"`, `inputmode="numeric"`, `data-keyboard-type="Numpad"`, etc.
+- **F-key and navigation key support**: configurable modes: `Virtual`, `Native`, `None`
+- **Grapheme-aware**: correct backspace/navigation for emoji and multi-code-unit characters
+- **Accessible**: ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
+- **i18n**: built-in English/German, extensible via custom resolver
+- **Custom layouts**: register/unregister layouts at runtime
 
 ## Installation
 
@@ -126,8 +126,8 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | Event                  | Detail                                                                          | Description                                                                                                    |
 | ---------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `key-press`            | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys. |
-| `after-open`           | —                                                                               | Fired after docked keyboard opens.                                                                             |
-| `after-close`          | —                                                                               | Fired after docked keyboard closes.                                                                            |
+| `after-open`           | -                                                                               | Fired after docked keyboard opens.                                                                             |
+| `after-close`          | -                                                                               | Fired after docked keyboard closes.                                                                            |
 | `layout-change`        | `{ layout: string }`                                                            | Fired when layout switches.                                                                                    |
 | `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                              |
 
@@ -256,7 +256,7 @@ Pass `null` to clear the custom resolver:
 kb.setTargetResolver(null);
 ```
 
-> **Note on events:** Virtual key presses dispatch `InputEvent("input")` on the target, matching native keyboard behavior. The `"change"` event is _not_ dispatched on character input — it fires only on Enter (for single-line inputs), consistent with how browsers handle `"change"` (on blur/commit).
+> **Note on events:** Virtual key presses dispatch `InputEvent("input")` on the target, matching native keyboard behavior. The `"change"` event is _not_ dispatched on character input; it fires only on Enter (for single-line inputs), consistent with how browsers handle `"change"` (on blur/commit).
 
 ## CSS Custom Properties
 

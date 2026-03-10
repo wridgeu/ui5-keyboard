@@ -8,10 +8,10 @@ import { KeyboardType } from "./library";
 /**
  * Renderer for the KioskKeyboard control.
  *
- * Uses apiVersion 4 (semantic rendering) — the control's output depends only on
+ * Uses apiVersion 4 (semantic rendering) - the control's output depends only on
  * its own properties and state, so the framework can skip re-rendering when only
  * the parent changes. Renders a flat DOM structure: rows of key divs with
- * role="button". No child UI5 controls — all keys are plain DOM via event delegation.
+ * role="button". No child UI5 controls - all keys are plain DOM via event delegation.
  *
  * Split into small hook methods following the InputBaseRenderer pattern so that
  * extending renderers can selectively override individual aspects (classes,
@@ -74,7 +74,7 @@ const KioskKeyboardRenderer = {
     rm.attr("data-sap-ui-fastnavgroup", "true");
   },
 
-  /** The row loop — override to add toolbar, extra sections, etc. */
+  /** The row loop - override to add toolbar, extra sections, etc. */
   renderContent(rm: RenderManager, oControl: KioskKeyboard): void {
     const { _getResolvedLayout } = oControl._getRendererApi();
     const layout = _getResolvedLayout();
@@ -105,7 +105,7 @@ const KioskKeyboardRenderer = {
     return { row: 0, col: 0 };
   },
 
-  /** ARIA live region — announces shift/caps state changes to screen readers. */
+  /** ARIA live region - announces shift/caps state changes to screen readers. */
   renderLiveRegion(rm: RenderManager, oControl: KioskKeyboard): void {
     const { _isCapsLock, _isShiftActive } = oControl._getRendererApi();
     rm.openStart("span", `${oControl.getId()}-liveState`);
@@ -181,7 +181,7 @@ const KioskKeyboardRenderer = {
       rm.class(`ui5KioskKey--w${key.width.replace(".", "-")}`);
     }
 
-    // Key type styling — separate modifier (subdued) from action (prominent)
+    // Key type styling - separate modifier (subdued) from action (prominent)
     if (key.type === "modifier") {
       rm.class("ui5KioskKey--modifier");
     } else if (key.type === "action") {

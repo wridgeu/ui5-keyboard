@@ -8,7 +8,7 @@ import { placeAndWait, waitForRender, tapKey, isShiftActive, isCapsLock } from "
 // Layout switch while shift is active
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Layout switch + shift", {
+QUnit.module("Negative / Edge-Case - Layout switch + shift", {
   afterEach() {
     KioskKeyboard.resetCustomLayouts();
     KioskKeyboard.resetLocaleLayouts();
@@ -29,7 +29,7 @@ QUnit.test("Shift persists across layout switch", async (assert) => {
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active after tap");
 
-  // Switch to numeric layout — shift should NOT auto-release
+  // Switch to numeric layout - shift should NOT auto-release
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift remains active after layout switch");
@@ -51,7 +51,7 @@ QUnit.test("Caps lock persists across layout switch", async (assert) => {
   await waitForRender();
   assert.ok(isCapsLock(kb), "Caps lock is active");
 
-  // Switch to numeric layout — caps lock should persist
+  // Switch to numeric layout - caps lock should persist
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
   assert.ok(isCapsLock(kb), "Caps lock remains active after layout switch");
@@ -73,7 +73,7 @@ QUnit.test("Shift auto-releases after typing in switched layout", async (assert)
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift active after layout switch");
 
-  // Type a character in the numeric layout — shift should auto-release
+  // Type a character in the numeric layout - shift should auto-release
   tapKey(kb, "1");
   await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift auto-released after character typed in new layout");
@@ -97,7 +97,7 @@ QUnit.test("setTargetInput() resets shift regardless of current layout", async (
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift active in numeric layout");
 
-  // Switch target — shift must reset
+  // Switch target - shift must reset
   kb.setTargetInput(input2);
   await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift reset when target switches");
@@ -112,7 +112,7 @@ QUnit.test("setTargetInput() resets shift regardless of current layout", async (
 // Keyboard close when target control is destroyed
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Target control destroyed", {
+QUnit.module("Negative / Edge-Case - Target control destroyed", {
   afterEach() {
     KioskKeyboard.resetCustomLayouts();
     KioskKeyboard.resetLocaleLayouts();
@@ -184,7 +184,7 @@ QUnit.test("setTargetInput to new control after previous target was destroyed", 
   input1.destroy();
   await waitForRender();
 
-  // Switch to new target — should not throw
+  // Switch to new target - should not throw
   kb.setTargetInput(input2);
 
   // Typing should work on the new target
@@ -199,7 +199,7 @@ QUnit.test("setTargetInput to new control after previous target was destroyed", 
 // Rapid successive setTargetInput() calls
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Rapid setTargetInput()", {
+QUnit.module("Negative / Edge-Case - Rapid setTargetInput()", {
   afterEach() {
     KioskKeyboard.resetCustomLayouts();
     KioskKeyboard.resetLocaleLayouts();
@@ -258,7 +258,7 @@ QUnit.test("Deferred change fires for dirty target on rapid switch", async (asse
     changeValue = event.getParameter("value") as string;
   });
 
-  // Immediately switch to second target — deferred change should fire for first
+  // Immediately switch to second target - deferred change should fire for first
   kb.setTargetInput(input2);
 
   assert.strictEqual(changeValue, "ab", "Change event fired for dirty target on switch");
@@ -281,7 +281,7 @@ QUnit.test("Rapid switch resets shift state for each switch", async (assert) => 
   tapKey(kb, "{shift}");
   assert.ok(isShiftActive(kb), "Shift active on first target");
 
-  // Switch target — shift should reset
+  // Switch target - shift should reset
   kb.setTargetInput(input2);
   assert.notOk(isShiftActive(kb), "Shift reset after switch to second target");
 
@@ -323,7 +323,7 @@ QUnit.test("setTargetInput to empty string clears the target", async (assert) =>
 // handleBackspace at position 0 with no selection
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case — Backspace at position 0", {
+QUnit.module("Negative / Edge-Case - Backspace at position 0", {
   afterEach() {
     KioskKeyboard.resetCustomLayouts();
     KioskKeyboard.resetLocaleLayouts();
@@ -343,7 +343,7 @@ QUnit.test("Backspace at position 0 is a silent no-op", async (assert) => {
   tapKey(kb, "{backspace}");
   assert.strictEqual(input.getValue(), "", "Empty input stays empty");
 
-  // Backspace should not have set the dirty flag — no change event expected
+  // Backspace should not have set the dirty flag - no change event expected
   let changeFired = false;
   input.attachChange(() => {
     changeFired = true;
@@ -377,7 +377,7 @@ QUnit.test("Backspace at position 0 with non-empty value does not truncate", asy
   tapKey(kb, "{backspace}");
   assert.strictEqual(input.getValue(), "", "Backspace at pos 0 does nothing");
 
-  // Keyboard still works — type a new character
+  // Keyboard still works - type a new character
   tapKey(kb, "x");
   assert.strictEqual(input.getValue(), "x", "Typing still works after backspace at pos 0");
 
@@ -416,7 +416,7 @@ QUnit.test("Multiple backspaces on empty TextArea are silent no-ops", async (ass
 
 const i18nSandbox = sinon.createSandbox();
 
-QUnit.module("Negative / Edge-Case — i18n API", {
+QUnit.module("Negative / Edge-Case - i18n API", {
   afterEach() {
     i18nSandbox.restore();
     KioskKeyboard.resetI18nConfiguration();
@@ -428,7 +428,7 @@ QUnit.module("Negative / Edge-Case — i18n API", {
   },
 });
 
-QUnit.test("configureI18n(null) delegates to registry — logs warning and rejects Promise", async (assert) => {
+QUnit.test("configureI18n(null) delegates to registry - logs warning and rejects Promise", async (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
   let rejection: unknown;
@@ -446,7 +446,7 @@ QUnit.test("configureI18n(null) delegates to registry — logs warning and rejec
   assert.ok(spy.calledOnce, "Warning logged for null config");
 });
 
-QUnit.test("setI18nOverrideHook(null) delegates to registry — logs warning, no crash", (assert) => {
+QUnit.test("setI18nOverrideHook(null) delegates to registry - logs warning, no crash", (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
   assert.strictEqual(KioskKeyboard.setI18nOverrideHook(null as never), false, "Returns false for null");

@@ -87,7 +87,7 @@ Analysis of the existing `kiosk-keyboard` package internals:
 ## Shared Core Candidates (Informational Only)
 
 > **Status:** This section is a reference snapshot from the initial
-> analysis. There is no commitment to build a shared-core package —
+> analysis. There is no commitment to build a shared-core package;
 > the value is unclear given the maintenance overhead of keeping two
 > consumers in sync through adapter interfaces. It is preserved here
 > so the extractability analysis is not lost if the question comes up
@@ -102,7 +102,7 @@ could consume.
 | Module                         | Source location                      | What it provides                                                                                                     | Notes                                                                              |
 | ------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `types.ts` (layout types only) | `kiosk-keyboard/src/types.ts`        | `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `SECONDARY_LAYOUTS`         | 100% framework-agnostic. i18n types (`KioskI18nConfig` etc.) stay in each package. |
-| All layout definitions         | `kiosk-keyboard/src/layouts/*.ts`    | 14 layout files (qwerty, qwertz-de, numeric, special, numpad, fkeys, nav, fkey-row, nav-row, and composite variants) | Pure data — `LayoutDefinition` arrays with no imports beyond local types.          |
+| All layout definitions         | `kiosk-keyboard/src/layouts/*.ts`    | 14 layout files (qwerty, qwertz-de, numeric, special, numpad, fkeys, nav, fkey-row, nav-row, and composite variants) | Pure data: `LayoutDefinition` arrays with no imports beyond local types.           |
 | DOM utilities                  | `kiosk-keyboard/src/internal/dom.ts` | `isInputOrTextarea()`, `resolveInputOrTextarea()`, `keyElementId()`, `KEY_ID_SUFFIX_RE`                              | Zero `sap/*` imports. Works with any DOM environment.                              |
 
 ### Tier 2: Extract with thin adapter interface
@@ -113,7 +113,7 @@ could consume.
 | Keyboard type detection | `kiosk-keyboard/src/internal/detect-keyboard-type.ts`                                                             | Steps 1-2: `control.getType()`, `control.isA("sap.m.InputBase")`, parent-chain walking via `getParent()`.                                                    | Extract DOM-based detection (steps 3-4: `inputmode` attribute, HTML `type` attribute) as shared. UI5-specific checks stay in the UI5 control as an additional detection layer.                                       |
 | Layout registry         | `kiosk-keyboard/src/internal/layout-registry.ts`                                                                  | `Localization.getLanguageTag()` for locale resolution, `Log.warning()` for diagnostics.                                                                      | Accept locale as a parameter (`getLocaleLayout(locale: string)`) instead of reading it internally. Each consumer provides the locale from its own framework.                                                         |
 | Target input session    | `kiosk-keyboard/src/internal/target-input-session.ts`                                                             | Constructor takes `() => Element \| null` callback. `fireChangeIfDirty()` assumes `Element.fireEvent()`.                                                     | Generalize callback to return an interface `{ getFocusDomRef(): HTMLElement, fireEvent?(name: string): void }`. The WC adapter omits `fireEvent` and dispatches native `input`/`change` events instead.              |
-| Shift state machine     | Inlined in `kiosk-keyboard/src/KioskKeyboard.ts` (`_shiftActive`, `_capsLock` fields + toggle/auto-release logic) | None — pure boolean state machine.                                                                                                                           | Extract as standalone `ShiftState` class. Currently coupled to the control only because it was never factored out.                                                                                                   |
+| Shift state machine     | Inlined in `kiosk-keyboard/src/KioskKeyboard.ts` (`_shiftActive`, `_capsLock` fields + toggle/auto-release logic) | None: pure boolean state machine.                                                                                                                            | Extract as standalone `ShiftState` class. Currently coupled to the control only because it was never factored out.                                                                                                   |
 
 ### Tier 3: Not shareable (framework-specific by nature)
 
@@ -249,10 +249,10 @@ packages/kiosk-keyboard-webc/
 
 Create `packages/kiosk-keyboard-webc/` with:
 
-- `package.json` — dependencies on `@ui5/webcomponents-base` (runtime),
+- `package.json`: dependencies on `@ui5/webcomponents-base` (runtime),
   `@ui5/webcomponents-theming` (runtime), `@ui5/webcomponents-tools` (dev).
   Modern TypeScript (`~5.9`), ESM-only (`"type": "module"`).
-- `tsconfig.json` — strict mode, ESNext target, JSX support for preact
+- `tsconfig.json`: strict mode, ESNext target, JSX support for preact
   templates (`"jsx": "react-jsx"`, `"jsxImportSource": "preact"`).
 - Build scripts using `@ui5/webcomponents-tools` (or custom Vite/Rollup
   config if the tools package is too opinionated for a sub-package).
@@ -265,12 +265,12 @@ package produces `dist/` output.
 
 Copy from `packages/kiosk-keyboard/src/`:
 
-- `types.ts` — strip i18n-related types (keep `KeyDefinition`, `KeyRow`,
+- `types.ts`: strip i18n-related types (keep `KeyDefinition`, `KeyRow`,
   `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`,
   `SECONDARY_LAYOUTS`). These are 100% framework-agnostic.
-- `layouts/*.ts` — copy all 14 layout files verbatim. They are pure data
+- `layouts/*.ts`: copy all 14 layout files verbatim. They are pure data
   with no imports beyond the local `types.ts`.
-- `layouts/index.ts` — copy the layout registry record.
+- `layouts/index.ts`: copy the layout registry record.
 
 **Acceptance:** TypeScript compiles, layouts import cleanly.
 
@@ -289,15 +289,15 @@ Copy verbatim. Already 100% framework-agnostic. Provides:
 
 #### 3b. `grapheme.ts` + `input-operations.ts`
 
-Copy `grapheme.ts` verbatim — it provides `graphemeLengthBefore()` and
+Copy `grapheme.ts` verbatim; it provides `graphemeLengthBefore()` and
 `graphemeLengthAfter()` using `Intl.Segmenter`, with zero framework
 dependencies. `input-operations.ts` imports it for backspace handling.
 
 Copy the pure DOM functions from `input-operations.ts`:
 
-- `insertText(dom, text)` — splice text at cursor position
-- `handleBackspace(dom)` — grapheme-aware backspace (uses `grapheme.ts`)
-- `handleNavigation(dom, key)` — arrow/home/end handling
+- `insertText(dom, text)`: splice text at cursor position
+- `handleBackspace(dom)`: grapheme-aware backspace (uses `grapheme.ts`)
+- `handleNavigation(dom, key)`: arrow/home/end handling
 
 **Drop** the UI5-specific wrappers (`setTargetValue`, `fireTargetChange`).
 In the web component, value sync goes directly to the target DOM element.
@@ -319,7 +319,7 @@ the web component, DOM attributes are sufficient.
 Port the layout storage and locale resolution:
 
 - `registerLayout()`, `unregisterLayout()`, `getRegisteredLayout()`
-- `getLocaleLayout()` — replace `sap/base/i18n/Localization.getLanguageTag()`
+- `getLocaleLayout()`: replace `sap/base/i18n/Localization.getLanguageTag()`
   with `navigator.language` + `Intl.Locale` for BCP47 parsing
 - `registerLocaleLayout()`, `unregisterLocaleLayout()`
 
@@ -397,15 +397,15 @@ class KioskKeyboard extends UI5Element {
 
 The component manages:
 
-- **Shift state** — via `ShiftState` instance (step 3e)
-- **Open state** — the reactive `open` property (no separate `_open` boolean needed; `@property` handles reactivity)
-- **Layout resolution** — delegates to `layout-registry`
-- **Target element** — resolved via `for` attribute + `document.getElementById()`
+- **Shift state**: via `ShiftState` instance (step 3e)
+- **Open state**: the reactive `open` property (no separate `_open` boolean needed; `@property` handles reactivity)
+- **Layout resolution**: delegates to `layout-registry`
+- **Target element**: resolved via `for` attribute + `document.getElementById()`
   or via `setTargetElement()`. No UI5 association needed.
-- **Auto-show** — `focusin`/`focusout` document listeners (capture phase),
+- **Auto-show**: `focusin`/`focusout` document listeners (capture phase),
   same pattern as the UI5 control but using DOM IDs directly instead of
   UI5 control IDs
-- **Keyboard type** — explicit vs auto-detected, same `_keyboardTypeExplicit`
+- **Keyboard type**: explicit vs auto-detected, same `_keyboardTypeExplicit`
   flag pattern
 
 #### Target input resolution
@@ -443,7 +443,7 @@ where DOM IDs are stable and predictable.
 
 Same pattern as the UI5 control: `mousedown`/`touchstart` handler on key
 elements calls `preventDefault()` to prevent focus transfer away from
-the target input. **Do not use `pointerdown`** — per the Pointer Events
+the target input. **Do not use `pointerdown`**; per the Pointer Events
 spec, canceling `pointerdown` suppresses compatibility mouse events
 including `click`. The web component uses native `mousedown` instead of
 UI5's `ontouchstart` event delegation.
@@ -534,7 +534,7 @@ animations remain identical to the LESS version.
 
 For component-specific variables (if any), create per-theme overrides in
 `src/themes/sap_horizon/parameters-bundle.css`, etc. For the initial
-implementation, the SAP global CSS variables should be sufficient — the
+implementation, the SAP global CSS variables should be sufficient; the
 existing keyboard styles map cleanly to `--sapButton_*` and `--sapElement_*`
 variables.
 
@@ -593,7 +593,7 @@ Add a new demo page showing the web component consumed inside the UI5 app.
   xmlns:kiosk="kiosk-keyboard-webc/dist"
   controllerName="demo.hotkeys.controller.KioskWebComponent">
 
-  <Page title="Kiosk Keyboard — Web Component">
+  <Page title="Kiosk Keyboard: Web Component">
     <VBox class="sapUiMediumMargin">
       <Label text="Target input" labelFor="wcTarget" />
       <Input id="wcTarget" placeholder="Type here via web component keyboard" />
@@ -609,7 +609,7 @@ Add a new demo page showing the web component consumed inside the UI5 app.
 ```
 
 This uses the same pattern as the existing `custom:AlertButton` and
-`custom:KioskInput` consumption in `KioskInputIds.view.xml` — a custom
+`custom:KioskInput` consumption in `KioskInputIds.view.xml`: a custom
 XML namespace pointing to the npm package, with `ui5-tooling-modules`
 resolving the import.
 
@@ -688,7 +688,7 @@ Three test layers, each chosen for its strengths:
 | Layer                      | Tool                                            | Why                                                                                      |
 | -------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Unit tests (pure logic)    | **Vitest 3.x** (jsdom)                          | Fast, no browser needed. Sufficient for framework-agnostic modules with no shadow DOM.   |
-| Component tests (rendered) | **@web/test-runner** + **@open-wc/testing 4.x** | Runs in a real browser — shadow DOM, custom elements, CSS variables all work natively.   |
+| Component tests (rendered) | **@web/test-runner** + **@open-wc/testing 4.x** | Runs in a real browser; shadow DOM, custom elements, CSS variables all work natively.    |
 | E2E + visual regression    | **WebdriverIO 9** + **@wdio/visual-service**    | Consistent with existing `kiosk-keyboard` infra. Proven theme-switching + baseline flow. |
 
 **Why not Vitest for component tests?** Vitest + jsdom/happy-dom cannot
@@ -704,7 +704,7 @@ Cypress 15.x for component testing, but `@web/test-runner` +
 libraries (used by Lit, Shoelace, open-wc). It's lightweight (no
 Electron/browser UI), runs in headless Chrome via Playwright launcher,
 and pairs naturally with `fixture()` / `oneEvent()` / `waitUntil()`
-helpers from `@open-wc/testing-helpers`. Either tool works — this is a
+helpers from `@open-wc/testing-helpers`. Either tool works; this is a
 preference call, not a hard constraint.
 
 **Dependencies to add in `packages/kiosk-keyboard-webc/`:**
@@ -725,13 +725,13 @@ installed: `@wdio/cli`, `@wdio/local-runner`, `@wdio/visual-service`).
 
 #### Unit tests (Vitest)
 
-Test the core modules independently — no browser, no shadow DOM:
+Test the core modules independently, no browser, no shadow DOM:
 
-- `shift-state.test.ts` — three-state cycle, auto-release, reset
-- `layout-registry.test.ts` — register, resolve, locale mapping
-- `input-operations.test.ts` — insert, backspace, navigation on mock inputs
-- `keyboard-type-detector.test.ts` — inputmode/type detection
-- `grapheme.test.ts` — grapheme length before/after with emoji, CJK, etc.
+- `shift-state.test.ts`: three-state cycle, auto-release, reset
+- `layout-registry.test.ts`: register, resolve, locale mapping
+- `input-operations.test.ts`: insert, backspace, navigation on mock inputs
+- `keyboard-type-detector.test.ts`: inputmode/type detection
+- `grapheme.test.ts`: grapheme length before/after with emoji, CJK, etc.
 
 Config (`vitest.config.ts`):
 
@@ -775,7 +775,7 @@ piercing utilities needed.
 **Event simulation:** Synthetic events dispatched on shadow DOM elements
 propagate out when `composed: true` is set on the component's event.
 For focus-related tests, use `el.shadowRoot.querySelector(...).focus()`
-directly — real browser focus semantics apply.
+directly; real browser focus semantics apply.
 
 Test cases:
 
@@ -811,13 +811,13 @@ Reuse the existing WebdriverIO visual regression infrastructure from
 `kiosk-keyboard`. Add a test suite for the web component variant:
 
 - Standalone HTML test page (`test/pages/index.html`) that loads the
-  web component without UI5 — validates framework-independent usage
+  web component without UI5, validating framework-independent usage
 - Screenshot comparisons in all four Horizon theme variants
 - Theme switching: parameterize tests with `sap_horizon`,
   `sap_horizon_dark`, `sap_horizon_hcb`, `sap_horizon_hcw`
 - Compare against the existing UI5 control baselines for visual parity
 
-The demo app integration (Step 8) also serves as an E2E test surface —
+The demo app integration (Step 8) also serves as an E2E test surface;
 the web component consumed inside a UI5 app validates the bridge pattern.
 
 **Acceptance:** All test layers pass. Visual baselines captured for all
@@ -829,8 +829,8 @@ themes.
 
 The package should produce:
 
-1. **ESM modules** in `dist/` — for bundler consumption (`import`)
-2. **Assets** — theme CSS and i18n bundles registered via `Assets.ts`
+1. **ESM modules** in `dist/`: for bundler consumption (`import`)
+2. **Assets**: theme CSS and i18n bundles registered via `Assets.ts`
 
 Consumers import:
 
@@ -928,7 +928,7 @@ sketch below.
 The UI5 control calls `fireLiveChange()` and `fireChange()` on the UI5
 control instance. The web component dispatches native `InputEvent` (on
 each keystroke) and `Event('change')` (on Enter / target switch) on the
-target DOM element. This is the web-standard equivalent — frameworks
+target DOM element. This is the web-standard equivalent; frameworks
 listening for `input`/`change` events on the target element will work
 naturally.
 
@@ -954,7 +954,7 @@ message bundles via the framework's `registerI18nLoader()`. This gives:
   `registerI18nLoader("kiosk-keyboard-webc", "de", async () => { ... })`
 
 This is the standard pattern used by all official UI5 Web Components.
-The override mechanism is automatically available — no custom code needed.
+The override mechanism is automatically available; no custom code needed.
 
 #### Layer 2: Resolver callback (programmatic overrides)
 
@@ -985,7 +985,7 @@ text from the `i18n-defaults.ts` generated module is used.
 
 The three-layer complexity of the UI5 control collapses into the framework's
 built-in i18n (layer 1) plus a single callback (layer 2). The resolver
-callback is strictly optional — most consumers will only need the base
+callback is strictly optional; most consumers will only need the base
 translations or the framework-native `registerI18nLoader` override.
 
 **Effort:** Low-medium. The UI5 WC i18n integration is standard scaffolding.
@@ -1145,7 +1145,7 @@ Integration points are the same as the UI5 control: call `_suppress` in
 `show()` and on target switch, call `_restore` in `close()` and
 `onExitDOM()`.
 
-**Effort:** Low. Direct port with no UI5 dependencies — the entire
+**Effort:** Low. Direct port with no UI5 dependencies; the entire
 implementation uses DOM APIs.
 
 ### v1 implementation: physical keyboard highlight delegation
@@ -1206,7 +1206,7 @@ instead of `this.getDomRef().querySelector()`, and native `addEventListener`
 instead of UI5's `addEventDelegate`. The key-to-data-key mapping table and
 the CSS class toggle logic are identical.
 
-**Effort:** Low. Direct port — actually simpler than the UI5 version since
+**Effort:** Low. Direct port, actually simpler than the UI5 version since
 native `addEventListener` is more straightforward than the delegate pattern.
 
 ## Research: Shadow DOM Focus and Caret Handling
@@ -1220,7 +1220,7 @@ handling. Research confirms all required operations work reliably.
 `mousedown.preventDefault()` on a key element inside the shadow root
 prevents focus transfer away from the light DOM input. This is the same
 mechanism the UI5 control uses (via `ontouchstart`) and works identically
-across the shadow boundary — the browser's focus-on-click behavior
+across the shadow boundary; the browser's focus-on-click behavior
 respects `preventDefault()` regardless of DOM tree location.
 
 **Important:** Use `mousedown`/`touchstart`, not `pointerdown`. Per the
@@ -1228,7 +1228,7 @@ Pointer Events spec, canceling `pointerdown` suppresses compatibility
 mouse events including `click`. The UI5 control already follows this
 pattern for the same reason.
 
-Browser support: Chrome, Firefox, Safari — all confirmed.
+Browser support: Chrome, Firefox, Safari, all confirmed.
 
 ### selectionStart/selectionEnd access
 
@@ -1239,7 +1239,7 @@ JavaScript inside a shadow root can freely read/write these on any input
 element it holds a reference to, regardless of DOM tree location:
 
 ```ts
-// Inside shadow root code — works without restriction:
+// Inside shadow root code - works without restriction:
 const externalInput = this._resolveTarget(); // light DOM <input>
 const start = externalInput.selectionStart;
 externalInput.setSelectionRange(5, 10);
@@ -1251,9 +1251,9 @@ referenced elements.
 
 Caveats (already handled by the UI5 control's patterns):
 
-- `type="number"` inputs throw on `selectionStart` access — wrap in
+- `type="number"` inputs throw on `selectionStart` access; wrap in
   try/catch (existing pattern in `input-operations.ts`)
-- Unfocused inputs may return stale positions — the cursor-position caching
+- Unfocused inputs may return stale positions; the cursor-position caching
   pattern from `TargetInputSession` carries over
 
 ### document.activeElement and shadow DOM
@@ -1287,7 +1287,7 @@ leaked. This means the auto-show `focusout` handler can check:
 private _onDocumentFocusOut(event: FocusEvent): void {
   const related = event.relatedTarget as HTMLElement | null;
 
-  // relatedTarget retargeted to host — user clicked a keyboard key
+  // relatedTarget retargeted to host - user clicked a keyboard key
   if (related === this) return; // don't close
 
   // null edge case (iframe transitions, window blur, Safari quirks)
@@ -1311,7 +1311,7 @@ regardless of where the calling code lives. The event originates on the
 target element, not inside the shadow root:
 
 ```ts
-// Inside shadow root code — dispatches ON the external input:
+// Inside shadow root code - dispatches ON the external input:
 target.dispatchEvent(
   new InputEvent("input", {
     bubbles: true,
@@ -1330,7 +1330,7 @@ DOM. Browser support: uniform across Chrome, Firefox, Safari.
 | ----------------------------------------------------- | ---------------------- | -------------------------------------------------- |
 | `mousedown.preventDefault()` prevents focus           | Yes                    | Use `mousedown`/`touchstart`, not `pointerdown`    |
 | `selectionStart`/`selectionEnd` on light DOM input    | Yes, no restrictions   | `type="number"` throws (handle with try/catch)     |
-| `setSelectionRange()` on light DOM input              | Yes, no restrictions   | —                                                  |
+| `setSelectionRange()` on light DOM input              | Yes, no restrictions   | -                                                  |
 | `document.activeElement`                              | Returns shadow host    | Use recursive `shadowRoot.activeElement` traversal |
 | `focusout.relatedTarget`                              | Retargeted to host     | Handle null with deferred check (existing pattern) |
 | `dispatchEvent(new InputEvent())` on external element | Yes, no restrictions   | Event originates in light DOM                      |
@@ -1411,7 +1411,7 @@ const KioskKeyboardBridge = WebComponent.extend("demo.hotkeys.control.KioskKeybo
 SAP theme CSS variables (`--sapButton_Background`, `--sapTextColor`, etc.)
 are injected at the document `:root` level by the UI5 runtime. CSS custom
 properties **naturally inherit through shadow DOM boundaries** per the CSS
-spec. No special setup is needed — the web component's shadow DOM styles
+spec. No special setup is needed; the web component's shadow DOM styles
 referencing `var(--sapButton_Background)` receive the active theme's values
 automatically, and update instantly on runtime theme switch.
 
@@ -1433,13 +1433,13 @@ This is confirmed by the
 
 For the actual PR work, implement in this order to get feedback early:
 
-1. **Steps 1-2** — Package scaffold + types/layouts (fast, validates build setup)
-2. **Step 3** — Core logic ports (validates framework-agnostic extraction)
-3. **Steps 4-5** — Component + template (first rendering on screen)
-4. **Step 6** — Theming (visual validation in all themes)
-5. **Step 7** — i18n (locale-aware labels)
-6. **Step 8** — Demo app integration (end-to-end validation in UI5 app)
-7. **Steps 9-10** — Tests + build polish (stabilization)
+1. **Steps 1-2**: Package scaffold + types/layouts (fast, validates build setup)
+2. **Step 3**: Core logic ports (validates framework-agnostic extraction)
+3. **Steps 4-5**: Component + template (first rendering on screen)
+4. **Step 6**: Theming (visual validation in all themes)
+5. **Step 7**: i18n (locale-aware labels)
+6. **Step 8**: Demo app integration (end-to-end validation in UI5 app)
+7. **Steps 9-10**: Tests + build polish (stabilization)
 
 Each step produces a testable increment. Steps 1-5 can happen
 independently of the demo app, enabling parallel work.

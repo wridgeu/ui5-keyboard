@@ -11,7 +11,7 @@ export interface SkipInfo {
 }
 
 /**
- * Debug skip entry for debug mode — records ALL skipped registrations.
+ * Debug skip entry for debug mode - records ALL skipped registrations.
  */
 export interface DebugSkipEntry {
   registration: HotkeyRegistration;

@@ -106,7 +106,7 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
 };
 
 /**
- * `<kiosk-keyboard>` — Native web component for on-screen virtual keyboard.
+ * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
  *
  * Built on the UI5 Web Components framework (`UI5Element`) for automatic SAP
  * theming, reactive properties, and JSX-based rendering. Consumable in any
@@ -217,7 +217,7 @@ export default class KioskKeyboard extends UI5Element {
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   private _lastFocusedKeyId: string | null = null;
   private _maxHeight = 0;
-  /** Accessed by the JSX template for highlight class binding — not private. */
+  /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
   private _layoutSwitchedByUser = false;
   private _pendingAnnouncement: string | null = null;
@@ -342,7 +342,7 @@ export default class KioskKeyboard extends UI5Element {
     }
 
     // Handle open=true set before DOM connection (same pattern as ui5-dialog).
-    // Delegate unconditionally — _performOpen() already resets _open when
+    // Delegate unconditionally - _performOpen() already resets _open when
     // !docked or native-deferred, preventing stale open state.
     if (this._open) {
       this._performOpen();
@@ -365,7 +365,7 @@ export default class KioskKeyboard extends UI5Element {
     this.shadowRoot!.removeEventListener("touchend", this._boundTouchEnd);
 
     // Fire after-close before disconnecting so direct listeners still see it.
-    // Cannot use `this.open = false` here — isConnected is already false,
+    // Cannot use `this.open = false` here - isConnected is already false,
     // so the setter skips side effects. Handle cleanup manually.
     if (this._open) {
       this._open = false;
@@ -429,7 +429,7 @@ export default class KioskKeyboard extends UI5Element {
       if (!autoDetected) {
         this._keyboardTypeExplicit = true;
       }
-      // Reset user layout switch and shift state — a keyboardType change implies a new layout context
+      // Reset user layout switch and shift state - a keyboardType change implies a new layout context
       this._layoutSwitchedByUser = false;
       this._shiftState.reset();
       this._syncShiftState();
@@ -461,7 +461,7 @@ export default class KioskKeyboard extends UI5Element {
       if (this.docked) {
         this._attachEscapeListener();
       } else {
-        // Close the keyboard before detaching — avoids stuck open state
+        // Close the keyboard before detaching - avoids stuck open state
         // and leaked inputmode suppression when docked is toggled off while open.
         this.open = false;
         this._detachEscapeListener();
@@ -475,7 +475,7 @@ export default class KioskKeyboard extends UI5Element {
   // consumers (no ES import) can call them via querySelector:
   //   document.querySelector('kiosk-keyboard').registerLayout(…)
   //
-  // The registry is shared — layouts registered on one instance are
+  // The registry is shared - layouts registered on one instance are
   // visible to all <kiosk-keyboard> elements on the page.
 
   /** Registers a custom layout. Delegates to the shared layout registry. */
@@ -519,7 +519,7 @@ export default class KioskKeyboard extends UI5Element {
   private _performOpen(): void {
     if (!this.docked) {
       console.warn("[kiosk-keyboard] open has no effect when docked=false.");
-      // Write backing field directly — going through the setter would trigger
+      // Write backing field directly - going through the setter would trigger
       // _performClose() and fire a spurious after-close for a keyboard that
       // never actually opened (same pattern as ui5-dialog's openPopup rejection).
       this._open = false;
@@ -603,7 +603,7 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   _getKeyIcon(key: KeyDefinition): string | null {
-    if (key.icon) return key.icon; // custom text icon — rendered as label
+    if (key.icon) return key.icon; // custom text icon - rendered as label
     if (key.value === "{shift}" && this._capsLock) return ICON_SHIFT_LOCKED;
     return ICON_MAP[key.value] ?? null;
   }
@@ -696,7 +696,7 @@ export default class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Regular character key — dispatches "input" event (not "change", which
+    // Regular character key - dispatches "input" event (not "change", which
     // fires on blur, matching native keyboard behavior).
     if (target) {
       insertText(target, char!);
@@ -929,7 +929,7 @@ export default class KioskKeyboard extends UI5Element {
     this._targetElement = inputEl;
     this._targetFromAutoShow = true;
 
-    // Detect keyboard type before open — this may trigger onInvalidation for
+    // Detect keyboard type before open - this may trigger onInvalidation for
     // keyboardType, but the target is already set so subsequent logic is safe.
     if (this.autoType && !this._keyboardTypeExplicit) {
       const detected = detectKeyboardType(inputEl);

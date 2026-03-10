@@ -4,12 +4,12 @@ UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications
 
 ## Packages
 
-| Package                                                 | Description                                                                                                        |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| [`ui5-lib-hotkeys`](./packages/hotkeys)                 | Declarative keyboard shortcut management — scopes, multi-key sequences, cross-platform modifiers, hotkey recording |
-| [`ui5-lib-kiosk-keyboard`](./packages/kiosk-keyboard)   | On-screen virtual keyboard UI5 control — SAP theming, multiple layouts, docked/auto-show mode, touch support       |
-| [`kiosk-keyboard-webc`](./packages/kiosk-keyboard-webc) | Native web component variant of the kiosk keyboard — framework-agnostic, built on UI5 Web Components               |
-| [`demo-hotkeys-app`](./packages/demo-app)               | Demo application showcasing all libraries                                                                          |
+| Package                                                 | Description                                                                                                       |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [`ui5-lib-hotkeys`](./packages/hotkeys)                 | Declarative keyboard shortcut management: scopes, multi-key sequences, cross-platform modifiers, hotkey recording |
+| [`ui5-lib-kiosk-keyboard`](./packages/kiosk-keyboard)   | On-screen virtual keyboard UI5 control: SAP theming, multiple layouts, docked/auto-show mode, touch support       |
+| [`kiosk-keyboard-webc`](./packages/kiosk-keyboard-webc) | Native web component variant of the kiosk keyboard: framework-agnostic, built on UI5 Web Components               |
+| [`demo-hotkeys-app`](./packages/demo-app)               | Demo application showcasing all libraries                                                                         |
 
 ## Kiosk Keyboard Theme Preview
 
@@ -119,7 +119,7 @@ npm install ui5-lib-kiosk-keyboard
 
 ### Kiosk Keyboard (Web Component)
 
-The web component variant (`kiosk-keyboard-webc`) provides the same virtual keyboard as a native custom element, usable in any framework — plain HTML, React, Vue, Angular — and inside UI5 apps via the `WebComponent.extend()` bridge.
+The web component variant (`kiosk-keyboard-webc`) provides the same virtual keyboard as a native custom element, usable in any framework (plain HTML, React, Vue, Angular) and inside UI5 apps via the `WebComponent.extend()` bridge.
 
 ```bash
 npm install kiosk-keyboard-webc
@@ -136,9 +136,9 @@ npm install kiosk-keyboard-webc
 
 See the [kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md) for full API reference, attributes, events, and custom layout examples.
 
-## Using Both Libraries Together
+## Using Hotkeys and the UI5 Kiosk Keyboard Together
 
-The two libraries are independent — neither depends on the other — but they complement each other well. A typical kiosk application uses hotkeys for global shortcuts and the virtual keyboard for text input:
+The two libraries are independent (neither depends on the other) but they complement each other well. A typical kiosk application uses hotkeys for global shortcuts and the virtual keyboard for text input:
 
 ```xml
 <mvc:View xmlns:kiosk="ui5.kiosk" xmlns:m="sap.m" xmlns:mvc="sap.ui.core.mvc">
@@ -148,7 +148,7 @@ The two libraries are independent — neither depends on the other — but they 
 ```
 
 ```ts
-// Controller — register hotkeys alongside the virtual keyboard
+// Controller - register hotkeys alongside the virtual keyboard
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
 onInit(): void {

@@ -8,10 +8,10 @@ AST-based linter that detects flaky hard-wait patterns in test files. Auto-disco
 
 **Rules:**
 
-| Rule                     | Scope          | Description                                                       |
-| ------------------------ | -------------- | ----------------------------------------------------------------- |
-| `browser.pause()`        | All test files | Flags `browser.pause()` calls — use `browser.waitUntil()` instead |
-| `await setTimeout sleep` | E2E tests only | Flags `await new Promise(r => setTimeout(r, N))` where N > 0      |
+| Rule                     | Scope          | Description                                                      |
+| ------------------------ | -------------- | ---------------------------------------------------------------- |
+| `browser.pause()`        | All test files | Flags `browser.pause()` calls; use `browser.waitUntil()` instead |
+| `await setTimeout sleep` | E2E tests only | Flags `await new Promise(r => setTimeout(r, N))` where N > 0     |
 
 `setTimeout(resolve, 0)` (microtask flush) is intentionally allowed.
 

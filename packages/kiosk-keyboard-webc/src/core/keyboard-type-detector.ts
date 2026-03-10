@@ -31,12 +31,12 @@ function closestDataKeyboardType(el: Element): string | null {
  *
  * Detection order:
  * 1. Explicit `data-keyboard-type` attribute on the element or any
- *    ancestor — crosses shadow DOM boundaries so the attribute can
+ *    ancestor - crosses shadow DOM boundaries so the attribute can
  *    be placed on an outer host element.
  * 2. DOM `inputmode` attribute (`numeric`, `decimal`, `tel`).
  * 3. HTML `type` attribute (`number`, `tel`).
  *
- * Expects an already-resolved native input/textarea — callers should
+ * Expects an already-resolved native input/textarea - callers should
  * resolve the target via `resolveInputOrTextarea` before calling.
  */
 export function detectKeyboardType(dom: HTMLInputElement | HTMLTextAreaElement): KeyboardTypeValue {

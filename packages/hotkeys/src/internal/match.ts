@@ -5,17 +5,17 @@ import type { ParsedHotkey } from "../types";
  * Check whether a KeyboardEvent matches a parsed hotkey.
  *
  * Matching rules:
- * 1. **Exact modifier match** — The event must have exactly the same modifier
+ * 1. **Exact modifier match** - The event must have exactly the same modifier
  *    state. Ctrl+Shift+S does NOT match a hotkey registered for Ctrl+S.
- * 2. **Primary key via `event.key`** — Case-insensitive comparison for single
+ * 2. **Primary key via `event.key`** - Case-insensitive comparison for single
  *    characters, exact match for special keys (Escape, F5, etc.).
- * 3. **Fallback to `event.code`** — For letter keys (KeyA-KeyZ) when `event.key`
+ * 3. **Fallback to `event.code`** - For letter keys (KeyA-KeyZ) when `event.key`
  *    returns a special character (e.g., macOS Option+D produces "∂"), and for
  *    digit keys (Digit0-Digit9) when Shift changes the key (e.g., Shift+4
  *    produces "$").
  */
 export function matchesKeyboardEvent(event: KeyboardEvent, parsed: ParsedHotkey): boolean {
-  // Exact modifier match — no extra modifiers allowed
+  // Exact modifier match - no extra modifiers allowed
   if (event.ctrlKey !== parsed.ctrl) return false;
   if (event.shiftKey !== parsed.shift) return false;
   if (event.altKey !== parsed.alt) return false;

@@ -82,7 +82,7 @@ async function expectValidationRejected(
 // configureI18n validation
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — configureI18n validation", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - configureI18n validation", { afterEach: commonAfterEach });
 
 QUnit.test("Accepts valid config with enhanceWith", async (assert) => {
   const spy = sandbox.spy(Log, "warning");
@@ -313,7 +313,7 @@ QUnit.test("All enhanceWith entries invalid triggers aggregate warning", async (
 // async bundle loading
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — async bundle loading", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - async bundle loading", { afterEach: commonAfterEach });
 
 QUnit.test("configureI18n returns a Promise that resolves after loading", async (assert) => {
   stubBundleCreate(makeBundleStub({}));
@@ -438,7 +438,7 @@ QUnit.test("Empty config cancels in-flight loads (generation guard)", async (ass
 
   const loading = configureI18n({ enhanceWith: [{ bundleName: "test.bundle" }] });
 
-  // Second call with no enhanceWith — should invalidate the in-flight load
+  // Second call with no enhanceWith - should invalidate the in-flight load
   await configureI18n({});
 
   resolveBundle(makeBundleStub({ KEY: "stale" }));
@@ -657,7 +657,7 @@ QUnit.test("reloadIfStale resolves immediately when bundles are current", async 
 // enhancement bundle precedence
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — enhancement bundle precedence", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - enhancement bundle precedence", { afterEach: commonAfterEach });
 
 QUnit.test("Base bundle text used when no enhancements configured", (assert) => {
   stubBaseBundle({ KEY: "base" });
@@ -685,7 +685,7 @@ QUnit.test("Last enhancement wins when multiple provide same key", async (assert
   assert.strictEqual(getText("KEY", "fallback"), "second", "Last enhancement wins");
 });
 
-QUnit.test("Three bundles with partial overlap — last providing bundle wins per key", async (assert) => {
+QUnit.test("Three bundles with partial overlap - last providing bundle wins per key", async (assert) => {
   stubBaseBundle({ K1: "base1", K2: "base2", K3: "base3" });
   stubBundleCreateMultiple([
     makeBundleStub({ K1: "b1-k1", K2: "b1-k2" }),
@@ -743,7 +743,7 @@ QUnit.test("Enhancement bundle error does not break resolution", async (assert) 
 // override hook
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — override hook", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - override hook", { afterEach: commonAfterEach });
 
 QUnit.test("Hook receives correct context", (assert) => {
   stubBaseBundle({ KEY: "base" });
@@ -875,7 +875,7 @@ QUnit.test("clearI18nOverrideHook removes hook", (assert) => {
 // resetI18nConfiguration
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — resetI18nConfiguration", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - resetI18nConfiguration", { afterEach: commonAfterEach });
 
 QUnit.test("Clears enhancement bundles", async (assert) => {
   stubBaseBundle({ KEY: "base" });
@@ -908,7 +908,7 @@ QUnit.test("Subsequent getText returns base bundle text only", async (assert) =>
   assert.strictEqual(getText("KEY", "fallback"), "base", "Only base text after reset");
 });
 
-QUnit.test("Idempotent — double reset does not error", (assert) => {
+QUnit.test("Idempotent - double reset does not error", (assert) => {
   resetI18nConfiguration();
   resetI18nConfiguration();
   assert.strictEqual(getI18nConfiguration(), null, "Still null after double reset");
@@ -933,7 +933,7 @@ QUnit.test("New configureI18n after reset works correctly", async (assert) => {
 // KioskKeyboard facade
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — KioskKeyboard facade", {
+QUnit.module("i18n-registry - KioskKeyboard facade", {
   afterEach() {
     sandbox.restore();
     KioskKeyboard.resetI18nConfiguration();
@@ -1045,7 +1045,7 @@ QUnit.test("All four methods invalidate live instances", async (assert) => {
 // onLocalizationChanged
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — onLocalizationChanged", {
+QUnit.module("i18n-registry - onLocalizationChanged", {
   afterEach() {
     sandbox.restore();
     KioskKeyboard.resetI18nConfiguration();
@@ -1126,7 +1126,7 @@ QUnit.test("No-op when no config is active", async (assert) => {
 // FLP lifecycle simulation
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — FLP lifecycle simulation", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - FLP lifecycle simulation", { afterEach: commonAfterEach });
 
 QUnit.test("Configure + hook in init, cleanup in destroy, next app sees defaults", async (assert) => {
   stubBaseBundle({ KEY: "base" });
@@ -1141,7 +1141,7 @@ QUnit.test("Configure + hook in init, cleanup in destroy, next app sees defaults
   clearI18nOverrideHook();
   resetI18nConfiguration();
 
-  // App 2 — should see defaults
+  // App 2 - should see defaults
   assert.strictEqual(getText("KEY", "fallback"), "base", "App 2 sees base text");
 });
 
@@ -1163,7 +1163,7 @@ QUnit.test("Override hook does not leak across simulated app sessions", (assert)
 // MAX_RELOAD_CYCLES safety valve
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — MAX_RELOAD_CYCLES safety valve", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - MAX_RELOAD_CYCLES safety valve", { afterEach: commonAfterEach });
 
 QUnit.test("reloadBundles aborts after exceeding MAX_RELOAD_CYCLES", async (assert) => {
   stubBaseBundle({ KEY: "base" });
@@ -1223,7 +1223,7 @@ QUnit.test("reloadBundles aborts after exceeding MAX_RELOAD_CYCLES", async (asse
 // getText edge cases
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — getText edge cases", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - getText edge cases", { afterEach: commonAfterEach });
 
 QUnit.test("getText returns fallback when base bundle is unavailable (null)", (assert) => {
   sandbox.stub(Lib, "getResourceBundleFor").returns(null as never);
@@ -1269,7 +1269,7 @@ QUnit.test("Override hook returning empty string applies empty string", (assert)
 // getI18nConfiguration
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — getI18nConfiguration", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - getI18nConfiguration", { afterEach: commonAfterEach });
 
 QUnit.test("Returns null when no configuration is applied", (assert) => {
   assert.strictEqual(getI18nConfiguration(), null, "null before any config");
@@ -1349,7 +1349,7 @@ QUnit.test("Static KioskKeyboard.getI18nConfiguration delegates to registry", as
 // hasConfiguredEnhancements
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — hasConfiguredEnhancements", { afterEach: commonAfterEach });
+QUnit.module("i18n-registry - hasConfiguredEnhancements", { afterEach: commonAfterEach });
 
 QUnit.test("Returns false when no config is active", (assert) => {
   assert.notOk(hasConfiguredEnhancements(), "No config = no enhancements");
@@ -1379,7 +1379,7 @@ QUnit.test("Returns false after reset", async (assert) => {
 // clearI18nOverrideHook conditional invalidation
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — clearI18nOverrideHook conditional invalidation", {
+QUnit.module("i18n-registry - clearI18nOverrideHook conditional invalidation", {
   afterEach() {
     sandbox.restore();
     KioskKeyboard.resetI18nConfiguration();
@@ -1430,7 +1430,7 @@ QUnit.test("clearI18nOverrideHook invalidates when a hook was set", async (asser
 // onLocalizationChanged dedup with multiple instances
 // ──────────────────────────────────────────────────
 
-QUnit.module("i18n-registry — onLocalizationChanged dedup", {
+QUnit.module("i18n-registry - onLocalizationChanged dedup", {
   afterEach() {
     sandbox.restore();
     KioskKeyboard.resetI18nConfiguration();

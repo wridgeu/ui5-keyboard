@@ -192,7 +192,7 @@ describe("layout-registry", () => {
     });
   });
 
-  describe("registerLayout — negative paths", () => {
+  describe("registerLayout - negative paths", () => {
     it("rejects non-string name", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLayout(42 as unknown as string, CUSTOM_LAYOUT);
@@ -228,7 +228,7 @@ describe("layout-registry", () => {
     });
   });
 
-  describe("unregisterLayout — negative paths", () => {
+  describe("unregisterLayout - negative paths", () => {
     it("rejects non-string name", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       unregisterLayout(null as unknown as string);
@@ -241,7 +241,7 @@ describe("layout-registry", () => {
     });
   });
 
-  describe("getLayoutOrDefault — negative paths", () => {
+  describe("getLayoutOrDefault - negative paths", () => {
     it("returns default for non-string argument", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const layout = getLayoutOrDefault(undefined as unknown as string);
@@ -257,14 +257,14 @@ describe("layout-registry", () => {
     });
   });
 
-  describe("isBuiltInLayout — negative paths", () => {
+  describe("isBuiltInLayout - negative paths", () => {
     it("returns false for non-string argument", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       expect(isBuiltInLayout(123 as unknown as string)).toBe(false);
     });
   });
 
-  describe("locale layouts — negative paths", () => {
+  describe("locale layouts - negative paths", () => {
     it("registerLocaleLayout rejects non-string locale", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLocaleLayout(42 as unknown as string, "qwerty");

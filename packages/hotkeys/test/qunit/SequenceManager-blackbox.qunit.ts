@@ -3,7 +3,7 @@ import { fireKey } from "./test-helpers";
 
 let clock: { tick: (ms: number) => number; restore: () => void };
 
-QUnit.module("SequenceManager — Black-Box Contracts", {
+QUnit.module("SequenceManager - Black-Box Contracts", {
   beforeEach() {
     try {
       HotkeyManager.getInstance().destroy();

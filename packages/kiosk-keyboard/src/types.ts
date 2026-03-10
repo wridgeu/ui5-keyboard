@@ -19,10 +19,10 @@ export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space"
 /**
  * Key type determines the visual styling of the key.
  *
- * - `"default"` — Standard key (letter, number, symbol). Uses `@sapUiButton*` tokens.
- * - `"modifier"` — Subdued style for Shift, layout switches, etc. Uses `@sapUiButtonLite*` tokens.
- * - `"action"` — Prominent style for Enter, Backspace, etc. Uses `@sapUiButtonEmphasized*` tokens.
- * - `"space"` — Spacebar. Visually same as default but semantically distinct.
+ * - `"default"` - Standard key (letter, number, symbol). Uses `@sapUiButton*` tokens.
+ * - `"modifier"` - Subdued style for Shift, layout switches, etc. Uses `@sapUiButtonLite*` tokens.
+ * - `"action"` - Prominent style for Enter, Backspace, etc. Uses `@sapUiButtonEmphasized*` tokens.
+ * - `"space"` - Spacebar. Visually same as default but semantically distinct.
  *
  * @public
  * @since ${version}
@@ -91,7 +91,7 @@ export interface KeyDefinition {
    * The character or action this key produces.
    *
    * For regular characters, use the lowercase letter or symbol (e.g. `"a"`, `"1"`, `","`).
-   * For special actions, use a `{action}` syntax — see {@link SpecialKeyValue}.
+   * For special actions, use a `{action}` syntax - see {@link SpecialKeyValue}.
    */
   value: string;
 
@@ -141,10 +141,10 @@ export interface KeyDefinition {
   /**
    * Visual style category.
    *
-   * - `"modifier"` — Subdued (Shift, layout switches). Uses SAP Lite Button tokens.
-   * - `"action"` — Prominent (Enter, Backspace). Uses SAP Emphasized Button tokens.
-   * - `"space"` — Spacebar. Visually like default.
-   * - `"default"` or omitted — Standard key. Uses SAP Button tokens.
+   * - `"modifier"` - Subdued (Shift, layout switches). Uses SAP Lite Button tokens.
+   * - `"action"` - Prominent (Enter, Backspace). Uses SAP Emphasized Button tokens.
+   * - `"space"` - Spacebar. Visually like default.
+   * - `"default"` or omitted - Standard key. Uses SAP Button tokens.
    *
    * @see {@link KeyType}
    */
@@ -159,9 +159,9 @@ export interface KeyDefinition {
    *
    * The following special keys render built-in icons by default (no need to
    * set this property):
-   * - `{shift}` — `sap-icon://arrow-top` (Caps Lock uses `sap-icon://locked`)
-   * - `{enter}` — `sap-icon://accept`
-   * - `{backspace}` — `sap-icon://arrow-left`
+   * - `{shift}` - `sap-icon://arrow-top` (Caps Lock uses `sap-icon://locked`)
+   * - `{enter}` - `sap-icon://accept`
+   * - `{backspace}` - `sap-icon://arrow-left`
    *
    * To override a default icon, set this property to a different icon URI.
    *
@@ -183,7 +183,7 @@ export interface KeyDefinition {
 export type KeyRow = KeyDefinition[];
 
 /**
- * Complete layout definition — an ordered array of rows.
+ * Complete layout definition - an ordered array of rows.
  *
  * Each entry is a row of keys rendered top-to-bottom. Use this type
  * with {@link KioskKeyboard.registerLayout} to register custom layouts.
@@ -303,7 +303,7 @@ export interface KioskI18nConfig {
    * Applies as default `supportedLocales` for enhancement entries
    * that do not declare their own.
    *
-   * Does **not** reconfigure the base library bundle — its locale
+   * Does **not** reconfigure the base library bundle - its locale
    * list is determined by shipped `.properties` files.
    */
   readonly supportedLocales?: readonly string[];
@@ -355,7 +355,7 @@ export interface KioskI18nOverrideContext {
  * Return a string to replace `resolvedText`.
  * Return `undefined` to keep the resolved text as-is.
  *
- * The hook must be synchronous — async hooks are not supported.
+ * The hook must be synchronous - async hooks are not supported.
  * Returning a `Promise` is treated as a non-string value and ignored.
  *
  * If the hook throws, the error is logged and `resolvedText` is used.

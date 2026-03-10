@@ -19,7 +19,7 @@ export function graphemeLengthBefore(value: string, offset: number): number {
 
   const before = value.slice(0, Math.min(offset, value.length));
 
-  // Walk to last segment — Intl.Segmenter is iterable but not indexable
+  // Walk to last segment - Intl.Segmenter is iterable but not indexable
   let last: Intl.SegmentData | undefined;
   for (const seg of segmenter.segment(before)) {
     last = seg;

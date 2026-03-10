@@ -164,7 +164,7 @@ export interface HotkeyOptions {
    * during event matching without being removed.
    *
    * When a function is provided, it is evaluated on every keypress. This
-   * enables dynamic guards without boilerplate in callbacks — e.g.,
+   * enables dynamic guards without boilerplate in callbacks - e.g.,
    * `enabled: () => model.getProperty("/canSave")`.
    *
    * @default true
@@ -229,7 +229,7 @@ export interface HotkeyOptions {
   /**
    * Bind the hotkey to a specific element instead of the document.
    * The hotkey will only fire when the target element appears in the event's
-   * `composedPath()`. Scopes still apply — both target and scope must match.
+   * `composedPath()`. Scopes still apply - both target and scope must match.
    *
    * For nested targets with the same key, the innermost matching target fires.
    *
@@ -300,7 +300,7 @@ export interface HotkeyRegistration {
 
 /**
  * Public view of a hotkey registration for introspection (e.g., cheat sheets).
- * Flat, serializable shape — no closures, no DOM references.
+ * Flat, serializable shape - no closures, no DOM references.
  */
 export interface HotkeyRegistrationInfo {
   readonly id: string;
@@ -321,7 +321,7 @@ export interface HotkeyRegistrationInfo {
 }
 
 /**
- * Hotkey options with all defaults resolved — no optional fields.
+ * Hotkey options with all defaults resolved - no optional fields.
  */
 export interface ResolvedHotkeyOptions {
   enabled: boolean | (() => boolean);
@@ -393,7 +393,7 @@ export type UnhandledCallback = (context: UnhandledContext) => void;
  *
  * The concrete `KeyStateTracker` class exposes additional lifecycle
  * methods (`processKeyDown`, `processKeyUp`, `processBlur`, `destroy`)
- * that are `@internal` — this interface hides them so that callers of
+ * that are `@internal` - this interface hides them so that callers of
  * `HotkeyManager.getKeyStateTracker()` cannot break dispatcher-owned state.
  */
 export interface KeyStateTrackerApi {
@@ -416,7 +416,7 @@ export interface KeyStateTrackerApi {
  * Call `release()` to resume dispatch. Release is idempotent.
  */
 export interface KeyboardDispatchGuard {
-  /** Release this guard. Idempotent — double-release does not throw. */
+  /** Release this guard. Idempotent - double-release does not throw. */
   release(): void;
   /** Whether this guard is still actively suspending dispatch. */
   readonly isActive: boolean;
@@ -434,7 +434,7 @@ export interface SequenceOptions {
   description?: string;
   /** Timeout in ms between keys before the sequence resets. @default 1000 */
   timeout?: number;
-  /** Scope — uses HotkeyManager's scope stack. @default "__global__" */
+  /** Scope - uses HotkeyManager's scope stack. @default "__global__" */
   scope?: string;
   /** Whether the sequence is active. @default true */
   enabled?: boolean | (() => boolean);
@@ -457,7 +457,7 @@ export interface SequenceOptions {
    * total steps, next expected key). When set, takes precedence over the
    * global `setSequencePendingHandler` for this registration.
    *
-   * Dies with the registration — no manual cleanup needed.
+   * Dies with the registration - no manual cleanup needed.
    */
   onPending?: SequencePendingCallback;
 }
@@ -515,7 +515,7 @@ export interface SequenceRegistration {
 
 /**
  * Public view of a sequence registration for introspection.
- * Flat, serializable shape — no closures, no parsed internals.
+ * Flat, serializable shape - no closures, no parsed internals.
  */
 export interface SequenceRegistrationInfo {
   readonly id: string;

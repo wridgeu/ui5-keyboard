@@ -48,7 +48,7 @@ export function isInputElement(target: EventTarget | null): boolean {
     return false;
   }
 
-  // <input> — only editable text types
+  // <input> - only editable text types
   if (target instanceof HTMLInputElement) {
     const type = (target.type || "text").toLowerCase();
     return EDITABLE_INPUT_TYPES.has(type);

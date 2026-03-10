@@ -41,9 +41,9 @@ QUnit.test("fkey-row module exports F1-F12 key definitions", (assert) => {
 QUnit.test("fkeys is a secondary layout (does not become base)", (assert) => {
   const kb = new KioskKeyboard({ layout: "qwerty" });
 
-  // Switch to fkeys — should not update the base layout
+  // Switch to fkeys - should not update the base layout
   kb.setLayout("fkeys");
-  // Switch back to base — should return to qwerty, not fkeys
+  // Switch back to base - should return to qwerty, not fkeys
   kb.setLayout("qwerty");
   assert.strictEqual(kb.getLayout(), "qwerty", "Base layout preserved after fkeys switch");
 

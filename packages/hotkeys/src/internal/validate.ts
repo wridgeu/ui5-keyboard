@@ -140,7 +140,7 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
   const normalized = [...parsed.modifiers, parsed.key].join("+");
 
   if (!KNOWN_KEYS.has(parsed.key)) {
-    warnings.push(`Unknown key "${parsed.key}" — may not match keyboard events correctly`);
+    warnings.push(`Unknown key "${parsed.key}" - may not match keyboard events correctly`);
   }
 
   // Check browser conflicts

@@ -1,5 +1,5 @@
 /**
- * Internal construction token — prevents direct instantiation of classes
+ * Internal construction token - prevents direct instantiation of classes
  * that should only be created by their owning factory (e.g., EventDispatcher
  * creates KeyStateTracker, HotkeyManager.createRecorder() creates HotkeyRecorder).
  *

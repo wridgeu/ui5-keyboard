@@ -15,7 +15,7 @@ const NUMPAD_HTML_TYPES: ReadonlySet<string> = new Set(["number", "tel"]);
  * inputmode, and HTML type in order.
  */
 export function detectKeyboardType(control: Control, customResolver?: TargetResolverFn | null): KeyboardTypeValue {
-  // 1. UI5 getType() — e.g. sap.m.Input type="Number"
+  // 1. UI5 getType() - e.g. sap.m.Input type="Number"
   //    Only sap.m.Input defines the `type` property; other InputBase
   //    subclasses (TextArea, ComboBox, DatePicker) do not have getType().
   if (control.isA("sap.m.InputBase")) {
@@ -23,7 +23,7 @@ export function detectKeyboardType(control: Control, customResolver?: TargetReso
     if (type && NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
   }
 
-  // 2. Control name — walk up the parent chain because composite controls
+  // 2. Control name - walk up the parent chain because composite controls
   //    (e.g. sap.m.StepInput) wrap an inner sap.m.Input. Element.closestTo()
   //    returns the inner Input, but we need to match the outer StepInput.
   let parent: ManagedObject | null = control;

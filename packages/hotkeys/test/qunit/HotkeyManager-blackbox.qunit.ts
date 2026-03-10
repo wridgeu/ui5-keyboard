@@ -4,7 +4,7 @@ import { fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 
-QUnit.module("HotkeyManager — Black-Box Contracts", {
+QUnit.module("HotkeyManager - Black-Box Contracts", {
   beforeEach() {
     try {
       HotkeyManager.getInstance().destroy();
@@ -77,11 +77,11 @@ QUnit.test("Target-bound hotkey only fires on its own element", (assert) => {
     { target: elementA },
   );
 
-  // Fire on elementB — should NOT trigger
+  // Fire on elementB - should NOT trigger
   fireKeyOn(elementB, "Escape");
   assert.notOk(called, "Callback does not fire on non-target element");
 
-  // Fire on elementA — should trigger
+  // Fire on elementA - should trigger
   fireKeyOn(elementA, "Escape");
   assert.ok(called, "Callback fires on target element");
 });

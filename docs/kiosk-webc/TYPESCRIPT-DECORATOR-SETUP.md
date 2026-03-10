@@ -42,7 +42,7 @@ The decorator intercepts reads/writes to trigger re-renders and reflect to/from 
 Used when a property change has **side effects** (e.g., opening/closing the keyboard). This follows the same pattern used by `@ui5/webcomponents` [Popup](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Popup.ts) / [Dialog](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Dialog.ts) for their `open` property:
 
 ```typescript
-// Plain backing field (NOT decorated — no reactivity of its own)
+// Plain backing field (NOT decorated - no reactivity of its own)
 _open = false;
 
 @property({ type: Boolean })
@@ -65,7 +65,7 @@ get open(): boolean {
 Key points:
 
 - The `@property()` decorator goes on the **setter** (not the getter).
-- The backing field (`_open`) is a plain class field — it holds the actual state.
+- The backing field (`_open`) is a plain class field that holds the actual state.
 - The setter guards against no-ops (`=== value`) and handles pre-connection state (`!this.isConnected`).
 - Side effects (event dispatch, inputmode suppression) live in dedicated methods called from the setter.
 - `onEnterDOM` checks the backing field and runs side effects for values set before DOM connection.
@@ -86,7 +86,7 @@ export default class KioskKeyboard extends UI5Element {
 }
 ```
 
-The `!:` (definite assignment assertion) is the canonical pattern used by all official UI5 Web Components (see [Button.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Button.ts), [Popup.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Popup.ts), [Input.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Input.ts)). Do **not** use `declare eventDetails:` — `declare` emits no runtime field and may interact differently with the framework's type checking.
+The `!:` (definite assignment assertion) is the canonical pattern used by all official UI5 Web Components (see [Button.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Button.ts), [Popup.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Popup.ts), [Input.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Input.ts)). Do **not** use `declare eventDetails:`. `declare` emits no runtime field and may interact differently with the framework's type checking.
 
 Events are fired via `this.fireDecoratorEvent("key-press", detail)` (not the deprecated `fireEvent()`), which returns `false` if `preventDefault()` was called (for cancelable events). See the [UI5 Web Components development docs](https://ui5.github.io/webcomponents/docs/advanced/) for current API reference.
 

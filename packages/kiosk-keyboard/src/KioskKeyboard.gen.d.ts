@@ -73,19 +73,19 @@ declare module "./KioskKeyboard" {
          * Controls whether the KioskKeyboard or the native on-screen
         keyboard is used.
         
-        - `"Custom"` (default) — always uses the KioskKeyboard and
+        - `"Custom"` (default) - always uses the KioskKeyboard and
           suppresses the native keyboard via `inputmode="none"`.
           Best for **dedicated kiosk terminals** without a physical
           keyboard.
-        - `"Native"` — always defers to the native keyboard; the
+        - `"Native"` - always defers to the native keyboard; the
           KioskKeyboard will not open on focus.
-        - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+        - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
           to the native keyboard on phones and tablets. This is
           intended for **kiosk terminals running a desktop OS**
           (no physical keyboard) that should still let mobile
           visitors use their native keyboard. On a regular
           laptop/desktop with a physical keyboard the virtual
-          keyboard **will** still appear — use `"Native"` if that
+          keyboard **will** still appear - use `"Native"` if that
           is not desired.
          */
         mobileKeyboard?: MobileKeyboard | PropertyBindingInfo | `{${string}}`;
@@ -148,7 +148,7 @@ declare module "./KioskKeyboard" {
         layoutChange?: (event: KioskKeyboard$LayoutChangeEvent) => void;
 
         /**
-         * Fired when the keyboard type changes — by auto-type detection,
+         * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          */
         keyboardTypeChange?: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void;
@@ -298,19 +298,19 @@ declare module "./KioskKeyboard" {
          * Controls whether the KioskKeyboard or the native on-screen
         keyboard is used.
         
-        - `"Custom"` (default) — always uses the KioskKeyboard and
+        - `"Custom"` (default) - always uses the KioskKeyboard and
           suppresses the native keyboard via `inputmode="none"`.
           Best for **dedicated kiosk terminals** without a physical
           keyboard.
-        - `"Native"` — always defers to the native keyboard; the
+        - `"Native"` - always defers to the native keyboard; the
           KioskKeyboard will not open on focus.
-        - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+        - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
           to the native keyboard on phones and tablets. This is
           intended for **kiosk terminals running a desktop OS**
           (no physical keyboard) that should still let mobile
           visitors use their native keyboard. On a regular
           laptop/desktop with a physical keyboard the virtual
-          keyboard **will** still appear — use `"Native"` if that
+          keyboard **will** still appear - use `"Native"` if that
           is not desired.
          */
         getMobileKeyboard(): MobileKeyboard;
@@ -319,19 +319,19 @@ declare module "./KioskKeyboard" {
          * Controls whether the KioskKeyboard or the native on-screen
         keyboard is used.
         
-        - `"Custom"` (default) — always uses the KioskKeyboard and
+        - `"Custom"` (default) - always uses the KioskKeyboard and
           suppresses the native keyboard via `inputmode="none"`.
           Best for **dedicated kiosk terminals** without a physical
           keyboard.
-        - `"Native"` — always defers to the native keyboard; the
+        - `"Native"` - always defers to the native keyboard; the
           KioskKeyboard will not open on focus.
-        - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+        - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
           to the native keyboard on phones and tablets. This is
           intended for **kiosk terminals running a desktop OS**
           (no physical keyboard) that should still let mobile
           visitors use their native keyboard. On a regular
           laptop/desktop with a physical keyboard the virtual
-          keyboard **will** still appear — use `"Native"` if that
+          keyboard **will** still appear - use `"Native"` if that
           is not desired.
          */
         setMobileKeyboard(mobileKeyboard: MobileKeyboard): this;
@@ -497,25 +497,25 @@ declare module "./KioskKeyboard" {
         // event: keyboardTypeChange
 
         /**
-         * Fired when the keyboard type changes — by auto-type detection,
+         * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          */
         attachKeyboardTypeChange(fn: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void, listener?: object): this;
 
         /**
-         * Fired when the keyboard type changes — by auto-type detection,
+         * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          */
         attachKeyboardTypeChange<CustomDataType extends object>(data: CustomDataType, fn: (event: KioskKeyboard$KeyboardTypeChangeEvent, data: CustomDataType) => void, listener?: object): this;
 
         /**
-         * Fired when the keyboard type changes — by auto-type detection,
+         * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          */
         detachKeyboardTypeChange(fn: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void, listener?: object): this;
 
         /**
-         * Fired when the keyboard type changes — by auto-type detection,
+         * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          */
         fireKeyboardTypeChange(parameters?: KioskKeyboard$KeyboardTypeChangeEventParameters): this;
@@ -586,7 +586,7 @@ declare module "./KioskKeyboard" {
 
     /**
      * Interface describing the parameters of KioskKeyboard's 'keyboardTypeChange' event.
-     * Fired when the keyboard type changes — by auto-type detection,
+     * Fired when the keyboard type changes - by auto-type detection,
     explicit `setKeyboardType()`, or `resetKeyboardType()`.
      */
     export interface KioskKeyboard$KeyboardTypeChangeEventParameters {
@@ -627,7 +627,7 @@ declare module "./KioskKeyboard" {
 
     /**
      * Type describing the KioskKeyboard's 'keyboardTypeChange' event.
-     * Fired when the keyboard type changes — by auto-type detection,
+     * Fired when the keyboard type changes - by auto-type detection,
     explicit `setKeyboardType()`, or `resetKeyboardType()`.
      */
     export type KioskKeyboard$KeyboardTypeChangeEvent = Event<KioskKeyboard$KeyboardTypeChangeEventParameters>;

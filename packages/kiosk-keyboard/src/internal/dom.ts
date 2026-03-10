@@ -51,7 +51,7 @@ export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElem
     return lightDom;
   }
 
-  // Check shadow DOM — direct native input/textarea first, then recurse into nested web components
+  // Check shadow DOM - direct native input/textarea first, then recurse into nested web components
   const shadow = el.shadowRoot;
   if (shadow) {
     const shadowInput = shadow.querySelector("input,textarea");

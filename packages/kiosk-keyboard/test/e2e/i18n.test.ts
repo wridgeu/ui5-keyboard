@@ -115,7 +115,7 @@ describe("KioskKeyboard i18n e2e", () => {
       await clickButton("controls-hook", "Set override hook");
 
       const kb = await getKeyboard("kb-hook");
-      // Hook prepends keyboard emoji — wait for it
+      // Hook prepends keyboard emoji - wait for it
       await browser.waitUntil(async () => ((await kb.getAttribute("aria-label")) ?? "").includes("\u2328"), {
         timeout: 5_000,
         timeoutMsg: "Hook did not update aria-label in time",

@@ -13,10 +13,10 @@ export type KeyWidth = "1.5" | "1.75" | "2" | "2.25" | "space";
 /**
  * Key type determines the visual styling of the key.
  *
- * - `"default"` — Standard key (letter, number, symbol).
- * - `"modifier"` — Subdued style for Shift, layout switches, etc.
- * - `"action"` — Prominent style for Enter, Backspace, etc.
- * - `"space"` — Spacebar. Visually same as default but semantically distinct.
+ * - `"default"` - Standard key (letter, number, symbol).
+ * - `"modifier"` - Subdued style for Shift, layout switches, etc.
+ * - `"action"` - Prominent style for Enter, Backspace, etc.
+ * - `"space"` - Spacebar. Visually same as default but semantically distinct.
  */
 export type KeyType = "default" | "modifier" | "action" | "space";
 
@@ -66,7 +66,7 @@ export interface KeyDefinition {
 /** A single row of keys on the keyboard. */
 export type KeyRow = KeyDefinition[];
 
-/** Complete layout definition — an ordered array of rows. */
+/** Complete layout definition - an ordered array of rows. */
 export type LayoutDefinition = KeyRow[];
 
 // ── Event detail types ──

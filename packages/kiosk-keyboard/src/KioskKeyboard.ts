@@ -117,7 +117,7 @@ export default class KioskKeyboard extends Control {
        * @example <caption>XML view</caption>
        * <kiosk:KioskKeyboard layout="qwertz-de" targetInput="myInput" />
        *
-       * @example <caption>TypeScript — custom layout</caption>
+       * @example <caption>TypeScript - custom layout</caption>
        * KioskKeyboard.registerLayout("azerty-fr", frenchLayout);
        * new KioskKeyboard({ layout: "azerty-fr" });
        */
@@ -135,7 +135,7 @@ export default class KioskKeyboard extends Control {
        * disables auto-type detection permanently.
        * Call `resetKeyboardType()` to re-enable it.
        *
-       * @example <caption>XML view — fixed numpad</caption>
+       * @example <caption>XML view - fixed numpad</caption>
        * <kiosk:KioskKeyboard keyboardType="Numpad" targetInput="pinInput" />
        */
       keyboardType: {
@@ -147,7 +147,7 @@ export default class KioskKeyboard extends Control {
        * Whether the keyboard is interactive. When `false`, all keys are
        * visually dimmed and pointer events are disabled.
        *
-       * @example <caption>XML view — bind to model</caption>
+       * @example <caption>XML view - bind to model</caption>
        * <kiosk:KioskKeyboard enabled="{/keyboardEnabled}" targetInput="myInput" />
        */
       enabled: {
@@ -173,7 +173,7 @@ export default class KioskKeyboard extends Control {
        * visibility manually, or set `autoShow` to `true` for automatic
        * focus-based behavior.
        *
-       * @example <caption>XML view — docked with programmatic control</caption>
+       * @example <caption>XML view - docked with programmatic control</caption>
        * <kiosk:KioskKeyboard id="kb" docked="true" />
        * <!-- Controller: this.byId("kb").show(); -->
        */
@@ -205,7 +205,7 @@ export default class KioskKeyboard extends Control {
        * keyboard type. Call `resetKeyboardType()` to clear the lock
        * and re-enable auto-type detection.
        *
-       * @example <caption>XML view — full auto kiosk setup</caption>
+       * @example <caption>XML view - full auto kiosk setup</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" mobileKeyboard="Auto" />
        */
       autoType: {
@@ -217,25 +217,25 @@ export default class KioskKeyboard extends Control {
        * Controls whether the KioskKeyboard or the native on-screen
        * keyboard is used.
        *
-       * - `"Custom"` (default) — always uses the KioskKeyboard and
+       * - `"Custom"` (default) - always uses the KioskKeyboard and
        *   suppresses the native keyboard via `inputmode="none"`.
        *   Best for **dedicated kiosk terminals** without a physical
        *   keyboard.
-       * - `"Native"` — always defers to the native keyboard; the
+       * - `"Native"` - always defers to the native keyboard; the
        *   KioskKeyboard will not open on focus.
-       * - `"Auto"` — uses KioskKeyboard on desktop browsers, defers
+       * - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
        *   to the native keyboard on phones and tablets. This is
        *   intended for **kiosk terminals running a desktop OS**
        *   (no physical keyboard) that should still let mobile
        *   visitors use their native keyboard. On a regular
        *   laptop/desktop with a physical keyboard the virtual
-       *   keyboard **will** still appear — use `"Native"` if that
+       *   keyboard **will** still appear - use `"Native"` if that
        *   is not desired.
        *
-       * @example <caption>XML view — kiosk terminal setup</caption>
+       * @example <caption>XML view - kiosk terminal setup</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Custom" />
        *
-       * @example <caption>XML view — let mobile devices use native keyboard</caption>
+       * @example <caption>XML view - let mobile devices use native keyboard</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
        */
       mobileKeyboard: {
@@ -270,7 +270,7 @@ export default class KioskKeyboard extends Control {
        * Use this instead of `targetInput` when multiple inputs share
        * a single keyboard (e.g. a form with several fields).
        *
-       * @example <caption>XML view — target multiple inputs</caption>
+       * @example <caption>XML view - target multiple inputs</caption>
        * <m:Input id="name" />
        * <m:Input id="email" />
        * <kiosk:KioskKeyboard inputIds="name,email" />
@@ -292,7 +292,7 @@ export default class KioskKeyboard extends Control {
        * Only effective for non-docked Full keyboards. Docked keyboards
        * always minimize their footprint.
        *
-       * @example <caption>XML view — keyboard inside a Popover</caption>
+       * @example <caption>XML view - keyboard inside a Popover</caption>
        * <Popover>
        *   <kiosk:KioskKeyboard stableHeight="true" targetInput="myInput" />
        * </Popover>
@@ -329,7 +329,7 @@ export default class KioskKeyboard extends Control {
        * Fired when a virtual key is pressed. Call `preventDefault()` to
        * skip the default input action (text insertion, backspace, etc.).
        *
-       * @example <caption>TypeScript — intercept key presses</caption>
+       * @example <caption>TypeScript - intercept key presses</caption>
        * import { KeyName } from "ui5/kiosk/library";
        *
        * keyboard.attachKeyPress((event) => {
@@ -361,7 +361,7 @@ export default class KioskKeyboard extends Control {
         },
       },
       /**
-       * Fired when the keyboard type changes — by auto-type detection,
+       * Fired when the keyboard type changes - by auto-type detection,
        * explicit `setKeyboardType()`, or `resetKeyboardType()`.
        *
        * @example <caption>TypeScript</caption>
@@ -390,7 +390,7 @@ export default class KioskKeyboard extends Control {
 
   static readonly renderer = KioskKeyboardRenderer;
 
-  /** All living KioskKeyboard instances — used by auto-show to skip inputs already targeted by another keyboard. */
+  /** All living KioskKeyboard instances - used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
   /** Tracks the current reload promise to avoid duplicate post-reload invalidation across N instances. */
@@ -423,7 +423,7 @@ export default class KioskKeyboard extends Control {
   private static _globalTargetResolver: TargetResolverFn | null = null;
 
   // ──────────────────────────────────────────────
-  // Static delegates — target resolver
+  // Static delegates - target resolver
   // ──────────────────────────────────────────────
 
   /**
@@ -463,7 +463,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Static delegates — layout registry (see internal/layout-registry.ts)
+  // Static delegates - layout registry (see internal/layout-registry.ts)
   // ──────────────────────────────────────────────
 
   /**
@@ -548,7 +548,7 @@ export default class KioskKeyboard extends Control {
    *
    * Secondary layouts (`numeric`, `special`, `fkeys`, `nav`) serve as
    * auxiliary views switched to via `{layout:name}` keys. They cannot
-   * become the base layout — the keyboard tracks the last non-secondary
+   * become the base layout - the keyboard tracks the last non-secondary
    * layout as the base and returns to it when `{layout:base}` is pressed.
    *
    * @param sName Layout identifier.
@@ -612,7 +612,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Static delegates — i18n registry (see internal/i18n-registry.ts)
+  // Static delegates - i18n registry (see internal/i18n-registry.ts)
   // ──────────────────────────────────────────────
 
   /**
@@ -667,7 +667,7 @@ export default class KioskKeyboard extends Control {
    * Reset i18n enhancement configuration to library defaults.
    *
    * Clears all enhancement bundles and cancels any in-flight bundle
-   * loads.  Does not affect the override hook — call
+   * loads.  Does not affect the override hook - call
    * {@link clearI18nOverrideHook} separately if needed.
    *
    * @public
@@ -730,7 +730,7 @@ export default class KioskKeyboard extends Control {
    * `null` when no configuration has been applied.
    *
    * Intended for debugging, logging, and test assertions.
-   * The returned object is a deep copy — mutations do not affect
+   * The returned object is a deep copy - mutations do not affect
    * internal state.
    *
    * @returns Frozen configuration snapshot or `null`.
@@ -846,7 +846,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // With N instances, this hook is called N times. reloadBundles()
-  // coalesces concurrent calls — only the first triggers the reload.
+  // coalesces concurrent calls - only the first triggers the reload.
   // The static sentinel avoids registering N duplicate .then() callbacks.
   onLocalizationChanged(): void {
     if (registryHasConfiguredEnhancements()) {
@@ -950,7 +950,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Public API — Property overrides
+  // Public API - Property overrides
   // ──────────────────────────────────────────────
 
   /**
@@ -966,7 +966,7 @@ export default class KioskKeyboard extends Control {
     if (!bEnabled) {
       this._redirectFocusToTargetIfOwned();
     }
-    // Intentionally bypasses super.setEnabled() — the renderer and
+    // Intentionally bypasses super.setEnabled() - the renderer and
     // _syncDockedDomState handle CSS classes and aria-disabled at
     // render time, so the generic Control.setEnabled logic is not needed.
     return this.setProperty("enabled", bEnabled) as this;
@@ -978,12 +978,12 @@ export default class KioskKeyboard extends Control {
    * fallback would move focus to an arbitrary sibling.
    *
    * Note: `setVisible(true)` does not re-open a previously closed docked
-   * keyboard — call `show()` explicitly after making it visible again.
+   * keyboard - call `show()` explicitly after making it visible again.
    */
   setVisible(bVisible: boolean): this {
     if (!bVisible) {
       this._redirectFocusToTargetIfOwned();
-      // Close the docked keyboard — a hidden keyboard should not retain
+      // Close the docked keyboard - a hidden keyboard should not retain
       // open state (escape listener, native keyboard suppression).
       if (this.getDocked() && this._open) {
         this.close();
@@ -1022,11 +1022,11 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Public API — Target & Docked Mode
+  // Public API - Target & Docked Mode
   // ──────────────────────────────────────────────
 
   /**
-   * Custom setter for layout — tracks the base (alphabetic) layout so
+   * Custom setter for layout - tracks the base (alphabetic) layout so
    * that `{layout:base}` in numeric/special layouts can return to it.
    */
   setLayout(sLayout: string): this {
@@ -1113,7 +1113,7 @@ export default class KioskKeyboard extends Control {
         const focusRef = next.getFocusDomRef?.();
         if (focusRef && !resolveWithCustomResolver(focusRef, this._getEffectiveResolver())) {
           Log.warning(
-            `KioskKeyboard: targetInput "${newId}" does not have a textual input DOM ref — ` +
+            `KioskKeyboard: targetInput "${newId}" does not have a textual input DOM ref - ` +
               "key taps will have no effect. Expected (or containing) HTMLInputElement/HTMLTextAreaElement.",
             undefined,
             "ui5.kiosk.KioskKeyboard",
@@ -1121,7 +1121,7 @@ export default class KioskKeyboard extends Control {
         }
       } else {
         Log.warning(
-          `KioskKeyboard: targetInput "${newId}" could not be resolved — Element.getElementById() returned null`,
+          `KioskKeyboard: targetInput "${newId}" could not be resolved - Element.getElementById() returned null`,
           undefined,
           "ui5.kiosk.KioskKeyboard",
         );
@@ -1167,7 +1167,7 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Custom setter for autoShow — activates or deactivates the
+   * Custom setter for autoShow - activates or deactivates the
    * auto-show document listeners via enableAutoShow/disableAutoShow.
    */
   setAutoShow(bAutoShow: boolean): this {
@@ -1181,7 +1181,7 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Custom setter for keyboardType — marks the type as explicitly set,
+   * Custom setter for keyboardType - marks the type as explicitly set,
    * which disables auto-type detection. Use {@link #resetKeyboardType}
    * to re-enable auto-type.
    */
@@ -1202,8 +1202,8 @@ export default class KioskKeyboard extends Control {
   /**
    * Clears the explicit keyboardType lock and resets to "Full".
    *
-   * Once {@link #setKeyboardType} has been called — directly, via the
-   * constructor, or via an XML attribute — the `autoType` feature is
+   * Once {@link #setKeyboardType} has been called - directly, via the
+   * constructor, or via an XML attribute - the `autoType` feature is
    * permanently disabled. Call this method to re-enable auto-type
    * detection so the keyboard can switch between Full and Numpad
    * based on the focused input's metadata again.
@@ -1272,7 +1272,7 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Custom setter for docked — manages CSS on the existing DOM
+   * Custom setter for docked - manages CSS on the existing DOM
    * rather than re-rendering (which would disrupt transitions).
    */
   setDocked(bDocked: boolean): this {
@@ -1388,7 +1388,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private — inputIds delegation
+  // Private - inputIds delegation
   // ──────────────────────────────────────────────
 
   private _setupInputIds(): void {
@@ -1454,7 +1454,7 @@ export default class KioskKeyboard extends Control {
   }
 
   private _findControlById(targetId: string): Control | null {
-    // Try view-local first (standard UI5 pattern — matches controller.byId())
+    // Try view-local first (standard UI5 pattern - matches controller.byId())
     for (let parent: ManagedObject | null = this.getParent(); parent; parent = parent.getParent()) {
       if (parent instanceof View) {
         const found = parent.byId(targetId);
@@ -1491,7 +1491,7 @@ export default class KioskKeyboard extends Control {
 
   applyFocusInfo(oFocusInfo: { id?: string; preventScroll?: boolean; lastFocusedKeyId?: string }): this {
     // Disabled keyboard: the renderer set all keys to tabindex="-1".
-    // Do not restore focus — it would undo the renderer's decision.
+    // Do not restore focus - it would undo the renderer's decision.
     if (!this.getEnabled()) {
       return this;
     }
@@ -1557,7 +1557,7 @@ export default class KioskKeyboard extends Control {
    *
    * Exposes the five private helpers the renderer and tests need, without
    * an unsafe `as unknown as` cast. TypeScript structurally checks the
-   * returned object literal against {@link RendererInternalApi} — if any
+   * returned object literal against {@link RendererInternalApi} - if any
    * method is renamed or its signature changes, this line produces a
    * compile error.
    *
@@ -1607,7 +1607,7 @@ export default class KioskKeyboard extends Control {
     return target instanceof Control ? (target as T) : null;
   }
 
-  /** Default icons for special keys — used when the key has no explicit icon. */
+  /** Default icons for special keys - used when the key has no explicit icon. */
   static readonly SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
     "{backspace}": "sap-icon://arrow-left",
     "{shift}": "sap-icon://arrow-top",
@@ -1636,7 +1636,7 @@ export default class KioskKeyboard extends Control {
   };
 
   /**
-   * Accessible label for a key — always non-empty.
+   * Accessible label for a key - always non-empty.
    * For icon-only keys (label=""), resolves to a human-readable name.
    */
   private _getKeyAriaLabel(key: KeyDefinition): string {
@@ -1680,12 +1680,12 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Prevents focus from leaving the target input when clicking anywhere
-   * on the keyboard surface — keys, rows, or gaps between keys.
+   * on the keyboard surface - keys, rows, or gaps between keys.
    *
    * Uses UI5's EventSimulation touchstart (fires for both mouse and touch)
    * instead of raw pointerdown. preventDefault() on the underlying
    * mousedown/touchstart prevents focus transfer without suppressing the
-   * click/tap chain — unlike pointerdown's preventDefault() which
+   * click/tap chain - unlike pointerdown's preventDefault() which
    * suppresses all compatibility mouse events per the Pointer Events spec.
    */
   ontouchstart(event: Event): void {
@@ -1704,7 +1704,7 @@ export default class KioskKeyboard extends Control {
    * Activates the key on touch/mouse release.
    *
    * Only fires if the release target matches the press target (basic
-   * tap detection — drag-away cancels). Replaces ontap which couldn't
+   * tap detection - drag-away cancels). Replaces ontap which couldn't
    * fire because pointerdown's preventDefault() suppressed the click
    * event that jQuery's tap plugin depends on.
    */
@@ -1778,7 +1778,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private — Auto-show
+  // Private - Auto-show
   // ──────────────────────────────────────────────
 
   /** Returns true if any other KioskKeyboard instance already targets this input. */
@@ -1873,11 +1873,11 @@ export default class KioskKeyboard extends Control {
     // relatedTarget is the element that is *receiving* focus.
     const related = event.relatedTarget as HTMLElement | null;
 
-    // Focus staying on the keyboard itself — don't close
+    // Focus staying on the keyboard itself - don't close
     const myDom = this.getDomRef();
     if (myDom && related && myDom.contains(related)) return;
 
-    // Focus moving to an input this keyboard would claim — keep open
+    // Focus moving to an input this keyboard would claim - keep open
     if (this._wouldClaimInput(related)) return;
 
     // relatedTarget can be null for some browser/shadow-dom transitions.
@@ -1913,7 +1913,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private — Pointer & Key Actions
+  // Private - Pointer & Key Actions
   // ──────────────────────────────────────────────
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
@@ -1991,7 +1991,7 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
-    // Regular character — resolve shift value
+    // Regular character - resolve shift value
     let effective = keyValue;
     if (shift) {
       const shiftValue = el.dataset.shiftValue;
@@ -2082,7 +2082,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private — Physical keyboard highlighting
+  // Private - Physical keyboard highlighting
   // ──────────────────────────────────────────────
 
   /** Maps KeyboardEvent.key names to special-key data-key values. */
@@ -2090,7 +2090,7 @@ export default class KioskKeyboard extends Control {
     Shift: "{shift}",
     Backspace: "{backspace}",
     Enter: "{enter}",
-    Delete: "{backspace}", // virtual keyboard has no separate Delete — highlight Backspace
+    Delete: "{backspace}", // virtual keyboard has no separate Delete - highlight Backspace
     F1: "{fkey:F1}",
     F2: "{fkey:F2}",
     F3: "{fkey:F3}",
@@ -2139,7 +2139,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private — Mobile detection
+  // Private - Mobile detection
   // ──────────────────────────────────────────────
 
   /**

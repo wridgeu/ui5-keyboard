@@ -23,7 +23,7 @@ This is tedious, error-prone, and forces every consuming app to re-implement wha
 
 ### Real-world scenario
 
-A company uses the kiosk keyboard on a shop-floor terminal running in fullscreen Chrome kiosk mode. The app has no SAP transaction logic — it's a simple data-entry form. Users see F-keys on the keyboard but tapping F5 does nothing visible. The admin wants "just make F-keys work normally".
+A company uses the kiosk keyboard on a shop-floor terminal running in fullscreen Chrome kiosk mode. The app has no SAP transaction logic; it's a simple data-entry form. Users see F-keys on the keyboard but tapping F5 does nothing visible. The admin wants "just make F-keys work normally".
 
 ## Proposal
 
@@ -44,7 +44,7 @@ Add an enumeration property to `KioskKeyboard` that controls how F-key presses a
 ### New enum: `FKeyMode`
 
 ```ts
-// src/library.ts — alongside KeyboardType, MobileKeyboard
+// src/library.ts - alongside KeyboardType, MobileKeyboard
 enum FKeyMode {
   Virtual = "Virtual",
   Native = "Native",
@@ -72,7 +72,7 @@ When `fKeyMode="Native"` and the user taps an F-key on the virtual keyboard:
 
    | Key   | Native action                                                                 |
    | ----- | ----------------------------------------------------------------------------- |
-   | F1    | _(no built-in — too platform-specific)_                                       |
+   | F1    | _(no built-in, too platform-specific)_                                        |
    | F5    | `location.reload()`                                                           |
    | F11   | `document.documentElement.requestFullscreen()` or `document.exitFullscreen()` |
    | Other | _(no built-in action)_                                                        |
@@ -203,9 +203,9 @@ static readonly metadata = {
 
 ### Out of scope
 
-- Per-key mode configuration (e.g., "F5 native but F8 virtual") — apps can use `keydown` + `preventDefault` for selective overrides
-- Custom native action mapping API (e.g., `setNativeAction("F3", () => history.back())`) — possible future enhancement
-- `keyup` dispatch (only `keydown` — consistent with how physical F-keys trigger actions on keydown)
+- Per-key mode configuration (e.g., "F5 native but F8 virtual"): apps can use `keydown` + `preventDefault` for selective overrides
+- Custom native action mapping API (e.g., `setNativeAction("F3", () => history.back())`): possible future enhancement
+- `keyup` dispatch (only `keydown`, consistent with how physical F-keys trigger actions on keydown)
 
 ## Files to change
 
@@ -219,15 +219,15 @@ static readonly metadata = {
 
 ## Considerations
 
-1. **`isTrusted: false`** — Synthetic events cannot trigger browser defaults on their own. This is why the keyboard explicitly calls `location.reload()` / `requestFullscreen()` for known keys. Apps and libraries (hotkeys, Fiori Launchpad) that listen for `keydown` events will still receive the synthetic event and can act on it.
+1. **`isTrusted: false`**: Synthetic events cannot trigger browser defaults on their own. This is why the keyboard explicitly calls `location.reload()` / `requestFullscreen()` for known keys. Apps and libraries (hotkeys, Fiori Launchpad) that listen for `keydown` events will still receive the synthetic event and can act on it.
 
-2. **Security** — `location.reload()` and `requestFullscreen()` are safe actions that the user explicitly triggered by tapping a key. No destructive actions (closing tabs, navigating away) are included in the built-in map.
+2. **Security**: `location.reload()` and `requestFullscreen()` are safe actions that the user explicitly triggered by tapping a key. No destructive actions (closing tabs, navigating away) are included in the built-in map.
 
-3. **Fullscreen quirk** — `requestFullscreen()` requires a user gesture. A virtual key tap is a `pointerdown`/`click` event, so it qualifies as a user gesture in all major browsers. This should work without issues.
+3. **Fullscreen quirk**: `requestFullscreen()` requires a user gesture. A virtual key tap is a `pointerdown`/`click` event, so it qualifies as a user gesture in all major browsers. This should work without issues.
 
-4. **Shift+F-key** — The `shiftKey` flag is passed through to the synthetic `KeyboardEvent`, so handlers that distinguish Shift+F5 (force refresh) from plain F5 will work correctly. The built-in native action map does not differentiate — `location.reload()` is the same regardless. Apps that want Shift+F5 = hard refresh can use `location.reload()` themselves via `keydown` listener.
+4. **Shift+F-key**: The `shiftKey` flag is passed through to the synthetic `KeyboardEvent`, so handlers that distinguish Shift+F5 (force refresh) from plain F5 will work correctly. The built-in native action map does not differentiate; `location.reload()` is the same regardless. Apps that want Shift+F5 = hard refresh can use `location.reload()` themselves via `keydown` listener.
 
-5. **Interaction with HotkeyManager** — When `fKeyMode="Native"`, the dispatched `KeyboardEvent` bubbles to the document and will be captured by `HotkeyManager` if it has a matching hotkey registered. This is desirable — it means the two libraries compose naturally. The hotkey handler can `preventDefault` to block the native action.
+5. **Interaction with HotkeyManager**: When `fKeyMode="Native"`, the dispatched `KeyboardEvent` bubbles to the document and will be captured by `HotkeyManager` if it has a matching hotkey registered. This is desirable; it means the two libraries compose naturally. The hotkey handler can `preventDefault` to block the native action.
 
 ## Migration
 

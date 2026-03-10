@@ -75,7 +75,7 @@ And evaluate what is currently covered by this repository's demos.
 
 ## Standalone Scenario Status
 
-Short answer: **not currently** — this repo does not include a dedicated standalone web-components page (`index.html` + direct ESM imports) at the moment.
+Short answer: **not currently**. This repo does not include a dedicated standalone web-components page (`index.html` + direct ESM imports) at the moment.
 
 - We demonstrate custom-element integration inside a UI5 app via bridge.
 - We demonstrate native UI5 Web Component usage inside the UI5 app (`@ui5/webcomponents/dist` namespace in XML).
