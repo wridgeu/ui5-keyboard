@@ -21,6 +21,14 @@ import "./generated/json-imports/i18n.js";
 // Register theme parameter bundle loaders (generated from src/themes/*/parameters-bundle.css)
 import "./generated/json-imports/Themes.js";
 
+// Load the SAP "72" font-face declarations. The component CSS references "72" as the
+// primary font-family; without this import the browser falls through to Arial whose
+// wider glyph metrics can cause visible clipping on narrow keys (e.g. phone viewports).
+// When OpenUI5 is detected this is a no-op since the framework loads the font itself.
+import insertFontFace from "@ui5/webcomponents-base/dist/FontFace.js";
+
+insertFontFace();
+
 // Fetch the i18n bundle (async, fire-and-forget - texts use English defaults until loaded)
 import { initI18n } from "./core/i18n.js";
 

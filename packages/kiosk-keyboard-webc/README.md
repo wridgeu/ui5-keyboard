@@ -55,6 +55,9 @@ import { KioskKeyboard } from "kiosk-keyboard-webc/dist/bundle.esm.js";
 > [!TIP]
 > The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `dist/KioskKeyboard.js` entry point to avoid duplicating framework code.
 
+> [!IMPORTANT]
+> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js`. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics — using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `dist/KioskKeyboard.js` import directly, make sure your app loads the "72" font itself (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
+
 ### Inside a UI5 app
 
 Use the `WebComponent.extend()` bridge (see `packages/demo-app` for a working example):
