@@ -1,12 +1,21 @@
 import { browser, $ } from "@wdio/globals";
 
-/** Navigate to the visual test page and wait for the custom element to register. */
+/** Navigate to the visual test page and wait for the keyboard to fully render. */
 export async function openTestPage(): Promise<void> {
   await browser.url("/test/pages/visual.html");
   await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
     timeout: 10_000,
     timeoutMsg: "kiosk-keyboard not registered",
   });
+  // Wait for keys to render so the layout is stable before any interaction
+  await browser.waitUntil(
+    async () =>
+      browser.execute(() => {
+        const kb = document.getElementById("kb-qwerty");
+        return (kb?.shadowRoot?.querySelectorAll('[role="button"]').length ?? 0) > 0;
+      }),
+    { timeout: 5_000, timeoutMsg: "Keyboard keys not rendered" },
+  );
 }
 
 /** Get the shadow DOM root element of a kiosk-keyboard by host ID. */

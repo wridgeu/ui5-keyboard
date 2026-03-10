@@ -50,6 +50,7 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
   it("should match key hover state", async () => {
     const kb = await getKeyboardRoot("kb-qwerty");
     const key = await $(`#kb-qwerty`).$('>>>[data-key="f"]');
+    await key.waitForClickable({ timeout: 5_000 });
     await key.moveTo();
     await expect(kb).toMatchElementSnapshot("webc-key-hovered");
     // Move away to reset hover
