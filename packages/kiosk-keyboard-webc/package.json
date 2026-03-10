@@ -61,6 +61,13 @@
     "test:coverage:component": "npm run generate && web-test-runner --coverage",
     "pretest:e2e": "npm run build",
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
+    "test:e2e:open": "wdio run test/e2e/wdio.conf.ts -- --headed",
+    "test:e2e:update": "wdio run test/e2e/wdio.conf.ts -- --update-visual-baseline",
+    "test:e2e:phone": "wdio run test/e2e/wdio-phone.conf.ts",
+    "test:e2e:tablet": "wdio run test/e2e/wdio-tablet.conf.ts",
+    "test:e2e:phone:update": "wdio run test/e2e/wdio-phone.conf.ts -- --update-visual-baseline",
+    "test:e2e:tablet:update": "wdio run test/e2e/wdio-tablet.conf.ts -- --update-visual-baseline",
+    "test:e2e:all-devices": "npm run test:e2e && npm run test:e2e:phone && npm run test:e2e:tablet",
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit"
   },
   "dependencies": {

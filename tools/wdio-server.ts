@@ -94,12 +94,67 @@ export function createServerManager(port: number, packageRoot: string, configFil
   };
 }
 
+function resolveViteCliEntry(packageRoot: string): string {
+  try {
+    const vitePkgPath = require.resolve("vite/package.json", { paths: [packageRoot] });
+    return path.resolve(path.dirname(vitePkgPath), "bin", "vite.js");
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Unable to resolve vite for '${packageRoot}'. Install dependencies before running tests. ${reason}`,
+      { cause: error },
+    );
+  }
+}
+
+/**
+ * Creates wdio lifecycle hooks that start a Vite dev server for packages
+ * that use Vite for bundling (e.g. kiosk-keyboard-webc).
+ *
+ * Unlike a plain static file server, Vite resolves bare module specifiers
+ * (e.g. `@ui5/webcomponents/dist/Input.js`) so test pages with ES module
+ * imports work without an import map.
+ *
+ * Mirrors the `createServerManager` API so consumers use the same pattern.
+ */
+export function createViteServerManager(port: number, packageRoot: string, startupTimeout = 60_000) {
+  let serverProcess: ChildProcess | undefined;
+
+  async function start(): Promise<void> {
+    if (await probePort(port)) return;
+    const viteCliEntry = resolveViteCliEntry(packageRoot);
+    serverProcess = spawn(process.execPath, [viteCliEntry, "--port", String(port), "--strictPort"], {
+      cwd: packageRoot,
+      stdio: ["ignore", "pipe", "inherit"],
+      shell: false,
+      windowsHide: process.platform === "win32",
+    });
+    await waitForServer(port, startupTimeout);
+  }
+
+  async function stop(): Promise<void> {
+    if (!serverProcess?.pid) return;
+    const pid = serverProcess.pid;
+    serverProcess = undefined;
+    await killProcessTree(pid);
+  }
+
+  return {
+    onPrepare: start,
+    onComplete: stop,
+    [Symbol.asyncDispose]: stop,
+  };
+}
+
 /**
  * Creates wdio lifecycle hooks that start a lightweight `node:http` static
  * file server for packages that do not need the UI5 CLI toolchain
  * (e.g. kiosk-keyboard-webc).
  *
  * Mirrors the `createServerManager` API so consumers use the same pattern.
+ *
+ * @deprecated Prefer `createViteServerManager` for packages using Vite,
+ * as it resolves bare module specifiers in test pages.
  */
 export function createStaticServerManager(port: number, root: string) {
   let server: http.Server | undefined;

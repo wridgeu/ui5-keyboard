@@ -1,23 +1,24 @@
 import url from "node:url";
 import path from "node:path";
-import { createViteServerManager } from "../../../../tools/wdio-server.js";
+import type { wdi5Config } from "wdio-ui5-service";
+import { createServerManager } from "../../../../tools/wdio-server.js";
+import { buildChromeOptions, deviceProfiles } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const PORT = 8084;
+const PORT = 8082;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
-const server = createViteServerManager(PORT, PACKAGE_ROOT);
+const server = createServerManager(PORT, PACKAGE_ROOT);
 
+const profile = deviceProfiles.phone;
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
-const chromeArgs = ["--window-size=1440,900", "--disable-gpu", "--no-sandbox"];
-if (headless) chromeArgs.unshift("--headless=new");
 
-export const config: WebdriverIO.Config = {
+export const config: wdi5Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
 
-  specs: [path.resolve(__dirname, "**/*.test.ts")],
+  specs: [path.resolve(__dirname, "visual.test.ts")],
 
   maxInstances: 1,
   maxInstancesPerCapability: 1,
@@ -25,15 +26,18 @@ export const config: WebdriverIO.Config = {
   capabilities: [
     {
       browserName: "chrome",
-      "goog:chromeOptions": {
-        args: chromeArgs,
-      },
+      "goog:chromeOptions": buildChromeOptions(profile, headless),
     },
   ],
 
   logLevel: "warn",
 
   baseUrl: `http://localhost:${PORT}`,
+
+  wdi5: {
+    skipInjectUI5OnStart: true,
+    waitForUI5Timeout: 20_000,
+  },
 
   framework: "mocha",
   mochaOpts: {
@@ -44,12 +48,13 @@ export const config: WebdriverIO.Config = {
   reporters: ["spec"],
 
   services: [
+    "ui5",
     [
       "visual",
       {
-        baselineFolder: path.resolve(__dirname, "__baselines__"),
+        baselineFolder: path.resolve(__dirname, `__baselines__/${profile.id}`),
         formatImageName: "{tag}-{logName}-{width}x{height}",
-        screenshotPath: path.resolve(__dirname, "__screenshots__"),
+        screenshotPath: path.resolve(__dirname, `__screenshots__/${profile.id}`),
         autoSaveBaseline: updateVisualBaseline,
         disableCSSAnimation: true,
         hideScrollBars: true,
