@@ -374,6 +374,7 @@ export default class KioskKeyboard extends UI5Element {
 
     this._targetElement = null;
     this._targetFromAutoShow = false;
+    this._targetResolver = null;
 
     if (this._deferredFocusOutCloseId !== null) {
       cancelAnimationFrame(this._deferredFocusOutCloseId);
