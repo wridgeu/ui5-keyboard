@@ -1537,6 +1537,50 @@ describe("kiosk-keyboard", () => {
     });
   });
 
+  // ── mobileKeyboard open/defer behavior ──
+
+  describe("mobileKeyboard open/defer behavior", () => {
+    it("mobileKeyboard='Custom' always opens the docked keyboard", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked mobile-keyboard="Custom"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      el.show();
+      await nextRender();
+      expect(el.open).to.be.true;
+    });
+
+    it("mobileKeyboard='Native' prevents the docked keyboard from opening", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked mobile-keyboard="Native"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      el.show();
+      await nextRender();
+      expect(el.open).to.be.false;
+    });
+
+    it("mobileKeyboard='Native' does not fire after-open", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked mobile-keyboard="Native"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      let fired = false;
+      el.addEventListener("after-open", () => {
+        fired = true;
+      });
+      el.show();
+      await nextRender();
+      expect(fired).to.be.false;
+    });
+  });
+
   // ── Additional public API ──
 
   describe("additional public API", () => {

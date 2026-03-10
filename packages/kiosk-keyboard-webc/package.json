@@ -56,6 +56,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:component": "npm run generate && web-test-runner",
+    "test:coverage": "npm run test:coverage:unit && npm run test:coverage:component",
+    "test:coverage:unit": "vitest run --coverage",
+    "test:coverage:component": "npm run generate && web-test-runner --coverage",
     "pretest:e2e": "npm run build",
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit"
