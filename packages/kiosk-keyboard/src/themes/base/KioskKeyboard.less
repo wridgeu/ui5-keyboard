@@ -174,6 +174,8 @@
   &:focus-visible {
     outline: @sapUiContentFocusWidth @sapUiContentFocusStyle @sapUiContentFocusColor;
     outline-offset: 1px;
+    transform: translateY(-1px);
+    box-shadow: var(--ui5KioskKeyboard-keyShadowHover);
   }
 
   /* ---- Width classes: proportional flex grow ---- */
@@ -245,6 +247,10 @@
       color: @sapUiButtonEmphasizedActiveTextColor;
       border-color: @sapUiButtonEmphasizedActiveBorderColor;
     }
+
+    &:focus-visible {
+      outline-color: @sapUiContentContrastFocusColor;
+    }
   }
 
   /* ---- Variant: Active Shift indicator ---- */
@@ -312,6 +318,7 @@
 
   .ui5KioskKey:hover,
   .ui5KioskKey:active,
+  .ui5KioskKey:focus-visible,
   .ui5KioskKey--pressed,
   .ui5KioskKey--highlight {
     transform: none;
@@ -323,15 +330,49 @@
     /* Ensure key borders remain visible under system color overrides */
     border-color: ButtonText;
 
+    &:hover {
+      border-color: Highlight;
+    }
+
     &:active,
     &.ui5KioskKey--pressed,
     &.ui5KioskKey--highlight,
     &.ui5KioskKey--active {
       border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
     }
 
     &:focus-visible {
       outline-color: Highlight;
     }
+  }
+
+  .ui5KioskKey--capsLock {
+    border-color: Highlight;
+    /* box-shadow is forced to none in forced-colors mode, so use outline
+       as the visible indicator for caps lock instead. */
+    outline: 2px solid Highlight;
+    outline-offset: -1px;
+  }
+}
+
+@media (hover: none) {
+  .ui5KioskKey:hover {
+    background: @sapUiButtonBackground;
+    border-color: @sapUiButtonBorderColor;
+    transform: none;
+    box-shadow: var(--ui5KioskKeyboard-keyShadow);
+  }
+
+  .ui5KioskKey--modifier:hover {
+    background: @sapUiButtonLiteBackground;
+    border-color: @sapUiButtonLiteBorderColor;
+  }
+
+  .ui5KioskKey--action:hover,
+  .ui5KioskKey--active:hover {
+    background: @sapUiButtonEmphasizedBackground;
+    border-color: @sapUiButtonEmphasizedBorderColor;
   }
 }
