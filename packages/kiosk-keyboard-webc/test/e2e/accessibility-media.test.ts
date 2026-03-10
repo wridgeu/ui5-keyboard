@@ -1,8 +1,9 @@
 import { browser, $, expect } from "@wdio/globals";
+import { setEmulatedMediaFeatures, clearEmulatedMediaFeatures } from "../../../../tools/wdio-cdp-media.js";
 
-/** Navigate to the standalone test page and wait for the custom element to register. */
+/** Navigate to the visual test page and wait for the custom element to register. */
 async function openTestPage(): Promise<void> {
-  await browser.url("/test/pages/index.html");
+  await browser.url("/test/pages/visual.html");
   await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
     timeout: 10_000,
     timeoutMsg: "kiosk-keyboard not registered",
@@ -12,22 +13,6 @@ async function openTestPage(): Promise<void> {
 /** Get the shadow DOM root element of a kiosk-keyboard by host ID. */
 async function getKeyboardRoot(hostId: string) {
   return $(`#${hostId}`).$(">>>.kiosk-keyboard");
-}
-
-/** Use CDP Emulation.setEmulatedMedia to set CSS media features. */
-async function setEmulatedMediaFeatures(features: Array<{ name: string; value: string }>): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = page.client();
-  await cdp.send("Emulation.setEmulatedMedia", { features });
-}
-
-/** Reset all emulated media features via CDP. */
-async function clearEmulatedMediaFeatures(): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = page.client();
-  await cdp.send("Emulation.setEmulatedMedia", { features: [] });
 }
 
 describe("KioskKeyboard Web Component - Accessibility Media Emulation", () => {

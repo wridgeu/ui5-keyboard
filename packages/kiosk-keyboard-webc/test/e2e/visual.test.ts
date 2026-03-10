@@ -1,8 +1,8 @@
 import { browser, $, expect } from "@wdio/globals";
 
-/** Navigate to the standalone test page and wait for the custom element to register. */
+/** Navigate to the visual test page and wait for the custom element to register. */
 async function openTestPage(): Promise<void> {
-  await browser.url("/test/pages/index.html");
+  await browser.url("/test/pages/visual.html");
   await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
     timeout: 10_000,
     timeoutMsg: "kiosk-keyboard not registered",
@@ -82,7 +82,15 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     });
   });
 
-  it("should match docked mode open", async () => {
+  it("should match docked mode open", async function () {
+    // Docked keyboards defer to native input on touch devices (pointer: coarse),
+    // so .show() intentionally does not open the on-screen keyboard.
+    const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
+    if (isCoarse) {
+      this.skip();
+      return;
+    }
+
     // Open the docked keyboard
     await browser.execute(() => {
       const kb = document.getElementById("kb-docked") as HTMLElement & { show(): void };
@@ -90,6 +98,7 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     });
 
     const kb = await getKeyboardRoot("kb-docked");
+    await kb.waitForDisplayed({ timeout: 5_000 });
     await expect(kb).toMatchElementSnapshot("webc-docked-open");
 
     // Close it again

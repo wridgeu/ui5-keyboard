@@ -1,20 +1,24 @@
 import url from "node:url";
 import path from "node:path";
-import type { wdi5Config } from "wdio-ui5-service";
-import { createServerManager } from "../../../../tools/wdio-server.js";
+import { createViteServerManager } from "../../../../tools/wdio-server.js";
 import { buildChromeOptions, deviceProfiles } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const PORT = 8082;
+const PORT = 8084;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
-const server = createServerManager(PORT, PACKAGE_ROOT);
+const server = createViteServerManager(PORT, PACKAGE_ROOT);
 
-const profile = deviceProfiles.phone;
+const deviceArg = process.argv.find((a) => a.startsWith("--device="));
+const deviceName = deviceArg?.split("=")[1];
+if (!deviceName || !deviceProfiles[deviceName]) {
+  throw new Error(`Unknown or missing device profile: ${deviceName}. Use --device=phone or --device=tablet.`);
+}
+const profile = deviceProfiles[deviceName];
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 
-export const config: wdi5Config = {
+export const config: WebdriverIO.Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
 
@@ -34,11 +38,6 @@ export const config: wdi5Config = {
 
   baseUrl: `http://localhost:${PORT}`,
 
-  wdi5: {
-    skipInjectUI5OnStart: true,
-    waitForUI5Timeout: 20_000,
-  },
-
   framework: "mocha",
   mochaOpts: {
     ui: "bdd",
@@ -48,7 +47,6 @@ export const config: wdi5Config = {
   reporters: ["spec"],
 
   services: [
-    "ui5",
     [
       "visual",
       {

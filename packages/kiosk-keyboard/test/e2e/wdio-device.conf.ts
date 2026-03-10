@@ -10,7 +10,12 @@ const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
 const server = createServerManager(PORT, PACKAGE_ROOT);
 
-const profile = deviceProfiles.tablet;
+const deviceArg = process.argv.find((a) => a.startsWith("--device="));
+const deviceName = deviceArg?.split("=")[1];
+if (!deviceName || !deviceProfiles[deviceName]) {
+  throw new Error(`Unknown or missing device profile: ${deviceName}. Use --device=phone or --device=tablet.`);
+}
+const profile = deviceProfiles[deviceName];
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 

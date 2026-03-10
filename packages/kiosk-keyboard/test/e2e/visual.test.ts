@@ -92,7 +92,15 @@ describe("KioskKeyboard Interactive States", () => {
     await expect(kb).toMatchElementSnapshot("kb-shift-active");
   });
 
-  it("should match docked mode", async () => {
+  it("should match docked mode", async function () {
+    // Docked keyboards defer to native input on touch devices (pointer: coarse),
+    // so toggling open intentionally does not show the on-screen keyboard.
+    const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
+    if (isCoarse) {
+      this.skip();
+      return;
+    }
+
     const toggleBtn = await $("#toggle-docked");
     await toggleBtn.click();
     const dockedKb = await $("#kb-docked .ui5KioskKeyboard");

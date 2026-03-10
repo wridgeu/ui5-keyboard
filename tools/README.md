@@ -23,7 +23,7 @@ Adding a new rule: append an entry to the `rules` array with `name`, `message`, 
 
 ## `wdio-server.ts`
 
-Shared utilities for WebdriverIO test configurations across packages. Provides three exports:
+Shared utilities for WebdriverIO test configurations across packages.
 
 ### `createServerManager(port, packageRoot, configFile?, startupTimeout?)`
 
@@ -50,12 +50,12 @@ await server.onPrepare();
 // server is automatically stopped when the scope exits
 ```
 
-### `createStaticServerManager(port, root)`
+### `createViteServerManager(port, packageRoot, startupTimeout?)`
 
-Creates wdio lifecycle hooks that start a lightweight `node:http` static file server for packages that do not need the UI5 CLI toolchain. Reuses the same `probePort` check (skip if port already in use) and implements proper error handling on both `listen()` and `close()`.
+Creates wdio lifecycle hooks that start a Vite dev server for packages that use Vite for bundling (e.g. kiosk-keyboard-webc). Unlike a plain static file server, Vite resolves bare module specifiers so test pages with ES module imports work without an import map.
 
 ```ts
-const server = createStaticServerManager(8084, PACKAGE_ROOT);
+const server = createViteServerManager(8084, PACKAGE_ROOT);
 
 export const config: WebdriverIO.Config = {
   onPrepare: () => server.onPrepare(),
@@ -71,6 +71,30 @@ Extracts test IDs from a `testsuite.qunit.ts` file using TypeScript AST parsing.
 
 Generates one `.spec.js` file per QUnit test ID so WebdriverIO can distribute them across parallel browser instances via `maxInstances`.
 
+## `wdio-device-profiles.ts`
+
+Shared device profiles and Chrome option builder for phone/tablet e2e testing.
+
+### `deviceProfiles`
+
+Record of named device profiles (`phone`, `tablet`) with viewport dimensions, device scale factor, and touch mode.
+
+### `buildChromeOptions(profile, headless)`
+
+Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` so that CSS media queries like `(hover: none)` and `(pointer: coarse)` evaluate correctly.
+
+## `wdio-cdp-media.ts`
+
+Shared helpers for emulating CSS media features via the Chrome DevTools Protocol.
+
+### `setEmulatedMediaFeatures(features)`
+
+Sets emulated CSS media features (e.g. `forced-colors`, `prefers-reduced-motion`) on the current browser page.
+
+### `clearEmulatedMediaFeatures()`
+
+Clears all emulated media features.
+
 ## Consumers
 
 ### `check-test-hard-waits.mjs`
@@ -81,13 +105,29 @@ Generates one `.spec.js` file per QUnit test ID so WebdriverIO can distribute th
 
 ### `wdio-server.ts`
 
-| Consumer                                             | Imports                                                         | Port |
-| ---------------------------------------------------- | --------------------------------------------------------------- | ---- |
-| `packages/hotkeys/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`                       | 8081 |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`    | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`      | `createServerManager`                                           | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`  | `createServerManager`                                           | 8083 |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts` | `createStaticServerManager`                                     | 8084 |
+| Consumer                                                    | Imports                                                         | Port |
+| ----------------------------------------------------------- | --------------------------------------------------------------- | ---- |
+| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `createServerManager`, `readQUnitTestIds`                       | 8081 |
+| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082 |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8082 |
+| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8082 |
+| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `createServerManager`                                           | 8083 |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `createViteServerManager`                                       | 8084 |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8084 |
+
+### `wdio-device-profiles.ts`
+
+| Consumer                                                    | Imports                                |
+| ----------------------------------------------------------- | -------------------------------------- |
+| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles` |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles` |
+
+### `wdio-cdp-media.ts`
+
+| Consumer                                                            | Imports                                                  |
+| ------------------------------------------------------------------- | -------------------------------------------------------- |
+| `packages/kiosk-keyboard/test/e2e/accessibility-media.test.ts`      | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures` |
+| `packages/kiosk-keyboard-webc/test/e2e/accessibility-media.test.ts` | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures` |
 
 ## `tsconfig.json`
 

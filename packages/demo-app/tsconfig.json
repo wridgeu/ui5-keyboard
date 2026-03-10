@@ -6,7 +6,7 @@
     // Monorepo development only: paths resolve library imports to sibling workspace
     // source folders so the IDE provides go-to-definition and type-checking across
     // packages. When the libraries are consumed from npm, consumers use the published
-    // type declarations instead — these paths have no effect outside this monorepo.
+    // type declarations instead. These paths have no effect outside this monorepo.
     "paths": {
       "demo/hotkeys/*": ["./webapp/*"],
       "ui5/hotkeys/*": ["../hotkeys/src/*"],

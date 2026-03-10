@@ -1,4 +1,5 @@
 import { browser, $, expect } from "@wdio/globals";
+import { setEmulatedMediaFeatures, clearEmulatedMediaFeatures } from "../../../../tools/wdio-cdp-media.js";
 
 const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 
@@ -9,22 +10,6 @@ async function openVisualPage(): Promise<void> {
 
 function getKeyboard(containerId: string) {
   return $(`#${containerId} .ui5KioskKeyboard`);
-}
-
-/** Use CDP Emulation.setEmulatedMedia to set CSS media features. */
-async function setEmulatedMediaFeatures(features: Array<{ name: string; value: string }>): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = page.client();
-  await cdp.send("Emulation.setEmulatedMedia", { features });
-}
-
-/** Reset all emulated media features via CDP. */
-async function clearEmulatedMediaFeatures(): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = page.client();
-  await cdp.send("Emulation.setEmulatedMedia", { features: [] });
 }
 
 describe("KioskKeyboard Accessibility Media Emulation", () => {
