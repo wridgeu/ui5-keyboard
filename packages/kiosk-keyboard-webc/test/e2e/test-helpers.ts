@@ -1,4 +1,19 @@
-import { browser } from "@wdio/globals";
+import { browser, $ } from "@wdio/globals";
+
+/** Navigate to the visual test page and wait for the custom element to register. */
+export async function openTestPage(): Promise<void> {
+  await browser.url("/test/pages/visual.html");
+  await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
+    timeout: 10_000,
+    timeoutMsg: "kiosk-keyboard not registered",
+  });
+}
+
+/** Get the shadow DOM root element of a kiosk-keyboard by host ID. */
+export async function getKeyboardRoot(hostId: string) {
+  // WDIO pierces shadow DOM with >>> (deep selector)
+  return $(`#${hostId}`).$(">>>.kiosk-keyboard");
+}
 
 /**
  * Set emulated CSS media features via the Chrome DevTools Protocol.

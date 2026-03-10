@@ -1,16 +1,5 @@
-import { browser, $, expect } from "@wdio/globals";
-import { setEmulatedMediaFeatures, clearEmulatedMediaFeatures } from "../../../../tools/wdio-cdp-media.js";
-
-const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
-
-async function openVisualPage(): Promise<void> {
-  await browser.url(VISUAL_PAGE);
-  await $("#kb-stable-height .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
-}
-
-function getKeyboard(containerId: string) {
-  return $(`#${containerId} .ui5KioskKeyboard`);
-}
+import { expect } from "@wdio/globals";
+import { openVisualPage, getKeyboard, setEmulatedMediaFeatures, clearEmulatedMediaFeatures } from "./test-helpers.js";
 
 describe("KioskKeyboard Accessibility Media Emulation", () => {
   afterEach(async () => {

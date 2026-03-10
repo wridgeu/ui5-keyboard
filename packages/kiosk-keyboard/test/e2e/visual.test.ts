@@ -1,18 +1,5 @@
 import { browser, $, expect } from "@wdio/globals";
-
-const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
-
-/** Navigate to the visual test page and wait for UI5 to finish rendering. */
-async function openVisualPage(): Promise<void> {
-  await browser.url(VISUAL_PAGE);
-  // wdi5 "ui5" service handles UI5 bootstrap sync; additionally wait for the last keyboard
-  await $("#kb-stable-height .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
-}
-
-/** Get the rendered KioskKeyboard element inside a container. */
-function getKeyboard(containerId: string) {
-  return $(`#${containerId} .ui5KioskKeyboard`);
-}
+import { openVisualPage, getKeyboard } from "./test-helpers.js";
 
 describe("KioskKeyboard Visual Regression", () => {
   before(async () => {

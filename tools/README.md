@@ -83,18 +83,6 @@ Record of named device profiles (`phone`, `tablet`) with viewport dimensions, de
 
 Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` so that CSS media queries like `(hover: none)` and `(pointer: coarse)` evaluate correctly.
 
-## `wdio-cdp-media.ts`
-
-Shared helpers for emulating CSS media features via the Chrome DevTools Protocol.
-
-### `setEmulatedMediaFeatures(features)`
-
-Sets emulated CSS media features (e.g. `forced-colors`, `prefers-reduced-motion`) on the current browser page.
-
-### `clearEmulatedMediaFeatures()`
-
-Clears all emulated media features.
-
 ## Consumers
 
 ### `check-test-hard-waits.mjs`
@@ -121,13 +109,6 @@ Clears all emulated media features.
 | ----------------------------------------------------------- | -------------------------------------- |
 | `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles` |
 | `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles` |
-
-### `wdio-cdp-media.ts`
-
-| Consumer                                                            | Imports                                                  |
-| ------------------------------------------------------------------- | -------------------------------------------------------- |
-| `packages/kiosk-keyboard/test/e2e/accessibility-media.test.ts`      | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures` |
-| `packages/kiosk-keyboard-webc/test/e2e/accessibility-media.test.ts` | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures` |
 
 ## `tsconfig.json`
 
