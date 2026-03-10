@@ -368,6 +368,8 @@
 .kiosk-key__label {
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .kiosk-key__icon {
