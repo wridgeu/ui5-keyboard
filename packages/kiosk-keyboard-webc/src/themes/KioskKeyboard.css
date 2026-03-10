@@ -137,17 +137,20 @@
   box-shadow: var(--kiosk-keyboard-key-shadow);
   overflow: hidden;
   white-space: nowrap;
-  transition:
-    background 0.1s ease,
-    border-color 0.1s ease,
-    box-shadow 0.1s ease,
-    transform 0.05s ease;
+
+  /* Transitions are scoped to interactive states so that Lit re-renders
+     (e.g. layout switches) apply instantly instead of animating from the
+     old styling. */
 
   &:hover {
     background: var(--sapButton_Hover_Background, #eaecee);
     border-color: var(--sapButton_Hover_BorderColor, #0064d9);
     transform: translateY(-1px);
     box-shadow: var(--kiosk-keyboard-key-shadow-hover);
+    transition:
+      background 0.1s ease,
+      box-shadow 0.1s ease,
+      transform 0.05s ease;
   }
 
   &:active,
@@ -159,8 +162,7 @@
     box-shadow: none;
     transition:
       background 0.1s ease,
-      border-color 0.1s ease,
-      transform 0.1s ease;
+      transform 0.05s ease;
   }
 
   &:focus-visible {
