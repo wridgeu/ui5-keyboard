@@ -1,9 +1,10 @@
 # demo-hotkeys-app
 
-Demo application for both workspace libraries:
+Demo application for all three workspace libraries:
 
 - `ui5-lib-hotkeys` (`ui5.hotkeys`)
 - `ui5-lib-kiosk-keyboard` (`ui5.kiosk`)
+- `kiosk-keyboard-webc` (native web component, consumed via `WebComponent.extend()` bridge)
 
 ## Run
 

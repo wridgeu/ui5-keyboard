@@ -25,7 +25,7 @@ Full-size inline keyboard:
 
 ## Getting Started
 
-This monorepo currently keeps both libraries workspace-local (`private: true`).
+This monorepo currently keeps all three library packages workspace-local (`private: true`).
 For local development, install once at the repository root and use the package READMEs for API details:
 
 ```bash
@@ -39,9 +39,9 @@ For full API details, see:
 - **[ui5-lib-kiosk-keyboard README](./packages/kiosk-keyboard/README.md)**
 - **[kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md)**
 
-### Consumption Modes (Both Libraries)
+### Consumption Modes (UI5 Libraries)
 
-Both `ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard` are packaged in a dual-mode way:
+Both UI5 libraries (`ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard`) are packaged in a dual-mode way:
 
 - **UI5-native development mode (source-based):** keep `src` in the npm package so UI5 tooling can resolve library sources via `ui5.yaml` and transpile dependencies during local development.
 - **Runtime/published mode (dist-based):** ship prebuilt `dist/resources/...` artifacts and typings for stable runtime consumption.
@@ -138,7 +138,7 @@ See the [kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md) f
 
 ## Using Hotkeys and the UI5 Kiosk Keyboard Together
 
-The two libraries are independent (neither depends on the other) but they complement each other well. A typical kiosk application uses hotkeys for global shortcuts and the virtual keyboard for text input:
+The two UI5 libraries are independent (neither depends on the other) but they complement each other well. A typical kiosk application uses hotkeys for global shortcuts and the virtual keyboard for text input:
 
 ```xml
 <mvc:View xmlns:kiosk="ui5.kiosk" xmlns:m="sap.m" xmlns:mvc="sap.ui.core.mvc">
@@ -159,7 +159,7 @@ onInit(): void {
 }
 ```
 
-Both libraries use standard UI5 lifecycle management (`destroy()`) and coexist on the same page without conflicts. The KioskKeyboard fires `keyPress` events (not native `keydown`), so virtual key taps do not trigger hotkeys registered via HotkeyManager.
+Both UI5 libraries use standard UI5 lifecycle management (`destroy()`) and coexist on the same page without conflicts. The KioskKeyboard fires `keyPress` events (not native `keydown`), so virtual key taps do not trigger hotkeys registered via HotkeyManager.
 
 ## Development
 

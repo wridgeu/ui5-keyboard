@@ -1,6 +1,6 @@
 # ui5-lib-hotkeys
 
-> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md).
+> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md) and [kiosk-keyboard-webc](../kiosk-keyboard-webc/README.md).
 
 Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
 

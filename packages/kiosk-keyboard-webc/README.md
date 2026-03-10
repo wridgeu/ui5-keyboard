@@ -1,5 +1,7 @@
 # kiosk-keyboard-webc
 
+> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md).
+
 Native web component variant of the kiosk on-screen keyboard, built on the [UI5 Web Components](https://sap.github.io/ui5-webcomponents/) framework (`@ui5/webcomponents-base`).
 
 ```html
@@ -50,7 +52,8 @@ npm install kiosk-keyboard-webc --workspace=packages/demo-app
 import { KioskKeyboard } from "kiosk-keyboard-webc/dist/bundle.esm.js";
 ```
 
-> **Bundle note:** The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `dist/KioskKeyboard.js` entry point to avoid duplicating framework code.
+> [!TIP]
+> The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `dist/KioskKeyboard.js` entry point to avoid duplicating framework code.
 
 ### Inside a UI5 app
 
@@ -86,6 +89,34 @@ Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinit
 Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. Event payloads are structurally identical.
 
 See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for general guidance on web component consumption patterns inside UI5 apps.
+
+## API Stability
+
+Recommended stable consumer imports:
+
+```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+
+import type {
+  FKeyMode,
+  KeyPressEventDetail,
+  LayoutChangeEventDetail,
+  KeyboardTypeChangeEventDetail,
+  KeyDefinition,
+  KeyRow,
+  LayoutDefinition,
+  KeyWidth,
+  KeyType,
+  SpecialKeyValue,
+} from "kiosk-keyboard-webc/bundle";
+```
+
+All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) and instance convenience delegates (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`) are part of the stable API surface.
+
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`layouts/fkey-row`, `layouts/nav-row`) are stable for composing custom variant layouts.
+
+> [!NOTE]
+> See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
 
 ## Attributes / Properties
 
@@ -212,7 +243,8 @@ Or via DOM (no ES import needed):
 </script>
 ```
 
-> **Note:** The layout registry is shared across all `<kiosk-keyboard>` instances on the page. A layout registered on one element is available to all others.
+> [!NOTE]
+> The layout registry is shared across all `<kiosk-keyboard>` instances on the page. A layout registered on one element is available to all others.
 
 Each key is a `KeyDefinition`:
 
@@ -256,7 +288,8 @@ Pass `null` to clear the custom resolver:
 kb.setTargetResolver(null);
 ```
 
-> **Note on events:** Virtual key presses dispatch `InputEvent("input")` on the target, matching native keyboard behavior. The `"change"` event is _not_ dispatched on character input; it fires only on Enter (for single-line inputs), consistent with how browsers handle `"change"` (on blur/commit).
+> [!NOTE]
+> Virtual key presses dispatch `InputEvent("input")` on the target, matching native keyboard behavior. The `"change"` event is _not_ dispatched on character input; it fires only on Enter (for single-line inputs), consistent with how browsers handle `"change"` (on blur/commit).
 
 ## CSS Custom Properties
 

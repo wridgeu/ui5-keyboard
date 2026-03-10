@@ -1,6 +1,6 @@
 # ui5-lib-kiosk-keyboard
 
-> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md).
+> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [kiosk-keyboard-webc](../kiosk-keyboard-webc/README.md).
 
 On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applications.
 
