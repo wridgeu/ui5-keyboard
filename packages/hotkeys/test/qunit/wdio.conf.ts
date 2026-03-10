@@ -1,6 +1,7 @@
 import url from "node:url";
 import path from "node:path";
 import { createServerManager, readQUnitTestIds } from "../../../../tools/wdio-server.js";
+import { CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8081;
@@ -20,6 +21,7 @@ export const config: WebdriverIO.Config = {
   capabilities: [
     {
       browserName: "chrome",
+      browserVersion: CHROME_VERSION,
       maxInstances: 1,
       "goog:chromeOptions": {
         args: ["--headless=new", "--window-size=1440,900", "--disable-gpu", "--no-sandbox"],

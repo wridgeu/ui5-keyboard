@@ -2,7 +2,7 @@ import url from "node:url";
 import path from "node:path";
 import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
-import { buildChromeOptions, deviceProfiles } from "../../../../tools/wdio-device-profiles.js";
+import { buildChromeOptions, deviceProfiles, CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8082;
@@ -31,6 +31,7 @@ export const config: wdi5Config = {
   capabilities: [
     {
       browserName: "chrome",
+      browserVersion: CHROME_VERSION,
       "goog:chromeOptions": buildChromeOptions(profile, headless),
     },
   ],

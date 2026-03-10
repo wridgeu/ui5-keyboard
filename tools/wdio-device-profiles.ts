@@ -1,5 +1,14 @@
 /** Shared device profiles for phone/tablet e2e testing via Chrome mobileEmulation. */
 
+/**
+ * Pinned Chrome version for visual regression testing.
+ *
+ * WDIO 9 auto-downloads this exact Chrome-for-Testing build so that
+ * baselines are reproducible across machines. When updating, regenerate
+ * all visual baselines and verify the diffs visually.
+ */
+export const CHROME_VERSION = "145.0.7632.160";
+
 export interface DeviceProfile {
   id: string;
   width: number;

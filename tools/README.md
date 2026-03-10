@@ -73,7 +73,11 @@ Generates one `.spec.js` file per QUnit test ID so WebdriverIO can distribute th
 
 ## `wdio-device-profiles.ts`
 
-Shared device profiles and Chrome option builder for phone/tablet e2e testing.
+Shared device profiles, pinned Chrome version, and Chrome option builder for e2e testing.
+
+### `CHROME_VERSION`
+
+Pinned Chrome version used by all WDIO configs. WDIO 9 auto-downloads this exact Chrome-for-Testing build so that visual regression baselines are reproducible across machines. When updating, regenerate all visual baselines and verify the diffs visually.
 
 ### `deviceProfiles`
 
@@ -105,10 +109,15 @@ Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` s
 
 ### `wdio-device-profiles.ts`
 
-| Consumer                                                    | Imports                                |
-| ----------------------------------------------------------- | -------------------------------------- |
-| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles` |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles` |
+| Consumer                                                    | Imports                                                  |
+| ----------------------------------------------------------- | -------------------------------------------------------- |
+| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `CHROME_VERSION`                                         |
+| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `CHROME_VERSION`                                         |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `CHROME_VERSION`                                         |
+| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION` |
+| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `CHROME_VERSION`                                         |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `CHROME_VERSION`                                         |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION` |
 
 ## `tsconfig.json`
 

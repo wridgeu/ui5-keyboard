@@ -56,7 +56,9 @@ import { KioskKeyboard } from "kiosk-keyboard-webc/dist/bundle.esm.js";
 > The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `dist/KioskKeyboard.js` entry point to avoid duplicating framework code.
 
 > [!IMPORTANT]
-> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js`. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics — using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `dist/KioskKeyboard.js` import directly, make sure your app loads the "72" font itself (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
+> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js`. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics. Using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `dist/KioskKeyboard.js` import directly, make sure your app loads the "72" font itself (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
+>
+> **Custom fonts:** If you override `--sapFontFamily` or set a custom `font-family` on the keyboard, the default key sizing may not fit the new font's glyph metrics. You may need to adjust `--kiosk-keyboard-key-height`, `--kiosk-keyboard-key-font-size`, or `--kiosk-keyboard-key-padding` to prevent clipping or excessive whitespace.
 
 ### Inside a UI5 app
 
@@ -298,19 +300,20 @@ kb.setTargetResolver(null);
 
 Override these on the `:host` or a parent element to customize appearance:
 
-| Property                                | Default    | Description                                     |
-| --------------------------------------- | ---------- | ----------------------------------------------- |
-| `--kiosk-keyboard-padding`              | `0.75rem`  | Container padding                               |
-| `--kiosk-keyboard-key-gap`              | `0.375rem` | Gap between keys                                |
-| `--kiosk-keyboard-key-height`           | `3rem`     | Key height                                      |
-| `--kiosk-keyboard-key-font-size`        | `1.125rem` | Key font size (all key types in Numpad/Numeric) |
-| `--kiosk-keyboard-key-shadow`           | _(subtle)_ | Box shadow for keys at rest                     |
-| `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_ | Box shadow for keys on hover                    |
-| `--kiosk-keyboard-docked-max-width`     | `1024px`   | Max width in docked mode                        |
-| `--kiosk-keyboard-docked-shadow`        | _(subtle)_ | Box shadow for the docked container             |
-| `--kiosk-keyboard-docked-z-index`       | `100`      | Z-index in docked mode                          |
-| `--kiosk-keyboard-numpad-max-width`     | `20rem`    | Max width for numpad layout                     |
-| `--kiosk-keyboard-numpad-key-min-width` | `4rem`     | Minimum key width in numpad layout              |
+| Property                                | Default     | Description                                     |
+| --------------------------------------- | ----------- | ----------------------------------------------- |
+| `--kiosk-keyboard-padding`              | `0.75rem`   | Container padding                               |
+| `--kiosk-keyboard-key-gap`              | `0.375rem`  | Gap between keys                                |
+| `--kiosk-keyboard-key-height`           | `3rem`      | Key height                                      |
+| `--kiosk-keyboard-key-font-size`        | `1.125rem`  | Key font size (all key types in Numpad/Numeric) |
+| `--kiosk-keyboard-key-padding`          | `0 0.25rem` | Inline padding inside each key                  |
+| `--kiosk-keyboard-key-shadow`           | _(subtle)_  | Box shadow for keys at rest                     |
+| `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_  | Box shadow for keys on hover                    |
+| `--kiosk-keyboard-docked-max-width`     | `1024px`    | Max width in docked mode                        |
+| `--kiosk-keyboard-docked-shadow`        | _(subtle)_  | Box shadow for the docked container             |
+| `--kiosk-keyboard-docked-z-index`       | `100`       | Z-index in docked mode                          |
+| `--kiosk-keyboard-numpad-max-width`     | `20rem`     | Max width for numpad layout                     |
+| `--kiosk-keyboard-numpad-key-min-width` | `4rem`      | Minimum key width in numpad layout              |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 

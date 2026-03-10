@@ -1,6 +1,7 @@
 import url from "node:url";
 import path from "node:path";
 import { createViteServerManager } from "../../../../tools/wdio-server.js";
+import { CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8084;
@@ -25,6 +26,7 @@ export const config: WebdriverIO.Config = {
   capabilities: [
     {
       browserName: "chrome",
+      browserVersion: CHROME_VERSION,
       "goog:chromeOptions": {
         args: chromeArgs,
       },
