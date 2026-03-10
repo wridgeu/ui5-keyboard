@@ -295,6 +295,27 @@ QUnit.test("Destroying last instance auto-resets i18n config and hook", async (a
   assert.ok(!hasConfiguredEnhancements(), "Enhancements auto-cleared after last instance destroyed");
 });
 
+QUnit.test("Destroying last instance clears global target resolver", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ targetInput: input });
+  await placeAndWait(kb);
+
+  const fakeResolver = (el: HTMLElement) => el.querySelector<HTMLInputElement>("input");
+  KioskKeyboard.setGlobalTargetResolver(fakeResolver);
+
+  assert.strictEqual(KioskKeyboard.getGlobalTargetResolver(), fakeResolver, "Resolver set before destroy");
+
+  input.destroy();
+  kb.destroy();
+
+  assert.strictEqual(
+    KioskKeyboard.getGlobalTargetResolver(),
+    null,
+    "Resolver auto-cleared after last instance destroyed",
+  );
+});
+
 QUnit.test("Re-created instance works after auto-reset when configureI18n is re-applied", async (assert) => {
   // Phase 1: create, configure, destroy → triggers auto-reset
   const input1 = new Input({ value: "" });

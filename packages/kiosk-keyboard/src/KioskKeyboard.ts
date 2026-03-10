@@ -938,6 +938,7 @@ export default class KioskKeyboard extends Control {
       registryClearOverrideHook();
       KioskKeyboard._lastReloadPromise = null;
       KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.clear();
+      KioskKeyboard._globalTargetResolver = null;
     }
 
     this._cancelDeferredFocusOutClose();

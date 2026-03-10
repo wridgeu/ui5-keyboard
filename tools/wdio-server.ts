@@ -116,9 +116,18 @@ export function createStaticServerManager(port: number, root: string) {
     ".woff2": "font/woff2",
   };
 
+  const resolvedRoot = path.resolve(root);
+
   const handler: http.RequestListener = (req, res) => {
     const urlPath = new URL(req.url ?? "/", `http://localhost:${port}`).pathname;
-    let filePath = path.join(root, urlPath);
+    let filePath = path.resolve(path.join(root, urlPath));
+
+    // Prevent path traversal outside the served root directory.
+    if (!filePath.startsWith(resolvedRoot + path.sep) && filePath !== resolvedRoot) {
+      res.writeHead(403);
+      res.end("Forbidden");
+      return;
+    }
 
     if (filePath.endsWith(path.sep) || (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory())) {
       filePath = path.join(filePath, "index.html");

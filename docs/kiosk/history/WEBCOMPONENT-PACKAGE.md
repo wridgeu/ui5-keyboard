@@ -1,5 +1,7 @@
 # Implementation Plan: `kiosk-keyboard-webc` Web Component Package
 
+> Status: Implemented
+
 ## Context
 
 `KioskKeyboard` is currently a SAPUI5 control. It works well inside UI5 apps,

@@ -420,6 +420,30 @@ describe("kiosk-keyboard", () => {
       }
     });
 
+    it("falls back to built-in resolver when custom resolver returns non-input element", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="fallback-input" type="text" />
+          <kiosk-keyboard layout="qwerty" for="fallback-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#fallback-input")!;
+      await nextRender();
+
+      // Resolver returns a <div> — should be rejected and fall through to
+      // the built-in resolver which finds the real <input>.
+      const badDiv = document.createElement("div");
+      kb.setTargetResolver(() => badDiv as unknown as HTMLInputElement);
+
+      try {
+        queryKey(kb, "z")!.click();
+        expect(input.value, "built-in resolver should find the input despite wrong-type resolver").to.equal("z");
+      } finally {
+        kb.setTargetResolver(null);
+      }
+    });
+
     it("handles backspace on target input", async () => {
       const container = await fixture(html`
         <div>

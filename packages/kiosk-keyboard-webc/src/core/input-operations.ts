@@ -1,7 +1,7 @@
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme.js";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
-export type CursorPos = [number, number];
+type CursorPos = [number, number];
 
 function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): number {
   const len = value.length;

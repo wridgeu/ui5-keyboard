@@ -6,7 +6,7 @@
  * - `"space"` gives the spacebar extra-wide flex (6x).
  * - `undefined` (default) gives a standard 1x flex-grow.
  *
- * Each numeric value maps to a CSS class (e.g. `"1.5"` → `.kioskKey--w1-5`).
+ * Each numeric value maps to a CSS class (e.g. `"1.5"` → `.kiosk-key--w1-5`).
  */
 export type KeyWidth = "1.5" | "1.75" | "2" | "2.25" | "space";
 

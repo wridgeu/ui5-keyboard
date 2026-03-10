@@ -6,7 +6,7 @@ import jsxRenderer from "@ui5/webcomponents-base/dist/renderer/JsxRenderer.js";
 import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
 
 import { ShiftState } from "./core/shift-state.js";
-import { resolveInputOrTextarea, keyElementId, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
+import { resolveWithCustomResolver, keyElementId, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
 import { insertText, handleBackspace, handleNavigation } from "./core/input-operations.js";
 import { detectKeyboardType } from "./core/keyboard-type-detector.js";
 import {
@@ -883,15 +883,7 @@ export default class KioskKeyboard extends UI5Element {
 
   /** Resolve a native input/textarea from an element, using the custom resolver if set. */
   private _resolveInputFrom(el: HTMLElement): HTMLInputElement | HTMLTextAreaElement | null {
-    if (this._targetResolver) {
-      try {
-        const custom = this._targetResolver(el);
-        if (custom) return custom;
-      } catch (err) {
-        console.warn("[kiosk-keyboard] Custom target resolver threw:", err);
-      }
-    }
-    return resolveInputOrTextarea(el);
+    return resolveWithCustomResolver(el, this._targetResolver);
   }
 
   private _shouldDeferToNative(): boolean {

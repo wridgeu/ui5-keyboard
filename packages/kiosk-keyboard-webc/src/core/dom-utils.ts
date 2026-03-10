@@ -61,3 +61,27 @@ export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElem
 
   return null;
 }
+
+/** Callback type for custom target resolution. */
+type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
+
+/**
+ * Resolve using a custom resolver first, falling back to the built-in resolver.
+ *
+ * Consumer-supplied resolvers are wrapped in try/catch so that a throwing
+ * resolver cannot crash interaction paths (typing, focus, escape, etc.).
+ */
+export function resolveWithCustomResolver(
+  el: HTMLElement,
+  customResolver: TargetResolverFn | null,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  if (customResolver) {
+    try {
+      const custom = customResolver(el);
+      if (isInputOrTextarea(custom)) return custom;
+    } catch (err) {
+      console.warn("[kiosk-keyboard] Custom target resolver threw:", err);
+    }
+  }
+  return resolveInputOrTextarea(el);
+}
