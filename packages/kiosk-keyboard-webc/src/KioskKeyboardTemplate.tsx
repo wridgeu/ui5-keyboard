@@ -21,6 +21,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const isDockedHidden = this.docked && !this.open;
   const focusPos = this._getFocusPosition(layout);
   const kbType = this.keyboardType;
+  const maxUnits = Math.max(...layout.map(rowUnits));
 
   return (
     <div
@@ -37,12 +38,13 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       aria-roledescription={this._roleDescription}
       aria-hidden={isDockedHidden ? "true" : undefined}
       aria-disabled={this.disabled ? "true" : undefined}
+      style={`--kiosk-keyboard-max-row-units:${maxUnits}`}
       onClick={this._boundOnKeyClick}
       onMouseDown={this._boundOnKeyMouseDown}
       onKeyDown={this._boundOnKeyDown}
     >
       {layout.map((row, rowIndex) => (
-        <div class="kiosk-row" key={`row-${rowIndex}`} style={`--kiosk-row-units:${rowUnits(row)}`}>
+        <div class="kiosk-row" key={`row-${rowIndex}`}>
           {row.map((key, colIndex) => {
             const id = keyElementId(this._componentId, rowIndex, colIndex);
             const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;

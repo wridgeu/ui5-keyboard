@@ -116,9 +116,14 @@
   gap: var(--kiosk-keyboard-key-gap);
   justify-content: center;
   container-type: inline-size;
+  /* Font scaling uses the densest row (max units) so every row gets
+     the same label font-size.  The 2px accounts for left+right key border. */
   --kiosk-row-key-content-max: calc(
-    ((100cqi - ((var(--kiosk-row-units, 10) - 1) * var(--kiosk-keyboard-key-gap))) / var(--kiosk-row-units, 10)) -
-      (var(--kiosk-keyboard-key-padding-inline) * 2)
+    (
+        (100cqi - ((var(--kiosk-keyboard-max-row-units, 10) - 1) * var(--kiosk-keyboard-key-gap))) /
+          var(--kiosk-keyboard-max-row-units, 10)
+      ) -
+      (var(--kiosk-keyboard-key-padding-inline) * 2) - 2px
   );
 }
 

@@ -121,7 +121,9 @@
   gap: var(--ui5KioskKeyboard-keyGap);
   justify-content: center;
   container-type: inline-size;
-  --ui5KioskRow-keyContentMax: ~"calc(((100cqi - ((var(--ui5KioskRow-units, 10) - 1) * var(--ui5KioskKeyboard-keyGap))) / var(--ui5KioskRow-units, 10)) - (var(--ui5KioskKeyboard-keyPaddingInline) * 2))";
+  // Font scaling uses the densest row (max units) so every row gets
+  // the same label font-size.  The 2px accounts for left+right key border.
+  --ui5KioskRow-keyContentMax: ~"calc(((100cqi - ((var(--ui5KioskKeyboard-maxRowUnits, 10) - 1) * var(--ui5KioskKeyboard-keyGap))) / var(--ui5KioskKeyboard-maxRowUnits, 10)) - (var(--ui5KioskKeyboard-keyPaddingInline) * 2) - 2px)";
 }
 
 /* ============================= */
