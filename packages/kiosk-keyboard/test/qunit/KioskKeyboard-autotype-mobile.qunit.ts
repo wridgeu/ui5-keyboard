@@ -397,6 +397,25 @@ QUnit.test("Native mode always defers to native keyboard", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Native mode: programmatic show() does not open keyboard", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: "Native",
+  });
+  kb.setTargetInput(input);
+  await placeAndWait(kb);
+
+  kb.show();
+
+  assert.notOk(kb.isOpen(), "show() does not open when mobileKeyboard=Native");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Auto mode still opens on desktop", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");

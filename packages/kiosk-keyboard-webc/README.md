@@ -37,9 +37,12 @@ npm install kiosk-keyboard-webc --workspace=packages/demo-app
 
 ### Standalone (any framework)
 
+> [!NOTE]
+> The examples below use bare package specifiers (`kiosk-keyboard-webc/…`), which require a bundler (Vite, webpack, etc.) or an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap). For plain `<script>` usage without a build step, replace the specifier with the resolved path to `dist/kiosk-keyboard.bundle.js` (e.g. `./node_modules/kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js`).
+
 ```html
 <script type="module">
-  import "kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js";
+  import "kiosk-keyboard-webc/bundle";
 </script>
 
 <input id="my-input" type="text" />
@@ -221,7 +224,7 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 ## Custom Layouts
 
 ```ts
-import { KioskKeyboard } from "kiosk-keyboard-webc/dist/bundle.esm.js";
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 
 KioskKeyboard.registerLayout("my-layout", [
   [{ value: "a" }, { value: "b" }, { value: "c" }, { value: "{backspace}", type: "action" }],
@@ -232,10 +235,10 @@ KioskKeyboard.registerLayout("my-layout", [
 ]);
 ```
 
-Or via DOM (no ES import needed):
+Or via DOM (no ES import needed — requires a bundler or import map, see note above):
 
 ```html
-<script type="module" src="kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js"></script>
+<script type="module" src="kiosk-keyboard-webc/bundle"></script>
 
 <input id="my-input" type="text" />
 <kiosk-keyboard id="kb" layout="pin-pad" for="my-input"></kiosk-keyboard>

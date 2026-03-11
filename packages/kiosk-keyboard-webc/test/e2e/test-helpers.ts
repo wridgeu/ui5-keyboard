@@ -7,23 +7,24 @@ export {
   setDocumentDirection,
 } from "../../../../tools/wdio-test-helpers.js";
 
-/** Navigate to the visual test page and wait for the keyboard to fully render. */
+/** Navigate to the visual test page and wait for all keyboards to fully render. */
 export async function openVisualPage(): Promise<void> {
   await browser.url("/test/pages/visual.html");
   await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
     timeout: 10_000,
     timeoutMsg: "kiosk-keyboard not registered",
   });
-  // Wait for the last keyboard on the page to render keys (order-independent)
+  // Wait for every keyboard on the page to render at least one key.
+  // This ensures custom layouts (e.g. glyph-stress registered via whenDefined)
+  // have been applied before any snapshots are taken.
   await browser.waitUntil(
     async () =>
       browser.execute(() => {
         const keyboards = document.querySelectorAll("kiosk-keyboard");
         if (keyboards.length === 0) return false;
-        const last = keyboards[keyboards.length - 1];
-        return (last.shadowRoot?.querySelectorAll('[role="button"]').length ?? 0) > 0;
+        return [...keyboards].every((kb) => (kb.shadowRoot?.querySelectorAll('[role="button"]').length ?? 0) > 0);
       }),
-    { timeout: 10_000, timeoutMsg: "Keyboard keys not rendered" },
+    { timeout: 10_000, timeoutMsg: "Not all keyboards have rendered keys" },
   );
 }
 

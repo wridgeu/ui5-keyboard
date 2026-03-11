@@ -1345,6 +1345,7 @@ export default class KioskKeyboard extends Control {
   show(): this {
     if (!this.getDocked()) return this;
     if (this._open) return this;
+    if (this._shouldDeferToNative()) return this;
     this._open = true;
     this._suppressNativeKeyboard();
     document.addEventListener("keydown", this._boundEscapeKeydown, true);
