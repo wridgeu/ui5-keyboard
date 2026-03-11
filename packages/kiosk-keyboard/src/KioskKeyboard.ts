@@ -893,8 +893,8 @@ export default class KioskKeyboard extends Control {
       }
     }
 
-    this._syncStableHeight(dom as HTMLElement | null);
     this._syncResponsiveSizing(dom as HTMLElement | null);
+    this._syncStableHeight(dom as HTMLElement | null);
 
     this._setupInputIds();
   }

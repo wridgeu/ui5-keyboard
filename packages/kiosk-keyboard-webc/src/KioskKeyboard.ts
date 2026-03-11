@@ -224,9 +224,11 @@ export default class KioskKeyboard extends UI5Element {
   private _pendingAnnouncement: string | null = null;
   private _deferredFocusOutCloseId: number | null = null;
   // ── Inputmode suppression (ref-counted, shared across instances) ──
-  private static readonly _inputModeSuppressions = new Map<string, { original: string | null; refCount: number }>();
-  private static _nextTempId = 0;
-  private _suppressedInputId: string | null = null;
+  private static readonly _inputModeSuppressions = new WeakMap<
+    HTMLElement,
+    { original: string | null; refCount: number }
+  >();
+  private _suppressedElement: HTMLElement | null = null;
 
   // ── Multi-keyboard instance isolation ──
   private static readonly _instances = new Set<KioskKeyboard>();
@@ -545,8 +547,23 @@ export default class KioskKeyboard extends UI5Element {
 
   /** Programmatically sets the input element that receives typed characters. */
   setTargetElement(el: HTMLInputElement | HTMLTextAreaElement | null): void {
+    // Restore the old target's inputmode before switching so it's not left suppressed.
+    if (this._open) {
+      this._restoreInputMode();
+    }
+
+    // Reset shift/caps state for the new input context
+    this._shiftState.reset();
+    this._syncShiftState();
+
     this._targetElement = el;
     this._targetFromAutoShow = false;
+
+    // Suppress the new target and sync highlight if the keyboard is open
+    if (this._open) {
+      this._suppressInputMode();
+      this._syncPhysicalKeyHighlight();
+    }
   }
 
   /**
@@ -570,8 +587,9 @@ export default class KioskKeyboard extends UI5Element {
     this._targetResolver = resolver;
   }
 
-  /** Resets `keyboardType` to `"Full"` and clears the explicit-type flag. */
+  /** Resets `keyboardType` to `"Full"` and re-enables auto-type detection. */
   resetKeyboardType(): void {
+    this._keyboardTypeExplicit = false;
     this._setKeyboardTypeInternal("Full");
   }
 
@@ -993,6 +1011,7 @@ export default class KioskKeyboard extends UI5Element {
   private _isTargetOfOther(inputEl: HTMLElement): boolean {
     for (const kb of KioskKeyboard._instances) {
       if (kb === this) continue;
+      if (!kb._isAutoShowParticipationActive()) continue;
       if (kb._targetElement === inputEl) return true;
       const kbFor = kb.for;
       if (kbFor) {
@@ -1004,6 +1023,17 @@ export default class KioskKeyboard extends UI5Element {
       }
     }
     return false;
+  }
+
+  /**
+   * Returns true when this instance should participate in auto-show claim checks.
+   * Hidden, disabled, or disconnected keyboards must not block other keyboards
+   * from claiming inputs.
+   */
+  private _isAutoShowParticipationActive(): boolean {
+    if (this.disabled) return false;
+    if (!this.isConnected) return false;
+    return this.getClientRects().length > 0;
   }
 
   /**
@@ -1056,48 +1086,36 @@ export default class KioskKeyboard extends UI5Element {
     const target = this._resolveTarget();
     if (!target) return;
 
-    if (!target.id) {
-      target.id = `kiosk-kb-tmp-${KioskKeyboard._nextTempId++}`;
-    }
-
-    const id = target.id;
-    const existing = KioskKeyboard._inputModeSuppressions.get(id);
+    const existing = KioskKeyboard._inputModeSuppressions.get(target);
     if (existing) {
       existing.refCount++;
     } else {
-      KioskKeyboard._inputModeSuppressions.set(id, {
+      KioskKeyboard._inputModeSuppressions.set(target, {
         original: target.getAttribute("inputmode"),
         refCount: 1,
       });
     }
     target.setAttribute("inputmode", "none");
-    this._suppressedInputId = id;
+    this._suppressedElement = target;
   }
 
   private _restoreInputMode(): void {
-    if (!this._suppressedInputId) return;
+    const el = this._suppressedElement;
+    if (!el) return;
 
-    const id = this._suppressedInputId;
-    const state = KioskKeyboard._inputModeSuppressions.get(id);
+    const state = KioskKeyboard._inputModeSuppressions.get(el);
     if (state) {
       state.refCount--;
       if (state.refCount <= 0) {
-        const el = document.getElementById(id) as HTMLInputElement | null;
-        if (el) {
-          if (state.original !== null) {
-            el.setAttribute("inputmode", state.original);
-          } else {
-            el.removeAttribute("inputmode");
-          }
-          // Clean up temp IDs assigned by _suppressInputMode
-          if (el.id.startsWith("kiosk-kb-tmp-")) {
-            el.removeAttribute("id");
-          }
+        if (state.original !== null) {
+          el.setAttribute("inputmode", state.original);
+        } else {
+          el.removeAttribute("inputmode");
         }
-        KioskKeyboard._inputModeSuppressions.delete(id);
+        KioskKeyboard._inputModeSuppressions.delete(el);
       }
     }
-    this._suppressedInputId = null;
+    this._suppressedElement = null;
   }
 
   // ── Physical keyboard highlight ──

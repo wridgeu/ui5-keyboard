@@ -180,8 +180,9 @@ describe("kiosk-keyboard", () => {
       const key = queryKey(el, "1")!;
       expect(key).to.not.be.null;
 
-      setTimeout(() => key.click());
-      const { detail } = await oneEvent(el, "key-press");
+      const keyPressEvent = oneEvent(el, "key-press");
+      key.click();
+      const { detail } = await keyPressEvent;
       expect(detail.key).to.equal("1");
       expect(detail.shiftKey).to.be.false;
       expect(detail.char).to.equal("1");
@@ -197,8 +198,9 @@ describe("kiosk-keyboard", () => {
 
       const bksp = queryKey(el, "{backspace}")!;
       expect(bksp).to.not.be.null;
-      setTimeout(() => bksp.click());
-      const { detail } = await oneEvent(el, "key-press");
+      const keyPressEvent = oneEvent(el, "key-press");
+      bksp.click();
+      const { detail } = await keyPressEvent;
       expect(detail.key).to.equal("{backspace}");
       expect(detail.char).to.be.undefined;
     });
@@ -216,8 +218,9 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       const keyA = queryKey(el, "a")!;
-      setTimeout(() => keyA.click());
-      const { detail } = await oneEvent(el, "key-press");
+      const keyPressEvent = oneEvent(el, "key-press");
+      keyA.click();
+      const { detail } = await keyPressEvent;
       expect(detail.key).to.equal("a");
       expect(detail.shiftKey).to.be.true;
       expect(detail.char).to.equal("A");
@@ -591,8 +594,9 @@ describe("kiosk-keyboard", () => {
       const layoutKey = queryKey(el, "{layout:numeric}");
       expect(layoutKey, "layout switch key should exist in qwerty").to.not.be.null;
 
-      setTimeout(() => layoutKey!.click());
-      const { detail } = await oneEvent(el, "layout-change");
+      const layoutChangeEvent = oneEvent(el, "layout-change");
+      layoutKey!.click();
+      const { detail } = await layoutChangeEvent;
       expect(detail.layout).to.equal("numeric");
     });
   });
@@ -624,8 +628,9 @@ describe("kiosk-keyboard", () => {
           <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
         `,
       );
-      setTimeout(() => el.show());
-      await oneEvent(el, "after-open");
+      const afterOpenEvent = oneEvent(el, "after-open");
+      el.show();
+      await afterOpenEvent;
     });
 
     it("dispatches after-close event", async () => {
@@ -635,8 +640,9 @@ describe("kiosk-keyboard", () => {
         `,
       );
       el.show();
-      setTimeout(() => el.close());
-      await oneEvent(el, "after-close");
+      const afterCloseEvent = oneEvent(el, "after-close");
+      el.close();
+      await afterCloseEvent;
     });
 
     it("closes on Escape key", async () => {
@@ -953,8 +959,9 @@ describe("kiosk-keyboard", () => {
       const f5Key = queryKey(el, "{fkey:F5}")!;
       expect(f5Key).to.not.be.null;
 
-      setTimeout(() => f5Key.click());
-      const { detail } = await oneEvent(el, "key-press");
+      const keyPressEvent = oneEvent(el, "key-press");
+      f5Key.click();
+      const { detail } = await keyPressEvent;
       expect(detail.key).to.equal("F5");
       expect(detail.shiftKey).to.be.false;
     });
@@ -969,8 +976,9 @@ describe("kiosk-keyboard", () => {
       const arrowUp = queryKey(el, "{fkey:ArrowUp}")!;
       expect(arrowUp).to.not.be.null;
 
-      setTimeout(() => arrowUp.click());
-      const { detail } = await oneEvent(el, "key-press");
+      const keyPressEvent = oneEvent(el, "key-press");
+      arrowUp.click();
+      const { detail } = await keyPressEvent;
       expect(detail.key).to.equal("ArrowUp");
     });
 
@@ -1359,10 +1367,9 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
 
-      setTimeout(() => {
-        el.keyboardType = "Numpad";
-      });
-      const { detail } = await oneEvent(el, "keyboard-type-change");
+      const typeChangeEvent = oneEvent(el, "keyboard-type-change");
+      el.keyboardType = "Numpad";
+      const { detail } = await typeChangeEvent;
       expect(detail.keyboardType).to.equal("Numpad");
       expect(detail.previousKeyboardType).to.equal("Full");
       expect(detail.autoDetected).to.be.false;
@@ -1379,11 +1386,10 @@ describe("kiosk-keyboard", () => {
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
       await nextRender();
 
-      setTimeout(() => {
-        input.focus();
-        input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
-      });
-      const { detail } = await oneEvent(kb, "keyboard-type-change");
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
       expect(detail.keyboardType).to.equal("Numpad");
       expect(detail.autoDetected).to.be.true;
     });
@@ -1413,16 +1419,14 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
 
-      setTimeout(() => {
-        el.keyboardType = "Numpad";
-      });
-      const first = await oneEvent(el, "keyboard-type-change");
+      const firstEvent = oneEvent(el, "keyboard-type-change");
+      el.keyboardType = "Numpad";
+      const first = await firstEvent;
       expect(first.detail.previousKeyboardType).to.equal("Full");
 
-      setTimeout(() => {
-        el.keyboardType = "Numeric";
-      });
-      const second = await oneEvent(el, "keyboard-type-change");
+      const secondEvent = oneEvent(el, "keyboard-type-change");
+      el.keyboardType = "Numeric";
+      const second = await secondEvent;
       expect(second.detail.previousKeyboardType).to.equal("Numpad");
       expect(second.detail.keyboardType).to.equal("Numeric");
     });
@@ -1592,6 +1596,7 @@ describe("kiosk-keyboard", () => {
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#reset-type-input")!;
       await nextRender();
 
       // Explicitly set a type
@@ -1603,6 +1608,14 @@ describe("kiosk-keyboard", () => {
       kb.resetKeyboardType();
       await nextRender();
       expect(kb.keyboardType).to.equal("Full");
+
+      // Auto-detection should now resume: focusing a number input should auto-detect Numpad
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
     });
 
     it("isOpen() returns current open state", async () => {
@@ -1714,6 +1727,111 @@ describe("kiosk-keyboard", () => {
 
       const root = rootDiv(el);
       expect(root.style.minHeight).to.not.equal("", "minHeight should be set for Full keyboard with stableHeight");
+    });
+  });
+
+  // ── Shadow-DOM inputmode suppression ──
+
+  describe("shadow-DOM inputmode suppression", () => {
+    it("restores inputmode on shadow-DOM targets after close", async () => {
+      // Define a custom element with a shadow-root input
+      const tagName = "shadow-input-host";
+      if (!customElements.get(tagName)) {
+        customElements.define(
+          tagName,
+          class extends HTMLElement {
+            constructor() {
+              super();
+              const shadow = this.attachShadow({ mode: "open" });
+              const input = document.createElement("input");
+              input.type = "text";
+              shadow.appendChild(input);
+            }
+          },
+        );
+      }
+
+      const container = await fixture(html`
+        <div>
+          <shadow-input-host id="shadow-host"></shadow-input-host>
+          <kiosk-keyboard layout="qwerty" docked for="shadow-host"></kiosk-keyboard>
+        </div>
+      `);
+      const host = container.querySelector<HTMLElement>("#shadow-host")!;
+      const shadowInput = host.shadowRoot!.querySelector("input")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      const originalInputMode = shadowInput.getAttribute("inputmode");
+
+      kb.show();
+      await nextRender();
+      expect(shadowInput.getAttribute("inputmode")).to.equal("none", "inputmode should be suppressed while open");
+
+      kb.close();
+      await nextRender();
+      expect(shadowInput.getAttribute("inputmode")).to.equal(
+        originalInputMode,
+        "inputmode should be restored after close",
+      );
+    });
+  });
+
+  // ── setTargetElement reconciliation ──
+
+  describe("setTargetElement reconciliation", () => {
+    it("restores old target inputmode and suppresses new target when retargeting while open", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="retarget-a" type="text" />
+          <input id="retarget-b" type="text" />
+          <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
+        </div>
+      `);
+      const inputA = container.querySelector<HTMLInputElement>("#retarget-a")!;
+      const inputB = container.querySelector<HTMLInputElement>("#retarget-b")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      // Open keyboard targeting input A
+      kb.setTargetElement(inputA);
+      kb.show();
+      await nextRender();
+      expect(inputA.getAttribute("inputmode")).to.equal("none", "input A should be suppressed while targeted");
+
+      // Retarget to input B while open
+      kb.setTargetElement(inputB);
+      await nextRender();
+      expect(inputA.getAttribute("inputmode")).to.not.equal(
+        "none",
+        "input A inputmode should be restored after retarget",
+      );
+      expect(inputB.getAttribute("inputmode")).to.equal("none", "input B should be suppressed after retarget");
+    });
+  });
+
+  // ── Multi-keyboard inactive-participation filter ──
+
+  describe("multi-keyboard inactive-participation filter", () => {
+    it("disabled keyboard does not block another keyboard from auto-showing on same input", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="multi-kb-input" type="text" />
+          <kiosk-keyboard id="kb-disabled" layout="qwerty" docked disabled for="multi-kb-input"></kiosk-keyboard>
+          <kiosk-keyboard id="kb-active" layout="qwerty" docked auto-show input-ids="multi-kb-input"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#multi-kb-input")!;
+      const kbActive = container.querySelector<KioskKeyboard>("#kb-active")!;
+      await nextRender();
+
+      // Focus the input to trigger auto-show on the active keyboard
+      const afterOpenEvent = oneEvent(kbActive, "after-open");
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await afterOpenEvent;
+
+      expect(kbActive.isOpen()).to.be.true;
     });
   });
 });
