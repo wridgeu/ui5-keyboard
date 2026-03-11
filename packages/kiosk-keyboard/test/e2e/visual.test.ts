@@ -60,6 +60,36 @@ describe("KioskKeyboard Visual Regression", () => {
     const kb = await getKeyboard("kb-stable-height");
     await expect(kb).toMatchElementSnapshot("kb-stable-height");
   });
+
+  it("should match F-Keys layout", async () => {
+    const kb = await getKeyboard("kb-fkeys");
+    await expect(kb).toMatchElementSnapshot("kb-fkeys");
+  });
+
+  it("should match Nav layout", async () => {
+    const kb = await getKeyboard("kb-nav");
+    await expect(kb).toMatchElementSnapshot("kb-nav");
+  });
+
+  it("should match QWERTY with F-Key row", async () => {
+    const kb = await getKeyboard("kb-qwerty-fk");
+    await expect(kb).toMatchElementSnapshot("kb-qwerty-fk");
+  });
+
+  it("should match QWERTZ-DE with F-Key row", async () => {
+    const kb = await getKeyboard("kb-qwertz-de-fk");
+    await expect(kb).toMatchElementSnapshot("kb-qwertz-de-fk");
+  });
+
+  it("should match QWERTY with Nav row", async () => {
+    const kb = await getKeyboard("kb-qwerty-nav");
+    await expect(kb).toMatchElementSnapshot("kb-qwerty-nav");
+  });
+
+  it("should match QWERTZ-DE with Nav row", async () => {
+    const kb = await getKeyboard("kb-qwertz-de-nav");
+    await expect(kb).toMatchElementSnapshot("kb-qwertz-de-nav");
+  });
 });
 
 describe("KioskKeyboard Interactive States", () => {

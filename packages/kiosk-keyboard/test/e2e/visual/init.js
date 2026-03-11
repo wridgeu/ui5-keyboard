@@ -81,5 +81,23 @@ sap.ui.define(
 
     // 14. Inline with stableHeight
     new KioskKeyboard({ stableHeight: true }).placeAt("kb-stable-height");
+
+    // 15. Function Keys (F1-F12)
+    new KioskKeyboard({ layout: "fkeys" }).placeAt("kb-fkeys");
+
+    // 16. Navigation Keys
+    new KioskKeyboard({ layout: "nav" }).placeAt("kb-nav");
+
+    // 17. QWERTY with F-Key Row
+    new KioskKeyboard({ layout: "qwerty-fk" }).placeAt("kb-qwerty-fk");
+
+    // 18. QWERTZ-DE with F-Key Row
+    new KioskKeyboard({ layout: "qwertz-de-fk" }).placeAt("kb-qwertz-de-fk");
+
+    // 19. QWERTY with Nav Row
+    new KioskKeyboard({ layout: "qwerty-nav" }).placeAt("kb-qwerty-nav");
+
+    // 20. QWERTZ-DE with Nav Row
+    new KioskKeyboard({ layout: "qwertz-de-nav" }).placeAt("kb-qwertz-de-nav");
   },
 );

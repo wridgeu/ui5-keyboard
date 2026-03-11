@@ -40,6 +40,36 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const kb = await getKeyboardRoot("kb-narrow");
     await expect(kb).toMatchElementSnapshot("webc-narrow");
   });
+
+  it("should match F-Keys layout", async () => {
+    const kb = await getKeyboardRoot("kb-fkeys");
+    await expect(kb).toMatchElementSnapshot("webc-fkeys");
+  });
+
+  it("should match Nav layout", async () => {
+    const kb = await getKeyboardRoot("kb-nav");
+    await expect(kb).toMatchElementSnapshot("webc-nav");
+  });
+
+  it("should match QWERTY with F-Key row", async () => {
+    const kb = await getKeyboardRoot("kb-qwerty-fk");
+    await expect(kb).toMatchElementSnapshot("webc-qwerty-fk");
+  });
+
+  it("should match QWERTZ-DE with F-Key row", async () => {
+    const kb = await getKeyboardRoot("kb-qwertz-de-fk");
+    await expect(kb).toMatchElementSnapshot("webc-qwertz-de-fk");
+  });
+
+  it("should match QWERTY with Nav row", async () => {
+    const kb = await getKeyboardRoot("kb-qwerty-nav");
+    await expect(kb).toMatchElementSnapshot("webc-qwerty-nav");
+  });
+
+  it("should match QWERTZ-DE with Nav row", async () => {
+    const kb = await getKeyboardRoot("kb-qwertz-de-nav");
+    await expect(kb).toMatchElementSnapshot("webc-qwertz-de-nav");
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {
