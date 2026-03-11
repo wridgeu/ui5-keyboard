@@ -222,7 +222,6 @@ export default class KioskKeyboard extends UI5Element {
   private _layoutSwitchedByUser = false;
   private _pendingAnnouncement: string | null = null;
   private _deferredFocusOutCloseId: number | null = null;
-
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   private static readonly _inputModeSuppressions = new Map<string, { original: string | null; refCount: number }>();
   private static _nextTempId = 0;
@@ -363,7 +362,6 @@ export default class KioskKeyboard extends UI5Element {
     this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
     this.shadowRoot!.removeEventListener("touchend", this._boundTouchEnd);
-
     // Fire after-close before disconnecting so direct listeners still see it.
     // Cannot use `this.open = false` here - isConnected is already false,
     // so the setter skips side effects. Handle cleanup manually.

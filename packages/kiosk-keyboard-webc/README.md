@@ -300,22 +300,28 @@ kb.setTargetResolver(null);
 
 Override these on the `:host` or a parent element to customize appearance:
 
-| Property                                | Default     | Description                                     |
-| --------------------------------------- | ----------- | ----------------------------------------------- |
-| `--kiosk-keyboard-padding`              | `0.75rem`   | Container padding                               |
-| `--kiosk-keyboard-key-gap`              | `0.375rem`  | Gap between keys                                |
-| `--kiosk-keyboard-key-height`           | `3rem`      | Key height                                      |
-| `--kiosk-keyboard-key-font-size`        | `1.125rem`  | Key font size (all key types in Numpad/Numeric) |
-| `--kiosk-keyboard-key-padding`          | `0 0.25rem` | Inline padding inside each key                  |
-| `--kiosk-keyboard-key-shadow`           | _(subtle)_  | Box shadow for keys at rest                     |
-| `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_  | Box shadow for keys on hover                    |
-| `--kiosk-keyboard-docked-max-width`     | `1024px`    | Max width in docked mode                        |
-| `--kiosk-keyboard-docked-shadow`        | _(subtle)_  | Box shadow for the docked container             |
-| `--kiosk-keyboard-docked-z-index`       | `100`       | Z-index in docked mode                          |
-| `--kiosk-keyboard-numpad-max-width`     | `20rem`     | Max width for numpad layout                     |
-| `--kiosk-keyboard-numpad-key-min-width` | `4rem`      | Minimum key width in numpad layout              |
+| Property                                | Default                          | Description                                     |
+| --------------------------------------- | -------------------------------- | ----------------------------------------------- |
+| `--kiosk-keyboard-padding`              | `0.75rem`                        | Container padding                               |
+| `--kiosk-keyboard-key-gap`              | `0.375rem`                       | Gap between keys                                |
+| `--kiosk-keyboard-key-height`           | `3rem`                           | Key height                                      |
+| `--kiosk-keyboard-key-font-size`        | `1.125rem`                       | Key font size (all key types in Numpad/Numeric) |
+| `--kiosk-keyboard-key-padding`          | `0 0.25rem`                      | Inline padding inside each key                  |
+| `--kiosk-keyboard-key-shadow`           | _(subtle)_                       | Box shadow for keys at rest                     |
+| `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_                       | Box shadow for keys on hover                    |
+| `--kiosk-keyboard-docked-max-width`     | `1024px`                         | Max width in docked mode                        |
+| `--kiosk-keyboard-docked-shadow`        | _(subtle)_                       | Box shadow for the docked container             |
+| `--kiosk-keyboard-z-base`               | `0`                              | Base layer token                                |
+| `--kiosk-keyboard-z-docked`             | `100`                            | Docked keyboard layer token                     |
+| `--kiosk-keyboard-z-top`                | `10`                             | Local top layer token                           |
+| `--kiosk-keyboard-z-bottom`             | `-10`                            | Local bottom layer token                        |
+| `--kiosk-keyboard-docked-z-index`       | `var(--kiosk-keyboard-z-docked)` | Docked z-index alias for compatibility          |
+| `--kiosk-keyboard-numpad-max-width`     | `20rem`                          | Max width for numpad layout                     |
+| `--kiosk-keyboard-numpad-key-min-width` | `4rem`                           | Minimum key width in numpad layout              |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
+
+Layering follows z-index tokens instead of hardcoded numbers. Prefer overriding `--kiosk-keyboard-z-docked` for external layering; `--kiosk-keyboard-docked-z-index` remains as a compatibility alias.
 
 Shadow custom properties use SAP theme tokens via `color-mix()` when supported, with static `rgba()` fallbacks for older browsers.
 

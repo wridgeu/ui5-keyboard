@@ -11,7 +11,8 @@ const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const deviceArg = process.argv.find((a) => a.startsWith("--device="));
 const deviceName = deviceArg?.split("=")[1];
 if (!deviceName || !deviceProfiles[deviceName]) {
-  throw new Error(`Unknown or missing device profile: ${deviceName}. Use --device=phone or --device=tablet.`);
+  const validDevices = Object.keys(deviceProfiles).join(", ");
+  throw new Error(`Unknown or missing device profile: ${deviceName}. Use --device=${validDevices}.`);
 }
 const profile = deviceProfiles[deviceName];
 const PORT = BASE_PORT + profile.portOffset;

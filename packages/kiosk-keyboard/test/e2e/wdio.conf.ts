@@ -2,7 +2,7 @@ import url from "node:url";
 import path from "node:path";
 import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
-import { CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
+import { CHROME_VERSION, DESKTOP_WINDOW_SIZE } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8082;
@@ -13,7 +13,7 @@ const server = createServerManager(PORT, PACKAGE_ROOT);
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const runReadmeScreenshots = process.argv.includes("--readme-screenshots");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
-const chromeArgs = ["--window-size=1440,900", "--disable-gpu", "--no-sandbox"];
+const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];
 if (headless) chromeArgs.unshift("--headless=new");
 
 export const config: wdi5Config = {

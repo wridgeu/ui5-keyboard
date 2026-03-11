@@ -2,10 +2,10 @@ import os from "node:os";
 import url from "node:url";
 import path from "node:path";
 import { createServerManager, readQUnitTestIds, generateQUnitSpecs } from "../../../../tools/wdio-server.js";
-import { CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
+import { CHROME_VERSION, DESKTOP_WINDOW_SIZE } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const PORT = 8082;
+const PORT = 8084;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const TESTSUITE_FILE = path.resolve(__dirname, "testsuite.qunit.ts");
 const SPECS_DIR = path.resolve(__dirname, ".generated-specs");
@@ -36,7 +36,7 @@ export const config: WebdriverIO.Config = {
       browserName: "chrome",
       browserVersion: CHROME_VERSION,
       "goog:chromeOptions": {
-        args: ["--headless=new", "--window-size=1440,900", "--disable-gpu", "--no-sandbox"],
+        args: ["--headless=new", `--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"],
       },
     },
   ],

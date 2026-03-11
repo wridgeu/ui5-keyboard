@@ -601,7 +601,7 @@ keyboard.close(); // slides out
 
 Both `show()` and `close()` are idempotent; calling them multiple times has no effect. They fire `afterOpen` and `afterClose` immediately as state-change hooks (not after CSS transition completion).
 
-The docked keyboard uses `position: fixed` with `z-index: 100` and a `box-shadow` for visual separation.
+The docked keyboard uses `position: fixed` with `z-index: var(--ui5KioskKeyboard-dockedZIndex)` (defaulting to `var(--ui5KioskKeyboard-zDocked)`) and a `box-shadow` for visual separation.
 
 ---
 
@@ -973,19 +973,25 @@ Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_hor
 
 Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
-| Property                               | Default    | Description                |
-| -------------------------------------- | ---------- | -------------------------- |
-| `--ui5KioskKeyboard-padding`           | `0.75rem`  | Container padding          |
-| `--ui5KioskKeyboard-keyGap`            | `0.375rem` | Gap between keys and rows  |
-| `--ui5KioskKeyboard-keyHeight`         | `3rem`     | Key height / touch target  |
-| `--ui5KioskKeyboard-keyFontSize`       | `1.125rem` | Key label font size        |
-| `--ui5KioskKeyboard-keyShadow`         | _(theme)_  | Key resting shadow         |
-| `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_  | Key hover shadow           |
-| `--ui5KioskKeyboard-dockedMaxWidth`    | `1024px`   | Max width when docked      |
-| `--ui5KioskKeyboard-dockedShadow`      | _(theme)_  | Shadow when docked         |
-| `--ui5KioskKeyboard-dockedZIndex`      | `100`      | Z-index when docked        |
-| `--ui5KioskKeyboard-numpadMaxWidth`    | `20rem`    | Numpad container max-width |
-| `--ui5KioskKeyboard-numpadKeyMinWidth` | `4rem`     | Numpad key min-width       |
+| Property                               | Default                           | Description                            |
+| -------------------------------------- | --------------------------------- | -------------------------------------- |
+| `--ui5KioskKeyboard-padding`           | `0.75rem`                         | Container padding                      |
+| `--ui5KioskKeyboard-keyGap`            | `0.375rem`                        | Gap between keys and rows              |
+| `--ui5KioskKeyboard-keyHeight`         | `3rem`                            | Key height / touch target              |
+| `--ui5KioskKeyboard-keyFontSize`       | `1.125rem`                        | Key label font size                    |
+| `--ui5KioskKeyboard-keyShadow`         | _(theme)_                         | Key resting shadow                     |
+| `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_                         | Key hover shadow                       |
+| `--ui5KioskKeyboard-dockedMaxWidth`    | `1024px`                          | Max width when docked                  |
+| `--ui5KioskKeyboard-dockedShadow`      | _(theme)_                         | Shadow when docked                     |
+| `--ui5KioskKeyboard-zBase`             | `0`                               | Base layer token                       |
+| `--ui5KioskKeyboard-zDocked`           | `100`                             | Docked keyboard layer token            |
+| `--ui5KioskKeyboard-zTop`              | `10`                              | Local top layer token                  |
+| `--ui5KioskKeyboard-zBottom`           | `-10`                             | Local bottom layer token               |
+| `--ui5KioskKeyboard-dockedZIndex`      | `var(--ui5KioskKeyboard-zDocked)` | Docked z-index alias for compatibility |
+| `--ui5KioskKeyboard-numpadMaxWidth`    | `20rem`                           | Numpad container max-width             |
+| `--ui5KioskKeyboard-numpadKeyMinWidth` | `4rem`                            | Numpad key min-width                   |
+
+Layering follows z-index tokens instead of hardcoded numbers. Prefer overriding `--ui5KioskKeyboard-zDocked` for app-level stacking; `--ui5KioskKeyboard-dockedZIndex` remains as a compatibility alias.
 
 ```css
 /* Example: larger keys for kiosk terminals */

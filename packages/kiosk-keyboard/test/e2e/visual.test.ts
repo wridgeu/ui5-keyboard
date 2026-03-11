@@ -70,8 +70,11 @@ describe("KioskKeyboard Interactive States", () => {
   it("should match key hover state", async () => {
     const kb = await getKeyboard("kb-qwerty");
     await forceHoverState('#kb-qwerty [data-key="f"]');
-    await expect(kb).toMatchElementSnapshot("kb-key-hovered");
-    await clearForcedHoverState('#kb-qwerty [data-key="f"]');
+    try {
+      await expect(kb).toMatchElementSnapshot("kb-key-hovered");
+    } finally {
+      await clearForcedHoverState('#kb-qwerty [data-key="f"]');
+    }
   });
 
   it("should match Shift active state", async () => {

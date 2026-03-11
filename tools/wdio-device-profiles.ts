@@ -9,19 +9,22 @@
  */
 export const CHROME_VERSION = "145.0.7632.160";
 
+/** Default window size for desktop e2e tests. */
+export const DESKTOP_WINDOW_SIZE = "1440,900";
+
 export interface DeviceProfile {
   id: string;
   width: number;
   height: number;
-  deviceScaleFactor: number;
+  pixelRatio: number;
   touch: boolean;
   /** Port offset from the package's base port so device profiles can run in parallel. */
   portOffset: number;
 }
 
 export const deviceProfiles: Record<string, DeviceProfile> = {
-  phone: { id: "phone", width: 360, height: 800, deviceScaleFactor: 3, touch: true, portOffset: 1 },
-  tablet: { id: "tablet", width: 768, height: 1024, deviceScaleFactor: 2, touch: true, portOffset: 2 },
+  phone: { id: "phone", width: 360, height: 800, pixelRatio: 3, touch: true, portOffset: 1 },
+  tablet: { id: "tablet", width: 768, height: 1024, pixelRatio: 2, touch: true, portOffset: 2 },
 };
 
 /**
@@ -41,7 +44,7 @@ export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
       deviceMetrics: {
         width: profile.width,
         height: profile.height,
-        pixelRatio: profile.deviceScaleFactor,
+        pixelRatio: profile.pixelRatio,
         touch: profile.touch,
       },
     },

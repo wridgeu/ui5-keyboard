@@ -1,7 +1,7 @@
 import url from "node:url";
 import path from "node:path";
 import { createViteServerManager } from "../../../../tools/wdio-server.js";
-import { CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
+import { CHROME_VERSION, DESKTOP_WINDOW_SIZE } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8086;
@@ -11,7 +11,7 @@ const server = createViteServerManager(PORT, PACKAGE_ROOT);
 
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
-const chromeArgs = ["--window-size=1440,900", "--disable-gpu", "--no-sandbox"];
+const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];
 if (headless) chromeArgs.unshift("--headless=new");
 
 export const config: WebdriverIO.Config = {

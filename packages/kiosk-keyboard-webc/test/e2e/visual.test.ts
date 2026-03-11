@@ -1,9 +1,9 @@
-import { browser, $, expect } from "@wdio/globals";
-import { openTestPage, getKeyboardRoot, forceHoverState, clearForcedHoverState } from "./test-helpers.js";
+import { browser, expect } from "@wdio/globals";
+import { openVisualPage, getKeyboardRoot, forceHoverState, clearForcedHoverState } from "./test-helpers.js";
 
 describe("KioskKeyboard Web Component - Visual Regression", () => {
   before(async () => {
-    await openTestPage();
+    await openVisualPage();
   });
 
   it("should match QWERTY layout", async () => {
@@ -12,27 +12,27 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
   });
 
   it("should match keyboard with input target", async () => {
-    const kb = await $('kiosk-keyboard[for="text-input"]').$(">>>.kiosk-keyboard");
+    const kb = await getKeyboardRoot("kb-with-input");
     await expect(kb).toMatchElementSnapshot("webc-with-input");
   });
 
   it("should match Numpad layout", async () => {
-    const kb = await $('kiosk-keyboard[keyboard-type="Numpad"]').$(">>>.kiosk-keyboard");
+    const kb = await getKeyboardRoot("kb-numpad");
     await expect(kb).toMatchElementSnapshot("webc-numpad");
   });
 
   it("should match Numeric layout", async () => {
-    const kb = await $('kiosk-keyboard[keyboard-type="Numeric"]').$(">>>.kiosk-keyboard");
+    const kb = await getKeyboardRoot("kb-numeric");
     await expect(kb).toMatchElementSnapshot("webc-numeric");
   });
 
   it("should match disabled state", async () => {
-    const kb = await $("kiosk-keyboard[disabled]").$(">>>.kiosk-keyboard");
+    const kb = await getKeyboardRoot("kb-disabled");
     await expect(kb).toMatchElementSnapshot("webc-disabled");
   });
 
   it("should match QWERTZ-DE layout", async () => {
-    const kb = await $('kiosk-keyboard[layout="qwertz-de"]').$(">>>.kiosk-keyboard");
+    const kb = await getKeyboardRoot("kb-qwertz-de");
     await expect(kb).toMatchElementSnapshot("webc-qwertz-de");
   });
 
@@ -44,14 +44,17 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
 
 describe("KioskKeyboard Web Component - Interactive States", () => {
   before(async () => {
-    await openTestPage();
+    await openVisualPage();
   });
 
   it("should match key hover state", async () => {
     const kb = await getKeyboardRoot("kb-qwerty");
     await forceHoverState("kb-qwerty", '[data-key="f"]');
-    await expect(kb).toMatchElementSnapshot("webc-key-hovered");
-    await clearForcedHoverState("kb-qwerty", '[data-key="f"]');
+    try {
+      await expect(kb).toMatchElementSnapshot("webc-key-hovered");
+    } finally {
+      await clearForcedHoverState("kb-qwerty", '[data-key="f"]');
+    }
   });
 
   it("should match Shift active state", async () => {
@@ -64,13 +67,25 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     });
     expect(shiftKey).toBe(true);
 
+    // Wait for the shift key to reflect active state (aria-pressed="true")
+    await browser.waitUntil(
+      async () =>
+        browser.execute(() => {
+          const kb = document.getElementById("kb-qwerty");
+          const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]');
+          return shift?.getAttribute("aria-pressed") === "true";
+        }),
+      { timeout: 3_000, timeoutMsg: "Shift key did not become active" },
+    );
+
     const kb = await getKeyboardRoot("kb-qwerty");
     await expect(kb).toMatchElementSnapshot("webc-qwerty-shifted");
 
-    // Reset shift
+    // Reset shift — click twice to cycle through caps lock back to off
     await browser.execute(() => {
       const kb = document.getElementById("kb-qwerty");
       const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+      shift?.click();
       shift?.click();
     });
   });

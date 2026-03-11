@@ -1,7 +1,7 @@
 import { browser, $ } from "@wdio/globals";
 
 /** Navigate to the visual test page and wait for the keyboard to fully render. */
-export async function openTestPage(): Promise<void> {
+export async function openVisualPage(): Promise<void> {
   await browser.url("/test/pages/visual.html");
   await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
     timeout: 10_000,
@@ -54,6 +54,7 @@ type CDPClient = ReturnType<PuppeteerPage["client"]>;
 async function resolveShadowNodeId(cdp: CDPClient, hostId: string, selector: string): Promise<number> {
   const { root } = await cdp.send("DOM.getDocument", { depth: 0, pierce: true });
   const { nodeId: hostNodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: `#${hostId}` });
+  if (!hostNodeId) throw new Error(`Shadow host #${hostId} not found in DOM`);
   const { node: hostNode } = await cdp.send("DOM.describeNode", { nodeId: hostNodeId, depth: 1, pierce: true });
   const shadowRootId = hostNode.shadowRoots?.[0]?.nodeId;
   if (!shadowRootId) throw new Error(`No shadow root found on #${hostId}`);
@@ -93,10 +94,12 @@ export async function clearForcedHoverState(hostId: string, selector: string): P
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
 }
 
-/** Set the `dir` and `lang` attributes on the document root element. */
+/** Set the `dir` and `lang` attributes on the document root element and wait for layout reflow. */
 export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
   await browser.execute((d) => {
     document.documentElement.setAttribute("dir", d);
     document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
   }, dir);
+  // Wait for the browser to reflow after the direction change
+  await browser.execute(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }

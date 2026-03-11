@@ -67,10 +67,12 @@ export async function clearForcedHoverState(selector: string): Promise<void> {
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
 }
 
-/** Set the `dir` and `lang` attributes on the document root element. */
+/** Set the `dir` and `lang` attributes on the document root element and wait for layout reflow. */
 export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
   await browser.execute((d) => {
     document.documentElement.setAttribute("dir", d);
     document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
   }, dir);
+  // Wait for the browser to reflow after the direction change
+  await browser.execute(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }

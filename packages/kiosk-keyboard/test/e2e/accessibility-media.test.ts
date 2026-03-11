@@ -2,6 +2,10 @@ import { expect } from "@wdio/globals";
 import { openVisualPage, getKeyboard, setEmulatedMediaFeatures, clearEmulatedMediaFeatures } from "./test-helpers.js";
 
 describe("KioskKeyboard Accessibility Media Emulation", () => {
+  beforeEach(async () => {
+    await clearEmulatedMediaFeatures();
+  });
+
   afterEach(async () => {
     await clearEmulatedMediaFeatures();
   });

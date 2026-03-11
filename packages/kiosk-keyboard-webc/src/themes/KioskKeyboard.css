@@ -10,12 +10,17 @@
   --kiosk-keyboard-key-gap: 0.375rem;
   --kiosk-keyboard-key-height: 3rem;
   --kiosk-keyboard-key-font-size: 1.125rem;
-  --kiosk-keyboard-key-padding: 0 0.25rem;
+  --kiosk-keyboard-key-padding-inline: 0.25rem;
+  --kiosk-keyboard-key-padding: 0 var(--kiosk-keyboard-key-padding-inline);
   --kiosk-keyboard-key-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.08);
   --kiosk-keyboard-docked-max-width: 1024px;
   --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
-  --kiosk-keyboard-docked-z-index: 100;
+  --kiosk-keyboard-z-base: 0;
+  --kiosk-keyboard-z-docked: 100;
+  --kiosk-keyboard-z-top: 10;
+  --kiosk-keyboard-z-bottom: -10;
+  --kiosk-keyboard-docked-z-index: var(--kiosk-keyboard-z-docked);
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 }
@@ -114,6 +119,11 @@
   display: flex;
   gap: var(--kiosk-keyboard-key-gap);
   justify-content: center;
+  container-type: inline-size;
+  --kiosk-row-key-content-max: calc(
+    ((100cqi - ((var(--kiosk-row-units, 10) - 1) * var(--kiosk-keyboard-key-gap))) / var(--kiosk-row-units, 10)) -
+      (var(--kiosk-keyboard-key-padding-inline) * 2)
+  );
 }
 
 /* ============================= */
@@ -137,7 +147,6 @@
   box-sizing: border-box;
   box-shadow: var(--kiosk-keyboard-key-shadow);
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 
   /* Transitions are scoped to interactive states so that Lit re-renders
@@ -368,7 +377,19 @@
 /* ============================= */
 
 .kiosk-key__label {
+  display: block;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  font-size: 1em;
+  line-height: 1;
+}
+
+@supports (font-size: 1cqi) {
+  .kiosk-key__label {
+    font-size: clamp(0.75em, calc(var(--kiosk-row-key-content-max, 1em) * 0.9), 1em);
+  }
 }
 
 /* ============================= */
