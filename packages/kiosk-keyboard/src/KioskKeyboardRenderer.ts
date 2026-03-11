@@ -265,17 +265,13 @@ const KioskKeyboardRenderer = {
   },
 
   isSingleGlyphLabel(label: string): boolean {
-    if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
-      const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-      let count = 0;
-      for (const _segment of segmenter.segment(label)) {
-        count += 1;
-        if (count > 1) return false;
-      }
-      return count === 1;
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    let count = 0;
+    for (const _segment of segmenter.segment(label)) {
+      count += 1;
+      if (count > 1) return false;
     }
-
-    return Array.from(label).length === 1;
+    return count === 1;
   },
 };
 
