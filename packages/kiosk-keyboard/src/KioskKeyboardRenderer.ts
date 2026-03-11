@@ -250,11 +250,30 @@ const KioskKeyboardRenderer = {
       if (icon) {
         rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
       } else {
-        rm.openStart("span").class("ui5KioskKey__label").openEnd();
-        rm.text(_getKeyLabel(key));
+        const label = _getKeyLabel(key);
+        rm.openStart("span").class("ui5KioskKey__label");
+        if (this.isSingleGlyphLabel(label)) {
+          rm.class("ui5KioskKey__label--glyph");
+        }
+        rm.openEnd();
+        rm.text(label);
         rm.close("span");
       }
     }
+  },
+
+  isSingleGlyphLabel(label: string): boolean {
+    if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+      let count = 0;
+      for (const _segment of segmenter.segment(label)) {
+        count += 1;
+        if (count > 1) return false;
+      }
+      return count === 1;
+    }
+
+    return Array.from(label).length === 1;
   },
 };
 

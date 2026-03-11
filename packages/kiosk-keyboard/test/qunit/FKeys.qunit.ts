@@ -35,7 +35,7 @@ QUnit.test("fkey-row module exports F1-F12 key definitions", (assert) => {
   assert.strictEqual(fkeyRow.length, 12, "Row has 12 keys");
   assert.strictEqual(fkeyRow[0].value, "{fkey:F1}", "First key is F1");
   assert.strictEqual(fkeyRow[11].value, "{fkey:F12}", "Last key is F12");
-  assert.strictEqual(fkeyRow[0].type, "modifier", "Keys have modifier type");
+  assert.strictEqual(fkeyRow[0].type, undefined, "F-key row keeps default key styling");
 });
 
 QUnit.test("fkeys is a secondary layout (does not become base)", (assert) => {

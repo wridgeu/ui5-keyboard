@@ -70,6 +70,11 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const kb = await getKeyboardRoot("kb-qwertz-de-nav");
     await expect(kb).toMatchElementSnapshot("webc-qwertz-de-nav");
   });
+
+  it("should match glyph stress layout in a narrow container", async () => {
+    const kb = await getKeyboardRoot("kb-glyph-stress");
+    await expect(kb).toMatchElementSnapshot("webc-glyph-stress");
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {
@@ -144,5 +149,25 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
       const kb = document.getElementById("kb-docked") as HTMLElement & { close(): void };
       kb.close();
     });
+  });
+
+  it("should keep docked mode closed on coarse pointers", async function () {
+    const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
+    if (!isCoarse) {
+      this.skip();
+      return;
+    }
+
+    await browser.execute(() => {
+      const kb = document.getElementById("kb-docked") as HTMLElement & { show(): void };
+      kb.show();
+    });
+
+    const classes = await browser.execute(() => {
+      const root = document.getElementById("kb-docked")?.shadowRoot?.querySelector(".kiosk-keyboard");
+      return root?.className ?? "";
+    });
+
+    expect(classes).toContain("kiosk-keyboard--hidden");
   });
 });

@@ -210,13 +210,22 @@
 
   /* ---- Label inside key ---- */
   &__label {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: 0;
+    max-inline-size: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: center;
     font-size: 1em;
     line-height: 1.2;
+  }
+
+  &__label--glyph {
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1;
   }
 
   /* ---- Icon inside key ---- */
@@ -291,20 +300,12 @@
 }
 
 /* ---- Responsive font scaling ---- */
-/* The UI5 LESS compiler does not support @container queries, so we use
-   viewport-based breakpoints.  Since the keyboard fills its parent width
-   (width: 100%) this is equivalent to container-based scaling.  The webc
-   package uses @container queries for full container-query support. */
-@media (max-width: 30rem) {
-  .ui5KioskKey {
-    --ui5KioskKeyboard-keyFontSize: 1rem;
-  }
+.ui5KioskKeyboard--cq-sm .ui5KioskKey {
+  --ui5KioskKeyboard-keyFontSize: 1rem;
 }
 
-@media (max-width: 20rem) {
-  .ui5KioskKey {
-    --ui5KioskKeyboard-keyFontSize: 0.875rem;
-  }
+.ui5KioskKeyboard--cq-xs .ui5KioskKey {
+  --ui5KioskKeyboard-keyFontSize: 0.875rem;
 }
 
 /* ============================= */

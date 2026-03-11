@@ -603,6 +603,8 @@ Both `show()` and `close()` are idempotent; calling them multiple times has no e
 
 The docked keyboard uses `position: fixed` with `z-index: var(--ui5KioskKeyboard-dockedZIndex)` (default `100`) and a `box-shadow` for visual separation.
 
+With the default `mobileKeyboard="Auto"`, coarse-pointer devices intentionally defer to the native on-screen keyboard. In that mode, calling `show()` keeps the custom docked keyboard closed; set `mobileKeyboard="Custom"` when you explicitly want the UI5 control to open on touch devices.
+
 ---
 
 ## Auto-Show
@@ -973,22 +975,33 @@ Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_hor
 
 Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
-| Property                               | Default    | Description                     |
-| -------------------------------------- | ---------- | ------------------------------- |
-| `--ui5KioskKeyboard-padding`           | `0.75rem`  | Container padding               |
-| `--ui5KioskKeyboard-keyGap`            | `0.375rem` | Gap between keys and rows       |
-| `--ui5KioskKeyboard-keyHeight`         | `3rem`     | Key height / touch target       |
-| `--ui5KioskKeyboard-keyPaddingInline`  | `0.25rem`  | Horizontal key padding          |
-| `--ui5KioskKeyboard-keyFontSize`       | `1.125rem` | Key label font size             |
-| `--ui5KioskKeyboard-keyShadow`         | _(theme)_  | Key resting shadow              |
-| `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_  | Key hover shadow                |
-| `--ui5KioskKeyboard-dockedMaxWidth`    | `1024px`   | Max width when docked           |
-| `--ui5KioskKeyboard-dockedShadow`      | _(theme)_  | Shadow when docked              |
-| `--ui5KioskKeyboard-dockedZIndex`      | `100`      | Z-index for the docked keyboard |
-| `--ui5KioskKeyboard-numpadMaxWidth`    | `20rem`    | Numpad container max-width      |
-| `--ui5KioskKeyboard-numpadKeyMinWidth` | `4rem`     | Numpad key min-width            |
+| Property                               | Default                                           | Description                               |
+| -------------------------------------- | ------------------------------------------------- | ----------------------------------------- |
+| `--ui5KioskKeyboard-padding`           | `0.75rem`                                         | Container padding                         |
+| `--ui5KioskKeyboard-keyGap`            | `0.375rem`                                        | Gap between keys and rows                 |
+| `--ui5KioskKeyboard-keyHeight`         | `3rem`                                            | Key height / touch target                 |
+| `--ui5KioskKeyboard-keyPaddingInline`  | `0.25rem`                                         | Horizontal key padding                    |
+| `--ui5KioskKeyboard-keyFontSize`       | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)` | Key label font size                       |
+| `--ui5KioskKeyboard-keyShadow`         | _(theme)_                                         | Key resting shadow                        |
+| `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_                                         | Key hover shadow                          |
+| `--ui5KioskKeyboard-maxWidth`          | `64rem`                                           | Max width for the default inline keyboard |
+| `--ui5KioskKeyboard-dockedMaxWidth`    | `1024px`                                          | Max width when docked                     |
+| `--ui5KioskKeyboard-dockedShadow`      | _(theme)_                                         | Shadow when docked                        |
+| `--ui5KioskKeyboard-dockedZIndex`      | `100`                                             | Z-index for the docked keyboard           |
+| `--ui5KioskKeyboard-numpadMaxWidth`    | `20rem`                                           | Numpad container max-width                |
+| `--ui5KioskKeyboard-numpadKeyMinWidth` | `4rem`                                            | Numpad key min-width                      |
 
 Override `--ui5KioskKeyboard-dockedZIndex` to adjust the docked keyboard's stacking layer.
+
+By default, the inline keyboard is centered and capped at `64rem` so wide desktop containers do not stretch the rows indefinitely. If your application wants an edge-to-edge inline keyboard, opt out explicitly:
+
+```css
+.ui5KioskKeyboard {
+  --ui5KioskKeyboard-maxWidth: 100%;
+}
+```
+
+Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport.
 
 ```css
 /* Example: larger keys for kiosk terminals */

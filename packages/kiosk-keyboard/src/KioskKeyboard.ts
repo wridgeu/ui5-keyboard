@@ -3,6 +3,7 @@ import Element from "sap/ui/core/Element";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
+import ResizeHandler from "sap/ui/core/ResizeHandler";
 import { SECONDARY_LAYOUTS } from "./types";
 import type { LayoutDefinition, KeyDefinition } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
@@ -106,6 +107,8 @@ export default class KioskKeyboard extends Control {
   declare private _deferredFocusOutCloseId: number | null;
   declare private _rendererApi: RendererInternalApi | null;
   declare private _targetResolverInstance: TargetResolverFn | null;
+  declare private _responsiveResizeHandlerId: string | null;
+  declare private _responsiveObservedDom: HTMLElement | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -811,6 +814,8 @@ export default class KioskKeyboard extends Control {
     );
     this._targetResolverInstance = null;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
+    this._responsiveResizeHandlerId = null;
+    this._responsiveObservedDom = null;
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -889,8 +894,44 @@ export default class KioskKeyboard extends Control {
     }
 
     this._syncStableHeight(dom as HTMLElement | null);
+    this._syncResponsiveSizing(dom as HTMLElement | null);
 
     this._setupInputIds();
+  }
+
+  /** Mirrors container-query breakpoints with UI5-managed root classes. */
+  private _syncResponsiveSizing(dom: HTMLElement | null): void {
+    if (!dom) {
+      this._teardownResponsiveSizing();
+      return;
+    }
+
+    if (this._responsiveObservedDom !== dom) {
+      this._teardownResponsiveSizing();
+      this._responsiveObservedDom = dom;
+      this._responsiveResizeHandlerId = ResizeHandler.register(dom, (event) => {
+        this._applyResponsiveSizeClasses(dom, event.size.width);
+      });
+    }
+
+    this._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width);
+  }
+
+  private _teardownResponsiveSizing(): void {
+    if (this._responsiveResizeHandlerId) {
+      ResizeHandler.deregister(this._responsiveResizeHandlerId);
+      this._responsiveResizeHandlerId = null;
+    }
+    this._responsiveObservedDom = null;
+  }
+
+  private _applyResponsiveSizeClasses(dom: HTMLElement, width: number): void {
+    const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+    const isCompact = width <= 20 * remPx;
+    const isNarrow = width <= 30 * remPx;
+
+    dom.classList.toggle("ui5KioskKeyboard--cq-xs", isCompact);
+    dom.classList.toggle("ui5KioskKeyboard--cq-sm", isNarrow && !isCompact);
   }
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */
@@ -945,6 +986,7 @@ export default class KioskKeyboard extends Control {
     this._disableAutoShow();
     this._teardownInputIds();
     this._removeHighlightDelegation();
+    this._teardownResponsiveSizing();
     this._restoreNativeKeyboard();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
   }

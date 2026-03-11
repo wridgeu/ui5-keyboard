@@ -29,7 +29,11 @@ export const config: wdi5Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
 
-  specs: [path.resolve(__dirname, "visual.test.ts")],
+  specs: [
+    path.resolve(__dirname, "visual.test.ts"),
+    path.resolve(__dirname, "rtl.test.ts"),
+    path.resolve(__dirname, "accessibility-media.test.ts"),
+  ],
 
   maxInstances: 1,
   maxInstancesPerCapability: 1,

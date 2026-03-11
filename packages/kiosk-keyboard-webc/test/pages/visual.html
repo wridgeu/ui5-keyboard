@@ -27,6 +27,23 @@
     </style>
     <script type="module">
       import "../../dist/kiosk-keyboard.bundle.js";
+
+      const glyphStressLayout = [
+        [
+          { value: "@" },
+          { value: "%" },
+          { value: "&" },
+          { value: '"' },
+          { value: "#" },
+          { value: "+" },
+          { value: "=" },
+          { value: "?" },
+        ],
+      ];
+
+      customElements.whenDefined("kiosk-keyboard").then(() => {
+        customElements.get("kiosk-keyboard").registerLayout("glyph-stress", glyphStressLayout);
+      });
     </script>
   </head>
   <body>
@@ -103,6 +120,13 @@
     <div class="section">
       <h2>14. QWERTZ-DE with Nav Row</h2>
       <kiosk-keyboard id="kb-qwertz-de-nav" layout="qwertz-de-nav"></kiosk-keyboard>
+    </div>
+
+    <div class="section">
+      <h2>15. Glyph Stress (320px container)</h2>
+      <div style="max-width: 320px">
+        <kiosk-keyboard id="kb-glyph-stress" layout="glyph-stress"></kiosk-keyboard>
+      </div>
     </div>
   </body>
 </html>

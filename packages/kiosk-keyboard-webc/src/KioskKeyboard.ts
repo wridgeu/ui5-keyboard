@@ -595,6 +595,20 @@ export default class KioskKeyboard extends UI5Element {
     return key.label ?? key.value;
   }
 
+  _isSingleGlyphLabel(label: string): boolean {
+    if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+      let count = 0;
+      for (const _segment of segmenter.segment(label)) {
+        count += 1;
+        if (count > 1) return false;
+      }
+      return count === 1;
+    }
+
+    return Array.from(label).length === 1;
+  }
+
   _getKeyAriaLabel(key: KeyDefinition): string {
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);

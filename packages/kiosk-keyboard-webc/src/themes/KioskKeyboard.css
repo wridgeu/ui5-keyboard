@@ -58,13 +58,13 @@
 
 /* ---- Responsive font scaling via container query ---- */
 @container keyboard (max-width: 30rem) {
-  .kiosk-keyboard {
+  .kiosk-key {
     --kiosk-keyboard-key-font-size: 1rem;
   }
 }
 
 @container keyboard (max-width: 20rem) {
-  .kiosk-keyboard {
+  .kiosk-key {
     --kiosk-keyboard-key-font-size: 0.875rem;
   }
 }
@@ -385,13 +385,22 @@
 /* ============================= */
 
 .kiosk-key__label {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
+  max-inline-size: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
   font-size: 1em;
   line-height: 1.2;
+}
+
+.kiosk-key__label--glyph {
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1;
 }
 
 /* ============================= */

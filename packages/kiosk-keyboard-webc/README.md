@@ -300,25 +300,38 @@ kb.setTargetResolver(null);
 
 Override these on the `:host` or a parent element to customize appearance:
 
-| Property                                | Default     | Description                                     |
-| --------------------------------------- | ----------- | ----------------------------------------------- |
-| `--kiosk-keyboard-padding`              | `0.75rem`   | Container padding                               |
-| `--kiosk-keyboard-key-gap`              | `0.375rem`  | Gap between keys                                |
-| `--kiosk-keyboard-key-height`           | `3rem`      | Key height                                      |
-| `--kiosk-keyboard-key-font-size`        | `1.125rem`  | Key font size (all key types in Numpad/Numeric) |
-| `--kiosk-keyboard-key-padding-inline`   | `0.25rem`   | Horizontal key padding                          |
-| `--kiosk-keyboard-key-padding`          | `0 0.25rem` | Full padding shorthand (uses padding-inline)    |
-| `--kiosk-keyboard-key-shadow`           | _(subtle)_  | Box shadow for keys at rest                     |
-| `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_  | Box shadow for keys on hover                    |
-| `--kiosk-keyboard-docked-max-width`     | `1024px`    | Max width in docked mode                        |
-| `--kiosk-keyboard-docked-shadow`        | _(subtle)_  | Box shadow for the docked container             |
-| `--kiosk-keyboard-docked-z-index`       | `100`       | Z-index for the docked keyboard                 |
-| `--kiosk-keyboard-numpad-max-width`     | `20rem`     | Max width for numpad layout                     |
-| `--kiosk-keyboard-numpad-key-min-width` | `4rem`      | Minimum key width in numpad layout              |
+| Property                                | Default                                          | Description                                     |
+| --------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `--kiosk-keyboard-padding`              | `0.75rem`                                        | Container padding                               |
+| `--kiosk-keyboard-key-gap`              | `0.375rem`                                       | Gap between keys                                |
+| `--kiosk-keyboard-key-height`           | `3rem`                                           | Key height                                      |
+| `--kiosk-keyboard-key-font-size`        | `calc(var(--kiosk-keyboard-key-height) * 0.375)` | Key font size (all key types in Numpad/Numeric) |
+| `--kiosk-keyboard-key-padding-inline`   | `0.25rem`                                        | Horizontal key padding                          |
+| `--kiosk-keyboard-key-padding`          | `0 0.25rem`                                      | Full padding shorthand (uses padding-inline)    |
+| `--kiosk-keyboard-key-shadow`           | _(subtle)_                                       | Box shadow for keys at rest                     |
+| `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_                                       | Box shadow for keys on hover                    |
+| `--kiosk-keyboard-max-width`            | `64rem`                                          | Max width for the default inline keyboard       |
+| `--kiosk-keyboard-docked-max-width`     | `1024px`                                         | Max width in docked mode                        |
+| `--kiosk-keyboard-docked-shadow`        | _(subtle)_                                       | Box shadow for the docked container             |
+| `--kiosk-keyboard-docked-z-index`       | `100`                                            | Z-index for the docked keyboard                 |
+| `--kiosk-keyboard-numpad-max-width`     | `20rem`                                          | Max width for numpad layout                     |
+| `--kiosk-keyboard-numpad-key-min-width` | `4rem`                                           | Minimum key width in numpad layout              |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 
+By default, the main keyboard is centered and capped at `64rem` so very wide desktop containers do not stretch keys indefinitely. If your layout should stay edge-to-edge, override the max width explicitly:
+
+```css
+kiosk-keyboard {
+  --kiosk-keyboard-max-width: 100%;
+}
+```
+
+The component uses container queries for narrow-container scaling, so embedded keyboards still respond to the space they actually get instead of only the viewport size.
+
 Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stacking layer.
+
+When `docked` is combined with `mobile-keyboard="Auto"` (the default), coarse-pointer devices defer to the native on-screen keyboard. Calling `show()` in that mode intentionally keeps the custom docked keyboard closed; use `mobile-keyboard="Custom"` if you want to force the component to open on touch devices.
 
 Shadow custom properties use SAP theme tokens via `color-mix()` when supported, with static `rgba()` fallbacks for older browsers.
 

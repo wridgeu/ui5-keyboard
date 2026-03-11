@@ -1,8 +1,21 @@
 // Plain JS: not processed by ui5-tooling-transpile (test files outside src/)
 sap.ui.define(
-  ["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/TextArea", "sap/m/Button", "sap/m/Popover", "sap/m/VBox"],
-  function (KioskKeyboard, Input, TextArea, Button, Popover, VBox) {
+  ["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button", "sap/m/Popover", "sap/m/VBox"],
+  function (KioskKeyboard, Input, Button, Popover, VBox) {
     "use strict";
+
+    KioskKeyboard.registerLayout("glyph-stress", [
+      [
+        { value: "@" },
+        { value: "%" },
+        { value: "&" },
+        { value: '"' },
+        { value: "#" },
+        { value: "+" },
+        { value: "=" },
+        { value: "?" },
+      ],
+    ]);
 
     // 1. Default QWERTY
     new KioskKeyboard().placeAt("kb-qwerty");
@@ -99,5 +112,8 @@ sap.ui.define(
 
     // 20. QWERTZ-DE with Nav Row
     new KioskKeyboard({ layout: "qwertz-de-nav" }).placeAt("kb-qwertz-de-nav");
+
+    // 21. Glyph stress layout
+    new KioskKeyboard({ layout: "glyph-stress" }).placeAt("kb-glyph-stress");
   },
 );

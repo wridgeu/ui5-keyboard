@@ -1,4 +1,4 @@
-import { browser, $, expect } from "@wdio/globals";
+import { $, expect } from "@wdio/globals";
 import { openVisualPage, getKeyboard, forceHoverState, clearForcedHoverState } from "./test-helpers.js";
 
 describe("KioskKeyboard Visual Regression", () => {
@@ -90,6 +90,11 @@ describe("KioskKeyboard Visual Regression", () => {
     const kb = await getKeyboard("kb-qwertz-de-nav");
     await expect(kb).toMatchElementSnapshot("kb-qwertz-de-nav");
   });
+
+  it("should match glyph stress layout in a narrow container", async () => {
+    const kb = await getKeyboard("kb-glyph-stress");
+    await expect(kb).toMatchElementSnapshot("kb-glyph-stress");
+  });
 });
 
 describe("KioskKeyboard Interactive States", () => {
@@ -119,15 +124,7 @@ describe("KioskKeyboard Interactive States", () => {
     await expect(kb).toMatchElementSnapshot("kb-shift-active");
   });
 
-  it("should match docked mode", async function () {
-    // Docked keyboards defer to native input on touch devices (pointer: coarse),
-    // so toggling open intentionally does not show the on-screen keyboard.
-    const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
-    if (isCoarse) {
-      this.skip();
-      return;
-    }
-
+  it("should match docked mode", async () => {
     const toggleBtn = await $("#toggle-docked");
     await toggleBtn.click();
     const dockedKb = await $("#kb-docked .ui5KioskKeyboard");

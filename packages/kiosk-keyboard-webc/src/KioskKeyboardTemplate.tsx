@@ -39,6 +39,8 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             const iconName = this._getKeyIcon(key);
             const isBuiltInIcon = !key.icon && iconName !== null;
             const isShift = key.value === "{shift}";
+            const label = iconName ?? this._getKeyLabel(key);
+            const isSingleGlyphLabel = !isBuiltInIcon && this._isSingleGlyphLabel(label);
 
             return (
               <div
@@ -64,7 +66,14 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 {isBuiltInIcon ? (
                   <ui5-icon class="kiosk-key__icon" name={iconName!} mode="Decorative" />
                 ) : (
-                  <span class="kiosk-key__label">{iconName ?? this._getKeyLabel(key)}</span>
+                  <span
+                    class={{
+                      "kiosk-key__label": true,
+                      "kiosk-key__label--glyph": isSingleGlyphLabel,
+                    }}
+                  >
+                    {label}
+                  </span>
                 )}
               </div>
             );
