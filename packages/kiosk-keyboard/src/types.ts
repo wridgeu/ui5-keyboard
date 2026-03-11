@@ -12,7 +12,7 @@ export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "speci
  * Each numeric value maps to a CSS class (e.g. `"1.5"` → `.ui5KioskKey--w1-5`).
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space";
 
@@ -25,7 +25,7 @@ export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space"
  * - `"space"` - Spacebar. Visually same as default but semantically distinct.
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export type KeyType = "default" | "modifier" | "action" | "space";
 
@@ -45,7 +45,7 @@ export type KeyType = "default" | "modifier" | "action" | "space";
  * Any other string is treated as a literal character to insert.
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:${string}}` | `{fkey:${string}}`;
 
@@ -84,7 +84,7 @@ export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:$
  * ```
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export interface KeyDefinition {
   /**
@@ -178,7 +178,7 @@ export interface KeyDefinition {
  * `justify-content: center`.
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export type KeyRow = KeyDefinition[];
 
@@ -217,7 +217,7 @@ export type KeyRow = KeyDefinition[];
  * Then in XML: `<kiosk:KioskKeyboard layout="pinpad" />`
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export type LayoutDefinition = KeyRow[];
 
@@ -231,7 +231,7 @@ export type LayoutDefinition = KeyRow[];
  * (e.g. `"my.app.i18n.kiosk"`).
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export type KioskI18nEnhancement =
   | {
@@ -295,7 +295,7 @@ export type KioskI18nEnhancement =
  * ```
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export interface KioskI18nConfig {
   /**
@@ -326,7 +326,7 @@ export interface KioskI18nConfig {
  * Context passed to the i18n override hook.
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export interface KioskI18nOverrideContext {
   /** The message key (e.g. `"KIOSK_KEYBOARD_LABEL"`). */
@@ -361,6 +361,6 @@ export interface KioskI18nOverrideContext {
  * If the hook throws, the error is logged and `resolvedText` is used.
  *
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export type KioskI18nOverrideHook = (ctx: KioskI18nOverrideContext) => string | undefined;

@@ -25,6 +25,9 @@ import {
 } from "./core/layout-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
+  KeyboardType,
+  MobileKeyboard,
+  FKeyMode,
   type LayoutDefinition,
   type KeyDefinition,
   type KeyPressEventDetail,
@@ -51,10 +54,10 @@ const ICON_MAP: Record<string, string> = {
 
 const ICON_SHIFT_LOCKED = "locked";
 
-// ── Valid enum values for string properties ──
-const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(["Full", "Numpad", "Numeric"]);
-const VALID_FKEY_MODES: ReadonlySet<string> = new Set(["Virtual", "Native", "None"]);
-const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(["Auto", "Native", "Custom"]);
+// ── Valid enum values for string properties (derived from enums) ──
+const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
+const VALID_FKEY_MODES: ReadonlySet<string> = new Set(Object.values(FKeyMode));
+const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(Object.values(MobileKeyboard));
 const glyphSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 // ── Native-dispatchable key allowlist ──
@@ -122,7 +125,6 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
   template: KioskKeyboardTemplate,
   styles,
   languageAware: true,
-  themeAware: true,
 })
 @event("key-press", { bubbles: true, cancelable: true })
 @event("after-open", { bubbles: true })
@@ -139,59 +141,236 @@ export default class KioskKeyboard extends UI5Element {
   };
 
   // ── Static registry delegates ──
+
+  /**
+   * Register a custom keyboard layout.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static registerLayout = registerLayout;
+
+  /**
+   * Remove a previously registered custom layout.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static unregisterLayout = unregisterLayout;
+
+  /**
+   * Remove all custom layouts and keep built-in layouts intact.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static resetCustomLayouts = resetCustomLayouts;
+
+  /**
+   * Get a registered layout definition by name.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static getRegisteredLayout = getRegisteredLayout;
+
+  /**
+   * Get all registered layout names (built-in and custom).
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static getRegisteredLayoutNames = getRegisteredLayoutNames;
+
+  /**
+   * Check whether a layout name belongs to a built-in layout.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static isBuiltInLayout = isBuiltInLayout;
-  /** Check whether a layout is secondary (non-alphabetic). Secondary layouts cannot become the base layout. */
+
+  /**
+   * Check whether a layout is secondary (non-alphabetic).
+   * Secondary layouts cannot become the base layout.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static isSecondaryLayout(name: string): boolean {
     return SECONDARY_LAYOUTS.has(name);
   }
+
+  /**
+   * Register a locale-to-layout mapping.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static registerLocaleLayout = registerLocaleLayout;
+
+  /**
+   * Remove a locale-to-layout mapping.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static unregisterLocaleLayout = unregisterLocaleLayout;
+
+  /**
+   * Remove all custom locale-to-layout mappings.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static resetLocaleLayouts = resetLocaleLayouts;
+
+  /**
+   * Get the layout name for the current locale.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static getLocaleLayout = getLocaleLayout;
+
+  /**
+   * Set a custom i18n resolver for translating keyboard labels.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
   static setI18nResolver = setI18nResolver;
 
   // ── Public reactive properties (synced with attributes) ──
 
+  /**
+   * The active keyboard layout name.
+   *
+   * When empty, the keyboard resolves the layout from the current locale
+   * (see {@link KioskKeyboard.registerLocaleLayout registerLocaleLayout}).
+   *
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property()
   layout = "";
 
+  /**
+   * The keyboard type variant to display.
+   *
+   * @default "Full"
+   * @public
+   * @since 0.1.0
+   */
   @property()
-  keyboardType = "Full";
+  keyboardType: `${KeyboardType}` = "Full";
 
+  /**
+   * Whether the keyboard renders in docked mode (fixed to the bottom of the viewport).
+   *
+   * @default false
+   * @public
+   * @since 0.1.0
+   */
   @property({ type: Boolean })
   docked = false;
 
+  /**
+   * Whether the keyboard automatically opens/closes when an input receives/loses focus.
+   * Only effective when `docked` is `true`.
+   *
+   * @default false
+   * @public
+   * @since 0.1.0
+   */
   @property({ type: Boolean })
   autoShow = false;
 
+  /**
+   * Whether the keyboard automatically detects the appropriate keyboard type
+   * based on the focused input's `type` and `inputmode` attributes.
+   *
+   * @default false
+   * @public
+   * @since 0.1.0
+   */
   @property({ type: Boolean })
   autoType = false;
 
+  /**
+   * Whether the keyboard is disabled. A disabled keyboard does not respond
+   * to key presses or auto-show triggers.
+   *
+   * @default false
+   * @public
+   * @since 0.1.0
+   */
   @property({ type: Boolean })
   disabled = false;
 
+  /**
+   * DOM id of the target input element. The keyboard types into this element.
+   *
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property()
   for = "";
 
+  /**
+   * Comma-separated list of input element ids that the keyboard should
+   * respond to in auto-show mode. Supports UI5-style prefixed ids.
+   *
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property()
   inputIds = "";
 
+  /**
+   * Whether the keyboard preserves its maximum height across layout switches
+   * to prevent content from jumping. Only effective for non-docked Full keyboards.
+   *
+   * @default false
+   * @public
+   * @since 0.1.0
+   */
   @property({ type: Boolean })
   stableHeight = false;
 
+  /**
+   * Accessible name for the keyboard region (ARIA label).
+   *
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property()
   accessibleName = "";
 
+  /**
+   * Controls behavior on touch devices: defer to native keyboard,
+   * always show custom, or auto-detect.
+   *
+   * @default "Auto"
+   * @public
+   * @since 0.1.0
+   */
   @property()
-  mobileKeyboard = "Auto";
+  mobileKeyboard: `${MobileKeyboard}` = "Auto";
 
+  /**
+   * Controls how function key presses are handled.
+   *
+   * @default "Virtual"
+   * @public
+   * @since 0.1.0
+   */
   @property()
-  fKeyMode = "Virtual";
+  fKeyMode: `${FKeyMode}` = "Virtual";
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
@@ -288,6 +467,10 @@ export default class KioskKeyboard extends UI5Element {
    * Follows the same reactive-property-on-setter pattern used by
    * `@ui5/webcomponents` Popup/Dialog (the `@property` decorator makes
    * the attribute observable so UI5 bridge controls can bind to it).
+   *
+   * @default false
+   * @public
+   * @since 0.1.0
    */
   @property({ type: Boolean })
   set open(value: boolean) {
@@ -439,7 +622,7 @@ export default class KioskKeyboard extends UI5Element {
       this._syncShiftState();
       this.fireDecoratorEvent("keyboard-type-change", {
         keyboardType: this.keyboardType,
-        previousKeyboardType: (changeInfo.oldValue as string) ?? "Full",
+        previousKeyboardType: ((changeInfo.oldValue as string) ?? "Full") as `${KeyboardType}`,
         autoDetected,
       });
       this._resetStableHeight();
@@ -482,39 +665,67 @@ export default class KioskKeyboard extends UI5Element {
   // The registry is shared - layouts registered on one instance are
   // visible to all <kiosk-keyboard> elements on the page.
 
-  /** Registers a custom layout. Delegates to the shared layout registry. */
+  /**
+   * Registers a custom layout. Delegates to the shared layout registry.
+   * @public
+   * @since 0.1.0
+   */
   registerLayout(name: string, definition: LayoutDefinition): void {
     registerLayout(name, definition);
   }
 
-  /** Removes a custom layout. Delegates to the shared layout registry. */
+  /**
+   * Removes a custom layout. Delegates to the shared layout registry.
+   * @public
+   * @since 0.1.0
+   */
   unregisterLayout(name: string): void {
     unregisterLayout(name);
   }
 
-  /** Registers a locale-to-layout mapping. Delegates to the shared layout registry. */
+  /**
+   * Registers a locale-to-layout mapping. Delegates to the shared layout registry.
+   * @public
+   * @since 0.1.0
+   */
   registerLocaleLayout(locale: string, layout: string): void {
     registerLocaleLayout(locale, layout);
   }
 
-  /** Removes a locale-to-layout mapping. Delegates to the shared layout registry. */
+  /**
+   * Removes a locale-to-layout mapping. Delegates to the shared layout registry.
+   * @public
+   * @since 0.1.0
+   */
   unregisterLocaleLayout(locale: string): void {
     unregisterLocaleLayout(locale);
   }
 
   // ── Public API ──
 
-  /** Opens the docked keyboard. Equivalent to setting `open = true`. */
+  /**
+   * Opens the docked keyboard. Equivalent to setting `open = true`.
+   * @public
+   * @since 0.1.0
+   */
   show(): void {
     this.open = true;
   }
 
-  /** Closes the docked keyboard. Equivalent to setting `open = false`. */
+  /**
+   * Closes the docked keyboard. Equivalent to setting `open = false`.
+   * @public
+   * @since 0.1.0
+   */
   close(): void {
     this.open = false;
   }
 
-  /** Returns whether the docked keyboard is currently open. */
+  /**
+   * Returns whether the docked keyboard is currently open.
+   * @public
+   * @since 0.1.0
+   */
   isOpen(): boolean {
     return this.open;
   }
@@ -545,7 +756,11 @@ export default class KioskKeyboard extends UI5Element {
     this.fireDecoratorEvent("after-close");
   }
 
-  /** Programmatically sets the input element that receives typed characters. */
+  /**
+   * Programmatically sets the input element that receives typed characters.
+   * @public
+   * @since 0.1.0
+   */
   setTargetElement(el: HTMLInputElement | HTMLTextAreaElement | null): void {
     // Restore the old target's inputmode before switching so it's not left suppressed.
     if (this._open) {
@@ -582,12 +797,18 @@ export default class KioskKeyboard extends UI5Element {
    *   return el.querySelector('.my-inner-wrapper input');
    * });
    * ```
+   * @public
+   * @since 0.1.0
    */
   setTargetResolver(resolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null): void {
     this._targetResolver = resolver;
   }
 
-  /** Resets `keyboardType` to `"Full"` and re-enables auto-type detection. */
+  /**
+   * Resets `keyboardType` to `"Full"` and re-enables auto-type detection.
+   * @public
+   * @since 0.1.0
+   */
   resetKeyboardType(): void {
     this._keyboardTypeExplicit = false;
     this._setKeyboardTypeInternal("Full");
@@ -875,7 +1096,7 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   /** Sets keyboardType without marking it as explicit (for auto-detection). */
-  private _setKeyboardTypeInternal(value: string): void {
+  private _setKeyboardTypeInternal(value: `${KeyboardType}`): void {
     if (value === this.keyboardType) return;
     this._lastAutoDetectedType = value;
     this.keyboardType = value;

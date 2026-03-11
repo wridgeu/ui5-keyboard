@@ -70,7 +70,7 @@ type InputModeSuppressionState = {
  * @namespace ui5.kiosk
  * @extends sap.ui.core.Control
  * @public
- * @since ${version}
+ * @since 0.1.0
  */
 export default class KioskKeyboard extends Control {
   // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures
@@ -443,7 +443,7 @@ export default class KioskKeyboard extends Control {
    * @param fnResolver Custom resolver function, or `null` to clear.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static setGlobalTargetResolver(fnResolver: TargetResolverFn | null): void {
     KioskKeyboard._globalTargetResolver = fnResolver;
@@ -459,7 +459,7 @@ export default class KioskKeyboard extends Control {
    * Returns the currently set global target resolver, or `null`.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static getGlobalTargetResolver(): TargetResolverFn | null {
     return KioskKeyboard._globalTargetResolver;
@@ -479,7 +479,7 @@ export default class KioskKeyboard extends Control {
    * @param oDefinition Layout rows and key definitions.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
     registryRegisterLayout(sName, oDefinition);
@@ -493,7 +493,7 @@ export default class KioskKeyboard extends Control {
    * @param sName Layout identifier.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static unregisterLayout(sName: string): void {
     registryUnregisterLayout(sName);
@@ -504,7 +504,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static resetCustomLayouts(): void {
     registryResetCustomLayouts();
@@ -517,7 +517,7 @@ export default class KioskKeyboard extends Control {
    * @returns The layout definition, or undefined if not found.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
     return registryGetLayout(sName);
@@ -528,7 +528,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static getRegisteredLayoutNames(): string[] {
     return registryGetLayoutNames();
@@ -540,7 +540,7 @@ export default class KioskKeyboard extends Control {
    * @param sName Layout identifier.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static isBuiltInLayout(sName: string): boolean {
     return registryIsBuiltIn(sName);
@@ -557,7 +557,7 @@ export default class KioskKeyboard extends Control {
    * @param sName Layout identifier.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static isSecondaryLayout(sName: string): boolean {
     return SECONDARY_LAYOUTS.has(sName);
@@ -572,7 +572,7 @@ export default class KioskKeyboard extends Control {
    * @param sLayout Target layout name.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static registerLocaleLayout(sLocale: string, sLayout: string): void {
     registryRegisterLocale(sLocale, sLayout);
@@ -584,7 +584,7 @@ export default class KioskKeyboard extends Control {
    * @param sLocale Locale key or prefix.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static unregisterLocaleLayout(sLocale: string): void {
     registryUnregisterLocale(sLocale);
@@ -595,7 +595,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static resetLocaleLayouts(): void {
     registryResetLocales();
@@ -608,7 +608,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static getLocaleLayout(): string {
     return registryGetLocaleLayout();
@@ -646,7 +646,7 @@ export default class KioskKeyboard extends Control {
    * @returns Resolves when all enhancement bundles are loaded.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static configureI18n(config: KioskI18nConfig): Promise<void> {
     const { accepted, promise: loaded } = registryConfigureI18nWithStatus(config);
@@ -675,7 +675,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static resetI18nConfiguration(): void {
     registryResetI18n();
@@ -705,7 +705,7 @@ export default class KioskKeyboard extends Control {
    *          (e.g. non-function argument).
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static setI18nOverrideHook(fn: KioskI18nOverrideHook): boolean {
     const accepted = registrySetOverrideHook(fn);
@@ -720,7 +720,7 @@ export default class KioskKeyboard extends Control {
    *
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static clearI18nOverrideHook(): void {
     if (registryClearOverrideHook()) {
@@ -739,7 +739,7 @@ export default class KioskKeyboard extends Control {
    * @returns Frozen configuration snapshot or `null`.
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static getI18nConfiguration(): Readonly<KioskI18nConfig> | null {
     return registryGetI18nConfiguration();
@@ -1251,7 +1251,7 @@ export default class KioskKeyboard extends Control {
    * based on the focused input's metadata again.
    *
    * @public
-   * @since ${version}
+   * @since 0.1.0
    */
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
@@ -1288,7 +1288,7 @@ export default class KioskKeyboard extends Control {
    *
    * @param fnResolver Custom resolver function, or `null` to clear.
    * @public
-   * @since ${version}
+   * @since 0.1.0
    */
   setTargetResolver(fnResolver: TargetResolverFn | null): this {
     this._targetResolverInstance = fnResolver;
@@ -1299,7 +1299,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Returns the instance-level target resolver, or `null`.
    * @public
-   * @since ${version}
+   * @since 0.1.0
    */
   getTargetResolver(): TargetResolverFn | null {
     return this._targetResolverInstance;
@@ -1664,7 +1664,7 @@ export default class KioskKeyboard extends Control {
    * @param sKeyValue Key value (e.g. "{shift}", "{enter}")
    * @public
    * @static
-   * @since ${version}
+   * @since 0.1.0
    */
   static getKeyIcon(sKeyValue: string): string | undefined {
     return KioskKeyboard.SPECIAL_KEY_ICONS[sKeyValue];
