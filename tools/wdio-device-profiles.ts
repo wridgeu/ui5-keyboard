@@ -12,6 +12,21 @@ export const CHROME_VERSION = "145.0.7632.160";
 /** Default window size for desktop e2e tests. */
 export const DESKTOP_WINDOW_SIZE = "1440,900";
 
+/**
+ * Base ports for device-emulation test servers, keyed by package directory name.
+ *
+ * Each device profile adds its `portOffset` (phone: +1, tablet: +2) to the
+ * base port so that profiles can run in parallel without collisions.
+ * Desktop e2e ports are separate and defined directly in their wdio.conf.ts.
+ *
+ * **When adding a new package or device profile, update this map to keep
+ * ranges non-overlapping.**
+ */
+export const DEVICE_BASE_PORTS: Record<string, number> = {
+  "kiosk-keyboard-webc": 8086,
+  "kiosk-keyboard": 8089,
+};
+
 export interface DeviceProfile {
   id: string;
   width: number;

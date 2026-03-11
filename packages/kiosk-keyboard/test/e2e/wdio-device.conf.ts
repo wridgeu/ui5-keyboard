@@ -2,14 +2,15 @@ import url from "node:url";
 import path from "node:path";
 import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
-import { buildChromeOptions, deviceProfiles, CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
+import {
+  buildChromeOptions,
+  deviceProfiles,
+  CHROME_VERSION,
+  DEVICE_BASE_PORTS,
+} from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-// Base port for this package's device tests. Each device profile adds its own
-// portOffset (phone: +1, tablet: +2) so profiles can run in parallel without
-// collisions. The kiosk-keyboard-webc package uses BASE_PORT 8086 — keep these
-// ranges non-overlapping when adding new packages or device profiles.
-const BASE_PORT = 8089;
+const BASE_PORT = DEVICE_BASE_PORTS["kiosk-keyboard"];
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
 const deviceArg = process.argv.find((a) => a.startsWith("--device="));

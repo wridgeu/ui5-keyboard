@@ -18,6 +18,7 @@ import { browser } from "@wdio/globals";
  */
 export async function setEmulatedMediaFeatures(features: Array<{ name: string; value: string }>): Promise<void> {
   const puppeteer = await browser.getPuppeteer();
+  // Assumes single-tab — safe because WDIO runs one page per browser instance
   const [page] = await puppeteer.pages();
   const cdp = page.client();
   await cdp.send("Emulation.setEmulatedMedia", { features });

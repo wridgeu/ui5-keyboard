@@ -103,6 +103,10 @@ Shared device profiles, pinned Chrome version, and Chrome option builder for e2e
 
 Pinned Chrome version used by all WDIO configs. WDIO 9 auto-downloads this exact Chrome-for-Testing build so that visual regression baselines are reproducible across machines. When updating, regenerate all visual baselines and verify the diffs visually.
 
+### `DEVICE_BASE_PORTS`
+
+Central registry of base ports for device-emulation test servers, keyed by package directory name. Each device profile adds its `portOffset` to the base port so profiles can run in parallel. When adding a new package or device profile, update this map to keep ranges non-overlapping.
+
 ### `deviceProfiles`
 
 Record of named device profiles (`phone`, `tablet`) with viewport dimensions, device scale factor, and touch mode.
@@ -142,15 +146,15 @@ Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` s
 
 ### `wdio-device-profiles.ts`
 
-| Consumer                                                    | Imports                                                  |
-| ----------------------------------------------------------- | -------------------------------------------------------- |
-| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
-| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION` |
-| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION` |
+| Consumer                                                    | Imports                                                                       |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
+| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
+| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION`, `DEVICE_BASE_PORTS` |
+| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION`, `DEVICE_BASE_PORTS` |
 
 ## `tsconfig.json`
 

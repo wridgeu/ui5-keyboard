@@ -14,14 +14,16 @@ export async function openVisualPage(): Promise<void> {
     timeout: 10_000,
     timeoutMsg: "kiosk-keyboard not registered",
   });
-  // Wait for the last keyboard on the page to render keys
+  // Wait for the last keyboard on the page to render keys (order-independent)
   await browser.waitUntil(
     async () =>
       browser.execute(() => {
-        const kb = document.getElementById("kb-glyph-stress");
-        return (kb?.shadowRoot?.querySelectorAll('[role="button"]').length ?? 0) > 0;
+        const keyboards = document.querySelectorAll("kiosk-keyboard");
+        if (keyboards.length === 0) return false;
+        const last = keyboards[keyboards.length - 1];
+        return (last.shadowRoot?.querySelectorAll('[role="button"]').length ?? 0) > 0;
       }),
-    { timeout: 5_000, timeoutMsg: "Keyboard keys not rendered" },
+    { timeout: 10_000, timeoutMsg: "Keyboard keys not rendered" },
   );
 }
 
