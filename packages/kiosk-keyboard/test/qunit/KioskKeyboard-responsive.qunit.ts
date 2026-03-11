@@ -116,3 +116,40 @@ QUnit.test("Cleanup on exit() removes resize observer", async (assert) => {
   assert.strictEqual((kb as any)._responsiveResizeHandlerId, null, "Resize handler deregistered");
   assert.strictEqual((kb as any)._responsiveObservedDom, null, "Observed DOM reference cleared");
 });
+
+// ──────────────────────────────────────────────
+// Font-size capping (min() preserves smaller consumer values)
+// ──────────────────────────────────────────────
+
+QUnit.test("Responsive class preserves custom font-size below the cap", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  // Set a custom font-size smaller than both caps (1rem, 0.875rem)
+  dom.style.setProperty("--ui5KioskKeyboard-keyFontSize", "0.75rem");
+
+  // Apply cq-sm (cap = 1rem) — 0.75rem should be preserved
+  (kb as any)._applyResponsiveSizeClasses(dom, 400);
+  const key = dom.querySelector(".ui5KioskKey") as HTMLElement;
+  assert.ok(key, "Key element found");
+
+  const fontSize = Number.parseFloat(window.getComputedStyle(key).fontSize);
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const expected = 0.75 * remPx;
+
+  assert.ok(
+    Math.abs(fontSize - expected) < 1.5,
+    `Custom 0.75rem (${expected}px) preserved at cq-sm; got ${fontSize}px`,
+  );
+
+  // Apply cq-xs (cap = 0.875rem) — 0.75rem should still be preserved
+  (kb as any)._applyResponsiveSizeClasses(dom, 300);
+  const fontSizeXs = Number.parseFloat(window.getComputedStyle(key).fontSize);
+  assert.ok(
+    Math.abs(fontSizeXs - expected) < 1.5,
+    `Custom 0.75rem (${expected}px) preserved at cq-xs; got ${fontSizeXs}px`,
+  );
+
+  kb.destroy();
+});

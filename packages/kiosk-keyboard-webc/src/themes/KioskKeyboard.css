@@ -4,8 +4,6 @@
 
 :host {
   display: block;
-  container-name: keyboard;
-  container-type: inline-size;
 
   /* ---- Custom property defaults ---- */
   --kiosk-keyboard-padding: 0.75rem;
@@ -41,6 +39,8 @@
 /* ============================= */
 
 .kiosk-keyboard {
+  container-name: keyboard;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--kiosk-keyboard-key-gap);
@@ -53,18 +53,26 @@
   width: 100%;
   max-width: var(--kiosk-keyboard-max-width);
   box-sizing: border-box;
+
+  /* Capture the consumer-provided font-size before responsive breakpoints
+     can override it.  Used by the @container rules below to cap rather
+     than hard-replace the value. */
+  --_kiosk-kb-font-base: var(--kiosk-keyboard-key-font-size);
 }
 
-/* ---- Responsive font scaling via container query ---- */
+/* ---- Responsive font scaling via container query ----
+   Uses min() to cap rather than hard-replace the consumer-provided value.
+   A consumer who sets --kiosk-keyboard-key-font-size: 0.75rem keeps that
+   value; one who sets 1.5rem gets capped to 1rem / 0.875rem. ---- */
 @container keyboard (max-width: 30rem) {
   .kiosk-key {
-    --kiosk-keyboard-key-font-size: 1rem;
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 1rem);
   }
 }
 
 @container keyboard (max-width: 20rem) {
   .kiosk-key {
-    --kiosk-keyboard-key-font-size: 0.875rem;
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.875rem);
   }
 }
 

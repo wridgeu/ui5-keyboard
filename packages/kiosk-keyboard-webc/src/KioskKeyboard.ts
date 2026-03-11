@@ -391,8 +391,10 @@ export default class KioskKeyboard extends UI5Element {
       this._pendingAnnouncement = null;
     }
 
-    // Stable height
-    if (this.stableHeight && !this.docked) {
+    // Stable height — only for non-docked Full keyboards, matching UI5 control behavior.
+    // Docked keyboards minimise their footprint; non-Full types have no layout switches
+    // that would cause significant height changes.
+    if (this.stableHeight && this.keyboardType === "Full" && !this.docked) {
       const root = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard");
       if (root) {
         const h = root.offsetHeight;

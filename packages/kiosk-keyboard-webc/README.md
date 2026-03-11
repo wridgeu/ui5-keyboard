@@ -128,21 +128,21 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 
 ## Attributes / Properties
 
-| Attribute         | Property         | Type      | Default     | Description                                                                      |
-| ----------------- | ---------------- | --------- | ----------- | -------------------------------------------------------------------------------- |
-| `layout`          | `layout`         | `string`  | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.       |
-| `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                            |
-| `open`            | `open`           | `boolean` | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.              |
-| `docked`          | `docked`         | `boolean` | `false`     | Fixed-position mode at bottom of viewport.                                       |
-| `auto-show`       | `autoShow`       | `boolean` | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).          |
-| `auto-type`       | `autoType`       | `boolean` | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                   |
-| `disabled`        | `disabled`       | `boolean` | `false`     | Disables all key interaction.                                                    |
-| `for`             | `for`            | `string`  | `""`        | ID of the target element (native input or host with nested input).               |
-| `input-ids`       | `inputIds`       | `string`  | `""`        | Comma-separated IDs to restrict auto-show to specific inputs.                    |
-| `stable-height`   | `stableHeight`   | `boolean` | `false`     | Maintains the maximum observed height (prevents layout shifts).                  |
-| `accessible-name` | `accessibleName` | `string`  | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".       |
-| `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                  |
-| `f-key-mode`      | `fKeyMode`       | `string`  | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`. |
+| Attribute         | Property         | Type      | Default     | Description                                                                                                                                                                                     |
+| ----------------- | ---------------- | --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`          | `layout`         | `string`  | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                                                                                      |
+| `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                                                                           |
+| `open`            | `open`           | `boolean` | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                                                                             |
+| `docked`          | `docked`         | `boolean` | `false`     | Fixed-position mode at bottom of viewport.                                                                                                                                                      |
+| `auto-show`       | `autoShow`       | `boolean` | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                                                                         |
+| `auto-type`       | `autoType`       | `boolean` | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                                                                                  |
+| `disabled`        | `disabled`       | `boolean` | `false`     | Disables all key interaction.                                                                                                                                                                   |
+| `for`             | `for`            | `string`  | `""`        | ID of the target element (native input or host with nested input).                                                                                                                              |
+| `input-ids`       | `inputIds`       | `string`  | `""`        | Comma-separated IDs to restrict auto-show to specific inputs.                                                                                                                                   |
+| `stable-height`   | `stableHeight`   | `boolean` | `false`     | Maintains the maximum observed height (prevents layout shifts). Only effective for non-docked Full keyboards. Latches and never auto-shrinks; toggle off/on to reset after orientation changes. |
+| `accessible-name` | `accessibleName` | `string`  | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                                                                                      |
+| `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                                                                                 |
+| `f-key-mode`      | `fKeyMode`       | `string`  | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                |
 
 ### Keyboard type override via `data-keyboard-type`
 
@@ -313,7 +313,7 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-key-padding`          | `0 0.25rem`                                      | Full padding shorthand (uses padding-inline)    |
 | `--kiosk-keyboard-key-shadow`           | _(subtle)_                                       | Box shadow for keys at rest                     |
 | `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_                                       | Box shadow for keys on hover                    |
-| `--kiosk-keyboard-max-width`            | `64rem`                                          | Max width for the default inline keyboard       |
+| `--kiosk-keyboard-max-width`            | `100%`                                           | Max width for the default inline keyboard       |
 | `--kiosk-keyboard-docked-max-width`     | `1024px`                                         | Max width in docked mode                        |
 | `--kiosk-keyboard-docked-shadow`        | _(subtle)_                                       | Box shadow for the docked container             |
 | `--kiosk-keyboard-docked-z-index`       | `100`                                            | Z-index for the docked keyboard                 |
@@ -322,15 +322,27 @@ Override these on the `:host` or a parent element to customize appearance:
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 
-By default, the main keyboard is centered and capped at `64rem` so very wide desktop containers do not stretch keys indefinitely. If your layout should stay edge-to-edge, override the max width explicitly:
+By default, the inline keyboard takes the full width of its container (`100%`). To prevent wide desktop containers from stretching the rows indefinitely, cap the width explicitly:
 
 ```css
 kiosk-keyboard {
-  --kiosk-keyboard-max-width: 100%;
+  --kiosk-keyboard-max-width: 64rem;
 }
 ```
 
-The component uses container queries for narrow-container scaling, so embedded keyboards still respond to the space they actually get instead of only the viewport size.
+Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
+
+The component uses container queries for narrow-container scaling, so embedded keyboards still respond to the space they actually get instead of only the viewport size. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem` — but a consumer-provided value that is already smaller than the cap is preserved.
+
+#### Label Sizing
+
+Key labels use three scaling tiers:
+
+| Tier                  | Applies to                                     | Scaling                                                                                                      |
+| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.        |
+| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                     |
+| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Fixed at the theme's base font-size (`--sapFontSize`). These keys are wider and use standard UI text sizing. |
 
 Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stacking layer.
 

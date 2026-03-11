@@ -370,6 +370,8 @@ This is **opt-in** (`false` by default) and only effective for non-docked Full k
 > Enable `stableHeight="true"` when the keyboard is rendered inside a **`sap.m.Popover`** or any container that reacts to content height changes. `sap.m.Popover` in particular will close automatically when its content height changes during a resize event on scrolled pages (due to a coordinate-system mismatch in `_applyPosition`). The stable height prevents this by ensuring layout switches never change the keyboard's outer dimensions.
 >
 > For keyboards embedded **inline on a page** (not in a Popover), `stableHeight` is typically not needed; the surrounding layout can accommodate height changes naturally.
+>
+> **Latch behavior:** `stableHeight` records the maximum observed height and never shrinks automatically — even after a container resize or orientation change. This is by design: the keyboard cannot distinguish a container resize from a layout switch. If you need to reset after an orientation change, toggle the property off and on (`setStableHeight(false); setStableHeight(true);`).
 
 ```xml
 <!-- Recommended: keyboard inside a Popover -->
@@ -987,7 +989,7 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-keyFontSize`       | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)` | Key label font size                       |
 | `--ui5KioskKeyboard-keyShadow`         | _(theme)_                                         | Key resting shadow                        |
 | `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_                                         | Key hover shadow                          |
-| `--ui5KioskKeyboard-maxWidth`          | `64rem`                                           | Max width for the default inline keyboard |
+| `--ui5KioskKeyboard-maxWidth`          | `100%`                                            | Max width for the default inline keyboard |
 | `--ui5KioskKeyboard-dockedMaxWidth`    | `1024px`                                          | Max width when docked                     |
 | `--ui5KioskKeyboard-dockedShadow`      | _(theme)_                                         | Shadow when docked                        |
 | `--ui5KioskKeyboard-dockedZIndex`      | `100`                                             | Z-index for the docked keyboard           |
@@ -996,15 +998,27 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
 Override `--ui5KioskKeyboard-dockedZIndex` to adjust the docked keyboard's stacking layer.
 
-By default, the inline keyboard is centered and capped at `64rem` so wide desktop containers do not stretch the rows indefinitely. If your application wants an edge-to-edge inline keyboard, opt out explicitly:
+By default, the inline keyboard takes the full width of its container (`100%`). To prevent wide desktop containers from stretching the rows indefinitely, cap the width explicitly:
 
 ```css
 .ui5KioskKeyboard {
-  --ui5KioskKeyboard-maxWidth: 100%;
+  --ui5KioskKeyboard-maxWidth: 64rem;
 }
 ```
 
-Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport.
+Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
+
+Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem` — but a consumer-provided value that is already smaller than the cap is preserved.
+
+#### Label Sizing
+
+Key labels use three scaling tiers:
+
+| Tier                  | Applies to                                     | Scaling                                                                                                       |
+| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.         |
+| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                      |
+| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Fixed at the theme's base font-size (`@sapUiFontSize`). These keys are wider and use standard UI text sizing. |
 
 ```css
 /* Example: larger keys for kiosk terminals */

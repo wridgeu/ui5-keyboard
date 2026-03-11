@@ -1633,4 +1633,93 @@ describe("kiosk-keyboard", () => {
       expect(KK.isSecondaryLayout("nonexistent")).to.be.false;
     });
   });
+
+  // ── Responsive sizing ──
+
+  describe("responsive sizing", () => {
+    it("container query triggers on .kiosk-keyboard width, not :host width", async () => {
+      // Place the component in an 800px wide wrapper but cap the keyboard itself to 18rem.
+      // After the container-query fix, breakpoints evaluate against the .kiosk-keyboard
+      // box (≤ 18rem → cq-xs), not the wide :host.
+      const wrapper = document.createElement("div");
+      wrapper.style.width = "800px";
+      document.body.appendChild(wrapper);
+
+      try {
+        const el = await fixture<KioskKeyboard>(
+          html`
+            <kiosk-keyboard layout="qwerty" style="--kiosk-keyboard-max-width: 18rem"></kiosk-keyboard>
+          `,
+          { parentNode: wrapper },
+        );
+        await nextRender();
+
+        const key = el.shadowRoot!.querySelector<HTMLElement>(".kiosk-key");
+        expect(key).to.not.be.null;
+
+        const fontSize = parseFloat(getComputedStyle(key!).fontSize);
+        const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+        // At ≤ 20rem the cap is 0.875rem; the computed font-size should be at or below that
+        expect(fontSize).to.be.at.most(0.875 * remPx + 0.5, "Font size should be capped at ≤ 0.875rem");
+      } finally {
+        wrapper.remove();
+      }
+    });
+
+    it("preserves consumer font-size below the responsive cap", async () => {
+      // Consumer sets a small custom font-size; the responsive breakpoint should
+      // NOT override it to a larger value.
+      const wrapper = document.createElement("div");
+      wrapper.style.width = "320px";
+      document.body.appendChild(wrapper);
+
+      try {
+        const el = await fixture<KioskKeyboard>(
+          html`
+            <kiosk-keyboard layout="qwerty" style="--kiosk-keyboard-key-font-size: 0.75rem"></kiosk-keyboard>
+          `,
+          { parentNode: wrapper },
+        );
+        await nextRender();
+
+        const key = el.shadowRoot!.querySelector<HTMLElement>(".kiosk-key");
+        expect(key).to.not.be.null;
+
+        const fontSize = parseFloat(getComputedStyle(key!).fontSize);
+        const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+        // 0.75rem is below the 1rem / 0.875rem caps, so it should be preserved
+        expect(fontSize).to.be.closeTo(0.75 * remPx, 1, "Custom font-size 0.75rem should be preserved");
+      } finally {
+        wrapper.remove();
+      }
+    });
+  });
+
+  // ── stableHeight type guard ──
+
+  describe("stableHeight type guard", () => {
+    it("does not apply minHeight on non-Full keyboard types", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="numpad" keyboard-type="Numpad" stable-height></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const root = rootDiv(el);
+      expect(root.style.minHeight).to.equal("", "minHeight should not be set for Numpad with stableHeight");
+    });
+
+    it("applies minHeight on Full keyboard type", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" keyboard-type="Full" stable-height></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const root = rootDiv(el);
+      expect(root.style.minHeight).to.not.equal("", "minHeight should be set for Full keyboard with stableHeight");
+    });
+  });
 });
