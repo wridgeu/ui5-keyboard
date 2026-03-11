@@ -150,6 +150,7 @@
   box-shadow: var(--ui5KioskKeyboard-keyShadow);
   min-width: 0;
   white-space: nowrap;
+  container-type: inline-size;
 
   /* Transitions are scoped to interactive states so that renderer-driven
      class changes (e.g. layout switches via DOM patching) apply instantly
@@ -210,9 +211,7 @@
 
   /* ---- Label inside key ---- */
   &__label {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     min-width: 0;
     max-inline-size: 100%;
     overflow: hidden;
@@ -226,6 +225,10 @@
     overflow: visible;
     text-overflow: clip;
     line-height: 1;
+  }
+
+  &__label--multi {
+    font-size: ~"clamp(0.5rem, calc(100cqi * 0.35), 1em)";
   }
 
   /* ---- Icon inside key ---- */

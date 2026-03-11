@@ -254,6 +254,8 @@ const KioskKeyboardRenderer = {
         rm.openStart("span").class("ui5KioskKey__label");
         if (this.isSingleGlyphLabel(label)) {
           rm.class("ui5KioskKey__label--glyph");
+        } else if (key.type !== "modifier" && key.type !== "action") {
+          rm.class("ui5KioskKey__label--multi");
         }
         rm.openEnd();
         rm.text(label);

@@ -156,6 +156,7 @@
   box-shadow: var(--kiosk-keyboard-key-shadow);
   min-width: 0;
   white-space: nowrap;
+  container-type: inline-size;
 
   /* Transitions are scoped to interactive states so that Lit re-renders
      (e.g. layout switches) apply instantly instead of animating from the
@@ -385,9 +386,7 @@
 /* ============================= */
 
 .kiosk-key__label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   min-width: 0;
   max-inline-size: 100%;
   overflow: hidden;
@@ -397,10 +396,19 @@
   line-height: 1.2;
 }
 
+/* Single-glyph labels (a, ü, @, €): no clipping, no scaling */
 .kiosk-key__label--glyph {
   overflow: visible;
   text-overflow: clip;
   line-height: 1;
+}
+
+/* Multi-character labels (F1, F10, Home, PgUp, Space):
+   scale font proportionally to the key's own inline width (cqi),
+   capped at 1em so it never exceeds the base key font-size.
+   All same-width keys in a row get identical sizing. */
+.kiosk-key__label--multi {
+  font-size: clamp(0.5rem, calc(100cqi * 0.35), 1em);
 }
 
 /* ============================= */

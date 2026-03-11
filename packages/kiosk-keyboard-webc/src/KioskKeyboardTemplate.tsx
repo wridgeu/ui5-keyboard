@@ -70,6 +70,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                     class={{
                       "kiosk-key__label": true,
                       "kiosk-key__label--glyph": isSingleGlyphLabel,
+                      "kiosk-key__label--multi": !isSingleGlyphLabel && key.type !== "modifier" && key.type !== "action",
                     }}
                   >
                     {label}
