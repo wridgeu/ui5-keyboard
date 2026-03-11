@@ -170,4 +170,30 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
 
     expect(classes).toContain("kiosk-keyboard--hidden");
   });
+
+  it("should open docked keyboard with mobile-keyboard='Custom' on coarse pointers", async function () {
+    const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
+    if (!isCoarse) {
+      this.skip();
+      return;
+    }
+
+    await browser.execute(() => {
+      const kb = document.getElementById("kb-docked-custom") as HTMLElement & { show(): void };
+      kb.show();
+    });
+
+    const classes = await browser.execute(() => {
+      const root = document.getElementById("kb-docked-custom")?.shadowRoot?.querySelector(".kiosk-keyboard");
+      return root?.className ?? "";
+    });
+
+    expect(classes).not.toContain("kiosk-keyboard--hidden");
+
+    // Clean up
+    await browser.execute(() => {
+      const kb = document.getElementById("kb-docked-custom") as HTMLElement & { close(): void };
+      kb.close();
+    });
+  });
 });

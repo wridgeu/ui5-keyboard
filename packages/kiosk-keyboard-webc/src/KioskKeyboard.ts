@@ -55,6 +55,7 @@ const ICON_SHIFT_LOCKED = "locked";
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(["Full", "Numpad", "Numeric"]);
 const VALID_FKEY_MODES: ReadonlySet<string> = new Set(["Virtual", "Native", "None"]);
 const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(["Auto", "Native", "Custom"]);
+const glyphSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 // ── Native-dispatchable key allowlist ──
 const NATIVE_DISPATCHABLE_KEYS = new Set([
@@ -596,9 +597,8 @@ export default class KioskKeyboard extends UI5Element {
   }
 
   _isSingleGlyphLabel(label: string): boolean {
-    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
     let count = 0;
-    for (const _segment of segmenter.segment(label)) {
+    for (const _segment of glyphSegmenter.segment(label)) {
       count += 1;
       if (count > 1) return false;
     }

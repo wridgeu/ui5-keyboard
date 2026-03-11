@@ -79,6 +79,9 @@ sap.ui.define([], () => {
       "negative-edge-cases": {
         title: "QUnit tests for ui5.kiosk - Negative-path & edge-case tests",
       },
+      "KioskKeyboard-responsive": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard Responsive Sizing",
+      },
     },
   };
 });

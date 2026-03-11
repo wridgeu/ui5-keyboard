@@ -49,14 +49,14 @@ npm install kiosk-keyboard-webc --workspace=packages/demo-app
 ### ESM import
 
 ```ts
-import { KioskKeyboard } from "kiosk-keyboard-webc/dist/bundle.esm.js";
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 ```
 
 > [!TIP]
 > The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `dist/KioskKeyboard.js` entry point to avoid duplicating framework code.
 
 > [!IMPORTANT]
-> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js`. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics. Using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `dist/KioskKeyboard.js` import directly, make sure your app loads the "72" font itself (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
+> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js` and register theme/i18n assets. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics. Using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `dist/KioskKeyboard.js` import directly, you must also import `kiosk-keyboard-webc/Assets` to register themes and i18n bundles, and ensure the "72" font is loaded (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
 >
 > **Custom fonts:** If you override `--sapFontFamily` or set a custom `font-family` on the keyboard, the default key sizing may not fit the new font's glyph metrics. You may need to adjust `--kiosk-keyboard-key-height`, `--kiosk-keyboard-key-font-size`, or `--kiosk-keyboard-key-padding` to prevent clipping or excessive whitespace.
 
@@ -65,7 +65,7 @@ import { KioskKeyboard } from "kiosk-keyboard-webc/dist/bundle.esm.js";
 Use the `WebComponent.extend()` bridge (see `packages/demo-app` for a working example):
 
 ```ts
-import "kiosk-keyboard-webc/dist/bundle.esm.js";
+import "kiosk-keyboard-webc/bundle";
 
 const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
   metadata: {
@@ -119,6 +119,9 @@ import type {
 All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) and instance convenience delegates (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`) are part of the stable API surface.
 
 Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`layouts/fkey-row`, `layouts/nav-row`) are stable for composing custom variant layouts.
+
+> [!NOTE]
+> **Upgrade note:** The `fkey-row` and `nav-row` key definitions no longer set `type: "modifier"`. F-keys and navigation keys now render with visible borders (standard key style) instead of the previous transparent/Lite button style. Custom layouts that compose these rows will pick up the new styling automatically.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
@@ -375,6 +378,10 @@ npm run test:e2e:all-devices
 npm run test:e2e:update
 npm run test:e2e:phone:update
 npm run test:e2e:tablet:update
+
+# NOTE: Visual baselines are tied to the pinned Chrome-for-Testing version
+# in tools/wdio-device-profiles.ts (CHROME_VERSION). Changing that version
+# requires regenerating ALL visual baselines across all packages.
 
 # Type check
 npm run typecheck

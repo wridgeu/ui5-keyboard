@@ -193,6 +193,9 @@ import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 
 Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, only `ui5/kiosk/layouts/fkey-row` and `ui5/kiosk/layouts/nav-row` are supported as stable consumer imports for composing custom variant layouts.
 
+> [!NOTE]
+> **Upgrade note:** The `fkey-row` and `nav-row` key definitions no longer set `type: "modifier"`. F-keys and navigation keys now render with visible borders (standard key style) instead of the previous transparent/Lite button style. Custom layouts that compose these rows will pick up the new styling automatically.
+
 ## FLP Lifecycle (Module Cache)
 
 In SAP Fiori launchpad (single-page shell), modules are cached and reused between app launches. Keep these rules in mind:
@@ -1255,6 +1258,10 @@ npm run test:e2e:all-devices
 npm run test:e2e:update
 npm run test:e2e:phone:update
 npm run test:e2e:tablet:update
+
+# NOTE: Visual baselines are tied to the pinned Chrome-for-Testing version
+# in tools/wdio-device-profiles.ts (CHROME_VERSION). Changing that version
+# requires regenerating ALL visual baselines across all packages.
 
 # Type check
 npm run typecheck

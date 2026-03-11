@@ -42,6 +42,14 @@
       "types": "./dist/Assets.d.ts",
       "default": "./dist/Assets.js"
     },
+    "./layouts/fkey-row": {
+      "types": "./dist/layouts/fkey-row.d.ts",
+      "default": "./dist/layouts/fkey-row.js"
+    },
+    "./layouts/nav-row": {
+      "types": "./dist/layouts/nav-row.d.ts",
+      "default": "./dist/layouts/nav-row.js"
+    },
     "./dist/*": "./dist/*"
   },
   "scripts": {

@@ -56,6 +56,7 @@
     "test:kiosk-webc:e2e:tablet": "npm run test:e2e:tablet -w packages/kiosk-keyboard-webc",
     "test:kiosk-webc:e2e:update": "npm run test:e2e:update -w packages/kiosk-keyboard-webc",
     "test:e2e:all-devices": "concurrently --kill-others-on-fail -n kb,webc \"npm run test:e2e:all-devices -w packages/kiosk-keyboard\" \"npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc\"",
+    "test:e2e:all-devices:sequential": "npm run test:e2e:all-devices -w packages/kiosk-keyboard && npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc",
     "test:coverage": "npm run test:coverage -w packages/kiosk-keyboard-webc",
     "test:guardrails": "node ./tools/check-test-hard-waits.mjs",
     "lint": "oxlint packages/ tools/",
@@ -71,7 +72,7 @@
     "typecheck:kiosk:e2e": "npm run typecheck:e2e -w packages/kiosk-keyboard",
     "typecheck:demo": "npm run typecheck -w packages/demo-app",
     "typecheck:tools": "tsc -p tools/tsconfig.json --noEmit",
-    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:guardrails && npm test",
+    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:guardrails && npm test && npm run test:e2e:all-devices",
     "prepare": "husky",
     "commitlint": "commitlint --edit"
   },

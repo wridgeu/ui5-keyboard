@@ -5,6 +5,8 @@ import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
 
+const glyphSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
 /**
  * Renderer for the KioskKeyboard control.
  *
@@ -265,9 +267,8 @@ const KioskKeyboardRenderer = {
   },
 
   isSingleGlyphLabel(label: string): boolean {
-    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
     let count = 0;
-    for (const _segment of segmenter.segment(label)) {
+    for (const _segment of glyphSegmenter.segment(label)) {
       count += 1;
       if (count > 1) return false;
     }
