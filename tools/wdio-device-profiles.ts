@@ -15,11 +15,13 @@ export interface DeviceProfile {
   height: number;
   deviceScaleFactor: number;
   touch: boolean;
+  /** Port offset from the package's base port so device profiles can run in parallel. */
+  portOffset: number;
 }
 
 export const deviceProfiles: Record<string, DeviceProfile> = {
-  phone: { id: "phone", width: 360, height: 800, deviceScaleFactor: 3, touch: true },
-  tablet: { id: "tablet", width: 768, height: 1024, deviceScaleFactor: 2, touch: true },
+  phone: { id: "phone", width: 360, height: 800, deviceScaleFactor: 3, touch: true, portOffset: 1 },
+  tablet: { id: "tablet", width: 768, height: 1024, deviceScaleFactor: 2, touch: true, portOffset: 2 },
 };
 
 /**

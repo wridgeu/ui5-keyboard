@@ -26,8 +26,7 @@ export const config: wdi5Config = {
     path.resolve(__dirname, "flp-lifecycle.test.ts"),
   ],
 
-  maxInstances: 1,
-  maxInstancesPerCapability: 1,
+  maxInstances: 5,
 
   capabilities: [
     {

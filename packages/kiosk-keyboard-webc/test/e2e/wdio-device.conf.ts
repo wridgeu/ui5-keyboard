@@ -4,10 +4,8 @@ import { createViteServerManager } from "../../../../tools/wdio-server.js";
 import { buildChromeOptions, deviceProfiles, CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const PORT = 8084;
+const BASE_PORT = 8086;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
-
-const server = createViteServerManager(PORT, PACKAGE_ROOT);
 
 const deviceArg = process.argv.find((a) => a.startsWith("--device="));
 const deviceName = deviceArg?.split("=")[1];
@@ -15,6 +13,9 @@ if (!deviceName || !deviceProfiles[deviceName]) {
   throw new Error(`Unknown or missing device profile: ${deviceName}. Use --device=phone or --device=tablet.`);
 }
 const profile = deviceProfiles[deviceName];
+const PORT = BASE_PORT + profile.portOffset;
+
+const server = createViteServerManager(PORT, PACKAGE_ROOT);
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 

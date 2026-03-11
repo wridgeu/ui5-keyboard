@@ -4,7 +4,7 @@ import { createViteServerManager } from "../../../../tools/wdio-server.js";
 import { CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const PORT = 8084;
+const PORT = 8086;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
 const server = createViteServerManager(PORT, PACKAGE_ROOT);
@@ -20,8 +20,7 @@ export const config: WebdriverIO.Config = {
 
   specs: [path.resolve(__dirname, "**/*.test.ts")],
 
-  maxInstances: 1,
-  maxInstancesPerCapability: 1,
+  maxInstances: 3,
 
   capabilities: [
     {
