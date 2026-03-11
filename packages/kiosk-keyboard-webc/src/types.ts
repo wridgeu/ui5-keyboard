@@ -14,7 +14,7 @@ export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space"
  * Key type determines the visual styling of the key.
  *
  * - `"default"` - Standard key (letter, number, symbol).
- * - `"modifier"` - Subdued style for Shift, layout switches, etc.
+ * - `"modifier"` - Subdued style for Shift, layout switches (ABC, Fn), etc.
  * - `"action"` - Prominent style for Enter, Backspace, etc.
  * - `"space"` - Spacebar. Visually same as default but semantically distinct.
  */

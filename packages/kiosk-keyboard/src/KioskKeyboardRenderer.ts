@@ -135,8 +135,14 @@ const KioskKeyboardRenderer = {
     ri: number,
     focusTarget: { row: number; col: number },
   ): void {
+    const units = row.reduce((sum, key) => {
+      if (!key.width) return sum + 1;
+      if (key.width === "space") return sum + 6;
+      return sum + parseFloat(key.width);
+    }, 0);
     rm.openStart("div", `${oControl.getId()}-row-${ri}`);
     rm.class("ui5KioskRow");
+    rm.style("--ui5KioskRow-units", String(units));
     rm.openEnd();
 
     row.forEach((key, ci) => {

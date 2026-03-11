@@ -1,5 +1,15 @@
 import type KioskKeyboard from "./KioskKeyboard.js";
+import type { KeyRow } from "./types.js";
 import { keyElementId } from "./core/dom-utils.js";
+
+/** Sum the flex-grow units of all keys in a row (used for container query font scaling). */
+function rowUnits(row: KeyRow): number {
+  return row.reduce((sum, key) => {
+    if (!key.width) return sum + 1;
+    if (key.width === "space") return sum + 6;
+    return sum + parseFloat(key.width);
+  }, 0);
+}
 
 /**
  * JSX template for `<kiosk-keyboard>`.
@@ -32,7 +42,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       onKeyDown={this._boundOnKeyDown}
     >
       {layout.map((row, rowIndex) => (
-        <div class="kiosk-row" key={`row-${rowIndex}`}>
+        <div class="kiosk-row" key={`row-${rowIndex}`} style={`--kiosk-row-units:${rowUnits(row)}`}>
           {row.map((key, colIndex) => {
             const id = keyElementId(this._componentId, rowIndex, colIndex);
             const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;

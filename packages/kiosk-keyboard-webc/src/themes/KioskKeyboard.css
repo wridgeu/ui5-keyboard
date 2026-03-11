@@ -142,7 +142,7 @@
   cursor: pointer;
   box-sizing: border-box;
   box-shadow: var(--kiosk-keyboard-key-shadow);
-  overflow: hidden;
+  min-width: 0;
   white-space: nowrap;
 
   /* Transitions are scoped to interactive states so that Lit re-renders
@@ -384,7 +384,7 @@
 
 @supports (font-size: 1cqi) {
   .kiosk-key__label {
-    font-size: clamp(0.75em, calc(var(--kiosk-row-key-content-max, 1em) * 0.9), 1em);
+    font-size: clamp(0.5em, calc(var(--kiosk-row-key-content-max, 1em) * 0.9), 1em);
   }
 }
 

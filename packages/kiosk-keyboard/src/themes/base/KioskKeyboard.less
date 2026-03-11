@@ -144,7 +144,7 @@
   cursor: pointer;
   box-sizing: border-box;
   box-shadow: var(--ui5KioskKeyboard-keyShadow);
-  overflow: hidden;
+  min-width: 0;
   white-space: nowrap;
 
   /* Transitions are scoped to interactive states so that renderer-driven
@@ -288,7 +288,7 @@
 
 @supports (font-size: 1cqi) {
   .ui5KioskKey__label {
-    font-size: ~"clamp(0.75em, calc(var(--ui5KioskRow-keyContentMax, 1em) * 0.9), 1em)";
+    font-size: ~"clamp(0.5em, calc(var(--ui5KioskRow-keyContentMax, 1em) * 0.9), 1em)";
   }
 }
 

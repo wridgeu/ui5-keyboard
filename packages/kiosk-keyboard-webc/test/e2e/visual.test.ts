@@ -111,7 +111,7 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     const kb = await getKeyboardRoot("kb-qwerty");
     await expect(kb).toMatchElementSnapshot("webc-qwerty-shifted");
 
-    // Reset shift — click twice to cycle through caps lock back to off
+    // Reset shift - click twice to cycle through caps lock back to off
     await browser.execute(() => {
       const kb = document.getElementById("kb-qwerty");
       const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;

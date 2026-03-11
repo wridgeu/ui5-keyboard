@@ -5,14 +5,14 @@ import type { KeyRow } from "../types.js";
  * Import this to compose custom variant layouts.
  */
 const navRow: KeyRow = [
-  { value: "{fkey:Home}", label: "Home", type: "modifier" },
-  { value: "{fkey:ArrowUp}", label: "Up", type: "modifier" },
-  { value: "{fkey:End}", label: "End", type: "modifier" },
-  { value: "{fkey:PageUp}", label: "PgUp", type: "modifier" },
-  { value: "{fkey:PageDown}", label: "PgDn", type: "modifier" },
-  { value: "{fkey:ArrowLeft}", label: "Left", type: "modifier" },
-  { value: "{fkey:ArrowDown}", label: "Down", type: "modifier" },
-  { value: "{fkey:ArrowRight}", label: "Right", type: "modifier" },
+  { value: "{fkey:Home}", label: "Home" },
+  { value: "{fkey:ArrowUp}", label: "Up" },
+  { value: "{fkey:End}", label: "End" },
+  { value: "{fkey:PageUp}", label: "PgUp" },
+  { value: "{fkey:PageDown}", label: "PgDn" },
+  { value: "{fkey:ArrowLeft}", label: "Left" },
+  { value: "{fkey:ArrowDown}", label: "Down" },
+  { value: "{fkey:ArrowRight}", label: "Right" },
 ];
 
 export default navRow;
