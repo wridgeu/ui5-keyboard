@@ -21,7 +21,7 @@ Uses `@open-wc/testing` fixtures backed by Playwright via `@web/test-runner-play
 
 - **Never call `document.body.appendChild(wrapper)` before passing `wrapper` as `{ parentNode }` to `fixture()`.** `fixture` already handles the append. Doing both causes `fixtureCleanup` to throw `NotFoundError` if you later call `wrapper.remove()`.
 - **If `fixture({ parentNode: wrapper })` is used, do NOT call `wrapper.remove()` in a `finally` block.** The fixture system owns the wrapper lifecycle.
-- **Tests that call `el.remove()`** (e.g. to verify `onExitDOM` behavior) are safe — `el` is a child of the wrapper, and the wrapper itself stays in `document.body`. `fixtureCleanup` removes the wrapper, not the inner element.
+- **Tests that call `el.remove()`** (e.g. to verify `onExitDOM` behavior) are safe. `el` is a child of the wrapper, and the wrapper itself stays in `document.body`. `fixtureCleanup` removes the wrapper, not the inner element.
 - **`nextRender()`** (alias for `renderFinished` from `@ui5/webcomponents-base`) must be awaited after any property change that triggers a UI5 Web Components render cycle.
 
 ### Pattern: custom-sized containers
@@ -35,7 +35,7 @@ const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></k
   parentNode: wrapper,
 });
 await nextRender();
-// wrapper is cleaned up automatically — do NOT call wrapper.remove()
+// wrapper is cleaned up automatically, do NOT call wrapper.remove()
 ```
 
 ```ts
@@ -49,7 +49,7 @@ wrapper.remove(); // ← fixtureCleanup will fail
 
 ## Visual Regression Tests
 
-Visual tests use `@wdio/visual-service` with pinned Chrome-for-Testing (`CHROME_VERSION` in `tools/wdio-device-profiles.ts`). Baselines are tied to this exact Chrome version — changing it requires regenerating ALL baselines across both packages.
+Visual tests use `@wdio/visual-service` with pinned Chrome-for-Testing (`CHROME_VERSION` in `tools/wdio-device-profiles.ts`). Baselines are tied to this exact Chrome version. Changing it requires regenerating ALL baselines across both packages.
 
 ### Config files
 
@@ -121,7 +121,7 @@ Each package has a `test/e2e/test-helpers.ts` that re-exports shared CDP helpers
 
 ### Device emulation
 
-Device tests use Chrome's `mobileEmulation` to set viewport, device pixel ratio, and touch mode. This means CSS media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly — the browser genuinely believes it's on a touch device.
+Device tests use Chrome's `mobileEmulation` to set viewport, device pixel ratio, and touch mode. CSS media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly because the browser genuinely believes it's on a touch device.
 
 Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles.ts`. Each device profile adds a `portOffset` to the base port so all profiles can run concurrently without collisions.
 

@@ -1642,7 +1642,7 @@ describe("kiosk-keyboard", () => {
       // After the container-query fix, breakpoints evaluate against the .kiosk-keyboard
       // box (≤ 18rem → cq-xs), not the wide :host.
       // NOTE: fixture({ parentNode }) appends the wrapper to body and registers
-      // it for cleanup — do NOT also call document.body.appendChild() or wrapper.remove().
+      // it for cleanup, so do NOT also call document.body.appendChild() or wrapper.remove().
       const wrapper = document.createElement("div");
       wrapper.style.width = "800px";
 
@@ -1667,7 +1667,7 @@ describe("kiosk-keyboard", () => {
       // Consumer sets a small custom font-size; the responsive breakpoint should
       // NOT override it to a larger value.
       // NOTE: fixture({ parentNode }) appends the wrapper to body and registers
-      // it for cleanup — do NOT also call document.body.appendChild() or wrapper.remove().
+      // it for cleanup, so do NOT also call document.body.appendChild() or wrapper.remove().
       const wrapper = document.createElement("div");
       wrapper.style.width = "320px";
 
