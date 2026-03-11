@@ -407,11 +407,17 @@ A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fall
 --kiosk-keyboard-padding: 0.75rem;
 --kiosk-keyboard-key-gap: 0.375rem;
 --kiosk-keyboard-key-height: 3rem;
---kiosk-keyboard-key-font-size: 1.125rem;
+--kiosk-keyboard-key-font-size: calc(var(--kiosk-keyboard-key-height) * 0.375);
+--kiosk-keyboard-key-padding-inline: 0.25rem;
+--kiosk-keyboard-key-padding: 0 var(--kiosk-keyboard-key-padding-inline);
+--kiosk-keyboard-max-width: 100%;
 --kiosk-keyboard-docked-max-width: 1024px;
 --kiosk-keyboard-docked-z-index: 100;
 --kiosk-keyboard-numpad-max-width: 20rem;
+--kiosk-keyboard-numpad-key-min-width: 4rem;
 ```
+
+The `Assets.ts` module calls `insertFontFace()` at import time to load the SAP "72" font-face declarations. This is a no-op when OpenUI5 is already present. Consumers who manage fonts themselves can skip importing `Assets.ts` and register only the theme/i18n bundles they need.
 
 ### Key Visual Variants
 
@@ -473,6 +479,7 @@ The bundle step uses Vite in library mode with `inlineDynamicImports: true` to p
 
 - Component tests use `@open-wc/testing` (`fixture`, `html`, `expect`, `oneEvent`, `waitUntil`) and `renderFinished()` from the UI5 WC framework for render cycle synchronization
 - E2E visual tests use `@wdio/visual-service` with baseline images stored in `test/e2e/__baselines__/`
+- Device-emulation E2E tests run via `wdio-device.conf.ts`, using Chrome's device emulation to validate touch and viewport behavior across form factors
 - A standalone test page at `test/pages/index.html` serves as both manual testing playground and E2E test target
 
 ## Differences from the UI5 Control Variant (`kiosk-keyboard`)

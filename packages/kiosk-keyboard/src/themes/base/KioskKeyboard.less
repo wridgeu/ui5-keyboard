@@ -14,7 +14,7 @@
  *   --ui5KioskKeyboard-keyHeight        Key height / touch target (default: 3rem)
  *   --ui5KioskKeyboard-keyPaddingInline Horizontal key padding (default: 0.25rem)
  *   --ui5KioskKeyboard-keyFontSize      Key label font size (default: 37.5% of key height)
- *   --ui5KioskKeyboard-maxWidth         Max inline width (default: 64rem / 1024px)
+ *   --ui5KioskKeyboard-maxWidth         Max inline width (default: 100%)
  *
  * Shadows (set to "none" for a flat appearance):
  *   --ui5KioskKeyboard-keyShadow        Key resting shadow
@@ -54,7 +54,7 @@
   --ui5KioskKeyboard-dockedMaxWidth: 1024px;
   --ui5KioskKeyboard-dockedShadow: 0 -4px 20px fade(@sapUiContentShadowColor, 20%);
   --ui5KioskKeyboard-dockedZIndex: 100;
-  --ui5KioskKeyboard-maxWidth: 64rem;
+  --ui5KioskKeyboard-maxWidth: 100%;
   --ui5KioskKeyboard-numpadMaxWidth: 20rem;
   --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
 
@@ -70,7 +70,6 @@
   touch-action: manipulation;
   width: 100%;
   max-width: var(--ui5KioskKeyboard-maxWidth);
-  margin-inline: auto;
   box-sizing: border-box;
 
   /* ---- Mode: Numpad ---- */

@@ -487,6 +487,8 @@ Keys use SAP button parameters for visual consistency with the rest of the UI:
 
 Keys use `flex: <grow> 1 0` for proportional sizing within rows. Width classes (`--w1-5`, `--w2`, `--space`) set the flex-grow factor. This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
 
+Because UI5 controls render into light DOM (no shadow DOM container queries), the control uses `sap/ui/core/ResizeHandler` to observe the root element's inline size and toggle responsive CSS classes (`ui5KioskKeyboard--cq-xs`, `ui5KioskKeyboard--cq-sm`) from JavaScript. The `_syncResponsiveSizing` method registers the handler after rendering and tears it down on destroy.
+
 ### Content Density
 
 Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font size for denser displays.
@@ -596,6 +598,8 @@ packages/kiosk-keyboard/
     test-helpers.ts                      Shared test utilities
   test/e2e/
     wdio.conf.ts               WebdriverIO configuration
+    wdio-flp.conf.ts           WebdriverIO config for FLP tests
+    wdio-device.conf.ts        WebdriverIO config for device emulation tests
     visual.test.ts             Visual regression tests
     inputmode.test.ts          E2E tests for inputmode suppression
     focus.test.ts              Focus/auto-show behavior
@@ -603,5 +607,7 @@ packages/kiosk-keyboard/
     interop.test.ts            StepInput + UI5 Web Components interop
     i18n.test.ts               i18n extensibility e2e tests
     flp-lifecycle.test.ts      FLP lifecycle i18n auto-reset tests
-    wdio-flp.conf.ts           WebdriverIO config for FLP tests
+    accessibility-media.test.ts  Accessibility and media-query tests
+    rtl.test.ts                RTL layout tests
+    readme-screenshots.test.ts   Screenshot generation for README
 ```
