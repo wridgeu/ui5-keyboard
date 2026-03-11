@@ -5,7 +5,7 @@ import { createServerManager } from "../../../../tools/wdio-server.js";
 import { buildChromeOptions, deviceProfiles, CHROME_VERSION } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const BASE_PORT = 8082;
+const BASE_PORT = 8089;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
 const deviceArg = process.argv.find((a) => a.startsWith("--device="));

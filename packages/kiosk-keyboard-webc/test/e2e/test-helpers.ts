@@ -48,11 +48,10 @@ export async function clearEmulatedMediaFeatures(): Promise<void> {
  * Uses the DOM domain to find the shadow host, descend into its shadow root,
  * and query for the target selector.
  */
-async function resolveShadowNodeId(
-  cdp: Awaited<ReturnType<Awaited<ReturnType<typeof browser.getPuppeteer>>["pages"]>[0]["client"]>,
-  hostId: string,
-  selector: string,
-): Promise<number> {
+type PuppeteerPage = Awaited<ReturnType<Awaited<ReturnType<typeof browser.getPuppeteer>>["pages"]>>[number];
+type CDPClient = ReturnType<PuppeteerPage["client"]>;
+
+async function resolveShadowNodeId(cdp: CDPClient, hostId: string, selector: string): Promise<number> {
   const { root } = await cdp.send("DOM.getDocument", { depth: 0, pierce: true });
   const { nodeId: hostNodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: `#${hostId}` });
   const { node: hostNode } = await cdp.send("DOM.describeNode", { nodeId: hostNodeId, depth: 1, pierce: true });
@@ -92,4 +91,12 @@ export async function clearForcedHoverState(hostId: string, selector: string): P
   const nodeId = await resolveShadowNodeId(cdp, hostId, selector);
   await cdp.send("CSS.enable");
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
+}
+
+/** Set the `dir` and `lang` attributes on the document root element. */
+export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
+  await browser.execute((d) => {
+    document.documentElement.setAttribute("dir", d);
+    document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
+  }, dir);
 }

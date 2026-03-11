@@ -102,10 +102,10 @@ Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` s
 | `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `createServerManager`, `readQUnitTestIds`                       | 8081 |
 | `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082 |
 | `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8082 |
+| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8089 |
 | `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `createServerManager`                                           | 8083 |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `createViteServerManager`                                       | 8084 |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8084 |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `createViteServerManager`                                       | 8086 |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8086 |
 
 ### `wdio-device-profiles.ts`
 

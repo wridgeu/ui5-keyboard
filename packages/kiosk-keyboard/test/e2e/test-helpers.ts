@@ -66,3 +66,11 @@ export async function clearForcedHoverState(selector: string): Promise<void> {
   await cdp.send("CSS.enable");
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
 }
+
+/** Set the `dir` and `lang` attributes on the document root element. */
+export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
+  await browser.execute((d) => {
+    document.documentElement.setAttribute("dir", d);
+    document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
+  }, dir);
+}
