@@ -1,5 +1,12 @@
 import { browser, $ } from "@wdio/globals";
 
+// Re-export shared CDP helpers so consumers import everything from one place
+export {
+  setEmulatedMediaFeatures,
+  clearEmulatedMediaFeatures,
+  setDocumentDirection,
+} from "../../../../tools/wdio-test-helpers.js";
+
 /** Navigate to the visual test page and wait for the keyboard to fully render. */
 export async function openVisualPage(): Promise<void> {
   await browser.url("/test/pages/visual.html");
@@ -22,24 +29,6 @@ export async function openVisualPage(): Promise<void> {
 export async function getKeyboardRoot(hostId: string) {
   // WDIO pierces shadow DOM with >>> (deep selector)
   return $(`#${hostId}`).$(">>>.kiosk-keyboard");
-}
-
-/**
- * Set emulated CSS media features via the Chrome DevTools Protocol.
- *
- * Requires a WDIO browser instance with DevTools protocol access
- * (the default when using `chromedriver` or `devtools` automation).
- */
-export async function setEmulatedMediaFeatures(features: Array<{ name: string; value: string }>): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = page.client();
-  await cdp.send("Emulation.setEmulatedMedia", { features });
-}
-
-/** Clear all emulated CSS media features via CDP. */
-export async function clearEmulatedMediaFeatures(): Promise<void> {
-  await setEmulatedMediaFeatures([]);
 }
 
 /**
@@ -92,14 +81,4 @@ export async function clearForcedHoverState(hostId: string, selector: string): P
   const nodeId = await resolveShadowNodeId(cdp, hostId, selector);
   await cdp.send("CSS.enable");
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
-}
-
-/** Set the `dir` and `lang` attributes on the document root element and wait for layout reflow. */
-export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
-  await browser.execute((d) => {
-    document.documentElement.setAttribute("dir", d);
-    document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
-  }, dir);
-  // Wait for the browser to reflow after the direction change
-  await browser.execute(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
