@@ -71,6 +71,30 @@ Extracts test IDs from a `testsuite.qunit.ts` file using TypeScript AST parsing.
 
 Generates one `.spec.js` file per QUnit test ID so WebdriverIO can distribute them across parallel browser instances via `maxInstances`.
 
+## `wdio-test-helpers.ts`
+
+Shared CDP (Chrome DevTools Protocol) helpers for e2e tests. Both packages re-export these from their own `test-helpers.ts` so test files import from a single place.
+
+### `setEmulatedMediaFeatures(features)`
+
+Emulates CSS media features via `Emulation.setEmulatedMedia`. Used to test `forced-colors`, `prefers-reduced-motion`, etc.
+
+```ts
+await setEmulatedMediaFeatures([{ name: "forced-colors", value: "active" }]);
+```
+
+### `clearEmulatedMediaFeatures()`
+
+Clears all previously emulated media features.
+
+### `setDocumentDirection(dir)`
+
+Sets `dir` and `lang` attributes on the document root and waits for a layout reflow. Used by RTL visual regression tests.
+
+```ts
+await setDocumentDirection("rtl");
+```
+
 ## `wdio-device-profiles.ts`
 
 Shared device profiles, pinned Chrome version, and Chrome option builder for e2e testing.
@@ -108,6 +132,13 @@ Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` s
 | `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8086 + offset\* |
 
 \*Device configs use `BASE_PORT + profile.portOffset` to avoid port collisions across device profiles (phone: +1, tablet: +2).
+
+### `wdio-test-helpers.ts`
+
+| Consumer                                                | Imports (re-exported via package `test-helpers.ts`)                              |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `packages/kiosk-keyboard/test/e2e/test-helpers.ts`      | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `setDocumentDirection` |
+| `packages/kiosk-keyboard-webc/test/e2e/test-helpers.ts` | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `setDocumentDirection` |
 
 ### `wdio-device-profiles.ts`
 

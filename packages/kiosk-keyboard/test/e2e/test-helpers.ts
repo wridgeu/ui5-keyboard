@@ -12,8 +12,8 @@ export const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 /** Navigate to the visual test page and wait for UI5 to finish rendering. */
 export async function openVisualPage(): Promise<void> {
   await browser.url(VISUAL_PAGE);
-  // wdi5 "ui5" service handles UI5 bootstrap sync; additionally wait for the last keyboard
-  await $("#kb-qwertz-de-nav .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
+  // wdi5 "ui5" service handles UI5 bootstrap sync; additionally wait for the last keyboard on the page
+  await $("#kb-glyph-stress .ui5KioskKeyboard").waitForExist({ timeout: 15_000 });
 }
 
 /** Get the rendered KioskKeyboard element inside a container. */

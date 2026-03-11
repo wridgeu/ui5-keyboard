@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
 import { browser, $ } from "@wdio/globals";
+import { VISUAL_PAGE } from "./test-helpers.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const OUTPUT_DIR = path.join(REPO_ROOT, "docs", "kiosk", "images");
-const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 
 const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"];
 

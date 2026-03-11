@@ -1,4 +1,4 @@
-import { $, expect } from "@wdio/globals";
+import { expect } from "@wdio/globals";
 import { openVisualPage, getKeyboardRoot, setDocumentDirection } from "./test-helpers.js";
 
 describe("KioskKeyboard Web Component - RTL (Right-to-Left)", () => {
@@ -16,14 +16,14 @@ describe("KioskKeyboard Web Component - RTL (Right-to-Left)", () => {
   it("should match Numpad layout in RTL", async () => {
     await openVisualPage();
     await setDocumentDirection("rtl");
-    const kb = await $('kiosk-keyboard[keyboard-type="Numpad"]').$(">>>.kiosk-keyboard");
+    const kb = await getKeyboardRoot("kb-numpad");
     await expect(kb).toMatchElementSnapshot("webc-numpad-rtl");
   });
 
   it("should match Numeric layout in RTL", async () => {
     await openVisualPage();
     await setDocumentDirection("rtl");
-    const kb = await $('kiosk-keyboard[keyboard-type="Numeric"]').$(">>>.kiosk-keyboard");
+    const kb = await getKeyboardRoot("kb-numeric");
     await expect(kb).toMatchElementSnapshot("webc-numeric-rtl");
   });
 });

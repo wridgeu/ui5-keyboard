@@ -361,8 +361,20 @@ npm test
 # Component tests (Web Test Runner, Playwright)
 npm run test:component
 
-# E2E tests (WebdriverIO)
+# E2E tests (WebdriverIO) — desktop
 npm run test:e2e
+
+# E2E tests — phone (360x800) / tablet (768x1024) device emulation
+npm run test:e2e:phone
+npm run test:e2e:tablet
+
+# Run all device profiles in parallel
+npm run test:e2e:all-devices
+
+# Update visual baselines (desktop / phone / tablet)
+npm run test:e2e:update
+npm run test:e2e:phone:update
+npm run test:e2e:tablet:update
 
 # Type check
 npm run typecheck

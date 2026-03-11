@@ -2,7 +2,9 @@ import type { KeyRow } from "../types.js";
 
 /**
  * Shared F1-F12 key row used by built-in variant layouts (`qwerty-fk`,
- * `qwertz-de-fk`). Import this to compose custom variant layouts.
+ * `qwertz-de-fk`). Keys render as regular keys (with visible borders).
+ *
+ * Import this to compose custom variant layouts.
  */
 const fkeyRow: KeyRow = [
   { value: "{fkey:F1}", label: "F1" },

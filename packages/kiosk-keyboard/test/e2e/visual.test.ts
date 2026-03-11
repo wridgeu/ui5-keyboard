@@ -121,6 +121,9 @@ describe("KioskKeyboard Interactive States", () => {
       timeout: 3_000,
       timeoutMsg: "Shift key did not become active",
     });
+    // Move the pointer off the shift key so the snapshot is deterministic
+    // (WebDriver click leaves the cursor on the key, causing :hover)
+    await $("body").moveTo({ xOffset: 0, yOffset: 0 });
     await expect(kb).toMatchElementSnapshot("kb-shift-active");
   });
 

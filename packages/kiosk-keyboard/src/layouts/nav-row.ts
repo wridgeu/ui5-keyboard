@@ -2,6 +2,8 @@ import type { KeyRow } from "../types";
 
 /**
  * Shared navigation key row used by built-in `*-nav` variant layouts.
+ * Keys render as regular keys (with visible borders).
+ *
  * Import this to compose custom variant layouts.
  *
  * @public

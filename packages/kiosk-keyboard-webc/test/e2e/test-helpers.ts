@@ -14,11 +14,11 @@ export async function openVisualPage(): Promise<void> {
     timeout: 10_000,
     timeoutMsg: "kiosk-keyboard not registered",
   });
-  // Wait for keys to render so the layout is stable before any interaction
+  // Wait for the last keyboard on the page to render keys
   await browser.waitUntil(
     async () =>
       browser.execute(() => {
-        const kb = document.getElementById("kb-qwerty");
+        const kb = document.getElementById("kb-glyph-stress");
         return (kb?.shadowRoot?.querySelectorAll('[role="button"]').length ?? 0) > 0;
       }),
     { timeout: 5_000, timeoutMsg: "Keyboard keys not rendered" },
