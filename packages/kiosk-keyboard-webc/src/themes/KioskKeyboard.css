@@ -395,7 +395,13 @@
   line-height: 1.2;
 }
 
-/* Single-glyph labels (a, ü, @, €): no clipping, no scaling */
+/* Single-glyph labels (a, ü, @, €): no clipping, no scaling.
+   Known issue: the "@" glyph appears slightly off-center on narrow phone
+   keys.  Font-side metrics are symmetric (verified in both 72-Regular.woff2
+   and 72-Regular-full.woff2 via https://fontinfo.app).  Root cause is
+   unclear; likely sub-pixel rounding when the glyph's advance width is
+   close to the key's content-box width at small viewports.
+   See also docs/proposals/CUSTOM-FONT-FACE.md. */
 .kiosk-key__label--glyph {
   overflow: visible;
   text-overflow: clip;
