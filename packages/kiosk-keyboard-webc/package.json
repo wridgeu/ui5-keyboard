@@ -80,6 +80,7 @@
     "test:e2e:phone:update": "wdio run test/e2e/wdio-device.conf.ts -- --device=phone --update-visual-baseline",
     "pretest:e2e:tablet:update": "npm run build",
     "test:e2e:tablet:update": "wdio run test/e2e/wdio-device.conf.ts -- --device=tablet --update-visual-baseline",
+    "test:e2e:report": "node ../../tools/visual-report.mjs test/e2e/__screenshots__",
     "test:e2e:all-devices": "npm run build && concurrently --kill-others-on-fail -n desktop,phone,tablet \"wdio run test/e2e/wdio.conf.ts\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=phone\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=tablet\"",
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit"
   },

@@ -64,6 +64,7 @@ export const config: wdi5Config = {
         formatImageName: "{tag}-{logName}-{width}x{height}",
         screenshotPath: path.resolve(__dirname, "__screenshots__"),
         autoSaveBaseline: updateVisualBaseline,
+        createJsonReportFiles: true,
         disableCSSAnimation: true,
         hideScrollBars: true,
         waitForFontsLoaded: true,
