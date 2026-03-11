@@ -183,12 +183,8 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
       kb.show();
     });
 
-    const classes = await browser.execute(() => {
-      const root = document.getElementById("kb-docked-custom")?.shadowRoot?.querySelector(".kiosk-keyboard");
-      return root?.className ?? "";
-    });
-
-    expect(classes).not.toContain("kiosk-keyboard--hidden");
+    const kb = await getKeyboardRoot("kb-docked-custom");
+    await kb.waitForDisplayed({ timeout: 5_000 });
 
     // Clean up
     await browser.execute(() => {
