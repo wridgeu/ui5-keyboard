@@ -19,16 +19,10 @@
  *   --ui5KioskKeyboard-keyShadow        Key resting shadow
  *   --ui5KioskKeyboard-keyShadowHover   Key hover shadow
  *
- * Layer tokens:
- *   --ui5KioskKeyboard-zBase         Base layer anchor (default: 0)
- *   --ui5KioskKeyboard-zDocked       Docked keyboard layer (default: 100)
- *   --ui5KioskKeyboard-zTop          Local top anchor (default: 10)
- *   --ui5KioskKeyboard-zBottom       Local bottom anchor (default: -10)
- *
  * Docked mode:
  *   --ui5KioskKeyboard-dockedMaxWidth   Max width when docked (default: 1024px)
  *   --ui5KioskKeyboard-dockedShadow     Shadow when docked
- *   --ui5KioskKeyboard-dockedZIndex     Z-index when docked (default: var(--ui5KioskKeyboard-zDocked))
+ *   --ui5KioskKeyboard-dockedZIndex     Z-index when docked (default: 100)
  *
  * Numpad mode:
  *   --ui5KioskKeyboard-numpadMaxWidth      Numpad container max-width (default: 20rem)
@@ -60,11 +54,7 @@
   --ui5KioskKeyboard-keyShadowHover: 0 2px 4px fade(@sapUiContentShadowColor, 15%);
   --ui5KioskKeyboard-dockedMaxWidth: 1024px;
   --ui5KioskKeyboard-dockedShadow: 0 -4px 20px fade(@sapUiContentShadowColor, 20%);
-  --ui5KioskKeyboard-zBase: 0;
-  --ui5KioskKeyboard-zDocked: 100;
-  --ui5KioskKeyboard-zTop: 10;
-  --ui5KioskKeyboard-zBottom: -10;
-  --ui5KioskKeyboard-dockedZIndex: var(--ui5KioskKeyboard-zDocked);
+  --ui5KioskKeyboard-dockedZIndex: 100;
   --ui5KioskKeyboard-numpadMaxWidth: 20rem;
   --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
 

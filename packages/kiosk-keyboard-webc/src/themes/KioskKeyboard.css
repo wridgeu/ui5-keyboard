@@ -16,11 +16,7 @@
   --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.08);
   --kiosk-keyboard-docked-max-width: 1024px;
   --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
-  --kiosk-keyboard-z-base: 0;
-  --kiosk-keyboard-z-docked: 100;
-  --kiosk-keyboard-z-top: 10;
-  --kiosk-keyboard-z-bottom: -10;
-  --kiosk-keyboard-docked-z-index: var(--kiosk-keyboard-z-docked);
+  --kiosk-keyboard-docked-z-index: 100;
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 }
