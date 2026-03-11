@@ -137,6 +137,7 @@
   box-sizing: border-box;
   box-shadow: var(--kiosk-keyboard-key-shadow);
   overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 
   /* Transitions are scoped to interactive states so that Lit re-renders
@@ -368,8 +369,6 @@
 
 .kiosk-key__label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ============================= */
