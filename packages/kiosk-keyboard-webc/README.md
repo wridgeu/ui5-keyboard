@@ -306,7 +306,8 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-key-gap`              | `0.375rem`                       | Gap between keys                                |
 | `--kiosk-keyboard-key-height`           | `3rem`                           | Key height                                      |
 | `--kiosk-keyboard-key-font-size`        | `1.125rem`                       | Key font size (all key types in Numpad/Numeric) |
-| `--kiosk-keyboard-key-padding`          | `0 0.25rem`                      | Inline padding inside each key                  |
+| `--kiosk-keyboard-key-padding-inline`   | `0.25rem`                        | Horizontal key padding                          |
+| `--kiosk-keyboard-key-padding`          | `0 0.25rem`                      | Full padding shorthand (uses padding-inline)    |
 | `--kiosk-keyboard-key-shadow`           | _(subtle)_                       | Box shadow for keys at rest                     |
 | `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_                       | Box shadow for keys on hover                    |
 | `--kiosk-keyboard-docked-max-width`     | `1024px`                         | Max width in docked mode                        |

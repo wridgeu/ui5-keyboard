@@ -97,26 +97,28 @@ Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` s
 
 ### `wdio-server.ts`
 
-| Consumer                                                    | Imports                                                         | Port |
-| ----------------------------------------------------------- | --------------------------------------------------------------- | ---- |
-| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `createServerManager`, `readQUnitTestIds`                       | 8081 |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8082 |
-| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8089 |
-| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `createServerManager`                                           | 8083 |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `createViteServerManager`                                       | 8086 |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8086 |
+| Consumer                                                    | Imports                                                         | Port            |
+| ----------------------------------------------------------- | --------------------------------------------------------------- | --------------- |
+| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `createServerManager`, `readQUnitTestIds`                       | 8081            |
+| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8084            |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8082            |
+| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8089 + offset\* |
+| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `createServerManager`                                           | 8083            |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `createViteServerManager`                                       | 8086            |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8086 + offset\* |
+
+\*Device configs use `BASE_PORT + profile.portOffset` to avoid port collisions across device profiles (phone: +1, tablet: +2).
 
 ### `wdio-device-profiles.ts`
 
 | Consumer                                                    | Imports                                                  |
 | ----------------------------------------------------------- | -------------------------------------------------------- |
-| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `CHROME_VERSION`                                         |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `CHROME_VERSION`                                         |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `CHROME_VERSION`                                         |
+| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
+| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
 | `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION` |
-| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `CHROME_VERSION`                                         |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `CHROME_VERSION`                                         |
+| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
+| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                  |
 | `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION` |
 
 ## `tsconfig.json`

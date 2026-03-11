@@ -978,6 +978,7 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-padding`           | `0.75rem`                         | Container padding                      |
 | `--ui5KioskKeyboard-keyGap`            | `0.375rem`                        | Gap between keys and rows              |
 | `--ui5KioskKeyboard-keyHeight`         | `3rem`                            | Key height / touch target              |
+| `--ui5KioskKeyboard-keyPaddingInline`  | `0.25rem`                         | Horizontal key padding                 |
 | `--ui5KioskKeyboard-keyFontSize`       | `1.125rem`                        | Key label font size                    |
 | `--ui5KioskKeyboard-keyShadow`         | _(theme)_                         | Key resting shadow                     |
 | `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_                         | Key hover shadow                       |
