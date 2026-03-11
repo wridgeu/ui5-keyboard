@@ -1,15 +1,5 @@
 import type KioskKeyboard from "./KioskKeyboard.js";
-import type { KeyRow } from "./types.js";
 import { keyElementId } from "./core/dom-utils.js";
-
-/** Sum the flex-grow units of all keys in a row (used for container query font scaling). */
-function rowUnits(row: KeyRow): number {
-  return row.reduce((sum, key) => {
-    if (!key.width) return sum + 1;
-    if (key.width === "space") return sum + 6;
-    return sum + parseFloat(key.width);
-  }, 0);
-}
 
 /**
  * JSX template for `<kiosk-keyboard>`.
@@ -21,7 +11,6 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const isDockedHidden = this.docked && !this.open;
   const focusPos = this._getFocusPosition(layout);
   const kbType = this.keyboardType;
-  const maxUnits = Math.max(...layout.map(rowUnits));
 
   return (
     <div
@@ -38,7 +27,6 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       aria-roledescription={this._roleDescription}
       aria-hidden={isDockedHidden ? "true" : undefined}
       aria-disabled={this.disabled ? "true" : undefined}
-      style={`--kiosk-keyboard-max-row-units:${maxUnits}`}
       onClick={this._boundOnKeyClick}
       onMouseDown={this._boundOnKeyMouseDown}
       onKeyDown={this._boundOnKeyDown}

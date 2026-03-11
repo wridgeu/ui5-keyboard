@@ -72,10 +72,6 @@ const KioskKeyboardRenderer = {
       rm.attr("aria-controls", targetId);
     }
     rm.attr("data-sap-ui-fastnavgroup", "true");
-
-    const { _getResolvedLayout } = oControl._getRendererApi();
-    const maxUnits = this._maxRowUnits(_getResolvedLayout());
-    rm.style("--ui5KioskKeyboard-maxRowUnits", String(maxUnits));
   },
 
   /** The row loop - override to add toolbar, extra sections, etc. */
@@ -86,18 +82,6 @@ const KioskKeyboardRenderer = {
     layout.forEach((row, ri) => {
       this.renderRow(rm, oControl, row, ri, focusTarget);
     });
-  },
-
-  /** Compute the maximum flex-grow units across all rows (for consistent font scaling). */
-  _maxRowUnits(layout: LayoutDefinition): number {
-    return layout.reduce((max, row) => {
-      const units = row.reduce((sum, key) => {
-        if (!key.width) return sum + 1;
-        if (key.width === "space") return sum + 6;
-        return sum + parseFloat(key.width);
-      }, 0);
-      return Math.max(max, units);
-    }, 0);
   },
 
   resolveFocusTarget(oControl: KioskKeyboard, layout: LayoutDefinition): { row: number; col: number } {
