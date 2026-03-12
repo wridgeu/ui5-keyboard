@@ -171,48 +171,66 @@ npm install                 # Install all workspaces
 
 ### Dev Servers
 
-| Command                      | Description                               | Port |
-| ---------------------------- | ----------------------------------------- | ---- |
-| `npm start`                  | Demo app                                  | 8080 |
-| `npm run start:demo`         | Demo app (explicit alias)                 | 8080 |
-| `npm run start:flp`          | Demo app in FLP sandbox (SAPUI5 + ushell) | 8080 |
-| `npm run start:hotkeys`      | Hotkeys library + test runner             | 8081 |
-| `npm run start:kiosk`        | Kiosk keyboard library + test runner      | 8082 |
-| `npm run start:kiosk:visual` | Kiosk visual test page                    | 8082 |
-| `npm run start:kiosk-webc`   | Kiosk web component standalone demo       | 8084 |
+| Command                      | Description                                   | Port |
+| ---------------------------- | --------------------------------------------- | ---- |
+| `npm start`                  | Demo app (alias for `start:demo`)             | 8080 |
+| `npm run start:flp`          | Demo app in FLP sandbox (SAPUI5 + ushell)     | 8080 |
+| `npm run start:hotkeys`      | Hotkeys QUnit test runner                     | 8081 |
+| `npm run start:kiosk`        | Kiosk keyboard QUnit test runner              | 8082 |
+| `npm run start:kiosk:visual` | Kiosk visual test page (same server as kiosk) | 8082 |
+| `npm run start:kiosk-webc`   | Kiosk web component standalone demo (Vite)    | 8084 |
 
-### Build & Test
+### Build
 
 ```bash
-npm run build                  # Build all libraries (hotkeys + kiosk + kiosk-webc)
-npm run build:hotkeys          # Build hotkeys only
-npm run build:kiosk            # Build kiosk-keyboard only
-npm run build:kiosk-webc       # Build kiosk-keyboard-webc only
-npm run build:demo             # Build demo app only
-npm run build:all              # Build libraries + demo app
+npm run build              # Build all libraries (hotkeys + kiosk + kiosk-webc)
+npm run build:hotkeys      # Build hotkeys only
+npm run build:kiosk        # Build kiosk-keyboard only
+npm run build:kiosk-webc   # Build kiosk-keyboard-webc only
+npm run build:demo         # Build demo app only
+npm run build:all          # Build libraries + demo app
+npm run clean              # Clean all dist outputs
+```
 
-npm test                       # Run all tests (headless)
-npm run test:qunit             # Run all library QUnit tests
-npm run test:hotkeys           # Hotkeys QUnit tests
-npm run test:kiosk             # Kiosk QUnit + e2e tests
-npm run test:kiosk:e2e         # Kiosk e2e tests only
-npm run test:kiosk:e2e:flp     # FLP lifecycle e2e tests (SAPUI5 sandbox)
-npm run test:kiosk:e2e:update  # Update kiosk visual baselines (explicit only)
-npm run test:kiosk:e2e:docs    # Regenerate README kiosk screenshots
-npm run test:kiosk-webc        # Kiosk web component unit tests (Vitest)
-npm run test:kiosk-webc:component  # Kiosk web component tests (Web Test Runner)
-npm run test:kiosk-webc:e2e    # Kiosk web component e2e tests (WebdriverIO)
+### Test
+
+```bash
+# Core test suite (QUnit + desktop e2e + Vitest + Web Test Runner)
+npm test                               # All core tests across all packages
+
+# Per-package
+npm run test:hotkeys                   # Hotkeys QUnit tests
+npm run test:kiosk                     # Kiosk QUnit + desktop e2e tests
+npm run test:kiosk:e2e                 # Kiosk desktop e2e only (no QUnit)
+npm run test:kiosk-webc                # Kiosk webc unit tests (Vitest)
+npm run test:kiosk-webc:component      # Kiosk webc integration tests (Web Test Runner)
+npm run test:kiosk-webc:e2e            # Kiosk webc e2e tests (WebdriverIO)
+npm run test:qunit                     # All QUnit tests only (hotkeys + kiosk)
+
+# Multi-device e2e (desktop + phone + tablet, concurrent)
+npm run test:e2e:all-devices           # All e2e across all device profiles (kiosk + webc)
+npm run test:kiosk:e2e:flp             # FLP lifecycle e2e tests (SAPUI5 sandbox)
+
+# Visual baseline management
+npm run test:kiosk:e2e:update          # Update kiosk desktop visual baselines
+npm run test:kiosk-webc:e2e:update     # Update webc desktop visual baselines
+npm run test:kiosk:e2e:docs            # Regenerate README kiosk screenshots
+
+# Coverage
+npm run test:coverage                  # Kiosk webc coverage (unit + component)
 ```
 
 ### Code Quality
 
 ```bash
-npm run check               # fmt:check + lint + lint:ui5 + typecheck + test:guardrails + test (project quality gate)
-npm run fmt                 # Format (oxfmt)
-npm run lint                # Lint (oxlint)
-npm run lint:ui5            # UI5 linter across all workspaces
-npm run typecheck           # Typecheck all workspaces (includes kiosk e2e tests)
-npm run test:guardrails     # Fails on hard-wait anti-patterns in test code
+npm run check              # Full quality gate (fmt + lint + typecheck + all tests + multi-device e2e)
+npm run fmt                # Format (oxfmt)
+npm run fmt:check          # Check formatting without fixing
+npm run lint               # Lint (oxlint)
+npm run lint:fix           # Lint with auto-fix
+npm run lint:ui5           # UI5 linter across all workspaces
+npm run typecheck          # Typecheck all workspaces (incl. e2e tests)
+npm run test:guardrails    # Check for hard-wait anti-patterns in test code
 ```
 
 ## Project Structure
