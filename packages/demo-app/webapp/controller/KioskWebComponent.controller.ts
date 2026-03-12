@@ -71,7 +71,9 @@ export default class KioskWebComponent extends BaseController {
     }
 
     // Deactivate: close keyboard and disable auto-show
-    (control as { close?: () => void }).close?.();
+    if ("close" in control) {
+      (control.close as () => void)();
+    }
     control.setProperty("autoShow", false);
 
     const viewModel = this._getViewModel();

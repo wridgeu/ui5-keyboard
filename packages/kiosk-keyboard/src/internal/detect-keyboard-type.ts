@@ -1,4 +1,5 @@
 import Control from "sap/ui/core/Control";
+import type Input from "sap/m/Input";
 import ManagedObject from "sap/ui/base/ManagedObject";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import { KeyboardType, type KeyboardTypeValue } from "../library";
@@ -18,9 +19,9 @@ export function detectKeyboardType(control: Control, customResolver?: TargetReso
   // 1. UI5 getType() - e.g. sap.m.Input type="Number"
   //    Only sap.m.Input defines the `type` property; other InputBase
   //    subclasses (TextArea, ComboBox, DatePicker) do not have getType().
-  if (control.isA("sap.m.InputBase")) {
-    const type = (control as unknown as { getType?: () => string }).getType?.();
-    if (type && NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
+  if (control.isA("sap.m.Input")) {
+    const type = (control as Input).getType();
+    if (NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
   }
 
   // 2. Control name - walk up the parent chain because composite controls
