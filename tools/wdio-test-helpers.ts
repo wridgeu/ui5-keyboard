@@ -20,7 +20,7 @@ export async function setEmulatedMediaFeatures(features: Array<{ name: string; v
   const puppeteer = await browser.getPuppeteer();
   // Assumes single-tab — safe because WDIO runs one page per browser instance
   const [page] = await puppeteer.pages();
-  const cdp = page.client();
+  const cdp = await page.createCDPSession();
   await cdp.send("Emulation.setEmulatedMedia", { features });
 }
 
@@ -31,7 +31,7 @@ export async function clearEmulatedMediaFeatures(): Promise<void> {
 
 /** Set the `dir` and `lang` attributes on the document root element and wait for layout reflow. */
 export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
-  await browser.execute((d) => {
+  await browser.execute((d: "ltr" | "rtl") => {
     document.documentElement.setAttribute("dir", d);
     document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
     // UI5 gates RTL styles on .sapUiRtl on <body> (set by Core at bootstrap).

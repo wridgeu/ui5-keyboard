@@ -2,7 +2,7 @@
     controllerName="demo.hotkeys.controller.Detail"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="ui5.hotkeys Demo - Detail View" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page title="Scope + Recorder - Detail View" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <Panel headerText="What to Test on This Page" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
