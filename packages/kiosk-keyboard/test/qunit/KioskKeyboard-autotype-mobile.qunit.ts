@@ -5,8 +5,11 @@ import Device from "sap/ui/Device";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { getKeyElements, placeAndWait, waitForRender } from "./test-helpers";
 
+const sandbox = sinon.createSandbox();
+
 QUnit.module("KioskKeyboard autoType and mobile keyboard", {
   afterEach() {
+    sandbox.restore();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -438,81 +441,64 @@ QUnit.test("Auto mode still opens on desktop", async (assert) => {
 });
 
 QUnit.test("Auto mode defers on phone", async (assert) => {
-  const originalPhone = Device.system.phone;
-  Device.system.phone = true;
+  sandbox.replace(Device.system, "phone", true);
 
-  try {
-    const input = new Input();
-    input.placeAt("qunit-fixture");
+  const input = new Input();
+  input.placeAt("qunit-fixture");
 
-    const kb = new KioskKeyboard({
-      docked: true,
-      autoShow: true,
-      mobileKeyboard: "Auto",
-    });
-    await placeAndWait(kb);
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    mobileKeyboard: "Auto",
+  });
+  await placeAndWait(kb);
 
-    (input.getFocusDomRef() as HTMLElement).focus();
-    await nextUIUpdate();
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
 
-    assert.notOk(kb.isOpen(), "mobileKeyboard=Auto defers on phone");
+  assert.notOk(kb.isOpen(), "mobileKeyboard=Auto defers on phone");
 
-    input.destroy();
-    kb.destroy();
-  } finally {
-    Device.system.phone = originalPhone;
-  }
+  input.destroy();
+  kb.destroy();
 });
 
 QUnit.test("Auto mode defers on tablet (non-desktop)", async (assert) => {
-  const originalTablet = Device.system.tablet;
-  const originalDesktop = Device.system.desktop;
-  Device.system.tablet = true;
-  Device.system.desktop = false;
+  sandbox.replace(Device.system, "tablet", true);
+  sandbox.replace(Device.system, "desktop", false);
 
-  try {
-    const input = new Input();
-    input.placeAt("qunit-fixture");
+  const input = new Input();
+  input.placeAt("qunit-fixture");
 
-    const kb = new KioskKeyboard({
-      docked: true,
-      autoShow: true,
-      mobileKeyboard: "Auto",
-    });
-    await placeAndWait(kb);
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    mobileKeyboard: "Auto",
+  });
+  await placeAndWait(kb);
 
-    (input.getFocusDomRef() as HTMLElement).focus();
-    await nextUIUpdate();
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
 
-    assert.notOk(kb.isOpen(), "mobileKeyboard=Auto defers on tablet without desktop flag");
+  assert.notOk(kb.isOpen(), "mobileKeyboard=Auto defers on tablet without desktop flag");
 
-    input.destroy();
-    kb.destroy();
-  } finally {
-    Device.system.tablet = originalTablet;
-    Device.system.desktop = originalDesktop;
-  }
+  input.destroy();
+  kb.destroy();
 });
 
 QUnit.test("Auto mode: programmatic show() does not open on phone", async (assert) => {
-  const originalPhone = Device.system.phone;
-  Device.system.phone = true;
+  sandbox.replace(Device.system, "phone", true);
 
-  try {
-    const kb = new KioskKeyboard({
-      docked: true,
-      mobileKeyboard: "Auto",
-    });
-    await placeAndWait(kb);
+  const kb = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: "Auto",
+  });
+  await placeAndWait(kb);
 
-    kb.show();
+  kb.show();
 
-    assert.notOk(kb.isOpen(), "show() does not open when mobileKeyboard=Auto on phone");
+  assert.notOk(kb.isOpen(), "show() does not open when mobileKeyboard=Auto on phone");
 
-    kb.destroy();
-  } finally {
-    Device.system.phone = originalPhone;
-  }
+  kb.destroy();
 });
 
 QUnit.test("Existing inputmode attribute is preserved and restored", async (assert) => {

@@ -55,11 +55,11 @@
   "scripts": {
     "clean": "rimraf dist src/generated",
     "generate": "ui5nps generate",
-    "build": "npm run generate && tsc && npm run build:bundle",
+    "build": "npm run generate && tsc && npm run build:bundle && npm run generateAPI",
     "build:bundle": "vite build",
     "prestart": "npm run build",
     "start": "vite --port 8084 --open /test/pages/index.html",
-    "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build && npm run generateAPI",
+    "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build",
     "typecheck": "npm run generate && tsc --noEmit --composite false",
     "test": "vitest run",
     "test:watch": "vitest",

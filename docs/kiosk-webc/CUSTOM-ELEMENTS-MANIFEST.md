@@ -38,10 +38,13 @@ Two fields in `package.json` signal CEM support to tooling:
 ## Generation
 
 ```bash
-# Generate CEM + validate (on-demand, not part of default build)
+# CEM is generated automatically as part of the build
+npm run build
+
+# Generate CEM only (without a full build)
 npm run generateAPI
 
-# Generate CEM only
+# Generate CEM only (skip validation)
 npx ui5nps generateAPI.generateCEM
 
 # Generate + validate in dev mode (strict, throws on doc errors)
@@ -53,7 +56,7 @@ The `generateAPI` script runs two steps:
 1. `generateCEM`: Runs the `@custom-elements-manifest/analyzer` with the UI5 custom plugin
 2. `validateCEM`: Validates both public and internal manifests against the CEM schema
 
-CEM generation is a separate on-demand step, not wired into `npm run build`. The generated files live in `dist/` alongside the compiled output and are not checked into git.
+CEM generation runs as the final step of `npm run build`, so `dist/custom-elements.json` is always available after a build. The generated files live in `dist/` alongside the compiled output and are not checked into git.
 
 ## How It Works
 
