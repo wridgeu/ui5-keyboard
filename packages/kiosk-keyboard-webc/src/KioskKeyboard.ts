@@ -1299,6 +1299,10 @@ class KioskKeyboard extends UI5Element {
   private _isAutoShowParticipationActive(): boolean {
     if (this.disabled) return false;
     if (!this.isConnected) return false;
+    // A docked keyboard that is closed hides via an inner shadow-DOM class
+    // (visibility:hidden + transform), but the host element still reports
+    // client rects. Exclude it explicitly so it does not block other keyboards.
+    if (this.docked && !this.open) return false;
     return this.getClientRects().length > 0;
   }
 
