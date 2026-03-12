@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>KioskKeyboard Web Component — Standalone Test Page</title>
     <style>
+      /* ── Theme tokens (CSS custom properties) ── */
+      :root {
+        --page-bg: #f5f6f7;
+        --text-color: #32363a;
+        --card-bg: #fff;
+        --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        --border-color: #e5e5e5;
+        --muted-color: #666;
+        --input-bg: #fff;
+        --input-border: #bfbfbf;
+      }
+
+      body[data-theme="sap_horizon_dark"],
+      body[data-theme="sap_horizon_hcb"] {
+        --text-color: #ccc;
+        --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        --border-color: #444;
+        --muted-color: #aaa;
+        --input-bg: #2a2e33;
+        --input-border: #555;
+      }
+      body[data-theme="sap_horizon_dark"] {
+        --page-bg: #12171c;
+        --card-bg: #1a1d21;
+      }
+      body[data-theme="sap_horizon_hcb"] {
+        --page-bg: #000;
+        --card-bg: #000;
+      }
+      body[data-theme="sap_horizon_hcw"] {
+        --page-bg: #fff;
+        --card-bg: #fff;
+      }
+
+      /* ── Base styles ── */
       *,
       *::before,
       *::after {
@@ -14,20 +49,59 @@
         margin: 0;
         padding: 20px;
         font-family: "72", Arial, Helvetica, sans-serif;
-        background: #f5f6f7;
-        color: #32363a;
+        background: var(--page-bg);
+        color: var(--text-color);
       }
       header {
-        margin-bottom: 24px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        margin: -20px -20px 24px;
+        padding: 12px 20px;
+        background: var(--page-bg);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
       }
       header h1 {
         font-size: 20px;
         margin: 0 0 4px;
       }
       header p {
-        color: #666;
+        color: var(--muted-color);
         font-size: 13px;
         margin: 0;
+      }
+
+      /* Theme switcher */
+      .theme-controls {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .theme-controls button {
+        padding: 5px 10px;
+        border: 1px solid var(--input-border);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+        background: transparent;
+        color: inherit;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .theme-controls button:hover {
+        border-color: #0070f2;
+      }
+      .theme-controls button.active {
+        background: #0070f2;
+        color: #fff;
+        border-color: #0070f2;
       }
 
       /* Main layout — content + sticky event log sidebar */
@@ -57,9 +131,9 @@
 
       /* Card */
       .card {
-        background: #fff;
+        background: var(--card-bg);
         border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--card-shadow);
         padding: 16px;
         display: flex;
         flex-direction: column;
@@ -69,7 +143,7 @@
         font-size: 14px;
         margin: 0;
         padding-bottom: 8px;
-        border-bottom: 1px solid #e5e5e5;
+        border-bottom: 1px solid var(--border-color);
       }
 
       /* Input fields */
@@ -80,16 +154,18 @@
       }
       .input-group label {
         font-size: 12px;
-        color: #666;
+        color: var(--muted-color);
       }
       input,
       textarea {
         font-family: inherit;
         font-size: 14px;
         padding: 8px 10px;
-        border: 1px solid #bfbfbf;
+        border: 1px solid var(--input-border);
         border-radius: 4px;
         width: 100%;
+        background: var(--input-bg);
+        color: var(--text-color);
       }
       input:focus,
       textarea:focus {
@@ -101,7 +177,7 @@
       /* Event log sidebar */
       .event-log-panel {
         position: sticky;
-        top: 20px;
+        top: 70px;
       }
       .event-log-panel h2 {
         font-size: 14px;
@@ -149,76 +225,20 @@
         }
       }
     </style>
-    <script type="module">
-      import "../../dist/kiosk-keyboard.bundle.js";
-
-      // UI5 Web Components used on the demo page
-      import "@ui5/webcomponents/dist/Input.js";
-      import "@ui5/webcomponents/dist/StepInput.js";
-      import "@ui5/webcomponents/dist/Label.js";
-      import "@ui5/webcomponents/dist/Button.js";
-      import "@ui5/webcomponents/dist/Switch.js";
-      import "@ui5/webcomponents/dist/TextArea.js";
-
-      // ── Global event log ──
-      const log = document.getElementById("event-log");
-      function appendLog(source, msg) {
-        const ts = new Date().toLocaleTimeString("en-GB", { hour12: false });
-        log.textContent += `[${ts}] ${source}: ${msg}\n`;
-        log.scrollTop = log.scrollHeight;
-      }
-
-      document.getElementById("clear-log").addEventListener("click", () => {
-        log.textContent = "";
-      });
-
-      // Wire all keyboards for event logging
-      document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
-        const name = kb.id || kb.getAttribute("keyboard-type") || "keyboard";
-        kb.addEventListener("key-press", (e) => {
-          const d = e.detail;
-          appendLog(name, `key-press key="${d.key}" shift=${d.shiftKey}`);
-        });
-        kb.addEventListener("layout-change", (e) => {
-          appendLog(name, `layout-change layout="${e.detail.layout}"`);
-        });
-        kb.addEventListener("keyboard-type-change", (e) => {
-          appendLog(name, `keyboard-type-change type="${e.detail.keyboardType}"`);
-        });
-        kb.addEventListener("after-open", () => appendLog(name, "after-open"));
-        kb.addEventListener("after-close", () => appendLog(name, "after-close"));
-      });
-
-      // Toggle docked keyboard
-      document.getElementById("toggle-docked").addEventListener("click", () => {
-        const docked = document.getElementById("kb-docked");
-        if (docked.open) docked.close();
-        else docked.show();
-      });
-
-      // Custom layout via instance method (no class import needed)
-      const kbCustom = document.getElementById("kb-custom");
-      kbCustom.registerLayout("demo-pin", [
-        [{ value: "1" }, { value: "2" }, { value: "3" }],
-        [{ value: "4" }, { value: "5" }, { value: "6" }],
-        [{ value: "7" }, { value: "8" }, { value: "9" }],
-        [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
-      ]);
-
-      // Auto-type toggle
-      document.getElementById("auto-type-switch").addEventListener("change", (e) => {
-        const enabled = e.target.checked;
-        const kb = document.getElementById("kb-docked");
-        kb.autoType = enabled;
-        if (!enabled) kb.resetKeyboardType();
-        appendLog("kb-docked", `autoType ${enabled ? "enabled" : "disabled"}`);
-      });
-    </script>
+    <script type="module" src="./index.js"></script>
   </head>
   <body>
     <header>
-      <h1>KioskKeyboard Web Component — Standalone</h1>
-      <p>No UI5 runtime. Pure custom element usage with native HTML inputs and UI5 Web Components.</p>
+      <div>
+        <h1>KioskKeyboard Web Component — Standalone</h1>
+        <p>No UI5 runtime. Pure custom element usage with native HTML inputs and UI5 Web Components.</p>
+      </div>
+      <div class="theme-controls">
+        <button data-theme="sap_horizon" class="active">Horizon</button>
+        <button data-theme="sap_horizon_dark">Dark</button>
+        <button data-theme="sap_horizon_hcb">HCB</button>
+        <button data-theme="sap_horizon_hcw">HCW</button>
+      </div>
     </header>
 
     <div class="page-layout">
