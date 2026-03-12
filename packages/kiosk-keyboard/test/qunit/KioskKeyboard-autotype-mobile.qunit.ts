@@ -9,11 +9,21 @@ import { getKeyElements, placeAndWait, waitForRender } from "./test-helpers";
 const deviceSystem = Device.system as Record<string, boolean>;
 let savedDeviceFlags: Record<string, boolean> = {};
 
-function overrideDevice(key: "phone" | "tablet" | "desktop", value: boolean): void {
-  if (!(key in savedDeviceFlags)) {
-    savedDeviceFlags[key] = deviceSystem[key];
+type DeviceProfile = Record<"phone" | "tablet" | "desktop", boolean>;
+
+const deviceProfiles: Record<string, DeviceProfile> = {
+  phone: { phone: true, tablet: false, desktop: false },
+  tablet: { phone: false, tablet: true, desktop: false },
+  desktop: { phone: false, tablet: false, desktop: true },
+};
+
+function emulateDevice(profile: keyof typeof deviceProfiles): void {
+  for (const [key, value] of Object.entries(deviceProfiles[profile])) {
+    if (!(key in savedDeviceFlags)) {
+      savedDeviceFlags[key] = deviceSystem[key];
+    }
+    deviceSystem[key] = value;
   }
-  deviceSystem[key] = value;
 }
 
 QUnit.module("KioskKeyboard autoType and mobile keyboard", {
@@ -453,7 +463,7 @@ QUnit.test("Auto mode still opens on desktop", async (assert) => {
 });
 
 QUnit.test("Auto mode defers on phone", async (assert) => {
-  overrideDevice("phone", true);
+  emulateDevice("phone");
 
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -475,8 +485,7 @@ QUnit.test("Auto mode defers on phone", async (assert) => {
 });
 
 QUnit.test("Auto mode defers on tablet (non-desktop)", async (assert) => {
-  overrideDevice("tablet", true);
-  overrideDevice("desktop", false);
+  emulateDevice("tablet");
 
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -498,7 +507,7 @@ QUnit.test("Auto mode defers on tablet (non-desktop)", async (assert) => {
 });
 
 QUnit.test("Auto mode: programmatic show() does not open on phone", async (assert) => {
-  overrideDevice("phone", true);
+  emulateDevice("phone");
 
   const kb = new KioskKeyboard({
     docked: true,
