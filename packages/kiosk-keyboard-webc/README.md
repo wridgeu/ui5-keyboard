@@ -271,7 +271,9 @@ KioskKeyboard.registerLayout("my-layout", [
 Or via DOM (no ES import needed — requires a bundler or import map, see note above):
 
 ```html
-<script type="module" src="kiosk-keyboard-webc/bundle"></script>
+<script type="module">
+  import "kiosk-keyboard-webc/bundle";
+</script>
 
 <input id="my-input" type="text" />
 <kiosk-keyboard id="kb" layout="pin-pad" for="my-input"></kiosk-keyboard>

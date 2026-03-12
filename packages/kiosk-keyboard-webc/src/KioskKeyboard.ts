@@ -134,19 +134,20 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  * Call `event.preventDefault()` to suppress the default input behavior.
  *
  * @param {string} key - The key value (character, `{shift}`, `{backspace}`, etc.)
- * @param {string} type - The key type (`default`, `special`, `shift`, `fkey`, `nav`, etc.)
+ * @param {boolean} shiftKey - Whether Shift is active.
+ * @param {string} [char] - The resolved character (after shift). `undefined` for action keys.
  * @public
  * @since 0.1.0
  */
 @event("key-press", { bubbles: true, cancelable: true })
 /**
- * Fired after the docked keyboard panel finishes its open animation.
+ * Fired when the docked keyboard panel opens.
  * @public
  * @since 0.1.0
  */
 @event("after-open", { bubbles: true })
 /**
- * Fired after the docked keyboard panel finishes its close animation.
+ * Fired when the docked keyboard panel closes.
  * @public
  * @since 0.1.0
  */
@@ -155,7 +156,6 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  * Fired when the active layout changes (user switch or locale resolution).
  *
  * @param {string} layout - The new layout name.
- * @param {string} previousLayout - The previous layout name.
  * @public
  * @since 0.1.0
  */

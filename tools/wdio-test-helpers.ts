@@ -34,6 +34,9 @@ export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
   await browser.execute((d) => {
     document.documentElement.setAttribute("dir", d);
     document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
+    // UI5 gates RTL styles on .sapUiRtl on <body> (set by Core at bootstrap).
+    // Toggling it here ensures the UI5-control e2e tests activate the real RTL CSS path.
+    document.body.classList.toggle("sapUiRtl", d === "rtl");
   }, dir);
   // Wait for the browser to reflow after the direction change
   await browser.execute(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));

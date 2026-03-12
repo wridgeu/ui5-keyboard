@@ -66,7 +66,7 @@ describe("layout-registry", () => {
     });
 
     it("rejects invalid layout definition", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       registerLayout("bad", [] as unknown as LayoutDefinition);
       expect(getRegisteredLayout("bad")).toBeUndefined();
     });
@@ -85,7 +85,7 @@ describe("layout-registry", () => {
     });
 
     it("cannot remove built-in layouts", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       unregisterLayout("qwerty");
       expect(getRegisteredLayout("qwerty")).toBeDefined();
     });
@@ -243,14 +243,14 @@ describe("layout-registry", () => {
 
   describe("getLayoutOrDefault - negative paths", () => {
     it("returns default for non-string argument", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       const layout = getLayoutOrDefault(undefined as unknown as string);
       expect(layout).toBeDefined();
       expect(layout.length).toBeGreaterThan(0);
     });
 
     it("returns default for whitespace-only name", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       const layout = getLayoutOrDefault("   ");
       expect(layout).toBeDefined();
       expect(layout.length).toBeGreaterThan(0);
@@ -259,7 +259,7 @@ describe("layout-registry", () => {
 
   describe("isBuiltInLayout - negative paths", () => {
     it("returns false for non-string argument", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       expect(isBuiltInLayout(123 as unknown as string)).toBe(false);
     });
   });

@@ -20,17 +20,22 @@
     {
       "files": ["*.test.ts", "*.spec.ts", "*.qunit.ts"],
       "rules": {
-        "@typescript-eslint/no-explicit-any": "off"
+        "@typescript-eslint/no-explicit-any": "off",
+        "no-unused-expressions": "off",
+        "no-shadow": "off",
+        "no-console": "off",
+        "import/no-unassigned-import": "off"
       }
     },
     {
-      "files": [
-        "packages/hotkeys/src/HotkeyManager.ts",
-        "packages/hotkeys/src/internal/SequenceManager.ts",
-        "packages/hotkeys/src/library.ts",
-        "packages/kiosk-keyboard/src/KioskKeyboard.ts",
-        "packages/kiosk-keyboard/src/library.ts"
-      ],
+      "files": ["packages/*/src/**/*.ts"],
+      "rules": {
+        "no-console": "off",
+        "import/no-unassigned-import": "off"
+      }
+    },
+    {
+      "files": ["packages/demo-app/**/*.ts"],
       "rules": {
         "import/no-unassigned-import": "off"
       }
