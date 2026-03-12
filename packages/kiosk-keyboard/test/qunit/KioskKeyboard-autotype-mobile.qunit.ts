@@ -5,11 +5,23 @@ import Device from "sap/ui/Device";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { getKeyElements, placeAndWait, waitForRender } from "./test-helpers";
 
-const sandbox = sinon.createSandbox();
+// Device.system is writable at runtime; the readonly modifier only exists in the .d.ts.
+const deviceSystem = Device.system as Record<string, boolean>;
+let savedDeviceFlags: Record<string, boolean> = {};
+
+function overrideDevice(key: "phone" | "tablet" | "desktop", value: boolean): void {
+  if (!(key in savedDeviceFlags)) {
+    savedDeviceFlags[key] = deviceSystem[key];
+  }
+  deviceSystem[key] = value;
+}
 
 QUnit.module("KioskKeyboard autoType and mobile keyboard", {
   afterEach() {
-    sandbox.restore();
+    for (const [key, value] of Object.entries(savedDeviceFlags)) {
+      deviceSystem[key] = value;
+    }
+    savedDeviceFlags = {};
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -441,7 +453,7 @@ QUnit.test("Auto mode still opens on desktop", async (assert) => {
 });
 
 QUnit.test("Auto mode defers on phone", async (assert) => {
-  sandbox.replace(Device.system, "phone", true);
+  overrideDevice("phone", true);
 
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -463,8 +475,8 @@ QUnit.test("Auto mode defers on phone", async (assert) => {
 });
 
 QUnit.test("Auto mode defers on tablet (non-desktop)", async (assert) => {
-  sandbox.replace(Device.system, "tablet", true);
-  sandbox.replace(Device.system, "desktop", false);
+  overrideDevice("tablet", true);
+  overrideDevice("desktop", false);
 
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -486,7 +498,7 @@ QUnit.test("Auto mode defers on tablet (non-desktop)", async (assert) => {
 });
 
 QUnit.test("Auto mode: programmatic show() does not open on phone", async (assert) => {
-  sandbox.replace(Device.system, "phone", true);
+  overrideDevice("phone", true);
 
   const kb = new KioskKeyboard({
     docked: true,
