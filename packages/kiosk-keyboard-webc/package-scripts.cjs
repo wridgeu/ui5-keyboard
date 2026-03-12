@@ -9,7 +9,6 @@
  *
  * Entry point: `ui5nps generate` (called from `npm run generate`).
  *
- * @see https://github.com/nicknisi/nps-utils
  * @see https://github.com/SAP/ui5-webcomponents/tree/main/packages/tools
  */
 
