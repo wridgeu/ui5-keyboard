@@ -58,7 +58,6 @@ const ICON_SHIFT_LOCKED = "locked";
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
 const VALID_FKEY_MODES: ReadonlySet<string> = new Set(Object.values(FKeyMode));
 const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(Object.values(MobileKeyboard));
-const glyphSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 // ── Native-dispatchable key allowlist ──
 const NATIVE_DISPATCHABLE_KEYS = new Set([
@@ -890,15 +889,6 @@ class KioskKeyboard extends UI5Element {
       if (key.value.length === 1) return key.value.toUpperCase();
     }
     return key.label ?? key.value;
-  }
-
-  _isSingleGlyphLabel(label: string): boolean {
-    let count = 0;
-    for (const _segment of glyphSegmenter.segment(label)) {
-      count += 1;
-      if (count > 1) return false;
-    }
-    return count === 1;
   }
 
   _getKeyAriaLabel(key: KeyDefinition): string {

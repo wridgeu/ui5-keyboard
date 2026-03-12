@@ -44,3 +44,17 @@ export function graphemeLengthAfter(value: string, offset: number): number {
   const first = segmenter.segment(after)[Symbol.iterator]().next();
   return first.done ? 0 : first.value.segment.length;
 }
+
+/**
+ * Returns true when the string contains exactly one grapheme cluster.
+ * Used to distinguish single-glyph key labels (e.g. "A", "😀", "🇩🇪")
+ * from multi-character labels (e.g. "Tab", "F1").
+ */
+export function isSingleGlyph(label: string): boolean {
+  let count = 0;
+  for (const _segment of segmenter.segment(label)) {
+    count += 1;
+    if (count > 1) return false;
+  }
+  return count === 1;
+}

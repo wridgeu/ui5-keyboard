@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { graphemeLengthBefore, graphemeLengthAfter } from "../../src/core/grapheme.js";
+import { graphemeLengthBefore, graphemeLengthAfter, isSingleGlyph } from "../../src/core/grapheme.js";
 
 describe("graphemeLengthBefore", () => {
   it("returns 0 at position 0", () => {
@@ -52,5 +52,51 @@ describe("graphemeLengthAfter", () => {
 
   it("returns 0 for offset past string length", () => {
     expect(graphemeLengthAfter("abc", 10)).toBe(0);
+  });
+});
+
+describe("isSingleGlyph", () => {
+  it("returns true for single ASCII character", () => {
+    expect(isSingleGlyph("A")).toBe(true);
+    expect(isSingleGlyph("@")).toBe(true);
+    expect(isSingleGlyph("9")).toBe(true);
+  });
+
+  it("returns false for multi-character strings", () => {
+    expect(isSingleGlyph("Tab")).toBe(false);
+    expect(isSingleGlyph("F1")).toBe(false);
+    expect(isSingleGlyph("ab")).toBe(false);
+  });
+
+  it("returns false for empty string", () => {
+    expect(isSingleGlyph("")).toBe(false);
+  });
+
+  it("returns true for surrogate pair emoji", () => {
+    expect(isSingleGlyph("😀")).toBe(true);
+    expect(isSingleGlyph("🎹")).toBe(true);
+  });
+
+  it("returns true for flag emoji (regional indicator sequence)", () => {
+    expect(isSingleGlyph("🇩🇪")).toBe(true);
+  });
+
+  it("returns true for ZWJ sequence (family emoji)", () => {
+    // 👨‍👩‍👧 = man + ZWJ + woman + ZWJ + girl — one grapheme cluster
+    expect(isSingleGlyph("👨\u200D👩\u200D👧")).toBe(true);
+  });
+
+  it("returns true for combining character sequence", () => {
+    // é as e + combining acute accent — one grapheme cluster
+    expect(isSingleGlyph("e\u0301")).toBe(true);
+  });
+
+  it("returns false for two separate emoji", () => {
+    expect(isSingleGlyph("😀😀")).toBe(false);
+  });
+
+  it("returns true for subdivision flag tag sequence", () => {
+    const englandFlag = "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}";
+    expect(isSingleGlyph(englandFlag)).toBe(true);
   });
 });

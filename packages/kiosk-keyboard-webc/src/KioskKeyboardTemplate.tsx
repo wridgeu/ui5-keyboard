@@ -1,5 +1,6 @@
 import type KioskKeyboard from "./KioskKeyboard.js";
 import { keyElementId } from "./core/dom-utils.js";
+import { isSingleGlyph } from "./core/grapheme.js";
 
 /**
  * JSX template for `<kiosk-keyboard>`.
@@ -40,7 +41,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             const isBuiltInIcon = !key.icon && iconName !== null;
             const isShift = key.value === "{shift}";
             const label = iconName ?? this._getKeyLabel(key);
-            const isSingleGlyphLabel = !isBuiltInIcon && this._isSingleGlyphLabel(label);
+            const isSingleGlyphLabel = !isBuiltInIcon && isSingleGlyph(label);
 
             return (
               <div
