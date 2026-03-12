@@ -84,8 +84,6 @@
     "@types/qunit": "^2.19.13",
     "@types/sinon": "^21.0.0",
     "@ui5/linter": "^1.20.11",
-    "@ui5/middleware-code-coverage": "2.0.3",
-    "@vitest/coverage-v8": "3.2.4",
     "@wdio/cli": "^9.0.0",
     "@wdio/local-runner": "^9.0.0",
     "@wdio/mocha-framework": "^9.0.0",

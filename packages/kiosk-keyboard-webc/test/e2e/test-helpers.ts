@@ -41,7 +41,7 @@ export async function getKeyboardRoot(hostId: string) {
  * and query for the target selector.
  */
 type PuppeteerPage = Awaited<ReturnType<Awaited<ReturnType<typeof browser.getPuppeteer>>["pages"]>>[number];
-type CDPClient = ReturnType<PuppeteerPage["client"]>;
+type CDPClient = Awaited<ReturnType<PuppeteerPage["createCDPSession"]>>;
 
 async function resolveShadowNodeId(cdp: CDPClient, hostId: string, selector: string): Promise<number> {
   const { root } = await cdp.send("DOM.getDocument", { depth: 0, pierce: true });
@@ -66,7 +66,7 @@ async function resolveShadowNodeId(cdp: CDPClient, hostId: string, selector: str
 export async function forceHoverState(hostId: string, selector: string): Promise<void> {
   const puppeteer = await browser.getPuppeteer();
   const [page] = await puppeteer.pages();
-  const cdp = page.client();
+  const cdp = await page.createCDPSession();
 
   await cdp.send("DOM.enable");
   const nodeId = await resolveShadowNodeId(cdp, hostId, selector);
@@ -78,7 +78,7 @@ export async function forceHoverState(hostId: string, selector: string): Promise
 export async function clearForcedHoverState(hostId: string, selector: string): Promise<void> {
   const puppeteer = await browser.getPuppeteer();
   const [page] = await puppeteer.pages();
-  const cdp = page.client();
+  const cdp = await page.createCDPSession();
 
   await cdp.send("DOM.enable");
   const nodeId = await resolveShadowNodeId(cdp, hostId, selector);

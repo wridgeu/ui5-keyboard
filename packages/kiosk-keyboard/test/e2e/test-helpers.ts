@@ -42,7 +42,7 @@ export function getKeyboard(containerId: string) {
 export async function forceHoverState(selector: string): Promise<void> {
   const puppeteer = await browser.getPuppeteer();
   const [page] = await puppeteer.pages();
-  const cdp = page.client();
+  const cdp = await page.createCDPSession();
 
   await cdp.send("DOM.enable");
   const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
@@ -56,7 +56,7 @@ export async function forceHoverState(selector: string): Promise<void> {
 export async function clearForcedHoverState(selector: string): Promise<void> {
   const puppeteer = await browser.getPuppeteer();
   const [page] = await puppeteer.pages();
-  const cdp = page.client();
+  const cdp = await page.createCDPSession();
 
   await cdp.send("DOM.enable");
   const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
