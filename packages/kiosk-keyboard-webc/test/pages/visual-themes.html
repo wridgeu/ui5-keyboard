@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KioskKeyboard - Theme Visual Regression</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "72", Arial, Helvetica, sans-serif;
+        background: var(--sapBackgroundColor, #f5f6f7);
+        transition: background 0.15s;
+      }
+    </style>
+    <script type="module" src="./visual-themes.js"></script>
+  </head>
+  <body>
+    <kiosk-keyboard id="kb-qwerty" layout="qwerty"></kiosk-keyboard>
+
+    <div style="margin-top: 20px">
+      <kiosk-keyboard id="kb-numpad" keyboard-type="Numpad"></kiosk-keyboard>
+    </div>
+  </body>
+</html>
