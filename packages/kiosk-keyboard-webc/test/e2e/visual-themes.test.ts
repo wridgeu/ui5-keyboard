@@ -28,12 +28,12 @@ async function openThemePage(): Promise<void> {
 }
 
 async function switchTheme(theme: string): Promise<void> {
-  await browser.execute(async (t) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (window as any).__setTheme(t);
+  // __setTheme resolves after the UI5 Web Components theme change event fires.
+  // Then verify the CSS custom properties have propagated before updating backgrounds.
+  await browser.executeAsync((t: string, done: () => void) => {
+    window.__setTheme(t).then(done);
   }, theme);
 
-  // Wait for the theme CSS custom properties to propagate
   await browser.waitUntil(
     async () =>
       browser.execute((t) => {
@@ -43,7 +43,6 @@ async function switchTheme(theme: string): Promise<void> {
     { timeout: 5_000, timeoutMsg: `Theme ${theme} did not apply within 5s` },
   );
 
-  // Update body background to match theme (so dark theme screenshots have correct bg)
   await browser.execute((bg) => {
     document.body.style.background = bg;
   }, THEME_BACKGROUNDS[theme]);
