@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Key Style Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: #fff;
+        transition: background 0.3s;
+      }
+
+      .key-compare {
+        display: flex;
+        gap: 3rem;
+        align-items: start;
+        margin-bottom: 3rem;
+      }
+
+      .demo-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .demo-item label {
+        font-size: 0.8rem;
+        color: #666;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Key style demo keyboards — compact width so single keys are prominent */
+      .demo-item kiosk-keyboard {
+        width: 180px;
+      }
+
+      /* Full keyboard previews — match the proportions of the native UI5 README images */
+      .preview {
+        margin-bottom: 2rem;
+        padding: 12px;
+        border-radius: 12px;
+        width: 624px;
+        box-sizing: border-box;
+      }
+
+      .preview kiosk-keyboard {
+        width: 600px;
+      }
+
+      .theme-controls {
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .theme-controls button {
+        padding: 0.4rem 0.8rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+
+      .theme-controls button.active {
+        background: #0070f2;
+        color: #fff;
+        border-color: #0070f2;
+      }
+    </style>
+    <script type="module" src="./key-style-demo.js"></script>
+  </head>
+  <body>
+    <!-- Theme switcher -->
+    <div class="theme-controls">
+      <button data-theme="sap_horizon" class="active">Horizon</button>
+      <button data-theme="sap_horizon_dark">Horizon Dark</button>
+      <button data-theme="sap_horizon_hcb">HCB</button>
+      <button data-theme="sap_horizon_hcw">HCW</button>
+    </div>
+
+    <!-- Key style comparison -->
+    <div class="key-compare" id="key-compare">
+      <div class="demo-item">
+        <label>Default (regular key)</label>
+        <kiosk-keyboard id="kb-default" keyboard-type="Full" layout="demo-default"></kiosk-keyboard>
+      </div>
+      <div class="demo-item">
+        <label>type: "modifier"</label>
+        <kiosk-keyboard id="kb-modifier" keyboard-type="Full" layout="demo-modifier"></kiosk-keyboard>
+      </div>
+    </div>
+
+    <!-- Full keyboard previews -->
+    <div class="preview" id="preview-qwerty" role="region" aria-label="QWERTY Preview">
+      <kiosk-keyboard layout="qwerty" keyboard-type="Full"></kiosk-keyboard>
+    </div>
+
+    <div class="preview" id="preview-numpad" role="region" aria-label="Numpad Preview">
+      <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard>
+    </div>
+
+    <div class="preview" id="preview-numeric" role="region" aria-label="Numeric Preview">
+      <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard>
+    </div>
+  </body>
+</html>

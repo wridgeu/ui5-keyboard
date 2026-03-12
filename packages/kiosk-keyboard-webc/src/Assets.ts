@@ -15,6 +15,11 @@
  * @module Assets
  */
 
+// Register global SAP theme variable loaders (--sapButton_Background, --sapBackgroundColor, etc.)
+// Without this import, theme switching (e.g. sap_horizon_dark) has no effect because the
+// global CSS custom properties that the component CSS references stay at their default values.
+import "@ui5/webcomponents-theming/dist/Assets.js";
+
 // Register i18n locale loaders (generated from src/i18n/messagebundle_*.properties)
 import "./generated/json-imports/i18n.js";
 

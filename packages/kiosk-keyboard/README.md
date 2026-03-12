@@ -191,10 +191,7 @@ import { KeyboardLayout, KeyboardType, KeyName, MobileKeyboard, FKeyMode } from 
 import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 ```
 
-Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, only `ui5/kiosk/layouts/fkey-row` and `ui5/kiosk/layouts/nav-row` are supported as stable consumer imports for composing custom variant layouts.
-
-> [!NOTE]
-> **Upgrade note:** The `fkey-row` and `nav-row` key definitions no longer set `type: "modifier"`. F-keys and navigation keys now render with visible borders (standard key style) instead of the previous transparent/Lite button style. Custom layouts that compose these rows will pick up the new styling automatically.
+Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, only `ui5/kiosk/layouts/fkey-row` and `ui5/kiosk/layouts/nav-row` are supported as stable consumer imports for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
 
 ## FLP Lifecycle (Module Cache)
 
@@ -1027,6 +1024,18 @@ Key labels use three scaling tiers:
   --ui5KioskKeyboard-keyFontSize: 1.5rem;
 }
 ```
+
+#### Key Types
+
+Keys support different visual styles via the `type` property in `KeyDefinition`:
+
+| Default                                                       | Default (hovered)                                                           | Modifier (`type: "modifier"`)                                   | Modifier (hovered)                                                            |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| ![Default key](../../docs/shared/images/key-type-default.png) | ![Default key hovered](../../docs/shared/images/key-type-default-hover.png) | ![Modifier key](../../docs/shared/images/key-type-modifier.png) | ![Modifier key hovered](../../docs/shared/images/key-type-modifier-hover.png) |
+
+- **Default** — visible border, SAP button background. Used for character keys.
+- **Modifier** — transparent background, no border (Lite button style). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
+- **Action** — emphasized style (blue). Used for Enter, Backspace.
 
 Theme preview (QWERTY layout):
 

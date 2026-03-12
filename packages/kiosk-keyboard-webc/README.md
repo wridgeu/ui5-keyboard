@@ -25,6 +25,42 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **i18n**: built-in English/German, extensible via custom resolver
 - **Custom layouts**: register/unregister layouts at runtime
 
+## Keyboard Overview
+
+QWERTY (Full):
+
+![QWERTY keyboard](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon.png)
+
+Numpad:
+
+![Numpad keyboard](../../docs/kiosk-webc/images/webc-numpad.png)
+
+Numeric:
+
+![Numeric keyboard](../../docs/kiosk-webc/images/webc-numeric.png)
+
+### Key Types
+
+Keys support different visual styles via the `type` property in `KeyDefinition`:
+
+| Default                                                       | Default (hovered)                                                           | Modifier (`type: "modifier"`)                                   | Modifier (hovered)                                                            |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| ![Default key](../../docs/shared/images/key-type-default.png) | ![Default key hovered](../../docs/shared/images/key-type-default-hover.png) | ![Modifier key](../../docs/shared/images/key-type-modifier.png) | ![Modifier key hovered](../../docs/shared/images/key-type-modifier-hover.png) |
+
+- **Default** — visible border, `--sapButton_Background`. Used for character keys.
+- **Modifier** — transparent background, no border (`--sapButton_Lite_Background`). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
+- **Action** — emphasized style (`--sapButton_Emphasized_Background`). Used for Enter, Backspace.
+
+### Theme Preview
+
+| `sap_horizon`                                                                      | `sap_horizon_dark`                                                                           |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| ![QWERTY in sap_horizon](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon.png) | ![QWERTY in sap_horizon_dark](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_dark.png) |
+
+| `sap_horizon_hcb`                                                                          | `sap_horizon_hcw`                                                                          |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| ![QWERTY in sap_horizon_hcb](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_hcb.png) | ![QWERTY in sap_horizon_hcw](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_hcw.png) |
+
 ## Installation
 
 This package is part of the [`ui5-lib-keyboard`](https://github.com/wridgeu/ui5-lib-keyboard) monorepo and is not published to npm. Install it as a workspace dependency:
@@ -121,10 +157,7 @@ import type {
 
 All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) and instance convenience delegates (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`) are part of the stable API surface.
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`layouts/fkey-row`, `layouts/nav-row`) are stable for composing custom variant layouts.
-
-> [!NOTE]
-> **Upgrade note:** The `fkey-row` and `nav-row` key definitions no longer set `type: "modifier"`. F-keys and navigation keys now render with visible borders (standard key style) instead of the previous transparent/Lite button style. Custom layouts that compose these rows will pick up the new styling automatically.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`layouts/fkey-row`, `layouts/nav-row`) are stable for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
@@ -436,7 +469,7 @@ test/
 ├── unit/                      # Vitest unit tests
 ├── component/                 # Web Test Runner component tests
 ├── e2e/                       # WebdriverIO E2E + visual regression tests
-└── pages/                     # Standalone test page
+└── pages/                     # Demo pages for screenshots and manual testing
 ```
 
 ## License
