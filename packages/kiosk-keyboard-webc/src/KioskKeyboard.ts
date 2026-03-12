@@ -117,7 +117,10 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  * framework (HTML, React, Vue, Angular) and inside UI5 apps via
  * `WebComponent.extend()` bridge.
  *
- * @tagname kiosk-keyboard
+ * @class
+ * @extends UI5Element
+ * @public
+ * @since 0.1.0
  */
 @customElement({
   tag: "kiosk-keyboard",
@@ -126,12 +129,49 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
   styles,
   languageAware: true,
 })
+/**
+ * Fired when a key is pressed on the virtual keyboard.
+ *
+ * Call `event.preventDefault()` to suppress the default input behavior.
+ *
+ * @param {string} key - The key value (character, `{shift}`, `{backspace}`, etc.)
+ * @param {string} type - The key type (`default`, `special`, `shift`, `fkey`, `nav`, etc.)
+ * @public
+ * @since 0.1.0
+ */
 @event("key-press", { bubbles: true, cancelable: true })
+/**
+ * Fired after the docked keyboard panel finishes its open animation.
+ * @public
+ * @since 0.1.0
+ */
 @event("after-open", { bubbles: true })
+/**
+ * Fired after the docked keyboard panel finishes its close animation.
+ * @public
+ * @since 0.1.0
+ */
 @event("after-close", { bubbles: true })
+/**
+ * Fired when the active layout changes (user switch or locale resolution).
+ *
+ * @param {string} layout - The new layout name.
+ * @param {string} previousLayout - The previous layout name.
+ * @public
+ * @since 0.1.0
+ */
 @event("layout-change", { bubbles: true })
+/**
+ * Fired when the keyboard type changes (manual or auto-detected).
+ *
+ * @param {string} keyboardType - The new keyboard type.
+ * @param {string} previousKeyboardType - The previous keyboard type.
+ * @param {boolean} autoDetected - Whether the change was auto-detected.
+ * @public
+ * @since 0.1.0
+ */
 @event("keyboard-type-change", { bubbles: true })
-export default class KioskKeyboard extends UI5Element {
+class KioskKeyboard extends UI5Element {
   eventDetails!: {
     "key-press": KeyPressEventDetail;
     "after-open": void;
@@ -144,57 +184,70 @@ export default class KioskKeyboard extends UI5Element {
 
   /**
    * Register a custom keyboard layout.
+   * @param sName Layout name.
+   * @param oDefinition Layout definition object.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static registerLayout = registerLayout;
+  static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
+    registerLayout(sName, oDefinition);
+  }
 
   /**
    * Remove a previously registered custom layout.
+   * @param sName Layout name to remove.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static unregisterLayout = unregisterLayout;
+  static unregisterLayout(sName: string): void {
+    unregisterLayout(sName);
+  }
 
   /**
    * Remove all custom layouts and keep built-in layouts intact.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static resetCustomLayouts = resetCustomLayouts;
+  static resetCustomLayouts(): void {
+    resetCustomLayouts();
+  }
 
   /**
    * Get a registered layout definition by name.
+   * @param sName Layout name.
+   * @returns The layout definition, or undefined if not found.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static getRegisteredLayout = getRegisteredLayout;
+  static getRegisteredLayout(sName: string): LayoutDefinition | undefined {
+    return getRegisteredLayout(sName);
+  }
 
   /**
    * Get all registered layout names (built-in and custom).
+   * @returns Array of layout names.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static getRegisteredLayoutNames = getRegisteredLayoutNames;
+  static getRegisteredLayoutNames(): string[] {
+    return getRegisteredLayoutNames();
+  }
 
   /**
    * Check whether a layout name belongs to a built-in layout.
+   * @param sName Layout name.
+   * @returns True if the layout is built-in.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static isBuiltInLayout = isBuiltInLayout;
+  static isBuiltInLayout(sName: string): boolean {
+    return isBuiltInLayout(sName);
+  }
 
   /**
    * Check whether a layout is secondary (non-alphabetic).
    * Secondary layouts cannot become the base layout.
    * @public
-   * @static
    * @since 0.1.0
    */
   static isSecondaryLayout(name: string): boolean {
@@ -203,43 +256,53 @@ export default class KioskKeyboard extends UI5Element {
 
   /**
    * Register a locale-to-layout mapping.
+   * @param sLocale Locale code (e.g. "de", "fr").
+   * @param sLayout Layout name to use for this locale.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static registerLocaleLayout = registerLocaleLayout;
+  static registerLocaleLayout(sLocale: string, sLayout: string): void {
+    registerLocaleLayout(sLocale, sLayout);
+  }
 
   /**
    * Remove a locale-to-layout mapping.
+   * @param sLocale Locale code to remove.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static unregisterLocaleLayout = unregisterLocaleLayout;
+  static unregisterLocaleLayout(sLocale: string): void {
+    unregisterLocaleLayout(sLocale);
+  }
 
   /**
    * Remove all custom locale-to-layout mappings.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static resetLocaleLayouts = resetLocaleLayouts;
+  static resetLocaleLayouts(): void {
+    resetLocaleLayouts();
+  }
 
   /**
    * Get the layout name for the current locale.
+   * @returns The layout name for the current locale.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static getLocaleLayout = getLocaleLayout;
+  static getLocaleLayout(): string {
+    return getLocaleLayout();
+  }
 
   /**
    * Set a custom i18n resolver for translating keyboard labels.
+   * @param fn Resolver function or null to reset.
    * @public
-   * @static
    * @since 0.1.0
    */
-  static setI18nResolver = setI18nResolver;
+  static setI18nResolver(fn: ((key: string, locale: string, defaultText: string) => string | undefined) | null): void {
+    setI18nResolver(fn);
+  }
 
   // ── Public reactive properties (synced with attributes) ──
 
@@ -789,14 +852,6 @@ export default class KioskKeyboard extends UI5Element {
    * Return the native `<input>` or `<textarea>` to type into, or `null`
    * to fall back to the built-in resolver (which traverses light DOM and
    * up to 3 levels of shadow DOM).
-   *
-   * @example
-   * ```ts
-   * keyboard.setTargetResolver((el) => {
-   *   // Custom control with deeply nested input
-   *   return el.querySelector('.my-inner-wrapper input');
-   * });
-   * ```
    * @public
    * @since 0.1.0
    */
@@ -1408,3 +1463,5 @@ export default class KioskKeyboard extends UI5Element {
 }
 
 KioskKeyboard.define();
+
+export default KioskKeyboard;
