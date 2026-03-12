@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>KioskKeyboard Web Component — Standalone Test Page</title>
     <style>
+      /* ── Theme tokens (CSS custom properties) ── */
+      :root {
+        --page-bg: #f5f6f7;
+        --text-color: #32363a;
+        --card-bg: #fff;
+        --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        --border-color: #e5e5e5;
+        --muted-color: #666;
+        --input-bg: #fff;
+        --input-border: #bfbfbf;
+      }
+
+      body[data-theme="sap_horizon_dark"],
+      body[data-theme="sap_horizon_hcb"] {
+        --text-color: #ccc;
+        --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        --border-color: #444;
+        --muted-color: #aaa;
+        --input-bg: #2a2e33;
+        --input-border: #555;
+      }
+      body[data-theme="sap_horizon_dark"] {
+        --page-bg: #12171c;
+        --card-bg: #1a1d21;
+      }
+      body[data-theme="sap_horizon_hcb"] {
+        --page-bg: #000;
+        --card-bg: #000;
+      }
+      body[data-theme="sap_horizon_hcw"] {
+        --page-bg: #fff;
+        --card-bg: #fff;
+      }
+
+      /* ── Base styles ── */
       *,
       *::before,
       *::after {
@@ -14,8 +49,8 @@
         margin: 0;
         padding: 20px;
         font-family: "72", Arial, Helvetica, sans-serif;
-        background: #f5f6f7;
-        color: #32363a;
+        background: var(--page-bg);
+        color: var(--text-color);
       }
       header {
         position: sticky;
@@ -23,8 +58,8 @@
         z-index: 10;
         margin: -20px -20px 24px;
         padding: 12px 20px;
-        background: inherit;
-        border-bottom: 1px solid #e5e5e5;
+        background: var(--page-bg);
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -36,7 +71,7 @@
         margin: 0 0 4px;
       }
       header p {
-        color: #666;
+        color: var(--muted-color);
         font-size: 13px;
         margin: 0;
       }
@@ -96,9 +131,9 @@
 
       /* Card */
       .card {
-        background: #fff;
+        background: var(--card-bg);
         border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--card-shadow);
         padding: 16px;
         display: flex;
         flex-direction: column;
@@ -108,7 +143,7 @@
         font-size: 14px;
         margin: 0;
         padding-bottom: 8px;
-        border-bottom: 1px solid #e5e5e5;
+        border-bottom: 1px solid var(--border-color);
       }
 
       /* Input fields */
@@ -119,16 +154,18 @@
       }
       .input-group label {
         font-size: 12px;
-        color: #666;
+        color: var(--muted-color);
       }
       input,
       textarea {
         font-family: inherit;
         font-size: 14px;
         padding: 8px 10px;
-        border: 1px solid #bfbfbf;
+        border: 1px solid var(--input-border);
         border-radius: 4px;
         width: 100%;
+        background: var(--input-bg);
+        color: var(--text-color);
       }
       input:focus,
       textarea:focus {

@@ -13,50 +13,14 @@ import "@ui5/webcomponents/dist/Switch.js";
 import "@ui5/webcomponents/dist/TextArea.js";
 
 // ── Theme switcher ──
-const THEME_BACKGROUNDS = {
-  sap_horizon: "#f5f6f7",
-  sap_horizon_dark: "#12171c",
-  sap_horizon_hcb: "#000",
-  sap_horizon_hcw: "#fff",
-};
-
-const CARD_BACKGROUNDS = {
-  sap_horizon: "#fff",
-  sap_horizon_dark: "#1a1d21",
-  sap_horizon_hcb: "#000",
-  sap_horizon_hcw: "#fff",
-};
-
+// Theme tokens are defined as CSS custom properties in index.html.
+// Switching themes only requires updating the data-theme attribute on <body>
+// and calling setTheme() for the UI5 Web Components.
 document.querySelectorAll(".theme-controls button").forEach((btn) => {
   btn.addEventListener("click", async () => {
     const theme = btn.dataset.theme;
+    document.body.dataset.theme = theme;
     await setTheme(theme);
-
-    const isDark = theme === "sap_horizon_dark" || theme === "sap_horizon_hcb";
-
-    document.body.style.background = THEME_BACKGROUNDS[theme];
-    document.body.style.color = isDark ? "#ccc" : "#32363a";
-
-    document.querySelectorAll(".card").forEach((c) => {
-      c.style.background = CARD_BACKGROUNDS[theme];
-      c.style.boxShadow = isDark ? "0 1px 4px rgba(0,0,0,0.4)" : "0 1px 4px rgba(0,0,0,0.1)";
-    });
-    document.querySelectorAll(".card h2").forEach((h) => {
-      h.style.borderBottomColor = isDark ? "#444" : "#e5e5e5";
-    });
-    document.querySelectorAll("label, .input-group label").forEach((l) => {
-      l.style.color = isDark ? "#aaa" : "#666";
-    });
-    document.querySelectorAll("header p").forEach((p) => {
-      p.style.color = isDark ? "#888" : "#666";
-    });
-    document.querySelectorAll("input, textarea").forEach((el) => {
-      el.style.background = isDark ? "#2a2e33" : "#fff";
-      el.style.color = isDark ? "#ccc" : "#32363a";
-      el.style.borderColor = isDark ? "#555" : "#bfbfbf";
-    });
-    document.querySelector("header").style.borderBottomColor = isDark ? "#444" : "#e5e5e5";
-
     document.querySelectorAll(".theme-controls button").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
   });
