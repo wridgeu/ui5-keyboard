@@ -232,29 +232,13 @@ ui5-keyboard/
 
 ## Documentation
 
-| Document                                                                                         | Description                                |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------ |
-| [Hotkeys Architecture](./docs/hotkeys/ARCHITECTURE.md)                                           | Internal design of the hotkeys library     |
-| [Kiosk Keyboard Architecture](./docs/kiosk/ARCHITECTURE.md)                                      | Internal design of the kiosk keyboard      |
-| [Kiosk Web Component Architecture](./docs/kiosk-webc/ARCHITECTURE.md)                            | Internal design of the kiosk web component |
-| [TypeScript Decorator Setup](./docs/kiosk-webc/TYPESCRIPT-DECORATOR-SETUP.md)                    | UI5 WC TypeScript and decorator config     |
-| [Kiosk Error Handling and DX](./docs/kiosk/ERROR-HANDLING-DX.md)                                 | Error handling consistency proposal        |
-| [Docs Index & Conventions](./docs/README.md)                                                     | Doc structure, naming, and lifecycle       |
-| [Glossary](./docs/GLOSSARY.md)                                                                   | Shared terms and concepts                  |
-| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                               | Sequence system design and rationale       |
-| [Alternatives Research](./docs/hotkeys/ALTERNATIVES-RESEARCH.md)                                 | Comparison with alternative approaches     |
-| [Kiosk Popover Layout Switch Behavior](./docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)           | Known popover behavior and mitigation      |
-| [UI5 Transpile Crash Deep Dive](./docs/kiosk/AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)          | Tooling crash analysis and fixes           |
-| [API Stability Policy](./docs/shared/API-STABILITY.md)                                           | Stable vs internal import boundaries       |
-| [UI5 Event Handling Deep Dive](./docs/shared/UI5-EVENT-HANDLING-DEEP-DIVE.md)                    | How UI5 processes keyboard events          |
-| [UI5 TypeScript Event Typing](./docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)                      | TypeScript patterns for UI5 events         |
-| [UI5 Web Component Consumption Research](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption guidance     |
-| [Hotkeys Backward Compatibility Proposal](./docs/hotkeys/proposals/BACKWARD-COMPATIBILITY.md)    | Planned compatibility work                 |
-| [Kiosk Backward Compatibility Proposal](./docs/kiosk/proposals/BACKWARD-COMPATIBILITY.md)        | Planned compatibility work                 |
-| [Tab and Done Keys Proposal](./docs/kiosk/proposals/TAB-AND-DONE-KEYS.md)                        | Proposed special-key behavior              |
-| [Kiosk i18n Extensibility Notes](./docs/kiosk/history/I18N-EXTENSIBILITY.md)                     | Historical i18n extension notes            |
-| [Kiosk Web Component Package (History)](./docs/kiosk/history/WEBCOMPONENT-PACKAGE.md)            | Web component package design notes         |
-| [Kiosk History Notes](./docs/kiosk/history/)                                                     | Archived implementation design notes       |
+| Document                                                                                | Description                                          |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| [Glossary](./docs/GLOSSARY.md)                                                          | Shared terms and concepts across all packages        |
+| [API Stability Policy](./docs/shared/API-STABILITY.md)                                  | Stable vs internal import boundaries                 |
+| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                      | Hotkeys sequence system design and rationale         |
+| [UI5 Web Component Consumption](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption guidance               |
+| [Docs Index](./docs/README.md)                                                          | Full index of all docs (incl. internal & historical) |
 
 ## License
 
