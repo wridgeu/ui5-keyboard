@@ -65,13 +65,12 @@ themes/
   template: KioskKeyboardTemplate,
   styles,
   languageAware: true,
-  themeAware: true,
 })
 ```
 
 - `jsxRenderer`: Preact-based JSX rendering engine provided by UI5 WC
 - `languageAware: true`: re-renders on UI5 language change (keeps ARIA labels current)
-- `themeAware: true`: re-renders on theme change
+- `themeAware` is intentionally omitted: the component uses only CSS custom properties (`--sap*`) which update automatically via the CSS cascade when themes change, so no template re-render is needed
 
 Events are declared with `@event` from `event-strict.js`:
 
@@ -447,12 +446,15 @@ Four Horizon variant bundles exist (required by the UI5 WC build tooling) but ar
 ## Build Pipeline
 
 ```
-npm run generate    →  ui5nps generate (theme CSS modules, i18n JSON, i18n-defaults.ts)
-tsc                 →  TypeScript compilation (src/ → dist/)
+npm run generate     →  ui5nps generate (theme CSS modules, i18n JSON, i18n-defaults.ts)
+tsc                  →  TypeScript compilation (src/ → dist/)
 npm run build:bundle →  vite build (dist/bundle.esm.js → dist/kiosk-keyboard.bundle.js)
+npm run generateAPI  →  CEM generation + validation (on-demand, see CUSTOM-ELEMENTS-MANIFEST.md)
 ```
 
 The bundle step uses Vite in library mode with `inlineDynamicImports: true` to produce a single self-contained file that inlines all UI5 WC framework dependencies.
+
+CEM generation (`generateAPI`) is a separate on-demand step that produces `custom-elements.json`, IDE integration files (VS Code, JetBrains), and validates the public API documentation. See [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md) for details.
 
 ### Package Exports
 

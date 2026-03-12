@@ -5,4 +5,5 @@ Documentation for the `kiosk-keyboard-webc` package, the native web component va
 ## Current
 
 - [Architecture](./ARCHITECTURE.md)
+- [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md)
 - [TypeScript and Decorator Setup](./TYPESCRIPT-DECORATOR-SETUP.md)
