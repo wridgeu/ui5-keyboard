@@ -464,8 +464,9 @@ class KioskKeyboard extends UI5Element {
   private _layoutSwitchedByUser = false;
   private _pendingAnnouncement: string | null = null;
   private _deferredFocusOutCloseId: number | null = null;
-  private _heightResizeObserver: ResizeObserver | null = null;
+  private _resizeObserver: ResizeObserver | null = null;
   private _naturalContentHeight: number | null = null;
+  private _lastHostHeight: number | null = null;
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   private static readonly _inputModeSuppressions = new WeakMap<
     HTMLElement,
@@ -603,14 +604,14 @@ class KioskKeyboard extends UI5Element {
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false });
     this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd);
 
-    this._setupHeightObserver();
+    this._setupResizeObserver();
   }
 
   onExitDOM(): void {
     KioskKeyboard._instances.delete(this);
     this._teardownAutoShow();
     this._teardownPhysicalKeyHighlight();
-    this._teardownHeightObserver();
+    this._teardownResizeObserver();
     this._restoreInputMode();
     this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
@@ -653,6 +654,12 @@ class KioskKeyboard extends UI5Element {
     ) {
       this._naturalContentHeight = root.scrollHeight;
     }
+
+    // Apply responsive sizing classes (width + height) after each render.
+    // This ensures classes survive template re-renders which reconcile the
+    // class attribute to only what the template specifies.
+    this._lastHostHeight = this.getBoundingClientRect().height;
+    this._applyResponsiveClasses();
 
     // Stable height - only for non-docked Full keyboards, matching UI5 control behavior.
     // Docked keyboards minimise their footprint; non-Full types have no layout switches
@@ -1474,44 +1481,70 @@ class KioskKeyboard extends UI5Element {
     this._clearHighlight();
   }
 
-  // ── Height-responsive sizing (ResizeObserver) ──
+  // ── Responsive sizing (ResizeObserver) ──
 
-  private _setupHeightObserver(): void {
-    this._heightResizeObserver = new ResizeObserver((entries) => {
+  private _setupResizeObserver(): void {
+    if (typeof ResizeObserver === "undefined") return;
+    this._resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        this._applyHeightClasses(entry.contentRect.height);
+        this._lastHostHeight = entry.contentRect.height;
       }
+      this._applyResponsiveClasses();
     });
-    this._heightResizeObserver.observe(this);
+    this._resizeObserver.observe(this);
   }
 
-  private _teardownHeightObserver(): void {
-    if (this._heightResizeObserver) {
-      this._heightResizeObserver.disconnect();
-      this._heightResizeObserver = null;
+  private _teardownResizeObserver(): void {
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
     }
   }
 
-  private _applyHeightClasses(hostHeight: number): void {
+  /**
+   * Applies width and height responsive classes to the root element.
+   *
+   * Width: mirrors @container inline-size breakpoints via JS classes.
+   * In CQ browsers, CSS @container rules handle width natively; these
+   * classes are wrapped in @supports not (container-type: inline-size)
+   * so they only take effect in non-CQ browsers (older webviews, etc.).
+   *
+   * Height: applied in all browsers — detects external height constraints
+   * (host height < natural content height) and applies compact layout.
+   *
+   * Called from both ResizeObserver (on resize) and onAfterRendering
+   * (to survive template re-renders that reconcile the class attribute).
+   */
+  private _applyResponsiveClasses(): void {
     const root = this.shadowRoot?.querySelector<HTMLElement>(".kiosk-keyboard");
     if (!root) return;
 
-    // Skip height classes for docked keyboards (viewport-driven, not container-constrained)
+    const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+    // ── Width ──
+    const cs = getComputedStyle(root);
+    const rootContentWidth = root.clientWidth - Number.parseFloat(cs.paddingLeft) - Number.parseFloat(cs.paddingRight);
+    const isCompact = rootContentWidth <= 20 * remPx;
+    const isNarrow = rootContentWidth <= 30 * remPx;
+    root.classList.toggle("kiosk-keyboard--cq-sm", isNarrow && !isCompact);
+    root.classList.toggle("kiosk-keyboard--cq-xs", isCompact);
+
+    // ── Height ──
+    // Skip for docked keyboards (viewport-driven, not container-constrained)
     // or if natural content height hasn't been measured yet.
     if (this.docked || this._naturalContentHeight === null) {
       root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
       return;
     }
 
-    // Only apply height classes when the keyboard is externally constrained,
-    // i.e., the host height is smaller than the keyboard's natural content height.
-    // This prevents naturally short keyboards (F-Keys, Nav) from triggering.
+    // Only apply when externally constrained (host height < natural content height).
+    // Prevents naturally short keyboards (F-Keys, Nav) from triggering.
+    const hostHeight = this._lastHostHeight ?? this.getBoundingClientRect().height;
     if (this._naturalContentHeight <= hostHeight + 1) {
       root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
       return;
     }
 
-    const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const isTiny = hostHeight <= 12 * remPx;
     const isShort = hostHeight <= 16 * remPx;
     root.classList.toggle("kiosk-keyboard--cq-short", isShort && !isTiny);

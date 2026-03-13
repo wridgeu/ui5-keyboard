@@ -155,5 +155,33 @@
         ></kiosk-keyboard>
       </div>
     </div>
+
+    <div class="section">
+      <h2>19. Ancestor-Constrained (flex parent 400x250)</h2>
+      <div
+        id="kb-ancestor-constrained-wrap"
+        style="display: flex; flex-direction: column; width: 400px; height: 250px; overflow: hidden"
+      >
+        <kiosk-keyboard
+          id="kb-ancestor-constrained"
+          layout="qwerty"
+          style="flex: 1; min-height: 0; overflow: hidden"
+        ></kiosk-keyboard>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>20. Ancestor-Constrained Severely (flex parent 400x180)</h2>
+      <div
+        id="kb-ancestor-tiny-wrap"
+        style="display: flex; flex-direction: column; width: 400px; height: 180px; overflow: hidden"
+      >
+        <kiosk-keyboard
+          id="kb-ancestor-tiny"
+          layout="qwerty"
+          style="flex: 1; min-height: 0; overflow: hidden"
+        ></kiosk-keyboard>
+      </div>
+    </div>
   </body>
 </html>

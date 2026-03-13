@@ -977,21 +977,24 @@ Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_hor
 
 Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
-| Property                               | Default                                           | Description                               |
-| -------------------------------------- | ------------------------------------------------- | ----------------------------------------- |
-| `--ui5KioskKeyboard-padding`           | `0.75rem`                                         | Container padding                         |
-| `--ui5KioskKeyboard-keyGap`            | `0.375rem`                                        | Gap between keys and rows                 |
-| `--ui5KioskKeyboard-keyHeight`         | `3rem`                                            | Key height / touch target                 |
-| `--ui5KioskKeyboard-keyPaddingInline`  | `0.25rem`                                         | Horizontal key padding                    |
-| `--ui5KioskKeyboard-keyFontSize`       | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)` | Key label font size                       |
-| `--ui5KioskKeyboard-keyShadow`         | _(theme)_                                         | Key resting shadow                        |
-| `--ui5KioskKeyboard-keyShadowHover`    | _(theme)_                                         | Key hover shadow                          |
-| `--ui5KioskKeyboard-maxWidth`          | `100%`                                            | Max width for the default inline keyboard |
-| `--ui5KioskKeyboard-dockedMaxWidth`    | `1024px`                                          | Max width when docked                     |
-| `--ui5KioskKeyboard-dockedShadow`      | _(theme)_                                         | Shadow when docked                        |
-| `--ui5KioskKeyboard-dockedZIndex`      | `100`                                             | Z-index for the docked keyboard           |
-| `--ui5KioskKeyboard-numpadMaxWidth`    | `20rem`                                           | Numpad container max-width                |
-| `--ui5KioskKeyboard-numpadKeyMinWidth` | `4rem`                                            | Numpad key min-width                      |
+| Property                                 | Default                                           | Description                               |
+| ---------------------------------------- | ------------------------------------------------- | ----------------------------------------- |
+| `--ui5KioskKeyboard-padding`             | `0.75rem`                                         | Container padding                         |
+| `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                        | Gap between keys and rows                 |
+| `--ui5KioskKeyboard-keyHeight`           | `3rem`                                            | Key height / touch target                 |
+| `--ui5KioskKeyboard-keyPaddingInline`    | `0.25rem`                                         | Horizontal key padding                    |
+| `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)` | Key label font size                       |
+| `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                         | Key resting shadow                        |
+| `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                         | Key hover shadow                          |
+| `--ui5KioskKeyboard-maxWidth`            | `100%`                                            | Max width for the default inline keyboard |
+| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                          | Max width when docked                     |
+| `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                         | Shadow when docked                        |
+| `--ui5KioskKeyboard-dockedZIndex`        | `100`                                             | Z-index for the docked keyboard           |
+| `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                  | Modifier / action key font size           |
+| `--ui5KioskKeyboard-modifierShadow`      | _(theme)_                                         | Modifier key resting shadow               |
+| `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                         | Modifier key hover shadow                 |
+| `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                           | Numpad container max-width                |
+| `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                            | Numpad key min-width                      |
 
 Override `--ui5KioskKeyboard-dockedZIndex` to adjust the docked keyboard's stacking layer.
 
@@ -1011,11 +1014,11 @@ Responsive font scaling follows the keyboard's rendered width, so embedded keybo
 
 Key labels use three scaling tiers:
 
-| Tier                  | Applies to                                     | Scaling                                                                                                       |
-| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.         |
-| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                      |
-| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Fixed at the theme's base font-size (`@sapUiFontSize`). These keys are wider and use standard UI text sizing. |
+| Tier                  | Applies to                                     | Scaling                                                                                                                                            |
+| --------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                              |
+| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                                                           |
+| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Defaults to the theme's base font-size (`@sapUiFontSize`). Scaled down in height-constrained containers via `--ui5KioskKeyboard-modifierFontSize`. |
 
 ```css
 /* Example: larger keys for kiosk terminals */

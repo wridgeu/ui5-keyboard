@@ -1286,6 +1286,9 @@ export default class KioskKeyboard extends Control {
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
     this._keyboardTypeExplicit = false;
+    // Reset cached natural height so height classes are re-evaluated after
+    // the type change triggers a re-render.
+    this._naturalContentHeight = null;
     this.setProperty("keyboardType", KeyboardType.Full);
     if (KeyboardType.Full !== sPrevious) {
       this.fireEvent("keyboardTypeChange", {

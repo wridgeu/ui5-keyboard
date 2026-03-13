@@ -57,10 +57,32 @@
   --_kiosk-kb-modifier-font-base: var(--kiosk-keyboard-modifier-font-size);
 }
 
-/* ---- Responsive font scaling via container query ----
-   Uses min() to cap rather than hard-replace the consumer-provided value.
+/* ---- Responsive font scaling ----
+   Width-responsive sizing uses two mechanisms:
+   1. CSS @container queries fire instantly in supporting browsers.
+   2. JS-driven classes (--cq-sm, --cq-xs) provide equivalent behavior
+      in browsers without container query support (e.g. older webviews).
+   Both use min() to cap rather than hard-replace consumer-provided values.
    A consumer who sets --kiosk-keyboard-key-font-size: 0.75rem keeps that
    value; one who sets 1.5rem gets capped to 1rem / 0.875rem. ---- */
+
+/* JS-driven width fallback (non-CQ browsers only) */
+@supports not (container-type: inline-size) {
+  .kiosk-keyboard--cq-sm .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 1rem);
+  }
+  .kiosk-keyboard--cq-xs .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.875rem);
+  }
+
+  /* Mixed: narrow + short (non-CQ) */
+  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short .kiosk-key,
+  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.75rem);
+  }
+}
+
+/* CSS @container rules (instant response in CQ-capable browsers) */
 @container keyboard (max-width: 30rem) {
   .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 1rem);
@@ -88,7 +110,7 @@
   --kiosk-keyboard-modifier-font-size: min(var(--_kiosk-kb-modifier-font-base), 0.75rem);
 }
 
-/* Mixed: narrow + short -- font reduction only when both axes are constrained */
+/* Mixed: narrow + short (CQ browsers) -- @container handles width, classes handle height */
 @container keyboard (max-width: 20rem) {
   .kiosk-keyboard--cq-short .kiosk-key,
   .kiosk-keyboard--cq-tiny .kiosk-key {
@@ -442,7 +464,10 @@
 /* Multi-character labels (F1, F10, Home, PgUp, Space):
    scale font proportionally to the key's own inline width (cqi),
    capped at 1em so it never exceeds the base key font-size.
-   All same-width keys in a row get identical sizing. */
+   All same-width keys in a row get identical sizing.
+   Progressive enhancement: cqi units require container query support.
+   In non-CQ browsers, the clamp() expression is invalid and labels
+   inherit the key's base font-size as a functional fallback. */
 .kiosk-key__label--multi {
   font-size: clamp(0.5rem, calc(100cqi * 0.35), 1em);
 }

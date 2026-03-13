@@ -121,6 +121,122 @@ QUnit.test("Cleanup on exit() removes resize observer", async (assert) => {
 // Font-size capping (min() preserves smaller consumer values)
 // ──────────────────────────────────────────────
 
+// ──────────────────────────────────────────────
+// Height-responsive breakpoint classes
+// ──────────────────────────────────────────────
+
+QUnit.test("Applies cq-short class when externally constrained (height <= 16rem)", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  // Simulate measured natural height (large enough to count as constrained)
+  (kb as any)._naturalContentHeight = 400;
+
+  // Constrained to 16rem — triggers cq-short
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 16 * remPx);
+
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short applied at 16rem height");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny absent at 16rem height");
+
+  kb.destroy();
+});
+
+QUnit.test("Applies cq-tiny class when severely constrained (height <= 12rem)", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  (kb as any)._naturalContentHeight = 400;
+
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 12 * remPx);
+
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny applied at 12rem height");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short absent when cq-tiny");
+
+  kb.destroy();
+});
+
+QUnit.test("No height classes when keyboard is not externally constrained", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+
+  // Natural height equals actual height — not constrained
+  (kb as any)._naturalContentHeight = 300;
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 300);
+
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short absent when unconstrained");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny absent when unconstrained");
+
+  kb.destroy();
+});
+
+QUnit.test("No height classes for docked keyboards", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  (kb as any)._naturalContentHeight = 400;
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 12 * remPx);
+
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short absent for docked");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny absent for docked");
+
+  kb.destroy();
+});
+
+QUnit.test("resetKeyboardType() clears cached natural height", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Simulate cached natural height
+  (kb as any)._naturalContentHeight = 350;
+  assert.strictEqual((kb as any)._naturalContentHeight, 350, "Natural height cached");
+
+  kb.resetKeyboardType();
+  assert.strictEqual((kb as any)._naturalContentHeight, null, "Natural height reset after resetKeyboardType()");
+
+  kb.destroy();
+});
+
+QUnit.test("Height classes update when constraint changes", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()!;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  (kb as any)._naturalContentHeight = 400;
+
+  // Start constrained (tiny)
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 10 * remPx);
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "Starts as tiny");
+
+  // Grow to short
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 15 * remPx);
+  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-short"), "Transitions to short");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny removed");
+
+  // Grow to unconstrained
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 400);
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short removed at full height");
+  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny removed at full height");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Font-size capping (min() preserves smaller consumer values)
+// ──────────────────────────────────────────────
+
 QUnit.test("Responsive class preserves custom font-size below the cap", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

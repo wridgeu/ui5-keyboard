@@ -341,22 +341,25 @@ kb.setTargetResolver(null);
 
 Override these on the `:host` or a parent element to customize appearance:
 
-| Property                                | Default                                          | Description                                     |
-| --------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
-| `--kiosk-keyboard-padding`              | `0.75rem`                                        | Container padding                               |
-| `--kiosk-keyboard-key-gap`              | `0.375rem`                                       | Gap between keys                                |
-| `--kiosk-keyboard-key-height`           | `3rem`                                           | Key height                                      |
-| `--kiosk-keyboard-key-font-size`        | `calc(var(--kiosk-keyboard-key-height) * 0.375)` | Key font size (all key types in Numpad/Numeric) |
-| `--kiosk-keyboard-key-padding-inline`   | `0.25rem`                                        | Horizontal key padding                          |
-| `--kiosk-keyboard-key-padding`          | `0 0.25rem`                                      | Full padding shorthand (uses padding-inline)    |
-| `--kiosk-keyboard-key-shadow`           | _(subtle)_                                       | Box shadow for keys at rest                     |
-| `--kiosk-keyboard-key-shadow-hover`     | _(subtle)_                                       | Box shadow for keys on hover                    |
-| `--kiosk-keyboard-max-width`            | `100%`                                           | Max width for the default inline keyboard       |
-| `--kiosk-keyboard-docked-max-width`     | `1024px`                                         | Max width in docked mode                        |
-| `--kiosk-keyboard-docked-shadow`        | _(subtle)_                                       | Box shadow for the docked container             |
-| `--kiosk-keyboard-docked-z-index`       | `100`                                            | Z-index for the docked keyboard                 |
-| `--kiosk-keyboard-numpad-max-width`     | `20rem`                                          | Max width for numpad layout                     |
-| `--kiosk-keyboard-numpad-key-min-width` | `4rem`                                           | Minimum key width in numpad layout              |
+| Property                                 | Default                                          | Description                                     |
+| ---------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `--kiosk-keyboard-padding`               | `0.75rem`                                        | Container padding                               |
+| `--kiosk-keyboard-key-gap`               | `0.375rem`                                       | Gap between keys                                |
+| `--kiosk-keyboard-key-height`            | `3rem`                                           | Key height                                      |
+| `--kiosk-keyboard-key-font-size`         | `calc(var(--kiosk-keyboard-key-height) * 0.375)` | Key font size (all key types in Numpad/Numeric) |
+| `--kiosk-keyboard-key-padding-inline`    | `0.25rem`                                        | Horizontal key padding                          |
+| `--kiosk-keyboard-key-padding`           | `0 0.25rem`                                      | Full padding shorthand (uses padding-inline)    |
+| `--kiosk-keyboard-key-shadow`            | _(subtle)_                                       | Box shadow for keys at rest                     |
+| `--kiosk-keyboard-key-shadow-hover`      | _(subtle)_                                       | Box shadow for keys on hover                    |
+| `--kiosk-keyboard-max-width`             | `100%`                                           | Max width for the default inline keyboard       |
+| `--kiosk-keyboard-docked-max-width`      | `1024px`                                         | Max width in docked mode                        |
+| `--kiosk-keyboard-docked-shadow`         | _(subtle)_                                       | Box shadow for the docked container             |
+| `--kiosk-keyboard-docked-z-index`        | `100`                                            | Z-index for the docked keyboard                 |
+| `--kiosk-keyboard-modifier-font-size`    | `var(--sapFontSize, 0.875rem)`                   | Modifier / action key font size                 |
+| `--kiosk-keyboard-modifier-shadow`       | _(subtle)_                                       | Box shadow for modifier keys at rest            |
+| `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                       | Box shadow for modifier keys on hover           |
+| `--kiosk-keyboard-numpad-max-width`      | `20rem`                                          | Max width for numpad layout                     |
+| `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                           | Minimum key width in numpad layout              |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 
@@ -370,17 +373,17 @@ kiosk-keyboard {
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-The component uses container queries for narrow-container scaling, so embedded keyboards still respond to the space they actually get instead of only the viewport size. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem` — but a consumer-provided value that is already smaller than the cap is preserved.
+Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem` — but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects externally constrained containers and reduces key height, gaps, and modifier font-size automatically.
 
 #### Label Sizing
 
 Key labels use three scaling tiers:
 
-| Tier                  | Applies to                                     | Scaling                                                                                                      |
-| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.        |
-| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                     |
-| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Fixed at the theme's base font-size (`--sapFontSize`). These keys are wider and use standard UI text sizing. |
+| Tier                  | Applies to                                     | Scaling                                                                                                                                           |
+| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                             |
+| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                                                          |
+| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Defaults to the theme's base font-size (`--sapFontSize`). Scaled down in height-constrained containers via `--kiosk-keyboard-modifier-font-size`. |
 
 Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stacking layer.
 

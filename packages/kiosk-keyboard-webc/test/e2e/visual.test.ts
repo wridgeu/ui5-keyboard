@@ -85,6 +85,16 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const kb = await getKeyboardRoot("kb-height-tiny");
     await expect(kb).toMatchElementSnapshot("webc-height-tiny");
   });
+
+  it("should match ancestor-constrained container (flex parent 400x250)", async () => {
+    const wrap = await $("#kb-ancestor-constrained-wrap");
+    await expect(wrap).toMatchElementSnapshot("webc-ancestor-constrained");
+  });
+
+  it("should match ancestor-constrained severely (flex parent 400x180)", async () => {
+    const wrap = await $("#kb-ancestor-tiny-wrap");
+    await expect(wrap).toMatchElementSnapshot("webc-ancestor-tiny");
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {

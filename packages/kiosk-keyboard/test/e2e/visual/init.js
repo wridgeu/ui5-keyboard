@@ -121,5 +121,11 @@ sap.ui.define(
 
     // 23. Severely height-constrained container
     new KioskKeyboard().placeAt("kb-height-tiny");
+
+    // 24. Ancestor-constrained (flex parent 400x250)
+    new KioskKeyboard().placeAt("kb-ancestor-constrained-wrap");
+
+    // 25. Ancestor-constrained severely (flex parent 400x180)
+    new KioskKeyboard().placeAt("kb-ancestor-tiny-wrap");
   },
 );
