@@ -1108,6 +1108,9 @@ export default class KioskKeyboard extends Control {
     if (!SECONDARY_LAYOUTS.has(name)) {
       this._baseLayout = name;
     }
+    // Reset cached natural height so height classes are re-evaluated after
+    // the layout change triggers a re-render.
+    this._naturalContentHeight = null;
     return this.setProperty("layout", name);
   }
 
@@ -1254,6 +1257,9 @@ export default class KioskKeyboard extends Control {
   setKeyboardType(sType: KeyboardTypeValue): this {
     const sPrevious = this.getKeyboardType();
     this._keyboardTypeExplicit = true;
+    // Reset cached natural height so height classes are re-evaluated after
+    // the type change triggers a re-render.
+    this._naturalContentHeight = null;
     this.setProperty("keyboardType", sType);
     if (sType !== sPrevious) {
       this.fireEvent("keyboardTypeChange", {
