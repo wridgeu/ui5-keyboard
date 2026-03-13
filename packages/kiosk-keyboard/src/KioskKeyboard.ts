@@ -107,8 +107,13 @@ export default class KioskKeyboard extends Control {
   declare private _deferredFocusOutCloseId: number | null;
   declare private _rendererApi: RendererInternalApi | null;
   declare private _targetResolverInstance: TargetResolverFn | null;
+  /** UI5 ResizeHandler registration ID for responsive class updates. */
   declare private _responsiveResizeHandlerId: string | null;
+  /** DOM element currently observed by the resize handler. */
   declare private _responsiveObservedDom: HTMLElement | null;
+  /** Cached scroll height of the keyboard content without height-responsive classes applied.
+   *  Used to distinguish "naturally short" keyboards (F-Keys, Nav) from externally constrained ones.
+   *  Reset to `null` on layout/keyboardType changes so the next render re-measures. */
   declare private _naturalContentHeight: number | null;
 
   static readonly metadata = {
@@ -930,6 +935,7 @@ export default class KioskKeyboard extends Control {
     this._applyResponsiveSizeClasses(dom, rect.width, rect.height);
   }
 
+  /** Deregisters the UI5 ResizeHandler and clears the observed DOM reference. */
   private _teardownResponsiveSizing(): void {
     if (this._responsiveResizeHandlerId) {
       ResizeHandler.deregister(this._responsiveResizeHandlerId);
@@ -938,6 +944,14 @@ export default class KioskKeyboard extends Control {
     this._responsiveObservedDom = null;
   }
 
+  /**
+   * Applies width and height responsive classes to the keyboard root element.
+   *
+   * Width: toggles `cq-xs` / `cq-sm` classes at 20rem / 30rem breakpoints.
+   * Height: toggles `cq-short` / `cq-tiny` classes when the keyboard is externally
+   * constrained (host height < natural content height). Skipped for docked and numpad.
+   * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
+   */
   private _applyResponsiveSizeClasses(dom: HTMLElement, width: number, height: number): void {
     const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
     const isCompact = width <= 20 * remPx;
@@ -1932,6 +1946,9 @@ export default class KioskKeyboard extends Control {
     if (this.getAutoType() && !this._keyboardTypeExplicit && this.getTargetInput() === ui5Control.getId()) {
       const detected = detectKbType(ui5Control, this._getEffectiveResolver());
       const previous = this.getKeyboardType();
+      // Reset cached natural height so height classes are re-evaluated after
+      // the type change triggers a re-render (mirrors setKeyboardType logic).
+      this._naturalContentHeight = null;
       this.setProperty("keyboardType", detected);
       if (detected !== previous) {
         this.fireEvent("keyboardTypeChange", {

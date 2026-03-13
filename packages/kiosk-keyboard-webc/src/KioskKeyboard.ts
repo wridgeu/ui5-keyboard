@@ -464,8 +464,13 @@ class KioskKeyboard extends UI5Element {
   private _layoutSwitchedByUser = false;
   private _pendingAnnouncement: string | null = null;
   private _deferredFocusOutCloseId: number | null = null;
+  /** ResizeObserver for responsive width/height class updates. */
   private _resizeObserver: ResizeObserver | null = null;
+  /** Cached scroll height of the keyboard content without height-responsive classes applied.
+   *  Used to distinguish "naturally short" keyboards (F-Keys, Nav) from externally constrained ones.
+   *  Reset to `null` on layout/keyboardType changes so the next render re-measures. */
   private _naturalContentHeight: number | null = null;
+  /** Last observed host element height from ResizeObserver, avoids extra getBoundingClientRect calls. */
   private _lastHostHeight: number | null = null;
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   private static readonly _inputModeSuppressions = new WeakMap<
@@ -645,7 +650,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     // Cache the keyboard's natural content height (without height classes) so
-    // _applyHeightClasses can distinguish "naturally short" from "externally constrained".
+    // _applyResponsiveClasses can distinguish "naturally short" from "externally constrained".
     const root = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard");
     if (
       root &&
@@ -1483,6 +1488,7 @@ class KioskKeyboard extends UI5Element {
 
   // ── Responsive sizing (ResizeObserver) ──
 
+  /** Attaches a ResizeObserver to the host element for responsive class updates. */
   private _setupResizeObserver(): void {
     if (typeof ResizeObserver === "undefined") return;
     this._resizeObserver = new ResizeObserver((entries) => {
@@ -1494,6 +1500,7 @@ class KioskKeyboard extends UI5Element {
     this._resizeObserver.observe(this);
   }
 
+  /** Disconnects and releases the ResizeObserver. */
   private _teardownResizeObserver(): void {
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
@@ -1540,6 +1547,7 @@ class KioskKeyboard extends UI5Element {
 
     // Only apply when externally constrained (host height < natural content height).
     // Prevents naturally short keyboards (F-Keys, Nav) from triggering.
+    // The +1px tolerance avoids oscillation from sub-pixel rounding differences.
     const hostHeight = this._lastHostHeight ?? this.getBoundingClientRect().height;
     if (this._naturalContentHeight <= hostHeight + 1) {
       root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");

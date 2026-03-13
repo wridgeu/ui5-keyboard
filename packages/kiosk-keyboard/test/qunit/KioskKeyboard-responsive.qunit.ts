@@ -1,4 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import Input from "sap/m/Input";
+import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait } from "./test-helpers";
 
 // ──────────────────────────────────────────────
@@ -21,7 +23,7 @@ QUnit.test("Applies cq-xs class at compact width (<= 20rem)", async (assert) => 
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()!;
-  (kb as any)._applyResponsiveSizeClasses(dom, 300);
+  (kb as any)._applyResponsiveSizeClasses(dom, 300, 600);
 
   assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs class present at 300px");
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm class absent at 300px");
@@ -34,7 +36,7 @@ QUnit.test("Applies cq-sm class at narrow width (20rem < width <= 30rem)", async
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()!;
-  (kb as any)._applyResponsiveSizeClasses(dom, 400);
+  (kb as any)._applyResponsiveSizeClasses(dom, 400, 600);
 
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs class absent at 400px");
   assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm class present at 400px");
@@ -47,7 +49,7 @@ QUnit.test("No responsive classes at wide width (> 30rem)", async (assert) => {
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()!;
-  (kb as any)._applyResponsiveSizeClasses(dom, 800);
+  (kb as any)._applyResponsiveSizeClasses(dom, 800, 600);
 
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs class absent at 800px");
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm class absent at 800px");
@@ -61,7 +63,7 @@ QUnit.test("Boundary: exactly 20rem applies cq-xs", async (assert) => {
 
   const dom = kb.getDomRef()!;
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-  (kb as any)._applyResponsiveSizeClasses(dom, 20 * remPx);
+  (kb as any)._applyResponsiveSizeClasses(dom, 20 * remPx, 600);
 
   assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs at exactly 20rem");
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm absent at exactly 20rem");
@@ -75,7 +77,7 @@ QUnit.test("Boundary: exactly 30rem applies cq-sm", async (assert) => {
 
   const dom = kb.getDomRef()!;
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-  (kb as any)._applyResponsiveSizeClasses(dom, 30 * remPx);
+  (kb as any)._applyResponsiveSizeClasses(dom, 30 * remPx, 600);
 
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs absent at exactly 30rem");
   assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm at exactly 30rem");
@@ -89,14 +91,14 @@ QUnit.test("Classes update when width changes across breakpoints", async (assert
 
   const dom = kb.getDomRef()!;
 
-  (kb as any)._applyResponsiveSizeClasses(dom, 300);
+  (kb as any)._applyResponsiveSizeClasses(dom, 300, 600);
   assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "Starts compact");
 
-  (kb as any)._applyResponsiveSizeClasses(dom, 400);
+  (kb as any)._applyResponsiveSizeClasses(dom, 400, 600);
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs removed after resize");
   assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm applied after resize");
 
-  (kb as any)._applyResponsiveSizeClasses(dom, 800);
+  (kb as any)._applyResponsiveSizeClasses(dom, 800, 600);
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs removed at wide width");
   assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm removed at wide width");
 
@@ -108,7 +110,7 @@ QUnit.test("Cleanup on exit() removes resize observer", async (assert) => {
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()!;
-  (kb as any)._applyResponsiveSizeClasses(dom, 300);
+  (kb as any)._applyResponsiveSizeClasses(dom, 300, 600);
   assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "Class applied before destroy");
 
   kb.destroy();
@@ -207,6 +209,32 @@ QUnit.test("resetKeyboardType() clears cached natural height", async (assert) =>
   kb.destroy();
 });
 
+QUnit.test("Auto-type detection resets cached natural height", async (assert) => {
+  const input = new Input({ type: "Number" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+  });
+  await placeAndWait(kb);
+
+  // Simulate cached natural height from a previous Full keyboard render
+  (kb as any)._naturalContentHeight = 400;
+
+  // Focus numeric input — auto-type detects Numpad
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad");
+  assert.strictEqual((kb as any)._naturalContentHeight, null, "Natural height reset by auto-type detection path");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Height classes update when constraint changes", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
@@ -246,7 +274,7 @@ QUnit.test("Responsive class preserves custom font-size below the cap", async (a
   dom.style.setProperty("--ui5KioskKeyboard-keyFontSize", "0.75rem");
 
   // Apply cq-sm (cap = 1rem) - 0.75rem should be preserved
-  (kb as any)._applyResponsiveSizeClasses(dom, 400);
+  (kb as any)._applyResponsiveSizeClasses(dom, 400, 600);
   const key = dom.querySelector(".ui5KioskKey") as HTMLElement;
   assert.ok(key, "Key element found");
 
@@ -260,7 +288,7 @@ QUnit.test("Responsive class preserves custom font-size below the cap", async (a
   );
 
   // Apply cq-xs (cap = 0.875rem) - 0.75rem should still be preserved
-  (kb as any)._applyResponsiveSizeClasses(dom, 300);
+  (kb as any)._applyResponsiveSizeClasses(dom, 300, 600);
   const fontSizeXs = Number.parseFloat(window.getComputedStyle(key).fontSize);
   assert.ok(
     Math.abs(fontSizeXs - expected) < 1.5,
