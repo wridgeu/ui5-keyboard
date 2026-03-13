@@ -12,8 +12,8 @@
   --kiosk-keyboard-key-font-size: calc(var(--kiosk-keyboard-key-height) * 0.375);
   --kiosk-keyboard-key-padding-inline: 0.25rem;
   --kiosk-keyboard-key-padding: 0 var(--kiosk-keyboard-key-padding-inline);
-  --kiosk-keyboard-key-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --kiosk-keyboard-key-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.15);
   --kiosk-keyboard-max-width: 100%;
   --kiosk-keyboard-docked-max-width: 1024px;
   --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
@@ -26,12 +26,9 @@
 /* ---- Theme-aware shadows (requires color-mix support) ---- */
 @supports (color: color-mix(in srgb, red 50%, blue)) {
   :host {
-    --kiosk-keyboard-key-shadow: 0 1px 2px
-      color-mix(in srgb, var(--sapContent_Shadow0, rgba(0, 0, 0, 0.1)) 10%, transparent);
-    --kiosk-keyboard-key-shadow-hover: 0 2px 4px
-      color-mix(in srgb, var(--sapContent_Shadow0, rgba(0, 0, 0, 0.15)) 15%, transparent);
-    --kiosk-keyboard-docked-shadow: 0 -4px 20px
-      color-mix(in srgb, var(--sapContent_Shadow0, rgba(0, 0, 0, 0.2)) 20%, transparent);
+    --kiosk-keyboard-key-shadow: 0 1px 2px color-mix(in srgb, var(--sapContent_Shadow0, #000) 10%, transparent);
+    --kiosk-keyboard-key-shadow-hover: 0 2px 4px color-mix(in srgb, var(--sapContent_Shadow0, #000) 15%, transparent);
+    --kiosk-keyboard-docked-shadow: 0 -4px 20px color-mix(in srgb, var(--sapContent_Shadow0, #000) 20%, transparent);
   }
 }
 
