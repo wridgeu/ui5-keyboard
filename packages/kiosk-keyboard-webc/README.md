@@ -389,7 +389,7 @@ Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stack
 
 When `docked` is combined with `mobile-keyboard="Auto"` (the default), coarse-pointer devices defer to the native on-screen keyboard. Calling `show()` in that mode intentionally keeps the custom docked keyboard closed; use `mobile-keyboard="Custom"` if you want to force the component to open on touch devices.
 
-Shadow custom properties use static `rgba()` values that closely match the SAP Horizon shadow color. Consumers can override `--kiosk-keyboard-key-shadow` and related properties for full control.
+Shadow custom properties use `color-mix()` with `--sapContent_ShadowColor` for theme-aware shadows, with static `rgba()` fallbacks for browsers that do not support `color-mix()`. Consumers can override `--kiosk-keyboard-key-shadow` and related properties for full control.
 
 ### Compact Density
 

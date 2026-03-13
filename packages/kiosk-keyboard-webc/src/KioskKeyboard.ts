@@ -663,6 +663,8 @@ class KioskKeyboard extends UI5Element {
     // Apply responsive sizing classes (width + height) after each render.
     // This ensures classes survive template re-renders which reconcile the
     // class attribute to only what the template specifies.
+    // getBoundingClientRect().height equals contentRect.height (used by ResizeObserver)
+    // because :host has no padding or border.
     this._lastHostHeight = this.getBoundingClientRect().height;
     this._applyResponsiveClasses();
 
@@ -1548,6 +1550,8 @@ class KioskKeyboard extends UI5Element {
     // Only apply when externally constrained (host height < natural content height).
     // Prevents naturally short keyboards (F-Keys, Nav) from triggering.
     // The +1px tolerance avoids oscillation from sub-pixel rounding differences.
+    // Fallback: getBoundingClientRect().height equals contentRect.height (used by
+    // ResizeObserver) because :host has no padding or border.
     const hostHeight = this._lastHostHeight ?? this.getBoundingClientRect().height;
     if (this._naturalContentHeight <= hostHeight + 1) {
       root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
