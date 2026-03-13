@@ -230,7 +230,6 @@ npm run lint               # Lint (oxlint)
 npm run lint:fix           # Lint with auto-fix
 npm run lint:ui5           # UI5 linter across all workspaces
 npm run typecheck          # Typecheck all workspaces (incl. e2e tests)
-npm run test:guardrails    # Check for hard-wait anti-patterns in test code
 ```
 
 ## Project Structure

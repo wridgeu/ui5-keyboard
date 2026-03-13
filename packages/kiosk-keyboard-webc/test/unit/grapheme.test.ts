@@ -82,12 +82,12 @@ describe("isSingleGlyph", () => {
   });
 
   it("returns true for ZWJ sequence (family emoji)", () => {
-    // 👨‍👩‍👧 = man + ZWJ + woman + ZWJ + girl — one grapheme cluster
+    // 👨‍👩‍👧 = man + ZWJ + woman + ZWJ + girl - one grapheme cluster
     expect(isSingleGlyph("👨\u200D👩\u200D👧")).toBe(true);
   });
 
   it("returns true for combining character sequence", () => {
-    // é as e + combining acute accent — one grapheme cluster
+    // é as e + combining acute accent - one grapheme cluster
     expect(isSingleGlyph("e\u0301")).toBe(true);
   });
 

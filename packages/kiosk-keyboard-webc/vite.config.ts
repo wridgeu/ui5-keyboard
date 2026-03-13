@@ -8,6 +8,7 @@ export default defineConfig({
     // Ensure a single instance of the UI5 WC framework modules so that
     // setTheme() and the component share the same theme registry.
     dedupe: ["@ui5/webcomponents-base"],
+    tsconfigPaths: true,
   },
   build: {
     lib: {
@@ -17,9 +18,9 @@ export default defineConfig({
     },
     outDir: "dist",
     emptyOutDir: false,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        inlineDynamicImports: true,
+        codeSplitting: false,
       },
     },
   },

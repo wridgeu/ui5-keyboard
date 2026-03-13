@@ -129,7 +129,7 @@ QUnit.test("Responsive class preserves custom font-size below the cap", async (a
   // Set a custom font-size smaller than both caps (1rem, 0.875rem)
   dom.style.setProperty("--ui5KioskKeyboard-keyFontSize", "0.75rem");
 
-  // Apply cq-sm (cap = 1rem) — 0.75rem should be preserved
+  // Apply cq-sm (cap = 1rem) - 0.75rem should be preserved
   (kb as any)._applyResponsiveSizeClasses(dom, 400);
   const key = dom.querySelector(".ui5KioskKey") as HTMLElement;
   assert.ok(key, "Key element found");
@@ -143,7 +143,7 @@ QUnit.test("Responsive class preserves custom font-size below the cap", async (a
     `Custom 0.75rem (${expected}px) preserved at cq-sm; got ${fontSize}px`,
   );
 
-  // Apply cq-xs (cap = 0.875rem) — 0.75rem should still be preserved
+  // Apply cq-xs (cap = 0.875rem) - 0.75rem should still be preserved
   (kb as any)._applyResponsiveSizeClasses(dom, 300);
   const fontSizeXs = Number.parseFloat(window.getComputedStyle(key).fontSize);
   assert.ok(
