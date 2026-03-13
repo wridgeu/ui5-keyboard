@@ -19,18 +19,16 @@
   --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
   --kiosk-keyboard-docked-z-index: 100;
   --kiosk-keyboard-modifier-font-size: var(--sapFontSize, 0.875rem);
+  --kiosk-keyboard-modifier-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+  --kiosk-keyboard-modifier-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.18);
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 }
 
-/* ---- Theme-aware shadows (requires color-mix support) ---- */
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  :host {
-    --kiosk-keyboard-key-shadow: 0 1px 2px color-mix(in srgb, var(--sapContent_Shadow0, #000) 10%, transparent);
-    --kiosk-keyboard-key-shadow-hover: 0 2px 4px color-mix(in srgb, var(--sapContent_Shadow0, #000) 15%, transparent);
-    --kiosk-keyboard-docked-shadow: 0 -4px 20px color-mix(in srgb, var(--sapContent_Shadow0, #000) 20%, transparent);
-  }
-}
+/* NOTE: --sapContent_Shadow0 is a complete shadow (not a color), so
+   color-mix() cannot be used for theme-aware tinting.  The rgba fallbacks
+   above match the sap_horizon shadow color (#223548) closely enough.
+   Consumers can override --kiosk-keyboard-key-shadow for full control. */
 
 /* ============================= */
 /* Keyboard container            */
@@ -250,11 +248,13 @@
   background: var(--sapButton_Lite_Background, transparent);
   color: var(--sapButton_Lite_TextColor, #32363a);
   border-color: var(--sapButton_Lite_BorderColor, transparent);
+  box-shadow: var(--kiosk-keyboard-modifier-shadow);
   font-size: var(--kiosk-keyboard-modifier-font-size);
 
   &:hover {
     background: var(--sapButton_Lite_Hover_Background, #eaecee);
     border-color: var(--sapButton_Lite_Hover_BorderColor, #0064d9);
+    box-shadow: var(--kiosk-keyboard-modifier-shadow-hover);
   }
 
   &:active,
@@ -384,6 +384,7 @@
   .kiosk-key--modifier:hover {
     background: var(--sapButton_Lite_Background, transparent);
     border-color: var(--sapButton_Lite_BorderColor, transparent);
+    box-shadow: var(--kiosk-keyboard-modifier-shadow);
   }
 
   .kiosk-key--action:hover,

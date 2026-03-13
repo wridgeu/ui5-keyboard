@@ -57,6 +57,8 @@
   --ui5KioskKeyboard-dockedZIndex: 100;
   --ui5KioskKeyboard-maxWidth: 100%;
   --ui5KioskKeyboard-modifierFontSize: @sapUiFontSize;
+  --ui5KioskKeyboard-modifierShadow: 0 1px 2px fade(@sapUiContentShadowColor, 14%);
+  --ui5KioskKeyboard-modifierShadowHover: 0 2px 4px fade(@sapUiContentShadowColor, 18%);
   --ui5KioskKeyboard-numpadMaxWidth: 20rem;
   --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
 
@@ -249,11 +251,13 @@
     background: @sapUiButtonLiteBackground;
     color: @sapUiButtonLiteTextColor;
     border-color: @sapUiButtonLiteBorderColor;
+    box-shadow: var(--ui5KioskKeyboard-modifierShadow);
     font-size: ~"var(--ui5KioskKeyboard-modifierFontSize)";
 
     &:hover {
       background: @sapUiButtonLiteHoverBackground;
       border-color: @sapUiButtonLiteHoverBorderColor;
+      box-shadow: var(--ui5KioskKeyboard-modifierShadowHover);
     }
 
     &:active,
@@ -439,6 +443,7 @@
   .ui5KioskKey--modifier:hover {
     background: @sapUiButtonLiteBackground;
     border-color: @sapUiButtonLiteBorderColor;
+    box-shadow: var(--ui5KioskKeyboard-modifierShadow);
   }
 
   .ui5KioskKey--action:hover,
