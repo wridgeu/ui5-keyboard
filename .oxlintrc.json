@@ -5,6 +5,14 @@
     {
       "name": "test-guardrails",
       "specifier": "./tools/eslint-plugin-test-guardrails.mjs"
+    },
+    {
+      "name": "code-quality",
+      "specifier": "./tools/eslint-plugin-code-quality.mjs"
+    },
+    {
+      "name": "comment-quality",
+      "specifier": "./tools/eslint-plugin-comment-quality.mjs"
     }
   ],
   "categories": {
@@ -20,7 +28,16 @@
     "unicorn/prefer-top-level-await": "off",
     "unicorn/no-static-only-class": "off",
     "unicorn/prefer-global-this": "off",
-    "unicorn/consistent-function-scoping": "off"
+    "unicorn/consistent-function-scoping": "off",
+    "code-quality/no-double-type-assertion": "error",
+    "code-quality/no-console-only-catch": "warn",
+    "code-quality/no-redundant-boolean-return": "warn",
+    "code-quality/no-em-dash-in-string": "warn",
+    "comment-quality/no-obvious-comment": "warn",
+    "comment-quality/no-narrator-comment": "warn",
+    "comment-quality/no-section-divider": "warn",
+    "comment-quality/no-placeholder-comment": "warn",
+    "comment-quality/no-hedging-comment": "warn"
   },
   "overrides": [
     {
@@ -30,7 +47,8 @@
         "no-unused-expressions": "off",
         "no-shadow": "off",
         "no-console": "off",
-        "import/no-unassigned-import": "off"
+        "import/no-unassigned-import": "off",
+        "code-quality/no-double-type-assertion": "off"
       }
     },
     {
