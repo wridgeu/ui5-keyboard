@@ -1,6 +1,12 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "import", "unicorn"],
+  "jsPlugins": [
+    {
+      "name": "test-guardrails",
+      "specifier": "./tools/eslint-plugin-test-guardrails.mjs"
+    }
+  ],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn"
@@ -44,6 +50,18 @@
       "files": ["tools/*.ts", "tools/*.mjs"],
       "rules": {
         "no-console": "off"
+      }
+    },
+    {
+      "files": ["packages/*/test/**/*.ts"],
+      "rules": {
+        "test-guardrails/no-browser-pause": "error"
+      }
+    },
+    {
+      "files": ["packages/*/test/e2e/**/*.ts"],
+      "rules": {
+        "test-guardrails/no-hard-wait": "error"
       }
     }
   ],
