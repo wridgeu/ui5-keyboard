@@ -14,7 +14,7 @@ const THEMES_PAGE = "/test-resources/ui5/kiosk/e2e/visual/themes.html";
 
 async function openWithTheme(theme: string): Promise<void> {
   // Load the page with the theme pre-set via URL parameter so OpenUI5 bootstraps
-  // with the correct theme CSS from the start — no runtime switching needed.
+  // with the correct theme CSS from the start - no runtime switching needed.
   await browser.url(`${THEMES_PAGE}?sap-ui-theme=${theme}`);
   await browser.waitUntil(
     async () =>

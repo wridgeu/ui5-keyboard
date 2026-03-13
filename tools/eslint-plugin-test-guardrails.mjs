@@ -16,7 +16,7 @@ const noBrowserPause = {
   meta: {
     type: "problem",
     docs: {
-      description: "Disallow browser.pause() in tests — use waitUntil/waitFor* instead",
+      description: "Disallow browser.pause() in tests - use waitUntil/waitFor* instead",
     },
     messages: {
       noBrowserPause: "Use waitUntil/waitFor* conditions instead of browser.pause().",
@@ -69,7 +69,7 @@ const noHardWait = {
   meta: {
     type: "problem",
     docs: {
-      description: "Disallow await setTimeout sleeps in e2e tests — use waitUntil/waitFor* instead",
+      description: "Disallow await setTimeout sleeps in e2e tests - use waitUntil/waitFor* instead",
     },
     messages: {
       noHardWait: "Use waitUntil/waitFor* conditions instead of fixed setTimeout sleeps in e2e tests.",

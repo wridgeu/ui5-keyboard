@@ -2,24 +2,62 @@
 
 Shared build and test tooling for the monorepo. These scripts are consumed by package-level configs and root-level npm scripts.
 
-## `check-test-hard-waits.mjs`
+## `eslint-plugin-test-guardrails.mjs`
 
-AST-based linter that detects flaky hard-wait patterns in test files. Auto-discovers test directories from all workspace packages.
+Custom oxlint JS plugin that enforces test stability guardrails. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
 
 **Rules:**
 
-| Rule                     | Scope          | Description                                                      |
-| ------------------------ | -------------- | ---------------------------------------------------------------- |
-| `browser.pause()`        | All test files | Flags `browser.pause()` calls; use `browser.waitUntil()` instead |
-| `await setTimeout sleep` | E2E tests only | Flags `await new Promise(r => setTimeout(r, N))` where N > 0     |
+| Rule                               | Scope          | Description                                                      |
+| ---------------------------------- | -------------- | ---------------------------------------------------------------- |
+| `test-guardrails/no-browser-pause` | All test files | Flags `browser.pause()` calls; use `browser.waitUntil()` instead |
+| `test-guardrails/no-hard-wait`     | E2E tests only | Flags `await new Promise(r => setTimeout(r, N))` where N > 0     |
 
 `setTimeout(resolve, 0)` (microtask flush) is intentionally allowed.
 
-```sh
-node tools/check-test-hard-waits.mjs   # or: npm run test:guardrails
-```
+Rule scoping is configured via `overrides` in `.oxlintrc.json`:
 
-Adding a new rule: append an entry to the `rules` array with `name`, `message`, `match(node)`, and an optional `fileFilter(filePath)`.
+- `no-browser-pause`: `packages/*/test/**/*.ts`
+- `no-hard-wait`: `packages/*/test/e2e/**/*.ts`
+
+Adding a new rule: export a new rule object from the plugin and add a corresponding override entry in `.oxlintrc.json`.
+
+## `eslint-plugin-code-quality.mjs`
+
+Custom oxlint JS plugin that catches AI-generated code anti-patterns. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
+
+**Rules:**
+
+| Rule                                       | Severity | Description                                                             |
+| ------------------------------------------ | -------- | ----------------------------------------------------------------------- |
+| `code-quality/no-double-type-assertion`    | error    | Flags `x as unknown as T` chains; use type guards or `in` checks        |
+| `code-quality/no-console-only-catch`       | warn     | Flags catch blocks with only a console call (error swallowed)           |
+| `code-quality/no-redundant-boolean-return` | warn     | Flags `if (x) return true; else return false;` (simplify to `return x`) |
+| `code-quality/no-em-dash-in-string`        | warn     | Flags em-dashes (U+2014) in string literals (AI text marker)            |
+
+`no-double-type-assertion` is disabled in test files (`*.test.ts`, `*.spec.ts`, `*.qunit.ts`) since test mocks legitimately use double assertions to pass invalid types.
+
+Inspired by [unguard](https://github.com/anthropics/unguard)'s `no-type-assertion` / `no-inline-type-assertion` rules and common AI-slop detection patterns from tools like [KarpeSlop](https://github.com/CodeDeficient/KarpeSlop) and [sloplint](https://github.com/dannote/sloplint).
+
+Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
+
+## `eslint-plugin-comment-quality.mjs`
+
+Custom oxlint JS plugin that detects low-quality AI-generated comments. Uses AST correlation (comparing comment text against adjacent code identifiers) rather than broad regex to keep false-positive rates low. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
+
+**Rules:**
+
+| Rule                                     | Severity | Description                                                          |
+| ---------------------------------------- | -------- | -------------------------------------------------------------------- |
+| `comment-quality/no-obvious-comment`     | warn     | Flags comments that just restate adjacent code identifiers           |
+| `comment-quality/no-narrator-comment`    | warn     | Flags "This function/method handles..." preamble comments            |
+| `comment-quality/no-section-divider`     | warn     | Flags decorative `// --- Helpers ---` banner comments                |
+| `comment-quality/no-placeholder-comment` | warn     | Flags "Replace this with your actual implementation" stub comments   |
+| `comment-quality/no-hedging-comment`     | warn     | Flags "hopefully", "probably fine", "quick hack" uncertainty markers |
+
+All rules are warn-only (no auto-fix) so the developer decides whether to rewrite or remove the comment. Comments containing keeper directives (`TODO`, `FIXME`, `eslint-disable`, JSDoc tags, etc.) are always skipped.
+
+Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
 ## `wdio-server.ts`
 
@@ -117,11 +155,23 @@ Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` s
 
 ## Consumers
 
-### `check-test-hard-waits.mjs`
+### `eslint-plugin-test-guardrails.mjs`
 
-| Consumer            | Invocation                |
-| ------------------- | ------------------------- |
-| Root `package.json` | `npm run test:guardrails` |
+| Consumer         | Integration                                      |
+| ---------------- | ------------------------------------------------ |
+| `.oxlintrc.json` | `jsPlugins` entry, rule overrides per test scope |
+
+### `eslint-plugin-code-quality.mjs`
+
+| Consumer         | Integration                                     |
+| ---------------- | ----------------------------------------------- |
+| `.oxlintrc.json` | `jsPlugins` entry, global rules + test override |
+
+### `eslint-plugin-comment-quality.mjs`
+
+| Consumer         | Integration                     |
+| ---------------- | ------------------------------- |
+| `.oxlintrc.json` | `jsPlugins` entry, global rules |
 
 ### `wdio-server.ts`
 

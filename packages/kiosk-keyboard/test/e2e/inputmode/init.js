@@ -2,7 +2,7 @@
 sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboard, Input) {
   "use strict";
 
-  // 1. Custom mode — should suppress native keyboard (inputmode="none")
+  // 1. Custom mode - should suppress native keyboard (inputmode="none")
   var inputCustom = new Input({ width: "300px", placeholder: "Custom mode" });
   inputCustom.placeAt("input-custom");
   var kbCustom = new KioskKeyboard({
@@ -13,7 +13,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
   });
   kbCustom.placeAt("kb-custom");
 
-  // 2. Native mode — should NOT suppress (no inputmode change)
+  // 2. Native mode - should NOT suppress (no inputmode change)
   var inputNative = new Input({ width: "300px", placeholder: "Native mode" });
   inputNative.placeAt("input-native");
   var kbNative = new KioskKeyboard({
@@ -24,7 +24,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
   });
   kbNative.placeAt("kb-native");
 
-  // 3. Auto mode — on desktop should suppress (inputmode="none")
+  // 3. Auto mode - on desktop should suppress (inputmode="none")
   var inputAuto = new Input({ width: "300px", placeholder: "Auto mode" });
   inputAuto.placeAt("input-auto");
   var kbAuto = new KioskKeyboard({
