@@ -12,23 +12,29 @@
   --kiosk-keyboard-key-font-size: calc(var(--kiosk-keyboard-key-height) * 0.375);
   --kiosk-keyboard-key-padding-inline: 0.25rem;
   --kiosk-keyboard-key-padding: 0 var(--kiosk-keyboard-key-padding-inline);
-  --kiosk-keyboard-key-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.15);
+  --kiosk-keyboard-key-shadow: 0 1px 2px color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 10%, transparent);
+  --kiosk-keyboard-key-shadow-hover: 0 2px 4px
+    color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 15%, transparent);
   --kiosk-keyboard-max-width: 100%;
   --kiosk-keyboard-docked-max-width: 1024px;
-  --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  --kiosk-keyboard-docked-shadow: 0 -4px 20px
+    color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 12%, transparent);
   --kiosk-keyboard-docked-z-index: 100;
   --kiosk-keyboard-modifier-font-size: var(--sapFontSize, 0.875rem);
-  --kiosk-keyboard-modifier-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
-  --kiosk-keyboard-modifier-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.18);
+  --kiosk-keyboard-modifier-shadow: 0 1px 2px
+    color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 14%, transparent);
+  --kiosk-keyboard-modifier-shadow-hover: 0 2px 4px
+    color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 18%, transparent);
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 }
 
-/* NOTE: --sapContent_Shadow0 is a complete shadow (not a color), so
-   color-mix() cannot be used for theme-aware tinting.  The rgba fallbacks
-   above match the sap_horizon shadow color (#223548) closely enough.
-   Consumers can override --kiosk-keyboard-key-shadow for full control. */
+/* Shadow colors derive from --sapContent_ShadowColor (a raw color, not a
+   complete shadow like --sapContent_Shadow0/1/2).  color-mix() applies the
+   desired opacity — equivalent to the LESS fade(@sapUiContentShadowColor, N%).
+   This adapts automatically across sap_horizon (#223548), sap_horizon_dark
+   (#000), sap_horizon_hcb (#fff), and sap_horizon_hcw (#000).
+   Consumers can still override --kiosk-keyboard-key-shadow for full control. */
 
 /* ============================= */
 /* Keyboard container            */

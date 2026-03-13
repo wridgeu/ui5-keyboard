@@ -521,7 +521,7 @@ Translate the LESS stylesheet to CSS using SAP CSS custom properties:
 | `@sapUiButtonEmphasizedBackground` | `var(--sapButton_Emphasized_Background)` |
 | `@sapUiButtonEmphasizedTextColor`  | `var(--sapButton_Emphasized_TextColor)`  |
 | `@sapUiButtonLiteBackground`       | `var(--sapButton_Lite_Background)`       |
-| `@sapUiContentShadowColor`         | `var(--sapContent_Shadow0)`              |
+| `@sapUiContentShadowColor`         | `var(--sapContent_ShadowColor)`          |
 | `@sapUiElementBorderCornerRadius`  | `var(--sapElement_BorderCornerRadius)`   |
 | `@sapUiFontSize`                   | `var(--sapFontSize)`                     |
 | `@sapUiFontFamily`                 | `var(--sapFontFamily)`                   |
