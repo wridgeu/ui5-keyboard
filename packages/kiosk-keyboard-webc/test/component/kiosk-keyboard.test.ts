@@ -1676,6 +1676,44 @@ describe("kiosk-keyboard", () => {
       expect(fontSize).to.be.at.most(0.875 * remPx + 0.5, "Font size should be capped at ≤ 0.875rem");
     });
 
+    it("JS fallback applies width classes for non-CQ browsers", async () => {
+      // _applyResponsiveClasses adds cq-sm / cq-xs classes to .kiosk-keyboard
+      // based on measured width. In CQ browsers the @supports not(...) CSS
+      // hides these; in non-CQ browsers they drive the font-size caps.
+      // This test verifies the JS class-toggle logic works correctly.
+      const wrapper = document.createElement("div");
+      wrapper.style.width = "18rem"; // ≤ 20rem → should get cq-xs
+
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+        { parentNode: wrapper },
+      );
+      await nextRender();
+
+      const root = rootDiv(el);
+      expect(root.classList.contains("kiosk-keyboard--cq-xs"), "cq-xs applied at ≤ 20rem").to.be.true;
+      expect(root.classList.contains("kiosk-keyboard--cq-sm"), "cq-sm absent when cq-xs applies").to.be.false;
+
+      // Widen to 25rem → should switch to cq-sm
+      wrapper.style.width = "25rem";
+      // Trigger ResizeObserver cycle
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await nextRender();
+
+      expect(root.classList.contains("kiosk-keyboard--cq-sm"), "cq-sm applied at ≤ 30rem").to.be.true;
+      expect(root.classList.contains("kiosk-keyboard--cq-xs"), "cq-xs removed above 20rem").to.be.false;
+
+      // Widen beyond 30rem → both removed
+      wrapper.style.width = "40rem";
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await nextRender();
+
+      expect(root.classList.contains("kiosk-keyboard--cq-sm"), "cq-sm removed above 30rem").to.be.false;
+      expect(root.classList.contains("kiosk-keyboard--cq-xs"), "cq-xs removed above 30rem").to.be.false;
+    });
+
     it("preserves consumer font-size below the responsive cap", async () => {
       // Consumer sets a small custom font-size; the responsive breakpoint should
       // NOT override it to a larger value.

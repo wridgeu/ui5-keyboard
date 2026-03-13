@@ -229,7 +229,14 @@ QUnit.test("Auto-type detection resets cached natural height", async (assert) =>
   await nextUIUpdate();
 
   assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad");
-  assert.strictEqual((kb as any)._naturalContentHeight, null, "Natural height reset by auto-type detection path");
+  // The auto-type path resets _naturalContentHeight to null before calling
+  // setProperty, but onAfterRendering immediately re-measures it.
+  // Verify the stale cache (400) was cleared and replaced with a fresh value.
+  assert.notStrictEqual((kb as any)._naturalContentHeight, 400, "Stale natural height cleared by auto-type path");
+  assert.ok(
+    typeof (kb as any)._naturalContentHeight === "number" && (kb as any)._naturalContentHeight > 0,
+    "Natural height re-measured after type switch",
+  );
 
   input.destroy();
   kb.destroy();
