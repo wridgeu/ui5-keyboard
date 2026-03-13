@@ -664,7 +664,7 @@ class KioskKeyboard extends UI5Element {
     // Stable height - only for non-docked Full keyboards, matching UI5 control behavior.
     // Docked keyboards minimise their footprint; non-Full types have no layout switches
     // that would cause significant height changes.
-    if (this.stableHeight && this.keyboardType === "Full" && !this.docked) {
+    if (this.stableHeight && this.keyboardType === KeyboardType.Full && !this.docked) {
       if (root) {
         const h = root.offsetHeight;
         if (h > this._maxHeight) this._maxHeight = h;
@@ -692,7 +692,7 @@ class KioskKeyboard extends UI5Element {
         console.warn(
           `[kiosk-keyboard] Invalid keyboardType "${this.keyboardType}". Valid values: ${[...VALID_KEYBOARD_TYPES].join(", ")}.`,
         );
-        this.keyboardType = "Full";
+        this.keyboardType = KeyboardType.Full;
         return;
       }
       const autoDetected = this._lastAutoDetectedType === this.keyboardType;
@@ -715,14 +715,14 @@ class KioskKeyboard extends UI5Element {
       console.warn(
         `[kiosk-keyboard] Invalid fKeyMode "${this.fKeyMode}". Valid values: ${[...VALID_FKEY_MODES].join(", ")}.`,
       );
-      this.fKeyMode = "Virtual";
+      this.fKeyMode = FKeyMode.Virtual;
       return;
     }
     if (name === "mobileKeyboard" && !VALID_MOBILE_KEYBOARDS.has(this.mobileKeyboard)) {
       console.warn(
         `[kiosk-keyboard] Invalid mobileKeyboard "${this.mobileKeyboard}". Valid values: ${[...VALID_MOBILE_KEYBOARDS].join(", ")}.`,
       );
-      this.mobileKeyboard = "Auto";
+      this.mobileKeyboard = MobileKeyboard.Auto;
       return;
     }
     if (name === "docked" || name === "autoShow") {
@@ -887,7 +887,7 @@ class KioskKeyboard extends UI5Element {
    */
   resetKeyboardType(): void {
     this._keyboardTypeExplicit = false;
-    this._setKeyboardTypeInternal("Full");
+    this._setKeyboardTypeInternal(KeyboardType.Full);
   }
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
@@ -898,8 +898,8 @@ class KioskKeyboard extends UI5Element {
     if (this._layoutSwitchedByUser) return getLayoutOrDefault(this._currentLayout);
 
     const type = this.keyboardType;
-    if (type === "Numpad") return getLayoutOrDefault("numpad");
-    if (type === "Numeric") return getLayoutOrDefault("numeric");
+    if (type === KeyboardType.Numpad) return getLayoutOrDefault("numpad");
+    if (type === KeyboardType.Numeric) return getLayoutOrDefault("numeric");
     const name = this._currentLayout || this._baseLayout || this.layout || getLocaleLayout();
     return getLayoutOrDefault(name);
   }
@@ -1108,11 +1108,11 @@ class KioskKeyboard extends UI5Element {
 
   private _handleFKey(fkeyName: string, shiftKey: boolean): void {
     const mode = this.fKeyMode;
-    if (mode === "None") return;
+    if (mode === FKeyMode.None) return;
 
     let nativeAllowed = true;
 
-    if (mode === "Native") {
+    if (mode === FKeyMode.Native) {
       if (NATIVE_DISPATCHABLE_KEYS.has(fkeyName)) {
         nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
         if (nativeAllowed) {
@@ -1209,8 +1209,8 @@ class KioskKeyboard extends UI5Element {
 
   private _shouldDeferToNative(): boolean {
     const mode = this.mobileKeyboard;
-    if (mode === "Custom") return false;
-    if (mode === "Native") return true;
+    if (mode === MobileKeyboard.Custom) return false;
+    if (mode === MobileKeyboard.Native) return true;
     return window.matchMedia("(pointer: coarse)").matches;
   }
 
@@ -1530,9 +1530,10 @@ class KioskKeyboard extends UI5Element {
     root.classList.toggle("kiosk-keyboard--cq-xs", isCompact);
 
     // ── Height ──
-    // Skip for docked keyboards (viewport-driven, not container-constrained)
+    // Skip for docked keyboards (viewport-driven, not container-constrained),
+    // numpad (already compact, shouldn't shrink further),
     // or if natural content height hasn't been measured yet.
-    if (this.docked || this._naturalContentHeight === null) {
+    if (this.docked || this.keyboardType === KeyboardType.Numpad || this._naturalContentHeight === null) {
       root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
       return;
     }

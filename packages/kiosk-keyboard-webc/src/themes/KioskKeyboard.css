@@ -76,8 +76,8 @@
   }
 
   /* Mixed: narrow + short (non-CQ) */
-  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short .kiosk-key,
-  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny .kiosk-key {
+  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
+  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.75rem);
   }
 }
@@ -112,8 +112,8 @@
 
 /* Mixed: narrow + short (CQ browsers) -- @container handles width, classes handle height */
 @container keyboard (max-width: 20rem) {
-  .kiosk-keyboard--cq-short .kiosk-key,
-  .kiosk-keyboard--cq-tiny .kiosk-key {
+  .kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
+  .kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.75rem);
   }
 }

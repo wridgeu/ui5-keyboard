@@ -949,9 +949,12 @@ export default class KioskKeyboard extends Control {
     // Height classes -- only apply when the keyboard is externally constrained
     // (host height < natural content height). This prevents naturally short
     // keyboards (F-Keys, Nav) from triggering height breakpoints.
-    // Also skip for docked keyboards (viewport-driven, not container-constrained).
+    // Also skip for docked keyboards (viewport-driven, not container-constrained)
+    // and numpad (already compact, shouldn't shrink further).
     const docked = this.getDocked();
-    const constrained = !docked && this._naturalContentHeight !== null && this._naturalContentHeight > height + 1;
+    const isNumpad = this.getKeyboardType() === KeyboardType.Numpad;
+    const constrained =
+      !docked && !isNumpad && this._naturalContentHeight !== null && this._naturalContentHeight > height + 1;
     const isShort = constrained && height <= 16 * remPx;
     const isTiny = constrained && height <= 12 * remPx;
     dom.classList.toggle("ui5KioskKeyboard--cq-short", isShort && !isTiny);
