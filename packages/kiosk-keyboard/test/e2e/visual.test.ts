@@ -95,6 +95,16 @@ describe("KioskKeyboard Visual Regression", () => {
     const kb = await getKeyboard("kb-glyph-stress");
     await expect(kb).toMatchElementSnapshot("kb-glyph-stress");
   });
+
+  it("should match height-constrained container (400x280)", async () => {
+    const container = await $("#kb-height-constrained");
+    await expect(container).toMatchElementSnapshot("kb-height-constrained");
+  });
+
+  it("should match severely height-constrained container (400x180)", async () => {
+    const container = await $("#kb-height-tiny");
+    await expect(container).toMatchElementSnapshot("kb-height-tiny");
+  });
 });
 
 describe("KioskKeyboard Interactive States", () => {

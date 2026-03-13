@@ -319,6 +319,25 @@
   --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-fontBase), 0.875rem)";
 }
 
+/* ---- Height-responsive classes (JS-driven) ---- */
+.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) {
+  --ui5KioskKeyboard-keyHeight: 2.25rem;
+  --ui5KioskKeyboard-keyGap: 0.25rem;
+  --ui5KioskKeyboard-padding: 0.5rem;
+}
+
+.ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) {
+  --ui5KioskKeyboard-keyHeight: 1.75rem;
+  --ui5KioskKeyboard-keyGap: 0.125rem;
+  --ui5KioskKeyboard-padding: 0.25rem;
+}
+
+/* Mixed: narrow + short */
+.ui5KioskKeyboard--cq-xs.ui5KioskKeyboard--cq-short .ui5KioskKey,
+.ui5KioskKeyboard--cq-xs.ui5KioskKeyboard--cq-tiny .ui5KioskKey {
+  --ui5KioskKeyboard-keyFontSize: 0.75rem;
+}
+
 /* ============================= */
 /* Compact mode                  */
 /* ============================= */

@@ -40,6 +40,15 @@
         flex-wrap: wrap;
         align-items: flex-start;
       }
+      /* Height-constrained fixtures: max-height on the keyboard root */
+      #kb-height-constrained .ui5KioskKeyboard {
+        max-height: 250px;
+        overflow: hidden;
+      }
+      #kb-height-tiny .ui5KioskKeyboard {
+        max-height: 180px;
+        overflow: hidden;
+      }
     </style>
   </head>
   <body>
@@ -155,6 +164,16 @@
     <div class="section">
       <h2>21. Glyph Stress (320px container)</h2>
       <div class="keyboard-container" id="kb-glyph-stress" style="width: 320px"></div>
+    </div>
+
+    <div class="section">
+      <h2>22. Height-Constrained Container (400x250)</h2>
+      <div class="keyboard-container" id="kb-height-constrained" style="width: 400px"></div>
+    </div>
+
+    <div class="section">
+      <h2>23. Severely Height-Constrained (400x180)</h2>
+      <div class="keyboard-container" id="kb-height-tiny" style="width: 400px"></div>
     </div>
   </body>
 </html>

@@ -133,5 +133,27 @@
       <h2>16. Docked with mobile-keyboard="Custom"</h2>
       <kiosk-keyboard id="kb-docked-custom" docked mobile-keyboard="Custom"></kiosk-keyboard>
     </div>
+
+    <div class="section">
+      <h2>17. Height-Constrained Container (400x250)</h2>
+      <div id="kb-height-constrained-wrap" style="width: 400px">
+        <kiosk-keyboard
+          id="kb-height-constrained"
+          layout="qwerty"
+          style="max-height: 250px; overflow: hidden"
+        ></kiosk-keyboard>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>18. Severely Height-Constrained (400x180)</h2>
+      <div id="kb-height-tiny-wrap" style="width: 400px">
+        <kiosk-keyboard
+          id="kb-height-tiny"
+          layout="qwerty"
+          style="max-height: 180px; overflow: hidden"
+        ></kiosk-keyboard>
+      </div>
+    </div>
   </body>
 </html>

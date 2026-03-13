@@ -464,6 +464,8 @@ class KioskKeyboard extends UI5Element {
   private _layoutSwitchedByUser = false;
   private _pendingAnnouncement: string | null = null;
   private _deferredFocusOutCloseId: number | null = null;
+  private _heightResizeObserver: ResizeObserver | null = null;
+  private _naturalContentHeight: number | null = null;
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   private static readonly _inputModeSuppressions = new WeakMap<
     HTMLElement,
@@ -600,12 +602,15 @@ class KioskKeyboard extends UI5Element {
     // preventDefault on touchstart suppresses the browser's synthesized click).
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false });
     this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd);
+
+    this._setupHeightObserver();
   }
 
   onExitDOM(): void {
     KioskKeyboard._instances.delete(this);
     this._teardownAutoShow();
     this._teardownPhysicalKeyHighlight();
+    this._teardownHeightObserver();
     this._restoreInputMode();
     this._detachEscapeListener();
     this.shadowRoot!.removeEventListener("touchstart", this._boundTouchStart);
@@ -638,11 +643,21 @@ class KioskKeyboard extends UI5Element {
       this._pendingAnnouncement = null;
     }
 
+    // Cache the keyboard's natural content height (without height classes) so
+    // _applyHeightClasses can distinguish "naturally short" from "externally constrained".
+    const root = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard");
+    if (
+      root &&
+      !root.classList.contains("kiosk-keyboard--cq-short") &&
+      !root.classList.contains("kiosk-keyboard--cq-tiny")
+    ) {
+      this._naturalContentHeight = root.scrollHeight;
+    }
+
     // Stable height - only for non-docked Full keyboards, matching UI5 control behavior.
     // Docked keyboards minimise their footprint; non-Full types have no layout switches
     // that would cause significant height changes.
     if (this.stableHeight && this.keyboardType === "Full" && !this.docked) {
-      const root = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard");
       if (root) {
         const h = root.offsetHeight;
         if (h > this._maxHeight) this._maxHeight = h;
@@ -1134,6 +1149,10 @@ class KioskKeyboard extends UI5Element {
 
   /** Resets stable height tracking so onAfterRendering re-measures from zero. */
   private _resetStableHeight(): void {
+    // Always reset cached natural height so height classes are re-evaluated
+    // after layout/keyboardType changes.
+    this._naturalContentHeight = null;
+
     if (!this.stableHeight) return;
     this._maxHeight = 0;
     const root = this.shadowRoot?.querySelector<HTMLElement>(".kiosk-keyboard");
@@ -1453,6 +1472,50 @@ class KioskKeyboard extends UI5Element {
       this._highlightTarget = null;
     }
     this._clearHighlight();
+  }
+
+  // ── Height-responsive sizing (ResizeObserver) ──
+
+  private _setupHeightObserver(): void {
+    this._heightResizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        this._applyHeightClasses(entry.contentRect.height);
+      }
+    });
+    this._heightResizeObserver.observe(this);
+  }
+
+  private _teardownHeightObserver(): void {
+    if (this._heightResizeObserver) {
+      this._heightResizeObserver.disconnect();
+      this._heightResizeObserver = null;
+    }
+  }
+
+  private _applyHeightClasses(hostHeight: number): void {
+    const root = this.shadowRoot?.querySelector<HTMLElement>(".kiosk-keyboard");
+    if (!root) return;
+
+    // Skip height classes for docked keyboards (viewport-driven, not container-constrained)
+    // or if natural content height hasn't been measured yet.
+    if (this.docked || this._naturalContentHeight === null) {
+      root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
+      return;
+    }
+
+    // Only apply height classes when the keyboard is externally constrained,
+    // i.e., the host height is smaller than the keyboard's natural content height.
+    // This prevents naturally short keyboards (F-Keys, Nav) from triggering.
+    if (this._naturalContentHeight <= hostHeight + 1) {
+      root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
+      return;
+    }
+
+    const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const isTiny = hostHeight <= 12 * remPx;
+    const isShort = hostHeight <= 16 * remPx;
+    root.classList.toggle("kiosk-keyboard--cq-short", isShort && !isTiny);
+    root.classList.toggle("kiosk-keyboard--cq-tiny", isTiny);
   }
 }
 

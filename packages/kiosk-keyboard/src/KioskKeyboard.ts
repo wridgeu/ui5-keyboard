@@ -109,6 +109,7 @@ export default class KioskKeyboard extends Control {
   declare private _targetResolverInstance: TargetResolverFn | null;
   declare private _responsiveResizeHandlerId: string | null;
   declare private _responsiveObservedDom: HTMLElement | null;
+  declare private _naturalContentHeight: number | null;
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -816,6 +817,7 @@ export default class KioskKeyboard extends Control {
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._responsiveResizeHandlerId = null;
     this._responsiveObservedDom = null;
+    this._naturalContentHeight = null;
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -893,6 +895,16 @@ export default class KioskKeyboard extends Control {
       }
     }
 
+    // Cache natural content height (without height classes) so _applyResponsiveSizeClasses
+    // can distinguish "naturally short" keyboards from "externally constrained" ones.
+    if (
+      dom &&
+      !dom.classList.contains("ui5KioskKeyboard--cq-short") &&
+      !dom.classList.contains("ui5KioskKeyboard--cq-tiny")
+    ) {
+      this._naturalContentHeight = dom.scrollHeight;
+    }
+
     this._syncResponsiveSizing(dom as HTMLElement | null);
     this._syncStableHeight(dom as HTMLElement | null);
 
@@ -910,11 +922,12 @@ export default class KioskKeyboard extends Control {
       this._teardownResponsiveSizing();
       this._responsiveObservedDom = dom;
       this._responsiveResizeHandlerId = ResizeHandler.register(dom, (event) => {
-        this._applyResponsiveSizeClasses(dom, event.size.width);
+        this._applyResponsiveSizeClasses(dom, event.size.width, event.size.height);
       });
     }
 
-    this._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width);
+    const rect = dom.getBoundingClientRect();
+    this._applyResponsiveSizeClasses(dom, rect.width, rect.height);
   }
 
   private _teardownResponsiveSizing(): void {
@@ -925,13 +938,24 @@ export default class KioskKeyboard extends Control {
     this._responsiveObservedDom = null;
   }
 
-  private _applyResponsiveSizeClasses(dom: HTMLElement, width: number): void {
+  private _applyResponsiveSizeClasses(dom: HTMLElement, width: number, height: number): void {
     const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
     const isCompact = width <= 20 * remPx;
     const isNarrow = width <= 30 * remPx;
 
     dom.classList.toggle("ui5KioskKeyboard--cq-xs", isCompact);
     dom.classList.toggle("ui5KioskKeyboard--cq-sm", isNarrow && !isCompact);
+
+    // Height classes -- only apply when the keyboard is externally constrained
+    // (host height < natural content height). This prevents naturally short
+    // keyboards (F-Keys, Nav) from triggering height breakpoints.
+    // Also skip for docked keyboards (viewport-driven, not container-constrained).
+    const docked = this.getDocked();
+    const constrained = !docked && this._naturalContentHeight !== null && this._naturalContentHeight > height + 1;
+    const isShort = constrained && height <= 16 * remPx;
+    const isTiny = constrained && height <= 12 * remPx;
+    dom.classList.toggle("ui5KioskKeyboard--cq-short", isShort && !isTiny);
+    dom.classList.toggle("ui5KioskKeyboard--cq-tiny", isTiny);
   }
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */

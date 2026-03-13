@@ -76,6 +76,27 @@
   }
 }
 
+/* ---- Height-responsive classes (JS-driven via ResizeObserver) ---- */
+.kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) {
+  --kiosk-keyboard-key-height: 2.25rem;
+  --kiosk-keyboard-key-gap: 0.25rem;
+  --kiosk-keyboard-padding: 0.5rem;
+}
+
+.kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) {
+  --kiosk-keyboard-key-height: 1.75rem;
+  --kiosk-keyboard-key-gap: 0.125rem;
+  --kiosk-keyboard-padding: 0.25rem;
+}
+
+/* Mixed: narrow + short -- font reduction only when both axes are constrained */
+@container keyboard (max-width: 20rem) {
+  .kiosk-keyboard--cq-short .kiosk-key,
+  .kiosk-keyboard--cq-tiny .kiosk-key {
+    --kiosk-keyboard-key-font-size: 0.75rem;
+  }
+}
+
 /* ---- Mode: Numpad ---- */
 .kiosk-keyboard--numpad {
   max-width: var(--kiosk-keyboard-numpad-max-width);

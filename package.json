@@ -71,6 +71,8 @@
     "typecheck:kiosk:e2e": "npm run typecheck:e2e -w packages/kiosk-keyboard",
     "typecheck:demo": "npm run typecheck -w packages/demo-app",
     "typecheck:tools": "tsc -p tools/tsconfig.json --noEmit",
+    "report:visual:kiosk": "node tools/visual-report.mjs packages/kiosk-keyboard/test/e2e/__screenshots__",
+    "report:visual:webc": "node tools/visual-report.mjs packages/kiosk-keyboard-webc/test/e2e/__screenshots__",
     "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm test && npm run test:e2e:all-devices",
     "prepare": "husky",
     "commitlint": "commitlint --edit"

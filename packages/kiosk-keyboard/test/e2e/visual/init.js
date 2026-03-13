@@ -115,5 +115,11 @@ sap.ui.define(
 
     // 21. Glyph stress layout
     new KioskKeyboard({ layout: "glyph-stress" }).placeAt("kb-glyph-stress");
+
+    // 22. Height-constrained container
+    new KioskKeyboard().placeAt("kb-height-constrained");
+
+    // 23. Severely height-constrained container
+    new KioskKeyboard().placeAt("kb-height-tiny");
   },
 );
