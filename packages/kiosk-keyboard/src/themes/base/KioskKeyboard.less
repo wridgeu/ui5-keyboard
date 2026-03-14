@@ -362,6 +362,24 @@
   --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.75rem)";
 }
 
+/* Progressive enhancement: text-box-trim
+   Trims invisible half-leading above and below text, giving true optical
+   centering inside keys without line-height workarounds for descender safety.
+   Must be at top level because the vendored LESS v1.6.3 (in less-openui5)
+   does not support @supports directive bubbling (added in LESS v2.5.0).
+   Non-supporting browsers keep the existing line-height behavior unchanged. */
+@supports (text-box-trim: trim-both) {
+  .ui5KioskKey__label {
+    text-box-trim: trim-both;
+    text-box-edge: text;
+    line-height: normal;
+  }
+
+  .ui5KioskKey__label--glyph {
+    text-box-edge: cap alphabetic;
+  }
+}
+
 /* ============================= */
 /* Compact mode                  */
 /* ============================= */

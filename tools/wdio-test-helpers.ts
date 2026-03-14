@@ -29,6 +29,36 @@ export async function clearEmulatedMediaFeatures(): Promise<void> {
   await setEmulatedMediaFeatures([]);
 }
 
+/**
+ * Inject a `<style>` override into the document `<head>`.
+ *
+ * Useful for disabling CSS progressive enhancements (e.g. text-box-trim,
+ * container queries) in visual regression tests so that both the enhanced
+ * and fallback rendering paths can be captured as separate baselines.
+ */
+export async function injectStyleOverride(css: string, id = "wdio-css-override"): Promise<void> {
+  await browser.execute(
+    (cssText: string, styleId: string) => {
+      let el = document.getElementById(styleId) as HTMLStyleElement | null;
+      if (!el) {
+        el = document.createElement("style");
+        el.id = styleId;
+        document.head.appendChild(el);
+      }
+      el.textContent = cssText;
+    },
+    css,
+    id,
+  );
+}
+
+/** Remove a previously injected style override by its element ID. */
+export async function removeStyleOverride(id = "wdio-css-override"): Promise<void> {
+  await browser.execute((styleId: string) => {
+    document.getElementById(styleId)?.remove();
+  }, id);
+}
+
 /** Set the `dir` and `lang` attributes on the document root element and wait for layout reflow. */
 export async function setDocumentDirection(dir: "ltr" | "rtl"): Promise<void> {
   await browser.execute((d: "ltr" | "rtl") => {

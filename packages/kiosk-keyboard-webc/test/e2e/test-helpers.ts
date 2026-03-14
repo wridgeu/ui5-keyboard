@@ -5,6 +5,8 @@ export {
   setEmulatedMediaFeatures,
   clearEmulatedMediaFeatures,
   setDocumentDirection,
+  injectStyleOverride,
+  removeStyleOverride,
 } from "../../../../tools/wdio-test-helpers.js";
 
 /** Navigate to the visual test page and wait for all keyboards to fully render. */
@@ -85,3 +87,67 @@ export async function clearForcedHoverState(hostId: string, selector: string): P
   await cdp.send("CSS.enable");
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
 }
+
+/* ---- Progressive enhancement overrides for visual regression testing ---- */
+
+/**
+ * Inject a `<style>` override into all kiosk-keyboard shadow roots.
+ *
+ * Since the web component's styles live in shadow DOM, document-level
+ * overrides have no effect. This helper appends (or updates) a `<style>`
+ * element inside each keyboard's shadow root.
+ */
+export async function injectShadowStyleOverride(css: string, id = "wdio-shadow-css-override"): Promise<void> {
+  await browser.execute(
+    (cssText: string, styleId: string) => {
+      document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
+        const root = kb.shadowRoot;
+        if (!root) return;
+        let el = root.getElementById(styleId) as HTMLStyleElement | null;
+        if (!el) {
+          el = document.createElement("style");
+          el.id = styleId;
+          root.appendChild(el);
+        }
+        el.textContent = cssText;
+      });
+    },
+    css,
+    id,
+  );
+}
+
+/** Remove previously injected shadow style overrides from all kiosk-keyboard elements. */
+export async function removeShadowStyleOverride(id = "wdio-shadow-css-override"): Promise<void> {
+  await browser.execute((styleId: string) => {
+    document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
+      kb.shadowRoot?.getElementById(styleId)?.remove();
+    });
+  }, id);
+}
+
+/** CSS override to disable the text-box-trim progressive enhancement. */
+export const DISABLE_TEXT_BOX_TRIM = `
+  .kiosk-key__label,
+  .kiosk-key__label--glyph {
+    text-box-trim: none !important;
+    text-box-edge: auto !important;
+  }
+  .kiosk-key__label {
+    line-height: 1.2 !important;
+  }
+  .kiosk-key__label--glyph {
+    line-height: 1 !important;
+  }
+`;
+
+/** CSS override to disable the container query progressive enhancement. */
+export const DISABLE_CONTAINER_QUERIES = `
+  .kiosk-keyboard {
+    container-type: normal !important;
+    container-name: none !important;
+  }
+  .kiosk-key {
+    container-type: normal !important;
+  }
+`;

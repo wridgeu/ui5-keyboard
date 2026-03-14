@@ -5,6 +5,8 @@ export {
   setEmulatedMediaFeatures,
   clearEmulatedMediaFeatures,
   setDocumentDirection,
+  injectStyleOverride,
+  removeStyleOverride,
 } from "../../../../tools/wdio-test-helpers.js";
 
 export const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
@@ -65,3 +67,20 @@ export async function clearForcedHoverState(selector: string): Promise<void> {
   await cdp.send("CSS.enable");
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
 }
+
+/* ---- Progressive enhancement overrides for visual regression testing ---- */
+
+/** CSS override to disable the text-box-trim progressive enhancement. */
+export const DISABLE_TEXT_BOX_TRIM = `
+  .ui5KioskKey__label,
+  .ui5KioskKey__label--glyph {
+    text-box-trim: none !important;
+    text-box-edge: auto !important;
+  }
+  .ui5KioskKey__label {
+    line-height: 1.2 !important;
+  }
+  .ui5KioskKey__label--glyph {
+    line-height: 1 !important;
+  }
+`;

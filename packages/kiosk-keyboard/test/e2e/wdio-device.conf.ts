@@ -33,6 +33,7 @@ export const config: wdi5Config = {
   specs: [
     path.resolve(__dirname, "visual.test.ts"),
     path.resolve(__dirname, "visual-themes.test.ts"),
+    path.resolve(__dirname, "visual-enhancements.test.ts"),
     path.resolve(__dirname, "rtl.test.ts"),
     path.resolve(__dirname, "accessibility-media.test.ts"),
   ],
