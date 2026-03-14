@@ -53,6 +53,7 @@
     "test:e2e:tablet:update": "wdio run test/e2e/wdio-device.conf.ts -- --device=tablet --update-visual-baseline",
     "test:e2e:report": "node ../../tools/visual-report.mjs test/e2e/__screenshots__",
     "test:e2e:all-devices": "concurrently --kill-others-on-fail -n desktop,phone,tablet \"npm:test:e2e\" \"npm:test:e2e:phone\" \"npm:test:e2e:tablet\"",
+    "test:e2e:all-devices:sequential": "npm run test:e2e && npm run test:e2e:phone && npm run test:e2e:tablet",
     "test:e2e:docs": "wdio run test/e2e/wdio.conf.ts --spec test/e2e/readme-screenshots.test.ts -- --readme-screenshots",
     "pretypecheck": "npm run generate",
     "typecheck": "tsc --noEmit",

@@ -135,7 +135,7 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 | 8081  | Hotkeys QUnit                                                      |
 | 8082  | Kiosk keyboard (UI5 serve: QUnit runner, E2E desktop, visual page) |
 | 8083  | Kiosk FLP e2e                                                      |
-| 8084  | Kiosk keyboard QUnit (parallel workers)                            |
+| 8082  | Kiosk keyboard UI5 server (QUnit + desktop E2E reuse this port)    |
 | 8086  | Kiosk webc (Vite: E2E desktop)                                     |
 | 8089+ | Kiosk device profiles (phone: +1, tablet: +2)                      |
 | 8086+ | Webc device profiles (phone: +1, tablet: +2)                       |
@@ -145,7 +145,8 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 ```bash
 npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
 npm run test:e2e:all-devices  # All E2E across both packages, all devices (parallel)
+npm run test:e2e:all-devices:sequential # Same device matrix, but sequential and more stable
 npm run check                 # Full quality gate (fmt + lint + typecheck + guardrails + test + e2e)
 ```
 
-`npm run check` is the CI gate. It runs everything sequentially. The `test:e2e:all-devices` step runs both packages' device profiles in parallel via `concurrently`.
+`npm run check` is the CI gate. It runs everything sequentially, including the device matrix. Use `npm run test:e2e:all-devices` when you want the faster concurrent desktop/phone/tablet sweep, and `npm run test:e2e:all-devices:sequential` when you prefer lower-flake verification on busy machines.

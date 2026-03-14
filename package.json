@@ -56,7 +56,7 @@
     "test:kiosk-webc:e2e:tablet": "npm run test:e2e:tablet -w packages/kiosk-keyboard-webc",
     "test:kiosk-webc:e2e:update": "npm run test:e2e:update -w packages/kiosk-keyboard-webc",
     "test:e2e:all-devices": "concurrently --kill-others-on-fail -n kb,webc \"npm run test:e2e:all-devices -w packages/kiosk-keyboard\" \"npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc\"",
-    "test:e2e:all-devices:sequential": "npm run test:e2e:all-devices -w packages/kiosk-keyboard && npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc",
+    "test:e2e:all-devices:sequential": "npm run test:e2e:all-devices:sequential -w packages/kiosk-keyboard && npm run test:e2e:all-devices:sequential -w packages/kiosk-keyboard-webc",
     "test:coverage": "npm run test:coverage -w packages/kiosk-keyboard-webc",
     "lint": "oxlint packages/ tools/",
     "lint:ui5": "npm run lint:ui5 --workspaces --if-present",
@@ -73,7 +73,7 @@
     "typecheck:tools": "tsc -p tools/tsconfig.json --noEmit",
     "report:visual:kiosk": "node tools/visual-report.mjs packages/kiosk-keyboard/test/e2e/__screenshots__",
     "report:visual:webc": "node tools/visual-report.mjs packages/kiosk-keyboard-webc/test/e2e/__screenshots__",
-    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm test && npm run test:e2e:all-devices",
+    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm test && npm run test:e2e:all-devices:sequential",
     "prepare": "husky",
     "commitlint": "commitlint --edit"
   },

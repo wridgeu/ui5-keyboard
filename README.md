@@ -207,8 +207,9 @@ npm run test:kiosk-webc:component      # Kiosk webc integration tests (Web Test 
 npm run test:kiosk-webc:e2e            # Kiosk webc e2e tests (WebdriverIO)
 npm run test:qunit                     # All QUnit tests only (hotkeys + kiosk)
 
-# Multi-device e2e (desktop + phone + tablet, concurrent)
-npm run test:e2e:all-devices           # All e2e across all device profiles (kiosk + webc)
+# Multi-device e2e
+npm run test:e2e:all-devices           # All e2e across all device profiles (kiosk + webc, concurrent)
+npm run test:e2e:all-devices:sequential # Same matrix, but sequential for lower-flake CI/local runs
 npm run test:kiosk:e2e:flp             # FLP lifecycle e2e tests (SAPUI5 sandbox)
 
 # Visual baseline management
@@ -223,7 +224,7 @@ npm run test:coverage                  # Kiosk webc coverage (unit + component)
 ### Code Quality
 
 ```bash
-npm run check              # Full quality gate (fmt + lint + typecheck + all tests + multi-device e2e)
+npm run check              # Full quality gate (fmt + lint + typecheck + all tests + sequential multi-device e2e)
 npm run fmt                # Format (oxfmt)
 npm run fmt:check          # Check formatting without fixing
 npm run lint               # Lint (oxlint)

@@ -78,6 +78,7 @@
     "test:e2e:tablet:update": "npm run generate && wdio run test/e2e/wdio-device.conf.ts -- --device=tablet --update-visual-baseline",
     "test:e2e:report": "node ../../tools/visual-report.mjs test/e2e/__screenshots__",
     "test:e2e:all-devices": "npm run generate && concurrently --kill-others-on-fail -n desktop,phone,tablet \"wdio run test/e2e/wdio.conf.ts\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=phone\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=tablet\"",
+    "test:e2e:all-devices:sequential": "npm run test:e2e && npm run test:e2e:phone && npm run test:e2e:tablet",
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit",
     "generateAPI": "ui5nps generateAPI"
   },
