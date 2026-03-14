@@ -1,6 +1,4 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import Input from "sap/m/Input";
-import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
@@ -12,7 +10,10 @@ const DOM = KioskKeyboard.DOM;
 QUnit.module("KioskKeyboard responsive sizing", {
   afterEach() {
     const fixture = document.getElementById("qunit-fixture");
-    if (fixture) fixture.innerHTML = "";
+    if (fixture) {
+      fixture.classList.remove("sapUiSizeCompact");
+      fixture.innerHTML = "";
+    }
   },
 });
 
@@ -133,11 +134,12 @@ QUnit.test("Applies cq-short class when externally constrained (height <= 16rem)
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
+  const dom = kb.getDomRef()! as HTMLElement;
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
 
-  // Simulate measured natural height (large enough to count as constrained)
-  (kb as any)._naturalContentHeight = 400;
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.height = "16rem";
+  dom.style.overflow = "hidden";
 
   // Constrained to 16rem — triggers cq-short
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 16 * remPx);
@@ -152,10 +154,12 @@ QUnit.test("Applies cq-tiny class when severely constrained (height <= 12rem)", 
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
+  const dom = kb.getDomRef()! as HTMLElement;
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
 
-  (kb as any)._naturalContentHeight = 400;
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.height = "12rem";
+  dom.style.overflow = "hidden";
 
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 12 * remPx);
 
@@ -169,11 +173,13 @@ QUnit.test("No height classes when keyboard is not externally constrained", asyn
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
+  const dom = kb.getDomRef()! as HTMLElement;
 
-  // Natural height equals actual height — not constrained
-  (kb as any)._naturalContentHeight = 300;
-  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 300);
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "1.5rem");
+  dom.style.height = "16rem";
+  dom.style.overflow = "hidden";
+
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, dom.getBoundingClientRect().height);
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short absent when unconstrained");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent when unconstrained");
@@ -185,10 +191,13 @@ QUnit.test("No height classes for docked keyboards", async (assert) => {
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
+  const dom = kb.getDomRef()! as HTMLElement;
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
 
-  (kb as any)._naturalContentHeight = 400;
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.height = "12rem";
+  dom.style.overflow = "hidden";
+
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 12 * remPx);
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short absent for docked");
@@ -206,7 +215,7 @@ QUnit.test("Toggling docked mode clears stale height classes immediately", async
 
   dom.style.height = `${10 * remPx}px`;
   dom.style.overflow = "hidden";
-  (kb as any)._naturalContentHeight = 400;
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 10 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied before docking");
@@ -219,50 +228,55 @@ QUnit.test("Toggling docked mode clears stale height classes immediately", async
   kb.destroy();
 });
 
-QUnit.test("resetKeyboardType() clears cached natural height", async (assert) => {
+QUnit.test("Intrinsic height changes from CSS vars update height classes without outer resize", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // Simulate cached natural height
-  (kb as any)._naturalContentHeight = 350;
-  assert.strictEqual((kb as any)._naturalContentHeight, 350, "Natural height cached");
+  const dom = kb.getDomRef()! as HTMLElement;
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "1.5rem");
+  dom.style.height = "15rem";
+  dom.style.overflow = "hidden";
 
-  kb.resetKeyboardType();
-  assert.strictEqual((kb as any)._naturalContentHeight, null, "Natural height reset after resetKeyboardType()");
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, dom.getBoundingClientRect().height);
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "No cq-short before intrinsic growth");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "No cq-tiny before intrinsic growth");
+
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "Still stale before refresh");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Still non-tiny before refresh");
+  kb.refreshResponsiveState();
+
+  assert.ok(
+    dom.classList.contains(DOM.classes.rootCqShort) || dom.classList.contains(DOM.classes.rootCqTiny),
+    "Height classes update after CSS variable changes intrinsic content height",
+  );
 
   kb.destroy();
 });
 
-QUnit.test("Auto-type detection resets cached natural height", async (assert) => {
-  const input = new Input({ type: "Number" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
+QUnit.test("Intrinsic height shrink clears height classes without outer resize", async (assert) => {
+  const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // Simulate cached natural height from a previous Full keyboard render
-  (kb as any)._naturalContentHeight = 400;
+  const dom = kb.getDomRef()! as HTMLElement;
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.height = "16rem";
+  dom.style.overflow = "hidden";
 
-  // Focus numeric input — auto-type detects Numpad
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad");
-  // The auto-type path resets _naturalContentHeight to null before calling
-  // setProperty, but onAfterRendering immediately re-measures it.
-  // Verify the stale cache (400) was cleared and replaced with a fresh value.
-  assert.notStrictEqual((kb as any)._naturalContentHeight, 400, "Stale natural height cleared by auto-type path");
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, dom.getBoundingClientRect().height);
   assert.ok(
-    typeof (kb as any)._naturalContentHeight === "number" && (kb as any)._naturalContentHeight > 0,
-    "Natural height re-measured after type switch",
+    dom.classList.contains(DOM.classes.rootCqShort) || dom.classList.contains(DOM.classes.rootCqTiny),
+    "Starts constrained at 4rem keys",
   );
 
-  input.destroy();
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "1.5rem");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Still stale before refresh");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Still non-tiny before refresh");
+  kb.refreshResponsiveState();
+
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after intrinsic height shrinks");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared after intrinsic height shrinks");
+
   kb.destroy();
 });
 
@@ -273,7 +287,8 @@ QUnit.test("Height classes update when constraint changes", async (assert) => {
   const dom = kb.getDomRef()!;
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
 
-  (kb as any)._naturalContentHeight = 400;
+  (dom as HTMLElement).style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  (dom as HTMLElement).style.overflow = "hidden";
 
   // Start constrained (tiny)
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 10 * remPx);

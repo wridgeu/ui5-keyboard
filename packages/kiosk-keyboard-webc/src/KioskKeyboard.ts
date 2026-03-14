@@ -468,12 +468,10 @@ class KioskKeyboard extends UI5Element {
   private _deferredFocusOutCloseId: number | null = null;
   /** ResizeObserver for responsive width/height class updates. */
   private _resizeObserver: ResizeObserver | null = null;
-  /** Cached scroll height of the keyboard content without height-responsive classes applied.
-   *  Used to distinguish "naturally short" keyboards (F-Keys, Nav) from externally constrained ones.
-   *  Reset to `null` on layout/keyboardType changes so the next render re-measures. */
-  private _naturalContentHeight: number | null = null;
-  /** Last observed host element height from ResizeObserver, avoids extra getBoundingClientRect calls. */
-  private _lastHostHeight: number | null = null;
+  /** The current root element observed for intrinsic content size changes. */
+  private _responsiveObservedRoot: HTMLElement | null = null;
+  /** rAF handle that coalesces responsive class updates from multiple observers. */
+  private _responsiveSyncFrame: number | null = null;
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   private static readonly _inputModeSuppressions = new WeakMap<
     HTMLElement,
@@ -651,35 +649,9 @@ class KioskKeyboard extends UI5Element {
       this._pendingAnnouncement = null;
     }
 
-    // Cache the keyboard's natural content height (without height classes) so
-    // _applyResponsiveClasses can distinguish "naturally short" from "externally constrained".
     const root = this.shadowRoot!.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
-    if (
-      root &&
-      !root.classList.contains(KIOSK_KEYBOARD_DOM.classes.rootCqShort) &&
-      !root.classList.contains(KIOSK_KEYBOARD_DOM.classes.rootCqTiny)
-    ) {
-      this._naturalContentHeight = root.scrollHeight;
-    }
-
-    // Apply responsive sizing classes (width + height) after each render.
-    // This ensures classes survive template re-renders which reconcile the
-    // class attribute to only what the template specifies.
-    // getBoundingClientRect().height equals contentRect.height (used by ResizeObserver)
-    // because :host has no padding or border.
-    this._lastHostHeight = this.getBoundingClientRect().height;
-    this._applyResponsiveClasses();
-
-    // Stable height - only for non-docked Full keyboards, matching UI5 control behavior.
-    // Docked keyboards minimise their footprint; non-Full types have no layout switches
-    // that would cause significant height changes.
-    if (this.stableHeight && this.keyboardType === KeyboardType.Full && !this.docked) {
-      if (root) {
-        const h = root.offsetHeight;
-        if (h > this._maxHeight) this._maxHeight = h;
-        if (this._maxHeight > 0) root.style.minHeight = `${this._maxHeight}px`;
-      }
-    }
+    this._syncResponsiveObserverTargets(root);
+    this.refreshResponsiveState();
   }
 
   onInvalidation(changeInfo: ChangeInfo): void {
@@ -897,6 +869,35 @@ class KioskKeyboard extends UI5Element {
   resetKeyboardType(): void {
     this._keyboardTypeExplicit = false;
     this._setKeyboardTypeInternal(KeyboardType.Full);
+  }
+
+  /**
+   * Recomputes responsive width/height classes from the current live DOM.
+   *
+   * Call this after runtime styling changes that alter intrinsic keyboard height
+   * without producing a reliable resize signal, for example when `stableHeight`
+   * keeps the rendered root size fixed while compact mode or custom CSS vars
+   * change the underlying natural content height.
+   */
+  refreshResponsiveState(): void {
+    const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
+    if (!root) return;
+
+    this._syncResponsiveObserverTargets(root);
+
+    // Apply responsive sizing classes (width + height) after each render.
+    // This ensures classes survive template re-renders which reconcile the
+    // class attribute to only what the template specifies.
+    this._applyResponsiveClasses();
+
+    // Stable height - only for non-docked Full keyboards, matching UI5 control behavior.
+    // Docked keyboards minimise their footprint; non-Full types have no layout switches
+    // that would cause significant height changes.
+    if (this.stableHeight && this.keyboardType === KeyboardType.Full && !this.docked) {
+      const h = root.offsetHeight;
+      if (h > this._maxHeight) this._maxHeight = h;
+      if (this._maxHeight > 0) root.style.minHeight = `${this._maxHeight}px`;
+    }
   }
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
@@ -1165,10 +1166,6 @@ class KioskKeyboard extends UI5Element {
 
   /** Resets stable height tracking so onAfterRendering re-measures from zero. */
   private _resetStableHeight(): void {
-    // Always reset cached natural height so height classes are re-evaluated
-    // after layout/keyboardType changes.
-    this._naturalContentHeight = null;
-
     if (!this.stableHeight) return;
     this._maxHeight = 0;
     const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
@@ -1495,21 +1492,48 @@ class KioskKeyboard extends UI5Element {
   /** Attaches a ResizeObserver to the host element for responsive class updates. */
   private _setupResizeObserver(): void {
     if (typeof ResizeObserver === "undefined") return;
-    this._resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        this._lastHostHeight = entry.contentRect.height;
-      }
-      this._applyResponsiveClasses();
+    this._resizeObserver = new ResizeObserver(() => {
+      this._scheduleResponsiveClassUpdate();
     });
     this._resizeObserver.observe(this);
   }
 
   /** Disconnects and releases the ResizeObserver. */
   private _teardownResizeObserver(): void {
+    if (this._responsiveSyncFrame !== null) {
+      cancelAnimationFrame(this._responsiveSyncFrame);
+      this._responsiveSyncFrame = null;
+    }
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
       this._resizeObserver = null;
     }
+    this._responsiveObservedRoot = null;
+  }
+
+  /** Keeps the root element observed so style-only intrinsic size changes trigger a re-sync. */
+  private _syncResponsiveObserverTargets(root: HTMLElement | null): void {
+    if (!this._resizeObserver || root === this._responsiveObservedRoot) return;
+
+    if (this._responsiveObservedRoot) {
+      this._resizeObserver.unobserve(this._responsiveObservedRoot);
+    }
+
+    if (root) {
+      this._resizeObserver.observe(root);
+    }
+
+    this._responsiveObservedRoot = root;
+  }
+
+  /** Coalesces responsive class updates triggered by host/content observation. */
+  private _scheduleResponsiveClassUpdate(): void {
+    if (this._responsiveSyncFrame !== null) return;
+
+    this._responsiveSyncFrame = requestAnimationFrame(() => {
+      this._responsiveSyncFrame = null;
+      this._applyResponsiveClasses();
+    });
   }
 
   /**
@@ -1541,21 +1565,31 @@ class KioskKeyboard extends UI5Element {
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
 
     // ── Height ──
-    // Skip for docked keyboards (viewport-driven, not container-constrained),
-    // numpad (already compact, shouldn't shrink further),
-    // or if natural content height hasn't been measured yet.
-    if (this.docked || this.keyboardType === KeyboardType.Numpad || this._naturalContentHeight === null) {
-      root.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
+    root.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
+
+    // Skip for docked keyboards (viewport-driven, not container-constrained)
+    // and numpad (already compact, shouldn't shrink further).
+    if (this.docked || this.keyboardType === KeyboardType.Numpad) {
       return;
     }
+
+    const previousMinHeight = root.style.minHeight;
+    if (previousMinHeight) {
+      root.style.minHeight = "";
+    }
+
+    const naturalHeight = root.scrollHeight;
+
+    if (previousMinHeight) {
+      root.style.minHeight = previousMinHeight;
+    }
+
+    const hostHeight = this.getBoundingClientRect().height;
 
     // Only apply when externally constrained (host height < natural content height).
     // Prevents naturally short keyboards (F-Keys, Nav) from triggering.
     // The +1px tolerance avoids oscillation from sub-pixel rounding differences.
-    // Fallback: getBoundingClientRect().height equals contentRect.height (used by
-    // ResizeObserver) because :host has no padding or border.
-    const hostHeight = this._lastHostHeight ?? this.getBoundingClientRect().height;
-    if (this._naturalContentHeight <= hostHeight + 1) {
+    if (naturalHeight <= hostHeight + 1) {
       root.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
       return;
     }

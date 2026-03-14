@@ -22,6 +22,12 @@ function queryRows(el: KioskKeyboard): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll(DOM.selectors.row);
 }
 
+async function waitForResponsiveSync(): Promise<void> {
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 describe("kiosk-keyboard", () => {
   // ── Render ──
 
@@ -1741,6 +1747,31 @@ describe("kiosk-keyboard", () => {
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
       // 0.75rem is below the 1rem / 0.875rem caps, so it should be preserved
       expect(fontSize).to.be.closeTo(0.75 * remPx, 1, "Custom font-size 0.75rem should be preserved");
+    });
+
+    it("refreshResponsiveState re-evaluates classes when stableHeight masks compact-size shrink", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" stable-height style="height: 15rem; overflow: hidden"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      const root = rootDiv(el);
+      expect(root.classList.contains(DOM.classes.rootCqShort), "starts constrained in cozy mode").to.be.true;
+      expect(root.classList.contains(DOM.classes.rootCqTiny), "starts above tiny breakpoint").to.be.false;
+
+      el.setAttribute("data-ui5-compact-size", "");
+      await waitForResponsiveSync();
+
+      expect(root.classList.contains(DOM.classes.rootCqShort), "stays stale without manual refresh").to.be.true;
+      expect(root.classList.contains(DOM.classes.rootCqTiny), "stays non-tiny before refresh").to.be.false;
+
+      el.refreshResponsiveState();
+
+      expect(root.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after refresh").to.be.false;
+      expect(root.classList.contains(DOM.classes.rootCqTiny), "cq-tiny stays cleared after refresh").to.be.false;
     });
   });
 

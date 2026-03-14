@@ -218,18 +218,19 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Methods
 
-| Method                                 | Description                                                                                             |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `show()`                               | Opens the docked keyboard (sets `open = true`). Logs a warning if `docked` is `false`.                  |
-| `close()`                              | Closes the docked keyboard (sets `open = false`).                                                       |
-| `isOpen()`                             | Returns whether the docked keyboard is open.                                                            |
-| `setTargetElement(el)`                 | Programmatically sets the target input/textarea.                                                        |
-| `setTargetResolver(fn)`                | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear. |
-| `resetKeyboardType()`                  | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                    |
-| `registerLayout(name, definition)`     | Registers a custom layout (delegates to shared registry).                                               |
-| `unregisterLayout(name)`               | Removes a custom layout (delegates to shared registry).                                                 |
-| `registerLocaleLayout(locale, layout)` | Maps a BCP-47 locale to a layout name (delegates to shared registry).                                   |
-| `unregisterLocaleLayout(locale)`       | Removes a locale mapping (delegates to shared registry).                                                |
+| Method                                 | Description                                                                                                                                                           |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `show()`                               | Opens the docked keyboard (sets `open = true`). Logs a warning if `docked` is `false`.                                                                                |
+| `close()`                              | Closes the docked keyboard (sets `open = false`).                                                                                                                     |
+| `isOpen()`                             | Returns whether the docked keyboard is open.                                                                                                                          |
+| `setTargetElement(el)`                 | Programmatically sets the target input/textarea.                                                                                                                      |
+| `setTargetResolver(fn)`                | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                               |
+| `resetKeyboardType()`                  | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                                  |
+| `refreshResponsiveState()`             | Recomputes responsive width/height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing. |
+| `registerLayout(name, definition)`     | Registers a custom layout (delegates to shared registry).                                                                                                             |
+| `unregisterLayout(name)`               | Removes a custom layout (delegates to shared registry).                                                                                                               |
+| `registerLocaleLayout(locale, layout)` | Maps a BCP-47 locale to a layout name (delegates to shared registry).                                                                                                 |
+| `unregisterLocaleLayout(locale)`       | Removes a locale mapping (delegates to shared registry).                                                                                                              |
 
 ## Static API
 
@@ -386,6 +387,8 @@ kiosk-keyboard {
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
 Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects externally constrained containers and reduces key height, gaps, and modifier font-size automatically.
+
+Most runtime style changes are picked up automatically through rendering and `ResizeObserver`. If you intentionally combine `stable-height` with styling changes that alter intrinsic height without changing the rendered outer box (for example toggling compact mode or swapping `--kiosk-keyboard-*` sizing variables at runtime), call `refreshResponsiveState()` after the style update to force a fresh height measurement.
 
 #### Label Sizing
 

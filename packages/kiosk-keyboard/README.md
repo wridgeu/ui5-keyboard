@@ -243,47 +243,49 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 
 ### Public Methods (Common)
 
-| Method                     | Returns           | Description                                                                 |
-| -------------------------- | ----------------- | --------------------------------------------------------------------------- |
-| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                   |
-| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.           |
-| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                     |
-| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type. |
-| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).             |
-| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).              |
-| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.          |
-| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                        |
-| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                       |
-| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                      |
-| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                              |
-| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).   |
-| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                   |
+| Method                     | Returns           | Description                                                                                                                                                           |
+| -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                                                                                                             |
+| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.                                                                                                     |
+| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                                                                                                               |
+| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.                                                                                           |
+| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).                                                                                                       |
+| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).                                                                                                        |
+| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.                                                                                                    |
+| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                                                                                                                  |
+| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                                                                                                                 |
+| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                                                                                                                |
+| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                                                                                                                        |
+| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).                                                                                             |
+| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                                                                                                             |
+| `refreshResponsiveState()` | `this`            | Recompute responsive width/height classes after runtime CSS changes that do not trigger a reliable resize callback. Usually not needed for normal container resizing. |
 
 ### Public Methods (Complete)
 
 Complete list of KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
 
-| Method                     | Returns           | Description                                                                             |
-| -------------------------- | ----------------- | --------------------------------------------------------------------------------------- |
-| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                               |
-| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.                       |
-| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                                 |
-| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.             |
-| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).                         |
-| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                               |
-| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).                          |
-| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.                      |
-| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                                    |
-| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                                   |
-| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                                  |
-| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                                          |
-| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).               |
-| `getFocusDomRef()`         | `Element \| null` | Returns the keyboard root DOM reference used for focus handling.                        |
-| `getFocusInfo()`           | `object`          | Returns focus state snapshot for UI5 focus restoration.                                 |
-| `applyFocusInfo(info)`     | `this`            | Restores focus state snapshot previously returned by `getFocusInfo()`.                  |
-| `getAccessibilityInfo()`   | `object`          | Returns UI5 accessibility metadata for assistive technologies.                          |
-| `setTargetResolver(fn)`    | `this`            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear. |
-| `getTargetResolver()`      | `Function\|null`  | Returns the instance-level target resolver, or `null`.                                  |
+| Method                     | Returns           | Description                                                                                                                                                           |
+| -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                                                                                                             |
+| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.                                                                                                     |
+| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                                                                                                               |
+| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.                                                                                           |
+| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).                                                                                                       |
+| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                                                                                                             |
+| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).                                                                                                        |
+| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.                                                                                                    |
+| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                                                                                                                  |
+| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                                                                                                                 |
+| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                                                                                                                |
+| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                                                                                                                        |
+| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).                                                                                             |
+| `refreshResponsiveState()` | `this`            | Recompute responsive width/height classes after runtime CSS changes that do not trigger a reliable resize callback. Usually not needed for normal container resizing. |
+| `getFocusDomRef()`         | `Element \| null` | Returns the keyboard root DOM reference used for focus handling.                                                                                                      |
+| `getFocusInfo()`           | `object`          | Returns focus state snapshot for UI5 focus restoration.                                                                                                               |
+| `applyFocusInfo(info)`     | `this`            | Restores focus state snapshot previously returned by `getFocusInfo()`.                                                                                                |
+| `getAccessibilityInfo()`   | `object`          | Returns UI5 accessibility metadata for assistive technologies.                                                                                                        |
+| `setTargetResolver(fn)`    | `this`            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear.                                                                               |
+| `getTargetResolver()`      | `Function\|null`  | Returns the instance-level target resolver, or `null`.                                                                                                                |
 
 For full generated typings (including property/event accessors from UI5 metadata), see [`src/KioskKeyboard.gen.d.ts`](src/KioskKeyboard.gen.d.ts) (regenerated by `npm run generate`).
 
@@ -369,6 +371,8 @@ This is **opt-in** (`false` by default) and only effective for non-docked Full k
 > For keyboards embedded **inline on a page** (not in a Popover), `stableHeight` is typically not needed; the surrounding layout can accommodate height changes naturally.
 >
 > **Latch behavior:** `stableHeight` records the maximum observed height and never shrinks automatically, even after a container resize or orientation change. This is by design: the keyboard cannot distinguish a container resize from a layout switch. If you need to reset after an orientation change, toggle the property off and on (`setStableHeight(false); setStableHeight(true);`).
+>
+> **Runtime styling changes:** If you change `--ui5KioskKeyboard-*` sizing variables at runtime while the keyboard stays inside a fixed-height or `stableHeight`-latched box, the browser may not emit a `ResizeHandler` callback because the rendered outer size does not change. In that advanced case, call `refreshResponsiveState()` after the CSS update to force a fresh responsive-height measurement.
 
 ```xml
 <!-- Recommended: keyboard inside a Popover -->
@@ -1011,6 +1015,8 @@ By default, the inline keyboard takes the full width of its container (`100%`). 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
 Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved.
+
+Most styling updates are handled automatically through rendering and `ResizeHandler`. When you intentionally change `--ui5KioskKeyboard-*` sizing variables at runtime without changing the rendered outer box, call `refreshResponsiveState()` after the style update so height-responsive classes are recomputed from the live DOM.
 
 #### Label Sizing
 
