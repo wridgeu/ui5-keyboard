@@ -11,7 +11,6 @@ import {
   isShiftActive,
   placeAndWait,
   tapKey,
-  tapShiftInternally,
   waitForRender,
 } from "./test-helpers";
 
@@ -181,21 +180,23 @@ QUnit.test("F-key tap does NOT insert text", async (assert) => {
 });
 
 QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "fkeys" });
+  const kb = new KioskKeyboard({ layout: "qwerty-fk" });
   await placeAndWait(kb);
 
   // Activate shift
-  tapShiftInternally(kb);
+  tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active before F-key tap");
 
   tapKey(kb, "{fkey:F3}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift remains active after F-key tap");
 
   kb.destroy();
 });
 
 QUnit.test("F-key tap fires keyPress with shiftKey=true when shift active", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "fkeys" });
+  const kb = new KioskKeyboard({ layout: "qwerty-fk" });
   await placeAndWait(kb);
 
   let shiftKey = false;
@@ -204,7 +205,7 @@ QUnit.test("F-key tap fires keyPress with shiftKey=true when shift active", asyn
   });
 
   // Activate shift
-  tapShiftInternally(kb);
+  tapKey(kb, "{shift}");
   tapKey(kb, "{fkey:F5}");
 
   assert.ok(shiftKey, "keyPress reports shiftKey=true");
@@ -304,7 +305,7 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
 QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (assert) => {
   const input = new Input();
   const kb = new KioskKeyboard({
-    layout: "fkeys",
+    layout: "qwerty-fk",
     targetInput: input,
   });
   kb.setFKeyMode("Native");
@@ -333,7 +334,7 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
   };
 
   try {
-    tapShiftInternally(kb);
+    tapKey(kb, "{shift}");
     tapKey(kb, "{fkey:F5}");
 
     assert.strictEqual(observedKey, "F5", "Synthetic keydown dispatched to target element");

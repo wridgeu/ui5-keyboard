@@ -29,10 +29,14 @@ QUnit.test("Shift persists across layout switch", async (assert) => {
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active after tap");
 
-  // Switch to numeric layout - shift should NOT auto-release
+  // Switch to numeric layout (no shift key to observe) and back to base
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
-  assert.ok(isShiftActive(kb), "Shift remains active after layout switch");
+  tapKey(kb, "{layout:base}");
+  await waitForRender();
+
+  // Shift must still be active after the round-trip
+  assert.ok(isShiftActive(kb), "Shift remains active after layout round-trip");
 
   input.destroy();
   kb.destroy();
@@ -51,10 +55,14 @@ QUnit.test("Caps lock persists across layout switch", async (assert) => {
   await waitForRender();
   assert.ok(isCapsLock(kb), "Caps lock is active");
 
-  // Switch to numeric layout - caps lock should persist
+  // Switch to numeric layout (no shift key to observe) and back to base
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
-  assert.ok(isCapsLock(kb), "Caps lock remains active after layout switch");
+  tapKey(kb, "{layout:base}");
+  await waitForRender();
+
+  // Caps lock must still be active after the round-trip
+  assert.ok(isCapsLock(kb), "Caps lock remains active after layout round-trip");
 
   input.destroy();
   kb.destroy();
@@ -71,12 +79,15 @@ QUnit.test("Shift auto-releases after typing in switched layout", async (assert)
   tapKey(kb, "{shift}");
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
-  assert.ok(isShiftActive(kb), "Shift active after layout switch");
 
-  // Type a character in the numeric layout - shift should auto-release
+  // Type a character in the numeric layout — shift should auto-release
   tapKey(kb, "1");
   await waitForRender();
-  assert.notOk(isShiftActive(kb), "Shift auto-released after character typed in new layout");
+
+  // Switch back to base layout to verify shift was released
+  tapKey(kb, "{layout:base}");
+  await waitForRender();
+  assert.notOk(isShiftActive(kb), "Shift auto-released after character typed in switched layout");
 
   input.destroy();
   kb.destroy();
@@ -91,16 +102,24 @@ QUnit.test("setTargetInput() resets shift regardless of current layout", async (
   const kb = new KioskKeyboard({ targetInput: input1 });
   await placeAndWait(kb);
 
-  // Activate shift and switch layout
+  // Activate shift on base layout
   tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Shift active on base layout");
+
+  // Switch to numeric layout (shift persists internally but is not
+  // observable — numeric layout has no shift key)
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
-  assert.ok(isShiftActive(kb), "Shift active in numeric layout");
 
-  // Switch target - shift must reset
+  // Switch target while on numeric layout — shift must reset
   kb.setTargetInput(input2);
   await waitForRender();
-  assert.notOk(isShiftActive(kb), "Shift reset when target switches");
+
+  // Switch back to base layout to observe that shift was cleared
+  tapKey(kb, "{layout:base}");
+  await waitForRender();
+  assert.notOk(isShiftActive(kb), "Shift reset when target switches (verified after returning to base layout)");
   assert.notOk(isCapsLock(kb), "Caps lock also reset when target switches");
 
   input1.destroy();
@@ -279,17 +298,21 @@ QUnit.test("Rapid switch resets shift state for each switch", async (assert) => 
 
   // Activate shift
   tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift active on first target");
 
   // Switch target - shift should reset
   kb.setTargetInput(input2);
+  await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift reset after switch to second target");
 
   // Activate shift again, then rapid switch back
   tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift active on second target");
 
   kb.setTargetInput(input1);
+  await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift reset after switch back to first target");
 
   input1.destroy();

@@ -15,7 +15,7 @@ import Input from "sap/m/Input";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
 import Log from "sap/base/Log";
-import { placeAndWait, getResolvedLayout } from "./test-helpers";
+import { placeAndWait, getRenderedLayoutKeys } from "./test-helpers";
 
 // ─── Helpers ─────────────────────────────────────
 
@@ -638,8 +638,9 @@ QUnit.test("Unknown layout name falls back to qwerty", async (assert) => {
   await placeAndWait(kb);
 
   const qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty")!;
-  const resolved = getResolvedLayout(kb);
-  assert.deepEqual(resolved, qwertyLayout, "Unknown layout falls back to qwerty");
+  const renderedKeys = getRenderedLayoutKeys(kb);
+  const expectedKeys = qwertyLayout.map((row: any) => row.map((k: any) => k.value));
+  assert.deepEqual(renderedKeys, expectedKeys, "Unknown layout falls back to qwerty");
 
   input.destroy();
   kb.destroy();
@@ -655,8 +656,9 @@ QUnit.test("Custom layout renders correctly after registration", async (assert) 
   const kb = new KioskKeyboard({ targetInput: input, layout: "xyz-layout" });
   await placeAndWait(kb);
 
-  const resolved = getResolvedLayout(kb);
-  assert.deepEqual(resolved, customLayout, "Custom layout is used by control");
+  const renderedKeys = getRenderedLayoutKeys(kb);
+  const expectedKeys = customLayout.map((row) => row.map((k) => k.value));
+  assert.deepEqual(renderedKeys, expectedKeys, "Custom layout is used by control");
 
   input.destroy();
   kb.destroy();
@@ -671,7 +673,8 @@ QUnit.test("Removing current layout makes control fall back to qwerty", async (a
   const kb = new KioskKeyboard({ targetInput: input, layout: "ephemeral" });
   await placeAndWait(kb);
 
-  assert.deepEqual(getResolvedLayout(kb), makeLayout("e"), "Ephemeral layout is active");
+  const ephemeralExpected = makeLayout("e").map((row) => row.map((k) => k.value));
+  assert.deepEqual(getRenderedLayoutKeys(kb), ephemeralExpected, "Ephemeral layout is active");
 
   KioskKeyboard.unregisterLayout("ephemeral");
   // Force re-render by triggering a layout re-resolve
@@ -679,7 +682,8 @@ QUnit.test("Removing current layout makes control fall back to qwerty", async (a
   await placeAndWait(kb);
 
   const qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty")!;
-  assert.deepEqual(getResolvedLayout(kb), qwertyLayout, "Falls back to qwerty after layout removed");
+  const qwertyExpected = qwertyLayout.map((row: any) => row.map((k: any) => k.value));
+  assert.deepEqual(getRenderedLayoutKeys(kb), qwertyExpected, "Falls back to qwerty after layout removed");
 
   input.destroy();
   kb.destroy();

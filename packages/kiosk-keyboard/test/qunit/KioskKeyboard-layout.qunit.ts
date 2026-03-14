@@ -6,7 +6,9 @@ import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
   getKeyElements,
-  getResolvedLayout,
+  getRenderedLayoutKeys,
+  getRowElements,
+  getRowKeyValues,
   hasKeyboardClass,
   placeAndWait,
   simulateTap,
@@ -33,20 +35,22 @@ QUnit.module("KioskKeyboard layout management", {
 // Layout resolution
 // ──────────────────────────────────────────────
 
-QUnit.test("getResolvedLayout returns QWERTY by default", (assert) => {
+QUnit.test("Default layout renders QWERTY", async (assert) => {
   const kb = new KioskKeyboard();
-  const layout = getResolvedLayout(kb);
-  assert.strictEqual(layout.length, 5, "QWERTY has 5 rows");
-  assert.strictEqual(layout[0][0].value, "1", "First key in number row is 1");
+  await placeAndWait(kb);
+  const rows = getRowElements(kb);
+  assert.strictEqual(rows.length, 5, "QWERTY has 5 rows");
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "1", "First key in number row is 1");
   kb.destroy();
 });
 
-QUnit.test("KeyboardType 'Numpad' overrides layout", (assert) => {
+QUnit.test("KeyboardType 'Numpad' renders numpad keys", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setKeyboardType("Numpad");
-  const layout = getResolvedLayout(kb);
-  assert.ok(layout.length <= 5, "Numpad has reasonable row count");
-  assert.strictEqual(layout[0][0].value, "7", "Numpad starts with 7");
+  await placeAndWait(kb);
+  const rows = getRowElements(kb);
+  assert.ok(rows.length <= 5, "Numpad has reasonable row count");
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad starts with 7");
   kb.destroy();
 });
 
@@ -73,9 +77,9 @@ QUnit.test("Layout property switches full keyboard layout", async (assert) => {
   kb.setLayout("numeric");
   await placeAndWait(kb);
 
-  const layout = getResolvedLayout(kb);
-  assert.strictEqual(layout[0][0].value, "1", "Numeric layout starts with 1");
-  const allValues = layout.flat().map((k) => k.value);
+  const firstKey = getRowKeyValues(kb, 0)[0];
+  assert.strictEqual(firstKey, "1", "Numeric layout starts with 1");
+  const allValues = getRenderedLayoutKeys(kb).flat();
   assert.notOk(allValues.includes("q"), "Numeric layout has no alphabetic keys");
 
   kb.destroy();
@@ -110,9 +114,9 @@ QUnit.test("setLayout with unregistered name is ignored and keeps current layout
   kb.setLayout("nonexistent-layout");
 
   assert.strictEqual(kb.getLayout(), before, "getLayout() still returns the previous layout");
-  const resolved = getResolvedLayout(kb);
-  assert.strictEqual(resolved[0][0].value, "1", "QWERTY layout still rendered (number row starts with 1)");
-  assert.strictEqual(resolved.length, 5, "QWERTY layout has 5 rows");
+  const firstKey = getRowKeyValues(kb, 0)[0];
+  assert.strictEqual(firstKey, "1", "QWERTY layout still rendered (number row starts with 1)");
+  assert.strictEqual(getRowElements(kb).length, 5, "QWERTY layout has 5 rows");
 
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
   assert.ok(keys.includes("q"), "QWERTY keys rendered - unregistered name had no effect");
@@ -206,26 +210,24 @@ QUnit.test("Layout switch does not fire layoutChange for invalid or unchanged la
 // German QWERTZ layout
 // ──────────────────────────────────────────────
 
-QUnit.test("QWERTZ-DE layout resolves correctly", (assert) => {
+QUnit.test("QWERTZ-DE layout resolves correctly", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setLayout("qwertz-de");
+  await placeAndWait(kb);
 
-  const layout = getResolvedLayout(kb);
-  assert.strictEqual(layout.length, 5, "QWERTZ-DE has 5 rows");
+  const rows = getRowElements(kb);
+  assert.strictEqual(rows.length, 5, "QWERTZ-DE has 5 rows");
 
-  // Row 2 should have Z instead of Y (QWERTZ)
-  const row2Values = layout[1].map((k) => k.value);
+  const row2Values = getRowKeyValues(kb, 1);
   assert.ok(row2Values.includes("z"), "Row 2 contains 'z' (QWERTZ arrangement)");
   assert.notOk(row2Values.includes("y"), "Row 2 does not contain 'y'");
 
-  // Umlaute present
   assert.ok(row2Values.includes("\u00FC"), "Row 2 contains \u00FC");
-  const row3Values = layout[2].map((k) => k.value);
+  const row3Values = getRowKeyValues(kb, 2);
   assert.ok(row3Values.includes("\u00F6"), "Row 3 contains \u00F6");
   assert.ok(row3Values.includes("\u00E4"), "Row 3 contains \u00E4");
 
-  // \u00DF present in row 4
-  const row4Values = layout[3].map((k) => k.value);
+  const row4Values = getRowKeyValues(kb, 3);
   assert.ok(row4Values.includes("\u00DF"), "Row 4 contains \u00DF");
 
   kb.destroy();

@@ -292,6 +292,22 @@ QUnit.test("Destroying last instance auto-resets i18n config and hook", async (a
 
   assert.strictEqual(getI18nConfiguration(), null, "Config auto-cleared after last instance destroyed");
   assert.ok(!hasConfiguredEnhancements(), "Enhancements auto-cleared after last instance destroyed");
+
+  // Verify the override hook was actually cleared by rendering a fresh keyboard
+  const input2 = new Input({ value: "" });
+  input2.placeAt("qunit-fixture");
+  const kb2 = new KioskKeyboard({ targetInput: input2 });
+  await placeAndWait(kb2);
+
+  const shiftKey = getKeyElement(kb2, "{shift}");
+  assert.strictEqual(
+    shiftKey?.getAttribute("aria-label"),
+    "Shift",
+    "Override hook was cleared - fresh keyboard uses default labels",
+  );
+
+  input2.destroy();
+  kb2.destroy();
 });
 
 QUnit.test("Destroying last instance clears global target resolver", async (assert) => {

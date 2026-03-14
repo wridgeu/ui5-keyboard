@@ -1,5 +1,4 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
 const DOM = KioskKeyboard.DOM;
@@ -29,11 +28,6 @@ export function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
   const end = new Event("touchend", { bubbles: true });
   Object.defineProperty(end, "target", { value: el, writable: false });
   kb.ontouchend(end);
-}
-
-/** Simulate a shift tap on an unrendered keyboard (creates a fake shift element). */
-export function tapShiftInternally(kb: KioskKeyboard): void {
-  simulateTap(kb, createFakeKeyElement("{shift}", "fake-shift"));
 }
 
 /** Get the rendered keyboard root element. */
@@ -108,22 +102,39 @@ export function createFakeKeyElement(keyValue: string, id = "fake-key"): HTMLEle
   return fakeKeyEl;
 }
 
+/**
+ * Check whether shift is active by reading `aria-pressed` from the
+ * rendered shift key.  Requires the keyboard to be rendered.
+ */
 export function isShiftActive(keyboard: KioskKeyboard): boolean {
-  return keyboard._getRendererApi()._isShiftActive();
+  const shiftKey = getKeyElement(keyboard, "{shift}");
+  return shiftKey !== null && shiftKey.getAttribute("aria-pressed") === "true";
 }
 
+/**
+ * Check whether caps lock is active by looking for the capsLock CSS
+ * class on the rendered shift key.  Requires the keyboard to be rendered.
+ */
 export function isCapsLock(keyboard: KioskKeyboard): boolean {
-  return keyboard._getRendererApi()._isCapsLock();
+  const shiftKey = getKeyElement(keyboard, "{shift}");
+  return shiftKey !== null && shiftKey.classList.contains(DOM.classes.keyCapsLock);
 }
 
-export function getResolvedLayout(keyboard: KioskKeyboard): LayoutDefinition {
-  return keyboard._getRendererApi()._getResolvedLayout();
+/** Get the rendered display label text of a key. */
+export function getRenderedKeyLabel(keyboard: KioskKeyboard, keyValue: string): string {
+  const keyEl = getRequiredKeyElement(keyboard, keyValue);
+  const labelSpan = keyEl.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`);
+  return labelSpan?.textContent ?? "";
 }
 
-export function getKeyLabel(keyboard: KioskKeyboard, key: KeyDefinition): string {
-  return keyboard._getRendererApi()._getKeyLabel(key);
+/** Get key data-key values from a rendered row. */
+export function getRowKeyValues(keyboard: KioskKeyboard, rowIndex: number): string[] {
+  return getRowKeys(keyboard, rowIndex).map((k) => k.dataset.key!);
 }
 
-export function getKeyAriaLabel(keyboard: KioskKeyboard, key: KeyDefinition): string {
-  return keyboard._getRendererApi()._getKeyAriaLabel(key);
+/** Get all rendered key data-key values as a 2D array (rows of strings). */
+export function getRenderedLayoutKeys(keyboard: KioskKeyboard): string[][] {
+  return getRowElements(keyboard).map((row) =>
+    Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)).map((k) => k.dataset.key!),
+  );
 }

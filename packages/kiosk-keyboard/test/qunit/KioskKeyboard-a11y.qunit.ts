@@ -3,9 +3,9 @@ import Input from "sap/m/Input";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
-  getKeyAriaLabel,
   getKeyElement,
   getKeyElements,
+  getRequiredKeyElement,
   hasKeyClass,
   placeAndWait,
   tapKey,
@@ -341,63 +341,64 @@ QUnit.test('getKeyIcon: " " \u2192 undefined', (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// getKeyAriaLabel for Special Keys
+// Rendered aria-label for Special Keys
 // ──────────────────────────────────────────────
 
-QUnit.test('getKeyAriaLabel: {backspace} (label: "") \u2192 "Backspace"', async (assert) => {
+QUnit.test('Rendered aria-label: {backspace} \u2192 "Backspace"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getKeyAriaLabel(kb, { value: "{backspace}", label: "" }), "Backspace");
+  assert.strictEqual(getRequiredKeyElement(kb, "{backspace}").getAttribute("aria-label"), "Backspace");
 
   kb.destroy();
 });
 
-QUnit.test('getKeyAriaLabel: {enter} (label: "") \u2192 "Enter"', async (assert) => {
+QUnit.test('Rendered aria-label: {enter} \u2192 "Enter"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getKeyAriaLabel(kb, { value: "{enter}", label: "" }), "Enter");
+  assert.strictEqual(getRequiredKeyElement(kb, "{enter}").getAttribute("aria-label"), "Enter");
 
   kb.destroy();
 });
 
-QUnit.test('getKeyAriaLabel: {shift} (label: "") \u2192 "Shift"', async (assert) => {
+QUnit.test('Rendered aria-label: {shift} \u2192 "Shift"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getKeyAriaLabel(kb, { value: "{shift}", label: "" }), "Shift");
+  assert.strictEqual(getRequiredKeyElement(kb, "{shift}").getAttribute("aria-label"), "Shift");
 
   kb.destroy();
 });
 
-QUnit.test('getKeyAriaLabel: " " \u2192 "Space"', async (assert) => {
+QUnit.test('Rendered aria-label: " " \u2192 "Space"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getKeyAriaLabel(kb, { value: " " }), "Space");
+  assert.strictEqual(getRequiredKeyElement(kb, " ").getAttribute("aria-label"), "Space");
 
   kb.destroy();
 });
 
-QUnit.test('getKeyAriaLabel: "a" \u2192 "a"', async (assert) => {
+QUnit.test('Rendered aria-label: "a" \u2192 "a"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getKeyAriaLabel(kb, { value: "a" }), "a");
+  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-label"), "a");
 
   kb.destroy();
 });
 
-QUnit.test('getKeyAriaLabel after shift: "a" \u2192 "A", "1" with shiftLabel "!" \u2192 "!"', async (assert) => {
+QUnit.test('Rendered aria-label after shift: "a" \u2192 "A", "1" \u2192 "!"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
+  await waitForRender();
 
-  assert.strictEqual(getKeyAriaLabel(kb, { value: "a" }), "A", "'a' becomes 'A' with shift");
+  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-label"), "A", "'a' becomes 'A' with shift");
   assert.strictEqual(
-    getKeyAriaLabel(kb, { value: "1", shiftLabel: "!" }),
+    getRequiredKeyElement(kb, "1").getAttribute("aria-label"),
     "!",
     "'1' with shiftLabel '!' becomes '!' with shift",
   );

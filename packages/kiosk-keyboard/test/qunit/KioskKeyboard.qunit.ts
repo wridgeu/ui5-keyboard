@@ -12,8 +12,8 @@ import {
   getKeyElement,
   placeAndWait,
   getKeyElements,
-  getKeyLabel,
   getKeyboardDom,
+  getRenderedKeyLabel,
   getRequiredKeyElement,
   getRowElements,
   hasKeyboardClass,
@@ -22,7 +22,6 @@ import {
   isShiftActive,
   simulateTap,
   tapKey,
-  tapShiftInternally,
   waitForRender,
 } from "./test-helpers";
 
@@ -126,24 +125,26 @@ QUnit.test("Disabled state renders correctly", async (assert) => {
 // Key labels and shift
 // ──────────────────────────────────────────────
 
-QUnit.test("getKeyLabel returns value by default", (assert) => {
-  const kb = new KioskKeyboard();
-  assert.strictEqual(getKeyLabel(kb, { value: "a" }), "a", "Simple key shows value");
-  assert.strictEqual(getKeyLabel(kb, { value: "1", label: "!" }), "!", "Key with label shows label");
+QUnit.test("Rendered key shows its label or value", async (assert) => {
+  KioskKeyboard.registerLayout("test-labels", [[{ value: "x" }, { value: "y", label: "Custom" }]]);
+  const kb = new KioskKeyboard({ layout: "test-labels" });
+  await placeAndWait(kb);
+
+  assert.strictEqual(getRenderedKeyLabel(kb, "x"), "x", "Key without explicit label shows value");
+  assert.strictEqual(getRenderedKeyLabel(kb, "y"), "Custom", "Key with explicit label shows label");
+
   kb.destroy();
 });
 
-QUnit.test("getKeyLabel returns uppercase when shift active", (assert) => {
+QUnit.test("Rendered key labels update to shift variants when shift active", async (assert) => {
   const kb = new KioskKeyboard();
+  await placeAndWait(kb);
 
-  tapShiftInternally(kb);
+  tapKey(kb, "{shift}");
+  await waitForRender();
 
-  assert.strictEqual(getKeyLabel(kb, { value: "a" }), "A", "Shifted single char is uppercase");
-  assert.strictEqual(
-    getKeyLabel(kb, { value: "1", shiftLabel: "!" }),
-    "!",
-    "Shifted key with shiftLabel uses shiftLabel",
-  );
+  assert.strictEqual(getRenderedKeyLabel(kb, "a"), "A", "Shifted single char is uppercase");
+  assert.strictEqual(getRenderedKeyLabel(kb, "1"), "!", "Shifted key shows shift variant");
 
   kb.destroy();
 });
@@ -152,21 +153,25 @@ QUnit.test("getKeyLabel returns uppercase when shift active", (assert) => {
 // Shift / Caps Lock toggle
 // ──────────────────────────────────────────────
 
-QUnit.test("Shift toggles: off -> shift -> caps -> off", (assert) => {
+QUnit.test("Shift toggles: off -> shift -> caps -> off", async (assert) => {
   const kb = new KioskKeyboard();
+  await placeAndWait(kb);
 
   assert.notOk(isShiftActive(kb), "Initially not shifted");
   assert.notOk(isCapsLock(kb), "Initially no caps lock");
 
-  tapShiftInternally(kb);
+  tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "After first tap: shift active");
   assert.notOk(isCapsLock(kb), "After first tap: not caps lock");
 
-  tapShiftInternally(kb);
+  tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "After second tap: still active (caps)");
   assert.ok(isCapsLock(kb), "After second tap: caps lock on");
 
-  tapShiftInternally(kb);
+  tapKey(kb, "{shift}");
+  await waitForRender();
   assert.notOk(isShiftActive(kb), "After third tap: shift off");
   assert.notOk(isCapsLock(kb), "After third tap: caps lock off");
 
@@ -178,9 +183,11 @@ QUnit.test("Shift auto-releases after character key", async (assert) => {
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active");
 
   tapKey(kb, "q");
+  await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift auto-released after character");
 
   kb.destroy();
@@ -193,9 +200,11 @@ QUnit.test("Caps Lock does NOT auto-release after character key", async (assert)
   // Double-tap shift for caps lock
   tapKey(kb, "{shift}");
   tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isCapsLock(kb), "Caps lock is on");
 
   tapKey(kb, "q");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Still shifted after character");
   assert.ok(isCapsLock(kb), "Caps lock still on");
 
@@ -519,6 +528,19 @@ QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
   document.body.removeChild(input);
 
   assert.ok(true, "No errors after destroy with auto-show enabled");
+});
+
+QUnit.test("exit() removes escape key listener", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+  kb.show();
+  assert.ok(kb.isOpen(), "Keyboard is open");
+
+  kb.destroy();
+
+  // Dispatching Escape after destroy should not throw
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.ok(true, "No errors dispatching Escape after destroy");
 });
 
 // ──────────────────────────────────────────────
@@ -955,9 +977,9 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   // Double-tap shift for caps lock
   tapKey(kb, "{shift}");
   tapKey(kb, "{shift}");
-  assert.ok(isCapsLock(kb), "Caps lock is on");
 
   await waitForRender();
+  assert.ok(isCapsLock(kb), "Caps lock is on");
 
   const shiftKey = getRequiredKeyElement(kb, "{shift}");
   assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "Shift key has capsLock CSS class");
@@ -987,15 +1009,18 @@ QUnit.test("Shift toggle works via keyboard (Enter key)", async (assert) => {
 
   // Off → Shift
   pressEnter();
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift active after first Enter");
   assert.notOk(isCapsLock(kb), "Not caps lock yet");
 
   // Shift → Caps Lock
   pressEnter();
+  await waitForRender();
   assert.ok(isCapsLock(kb), "Caps Lock after second Enter");
 
   // Caps Lock → Off
   pressEnter();
+  await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift off after third Enter");
   assert.notOk(isCapsLock(kb), "Caps Lock off after third Enter");
 
@@ -1007,10 +1032,9 @@ QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (asse
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active");
   assert.notOk(isCapsLock(kb), "Caps lock is NOT on");
-
-  await waitForRender();
 
   const shiftKey = getRequiredKeyElement(kb, "{shift}");
   assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "Has active class");
@@ -1570,6 +1594,7 @@ QUnit.test("Prior shift state does not leak into Numpad rendering", async (asser
 
   // Activate shift on full layout
   tapKey(kb, "{shift}");
+  await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active on full layout");
 
   // Switch to numpad
