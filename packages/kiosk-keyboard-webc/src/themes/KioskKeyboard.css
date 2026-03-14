@@ -5,7 +5,7 @@
 :host {
   display: block;
 
-  /* ---- Custom property defaults ---- */
+  /* ---- Public custom property defaults ---- */
   --kiosk-keyboard-padding: 0.75rem;
   --kiosk-keyboard-key-gap: 0.375rem;
   --kiosk-keyboard-key-height: 3rem;
@@ -52,26 +52,47 @@
 /* ============================= */
 
 .kiosk-keyboard {
+  /* ---- Private styling aliases ---- */
+  --_kiosk-keyboard-padding: var(--_kiosk-keyboard-responsive-padding, var(--kiosk-keyboard-padding));
+  --_kiosk-keyboard-key-gap: var(--_kiosk-keyboard-responsive-key-gap, var(--kiosk-keyboard-key-gap));
+  --_kiosk-keyboard-key-height: var(--_kiosk-keyboard-responsive-key-height, var(--kiosk-keyboard-key-height));
+  --_kiosk-keyboard-key-padding-inline: var(--kiosk-keyboard-key-padding-inline);
+  --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding, 0 var(--_kiosk-keyboard-key-padding-inline));
+  --_kiosk-keyboard-key-font-base: var(--kiosk-keyboard-key-font-size);
+  --_kiosk-keyboard-key-font-size: var(
+    --_kiosk-keyboard-responsive-key-font-size,
+    var(--_kiosk-keyboard-key-font-base)
+  );
+  --_kiosk-keyboard-key-shadow: var(--kiosk-keyboard-key-shadow);
+  --_kiosk-keyboard-key-shadow-hover: var(--kiosk-keyboard-key-shadow-hover);
+  --_kiosk-keyboard-max-width: var(--kiosk-keyboard-max-width);
+  --_kiosk-keyboard-docked-max-width: var(--kiosk-keyboard-docked-max-width);
+  --_kiosk-keyboard-docked-shadow: var(--kiosk-keyboard-docked-shadow);
+  --_kiosk-keyboard-docked-z-index: var(--kiosk-keyboard-docked-z-index);
+  --_kiosk-keyboard-modifier-font-base: var(--kiosk-keyboard-modifier-font-size);
+  --_kiosk-keyboard-modifier-font-size: var(
+    --_kiosk-keyboard-responsive-modifier-font-size,
+    var(--_kiosk-keyboard-modifier-font-base)
+  );
+  --_kiosk-keyboard-modifier-shadow: var(--kiosk-keyboard-modifier-shadow);
+  --_kiosk-keyboard-modifier-shadow-hover: var(--kiosk-keyboard-modifier-shadow-hover);
+  --_kiosk-keyboard-numpad-max-width: var(--kiosk-keyboard-numpad-max-width);
+  --_kiosk-keyboard-numpad-key-min-width: var(--kiosk-keyboard-numpad-key-min-width);
+
   container-name: keyboard;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: var(--kiosk-keyboard-key-gap);
-  padding: var(--kiosk-keyboard-padding);
+  gap: var(--_kiosk-keyboard-key-gap);
+  padding: var(--_kiosk-keyboard-padding);
   background: var(--sapGroup_ContentBackground, #fff);
   border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
   border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   user-select: none;
   touch-action: manipulation;
   width: 100%;
-  max-width: var(--kiosk-keyboard-max-width);
+  max-width: var(--_kiosk-keyboard-max-width);
   box-sizing: border-box;
-
-  /* Capture the consumer-provided font-size before responsive breakpoints
-     can override it.  Used by the @container rules below to cap rather
-     than hard-replace the value. */
-  --_kiosk-kb-font-base: var(--kiosk-keyboard-key-font-size);
-  --_kiosk-kb-modifier-font-base: var(--kiosk-keyboard-modifier-font-size);
 }
 
 /* ---- Responsive font scaling ----
@@ -86,29 +107,29 @@
 /* JS-driven width fallback (non-CQ browsers only) */
 @supports not (container-type: inline-size) {
   .kiosk-keyboard--cq-sm .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 1rem);
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
   }
   .kiosk-keyboard--cq-xs .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.875rem);
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
   }
 
   /* Mixed: narrow + short (non-CQ) */
   .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
   .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.75rem);
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
   }
 }
 
 /* CSS @container rules (instant response in CQ-capable browsers) */
 @container keyboard (max-width: 30rem) {
   .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 1rem);
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
   }
 }
 
 @container keyboard (max-width: 20rem) {
   .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.875rem);
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
   }
 }
 
@@ -117,32 +138,32 @@
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
-  --kiosk-keyboard-modifier-font-size: min(var(--_kiosk-kb-modifier-font-base), 0.8125rem);
+  --kiosk-keyboard-modifier-font-size: min(var(--_kiosk-keyboard-modifier-font-base), 0.8125rem);
 }
 
 .kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;
-  --kiosk-keyboard-modifier-font-size: min(var(--_kiosk-kb-modifier-font-base), 0.75rem);
+  --kiosk-keyboard-modifier-font-size: min(var(--_kiosk-keyboard-modifier-font-base), 0.75rem);
 }
 
 /* Mixed: narrow + short (CQ browsers) -- @container handles width, classes handle height */
 @container keyboard (max-width: 20rem) {
   .kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
   .kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-kb-font-base), 0.75rem);
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
   }
 }
 
 /* ---- Mode: Numpad ---- */
 .kiosk-keyboard--numpad {
-  max-width: var(--kiosk-keyboard-numpad-max-width);
+  max-width: var(--_kiosk-keyboard-numpad-max-width);
   --kiosk-keyboard-key-height: 3.5rem;
   --kiosk-keyboard-key-font-size: 1.375rem;
 
   & .kiosk-key {
-    min-width: var(--kiosk-keyboard-numpad-key-min-width);
+    min-width: var(--_kiosk-keyboard-numpad-key-min-width);
   }
 
   & .kiosk-key--modifier,
@@ -162,12 +183,12 @@
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: var(--kiosk-keyboard-docked-z-index);
-  max-width: var(--kiosk-keyboard-docked-max-width);
+  z-index: var(--_kiosk-keyboard-docked-z-index);
+  max-width: var(--_kiosk-keyboard-docked-max-width);
   margin-inline: auto;
   border-radius: var(--sapElement_BorderCornerRadius, 0.75rem) var(--sapElement_BorderCornerRadius, 0.75rem) 0 0;
   border-bottom: none;
-  box-shadow: var(--kiosk-keyboard-docked-shadow);
+  box-shadow: var(--_kiosk-keyboard-docked-shadow);
   transform: translateY(0);
   transition:
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -196,7 +217,7 @@
 
 .kiosk-row {
   display: flex;
-  gap: var(--kiosk-keyboard-key-gap);
+  gap: var(--_kiosk-keyboard-key-gap);
   justify-content: center;
 }
 
@@ -209,8 +230,8 @@
   align-items: center;
   justify-content: center;
   flex: 1 1 0;
-  height: var(--kiosk-keyboard-key-height);
-  padding: var(--kiosk-keyboard-key-padding);
+  height: var(--_kiosk-keyboard-key-height);
+  padding: var(--_kiosk-keyboard-key-padding);
   border: 1px solid var(--sapButton_BorderColor, #bfbfbf);
   border-radius: var(--sapButton_BorderCornerRadius, 0.5rem);
   background: var(--sapButton_Background, #fff);
@@ -219,7 +240,7 @@
   font-size: var(--kiosk-keyboard-key-font-size);
   cursor: pointer;
   box-sizing: border-box;
-  box-shadow: var(--kiosk-keyboard-key-shadow);
+  box-shadow: var(--_kiosk-keyboard-key-shadow);
   min-width: 0;
   white-space: nowrap;
   container-type: inline-size;
@@ -232,7 +253,7 @@
     background: var(--sapButton_Hover_Background, #eaecee);
     border-color: var(--sapButton_Hover_BorderColor, #0064d9);
     transform: translateY(-1px);
-    box-shadow: var(--kiosk-keyboard-key-shadow-hover);
+    box-shadow: var(--_kiosk-keyboard-key-shadow-hover);
     transition:
       background 0.1s ease,
       box-shadow 0.1s ease,
@@ -255,7 +276,7 @@
     outline: var(--sapContent_FocusWidth, 2px) var(--sapContent_FocusStyle, solid) var(--sapContent_FocusColor, #000);
     outline-offset: 1px;
     transform: translateY(-1px);
-    box-shadow: var(--kiosk-keyboard-key-shadow-hover);
+    box-shadow: var(--_kiosk-keyboard-key-shadow-hover);
   }
 }
 
@@ -287,13 +308,13 @@
   background: var(--sapButton_Lite_Background, transparent);
   color: var(--sapButton_Lite_TextColor, #32363a);
   border-color: var(--sapButton_Lite_BorderColor, transparent);
-  box-shadow: var(--kiosk-keyboard-modifier-shadow);
+  box-shadow: var(--_kiosk-keyboard-modifier-shadow);
   font-size: var(--kiosk-keyboard-modifier-font-size);
 
   &:hover {
     background: var(--sapButton_Lite_Hover_Background, #eaecee);
     border-color: var(--sapButton_Lite_Hover_BorderColor, #0064d9);
-    box-shadow: var(--kiosk-keyboard-modifier-shadow-hover);
+    box-shadow: var(--_kiosk-keyboard-modifier-shadow-hover);
   }
 
   &:active,
@@ -417,13 +438,13 @@
     background: var(--sapButton_Background, #fff);
     border-color: var(--sapButton_BorderColor, #bfbfbf);
     transform: none;
-    box-shadow: var(--kiosk-keyboard-key-shadow);
+    box-shadow: var(--_kiosk-keyboard-key-shadow);
   }
 
   .kiosk-key--modifier:hover {
     background: var(--sapButton_Lite_Background, transparent);
     border-color: var(--sapButton_Lite_BorderColor, transparent);
-    box-shadow: var(--kiosk-keyboard-modifier-shadow);
+    box-shadow: var(--_kiosk-keyboard-modifier-shadow);
   }
 
   .kiosk-key--action:hover,

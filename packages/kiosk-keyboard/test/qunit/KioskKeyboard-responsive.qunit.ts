@@ -3,6 +3,8 @@ import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait } from "./test-helpers";
 
+const DOM = KioskKeyboard.DOM;
+
 // ──────────────────────────────────────────────
 // Module
 // ──────────────────────────────────────────────
@@ -25,8 +27,8 @@ QUnit.test("Applies cq-xs class at compact width (<= 20rem)", async (assert) => 
   const dom = kb.getDomRef()!;
   (kb as any)._applyResponsiveSizeClasses(dom, 300, 600);
 
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs class present at 300px");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm class absent at 300px");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs class present at 300px");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm class absent at 300px");
 
   kb.destroy();
 });
@@ -38,8 +40,8 @@ QUnit.test("Applies cq-sm class at narrow width (20rem < width <= 30rem)", async
   const dom = kb.getDomRef()!;
   (kb as any)._applyResponsiveSizeClasses(dom, 400, 600);
 
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs class absent at 400px");
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm class present at 400px");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs class absent at 400px");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm class present at 400px");
 
   kb.destroy();
 });
@@ -51,8 +53,8 @@ QUnit.test("No responsive classes at wide width (> 30rem)", async (assert) => {
   const dom = kb.getDomRef()!;
   (kb as any)._applyResponsiveSizeClasses(dom, 800, 600);
 
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs class absent at 800px");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm class absent at 800px");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs class absent at 800px");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm class absent at 800px");
 
   kb.destroy();
 });
@@ -65,8 +67,8 @@ QUnit.test("Boundary: exactly 20rem applies cq-xs", async (assert) => {
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
   (kb as any)._applyResponsiveSizeClasses(dom, 20 * remPx, 600);
 
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs at exactly 20rem");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm absent at exactly 20rem");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs at exactly 20rem");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm absent at exactly 20rem");
 
   kb.destroy();
 });
@@ -79,8 +81,8 @@ QUnit.test("Boundary: exactly 30rem applies cq-sm", async (assert) => {
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
   (kb as any)._applyResponsiveSizeClasses(dom, 30 * remPx, 600);
 
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs absent at exactly 30rem");
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm at exactly 30rem");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs absent at exactly 30rem");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm at exactly 30rem");
 
   kb.destroy();
 });
@@ -92,15 +94,15 @@ QUnit.test("Classes update when width changes across breakpoints", async (assert
   const dom = kb.getDomRef()!;
 
   (kb as any)._applyResponsiveSizeClasses(dom, 300, 600);
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "Starts compact");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqXs), "Starts compact");
 
   (kb as any)._applyResponsiveSizeClasses(dom, 400, 600);
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs removed after resize");
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm applied after resize");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs removed after resize");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm applied after resize");
 
   (kb as any)._applyResponsiveSizeClasses(dom, 800, 600);
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "cq-xs removed at wide width");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-sm"), "cq-sm removed at wide width");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs removed at wide width");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm removed at wide width");
 
   kb.destroy();
 });
@@ -111,7 +113,7 @@ QUnit.test("Cleanup on exit() removes resize observer", async (assert) => {
 
   const dom = kb.getDomRef()!;
   (kb as any)._applyResponsiveSizeClasses(dom, 300, 600);
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-xs"), "Class applied before destroy");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqXs), "Class applied before destroy");
 
   kb.destroy();
 
@@ -140,8 +142,8 @@ QUnit.test("Applies cq-short class when externally constrained (height <= 16rem)
   // Constrained to 16rem — triggers cq-short
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 16 * remPx);
 
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short applied at 16rem height");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny absent at 16rem height");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied at 16rem height");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent at 16rem height");
 
   kb.destroy();
 });
@@ -157,8 +159,8 @@ QUnit.test("Applies cq-tiny class when severely constrained (height <= 12rem)", 
 
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 12 * remPx);
 
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny applied at 12rem height");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short absent when cq-tiny");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied at 12rem height");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short absent when cq-tiny");
 
   kb.destroy();
 });
@@ -173,8 +175,8 @@ QUnit.test("No height classes when keyboard is not externally constrained", asyn
   (kb as any)._naturalContentHeight = 300;
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 300);
 
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short absent when unconstrained");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny absent when unconstrained");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short absent when unconstrained");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent when unconstrained");
 
   kb.destroy();
 });
@@ -189,8 +191,8 @@ QUnit.test("No height classes for docked keyboards", async (assert) => {
   (kb as any)._naturalContentHeight = 400;
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 12 * remPx);
 
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short absent for docked");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny absent for docked");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short absent for docked");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent for docked");
 
   kb.destroy();
 });
@@ -253,17 +255,17 @@ QUnit.test("Height classes update when constraint changes", async (assert) => {
 
   // Start constrained (tiny)
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 10 * remPx);
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "Starts as tiny");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "Starts as tiny");
 
   // Grow to short
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 15 * remPx);
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--cq-short"), "Transitions to short");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny removed");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Transitions to short");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny removed");
 
   // Grow to unconstrained
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 400);
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-short"), "cq-short removed at full height");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--cq-tiny"), "cq-tiny removed at full height");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short removed at full height");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny removed at full height");
 
   kb.destroy();
 });
@@ -282,7 +284,7 @@ QUnit.test("Responsive class preserves custom font-size below the cap", async (a
 
   // Apply cq-sm (cap = 1rem) - 0.75rem should be preserved
   (kb as any)._applyResponsiveSizeClasses(dom, 400, 600);
-  const key = dom.querySelector(".ui5KioskKey") as HTMLElement;
+  const key = dom.querySelector(DOM.selectors.key) as HTMLElement;
   assert.ok(key, "Key element found");
 
   const fontSize = Number.parseFloat(window.getComputedStyle(key).fontSize);

@@ -347,7 +347,9 @@ kb.setTargetResolver(null);
 > [!NOTE]
 > Virtual key presses dispatch `InputEvent("input")` on the target, matching native keyboard behavior. The `"change"` event is _not_ dispatched on character input; it fires only on Enter (for single-line inputs), consistent with how browsers handle `"change"` (on blur/commit).
 
-## CSS Custom Properties
+## Public CSS Custom Properties
+
+The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and shadow DOM classes remain private implementation details. This package currently expects customization through host attributes and public CSS variables rather than shadow-internal selectors.
 
 Override these on the `:host` or a parent element to customize appearance:
 

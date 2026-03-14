@@ -1,21 +1,25 @@
 import { fixture, html, expect, oneEvent, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
-import "../../src/KioskKeyboard.js";
-import type KioskKeyboard from "../../src/KioskKeyboard.js";
+import KioskKeyboard from "../../src/KioskKeyboard.js";
 
 /** Wait for UI5Element async render cycle. */
 const nextRender = renderFinished;
+const DOM = KioskKeyboard.DOM;
 
 function queryKeys(el: KioskKeyboard): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[role="button"]');
 }
 
 function queryKey(el: KioskKeyboard, dataKey: string): HTMLElement | null {
-  return el.shadowRoot!.querySelector(`[data-key="${CSS.escape(dataKey)}"]`);
+  return el.shadowRoot!.querySelector(DOM.selectors.keyByValue(dataKey));
 }
 
 function rootDiv(el: KioskKeyboard): HTMLElement {
-  return el.shadowRoot!.querySelector(".kiosk-keyboard")!;
+  return el.shadowRoot!.querySelector(DOM.selectors.root)!;
+}
+
+function queryRows(el: KioskKeyboard): NodeListOf<HTMLElement> {
+  return el.shadowRoot!.querySelectorAll(DOM.selectors.row);
 }
 
 describe("kiosk-keyboard", () => {
@@ -40,7 +44,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      const rows = el.shadowRoot!.querySelectorAll(".kiosk-row");
+      const rows = queryRows(el);
       expect(rows.length).to.be.greaterThan(0);
     });
 
@@ -51,7 +55,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--disabled")).to.be.true;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootDisabled)).to.be.true;
     });
 
     it("renders docked mode with docked class", async () => {
@@ -61,7 +65,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--docked")).to.be.true;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootDocked)).to.be.true;
     });
 
     it("renders hidden state when docked and not opened", async () => {
@@ -71,7 +75,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.true;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
     });
   });
 
@@ -575,7 +579,7 @@ describe("kiosk-keyboard", () => {
 
       const shift = queryKey(kb, "{shift}")!;
       expect(shift.getAttribute("aria-pressed")).to.equal("true");
-      expect(shift.classList.contains("kiosk-key--caps-lock")).to.be.true;
+      expect(shift.classList.contains(DOM.classes.keyCapsLock)).to.be.true;
     });
   });
 
@@ -611,15 +615,15 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.true;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
 
       el.show();
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.false;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.false;
 
       el.close();
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.true;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
     });
 
     it("dispatches after-open event", async () => {
@@ -741,11 +745,11 @@ describe("kiosk-keyboard", () => {
 
       el.open = true;
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.false;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.false;
 
       el.open = false;
       await nextRender();
-      expect(rootDiv(el).classList.contains("kiosk-keyboard--hidden")).to.be.true;
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
     });
 
     it("does not fire spurious after-close when open=true is rejected (non-docked)", async () => {
@@ -1244,7 +1248,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      const keys = el.shadowRoot!.querySelectorAll(".kiosk-key");
+      const keys = el.shadowRoot!.querySelectorAll(DOM.selectors.key);
       expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
       for (const key of keys) {
         expect(key.getAttribute("role")).to.equal("button");
@@ -1287,7 +1291,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      const focusable = el.shadowRoot!.querySelectorAll('.kiosk-key[tabindex="0"]');
+      const focusable = el.shadowRoot!.querySelectorAll(DOM.selectors.focusableKey);
       expect(focusable.length).to.equal(1);
     });
 
@@ -1346,12 +1350,12 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      const firstKey = el.shadowRoot!.querySelector<HTMLElement>('.kiosk-key[tabindex="0"]')!;
+      const firstKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
       firstKey.focus();
 
       firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
 
-      const nextFocused = el.shadowRoot!.querySelector<HTMLElement>('.kiosk-key[tabindex="0"]')!;
+      const nextFocused = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
       expect(nextFocused).to.not.equal(firstKey);
     });
   });
@@ -1667,7 +1671,7 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
 
-      const key = el.shadowRoot!.querySelector<HTMLElement>(".kiosk-key");
+      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
       expect(key).to.not.be.null;
 
       const fontSize = parseFloat(getComputedStyle(key!).fontSize);
@@ -1693,8 +1697,8 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       const root = rootDiv(el);
-      expect(root.classList.contains("kiosk-keyboard--cq-xs"), "cq-xs applied at ≤ 20rem").to.be.true;
-      expect(root.classList.contains("kiosk-keyboard--cq-sm"), "cq-sm absent when cq-xs applies").to.be.false;
+      expect(root.classList.contains(DOM.classes.rootCqXs), "cq-xs applied at ≤ 20rem").to.be.true;
+      expect(root.classList.contains(DOM.classes.rootCqSm), "cq-sm absent when cq-xs applies").to.be.false;
 
       // Widen to 25rem → should switch to cq-sm
       wrapper.style.width = "25rem";
@@ -1702,16 +1706,16 @@ describe("kiosk-keyboard", () => {
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       await nextRender();
 
-      expect(root.classList.contains("kiosk-keyboard--cq-sm"), "cq-sm applied at ≤ 30rem").to.be.true;
-      expect(root.classList.contains("kiosk-keyboard--cq-xs"), "cq-xs removed above 20rem").to.be.false;
+      expect(root.classList.contains(DOM.classes.rootCqSm), "cq-sm applied at ≤ 30rem").to.be.true;
+      expect(root.classList.contains(DOM.classes.rootCqXs), "cq-xs removed above 20rem").to.be.false;
 
       // Widen beyond 30rem → both removed
       wrapper.style.width = "40rem";
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       await nextRender();
 
-      expect(root.classList.contains("kiosk-keyboard--cq-sm"), "cq-sm removed above 30rem").to.be.false;
-      expect(root.classList.contains("kiosk-keyboard--cq-xs"), "cq-xs removed above 30rem").to.be.false;
+      expect(root.classList.contains(DOM.classes.rootCqSm), "cq-sm removed above 30rem").to.be.false;
+      expect(root.classList.contains(DOM.classes.rootCqXs), "cq-xs removed above 30rem").to.be.false;
     });
 
     it("preserves consumer font-size below the responsive cap", async () => {
@@ -1730,7 +1734,7 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
 
-      const key = el.shadowRoot!.querySelector<HTMLElement>(".kiosk-key");
+      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
       expect(key).to.not.be.null;
 
       const fontSize = parseFloat(getComputedStyle(key!).fontSize);

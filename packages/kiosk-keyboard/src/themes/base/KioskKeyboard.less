@@ -3,10 +3,11 @@
 /* ============================= */
 
 /*
- * CSS Custom Properties API
+ * Public CSS Custom Properties API
  *
  * Override these on .ui5KioskKeyboard to customize without !important.
  * Example: .ui5KioskKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }
+ * Internal --_ui5KioskKeyboard-* aliases are private implementation details.
  *
  * Layout:
  *   --ui5KioskKeyboard-padding          Container padding (default: 0.75rem)
@@ -44,7 +45,7 @@
 /* ============================= */
 
 .ui5KioskKeyboard {
-  /* ---- Custom property defaults ---- */
+  /* ---- Public custom property defaults ---- */
   --ui5KioskKeyboard-padding: 0.75rem;
   --ui5KioskKeyboard-keyGap: @_ui5KioskKeyGap;
   --ui5KioskKeyboard-keyHeight: @_ui5KioskKeyHeight;
@@ -62,34 +63,48 @@
   --ui5KioskKeyboard-numpadMaxWidth: 20rem;
   --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
 
+  /* ---- Private styling aliases ---- */
+  --_ui5KioskKeyboard-padding: ~"var(--_ui5KioskKeyboard-responsivePadding, var(--ui5KioskKeyboard-padding))";
+  --_ui5KioskKeyboard-keyGap: ~"var(--_ui5KioskKeyboard-responsiveKeyGap, var(--ui5KioskKeyboard-keyGap))";
+  --_ui5KioskKeyboard-keyHeight: ~"var(--_ui5KioskKeyboard-responsiveKeyHeight, var(--ui5KioskKeyboard-keyHeight))";
+  --_ui5KioskKeyboard-keyPaddingInline: ~"var(--ui5KioskKeyboard-keyPaddingInline)";
+  --_ui5KioskKeyboard-keyFontBase: ~"var(--ui5KioskKeyboard-keyFontSize)";
+  --_ui5KioskKeyboard-keyFontSize: ~"var(--_ui5KioskKeyboard-responsiveKeyFontSize, var(--_ui5KioskKeyboard-keyFontBase))";
+  --_ui5KioskKeyboard-keyShadow: ~"var(--ui5KioskKeyboard-keyShadow)";
+  --_ui5KioskKeyboard-keyShadowHover: ~"var(--ui5KioskKeyboard-keyShadowHover)";
+  --_ui5KioskKeyboard-maxWidth: ~"var(--ui5KioskKeyboard-maxWidth)";
+  --_ui5KioskKeyboard-dockedMaxWidth: ~"var(--ui5KioskKeyboard-dockedMaxWidth)";
+  --_ui5KioskKeyboard-dockedShadow: ~"var(--ui5KioskKeyboard-dockedShadow)";
+  --_ui5KioskKeyboard-dockedZIndex: ~"var(--ui5KioskKeyboard-dockedZIndex)";
+  --_ui5KioskKeyboard-modifierFontBase: ~"var(--ui5KioskKeyboard-modifierFontSize)";
+  --_ui5KioskKeyboard-modifierFontSize: ~"var(--_ui5KioskKeyboard-responsiveModifierFontSize, var(--_ui5KioskKeyboard-modifierFontBase))";
+  --_ui5KioskKeyboard-modifierShadow: ~"var(--ui5KioskKeyboard-modifierShadow)";
+  --_ui5KioskKeyboard-modifierShadowHover: ~"var(--ui5KioskKeyboard-modifierShadowHover)";
+  --_ui5KioskKeyboard-numpadMaxWidth: ~"var(--ui5KioskKeyboard-numpadMaxWidth)";
+  --_ui5KioskKeyboard-numpadKeyMinWidth: ~"var(--ui5KioskKeyboard-numpadKeyMinWidth)";
+
   /* ---- Base layout ---- */
   display: flex;
   flex-direction: column;
-  gap: var(--ui5KioskKeyboard-keyGap);
-  padding: var(--ui5KioskKeyboard-padding);
+  gap: var(--_ui5KioskKeyboard-keyGap);
+  padding: var(--_ui5KioskKeyboard-padding);
   background: @sapUiGroupContentBackground;
   border: 1px solid @sapUiGroupTitleBorderColor;
   border-radius: @sapUiElementBorderCornerRadius;
   user-select: none;
   touch-action: manipulation;
   width: 100%;
-  max-width: var(--ui5KioskKeyboard-maxWidth);
+  max-width: var(--_ui5KioskKeyboard-maxWidth);
   box-sizing: border-box;
-
-  /* Capture the consumer-provided font-size before responsive breakpoints
-     can override it.  Used by the cq-sm / cq-xs rules below to cap rather
-     than hard-replace the value. */
-  --_ui5KioskKeyboard-fontBase: ~"var(--ui5KioskKeyboard-keyFontSize)";
-  --_ui5KioskKeyboard-modifierFontBase: ~"var(--ui5KioskKeyboard-modifierFontSize)";
 
   /* ---- Mode: Numpad ---- */
   &--numpad {
-    max-width: var(--ui5KioskKeyboard-numpadMaxWidth);
+    max-width: var(--_ui5KioskKeyboard-numpadMaxWidth);
     --ui5KioskKeyboard-keyHeight: 3.5rem;
     --ui5KioskKeyboard-keyFontSize: 1.375rem;
 
     .ui5KioskKey {
-      min-width: var(--ui5KioskKeyboard-numpadKeyMinWidth);
+      min-width: var(--_ui5KioskKeyboard-numpadKeyMinWidth);
     }
   }
 
@@ -104,12 +119,12 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: var(--ui5KioskKeyboard-dockedZIndex);
-    max-width: var(--ui5KioskKeyboard-dockedMaxWidth);
+    z-index: var(--_ui5KioskKeyboard-dockedZIndex);
+    max-width: var(--_ui5KioskKeyboard-dockedMaxWidth);
     margin-inline: auto;
     border-radius: @sapUiElementBorderCornerRadius @sapUiElementBorderCornerRadius 0 0;
     border-bottom: none;
-    box-shadow: var(--ui5KioskKeyboard-dockedShadow);
+    box-shadow: var(--_ui5KioskKeyboard-dockedShadow);
     transform: translateY(0);
     transition:
       transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -134,7 +149,7 @@
 
 .ui5KioskRow {
   display: flex;
-  gap: var(--ui5KioskKeyboard-keyGap);
+  gap: var(--_ui5KioskKeyboard-keyGap);
   justify-content: center;
 }
 
@@ -147,8 +162,8 @@
   align-items: center;
   justify-content: center;
   flex: 1 1 0;
-  height: var(--ui5KioskKeyboard-keyHeight);
-  padding: 0 var(--ui5KioskKeyboard-keyPaddingInline);
+  height: var(--_ui5KioskKeyboard-keyHeight);
+  padding: 0 var(--_ui5KioskKeyboard-keyPaddingInline);
   border: 1px solid @sapUiButtonBorderColor;
   border-radius: @sapUiButtonBorderCornerRadius;
   background: @sapUiButtonBackground;
@@ -157,7 +172,7 @@
   font-size: var(--ui5KioskKeyboard-keyFontSize);
   cursor: pointer;
   box-sizing: border-box;
-  box-shadow: var(--ui5KioskKeyboard-keyShadow);
+  box-shadow: var(--_ui5KioskKeyboard-keyShadow);
   min-width: 0;
   white-space: nowrap;
   container-type: inline-size;
@@ -169,7 +184,7 @@
     background: @sapUiButtonHoverBackground;
     border-color: @sapUiButtonHoverBorderColor;
     transform: translateY(-1px);
-    box-shadow: var(--ui5KioskKeyboard-keyShadowHover);
+    box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
     transition:
       background 0.1s ease,
       box-shadow 0.1s ease,
@@ -193,7 +208,7 @@
     outline: @sapUiContentFocusWidth @sapUiContentFocusStyle @sapUiContentFocusColor;
     outline-offset: 1px;
     transform: translateY(-1px);
-    box-shadow: var(--ui5KioskKeyboard-keyShadowHover);
+    box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
   }
 
   /* ---- Width classes: proportional flex grow ---- */
@@ -251,13 +266,13 @@
     background: @sapUiButtonLiteBackground;
     color: @sapUiButtonLiteTextColor;
     border-color: @sapUiButtonLiteBorderColor;
-    box-shadow: var(--ui5KioskKeyboard-modifierShadow);
-    font-size: ~"var(--ui5KioskKeyboard-modifierFontSize)";
+    box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
+    font-size: var(--ui5KioskKeyboard-modifierFontSize);
 
     &:hover {
       background: @sapUiButtonLiteHoverBackground;
       border-color: @sapUiButtonLiteHoverBorderColor;
-      box-shadow: var(--ui5KioskKeyboard-modifierShadowHover);
+      box-shadow: var(--_ui5KioskKeyboard-modifierShadowHover);
     }
 
     &:active,
@@ -274,7 +289,7 @@
     background: @sapUiButtonEmphasizedBackground;
     color: @sapUiButtonEmphasizedTextColor;
     border-color: @sapUiButtonEmphasizedBorderColor;
-    font-size: ~"var(--ui5KioskKeyboard-modifierFontSize)";
+    font-size: var(--ui5KioskKeyboard-modifierFontSize);
     font-weight: bold;
 
     &:hover {
@@ -319,11 +334,11 @@
    A consumer who sets --ui5KioskKeyboard-keyFontSize: 0.75rem keeps that
    value; one who sets 1.5rem gets capped to 1rem / 0.875rem. ---- */
 .ui5KioskKeyboard--cq-sm .ui5KioskKey {
-  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-fontBase), 1rem)";
+  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 1rem)";
 }
 
 .ui5KioskKeyboard--cq-xs .ui5KioskKey {
-  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-fontBase), 0.875rem)";
+  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.875rem)";
 }
 
 /* ---- Height-responsive classes (JS-driven) ---- */
@@ -344,7 +359,7 @@
 /* Mixed: narrow + short */
 .ui5KioskKeyboard--cq-xs.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) .ui5KioskKey,
 .ui5KioskKeyboard--cq-xs.ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
-  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-fontBase), 0.75rem)";
+  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.75rem)";
 }
 
 /* ============================= */
@@ -437,13 +452,13 @@
     background: @sapUiButtonBackground;
     border-color: @sapUiButtonBorderColor;
     transform: none;
-    box-shadow: var(--ui5KioskKeyboard-keyShadow);
+    box-shadow: var(--_ui5KioskKeyboard-keyShadow);
   }
 
   .ui5KioskKey--modifier:hover {
     background: @sapUiButtonLiteBackground;
     border-color: @sapUiButtonLiteBorderColor;
-    box-shadow: var(--ui5KioskKeyboard-modifierShadow);
+    box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
   }
 
   .ui5KioskKey--action:hover,

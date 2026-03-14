@@ -7,6 +7,49 @@ import { KeyboardType } from "./library";
 
 const glyphSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
+export const KIOSK_KEYBOARD_DOM = {
+  classes: {
+    root: "ui5KioskKeyboard",
+    rootDocked: "ui5KioskKeyboard--docked",
+    rootClosed: "ui5KioskKeyboard--closed",
+    rootDisabled: "ui5KioskKeyboard--disabled",
+    rootCqSm: "ui5KioskKeyboard--cq-sm",
+    rootCqXs: "ui5KioskKeyboard--cq-xs",
+    rootCqShort: "ui5KioskKeyboard--cq-short",
+    rootCqTiny: "ui5KioskKeyboard--cq-tiny",
+    row: "ui5KioskRow",
+    key: "ui5KioskKey",
+    keySpace: "ui5KioskKey--space",
+    keyModifier: "ui5KioskKey--modifier",
+    keyAction: "ui5KioskKey--action",
+    keyActive: "ui5KioskKey--active",
+    keyCapsLock: "ui5KioskKey--capsLock",
+    keyPressed: "ui5KioskKey--pressed",
+    keyHighlight: "ui5KioskKey--highlight",
+    keyLabel: "ui5KioskKey__label",
+    keyLabelGlyph: "ui5KioskKey__label--glyph",
+    keyLabelMulti: "ui5KioskKey__label--multi",
+  },
+  attributes: {
+    key: "data-key",
+    shiftValue: "data-shift-value",
+  },
+  selectors: {
+    root: ".ui5KioskKeyboard",
+    row: ".ui5KioskRow",
+    key: ".ui5KioskKey",
+    focusableKey: '.ui5KioskKey[tabindex="0"]',
+    keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
+    keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
+  },
+  keyboardTypeClass(type: string): string {
+    return `ui5KioskKeyboard--${type.toLowerCase()}`;
+  },
+  keyWidthClass(width: string): string {
+    return width === "space" ? this.classes.keySpace : `ui5KioskKey--w${width.replace(".", "-")}`;
+  },
+} as const;
+
 /**
  * Renderer for the KioskKeyboard control.
  *
@@ -44,21 +87,21 @@ const KioskKeyboardRenderer = {
 
   /** CSS classes on the root `<div>`. */
   addRootClasses(rm: RenderManager, oControl: KioskKeyboard): void {
-    rm.class("ui5KioskKeyboard");
+    rm.class(KIOSK_KEYBOARD_DOM.classes.root);
 
     const sType = oControl.getKeyboardType();
     if (sType !== KeyboardType.Full) {
-      rm.class(`ui5KioskKeyboard--${sType.toLowerCase()}`);
+      rm.class(KIOSK_KEYBOARD_DOM.keyboardTypeClass(sType));
     }
 
     if (oControl.getDocked()) {
-      rm.class("ui5KioskKeyboard--docked");
+      rm.class(KIOSK_KEYBOARD_DOM.classes.rootDocked);
       // Start closed; onAfterRendering syncs with _open state
-      rm.class("ui5KioskKeyboard--closed");
+      rm.class(KIOSK_KEYBOARD_DOM.classes.rootClosed);
     }
 
     if (!oControl.getEnabled()) {
-      rm.class("ui5KioskKeyboard--disabled");
+      rm.class(KIOSK_KEYBOARD_DOM.classes.rootDisabled);
     }
   },
 
@@ -138,7 +181,7 @@ const KioskKeyboardRenderer = {
     focusTarget: { row: number; col: number },
   ): void {
     rm.openStart("div", `${oControl.getId()}-row-${ri}`);
-    rm.class("ui5KioskRow");
+    rm.class(KIOSK_KEYBOARD_DOM.classes.row);
     rm.openEnd();
 
     row.forEach((key, ci) => {
@@ -174,27 +217,27 @@ const KioskKeyboardRenderer = {
   /** CSS classes on a key `<div>`. */
   addKeyClasses(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
     const { _isShiftActive, _isCapsLock } = oControl._getRendererApi();
-    rm.class("ui5KioskKey");
+    rm.class(KIOSK_KEYBOARD_DOM.classes.key);
 
     // Width class
     if (key.width === "space") {
-      rm.class("ui5KioskKey--space");
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keySpace);
     } else if (key.width) {
-      rm.class(`ui5KioskKey--w${key.width.replace(".", "-")}`);
+      rm.class(KIOSK_KEYBOARD_DOM.keyWidthClass(key.width));
     }
 
     // Key type styling - separate modifier (subdued) from action (prominent)
     if (key.type === "modifier") {
-      rm.class("ui5KioskKey--modifier");
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyModifier);
     } else if (key.type === "action") {
-      rm.class("ui5KioskKey--action");
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyAction);
     }
 
     // Active shift / caps lock indicator
     if (key.value === "{shift}" && _isShiftActive()) {
-      rm.class("ui5KioskKey--active");
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyActive);
       if (_isCapsLock()) {
-        rm.class("ui5KioskKey--capsLock");
+        rm.class(KIOSK_KEYBOARD_DOM.classes.keyCapsLock);
       }
     }
   },
@@ -228,11 +271,11 @@ const KioskKeyboardRenderer = {
       rm.attr("aria-disabled", "true");
     }
 
-    rm.attr("data-key", key.value);
+    rm.attr(KIOSK_KEYBOARD_DOM.attributes.key, key.value);
 
     // Store shift value for efficient lookup in tap handler
     if (key.shiftValue) {
-      rm.attr("data-shift-value", key.shiftValue);
+      rm.attr(KIOSK_KEYBOARD_DOM.attributes.shiftValue, key.shiftValue);
     }
 
     const ariaLabel = bIsShiftKey && _isCapsLock() ? getText("ARIA_CAPS_LOCK", "Caps Lock") : _getKeyAriaLabel(key);
@@ -253,11 +296,11 @@ const KioskKeyboardRenderer = {
         rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
       } else {
         const label = _getKeyLabel(key);
-        rm.openStart("span").class("ui5KioskKey__label");
+        rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
         if (this.isSingleGlyphLabel(label)) {
-          rm.class("ui5KioskKey__label--glyph");
+          rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
         } else if (key.type !== "modifier" && key.type !== "action") {
-          rm.class("ui5KioskKey__label--multi");
+          rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);
         }
         rm.openEnd();
         rm.text(label);

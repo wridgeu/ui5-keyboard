@@ -35,7 +35,7 @@ import {
   type KeyboardTypeChangeEventDetail,
 } from "./types.js";
 
-import KioskKeyboardTemplate from "./KioskKeyboardTemplate.js";
+import KioskKeyboardTemplate, { KIOSK_KEYBOARD_DOM } from "./KioskKeyboardTemplate.js";
 import styles from "./generated/themes/KioskKeyboard.css.js";
 
 // ── Register ui5-icon + needed icons so they resolve inside shadow DOM ──
@@ -171,6 +171,8 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  */
 @event("keyboard-type-change", { bubbles: true })
 class KioskKeyboard extends UI5Element {
+  static readonly DOM = KIOSK_KEYBOARD_DOM;
+
   eventDetails!: {
     "key-press": KeyPressEventDetail;
     "after-open": void;
@@ -505,7 +507,7 @@ class KioskKeyboard extends UI5Element {
     this._clearHighlight();
   };
   private readonly _boundTouchStart = (e: Event) => {
-    const target = (e.target as HTMLElement).closest?.(".kiosk-key");
+    const target = (e.target as HTMLElement).closest?.(KIOSK_KEYBOARD_DOM.selectors.key);
     if (!target) return;
     // Prevent the input from losing focus when the user taps a virtual key.
     // This also suppresses the browser's synthesized mouse events (mousedown,
@@ -519,7 +521,7 @@ class KioskKeyboard extends UI5Element {
     // Resolve the key under the finger at lift-off, not e.target (which is
     // the touchstart target per spec and may differ if the finger drifted).
     const el = this.shadowRoot!.elementFromPoint(touch.clientX, touch.clientY);
-    const keyEl = (el as HTMLElement | null)?.closest<HTMLElement>("[data-key]");
+    const keyEl = (el as HTMLElement | null)?.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (keyEl) keyEl.click();
   };
 
@@ -644,18 +646,18 @@ class KioskKeyboard extends UI5Element {
   onAfterRendering(): void {
     // Announce pending live region text (from show/close/shift)
     if (this._pendingAnnouncement) {
-      const region = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard__live-region");
+      const region = this.shadowRoot!.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.liveRegion);
       if (region) region.textContent = this._pendingAnnouncement;
       this._pendingAnnouncement = null;
     }
 
     // Cache the keyboard's natural content height (without height classes) so
     // _applyResponsiveClasses can distinguish "naturally short" from "externally constrained".
-    const root = this.shadowRoot!.querySelector<HTMLElement>(".kiosk-keyboard");
+    const root = this.shadowRoot!.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
     if (
       root &&
-      !root.classList.contains("kiosk-keyboard--cq-short") &&
-      !root.classList.contains("kiosk-keyboard--cq-tiny")
+      !root.classList.contains(KIOSK_KEYBOARD_DOM.classes.rootCqShort) &&
+      !root.classList.contains(KIOSK_KEYBOARD_DOM.classes.rootCqTiny)
     ) {
       this._naturalContentHeight = root.scrollHeight;
     }
@@ -963,7 +965,7 @@ class KioskKeyboard extends UI5Element {
   private _onKeyClick(e: Event): void {
     if (this.disabled) return;
 
-    const keyEl = (e.target as HTMLElement).closest<HTMLElement>("[data-key]");
+    const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (!keyEl) return;
 
     const value = keyEl.dataset.key!;
@@ -1033,7 +1035,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   private _onKeyDown(e: KeyboardEvent): void {
-    const keyEl = (e.target as HTMLElement).closest<HTMLElement>("[data-key]");
+    const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (!keyEl) return;
 
     const layout = this._getResolvedLayout();
@@ -1169,7 +1171,7 @@ class KioskKeyboard extends UI5Element {
 
     if (!this.stableHeight) return;
     this._maxHeight = 0;
-    const root = this.shadowRoot?.querySelector<HTMLElement>(".kiosk-keyboard");
+    const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
     if (root) root.style.minHeight = "";
   }
 
@@ -1439,9 +1441,9 @@ class KioskKeyboard extends UI5Element {
 
     // Immediate DOM manipulation for instant visual feedback
     if (pressed) {
-      const selector = `[data-key="${CSS.escape(dataKey)}"], [data-shift-value="${CSS.escape(physicalKey)}"]`;
+      const selector = `${KIOSK_KEYBOARD_DOM.selectors.keyByValue(dataKey)}, ${KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(physicalKey)}`;
       const el = shadow.querySelector<HTMLElement>(selector);
-      if (el) el.classList.add("kiosk-key--highlight");
+      if (el) el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyHighlight);
     } else {
       this._clearHighlight();
     }
@@ -1451,8 +1453,8 @@ class KioskKeyboard extends UI5Element {
   }
 
   private _clearHighlight(): void {
-    this.shadowRoot!.querySelectorAll<HTMLElement>(".kiosk-key--highlight").forEach((el) =>
-      el.classList.remove("kiosk-key--highlight"),
+    this.shadowRoot!.querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`).forEach((el) =>
+      el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight),
     );
     this._highlightedKey = null;
   }
@@ -1525,7 +1527,7 @@ class KioskKeyboard extends UI5Element {
    * (to survive template re-renders that reconcile the class attribute).
    */
   private _applyResponsiveClasses(): void {
-    const root = this.shadowRoot?.querySelector<HTMLElement>(".kiosk-keyboard");
+    const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
     if (!root) return;
 
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -1535,15 +1537,15 @@ class KioskKeyboard extends UI5Element {
     const rootContentWidth = root.clientWidth - Number.parseFloat(cs.paddingLeft) - Number.parseFloat(cs.paddingRight);
     const isCompact = rootContentWidth <= 20 * remPx;
     const isNarrow = rootContentWidth <= 30 * remPx;
-    root.classList.toggle("kiosk-keyboard--cq-sm", isNarrow && !isCompact);
-    root.classList.toggle("kiosk-keyboard--cq-xs", isCompact);
+    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
+    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
 
     // ── Height ──
     // Skip for docked keyboards (viewport-driven, not container-constrained),
     // numpad (already compact, shouldn't shrink further),
     // or if natural content height hasn't been measured yet.
     if (this.docked || this.keyboardType === KeyboardType.Numpad || this._naturalContentHeight === null) {
-      root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
+      root.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
       return;
     }
 
@@ -1554,14 +1556,14 @@ class KioskKeyboard extends UI5Element {
     // ResizeObserver) because :host has no padding or border.
     const hostHeight = this._lastHostHeight ?? this.getBoundingClientRect().height;
     if (this._naturalContentHeight <= hostHeight + 1) {
-      root.classList.remove("kiosk-keyboard--cq-short", "kiosk-keyboard--cq-tiny");
+      root.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
       return;
     }
 
     const isTiny = hostHeight <= 12 * remPx;
     const isShort = hostHeight <= 16 * remPx;
-    root.classList.toggle("kiosk-keyboard--cq-short", isShort && !isTiny);
-    root.classList.toggle("kiosk-keyboard--cq-tiny", isTiny);
+    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
+    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }
 }
 

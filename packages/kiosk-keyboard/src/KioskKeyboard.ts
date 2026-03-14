@@ -9,7 +9,7 @@ import type { LayoutDefinition, KeyDefinition } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
-import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
+import KioskKeyboardRenderer, { KIOSK_KEYBOARD_DOM } from "./KioskKeyboardRenderer";
 import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, keyElementId, resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
 import { KeyboardType, type KeyboardTypeValue, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
@@ -73,6 +73,8 @@ type InputModeSuppressionState = {
  * @since 0.1.0
  */
 export default class KioskKeyboard extends Control {
+  static readonly DOM = KIOSK_KEYBOARD_DOM;
+
   // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures
   constructor(idOrSettings?: string | $KioskKeyboardSettings);
   constructor(id?: string, settings?: $KioskKeyboardSettings);
@@ -904,8 +906,8 @@ export default class KioskKeyboard extends Control {
     // can distinguish "naturally short" keyboards from "externally constrained" ones.
     if (
       dom &&
-      !dom.classList.contains("ui5KioskKeyboard--cq-short") &&
-      !dom.classList.contains("ui5KioskKeyboard--cq-tiny")
+      !dom.classList.contains(KIOSK_KEYBOARD_DOM.classes.rootCqShort) &&
+      !dom.classList.contains(KIOSK_KEYBOARD_DOM.classes.rootCqTiny)
     ) {
       this._naturalContentHeight = dom.scrollHeight;
     }
@@ -957,8 +959,8 @@ export default class KioskKeyboard extends Control {
     const isCompact = width <= 20 * remPx;
     const isNarrow = width <= 30 * remPx;
 
-    dom.classList.toggle("ui5KioskKeyboard--cq-xs", isCompact);
-    dom.classList.toggle("ui5KioskKeyboard--cq-sm", isNarrow && !isCompact);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
 
     // Height classes -- only apply when the keyboard is externally constrained
     // (host height < natural content height). This prevents naturally short
@@ -971,8 +973,8 @@ export default class KioskKeyboard extends Control {
       !docked && !isNumpad && this._naturalContentHeight !== null && this._naturalContentHeight > height + 1;
     const isShort = constrained && height <= 16 * remPx;
     const isTiny = constrained && height <= 12 * remPx;
-    dom.classList.toggle("ui5KioskKeyboard--cq-short", isShort && !isTiny);
-    dom.classList.toggle("ui5KioskKeyboard--cq-tiny", isTiny);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */
@@ -981,8 +983,8 @@ export default class KioskKeyboard extends Control {
     if (!dom) return;
 
     const docked = this.getDocked();
-    dom.classList.toggle("ui5KioskKeyboard--docked", docked);
-    dom.classList.toggle("ui5KioskKeyboard--closed", docked && !this._open);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootDocked, docked);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this._open);
   }
 
   /** Updates stable-height minHeight based on current mode and measured height. */
@@ -1401,7 +1403,7 @@ export default class KioskKeyboard extends Control {
     document.addEventListener("keydown", this._boundEscapeKeydown, true);
     const dom = this.getDomRef();
     if (dom) {
-      dom.classList.remove("ui5KioskKeyboard--closed");
+      dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootClosed);
       this._announceLiveRegion(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
     }
     this.fireEvent("afterOpen");
@@ -1418,7 +1420,7 @@ export default class KioskKeyboard extends Control {
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
     const dom = this.getDomRef();
     if (dom) {
-      dom.classList.add("ui5KioskKeyboard--closed");
+      dom.classList.add(KIOSK_KEYBOARD_DOM.classes.rootClosed);
       this._announceLiveRegion(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
     }
     this.fireEvent("afterClose");
@@ -1573,7 +1575,7 @@ export default class KioskKeyboard extends Control {
 
     return (
       (this._lastFocusedKeyId && document.getElementById(this._lastFocusedKeyId)) ||
-      this.getDomRef()?.querySelector(".ui5KioskKey") ||
+      this.getDomRef()?.querySelector(KIOSK_KEYBOARD_DOM.selectors.key) ||
       null
     );
   }
@@ -1600,7 +1602,7 @@ export default class KioskKeyboard extends Control {
     // Fallback: focus the first key (e.g. after layout switch where the
     // previously focused key no longer exists). This prevents Popover
     // auto-close when the keyboard re-renders inside one.
-    const first = this.getDomRef()?.querySelector(".ui5KioskKey") as HTMLElement | null;
+    const first = this.getDomRef()?.querySelector(KIOSK_KEYBOARD_DOM.selectors.key) as HTMLElement | null;
     if (first) {
       first.setAttribute("tabindex", "0");
       this._focusWithOptions(first, oFocusInfo.preventScroll);
@@ -1758,7 +1760,7 @@ export default class KioskKeyboard extends Control {
 
   private _resolveKeyElementFromEventTarget(target: EventTarget | null): HTMLElement | null {
     if (!(target instanceof globalThis.Element)) return null;
-    const keyElement = target.closest(".ui5KioskKey");
+    const keyElement = target.closest(KIOSK_KEYBOARD_DOM.selectors.key);
     return keyElement instanceof HTMLElement ? keyElement : null;
   }
 
@@ -1766,7 +1768,7 @@ export default class KioskKeyboard extends Control {
     const pressed = this._pressedKeyEl;
     this._pressedKeyEl = null;
     if (pressed) {
-      pressed.classList.remove("ui5KioskKey--pressed");
+      pressed.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
     }
     return pressed;
   }
@@ -1789,7 +1791,7 @@ export default class KioskKeyboard extends Control {
     const el = this._resolveKeyElementFromEventTarget(event.target);
     if (el) {
       this._pressedKeyEl = el;
-      el.classList.add("ui5KioskKey--pressed");
+      el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
     }
   }
 
@@ -1826,7 +1828,7 @@ export default class KioskKeyboard extends Control {
     if (event.altKey || event.metaKey) return;
 
     const target = event.target as HTMLElement;
-    if (!target.classList.contains("ui5KioskKey")) return;
+    if (!target.classList.contains(KIOSK_KEYBOARD_DOM.classes.key)) return;
 
     switch (event.key) {
       case "Enter":
@@ -1854,15 +1856,15 @@ export default class KioskKeyboard extends Control {
         break;
       case "Home": {
         event.preventDefault();
-        const row = target.closest(".ui5KioskRow");
-        const first = row?.querySelector(".ui5KioskKey") as HTMLElement | null;
+        const row = target.closest(KIOSK_KEYBOARD_DOM.selectors.row);
+        const first = row?.querySelector(KIOSK_KEYBOARD_DOM.selectors.key) as HTMLElement | null;
         if (first && first !== target) this._transferFocus(target, first);
         break;
       }
       case "End": {
         event.preventDefault();
-        const row = target.closest(".ui5KioskRow");
-        const keys = row?.querySelectorAll(".ui5KioskKey");
+        const row = target.closest(KIOSK_KEYBOARD_DOM.selectors.row);
+        const keys = row?.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.key);
         const last = keys?.[keys.length - 1] as HTMLElement | undefined;
         if (last && last !== target) this._transferFocus(target, last);
         break;
@@ -2145,19 +2147,19 @@ export default class KioskKeyboard extends Control {
     if (!next) {
       if (dCol !== 0 && dRow === 0) {
         // Horizontal wrapping: move to adjacent row
-        const currentRow = current.closest(".ui5KioskRow");
+        const currentRow = current.closest(KIOSK_KEYBOARD_DOM.selectors.row);
         const adjacentRow = dCol > 0 ? currentRow?.nextElementSibling : currentRow?.previousElementSibling;
         if (adjacentRow) {
-          const keys = adjacentRow.querySelectorAll(".ui5KioskKey");
+          const keys = adjacentRow.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.key);
           if (keys.length > 0) {
             next = (dCol > 0 ? keys[0] : keys[keys.length - 1]) as HTMLElement;
           }
         }
       } else if (dRow !== 0) {
         // Vertical fallback: clamp to last key in target row
-        const targetRow = this.getDomRef()?.querySelectorAll(".ui5KioskRow")[row];
+        const targetRow = this.getDomRef()?.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.row)[row];
         if (targetRow) {
-          const keys = targetRow.querySelectorAll(".ui5KioskKey");
+          const keys = targetRow.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.key);
           if (keys.length > 0) {
             next = keys[Math.min(col, keys.length - 1)] as HTMLElement;
           }
@@ -2215,10 +2217,10 @@ export default class KioskKeyboard extends Control {
 
     const mapped = KioskKeyboard._KEY_TO_DATA_KEY[key];
     const el =
-      dom.querySelector(`[data-key="${CSS.escape(mapped ?? key)}"]`) ??
-      (key.length === 1 ? dom.querySelector(`[data-key="${CSS.escape(key.toLowerCase())}"]`) : null) ??
-      dom.querySelector(`[data-shift-value="${CSS.escape(key)}"]`);
-    el?.classList.toggle("ui5KioskKey--highlight", add);
+      dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(mapped ?? key)) ??
+      (key.length === 1 ? dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(key.toLowerCase())) : null) ??
+      dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(key));
+    el?.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyHighlight, add);
   }
 
   /** Updates the ARIA live region text for screen reader announcements. */

@@ -17,7 +17,7 @@ export async function waitForRender(): Promise<void> {
 export function tapKey(keyboard: KioskKeyboard, keyValue: string): void {
   const dom = keyboard.getDomRef();
   if (!dom) throw new Error("Keyboard not rendered");
-  const keyEl = dom.querySelector(`[data-key="${keyValue}"]`) as HTMLElement | null;
+  const keyEl = dom.querySelector(KioskKeyboard.DOM.selectors.keyByValue(keyValue)) as HTMLElement | null;
   if (!keyEl) throw new Error(`Key "${keyValue}" not found`);
   simulateTap(keyboard, keyEl);
 }
@@ -36,7 +36,7 @@ export function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
 /** Simulate a shift tap on an unrendered keyboard (creates a fake shift element). */
 export function tapShiftInternally(kb: KioskKeyboard): void {
   const fakeShiftEl = document.createElement("div");
-  fakeShiftEl.classList.add("ui5KioskKey");
+  fakeShiftEl.classList.add(KioskKeyboard.DOM.classes.key);
   fakeShiftEl.dataset.key = "{shift}";
   fakeShiftEl.id = "fake-shift";
   simulateTap(kb, fakeShiftEl);
@@ -46,7 +46,7 @@ export function tapShiftInternally(kb: KioskKeyboard): void {
 export function getKeyElements(keyboard: KioskKeyboard): NodeListOf<HTMLElement> {
   const dom = keyboard.getDomRef();
   if (!dom) throw new Error("Keyboard not rendered");
-  return dom.querySelectorAll<HTMLElement>(".ui5KioskKey");
+  return dom.querySelectorAll<HTMLElement>(KioskKeyboard.DOM.selectors.key);
 }
 
 export function isShiftActive(keyboard: KioskKeyboard): boolean {
