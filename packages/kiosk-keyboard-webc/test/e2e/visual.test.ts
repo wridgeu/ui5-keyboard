@@ -76,22 +76,22 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     await expect(kb).toMatchElementSnapshot("webc-glyph-stress");
   });
 
-  it("should match height-constrained container (400x250)", async () => {
+  it("should match height-constrained container (250px)", async () => {
     const kb = await getKeyboardRoot("kb-height-constrained");
     await expect(kb).toMatchElementSnapshot("webc-height-constrained");
   });
 
-  it("should match severely height-constrained container (400x180)", async () => {
+  it("should match severely height-constrained container (180px)", async () => {
     const kb = await getKeyboardRoot("kb-height-tiny");
     await expect(kb).toMatchElementSnapshot("webc-height-tiny");
   });
 
-  it("should match ancestor-constrained container (flex parent 400x250)", async () => {
+  it("should match ancestor-constrained container (flex parent 250px)", async () => {
     const wrap = await $("#kb-ancestor-constrained-wrap");
     await expect(wrap).toMatchElementSnapshot("webc-ancestor-constrained");
   });
 
-  it("should match ancestor-constrained severely (flex parent 400x180)", async () => {
+  it("should match ancestor-constrained severely (flex parent 180px)", async () => {
     const wrap = await $("#kb-ancestor-tiny-wrap");
     await expect(wrap).toMatchElementSnapshot("webc-ancestor-tiny");
   });
