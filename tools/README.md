@@ -153,6 +153,29 @@ Record of named device profiles (`phone`, `tablet`) with viewport dimensions, de
 
 Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` so that CSS media queries like `(hover: none)` and `(pointer: coarse)` evaluate correctly.
 
+## `visual-report.mjs`
+
+Generates a local HTML report from WDIO visual regression output and serves it.
+
+### Usage
+
+```bash
+node tools/visual-report.mjs <screenshotDir>
+```
+
+Example:
+
+```bash
+node tools/visual-report.mjs packages/kiosk-keyboard/test/e2e/__screenshots__
+```
+
+What it does:
+
+- finds `output.json` in the target screenshots folder and one level of device subfolders
+- merges multiple JSON outputs into `output-combined.json` when needed
+- runs `wdio-visual-reporter` to generate the HTML report
+- serves the generated report locally with `sirv-cli`
+
 ## Consumers
 
 ### `eslint-plugin-test-guardrails.mjs`
@@ -205,6 +228,14 @@ Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` s
 | `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
 | `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
 | `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION`, `DEVICE_BASE_PORTS` |
+
+### `visual-report.mjs`
+
+| Consumer                                    | Integration                                 |
+| ------------------------------------------- | ------------------------------------------- |
+| `package.json`                              | `report:visual:kiosk`, `report:visual:webc` |
+| `packages/kiosk-keyboard/package.json`      | `test:e2e:report`                           |
+| `packages/kiosk-keyboard-webc/package.json` | `test:e2e:report`                           |
 
 ## `tsconfig.json`
 

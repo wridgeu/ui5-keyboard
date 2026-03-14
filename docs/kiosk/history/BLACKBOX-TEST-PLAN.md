@@ -1,6 +1,6 @@
-# Feature: Black-Box QUnit Test Plan for `ui5.kiosk`
+# Feature: Black-Box QUnit Test Layer for `ui5.kiosk`
 
-> Status: Proposal
+> Status: Implemented
 
 ## Goal
 
@@ -13,9 +13,9 @@ public events, and input behavior from a consumer perspective.
 - No mutation tooling.
 - No renderer/internal API access in assertions.
 
-## Planned Test Additions
+## Implemented Test Additions
 
-### 1) New suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-renderer-blackbox.qunit.ts`
+### 1) Suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-renderer-blackbox.qunit.ts`
 
 1. **Shift cycle render contract**
    - Tap `{shift}` three times and assert rendered key state transitions using:
@@ -36,7 +36,7 @@ public events, and input behavior from a consumer perspective.
    - Trigger layout change via `{layout:name}` key and assert rendered key matrix
      reflects new layout.
 
-### 2) New suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-input-blackbox.qunit.ts`
+### 2) Suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-input-blackbox.qunit.ts`
 
 1. **Default typing into `targetInput`**
    - Associate `sap.m.Input` and assert text insertion for printable keys.
@@ -49,7 +49,7 @@ public events, and input behavior from a consumer perspective.
 5. **No-target safety**
    - Without target input, assert key events still fire and do not throw.
 
-### 3) New suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-autoshow-blackbox.qunit.ts`
+### 3) Suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-autoshow-blackbox.qunit.ts`
 
 1. **Docked auto-show open/close**
    - With `docked=true` and `autoShow=true`, assert keyboard opens on input focus
@@ -63,12 +63,12 @@ public events, and input behavior from a consumer perspective.
 
 ### 4) Suite registration update
 
-- Add entries in `packages/kiosk-keyboard/test/qunit/testsuite.qunit.ts`:
+- Added entries in `packages/kiosk-keyboard/test/qunit/testsuite.qunit.ts`:
   - `KioskKeyboard-renderer-blackbox`
   - `KioskKeyboard-input-blackbox`
   - `KioskKeyboard-autoshow-blackbox`
 
 ## Notes
 
-- Existing implementation-coupled tests can remain for now; this plan adds a
-  public-contract safety layer that is resilient to internal refactors.
+- Existing implementation-coupled tests can remain; this layer adds a
+  public-contract safety net that stays useful across internal refactors.

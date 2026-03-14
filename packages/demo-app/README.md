@@ -34,7 +34,7 @@ This app is a scenario catalog for keyboard-heavy UX in UI5. It shows:
 - Global and route-scoped shortcuts (`Mod+S`, `Escape`, `F5`, `Mod+D`)
 - Input suppression behavior (single-key suppression in text fields, combos still active)
 - Dialog scope stacking and cleanup
-- Sequences (`G I`, `G S`) via `SequenceManager`
+- Sequences (`G I`, `G S`) via `HotkeyManager.registerSequence()`
 - Key hold tracking via `KeyStateTracker`
 - Dynamic enabled guard (`Mod+P` tied to toggle state)
 - Conflict strategies demo (`Ctrl+Shift+K` with Warn/Allow/Replace/Error)

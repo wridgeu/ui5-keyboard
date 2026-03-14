@@ -19,7 +19,7 @@ parse.ts             Hotkey string parsing ("Mod+Shift+S" -> structured object)
 match.ts             KeyboardEvent matching against parsed hotkeys
 internal/dom.ts      Input element detection (text fields, textareas, contentEditable)
 platform.ts          Platform detection (mac/windows/linux) and Mod resolution
-format.ts            Platform-aware display formatting (advanced helper re-export)
+format.ts            Platform-aware display formatting helper
 library.ts           UI5 library entry point (Lib.init)
 internal/event-dispatcher.ts Centralized DOM listener + 7-step dispatch pipeline
 internal/dispatch-core.ts    Dispatch pipeline helpers and skip handling
@@ -31,7 +31,7 @@ internal/idgen.ts            Internal registration ID generator
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`). Their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
 
-Some top-level entry points are importable but not part of the semver-stable consumer contract. This currently includes utility/helper modules (`parse.ts`, `match.ts`, `platform.ts`, `validate.ts`, `constants.ts`, `format.ts`). Higher-level implementation modules (for example `SequenceManager.ts`) are consumed via `HotkeyManager` and are not a supported direct import surface.
+Some top-level entry points are importable but not part of the semver-stable consumer contract. This currently includes utility/helper modules (`parse.ts`, `match.ts`, `platform.ts`, `validate.ts`, `constants.ts`). `format.ts` is the supported exception and remains part of the stable consumer surface. Higher-level implementation modules (for example `SequenceManager.ts`) are consumed via `HotkeyManager` and are not a supported direct import surface.
 
 ## UI5 Integration
 
@@ -343,7 +343,7 @@ packages/hotkeys/
     match.ts             KeyboardEvent matching
     internal/dom.ts      Input element detection
     platform.ts          Platform detection and Mod resolution
-    format.ts            Display formatting helper re-export
+    format.ts            Display formatting helper (stable consumer import)
     internal/
       SequenceManager.ts   Multi-key sequence matching
       event-dispatcher.ts  Centralized DOM listener + 7-step pipeline

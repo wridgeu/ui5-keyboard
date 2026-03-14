@@ -1,6 +1,6 @@
 # ui5-lib-hotkeys
 
-> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md) and [kiosk-keyboard-webc](../kiosk-keyboard-webc/README.md).
+> Part of the [ui5-lib-keyboard](../../README.md) monorepo. See also: [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md) and [kiosk-keyboard-webc](../kiosk-keyboard-webc/README.md).
 
 Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
 
@@ -164,6 +164,8 @@ import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 `HotkeyRecorder` and `KeyStateTracker` classes are exported for type declarations (e.g., `const tracker: KeyStateTracker = manager.getKeyStateTracker()`), but their constructors are internal: use `manager.createRecorder()` and `manager.getKeyStateTracker()` respectively.
 
 Advanced modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. Non-stable top-level paths currently include re-export entry points (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`).
+
+The sections below also mention advanced helper modules such as `ui5/hotkeys/validate`, `ui5/hotkeys/parse`, `ui5/hotkeys/match`, and `ui5/hotkeys/platform`. They are available today for power users, but they are not part of the semver-stable consumer contract. `ui5/hotkeys/format` is the supported exception.
 
 ## HotkeyManager
 

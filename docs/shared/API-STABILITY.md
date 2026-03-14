@@ -35,7 +35,10 @@ Use these imports for application code:
 The stable consumer surface consists of the package entry points and the `<kiosk-keyboard>` custom element:
 
 - `kiosk-keyboard-webc/bundle` - ESM entry point that registers the custom element and re-exports the class and public types
-- `kiosk-keyboard-webc` - bare component class (without asset registration); prefer the bundle entry for most use cases
+- `kiosk-keyboard-webc` - bare component class; prefer the bundle entry for most use cases
+- `kiosk-keyboard-webc/Assets` - supported companion entry for theme and i18n registration when consuming the bare class
+- `kiosk-keyboard-webc/layouts/fkey-row` - stable shared row for custom layout composition
+- `kiosk-keyboard-webc/layouts/nav-row` - stable shared row for custom layout composition
 
 Stable exports from the bundle entry:
 
@@ -74,8 +77,8 @@ Modules under `core/*` (`shift-state`, `dom-utils`, `input-operations`, `keyboar
 
 The `layouts/*` directory contains built-in layout definitions. Individual layout files (e.g. `layouts/qwerty`, `layouts/numeric`) are not a stable import surface; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules are additionally treated as stable for composing custom variant layouts:
 
-- `kiosk-keyboard-webc/dist/layouts/fkey-row.js`
-- `kiosk-keyboard-webc/dist/layouts/nav-row.js`
+- `kiosk-keyboard-webc/layouts/fkey-row`
+- `kiosk-keyboard-webc/layouts/nav-row`
 
 The `generated/*` directory (themes, i18n bundles) is build output and must never be imported directly.
 

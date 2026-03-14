@@ -1,6 +1,6 @@
 # kiosk-keyboard-webc
 
-> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md).
+> Part of the [ui5-lib-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md).
 
 Native web component variant of the kiosk on-screen keyboard, built on the [UI5 Web Components](https://sap.github.io/ui5-webcomponents/) framework (`@ui5/webcomponents-base`).
 
@@ -47,9 +47,9 @@ Keys support different visual styles via the `type` property in `KeyDefinition`:
 | ------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | ![Default key](../../docs/shared/images/key-type-default.png) | ![Default key hovered](../../docs/shared/images/key-type-default-hover.png) | ![Modifier key](../../docs/shared/images/key-type-modifier.png) | ![Modifier key hovered](../../docs/shared/images/key-type-modifier-hover.png) |
 
-- **Default** — visible border, `--sapButton_Background`. Used for character keys.
-- **Modifier** — transparent background, no border (`--sapButton_Lite_Background`). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
-- **Action** — emphasized style (`--sapButton_Emphasized_Background`). Used for Enter, Backspace.
+- **Default**: visible border, `--sapButton_Background`. Used for character keys.
+- **Modifier**: transparent background, no border (`--sapButton_Lite_Background`). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
+- **Action**: emphasized style (`--sapButton_Emphasized_Background`). Used for Enter, Backspace.
 
 ### Theme Preview
 
@@ -63,10 +63,18 @@ Keys support different visual styles via the `type` property in `KeyDefinition`:
 
 ## Installation
 
-This package is part of the [`ui5-lib-keyboard`](https://github.com/wridgeu/ui5-lib-keyboard) monorepo and is not published to npm. Install it as a workspace dependency:
+> This package is currently workspace-only (`private: true`) and not published to npm.
+
+In this monorepo, install all workspace dependencies once at the repository root:
 
 ```bash
-npm install kiosk-keyboard-webc --workspace=packages/demo-app
+npm install
+```
+
+If/when this package is published, install it directly from npm:
+
+```bash
+npm install kiosk-keyboard-webc
 ```
 
 ## Usage
@@ -92,10 +100,10 @@ import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 ```
 
 > [!TIP]
-> The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `dist/KioskKeyboard.js` entry point to avoid duplicating framework code.
+> The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `kiosk-keyboard-webc` entry point to avoid duplicating framework code.
 
 > [!IMPORTANT]
-> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js` and register theme/i18n assets. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics. Using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `dist/KioskKeyboard.js` import directly, you must also import `kiosk-keyboard-webc/Assets` to register themes and i18n bundles, and ensure the "72" font is loaded (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
+> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js` and register theme/i18n assets. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics. Using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `kiosk-keyboard-webc` entry directly, you must also import `kiosk-keyboard-webc/Assets` to register themes and i18n bundles, and ensure the "72" font is loaded (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
 >
 > **Custom fonts:** If you override `--sapFontFamily` or set a custom `font-family` on the keyboard, the default key sizing may not fit the new font's glyph metrics. You may need to adjust `--kiosk-keyboard-key-height`, `--kiosk-keyboard-key-font-size`, or `--kiosk-keyboard-key-padding` to prevent clipping or excessive whitespace.
 
@@ -136,7 +144,7 @@ See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPON
 
 ## API Stability
 
-Recommended stable consumer imports:
+Recommended stable consumer entry points and imports:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
@@ -155,9 +163,11 @@ import type {
 } from "kiosk-keyboard-webc/bundle";
 ```
 
+For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`.
+
 All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) and instance convenience delegates (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`) are part of the stable API surface.
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`layouts/fkey-row`, `layouts/nav-row`) are stable for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
@@ -268,7 +278,7 @@ KioskKeyboard.registerLayout("my-layout", [
 ]);
 ```
 
-Or via DOM (no ES import needed — requires a bundler or import map, see note above):
+Or via DOM (no ES import needed; requires a bundler or import map, see note above):
 
 ```html
 <script type="module">
@@ -373,7 +383,7 @@ kiosk-keyboard {
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem` — but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects externally constrained containers and reduces key height, gaps, and modifier font-size automatically.
+Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects externally constrained containers and reduces key height, gaps, and modifier font-size automatically.
 
 #### Label Sizing
 
@@ -381,7 +391,7 @@ Key labels use three scaling tiers:
 
 | Tier                  | Applies to                                     | Scaling                                                                                                                                           |
 | --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                             |
+| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling, rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                              |
 | **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                                                          |
 | **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Defaults to the theme's base font-size (`--sapFontSize`). Scaled down in height-constrained containers via `--kiosk-keyboard-modifier-font-size`. |
 
@@ -417,10 +427,10 @@ npm test
 # Component tests (Web Test Runner, Playwright)
 npm run test:component
 
-# E2E tests (WebdriverIO) — desktop
+# E2E tests (WebdriverIO), desktop
 npm run test:e2e
 
-# E2E tests — phone (360x800) / tablet (768x1024) device emulation
+# E2E tests, phone (360x800) / tablet (768x1024) device emulation
 npm run test:e2e:phone
 npm run test:e2e:tablet
 
@@ -431,6 +441,9 @@ npm run test:e2e:all-devices
 npm run test:e2e:update
 npm run test:e2e:phone:update
 npm run test:e2e:tablet:update
+
+# Visual diff report
+npm run test:e2e:report
 
 # NOTE: Visual baselines are tied to the pinned Chrome-for-Testing version
 # in tools/wdio-device-profiles.ts (CHROME_VERSION). Changing that version

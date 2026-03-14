@@ -1,6 +1,6 @@
 # ui5-lib-kiosk-keyboard
 
-> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [kiosk-keyboard-webc](../kiosk-keyboard-webc/README.md).
+> Part of the [ui5-lib-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [kiosk-keyboard-webc](../kiosk-keyboard-webc/README.md).
 
 On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applications.
 
@@ -368,7 +368,7 @@ This is **opt-in** (`false` by default) and only effective for non-docked Full k
 >
 > For keyboards embedded **inline on a page** (not in a Popover), `stableHeight` is typically not needed; the surrounding layout can accommodate height changes naturally.
 >
-> **Latch behavior:** `stableHeight` records the maximum observed height and never shrinks automatically — even after a container resize or orientation change. This is by design: the keyboard cannot distinguish a container resize from a layout switch. If you need to reset after an orientation change, toggle the property off and on (`setStableHeight(false); setStableHeight(true);`).
+> **Latch behavior:** `stableHeight` records the maximum observed height and never shrinks automatically, even after a container resize or orientation change. This is by design: the keyboard cannot distinguish a container resize from a layout switch. If you need to reset after an orientation change, toggle the property off and on (`setStableHeight(false); setStableHeight(true);`).
 
 ```xml
 <!-- Recommended: keyboard inside a Popover -->
@@ -1008,7 +1008,7 @@ By default, the inline keyboard takes the full width of its container (`100%`). 
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem` — but a consumer-provided value that is already smaller than the cap is preserved.
+Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved.
 
 #### Label Sizing
 
@@ -1016,7 +1016,7 @@ Key labels use three scaling tiers:
 
 | Tier                  | Applies to                                     | Scaling                                                                                                                                            |
 | --------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling — rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                              |
+| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling, rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                               |
 | **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                                                           |
 | **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Defaults to the theme's base font-size (`@sapUiFontSize`). Scaled down in height-constrained containers via `--ui5KioskKeyboard-modifierFontSize`. |
 
@@ -1036,9 +1036,9 @@ Keys support different visual styles via the `type` property in `KeyDefinition`:
 | ------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | ![Default key](../../docs/shared/images/key-type-default.png) | ![Default key hovered](../../docs/shared/images/key-type-default-hover.png) | ![Modifier key](../../docs/shared/images/key-type-modifier.png) | ![Modifier key hovered](../../docs/shared/images/key-type-modifier-hover.png) |
 
-- **Default** — visible border, SAP button background. Used for character keys.
-- **Modifier** — transparent background, no border (Lite button style). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
-- **Action** — emphasized style (blue). Used for Enter, Backspace.
+- **Default**: visible border, SAP button background. Used for character keys.
+- **Modifier**: transparent background, no border (Lite button style). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
+- **Action**: emphasized style (blue). Used for Enter, Backspace.
 
 Theme preview (QWERTY layout):
 
@@ -1270,10 +1270,10 @@ npm run build
 # QUnit tests (WebdriverIO + qunit-service)
 npm run test:qunit
 
-# E2E tests (WebdriverIO) — desktop
+# E2E tests (WebdriverIO), desktop
 npm run test:e2e
 
-# E2E tests — phone (360x800) / tablet (768x1024) device emulation
+# E2E tests, phone (360x800) / tablet (768x1024) device emulation
 npm run test:e2e:phone
 npm run test:e2e:tablet
 

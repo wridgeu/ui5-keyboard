@@ -1,4 +1,4 @@
-# ui5-keyboard
+# ui5-lib-keyboard
 
 UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications.
 
@@ -127,7 +127,7 @@ npm install kiosk-keyboard-webc
 
 ```html
 <script type="module">
-  import "kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js";
+  import "kiosk-keyboard-webc/bundle";
 </script>
 
 <input id="my-input" type="text" />
@@ -235,7 +235,7 @@ npm run typecheck          # Typecheck all workspaces (incl. e2e tests)
 ## Project Structure
 
 ```
-ui5-keyboard/
+ui5-lib-keyboard/
 ├── packages/
 │   ├── hotkeys/               # ui5-lib-hotkeys (ui5.hotkeys namespace)
 │   ├── kiosk-keyboard/        # ui5-lib-kiosk-keyboard (ui5.kiosk namespace)

@@ -75,11 +75,11 @@ And evaluate what is currently covered by this repository's demos.
 
 ## Standalone Scenario Status
 
-Short answer: **not currently**. This repo does not include a dedicated standalone web-components page (`index.html` + direct ESM imports) at the moment.
+Short answer: **yes, for manual testing and visual coverage**. This repo now includes standalone web component pages under `packages/kiosk-keyboard-webc/test/pages/`.
 
-- We demonstrate custom-element integration inside a UI5 app via bridge.
-- We demonstrate native UI5 Web Component usage inside the UI5 app (`@ui5/webcomponents/dist` namespace in XML).
-- Standalone consumption guidance in this document remains valid, but a runnable standalone sample is currently out of scope for this repository.
+- `index.html` is a standalone demo page with direct ESM imports, native inputs, and UI5 Web Components inputs.
+- `visual.html` and `visual-themes.html` support visual regression coverage and manual inspection outside the UI5 demo app.
+- The main UI5 interoperability examples still live in `packages/demo-app`.
 
 ## Key Learnings from Community Posts
 
@@ -122,17 +122,17 @@ The demo currently focuses on UI5-app integration paths:
 
 - **Inside UI5 app:** native UI5 Web Component usage in XML (`@ui5/webcomponents/dist`) plus custom/external web component bridge examples.
 - **Inside UI5 app (native custom elements):** example using package namespace + custom element tag in XML.
-- **Outside UI5 app:** no dedicated standalone sample page is currently included.
+- **Outside UI5 app:** standalone Vite-served pages exist under `packages/kiosk-keyboard-webc/test/pages/`.
 
 This avoids deprecated `sap.ui.webc.main` while still demonstrating practical web component interoperability for UI5 applications.
 
 ## Operational Notes (Current Demo Scope)
 
 1. Install dependencies at repo root (`npm install`).
-2. Start demo app (`npm start`).
-3. Open `http://localhost:8080/index.html#/kiosk/input-ids`.
+2. For standalone web component pages, run `npm run start:kiosk-webc` and open `http://localhost:8084/test/pages/index.html`.
+3. For UI5 integration examples, run `npm start` and open `http://localhost:8080/index.html#/kiosk/input-ids`.
 
-This keeps interoperability examples reproducible in the main UI5 demo app.
+This keeps both the standalone and UI5 integration examples reproducible.
 
 ## Practical Rule-of-Thumb
 

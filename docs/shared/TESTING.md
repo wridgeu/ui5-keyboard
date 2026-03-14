@@ -80,6 +80,7 @@ Always review diffs visually after updating. The `test:e2e:report` script genera
 
 ```bash
 npm run test:e2e:report -w packages/kiosk-keyboard
+npm run test:e2e:report -w packages/kiosk-keyboard-webc
 ```
 
 This finds all `output.json` files (including per-device subfolders) and merges them into a combined report.
@@ -100,11 +101,13 @@ await expect(kb).toMatchElementSnapshot("kb-numpad", 0.01);
 
 Use this sparingly on specific assertions that are known to jitter, rather than raising the global bar.
 
-### Prebuild hooks
+### Generated assets for webc E2E
 
-The webc package imports `dist/` artifacts in test pages, so E2E scripts need a prebuild. Every `test:e2e:*` script should have a matching `pretest:e2e:*` hook that runs `npm run build`. The `test:e2e:open` (headed debugging) script is no exception.
+The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild.
 
-The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2E scripts don't need prebuild hooks.
+What the webc E2E scripts do need is generated theme and i18n output. Every current `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` runs `npm run generate` inline before starting WebdriverIO, including headed and device-profile variants.
+
+The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2E scripts also avoid a separate prebuild step.
 
 ### Test helpers
 
@@ -140,7 +143,7 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 ## Running all tests
 
 ```bash
-npm test                      # Unit + QUnit + component tests
+npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
 npm run test:e2e:all-devices  # All E2E across both packages, all devices (parallel)
 npm run check                 # Full quality gate (fmt + lint + typecheck + guardrails + test + e2e)
 ```

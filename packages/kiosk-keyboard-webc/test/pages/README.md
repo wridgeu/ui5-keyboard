@@ -1,24 +1,42 @@
 # Test Pages
 
-Demo pages for manual testing and screenshot generation.
+Standalone pages for manual testing, screenshot generation, and visual inspection of `kiosk-keyboard-webc`.
 
 ## Pages
 
-- **`key-style-demo.html`** — Key type comparison (default vs modifier) and full keyboard previews (QWERTY, Numpad, Numeric) with theme switching. Used to generate the README screenshots.
+- `index.html`: main standalone demo with native inputs, UI5 Web Components inputs, docked mode, and event logging
+- `key-style-demo.html`: key type comparison page used for README screenshots
+- `visual.html`: visual regression matrix used by WebdriverIO
+- `visual-themes.html`: focused theme preview page for theme-specific visual checks
 
 ## Running
 
-Pages are served by the Vite dev server. From the package root:
+From the repo root:
 
 ```bash
-npm run generate       # required — generates theme/i18n assets
-npx vite serve --port 8100
+npm run start:kiosk-webc
 ```
 
-Then open `http://localhost:8100/test/pages/key-style-demo.html`.
+From the package root:
+
+```bash
+npm start
+npm run start:key-style-demo
+```
+
+Default URLs:
+
+- `http://localhost:8084/test/pages/index.html`
+- `http://localhost:8084/test/pages/key-style-demo.html`
+- `http://localhost:8084/test/pages/visual.html`
+- `http://localhost:8084/test/pages/visual-themes.html`
+
+`npm start` runs `generate` through the package `prestart` hook. The explicit page scripts also ensure generated theme and i18n assets are available before Vite starts serving the page.
 
 ## Vite Configuration Notes
 
-The `vite.config.ts` includes `resolve.dedupe: ["@ui5/webcomponents-base"]` to ensure that the UI5 Web Components framework is loaded as a single instance. Without this, Vite's dependency pre-bundling can create separate copies of internal framework singletons, causing `setTheme()` to operate on a different theme registry than the one the component uses. This manifests as theme switching having no visible effect on the keyboard keys.
+The page scripts import `src/bundle.esm.ts` directly, so Vite transpiles TypeScript on the fly and no full `npm run build` is required for these pages.
 
-The demo page script is in a separate `.js` file (not inline in the HTML) for the same reason: Vite's HTML proxy transform for inline `<script type="module">` creates an isolated module entry that bypasses the deduplication, resulting in a split framework instance.
+The `vite.config.ts` file includes `resolve.dedupe: ["@ui5/webcomponents-base"]` to ensure the UI5 Web Components framework is loaded as a single instance. Without this, Vite's dependency pre-bundling can create separate copies of internal framework singletons, causing `setTheme()` to operate on a different theme registry than the one the component uses.
+
+The page scripts live in separate `.js` files instead of inline `<script type="module">` blocks for the same reason. Vite's HTML proxy transform for inline scripts can bypass the deduplication and split the framework instance.
