@@ -1,6 +1,6 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
-import { fireKey } from "./test-helpers";
+import { destroyHotkeyManager, fireKey } from "./test-helpers";
 
 let restoreRuntimeHooks: (() => void) | null = null;
 
@@ -9,18 +9,13 @@ QUnit.module("Dialog & Fragment Scopes", {
     restoreRuntimeHooks?.();
     restoreRuntimeHooks = null;
 
-    const existing = HotkeyManager.getInstance();
-    existing.destroy();
+    destroyHotkeyManager();
   },
   afterEach() {
     restoreRuntimeHooks?.();
     restoreRuntimeHooks = null;
 
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 

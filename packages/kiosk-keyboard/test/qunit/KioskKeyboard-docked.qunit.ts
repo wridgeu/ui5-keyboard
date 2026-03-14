@@ -1,6 +1,8 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
-import { placeAndWait, waitForRender } from "./test-helpers";
+import { getFirstKeyElement, hasKeyboardClass, placeAndWait, waitForRender } from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 // ──────────────────────────────────────────────
 // Module
@@ -22,9 +24,8 @@ QUnit.test("Docked keyboard starts closed", async (assert) => {
   kb.setDocked(true);
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--docked"), "Has docked CSS class");
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--closed"), "Has closed CSS class");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootDocked), "Has docked CSS class");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootClosed), "Has closed CSS class");
   assert.notOk(kb.isOpen(), "isOpen() returns false");
 
   kb.destroy();
@@ -38,7 +39,7 @@ QUnit.test("show() opens docked keyboard", async (assert) => {
   kb.show();
 
   assert.ok(kb.isOpen(), "isOpen() returns true");
-  assert.notOk(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--closed"), "Closed class removed");
+  assert.notOk(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed class removed");
 
   kb.destroy();
 });
@@ -53,7 +54,7 @@ QUnit.test("close() closes docked keyboard", async (assert) => {
 
   kb.close();
   assert.notOk(kb.isOpen(), "isOpen() returns false after close");
-  assert.ok(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--closed"), "Closed class added");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed class added");
 
   kb.destroy();
 });
@@ -154,9 +155,8 @@ QUnit.test("Non-docked keyboard has no docked CSS classes", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--docked"), "No docked class");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--closed"), "No closed class");
+  assert.notOk(hasKeyboardClass(kb, DOM.classes.rootDocked), "No docked class");
+  assert.notOk(hasKeyboardClass(kb, DOM.classes.rootClosed), "No closed class");
 
   kb.destroy();
 });
@@ -206,7 +206,7 @@ QUnit.test("Escape closes docked keyboard when virtual key has focus", async (as
   assert.ok(kb.isOpen(), "Keyboard is open");
 
   // Focus a virtual key and dispatch Escape on it
-  const firstKey = kb.getDomRef()!.querySelector<HTMLElement>(".ui5KioskKey")!;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -271,7 +271,7 @@ QUnit.test("Escape on docked keyboard returns focus to target input", async (ass
 
   kb.show();
 
-  const firstKey = kb.getDomRef()!.querySelector<HTMLElement>(".ui5KioskKey")!;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -293,7 +293,7 @@ QUnit.test("Escape fires afterClose event", async (assert) => {
   let fired = false;
   kb.attachEvent("afterClose", () => (fired = true));
 
-  const firstKey = kb.getDomRef()!.querySelector<HTMLElement>(".ui5KioskKey")!;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -308,7 +308,7 @@ QUnit.test("Escape does nothing when keyboard is not docked", async (assert) => 
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const firstKey = kb.getDomRef()!.querySelector<HTMLElement>(".ui5KioskKey")!;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -327,7 +327,7 @@ QUnit.test("Escape does nothing when docked keyboard is already closed", async (
   // Keyboard is docked but closed (default state) - Escape listener not attached
   assert.notOk(kb.isOpen(), "Keyboard starts closed");
 
-  const firstKey = kb.getDomRef()!.querySelector<HTMLElement>(".ui5KioskKey")!;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -355,7 +355,7 @@ QUnit.test("20 show/close cycles without error or state desync", async (assert) 
   }
 
   assert.notOk(kb.isOpen(), "Keyboard is closed after all cycles");
-  assert.ok(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--closed"), "Closed CSS class present");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed CSS class present");
 
   kb.destroy();
 });
@@ -457,9 +457,8 @@ QUnit.test("setDocked(true) adds docked CSS classes after render", async (assert
   kb.setDocked(true);
   await waitForRender();
 
-  const dom = kb.getDomRef()!;
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--docked"), "Docked class present");
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--closed"), "Closed class present (starts closed)");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootDocked), "Docked class present");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed class present (starts closed)");
 
   kb.destroy();
 });

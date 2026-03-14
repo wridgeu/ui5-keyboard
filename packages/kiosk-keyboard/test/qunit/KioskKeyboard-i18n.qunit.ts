@@ -2,7 +2,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import ResourceBundle from "sap/base/i18n/ResourceBundle";
 import { reloadBundles, getI18nConfiguration, hasConfiguredEnhancements } from "ui5/kiosk/internal/i18n-registry";
-import { placeAndWait, waitForRender } from "./test-helpers";
+import { getKeyElement, placeAndWait, waitForRender } from "./test-helpers";
 
 // ──────────────────────────────────────────────
 // Module
@@ -129,10 +129,9 @@ QUnit.test("Special key labels reflect enhancement text", async (assert) => {
   });
   await waitForRender();
 
-  const dom = kb.getDomRef()!;
-  const shiftKey = dom.querySelector('[data-key="{shift}"]');
-  const enterKey = dom.querySelector('[data-key="{enter}"]');
-  const backspaceKey = dom.querySelector('[data-key="{backspace}"]');
+  const shiftKey = getKeyElement(kb, "{shift}");
+  const enterKey = getKeyElement(kb, "{enter}");
+  const backspaceKey = getKeyElement(kb, "{backspace}");
 
   assert.strictEqual(shiftKey?.getAttribute("aria-label"), "Umschalt", "Shift key label enhanced");
   assert.strictEqual(enterKey?.getAttribute("aria-label"), "Eingabe", "Enter key label enhanced");
@@ -186,7 +185,7 @@ QUnit.test("Enhancement bundle + override hook combined on rendered control", as
     "Hook receives enhanced text as resolvedText and further modifies it",
   );
 
-  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  const shiftKey = getKeyElement(kb, "{shift}");
   assert.strictEqual(shiftKey?.getAttribute("aria-label"), "UMSCHALT", "Hook uppercases enhanced shift label");
 
   input.destroy();

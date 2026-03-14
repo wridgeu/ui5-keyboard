@@ -2,6 +2,8 @@
  * Shared test utilities for dispatching keyboard events.
  */
 
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+
 function buildKeyEvent(type: "keydown" | "keyup", key: string, options?: Partial<KeyboardEvent>): KeyboardEvent {
   const event = new KeyboardEvent(type, {
     key,
@@ -54,4 +56,23 @@ export function fireKeyUp(key: string, options?: Partial<KeyboardEvent>): void {
  */
 export function fireBlur(): void {
   window.dispatchEvent(new Event("blur"));
+}
+
+/**
+ * Destroy the HotkeyManager singleton if it currently exists.
+ */
+export function destroyHotkeyManager(): void {
+  try {
+    HotkeyManager.getInstance().destroy();
+  } catch {
+    // Not initialized yet or already destroyed
+  }
+}
+
+/**
+ * Reset the HotkeyManager singleton and return a fresh instance.
+ */
+export function resetHotkeyManager(): HotkeyManager {
+  destroyHotkeyManager();
+  return HotkeyManager.getInstance();
 }

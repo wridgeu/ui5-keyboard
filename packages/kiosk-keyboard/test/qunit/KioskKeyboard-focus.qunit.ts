@@ -4,7 +4,18 @@ import StepInput from "sap/m/StepInput";
 import VBox from "sap/m/VBox";
 import XMLView from "sap/ui/core/mvc/XMLView";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender, tapKey } from "./test-helpers";
+import {
+  getFirstKeyElement,
+  getFocusableKeys,
+  getKeyboardDom,
+  getRowKeys,
+  hasKeyboardClass,
+  placeAndWait,
+  tapKey,
+  waitForRender,
+} from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 // ──────────────────────────────────────────────
 // Module
@@ -25,10 +36,7 @@ QUnit.test("Home key moves focus to first key in row", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const rows = dom.querySelectorAll(".ui5KioskRow");
-  const firstRow = rows[0];
-  const keys = firstRow.querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const keys = getRowKeys(kb, 0);
   const lastKeyInRow = keys[keys.length - 1];
   const firstKeyInRow = keys[0];
 
@@ -51,10 +59,7 @@ QUnit.test("End key moves focus to last key in row", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const rows = dom.querySelectorAll(".ui5KioskRow");
-  const firstRow = rows[0];
-  const keys = firstRow.querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const keys = getRowKeys(kb, 0);
   const firstKeyInRow = keys[0];
   const lastKeyInRow = keys[keys.length - 1];
 
@@ -81,11 +86,9 @@ QUnit.test("ArrowRight at end of row wraps to next row", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const rows = dom.querySelectorAll(".ui5KioskRow");
-  const firstRowKeys = rows[0].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const firstRowKeys = getRowKeys(kb, 0);
   const lastKeyFirstRow = firstRowKeys[firstRowKeys.length - 1];
-  const secondRowKeys = rows[1].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const secondRowKeys = getRowKeys(kb, 1);
   const firstKeySecondRow = secondRowKeys[0];
 
   // Focus the last key in first row
@@ -105,11 +108,9 @@ QUnit.test("ArrowLeft at start of row wraps to previous row", async (assert) => 
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const rows = dom.querySelectorAll(".ui5KioskRow");
-  const secondRowKeys = rows[1].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const secondRowKeys = getRowKeys(kb, 1);
   const firstKeySecondRow = secondRowKeys[0];
-  const firstRowKeys = rows[0].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const firstRowKeys = getRowKeys(kb, 0);
   const lastKeyFirstRow = firstRowKeys[firstRowKeys.length - 1];
 
   // Focus the first key in second row
@@ -130,11 +131,9 @@ QUnit.test("ArrowDown with column overflow clamps to last key", async (assert) =
   kb.setKeyboardType("Numpad");
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const rows = dom.querySelectorAll(".ui5KioskRow");
   // Numpad: rows may have different key counts
   // Find a key in a row that has more columns than a later row
-  const firstRowKeys = rows[0].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const firstRowKeys = getRowKeys(kb, 0);
   const lastCol = firstRowKeys.length - 1;
   const lastKeyFirstRow = firstRowKeys[lastCol];
 
@@ -147,7 +146,7 @@ QUnit.test("ArrowDown with column overflow clamps to last key", async (assert) =
   kb.onkeydown(event);
 
   // Should land on a key in the second row (clamped if column doesn't exist)
-  const secondRowKeys = rows[1].querySelectorAll<HTMLElement>(".ui5KioskKey");
+  const secondRowKeys = getRowKeys(kb, 1);
   const expectedTarget = secondRowKeys[Math.min(lastCol, secondRowKeys.length - 1)];
   assert.strictEqual(document.activeElement, expectedTarget, "Focus clamped to last key in target row");
 
@@ -162,8 +161,7 @@ QUnit.test("Alt+Arrow keys are not intercepted", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const firstKey = dom.querySelector<HTMLElement>(".ui5KioskKey")!;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -181,8 +179,7 @@ QUnit.test("Meta+Arrow keys are not intercepted", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const firstKey = dom.querySelector<HTMLElement>(".ui5KioskKey")!;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -528,8 +525,7 @@ QUnit.test("applyFocusInfo restores focus to previously focused key", async (ass
   const info = kb.getFocusInfo() as { lastFocusedKeyId: string };
 
   // Focus something else
-  const dom = kb.getDomRef()!;
-  const firstKey = dom.querySelector(".ui5KioskKey") as HTMLElement;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
@@ -550,7 +546,7 @@ QUnit.test("applyFocusInfo falls back to first key when saved key is gone", asyn
   // Apply focus info with a nonexistent key ID
   kb.applyFocusInfo({ lastFocusedKeyId: "nonexistent-key-id" });
 
-  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  const firstKey = getFirstKeyElement(kb);
   assert.strictEqual(document.activeElement, firstKey, "Focus falls back to first key");
   assert.strictEqual(firstKey.getAttribute("tabindex"), "0", "First key has tabindex=0");
 
@@ -565,9 +561,9 @@ QUnit.test("Renderer falls back to first key when saved focus id is stale", asyn
   kb.setLayout("numeric");
   await waitForRender();
 
-  const focusableKeys = kb.getDomRef()!.querySelectorAll('.ui5KioskKey[tabindex="0"]');
+  const focusableKeys = getFocusableKeys(kb);
   assert.strictEqual(focusableKeys.length, 1, "Exactly one key remains keyboard-focusable");
-  assert.ok(focusableKeys[0].classList.contains("ui5KioskKey"), "Focusable key is a rendered keyboard key");
+  assert.ok(focusableKeys[0].classList.contains(DOM.classes.key), "Focusable key is a rendered keyboard key");
 
   kb.destroy();
 });
@@ -579,7 +575,7 @@ QUnit.test("getFocusDomRef returns last focused key", async (assert) => {
   // Before any tap, should return the first key
   const initial = kb.getFocusDomRef();
   assert.ok(initial, "getFocusDomRef returns an element before any tap");
-  assert.ok(initial!.classList.contains("ui5KioskKey"), "Initial focus ref is a key");
+  assert.ok(initial!.classList.contains(DOM.classes.key), "Initial focus ref is a key");
 
   // Tap a specific key
   tapKey(kb, "w");
@@ -643,12 +639,11 @@ QUnit.test("applyFocusInfo is a no-op when keyboard is disabled", async (assert)
 
   kb.applyFocusInfo(info);
 
-  const dom = kb.getDomRef()!;
-  const focusableKeys = dom.querySelectorAll('.ui5KioskKey[tabindex="0"]');
+  const focusableKeys = getFocusableKeys(kb);
   assert.strictEqual(focusableKeys.length, 0, "No key has tabindex=0 after applyFocusInfo on disabled keyboard");
 
   const active = document.activeElement;
-  assert.notOk(active && dom.contains(active), "No key inside the keyboard has focus");
+  assert.notOk(active && getKeyboardDom(kb).contains(active), "No key inside the keyboard has focus");
 
   kb.destroy();
 });
@@ -658,14 +653,13 @@ QUnit.test("Re-render after setEnabled(false) does not leave a focusable key", a
   await placeAndWait(kb);
 
   // Focus a key so the framework will attempt focus restoration after re-render
-  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.focus();
 
   kb.setEnabled(false);
   await waitForRender();
 
-  const dom = kb.getDomRef()!;
-  const focusableKeys = dom.querySelectorAll('.ui5KioskKey[tabindex="0"]');
+  const focusableKeys = getFocusableKeys(kb);
   assert.strictEqual(focusableKeys.length, 0, "No key has tabindex=0 on a disabled keyboard");
 
   kb.destroy();
@@ -690,7 +684,7 @@ QUnit.test("setEnabled(false) redirects focus to target input when a key has foc
   await placeAndWait(kb);
 
   // Focus a key on the keyboard
-  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.focus();
   assert.strictEqual(document.activeElement, firstKey, "Key has focus before disabling");
 
@@ -730,14 +724,14 @@ QUnit.test("setEnabled(false) keeps docked keyboard open but disabled", async (a
   await waitForRender();
 
   assert.ok(kb.isOpen(), "Docked keyboard stays open (visually greyed out)");
-  assert.ok(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--disabled"), "Disabled CSS class is applied");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootDisabled), "Disabled CSS class is applied");
 
   // Re-enabling restores interaction without needing show()
   kb.setEnabled(true);
   await waitForRender();
 
   assert.ok(kb.isOpen(), "Keyboard is still open after re-enabling");
-  assert.notOk(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--disabled"), "Disabled CSS class is removed");
+  assert.notOk(hasKeyboardClass(kb, DOM.classes.rootDisabled), "Disabled CSS class is removed");
 
   kb.destroy();
 });
@@ -749,7 +743,7 @@ QUnit.test("setVisible(false) redirects focus to target input when a key has foc
   await placeAndWait(kb);
 
   // Focus a key on the keyboard
-  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.focus();
   assert.strictEqual(document.activeElement, firstKey, "Key has focus before hiding");
 
@@ -778,7 +772,7 @@ QUnit.test("setEnabled(false) blurs key when no target input is set", async (ass
   const kb = new KioskKeyboard(); // no targetInput
   await placeAndWait(kb);
 
-  const firstKey = kb.getDomRef()!.querySelector(".ui5KioskKey") as HTMLElement;
+  const firstKey = getFirstKeyElement(kb);
   firstKey.focus();
   assert.strictEqual(document.activeElement, firstKey, "Key has focus before disabling");
 

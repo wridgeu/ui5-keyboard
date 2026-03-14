@@ -2,7 +2,17 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender, tapKey, getKeyElements, getKeyAriaLabel } from "./test-helpers";
+import {
+  getKeyAriaLabel,
+  getKeyElement,
+  getKeyElements,
+  hasKeyClass,
+  placeAndWait,
+  tapKey,
+  waitForRender,
+} from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 // ──────────────────────────────────────────────
 // Module
@@ -37,14 +47,14 @@ QUnit.test("Shift key has aria-pressed", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  const shiftKey = getKeyElement(kb, "{shift}");
   assert.ok(shiftKey, "Shift key exists");
   assert.strictEqual(shiftKey!.getAttribute("aria-pressed"), "false", "Initially aria-pressed=false");
 
   tapKey(kb, "{shift}");
   await waitForRender();
 
-  const updatedShift = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  const updatedShift = getKeyElement(kb, "{shift}");
   assert.strictEqual(updatedShift!.getAttribute("aria-pressed"), "true", "After shift: aria-pressed=true");
 
   kb.destroy();
@@ -71,13 +81,13 @@ QUnit.test("Modifier keys have modifier CSS class", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const shiftKey = kb.getDomRef()!.querySelector('[data-key="{shift}"]');
+  const shiftKey = getKeyElement(kb, "{shift}");
   assert.ok(shiftKey, "Shift key found");
-  assert.ok(shiftKey!.classList.contains("ui5KioskKey--modifier"), "Shift has modifier class");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyModifier), "Shift has modifier class");
 
-  const layoutKey = kb.getDomRef()!.querySelector('[data-key="{layout:numeric}"]');
+  const layoutKey = getKeyElement(kb, "{layout:numeric}");
   assert.ok(layoutKey, "Layout switch key found");
-  assert.ok(layoutKey!.classList.contains("ui5KioskKey--modifier"), "Layout switch has modifier class");
+  assert.ok(hasKeyClass(kb, "{layout:numeric}", DOM.classes.keyModifier), "Layout switch has modifier class");
 
   kb.destroy();
 });
@@ -86,13 +96,13 @@ QUnit.test("Action keys have action CSS class", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const enterKey = kb.getDomRef()!.querySelector('[data-key="{enter}"]');
+  const enterKey = getKeyElement(kb, "{enter}");
   assert.ok(enterKey, "Enter key found");
-  assert.ok(enterKey!.classList.contains("ui5KioskKey--action"), "Enter has action class");
+  assert.ok(hasKeyClass(kb, "{enter}", DOM.classes.keyAction), "Enter has action class");
 
-  const backspaceKey = kb.getDomRef()!.querySelector('[data-key="{backspace}"]');
+  const backspaceKey = getKeyElement(kb, "{backspace}");
   assert.ok(backspaceKey, "Backspace key found");
-  assert.ok(backspaceKey!.classList.contains("ui5KioskKey--action"), "Backspace has action class");
+  assert.ok(hasKeyClass(kb, "{backspace}", DOM.classes.keyAction), "Backspace has action class");
 
   kb.destroy();
 });
@@ -101,9 +111,9 @@ QUnit.test("Space key has space CSS class", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const spaceKey = kb.getDomRef()!.querySelector('[data-key=" "]');
+  const spaceKey = getKeyElement(kb, " ");
   assert.ok(spaceKey, "Space key found");
-  assert.ok(spaceKey!.classList.contains("ui5KioskKey--space"), "Space has space width class");
+  assert.ok(hasKeyClass(kb, " ", DOM.classes.keySpace), "Space has space width class");
 
   kb.destroy();
 });

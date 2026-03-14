@@ -1,25 +1,17 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { fireKey, fireKeyOn } from "./test-helpers";
+import { destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 let clock: { tick: (ms: number) => number; restore: () => void };
 
 QUnit.module("SequenceManager (via HotkeyManager)", {
   beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
+    destroyHotkeyManager();
     clock = sinon.useFakeTimers();
   },
   afterEach() {
     clock.restore();
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 

@@ -2,7 +2,7 @@ import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { Platform } from "ui5/hotkeys/library";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
-import { fireKey, fireKeyUp, fireBlur } from "./test-helpers";
+import { destroyHotkeyManager, fireBlur, fireKey, fireKeyUp } from "./test-helpers";
 
 let restoreRuntimeHooks: (() => void) | null = null;
 
@@ -11,21 +11,13 @@ QUnit.module("KeyStateTracker", {
     restoreRuntimeHooks?.();
     restoreRuntimeHooks = null;
 
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
+    destroyHotkeyManager();
   },
   afterEach() {
     restoreRuntimeHooks?.();
     restoreRuntimeHooks = null;
 
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 

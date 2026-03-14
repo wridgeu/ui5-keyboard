@@ -1,6 +1,6 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
-import { fireKey } from "./test-helpers";
+import { destroyHotkeyManager, fireKey } from "./test-helpers";
 
 interface MockRouter {
   attachBeforeRouteMatched: (handler: Function, listener: object) => void;
@@ -38,15 +38,10 @@ function createMockRouter(): MockRouter {
 
 QUnit.module("Router Integration", {
   beforeEach() {
-    const existing = HotkeyManager.getInstance();
-    existing.destroy();
+    destroyHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 

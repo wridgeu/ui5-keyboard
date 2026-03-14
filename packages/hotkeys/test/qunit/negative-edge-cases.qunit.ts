@@ -1,6 +1,6 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
-import { fireKey, fireKeyOn } from "./test-helpers";
+import { destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 
@@ -12,18 +12,10 @@ const fixture = document.getElementById("qunit-fixture")!;
 function freshManagerHooks() {
   return {
     beforeEach() {
-      try {
-        HotkeyManager.getInstance().destroy();
-      } catch {
-        /* not initialized yet */
-      }
+      destroyHotkeyManager();
     },
     afterEach() {
-      try {
-        HotkeyManager.getInstance().destroy();
-      } catch {
-        /* already destroyed */
-      }
+      destroyHotkeyManager();
     },
   };
 }
@@ -172,20 +164,12 @@ let clock: ReturnType<typeof sinon.useFakeTimers>;
 
 QUnit.module("Negative / Edge-Case - enabled() mid-sequence", {
   beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      /* not initialized yet */
-    }
+    destroyHotkeyManager();
     clock = sinon.useFakeTimers();
   },
   afterEach() {
     clock.restore();
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      /* already destroyed */
-    }
+    destroyHotkeyManager();
   },
 });
 

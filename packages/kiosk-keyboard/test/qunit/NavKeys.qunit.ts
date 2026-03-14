@@ -5,7 +5,17 @@ import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, tapKey, waitForRender } from "./test-helpers";
+import {
+  getKeyElement,
+  getRequiredKeyElement,
+  getRowElements,
+  hasKeyClass,
+  placeAndWait,
+  tapKey,
+  waitForRender,
+} from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 QUnit.module("NavKeys", {
   afterEach() {
@@ -36,15 +46,14 @@ QUnit.test("Standalone nav layout renders expected keys", async (assert) => {
   const kb = new KioskKeyboard({ layout: "nav" });
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  assert.ok(dom.querySelector('[data-key="{fkey:ArrowLeft}"]'), "ArrowLeft rendered");
-  assert.ok(dom.querySelector('[data-key="{fkey:ArrowRight}"]'), "ArrowRight rendered");
-  assert.ok(dom.querySelector('[data-key="{fkey:ArrowUp}"]'), "ArrowUp rendered");
-  assert.ok(dom.querySelector('[data-key="{fkey:ArrowDown}"]'), "ArrowDown rendered");
-  assert.ok(dom.querySelector('[data-key="{fkey:Home}"]'), "Home rendered");
-  assert.ok(dom.querySelector('[data-key="{fkey:End}"]'), "End rendered");
-  assert.ok(dom.querySelector('[data-key="{fkey:PageUp}"]'), "PageUp rendered");
-  assert.ok(dom.querySelector('[data-key="{fkey:PageDown}"]'), "PageDown rendered");
+  assert.ok(getKeyElement(kb, "{fkey:ArrowLeft}"), "ArrowLeft rendered");
+  assert.ok(getKeyElement(kb, "{fkey:ArrowRight}"), "ArrowRight rendered");
+  assert.ok(getKeyElement(kb, "{fkey:ArrowUp}"), "ArrowUp rendered");
+  assert.ok(getKeyElement(kb, "{fkey:ArrowDown}"), "ArrowDown rendered");
+  assert.ok(getKeyElement(kb, "{fkey:Home}"), "Home rendered");
+  assert.ok(getKeyElement(kb, "{fkey:End}"), "End rendered");
+  assert.ok(getKeyElement(kb, "{fkey:PageUp}"), "PageUp rendered");
+  assert.ok(getKeyElement(kb, "{fkey:PageDown}"), "PageDown rendered");
 
   kb.destroy();
 });
@@ -128,10 +137,10 @@ QUnit.test("Consumers can compose fkey-row + nav-row + base layout", async (asse
   const kb = new KioskKeyboard({ layout: "qwerty-fk-nav-test" });
   await placeAndWait(kb);
 
-  const rows = kb.getDomRef()!.querySelectorAll(".ui5KioskRow");
+  const rows = getRowElements(kb);
   assert.strictEqual(rows.length, 7, "Composite layout has 7 rows (fkey + nav + qwerty)");
-  assert.ok(kb.getDomRef()!.querySelector('[data-key="{fkey:F1}"]'), "Composite includes fkey row");
-  assert.ok(kb.getDomRef()!.querySelector('[data-key="{fkey:ArrowLeft}"]'), "Composite includes nav row");
+  assert.ok(getKeyElement(kb, "{fkey:F1}"), "Composite includes fkey row");
+  assert.ok(getKeyElement(kb, "{fkey:ArrowLeft}"), "Composite includes nav row");
 
   kb.destroy();
 });
@@ -228,19 +237,18 @@ QUnit.test("Physical Arrow key highlights matching virtual nav key", async (asse
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const left = dom.querySelector('[data-key="{fkey:ArrowLeft}"]') as HTMLElement;
+  const left = getRequiredKeyElement(kb, "{fkey:ArrowLeft}");
   assert.ok(left, "ArrowLeft key exists");
 
   input.focus();
 
   input.getFocusDomRef()!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
   await nextUIUpdate();
-  assert.ok(left.classList.contains("ui5KioskKey--highlight"), "ArrowLeft highlighted on physical keydown");
+  assert.ok(hasKeyClass(kb, "{fkey:ArrowLeft}", DOM.classes.keyHighlight), "ArrowLeft highlighted on physical keydown");
 
   input.getFocusDomRef()!.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowLeft", bubbles: true }));
   await nextUIUpdate();
-  assert.notOk(left.classList.contains("ui5KioskKey--highlight"), "ArrowLeft unhighlighted on keyup");
+  assert.notOk(hasKeyClass(kb, "{fkey:ArrowLeft}", DOM.classes.keyHighlight), "ArrowLeft unhighlighted on keyup");
 
   input.destroy();
   kb.destroy();

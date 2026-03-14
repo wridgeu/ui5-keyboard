@@ -1,7 +1,7 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
-import { fireKey, fireKeyOn } from "./test-helpers";
+import { destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 let restoreRuntimeHooks: (() => void) | null = null;
@@ -11,20 +11,13 @@ QUnit.module("HotkeyManager", {
     restoreRuntimeHooks?.();
     restoreRuntimeHooks = null;
 
-    // Ensure a fresh instance for each test
-    const existing = HotkeyManager.getInstance();
-    existing.destroy();
+    destroyHotkeyManager();
   },
   afterEach() {
     restoreRuntimeHooks?.();
     restoreRuntimeHooks = null;
 
-    // Clean up singleton
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 

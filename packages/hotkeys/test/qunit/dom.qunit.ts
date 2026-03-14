@@ -23,59 +23,29 @@ function createElement<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-QUnit.test("Returns true for text input", (assert) => {
-  const el = createElement("input", { type: "text" });
-  assert.ok(isInputElement(el));
-});
-
-QUnit.test("Returns true for password input", (assert) => {
-  const el = createElement("input", { type: "password" });
-  assert.ok(isInputElement(el));
-});
-
-QUnit.test("Returns true for email input", (assert) => {
-  const el = createElement("input", { type: "email" });
-  assert.ok(isInputElement(el));
-});
-
-QUnit.test("Returns true for number input", (assert) => {
-  const el = createElement("input", { type: "number" });
-  assert.ok(isInputElement(el));
-});
-
-QUnit.test("Returns true for search input", (assert) => {
-  const el = createElement("input", { type: "search" });
-  assert.ok(isInputElement(el));
+(
+  [
+    ["text input", { type: "text" }, true],
+    ["password input", { type: "password" }, true],
+    ["email input", { type: "email" }, true],
+    ["number input", { type: "number" }, true],
+    ["search input", { type: "search" }, true],
+    ["button input", { type: "button" }, false],
+    ["submit input", { type: "submit" }, false],
+    ["reset input", { type: "reset" }, false],
+    ["checkbox input", { type: "checkbox" }, false],
+    ["radio input", { type: "radio" }, false],
+  ] as const satisfies ReadonlyArray<readonly [string, Record<string, string>, boolean]>
+).forEach(([label, attrs, expected]) => {
+  QUnit.test(`Returns ${expected ? "true" : "false"} for ${label}`, (assert) => {
+    const el = createElement("input", attrs);
+    assert.strictEqual(isInputElement(el), expected);
+  });
 });
 
 QUnit.test("Returns true for input with no type (defaults to text)", (assert) => {
   const el = createElement("input");
   assert.ok(isInputElement(el));
-});
-
-QUnit.test("Returns false for button input", (assert) => {
-  const el = createElement("input", { type: "button" });
-  assert.notOk(isInputElement(el));
-});
-
-QUnit.test("Returns false for submit input", (assert) => {
-  const el = createElement("input", { type: "submit" });
-  assert.notOk(isInputElement(el));
-});
-
-QUnit.test("Returns false for reset input", (assert) => {
-  const el = createElement("input", { type: "reset" });
-  assert.notOk(isInputElement(el));
-});
-
-QUnit.test("Returns false for checkbox input", (assert) => {
-  const el = createElement("input", { type: "checkbox" });
-  assert.notOk(isInputElement(el));
-});
-
-QUnit.test("Returns false for radio input", (assert) => {
-  const el = createElement("input", { type: "radio" });
-  assert.notOk(isInputElement(el));
 });
 
 QUnit.test("Returns true for textarea", (assert) => {

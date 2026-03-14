@@ -3,7 +3,18 @@ import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import Localization from "sap/base/i18n/Localization";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender, tapKey, simulateTap, getKeyElements, getResolvedLayout } from "./test-helpers";
+import {
+  createFakeKeyElement,
+  getKeyElements,
+  getResolvedLayout,
+  hasKeyboardClass,
+  placeAndWait,
+  simulateTap,
+  tapKey,
+  waitForRender,
+} from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 // ──────────────────────────────────────────────
 // Module
@@ -44,8 +55,7 @@ QUnit.test("KeyboardType 'Numpad' renders numpad layout", async (assert) => {
   kb.setKeyboardType("Numpad");
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--numpad"), "Has numpad CSS class");
+  assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Has numpad CSS class");
 
   const keys = getKeyElements(kb);
   assert.ok(keys.length > 0, "Numpad keys rendered");
@@ -76,9 +86,8 @@ QUnit.test("KeyboardType 'Numeric' has numeric CSS class", async (assert) => {
   kb.setKeyboardType("Numeric");
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  assert.ok(dom.classList.contains("ui5KioskKeyboard--numeric"), "Has numeric CSS class");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--numpad"), "No numpad class");
+  assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Has numeric CSS class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "No numpad class");
 
   kb.destroy();
 });
@@ -87,9 +96,8 @@ QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) =>
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--numpad"), "No numpad class on Full");
-  assert.notOk(dom.classList.contains("ui5KioskKeyboard--numeric"), "No numeric class on Full");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "No numpad class on Full");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "No numeric class on Full");
 
   kb.destroy();
 });
@@ -163,10 +171,7 @@ QUnit.test("Layout switch ignored when keyboardType is Numpad", async (assert) =
   });
 
   // Create a fake layout switch key and tap it
-  const fakeEl = document.createElement("div");
-  fakeEl.classList.add("ui5KioskKey");
-  fakeEl.dataset.key = "{layout:numeric}";
-  fakeEl.id = "fake-layout";
+  const fakeEl = createFakeKeyElement("{layout:numeric}", "fake-layout");
 
   simulateTap(kb, fakeEl);
 
@@ -185,16 +190,10 @@ QUnit.test("Layout switch does not fire layoutChange for invalid or unchanged la
     changeCount++;
   });
 
-  const invalidLayoutEl = document.createElement("div");
-  invalidLayoutEl.classList.add("ui5KioskKey");
-  invalidLayoutEl.dataset.key = "{layout:not-registered}";
-  invalidLayoutEl.id = "fake-layout-invalid";
+  const invalidLayoutEl = createFakeKeyElement("{layout:not-registered}", "fake-layout-invalid");
   simulateTap(kb, invalidLayoutEl);
 
-  const sameLayoutEl = document.createElement("div");
-  sameLayoutEl.classList.add("ui5KioskKey");
-  sameLayoutEl.dataset.key = `{layout:${initialLayout}}`;
-  sameLayoutEl.id = "fake-layout-same";
+  const sameLayoutEl = createFakeKeyElement(`{layout:${initialLayout}}`, "fake-layout-same");
   simulateTap(kb, sameLayoutEl);
 
   assert.strictEqual(changeCount, 0, "No layoutChange event for invalid or unchanged layout");

@@ -1,6 +1,16 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { LayoutDefinition } from "ui5/kiosk/types";
-import { placeAndWait, waitForRender, tapKey, getKeyElements } from "./test-helpers";
+import {
+  getKeyElement,
+  getKeyElements,
+  hasKeyboardClass,
+  hasKeyClass,
+  placeAndWait,
+  tapKey,
+  waitForRender,
+} from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 QUnit.module("KioskKeyboard renderer black-box", {
   afterEach() {
@@ -18,13 +28,13 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const getShift = () => kb.getDomRef()!.querySelector('[data-key="{shift}"]')!;
+  const getShift = () => getKeyElement(kb, "{shift}")!;
   const getLive = () => document.getElementById(`${kb.getId()}-liveState`)!;
 
   // Initial state
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "false", "Initially aria-pressed=false");
-  assert.notOk(getShift().classList.contains("ui5KioskKey--active"), "No active class initially");
-  assert.notOk(getShift().classList.contains("ui5KioskKey--capsLock"), "No capsLock class initially");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "No active class initially");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "No capsLock class initially");
   assert.strictEqual(getLive().textContent, "", "Live region empty initially");
 
   // 1st tap → Shift on
@@ -32,8 +42,8 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   await waitForRender();
 
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "true", "After 1st tap: aria-pressed=true");
-  assert.ok(getShift().classList.contains("ui5KioskKey--active"), "After 1st tap: active class present");
-  assert.notOk(getShift().classList.contains("ui5KioskKey--capsLock"), "After 1st tap: no capsLock class");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "After 1st tap: active class present");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 1st tap: no capsLock class");
   assert.strictEqual(getLive().textContent, "Shift on", "After 1st tap: live region announces Shift on");
 
   // 2nd tap → Caps Lock on
@@ -41,8 +51,8 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   await waitForRender();
 
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "true", "After 2nd tap: aria-pressed=true");
-  assert.ok(getShift().classList.contains("ui5KioskKey--active"), "After 2nd tap: active class present");
-  assert.ok(getShift().classList.contains("ui5KioskKey--capsLock"), "After 2nd tap: capsLock class present");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "After 2nd tap: active class present");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 2nd tap: capsLock class present");
   assert.strictEqual(getLive().textContent, "Caps Lock on", "After 2nd tap: live region announces Caps Lock on");
 
   // 3rd tap → All off
@@ -50,8 +60,8 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   await waitForRender();
 
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "false", "After 3rd tap: aria-pressed=false");
-  assert.notOk(getShift().classList.contains("ui5KioskKey--active"), "After 3rd tap: no active class");
-  assert.notOk(getShift().classList.contains("ui5KioskKey--capsLock"), "After 3rd tap: no capsLock class");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "After 3rd tap: no active class");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 3rd tap: no capsLock class");
   assert.strictEqual(getLive().textContent, "", "After 3rd tap: live region cleared");
 
   kb.destroy();
@@ -74,7 +84,7 @@ QUnit.test("Shifted labels and aria-labels update in DOM", async (assert) => {
   const kb = new KioskKeyboard({ layout: "bb-shift-test" });
   await placeAndWait(kb);
 
-  const getKey = (v: string) => kb.getDomRef()!.querySelector(`[data-key="${v}"]`)!;
+  const getKey = (v: string) => getKeyElement(kb, v)!;
 
   // Unshifted state
   assert.strictEqual(getKey("1").textContent, "1", "Key '1' shows '1' unshifted");
@@ -109,20 +119,19 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = () => kb.getDomRef()!;
   const keyValues = () => Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
 
   // Full
-  assert.notOk(dom().classList.contains("ui5KioskKeyboard--numpad"), "Full: no numpad class");
-  assert.notOk(dom().classList.contains("ui5KioskKeyboard--numeric"), "Full: no numeric class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Full: no numpad class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Full: no numeric class");
   assert.ok(keyValues().includes("q"), "Full: has alphabetic keys");
 
   // Switch to Numpad
   kb.setKeyboardType("Numpad");
   await waitForRender();
 
-  assert.ok(dom().classList.contains("ui5KioskKeyboard--numpad"), "Numpad: has numpad class");
-  assert.notOk(dom().classList.contains("ui5KioskKeyboard--numeric"), "Numpad: no numeric class");
+  assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Numpad: has numpad class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Numpad: no numeric class");
   const numpadKeys = keyValues();
   assert.notOk(numpadKeys.includes("q"), "Numpad: no alphabetic keys");
   assert.ok(numpadKeys.includes("7"), "Numpad: has '7'");
@@ -131,8 +140,8 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   kb.setKeyboardType("Numeric");
   await waitForRender();
 
-  assert.notOk(dom().classList.contains("ui5KioskKeyboard--numpad"), "Numeric: no numpad class");
-  assert.ok(dom().classList.contains("ui5KioskKeyboard--numeric"), "Numeric: has numeric class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Numeric: no numpad class");
+  assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Numeric: has numeric class");
   const numericKeys = keyValues();
   assert.notOk(numericKeys.includes("q"), "Numeric: no alphabetic keys");
 
@@ -140,8 +149,8 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   kb.setKeyboardType("Full");
   await waitForRender();
 
-  assert.notOk(dom().classList.contains("ui5KioskKeyboard--numpad"), "Full again: no numpad class");
-  assert.notOk(dom().classList.contains("ui5KioskKeyboard--numeric"), "Full again: no numeric class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Full again: no numpad class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Full again: no numeric class");
   assert.ok(keyValues().includes("q"), "Full again: has alphabetic keys");
 
   kb.destroy();
@@ -155,21 +164,19 @@ QUnit.test("Special keys render correct aria-labels", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-
-  const backspace = dom.querySelector('[data-key="{backspace}"]');
+  const backspace = getKeyElement(kb, "{backspace}");
   assert.ok(backspace, "Backspace key rendered");
   assert.strictEqual(backspace!.getAttribute("aria-label"), "Backspace", "Backspace aria-label");
 
-  const enter = dom.querySelector('[data-key="{enter}"]');
+  const enter = getKeyElement(kb, "{enter}");
   assert.ok(enter, "Enter key rendered");
   assert.strictEqual(enter!.getAttribute("aria-label"), "Enter", "Enter aria-label");
 
-  const shift = dom.querySelector('[data-key="{shift}"]');
+  const shift = getKeyElement(kb, "{shift}");
   assert.ok(shift, "Shift key rendered");
   assert.strictEqual(shift!.getAttribute("aria-label"), "Shift", "Shift aria-label");
 
-  const space = dom.querySelector('[data-key=" "]');
+  const space = getKeyElement(kb, " ");
   assert.ok(space, "Space key rendered");
   assert.strictEqual(space!.getAttribute("aria-label"), "Space", "Space aria-label");
 

@@ -2,6 +2,8 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
+const DOM = KioskKeyboard.DOM;
+
 /** Place a control into qunit-fixture and wait for initial render. */
 export async function placeAndWait(control: KioskKeyboard): Promise<void> {
   control.placeAt("qunit-fixture");
@@ -15,11 +17,7 @@ export async function waitForRender(): Promise<void> {
 
 /** Find a rendered key by its data-key value and tap it via touch simulation. */
 export function tapKey(keyboard: KioskKeyboard, keyValue: string): void {
-  const dom = keyboard.getDomRef();
-  if (!dom) throw new Error("Keyboard not rendered");
-  const keyEl = dom.querySelector(KioskKeyboard.DOM.selectors.keyByValue(keyValue)) as HTMLElement | null;
-  if (!keyEl) throw new Error(`Key "${keyValue}" not found`);
-  simulateTap(keyboard, keyEl);
+  simulateTap(keyboard, getRequiredKeyElement(keyboard, keyValue));
 }
 
 /** Simulate a touchstart→touchend sequence on a control, targeting a specific element. */
@@ -35,18 +33,79 @@ export function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
 
 /** Simulate a shift tap on an unrendered keyboard (creates a fake shift element). */
 export function tapShiftInternally(kb: KioskKeyboard): void {
-  const fakeShiftEl = document.createElement("div");
-  fakeShiftEl.classList.add(KioskKeyboard.DOM.classes.key);
-  fakeShiftEl.dataset.key = "{shift}";
-  fakeShiftEl.id = "fake-shift";
-  simulateTap(kb, fakeShiftEl);
+  simulateTap(kb, createFakeKeyElement("{shift}", "fake-shift"));
+}
+
+/** Get the rendered keyboard root element. */
+export function getKeyboardDom(keyboard: KioskKeyboard): HTMLElement {
+  const dom = keyboard.getDomRef();
+  if (!(dom instanceof HTMLElement)) throw new Error("Keyboard not rendered");
+  return dom;
 }
 
 /** Get all rendered key elements from a keyboard. */
 export function getKeyElements(keyboard: KioskKeyboard): NodeListOf<HTMLElement> {
-  const dom = keyboard.getDomRef();
-  if (!dom) throw new Error("Keyboard not rendered");
-  return dom.querySelectorAll<HTMLElement>(KioskKeyboard.DOM.selectors.key);
+  return getKeyboardDom(keyboard).querySelectorAll<HTMLElement>(DOM.selectors.key);
+}
+
+/** Get the first rendered key element. */
+export function getFirstKeyElement(keyboard: KioskKeyboard): HTMLElement {
+  const firstKey = getKeyElements(keyboard)[0];
+  if (!firstKey) throw new Error("Keyboard has no rendered keys");
+  return firstKey;
+}
+
+/** Find a rendered key by its data-key value. */
+export function getKeyElement(keyboard: KioskKeyboard, keyValue: string): HTMLElement | null {
+  return getKeyboardDom(keyboard).querySelector<HTMLElement>(DOM.selectors.keyByValue(keyValue));
+}
+
+/** Find a rendered key by its data-key value or throw. */
+export function getRequiredKeyElement(keyboard: KioskKeyboard, keyValue: string): HTMLElement {
+  const keyEl = getKeyElement(keyboard, keyValue);
+  if (!keyEl) throw new Error(`Key "${keyValue}" not found`);
+  return keyEl;
+}
+
+/** Get rendered keyboard rows. */
+export function getRowElements(keyboard: KioskKeyboard): HTMLElement[] {
+  return Array.from(getKeyboardDom(keyboard).querySelectorAll<HTMLElement>(DOM.selectors.row));
+}
+
+/** Get a rendered keyboard row by index. */
+export function getRowElement(keyboard: KioskKeyboard, rowIndex: number): HTMLElement {
+  const row = getRowElements(keyboard)[rowIndex];
+  if (!row) throw new Error(`Row ${rowIndex} not found`);
+  return row;
+}
+
+/** Get key elements from a rendered row. */
+export function getRowKeys(keyboard: KioskKeyboard, rowIndex: number): HTMLElement[] {
+  return Array.from(getRowElement(keyboard, rowIndex).querySelectorAll<HTMLElement>(DOM.selectors.key));
+}
+
+/** Get the currently focusable key elements. */
+export function getFocusableKeys(keyboard: KioskKeyboard): HTMLElement[] {
+  return Array.from(getKeyboardDom(keyboard).querySelectorAll<HTMLElement>(DOM.selectors.focusableKey));
+}
+
+/** Check whether the keyboard root currently has a CSS class. */
+export function hasKeyboardClass(keyboard: KioskKeyboard, className: string): boolean {
+  return getKeyboardDom(keyboard).classList.contains(className);
+}
+
+/** Check whether a rendered key currently has a CSS class. */
+export function hasKeyClass(keyboard: KioskKeyboard, keyValue: string, className: string): boolean {
+  return getRequiredKeyElement(keyboard, keyValue).classList.contains(className);
+}
+
+/** Create a fake key-like element for unrendered/internal event tests. */
+export function createFakeKeyElement(keyValue: string, id = "fake-key"): HTMLElement {
+  const fakeKeyEl = document.createElement("div");
+  fakeKeyEl.classList.add(DOM.classes.key);
+  fakeKeyEl.dataset.key = keyValue;
+  fakeKeyEl.id = id;
+  return fakeKeyEl;
 }
 
 export function isShiftActive(keyboard: KioskKeyboard): boolean {

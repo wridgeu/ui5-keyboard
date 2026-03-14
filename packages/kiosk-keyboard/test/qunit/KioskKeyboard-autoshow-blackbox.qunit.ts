@@ -1,7 +1,9 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, tapKey, waitForRender } from "./test-helpers";
+import { hasKeyboardClass, placeAndWait, tapKey, waitForRender } from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 QUnit.module("KioskKeyboard autoshow black-box", {
   afterEach() {
@@ -21,17 +23,15 @@ QUnit.test("Docked auto-show opens on input focus and closes via API", async (as
   const kb = new KioskKeyboard({ docked: true, autoShow: true });
   await placeAndWait(kb);
 
-  const dom = () => kb.getDomRef()!;
-
   assert.notOk(kb.isOpen(), "Keyboard closed initially");
-  assert.ok(dom().classList.contains("ui5KioskKeyboard--closed"), "Has closed CSS class initially");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootClosed), "Has closed CSS class initially");
 
   // Focus input → keyboard opens
   (input.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
 
   assert.ok(kb.isOpen(), "Keyboard opens on input focus");
-  assert.notOk(dom().classList.contains("ui5KioskKeyboard--closed"), "Closed CSS class removed");
+  assert.notOk(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed CSS class removed");
   assert.strictEqual(kb.getTargetInput(), input.getId(), "Target input is set");
 
   // Close via public API
@@ -39,7 +39,7 @@ QUnit.test("Docked auto-show opens on input focus and closes via API", async (as
   await nextUIUpdate();
 
   assert.notOk(kb.isOpen(), "Keyboard closed after close()");
-  assert.ok(dom().classList.contains("ui5KioskKeyboard--closed"), "Closed CSS class restored");
+  assert.ok(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed CSS class restored");
 
   input.destroy();
   kb.destroy();
@@ -68,7 +68,7 @@ QUnit.test("Auto-type switches keyboard type based on focused input", async (ass
   await waitForRender();
 
   assert.strictEqual(kb.getKeyboardType(), "Numpad", "Switched to Numpad for Number input");
-  assert.ok(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--numpad"), "DOM has numpad class after auto-type");
+  assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "DOM has numpad class after auto-type");
 
   // Focus text input → should switch back to Full
   (textInput.getFocusDomRef() as HTMLElement).focus();
@@ -76,7 +76,7 @@ QUnit.test("Auto-type switches keyboard type based on focused input", async (ass
   await waitForRender();
 
   assert.strictEqual(kb.getKeyboardType(), "Full", "Switched back to Full for text input");
-  assert.notOk(kb.getDomRef()!.classList.contains("ui5KioskKeyboard--numpad"), "DOM no longer has numpad class");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "DOM no longer has numpad class");
 
   numInput.destroy();
   textInput.destroy();

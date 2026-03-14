@@ -3,25 +3,16 @@ import { UnhandledReason } from "ui5/hotkeys/library";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 import { FOCUS_PATH_FALLBACK_TTL_MS } from "ui5/hotkeys/internal/FocusFallbackTracker";
 import type Log from "sap/base/Log";
-import { fireKey, fireKeyOn, fireKeyUp, fireBlur } from "./test-helpers";
+import { destroyHotkeyManager, fireBlur, fireKey, fireKeyOn, fireKeyUp, resetHotkeyManager } from "./test-helpers";
 
 let manager: HotkeyManager;
 
 QUnit.module("EventDispatcher & Suspend Guard", {
   beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
-    manager = HotkeyManager.getInstance();
+    manager = resetHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 
@@ -1549,14 +1540,10 @@ let clock: ReturnType<typeof sinon.useFakeTimers>;
 QUnit.module("Focus fallback for Escape", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = HotkeyManager.getInstance();
+    manager = resetHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
     clock.restore();
   },
 });
@@ -1738,14 +1725,10 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
 QUnit.module("Generic root ID API", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = HotkeyManager.getInstance();
+    manager = resetHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
     clock.restore();
   },
 });
@@ -1935,14 +1918,10 @@ QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (
 
 QUnit.module("Shadow DOM target matching", {
   beforeEach() {
-    manager = HotkeyManager.getInstance();
+    manager = resetHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 
@@ -2017,14 +1996,10 @@ QUnit.test("nested shadow DOM: target on outer host matches when focus is two sh
 
 QUnit.module("ActiveElement path augmentation", {
   beforeEach() {
-    manager = HotkeyManager.getInstance();
+    manager = resetHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 
@@ -2070,14 +2045,10 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
 QUnit.module("UIArea generic root detection", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = HotkeyManager.getInstance();
+    manager = resetHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
     clock.restore();
   },
 });

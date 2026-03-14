@@ -1,24 +1,16 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { fireKey } from "./test-helpers";
+import { destroyHotkeyManager, fireKey } from "./test-helpers";
 
 let clock: { tick: (ms: number) => number; restore: () => void };
 
 QUnit.module("SequenceManager - Black-Box Contracts", {
   beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
+    destroyHotkeyManager();
     clock = sinon.useFakeTimers();
   },
   afterEach() {
     clock.restore();
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 

@@ -2,7 +2,20 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender, tapKey, tapShiftInternally, isShiftActive } from "./test-helpers";
+import {
+  getKeyElement,
+  getRequiredKeyElement,
+  getRowElement,
+  getRowElements,
+  hasKeyClass,
+  isShiftActive,
+  placeAndWait,
+  tapKey,
+  tapShiftInternally,
+  waitForRender,
+} from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 // ──────────────────────────────────────────────
 // Module
@@ -58,7 +71,7 @@ QUnit.test("Standalone fkeys layout renders 3 rows", async (assert) => {
   const kb = new KioskKeyboard({ layout: "fkeys" });
   await placeAndWait(kb);
 
-  const rows = kb.getDomRef()!.querySelectorAll(".ui5KioskRow");
+  const rows = getRowElements(kb);
   assert.strictEqual(rows.length, 3, "fkeys layout has 3 rows");
 
   kb.destroy();
@@ -68,20 +81,18 @@ QUnit.test("Standalone fkeys layout contains F1-F12 + ABC + Enter", async (asser
   const kb = new KioskKeyboard({ layout: "fkeys" });
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-
   // Check all F-keys are present
   for (let i = 1; i <= 12; i++) {
-    const el = dom.querySelector(`[data-key="{fkey:F${i}}"]`);
+    const el = getKeyElement(kb, `{fkey:F${i}}`);
     assert.ok(el, `F${i} key is rendered`);
   }
 
   // ABC button
-  const abc = dom.querySelector('[data-key="{layout:base}"]');
+  const abc = getKeyElement(kb, "{layout:base}");
   assert.ok(abc, "ABC layout switch is rendered");
 
   // Enter button
-  const enter = dom.querySelector('[data-key="{enter}"]');
+  const enter = getKeyElement(kb, "{enter}");
   assert.ok(enter, "Enter key is rendered");
 
   kb.destroy();
@@ -95,13 +106,13 @@ QUnit.test("qwerty-fk layout renders 6 rows (F-key row + 5 base rows)", async (a
   const kb = new KioskKeyboard({ layout: "qwerty-fk" });
   await placeAndWait(kb);
 
-  const rows = kb.getDomRef()!.querySelectorAll(".ui5KioskRow");
+  const rows = getRowElements(kb);
   assert.strictEqual(rows.length, 6, "qwerty-fk layout has 6 rows");
 
   // First row should contain F-keys
-  const firstRow = rows[0];
-  assert.ok(firstRow.querySelector('[data-key="{fkey:F1}"]'), "First row contains F1");
-  assert.ok(firstRow.querySelector('[data-key="{fkey:F12}"]'), "First row contains F12");
+  const firstRow = getRowElement(kb, 0);
+  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F1}")), "First row contains F1");
+  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F12}")), "First row contains F12");
 
   kb.destroy();
 });
@@ -110,17 +121,16 @@ QUnit.test("qwertz-de-fk layout renders 6 rows (F-key row + 5 base rows)", async
   const kb = new KioskKeyboard({ layout: "qwertz-de-fk" });
   await placeAndWait(kb);
 
-  const rows = kb.getDomRef()!.querySelectorAll(".ui5KioskRow");
+  const rows = getRowElements(kb);
   assert.strictEqual(rows.length, 6, "qwertz-de-fk layout has 6 rows");
 
   // First row should contain F-keys
-  const firstRow = rows[0];
-  assert.ok(firstRow.querySelector('[data-key="{fkey:F1}"]'), "First row contains F1");
-  assert.ok(firstRow.querySelector('[data-key="{fkey:F12}"]'), "First row contains F12");
+  const firstRow = getRowElement(kb, 0);
+  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F1}")), "First row contains F1");
+  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F12}")), "First row contains F12");
 
   // Should also contain German-specific keys (umlauts)
-  const dom = kb.getDomRef()!;
-  assert.ok(dom.querySelector('[data-key="\u00FC"]'), "Contains \u00FC key from qwertz-de base");
+  assert.ok(getKeyElement(kb, "\u00FC"), "Contains \u00FC key from qwertz-de base");
 
   kb.destroy();
 });
@@ -210,8 +220,7 @@ QUnit.test("QWERTY bottom row has Fn button that switches to fkeys", async (asse
   const kb = new KioskKeyboard({ layout: "qwerty" });
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const fnKey = dom.querySelector('[data-key="{layout:fkeys}"]');
+  const fnKey = getKeyElement(kb, "{layout:fkeys}");
   assert.ok(fnKey, "Fn button exists on qwerty layout");
   assert.strictEqual(fnKey!.textContent!.trim(), "Fn", "Fn button shows Fn label");
 
@@ -222,7 +231,7 @@ QUnit.test("QWERTY bottom row has Fn button that switches to fkeys", async (asse
   assert.strictEqual(kb.getLayout(), "fkeys", "Layout switched to fkeys");
 
   // Verify fkeys layout is rendered
-  const f1 = kb.getDomRef()!.querySelector('[data-key="{fkey:F1}"]');
+  const f1 = getKeyElement(kb, "{fkey:F1}");
   assert.ok(f1, "F1 key visible after Fn tap");
 
   kb.destroy();
@@ -232,8 +241,7 @@ QUnit.test("QWERTZ-DE bottom row has Fn button that switches to fkeys", async (a
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const fnKey = dom.querySelector('[data-key="{layout:fkeys}"]');
+  const fnKey = getKeyElement(kb, "{layout:fkeys}");
   assert.ok(fnKey, "Fn button exists on qwertz-de layout");
 
   tapKey(kb, "{layout:fkeys}");
@@ -271,8 +279,7 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
-  const dom = kb.getDomRef()!;
-  const f5El = dom.querySelector('[data-key="{fkey:F5}"]') as HTMLElement;
+  const f5El = getRequiredKeyElement(kb, "{fkey:F5}");
   assert.ok(f5El, "F5 key exists");
 
   // Simulate physical keydown via the highlight delegation
@@ -281,14 +288,14 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   input.getFocusDomRef()!.dispatchEvent(keydown);
   await nextUIUpdate();
 
-  assert.ok(f5El.classList.contains("ui5KioskKey--highlight"), "F5 key highlighted on physical keydown");
+  assert.ok(hasKeyClass(kb, "{fkey:F5}", DOM.classes.keyHighlight), "F5 key highlighted on physical keydown");
 
   // Simulate keyup
   const keyup = new KeyboardEvent("keyup", { key: "F5", bubbles: true });
   input.getFocusDomRef()!.dispatchEvent(keyup);
   await nextUIUpdate();
 
-  assert.notOk(f5El.classList.contains("ui5KioskKey--highlight"), "F5 key unhighlighted on physical keyup");
+  assert.notOk(hasKeyClass(kb, "{fkey:F5}", DOM.classes.keyHighlight), "F5 key unhighlighted on physical keyup");
 
   input.destroy();
   kb.destroy();

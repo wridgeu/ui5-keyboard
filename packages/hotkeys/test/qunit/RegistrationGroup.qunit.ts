@@ -1,17 +1,12 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { fireKey } from "./test-helpers";
+import { destroyHotkeyManager, fireKey } from "./test-helpers";
 
 QUnit.module("RegistrationGroup", {
   beforeEach() {
-    const existing = HotkeyManager.getInstance();
-    existing.destroy();
+    destroyHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 

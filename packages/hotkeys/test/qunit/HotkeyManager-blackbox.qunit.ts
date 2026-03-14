@@ -1,23 +1,15 @@
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
-import { fireKey, fireKeyOn } from "./test-helpers";
+import { destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 
 QUnit.module("HotkeyManager - Black-Box Contracts", {
   beforeEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Not initialized yet
-    }
+    destroyHotkeyManager();
   },
   afterEach() {
-    try {
-      HotkeyManager.getInstance().destroy();
-    } catch {
-      // Already destroyed
-    }
+    destroyHotkeyManager();
   },
 });
 
