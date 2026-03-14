@@ -197,6 +197,28 @@ QUnit.test("No height classes for docked keyboards", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Toggling docked mode clears stale height classes immediately", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  dom.style.height = `${10 * remPx}px`;
+  dom.style.overflow = "hidden";
+  (kb as any)._naturalContentHeight = 400;
+  (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, 10 * remPx);
+
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied before docking");
+
+  kb.setDocked(true);
+
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared when docked=true");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared when docked=true");
+
+  kb.destroy();
+});
+
 QUnit.test("resetKeyboardType() clears cached natural height", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
