@@ -96,7 +96,7 @@ describe("KioskKeyboard Visual Regression", () => {
     await expect(kb).toMatchElementSnapshot("kb-glyph-stress");
   });
 
-  it("should match height-constrained container (400x280)", async () => {
+  it("should match height-constrained container (400x250)", async () => {
     const container = await $("#kb-height-constrained");
     await expect(container).toMatchElementSnapshot("kb-height-constrained");
   });

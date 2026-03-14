@@ -25,26 +25,7 @@
         margin-bottom: 12px;
       }
     </style>
-    <script type="module">
-      import "../../src/bundle.esm.ts";
-
-      const glyphStressLayout = [
-        [
-          { value: "@" },
-          { value: "%" },
-          { value: "&" },
-          { value: '"' },
-          { value: "#" },
-          { value: "+" },
-          { value: "=" },
-          { value: "?" },
-        ],
-      ];
-
-      customElements.whenDefined("kiosk-keyboard").then(() => {
-        customElements.get("kiosk-keyboard").registerLayout("glyph-stress", glyphStressLayout);
-      });
-    </script>
+    <script type="module" src="visual.js"></script>
   </head>
   <body>
     <h1 style="font-size: 20px; color: #32363a">KioskKeyboard Web Component - Visual Inspection</h1>

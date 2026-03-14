@@ -1,4 +1,4 @@
-import { browser, expect } from "@wdio/globals";
+import { $, browser, expect } from "@wdio/globals";
 import { openVisualPage, getKeyboardRoot, forceHoverState, clearForcedHoverState } from "./test-helpers.js";
 
 describe("KioskKeyboard Web Component - Visual Regression", () => {
