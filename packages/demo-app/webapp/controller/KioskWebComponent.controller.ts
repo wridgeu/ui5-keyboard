@@ -5,7 +5,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 // Register the <kiosk-keyboard> custom element (resolved by ui5-tooling-modules)
-import "kiosk-keyboard-webc/dist/bundle.esm.js";
+import "kiosk-keyboard-webc/bundle";
 
 /**
  * Controller for the native `<kiosk-keyboard>` web component demo page.

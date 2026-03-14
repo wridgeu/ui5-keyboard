@@ -11,7 +11,7 @@ Demo pages for manual testing and screenshot generation.
 Pages are served by the Vite dev server. From the package root:
 
 ```bash
-npm run build          # required — pages import from dist/
+npm run generate       # required — generates theme/i18n assets
 npx vite serve --port 8100
 ```
 

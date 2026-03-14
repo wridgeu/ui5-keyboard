@@ -12,7 +12,7 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, "dist/bundle.esm.js"),
+      entry: path.resolve(__dirname, "src/bundle.esm.ts"),
       formats: ["es"],
       fileName: "kiosk-keyboard.bundle",
     },
