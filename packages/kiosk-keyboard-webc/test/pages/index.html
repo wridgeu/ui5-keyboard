@@ -267,10 +267,6 @@
               <ui5-input id="docked-input-email" type="Email" placeholder="john@example.com"></ui5-input>
             </div>
             <div class="input-group">
-              <ui5-label for="docked-input-age" show-colon>Age (step-input)</ui5-label>
-              <ui5-step-input id="docked-input-age" value="25" min="0" max="120"></ui5-step-input>
-            </div>
-            <div class="input-group">
               <label for="docked-input-zip">ZIP (native)</label>
               <input id="docked-input-zip" type="number" placeholder="12345" />
             </div>
@@ -279,13 +275,54 @@
               <textarea id="docked-input-notes" rows="1" placeholder="Notes…"></textarea>
             </div>
           </div>
+
+          <!-- Auto-type detection: step-input comparison -->
+          <div style="border-top: 1px solid var(--border-color); padding-top: 12px">
+            <h3 style="font-size: 13px; margin: 0 0 4px">Auto-Type Detection: <code>ui5-step-input</code></h3>
+            <p style="font-size: 12px; color: var(--muted-color); margin: 0 0 12px; line-height: 1.5">
+              The auto-type detector checks the resolved native <code>&lt;input&gt;</code> for
+              <code>type="number"</code> or <code>inputmode="numeric"</code>. However,
+              <code>ui5-step-input</code> renders its inner input as <code>type="text"</code> without an
+              <code>inputmode</code> attribute, so auto-detection sees no numeric signal and falls back to Full
+              (QWERTY). The <code>data-keyboard-type="Numpad"</code>
+              attribute provides a framework-agnostic override that crosses shadow DOM boundaries.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+              <div
+                class="input-group"
+                style="border: 1px dashed var(--border-color); padding: 10px; border-radius: 6px"
+              >
+                <ui5-label for="docked-step-unpatched" show-colon>Age - no override</ui5-label>
+                <ui5-step-input id="docked-step-unpatched" value="25" min="0" max="120"></ui5-step-input>
+                <span style="font-size: 11px; color: var(--muted-color)">
+                  Inner input has <code>type="text"</code>, auto-type resolves to <strong>Full</strong> (QWERTY).
+                </span>
+              </div>
+              <div
+                class="input-group"
+                style="border: 1px dashed var(--border-color); padding: 10px; border-radius: 6px"
+              >
+                <ui5-label for="docked-step-patched" show-colon>Age - with <code>data-keyboard-type</code></ui5-label>
+                <ui5-step-input
+                  id="docked-step-patched"
+                  value="25"
+                  min="0"
+                  max="120"
+                  data-keyboard-type="Numpad"
+                ></ui5-step-input>
+                <span style="font-size: 11px; color: var(--muted-color)">
+                  Override attribute found via shadow DOM traversal, auto-type resolves to <strong>Numpad</strong>.
+                </span>
+              </div>
+            </div>
+          </div>
           <kiosk-keyboard
             id="kb-docked"
             docked
             auto-show
             auto-type
             mobile-keyboard="Custom"
-            input-ids="docked-input-name,docked-input-email,docked-input-age,docked-input-zip,docked-input-notes"
+            input-ids="docked-input-name,docked-input-email,docked-input-zip,docked-input-notes,docked-step-unpatched,docked-step-patched"
           ></kiosk-keyboard>
         </div>
 
