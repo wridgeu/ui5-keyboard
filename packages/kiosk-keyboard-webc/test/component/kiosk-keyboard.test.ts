@@ -1452,7 +1452,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      el.keyboardType = "InvalidType";
+      el.keyboardType = "InvalidType" as any;
       await nextRender();
       expect(el.keyboardType).to.equal("Full");
     });
@@ -1464,7 +1464,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      el.fKeyMode = "InvalidMode";
+      el.fKeyMode = "InvalidMode" as any;
       await nextRender();
       expect(el.fKeyMode).to.equal("Virtual");
     });
@@ -1476,7 +1476,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      el.mobileKeyboard = "InvalidValue";
+      el.mobileKeyboard = "InvalidValue" as any;
       await nextRender();
       expect(el.mobileKeyboard).to.equal("Auto");
     });
@@ -1773,6 +1773,26 @@ describe("kiosk-keyboard", () => {
       expect(root.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after refresh").to.be.false;
       expect(root.classList.contains(DOM.classes.rootCqTiny), "cq-tiny stays cleared after refresh").to.be.false;
     });
+
+    it("measures host content height so padded hosts still trigger height breakpoints", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard
+            layout="qwerty"
+            style="height: 17rem; padding: 1rem; border: 4px solid transparent; box-sizing: border-box; overflow: hidden"
+          ></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      const root = rootDiv(el);
+      expect(
+        root.classList.contains(DOM.classes.rootCqShort),
+        "content-box height triggers cq-short despite host padding",
+      ).to.be.true;
+      expect(root.classList.contains(DOM.classes.rootCqTiny), "padding case stays above tiny breakpoint").to.be.false;
+    });
   });
 
   // ── stableHeight type guard ──
@@ -1800,6 +1820,29 @@ describe("kiosk-keyboard", () => {
 
       const root = rootDiv(el);
       expect(root.style.minHeight).to.not.equal("", "minHeight should be set for Full keyboard with stableHeight");
+    });
+
+    it("preserves minHeight across layout switches", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" stable-height></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const root = rootDiv(el);
+      const initialMinHeight = parseFloat(root.style.minHeight);
+      expect(initialMinHeight).to.be.greaterThan(0, "Has initial minHeight");
+
+      // Switch to numeric (fewer rows, shorter content)
+      el.layout = "numeric";
+      await nextRender();
+
+      const minHeightAfterSwitch = parseFloat(root.style.minHeight);
+      expect(minHeightAfterSwitch).to.be.at.least(
+        initialMinHeight,
+        "minHeight preserved after switching to shorter layout",
+      );
     });
   });
 

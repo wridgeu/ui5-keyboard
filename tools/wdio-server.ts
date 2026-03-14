@@ -46,6 +46,16 @@ async function waitForServer(port: number, timeout: number): Promise<void> {
   throw new Error(`Server not ready on port ${port} after ${timeout}ms`);
 }
 
+/** Polls until the given localhost port no longer accepts TCP connections. */
+async function waitForPortToClose(port: number, timeout: number): Promise<void> {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (!(await probePort(port))) return;
+    await delay(250);
+  }
+  throw new Error(`Server on port ${port} did not close after ${timeout}ms`);
+}
+
 function killProcessTree(pid: number): Promise<void> {
   return new Promise((resolve) => {
     treeKill(pid, (err) => {
@@ -84,6 +94,7 @@ export function createServerManager(port: number, packageRoot: string, configFil
     const pid = serverProcess.pid;
     serverProcess = undefined;
     await killProcessTree(pid);
+    await waitForPortToClose(port, 15_000);
   }
 
   return {
@@ -136,6 +147,7 @@ export function createViteServerManager(port: number, packageRoot: string, start
     const pid = serverProcess.pid;
     serverProcess = undefined;
     await killProcessTree(pid);
+    await waitForPortToClose(port, 15_000);
   }
 
   return {

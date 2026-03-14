@@ -15,3 +15,4 @@ export type {
   KeyType,
   SpecialKeyValue,
 } from "./types.js";
+export type { KioskKeyboardDomContract } from "./KioskKeyboard.js";

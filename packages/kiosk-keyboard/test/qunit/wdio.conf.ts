@@ -5,7 +5,7 @@ import { createServerManager, readQUnitTestIds, generateQUnitSpecs } from "../..
 import { CHROME_VERSION, DESKTOP_WINDOW_SIZE } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const PORT = 8084;
+const PORT = 8082;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const TESTSUITE_FILE = path.resolve(__dirname, "testsuite.qunit.ts");
 const SPECS_DIR = path.resolve(__dirname, ".generated-specs");

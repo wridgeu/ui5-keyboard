@@ -41,6 +41,8 @@ import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-t
 import FocusClaimService from "./internal/focus-claim-service";
 import TargetInputSession from "./internal/target-input-session";
 
+export type { KioskKeyboardDomContract } from "./KioskKeyboardRenderer";
+
 type InputFocusDelegation = {
   onfocusin: () => void;
 };
@@ -73,6 +75,13 @@ type InputModeSuppressionState = {
  * @since 0.1.0
  */
 export default class KioskKeyboard extends Control {
+  /**
+   * Stable DOM hook contract for tests and DOM assertions.
+   *
+   * Prefer these selectors and class names over hard-coded strings.
+   * Styling customizations should continue to use the documented
+   * `--ui5KioskKeyboard-*` CSS custom properties instead.
+   */
   static readonly DOM = KIOSK_KEYBOARD_DOM;
 
   // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures

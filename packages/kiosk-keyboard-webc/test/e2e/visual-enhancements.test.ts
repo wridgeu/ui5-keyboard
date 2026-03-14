@@ -2,8 +2,11 @@ import { expect } from "@wdio/globals";
 import {
   openVisualPage,
   getKeyboardRoot,
+  forceHoverState,
+  clearForcedHoverState,
   injectShadowStyleOverride,
   removeShadowStyleOverride,
+  DISABLE_COLOR_MIX,
   DISABLE_TEXT_BOX_TRIM,
   DISABLE_CONTAINER_QUERIES,
 } from "./test-helpers.js";
@@ -24,6 +27,9 @@ import {
  *      breakpoints for width-responsive font scaling. The fallback
  *      snapshots explicitly disable native CQ styling and inject the
  *      class-based fallback rules so they match older browsers.
+ *   3. color-mix() shadow tokens — guarded with @supports. The fallback
+ *      snapshot re-applies the static rgba() shadow tokens that older
+ *      browsers keep when the guarded override block is skipped.
  */
 
 describe("KioskKeyboard WebC - Fallback: without text-box-trim", () => {
@@ -103,5 +109,26 @@ describe("KioskKeyboard WebC - Fallback: without all enhancements", () => {
   it("should match height-constrained container without any enhancements", async () => {
     const kb = await getKeyboardRoot("kb-height-constrained");
     await expect(kb).toMatchElementSnapshot("webc-height-constrained-no-enhancements");
+  });
+});
+
+describe("KioskKeyboard WebC - Fallback: without color-mix()", () => {
+  before(async () => {
+    await openVisualPage();
+    await injectShadowStyleOverride(DISABLE_COLOR_MIX, "disable-color-mix");
+  });
+
+  after(async () => {
+    await removeShadowStyleOverride("disable-color-mix");
+  });
+
+  it("should match hovered key shadows without color-mix()", async () => {
+    const kb = await getKeyboardRoot("kb-qwerty");
+    await forceHoverState("kb-qwerty", '[data-key="f"]');
+    try {
+      await expect(kb).toMatchElementSnapshot("webc-key-hovered-no-color-mix");
+    } finally {
+      await clearForcedHoverState("kb-qwerty", '[data-key="f"]');
+    }
   });
 });

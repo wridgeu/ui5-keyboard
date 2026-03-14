@@ -50,6 +50,8 @@ export const KIOSK_KEYBOARD_DOM = {
   },
 } as const;
 
+export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;
+
 /**
  * Renderer for the KioskKeyboard control.
  *

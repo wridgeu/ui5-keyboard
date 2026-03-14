@@ -95,6 +95,11 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const wrap = await $("#kb-ancestor-tiny-wrap");
     await expect(wrap).toMatchElementSnapshot("webc-ancestor-tiny");
   });
+
+  it("should match height-constrained host with padding and border", async () => {
+    const kb = await getKeyboardRoot("kb-height-padded-host");
+    await expect(kb).toMatchElementSnapshot("webc-height-padded-host");
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {

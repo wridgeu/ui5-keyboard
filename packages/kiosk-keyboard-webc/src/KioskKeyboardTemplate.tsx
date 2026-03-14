@@ -46,6 +46,8 @@ export const KIOSK_KEYBOARD_DOM = {
   },
 } as const;
 
+export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;
+
 /**
  * JSX template for `<kiosk-keyboard>`.
  *

@@ -168,3 +168,21 @@ export const DISABLE_CONTAINER_QUERIES = `
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem) !important;
   }
 `;
+
+/**
+ * CSS override that emulates the static shadow fallbacks used when color-mix()
+ * is unavailable.
+ *
+ * Browser support itself cannot be disabled in Chrome, so the visual fallback
+ * baseline re-applies the same public shadow tokens a non-supporting browser
+ * would keep after skipping the guarded @supports block.
+ */
+export const DISABLE_COLOR_MIX = `
+  :host {
+    --kiosk-keyboard-key-shadow: 0 1px 2px rgba(34, 53, 72, 0.1) !important;
+    --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(34, 53, 72, 0.15) !important;
+    --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(34, 53, 72, 0.12) !important;
+    --kiosk-keyboard-modifier-shadow: 0 1px 2px rgba(34, 53, 72, 0.14) !important;
+    --kiosk-keyboard-modifier-shadow-hover: 0 2px 4px rgba(34, 53, 72, 0.18) !important;
+  }
+`;

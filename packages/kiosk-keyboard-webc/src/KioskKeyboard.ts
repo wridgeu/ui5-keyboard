@@ -38,6 +38,8 @@ import {
 import KioskKeyboardTemplate, { KIOSK_KEYBOARD_DOM } from "./KioskKeyboardTemplate.js";
 import styles from "./generated/themes/KioskKeyboard.css.js";
 
+export type { KioskKeyboardDomContract } from "./KioskKeyboardTemplate.js";
+
 // ── Register ui5-icon + needed icons so they resolve inside shadow DOM ──
 import "@ui5/webcomponents/dist/Icon.js";
 import "@ui5/webcomponents-icons/dist/arrow-top.js";
@@ -171,6 +173,13 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  */
 @event("keyboard-type-change", { bubbles: true })
 class KioskKeyboard extends UI5Element {
+  /**
+   * Stable DOM hook contract for tests and DOM assertions.
+   *
+   * Prefer these selectors and class names over hard-coded strings.
+   * Styling customizations should continue to use host attributes and the
+   * documented `--kiosk-keyboard-*` CSS custom properties instead.
+   */
   static readonly DOM = KIOSK_KEYBOARD_DOM;
 
   eventDetails!: {
@@ -666,7 +675,11 @@ class KioskKeyboard extends UI5Element {
       this._currentLayout = this.layout;
       this._shiftState.reset();
       this._syncShiftState();
-      this._resetStableHeight();
+      // Note: _resetStableHeight() is intentionally NOT called here.
+      // stableHeight is designed to maintain a consistent minHeight across
+      // layout switches (e.g. qwerty -> numeric -> special), matching the
+      // UI5 control behavior. Resetting would defeat this purpose and cause
+      // height shifts in popup/popover containers.
     }
     if (name === "keyboardType") {
       if (!VALID_KEYBOARD_TYPES.has(this.keyboardType)) {
@@ -1536,6 +1549,14 @@ class KioskKeyboard extends UI5Element {
     });
   }
 
+  /** Returns the current host content-box height available to the keyboard root. */
+  private _getHostContentHeight(): number {
+    const hostStyle = getComputedStyle(this);
+    const paddingTop = Number.parseFloat(hostStyle.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(hostStyle.paddingBottom) || 0;
+    return Math.max(0, this.clientHeight - paddingTop - paddingBottom);
+  }
+
   /**
    * Applies width and height responsive classes to the root element.
    *
@@ -1584,7 +1605,9 @@ class KioskKeyboard extends UI5Element {
       root.style.minHeight = previousMinHeight;
     }
 
-    const hostHeight = this.getBoundingClientRect().height;
+    // Compare against the host content box, not the host border box. This
+    // keeps height breakpoints accurate when consumers add host padding/borders.
+    const hostHeight = this._getHostContentHeight();
 
     // Only apply when externally constrained (host height < natural content height).
     // Prevents naturally short keyboards (F-Keys, Nav) from triggering.

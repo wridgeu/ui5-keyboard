@@ -29,6 +29,12 @@ Use these imports for application code:
 - `ui5/kiosk/KioskKeyboard`
 - `ui5/kiosk/library`
 - `ui5/kiosk/types`
+- type-only helper export `KioskKeyboardDomContract` from `ui5/kiosk/KioskKeyboard`
+
+Stable runtime hooks on the `KioskKeyboard` class include:
+
+- Public instance methods documented in the package README (for example `show`, `close`, `refreshResponsiveState`)
+- `KioskKeyboard.DOM` - read-only selector/class contract for tests and DOM assertions
 
 ### `kiosk-keyboard-webc`
 
@@ -43,7 +49,7 @@ The stable consumer surface consists of the package entry points and the `<kiosk
 Stable exports from the bundle entry:
 
 - `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
-- Type exports: `FKeyMode`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`
+- Type exports: `FKeyMode`, `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`
 
 Static methods on `KioskKeyboard` (layout and locale registry):
 
@@ -51,6 +57,11 @@ Static methods on `KioskKeyboard` (layout and locale registry):
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
 - `registerLocaleLayout` / `unregisterLocaleLayout` / `resetLocaleLayouts` / `getLocaleLayout`
 - `setI18nResolver`
+
+Additional stable runtime hooks on the class:
+
+- Public instance methods documented in the package README (for example `show`, `close`, `refreshResponsiveState`)
+- `KioskKeyboard.DOM` - read-only selector/class contract for tests and DOM assertions
 
 Instance convenience methods that delegate to the same shared registry are also stable (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`).
 

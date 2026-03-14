@@ -249,6 +249,22 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `KioskKeyboard.getLocaleLayout()`                    | Returns the layout for the current browser locale. |
 | `KioskKeyboard.setI18nResolver(fn)`                  | Sets a custom i18n resolver callback.              |
 
+`KioskKeyboard.DOM` is a supported read-only DOM hook contract for tests and DOM assertions. Prefer it over hard-coded shadow selectors. Styling customizations should still use the documented host attributes and public `--kiosk-keyboard-*` CSS custom properties.
+
+## DOM Contract
+
+Use `KioskKeyboard.DOM` when you need stable selectors for tests or DOM assertions:
+
+```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import type { KioskKeyboardDomContract } from "kiosk-keyboard-webc/bundle";
+
+const DOM: KioskKeyboardDomContract = KioskKeyboard.DOM;
+const firstKey = keyboard.shadowRoot?.querySelector(DOM.selectors.key);
+```
+
+The contract is intentionally read-only. It is not the styling API; continue to customize appearance through the documented public CSS custom properties.
+
 ## Built-in Layouts
 
 | Name            | Description                               |
@@ -350,7 +366,7 @@ kb.setTargetResolver(null);
 
 ## Public CSS Custom Properties
 
-The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and shadow DOM classes remain private implementation details. This package currently expects customization through host attributes and public CSS variables rather than shadow-internal selectors.
+The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and raw shadow DOM class names remain private implementation details. For tests and DOM assertions, use the stable `KioskKeyboard.DOM` contract instead of hard-coded selectors. This package currently expects customization through host attributes and public CSS variables rather than shadow-internal selectors.
 
 Override these on the `:host` or a parent element to customize appearance:
 
@@ -404,7 +420,7 @@ Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stack
 
 When `docked` is combined with `mobile-keyboard="Auto"` (the default), coarse-pointer devices defer to the native on-screen keyboard. Calling `show()` in that mode intentionally keeps the custom docked keyboard closed; use `mobile-keyboard="Custom"` if you want to force the component to open on touch devices.
 
-Shadow custom properties use `color-mix()` with `--sapContent_ShadowColor` for theme-aware shadows, with static `rgba()` fallbacks for browsers that do not support `color-mix()`. Consumers can override `--kiosk-keyboard-key-shadow` and related properties for full control.
+Shadow custom properties use static `rgba()` fallbacks by default and apply `color-mix()` theme-aware overrides only inside a guarded `@supports` block. Browsers that do not support `color-mix()` therefore keep the fallback shadows instead of dropping them. Consumers can override `--kiosk-keyboard-key-shadow` and related properties for full control.
 
 ### Compact Density
 
