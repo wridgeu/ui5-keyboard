@@ -1388,8 +1388,12 @@ export default class KioskKeyboard extends Control {
     }
 
     this.setProperty("docked", bDocked, true);
+    const dom = this.getDomRef() as HTMLElement | null;
     this._syncDockedDomState();
-    this._syncStableHeight(this.getDomRef() as HTMLElement | null);
+    if (dom) {
+      this._syncResponsiveSizing(dom);
+    }
+    this._syncStableHeight(dom);
     return this;
   }
 

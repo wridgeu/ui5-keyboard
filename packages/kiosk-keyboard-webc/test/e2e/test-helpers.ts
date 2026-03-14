@@ -141,7 +141,14 @@ export const DISABLE_TEXT_BOX_TRIM = `
   }
 `;
 
-/** CSS override to disable the container query progressive enhancement. */
+/**
+ * CSS override to simulate a browser without container query support.
+ *
+ * Disabling `container-type` alone is not enough because the real fallback
+ * CSS is gated by `@supports not (container-type: inline-size)`, which still
+ * evaluates to false in Chrome. Re-declare the class-based fallback rules so
+ * the snapshots reflect the same styling a non-CQ browser would get.
+ */
 export const DISABLE_CONTAINER_QUERIES = `
   .kiosk-keyboard {
     container-type: normal !important;
@@ -149,5 +156,15 @@ export const DISABLE_CONTAINER_QUERIES = `
   }
   .kiosk-key {
     container-type: normal !important;
+  }
+  .kiosk-keyboard--cq-sm .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem) !important;
+  }
+  .kiosk-keyboard--cq-xs .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem) !important;
+  }
+  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
+  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem) !important;
   }
 `;

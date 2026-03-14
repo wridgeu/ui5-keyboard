@@ -20,8 +20,10 @@ import {
  * Enhancement layers tested:
  *   1. text-box-trim  — ~83 % browser support (Chrome 133+, Edge 133+,
  *      Safari 18.2+, Firefox 133+).  Removes invisible half-leading.
- *   2. Container queries — ~92 % browser support.  Native @container
- *      breakpoints for width-responsive font scaling.
+ *   2. Container queries — ~92 % browser support. Native @container
+ *      breakpoints for width-responsive font scaling. The fallback
+ *      snapshots explicitly disable native CQ styling and inject the
+ *      class-based fallback rules so they match older browsers.
  */
 
 describe("KioskKeyboard WebC - Fallback: without text-box-trim", () => {
