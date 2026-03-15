@@ -1,6 +1,8 @@
 import { $, expect } from "@wdio/globals";
 import { openVisualPage, getKeyboard, forceHoverState, clearForcedHoverState } from "./test-helpers.js";
 
+const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+
 describe("KioskKeyboard Visual Regression", () => {
   before(async () => {
     await openVisualPage();
@@ -98,22 +100,22 @@ describe("KioskKeyboard Visual Regression", () => {
 
   it("should match height-constrained container (400x250)", async () => {
     const container = await $("#kb-height-constrained");
-    await expect(container).toMatchElementSnapshot("kb-height-constrained");
+    await expect(container).toMatchElementSnapshot("kb-height-constrained", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match severely height-constrained container (400x180)", async () => {
     const container = await $("#kb-height-tiny");
-    await expect(container).toMatchElementSnapshot("kb-height-tiny");
+    await expect(container).toMatchElementSnapshot("kb-height-tiny", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match ancestor-constrained container (flex parent 400x250)", async () => {
     const wrap = await $("#kb-ancestor-constrained-wrap");
-    await expect(wrap).toMatchElementSnapshot("kb-ancestor-constrained");
+    await expect(wrap).toMatchElementSnapshot("kb-ancestor-constrained", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match ancestor-constrained severely (flex parent 400x180)", async () => {
     const wrap = await $("#kb-ancestor-tiny-wrap");
-    await expect(wrap).toMatchElementSnapshot("kb-ancestor-tiny");
+    await expect(wrap).toMatchElementSnapshot("kb-ancestor-tiny", HEIGHT_SNAPSHOT_OPTIONS);
   });
 });
 

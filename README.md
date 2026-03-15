@@ -209,7 +209,7 @@ npm run test:qunit                     # All QUnit tests only (hotkeys + kiosk)
 
 # Multi-device e2e
 npm run test:e2e:all-devices           # All e2e across all device profiles (kiosk + webc, concurrent)
-npm run test:e2e:all-devices:sequential # Same matrix, but sequential for lower-flake CI/local runs
+npm run test:e2e:all-devices:sequential # Same matrix, but sequential for lower local CPU/RAM pressure
 npm run test:kiosk:e2e:flp             # FLP lifecycle e2e tests (SAPUI5 sandbox)
 
 # Visual baseline management

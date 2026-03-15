@@ -1308,7 +1308,7 @@ npm run test:e2e:tablet
 # Run all device profiles in parallel
 npm run test:e2e:all-devices
 
-# Run the same device matrix sequentially (slower, but more stable on busy machines)
+# Run the same device matrix sequentially (useful when you want lower local CPU/RAM pressure)
 npm run test:e2e:all-devices:sequential
 
 # Update visual baselines (desktop / phone / tablet)

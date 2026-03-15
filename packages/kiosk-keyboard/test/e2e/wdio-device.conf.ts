@@ -20,7 +20,9 @@ if (!deviceName || !deviceProfiles[deviceName]) {
   throw new Error(`Unknown or missing device profile: ${deviceName}. Use --device=${validDevices}.`);
 }
 const profile = deviceProfiles[deviceName];
-const PORT = BASE_PORT + profile.portOffset;
+const sharedPortArg = process.argv.find((a) => a.startsWith("--server-port="));
+const sharedPort = sharedPortArg ? Number.parseInt(sharedPortArg.split("=")[1], 10) : Number.NaN;
+const PORT = Number.isFinite(sharedPort) ? sharedPort : BASE_PORT + profile.portOffset;
 
 const server = createServerManager(PORT, PACKAGE_ROOT);
 const headless = !process.env.HEADED && !process.argv.includes("--headed");

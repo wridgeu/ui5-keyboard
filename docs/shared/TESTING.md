@@ -145,8 +145,8 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 ```bash
 npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
 npm run test:e2e:all-devices  # All E2E across both packages, all devices (parallel)
-npm run test:e2e:all-devices:sequential # Same device matrix, but sequential and more stable
+npm run test:e2e:all-devices:sequential # Same device matrix, but sequential for lower local CPU/RAM pressure
 npm run check                 # Full quality gate (fmt + lint + typecheck + guardrails + test + e2e)
 ```
 
-`npm run check` is the CI gate. It runs everything sequentially, including the device matrix. Use `npm run test:e2e:all-devices` when you want the faster concurrent desktop/phone/tablet sweep, and `npm run test:e2e:all-devices:sequential` when you prefer lower-flake verification on busy machines.
+`npm run check` is the CI gate. It now includes the concurrent multi-device matrix. Use `npm run test:e2e:all-devices` for the normal desktop/phone/tablet sweep, and `npm run test:e2e:all-devices:sequential` when you specifically want lower local machine load.

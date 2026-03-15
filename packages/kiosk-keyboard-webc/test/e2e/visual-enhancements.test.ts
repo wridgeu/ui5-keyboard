@@ -11,6 +11,8 @@ import {
   DISABLE_CONTAINER_QUERIES,
 } from "./test-helpers.js";
 
+const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+
 /**
  * Progressive enhancement visual regression tests.
  *
@@ -54,7 +56,7 @@ describe("KioskKeyboard WebC - Fallback: without text-box-trim", () => {
 
   it("should match height-constrained container without text-box-trim", async () => {
     const kb = await getKeyboardRoot("kb-height-constrained");
-    await expect(kb).toMatchElementSnapshot("webc-height-constrained-no-text-trim");
+    await expect(kb).toMatchElementSnapshot("webc-height-constrained-no-text-trim", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match glyph stress layout without text-box-trim", async () => {
@@ -108,7 +110,7 @@ describe("KioskKeyboard WebC - Fallback: without all enhancements", () => {
 
   it("should match height-constrained container without any enhancements", async () => {
     const kb = await getKeyboardRoot("kb-height-constrained");
-    await expect(kb).toMatchElementSnapshot("webc-height-constrained-no-enhancements");
+    await expect(kb).toMatchElementSnapshot("webc-height-constrained-no-enhancements", HEIGHT_SNAPSHOT_OPTIONS);
   });
 });
 

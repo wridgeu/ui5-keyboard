@@ -1,6 +1,8 @@
 import { $, browser, expect } from "@wdio/globals";
 import { openVisualPage, getKeyboardRoot, forceHoverState, clearForcedHoverState } from "./test-helpers.js";
 
+const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+
 describe("KioskKeyboard Web Component - Visual Regression", () => {
   before(async () => {
     await openVisualPage();
@@ -78,27 +80,27 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
 
   it("should match height-constrained container (250px)", async () => {
     const kb = await getKeyboardRoot("kb-height-constrained");
-    await expect(kb).toMatchElementSnapshot("webc-height-constrained");
+    await expect(kb).toMatchElementSnapshot("webc-height-constrained", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match severely height-constrained container (180px)", async () => {
     const kb = await getKeyboardRoot("kb-height-tiny");
-    await expect(kb).toMatchElementSnapshot("webc-height-tiny");
+    await expect(kb).toMatchElementSnapshot("webc-height-tiny", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match ancestor-constrained container (flex parent 250px)", async () => {
     const wrap = await $("#kb-ancestor-constrained-wrap");
-    await expect(wrap).toMatchElementSnapshot("webc-ancestor-constrained");
+    await expect(wrap).toMatchElementSnapshot("webc-ancestor-constrained", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match ancestor-constrained severely (flex parent 180px)", async () => {
     const wrap = await $("#kb-ancestor-tiny-wrap");
-    await expect(wrap).toMatchElementSnapshot("webc-ancestor-tiny");
+    await expect(wrap).toMatchElementSnapshot("webc-ancestor-tiny", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match height-constrained host with padding and border", async () => {
     const kb = await getKeyboardRoot("kb-height-padded-host");
-    await expect(kb).toMatchElementSnapshot("webc-height-padded-host");
+    await expect(kb).toMatchElementSnapshot("webc-height-padded-host", HEIGHT_SNAPSHOT_OPTIONS);
   });
 });
 

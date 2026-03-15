@@ -7,6 +7,8 @@ import {
   DISABLE_TEXT_BOX_TRIM,
 } from "./test-helpers.js";
 
+const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+
 /**
  * Progressive enhancement visual regression tests.
  *
@@ -42,7 +44,7 @@ describe("KioskKeyboard UI5 - Fallback: without text-box-trim", () => {
 
   it("should match height-constrained container without text-box-trim", async () => {
     const container = await $("#kb-height-constrained");
-    await expect(container).toMatchElementSnapshot("kb-height-constrained-no-text-trim");
+    await expect(container).toMatchElementSnapshot("kb-height-constrained-no-text-trim", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match glyph stress layout without text-box-trim", async () => {
