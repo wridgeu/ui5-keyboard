@@ -154,57 +154,127 @@ function maybeWrap(text) {
   return /[|&?]/.test(text) ? `(${text})` : text;
 }
 
-// Em-dash character built at runtime so the rule does not flag itself.
+// Em-dash character built at runtime so the rule source does not contain it.
 const EM_DASH = String.fromCodePoint(0x2014);
+const EM_DASH_RE = new RegExp(EM_DASH, "g");
 
 /**
- * Detects em-dashes (U+2014) in string literals.
+ * Detects em-dashes (U+2014) in strings and/or comments.
  *
- * Em-dashes in code strings are a strong signal of AI-generated text
- * that was pasted in without review. Regular dashes (-) or explicit
- * unicode escapes should be used instead.
+ * Em-dashes are a strong signal of AI-generated text that was pasted
+ * without review. Configurable via `checkStrings` and `checkComments`
+ * options (both default to true).
+ *
+ * Auto-fix: replaces with `-` in strings, `--` in comments.
  */
-const EM_DASH_RE = /\u2014/g;
-
-const noEmDashInString = {
+const noEmDash = {
   meta: {
     type: "suggestion",
     fixable: "code",
     docs: {
-      description: "Disallow em-dashes in string literals",
+      description: "Disallow em-dashes (U+2014) in strings and comments",
     },
     messages: {
-      noEmDashInString: "String contains an em-dash (U+2014). Use a regular dash (-) instead.",
+      emDashInString: "String contains an em-dash (U+2014). Use a regular dash (-) instead.",
+      emDashInComment: "Comment contains an em-dash (U+2014). Use -- instead.",
+    },
+    schema: [
+      {
+        type: "object",
+        properties: {
+          checkStrings: { type: "boolean" },
+          checkComments: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    ],
+  },
+  create(context) {
+    const opts = context.options[0] || {};
+    const checkStrings = opts.checkStrings !== false;
+    const checkComments = opts.checkComments !== false;
+
+    const visitors = {};
+
+    if (checkStrings) {
+      visitors.Literal = function (node) {
+        if (typeof node.value === "string" && node.value.includes(EM_DASH)) {
+          context.report({
+            node,
+            messageId: "emDashInString",
+            fix(fixer) {
+              return fixer.replaceText(node, context.sourceCode.getText(node).replace(EM_DASH_RE, "-"));
+            },
+          });
+        }
+      };
+      visitors.TemplateLiteral = function (node) {
+        for (const quasi of node.quasis) {
+          if (quasi.value.raw.includes(EM_DASH)) {
+            context.report({
+              node,
+              messageId: "emDashInString",
+              fix(fixer) {
+                return fixer.replaceText(node, context.sourceCode.getText(node).replace(EM_DASH_RE, "-"));
+              },
+            });
+            break;
+          }
+        }
+      };
+    }
+
+    if (checkComments) {
+      visitors.Program = function () {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (!comment.value.includes(EM_DASH)) continue;
+          context.report({
+            node: comment,
+            messageId: "emDashInComment",
+            fix(fixer) {
+              const prefix = comment.type === "Line" ? "//" : "/*";
+              const suffix = comment.type === "Line" ? "" : "*/";
+              return fixer.replaceTextRange(
+                comment.range,
+                `${prefix}${comment.value.replace(EM_DASH_RE, "--")}${suffix}`,
+              );
+            },
+          });
+        }
+      };
+    }
+
+    return visitors;
+  },
+};
+
+/**
+ * Detects `expression as any` type assertions.
+ *
+ * `as any` silences the type system entirely and hides real type
+ * errors. This rule is enabled even in test files (where the broader
+ * `@typescript-eslint/no-explicit-any` is off) to prevent unchecked
+ * casts from accumulating. Legitimate uses should go through a typed
+ * helper with a single eslint-disable comment.
+ */
+const noAsAnyAssertion = {
+  meta: {
+    type: "problem",
+    docs: {
+      description: "Disallow `as any` type assertions",
+    },
+    messages: {
+      noAsAnyAssertion:
+        "Avoid `as any`. Use a typed helper, type guard, or add an eslint-disable comment with justification.",
     },
     schema: [],
   },
   create(context) {
     return {
-      Literal(node) {
-        if (typeof node.value === "string" && node.value.includes(EM_DASH)) {
-          context.report({
-            node,
-            messageId: "noEmDashInString",
-            fix(fixer) {
-              const raw = context.sourceCode.getText(node);
-              return fixer.replaceText(node, raw.replace(EM_DASH_RE, "-"));
-            },
-          });
-        }
-      },
-      TemplateLiteral(node) {
-        for (const quasi of node.quasis) {
-          if (quasi.value.raw.includes(EM_DASH)) {
-            context.report({
-              node,
-              messageId: "noEmDashInString",
-              fix(fixer) {
-                const raw = context.sourceCode.getText(node);
-                return fixer.replaceText(node, raw.replace(EM_DASH_RE, "-"));
-              },
-            });
-            break;
-          }
+      TSAsExpression(node) {
+        const annotation = node.typeAnnotation;
+        if (annotation?.type === "TSAnyKeyword") {
+          context.report({ node, messageId: "noAsAnyAssertion" });
         }
       },
     };
@@ -218,6 +288,7 @@ export default {
     "no-double-type-assertion": noDoubleTypeAssertion,
     "no-console-only-catch": noConsoleOnlyCatch,
     "no-redundant-boolean-return": noRedundantBooleanReturn,
-    "no-em-dash-in-string": noEmDashInString,
+    "no-em-dash": noEmDash,
+    "no-as-any-assertion": noAsAnyAssertion,
   },
 };
