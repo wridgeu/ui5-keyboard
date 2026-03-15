@@ -887,19 +887,20 @@ QUnit.test("Keyboard renders inside a Popover", async (assert) => {
     content: [new VBox({ items: [input, kb] })],
   });
 
-  popover.openBy(trigger);
-  await waitForRender();
+  try {
+    popover.openBy(trigger);
+    await waitForRender();
 
-  assert.ok(popover.isOpen(), "Popover is open");
-  assert.ok(kb.getDomRef(), "Keyboard is rendered inside popover");
+    assert.ok(popover.isOpen(), "Popover is open");
+    assert.ok(kb.getDomRef(), "Keyboard is rendered inside popover");
 
-  const keys = getKeyElements(kb);
-  assert.ok(keys.length > 0, "Keyboard keys are rendered");
-
-  popover.close();
-  await waitForRender();
-
-  popover.destroy();
+    const keys = getKeyElements(kb);
+    assert.ok(keys.length > 0, "Keyboard keys are rendered");
+  } finally {
+    popover.close();
+    await waitForRender();
+    popover.destroy();
+  }
 });
 
 QUnit.test("Typing into input inside a Popover", async (assert) => {
@@ -915,24 +916,25 @@ QUnit.test("Typing into input inside a Popover", async (assert) => {
     content: [new VBox({ items: [input, kb] })],
   });
 
-  popover.openBy(trigger);
-  await waitForRender();
+  try {
+    popover.openBy(trigger);
+    await waitForRender();
 
-  tapKey(kb, "h");
-  tapKey(kb, "i");
-  assert.strictEqual(input.getValue(), "hi", "Typing works inside popover");
+    tapKey(kb, "h");
+    tapKey(kb, "i");
+    assert.strictEqual(input.getValue(), "hi", "Typing works inside popover");
 
-  tapKey(kb, "{shift}");
-  tapKey(kb, "a");
-  assert.strictEqual(input.getValue(), "hiA", "Shift works inside popover");
+    tapKey(kb, "{shift}");
+    tapKey(kb, "a");
+    assert.strictEqual(input.getValue(), "hiA", "Shift works inside popover");
 
-  tapKey(kb, "{backspace}");
-  assert.strictEqual(input.getValue(), "hi", "Backspace works inside popover");
-
-  popover.close();
-  await waitForRender();
-
-  popover.destroy();
+    tapKey(kb, "{backspace}");
+    assert.strictEqual(input.getValue(), "hi", "Backspace works inside popover");
+  } finally {
+    popover.close();
+    await waitForRender();
+    popover.destroy();
+  }
 });
 
 QUnit.test("Popover stays open while interacting with keyboard", async (assert) => {
@@ -948,22 +950,23 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
     content: [new VBox({ items: [input, kb] })],
   });
 
-  popover.openBy(trigger);
-  await waitForRender();
+  try {
+    popover.openBy(trigger);
+    await waitForRender();
 
-  // Tap several keys - popover should remain open
-  tapKey(kb, "a");
-  tapKey(kb, "b");
-  tapKey(kb, "c");
+    // Tap several keys - popover should remain open
+    tapKey(kb, "a");
+    tapKey(kb, "b");
+    tapKey(kb, "c");
 
-  await nextUIUpdate();
-  assert.ok(popover.isOpen(), "Popover stays open during keyboard interaction");
-  assert.strictEqual(input.getValue(), "abc", "Input value accumulated correctly");
-
-  popover.close();
-  await waitForRender();
-
-  popover.destroy();
+    await nextUIUpdate();
+    assert.ok(popover.isOpen(), "Popover stays open during keyboard interaction");
+    assert.strictEqual(input.getValue(), "abc", "Input value accumulated correctly");
+  } finally {
+    popover.close();
+    await waitForRender();
+    popover.destroy();
+  }
 });
 
 // ──────────────────────────────────────────────
@@ -1101,26 +1104,27 @@ QUnit.test("Layout switching works inside a Popover", async (assert) => {
     content: [new VBox({ items: [input, kb] })],
   });
 
-  popover.openBy(trigger);
-  await waitForRender();
+  try {
+    popover.openBy(trigger);
+    await waitForRender();
 
-  // Verify QWERTY is active
-  let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("q"), "QWERTY layout initially");
+    // Verify QWERTY is active
+    let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("q"), "QWERTY layout initially");
 
-  // Switch to numeric
-  tapKey(kb, "{layout:numeric}");
-  await waitForRender();
+    // Switch to numeric
+    tapKey(kb, "{layout:numeric}");
+    await waitForRender();
 
-  keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.notOk(keys.includes("q"), "Numeric layout after switch");
-  assert.ok(popover.isOpen(), "Popover still open after layout switch");
-
-  popover.close();
-  await waitForRender();
-
-  popover.destroy();
-  trigger.remove();
+    keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.notOk(keys.includes("q"), "Numeric layout after switch");
+    assert.ok(popover.isOpen(), "Popover still open after layout switch");
+  } finally {
+    popover.close();
+    await waitForRender();
+    popover.destroy();
+    trigger.remove();
+  }
 });
 
 // ──────────────────────────────────────────────

@@ -246,10 +246,8 @@ QUnit.test("Intrinsic height changes from CSS vars update height classes without
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Still non-tiny before refresh");
   kb.refreshResponsiveState();
 
-  assert.ok(
-    dom.classList.contains(DOM.classes.rootCqShort) || dom.classList.contains(DOM.classes.rootCqTiny),
-    "Height classes update after CSS variable changes intrinsic content height",
-  );
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied at 15rem after key height grows");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent at 15rem");
 
   kb.destroy();
 });
@@ -265,9 +263,10 @@ QUnit.test("Intrinsic height shrink clears height classes without outer resize",
 
   (kb as any)._applyResponsiveSizeClasses(dom, dom.getBoundingClientRect().width, dom.getBoundingClientRect().height);
   assert.ok(
-    dom.classList.contains(DOM.classes.rootCqShort) || dom.classList.contains(DOM.classes.rootCqTiny),
-    "Starts constrained at 4rem keys",
+    dom.classList.contains(DOM.classes.rootCqShort),
+    "Starts constrained (cq-short) at 4rem keys in 16rem container",
   );
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent at 16rem");
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "1.5rem");
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Still stale before refresh");

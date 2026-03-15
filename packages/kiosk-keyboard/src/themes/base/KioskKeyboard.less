@@ -69,7 +69,6 @@
   --_ui5KioskKeyboard-keyHeight: ~"var(--_ui5KioskKeyboard-responsiveKeyHeight, var(--ui5KioskKeyboard-keyHeight))";
   --_ui5KioskKeyboard-keyPaddingInline: ~"var(--ui5KioskKeyboard-keyPaddingInline)";
   --_ui5KioskKeyboard-keyFontBase: ~"var(--ui5KioskKeyboard-keyFontSize)";
-  --_ui5KioskKeyboard-keyFontSize: ~"var(--_ui5KioskKeyboard-responsiveKeyFontSize, var(--_ui5KioskKeyboard-keyFontBase))";
   --_ui5KioskKeyboard-keyShadow: ~"var(--ui5KioskKeyboard-keyShadow)";
   --_ui5KioskKeyboard-keyShadowHover: ~"var(--ui5KioskKeyboard-keyShadowHover)";
   --_ui5KioskKeyboard-maxWidth: ~"var(--ui5KioskKeyboard-maxWidth)";
@@ -77,7 +76,6 @@
   --_ui5KioskKeyboard-dockedShadow: ~"var(--ui5KioskKeyboard-dockedShadow)";
   --_ui5KioskKeyboard-dockedZIndex: ~"var(--ui5KioskKeyboard-dockedZIndex)";
   --_ui5KioskKeyboard-modifierFontBase: ~"var(--ui5KioskKeyboard-modifierFontSize)";
-  --_ui5KioskKeyboard-modifierFontSize: ~"var(--_ui5KioskKeyboard-responsiveModifierFontSize, var(--_ui5KioskKeyboard-modifierFontBase))";
   --_ui5KioskKeyboard-modifierShadow: ~"var(--ui5KioskKeyboard-modifierShadow)";
   --_ui5KioskKeyboard-modifierShadowHover: ~"var(--ui5KioskKeyboard-modifierShadowHover)";
   --_ui5KioskKeyboard-numpadMaxWidth: ~"var(--ui5KioskKeyboard-numpadMaxWidth)";
@@ -420,7 +418,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ui5KioskKey,
-  .ui5KioskKeyboard--docked {
+  .ui5KioskKeyboard--docked,
+  .ui5KioskKeyboard--closed {
     transition: none;
   }
 

@@ -1613,7 +1613,6 @@ class KioskKeyboard extends UI5Element {
     // Prevents naturally short keyboards (F-Keys, Nav) from triggering.
     // The +1px tolerance avoids oscillation from sub-pixel rounding differences.
     if (naturalHeight <= hostHeight + 1) {
-      root.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
       return;
     }
 
