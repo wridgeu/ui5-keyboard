@@ -1,4 +1,5 @@
 import { browser, expect, $ } from "@wdio/globals";
+import { injectShadowStyleOverride, removeShadowStyleOverride, DISABLE_COLOR_MIX } from "./test-helpers.js";
 
 const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"] as const;
 
@@ -72,6 +73,33 @@ describe("KioskKeyboard Web Component - Theme Visual Regression", () => {
         const kb = await getKeyboardRoot("kb-numpad");
         await expect(kb).toMatchElementSnapshot(`webc-numpad-${theme}`);
       });
+    });
+  }
+});
+
+/**
+ * color-mix() fallback tests across themes where the visual delta is largest.
+ *
+ * In sap_horizon (light), --sapContent_ShadowColor is #223548 which matches
+ * the static rgba(34,53,72,...) fallback, so the difference is invisible.
+ * In HCB the shadow color is #fff (white shadows) and in HCW/dark it is #000,
+ * making the fallback (dark blue shadows) visually distinct.
+ */
+describe("KioskKeyboard WebC - Fallback: color-mix() across themes", () => {
+  before(async () => {
+    await openThemePage();
+  });
+
+  for (const theme of ["sap_horizon_hcb", "sap_horizon_hcw"] as const) {
+    it(`should match QWERTY without color-mix() in ${theme}`, async () => {
+      await switchTheme(theme);
+      await injectShadowStyleOverride(DISABLE_COLOR_MIX, "disable-color-mix");
+      try {
+        const kb = await getKeyboardRoot("kb-qwerty");
+        await expect(kb).toMatchElementSnapshot(`webc-qwerty-no-color-mix-${theme}`);
+      } finally {
+        await removeShadowStyleOverride("disable-color-mix");
+      }
     });
   }
 });

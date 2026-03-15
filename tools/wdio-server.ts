@@ -1,4 +1,5 @@
 import net from "node:net";
+import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -46,6 +47,22 @@ async function waitForServer(port: number, timeout: number): Promise<void> {
   throw new Error(`Server not ready on port ${port} after ${timeout}ms`);
 }
 
+/** Verifies that an HTTP server on localhost:port responds with a 2xx/3xx status. */
+function probeHttp(port: number, timeout = 3_000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = http.get(`http://localhost:${port}/`, { timeout }, (res) => {
+      // Any non-error response (2xx, 3xx, even 404) means a real server is listening
+      resolve((res.statusCode ?? 0) > 0);
+      res.resume(); // drain the response
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
 /** Polls until the given localhost port no longer accepts TCP connections. */
 async function waitForPortToClose(port: number, timeout: number): Promise<void> {
   const deadline = Date.now() + timeout;
@@ -76,7 +93,18 @@ export function createServerManager(port: number, packageRoot: string, configFil
   let serverProcess: ChildProcess | undefined;
 
   async function start(): Promise<void> {
-    if (await probePort(port)) return;
+    if (await probePort(port)) {
+      // Port is occupied -- verify it's actually serving HTTP content.
+      // Stale processes from killed test runs keep the port open but serve
+      // nothing, causing "Keyboard keys not rendered" timeouts downstream.
+      if (!(await probeHttp(port))) {
+        throw new Error(
+          `Port ${port} is occupied by a process that does not respond to HTTP requests. ` +
+            `Kill the stale process (netstat -aon | findstr :${port}) and retry.`,
+        );
+      }
+      return;
+    }
     const ui5CliEntry = resolveUi5CliEntry(packageRoot);
     const args = [ui5CliEntry, "serve", "--port", String(port)];
     if (configFile) args.push("--config", configFile);
@@ -131,7 +159,15 @@ export function createViteServerManager(port: number, packageRoot: string, start
   let serverProcess: ChildProcess | undefined;
 
   async function start(): Promise<void> {
-    if (await probePort(port)) return;
+    if (await probePort(port)) {
+      if (!(await probeHttp(port))) {
+        throw new Error(
+          `Port ${port} is occupied by a process that does not respond to HTTP requests. ` +
+            `Kill the stale process (netstat -aon | findstr :${port}) and retry.`,
+        );
+      }
+      return;
+    }
     const viteCliEntry = resolveViteCliEntry(packageRoot);
     serverProcess = spawn(process.execPath, [viteCliEntry, "--port", String(port), "--strictPort"], {
       cwd: packageRoot,

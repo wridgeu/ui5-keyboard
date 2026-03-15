@@ -117,6 +117,11 @@ describe("KioskKeyboard Visual Regression", () => {
     const wrap = await $("#kb-ancestor-tiny-wrap");
     await expect(wrap).toMatchElementSnapshot("kb-ancestor-tiny", HEIGHT_SNAPSHOT_OPTIONS);
   });
+
+  it("should match narrow + height-constrained container (320px x 250px)", async () => {
+    const container = await $("#kb-narrow-short");
+    await expect(container).toMatchElementSnapshot("kb-narrow-short", HEIGHT_SNAPSHOT_OPTIONS);
+  });
 });
 
 describe("KioskKeyboard Interactive States", () => {

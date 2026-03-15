@@ -74,6 +74,11 @@
         min-height: 0;
         overflow: hidden;
       }
+      /* Narrow + height-constrained: compound breakpoint fixture */
+      #kb-narrow-short .ui5KioskKeyboard {
+        max-height: 250px;
+        overflow: hidden;
+      }
     </style>
   </head>
   <body>
@@ -209,6 +214,11 @@
     <div class="section">
       <h2>25. Ancestor-Constrained Severely (flex parent 400x180)</h2>
       <div class="keyboard-container" id="kb-ancestor-tiny-wrap"></div>
+    </div>
+
+    <div class="section">
+      <h2>26. Narrow + Height-Constrained (320px x 250px)</h2>
+      <div class="keyboard-container" id="kb-narrow-short" style="width: 320px"></div>
     </div>
   </body>
 </html>
