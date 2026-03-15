@@ -61,13 +61,17 @@ function killProcessTree(pid) {
 }
 
 function spawnShell(command, cwd) {
-  return spawn(command, {
+  const child = spawn(command, {
     cwd,
     env: process.env,
     shell: true,
     stdio: "inherit",
     windowsHide: process.platform === "win32",
   });
+  child.on("error", (err) => {
+    console.error(`Child process failed: ${err.message}`);
+  });
+  return child;
 }
 
 const separatorIndex = process.argv.indexOf("--");
@@ -98,6 +102,9 @@ async function startServer() {
     shell: false,
     stdio: ["ignore", "ignore", "inherit"],
     windowsHide: process.platform === "win32",
+  });
+  serverProcess.on("error", (err) => {
+    console.error(`Server process failed to start: ${err.message}`);
   });
   ownsServer = true;
   await waitForServer(port, 60_000);
@@ -139,7 +146,13 @@ process.on("SIGTERM", () => {
   void shutdown(143);
 });
 
-await startServer();
+try {
+  await startServer();
+} catch (err) {
+  console.error(err);
+  await stopServer();
+  process.exit(1);
+}
 
 let remaining = commands.length;
 let failed = false;
