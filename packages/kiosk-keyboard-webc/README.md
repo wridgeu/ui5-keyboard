@@ -364,6 +364,77 @@ kb.setTargetResolver(null);
 > [!NOTE]
 > Virtual key presses dispatch `InputEvent("input")` on the target, matching native keyboard behavior. The `"change"` event is _not_ dispatched on character input; it fires only on Enter (for single-line inputs), consistent with how browsers handle `"change"` (on blur/commit).
 
+## Internationalization (i18n)
+
+The keyboard ships with English and German translations for all accessibility labels and key names. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
+
+**Resource bundle keys:**
+
+| Key                              | Default (English)       | Used for                                                |
+| -------------------------------- | ----------------------- | ------------------------------------------------------- |
+| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `accessibleName` is empty     |
+| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element              |
+| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key         |
+| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key         |
+| `KEY_BACKSPACE`                  | Backspace               | `aria-label` for the Backspace key (icon-only)          |
+| `KEY_SPACE`                      | Space                   | `aria-label` for the Space key                          |
+| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active |
+| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                           |
+| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                           |
+| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`               |
+| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`              |
+
+### Custom i18n Resolver
+
+Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from `navigator.language`), and the text resolved from the built-in bundle:
+
+```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+
+KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
+  const fr: Record<string, string> = {
+    KIOSK_KEYBOARD_LABEL: "Clavier virtuel",
+    KIOSK_KEYBOARD_ROLEDESCRIPTION: "clavier",
+    KEY_SHIFT: "Maj",
+    KEY_ENTER: "Entree",
+    KEY_BACKSPACE: "Retour",
+    KEY_SPACE: "Espace",
+    ARIA_CAPS_LOCK: "Verrouillage majuscules",
+    ARIA_CAPS_LOCK_ON: "Verrouillage majuscules active",
+    ARIA_SHIFT_ON: "Majuscules activees",
+    ARIA_KEYBOARD_OPENED: "Clavier virtuel ouvert",
+    ARIA_KEYBOARD_CLOSED: "Clavier virtuel ferme",
+  };
+  if (locale === "fr" && fr[key]) return fr[key];
+  return undefined; // fall through to built-in text
+});
+```
+
+**Resolution order:** custom resolver (highest priority) -> UI5 WC i18n bundle (locale-aware) -> English defaults.
+
+Return `undefined` from the resolver for any key you don't want to override -- the built-in translation chain handles the rest. If the resolver throws, the error is logged and the default text is used.
+
+Pass `null` to clear a previously set resolver:
+
+```ts
+KioskKeyboard.setI18nResolver(null);
+```
+
+**Dynamic translations:** The resolver is called on every render, so it can return different values based on runtime state (e.g. a tenant-specific translation service, user preferences, or an external i18n library):
+
+```ts
+import { get } from "my-i18n-library";
+
+KioskKeyboard.setI18nResolver((key, locale) => {
+  return get(`kiosk.${key}`, locale); // returns string or undefined
+});
+```
+
+**Adding built-in translations (library contributors):** To add a new locale to the library itself, create a properties file in `src/i18n/` following the naming convention `messagebundle_<locale>.properties` (e.g. `messagebundle_fr.properties`). The UI5 Web Components build pipeline picks it up automatically.
+
+> [!NOTE]
+> The UI5 native control (`ui5-lib-kiosk-keyboard`) offers a richer i18n API with enhancement bundles and locale configuration via `configureI18n()`. The web component intentionally uses a simpler single-callback approach since it operates outside the UI5 resource bundle infrastructure. The resolver callback covers the same use cases -- adding languages, overriding texts, connecting to external translation systems -- through a pattern that is more natural for standalone web component consumption.
+
 ## Public CSS Custom Properties
 
 The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and raw shadow DOM class names remain private implementation details. For tests and DOM assertions, use the stable `KioskKeyboard.DOM` contract instead of hard-coded selectors. This package currently expects customization through host attributes and public CSS variables rather than shadow-internal selectors.

@@ -305,8 +305,36 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Set a custom i18n resolver for translating keyboard labels.
-   * @param fn Resolver function or null to reset.
+   * Set a custom i18n resolver callback for programmatic text overrides.
+   *
+   * The resolver is called for every translatable text the keyboard renders
+   * (key labels, ARIA labels, live region announcements). It receives:
+   *
+   * - `key` -- the i18n key (e.g. `"KEY_SHIFT"`, `"ARIA_KEYBOARD_OPENED"`)
+   * - `locale` -- the current browser locale language subtag (e.g. `"en"`, `"de"`, `"fr"`)
+   * - `defaultText` -- the text resolved from the built-in bundle (English or German)
+   *
+   * Return a `string` to override that text, or `undefined` to keep the default.
+   *
+   * Resolution order: custom resolver (highest priority) -> UI5 WC i18n bundle (locale-aware) -> English defaults.
+   *
+   * If the resolver throws, the error is logged and the default text is used.
+   * Pass `null` to clear a previously set resolver.
+   *
+   * @example
+   * ```ts
+   * // Add French translations
+   * KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
+   *   const fr = { KEY_SHIFT: "Maj", KEY_ENTER: "Entree", KEY_SPACE: "Espace" };
+   *   if (locale === "fr" && fr[key]) return fr[key];
+   *   return undefined; // fall through to built-in text
+   * });
+   *
+   * // Clear the resolver
+   * KioskKeyboard.setI18nResolver(null);
+   * ```
+   *
+   * @param fn Resolver function, or `null` to clear.
    * @public
    * @since 0.1.0
    */

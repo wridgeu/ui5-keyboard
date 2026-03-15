@@ -104,6 +104,33 @@
         border-color: #0070f2;
       }
 
+      /* i18n language switcher (reuses theme-controls button style) */
+      .i18n-controls {
+        display: flex;
+        gap: 6px;
+      }
+      .i18n-controls button {
+        padding: 5px 10px;
+        border: 1px solid var(--input-border);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+        background: transparent;
+        color: inherit;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .i18n-controls button:hover {
+        border-color: #0070f2;
+      }
+      .i18n-controls button.active {
+        background: #0070f2;
+        color: #fff;
+        border-color: #0070f2;
+      }
+
       /* Main layout — content + sticky event log sidebar */
       .page-layout {
         display: grid;
@@ -428,6 +455,34 @@
               <input id="nav-input" type="text" value="hello world" />
             </div>
             <kiosk-keyboard id="kb-nav" layout="nav" for="nav-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 11. i18n Resolver -->
+          <div class="card" style="grid-column: 1 / -1">
+            <h2>i18n Resolver (custom translations)</h2>
+            <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">
+              Demonstrates <code>KioskKeyboard.setI18nResolver()</code>. Select a language to override the keyboard's
+              Shift, Enter, Backspace, and Space labels at runtime. The resolver receives each i18n key, the active
+              locale, and the built-in default text. Return a string to override, or <code>undefined</code> to keep the
+              default.
+            </p>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+              <ui5-label>Language override:</ui5-label>
+              <div class="i18n-controls">
+                <button class="i18n-lang-btn active" data-lang="">Default (EN/DE)</button>
+                <button class="i18n-lang-btn" data-lang="fr">French</button>
+                <button class="i18n-lang-btn" data-lang="es">Spanish</button>
+                <button class="i18n-lang-btn" data-lang="ja">Japanese</button>
+              </div>
+              <span id="i18n-status" style="font-size: 11px; color: var(--muted-color)">
+                Using built-in translations
+              </span>
+            </div>
+            <div class="input-group">
+              <label for="i18n-input">Target Input</label>
+              <input id="i18n-input" type="text" placeholder="Type here to see translated key labels..." />
+            </div>
+            <kiosk-keyboard id="kb-i18n" layout="qwerty" for="i18n-input"></kiosk-keyboard>
           </div>
         </div>
       </div>
