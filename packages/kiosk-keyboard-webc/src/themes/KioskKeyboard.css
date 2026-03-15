@@ -58,9 +58,9 @@
 
 .kiosk-keyboard {
   /* ---- Private styling aliases ---- */
-  --_kiosk-keyboard-padding: var(--_kiosk-keyboard-responsive-padding, var(--kiosk-keyboard-padding));
-  --_kiosk-keyboard-key-gap: var(--_kiosk-keyboard-responsive-key-gap, var(--kiosk-keyboard-key-gap));
-  --_kiosk-keyboard-key-height: var(--_kiosk-keyboard-responsive-key-height, var(--kiosk-keyboard-key-height));
+  --_kiosk-keyboard-padding: var(--kiosk-keyboard-padding);
+  --_kiosk-keyboard-key-gap: var(--kiosk-keyboard-key-gap);
+  --_kiosk-keyboard-key-height: var(--kiosk-keyboard-key-height);
   --_kiosk-keyboard-key-padding-inline: var(--kiosk-keyboard-key-padding-inline);
   --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding, 0 var(--_kiosk-keyboard-key-padding-inline));
   --_kiosk-keyboard-key-font-base: var(--kiosk-keyboard-key-font-size);
