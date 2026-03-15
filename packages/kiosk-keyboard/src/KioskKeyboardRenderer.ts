@@ -7,8 +7,8 @@ import { KeyboardType } from "./library";
 
 const glyphSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
-export const KIOSK_KEYBOARD_DOM = {
-  classes: {
+export const KIOSK_KEYBOARD_DOM = Object.freeze({
+  classes: Object.freeze({
     root: "ui5KioskKeyboard",
     rootDocked: "ui5KioskKeyboard--docked",
     rootClosed: "ui5KioskKeyboard--closed",
@@ -29,26 +29,27 @@ export const KIOSK_KEYBOARD_DOM = {
     keyLabel: "ui5KioskKey__label",
     keyLabelGlyph: "ui5KioskKey__label--glyph",
     keyLabelMulti: "ui5KioskKey__label--multi",
-  },
-  attributes: {
+    keyIcon: "ui5KioskKey__icon",
+  }),
+  attributes: Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
-  },
-  selectors: {
+  }),
+  selectors: Object.freeze({
     root: ".ui5KioskKeyboard",
     row: ".ui5KioskRow",
     key: ".ui5KioskKey",
     focusableKey: '.ui5KioskKey[tabindex="0"]',
     keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
     keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
-  },
+  }),
   keyboardTypeClass(type: string): string {
     return `ui5KioskKeyboard--${type.toLowerCase()}`;
   },
   keyWidthClass(width: string): string {
-    return width === "space" ? this.classes.keySpace : `ui5KioskKey--w${width.replace(".", "-")}`;
+    return width === "space" ? "ui5KioskKey--space" : `ui5KioskKey--w${width.replace(".", "-")}`;
   },
-} as const;
+} as const);
 
 export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;
 
@@ -290,12 +291,12 @@ const KioskKeyboardRenderer = {
     const bIsShiftKey = key.value === "{shift}";
 
     if (bIsShiftKey && _isCapsLock()) {
-      rm.icon("sap-icon://locked", ["sapUiIcon"], { "aria-hidden": "true" });
+      rm.icon("sap-icon://locked", ["sapUiIcon", KIOSK_KEYBOARD_DOM.classes.keyIcon], { "aria-hidden": "true" });
     } else {
       const Ctor = oControl.constructor as typeof KioskKeyboard;
       const icon = key.icon || Ctor.getKeyIcon(key.value);
       if (icon) {
-        rm.icon(icon, ["sapUiIcon"], { "aria-hidden": "true" });
+        rm.icon(icon, ["sapUiIcon", KIOSK_KEYBOARD_DOM.classes.keyIcon], { "aria-hidden": "true" });
       } else {
         const label = _getKeyLabel(key);
         rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);

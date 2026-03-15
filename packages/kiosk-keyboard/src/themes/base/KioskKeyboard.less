@@ -15,7 +15,10 @@
  *   --ui5KioskKeyboard-keyHeight        Key height / touch target (default: 3rem)
  *   --ui5KioskKeyboard-keyPaddingInline Horizontal key padding (default: 0.25rem)
  *   --ui5KioskKeyboard-keyFontSize      Key label font size (default: 37.5% of key height)
- *   --ui5KioskKeyboard-modifierFontSize Modifier/action key font size (default: @sapUiFontSize)
+ *   --ui5KioskKeyboard-modifierFontSize  Modifier/action key font size (default: @sapUiFontSize,
+ *                                       capped by modifierFontScale to stay visually subordinate)
+ *   --ui5KioskKeyboard-modifierFontScale Scale factor that caps modifier font relative to
+ *                                       keyFontSize (default: 0.8, set to 1 to disable cap)
  *   --ui5KioskKeyboard-maxWidth         Max inline width (default: 100%)
  *
  * Shadows (set to "none" for a flat appearance):
@@ -58,6 +61,7 @@
   --ui5KioskKeyboard-dockedZIndex: 100;
   --ui5KioskKeyboard-maxWidth: 100%;
   --ui5KioskKeyboard-modifierFontSize: @sapUiFontSize;
+  --ui5KioskKeyboard-modifierFontScale: 0.8;
   --ui5KioskKeyboard-modifierShadow: 0 1px 2px fade(@sapUiContentShadowColor, 14%);
   --ui5KioskKeyboard-modifierShadowHover: 0 2px 4px fade(@sapUiContentShadowColor, 18%);
   --ui5KioskKeyboard-numpadMaxWidth: 20rem;
@@ -75,7 +79,6 @@
   --_ui5KioskKeyboard-dockedMaxWidth: ~"var(--ui5KioskKeyboard-dockedMaxWidth)";
   --_ui5KioskKeyboard-dockedShadow: ~"var(--ui5KioskKeyboard-dockedShadow)";
   --_ui5KioskKeyboard-dockedZIndex: ~"var(--ui5KioskKeyboard-dockedZIndex)";
-  --_ui5KioskKeyboard-modifierFontBase: ~"var(--ui5KioskKeyboard-modifierFontSize)";
   --_ui5KioskKeyboard-modifierShadow: ~"var(--ui5KioskKeyboard-modifierShadow)";
   --_ui5KioskKeyboard-modifierShadowHover: ~"var(--ui5KioskKeyboard-modifierShadowHover)";
   --_ui5KioskKeyboard-numpadMaxWidth: ~"var(--ui5KioskKeyboard-numpadMaxWidth)";
@@ -255,17 +258,25 @@
   }
 
   /* ---- Icon inside key ---- */
-  .sapUiIcon {
+  &__icon {
     font-size: var(--ui5KioskKeyboard-keyFontSize);
   }
 
-  /* ---- Variant: Modifier keys (Shift, layout switches) ---- */
+  /* ---- Variant: Modifier keys (Shift, layout switches) ----
+     font-size uses min() to cap at 80 % of the resolved key font-size.
+     This keeps modifier labels visually subordinate at every viewport
+     width while still honouring a consumer-provided override.
+     At desktop sizes the cap is a no-op (0.875rem < key-font * 0.8). */
   &--modifier {
     background: @sapUiButtonLiteBackground;
     color: @sapUiButtonLiteTextColor;
     border-color: @sapUiButtonLiteBorderColor;
     box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
-    font-size: var(--ui5KioskKeyboard-modifierFontSize);
+    font-size: ~"min(var(--ui5KioskKeyboard-modifierFontSize), calc(var(--ui5KioskKeyboard-keyFontSize) * var(--ui5KioskKeyboard-modifierFontScale)))";
+
+    .ui5KioskKey__icon {
+      font-size: 1em;
+    }
 
     &:hover {
       background: @sapUiButtonLiteHoverBackground;
@@ -287,8 +298,12 @@
     background: @sapUiButtonEmphasizedBackground;
     color: @sapUiButtonEmphasizedTextColor;
     border-color: @sapUiButtonEmphasizedBorderColor;
-    font-size: var(--ui5KioskKeyboard-modifierFontSize);
+    font-size: ~"min(var(--ui5KioskKeyboard-modifierFontSize), calc(var(--ui5KioskKeyboard-keyFontSize) * var(--ui5KioskKeyboard-modifierFontScale)))";
     font-weight: bold;
+
+    .ui5KioskKey__icon {
+      font-size: 1em;
+    }
 
     &:hover {
       background: @sapUiButtonEmphasizedHoverBackground;
@@ -344,14 +359,12 @@
   --ui5KioskKeyboard-keyHeight: 2.25rem;
   --ui5KioskKeyboard-keyGap: 0.25rem;
   --ui5KioskKeyboard-padding: 0.5rem;
-  --ui5KioskKeyboard-modifierFontSize: ~"min(var(--_ui5KioskKeyboard-modifierFontBase), 0.8125rem)";
 }
 
 .ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) {
   --ui5KioskKeyboard-keyHeight: 1.75rem;
   --ui5KioskKeyboard-keyGap: 0.125rem;
   --ui5KioskKeyboard-padding: 0.25rem;
-  --ui5KioskKeyboard-modifierFontSize: ~"min(var(--_ui5KioskKeyboard-modifierFontBase), 0.75rem)";
 }
 
 /* Mixed: narrow + short */

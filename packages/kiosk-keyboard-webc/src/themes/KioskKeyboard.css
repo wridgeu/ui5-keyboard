@@ -25,6 +25,7 @@
   --kiosk-keyboard-docked-max-width: 1024px;
   --kiosk-keyboard-docked-z-index: 100;
   --kiosk-keyboard-modifier-font-size: var(--sapFontSize, 0.875rem);
+  --kiosk-keyboard-modifier-font-scale: 0.8;
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 }
@@ -69,7 +70,6 @@
   --_kiosk-keyboard-docked-max-width: var(--kiosk-keyboard-docked-max-width);
   --_kiosk-keyboard-docked-shadow: var(--kiosk-keyboard-docked-shadow);
   --_kiosk-keyboard-docked-z-index: var(--kiosk-keyboard-docked-z-index);
-  --_kiosk-keyboard-modifier-font-base: var(--kiosk-keyboard-modifier-font-size);
   --_kiosk-keyboard-modifier-shadow: var(--kiosk-keyboard-modifier-shadow);
   --_kiosk-keyboard-modifier-shadow-hover: var(--kiosk-keyboard-modifier-shadow-hover);
   --_kiosk-keyboard-numpad-max-width: var(--kiosk-keyboard-numpad-max-width);
@@ -134,14 +134,12 @@
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
-  --kiosk-keyboard-modifier-font-size: min(var(--_kiosk-keyboard-modifier-font-base), 0.8125rem);
 }
 
 .kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;
-  --kiosk-keyboard-modifier-font-size: min(var(--_kiosk-keyboard-modifier-font-base), 0.75rem);
 }
 
 /* Mixed: narrow + short (CQ browsers) -- @container handles width, classes handle height */
@@ -299,13 +297,20 @@
   flex: 6 1 0;
 }
 
-/* ---- Variant: Modifier keys (Shift, layout switches) ---- */
+/* ---- Variant: Modifier keys (Shift, layout switches) ----
+   font-size uses min() to cap at 80 % of the resolved key font-size.
+   This keeps modifier labels visually subordinate at every viewport
+   width while still honouring a consumer-provided override.
+   At desktop sizes the cap is a no-op (0.875rem < key-font * 0.8). */
 .kiosk-key--modifier {
   background: var(--sapButton_Lite_Background, transparent);
   color: var(--sapButton_Lite_TextColor, #32363a);
   border-color: var(--sapButton_Lite_BorderColor, transparent);
   box-shadow: var(--_kiosk-keyboard-modifier-shadow);
-  font-size: var(--kiosk-keyboard-modifier-font-size);
+  font-size: min(
+    var(--kiosk-keyboard-modifier-font-size),
+    calc(var(--kiosk-keyboard-key-font-size) * var(--kiosk-keyboard-modifier-font-scale))
+  );
 
   &:hover {
     background: var(--sapButton_Lite_Hover_Background, #eaecee);
@@ -326,7 +331,10 @@
   background: var(--sapButton_Emphasized_Background, #0070f2);
   color: var(--sapButton_Emphasized_TextColor, #fff);
   border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
-  font-size: var(--kiosk-keyboard-modifier-font-size);
+  font-size: min(
+    var(--kiosk-keyboard-modifier-font-size),
+    calc(var(--kiosk-keyboard-key-font-size) * var(--kiosk-keyboard-modifier-font-scale))
+  );
   font-weight: bold;
 
   &:hover {

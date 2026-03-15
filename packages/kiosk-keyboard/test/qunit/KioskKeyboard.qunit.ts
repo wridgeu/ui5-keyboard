@@ -57,6 +57,40 @@ QUnit.test("Default property values", (assert) => {
   kb.destroy();
 });
 
+QUnit.test("DOM contract is frozen", (assert) => {
+  assert.ok(Object.isFrozen(KioskKeyboard.DOM), "Root DOM contract object is frozen");
+  assert.ok(Object.isFrozen(KioskKeyboard.DOM.classes), "DOM classes map is frozen");
+  assert.ok(Object.isFrozen(KioskKeyboard.DOM.attributes), "DOM attributes map is frozen");
+  assert.ok(Object.isFrozen(KioskKeyboard.DOM.selectors), "DOM selectors map is frozen");
+});
+
+QUnit.test("Modifier/action icon keys honor modifierFontSize", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = getKeyboardDom(kb);
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  dom.style.setProperty("--ui5KioskKeyboard-keyFontSize", "2rem");
+  dom.style.setProperty("--ui5KioskKeyboard-modifierFontSize", "0.5rem");
+  await nextUIUpdate();
+
+  const shiftIcon = getRequiredKeyElement(kb, "{shift}").querySelector<HTMLElement>(".sapUiIcon");
+  const enterIcon = getRequiredKeyElement(kb, "{enter}").querySelector<HTMLElement>(".sapUiIcon");
+
+  assert.ok(shiftIcon, "Shift key renders an icon");
+  assert.ok(enterIcon, "Enter key renders an icon");
+  assert.ok(
+    Math.abs(Number.parseFloat(window.getComputedStyle(shiftIcon!).fontSize) - 0.5 * remPx) <= 0.25,
+    "Shift icon follows modifierFontSize",
+  );
+  assert.ok(
+    Math.abs(Number.parseFloat(window.getComputedStyle(enterIcon!).fontSize) - 0.5 * remPx) <= 0.25,
+    "Enter icon follows modifierFontSize",
+  );
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Rendering
 // ──────────────────────────────────────────────

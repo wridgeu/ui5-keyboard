@@ -3,8 +3,8 @@ import { keyElementId } from "./core/dom-utils.js";
 import { isSingleGlyph } from "./core/grapheme.js";
 import { KeyboardType } from "./types.js";
 
-export const KIOSK_KEYBOARD_DOM = {
-  classes: {
+export const KIOSK_KEYBOARD_DOM = Object.freeze({
+  classes: Object.freeze({
     root: "kiosk-keyboard",
     rootDocked: "kiosk-keyboard--docked",
     rootDisabled: "kiosk-keyboard--disabled",
@@ -27,12 +27,12 @@ export const KIOSK_KEYBOARD_DOM = {
     keyLabelMulti: "kiosk-key__label--multi",
     keyIcon: "kiosk-key__icon",
     liveRegion: "kiosk-keyboard__live-region",
-  },
-  attributes: {
+  }),
+  attributes: Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
-  },
-  selectors: {
+  }),
+  selectors: Object.freeze({
     root: ".kiosk-keyboard",
     row: ".kiosk-row",
     key: ".kiosk-key",
@@ -41,11 +41,11 @@ export const KIOSK_KEYBOARD_DOM = {
     keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
     keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
     liveRegion: ".kiosk-keyboard__live-region",
-  },
+  }),
   keyWidthClass(width: string): string {
     return `kiosk-key--w${width.replace(".", "-")}`;
   },
-} as const;
+} as const);
 
 export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;
 

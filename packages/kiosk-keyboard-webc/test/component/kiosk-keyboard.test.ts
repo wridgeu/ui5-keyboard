@@ -64,6 +64,13 @@ describe("kiosk-keyboard", () => {
       expect(rootDiv(el).classList.contains(DOM.classes.rootDisabled)).to.be.true;
     });
 
+    it("exposes a frozen DOM contract", async () => {
+      expect(Object.isFrozen(KioskKeyboard.DOM)).to.be.true;
+      expect(Object.isFrozen(KioskKeyboard.DOM.classes)).to.be.true;
+      expect(Object.isFrozen(KioskKeyboard.DOM.attributes)).to.be.true;
+      expect(Object.isFrozen(KioskKeyboard.DOM.selectors)).to.be.true;
+    });
+
     it("renders docked mode with docked class", async () => {
       const el = await fixture<KioskKeyboard>(
         html`

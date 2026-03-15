@@ -87,7 +87,7 @@ describe("KioskKeyboard WebC - Fallback: without container queries", () => {
 });
 
 describe("KioskKeyboard WebC - Fallback: without all enhancements", () => {
-  const DISABLE_ALL = DISABLE_TEXT_BOX_TRIM + DISABLE_CONTAINER_QUERIES;
+  const DISABLE_ALL = DISABLE_TEXT_BOX_TRIM + DISABLE_CONTAINER_QUERIES + DISABLE_COLOR_MIX;
 
   before(async () => {
     await openVisualPage();
