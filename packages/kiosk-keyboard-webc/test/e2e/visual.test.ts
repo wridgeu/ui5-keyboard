@@ -104,8 +104,8 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
   });
 
   it("should match narrow + height-constrained container (320px x 250px)", async () => {
-    const wrap = await $("#kb-narrow-short-wrap");
-    await expect(wrap).toMatchElementSnapshot("webc-narrow-short", HEIGHT_SNAPSHOT_OPTIONS);
+    const kb = await getKeyboardRoot("kb-narrow-short");
+    await expect(kb).toMatchElementSnapshot("webc-narrow-short", HEIGHT_SNAPSHOT_OPTIONS);
   });
 });
 
