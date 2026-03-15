@@ -478,7 +478,24 @@ kiosk-keyboard {
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects externally constrained containers and reduces key height, gaps, and modifier font-size automatically.
+Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects when the host element's layout box is smaller than the keyboard's natural content height and reduces key height, gaps, and modifier font-size automatically.
+
+The height constraint must affect the **host element's own dimensions** -- the component measures `clientHeight` on itself. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the host's layout box, so the keyboard will be clipped instead of adapting.
+
+```html
+<!-- Works: constraint on the host element -->
+<kiosk-keyboard style="max-height: 250px; overflow: hidden"></kiosk-keyboard>
+
+<!-- Works: flex parent propagates constraint to the host -->
+<div style="display: flex; flex-direction: column; height: 250px">
+  <kiosk-keyboard style="flex: 1; min-height: 0; overflow: hidden"></kiosk-keyboard>
+</div>
+
+<!-- Does NOT work: wrapper clips paint but host renders at natural height -->
+<div style="max-height: 250px; overflow: hidden">
+  <kiosk-keyboard></kiosk-keyboard>
+</div>
+```
 
 Most runtime style changes are picked up automatically through rendering and `ResizeObserver`. If you intentionally combine `stable-height` with styling changes that alter intrinsic height without changing the rendered outer box (for example toggling compact mode or swapping `--kiosk-keyboard-*` sizing variables at runtime), call `refreshResponsiveState()` after the style update to force a fresh height measurement.
 

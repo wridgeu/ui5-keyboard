@@ -1037,7 +1037,9 @@ By default, the inline keyboard takes the full width of its container (`100%`). 
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved.
+Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects when the control's rendered DOM element is smaller than its natural content height and reduces key height, gaps, and modifier font-size automatically.
+
+The height constraint must affect the **control's own rendered element**. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the control's layout box, so the keyboard will be clipped instead of adapting. Apply `max-height` directly to the keyboard's root element (via CSS targeting `.ui5KioskKeyboard`), or use a flex parent that propagates the constraint.
 
 Most styling updates are handled automatically through rendering and `ResizeHandler`. When you intentionally change `--ui5KioskKeyboard-*` sizing variables at runtime without changing the rendered outer box, call `refreshResponsiveState()` after the style update so height-responsive classes are recomputed from the live DOM.
 
