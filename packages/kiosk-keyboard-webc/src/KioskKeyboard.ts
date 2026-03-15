@@ -700,7 +700,7 @@ class KioskKeyboard extends UI5Element {
       this._syncShiftState();
       this.fireDecoratorEvent("keyboard-type-change", {
         keyboardType: this.keyboardType,
-        previousKeyboardType: ((changeInfo.oldValue as string) ?? "Full") as `${KeyboardType}`,
+        previousKeyboardType: ((changeInfo.oldValue as string) ?? KeyboardType.Full) as `${KeyboardType}`,
         autoDetected,
       });
       this._resetStableHeight();
@@ -1579,7 +1579,8 @@ class KioskKeyboard extends UI5Element {
 
     // ── Width ──
     const cs = getComputedStyle(root);
-    const rootContentWidth = root.clientWidth - Number.parseFloat(cs.paddingLeft) - Number.parseFloat(cs.paddingRight);
+    const rootContentWidth =
+      root.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
     const isCompact = rootContentWidth <= 20 * remPx;
     const isNarrow = rootContentWidth <= 30 * remPx;
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);

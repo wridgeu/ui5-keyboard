@@ -1,6 +1,7 @@
 import type KioskKeyboard from "./KioskKeyboard.js";
 import { keyElementId } from "./core/dom-utils.js";
 import { isSingleGlyph } from "./core/grapheme.js";
+import { KeyboardType } from "./types.js";
 
 export const KIOSK_KEYBOARD_DOM = {
   classes: {
@@ -66,8 +67,8 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
         [KIOSK_KEYBOARD_DOM.classes.rootDocked]: this.docked,
         [KIOSK_KEYBOARD_DOM.classes.rootDisabled]: this.disabled,
         [KIOSK_KEYBOARD_DOM.classes.rootHidden]: isDockedHidden,
-        [KIOSK_KEYBOARD_DOM.classes.rootNumpad]: kbType === "Numpad",
-        [KIOSK_KEYBOARD_DOM.classes.rootNumeric]: kbType === "Numeric",
+        [KIOSK_KEYBOARD_DOM.classes.rootNumpad]: kbType === KeyboardType.Numpad,
+        [KIOSK_KEYBOARD_DOM.classes.rootNumeric]: kbType === KeyboardType.Numeric,
       }}
       role="group"
       aria-label={this._ariaLabel}

@@ -964,12 +964,19 @@ export default class KioskKeyboard extends Control {
    * constrained (host height < natural content height). Skipped for docked and numpad.
    * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
    */
-  private _applyResponsiveSizeClasses(
-    dom: HTMLElement,
-    width = dom.getBoundingClientRect().width,
-    height = dom.getBoundingClientRect().height,
-  ): void {
+  private _applyResponsiveSizeClasses(dom: HTMLElement, width?: number, height?: number): void {
     const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+    // Default to content-box width (matching container query semantics and the
+    // WebC package) so breakpoints fire at the same container size in both packages.
+    if (width === undefined) {
+      const cs = window.getComputedStyle(dom);
+      width = dom.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
+    }
+    if (height === undefined) {
+      height = dom.getBoundingClientRect().height;
+    }
+
     const isCompact = width <= 20 * remPx;
     const isNarrow = width <= 30 * remPx;
 
