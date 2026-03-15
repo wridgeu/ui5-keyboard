@@ -28,6 +28,12 @@ async function waitForResponsiveSync(): Promise<void> {
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 }
 
+/** Assign an invalid value to a typed property to test runtime validation/clamping. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setInvalidValue(target: any, property: string, value: string): void {
+  target[property] = value;
+}
+
 describe("kiosk-keyboard", () => {
   // ── Render ──
 
@@ -1459,7 +1465,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      el.keyboardType = "InvalidType" as any;
+      setInvalidValue(el, "keyboardType", "InvalidType");
       await nextRender();
       expect(el.keyboardType).to.equal("Full");
     });
@@ -1471,7 +1477,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      el.fKeyMode = "InvalidMode" as any;
+      setInvalidValue(el, "fKeyMode", "InvalidMode");
       await nextRender();
       expect(el.fKeyMode).to.equal("Virtual");
     });
@@ -1483,7 +1489,7 @@ describe("kiosk-keyboard", () => {
         `,
       );
       await nextRender();
-      el.mobileKeyboard = "InvalidValue" as any;
+      setInvalidValue(el, "mobileKeyboard", "InvalidValue");
       await nextRender();
       expect(el.mobileKeyboard).to.equal("Auto");
     });

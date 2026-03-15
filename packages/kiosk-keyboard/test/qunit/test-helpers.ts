@@ -138,3 +138,9 @@ export function getRenderedLayoutKeys(keyboard: KioskKeyboard): string[][] {
     Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)).map((k) => k.dataset.key!),
   );
 }
+
+/** Call the private _applyResponsiveSizeClasses for unit testing responsive breakpoints. */
+export function applyResponsiveSizeClasses(keyboard: KioskKeyboard, dom: Element, width: number, height: number): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private method for unit testing
+  (keyboard as any)._applyResponsiveSizeClasses(dom, width, height);
+}

@@ -80,7 +80,7 @@ QUnit.test("Shift auto-releases after typing in switched layout", async (assert)
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
 
-  // Type a character in the numeric layout — shift should auto-release
+  // Type a character in the numeric layout -- shift should auto-release
   tapKey(kb, "1");
   await waitForRender();
 
@@ -108,11 +108,11 @@ QUnit.test("setTargetInput() resets shift regardless of current layout", async (
   assert.ok(isShiftActive(kb), "Shift active on base layout");
 
   // Switch to numeric layout (shift persists internally but is not
-  // observable — numeric layout has no shift key)
+  // observable -- numeric layout has no shift key)
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
 
-  // Switch target while on numeric layout — shift must reset
+  // Switch target while on numeric layout -- shift must reset
   kb.setTargetInput(input2);
   await waitForRender();
 

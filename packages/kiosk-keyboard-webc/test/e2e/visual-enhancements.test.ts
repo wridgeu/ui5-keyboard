@@ -23,13 +23,13 @@ const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
  * non-supporting browsers would show.
  *
  * Enhancement layers tested:
- *   1. text-box-trim  — ~83 % browser support (Chrome 133+, Edge 133+,
+ *   1. text-box-trim  -- ~83 % browser support (Chrome 133+, Edge 133+,
  *      Safari 18.2+, Firefox 133+).  Removes invisible half-leading.
- *   2. Container queries — ~92 % browser support. Native @container
+ *   2. Container queries -- ~92 % browser support. Native @container
  *      breakpoints for width-responsive font scaling. The fallback
  *      snapshots explicitly disable native CQ styling and inject the
  *      class-based fallback rules so they match older browsers.
- *   3. color-mix() shadow tokens — guarded with @supports. The fallback
+ *   3. color-mix() shadow tokens -- guarded with @supports. The fallback
  *      snapshot re-applies the static rgba() shadow tokens that older
  *      browsers keep when the guarded override block is skipped.
  */

@@ -1593,7 +1593,7 @@ class KioskKeyboard extends UI5Element {
    * classes are wrapped in @supports not (container-type: inline-size)
    * so they only take effect in non-CQ browsers (older webviews, etc.).
    *
-   * Height: applied in all browsers — detects external height constraints
+   * Height: applied in all browsers -- detects external height constraints
    * (host height < natural content height) and applies compact layout.
    *
    * Called from both ResizeObserver (on resize) and onAfterRendering

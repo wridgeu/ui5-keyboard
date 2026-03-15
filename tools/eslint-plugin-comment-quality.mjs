@@ -317,6 +317,50 @@ const noHedgingComment = {
   },
 };
 
+/**
+ * Flags em-dashes (U+2014) in comments.
+ *
+ * The sibling `code-quality/no-em-dash-in-string` catches string literals;
+ * this rule covers comments, which are the other common entry point for
+ * AI-generated text. Auto-fix replaces with `--`.
+ */
+// Built at runtime so the rule source itself does not contain the character.
+const EM_DASH_CHAR = String.fromCodePoint(0x2014);
+const EM_DASH_COMMENT_RE = new RegExp(EM_DASH_CHAR, "g");
+
+const noEmDashInComment = {
+  meta: {
+    type: "suggestion",
+    fixable: "code",
+    docs: {
+      description: "Disallow em-dashes in comments",
+    },
+    messages: {
+      noEmDashInComment: "Comment contains an em-dash (U+2014). Use -- instead.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (!comment.value.includes(EM_DASH_CHAR)) continue;
+          context.report({
+            node: comment,
+            messageId: "noEmDashInComment",
+            fix(fixer) {
+              const prefix = comment.type === "Line" ? "//" : "/*";
+              const suffix = comment.type === "Line" ? "" : "*/";
+              const fixed = comment.value.replace(EM_DASH_COMMENT_RE, "--");
+              return fixer.replaceTextRange(comment.range, `${prefix}${fixed}${suffix}`);
+            },
+          });
+        }
+      },
+    };
+  },
+};
+
 /** @type {import('eslint').ESLint.Plugin} */
 export default {
   meta: { name: "comment-quality" },
@@ -326,5 +370,6 @@ export default {
     "no-section-divider": noSectionDivider,
     "no-placeholder-comment": noPlaceholderComment,
     "no-hedging-comment": noHedgingComment,
+    "no-em-dash-in-comment": noEmDashInComment,
   },
 };

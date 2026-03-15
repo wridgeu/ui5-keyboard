@@ -517,7 +517,7 @@
 /* Progressive enhancement: text-box-trim
    Trims invisible half-leading above and below text, giving true optical
    centering inside keys without the line-height workarounds needed to avoid
-   descender clipping (see commit 8b734a2).  Falls back gracefully — non-
+   descender clipping (see commit 8b734a2).  Falls back gracefully -- non-
    supporting browsers keep the existing line-height behavior unchanged.
    Browser support: ~83% (Chrome 133+, Edge 133+, Safari 18.2+, Firefox 133+).
    See also: docs/proposals/CUSTOM-FONT-FACE.md for horizontal glyph issues. */
