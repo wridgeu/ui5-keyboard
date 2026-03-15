@@ -87,6 +87,7 @@ const i18nTranslations = {
     KEY_BACKSPACE: "Retour",
     KEY_SPACE: "Espace",
     KIOSK_KEYBOARD_LABEL: "Clavier virtuel",
+    KIOSK_KEYBOARD_ROLEDESCRIPTION: "clavier",
     ARIA_CAPS_LOCK: "Verr. maj.",
     ARIA_CAPS_LOCK_ON: "Verrouillage majuscules active",
     ARIA_SHIFT_ON: "Majuscules activees",
@@ -99,6 +100,7 @@ const i18nTranslations = {
     KEY_BACKSPACE: "Retroceso",
     KEY_SPACE: "Espacio",
     KIOSK_KEYBOARD_LABEL: "Teclado virtual",
+    KIOSK_KEYBOARD_ROLEDESCRIPTION: "teclado",
     ARIA_CAPS_LOCK: "Bloq May\u00fas",
     ARIA_CAPS_LOCK_ON: "Bloqueo de may\u00fasculas activado",
     ARIA_SHIFT_ON: "May\u00fasculas activadas",
@@ -111,6 +113,7 @@ const i18nTranslations = {
     KEY_BACKSPACE: "\u524a\u9664",
     KEY_SPACE: "\u30b9\u30da\u30fc\u30b9",
     KIOSK_KEYBOARD_LABEL: "\u4eee\u60f3\u30ad\u30fc\u30dc\u30fc\u30c9",
+    KIOSK_KEYBOARD_ROLEDESCRIPTION: "\u30ad\u30fc\u30dc\u30fc\u30c9",
     ARIA_CAPS_LOCK: "Caps Lock",
     ARIA_CAPS_LOCK_ON: "Caps Lock \u30aa\u30f3",
     ARIA_SHIFT_ON: "\u30b7\u30d5\u30c8\u30aa\u30f3",
@@ -119,8 +122,47 @@ const i18nTranslations = {
   },
 };
 
+// Keys to inspect in the ARIA inspector panel
+const INSPECTED_KEYS = [
+  { value: "{shift}", label: "Shift key" },
+  { value: "{enter}", label: "Enter key" },
+  { value: "{backspace}", label: "Backspace key" },
+  { value: " ", label: "Space key" },
+];
+
 const i18nStatus = document.getElementById("i18n-status");
+const i18nInspector = document.getElementById("i18n-aria-inspector");
 const kbI18n = document.getElementById("kb-i18n");
+
+function updateAriaInspector() {
+  const root = kbI18n.shadowRoot;
+  if (!root) return;
+  const kbGroup = root.querySelector("[role='group']");
+  const kbAriaLabel = kbGroup ? kbGroup.getAttribute("aria-label") : "?";
+  const kbRoleDesc = kbGroup ? kbGroup.getAttribute("aria-roledescription") : "?";
+
+  let html =
+    `<div style="padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px">` +
+    `<div style="font-size: 11px; color: var(--muted-color)">aria-label (keyboard)</div>` +
+    `<div style="font-weight: bold">${kbAriaLabel}</div></div>`;
+  html +=
+    `<div style="padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px">` +
+    `<div style="font-size: 11px; color: var(--muted-color)">aria-roledescription</div>` +
+    `<div style="font-weight: bold">${kbRoleDesc}</div></div>`;
+
+  for (const spec of INSPECTED_KEYS) {
+    const keyEl = root.querySelector(`[data-key="${CSS.escape(spec.value)}"]`);
+    const ariaLabel = keyEl ? keyEl.getAttribute("aria-label") : "?";
+    html +=
+      `<div style="padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px">` +
+      `<div style="font-size: 11px; color: var(--muted-color)">${spec.label}</div>` +
+      `<div style="font-weight: bold">${ariaLabel}</div></div>`;
+  }
+  i18nInspector.innerHTML = html;
+}
+
+// Initial render of ARIA inspector
+requestAnimationFrame(() => requestAnimationFrame(updateAriaInspector));
 
 document.querySelectorAll(".i18n-lang-btn").forEach((btn) => {
   btn.addEventListener("click", async () => {
@@ -131,7 +173,6 @@ document.querySelectorAll(".i18n-lang-btn").forEach((btn) => {
     btn.classList.add("active");
 
     if (!lang) {
-      // Clear resolver -- revert to built-in translations
       KioskKeyboard.setI18nResolver(null);
       i18nStatus.textContent = "Using built-in translations";
       appendLog("kb-i18n", "i18n resolver cleared (using defaults)");
@@ -144,11 +185,13 @@ document.querySelectorAll(".i18n-lang-btn").forEach((btn) => {
 
     // The resolver is module-level state (not a reactive property), so
     // nudge a reactive property to trigger a re-render with new labels.
-    // Use two microtask-separated changes so UI5's render batching sees
-    // a real property change in each cycle.
     const currentLayout = kbI18n.layout;
     kbI18n.layout = "";
     await Promise.resolve();
     kbI18n.layout = currentLayout;
+
+    // Wait for UI5 render cycle then update the ARIA inspector
+    await new Promise((r) => requestAnimationFrame(r));
+    updateAriaInspector();
   });
 });

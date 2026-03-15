@@ -459,12 +459,11 @@
 
           <!-- 11. i18n Resolver -->
           <div class="card" style="grid-column: 1 / -1">
-            <h2>i18n Resolver (custom translations)</h2>
+            <h2>i18n Resolver (accessibility labels)</h2>
             <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">
-              Demonstrates <code>KioskKeyboard.setI18nResolver()</code>. Select a language to override the keyboard's
-              Shift, Enter, Backspace, and Space labels at runtime. The resolver receives each i18n key, the active
-              locale, and the built-in default text. Return a string to override, or <code>undefined</code> to keep the
-              default.
+              Demonstrates <code>KioskKeyboard.setI18nResolver()</code>. The resolver overrides ARIA labels and screen
+              reader announcements (e.g. "Virtual keyboard opened", "Caps Lock on"). Visible key text is driven by the
+              layout definition, not i18n. Select a language and inspect the ARIA label changes below.
             </p>
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
               <ui5-label>Language override:</ui5-label>
@@ -478,11 +477,16 @@
                 Using built-in translations
               </span>
             </div>
-            <div class="input-group">
-              <label for="i18n-input">Target Input</label>
-              <input id="i18n-input" type="text" placeholder="Type here to see translated key labels..." />
-            </div>
-            <kiosk-keyboard id="kb-i18n" layout="qwerty" for="i18n-input"></kiosk-keyboard>
+            <div
+              id="i18n-aria-inspector"
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 8px;
+                font-size: 12px;
+              "
+            ></div>
+            <kiosk-keyboard id="kb-i18n" layout="qwerty"></kiosk-keyboard>
           </div>
         </div>
       </div>
