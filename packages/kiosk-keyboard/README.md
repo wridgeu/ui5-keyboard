@@ -5,7 +5,10 @@
 On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applications.
 
 > [!IMPORTANT]
-> **Minimum UI5 version: 1.120**: requires `Lib.init()` (1.118), `DataType.registerEnum()` and `Localization.getLanguageTag()` (both 1.120).
+> **UI5 compatibility**
+> Supported package baseline: UI5 1.144.0.
+> Lowest implementation floor: UI5 1.120, because the library uses `DataType.registerEnum()` and `Localization.getLanguageTag()` from 1.120.
+> `Lib.init()` is available from 1.118, so it does not raise the floor.
 
 A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virtual keyboard that types into any UI5 input control. Supports multiple layouts, Shift/Caps Lock, docked mode with auto-show, and integrates with SAP Horizon theming.
 

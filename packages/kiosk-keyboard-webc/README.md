@@ -208,13 +208,13 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Events
 
-| Event                  | Detail                                                                          | Description                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `key-press`            | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys. |
-| `after-open`           | -                                                                               | Fired after docked keyboard opens.                                                                             |
-| `after-close`          | -                                                                               | Fired after docked keyboard closes.                                                                            |
-| `layout-change`        | `{ layout: string }`                                                            | Fired when layout switches.                                                                                    |
-| `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                              |
+| Event                  | Detail                                                                          | Description                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `key-press`            | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys.  |
+| `after-open`           | -                                                                               | Fired when the docked keyboard enters the open state. State-change hook only; not a CSS transition-end event.   |
+| `after-close`          | -                                                                               | Fired when the docked keyboard enters the closed state. State-change hook only; not a CSS transition-end event. |
+| `layout-change`        | `{ layout: string }`                                                            | Fired when layout switches.                                                                                     |
+| `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                               |
 
 ## Methods
 
@@ -231,6 +231,9 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `unregisterLayout(name)`               | Removes a custom layout (delegates to shared registry).                                                                                                               |
 | `registerLocaleLayout(locale, layout)` | Maps a BCP-47 locale to a layout name (delegates to shared registry).                                                                                                 |
 | `unregisterLocaleLayout(locale)`       | Removes a locale mapping (delegates to shared registry).                                                                                                              |
+
+`after-open` and `after-close` fire synchronously when the `open` state flips.
+They report the state transition itself, not animation completion.
 
 ## Static API
 

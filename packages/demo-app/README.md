@@ -47,6 +47,32 @@ This app is a scenario catalog for keyboard-heavy UX in UI5. It shows:
 - Scoped back navigation shortcut (`Mod+B`)
 - `HotkeyRecorder` flow for capture/cancel/clear recording
 
+### Hotkeys Hub (`#/hotkeys`)
+
+Landing page linking to the dedicated hotkeys demos.
+
+### Sequences (`#/hotkeys/sequences`)
+
+- Two-step command sequences with pending-state feedback
+- Focused demo page for `HotkeyManager.registerSequence()` behavior
+
+### Target Bubbling (`#/hotkeys/target-bubbling`)
+
+- Nested targets with innermost-wins matching
+- `stopPropagation` behavior for scoped target handlers
+
+### Conflict Behavior (`#/hotkeys/conflict`)
+
+- Warn / Allow / Replace / Error strategies for duplicate registrations
+- Side-by-side comparison of conflict resolution outcomes
+
+## Integration Demo
+
+### Combined Page (`#/integration`)
+
+- Combined page showing `ui5.hotkeys` and `ui5.kiosk` together in one flow
+- Demonstrates shortcut-driven focus plus virtual keyboard interaction on the same page
+
 ## Kiosk Keyboard Scenarios
 
 ### Kiosk Hub (`#/kiosk`)
@@ -111,17 +137,40 @@ Landing page linking to all kiosk demos.
 - Keyboard created in controller and placed in static UI area
 - Reused across route round-trips while the demo controller remains alive
 
+### Focus Scenarios (`#/kiosk/focus-scenarios`)
+
+- Focus transitions, deferred close behavior, and composite-control targeting
+- Live focus event log for troubleshooting docked `autoShow` flows
+
+### i18n Extensibility (`#/kiosk/i18n-extensibility`)
+
+- New language bundles and label overrides
+- Programmatic override hooks for runtime text customization
+
+### Web Component (Native) (`#/kiosk/web-component`)
+
+- Native `<kiosk-keyboard>` web component consumed via `WebComponent.extend()` bridge
+- Demonstrates the web component variant inside the UI5 demo shell
+
 ## Route Map
 
 - `#/` main hotkeys scenarios
 - `#/detail` detail hotkeys and recorder
+- `#/integration` combined hotkeys + kiosk flow
+- `#/hotkeys` hotkeys demo hub
+- `#/hotkeys/sequences` sequence demo
+- `#/hotkeys/target-bubbling` nested target bubbling demo
+- `#/hotkeys/conflict` registration conflict demo
 - `#/kiosk` kiosk demo hub
 - `#/kiosk/docked` docked + inline numpad
-- `#/kiosk/form-workflow` check-in workflow
-- `#/kiosk/multi-keyboard` multi-instance isolation
 - `#/kiosk/popover` popover keyboard
-- `#/kiosk/dialog` dialog integration approaches
 - `#/kiosk/input-ids` selective targeting + custom element bridge
 - `#/kiosk/programmatic` imperative API and runtime layouts
-- `#/kiosk/custom-layouts` custom layout gallery
 - `#/kiosk/component` persistent component-level keyboard
+- `#/kiosk/form-workflow` check-in workflow
+- `#/kiosk/multi-keyboard` multi-instance isolation
+- `#/kiosk/dialog` dialog integration approaches
+- `#/kiosk/custom-layouts` custom layout gallery
+- `#/kiosk/focus-scenarios` focus transition and deferred close demo
+- `#/kiosk/i18n-extensibility` i18n extension demo
+- `#/kiosk/web-component` native web component bridge demo

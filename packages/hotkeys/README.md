@@ -5,7 +5,10 @@
 Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
 
 > [!IMPORTANT]
-> **Minimum UI5 version: 1.120**: requires `Lib.init()` (1.118) and `DataType.registerEnum()` (1.120).
+> **UI5 compatibility**
+> Supported package baseline: UI5 1.144.0.
+> Lowest implementation floor: UI5 1.120, because the library uses `DataType.registerEnum()` from 1.120.
+> `Lib.init()` is available from 1.118, so it does not raise the floor.
 
 A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard shortcuts with scope-based activation, cross-platform modifier normalization, multi-key sequences, hotkey recording, and proper UI5 lifecycle integration.
 

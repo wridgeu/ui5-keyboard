@@ -125,6 +125,24 @@ await setEmulatedMediaFeatures([{ name: "forced-colors", value: "active" }]);
 
 Clears all previously emulated media features.
 
+### `injectStyleOverride(css, id?)`
+
+Injects or updates a `<style>` element in the page under test. Used by visual
+regression tests to force fallback rendering paths when progressive enhancement
+features such as container queries or text-box-trim would otherwise be active.
+
+```ts
+await injectStyleOverride(".example { color: red; }");
+```
+
+### `removeStyleOverride(id?)`
+
+Removes a previously injected style override by element ID.
+
+```ts
+await removeStyleOverride();
+```
+
 ### `setDocumentDirection(dir)`
 
 Sets `dir` and `lang` attributes on the document root and waits for a layout reflow. Used by RTL visual regression tests.
@@ -212,10 +230,10 @@ What it does:
 
 ### `wdio-test-helpers.ts`
 
-| Consumer                                                | Imports (re-exported via package `test-helpers.ts`)                              |
-| ------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `packages/kiosk-keyboard/test/e2e/test-helpers.ts`      | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `setDocumentDirection` |
-| `packages/kiosk-keyboard-webc/test/e2e/test-helpers.ts` | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `setDocumentDirection` |
+| Consumer                                                | Imports (re-exported via package `test-helpers.ts`)                                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/kiosk-keyboard/test/e2e/test-helpers.ts`      | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `injectStyleOverride`, `removeStyleOverride`, `setDocumentDirection` |
+| `packages/kiosk-keyboard-webc/test/e2e/test-helpers.ts` | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `injectStyleOverride`, `removeStyleOverride`, `setDocumentDirection` |
 
 ### `wdio-device-profiles.ts`
 

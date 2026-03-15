@@ -224,7 +224,7 @@ npm run test:coverage                  # Kiosk webc coverage (unit + component)
 ### Code Quality
 
 ```bash
-npm run check              # Full quality gate (fmt + lint + typecheck + all tests + sequential multi-device e2e)
+npm run check              # Full quality gate (fmt + lint + typecheck + all tests + concurrent multi-device e2e)
 npm run fmt                # Format (oxfmt)
 npm run fmt:check          # Check formatting without fixing
 npm run lint               # Lint (oxlint)
