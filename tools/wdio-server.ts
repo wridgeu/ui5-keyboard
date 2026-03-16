@@ -37,14 +37,23 @@ function probePort(port: number, timeout = 1_000): Promise<boolean> {
   });
 }
 
-/** Polls until the server on the given port accepts TCP connections. */
+/** Polls until the server on the given port accepts TCP connections and responds to HTTP. */
 async function waitForServer(port: number, timeout: number): Promise<void> {
   const deadline = Date.now() + timeout;
+  // Phase 1: wait for TCP
   while (Date.now() < deadline) {
-    if (await probePort(port)) return;
+    if (await probePort(port)) break;
     await delay(500);
   }
-  throw new Error(`Server not ready on port ${port} after ${timeout}ms`);
+  if (Date.now() >= deadline) {
+    throw new Error(`Server not ready on port ${port} after ${timeout}ms (TCP)`);
+  }
+  // Phase 2: wait for HTTP readiness (server may accept TCP before it can serve content)
+  while (Date.now() < deadline) {
+    if (await probeHttp(port)) return;
+    await delay(500);
+  }
+  throw new Error(`Server on port ${port} accepts TCP but does not respond to HTTP after ${timeout}ms`);
 }
 
 /** Verifies that an HTTP server on localhost:port responds with a 2xx/3xx status. */
@@ -110,7 +119,7 @@ export function createServerManager(port: number, packageRoot: string, configFil
     if (configFile) args.push("--config", configFile);
     serverProcess = spawn(process.execPath, args, {
       cwd: packageRoot,
-      stdio: ["ignore", "pipe", "inherit"],
+      stdio: ["ignore", "ignore", "inherit"],
       shell: false,
       windowsHide: process.platform === "win32",
     });
@@ -171,7 +180,7 @@ export function createViteServerManager(port: number, packageRoot: string, start
     const viteCliEntry = resolveViteCliEntry(packageRoot);
     serverProcess = spawn(process.execPath, [viteCliEntry, "--port", String(port), "--strictPort"], {
       cwd: packageRoot,
-      stdio: ["ignore", "pipe", "inherit"],
+      stdio: ["ignore", "ignore", "inherit"],
       shell: false,
       windowsHide: process.platform === "win32",
     });

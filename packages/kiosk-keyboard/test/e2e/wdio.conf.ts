@@ -5,7 +5,7 @@ import { createServerManager } from "../../../../tools/wdio-server.js";
 import { CHROME_VERSION, DESKTOP_WINDOW_SIZE } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-const PORT = 8082;
+const PORT = 8085;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
 const server = createServerManager(PORT, PACKAGE_ROOT);

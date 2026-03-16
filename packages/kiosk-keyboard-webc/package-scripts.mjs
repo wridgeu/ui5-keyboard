@@ -52,7 +52,7 @@ const scripts = {
     // json-imports (which use relative ../assets/ paths) resolve correctly
     // when Vite serves from source. The upstream tools hardcode the JSON
     // output to dist/generated/assets; this copies them to the source tree.
-    syncAssets: `node -e "require('fs').cpSync('dist/generated/assets','src/generated/assets',{recursive:true})"`,
+    syncAssets: `node -e "const fs=require('fs');fs.rmSync('src/generated/assets',{recursive:true,force:true});fs.cpSync('dist/generated/assets','src/generated/assets',{recursive:true})"`,
   },
 };
 
