@@ -28,6 +28,17 @@
   --kiosk-keyboard-modifier-font-scale: 0.8;
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
+
+  /* ---- Responsive breakpoint thresholds (rem) ----
+     Override to control when width/height compact classes activate.
+     Width thresholds affect the JS-driven class toggling (--cq-sm, --cq-xs).
+     Note: CSS @container font-size rules use fixed 30rem/20rem breakpoints
+     independently; these variables control the class application only.
+     Height thresholds control when --cq-short / --cq-tiny classes apply. */
+  --kiosk-keyboard-cq-narrow-threshold: 30rem;
+  --kiosk-keyboard-cq-compact-threshold: 20rem;
+  --kiosk-keyboard-cq-short-threshold: 16rem;
+  --kiosk-keyboard-cq-tiny-threshold: 12rem;
 }
 
 /* Shadow colors derive from --sapContent_ShadowColor (a raw color, not a

@@ -70,6 +70,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
         [KIOSK_KEYBOARD_DOM.classes.rootNumpad]: kbType === KeyboardType.Numpad,
         [KIOSK_KEYBOARD_DOM.classes.rootNumeric]: kbType === KeyboardType.Numeric,
       }}
+      part="keyboard"
       role="group"
       aria-label={this._ariaLabel}
       aria-roledescription={this._roleDescription}
@@ -80,7 +81,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       onKeyDown={this._boundOnKeyDown}
     >
       {layout.map((row, rowIndex) => (
-        <div class={KIOSK_KEYBOARD_DOM.classes.row} key={`row-${rowIndex}`}>
+        <div class={KIOSK_KEYBOARD_DOM.classes.row} part="row" key={`row-${rowIndex}`}>
           {row.map((key, colIndex) => {
             const id = keyElementId(this._componentId, rowIndex, colIndex);
             const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;
@@ -103,6 +104,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   [KIOSK_KEYBOARD_DOM.classes.keyCapsLock]: isShift && this._capsLock,
                   [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
                 }}
+                part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}`}
                 role="button"
                 tabindex={isFocusTarget ? 0 : -1}
                 data-key={key.value}
@@ -112,7 +114,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 aria-label={this._getKeyAriaLabel(key)}
               >
                 {isBuiltInIcon ? (
-                  <ui5-icon class={KIOSK_KEYBOARD_DOM.classes.keyIcon} name={iconName!} mode="Decorative" />
+                  <ui5-icon class={KIOSK_KEYBOARD_DOM.classes.keyIcon} part="key-icon" name={iconName!} mode="Decorative" />
                 ) : (
                   <span
                     class={{
@@ -121,6 +123,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                       [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]:
                         !isSingleGlyphLabel && key.type !== "modifier" && key.type !== "action",
                     }}
+                    part="key-label"
                   >
                     {label}
                   </span>

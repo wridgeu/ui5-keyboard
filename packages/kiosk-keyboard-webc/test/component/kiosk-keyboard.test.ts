@@ -1963,4 +1963,134 @@ describe("kiosk-keyboard", () => {
       expect(kbActive.isOpen()).to.be.true;
     });
   });
+
+  // ── CSS Parts ──
+
+  describe("CSS parts", () => {
+    it("exposes 'keyboard' part on root container", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const root = rootDiv(el);
+      expect(root.getAttribute("part")).to.equal("keyboard");
+    });
+
+    it("exposes 'row' part on each row", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const rows = queryRows(el);
+      expect(rows.length).to.be.greaterThan(0);
+      for (const row of rows) {
+        expect(row.getAttribute("part")).to.equal("row");
+      }
+    });
+
+    it("exposes 'key' part on regular keys", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const key = queryKey(el, "a")!;
+      expect(key).to.not.be.null;
+      expect(key.getAttribute("part")).to.equal("key");
+    });
+
+    it("exposes 'key modifier' part on modifier keys", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const shift = queryKey(el, "{shift}")!;
+      expect(shift).to.not.be.null;
+      expect(shift.getAttribute("part")).to.equal("key modifier");
+    });
+
+    it("exposes 'key action' part on action keys", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const enter = queryKey(el, "{enter}")!;
+      expect(enter).to.not.be.null;
+      expect(enter.getAttribute("part")).to.equal("key action");
+    });
+
+    it("exposes 'key-label' part on text labels", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const label = el.shadowRoot!.querySelector(`.${DOM.classes.keyLabel}`)!;
+      expect(label).to.not.be.null;
+      expect(label.getAttribute("part")).to.equal("key-label");
+    });
+
+    it("exposes 'key-icon' part on icon elements", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const icon = el.shadowRoot!.querySelector(`.${DOM.classes.keyIcon}`)!;
+      expect(icon).to.not.be.null;
+      expect(icon.getAttribute("part")).to.equal("key-icon");
+    });
+  });
+
+  // ── Responsive threshold CSS variables ──
+
+  describe("responsive threshold CSS variables", () => {
+    it("uses custom width thresholds for class toggling", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" style="width: 600px"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      // At 600px with default 30rem threshold (480px), no cq-sm class expected.
+      // Override narrow threshold to 40rem (640px) so 600px triggers cq-sm.
+      el.style.setProperty("--kiosk-keyboard-cq-narrow-threshold", "40rem");
+      el.refreshResponsiveState();
+      await waitForResponsiveSync();
+
+      const root = rootDiv(el);
+      expect(root.classList.contains(DOM.classes.rootCqSm)).to.be.true;
+    });
+
+    it("uses custom height thresholds for class toggling", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" style="height: 260px; overflow: hidden"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      // At 260px with default 16rem threshold (256px), no cq-short expected.
+      // Override short threshold to 18rem (288px) so 260px triggers cq-short.
+      el.style.setProperty("--kiosk-keyboard-cq-short-threshold", "18rem");
+      el.refreshResponsiveState();
+      await waitForResponsiveSync();
+
+      const root = rootDiv(el);
+      expect(root.classList.contains(DOM.classes.rootCqShort)).to.be.true;
+    });
+  });
 });

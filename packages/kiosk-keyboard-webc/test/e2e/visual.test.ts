@@ -107,6 +107,16 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const kb = await getKeyboardRoot("kb-narrow-short");
     await expect(kb).toMatchElementSnapshot("webc-narrow-short", HEIGHT_SNAPSHOT_OPTIONS);
   });
+
+  it("should match consumer part styling via ::part()", async () => {
+    const kb = await getKeyboardRoot("kb-part-styled");
+    await expect(kb).toMatchElementSnapshot("webc-part-styled");
+  });
+
+  it("should match custom threshold override (cq-short at 18rem)", async () => {
+    const kb = await getKeyboardRoot("kb-custom-threshold");
+    await expect(kb).toMatchElementSnapshot("webc-custom-threshold", HEIGHT_SNAPSHOT_OPTIONS);
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {

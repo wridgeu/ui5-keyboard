@@ -111,6 +111,23 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
 };
 
 /**
+ * Resolves a CSS custom property holding a rem-based threshold to pixels.
+ * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem * remPx`
+ * when the property is unset or unparseable.
+ */
+function resolveRemThreshold(
+  computedStyle: CSSStyleDeclaration,
+  prop: string,
+  fallbackRem: number,
+  remPx: number,
+): number {
+  const raw = computedStyle.getPropertyValue(prop).trim();
+  if (!raw) return fallbackRem * remPx;
+  const value = Number.parseFloat(raw);
+  return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
+}
+
+/**
  * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
  *
  * Built on the UI5 Web Components framework (`UI5Element`) for automatic SAP
@@ -1609,8 +1626,11 @@ class KioskKeyboard extends UI5Element {
     const cs = getComputedStyle(root);
     const rootContentWidth =
       root.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
-    const isCompact = rootContentWidth <= 20 * remPx;
-    const isNarrow = rootContentWidth <= 30 * remPx;
+
+    const narrowThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-narrow-threshold", 30, remPx);
+    const compactThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-compact-threshold", 20, remPx);
+    const isCompact = rootContentWidth <= compactThresh;
+    const isNarrow = rootContentWidth <= narrowThresh;
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
 
@@ -1645,8 +1665,10 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    const isTiny = hostHeight <= 12 * remPx;
-    const isShort = hostHeight <= 16 * remPx;
+    const shortThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-short-threshold", 16, remPx);
+    const tinyThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-tiny-threshold", 12, remPx);
+    const isTiny = hostHeight <= tinyThresh;
+    const isShort = hostHeight <= shortThresh;
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }

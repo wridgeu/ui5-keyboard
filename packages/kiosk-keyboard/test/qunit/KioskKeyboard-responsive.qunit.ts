@@ -394,6 +394,93 @@ QUnit.test("Compound: narrow width + tiny height applies both cq-xs and cq-tiny"
 // Font-size capping (min() preserves smaller consumer values)
 // ──────────────────────────────────────────────
 
+// ──────────────────────────────────────────────
+// Custom responsive threshold CSS variables
+// ──────────────────────────────────────────────
+
+QUnit.test("Custom width threshold: cq-sm triggers at overridden narrow threshold", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+
+  // Default narrow threshold is 30rem (480px). At 500px, no cq-sm expected.
+  applyResponsiveSizeClasses(kb, dom, 500, 600);
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm absent at 500px with default threshold");
+
+  // Override narrow threshold to 35rem (560px). Now 500px should trigger cq-sm.
+  dom.style.setProperty("--ui5KioskKeyboard-cqNarrowThreshold", "35rem");
+  applyResponsiveSizeClasses(kb, dom, 500, 600);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm present at 500px with 35rem threshold");
+
+  kb.destroy();
+});
+
+QUnit.test("Custom width threshold: cq-xs triggers at overridden compact threshold", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+
+  // Default compact threshold is 20rem (320px). At 350px, cq-sm expected, not cq-xs.
+  applyResponsiveSizeClasses(kb, dom, 350, 600);
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs absent at 350px with default threshold");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqSm), "cq-sm present at 350px with default threshold");
+
+  // Override compact threshold to 25rem (400px). Now 350px should trigger cq-xs.
+  dom.style.setProperty("--ui5KioskKeyboard-cqCompactThreshold", "25rem");
+  applyResponsiveSizeClasses(kb, dom, 350, 600);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqXs), "cq-xs present at 350px with 25rem threshold");
+
+  kb.destroy();
+});
+
+QUnit.test("Custom height threshold: cq-short triggers at overridden short threshold", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.overflow = "hidden";
+
+  // At 17rem height with default 16rem threshold, cq-short should NOT apply.
+  applyResponsiveSizeClasses(kb, dom, dom.getBoundingClientRect().width, 17 * remPx);
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short absent at 17rem with default threshold");
+
+  // Override short threshold to 18rem. Now 17rem should trigger cq-short.
+  dom.style.setProperty("--ui5KioskKeyboard-cqShortThreshold", "18rem");
+  applyResponsiveSizeClasses(kb, dom, dom.getBoundingClientRect().width, 17 * remPx);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short present at 17rem with 18rem threshold");
+
+  kb.destroy();
+});
+
+QUnit.test("Custom height threshold: cq-tiny triggers at overridden tiny threshold", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.overflow = "hidden";
+
+  // At 13rem height with default 12rem threshold, cq-short expected (not cq-tiny).
+  applyResponsiveSizeClasses(kb, dom, dom.getBoundingClientRect().width, 13 * remPx);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short present at 13rem with default threshold");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent at 13rem with default threshold");
+
+  // Override tiny threshold to 14rem. Now 13rem should trigger cq-tiny.
+  dom.style.setProperty("--ui5KioskKeyboard-cqTinyThreshold", "14rem");
+  applyResponsiveSizeClasses(kb, dom, dom.getBoundingClientRect().width, 13 * remPx);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny present at 13rem with 14rem threshold");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short absent when cq-tiny applies");
+
+  kb.destroy();
+});
+
 QUnit.test("Responsive class preserves custom font-size below the cap", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

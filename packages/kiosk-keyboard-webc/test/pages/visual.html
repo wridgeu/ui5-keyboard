@@ -176,5 +176,30 @@
         ></kiosk-keyboard>
       </div>
     </div>
+
+    <div class="section">
+      <h2>23. Consumer Part Styling (::part)</h2>
+      <style>
+        #kb-part-styled::part(keyboard) {
+          border-radius: 1rem;
+        }
+        #kb-part-styled::part(row) {
+          gap: 0.5rem;
+        }
+        #kb-part-styled::part(action) {
+          border-radius: 1rem;
+        }
+      </style>
+      <kiosk-keyboard id="kb-part-styled" layout="qwerty"></kiosk-keyboard>
+    </div>
+
+    <div class="section">
+      <h2>24. Custom Threshold Override (cq-short at 18rem)</h2>
+      <kiosk-keyboard
+        id="kb-custom-threshold"
+        layout="qwerty"
+        style="max-height: 280px; overflow: hidden; --kiosk-keyboard-cq-short-threshold: 18rem"
+      ></kiosk-keyboard>
+    </div>
   </body>
 </html>

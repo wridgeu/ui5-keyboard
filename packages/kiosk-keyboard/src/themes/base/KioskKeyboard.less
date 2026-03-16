@@ -36,6 +36,12 @@
  *   --ui5KioskKeyboard-numpadMaxWidth      Numpad container max-width (default: 20rem)
  *   --ui5KioskKeyboard-numpadKeyMinWidth   Numpad key min-width (default: 4rem)
  *
+ * Responsive thresholds (rem):
+ *   --ui5KioskKeyboard-cqNarrowThreshold   Width for --cq-sm class (default: 30rem)
+ *   --ui5KioskKeyboard-cqCompactThreshold  Width for --cq-xs class (default: 20rem)
+ *   --ui5KioskKeyboard-cqShortThreshold    Height for --cq-short class (default: 16rem)
+ *   --ui5KioskKeyboard-cqTinyThreshold     Height for --cq-tiny class (default: 12rem)
+ *
  * Colors follow SAP theming variables and adapt automatically to
  * sap_horizon, sap_horizon_dark, sap_horizon_hcb, and sap_horizon_hcw.
  */
@@ -69,6 +75,15 @@
   --ui5KioskKeyboard-numpadMaxWidth: 20rem;
   --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
 
+  /* ---- Responsive breakpoint thresholds (rem) ----
+     Override to control when width/height compact classes activate.
+     Width thresholds affect --cq-sm / --cq-xs class toggling.
+     Height thresholds control --cq-short / --cq-tiny classes. */
+  --ui5KioskKeyboard-cqNarrowThreshold: 30rem;
+  --ui5KioskKeyboard-cqCompactThreshold: 20rem;
+  --ui5KioskKeyboard-cqShortThreshold: 16rem;
+  --ui5KioskKeyboard-cqTinyThreshold: 12rem;
+
   /* ---- Private styling aliases ---- */
   --_ui5KioskKeyboard-padding: ~"var(--ui5KioskKeyboard-padding)";
   --_ui5KioskKeyboard-keyGap: ~"var(--ui5KioskKeyboard-keyGap)";
@@ -85,6 +100,10 @@
   --_ui5KioskKeyboard-modifierShadowHover: ~"var(--ui5KioskKeyboard-modifierShadowHover)";
   --_ui5KioskKeyboard-numpadMaxWidth: ~"var(--ui5KioskKeyboard-numpadMaxWidth)";
   --_ui5KioskKeyboard-numpadKeyMinWidth: ~"var(--ui5KioskKeyboard-numpadKeyMinWidth)";
+  --_ui5KioskKeyboard-cqNarrowThreshold: ~"var(--ui5KioskKeyboard-cqNarrowThreshold)";
+  --_ui5KioskKeyboard-cqCompactThreshold: ~"var(--ui5KioskKeyboard-cqCompactThreshold)";
+  --_ui5KioskKeyboard-cqShortThreshold: ~"var(--ui5KioskKeyboard-cqShortThreshold)";
+  --_ui5KioskKeyboard-cqTinyThreshold: ~"var(--ui5KioskKeyboard-cqTinyThreshold)";
 
   /* ---- Base layout ---- */
   display: flex;

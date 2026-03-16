@@ -58,6 +58,18 @@ type InputModeSuppressionState = {
 };
 
 /**
+ * Resolves a CSS custom property holding a rem-based threshold to pixels.
+ * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem * remPx`
+ * when the property is unset or unparseable.
+ */
+function resolveRemThreshold(styles: CSSStyleDeclaration, prop: string, fallbackRem: number, remPx: number): number {
+  const raw = styles.getPropertyValue(prop).trim();
+  if (!raw) return fallbackRem * remPx;
+  const value = Number.parseFloat(raw);
+  return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
+}
+
+/**
  * On-screen virtual keyboard control for kiosk and touch applications.
  *
  * Renders an interactive keyboard that types into a target UI5 input control.
@@ -966,19 +978,21 @@ export default class KioskKeyboard extends Control {
    */
   private _applyResponsiveSizeClasses(dom: HTMLElement, width?: number, height?: number): void {
     const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+    const cs = window.getComputedStyle(dom);
 
     // Default to content-box width (matching container query semantics and the
     // WebC package) so breakpoints fire at the same container size in both packages.
     if (width === undefined) {
-      const cs = window.getComputedStyle(dom);
       width = dom.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
     }
     if (height === undefined) {
       height = dom.getBoundingClientRect().height;
     }
 
-    const isCompact = width <= 20 * remPx;
-    const isNarrow = width <= 30 * remPx;
+    const narrowThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqNarrowThreshold", 30, remPx);
+    const compactThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqCompactThreshold", 20, remPx);
+    const isCompact = width <= compactThresh;
+    const isNarrow = width <= narrowThresh;
 
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
@@ -1007,8 +1021,10 @@ export default class KioskKeyboard extends Control {
     }
 
     const constrained = naturalHeight > height + 1;
-    const isShort = constrained && height <= 16 * remPx;
-    const isTiny = constrained && height <= 12 * remPx;
+    const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
+    const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
+    const isShort = constrained && height <= shortThresh;
+    const isTiny = constrained && height <= tinyThresh;
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }

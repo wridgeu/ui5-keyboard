@@ -232,12 +232,13 @@ const noEmDash = {
             node: comment,
             messageId: "emDashInComment",
             fix(fixer) {
-              const prefix = comment.type === "Line" ? "//" : "/*";
-              const suffix = comment.type === "Line" ? "" : "*/";
-              return fixer.replaceTextRange(
-                comment.range,
-                `${prefix}${comment.value.replace(EM_DASH_RE, "--")}${suffix}`,
-              );
+              // Replace only the content between delimiters to preserve
+              // the original prefix (/** for JSDoc vs /* for block).
+              const fixed = comment.value.replace(EM_DASH_RE, "--");
+              if (comment.type === "Line") {
+                return fixer.replaceTextRange([comment.range[0] + 2, comment.range[1]], fixed);
+              }
+              return fixer.replaceTextRange([comment.range[0] + 2, comment.range[1] - 2], fixed);
             },
           });
         }
