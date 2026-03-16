@@ -179,9 +179,14 @@ npm install ui5-lib-kiosk-keyboard
 
 ### Kiosk Keyboard (Web Component)
 
-The web component variant (`kiosk-keyboard-webc`) provides the same virtual keyboard as a native custom element, usable in any framework (plain HTML, React, Vue, Angular) and inside UI5 apps via the `WebComponent.extend()` bridge.
+The web component variant (`kiosk-keyboard-webc`) provides the same virtual keyboard as a native custom element. Its consumption model is different from the native UI5 libraries:
+
+- standalone apps: prefer `kiosk-keyboard-webc/bundle`
+- advanced ESM setups: use `kiosk-keyboard-webc` with `kiosk-keyboard-webc/Assets`
+- UI5 apps: resolve npm modules via `ui5-tooling-modules`, then choose CEM-driven wrapper consumption or a `WebComponent.extend()` bridge
 
 ```bash
+# if/when published
 npm install kiosk-keyboard-webc
 ```
 
@@ -194,7 +199,7 @@ npm install kiosk-keyboard-webc
 <kiosk-keyboard layout="qwerty" for="my-input"></kiosk-keyboard>
 ```
 
-See the [kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md) for full API reference, attributes, events, and custom layout examples.
+See the [kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md) for the detailed consumption modes, UI5 integration notes, API reference, attributes, events, and custom layout examples.
 
 ## Using Hotkeys and the UI5 Kiosk Keyboard Together
 

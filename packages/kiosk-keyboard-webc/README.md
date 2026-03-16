@@ -77,12 +77,16 @@ If/when this package is published, install it directly from npm:
 npm install kiosk-keyboard-webc
 ```
 
-## Usage
+## Consumption Modes
 
-### Standalone (any framework)
+### 1. Standalone via `kiosk-keyboard-webc/bundle` (recommended)
+
+Recommended for plain HTML, React, Vue, Angular, and most non-UI5 apps.
+
+`kiosk-keyboard-webc/bundle` is the convenience entry point. It imports `Assets`, registers the custom element, loads theme and i18n assets, and inserts the SAP "72" font face.
 
 > [!NOTE]
-> The examples below use bare package specifiers (`kiosk-keyboard-webc/…`), which require a bundler (Vite, webpack, etc.) or an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap). For plain `<script>` usage without a build step, replace the specifier with the resolved path to `dist/kiosk-keyboard.bundle.js` (e.g. `./node_modules/kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js`).
+> The examples below use bare package specifiers (`kiosk-keyboard-webc/…`), which require a bundler (Vite, webpack, etc.) or an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap). For plain `<script>` usage without a build step, replace the specifier with the resolved path to `dist/kiosk-keyboard.bundle.js` (for example `./node_modules/kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js`).
 
 ```html
 <script type="module">
@@ -93,23 +97,56 @@ npm install kiosk-keyboard-webc
 <kiosk-keyboard layout="qwerty" for="my-input"></kiosk-keyboard>
 ```
 
-### ESM import
-
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 ```
 
-> [!TIP]
-> The `kiosk-keyboard.bundle.js` file inlines all UI5 Web Components dependencies into a single file for convenience. If your app already loads `@ui5/webcomponents-base` (e.g., a UI5 Web Components app), prefer the ESM import or the tree-shakeable `kiosk-keyboard-webc` entry point to avoid duplicating framework code.
+### 2. Advanced ESM via `kiosk-keyboard-webc` + `kiosk-keyboard-webc/Assets`
+
+Use this when your app already manages UI5 Web Components dependencies and you want the bare component class entry point.
+
+```ts
+import "kiosk-keyboard-webc/Assets";
+import KioskKeyboard from "kiosk-keyboard-webc";
+```
+
+Use this mode when you want to avoid the convenience bundle and keep control over how the component is composed into your app build. `Assets` is required here because the bare `kiosk-keyboard-webc` entry exports the component class only.
 
 > [!IMPORTANT]
-> **Font loading:** The bundle and ESM entry points automatically load the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js` and register theme/i18n assets. The keyboard CSS (`font-size`, `padding`, `key widths`) is tuned for the "72" font metrics. Using a fallback font like Arial can cause visible clipping on narrow keys (e.g. phone-sized viewports). If you use the tree-shakeable `kiosk-keyboard-webc` entry directly, you must also import `kiosk-keyboard-webc/Assets` to register themes and i18n bundles, and ensure the "72" font is loaded (e.g. via the UI5 framework, `@ui5/webcomponents-base/dist/FontFace.js`, or a custom `@font-face` declaration).
+> **Font loading:** `kiosk-keyboard-webc/bundle` already imports `kiosk-keyboard-webc/Assets`, which in turn loads the SAP "72" font via `@ui5/webcomponents-base/dist/FontFace.js` and registers theme/i18n assets. If you use the bare `kiosk-keyboard-webc` entry directly, import `kiosk-keyboard-webc/Assets` yourself and make sure the "72" font is available (for example via the UI5 framework, `FontFace.js`, or a custom `@font-face` declaration).
 >
 > **Custom fonts:** If you override `--sapFontFamily` or set a custom `font-family` on the keyboard, the default key sizing may not fit the new font's glyph metrics. You may need to adjust `--kiosk-keyboard-key-height`, `--kiosk-keyboard-key-font-size`, or `--kiosk-keyboard-key-padding` to prevent clipping or excessive whitespace.
 
-### Inside a UI5 app
+### 3. Inside a UI5 app
 
-Use the `WebComponent.extend()` bridge (see `packages/demo-app` for a working example):
+This package is not a native UI5 library, so the UI5-app story is different from `ui5-lib-hotkeys` / `ui5-lib-kiosk-keyboard`.
+
+For UI5 apps, first make sure your app can resolve npm ESM packages, typically via `ui5-tooling-modules` in `ui5.yaml`:
+
+```yaml
+builder:
+  customTasks:
+    - name: ui5-tooling-modules-task
+      afterTask: replaceVersion
+server:
+  customMiddleware:
+    - name: ui5-tooling-modules-middleware
+      afterMiddleware: compression
+```
+
+Then you have two practical integration paths:
+
+#### 3a. CEM-driven UI5 wrapper consumption
+
+Published builds include `dist/custom-elements.json`, and the package declares the `customElements` field in `package.json`. In workspace development, generate or build the package first so that `dist/custom-elements.json` exists. In UI5 setups that consume external web components through their Custom Elements Manifest, this enables UI5-side wrapper/metadata generation for XML usage.
+
+This is not the same as dropping raw `<kiosk-keyboard>` tags directly into a UI5 XML view. It is a UI5 integration path built on web component metadata.
+
+That path is viable, but this repository does not currently use it as the primary demo path.
+
+#### 3b. `WebComponent.extend()` bridge (repo-proven fallback)
+
+This repository's demo app uses `WebComponent.extend()` because it gives explicit UI5-side property, event, method, and association metadata.
 
 ```ts
 import "kiosk-keyboard-webc/bundle";
@@ -126,15 +163,17 @@ const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
 });
 ```
 
+Use the bridge when you want predictable XML view metadata, typed UI5 events, or imperative methods such as `show()` / `close()` exposed as a UI5 control API.
+
 ### Choosing between the UI5 control and the web component
 
-| Criterion         | `ui5-lib-kiosk-keyboard` (UI5 control)                | `kiosk-keyboard-webc` (web component)                 |
-| ----------------- | ----------------------------------------------------- | ----------------------------------------------------- |
-| **Framework**     | SAPUI5 / OpenUI5 only                                 | Any (plain HTML, React, Vue, Angular, UI5 via bridge) |
-| **Theming**       | LESS variables (`@sapUiButton*`)                      | CSS custom properties + SAP theme token fallbacks     |
-| **i18n**          | UI5 ResourceBundle with `configureI18n()` API         | Built-in EN/DE + `setI18nResolver()` callback         |
-| **Target inputs** | UI5 associations (`targetInput`) + `setTargetInput()` | `for` attribute + `setTargetElement()`                |
-| **Density**       | UI5 content density (`sapUiSizeCompact`)              | `data-ui5-compact-size` attribute                     |
+| Criterion         | `ui5-lib-kiosk-keyboard` (UI5 control)                | `kiosk-keyboard-webc` (web component)                         |
+| ----------------- | ----------------------------------------------------- | ------------------------------------------------------------- |
+| **Framework**     | SAPUI5 / OpenUI5 only                                 | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge) |
+| **Theming**       | LESS variables (`@sapUiButton*`)                      | CSS custom properties + SAP theme token fallbacks             |
+| **i18n**          | UI5 ResourceBundle with `configureI18n()` API         | Built-in EN/DE + `setI18nResolver()` callback                 |
+| **Target inputs** | UI5 associations (`targetInput`) + `setTargetInput()` | `for` attribute + `setTargetElement()`                        |
+| **Density**       | UI5 content density (`sapUiSizeCompact`)              | `data-ui5-compact-size` attribute                             |
 
 Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), layout registry API (`registerLayout`, `registerLocaleLayout`), and special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). Custom layouts work identically across both.
 
