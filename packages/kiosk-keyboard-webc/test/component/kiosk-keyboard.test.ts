@@ -967,6 +967,44 @@ describe("kiosk-keyboard", () => {
         KK.setI18nResolver(null);
       }
     });
+
+    it("rerenders mounted instances when the resolver changes", async () => {
+      const { default: KK } = await import("../../src/KioskKeyboard.js");
+
+      const first = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      const second = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const initialFirstLabel = queryKey(first, "{shift}")!.getAttribute("aria-label");
+      const initialSecondLabel = queryKey(second, "{shift}")!.getAttribute("aria-label");
+
+      KK.setI18nResolver((key: string) => {
+        if (key === "KEY_SHIFT") return "Live Shift";
+        return undefined;
+      });
+
+      try {
+        await nextRender();
+        expect(queryKey(first, "{shift}")!.getAttribute("aria-label")).to.equal("Live Shift");
+        expect(queryKey(second, "{shift}")!.getAttribute("aria-label")).to.equal("Live Shift");
+
+        KK.setI18nResolver(null);
+        await nextRender();
+
+        expect(queryKey(first, "{shift}")!.getAttribute("aria-label")).to.equal(initialFirstLabel);
+        expect(queryKey(second, "{shift}")!.getAttribute("aria-label")).to.equal(initialSecondLabel);
+      } finally {
+        KK.setI18nResolver(null);
+      }
+    });
   });
 
   // ── F-key / navigation key handling ──

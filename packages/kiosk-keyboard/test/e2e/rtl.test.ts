@@ -1,5 +1,4 @@
-import { expect } from "@wdio/globals";
-import { openVisualPage, getKeyboard, setDocumentDirection } from "./test-helpers.js";
+import { openVisualPage, getKeyboard, setDocumentDirection, matchElementSnapshotInSection } from "./test-helpers.js";
 
 describe("KioskKeyboard RTL (Right-to-Left)", () => {
   afterEach(async () => {
@@ -10,20 +9,20 @@ describe("KioskKeyboard RTL (Right-to-Left)", () => {
     await openVisualPage();
     await setDocumentDirection("rtl");
     const kb = await getKeyboard("kb-qwerty");
-    await expect(kb).toMatchElementSnapshot("kb-qwerty-rtl");
+    await matchElementSnapshotInSection(kb, "kb-qwerty-rtl");
   });
 
   it("should match Numpad layout in RTL", async () => {
     await openVisualPage();
     await setDocumentDirection("rtl");
     const kb = await getKeyboard("kb-numpad");
-    await expect(kb).toMatchElementSnapshot("kb-numpad-rtl");
+    await matchElementSnapshotInSection(kb, "kb-numpad-rtl");
   });
 
   it("should match Numeric layout in RTL", async () => {
     await openVisualPage();
     await setDocumentDirection("rtl");
     const kb = await getKeyboard("kb-numeric");
-    await expect(kb).toMatchElementSnapshot("kb-numeric-rtl");
+    await matchElementSnapshotInSection(kb, "kb-numeric-rtl");
   });
 });

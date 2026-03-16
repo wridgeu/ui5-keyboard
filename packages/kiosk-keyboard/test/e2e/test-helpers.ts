@@ -1,4 +1,5 @@
-import { browser, $ } from "@wdio/globals";
+import { browser, $, expect } from "@wdio/globals";
+import type { ChainablePromiseElement } from "webdriverio";
 
 // Re-export shared CDP helpers so consumers import everything from one place
 export {
@@ -31,6 +32,62 @@ export async function openVisualPage(): Promise<void> {
 /** Get the rendered KioskKeyboard element inside a container. */
 export function getKeyboard(containerId: string) {
   return $(`#${containerId} .ui5KioskKeyboard`);
+}
+
+type SnapshotElement = WebdriverIO.Element | ChainablePromiseElement;
+
+async function isolateSection(element: SnapshotElement): Promise<void> {
+  const target = await element;
+  await browser.execute((el: HTMLElement) => {
+    const activeSection = el.closest(".section");
+    if (!activeSection) return;
+
+    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
+      if (section === activeSection) return;
+      if (!("snapshotPrevDisplay" in section.dataset)) {
+        section.dataset.snapshotPrevDisplay = section.style.display;
+      }
+      section.style.display = "none";
+    });
+  }, target);
+}
+
+async function restoreSections(): Promise<void> {
+  await browser.execute(() => {
+    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
+      if (!("snapshotPrevDisplay" in section.dataset)) return;
+      const previousDisplay = section.dataset.snapshotPrevDisplay ?? "";
+      if (previousDisplay) {
+        section.style.display = previousDisplay;
+      } else {
+        section.style.removeProperty("display");
+      }
+      delete section.dataset.snapshotPrevDisplay;
+    });
+  });
+}
+
+async function scrollElementIntoView(element: SnapshotElement): Promise<void> {
+  const target = await element;
+  await browser.execute((el: HTMLElement) => {
+    el.scrollIntoView({ block: "center", inline: "center" });
+  }, target);
+}
+
+export async function matchElementSnapshotInSection(
+  element: SnapshotElement,
+  name: string,
+  options?: { ignoreAntialiasing?: boolean },
+): Promise<void> {
+  const target = await element;
+  await isolateSection(target);
+  try {
+    await scrollElementIntoView(target);
+    await browser.executeAsync((done) => requestAnimationFrame(() => done()));
+    await expect(target).toMatchElementSnapshot(name, options);
+  } finally {
+    await restoreSections();
+  }
 }
 
 /**

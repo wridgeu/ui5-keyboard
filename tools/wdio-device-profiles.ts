@@ -32,14 +32,16 @@ export interface DeviceProfile {
   width: number;
   height: number;
   pixelRatio: number;
+  /** Enable Chrome's mobile layout viewport emulation. */
+  mobile: boolean;
   touch: boolean;
   /** Port offset from the package's base port so device profiles can run in parallel. */
   portOffset: number;
 }
 
 export const deviceProfiles: Record<string, DeviceProfile> = {
-  phone: { id: "phone", width: 360, height: 800, pixelRatio: 3, touch: true, portOffset: 1 },
-  tablet: { id: "tablet", width: 768, height: 1024, pixelRatio: 2, touch: true, portOffset: 2 },
+  phone: { id: "phone", width: 360, height: 800, pixelRatio: 3, mobile: true, touch: true, portOffset: 1 },
+  tablet: { id: "tablet", width: 768, height: 1024, pixelRatio: 2, mobile: true, touch: true, portOffset: 2 },
 };
 
 /**
@@ -60,6 +62,7 @@ export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
         width: profile.width,
         height: profile.height,
         pixelRatio: profile.pixelRatio,
+        mobile: profile.mobile,
         touch: profile.touch,
       },
     },

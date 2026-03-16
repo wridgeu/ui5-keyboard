@@ -9,7 +9,6 @@
     },
     "title": "UI5 Kiosk Keyboard",
     "description": "On-screen virtual keyboard control for SAPUI5/OpenUI5 applications",
-    "resources": "resources.json",
     "offline": true
   },
   "sap.ui": {

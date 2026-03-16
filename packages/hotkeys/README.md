@@ -91,7 +91,82 @@ npm install
 
 If/when this package is published, you can install it directly from npm (`ui5-lib-hotkeys`).
 
-Add the library to your application's `manifest.json`:
+The package ships both the UI5 source project and prebuilt dist resources (`dist/resources/ui5/hotkeys/`) plus `dist/.ui5/build-manifest.json`. Choose the app-side consumption mode that fits your setup:
+
+### 1. Tooling + dist resources
+
+Recommended for published/runtime usage when you want UI5 Tooling to serve and build the prebuilt library artifacts without transpiling dependency sources.
+
+```yaml
+builder:
+  settings:
+    includeDependency:
+      - ui5-lib-hotkeys
+---
+specVersion: "4.0"
+kind: extension
+type: project-shim
+metadata:
+  name: my.app.ui5-hotkeys-dist
+shims:
+  configurations:
+    ui5-lib-hotkeys:
+      specVersion: "4.0"
+      type: module
+      metadata:
+        name: ui5-lib-hotkeys-dist
+      resources:
+        configuration:
+          paths:
+            /resources/ui5/hotkeys/: dist/resources/ui5/hotkeys
+```
+
+Use `includeDependency` when `ui5 build` should copy the library resources into your app output. The shim itself is enough for `ui5 serve`.
+
+### 2. Tooling + source project
+
+Recommended for monorepos and local development when you want UI5 Tooling to consume the dependency's source project directly from npm/workspaces.
+
+```yaml
+builder:
+  customTasks:
+    - name: ui5-tooling-transpile-task
+      afterTask: replaceVersion
+      configuration:
+        transpileDependencies: true
+        transformTypeScript:
+          allowDeclareFields: true
+server:
+  customMiddleware:
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
+      configuration:
+        transpileDependencies: true
+        transformTypeScript:
+          allowDeclareFields: true
+```
+
+No `framework.libraries` entry is required for `ui5.hotkeys`; UI5 Tooling resolves the package dependency via its packaged `ui5.yaml`.
+
+### 3. Static middleware escape hatch
+
+Use this when you only need runtime serving from `dist/resources/ui5/hotkeys/` and do not want the dependency to participate in your app build.
+
+```bash
+npm install -D ui5-middleware-servestatic
+```
+
+```yaml
+server:
+  customMiddleware:
+    - name: ui5-middleware-servestatic
+      afterMiddleware: compression
+      mountPath: /resources/ui5/hotkeys/
+      configuration:
+        npmPackagePath: ui5-lib-hotkeys/dist/resources/ui5/hotkeys
+```
+
+In all 3 modes, declare the library in your application's `manifest.json`:
 
 ```json
 {

@@ -417,6 +417,8 @@ KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
 
 **Resolution order:** custom resolver (highest priority) -> UI5 WC i18n bundle (locale-aware) -> English defaults.
 
+Calling `KioskKeyboard.setI18nResolver()` automatically re-renders connected keyboard instances, so mounted components pick up new labels without a manual refresh.
+
 Return `undefined` from the resolver for any key you don't want to override -- the built-in translation chain handles the rest. If the resolver throws, the error is logged and the default text is used.
 
 Pass `null` to clear a previously set resolver:

@@ -41,32 +41,83 @@ For full API details, see:
 
 ### Consumption Modes (UI5 Libraries)
 
-Both UI5 libraries (`ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard`) are packaged in a dual-mode way:
+Both UI5-native libraries (`ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard`) ship:
 
-- **UI5-native development mode (source-based):** keep `src` in the npm package so UI5 tooling can resolve library sources via `ui5.yaml` and transpile dependencies during local development.
-- **Runtime/published mode (dist-based):** ship prebuilt `dist/resources/...` artifacts and typings for stable runtime consumption.
+- the source UI5 project (`src/`, `ui5.yaml`) for source-first UI5 Tooling consumption
+- prebuilt `dist/resources/...` artifacts, typings, and `dist/.ui5/build-manifest.json` for direct dist serving and tooling reuse
 
-For app projects that consume these libraries in development with transpilation of dependencies, enable UI5 transpile middleware with dependency transpilation:
+That enables 3 app-side consumption modes:
+
+#### 1. Tooling + dist resources
+
+Recommended for published/runtime usage when you want UI5 Tooling to serve and build the prebuilt library artifacts without transpiling dependency sources.
+
+Use a project shim to map the dependency's `dist/resources/...` folder into the normal UI5 runtime paths. Add `includeDependency` when your app build should copy those resources into its own `dist/` output.
 
 ```yaml
+builder:
+  settings:
+    includeDependency:
+      - ui5-lib-hotkeys
+      - ui5-lib-kiosk-keyboard
+---
+specVersion: "4.0"
+kind: extension
+type: project-shim
+metadata:
+  name: my.app.ui5-lib-dist
+shims:
+  configurations:
+    ui5-lib-hotkeys:
+      specVersion: "4.0"
+      type: module
+      metadata:
+        name: ui5-lib-hotkeys-dist
+      resources:
+        configuration:
+          paths:
+            /resources/ui5/hotkeys/: dist/resources/ui5/hotkeys
+    ui5-lib-kiosk-keyboard:
+      specVersion: "4.0"
+      type: module
+      metadata:
+        name: ui5-lib-kiosk-keyboard-dist
+      resources:
+        configuration:
+          paths:
+            /resources/ui5/kiosk/: dist/resources/ui5/kiosk
+```
+
+#### 2. Tooling + source project
+
+Recommended for monorepos and local development when you want UI5 Tooling to consume the dependency's source project directly from npm/workspaces.
+
+Enable dependency transpilation in both the build task and the dev server middleware:
+
+```yaml
+builder:
+  customTasks:
+    - name: ui5-tooling-transpile-task
+      afterTask: replaceVersion
+      configuration:
+        transpileDependencies: true
+        transformTypeScript:
+          allowDeclareFields: true
 server:
   customMiddleware:
     - name: ui5-tooling-transpile-middleware
       afterMiddleware: compression
       configuration:
         transpileDependencies: true
+        transformTypeScript:
+          allowDeclareFields: true
 ```
 
-Notes:
+No `framework.libraries` entry is required for these custom libraries; UI5 Tooling resolves them from the package dependency and your app declares them in `manifest.json`.
 
-- `main`/`types` in the library `package.json` point to `dist` for predictable runtime/type resolution.
-- Sourcemaps are included in `dist` with embedded source content, so debugging remains usable even when consuming built resources.
+#### 3. Static middleware escape hatch
 
-#### UI5 Dist-Based Consumption (No Dependency Transpile)
-
-If you want a pure runtime setup in a UI5 app (no source transpilation of dependencies), mount the prebuilt library resources from `dist/resources` via static middleware.
-
-Install middleware in the consuming app:
+Use this when you only need runtime serving from `dist/resources/...` and do not want the dependency to participate in your app build.
 
 ```bash
 npm install -D ui5-middleware-servestatic
@@ -87,7 +138,20 @@ server:
         npmPackagePath: ui5-lib-kiosk-keyboard/dist/resources/ui5/kiosk
 ```
 
-Use this mode when you want UI5 to load only built artifacts from dependencies while keeping your app build pipeline minimal and predictable.
+In all 3 modes, keep the custom library declarations in your app `manifest.json`:
+
+```json
+{
+  "sap.ui5": {
+    "dependencies": {
+      "libs": {
+        "ui5.hotkeys": {},
+        "ui5.kiosk": {}
+      }
+    }
+  }
+}
+```
 
 ### Hotkeys
 

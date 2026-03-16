@@ -36,7 +36,7 @@
     "clean": "rimraf dist",
     "generate": "ts-interface-generator",
     "prebuild": "npm run generate",
-    "build": "ui5 build --clean-dest",
+    "build": "ui5 build --clean-dest --create-build-manifest",
     "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build",
     "start": "npm run start:qunit",
     "start:qunit": "ui5 serve --port 8082 -o \"test-resources/sap/ui/qunit/testrunner.html?testpage=%2Ftest-resources%2Fui5%2Fkiosk%2Fqunit%2Ftestsuite.qunit.html&autostart=true\"",

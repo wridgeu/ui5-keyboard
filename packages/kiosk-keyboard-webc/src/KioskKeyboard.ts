@@ -3,6 +3,7 @@ import customElement from "@ui5/webcomponents-base/dist/decorators/customElement
 import property from "@ui5/webcomponents-base/dist/decorators/property.js";
 import event from "@ui5/webcomponents-base/dist/decorators/event-strict.js";
 import jsxRenderer from "@ui5/webcomponents-base/dist/renderer/JsxRenderer.js";
+import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
 
 import { ShiftState } from "./core/shift-state.js";
@@ -334,6 +335,7 @@ class KioskKeyboard extends UI5Element {
    * Return a `string` to override that text, or `undefined` to keep the default.
    *
    * Resolution order: custom resolver (highest priority) -> UI5 WC i18n bundle (locale-aware) -> English defaults.
+   * Connected keyboard instances re-render asynchronously after the resolver changes.
    *
    * If the resolver throws, the error is logged and the default text is used.
    * Pass `null` to clear a previously set resolver.
@@ -357,6 +359,7 @@ class KioskKeyboard extends UI5Element {
    */
   static setI18nResolver(fn: ((key: string, locale: string, defaultText: string) => string | undefined) | null): void {
     setI18nResolver(fn);
+    KioskKeyboard._queueI18nRefresh();
   }
 
   // ── Public reactive properties (synced with attributes) ──
@@ -535,7 +538,19 @@ class KioskKeyboard extends UI5Element {
 
   // ── Multi-keyboard instance isolation ──
   private static readonly _instances = new Set<KioskKeyboard>();
+  private static _pendingI18nRefresh = false;
   private static _nextAutoId = 0;
+
+  private static _queueI18nRefresh(): void {
+    if (KioskKeyboard._pendingI18nRefresh) return;
+    KioskKeyboard._pendingI18nRefresh = true;
+
+    queueMicrotask(() => {
+      KioskKeyboard._pendingI18nRefresh = false;
+      if (KioskKeyboard._instances.size === 0) return;
+      void reRenderAllUI5Elements({ tag: KioskKeyboard.getMetadata().getTag() });
+    });
+  }
 
   // ── Escape listener tracking ──
   private _escapeListenerAttached = false;

@@ -1,5 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import { applyResponsiveSizeClasses, placeAndWait } from "./test-helpers";
+import { applyResponsiveSizeClasses, placeAndWait, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -262,6 +262,35 @@ QUnit.test("Toggling docked mode clears stale height classes immediately", async
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared when docked=true");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared when docked=true");
+
+  kb.destroy();
+});
+
+QUnit.test("Switching to Numpad clears stale height classes immediately", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  let dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  dom.style.height = `${10 * remPx}px`;
+  dom.style.overflow = "hidden";
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  applyResponsiveSizeClasses(kb, dom, dom.getBoundingClientRect().width, 10 * remPx);
+
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied before keyboardType switch");
+
+  kb.setKeyboardType("Numpad");
+  await waitForRender();
+
+  dom = kb.getDomRef()! as HTMLElement;
+  dom.style.height = `${10 * remPx}px`;
+  dom.style.overflow = "hidden";
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  applyResponsiveSizeClasses(kb, dom, dom.getBoundingClientRect().width, 10 * remPx);
+
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared for numpad");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared for numpad");
 
   kb.destroy();
 });

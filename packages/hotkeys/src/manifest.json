@@ -9,7 +9,6 @@
     },
     "title": "UI5 Hotkeys",
     "description": "Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications",
-    "resources": "resources.json",
     "offline": true
   },
   "sap.ui": {

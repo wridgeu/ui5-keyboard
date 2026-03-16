@@ -140,7 +140,12 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 aria-label={this._getKeyAriaLabel(key)}
               >
                 {isBuiltInIcon ? (
-                  <ui5-icon class={KIOSK_KEYBOARD_DOM.classes.keyIcon} part="key-icon" name={iconName!} mode="Decorative" />
+                  <ui5-icon
+                    class={KIOSK_KEYBOARD_DOM.classes.keyIcon}
+                    part="key-icon"
+                    name={iconName!}
+                    mode="Decorative"
+                  />
                 ) : (
                   <span
                     class={{

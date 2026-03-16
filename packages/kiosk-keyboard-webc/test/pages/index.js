@@ -1,6 +1,7 @@
 // Import the source ESM entry so Vite transpiles TS on the fly and
 // deduplicates the UI5 WC framework. No tsc pre-build needed.
 import { KioskKeyboard } from "../../src/bundle.esm.ts";
+import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import { setTheme } from "@ui5/webcomponents-base/dist/config/Theme.js";
 
 // UI5 Web Components used on the demo page
@@ -183,15 +184,7 @@ document.querySelectorAll(".i18n-lang-btn").forEach((btn) => {
       appendLog("kb-i18n", `i18n resolver set for ${btn.textContent.trim()}`);
     }
 
-    // The resolver is module-level state (not a reactive property), so
-    // nudge a reactive property to trigger a re-render with new labels.
-    const currentLayout = kbI18n.layout;
-    kbI18n.layout = "";
-    await Promise.resolve();
-    kbI18n.layout = currentLayout;
-
-    // Wait for UI5 render cycle then update the ARIA inspector
-    await new Promise((r) => requestAnimationFrame(r));
+    await renderFinished();
     updateAriaInspector();
   });
 });

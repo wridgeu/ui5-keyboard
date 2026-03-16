@@ -116,15 +116,41 @@ If/when this package is published, you can install it directly from npm (`ui5-li
 
 ## Getting Started
 
-**1. Add the library dependency to `ui5.yaml`:**
+The package ships both the UI5 source project and prebuilt dist resources (`dist/resources/ui5/kiosk/`) plus `dist/.ui5/build-manifest.json`. Choose the app-side consumption mode that fits your setup:
+
+### 1. Tooling + dist resources
+
+Recommended for published/runtime usage when you want UI5 Tooling to serve and build the prebuilt library artifacts without transpiling dependency sources.
 
 ```yaml
-framework:
-  libraries:
-    - name: ui5.kiosk
+builder:
+  settings:
+    includeDependency:
+      - ui5-lib-kiosk-keyboard
+---
+specVersion: "4.0"
+kind: extension
+type: project-shim
+metadata:
+  name: my.app.ui5-kiosk-dist
+shims:
+  configurations:
+    ui5-lib-kiosk-keyboard:
+      specVersion: "4.0"
+      type: module
+      metadata:
+        name: ui5-lib-kiosk-keyboard-dist
+      resources:
+        configuration:
+          paths:
+            /resources/ui5/kiosk/: dist/resources/ui5/kiosk
 ```
 
-If the library is consumed from npm (not a workspace sibling), also configure `ui5-tooling-transpile` to transpile it:
+Use `includeDependency` when `ui5 build` should copy the library resources into your app output. The shim itself is enough for `ui5 serve`.
+
+### 2. Tooling + source project
+
+Recommended for monorepos and local development when you want UI5 Tooling to consume the dependency's source project directly from npm/workspaces.
 
 ```yaml
 builder:
@@ -133,9 +159,39 @@ builder:
       afterTask: replaceVersion
       configuration:
         transpileDependencies: true
+        transformTypeScript:
+          allowDeclareFields: true
+server:
+  customMiddleware:
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
+      configuration:
+        transpileDependencies: true
+        transformTypeScript:
+          allowDeclareFields: true
 ```
 
-**2. Declare the library dependency in `manifest.json`:**
+Do not add `ui5.kiosk` under `framework.libraries`; custom libraries are resolved from the package dependency and declared in `manifest.json`.
+
+### 3. Static middleware escape hatch
+
+Use this when you only need runtime serving from `dist/resources/ui5/kiosk/` and do not want the dependency to participate in your app build.
+
+```bash
+npm install -D ui5-middleware-servestatic
+```
+
+```yaml
+server:
+  customMiddleware:
+    - name: ui5-middleware-servestatic
+      afterMiddleware: compression
+      mountPath: /resources/ui5/kiosk/
+      configuration:
+        npmPackagePath: ui5-lib-kiosk-keyboard/dist/resources/ui5/kiosk
+```
+
+In all 3 modes, declare the library dependency in your app `manifest.json`:
 
 ```json
 {
@@ -149,7 +205,7 @@ builder:
 }
 ```
 
-**3. Use the control in your view or controller.** See [Quick Start](#quick-start) below.
+Use the control in your view or controller as shown in [Quick Start](#quick-start) below.
 
 ---
 
