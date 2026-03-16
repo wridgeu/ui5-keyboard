@@ -12,6 +12,7 @@ From repo root:
 
 ```bash
 npm install
+npm run build        # required: builds library dist/ artifacts used by the demo
 npm start
 ```
 

@@ -1910,6 +1910,43 @@ describe("kiosk-keyboard", () => {
         "minHeight preserved after switching to shorter layout",
       );
     });
+
+    it("clears minHeight when stableHeight is toggled off", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" stable-height></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const root = rootDiv(el);
+      expect(root.style.minHeight).to.not.equal("", "minHeight should be set initially");
+
+      el.stableHeight = false;
+      await nextRender();
+      el.refreshResponsiveState();
+
+      expect(root.style.minHeight).to.equal("", "minHeight should be cleared after disabling stableHeight");
+    });
+
+    it("clears minHeight when keyboard becomes docked", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="dock-target" type="text" />
+          <kiosk-keyboard layout="qwerty" stable-height for="dock-target"></kiosk-keyboard>
+        </div>
+      `);
+      const el = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      const root = rootDiv(el);
+      expect(root.style.minHeight).to.not.equal("", "minHeight should be set for non-docked Full keyboard");
+
+      el.docked = true;
+      await nextRender();
+
+      expect(root.style.minHeight).to.equal("", "minHeight should be cleared when docked");
+    });
   });
 
   // ── Shadow-DOM inputmode suppression ──

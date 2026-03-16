@@ -232,6 +232,7 @@ Monorepo using npm workspaces. Requires Node >= 22.
 
 ```bash
 npm install                 # Install all workspaces
+npm run build               # Build library dist/ artifacts (required before starting the demo app)
 ```
 
 ### Dev Servers

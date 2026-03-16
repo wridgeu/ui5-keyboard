@@ -138,7 +138,7 @@ Then you have two practical integration paths:
 
 #### 3a. CEM-driven UI5 wrapper consumption
 
-Published builds include `dist/custom-elements.json`, and the package declares the `customElements` field in `package.json`. In workspace development, generate or build the package first so that `dist/custom-elements.json` exists. In UI5 setups that consume external web components through their Custom Elements Manifest, this enables UI5-side wrapper/metadata generation for XML usage.
+Published builds include `dist/custom-elements.json`, and the package declares the `customElements` field in `package.json`. In workspace development, build the package first (`npm run build`) so that `dist/custom-elements.json` exists; it is produced by the `generateAPI` step that runs as part of the build. In UI5 setups that consume external web components through their Custom Elements Manifest, this enables UI5-side wrapper/metadata generation for XML usage.
 
 This is not the same as dropping raw `<kiosk-keyboard>` tags directly into a UI5 XML view. It is a UI5 integration path built on web component metadata.
 

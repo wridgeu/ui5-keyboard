@@ -735,7 +735,7 @@ class KioskKeyboard extends UI5Element {
       this._currentLayout = this.layout;
       this._shiftState.reset();
       this._syncShiftState();
-      // Note: _resetStableHeight() is intentionally NOT called here.
+      // Note: _syncStableHeight() is intentionally NOT called here.
       // stableHeight is designed to maintain a consistent minHeight across
       // layout switches (e.g. qwerty -> numeric -> special), matching the
       // UI5 control behavior. Resetting would defeat this purpose and cause
@@ -763,7 +763,7 @@ class KioskKeyboard extends UI5Element {
         previousKeyboardType: ((changeInfo.oldValue as string) ?? KeyboardType.Full) as `${KeyboardType}`,
         autoDetected,
       });
-      this._resetStableHeight();
+      this._syncStableHeight(this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root));
     }
     if (name === "fKeyMode" && !VALID_FKEY_MODES.has(this.fKeyMode)) {
       console.warn(
@@ -791,6 +791,7 @@ class KioskKeyboard extends UI5Element {
         this.open = false;
         this._detachEscapeListener();
       }
+      this._syncStableHeight(this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root));
     }
   }
 
@@ -963,14 +964,7 @@ class KioskKeyboard extends UI5Element {
     // class attribute to only what the template specifies.
     this._applyResponsiveClasses();
 
-    // Stable height - only for non-docked Full keyboards, matching UI5 control behavior.
-    // Docked keyboards minimise their footprint; non-Full types have no layout switches
-    // that would cause significant height changes.
-    if (this.stableHeight && this.keyboardType === KeyboardType.Full && !this.docked) {
-      const h = root.offsetHeight;
-      if (h > this._maxHeight) this._maxHeight = h;
-      if (this._maxHeight > 0) root.style.minHeight = `${this._maxHeight}px`;
-    }
+    this._syncStableHeight(root);
   }
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
@@ -1237,12 +1231,17 @@ class KioskKeyboard extends UI5Element {
 
   // ── Internal helpers ──
 
-  /** Resets stable height tracking so onAfterRendering re-measures from zero. */
-  private _resetStableHeight(): void {
-    if (!this.stableHeight) return;
-    this._maxHeight = 0;
-    const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
+  /** Updates stable-height minHeight based on current mode and measured height. */
+  private _syncStableHeight(root: HTMLElement | null | undefined): void {
+    if (root && this.stableHeight && this.keyboardType === KeyboardType.Full && !this.docked) {
+      const h = root.offsetHeight;
+      if (h > this._maxHeight) this._maxHeight = h;
+      if (this._maxHeight > 0) root.style.minHeight = `${this._maxHeight}px`;
+      return;
+    }
+
     if (root) root.style.minHeight = "";
+    this._maxHeight = 0;
   }
 
   /** Sets keyboardType without marking it as explicit (for auto-detection). */
