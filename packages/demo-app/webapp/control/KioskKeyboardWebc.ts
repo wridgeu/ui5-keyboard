@@ -114,7 +114,15 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
       ariaLabelledBy: { type: "sap.ui.core.Control", multiple: true, singularName: "ariaLabelledBy" },
       ariaDescribedBy: { type: "sap.ui.core.Control", multiple: true, singularName: "ariaDescribedBy" },
     },
-    methods: ["show", "close", "isOpen", "setTargetElement", "setTargetResolver", "resetKeyboardType"],
+    methods: [
+      "show",
+      "close",
+      "isOpen",
+      "setTargetElement",
+      "setTargetResolver",
+      "resetKeyboardType",
+      "refreshResponsiveState",
+    ],
   },
 }) as typeof WebComponent;
 
