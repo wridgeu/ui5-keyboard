@@ -42,6 +42,32 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
     liveRegion: ".kiosk-keyboard__live-region",
   }),
+  /** All CSS part names exposed by the component. */
+  parts: Object.freeze(["keyboard", "row", "key", "modifier", "action", "key-label", "key-icon"]),
+
+  /**
+   * Ready-to-use `exportparts` attribute value for wrapper components.
+   *
+   * When `<kiosk-keyboard>` is placed inside another shadow DOM host,
+   * CSS `::part()` selectors cannot cross multiple shadow boundaries.
+   * Set `exportparts` on the inner `<kiosk-keyboard>` to forward all
+   * parts to the outer host:
+   *
+   * ```html
+   * <!-- Inside my-wrapper's shadow DOM template -->
+   * <kiosk-keyboard exportparts="keyboard, row, key, modifier, action, key-label, key-icon">
+   * </kiosk-keyboard>
+   * ```
+   *
+   * Or programmatically:
+   * ```js
+   * import KioskKeyboard from "kiosk-keyboard-webc/dist/KioskKeyboard.js";
+   * this.shadowRoot.querySelector('kiosk-keyboard')
+   *   .setAttribute('exportparts', KioskKeyboard.DOM.exportParts);
+   * ```
+   */
+  exportParts: "keyboard, row, key, modifier, action, key-label, key-icon",
+
   keyWidthClass(width: string): string {
     return `kiosk-key--w${width.replace(".", "-")}`;
   },

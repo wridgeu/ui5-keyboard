@@ -440,6 +440,68 @@ KioskKeyboard.setI18nResolver((key, locale) => {
 > [!NOTE]
 > The UI5 native control (`ui5-lib-kiosk-keyboard`) offers a richer i18n API with enhancement bundles and locale configuration via `configureI18n()`. The web component intentionally uses a simpler single-callback approach since it operates outside the UI5 resource bundle infrastructure. The resolver callback covers the same use cases -- adding languages, overriding texts, connecting to external translation systems -- through a pattern that is more natural for standalone web component consumption.
 
+## CSS Parts
+
+The component exposes CSS shadow parts for structural styling from outside the shadow DOM. Use `::part()` selectors to customize elements that CSS custom properties alone cannot reach (e.g., changing `display`, adding borders to specific elements, or adjusting flex behavior).
+
+| Part        | Element                            | Description                                |
+| ----------- | ---------------------------------- | ------------------------------------------ |
+| `keyboard`  | Root container (`.kiosk-keyboard`) | The outermost keyboard wrapper             |
+| `row`       | Row container (`.kiosk-row`)       | Each row of keys                           |
+| `key`       | Every key element                  | All keys (regular, modifier, and action)   |
+| `modifier`  | Modifier keys (Shift, 123, Fn)     | Combined with `key`: `part="key modifier"` |
+| `action`    | Action keys (Enter, Backspace)     | Combined with `key`: `part="key action"`   |
+| `key-label` | Text label inside a key            | The `<span>` rendering the key's text      |
+| `key-icon`  | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons  |
+
+```css
+/* Example: round action keys and increase row gap */
+kiosk-keyboard::part(action) {
+  border-radius: 1rem;
+}
+kiosk-keyboard::part(row) {
+  gap: 0.5rem;
+}
+
+/* Target all keys */
+kiosk-keyboard::part(key) {
+  border-color: transparent;
+}
+```
+
+Multi-name parts allow targeting specific key types. `::part(key)` matches all keys, while `::part(modifier)` or `::part(action)` match only those subtypes.
+
+### Forwarding Parts (`exportparts`)
+
+CSS `::part()` selectors do not cross multiple shadow DOM boundaries. If you wrap `<kiosk-keyboard>` inside another web component, you must forward the parts using the `exportparts` attribute on the inner `<kiosk-keyboard>` element.
+
+The `KioskKeyboard.DOM.exportParts` constant provides a ready-to-use attribute value:
+
+```html
+<!-- Inside my-wrapper's shadow DOM template -->
+<kiosk-keyboard exportparts="keyboard, row, key, modifier, action, key-label, key-icon"></kiosk-keyboard>
+```
+
+Or programmatically:
+
+```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+
+// Inside your wrapper component's connectedCallback or render:
+this.shadowRoot.querySelector("kiosk-keyboard").setAttribute("exportparts", KioskKeyboard.DOM.exportParts);
+```
+
+With `exportparts` set, consumers of your wrapper can style the keyboard parts:
+
+```css
+my-wrapper::part(key) {
+  /* styles forwarded through */
+}
+```
+
+> [!NOTE]
+> `KioskKeyboard.DOM.parts` (frozen array) and `KioskKeyboard.DOM.exportParts` (comma-separated string) are part of the stable API. They stay in sync with the template and are covered by automated tests.
+
 ## Public CSS Custom Properties
 
 The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and raw shadow DOM class names remain private implementation details. For tests and DOM assertions, use the stable `KioskKeyboard.DOM` contract instead of hard-coded selectors. This package currently expects customization through host attributes and public CSS variables rather than shadow-internal selectors.
@@ -465,6 +527,10 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                       | Box shadow for modifier keys on hover           |
 | `--kiosk-keyboard-numpad-max-width`      | `20rem`                                          | Max width for numpad layout                     |
 | `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                           | Minimum key width in numpad layout              |
+| `--kiosk-keyboard-cq-narrow-threshold`   | `30rem`                                          | Width threshold for `--cq-sm` class             |
+| `--kiosk-keyboard-cq-compact-threshold`  | `20rem`                                          | Width threshold for `--cq-xs` class             |
+| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                          | Height threshold for `--cq-short` class         |
+| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                          | Height threshold for `--cq-tiny` class          |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 
@@ -479,6 +545,19 @@ kiosk-keyboard {
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
 Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects when the host element's layout box is smaller than the keyboard's natural content height and reduces key height, gaps, and modifier font-size automatically.
+
+The four `--kiosk-keyboard-cq-*-threshold` variables control when responsive classes (`--cq-sm`, `--cq-xs`, `--cq-short`, `--cq-tiny`) activate. Override them to tune breakpoints for your container:
+
+```css
+/* Trigger compact mode earlier for a tight sidebar */
+kiosk-keyboard {
+  --kiosk-keyboard-cq-narrow-threshold: 25rem;
+  --kiosk-keyboard-cq-short-threshold: 14rem;
+}
+```
+
+> [!NOTE]
+> The threshold variables control the JS-driven class toggling. The CSS `@container` rules for font-size capping use fixed `30rem` / `20rem` breakpoints independently (CSS does not support `var()` in `@container` conditions). If you override the width thresholds, the class application will shift but the built-in font-size capping fires at the original fixed breakpoints.
 
 The height constraint must affect the **host element's own dimensions** -- the component measures `clientHeight` on itself. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the host's layout box, so the keyboard will be clipped instead of adapting.
 

@@ -1967,6 +1967,38 @@ describe("kiosk-keyboard", () => {
   // ── CSS Parts ──
 
   describe("CSS parts", () => {
+    it("exposes a frozen parts list and exportParts string on DOM contract", () => {
+      expect(DOM.parts).to.deep.equal(["keyboard", "row", "key", "modifier", "action", "key-label", "key-icon"]);
+      expect(Object.isFrozen(DOM.parts)).to.be.true;
+      expect(DOM.exportParts).to.equal("keyboard, row, key, modifier, action, key-label, key-icon");
+    });
+
+    it("exportParts string matches the parts array", () => {
+      const fromString = DOM.exportParts.split(", ");
+      expect(fromString).to.deep.equal([...DOM.parts]);
+    });
+
+    it("all declared parts appear in rendered shadow DOM", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const allPartElements = el.shadowRoot!.querySelectorAll("[part]");
+      const renderedParts = new Set<string>();
+      for (const node of allPartElements) {
+        for (const token of node.getAttribute("part")!.split(" ")) {
+          renderedParts.add(token);
+        }
+      }
+
+      for (const declared of DOM.parts) {
+        expect(renderedParts.has(declared), `part "${declared}" found in rendered DOM`).to.be.true;
+      }
+    });
+
     it("exposes 'keyboard' part on root container", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
