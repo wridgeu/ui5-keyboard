@@ -887,6 +887,21 @@ describe("kiosk-keyboard", () => {
       el.remove();
       expect(closeFiredOnRemove, "after-close should NOT fire on remove for keyboard that was never open").to.be.false;
     });
+
+    it("should use 20% docked shadow opacity (consistent with UI5 library)", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const shadow = getComputedStyle(el).getPropertyValue("--kiosk-keyboard-docked-shadow").trim();
+      // color-mix browsers: "... 20% ..." | fallback: "... 0.2)"
+      expect(shadow).to.satisfy(
+        (v: string) => v.includes("20%") || v.includes("0.2)"),
+        `docked shadow should use 20% opacity, got: ${shadow}`,
+      );
+    });
   });
 
   // ── Auto-show ──

@@ -17,7 +17,7 @@
      adapting to the active SAP theme's --sapContent_ShadowColor. */
   --kiosk-keyboard-key-shadow: 0 1px 2px rgba(34, 53, 72, 0.1);
   --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(34, 53, 72, 0.15);
-  --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(34, 53, 72, 0.12);
+  --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(34, 53, 72, 0.2);
   --kiosk-keyboard-modifier-shadow: 0 1px 2px rgba(34, 53, 72, 0.14);
   --kiosk-keyboard-modifier-shadow-hover: 0 2px 4px rgba(34, 53, 72, 0.18);
 
@@ -55,7 +55,7 @@
     --kiosk-keyboard-key-shadow-hover: 0 2px 4px
       color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 15%, transparent);
     --kiosk-keyboard-docked-shadow: 0 -4px 20px
-      color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 12%, transparent);
+      color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 20%, transparent);
     --kiosk-keyboard-modifier-shadow: 0 1px 2px
       color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 14%, transparent);
     --kiosk-keyboard-modifier-shadow-hover: 0 2px 4px
