@@ -91,41 +91,73 @@ npm install
 
 If/when this package is published, you can install it directly from npm (`ui5-lib-hotkeys`).
 
-The package ships both the UI5 source project and prebuilt dist resources (`dist/resources/ui5/hotkeys/`) plus `dist/.ui5/build-manifest.json`. Choose the app-side consumption mode that fits your setup:
+The package ships:
 
-### 1. Tooling + dist resources
+- the UI5 source project (`src/`, `ui5.yaml`) for source-first development
+- the prebuilt distributable under `dist/resources/ui5/hotkeys/`
+- build metadata under `dist/.ui5/build-manifest.json`
 
-Recommended for published/runtime usage when you want UI5 Tooling to serve and build the prebuilt library artifacts without transpiling dependency sources.
+That gives you 3 supported consumption modes. No project shim is required.
+
+Before choosing a mode, declare the library in your app `manifest.json`:
+
+```json
+{
+  "sap.ui5": {
+    "dependencies": {
+      "libs": {
+        "ui5.hotkeys": {}
+      }
+    }
+  }
+}
+```
+
+### 1. Installed package + UI5 Tooling (default)
+
+Recommended for published/runtime usage.
+
+Install the package, keep the library in `manifest.json`, and let UI5 Tooling resolve it from `node_modules`.
+
+```bash
+npm install ui5-lib-hotkeys
+```
+
+If your app build should copy the library resources into the app `dist/`, add the UI5 project name to `builder.settings.includeDependency`:
 
 ```yaml
 builder:
   settings:
     includeDependency:
-      - ui5-lib-hotkeys
----
-specVersion: "4.0"
-kind: extension
-type: project-shim
-metadata:
-  name: my.app.ui5-hotkeys-dist
-shims:
-  configurations:
-    ui5-lib-hotkeys:
-      specVersion: "4.0"
-      type: module
-      metadata:
-        name: ui5-lib-hotkeys-dist
-      resources:
-        configuration:
-          paths:
-            /resources/ui5/hotkeys/: dist/resources/ui5/hotkeys
+      - ui5.hotkeys
 ```
 
-Use `includeDependency` when `ui5 build` should copy the library resources into your app output. The shim itself is enough for `ui5 serve`.
+Notes:
 
-### 2. Tooling + source project
+- Use the UI5 project name `ui5.hotkeys` here, not the npm package name `ui5-lib-hotkeys`.
+- `includeDependency` is a build concern. `ui5 serve` can resolve the installed UI5 dependency without it.
+- The packaged build manifest exists so the distributable can be reused as a build result in dist-based setups instead of always rebuilding from source.
 
-Recommended for monorepos and local development when you want UI5 Tooling to consume the dependency's source project directly from npm/workspaces.
+If you deploy the built app to a plain static server while bootstrapping UI5 from CDN, also map the library namespace to the copied `resources/` folder:
+
+```html
+<script
+  id="sap-ui-bootstrap"
+  src="https://sdk.openui5.org/resources/sap-ui-core.js"
+  data-sap-ui-resource-roots='{
+    "my.app": "./",
+    "ui5.hotkeys": "./resources/ui5/hotkeys/"
+  }'
+  data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
+  data-sap-ui-async="true"
+></script>
+```
+
+### 2. Source package + UI5 Tooling transpilation
+
+Recommended for monorepos and local development when you want to work against the library source instead of the prebuilt distributable.
+
+Enable dependency transpilation in both the build task and dev server middleware:
 
 ```yaml
 builder:
@@ -146,11 +178,15 @@ server:
           allowDeclareFields: true
 ```
 
-No `framework.libraries` entry is required for `ui5.hotkeys`; UI5 Tooling resolves the package dependency via its packaged `ui5.yaml`.
+Notes:
+
+- No `framework.libraries` entry is required for `ui5.hotkeys`; this is a custom UI5 dependency, not a framework library.
+- Keep using the `manifest.json` dependency shown above.
+- If your app build should include the library resources in its own `dist/`, keep `builder.settings.includeDependency: [ui5.hotkeys]` in addition to the transpile setup.
 
 ### 3. Static middleware escape hatch
 
-Use this when you only need runtime serving from `dist/resources/ui5/hotkeys/` and do not want the dependency to participate in your app build.
+Use this when you want explicit runtime serving from the dependency's distributable and do not want the dependency to participate in your app's UI5 dependency resolution.
 
 ```bash
 npm install -D ui5-middleware-servestatic
@@ -166,19 +202,10 @@ server:
         npmPackagePath: ui5-lib-hotkeys/dist/resources/ui5/hotkeys
 ```
 
-In all 3 modes, declare the library in your application's `manifest.json`:
+Notes:
 
-```json
-{
-  "sap.ui5": {
-    "dependencies": {
-      "libs": {
-        "ui5.hotkeys": {}
-      }
-    }
-  }
-}
-```
+- This is mainly a dev-server/runtime option.
+- If you need the library resources inside the app build output as well, prefer mode 1 with `includeDependency`, or copy the resources explicitly as part of your deployment process.
 
 Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unnecessary; the library is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
 

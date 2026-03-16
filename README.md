@@ -46,53 +46,47 @@ Both UI5-native libraries (`ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard`) ship:
 - the source UI5 project (`src/`, `ui5.yaml`) for source-first UI5 Tooling consumption
 - prebuilt `dist/resources/...` artifacts, typings, and `dist/.ui5/build-manifest.json` for direct dist serving and tooling reuse
 
-That enables 3 app-side consumption modes:
+That enables 3 app-side consumption modes. No project shim is required.
 
-#### 1. Tooling + dist resources
+#### 1. Installed package + UI5 Tooling (default)
 
-Recommended for published/runtime usage when you want UI5 Tooling to serve and build the prebuilt library artifacts without transpiling dependency sources.
+Recommended for published/runtime usage.
 
-Use a project shim to map the dependency's `dist/resources/...` folder into the normal UI5 runtime paths. Add `includeDependency` when your app build should copy those resources into its own `dist/` output.
+Install the npm package, declare the library in `manifest.json`, and let UI5 Tooling resolve it from `node_modules`.
+
+If your app build should copy the custom-library resources into the app `dist/`, add the UI5 project names to `builder.settings.includeDependency`:
 
 ```yaml
 builder:
   settings:
     includeDependency:
-      - ui5-lib-hotkeys
-      - ui5-lib-kiosk-keyboard
----
-specVersion: "4.0"
-kind: extension
-type: project-shim
-metadata:
-  name: my.app.ui5-lib-dist
-shims:
-  configurations:
-    ui5-lib-hotkeys:
-      specVersion: "4.0"
-      type: module
-      metadata:
-        name: ui5-lib-hotkeys-dist
-      resources:
-        configuration:
-          paths:
-            /resources/ui5/hotkeys/: dist/resources/ui5/hotkeys
-    ui5-lib-kiosk-keyboard:
-      specVersion: "4.0"
-      type: module
-      metadata:
-        name: ui5-lib-kiosk-keyboard-dist
-      resources:
-        configuration:
-          paths:
-            /resources/ui5/kiosk/: dist/resources/ui5/kiosk
+      - ui5.hotkeys
+      - ui5.kiosk
 ```
 
-#### 2. Tooling + source project
+Use the UI5 project names shown by `ui5 tree --flat` (`ui5.hotkeys`, `ui5.kiosk`), not the npm package names.
 
-Recommended for monorepos and local development when you want UI5 Tooling to consume the dependency's source project directly from npm/workspaces.
+If you deploy the built app to a plain static server while bootstrapping UI5 from CDN, map the custom-library namespaces to the copied `resources/` folders:
 
-Enable dependency transpilation in both the build task and the dev server middleware:
+```html
+<script
+  id="sap-ui-bootstrap"
+  src="https://sdk.openui5.org/resources/sap-ui-core.js"
+  data-sap-ui-resource-roots='{
+    "my.app": "./",
+    "ui5.hotkeys": "./resources/ui5/hotkeys/",
+    "ui5.kiosk": "./resources/ui5/kiosk/"
+  }'
+  data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
+  data-sap-ui-async="true"
+></script>
+```
+
+#### 2. Source package + UI5 Tooling transpilation
+
+Recommended for monorepos and local development when you want to work against the library source instead of the prebuilt distributable.
+
+Enable dependency transpilation in both the build task and dev server middleware:
 
 ```yaml
 builder:
@@ -113,11 +107,11 @@ server:
           allowDeclareFields: true
 ```
 
-No `framework.libraries` entry is required for these custom libraries; UI5 Tooling resolves them from the package dependency and your app declares them in `manifest.json`.
+No `framework.libraries` entry is required for these custom libraries; keep them in `manifest.json` and use `includeDependency` only when your app build should copy them into `dist/`.
 
 #### 3. Static middleware escape hatch
 
-Use this when you only need runtime serving from `dist/resources/...` and do not want the dependency to participate in your app build.
+Use this when you want explicit runtime serving from the dependency distributables and do not want the dependency to participate in your app's UI5 dependency resolution.
 
 ```bash
 npm install -D ui5-middleware-servestatic
@@ -137,6 +131,8 @@ server:
       configuration:
         npmPackagePath: ui5-lib-kiosk-keyboard/dist/resources/ui5/kiosk
 ```
+
+This is mainly a dev-server/runtime option. If you also need those resources inside the app build output, prefer mode 1 with `includeDependency`, or copy the resources explicitly as part of deployment.
 
 In all 3 modes, keep the custom library declarations in your app `manifest.json`:
 
