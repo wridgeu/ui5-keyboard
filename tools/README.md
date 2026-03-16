@@ -33,7 +33,8 @@ Custom oxlint JS plugin that catches AI-generated code anti-patterns. Loaded via
 | `code-quality/no-double-type-assertion`    | error    | Flags `x as unknown as T` chains; use type guards or `in` checks        |
 | `code-quality/no-console-only-catch`       | warn     | Flags catch blocks with only a console call (error swallowed)           |
 | `code-quality/no-redundant-boolean-return` | warn     | Flags `if (x) return true; else return false;` (simplify to `return x`) |
-| `code-quality/no-em-dash-in-string`        | warn     | Flags em-dashes (U+2014) in string literals (AI text marker)            |
+| `code-quality/no-em-dash`                  | warn     | Flags em-dashes (U+2014) in strings and comments (AI text marker)       |
+| `code-quality/no-as-any-assertion`         | warn     | Flags `as any` type assertions; use typed helpers or type guards        |
 
 `no-double-type-assertion` is disabled in test files (`*.test.ts`, `*.spec.ts`, `*.qunit.ts`) since test mocks legitimately use double assertions to pass invalid types.
 
@@ -219,7 +220,7 @@ What it does:
 | Consumer                                                    | Imports                                                         | Port            |
 | ----------------------------------------------------------- | --------------------------------------------------------------- | --------------- |
 | `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `createServerManager`, `readQUnitTestIds`                       | 8081            |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8084            |
+| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082            |
 | `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8082            |
 | `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8089 + offset\* |
 | `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `createServerManager`                                           | 8083            |

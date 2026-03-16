@@ -3,7 +3,7 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page title="Dialog Integration Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Dialog Integration Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <HBox class="sapUiSmallMarginBottom" gap="1rem">
                 <Panel headerText="Page Input (Docked Keyboard)">

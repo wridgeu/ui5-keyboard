@@ -36,7 +36,7 @@ export function getKeyboard(containerId: string) {
 
 type SnapshotElement = WebdriverIO.Element | ChainablePromiseElement;
 
-async function isolateSection(element: SnapshotElement): Promise<void> {
+export async function isolateSection(element: SnapshotElement): Promise<void> {
   const target = await element;
   await browser.execute((el: HTMLElement) => {
     const activeSection = el.closest(".section");
@@ -52,7 +52,7 @@ async function isolateSection(element: SnapshotElement): Promise<void> {
   }, target);
 }
 
-async function restoreSections(): Promise<void> {
+export async function restoreSections(): Promise<void> {
   await browser.execute(() => {
     document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
       if (!("snapshotPrevDisplay" in section.dataset)) return;
@@ -67,7 +67,7 @@ async function restoreSections(): Promise<void> {
   });
 }
 
-async function scrollElementIntoView(element: SnapshotElement): Promise<void> {
+export async function scrollElementIntoView(element: SnapshotElement): Promise<void> {
   const target = await element;
   await browser.execute((el: HTMLElement) => {
     el.scrollIntoView({ block: "center", inline: "center" });

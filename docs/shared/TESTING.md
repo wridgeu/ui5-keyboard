@@ -135,7 +135,6 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 | 8081  | Hotkeys QUnit                                                      |
 | 8082  | Kiosk keyboard (UI5 serve: QUnit runner, E2E desktop, visual page) |
 | 8083  | Kiosk FLP e2e                                                      |
-| 8082  | Kiosk keyboard UI5 server (QUnit + desktop E2E reuse this port)    |
 | 8086  | Kiosk webc (Vite: E2E desktop)                                     |
 | 8089+ | Kiosk device profiles (phone: +1, tablet: +2)                      |
 | 8086+ | Webc device profiles (phone: +1, tablet: +2)                       |

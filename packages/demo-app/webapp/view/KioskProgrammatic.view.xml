@@ -3,7 +3,7 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page title="Programmatic Control Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Programmatic Control Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <MessageStrip
                 text="How to test: click Show, focus the target input, type with the keyboard, then switch type/layout and verify the Status values and Last Key update. Use Register Pinpad or Register Qwerty FK+Nav to add runtime layouts before selecting them."

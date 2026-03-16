@@ -4,7 +4,7 @@
     xmlns:core="sap.ui.core"
     xmlns:kiosk="ui5.kiosk"
     xmlns="sap.m">
-    <Page title="Integration Demo - ui5.hotkeys + ui5.kiosk" showNavButton="true" navButtonPress=".onNavBack"
+    <Page titleAlignment="Center" title="Integration Demo - ui5.hotkeys + ui5.kiosk" showNavButton="true" navButtonPress=".onNavBack"
         class="sapUiContentPadding">
         <content>
             <Panel headerText="How this page combines both libraries" class="sapUiSmallMarginBottom">

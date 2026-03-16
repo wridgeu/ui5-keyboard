@@ -2,7 +2,7 @@
     controllerName="demo.hotkeys.controller.HotkeysHub"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="Hotkey Manager Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Hotkey Manager Demos" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <List
                 headerText="Choose a Scenario"

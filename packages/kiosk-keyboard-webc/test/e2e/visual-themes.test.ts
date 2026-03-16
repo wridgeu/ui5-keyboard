@@ -1,5 +1,10 @@
-import { browser, expect, $ } from "@wdio/globals";
-import { injectShadowStyleOverride, removeShadowStyleOverride, DISABLE_COLOR_MIX } from "./test-helpers.js";
+import { browser, expect } from "@wdio/globals";
+import {
+  getKeyboardRoot,
+  injectShadowStyleOverride,
+  removeShadowStyleOverride,
+  DISABLE_COLOR_MIX,
+} from "./test-helpers.js";
 
 const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"] as const;
 
@@ -47,10 +52,6 @@ async function switchTheme(theme: string): Promise<void> {
   await browser.execute((bg) => {
     document.body.style.background = bg;
   }, THEME_BACKGROUNDS[theme]);
-}
-
-function getKeyboardRoot(hostId: string) {
-  return $(`#${hostId}`).$(">>>.kiosk-keyboard");
 }
 
 describe("KioskKeyboard Web Component - Theme Visual Regression", () => {

@@ -2,7 +2,7 @@
     controllerName="demo.hotkeys.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="UI5 Keyboard Libraries Demo" id="mainPage" class="sapUiContentPadding">
+    <Page title="UI5 Keyboard Libraries Demo" id="mainPage" titleAlignment="Center" class="sapUiContentPadding">
         <content>
             <Panel headerText="Welcome" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

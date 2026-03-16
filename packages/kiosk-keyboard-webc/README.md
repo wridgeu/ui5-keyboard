@@ -316,7 +316,7 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 | `numeric`       | Numbers + common symbols                  |
 | `special`       | Extended symbols (`#+=`, currencies)      |
 | `numpad`        | Calculator-style number pad               |
-| `fkeys`         | F1–F12 function keys                      |
+| `fkeys`         | F1-F12 function keys                      |
 | `nav`           | Navigation keys (arrows, Home, End, etc.) |
 | `qwerty-fk`     | QWERTY + F-key row                        |
 | `qwertz-de-fk`  | QWERTZ-DE + F-key row                     |

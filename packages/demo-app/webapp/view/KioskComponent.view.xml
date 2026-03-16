@@ -2,7 +2,7 @@
     controllerName="demo.hotkeys.controller.KioskComponent"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="Component-Level Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Component-Level Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <Panel headerText="Persistent Keyboard" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

@@ -3,7 +3,7 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core"
     xmlns="sap.m">
-    <Page id="targetBubblePage" title="Hotkeys Demo - Target Bubbling" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page id="targetBubblePage" titleAlignment="Center" title="Hotkeys Demo - Target Bubbling" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <HBox fitContainer="true" renderType="Bare" wrap="Wrap" gap="1rem">
                 <VBox>

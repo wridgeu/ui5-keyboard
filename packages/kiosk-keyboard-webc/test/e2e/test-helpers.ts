@@ -149,9 +149,10 @@ export const DISABLE_TEXT_BOX_TRIM = `
  * evaluates to false in Chrome. Re-declare the class-based fallback rules so
  * the snapshots reflect the same styling a non-CQ browser would get.
  *
- * SYNC SOURCE: The font-size values below must match the `@supports not`
- * block in `src/themes/KioskKeyboard.css` (lines 104-117). If those CSS
- * rules change, update this constant to match.
+ * SYNC SOURCE: The font-size values below must match the
+ * `@supports not (container-type: inline-size)` block in
+ * `src/themes/KioskKeyboard.css`. If those CSS rules change, update
+ * this constant to match.
  */
 export const DISABLE_CONTAINER_QUERIES = `
   .kiosk-keyboard {
@@ -182,7 +183,7 @@ export const DISABLE_CONTAINER_QUERIES = `
  * would keep after skipping the guarded @supports block.
  *
  * SYNC SOURCE: The rgba() values below must match the static fallback
- * declarations in `src/themes/KioskKeyboard.css` (:host block, lines 18-22).
+ * shadow declarations in the `:host` block of `src/themes/KioskKeyboard.css`.
  * If those CSS rules change, update this constant to match.
  */
 export const DISABLE_COLOR_MIX = `

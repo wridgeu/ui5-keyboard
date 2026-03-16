@@ -3,7 +3,7 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page title="i18n Extensibility Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="i18n Extensibility Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <MessageStrip
                 text="Switch the i18n mode below, then tap an input field. Special keys use icons -- their translated text appears as aria-labels (for screen readers) and as visible text on the Space key."

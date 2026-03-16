@@ -2,7 +2,7 @@
     controllerName="demo.hotkeys.controller.HotkeysSequences"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
-    <Page title="Hotkeys Demo - Sequences" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Hotkeys Demo - Sequences" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <Panel headerText="Try Sequences" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

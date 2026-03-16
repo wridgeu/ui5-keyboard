@@ -156,15 +156,17 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     );
 
     const kb = await getKeyboardRoot("kb-qwerty");
-    await expect(kb).toMatchElementSnapshot("webc-qwerty-shifted");
-
-    // Reset shift - click twice to cycle through caps lock back to off
-    await browser.execute(() => {
-      const kb = document.getElementById("kb-qwerty");
-      const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
-      shift?.click();
-      shift?.click();
-    });
+    try {
+      await expect(kb).toMatchElementSnapshot("webc-qwerty-shifted");
+    } finally {
+      // Reset shift - click twice to cycle through caps lock back to off
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-qwerty");
+        const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+        shift?.click();
+        shift?.click();
+      });
+    }
   });
 
   it("should match docked mode open", async function () {
@@ -184,13 +186,14 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
 
     const kb = await getKeyboardRoot("kb-docked");
     await kb.waitForDisplayed({ timeout: 5_000 });
-    await expect(kb).toMatchElementSnapshot("webc-docked-open");
-
-    // Close it again
-    await browser.execute(() => {
-      const kb = document.getElementById("kb-docked") as HTMLElement & { close(): void };
-      kb.close();
-    });
+    try {
+      await expect(kb).toMatchElementSnapshot("webc-docked-open");
+    } finally {
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-docked") as HTMLElement & { close(): void };
+        kb.close();
+      });
+    }
   });
 
   it("should keep docked mode closed on coarse pointers", async function () {
