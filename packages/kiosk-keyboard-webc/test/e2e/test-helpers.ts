@@ -88,7 +88,7 @@ export async function clearForcedHoverState(hostId: string, selector: string): P
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
 }
 
-/* ---- Progressive enhancement overrides for visual regression testing ---- */
+/* Progressive enhancement overrides for visual regression testing */
 
 /**
  * Inject a `<style>` override into all kiosk-keyboard shadow roots.

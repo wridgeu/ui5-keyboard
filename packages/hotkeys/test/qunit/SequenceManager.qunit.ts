@@ -570,7 +570,8 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
   const handle = manager.registerSequence(["G", "E"], () => {});
 
   assert.throws(
-    () => handle.setOptions({ scope: "other" } as any),
+    // @ts-expect-error Testing runtime guard for disallowed option
+    () => handle.setOptions({ scope: "other" }),
     /Cannot change scope/,
     "Throws when trying to change scope",
   );

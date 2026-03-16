@@ -48,7 +48,7 @@ QUnit.module("Router Integration", {
 QUnit.test("Route change pushes scope", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main", "Active scope is 'main' after route change");
@@ -57,7 +57,7 @@ QUnit.test("Route change pushes scope", (assert) => {
 QUnit.test("Route change resets previous scopes", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -69,7 +69,7 @@ QUnit.test("Route change resets previous scopes", (assert) => {
 QUnit.test("Hotkey fires in correct route scope", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   let mainCalled = false;
   let detailCalled = false;
@@ -104,7 +104,7 @@ QUnit.test("Hotkey fires in correct route scope", (assert) => {
 QUnit.test("Global hotkey still fires after route change", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   let globalCalled = false;
   manager.register("Ctrl+S", () => {
@@ -119,7 +119,7 @@ QUnit.test("Global hotkey still fires after route change", (assert) => {
 QUnit.test("Detach cleanup on destroy", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -135,10 +135,10 @@ QUnit.test("Detach cleanup on destroy", (assert) => {
 QUnit.test("Error on double enableRouterIntegration", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   assert.throws(
-    () => manager.enableRouterIntegration(router as any),
+    () => manager.enableRouterIntegration(router),
     /already enabled/,
     "Throws on double enableRouterIntegration",
   );
@@ -147,7 +147,7 @@ QUnit.test("Error on double enableRouterIntegration", (assert) => {
 QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -163,7 +163,7 @@ QUnit.test("hasRouterIntegration reflects router integration state", (assert) =>
 
   assert.notOk(manager.hasRouterIntegration(), "False before enable");
 
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
   assert.ok(manager.hasRouterIntegration(), "True after enable");
 
   manager.disableRouterIntegration();
@@ -177,7 +177,7 @@ QUnit.test("hasRouterIntegration reflects router integration state", (assert) =>
 QUnit.test("disableRouterIntegration: disable stops scope updates", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -202,12 +202,12 @@ QUnit.test("disableRouterIntegration: re-enable after disable", (assert) => {
   const manager = HotkeyManager.getInstance();
   const router = createMockRouter();
 
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
   manager.disableRouterIntegration();
   manager.resetToGlobalScope();
 
   // Re-enable and verify it works again
-  manager.enableRouterIntegration(router as any);
+  manager.enableRouterIntegration(router);
   router.fireRouteMatched("settings");
   assert.strictEqual(manager.getActiveScope(), "settings", "Scope changes after re-enable");
 });

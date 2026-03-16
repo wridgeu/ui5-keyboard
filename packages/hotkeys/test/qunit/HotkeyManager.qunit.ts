@@ -1343,7 +1343,8 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
   const handle = manager.register("Escape", () => {});
 
   assert.throws(
-    () => handle.setOptions({ scope: "other" } as any),
+    // @ts-expect-error Testing runtime guard for disallowed option
+    () => handle.setOptions({ scope: "other" }),
     /Cannot change scope/,
     "Throws when trying to change scope",
   );
@@ -1354,7 +1355,8 @@ QUnit.test("setOptions: throws on conflictBehavior change", (assert) => {
   const handle = manager.register("Escape", () => {});
 
   assert.throws(
-    () => handle.setOptions({ conflictBehavior: "error" } as any),
+    // @ts-expect-error Testing runtime guard for disallowed option
+    () => handle.setOptions({ conflictBehavior: "error" }),
     /Cannot change conflictBehavior/,
     "Throws when trying to change conflictBehavior",
   );

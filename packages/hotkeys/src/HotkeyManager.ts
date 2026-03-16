@@ -43,6 +43,16 @@ type ValidateModule = typeof import("./validate");
 
 type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
+/**
+ * Minimal router contract for hotkey scope integration.
+ * Any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched` satisfies this,
+ * including `sap.ui.core.routing.Router` and `sap.m.routing.Router`.
+ */
+export interface RouterLike {
+  attachBeforeRouteMatched(handler: Function, listener?: object): unknown;
+  detachBeforeRouteMatched(handler: Function, listener?: object): unknown;
+}
+
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 let instance: HotkeyManager | null = null;
@@ -500,7 +510,7 @@ export default class HotkeyManager extends BaseObject {
    * manager.register("F5", handler, { scope: "main" }); // "main" = route name
    * ```
    */
-  enableRouterIntegration(router: Router): void {
+  enableRouterIntegration(router: RouterLike): void {
     this._assertAlive("enableRouterIntegration");
     if (this._routerCleanup) {
       throw new Error("Router integration is already enabled");

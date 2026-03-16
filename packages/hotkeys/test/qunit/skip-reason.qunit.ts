@@ -28,8 +28,8 @@ function makeRegistration(id: string): Registration {
 }
 
 /** Minimal toRegistrationInfo stub - only the id is inspected in assertions. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toInfo: Parameters<typeof recordSkip>[3] = (reg) => ({ id: reg.id }) as any;
+// @ts-expect-error Partial stub: only `id` is needed for test assertions
+const toInfo: Parameters<typeof recordSkip>[3] = (reg) => ({ id: reg.id });
 
 // ──────────────────────────────────────────────
 // Tests
@@ -58,7 +58,8 @@ QUnit.test("Higher-priority reason overwrites lower", (assert) => {
 });
 
 QUnit.test("Lower-priority reason does not overwrite higher", (assert) => {
-  const origInfo = { id: "orig" } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  // @ts-expect-error Partial stub: only `id` is needed for test assertions
+  const origInfo: SkipInfo["registration"] = { id: "orig" };
   const skipInfo: SkipInfo = { reason: UnhandledReason.Disabled, registration: origInfo };
 
   recordSkip(skipInfo, UnhandledReason.RepeatIgnored, makeRegistration("lower"), toInfo);
@@ -68,7 +69,8 @@ QUnit.test("Lower-priority reason does not overwrite higher", (assert) => {
 });
 
 QUnit.test("Equal-priority reason does not overwrite", (assert) => {
-  const firstInfo = { id: "first" } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  // @ts-expect-error Partial stub: only `id` is needed for test assertions
+  const firstInfo: SkipInfo["registration"] = { id: "first" };
   const skipInfo: SkipInfo = { reason: UnhandledReason.InputSuppressed, registration: firstInfo };
 
   recordSkip(skipInfo, UnhandledReason.InputSuppressed, makeRegistration("second"), toInfo);
@@ -101,7 +103,8 @@ QUnit.test(
 );
 
 QUnit.test("Downgrade attempts after Disabled are all rejected", (assert) => {
-  const topInfo = { id: "top" } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  // @ts-expect-error Partial stub: only `id` is needed for test assertions
+  const topInfo: SkipInfo["registration"] = { id: "top" };
   const skipInfo: SkipInfo = { reason: UnhandledReason.Disabled, registration: topInfo };
 
   recordSkip(skipInfo, UnhandledReason.PopupSuppressed, makeRegistration("popup"), toInfo);

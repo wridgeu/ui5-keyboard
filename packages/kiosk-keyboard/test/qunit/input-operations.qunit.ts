@@ -1,3 +1,5 @@
+import type { TargetElement } from "ui5/kiosk/types";
+
 import {
   insertText,
   handleBackspace,
@@ -415,40 +417,41 @@ QUnit.module("input-operations - setTargetValue", {
 
 QUnit.test("Tier 1: calls setValue() when method exists", (assert) => {
   let received = "";
-  const element = {
+  const element: TargetElement & { setValue(v: string): void } = {
     setValue(v: string) {
       received = v;
     },
-    getMetadata() {
-      return {
-        hasProperty: () => true,
-        hasEvent: () => false,
-      };
-    },
+    getFocusDomRef: () => null,
+    getMetadata: () => ({
+      hasProperty: () => true,
+      hasEvent: () => false,
+    }),
+    fireEvent() {},
+    setProperty() {},
   };
 
-  setTargetValue(element as any, "hello"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  setTargetValue(element, "hello");
   assert.strictEqual(received, "hello", "setValue called with new value");
 });
 
 QUnit.test("Tier 2: calls setProperty when metadata has value property but no setValue", (assert) => {
   let propName = "";
   let propValue = "";
-  const element = {
+  const element: TargetElement = {
     // No setValue method
-    setProperty(name: string, value: string) {
+    setProperty(name: string, value: unknown) {
       propName = name;
-      propValue = value;
+      propValue = value as string;
     },
-    getMetadata() {
-      return {
-        hasProperty: (name: string) => name === "value",
-        hasEvent: () => false,
-      };
-    },
+    getFocusDomRef: () => null,
+    getMetadata: () => ({
+      hasProperty: (name: string) => name === "value",
+      hasEvent: () => false,
+    }),
+    fireEvent() {},
   };
 
-  setTargetValue(element as any, "test"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  setTargetValue(element, "test");
   assert.strictEqual(propName, "value", "setProperty called with 'value'");
   assert.strictEqual(propValue, "test", "setProperty called with new value");
 });
@@ -462,21 +465,20 @@ QUnit.test("Tier 3: falls back to DOM value when no metadata property", (assert)
   wrapper.appendChild(innerInput);
   fixture.appendChild(wrapper);
 
-  const element = {
+  const element: TargetElement = {
     // No setValue method
     setProperty() {
       assert.notOk(true, "setProperty should not be called");
     },
-    getMetadata() {
-      return {
-        hasProperty: () => false,
-        hasEvent: () => false,
-      };
-    },
+    getMetadata: () => ({
+      hasProperty: () => false,
+      hasEvent: () => false,
+    }),
     getFocusDomRef: () => wrapper,
+    fireEvent() {},
   };
 
-  setTargetValue(element as any, "new"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  setTargetValue(element, "new");
   assert.strictEqual(innerInput.value, "new", "DOM input value set directly");
 });
 
@@ -486,58 +488,58 @@ QUnit.test("Tier 3: getFocusDomRef returns input directly", (assert) => {
   input.value = "old";
   fixture.appendChild(input);
 
-  const element = {
-    getMetadata() {
-      return {
-        hasProperty: () => false,
-        hasEvent: () => false,
-      };
-    },
+  const element: TargetElement = {
+    getMetadata: () => ({
+      hasProperty: () => false,
+      hasEvent: () => false,
+    }),
     getFocusDomRef: () => input,
+    fireEvent() {},
+    setProperty() {},
   };
 
-  setTargetValue(element as any, "direct"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  setTargetValue(element, "direct");
   assert.strictEqual(input.value, "direct", "Input value set via direct getFocusDomRef");
 });
 
 QUnit.test("Fires liveChange event when supported", (assert) => {
   let firedEvent = "";
   let firedValue = "";
-  const element = {
+  const element: TargetElement & { setValue(): void } = {
     setValue() {},
-    getMetadata() {
-      return {
-        hasProperty: () => false,
-        hasEvent: (name: string) => name === "liveChange",
-      };
-    },
-    fireEvent(name: string, params: { value: string }) {
+    getFocusDomRef: () => null,
+    getMetadata: () => ({
+      hasProperty: () => false,
+      hasEvent: (name: string) => name === "liveChange",
+    }),
+    fireEvent(name: string, params?: Record<string, unknown>) {
       firedEvent = name;
-      firedValue = params.value;
+      firedValue = (params as { value: string })?.value ?? "";
     },
+    setProperty() {},
   };
 
-  setTargetValue(element as any, "typed"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  setTargetValue(element, "typed");
   assert.strictEqual(firedEvent, "liveChange", "liveChange event fired");
   assert.strictEqual(firedValue, "typed", "liveChange passes new value");
 });
 
 QUnit.test("Does not fire liveChange when not supported", (assert) => {
   let eventFired = false;
-  const element = {
+  const element: TargetElement & { setValue(): void } = {
     setValue() {},
-    getMetadata() {
-      return {
-        hasProperty: () => false,
-        hasEvent: () => false,
-      };
-    },
+    getFocusDomRef: () => null,
+    getMetadata: () => ({
+      hasProperty: () => false,
+      hasEvent: () => false,
+    }),
     fireEvent() {
       eventFired = true;
     },
+    setProperty() {},
   };
 
-  setTargetValue(element as any, "test"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  setTargetValue(element, "test");
   assert.notOk(eventFired, "No event fired when liveChange not in metadata");
 });
 
@@ -550,36 +552,38 @@ QUnit.module("input-operations - fireTargetChange");
 QUnit.test("Fires change event when supported", (assert) => {
   let firedEvent = "";
   let firedValue = "";
-  const element = {
-    getMetadata() {
-      return {
-        hasEvent: (name: string) => name === "change",
-      };
-    },
-    fireEvent(name: string, params: { value: string }) {
+  const element: TargetElement = {
+    getFocusDomRef: () => null,
+    getMetadata: () => ({
+      hasProperty: () => false,
+      hasEvent: (name: string) => name === "change",
+    }),
+    fireEvent(name: string, params?: Record<string, unknown>) {
       firedEvent = name;
-      firedValue = params.value;
+      firedValue = (params as { value: string })?.value ?? "";
     },
+    setProperty() {},
   };
 
-  fireTargetChange(element as any, "done"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  fireTargetChange(element, "done");
   assert.strictEqual(firedEvent, "change", "change event fired");
   assert.strictEqual(firedValue, "done", "change passes the value");
 });
 
 QUnit.test("Does not fire when change event not supported", (assert) => {
   let eventFired = false;
-  const element = {
-    getMetadata() {
-      return {
-        hasEvent: () => false,
-      };
-    },
+  const element: TargetElement = {
+    getFocusDomRef: () => null,
+    getMetadata: () => ({
+      hasProperty: () => false,
+      hasEvent: () => false,
+    }),
     fireEvent() {
       eventFired = true;
     },
+    setProperty() {},
   };
 
-  fireTargetChange(element as any, "test"); // eslint-disable-line @typescript-eslint/no-explicit-any
+  fireTargetChange(element, "test");
   assert.notOk(eventFired, "No event fired");
 });

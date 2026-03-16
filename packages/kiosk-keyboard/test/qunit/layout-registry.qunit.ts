@@ -14,6 +14,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
+import type LanguageTag from "sap/base/i18n/LanguageTag";
 import Log from "sap/base/Log";
 import { placeAndWait, getRenderedLayoutKeys } from "./test-helpers";
 
@@ -22,6 +23,11 @@ import { placeAndWait, getRenderedLayoutKeys } from "./test-helpers";
 /** Minimal valid layout definition for registration. */
 function makeLayout(label = "a"): LayoutDefinition {
   return [[{ value: label }]];
+}
+
+/** Minimal LanguageTag stub for Localization.getLanguageTag() tests. */
+function langTag(language: string, region = ""): LanguageTag {
+  return { language, region } as unknown as LanguageTag;
 }
 
 const BUILTIN_NAMES = [
@@ -160,14 +166,14 @@ QUnit.test("Warns but stores mapping when layout is not yet registered", (assert
 
   // Now register the layout - the mapping should resolve
   registerLayout("azerty-fr", makeLayout());
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "fr", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
   assert.strictEqual(getLocaleLayout(), "azerty-fr", "Mapping resolves after layout is registered");
 });
 
 QUnit.test("Normalizes locale key (trim + lowercase)", (assert) => {
   registerLocaleLayout("  FR  ", "qwerty");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "fr", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Mapping found with normalized key");
 });
 
@@ -175,7 +181,7 @@ QUnit.test("Overwrites existing locale mapping", (assert) => {
   registerLocaleLayout("fr", "qwerty");
   registerLocaleLayout("fr", "qwertz-de");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "fr", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
   assert.strictEqual(getLocaleLayout(), "qwertz-de", "Second registration overwrites first");
 });
 
@@ -201,14 +207,14 @@ QUnit.test("Removes a previously registered locale mapping", (assert) => {
   registerLocaleLayout("fr", "qwerty");
   unregisterLocaleLayout("fr");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "fr", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Falls back to default when mapping removed");
 });
 
 QUnit.test("Removes the built-in de mapping", (assert) => {
   unregisterLocaleLayout("de");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Falls back to default after removing built-in mapping");
 });
 
@@ -232,10 +238,10 @@ QUnit.test("Restores default de mapping after custom mappings added", (assert) =
 
   resetLocaleLayouts();
 
-  const stubDe = sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "" } as any);
+  const stubDe = sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
   assert.strictEqual(getLocaleLayout(), "qwertz-de", "de mapping restored to default");
 
-  stubDe.returns({ language: "fr", region: "" } as any);
+  stubDe.returns(langTag("fr"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "fr mapping removed (falls back to default)");
 });
 
@@ -243,7 +249,7 @@ QUnit.test("Idempotent - calling reset twice does not break state", (assert) => 
   resetLocaleLayouts();
   resetLocaleLayouts();
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
   assert.strictEqual(getLocaleLayout(), "qwertz-de", "de mapping still works after double reset");
 });
 
@@ -258,22 +264,22 @@ QUnit.test("Exact BCP-47 match takes precedence over language prefix", (assert) 
   registerLocaleLayout("de", "qwertz-de");
   registerLocaleLayout("de-ch", "swiss-de");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "CH" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "CH"));
   assert.strictEqual(getLocaleLayout(), "swiss-de", "Exact de-ch match used over de prefix");
 });
 
 QUnit.test("Falls back to language prefix when no exact match", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "AT" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "AT"));
   assert.strictEqual(getLocaleLayout(), "qwertz-de", "Falls back to de prefix mapping");
 });
 
 QUnit.test("Falls back to DEFAULT_LAYOUT when no mapping matches", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "ja", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("ja"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Unmapped language returns qwerty default");
 });
 
 QUnit.test("Falls back to DEFAULT_LAYOUT when no region and no prefix match", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "zh", region: "TW" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("zh", "TW"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Unmapped language+region returns qwerty default");
 });
 
@@ -281,7 +287,7 @@ QUnit.test("Locale with region but only prefix registered uses prefix", (assert)
   registerLayout("azerty-fr", makeLayout());
   registerLocaleLayout("fr", "azerty-fr");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "fr", region: "CA" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr", "CA"));
   assert.strictEqual(getLocaleLayout(), "azerty-fr", "fr-ca falls back to fr prefix");
 });
 
@@ -289,7 +295,7 @@ QUnit.test("Does not resolve mapping when target layout is not registered", (ass
   sandbox.spy(Log, "warning"); // suppress warning noise
   registerLocaleLayout("it", "qwerty-it"); // layout doesn't exist
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "it", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("it"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Falls back to default when mapped layout is missing");
 });
 
@@ -297,7 +303,7 @@ QUnit.test("Region is lowercased for matching", (assert) => {
   registerLayout("swiss-de", makeLayout());
   registerLocaleLayout("de-ch", "swiss-de");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "CH" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "CH"));
   assert.strictEqual(
     getLocaleLayout(),
     "swiss-de",
@@ -308,7 +314,7 @@ QUnit.test("Region is lowercased for matching", (assert) => {
 QUnit.test("Skips exact match when region is empty", (assert) => {
   registerLocaleLayout("de", "qwertz-de");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
   assert.strictEqual(getLocaleLayout(), "qwertz-de", "Empty region skips exact match, uses prefix");
 });
 
@@ -601,7 +607,7 @@ QUnit.test("Static locale facade round-trip", (assert) => {
   KioskKeyboard.registerLayout("azerty-fr", makeLayout());
   KioskKeyboard.registerLocaleLayout("fr", "azerty-fr");
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "fr", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
   assert.strictEqual(KioskKeyboard.getLocaleLayout(), "azerty-fr", "Locale resolves via facade");
 
   KioskKeyboard.unregisterLocaleLayout("fr");
@@ -612,7 +618,7 @@ QUnit.test("Static resetLocaleLayouts restores defaults via facade", (assert) =>
   KioskKeyboard.registerLocaleLayout("de", "qwerty"); // override built-in
   KioskKeyboard.resetLocaleLayouts();
 
-  sandbox.stub(Localization, "getLanguageTag").returns({ language: "de", region: "" } as any);
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
   assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "de mapping restored via facade reset");
 });
 

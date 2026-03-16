@@ -141,6 +141,6 @@ export function getRenderedLayoutKeys(keyboard: KioskKeyboard): string[][] {
 
 /** Call the private _applyResponsiveSizeClasses for unit testing responsive breakpoints. */
 export function applyResponsiveSizeClasses(keyboard: KioskKeyboard, dom: Element, width: number, height: number): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accessing private method for unit testing
-  (keyboard as any)._applyResponsiveSizeClasses(dom, width, height);
+  // @ts-expect-error Accessing private method for unit testing
+  keyboard._applyResponsiveSizeClasses(dom, width, height);
 }

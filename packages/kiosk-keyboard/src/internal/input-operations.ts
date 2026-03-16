@@ -1,4 +1,5 @@
 import Element from "sap/ui/core/Element";
+import type { TargetElement } from "../types";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme";
 
@@ -165,7 +166,11 @@ export function handleNavigation(
  * Falls back to setting the DOM value directly for custom controls without
  * a `value` metadata property. Also fires `liveChange` when the event exists.
  */
-export function setTargetValue(element: Element, newValue: string, customResolver?: TargetResolverFn | null): void {
+export function setTargetValue(
+  element: TargetElement,
+  newValue: string,
+  customResolver?: TargetResolverFn | null,
+): void {
   const metadata = element.getMetadata();
   if ("setValue" in element && typeof element.setValue === "function") {
     (element.setValue as (v: string) => unknown).call(element, newValue);
@@ -187,7 +192,7 @@ export function setTargetValue(element: Element, newValue: string, customResolve
 /**
  * Fires a `change` event on the given UI5 element, if it supports one.
  */
-export function fireTargetChange(element: Element, value: string): void {
+export function fireTargetChange(element: TargetElement, value: string): void {
   if (element.getMetadata().hasEvent("change")) {
     element.fireEvent("change", { value });
   }

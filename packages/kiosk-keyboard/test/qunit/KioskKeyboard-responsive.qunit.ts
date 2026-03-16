@@ -118,8 +118,10 @@ QUnit.test("Cleanup on exit() removes resize observer", async (assert) => {
 
   kb.destroy();
 
-  assert.strictEqual((kb as any)._responsiveResizeHandlerId, null, "Resize handler deregistered");
-  assert.strictEqual((kb as any)._responsiveObservedDom, null, "Observed DOM reference cleared");
+  // @ts-expect-error Accessing private field for cleanup verification
+  assert.strictEqual(kb._responsiveResizeHandlerId, null, "Resize handler deregistered");
+  // @ts-expect-error Accessing private field for cleanup verification
+  assert.strictEqual(kb._responsiveObservedDom, null, "Observed DOM reference cleared");
 });
 
 // ──────────────────────────────────────────────

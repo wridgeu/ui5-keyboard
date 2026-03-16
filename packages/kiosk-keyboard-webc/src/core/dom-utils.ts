@@ -81,6 +81,7 @@ export function resolveWithCustomResolver(
       if (isInputOrTextarea(custom)) return custom;
     } catch (err) {
       console.warn("[kiosk-keyboard] Custom target resolver threw:", err);
+      return resolveInputOrTextarea(el);
     }
   }
   return resolveInputOrTextarea(el);

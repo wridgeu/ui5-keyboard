@@ -1,4 +1,4 @@
-import Element from "sap/ui/core/Element";
+import type { TargetElement } from "../types";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import {
   insertText as opsInsertText,
@@ -17,7 +17,7 @@ export default class TargetInputSession {
 
   private _customResolver: TargetResolverFn | null = null;
 
-  constructor(private readonly _getTargetElement: () => Element | null) {}
+  constructor(private readonly _getTargetElement: () => TargetElement | null) {}
 
   setTargetResolver(resolver: TargetResolverFn | null): void {
     this._customResolver = resolver;

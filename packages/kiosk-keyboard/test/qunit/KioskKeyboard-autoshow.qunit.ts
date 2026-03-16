@@ -2,6 +2,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import CheckBox from "sap/m/CheckBox";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
+import type RenderManager from "sap/ui/core/RenderManager";
 import VBox from "sap/m/VBox";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait, waitForRender } from "./test-helpers";
@@ -68,11 +69,11 @@ QUnit.test("autoShow ignores readonly inputs", async (assert) => {
 });
 
 QUnit.test("autoShow ignores disabled inputs", async (assert) => {
-  const DisabledWrapper = (Control as any).extend("test.DisabledWrapper", {
+  const DisabledWrapper = Control.extend("test.DisabledWrapper", {
     metadata: { properties: {} },
     renderer: {
       apiVersion: 2,
-      render(rm: any, ctrl: any) {
+      render(rm: RenderManager, ctrl: Control) {
         rm.openStart("div", ctrl).openEnd();
         rm.voidStart("input")
           .attr("id", ctrl.getId() + "-inner")
@@ -82,10 +83,10 @@ QUnit.test("autoShow ignores disabled inputs", async (assert) => {
         rm.close("div");
       },
     },
-    getFocusDomRef() {
-      return document.getElementById((this as any).getId() + "-inner");
+    getFocusDomRef(this: Control) {
+      return document.getElementById(this.getId() + "-inner");
     },
-  }) as any;
+  }) as new () => Control;
 
   const disabledInput = new DisabledWrapper();
   disabledInput.placeAt("qunit-fixture");
@@ -121,11 +122,11 @@ QUnit.test("autoShow ignores raw DOM input without UI5 control", async (assert) 
 });
 
 QUnit.test("autoShow ignores date/time input types", async (assert) => {
-  const DateWrapper = (Control as any).extend("test.DateWrapper", {
+  const DateWrapper = Control.extend("test.DateWrapper", {
     metadata: { properties: {} },
     renderer: {
       apiVersion: 2,
-      render(rm: any, ctrl: any) {
+      render(rm: RenderManager, ctrl: Control) {
         rm.openStart("div", ctrl).openEnd();
         rm.voidStart("input")
           .attr("id", ctrl.getId() + "-inner")
@@ -134,10 +135,10 @@ QUnit.test("autoShow ignores date/time input types", async (assert) => {
         rm.close("div");
       },
     },
-    getFocusDomRef() {
-      return document.getElementById((this as any).getId() + "-inner");
+    getFocusDomRef(this: Control) {
+      return document.getElementById(this.getId() + "-inner");
     },
-  }) as any;
+  }) as new () => Control;
 
   const dateInput = new DateWrapper();
   dateInput.placeAt("qunit-fixture");

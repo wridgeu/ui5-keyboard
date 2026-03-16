@@ -1,6 +1,7 @@
 import FocusClaimService from "ui5/kiosk/internal/focus-claim-service";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
+import type RenderManager from "sap/ui/core/RenderManager";
 import TextArea from "sap/m/TextArea";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
@@ -8,12 +9,18 @@ const fixture = document.getElementById("qunit-fixture")!;
 
 // ─── Helpers ─────────────────────────────────────
 
-/** @openui5/types marks Control as abstract, but runtime allows direct instantiation. */
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call
-const createControl = (id: string): Control => new (Control as any)(id);
+// @ts-expect-error Control is abstract in @openui5/types but instantiable at runtime
+const createControl = (id: string): Control => new Control(id);
+
+/** Runtime interface for the dynamically generated property getters on TypedInput. */
+interface TypedInputControl extends Control {
+  getInputType(): string;
+  getInputDisabled(): boolean;
+  getInputReadOnly(): boolean;
+}
 
 /** Minimal UI5 Control wrapping a single <input> with configurable type/disabled/readOnly. */
-const TypedInput = (Control as any).extend("test.FcsTypedInput", {
+const TypedInput = Control.extend("test.FcsTypedInput", {
   metadata: {
     properties: {
       inputType: { type: "string", defaultValue: "text" },
@@ -23,7 +30,7 @@ const TypedInput = (Control as any).extend("test.FcsTypedInput", {
   },
   renderer: {
     apiVersion: 2,
-    render(rm: any, ctrl: any) {
+    render(rm: RenderManager, ctrl: TypedInputControl) {
       rm.openStart("div", ctrl).openEnd();
       rm.voidStart("input")
         .attr("id", ctrl.getId() + "-inner")
@@ -34,10 +41,10 @@ const TypedInput = (Control as any).extend("test.FcsTypedInput", {
       rm.close("div");
     },
   },
-  getFocusDomRef() {
-    return document.getElementById((this as any).getId() + "-inner");
+  getFocusDomRef(this: Control) {
+    return document.getElementById(this.getId() + "-inner");
   },
-}) as any;
+}) as new (settings?: object) => TypedInputControl;
 
 function createService(
   overrides: {

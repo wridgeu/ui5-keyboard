@@ -53,8 +53,8 @@ function mockKeyEvent(overrides: { key: string } & Partial<KeyboardEvent>): Keyb
 }
 
 /** Minimal toRegistrationInfo stub - only the id is inspected in assertions. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toInfo: Parameters<typeof findMatchInScope>[0]["toRegistrationInfo"] = (reg) => ({ id: reg.id }) as any;
+// @ts-expect-error Partial stub: only `id` is needed for test assertions
+const toInfo: Parameters<typeof findMatchInScope>[0]["toRegistrationInfo"] = (reg) => ({ id: reg.id });
 
 const LOG_COMPONENT = "test.dispatch-core";
 

@@ -1,5 +1,11 @@
 import { browser, $, $$, expect } from "@wdio/globals";
 
+declare global {
+  interface Window {
+    hasher: { setHash(hash: string): void };
+  }
+}
+
 const FLP_PAGE = "/test/flp.html";
 
 /**
@@ -31,8 +37,7 @@ async function openAppTile(): Promise<void> {
  */
 async function navigateToHash(hash: string): Promise<void> {
   await browser.execute((h: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).hasher.setHash(h);
+    window.hasher.setHash(h);
   }, hash);
 }
 

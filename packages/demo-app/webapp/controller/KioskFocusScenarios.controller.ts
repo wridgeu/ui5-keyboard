@@ -54,7 +54,7 @@ export default class KioskFocusScenarios extends BaseController {
     }
   }
 
-  // --- Keyboard events ---
+  // Keyboard events
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
     this._addLogEntry("keyPress", this.formatKeyPress(event), "Information");
@@ -79,7 +79,7 @@ export default class KioskFocusScenarios extends BaseController {
     this._addLogEntry("layoutChange", event.getParameter("layout") ?? "", "Information");
   }
 
-  // --- Scenario handlers ---
+  // Scenario handlers
 
   onAdjacentButtonPress(): void {
     this._addLogEntry("press", "Adjacent Button pressed", "Information");
@@ -120,7 +120,7 @@ export default class KioskFocusScenarios extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
-  // --- DOM focus delegate ---
+  // DOM focus delegate
 
   private _onDomFocusIn(event: Event): void {
     const fe = event as FocusEvent;
@@ -136,7 +136,7 @@ export default class KioskFocusScenarios extends BaseController {
     this._addLogEntry("focusout", `${target} \u2192 to ${related}`, "Warning");
   }
 
-  // --- Private helpers ---
+  // Private helpers
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
     this._setKeyboardRouteActive(event.getParameter("name") === Scope.KioskFocusScenarios);

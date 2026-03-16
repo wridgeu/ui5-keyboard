@@ -88,6 +88,7 @@ export function getText(key: string, fallback: string): string {
       if (typeof override === "string") return override;
     } catch (err) {
       console.warn("[kiosk-keyboard] i18n resolver threw:", err);
+      return resolved;
     }
   }
 

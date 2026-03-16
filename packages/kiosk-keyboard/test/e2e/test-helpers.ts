@@ -125,7 +125,7 @@ export async function clearForcedHoverState(selector: string): Promise<void> {
   await cdp.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
 }
 
-/* ---- Progressive enhancement overrides for visual regression testing ---- */
+/* Progressive enhancement overrides for visual regression testing */
 
 /** CSS override to disable the text-box-trim progressive enhancement. */
 export const DISABLE_TEXT_BOX_TRIM = `

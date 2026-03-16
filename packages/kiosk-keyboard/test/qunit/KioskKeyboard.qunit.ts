@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
+import type RenderManager from "sap/ui/core/RenderManager";
 import TextArea from "sap/m/TextArea";
 import Popover from "sap/m/Popover";
 import VBox from "sap/m/VBox";
@@ -1651,11 +1652,11 @@ QUnit.test("Prior shift state does not leak into Numpad rendering", async (asser
 
 // Minimal custom control: renders a textual <input> but has no "value" metadata property.
 // Verifies that the DOM-fallback path in _setTargetValue works for non-standard controls.
-const CustomWrapper = (Control as any).extend("test.CustomWrapper", {
+const CustomWrapper = Control.extend("test.CustomWrapper", {
   metadata: { properties: {} },
   renderer: {
     apiVersion: 2,
-    render(rm: any, ctrl: any) {
+    render(rm: RenderManager, ctrl: Control) {
       rm.openStart("div", ctrl).openEnd();
       rm.voidStart("input")
         .attr("id", ctrl.getId() + "-inner")
@@ -1664,10 +1665,10 @@ const CustomWrapper = (Control as any).extend("test.CustomWrapper", {
       rm.close("div");
     },
   },
-  getFocusDomRef() {
-    return document.getElementById((this as any).getId() + "-inner");
+  getFocusDomRef(this: Control) {
+    return document.getElementById(this.getId() + "-inner");
   },
-}) as any;
+}) as new () => Control;
 
 QUnit.test("typing works for custom control without value property (DOM fallback)", async (assert) => {
   const custom = new CustomWrapper();
