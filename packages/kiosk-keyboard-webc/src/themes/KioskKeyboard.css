@@ -124,7 +124,8 @@
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
   }
   .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --_kiosk-keyboard-key-padding: var(--_kiosk-keyboard-key-padding-xs);
+    --_kiosk-keyboard-key-padding: 0
+      min(var(--_kiosk-keyboard-key-padding-inline), var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem));
   }
   .kiosk-keyboard--cq-xs .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
@@ -146,7 +147,8 @@
 
 @container keyboard (max-width: 20rem) {
   .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --_kiosk-keyboard-key-padding: var(--_kiosk-keyboard-key-padding-xs);
+    --_kiosk-keyboard-key-padding: 0
+      min(var(--_kiosk-keyboard-key-padding-inline), var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem));
   }
 
   .kiosk-key {
