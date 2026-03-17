@@ -3,7 +3,7 @@ import {
   getKeyboardRoot,
   setEmulatedMediaFeatures,
   clearEmulatedMediaFeatures,
-  matchElementSnapshotSafely,
+  matchElementSnapshotInSection,
 } from "./test-helpers.js";
 
 describe("KioskKeyboard Web Component - Accessibility Media Emulation", () => {
@@ -19,6 +19,6 @@ describe("KioskKeyboard Web Component - Accessibility Media Emulation", () => {
     await setEmulatedMediaFeatures([{ name: "forced-colors", value: "active" }]);
     await openVisualPage();
     const kb = await getKeyboardRoot("kb-qwerty");
-    await matchElementSnapshotSafely(kb, "webc-qwerty-forced-colors");
+    await matchElementSnapshotInSection(kb, "webc-qwerty-forced-colors");
   });
 });

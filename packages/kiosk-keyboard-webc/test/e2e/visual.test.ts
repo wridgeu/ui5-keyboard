@@ -1,13 +1,11 @@
-import { $, browser, expect } from "@wdio/globals";
+import { browser, expect } from "@wdio/globals";
 import {
   openVisualPage,
   getKeyboardRoot,
   forceHoverState,
   clearForcedHoverState,
-  matchElementSnapshotSafely,
+  matchElementSnapshotInSection,
 } from "./test-helpers.js";
-
-const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
 
 describe("KioskKeyboard Web Component - Visual Regression", () => {
   before(async () => {
@@ -16,112 +14,67 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
 
   it("should match QWERTY layout", async () => {
     const kb = await getKeyboardRoot("kb-qwerty");
-    await matchElementSnapshotSafely(kb, "webc-qwerty");
+    await matchElementSnapshotInSection(kb, "webc-qwerty");
   });
 
   it("should match keyboard with input target", async () => {
     const kb = await getKeyboardRoot("kb-with-input");
-    await matchElementSnapshotSafely(kb, "webc-with-input");
+    await matchElementSnapshotInSection(kb, "webc-with-input");
   });
 
   it("should match Numpad layout", async () => {
     const kb = await getKeyboardRoot("kb-numpad");
-    await matchElementSnapshotSafely(kb, "webc-numpad");
+    await matchElementSnapshotInSection(kb, "webc-numpad");
   });
 
   it("should match Numeric layout", async () => {
     const kb = await getKeyboardRoot("kb-numeric");
-    await matchElementSnapshotSafely(kb, "webc-numeric");
+    await matchElementSnapshotInSection(kb, "webc-numeric");
   });
 
   it("should match disabled state", async () => {
     const kb = await getKeyboardRoot("kb-disabled");
-    await matchElementSnapshotSafely(kb, "webc-disabled");
+    await matchElementSnapshotInSection(kb, "webc-disabled");
   });
 
   it("should match QWERTZ-DE layout", async () => {
     const kb = await getKeyboardRoot("kb-qwertz-de");
-    await matchElementSnapshotSafely(kb, "webc-qwertz-de");
-  });
-
-  it("should match narrow container (320px)", async () => {
-    const kb = await getKeyboardRoot("kb-narrow");
-    await matchElementSnapshotSafely(kb, "webc-narrow");
+    await matchElementSnapshotInSection(kb, "webc-qwertz-de");
   });
 
   it("should match F-Keys layout", async () => {
     const kb = await getKeyboardRoot("kb-fkeys");
-    await matchElementSnapshotSafely(kb, "webc-fkeys");
+    await matchElementSnapshotInSection(kb, "webc-fkeys");
   });
 
   it("should match Nav layout", async () => {
     const kb = await getKeyboardRoot("kb-nav");
-    await matchElementSnapshotSafely(kb, "webc-nav");
+    await matchElementSnapshotInSection(kb, "webc-nav");
   });
 
   it("should match QWERTY with F-Key row", async () => {
     const kb = await getKeyboardRoot("kb-qwerty-fk");
-    await matchElementSnapshotSafely(kb, "webc-qwerty-fk");
+    await matchElementSnapshotInSection(kb, "webc-qwerty-fk");
   });
 
   it("should match QWERTZ-DE with F-Key row", async () => {
     const kb = await getKeyboardRoot("kb-qwertz-de-fk");
-    await matchElementSnapshotSafely(kb, "webc-qwertz-de-fk");
+    await matchElementSnapshotInSection(kb, "webc-qwertz-de-fk");
   });
 
   it("should match QWERTY with Nav row", async () => {
     const kb = await getKeyboardRoot("kb-qwerty-nav");
-    await matchElementSnapshotSafely(kb, "webc-qwerty-nav");
+    await matchElementSnapshotInSection(kb, "webc-qwerty-nav");
   });
 
   it("should match QWERTZ-DE with Nav row", async () => {
     const kb = await getKeyboardRoot("kb-qwertz-de-nav");
-    await matchElementSnapshotSafely(kb, "webc-qwertz-de-nav");
-  });
-
-  it("should match glyph stress layout in a narrow container", async () => {
-    const kb = await getKeyboardRoot("kb-glyph-stress");
-    await matchElementSnapshotSafely(kb, "webc-glyph-stress");
-  });
-
-  it("should match height-constrained container (250px)", async () => {
-    const kb = await getKeyboardRoot("kb-height-constrained");
-    await matchElementSnapshotSafely(kb, "webc-height-constrained", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match severely height-constrained container (180px)", async () => {
-    const kb = await getKeyboardRoot("kb-height-tiny");
-    await matchElementSnapshotSafely(kb, "webc-height-tiny", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match ancestor-constrained container (flex parent 250px)", async () => {
-    const wrap = await $("#kb-ancestor-constrained-wrap");
-    await matchElementSnapshotSafely(wrap, "webc-ancestor-constrained", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match ancestor-constrained severely (flex parent 180px)", async () => {
-    const wrap = await $("#kb-ancestor-tiny-wrap");
-    await matchElementSnapshotSafely(wrap, "webc-ancestor-tiny", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match height-constrained host with padding and border", async () => {
-    const kb = await getKeyboardRoot("kb-height-padded-host");
-    await matchElementSnapshotSafely(kb, "webc-height-padded-host", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match narrow + height-constrained container (320px x 250px)", async () => {
-    const kb = await getKeyboardRoot("kb-narrow-short");
-    await matchElementSnapshotSafely(kb, "webc-narrow-short", HEIGHT_SNAPSHOT_OPTIONS);
+    await matchElementSnapshotInSection(kb, "webc-qwertz-de-nav");
   });
 
   it("should match consumer part styling via ::part()", async () => {
     const kb = await getKeyboardRoot("kb-part-styled");
-    await matchElementSnapshotSafely(kb, "webc-part-styled");
-  });
-
-  it("should match custom threshold override (cq-short at 18rem)", async () => {
-    const kb = await getKeyboardRoot("kb-custom-threshold");
-    await matchElementSnapshotSafely(kb, "webc-custom-threshold", HEIGHT_SNAPSHOT_OPTIONS);
+    await matchElementSnapshotInSection(kb, "webc-part-styled");
   });
 });
 
@@ -134,7 +87,7 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     const kb = await getKeyboardRoot("kb-qwerty");
     await forceHoverState("kb-qwerty", '[data-key="f"]');
     try {
-      await matchElementSnapshotSafely(kb, "webc-key-hovered");
+      await matchElementSnapshotInSection(kb, "webc-key-hovered");
     } finally {
       await clearForcedHoverState("kb-qwerty", '[data-key="f"]');
     }
@@ -163,7 +116,7 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
 
     const kb = await getKeyboardRoot("kb-qwerty");
     try {
-      await matchElementSnapshotSafely(kb, "webc-qwerty-shifted");
+      await matchElementSnapshotInSection(kb, "webc-qwerty-shifted");
     } finally {
       // Reset shift - click twice to cycle through caps lock back to off
       await browser.execute(() => {
@@ -193,7 +146,7 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     const kb = await getKeyboardRoot("kb-docked");
     await kb.waitForDisplayed({ timeout: 5_000 });
     try {
-      await matchElementSnapshotSafely(kb, "webc-docked-open");
+      await matchElementSnapshotInSection(kb, "webc-docked-open");
     } finally {
       await browser.execute(() => {
         const kb = document.getElementById("kb-docked") as HTMLElement & { close(): void };

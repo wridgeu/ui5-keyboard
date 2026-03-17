@@ -8,7 +8,7 @@ import {
   DISABLE_COLOR_MIX,
   DISABLE_TEXT_BOX_TRIM,
   DISABLE_CONTAINER_QUERIES,
-  matchElementSnapshotSafely,
+  matchElementSnapshotInSection,
 } from "./test-helpers.js";
 
 const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
@@ -46,22 +46,22 @@ describe("KioskKeyboard WebC - Fallback: without text-box-trim", () => {
 
   it("should match QWERTY layout without text-box-trim", async () => {
     const kb = await getKeyboardRoot("kb-qwerty");
-    await matchElementSnapshotSafely(kb, "webc-qwerty-no-text-trim");
+    await matchElementSnapshotInSection(kb, "webc-qwerty-no-text-trim");
   });
 
   it("should match narrow container without text-box-trim", async () => {
     const kb = await getKeyboardRoot("kb-narrow");
-    await matchElementSnapshotSafely(kb, "webc-narrow-no-text-trim");
+    await matchElementSnapshotInSection(kb, "webc-narrow-no-text-trim");
   });
 
   it("should match height-constrained container without text-box-trim", async () => {
     const kb = await getKeyboardRoot("kb-height-constrained");
-    await matchElementSnapshotSafely(kb, "webc-height-constrained-no-text-trim", HEIGHT_SNAPSHOT_OPTIONS);
+    await matchElementSnapshotInSection(kb, "webc-height-constrained-no-text-trim", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
   it("should match glyph stress layout without text-box-trim", async () => {
     const kb = await getKeyboardRoot("kb-glyph-stress");
-    await matchElementSnapshotSafely(kb, "webc-glyph-stress-no-text-trim");
+    await matchElementSnapshotInSection(kb, "webc-glyph-stress-no-text-trim");
   });
 });
 
@@ -77,12 +77,12 @@ describe("KioskKeyboard WebC - Fallback: without container queries", () => {
 
   it("should match narrow container without container queries", async () => {
     const kb = await getKeyboardRoot("kb-narrow");
-    await matchElementSnapshotSafely(kb, "webc-narrow-no-cq");
+    await matchElementSnapshotInSection(kb, "webc-narrow-no-cq");
   });
 
   it("should match glyph stress layout without container queries", async () => {
     const kb = await getKeyboardRoot("kb-glyph-stress");
-    await matchElementSnapshotSafely(kb, "webc-glyph-stress-no-cq");
+    await matchElementSnapshotInSection(kb, "webc-glyph-stress-no-cq");
   });
 });
 
@@ -100,17 +100,17 @@ describe("KioskKeyboard WebC - Fallback: without all enhancements", () => {
 
   it("should match QWERTY layout without any enhancements", async () => {
     const kb = await getKeyboardRoot("kb-qwerty");
-    await matchElementSnapshotSafely(kb, "webc-qwerty-no-enhancements");
+    await matchElementSnapshotInSection(kb, "webc-qwerty-no-enhancements");
   });
 
   it("should match narrow container without any enhancements", async () => {
     const kb = await getKeyboardRoot("kb-narrow");
-    await matchElementSnapshotSafely(kb, "webc-narrow-no-enhancements");
+    await matchElementSnapshotInSection(kb, "webc-narrow-no-enhancements");
   });
 
   it("should match height-constrained container without any enhancements", async () => {
     const kb = await getKeyboardRoot("kb-height-constrained");
-    await matchElementSnapshotSafely(kb, "webc-height-constrained-no-enhancements", HEIGHT_SNAPSHOT_OPTIONS);
+    await matchElementSnapshotInSection(kb, "webc-height-constrained-no-enhancements", HEIGHT_SNAPSHOT_OPTIONS);
   });
 });
 
@@ -128,7 +128,7 @@ describe("KioskKeyboard WebC - Fallback: without color-mix()", () => {
     const kb = await getKeyboardRoot("kb-qwerty");
     await forceHoverState("kb-qwerty", '[data-key="f"]');
     try {
-      await matchElementSnapshotSafely(kb, "webc-key-hovered-no-color-mix");
+      await matchElementSnapshotInSection(kb, "webc-key-hovered-no-color-mix");
     } finally {
       await clearForcedHoverState("kb-qwerty", '[data-key="f"]');
     }

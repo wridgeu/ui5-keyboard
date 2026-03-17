@@ -4,7 +4,7 @@ import {
   injectShadowStyleOverride,
   removeShadowStyleOverride,
   DISABLE_COLOR_MIX,
-  matchElementSnapshotSafely,
+  matchElementSnapshotInSection,
 } from "./test-helpers.js";
 
 const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"] as const;
@@ -68,12 +68,12 @@ describe("KioskKeyboard Web Component - Theme Visual Regression", () => {
 
       it(`should match QWERTY layout in ${theme}`, async () => {
         const kb = await getKeyboardRoot("kb-qwerty");
-        await matchElementSnapshotSafely(kb, `webc-qwerty-${theme}`);
+        await matchElementSnapshotInSection(kb, `webc-qwerty-${theme}`);
       });
 
       it(`should match Numpad layout in ${theme}`, async () => {
         const kb = await getKeyboardRoot("kb-numpad");
-        await matchElementSnapshotSafely(kb, `webc-numpad-${theme}`);
+        await matchElementSnapshotInSection(kb, `webc-numpad-${theme}`);
       });
     });
   }
@@ -98,7 +98,7 @@ describe("KioskKeyboard WebC - Fallback: color-mix() across themes", () => {
       await injectShadowStyleOverride(DISABLE_COLOR_MIX, "disable-color-mix");
       try {
         const kb = await getKeyboardRoot("kb-qwerty");
-        await matchElementSnapshotSafely(kb, `webc-qwerty-no-color-mix-${theme}`);
+        await matchElementSnapshotInSection(kb, `webc-qwerty-no-color-mix-${theme}`);
       } finally {
         await removeShadowStyleOverride("disable-color-mix");
       }

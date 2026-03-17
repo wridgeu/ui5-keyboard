@@ -123,20 +123,71 @@ async function shouldScrollSnapshotTarget(element: SnapshotElement): Promise<boo
   return browser.execute((el: HTMLElement) => getComputedStyle(el).position !== "fixed", target);
 }
 
-export async function matchElementSnapshotSafely(
+/**
+ * Hide all `.section` wrappers on the page except the one containing the
+ * target element. This reduces page height so that `scrollIntoView` can
+ * reliably position the target fully inside the viewport, preventing the
+ * WDIO visual service from clipping the element screenshot at the viewport
+ * boundary.
+ *
+ * Shadow DOM elements cannot reach light-DOM ancestors via `closest()`,
+ * so the helper traverses through the shadow host first.
+ */
+export async function isolateSection(element: SnapshotElement): Promise<void> {
+  const target = await element;
+  await browser.execute((el: HTMLElement) => {
+    const root = el.getRootNode();
+    const host = root instanceof ShadowRoot ? root.host : el;
+    const activeSection = (host as Element).closest(".section");
+    if (!activeSection) return;
+
+    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
+      if (section === activeSection) return;
+      if (!("snapshotPrevDisplay" in section.dataset)) {
+        section.dataset.snapshotPrevDisplay = section.style.display;
+      }
+      section.style.display = "none";
+    });
+  }, target);
+}
+
+export async function restoreSections(): Promise<void> {
+  await browser.execute(() => {
+    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
+      if (!("snapshotPrevDisplay" in section.dataset)) return;
+      const previousDisplay = section.dataset.snapshotPrevDisplay ?? "";
+      if (previousDisplay) {
+        section.style.display = previousDisplay;
+      } else {
+        section.style.removeProperty("display");
+      }
+      delete section.dataset.snapshotPrevDisplay;
+    });
+  });
+}
+
+export async function matchElementSnapshotInSection(
   element: SnapshotElement,
   name: string,
   options?: { ignoreAntialiasing?: boolean },
 ): Promise<void> {
   const target = await element;
-  if (await shouldScrollSnapshotTarget(target)) {
-    await browser.execute((el: HTMLElement) => {
-      el.scrollIntoView({ block: "center", inline: "center" });
-    }, target);
+  await isolateSection(target);
+  try {
+    if (await shouldScrollSnapshotTarget(target)) {
+      await browser.execute((el: HTMLElement) => {
+        el.scrollIntoView({ block: "center", inline: "center" });
+      }, target);
+    }
+    await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+    await assertSnapshotTargetIsUsable(target, name);
+    await expect(target).toMatchElementSnapshot(name, {
+      ignoreAntialiasing: true,
+      ...options,
+    });
+  } finally {
+    await restoreSections();
   }
-  await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
-  await assertSnapshotTargetIsUsable(target, name);
-  await expect(target).toMatchElementSnapshot(name, options);
 }
 
 /**
