@@ -149,7 +149,7 @@ export const DISABLE_TEXT_BOX_TRIM = `
  * evaluates to false in Chrome. Re-declare the class-based fallback rules so
  * the snapshots reflect the same styling a non-CQ browser would get.
  *
- * SYNC SOURCE: The font-size values below must match the
+ * SYNC SOURCE: The font-size and padding rules below must match the
  * `@supports not (container-type: inline-size)` block in
  * `src/themes/KioskKeyboard.css`. If those CSS rules change, update
  * this constant to match.
@@ -164,6 +164,9 @@ export const DISABLE_CONTAINER_QUERIES = `
   }
   .kiosk-keyboard--cq-sm .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem) !important;
+  }
+  .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
+    --_kiosk-keyboard-key-padding: var(--_kiosk-keyboard-key-padding-xs) !important;
   }
   .kiosk-keyboard--cq-xs .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem) !important;

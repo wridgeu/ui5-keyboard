@@ -54,5 +54,11 @@ glyphs that exhibit rendering issues at small key sizes.
 
 ## Current workaround
 
-None. The `@` offset is accepted as-is. A CSS comment in
-`KioskKeyboard.css` references this proposal for traceability.
+Extra-narrow non-numpad keyboards now reduce horizontal key padding from
+`0.25rem` to `0.125rem` by default. That gives wide glyphs like `@`, `%`, and
+`&` more room before the touch target itself needs to shrink, which improves
+the phone-width screenshots without introducing glyph-specific offsets.
+
+This proposal remains relevant if future visual review still finds optical
+centering issues that spacing alone cannot solve. A custom font face would be a
+font-level answer; the padding change is only a responsive layout mitigation.

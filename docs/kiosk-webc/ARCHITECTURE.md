@@ -409,6 +409,8 @@ A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fall
 --kiosk-keyboard-key-font-size: calc(var(--kiosk-keyboard-key-height) * 0.375);
 --kiosk-keyboard-key-padding-inline: 0.25rem;
 --kiosk-keyboard-key-padding: 0 var(--kiosk-keyboard-key-padding-inline);
+--kiosk-keyboard-key-padding-inline-xs: min(var(--kiosk-keyboard-key-padding-inline), 0.125rem);
+--kiosk-keyboard-key-padding-xs: 0 var(--kiosk-keyboard-key-padding-inline-xs);
 --kiosk-keyboard-max-width: 100%;
 --kiosk-keyboard-docked-max-width: 1024px;
 --kiosk-keyboard-docked-z-index: 100;
@@ -417,6 +419,10 @@ A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fall
 ```
 
 The `Assets.ts` module calls `insertFontFace()` at import time to load the SAP "72" font-face declarations. This is a no-op when OpenUI5 is already present. Consumers who manage fonts themselves can skip importing `Assets.ts` and register only the theme/i18n bundles they need.
+
+The extra-narrow `*-xs` padding variables exist because wide single-glyph labels (`@`, `%`, `&`) start to look cramped before the 48px touch target itself needs to shrink. At `≤ 20rem`, non-numpad keys switch to `--kiosk-keyboard-key-padding-xs`, which defaults to a tighter `2px` inline inset. The default uses `min(...)` so a consumer-provided smaller padding is preserved, while still allowing explicit overrides for compact embedded layouts.
+
+Responsive sizing is explained by four internal root classes: `kiosk-keyboard--cq-sm`, `kiosk-keyboard--cq-xs`, `kiosk-keyboard--cq-short`, and `kiosk-keyboard--cq-tiny`. They are useful for understanding the implementation, but the supported styling surface remains the public `--kiosk-keyboard-*` variables above.
 
 ### Key Visual Variants
 

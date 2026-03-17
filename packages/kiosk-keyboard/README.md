@@ -1089,24 +1089,29 @@ The documented `--ui5KioskKeyboard-*` variables are the supported styling API. I
 
 Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
-| Property                                 | Default                                           | Description                               |
-| ---------------------------------------- | ------------------------------------------------- | ----------------------------------------- |
-| `--ui5KioskKeyboard-padding`             | `0.75rem`                                         | Container padding                         |
-| `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                        | Gap between keys and rows                 |
-| `--ui5KioskKeyboard-keyHeight`           | `3rem`                                            | Key height / touch target                 |
-| `--ui5KioskKeyboard-keyPaddingInline`    | `0.25rem`                                         | Horizontal key padding                    |
-| `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)` | Key label font size                       |
-| `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                         | Key resting shadow                        |
-| `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                         | Key hover shadow                          |
-| `--ui5KioskKeyboard-maxWidth`            | `100%`                                            | Max width for the default inline keyboard |
-| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                          | Max width when docked                     |
-| `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                         | Shadow when docked                        |
-| `--ui5KioskKeyboard-dockedZIndex`        | `100`                                             | Z-index for the docked keyboard           |
-| `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                  | Modifier / action key font size           |
-| `--ui5KioskKeyboard-modifierShadow`      | _(theme)_                                         | Modifier key resting shadow               |
-| `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                         | Modifier key hover shadow                 |
-| `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                           | Numpad container max-width                |
-| `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                            | Numpad key min-width                      |
+| Property                                 | Default                                                   | Description                                       |
+| ---------------------------------------- | --------------------------------------------------------- | ------------------------------------------------- |
+| `--ui5KioskKeyboard-padding`             | `0.75rem`                                                 | Container padding                                 |
+| `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                                | Gap between keys and rows                         |
+| `--ui5KioskKeyboard-keyHeight`           | `3rem`                                                    | Key height / touch target                         |
+| `--ui5KioskKeyboard-keyPaddingInline`    | `0.25rem`                                                 | Horizontal key padding                            |
+| `--ui5KioskKeyboard-keyPaddingInlineXs`  | `min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)` | Horizontal key padding in extra-narrow mode       |
+| `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)`         | Key label font size                               |
+| `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                                 | Key resting shadow                                |
+| `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                                 | Key hover shadow                                  |
+| `--ui5KioskKeyboard-maxWidth`            | `100%`                                                    | Max width for the default inline keyboard         |
+| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                                  | Max width when docked                             |
+| `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                                 | Shadow when docked                                |
+| `--ui5KioskKeyboard-dockedZIndex`        | `100`                                                     | Z-index for the docked keyboard                   |
+| `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                          | Modifier / action key font size                   |
+| `--ui5KioskKeyboard-modifierShadow`      | _(theme)_                                                 | Modifier key resting shadow                       |
+| `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                                 | Modifier key hover shadow                         |
+| `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                                   | Numpad container max-width                        |
+| `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                                    | Numpad key min-width                              |
+| `--ui5KioskKeyboard-cqNarrowThreshold`   | `30rem`                                                   | Width threshold for `ui5KioskKeyboard--cq-sm`     |
+| `--ui5KioskKeyboard-cqCompactThreshold`  | `20rem`                                                   | Width threshold for `ui5KioskKeyboard--cq-xs`     |
+| `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-short` |
+| `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-tiny`  |
 
 Override `--ui5KioskKeyboard-dockedZIndex` to adjust the docked keyboard's stacking layer.
 
@@ -1120,7 +1125,9 @@ By default, the inline keyboard takes the full width of its container (`100%`). 
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. Height-responsive sizing detects when the control's rendered DOM element is smaller than its natural content height and reduces key height, gaps, and modifier font-size automatically.
+Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. In the extra-narrow `≤ 20rem` mode, non-numpad keys also switch from `--ui5KioskKeyboard-keyPaddingInline` to `--ui5KioskKeyboard-keyPaddingInlineXs`. The default reduces horizontal padding from `0.25rem` to `0.125rem` because wide glyphs such as `@`, `%`, and `&` become visually cramped before the touch target itself needs to shrink. The `min(...)` default keeps any smaller consumer override intact, while still letting consumers opt into a roomier or tighter compact mode explicitly. Height-responsive sizing detects when the control's rendered DOM element is smaller than its natural content height and reduces key height, gaps, and modifier font-size automatically.
+
+For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-sm`, `ui5KioskKeyboard--cq-xs`, `ui5KioskKeyboard--cq-short`, and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
 The height constraint must affect the **control's own rendered element**. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the control's layout box, so the keyboard will be clipped instead of adapting. Apply `max-height` directly to the keyboard's root element (via CSS targeting `.ui5KioskKeyboard`), or use a flex parent that propagates the constraint.
 

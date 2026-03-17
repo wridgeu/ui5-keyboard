@@ -489,6 +489,10 @@ Keys use `flex: <grow> 1 0` for proportional sizing within rows. Width classes (
 
 Because UI5 controls render into light DOM (no shadow DOM container queries), the control uses `sap/ui/core/ResizeHandler` to observe the root element's inline size and toggle responsive CSS classes (`ui5KioskKeyboard--cq-xs`, `ui5KioskKeyboard--cq-sm`) from JavaScript. The `_syncResponsiveSizing` method registers the handler after rendering and tears it down on destroy.
 
+The public sizing variables deliberately separate normal and extra-narrow spacing. `--ui5KioskKeyboard-keyPaddingInline` keeps the default inline inset for regular widths, while `--ui5KioskKeyboard-keyPaddingInlineXs` is applied only in `ui5KioskKeyboard--cq-xs` for non-numpad keys. Its default (`min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)`) trims the stock padding from `0.25rem` to `0.125rem` so wide glyphs like `@`, `%`, and `&` get more horizontal breathing room on phone-sized rows without reducing key height or touch-target size. The `min(...)` form preserves any consumer override that is already smaller.
+
+The responsive classes explain when the compact variables take effect, but they are implementation details; consumers should adjust the documented `--ui5KioskKeyboard-*` custom properties instead of styling those classes directly.
+
 ### Content Density
 
 Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font size for denser displays.

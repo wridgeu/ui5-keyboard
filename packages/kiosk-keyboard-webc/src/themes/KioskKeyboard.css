@@ -12,6 +12,8 @@
   --kiosk-keyboard-key-font-size: calc(var(--kiosk-keyboard-key-height) * 0.375);
   --kiosk-keyboard-key-padding-inline: 0.25rem;
   --kiosk-keyboard-key-padding: 0 var(--kiosk-keyboard-key-padding-inline);
+  --kiosk-keyboard-key-padding-inline-xs: min(var(--kiosk-keyboard-key-padding-inline), 0.125rem);
+  --kiosk-keyboard-key-padding-xs: 0 var(--kiosk-keyboard-key-padding-inline-xs);
   /* Static rgba fallbacks for browsers without color-mix() support.
      The color-mix() re-declarations below override these in modern browsers,
      adapting to the active SAP theme's --sapContent_ShadowColor. */
@@ -74,6 +76,11 @@
   --_kiosk-keyboard-key-height: var(--kiosk-keyboard-key-height);
   --_kiosk-keyboard-key-padding-inline: var(--kiosk-keyboard-key-padding-inline);
   --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding, 0 var(--_kiosk-keyboard-key-padding-inline));
+  --_kiosk-keyboard-key-padding-inline-xs: var(--kiosk-keyboard-key-padding-inline-xs);
+  --_kiosk-keyboard-key-padding-xs: var(
+    --kiosk-keyboard-key-padding-xs,
+    0 var(--_kiosk-keyboard-key-padding-inline-xs)
+  );
   --_kiosk-keyboard-key-font-base: var(--kiosk-keyboard-key-font-size);
   --_kiosk-keyboard-key-shadow: var(--kiosk-keyboard-key-shadow);
   --_kiosk-keyboard-key-shadow-hover: var(--kiosk-keyboard-key-shadow-hover);
@@ -116,6 +123,9 @@
   .kiosk-keyboard--cq-sm .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
   }
+  .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
+    --_kiosk-keyboard-key-padding: var(--_kiosk-keyboard-key-padding-xs);
+  }
   .kiosk-keyboard--cq-xs .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
   }
@@ -135,6 +145,10 @@
 }
 
 @container keyboard (max-width: 20rem) {
+  .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
+    --_kiosk-keyboard-key-padding: var(--_kiosk-keyboard-key-padding-xs);
+  }
+
   .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
   }
@@ -502,12 +516,10 @@
 }
 
 /* Single-glyph labels (a, ü, @, €): no clipping, no scaling.
-   Known issue: the "@" glyph appears slightly off-center on narrow phone
-   keys.  Font-side metrics are symmetric (verified in both 72-Regular.woff2
-   and 72-Regular-full.woff2 via https://fontinfo.app).  Root cause is
-   unclear; likely sub-pixel rounding when the glyph's advance width is
-   close to the key's content-box width at small viewports.
-   See also docs/proposals/CUSTOM-FONT-FACE.md. */
+   Extra-narrow mode reduces horizontal key padding before shrinking touch
+   targets so wide glyphs such as @ / % / & keep more horizontal breathing
+   room on phone-sized rows. A custom font face could still improve optical
+   centering further; see docs/proposals/CUSTOM-FONT-FACE.md. */
 .kiosk-key__label--glyph {
   overflow: visible;
   text-overflow: clip;
