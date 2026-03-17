@@ -1,4 +1,5 @@
-import { browser, expect, $ } from "@wdio/globals";
+import { browser, $ } from "@wdio/globals";
+import { matchElementSnapshotInSection } from "./test-helpers.js";
 
 const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"] as const;
 
@@ -46,12 +47,12 @@ describe("KioskKeyboard Theme Visual Regression", () => {
 
       it(`should match QWERTY layout in ${theme}`, async () => {
         const kb = await getKeyboard("kb-qwerty");
-        await expect(kb).toMatchElementSnapshot(`kb-qwerty-${theme}`);
+        await matchElementSnapshotInSection(kb, `kb-qwerty-${theme}`);
       });
 
       it(`should match Numpad layout in ${theme}`, async () => {
         const kb = await getKeyboard("kb-numpad");
-        await expect(kb).toMatchElementSnapshot(`kb-numpad-${theme}`);
+        await matchElementSnapshotInSection(kb, `kb-numpad-${theme}`);
       });
     });
   }

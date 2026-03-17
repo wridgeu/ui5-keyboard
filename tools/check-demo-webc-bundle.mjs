@@ -28,11 +28,15 @@ if (typeof bundleExport !== "string" || bundleExport.length === 0) {
   throw new Error("kiosk-keyboard-webc/package.json is missing the public './bundle' export.");
 }
 
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-const result = spawnSync(npmCmd, ["run", "build", "-w", "packages/demo-app"], {
+const npmExecPath = process.env.npm_execpath;
+const npmCommand = npmExecPath ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm";
+const spawnArgs = npmExecPath
+  ? [npmExecPath, "run", "build", "-w", "packages/demo-app"]
+  : ["run", "build", "-w", "packages/demo-app"];
+const result = spawnSync(npmCommand, spawnArgs, {
   cwd: repoRoot,
   encoding: "utf8",
-  shell: process.platform === "win32",
+  shell: false,
 });
 
 if (result.stdout) {

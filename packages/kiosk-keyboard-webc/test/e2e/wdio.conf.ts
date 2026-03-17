@@ -49,7 +49,7 @@ export const config: WebdriverIO.Config = {
       "visual",
       {
         baselineFolder: path.resolve(__dirname, "__baselines__"),
-        formatImageName: "{tag}-{logName}-{width}x{height}",
+        formatImageName: "{tag}",
         screenshotPath: path.resolve(__dirname, "__screenshots__"),
         autoSaveBaseline: updateVisualBaseline,
         createJsonReportFiles: true,

@@ -258,6 +258,7 @@ Recommended stable consumer imports:
 
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type { RouterLike } from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";

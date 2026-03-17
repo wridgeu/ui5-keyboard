@@ -94,6 +94,67 @@ function killProcessTree(pid: number): Promise<void> {
   });
 }
 
+const MAX_STARTUP_OUTPUT_CHARS = 12_000;
+
+function createStartupOutputBuffer() {
+  let output = "";
+
+  return {
+    append(stream: "stdout" | "stderr", chunk: Buffer | string): void {
+      const text = chunk.toString().trim();
+      if (!text) return;
+      output += `[${stream}] ${text}\n`;
+      if (output.length > MAX_STARTUP_OUTPUT_CHARS) {
+        output = output.slice(-MAX_STARTUP_OUTPUT_CHARS);
+      }
+    },
+    format(): string {
+      return output ? `\nRecent server output:\n${output}` : "";
+    },
+  };
+}
+
+function createStartupFailureMonitor(
+  child: ChildProcess,
+  label: string,
+  getRecentOutput: () => string,
+): { promise: Promise<never>; complete: () => void } {
+  let startupFinished = false;
+  let rejectStartup!: (reason: Error) => void;
+
+  const onError = (error: Error) => {
+    if (startupFinished) return;
+    rejectStartup(
+      new Error(`${label} failed before becoming ready: ${error.message}${getRecentOutput()}`, { cause: error }),
+    );
+  };
+
+  const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+    if (startupFinished) return;
+    rejectStartup(
+      new Error(
+        `${label} exited before becoming ready (code=${code ?? "null"}, signal=${signal ?? "null"})${getRecentOutput()}`,
+      ),
+    );
+  };
+
+  const promise = new Promise<never>((_, reject) => {
+    rejectStartup = reject;
+  });
+
+  child.once("error", onError);
+  child.once("exit", onExit);
+
+  return {
+    promise,
+    complete() {
+      startupFinished = true;
+      child.off("error", onError);
+      child.off("exit", onExit);
+    },
+  };
+}
+
 /**
  * Creates wdio lifecycle hooks that auto-start a UI5 dev server
  * if the target port is not already in use, and tear it down on completion.
@@ -126,13 +187,38 @@ export function createServerManager(
     const ui5CliEntry = resolveUi5CliEntry(packageRoot);
     const args = [ui5CliEntry, "serve", "--port", String(port)];
     if (configFile) args.push("--config", configFile);
+    const startupOutput = createStartupOutputBuffer();
     serverProcess = spawn(process.execPath, args, {
       cwd: packageRoot,
-      stdio: ["ignore", "ignore", "inherit"],
+      stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       windowsHide: process.platform === "win32",
     });
-    await waitForServer(port, startupTimeout, readinessPath);
+
+    serverProcess.stdout?.on("data", (chunk) => startupOutput.append("stdout", chunk));
+    serverProcess.stderr?.on("data", (chunk) => startupOutput.append("stderr", chunk));
+
+    const startupFailure = createStartupFailureMonitor(serverProcess, `UI5 server on port ${port}`, () =>
+      startupOutput.format(),
+    );
+
+    try {
+      await Promise.race([
+        waitForServer(port, startupTimeout, readinessPath).catch((error) => {
+          throw new Error(`${(error as Error).message}${startupOutput.format()}`, { cause: error });
+        }),
+        startupFailure.promise,
+      ]);
+    } catch (error) {
+      startupFailure.complete();
+      if (serverProcess?.pid) {
+        await killProcessTree(serverProcess.pid);
+      }
+      serverProcess = undefined;
+      throw error;
+    }
+
+    startupFailure.complete();
   }
 
   async function stop(): Promise<void> {
@@ -192,13 +278,38 @@ export function createViteServerManager(
       return;
     }
     const viteCliEntry = resolveViteCliEntry(packageRoot);
+    const startupOutput = createStartupOutputBuffer();
     serverProcess = spawn(process.execPath, [viteCliEntry, "--port", String(port), "--strictPort"], {
       cwd: packageRoot,
-      stdio: ["ignore", "ignore", "inherit"],
+      stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       windowsHide: process.platform === "win32",
     });
-    await waitForServer(port, startupTimeout, readinessPath);
+
+    serverProcess.stdout?.on("data", (chunk) => startupOutput.append("stdout", chunk));
+    serverProcess.stderr?.on("data", (chunk) => startupOutput.append("stderr", chunk));
+
+    const startupFailure = createStartupFailureMonitor(serverProcess, `Vite server on port ${port}`, () =>
+      startupOutput.format(),
+    );
+
+    try {
+      await Promise.race([
+        waitForServer(port, startupTimeout, readinessPath).catch((error) => {
+          throw new Error(`${(error as Error).message}${startupOutput.format()}`, { cause: error });
+        }),
+        startupFailure.promise,
+      ]);
+    } catch (error) {
+      startupFailure.complete();
+      if (serverProcess?.pid) {
+        await killProcessTree(serverProcess.pid);
+      }
+      serverProcess = undefined;
+      throw error;
+    }
+
+    startupFailure.complete();
   }
 
   async function stop(): Promise<void> {

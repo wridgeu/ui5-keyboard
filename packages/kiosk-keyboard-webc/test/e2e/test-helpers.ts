@@ -1,4 +1,5 @@
-import { browser, $ } from "@wdio/globals";
+import { browser, $, expect } from "@wdio/globals";
+import type { ChainablePromiseElement } from "webdriverio";
 
 // Re-export shared CDP helpers so consumers import everything from one place
 export {
@@ -34,6 +35,108 @@ export async function openVisualPage(): Promise<void> {
 export async function getKeyboardRoot(hostId: string) {
   // WDIO pierces shadow DOM with >>> (deep selector)
   return $(`#${hostId}`).$(">>>.kiosk-keyboard");
+}
+
+type SnapshotElement = WebdriverIO.Element | ChainablePromiseElement;
+
+type SnapshotGeometry = {
+  position: string;
+  rect: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+  };
+  clientWidth: number;
+  clientHeight: number;
+  scrollWidth: number;
+  scrollHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+};
+
+async function readSnapshotGeometry(element: SnapshotElement): Promise<SnapshotGeometry> {
+  const target = await element;
+  return browser.execute((el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      position: getComputedStyle(el).position,
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      },
+      clientWidth: el.clientWidth,
+      clientHeight: el.clientHeight,
+      scrollWidth: el.scrollWidth,
+      scrollHeight: el.scrollHeight,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    };
+  }, target);
+}
+
+async function assertSnapshotTargetIsUsable(element: SnapshotElement, name: string): Promise<void> {
+  const geometry = await readSnapshotGeometry(element);
+  const tolerancePx = 2;
+
+  if (geometry.clientWidth <= 0 || geometry.clientHeight <= 0) {
+    throw new Error(
+      `Snapshot target '${name}' has zero size (${geometry.clientWidth}x${geometry.clientHeight}). ` +
+        `Visible element snapshots require a rendered target.`,
+    );
+  }
+
+  if (
+    geometry.position !== "fixed" &&
+    (geometry.rect.left < -tolerancePx ||
+      geometry.rect.top < -tolerancePx ||
+      geometry.rect.right > geometry.viewportWidth + tolerancePx ||
+      geometry.rect.bottom > geometry.viewportHeight + tolerancePx)
+  ) {
+    throw new Error(
+      `Snapshot target '${name}' does not fully fit inside the viewport after scrolling. ` +
+        `rect=${geometry.rect.width}x${geometry.rect.height}@(${geometry.rect.left},${geometry.rect.top}) ` +
+        `viewport=${geometry.viewportWidth}x${geometry.viewportHeight}.`,
+    );
+  }
+
+  if (
+    geometry.scrollWidth > geometry.clientWidth + tolerancePx ||
+    geometry.scrollHeight > geometry.clientHeight + tolerancePx
+  ) {
+    throw new Error(
+      `Snapshot target '${name}' is internally clipped or overflowing. ` +
+        `client=${geometry.clientWidth}x${geometry.clientHeight} ` +
+        `scroll=${geometry.scrollWidth}x${geometry.scrollHeight}.`,
+    );
+  }
+}
+
+async function shouldScrollSnapshotTarget(element: SnapshotElement): Promise<boolean> {
+  const target = await element;
+  return browser.execute((el: HTMLElement) => getComputedStyle(el).position !== "fixed", target);
+}
+
+export async function matchElementSnapshotSafely(
+  element: SnapshotElement,
+  name: string,
+  options?: { ignoreAntialiasing?: boolean },
+): Promise<void> {
+  const target = await element;
+  if (await shouldScrollSnapshotTarget(target)) {
+    await browser.execute((el: HTMLElement) => {
+      el.scrollIntoView({ block: "center", inline: "center" });
+    }, target);
+  }
+  await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+  await assertSnapshotTargetIsUsable(target, name);
+  await expect(target).toMatchElementSnapshot(name, options);
 }
 
 /**

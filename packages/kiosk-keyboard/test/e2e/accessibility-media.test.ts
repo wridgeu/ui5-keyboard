@@ -1,5 +1,10 @@
-import { expect } from "@wdio/globals";
-import { openVisualPage, getKeyboard, setEmulatedMediaFeatures, clearEmulatedMediaFeatures } from "./test-helpers.js";
+import {
+  openVisualPage,
+  getKeyboard,
+  setEmulatedMediaFeatures,
+  clearEmulatedMediaFeatures,
+  matchElementSnapshotInSection,
+} from "./test-helpers.js";
 
 describe("KioskKeyboard Accessibility Media Emulation", () => {
   beforeEach(async () => {
@@ -14,6 +19,6 @@ describe("KioskKeyboard Accessibility Media Emulation", () => {
     await setEmulatedMediaFeatures([{ name: "forced-colors", value: "active" }]);
     await openVisualPage();
     const kb = await getKeyboard("kb-qwerty");
-    await expect(kb).toMatchElementSnapshot("kb-qwerty-forced-colors");
+    await matchElementSnapshotInSection(kb, "kb-qwerty-forced-colors");
   });
 });

@@ -1,5 +1,5 @@
 {
-  "name": "ui5-keyboard",
+  "name": "ui5-lib-keyboard",
   "private": true,
   "description": "UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications",
   "homepage": "https://github.com/wridgeu/ui5-lib-keyboard",
@@ -77,8 +77,8 @@
     "test:tools": "node --test tools/test/*.test.mjs",
     "report:visual:kiosk": "node tools/visual-report.mjs packages/kiosk-keyboard/test/e2e/__screenshots__",
     "report:visual:webc": "node tools/visual-report.mjs packages/kiosk-keyboard-webc/test/e2e/__screenshots__",
-    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:tools && npm test && npm run test:demo:webc-bundle && npm run test:e2e:all-devices:sequential",
-    "check:parallel": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:tools && npm test && npm run test:demo:webc-bundle && npm run test:e2e:all-devices",
+    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:tools && npm test && npm run test:demo:webc-bundle && npm run test:packages:smoke && npm run test:e2e:all-devices:sequential",
+    "check:parallel": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:tools && npm test && npm run test:demo:webc-bundle && npm run test:packages:smoke && npm run test:e2e:all-devices",
     "prepare": "husky",
     "commitlint": "commitlint --edit"
   },

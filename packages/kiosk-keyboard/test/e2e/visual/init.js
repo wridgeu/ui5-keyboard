@@ -83,7 +83,6 @@ sap.ui.define(
     var shiftInput = new Input({ value: "Test shift", width: "300px" });
     shiftInput.placeAt("input-shift");
     var kbShift = new KioskKeyboard({ targetInput: shiftInput });
-    kbShift._shiftActive = true;
     kbShift.placeAt("kb-shift");
 
     // 12. Special characters layout

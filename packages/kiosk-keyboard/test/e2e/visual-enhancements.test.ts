@@ -1,13 +1,17 @@
-import { $, expect } from "@wdio/globals";
+import { $ } from "@wdio/globals";
 import {
   openVisualPage,
   getKeyboard,
+  getViewportWidth,
   injectStyleOverride,
   removeStyleOverride,
   DISABLE_TEXT_BOX_TRIM,
+  matchElementSnapshotInSection,
 } from "./test-helpers.js";
 
 const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+const FIXED_400_VIEWPORT_MIN = 420;
+const NARROW_CONTAINER_VIEWPORT_MIN = 340;
 
 /**
  * Progressive enhancement visual regression tests.
@@ -34,21 +38,24 @@ describe("KioskKeyboard UI5 - Fallback: without text-box-trim", () => {
 
   it("should match QWERTY layout without text-box-trim", async () => {
     const kb = await getKeyboard("kb-qwerty");
-    await expect(kb).toMatchElementSnapshot("kb-qwerty-no-text-trim");
+    await matchElementSnapshotInSection(kb, "kb-qwerty-no-text-trim");
   });
 
-  it("should match narrow layout without text-box-trim", async () => {
+  it("should match narrow layout without text-box-trim", async function () {
+    if ((await getViewportWidth()) < NARROW_CONTAINER_VIEWPORT_MIN) this.skip();
     const kb = await getKeyboard("kb-narrow");
-    await expect(kb).toMatchElementSnapshot("kb-narrow-no-text-trim");
+    await matchElementSnapshotInSection(kb, "kb-narrow-no-text-trim");
   });
 
-  it("should match height-constrained container without text-box-trim", async () => {
+  it("should match height-constrained container without text-box-trim", async function () {
+    if ((await getViewportWidth()) < FIXED_400_VIEWPORT_MIN) this.skip();
     const container = await $("#kb-height-constrained");
-    await expect(container).toMatchElementSnapshot("kb-height-constrained-no-text-trim", HEIGHT_SNAPSHOT_OPTIONS);
+    await matchElementSnapshotInSection(container, "kb-height-constrained-no-text-trim", HEIGHT_SNAPSHOT_OPTIONS);
   });
 
-  it("should match glyph stress layout without text-box-trim", async () => {
+  it("should match glyph stress layout without text-box-trim", async function () {
+    if ((await getViewportWidth()) < NARROW_CONTAINER_VIEWPORT_MIN) this.skip();
     const kb = await getKeyboard("kb-glyph-stress");
-    await expect(kb).toMatchElementSnapshot("kb-glyph-stress-no-text-trim");
+    await matchElementSnapshotInSection(kb, "kb-glyph-stress-no-text-trim");
   });
 });

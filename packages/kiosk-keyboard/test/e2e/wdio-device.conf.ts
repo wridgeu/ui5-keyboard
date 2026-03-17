@@ -78,7 +78,7 @@ export const config: wdi5Config = {
       "visual",
       {
         baselineFolder: path.resolve(__dirname, `__baselines__/${profile.id}`),
-        formatImageName: "{tag}-{logName}-{width}x{height}",
+        formatImageName: "{tag}",
         screenshotPath: path.resolve(__dirname, `__screenshots__/${profile.id}`),
         autoSaveBaseline: updateVisualBaseline,
         createJsonReportFiles: true,
