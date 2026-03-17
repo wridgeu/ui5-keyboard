@@ -11,6 +11,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootHidden: "kiosk-keyboard--hidden",
     rootNumpad: "kiosk-keyboard--numpad",
     rootNumeric: "kiosk-keyboard--numeric",
+    rootCqWidthCustom: "kiosk-keyboard--cq-width-custom",
     rootCqSm: "kiosk-keyboard--cq-sm",
     rootCqXs: "kiosk-keyboard--cq-xs",
     rootCqShort: "kiosk-keyboard--cq-short",

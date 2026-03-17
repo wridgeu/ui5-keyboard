@@ -37,8 +37,12 @@ function probePort(port: number, timeout = 1_000): Promise<boolean> {
   });
 }
 
-/** Polls until the server on the given port accepts TCP connections and responds to HTTP. */
-async function waitForServer(port: number, timeout: number): Promise<void> {
+function isSuccessfulHttpStatus(statusCode: number): boolean {
+  return statusCode >= 200 && statusCode < 400;
+}
+
+/** Polls until the server on the given port accepts TCP connections and responds to the expected HTTP path. */
+async function waitForServer(port: number, timeout: number, readinessPath = "/"): Promise<void> {
   const deadline = Date.now() + timeout;
   // Phase 1: wait for TCP
   while (Date.now() < deadline) {
@@ -50,18 +54,17 @@ async function waitForServer(port: number, timeout: number): Promise<void> {
   }
   // Phase 2: wait for HTTP readiness (server may accept TCP before it can serve content)
   while (Date.now() < deadline) {
-    if (await probeHttp(port)) return;
+    if (await probeHttp(port, readinessPath)) return;
     await delay(500);
   }
-  throw new Error(`Server on port ${port} accepts TCP but does not respond to HTTP after ${timeout}ms`);
+  throw new Error(`Server on port ${port} accepts TCP but does not serve '${readinessPath}' after ${timeout}ms`);
 }
 
-/** Verifies that an HTTP server on localhost:port responds with a 2xx/3xx status. */
-function probeHttp(port: number, timeout = 3_000): Promise<boolean> {
+/** Verifies that an HTTP server on localhost:port serves the expected path with a 2xx/3xx status. */
+function probeHttp(port: number, readinessPath = "/", timeout = 3_000): Promise<boolean> {
   return new Promise((resolve) => {
-    const req = http.get(`http://localhost:${port}/`, { timeout }, (res) => {
-      // Any non-error response (2xx, 3xx, even 404) means a real server is listening
-      resolve((res.statusCode ?? 0) > 0);
+    const req = http.get(`http://localhost:${port}${readinessPath}`, { timeout }, (res) => {
+      resolve(isSuccessfulHttpStatus(res.statusCode ?? 0));
       res.resume(); // drain the response
     });
     req.on("error", () => resolve(false));
@@ -98,18 +101,24 @@ function killProcessTree(pid: number): Promise<void> {
  * The returned object also implements `Symbol.asyncDispose` so it can be
  * used with `await using` for automatic cleanup.
  */
-export function createServerManager(port: number, packageRoot: string, configFile?: string, startupTimeout = 60_000) {
+export function createServerManager(
+  port: number,
+  packageRoot: string,
+  configFile?: string,
+  startupTimeout = 60_000,
+  readinessPath = "/",
+) {
   let serverProcess: ChildProcess | undefined;
 
   async function start(): Promise<void> {
     if (await probePort(port)) {
-      // Port is occupied -- verify it's actually serving HTTP content.
+      // Port is occupied -- verify it's actually serving the expected content.
       // Stale processes from killed test runs keep the port open but serve
       // nothing, causing "Keyboard keys not rendered" timeouts downstream.
-      if (!(await probeHttp(port))) {
+      if (!(await probeHttp(port, readinessPath))) {
         throw new Error(
-          `Port ${port} is occupied by a process that does not respond to HTTP requests. ` +
-            `Kill the stale process (netstat -aon | findstr :${port}) and retry.`,
+          `Port ${port} is occupied by a process that does not serve '${readinessPath}'. ` +
+            `Kill the stale or wrong process (netstat -aon | findstr :${port}) and retry.`,
         );
       }
       return;
@@ -123,7 +132,7 @@ export function createServerManager(port: number, packageRoot: string, configFil
       shell: false,
       windowsHide: process.platform === "win32",
     });
-    await waitForServer(port, startupTimeout);
+    await waitForServer(port, startupTimeout, readinessPath);
   }
 
   async function stop(): Promise<void> {
@@ -164,15 +173,20 @@ function resolveViteCliEntry(packageRoot: string): string {
  *
  * Mirrors the `createServerManager` API so consumers use the same pattern.
  */
-export function createViteServerManager(port: number, packageRoot: string, startupTimeout = 60_000) {
+export function createViteServerManager(
+  port: number,
+  packageRoot: string,
+  startupTimeout = 60_000,
+  readinessPath = "/",
+) {
   let serverProcess: ChildProcess | undefined;
 
   async function start(): Promise<void> {
     if (await probePort(port)) {
-      if (!(await probeHttp(port))) {
+      if (!(await probeHttp(port, readinessPath))) {
         throw new Error(
-          `Port ${port} is occupied by a process that does not respond to HTTP requests. ` +
-            `Kill the stale process (netstat -aon | findstr :${port}) and retry.`,
+          `Port ${port} is occupied by a process that does not serve '${readinessPath}'. ` +
+            `Kill the stale or wrong process (netstat -aon | findstr :${port}) and retry.`,
         );
       }
       return;
@@ -184,7 +198,7 @@ export function createViteServerManager(port: number, packageRoot: string, start
       shell: false,
       windowsHide: process.platform === "win32",
     });
-    await waitForServer(port, startupTimeout);
+    await waitForServer(port, startupTimeout, readinessPath);
   }
 
   async function stop(): Promise<void> {

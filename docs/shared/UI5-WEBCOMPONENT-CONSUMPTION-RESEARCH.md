@@ -71,6 +71,7 @@ And evaluate what is currently covered by this repository's demos.
   - native UI5 Web Component input usage in XML (`xmlns:webc="@ui5/webcomponents/dist"`)
   - custom-element bridge controls in `packages/demo-app/webapp/control/`
 - Kept `ui5-tooling-modules` middleware/task so npm web-component modules resolve correctly in the UI5 app.
+- For the `WebComponent.extend()` bridge path, configure `pluginOptions.webcomponents.skip: true`. This uses the documented `ui5-tooling-modules` option for skipping seamless wrapper transformation, and it avoids substitute wrappers for packages that are already being consumed as native custom elements.
 - Updated interop e2e harness to avoid deprecated/global-core access patterns.
 
 ## Standalone Scenario Status

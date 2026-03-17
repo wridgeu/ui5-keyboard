@@ -2178,13 +2178,20 @@ describe("kiosk-keyboard", () => {
   // ── Responsive threshold CSS variables ──
 
   describe("responsive threshold CSS variables", () => {
-    it("uses custom width thresholds for class toggling", async () => {
+    it("uses custom width thresholds for visible narrow-mode styling", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard layout="qwerty" style="width: 600px"></kiosk-keyboard>
         `,
       );
       await nextRender();
+      await waitForResponsiveSync();
+
+      const key = queryKey(el, "1");
+      expect(key).to.not.be.null;
+
+      const defaultFontSize = parseFloat(getComputedStyle(key!).fontSize);
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
       // At 600px with default 30rem threshold (480px), no cq-sm class expected.
       // Override narrow threshold to 40rem (640px) so 600px triggers cq-sm.
@@ -2193,7 +2200,46 @@ describe("kiosk-keyboard", () => {
       await waitForResponsiveSync();
 
       const root = rootDiv(el);
+      expect(root.classList.contains(DOM.classes.rootCqWidthCustom)).to.be.true;
       expect(root.classList.contains(DOM.classes.rootCqSm)).to.be.true;
+
+      const customFontSize = parseFloat(getComputedStyle(key!).fontSize);
+      expect(customFontSize).to.be.at.most(1 * remPx + 0.5, "Font size should respect the 1rem narrow cap");
+      expect(customFontSize).to.be.below(
+        defaultFontSize - 0.5,
+        "Custom width threshold should visibly narrow the keys",
+      );
+    });
+
+    it("uses custom compact threshold for visible compact-mode padding", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty" style="width: 28rem"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      const key = queryKey(el, "1");
+      expect(key).to.not.be.null;
+
+      const defaultPaddingLeft = parseFloat(getComputedStyle(key!).paddingLeft);
+
+      // At 28rem the default 20rem compact threshold does not apply.
+      // Override compact threshold to 30rem so 28rem triggers cq-xs.
+      el.style.setProperty("--kiosk-keyboard-cq-compact-threshold", "30rem");
+      el.refreshResponsiveState();
+      await waitForResponsiveSync();
+
+      const root = rootDiv(el);
+      expect(root.classList.contains(DOM.classes.rootCqWidthCustom)).to.be.true;
+      expect(root.classList.contains(DOM.classes.rootCqXs)).to.be.true;
+
+      const compactPaddingLeft = parseFloat(getComputedStyle(key!).paddingLeft);
+      expect(compactPaddingLeft).to.be.below(
+        defaultPaddingLeft - 0.5,
+        "Custom compact threshold should reduce key padding",
+      );
     });
 
     it("uses custom height thresholds for class toggling", async () => {

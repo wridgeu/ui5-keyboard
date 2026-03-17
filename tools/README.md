@@ -42,6 +42,8 @@ Inspired by [unguard](https://github.com/anthropics/unguard)'s `no-type-assertio
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
+Regression coverage for the auto-fix rules lives in `tools/test/oxlint-custom-rules.test.mjs` and runs via `npm run test:tools`.
+
 ## `eslint-plugin-comment-quality.mjs`
 
 Custom oxlint JS plugin that detects low-quality AI-generated comments. Uses AST correlation (comparing comment text against adjacent code identifiers) rather than broad regex to keep false-positive rates low. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
@@ -60,18 +62,26 @@ All rules are warn-only (no auto-fix) so the developer decides whether to rewrit
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
+Warn-only comment rules currently piggyback on the same `npm run test:tools` harness only when they need explicit regression coverage; the auto-fix rules are the main priority because they can rewrite staged files during commit.
+
 ## `wdio-server.ts`
 
 Shared utilities for WebdriverIO test configurations across packages.
 
-### `createServerManager(port, packageRoot, configFile?, startupTimeout?)`
+### `createServerManager(port, packageRoot, configFile?, startupTimeout?, readinessPath?)`
 
-Creates wdio lifecycle hooks (`onPrepare` / `onComplete`) that auto-start a UI5 dev server if the target port is not already in use, and tear it down on completion.
+Creates wdio lifecycle hooks (`onPrepare` / `onComplete`) that auto-start a UI5 dev server if the target port is not already in use, and tear it down on completion. `readinessPath` lets callers verify a package-specific URL instead of accepting any HTTP response on the port.
 
 **Usage with wdio hooks (current):**
 
 ```ts
-const server = createServerManager(8082, PACKAGE_ROOT);
+const server = createServerManager(
+  8082,
+  PACKAGE_ROOT,
+  undefined,
+  60_000,
+  "/test-resources/ui5/kiosk/qunit/testsuite.qunit.html",
+);
 
 export const config: WebdriverIO.Config = {
   onPrepare: () => server.onPrepare(),
@@ -89,12 +99,12 @@ await server.onPrepare();
 // server is automatically stopped when the scope exits
 ```
 
-### `createViteServerManager(port, packageRoot, startupTimeout?)`
+### `createViteServerManager(port, packageRoot, startupTimeout?, readinessPath?)`
 
-Creates wdio lifecycle hooks that start a Vite dev server for packages that use Vite for bundling (e.g. kiosk-keyboard-webc). Unlike a plain static file server, Vite resolves bare module specifiers so test pages with ES module imports work without an import map.
+Creates wdio lifecycle hooks that start a Vite dev server for packages that use Vite for bundling (e.g. kiosk-keyboard-webc). Unlike a plain static file server, Vite resolves bare module specifiers so test pages with ES module imports work without an import map. `readinessPath` lets callers reject unrelated HTTP servers already bound to the same port.
 
 ```ts
-const server = createViteServerManager(8084, PACKAGE_ROOT);
+const server = createViteServerManager(8084, PACKAGE_ROOT, 60_000, "/test/pages/index.html");
 
 export const config: WebdriverIO.Config = {
   onPrepare: () => server.onPrepare(),
@@ -194,6 +204,26 @@ What it does:
 - merges multiple JSON outputs into `output-combined.json` when needed
 - runs `wdio-visual-reporter` to generate the HTML report
 - serves the generated report locally with `sirv-cli`
+
+## `check-demo-webc-bundle.mjs`
+
+Build-time smoke check that keeps the documented UI5 bridge path honest.
+
+- Verifies the demo still imports `kiosk-keyboard-webc/bundle`
+- Rebuilds `packages/demo-app`
+- Fails if the documented public bundle path stops being buildable in the demo
+
+Run via `npm run test:demo:webc-bundle`.
+
+## `check-package-smoke.mjs`
+
+Packaging smoke check for the publishable packages.
+
+- Rebuilds `packages/hotkeys`, `packages/kiosk-keyboard`, and `packages/kiosk-keyboard-webc`
+- Runs `npm pack --dry-run --json` in each package
+- Verifies contract-critical files are actually present in the tarball (for example UI5 build manifests and the WebC bundle outputs)
+
+Run via `npm run test:packages:smoke`.
 
 ## Consumers
 

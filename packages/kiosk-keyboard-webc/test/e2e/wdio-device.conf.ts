@@ -21,7 +21,7 @@ if (!deviceName || !deviceProfiles[deviceName]) {
 const profile = deviceProfiles[deviceName];
 const PORT = BASE_PORT + profile.portOffset;
 
-const server = createViteServerManager(PORT, PACKAGE_ROOT);
+const server = createViteServerManager(PORT, PACKAGE_ROOT, 60_000, "/test/pages/index.html");
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 

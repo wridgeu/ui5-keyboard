@@ -128,11 +128,21 @@ builder:
   customTasks:
     - name: ui5-tooling-modules-task
       afterTask: replaceVersion
+      configuration:
+        pluginOptions:
+          webcomponents:
+            skip: true
 server:
   customMiddleware:
     - name: ui5-tooling-modules-middleware
       afterMiddleware: compression
+      configuration:
+        pluginOptions:
+          webcomponents:
+            skip: true
 ```
+
+For this repo's `WebComponent.extend()` bridge pattern, set `pluginOptions.webcomponents.skip: true`. This is not a repo-invented convention: it follows the documented `ui5-tooling-modules` option for skipping seamless web component wrapper transformation. In our bridge setup, that keeps the build focused on the native custom element and avoids substitute-module warnings for `kiosk-keyboard-webc`.
 
 Then you have two practical integration paths:
 
@@ -147,6 +157,8 @@ That path is viable, but this repository does not currently use it as the primar
 #### 3b. `WebComponent.extend()` bridge (repo-proven fallback)
 
 This repository's demo app uses `WebComponent.extend()` because it gives explicit UI5-side property, event, method, and association metadata.
+
+The repo also keeps a dedicated smoke check for this exact public entry point via `npm run test:demo:webc-bundle`, so the documented UI5 bridge path stays buildable instead of only being described in prose.
 
 ```ts
 import "kiosk-keyboard-webc/bundle";
@@ -600,7 +612,7 @@ kiosk-keyboard {
 ```
 
 > [!NOTE]
-> The threshold variables control the JS-driven class toggling. The CSS `@container` rules for font-size capping use fixed `30rem` / `20rem` breakpoints independently (CSS does not support `var()` in `@container` conditions). If you override the width thresholds, the class application will shift but the built-in font-size capping fires at the original fixed breakpoints.
+> The default width behavior uses native CSS `@container` breakpoints at `30rem` / `20rem` for instant response. When you override `--kiosk-keyboard-cq-narrow-threshold` or `--kiosk-keyboard-cq-compact-threshold`, the component automatically switches to class-driven width styling so the custom breakpoints become authoritative in CQ and non-CQ browsers alike.
 
 For troubleshooting, the root element toggles internal classes such as `kiosk-keyboard--cq-sm`, `kiosk-keyboard--cq-xs`, `kiosk-keyboard--cq-short`, and `kiosk-keyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
 

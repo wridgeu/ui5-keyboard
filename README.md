@@ -278,6 +278,11 @@ npm run test:e2e:all-devices           # All e2e across all device profiles (kio
 npm run test:e2e:all-devices:sequential # Same matrix, but sequential for lower local CPU/RAM pressure
 npm run test:kiosk:e2e:flp             # FLP lifecycle e2e tests (SAPUI5 sandbox)
 
+# Contract / tooling smoke checks
+npm run test:tools                      # Regression tests for custom oxlint fixers
+npm run test:demo:webc-bundle           # Demo build smoke check for the public WebC bundle path
+npm run test:packages:smoke             # Build + npm pack dry-run smoke for publishable packages
+
 # Visual baseline management
 npm run test:kiosk:e2e:update          # Update kiosk desktop visual baselines
 npm run test:kiosk-webc:e2e:update     # Update webc desktop visual baselines
@@ -290,7 +295,8 @@ npm run test:coverage                  # Kiosk webc coverage (unit + component)
 ### Code Quality
 
 ```bash
-npm run check              # Full quality gate (fmt + lint + typecheck + all tests + concurrent multi-device e2e)
+npm run check              # Full quality gate with smoke checks + sequential multi-device e2e
+npm run check:parallel     # Same gate, but with the concurrent multi-device matrix
 npm run fmt                # Format (oxfmt)
 npm run fmt:check          # Check formatting without fixing
 npm run lint               # Lint (oxlint)

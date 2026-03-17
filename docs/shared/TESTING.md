@@ -145,7 +145,10 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
 npm run test:e2e:all-devices  # All E2E across both packages, all devices (parallel)
 npm run test:e2e:all-devices:sequential # Same device matrix, but sequential for lower local CPU/RAM pressure
-npm run check                 # Full quality gate (fmt + lint + typecheck + guardrails + test + e2e)
+npm run test:tools            # Regression tests for custom oxlint fixers
+npm run test:demo:webc-bundle # Demo build smoke check for the public WebC bundle path
+npm run check                 # Full quality gate with smoke checks + sequential multi-device matrix
+npm run check:parallel        # Same gate, but with the concurrent multi-device matrix
 ```
 
-`npm run check` is the CI gate. It now includes the concurrent multi-device matrix. Use `npm run test:e2e:all-devices` for the normal desktop/phone/tablet sweep, and `npm run test:e2e:all-devices:sequential` when you specifically want lower local machine load.
+`npm run check` remains exhaustive, but it now uses the sequential device matrix to reduce peak machine load and port/contention flake. Use `npm run check:parallel` or `npm run test:e2e:all-devices` when you explicitly want the higher-pressure concurrent sweep.

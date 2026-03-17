@@ -33,10 +33,10 @@
 
   /* ---- Responsive breakpoint thresholds (rem) ----
      Override to control when width/height compact classes activate.
-     Width thresholds affect the JS-driven class toggling (--cq-sm, --cq-xs).
-     Note: CSS @container font-size rules use fixed 30rem/20rem breakpoints
-     independently; these variables control the class application only.
-     Height thresholds control when --cq-short / --cq-tiny classes apply. */
+     The default width behavior uses CSS @container breakpoints (30rem/20rem).
+     When consumers override the width thresholds, JS-driven classes take over
+     so the public CSS variables remain authoritative.
+     Height thresholds always drive JS-applied --cq-short / --cq-tiny classes. */
   --kiosk-keyboard-cq-narrow-threshold: 30rem;
   --kiosk-keyboard-cq-compact-threshold: 20rem;
   --kiosk-keyboard-cq-short-threshold: 16rem;
@@ -160,6 +160,32 @@
   }
 }
 
+/* Consumer-overridden width thresholds take precedence over the fixed
+   @container defaults. These rules reset the width-responsive styling to the
+   base values, then re-apply the width state from the JS-driven cq classes. */
+.kiosk-keyboard--cq-width-custom .kiosk-key {
+  --kiosk-keyboard-key-font-size: var(--_kiosk-keyboard-key-font-base);
+}
+
+.kiosk-keyboard--cq-width-custom:not(.kiosk-keyboard--numpad) .kiosk-key {
+  --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding, 0 var(--_kiosk-keyboard-key-padding-inline));
+}
+
+.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-sm .kiosk-key {
+  --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
+}
+
+.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
+  --_kiosk-keyboard-key-padding: var(
+    --kiosk-keyboard-key-padding-xs,
+    0 min(var(--_kiosk-keyboard-key-padding-inline), var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem))
+  );
+}
+
+.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-xs .kiosk-key {
+  --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
+}
+
 /* ---- Height-responsive classes (JS-driven via ResizeObserver) ---- */
 .kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) {
   --kiosk-keyboard-key-height: 2.25rem;
@@ -179,6 +205,11 @@
   .kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
   }
+}
+
+.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
+.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
+  --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
 }
 
 /* ---- Mode: Numpad ---- */

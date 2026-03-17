@@ -8,7 +8,13 @@ const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8085;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
-const server = createServerManager(PORT, PACKAGE_ROOT);
+const server = createServerManager(
+  PORT,
+  PACKAGE_ROOT,
+  undefined,
+  60_000,
+  "/test-resources/ui5/kiosk/e2e/visual/index.html",
+);
 
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const runReadmeScreenshots = process.argv.includes("--readme-screenshots");

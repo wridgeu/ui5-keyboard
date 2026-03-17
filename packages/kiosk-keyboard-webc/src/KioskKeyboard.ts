@@ -128,6 +128,10 @@ function resolveRemThreshold(
   return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
 }
 
+function differsFromDefaultThreshold(valuePx: number, fallbackRem: number, remPx: number): boolean {
+  return Math.abs(valuePx - fallbackRem * remPx) > 0.01;
+}
+
 /**
  * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
  *
@@ -1619,10 +1623,11 @@ class KioskKeyboard extends UI5Element {
   /**
    * Applies width and height responsive classes to the root element.
    *
-   * Width: mirrors @container inline-size breakpoints via JS classes.
-   * In CQ browsers, CSS @container rules handle width natively; these
-   * classes are wrapped in @supports not (container-type: inline-size)
-   * so they only take effect in non-CQ browsers (older webviews, etc.).
+   * Width: mirrors the default @container inline-size breakpoints via JS
+   * classes. In CQ browsers, the default 30rem / 20rem breakpoints are still
+   * handled natively by CSS, but when consumers override the public width
+   * threshold variables we add a dedicated class so CSS can honor the custom
+   * thresholds instead of the fixed @container defaults.
    *
    * Height: applied in all browsers -- detects external height constraints
    * (host height < natural content height) and applies compact layout.
@@ -1645,6 +1650,9 @@ class KioskKeyboard extends UI5Element {
     const compactThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-compact-threshold", 20, remPx);
     const isCompact = rootContentWidth <= compactThresh;
     const isNarrow = rootContentWidth <= narrowThresh;
+    const hasCustomWidthThresholds =
+      differsFromDefaultThreshold(narrowThresh, 30, remPx) || differsFromDefaultThreshold(compactThresh, 20, remPx);
+    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqWidthCustom, hasCustomWidthThresholds);
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
 

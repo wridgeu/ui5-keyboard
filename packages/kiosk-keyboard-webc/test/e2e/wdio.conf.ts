@@ -7,7 +7,7 @@ const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8086;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 
-const server = createViteServerManager(PORT, PACKAGE_ROOT);
+const server = createViteServerManager(PORT, PACKAGE_ROOT, 60_000, "/test/pages/index.html");
 
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");

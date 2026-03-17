@@ -9,7 +9,7 @@ const PORT = 8083;
 const PACKAGE_ROOT = path.resolve(__dirname, "../../../../packages/demo-app");
 
 // SAPUI5 framework packages may need to download on first run → longer timeout
-const server = createServerManager(PORT, PACKAGE_ROOT, "ui5-flp.yaml", 120_000);
+const server = createServerManager(PORT, PACKAGE_ROOT, "ui5-flp.yaml", 120_000, "/test/flp.html");
 
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];

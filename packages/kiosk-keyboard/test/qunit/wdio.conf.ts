@@ -10,7 +10,13 @@ const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const TESTSUITE_FILE = path.resolve(__dirname, "testsuite.qunit.ts");
 const SPECS_DIR = path.resolve(__dirname, ".generated-specs");
 
-const server = createServerManager(PORT, PACKAGE_ROOT);
+const server = createServerManager(
+  PORT,
+  PACKAGE_ROOT,
+  undefined,
+  60_000,
+  "/test-resources/ui5/kiosk/qunit/testsuite.qunit.html",
+);
 const testIds = readQUnitTestIds(TESTSUITE_FILE);
 
 const cpus = (os.availableParallelism?.() ?? os.cpus().length) || 4;

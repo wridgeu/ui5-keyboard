@@ -8,7 +8,13 @@ const PORT = 8081;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const TESTSUITE_FILE = path.resolve(__dirname, "testsuite.qunit.ts");
 
-const server = createServerManager(PORT, PACKAGE_ROOT);
+const server = createServerManager(
+  PORT,
+  PACKAGE_ROOT,
+  undefined,
+  60_000,
+  "/test-resources/ui5/hotkeys/qunit/testsuite.qunit.html",
+);
 const testIds = readQUnitTestIds(TESTSUITE_FILE);
 
 export const config: WebdriverIO.Config = {
