@@ -51,39 +51,127 @@ wrapper.remove(); // ← fixtureCleanup will fail
 
 Visual tests use `@wdio/visual-service` with pinned Chrome-for-Testing (`CHROME_VERSION` in `tools/wdio-device-profiles.ts`). Baselines are tied to this exact Chrome version. Changing it requires regenerating ALL baselines across both packages.
 
-### Config files
+### How it works
 
-Each package has three wdio configs:
+The visual regression pipeline has three stages:
 
-| Config                | Purpose                             | Server               |
-| --------------------- | ----------------------------------- | -------------------- |
-| `wdio.conf.ts`        | Desktop (1440x900)                  | UI5 serve / Vite     |
-| `wdio-device.conf.ts` | Phone (360x800) / Tablet (768x1024) | Same, different port |
-| `wdio-flp.conf.ts`    | FLP sandbox (kiosk only)            | UI5 serve            |
+1. **Capture**: `@wdio/visual-service` takes a viewport screenshot via Chrome DevTools Protocol and crops it to the target element's bounding rectangle.
+2. **Compare**: The cropped screenshot is compared pixel-by-pixel against a stored baseline image in `__baselines__/`.
+3. **Report**: Comparison results are written to `output.json` files in `__screenshots__/`. The `test:e2e:report` script merges these into an interactive HTML report.
 
-Device configs write screenshots and baselines to per-device subfolders (`__baselines__/{phone,tablet}`, `__screenshots__/{phone,tablet}`).
+The critical limitation of stage 1: **the crop is bounded by the viewport**. If any part of the target element extends outside the viewport, that portion is silently clipped from the screenshot. This is why section isolation exists (see below).
 
-### Baseline management
+### Section isolation (required for multi-keyboard test pages)
 
-```bash
-# Update desktop baselines
-npm run test:e2e:update -w packages/kiosk-keyboard
-npm run test:e2e:update -w packages/kiosk-keyboard-webc
+Visual test pages contain many keyboard sections stacked vertically. Without intervention, `scrollIntoView` may not position tall elements fully inside the viewport, causing the WDIO visual service to clip the screenshot at the viewport edge. The result is a baseline with a cropped keyboard that silently passes future comparisons (because it compares against the equally-cropped baseline).
 
-# Update device baselines
-npm run test:e2e:phone:update -w packages/kiosk-keyboard
-npm run test:e2e:tablet:update -w packages/kiosk-keyboard-webc
-# etc.
+Both packages use `isolateSection()` to prevent this. Before each snapshot, all `.section` wrappers except the active one are hidden via `display: none`. This collapses the page so the target element sits near the top and fits comfortably in any viewport size. Sections are restored in a `finally` block after the snapshot.
+
+```ts
+// Both packages expose the same pattern via matchElementSnapshotInSection:
+export async function matchElementSnapshotInSection(
+  element: SnapshotElement,
+  name: string,
+  options?: { ignoreAntialiasing?: boolean },
+): Promise<void> {
+  const target = await element;
+  await isolateSection(target); // hide other sections
+  try {
+    // scroll, wait for paint, assert geometry, take snapshot
+    await expect(target).toMatchElementSnapshot(name, options);
+  } finally {
+    await restoreSections(); // always restore
+  }
+}
 ```
 
-Always review diffs visually after updating. The `test:e2e:report` script generates an interactive HTML report:
+The WebC variant traverses through the shadow host to reach light-DOM `.section` ancestors (shadow DOM elements cannot use `closest()` across shadow boundaries).
+
+**If you add a new visual test file or test page, always use `matchElementSnapshotInSection` for element snapshots. Direct calls to `toMatchElementSnapshot` without section isolation will produce cropped baselines on small viewports.**
+
+### Config files
+
+Each package has up to three wdio configs:
+
+| Config                | Purpose                                                                 | Server               |
+| --------------------- | ----------------------------------------------------------------------- | -------------------- |
+| `wdio.conf.ts`        | Desktop (1440x900)                                                      | UI5 serve / Vite     |
+| `wdio-device.conf.ts` | Responsive device matrix (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) | Same, different port |
+| `wdio-flp.conf.ts`    | FLP sandbox (kiosk only)                                                | UI5 serve            |
+
+Desktop configs run all `**/*.test.ts` files (including container and enhancement tests). Device configs run a focused subset: `visual.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, `accessibility-media.test.ts`. Container tests with fixed-width wrappers (e.g. 400px) are desktop-only because they would overflow a 320px phone viewport.
+
+Baselines are stored in per-profile subfolders:
+
+```
+__baselines__/              desktop baselines (1440x900, DPR 1)
+__baselines__/phone-sm/     320x568, DPR 2
+__baselines__/phone-md/     390x844, DPR 3
+__baselines__/phone-lg/     430x932, DPR 3
+__baselines__/tablet/       768x1024, DPR 2
+```
+
+### Running visual tests
 
 ```bash
-npm run test:e2e:report -w packages/kiosk-keyboard
+# Run tests (headless, compare against baselines)
+npm run test:e2e -w packages/kiosk-keyboard-webc           # desktop only
+npm run test:e2e:phone-md -w packages/kiosk-keyboard-webc  # single device
+npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc  # all profiles in parallel
+
+# Run tests with browser visible (for debugging)
+npm run test:e2e:open -w packages/kiosk-keyboard-webc      # desktop, headed
+
+# Run ALL e2e across both packages, all devices
+npm run test:e2e:all-devices                               # parallel
+npm run test:e2e:all-devices:sequential                    # sequential (lower CPU)
+```
+
+### Inspecting visual diffs locally
+
+When a visual test fails, the WDIO visual service writes diff images to `__screenshots__/`. To inspect these as an interactive HTML report:
+
+```bash
+# 1. Run the tests (they will fail if baselines don't match)
+npm run test:e2e -w packages/kiosk-keyboard-webc
+
+# 2. Generate and open the HTML report in your browser
 npm run test:e2e:report -w packages/kiosk-keyboard-webc
 ```
 
-This finds all `output.json` files (including per-device subfolders) and merges them into a combined report.
+The report shows baseline, actual, and diff images side-by-side for every comparison. For device profiles, the report automatically merges results from all `__screenshots__/phone-sm/`, `phone-md/`, etc. subfolders.
+
+Root-level shortcuts are also available:
+
+```bash
+npm run report:visual:kiosk   # kiosk-keyboard package
+npm run report:visual:webc    # kiosk-keyboard-webc package
+```
+
+The report is generated by `tools/visual-report.mjs`, which runs `wdio-visual-reporter` and serves the output locally with `sirv-cli`.
+
+### Updating baselines
+
+When a visual change is intentional (new feature, style update, Chrome version bump), regenerate the affected baselines:
+
+```bash
+# Desktop
+npm run test:e2e:update -w packages/kiosk-keyboard
+npm run test:e2e:update -w packages/kiosk-keyboard-webc
+
+# Individual device profiles
+npm run test:e2e:phone-sm:update -w packages/kiosk-keyboard-webc
+npm run test:e2e:phone-md:update -w packages/kiosk-keyboard-webc
+npm run test:e2e:phone-lg:update -w packages/kiosk-keyboard-webc
+npm run test:e2e:tablet:update -w packages/kiosk-keyboard-webc
+# (same pattern for kiosk-keyboard)
+```
+
+**After updating, always:**
+
+1. Run `git diff --stat` to verify only expected baselines changed.
+2. Spot-check the updated images (open them directly or use the report).
+3. Commit ALL related changes together: new baselines, deleted old baselines, and any code changes. Leaving orphaned baseline files in the repository causes confusion.
 
 ### Mismatch threshold
 
@@ -95,8 +183,7 @@ The default threshold is **0%** (pixel-perfect). This is appropriate because:
 If sub-pixel anti-aliasing causes rare false positives (e.g. 0.003% on device emulation), the matcher supports a per-assertion tolerance:
 
 ```ts
-await expect(kb).toMatchElementSnapshot("kb-numpad", 0.01);
-//                                                    ^^^^ 0.01% tolerance
+await expect(kb).toMatchElementSnapshot("kb-numpad", { ignoreAntialiasing: true });
 ```
 
 Use this sparingly on specific assertions that are known to jitter, rather than raising the global bar.
@@ -113,14 +200,18 @@ The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2
 
 Each package has a `test/e2e/test-helpers.ts` that re-exports shared CDP helpers from `tools/wdio-test-helpers.ts` and adds package-specific utilities:
 
-| Helper                     | Package | Purpose                                                   |
-| -------------------------- | ------- | --------------------------------------------------------- |
-| `openVisualPage()`         | webc    | Navigate to visual.html, wait for ALL keyboards to render |
-| `getKeyboardRoot(id)`      | webc    | Get shadow DOM root via deep selector                     |
-| `forceHoverState(id, sel)` | webc    | Force `:hover` via CDP (headless Chrome workaround)       |
-| `openVisualPage()`         | kiosk   | Navigate to visual test page, inject UI5                  |
+| Helper                            | Package | Purpose                                                       |
+| --------------------------------- | ------- | ------------------------------------------------------------- |
+| `openVisualPage()`                | both    | Navigate to visual test page, wait for all keyboards rendered |
+| `getKeyboardRoot(id)`             | webc    | Get shadow DOM root via deep selector (`>>>.kiosk-keyboard`)  |
+| `getKeyboard(id)`                 | kiosk   | Get `.ui5KioskKeyboard` inside container                      |
+| `matchElementSnapshotInSection()` | both    | Isolate section, scroll, assert geometry, take snapshot       |
+| `isolateSection()`                | both    | Hide all `.section` wrappers except the target's              |
+| `restoreSections()`               | both    | Restore hidden sections                                       |
+| `forceHoverState()`               | both    | Force `:hover` via CDP (deterministic hover testing)          |
+| `clearForcedHoverState()`         | both    | Clear forced pseudo-states                                    |
 
-`openVisualPage()` waits for every `<kiosk-keyboard>` on the page to have at least one rendered key. This prevents snapshots of partially-loaded keyboards (e.g. custom layouts registered via `whenDefined`).
+`openVisualPage()` waits for every keyboard on the page to have at least one rendered key. This prevents snapshots of partially-loaded keyboards (e.g. custom layouts registered via `whenDefined`).
 
 ### Device emulation
 
@@ -128,16 +219,27 @@ Device tests use Chrome's `mobileEmulation` to set viewport, device pixel ratio,
 
 Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles.ts`. Each device profile adds a `portOffset` to the base port so all profiles can run concurrently without collisions.
 
+### Troubleshooting
+
+**Cropped/clipped baseline images**: The element was not fully inside the viewport when the screenshot was taken. Ensure the test uses `matchElementSnapshotInSection()` (not a bare `toMatchElementSnapshot`) and that the test page wraps each keyboard in a `.section` div.
+
+**"no such node" / stale element errors on device profiles**: Chrome's WebDriver BiDi protocol can intermittently lose element references during heavy DOM manipulation in mobile emulation mode. Re-running the test usually succeeds. If the error is consistent, check that the element is re-queried after any page navigation.
+
+**Baseline diffs after Chrome version bump**: Expected. Regenerate ALL baselines across both packages and all device profiles. Review the diffs visually before committing.
+
+**Port conflicts**: Check the port map below. Kill stale processes on the conflicting port, or use `npm run test:e2e:all-devices:sequential` to avoid concurrent port pressure.
+
 ## Port Map
 
-| Port  | Usage                                                              |
-| ----- | ------------------------------------------------------------------ |
-| 8081  | Hotkeys QUnit                                                      |
-| 8082  | Kiosk keyboard (UI5 serve: QUnit runner, E2E desktop, visual page) |
-| 8083  | Kiosk FLP e2e                                                      |
-| 8086  | Kiosk webc (Vite: E2E desktop)                                     |
-| 8089+ | Kiosk device profiles (phone: +1, tablet: +2)                      |
-| 8086+ | Webc device profiles (phone: +1, tablet: +2)                       |
+| Port      | Usage                                                                |
+| --------- | -------------------------------------------------------------------- |
+| 8081      | Hotkeys QUnit                                                        |
+| 8082      | Kiosk keyboard QUnit runner                                          |
+| 8083      | Kiosk FLP e2e                                                        |
+| 8086      | Kiosk webc (Vite: E2E desktop)                                       |
+| 8085      | Kiosk keyboard E2E desktop + visual page                             |
+| 8092-8095 | Kiosk device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) |
+| 8087-8090 | Webc device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`)  |
 
 ## Running all tests
 
