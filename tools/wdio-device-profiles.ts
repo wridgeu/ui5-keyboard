@@ -24,7 +24,7 @@ export const DESKTOP_WINDOW_SIZE = "1440,900";
  */
 export const DEVICE_BASE_PORTS: Record<string, number> = {
   "kiosk-keyboard-webc": 8086,
-  "kiosk-keyboard": 8089,
+  "kiosk-keyboard": 8091,
 };
 
 export interface DeviceProfile {
@@ -40,8 +40,10 @@ export interface DeviceProfile {
 }
 
 export const deviceProfiles: Record<string, DeviceProfile> = {
-  phone: { id: "phone", width: 360, height: 800, pixelRatio: 3, mobile: true, touch: true, portOffset: 1 },
-  tablet: { id: "tablet", width: 768, height: 1024, pixelRatio: 2, mobile: true, touch: true, portOffset: 2 },
+  "phone-sm": { id: "phone-sm", width: 320, height: 568, pixelRatio: 2, mobile: true, touch: true, portOffset: 1 },
+  "phone-md": { id: "phone-md", width: 390, height: 844, pixelRatio: 3, mobile: true, touch: true, portOffset: 2 },
+  "phone-lg": { id: "phone-lg", width: 430, height: 932, pixelRatio: 3, mobile: true, touch: true, portOffset: 3 },
+  tablet: { id: "tablet", width: 768, height: 1024, pixelRatio: 2, mobile: true, touch: true, portOffset: 4 },
 };
 
 /**

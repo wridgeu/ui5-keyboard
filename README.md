@@ -286,7 +286,12 @@ npm run test:packages:smoke             # Build + npm pack dry-run smoke for pub
 # Visual baseline management
 npm run test:kiosk:e2e:update          # Update kiosk desktop visual baselines
 npm run test:kiosk-webc:e2e:update     # Update webc desktop visual baselines
+npm run test:e2e:all-devices:sequential # Re-run the full desktop + responsive matrix before accepting new baselines
 npm run test:kiosk:e2e:docs            # Regenerate README kiosk screenshots
+
+# For per-profile baseline updates (phone-sm / phone-md / phone-lg / tablet),
+# use the package scripts documented in packages/kiosk-keyboard/README.md,
+# packages/kiosk-keyboard-webc/README.md, or docs/shared/TESTING.md.
 
 # Coverage
 npm run test:coverage                  # Kiosk webc coverage (unit + component)

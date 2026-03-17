@@ -486,7 +486,7 @@ CEM generation (`generateAPI`) is a separate on-demand step that produces `custo
 ### Test Infrastructure
 
 - Component tests use `@open-wc/testing` (`fixture`, `html`, `expect`, `oneEvent`, `waitUntil`) and `renderFinished()` from the UI5 WC framework for render cycle synchronization
-- E2E visual tests use `@wdio/visual-service` with baseline images stored in `test/e2e/__baselines__/`
+- E2E visual tests use `@wdio/visual-service` with desktop baselines in `test/e2e/__baselines__/` and responsive device baselines in `test/e2e/__baselines__/<profile>/`
 - Device-emulation E2E tests run via `wdio-device.conf.ts`, using Chrome's device emulation to validate touch and viewport behavior across form factors
 - A standalone test page at `test/pages/index.html` serves as both manual testing playground and E2E test target
 

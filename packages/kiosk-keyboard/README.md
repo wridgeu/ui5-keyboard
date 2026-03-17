@@ -1396,9 +1396,14 @@ npm run test:qunit
 # E2E tests (WebdriverIO), desktop
 npm run test:e2e
 
-# E2E tests, phone (360x800) / tablet (768x1024) device emulation
-npm run test:e2e:phone
+# E2E tests, responsive device matrix
+npm run test:e2e:phone-sm
+npm run test:e2e:phone-md
+npm run test:e2e:phone-lg
 npm run test:e2e:tablet
+
+# Alias: phone -> phone-md
+npm run test:e2e:phone
 
 # Run all device profiles in parallel
 npm run test:e2e:all-devices
@@ -1406,10 +1411,18 @@ npm run test:e2e:all-devices
 # Run the same device matrix sequentially (useful when you want lower local CPU/RAM pressure)
 npm run test:e2e:all-devices:sequential
 
-# Update visual baselines (desktop / phone / tablet)
+# Update visual baselines (desktop / responsive device matrix)
 npm run test:e2e:update
-npm run test:e2e:phone:update
+npm run test:e2e:phone-sm:update
+npm run test:e2e:phone-md:update
+npm run test:e2e:phone-lg:update
 npm run test:e2e:tablet:update
+
+# Alias: phone:update -> phone-md:update
+npm run test:e2e:phone:update
+
+# Visual diff report
+npm run test:e2e:report
 
 # NOTE: Visual baselines are tied to the pinned Chrome-for-Testing version
 # in tools/wdio-device-profiles.ts (CHROME_VERSION). Changing that version

@@ -176,7 +176,7 @@ Central registry of base ports for device-emulation test servers, keyed by packa
 
 ### `deviceProfiles`
 
-Record of named device profiles (`phone`, `tablet`) with viewport dimensions, device scale factor, and touch mode.
+Record of named device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) with viewport dimensions, device scale factor, and touch mode.
 
 ### `buildChromeOptions(profile, headless)`
 
@@ -251,13 +251,13 @@ Run via `npm run test:packages:smoke`.
 | ----------------------------------------------------------- | --------------------------------------------------------------- | --------------- |
 | `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `createServerManager`, `readQUnitTestIds`                       | 8081            |
 | `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082            |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8082            |
-| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8089 + offset\* |
+| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8085            |
+| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8091 + offset\* |
 | `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `createServerManager`                                           | 8083            |
 | `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `createViteServerManager`                                       | 8086            |
 | `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8086 + offset\* |
 
-\*Device configs use `BASE_PORT + profile.portOffset` to avoid port collisions across device profiles (phone: +1, tablet: +2).
+\*Device configs use `BASE_PORT + profile.portOffset` to avoid port collisions across device profiles (`phone-sm`: +1, `phone-md`: +2, `phone-lg`: +3, `tablet`: +4). For `kiosk-keyboard`, that maps to ports `8092-8095`.
 
 ### `wdio-test-helpers.ts`
 

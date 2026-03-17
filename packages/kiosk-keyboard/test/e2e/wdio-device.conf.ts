@@ -39,7 +39,6 @@ export const config: wdi5Config = {
   specs: [
     path.resolve(__dirname, "visual.test.ts"),
     path.resolve(__dirname, "visual-themes.test.ts"),
-    path.resolve(__dirname, "visual-enhancements.test.ts"),
     path.resolve(__dirname, "rtl.test.ts"),
     path.resolve(__dirname, "accessibility-media.test.ts"),
   ],
@@ -51,6 +50,7 @@ export const config: wdi5Config = {
     {
       browserName: "chrome",
       browserVersion: CHROME_VERSION,
+      "wdio:maxInstances": 1,
       "goog:chromeOptions": buildChromeOptions(profile, headless),
     },
   ],

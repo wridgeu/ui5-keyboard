@@ -158,10 +158,6 @@ export async function scrollElementIntoView(element: SnapshotElement): Promise<v
   }, target);
 }
 
-export async function getViewportWidth(): Promise<number> {
-  return browser.execute(() => window.innerWidth);
-}
-
 export async function matchElementSnapshotInSection(
   element: SnapshotElement,
   name: string,

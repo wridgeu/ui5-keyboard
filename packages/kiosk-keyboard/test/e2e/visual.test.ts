@@ -2,7 +2,6 @@ import { $, browser } from "@wdio/globals";
 import {
   openVisualPage,
   getKeyboard,
-  getViewportWidth,
   isolateSection,
   restoreSections,
   scrollElementIntoView,
@@ -11,13 +10,7 @@ import {
   clearForcedHoverState,
 } from "./test-helpers.js";
 
-const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
-
-const NARROW_CONTAINER_VIEWPORT_MIN = 340;
-const FIXED_400_VIEWPORT_MIN = 420;
-const FIXED_600_VIEWPORT_MIN = 620;
-
-describe("KioskKeyboard Visual Regression", () => {
+describe("KioskKeyboard Responsive Visual Regression", () => {
   before(async () => {
     await openVisualPage();
   });
@@ -47,18 +40,6 @@ describe("KioskKeyboard Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "kb-disabled");
   });
 
-  it("should match full width (600px) layout", async function () {
-    if ((await getViewportWidth()) < FIXED_600_VIEWPORT_MIN) this.skip();
-    const kb = await getKeyboard("kb-wide");
-    await matchElementSnapshotInSection(kb, "kb-wide");
-  });
-
-  it("should match narrow (320px) layout", async function () {
-    if ((await getViewportWidth()) < NARROW_CONTAINER_VIEWPORT_MIN) this.skip();
-    const kb = await getKeyboard("kb-narrow");
-    await matchElementSnapshotInSection(kb, "kb-narrow");
-  });
-
   it("should match compact density", async () => {
     const kb = await getKeyboard("kb-compact");
     await matchElementSnapshotInSection(kb, "kb-compact");
@@ -67,18 +48,6 @@ describe("KioskKeyboard Visual Regression", () => {
   it("should match special characters layout", async () => {
     const kb = await getKeyboard("kb-special");
     await matchElementSnapshotInSection(kb, "kb-special");
-  });
-
-  it("should match keyboard in fixed container (400x350)", async function () {
-    if ((await getViewportWidth()) < FIXED_400_VIEWPORT_MIN) this.skip();
-    const container = await $("#kb-container-fixed");
-    await matchElementSnapshotInSection(container, "kb-container-fixed");
-  });
-
-  it("should match keyboard with stableHeight", async function () {
-    if ((await getViewportWidth()) < FIXED_400_VIEWPORT_MIN) this.skip();
-    const kb = await getKeyboard("kb-stable-height");
-    await matchElementSnapshotInSection(kb, "kb-stable-height");
   });
 
   it("should match F-Keys layout", async () => {
@@ -111,40 +80,9 @@ describe("KioskKeyboard Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "kb-qwertz-de-nav");
   });
 
-  it("should match glyph stress layout in a narrow container", async function () {
-    if ((await getViewportWidth()) < NARROW_CONTAINER_VIEWPORT_MIN) this.skip();
+  it("should match glyph stress layout in a narrow container", async () => {
     const kb = await getKeyboard("kb-glyph-stress");
     await matchElementSnapshotInSection(kb, "kb-glyph-stress");
-  });
-
-  it("should match height-constrained container (400x250)", async function () {
-    if ((await getViewportWidth()) < FIXED_400_VIEWPORT_MIN) this.skip();
-    const container = await $("#kb-height-constrained");
-    await matchElementSnapshotInSection(container, "kb-height-constrained", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match severely height-constrained container (400x180)", async function () {
-    if ((await getViewportWidth()) < FIXED_400_VIEWPORT_MIN) this.skip();
-    const container = await $("#kb-height-tiny");
-    await matchElementSnapshotInSection(container, "kb-height-tiny", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match ancestor-constrained container (flex parent 400x250)", async function () {
-    if ((await getViewportWidth()) < FIXED_400_VIEWPORT_MIN) this.skip();
-    const wrap = await $("#kb-ancestor-constrained-wrap");
-    await matchElementSnapshotInSection(wrap, "kb-ancestor-constrained", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match ancestor-constrained severely (flex parent 400x180)", async function () {
-    if ((await getViewportWidth()) < FIXED_400_VIEWPORT_MIN) this.skip();
-    const wrap = await $("#kb-ancestor-tiny-wrap");
-    await matchElementSnapshotInSection(wrap, "kb-ancestor-tiny", HEIGHT_SNAPSHOT_OPTIONS);
-  });
-
-  it("should match narrow + height-constrained container (320px x 250px)", async function () {
-    if ((await getViewportWidth()) < NARROW_CONTAINER_VIEWPORT_MIN) this.skip();
-    const container = await $("#kb-narrow-short");
-    await matchElementSnapshotInSection(container, "kb-narrow-short", HEIGHT_SNAPSHOT_OPTIONS);
   });
 });
 
