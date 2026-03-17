@@ -112,17 +112,22 @@ const noRedundantBooleanReturn = {
         if (!consequent || !alternate) return;
 
         if (isBooleanLiteral(consequent) && isBooleanLiteral(alternate)) {
+          // Same-value branches (e.g. both return true) are dead code --
+          // report without auto-fix so the developer can inspect manually.
+          if (consequent.value === alternate.value) {
+            context.report({ node, messageId: "noRedundantBooleanReturn" });
+            return;
+          }
+
           context.report({
             node,
             messageId: "noRedundantBooleanReturn",
             fix(fixer) {
               const condText = context.sourceCode.getText(node.test);
-              // if (cond) return true; else return false; -> return !!cond;
-              // if (cond) return false; else return true; -> return !cond;
-              // Uses !! to preserve boolean return type when cond may not be boolean.
-              const replacement = consequent.value
-                ? `return !!${maybeWrap(condText)};`
-                : `return !${maybeWrap(condText)};`;
+              // if (cond) return true; else return false; -> return !!(cond);
+              // if (cond) return false; else return true; -> return !(cond);
+              // Always wraps in parens to avoid precedence issues with !!.
+              const replacement = consequent.value ? `return !!(${condText});` : `return !(${condText});`;
               return fixer.replaceText(node, replacement);
             },
           });
@@ -147,11 +152,6 @@ function unwrapSingleReturn(node) {
 
 function isBooleanLiteral(node) {
   return node?.type === "Literal" && typeof node.value === "boolean";
-}
-
-/** Wraps compound expressions in parens so `!a || b` becomes `!(a || b)`. */
-function maybeWrap(text) {
-  return /[|&?]/.test(text) ? `(${text})` : text;
 }
 
 // Em-dash character built at runtime so the rule source does not contain it.

@@ -310,7 +310,7 @@ ui5-lib-keyboard/
 │   └── demo-app/              # Demo application
 │       ├── ui5.yaml           # OpenUI5 dev server config (default)
 │       └── ui5-flp.yaml       # SAPUI5 + FLP sandbox config (preview-middleware)
-├── tools/                     # Shared test infrastructure (wdio server, QUnit helpers)
+├── tools/                     # Custom oxlint JS plugins (code-quality, comment-quality, test-guardrails) and shared test infrastructure
 └── docs/                      # Architecture & design documents
 ```
 
