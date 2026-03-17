@@ -141,11 +141,8 @@ const noObviousComment = {
         // against the correct next sibling, not the next top-level statement.
         const scopes = [];
         function collectScopes(node) {
-          if (!node || typeof node !== "object") return;
           if (node.type === "Program" || node.type === "BlockStatement") {
-            if (Array.isArray(node.body)) {
-              scopes.push({ body: node.body, start: node.start, end: node.end });
-            }
+            scopes.push({ body: node.body, start: node.start, end: node.end });
           }
           for (const key of Object.keys(node)) {
             if (key === "parent" || key === "type") continue;
@@ -175,15 +172,15 @@ const noObviousComment = {
           if (EXPLAINS_WHY_RE.test(text)) continue;
 
           // Find the narrowest enclosing scope for this comment
-          let narrowest = null;
-          for (const scope of scopes) {
+          let narrowest = scopes[0]; // Program scope always contains every comment
+          for (let i = 1; i < scopes.length; i++) {
+            const scope = scopes[i];
             if (scope.start <= comment.start && scope.end >= comment.end) {
-              if (!narrowest || scope.end - scope.start < narrowest.end - narrowest.start) {
+              if (scope.end - scope.start < narrowest.end - narrowest.start) {
                 narrowest = scope;
               }
             }
           }
-          if (!narrowest) continue;
 
           // Find the next statement after this comment within its scope
           const nextNode = narrowest.body.find((n) => n.start > comment.end);

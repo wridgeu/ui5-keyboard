@@ -165,7 +165,6 @@ QUnit.test("F-key tap does NOT insert text", async (assert) => {
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
-  // Focus the input
   input.focus();
   await waitForRender();
 
