@@ -166,9 +166,9 @@ export const DISABLE_CONTAINER_QUERIES = `
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem) !important;
   }
   .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --_kiosk-keyboard-key-padding: 0 min(
-      var(--_kiosk-keyboard-key-padding-inline),
-      var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem)
+    --_kiosk-keyboard-key-padding: var(
+      --kiosk-keyboard-key-padding-xs,
+      0 min(var(--_kiosk-keyboard-key-padding-inline), var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem))
     ) !important;
   }
   .kiosk-keyboard--cq-xs .kiosk-key {
