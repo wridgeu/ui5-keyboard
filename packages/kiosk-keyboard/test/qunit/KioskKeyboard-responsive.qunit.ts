@@ -268,7 +268,7 @@ QUnit.test("Toggling docked mode clears stale height classes immediately", async
   kb.destroy();
 });
 
-QUnit.test("Switching to Numpad clears stale height classes immediately", async (assert) => {
+QUnit.test("Switching to Numpad clears height classes after re-render", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -286,13 +286,17 @@ QUnit.test("Switching to Numpad clears stale height classes immediately", async 
   await waitForRender();
 
   dom = kb.getDomRef()! as HTMLElement;
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after re-render");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared after re-render");
+
+  // Manually re-applying responsive classes should not re-add height classes for numpad
   dom.style.height = `${10 * remPx}px`;
   dom.style.overflow = "hidden";
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   applyResponsiveSizeClasses(kb, dom, dom.getBoundingClientRect().width, 10 * remPx);
 
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared for numpad");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared for numpad");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short still absent after manual re-apply");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny still absent after manual re-apply");
 
   kb.destroy();
 });

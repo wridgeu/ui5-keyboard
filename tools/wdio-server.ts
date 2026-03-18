@@ -155,20 +155,16 @@ function createStartupFailureMonitor(
   };
 }
 
-/**
- * Creates wdio lifecycle hooks that auto-start a UI5 dev server
- * if the target port is not already in use, and tear it down on completion.
- *
- * The returned object also implements `Symbol.asyncDispose` so it can be
- * used with `await using` for automatic cleanup.
- */
-export function createServerManager(
-  port: number,
-  packageRoot: string,
-  configFile?: string,
-  startupTimeout = 60_000,
-  readinessPath = "/",
-) {
+/** Shared startup/shutdown logic for child dev servers (UI5 CLI, Vite, etc.). */
+function createChildServerManager(opts: {
+  port: number;
+  packageRoot: string;
+  label: string;
+  spawnArgs: string[];
+  startupTimeout: number;
+  readinessPath: string;
+}) {
+  const { port, packageRoot, label, spawnArgs, startupTimeout, readinessPath } = opts;
   let serverProcess: ChildProcess | undefined;
 
   async function start(): Promise<void> {
@@ -184,11 +180,8 @@ export function createServerManager(
       }
       return;
     }
-    const ui5CliEntry = resolveUi5CliEntry(packageRoot);
-    const args = [ui5CliEntry, "serve", "--port", String(port)];
-    if (configFile) args.push("--config", configFile);
     const startupOutput = createStartupOutputBuffer();
-    serverProcess = spawn(process.execPath, args, {
+    serverProcess = spawn(process.execPath, spawnArgs, {
       cwd: packageRoot,
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
@@ -198,9 +191,7 @@ export function createServerManager(
     serverProcess.stdout?.on("data", (chunk) => startupOutput.append("stdout", chunk));
     serverProcess.stderr?.on("data", (chunk) => startupOutput.append("stderr", chunk));
 
-    const startupFailure = createStartupFailureMonitor(serverProcess, `UI5 server on port ${port}`, () =>
-      startupOutput.format(),
-    );
+    const startupFailure = createStartupFailureMonitor(serverProcess, label, () => startupOutput.format());
 
     try {
       await Promise.race([
@@ -234,6 +225,34 @@ export function createServerManager(
     onComplete: stop,
     [Symbol.asyncDispose]: stop,
   };
+}
+
+/**
+ * Creates wdio lifecycle hooks that auto-start a UI5 dev server
+ * if the target port is not already in use, and tear it down on completion.
+ *
+ * The returned object also implements `Symbol.asyncDispose` so it can be
+ * used with `await using` for automatic cleanup.
+ */
+export function createServerManager(
+  port: number,
+  packageRoot: string,
+  configFile?: string,
+  startupTimeout = 60_000,
+  readinessPath = "/",
+) {
+  const ui5CliEntry = resolveUi5CliEntry(packageRoot);
+  const args = [ui5CliEntry, "serve", "--port", String(port)];
+  if (configFile) args.push("--config", configFile);
+
+  return createChildServerManager({
+    port,
+    packageRoot,
+    label: `UI5 server on port ${port}`,
+    spawnArgs: args,
+    startupTimeout,
+    readinessPath,
+  });
 }
 
 function resolveViteCliEntry(packageRoot: string): string {
@@ -265,66 +284,16 @@ export function createViteServerManager(
   startupTimeout = 60_000,
   readinessPath = "/",
 ) {
-  let serverProcess: ChildProcess | undefined;
+  const viteCliEntry = resolveViteCliEntry(packageRoot);
 
-  async function start(): Promise<void> {
-    if (await probePort(port)) {
-      if (!(await probeHttp(port, readinessPath))) {
-        throw new Error(
-          `Port ${port} is occupied by a process that does not serve '${readinessPath}'. ` +
-            `Kill the stale or wrong process (netstat -aon | findstr :${port}) and retry.`,
-        );
-      }
-      return;
-    }
-    const viteCliEntry = resolveViteCliEntry(packageRoot);
-    const startupOutput = createStartupOutputBuffer();
-    serverProcess = spawn(process.execPath, [viteCliEntry, "--port", String(port), "--strictPort"], {
-      cwd: packageRoot,
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: false,
-      windowsHide: process.platform === "win32",
-    });
-
-    serverProcess.stdout?.on("data", (chunk) => startupOutput.append("stdout", chunk));
-    serverProcess.stderr?.on("data", (chunk) => startupOutput.append("stderr", chunk));
-
-    const startupFailure = createStartupFailureMonitor(serverProcess, `Vite server on port ${port}`, () =>
-      startupOutput.format(),
-    );
-
-    try {
-      await Promise.race([
-        waitForServer(port, startupTimeout, readinessPath).catch((error) => {
-          throw new Error(`${(error as Error).message}${startupOutput.format()}`, { cause: error });
-        }),
-        startupFailure.promise,
-      ]);
-    } catch (error) {
-      startupFailure.complete();
-      if (serverProcess?.pid) {
-        await killProcessTree(serverProcess.pid);
-      }
-      serverProcess = undefined;
-      throw error;
-    }
-
-    startupFailure.complete();
-  }
-
-  async function stop(): Promise<void> {
-    if (!serverProcess?.pid) return;
-    const pid = serverProcess.pid;
-    serverProcess = undefined;
-    await killProcessTree(pid);
-    await waitForPortToClose(port, 15_000);
-  }
-
-  return {
-    onPrepare: start,
-    onComplete: stop,
-    [Symbol.asyncDispose]: stop,
-  };
+  return createChildServerManager({
+    port,
+    packageRoot,
+    label: `Vite server on port ${port}`,
+    spawnArgs: [viteCliEntry, "--port", String(port), "--strictPort"],
+    startupTimeout,
+    readinessPath,
+  });
 }
 
 /**

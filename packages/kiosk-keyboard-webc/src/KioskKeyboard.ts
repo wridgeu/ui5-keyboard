@@ -722,8 +722,6 @@ class KioskKeyboard extends UI5Element {
       this._pendingAnnouncement = null;
     }
 
-    const root = this.shadowRoot!.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
-    this._syncResponsiveObserverTargets(root);
     this.refreshResponsiveState();
   }
 
