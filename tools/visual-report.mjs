@@ -16,7 +16,7 @@
  *   node tools/visual-report.mjs packages/kiosk-keyboard/test/e2e/__screenshots__
  */
 
-import { existsSync, readdirSync, statSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, globSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { execSync } from "node:child_process";
 
@@ -34,25 +34,7 @@ if (!existsSync(absDir)) {
   process.exit(1);
 }
 
-/**
- * Recursively find all output.json files under the given directory.
- */
-function findOutputJsonFiles(dir) {
-  const results = [];
-  const rootFile = join(dir, "output.json");
-  if (existsSync(rootFile)) results.push(rootFile);
-
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      const nested = join(full, "output.json");
-      if (existsSync(nested)) results.push(nested);
-    }
-  }
-  return results;
-}
-
-const outputJsonFiles = findOutputJsonFiles(absDir);
+const outputJsonFiles = globSync("**/output.json", { cwd: absDir, exclude: ["report/**"] }).map((f) => join(absDir, f));
 
 if (outputJsonFiles.length === 0) {
   console.error("No output.json found. Did any visual tests run?");
