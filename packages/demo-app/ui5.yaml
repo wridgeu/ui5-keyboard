@@ -24,9 +24,6 @@ server:
       afterMiddleware: compression
       configuration:
         addToNamespace: false
-        pluginOptions:
-          webcomponents:
-            force: true
     - name: ui5-tooling-transpile-middleware
       afterMiddleware: compression
       configuration:

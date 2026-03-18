@@ -128,16 +128,13 @@ For UI5 apps, make sure your app can resolve npm ESM packages via `ui5-tooling-m
 Published builds include `dist/custom-elements.json` (the Custom Elements Manifest), and the package declares the `customElements` field in `package.json`. The `ui5-tooling-modules` middleware reads this manifest and auto-generates a `sap.ui.core.webc.WebComponent` wrapper at serve/build time. No manual wrapper code needed.
 
 ```yaml
-# ui5.yaml - minimal config for seamless web component consumption
+# ui5.yaml - config for seamless web component consumption
 server:
   customMiddleware:
     - name: ui5-tooling-modules-middleware
       afterMiddleware: compression
       configuration:
         addToNamespace: false
-        pluginOptions:
-          webcomponents:
-            force: true
 ```
 
 Then use the component directly in XML views:
@@ -148,9 +145,11 @@ Then use the component directly in XML views:
 </mvc:View>
 ```
 
-In workspace development, run `npm run generate` in the webc package first so that `dist/custom-elements.json` exists. The `generate` script includes CEM generation alongside CSS and i18n assets.
+In workspace development, run `npm run generate` in the webc package first so that `dist/custom-elements.json` exists. The `generate` script produces the CEM alongside CSS and i18n assets.
 
-The `addToNamespace: false` setting bypasses a middleware routing issue with the default redirect mechanism. The `force: true` setting ensures the web component transformation runs regardless of framework version detection in the middleware.
+The `addToNamespace: false` setting is required because the middleware's default redirect mechanism (`addToNamespace: true`) has a routing issue for application-type projects. Setting it to `false` serves the auto-generated wrappers directly at their original module paths.
+
+The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate. See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project for the official reference setup.
 
 #### 3b. `WebComponent.extend()` bridge (explicit control)
 
