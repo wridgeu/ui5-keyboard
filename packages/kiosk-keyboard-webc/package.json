@@ -87,6 +87,7 @@
     "test:e2e:report": "node ../../tools/visual-report.mjs test/e2e/__screenshots__",
     "test:e2e:all-devices": "npm run generate && concurrently --kill-others-on-fail -n desktop,phone-sm,phone-md,phone-lg,tablet \"wdio run test/e2e/wdio.conf.ts\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=phone-sm\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=phone-md\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=phone-lg\" \"wdio run test/e2e/wdio-device.conf.ts -- --device=tablet\"",
     "test:e2e:all-devices:sequential": "npm run test:e2e && npm run test:e2e:phone-sm && npm run test:e2e:phone-md && npm run test:e2e:phone-lg && npm run test:e2e:tablet",
+    "test:e2e:update:all-devices": "npm run test:e2e:update && npm run test:e2e:phone-sm:update && npm run test:e2e:phone-md:update && npm run test:e2e:phone-lg:update && npm run test:e2e:tablet:update",
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit",
     "generateAPI": "ui5nps generateAPI"
   },
