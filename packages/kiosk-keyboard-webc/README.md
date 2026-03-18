@@ -121,46 +121,45 @@ Use this mode when you want to avoid the convenience bundle and keep control ove
 
 This package is not a native UI5 library, so the UI5-app story is different from `ui5-lib-hotkeys` / `ui5-lib-kiosk-keyboard`.
 
-For UI5 apps, first make sure your app can resolve npm ESM packages, typically via `ui5-tooling-modules` in `ui5.yaml`:
+For UI5 apps, make sure your app can resolve npm ESM packages via `ui5-tooling-modules` in `ui5.yaml`. There are two integration paths:
+
+#### 3a. Seamless Web Components (CEM-driven, recommended)
+
+Published builds include `dist/custom-elements.json` (the Custom Elements Manifest), and the package declares the `customElements` field in `package.json`. The `ui5-tooling-modules` middleware reads this manifest and auto-generates a `sap.ui.core.webc.WebComponent` wrapper at serve/build time. No manual wrapper code needed.
 
 ```yaml
-builder:
-  customTasks:
-    - name: ui5-tooling-modules-task
-      afterTask: replaceVersion
-      configuration:
-        pluginOptions:
-          webcomponents:
-            skip: true
+# ui5.yaml - minimal config for seamless web component consumption
 server:
   customMiddleware:
     - name: ui5-tooling-modules-middleware
       afterMiddleware: compression
       configuration:
+        addToNamespace: false
         pluginOptions:
           webcomponents:
-            skip: true
+            force: true
 ```
 
-For this repo's `WebComponent.extend()` bridge pattern, set `pluginOptions.webcomponents.skip: true`. This is not a repo-invented convention: it follows the documented `ui5-tooling-modules` option for skipping seamless web component wrapper transformation. In our bridge setup, that keeps the build focused on the native custom element and avoids substitute-module warnings for `kiosk-keyboard-webc`.
+Then use the component directly in XML views:
 
-Then you have two practical integration paths:
+```xml
+<mvc:View xmlns:kb="kiosk-keyboard-webc/dist">
+  <kb:KioskKeyboard layout="qwerty" docked="true" />
+</mvc:View>
+```
 
-#### 3a. CEM-driven UI5 wrapper consumption
+In workspace development, run `npm run generate` in the webc package first so that `dist/custom-elements.json` exists. The `generate` script includes CEM generation alongside CSS and i18n assets.
 
-Published builds include `dist/custom-elements.json`, and the package declares the `customElements` field in `package.json`. In workspace development, build the package first (`npm run build`) so that `dist/custom-elements.json` exists; it is produced by the `generateAPI` step that runs as part of the build. In UI5 setups that consume external web components through their Custom Elements Manifest, this enables UI5-side wrapper/metadata generation for XML usage.
+The `addToNamespace: false` setting bypasses a middleware routing issue with the default redirect mechanism. The `force: true` setting ensures the web component transformation runs regardless of framework version detection in the middleware.
 
-This is not the same as dropping raw `<kiosk-keyboard>` tags directly into a UI5 XML view. It is a UI5 integration path built on web component metadata.
+#### 3b. `WebComponent.extend()` bridge (explicit control)
 
-That path is viable, but this repository does not currently use it as the primary demo path.
+For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events.
 
-#### 3b. `WebComponent.extend()` bridge (repo-proven fallback)
-
-This repository's demo app uses `WebComponent.extend()` because it gives explicit UI5-side property, event, method, and association metadata.
-
-The repo also keeps a dedicated smoke check for this exact public entry point via `npm run test:demo:webc-bundle`, so the documented UI5 bridge path stays resolvable from the demo app and buildable instead of only being described in prose.
+This repository's demo app includes a complete bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts` that can be used as a template. A dedicated smoke check (`npm run test:demo:webc-bundle`) verifies the bridge entry point stays resolvable.
 
 ```ts
+import WebComponent from "sap/ui/core/webc/WebComponent";
 import "kiosk-keyboard-webc/bundle";
 
 const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {

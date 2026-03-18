@@ -32,7 +32,7 @@ const scripts = {
   },
 
   generate: {
-    default: "ui5nps generate.styles generate.i18n generate.jsonImports generate.syncAssets",
+    default: "ui5nps generate.styles generate.i18n generate.jsonImports generate.syncAssets generateAPI",
     styles: {
       default: "ui5nps generate.styles.components generate.styles.themes",
       components: `ui5nps-script "${LIB}/css-processors/css-processor-components.mjs"`,
