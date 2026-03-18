@@ -405,6 +405,18 @@ QUnit.test("ArrowUp collapses selection and moves from start position", (assert)
   assert.deepEqual(result, [1, 1], "Uses selection start for ArrowUp");
 });
 
+QUnit.test("ArrowDown with caret at 0 and leading newline moves to line 2", (assert) => {
+  const ta = makeTextarea("\nfoo\nbar", [0, 0]);
+  const result = handleNavigation(ta, "ArrowDown", [0, 0]);
+  assert.deepEqual(result, [1, 1], "Moved to start of 'foo'");
+});
+
+QUnit.test("ArrowUp with caret at 0 and leading newline stays at 0", (assert) => {
+  const ta = makeTextarea("\nfoo", [0, 0]);
+  const result = handleNavigation(ta, "ArrowUp", [0, 0]);
+  assert.deepEqual(result, [0, 0], "Stays at position 0");
+});
+
 // ──────────────────────────────────────────────
 // setTargetValue
 // ──────────────────────────────────────────────

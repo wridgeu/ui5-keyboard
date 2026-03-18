@@ -13,7 +13,8 @@ function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): 
   const currentLineStart = value.lastIndexOf("\n", Math.max(0, pos - 1)) + 1;
   const currentLineEndRaw = value.indexOf("\n", pos);
   const currentLineEnd = currentLineEndRaw === -1 ? len : currentLineEndRaw;
-  const column = pos - currentLineStart;
+  // Clamp: pos can precede currentLineStart when caret sits before a leading "\n"
+  const column = Math.max(0, pos - currentLineStart);
 
   if (direction < 0) {
     if (currentLineStart === 0) return 0;
