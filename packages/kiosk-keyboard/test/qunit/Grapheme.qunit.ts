@@ -1,4 +1,4 @@
-import { graphemeLengthAfter, graphemeLengthBefore } from "ui5/kiosk/internal/grapheme";
+import { graphemeLengthAfter, graphemeLengthBefore, isSingleGlyph } from "ui5/kiosk/internal/grapheme";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
@@ -237,4 +237,45 @@ QUnit.test("ArrowLeft and ArrowRight step over emoji as one unit", async (assert
 
   input.destroy();
   kb.destroy();
+});
+
+// ── Unit tests: isSingleGlyph ──────────────────────────────────
+
+QUnit.module("isSingleGlyph");
+
+QUnit.test("single ASCII character returns true", (assert) => {
+  assert.strictEqual(isSingleGlyph("A"), true, "single ASCII letter is one glyph");
+  assert.strictEqual(isSingleGlyph("z"), true, "single lowercase ASCII is one glyph");
+  assert.strictEqual(isSingleGlyph("5"), true, "single digit is one glyph");
+});
+
+QUnit.test("multi-character string returns false", (assert) => {
+  assert.strictEqual(isSingleGlyph("Tab"), false, "multi-char label 'Tab' is not one glyph");
+  assert.strictEqual(isSingleGlyph("F1"), false, "multi-char label 'F1' is not one glyph");
+  assert.strictEqual(isSingleGlyph("ab"), false, "two ASCII chars is not one glyph");
+});
+
+QUnit.test("empty string returns false", (assert) => {
+  assert.strictEqual(isSingleGlyph(""), false, "empty string has no glyphs");
+});
+
+QUnit.test("surrogate pair emoji returns true", (assert) => {
+  // 😀 = U+1F600 = 2 code units (surrogate pair) but one grapheme
+  assert.strictEqual(isSingleGlyph("😀"), true, "surrogate-pair emoji is one glyph");
+});
+
+QUnit.test("flag emoji (regional indicator pair) returns true", (assert) => {
+  // 🇩🇪 = U+1F1E9 + U+1F1EA = 4 code units but one grapheme cluster
+  assert.strictEqual(isSingleGlyph("🇩🇪"), true, "flag emoji is one glyph");
+});
+
+QUnit.test("ZWJ sequence returns true", (assert) => {
+  // 👨‍👩‍👧 = multiple code points joined by ZWJ, one grapheme cluster
+  const family = "👨‍👩‍👧";
+  assert.strictEqual(isSingleGlyph(family), true, "ZWJ family emoji is one glyph");
+});
+
+QUnit.test("two separate emoji returns false", (assert) => {
+  assert.strictEqual(isSingleGlyph("😀😀"), false, "two emoji is not one glyph");
+  assert.strictEqual(isSingleGlyph("🇩🇪🇫🇷"), false, "two flag emoji is not one glyph");
 });
