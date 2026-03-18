@@ -129,12 +129,19 @@ Published builds include `dist/custom-elements.json` (the Custom Elements Manife
 
 ```yaml
 # ui5.yaml - config for seamless web component consumption
+builder:
+  customTasks:
+    - name: ui5-tooling-modules-task
+      afterTask: replaceVersion
+      configuration:
+        addToNamespace: true
 server:
   customMiddleware:
     - name: ui5-tooling-modules-middleware
       afterMiddleware: compression
       configuration:
-        addToNamespace: false
+        addToNamespace: true
+        useRelativeModulePaths: true
 ```
 
 Then use the component directly in XML views:
@@ -147,9 +154,9 @@ Then use the component directly in XML views:
 
 In workspace development, run `npm run generate` in the webc package first so that `dist/custom-elements.json` exists. The `generate` script produces the CEM alongside CSS and i18n assets.
 
-The `addToNamespace: false` setting is required because the middleware's default redirect mechanism (`addToNamespace: true`) has a routing issue for application-type projects. Setting it to `false` serves the auto-generated wrappers directly at their original module paths.
+**Why `useRelativeModulePaths: true`?** The middleware's default behavior (`addToNamespace: true` without `useRelativeModulePaths`) creates a redirect ("Stellvertreter") from the original module path to a namespace-prefixed path (e.g., `demo/hotkeys/thirdparty/@ui5/webcomponents/dist/Input`). However, during dev serve, the bundle entries are stored under their original npm names -- the namespace rewriting only runs at build time (`ui5-tooling-modules-task`, not the middleware). This means the redirect target can never be resolved, resulting in 404. Setting `useRelativeModulePaths: true` skips the redirect and serves the bundled module directly at its original path. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
 
-The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate. See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project for the official reference setup.
+The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate.
 
 #### 3b. `WebComponent.extend()` bridge (explicit control)
 

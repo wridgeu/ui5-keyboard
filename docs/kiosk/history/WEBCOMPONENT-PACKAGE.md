@@ -1375,9 +1375,14 @@ Requirements:
    resolvable from `node_modules`.
 
 4. The `ui5-tooling-modules-middleware` must be configured with
-   `addToNamespace: false` to bypass a routing issue with the default
-   redirect mechanism for application-type projects. The UI5 framework
-   version in `ui5.yaml` must be >= 1.120.0.
+   `addToNamespace: true` and `useRelativeModulePaths: true`.
+   Without `useRelativeModulePaths`, the middleware creates a
+   Stellvertreter redirect to a namespace-prefixed path, but during
+   dev serve the bundle entries are stored under original npm names
+   (the namespace rewriting only runs at build time), so the redirect
+   target is a 404. The UI5 framework version in `ui5.yaml` must be
+
+   > = 1.120.0.
 
    ```yaml
    server:
@@ -1385,7 +1390,8 @@ Requirements:
        - name: ui5-tooling-modules-middleware
          afterMiddleware: compression
          configuration:
-           addToNamespace: false
+           addToNamespace: true
+           useRelativeModulePaths: true
    ```
 
 Once set up, XML views consume the component directly:
