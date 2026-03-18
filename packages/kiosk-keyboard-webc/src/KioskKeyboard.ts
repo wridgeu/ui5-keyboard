@@ -1630,8 +1630,10 @@ class KioskKeyboard extends UI5Element {
    * Height: applied in all browsers -- detects external height constraints
    * (host height < natural content height) and applies compact layout.
    *
-   * Called from both ResizeObserver (on resize) and onAfterRendering
-   * (to survive template re-renders that reconcile the class attribute).
+   * Called from _scheduleResponsiveClassUpdate() (coalesced from ResizeObserver
+   * via rAF) and from refreshResponsiveState() (invoked by onAfterRendering
+   * and public callers) to survive template re-renders that reconcile the
+   * class attribute.
    */
   private _applyResponsiveClasses(): void {
     const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);

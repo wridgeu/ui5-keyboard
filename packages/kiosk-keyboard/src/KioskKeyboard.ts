@@ -1010,8 +1010,12 @@ export default class KioskKeyboard extends Control {
       dom.style.minHeight = "";
     }
 
+    // offsetHeight = the keyboard's own rendered height (border-box):
+    // its total visual footprint. The constrained check works because
+    // scrollHeight (padding-box) is always less than offsetHeight
+    // (border-box) when unconstrained.
     if (height === undefined) {
-      height = dom.getBoundingClientRect().height;
+      height = dom.offsetHeight;
     }
     const naturalHeight = dom.scrollHeight;
 

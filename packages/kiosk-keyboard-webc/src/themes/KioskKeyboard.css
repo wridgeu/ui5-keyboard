@@ -111,14 +111,21 @@
 
 /* ---- Responsive font scaling ----
    Width-responsive sizing uses two mechanisms:
-   1. CSS @container queries fire instantly in supporting browsers.
-   2. JS-driven classes (--cq-sm, --cq-xs) provide equivalent behavior
-      in browsers without container query support (e.g. older webviews).
+   1. CSS @container queries (30rem / 20rem) handle the default breakpoints
+      in CQ-capable browsers instantly and without JS involvement.
+   2. JS always sets --cq-sm / --cq-xs classes on every resize. Their CSS
+      rules activate in two contexts:
+      a. @supports not (container-type: inline-size) -- non-CQ browsers
+         where native @container is unavailable.
+      b. .kiosk-keyboard--cq-width-custom -- all browsers, when consumers
+         override width threshold CSS variables, since @container cannot
+         read custom property values.
    Both use min() to cap rather than hard-replace consumer-provided values.
    A consumer who sets --kiosk-keyboard-key-font-size: 0.75rem keeps that
    value; one who sets 1.5rem gets capped to 1rem / 0.875rem. ---- */
 
-/* JS-driven width fallback (non-CQ browsers only) */
+/* JS-driven width classes: non-CQ fallback path (--cq-sm/--cq-xs also
+   serve --cq-width-custom in all browsers; see custom-threshold block below) */
 @supports not (container-type: inline-size) {
   .kiosk-keyboard--cq-sm .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
@@ -133,7 +140,9 @@
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
   }
 
-  /* Mixed: narrow + short (non-CQ) */
+  /* Mixed: extra-narrow (xs) + short/tiny (non-CQ).
+     The sm + short combination does not need additional font capping because
+     the sm width still provides adequate room for legibility. */
   .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
   .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
@@ -160,9 +169,10 @@
   }
 }
 
-/* Consumer-overridden width thresholds take precedence over the fixed
-   @container defaults. These rules reset the width-responsive styling to the
-   base values, then re-apply the width state from the JS-driven cq classes. */
+/* Consumer-overridden width thresholds (all browsers, including CQ-capable).
+   @container cannot read CSS custom properties, so when consumers override
+   the width threshold variables this block resets the fixed @container
+   defaults to base values and re-applies from JS-driven --cq-sm/--cq-xs. */
 .kiosk-keyboard--cq-width-custom .kiosk-key {
   --kiosk-keyboard-key-font-size: var(--_kiosk-keyboard-key-font-base);
 }
