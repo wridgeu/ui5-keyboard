@@ -71,8 +71,46 @@ And evaluate what is currently covered by this repository's demos.
   - native UI5 Web Component input usage in XML (`xmlns:webc="@ui5/webcomponents/dist"`)
   - custom-element bridge controls in `packages/demo-app/webapp/control/`
 - Kept `ui5-tooling-modules` middleware/task so npm web-component modules resolve correctly in the UI5 app.
-- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses both: `@ui5/webcomponents/dist/Input` is auto-wrapped via CEM, while `kiosk-keyboard-webc` uses a manual bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts`. Set `addToNamespace: true` with `useRelativeModulePaths: true` on the middleware. The default `addToNamespace: true` without `useRelativeModulePaths` creates a Stellvertreter redirect to a namespace-prefixed path, but during dev serve the bundle entries are stored under original npm names (the namespace rewriting only runs at build time), so the redirect target is a 404. `useRelativeModulePaths: true` skips the redirect and serves modules directly. Framework version in `ui5.yaml` must be >= 1.120.0. See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project for the build-time reference setup.
+- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses both: `@ui5/webcomponents/dist/Input` is auto-wrapped via CEM, while `kiosk-keyboard-webc` uses a manual bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts`.
 - Updated interop e2e harness to avoid deprecated/global-core access patterns.
+
+### Middleware Configuration for Seamless Web Components
+
+The `ui5-tooling-modules` middleware requires `addToNamespace: true` with `useRelativeModulePaths: true` for dev serve. The build task uses `addToNamespace: true` without `useRelativeModulePaths`. Framework version must be >= 1.120.0. See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project for the official build-time reference.
+
+```yaml
+builder:
+  customTasks:
+    - name: ui5-tooling-modules-task
+      configuration:
+        addToNamespace: true
+server:
+  customMiddleware:
+    - name: ui5-tooling-modules-middleware
+      configuration:
+        addToNamespace: true
+        useRelativeModulePaths: true
+```
+
+#### Why `useRelativeModulePaths: true` is needed during dev serve
+
+Without it, the middleware creates a redirect that fails for application-type projects. Here is the path trace for an app with namespace `demo/hotkeys` requesting `@ui5/webcomponents/dist/Input`:
+
+| Step                            | What happens                                                                        | Path                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 1. Browser requests module      | `GET`                                                                               | `/resources/@ui5/webcomponents/dist/Input.js`                         |
+| 2. Middleware creates redirect  | Responds with a "Stellvertreter" module that loads from the namespace-prefixed path | `demo/hotkeys/thirdparty/@ui5/webcomponents/dist/Input`               |
+| 3. Browser follows redirect     | `GET`                                                                               | `/resources/demo/hotkeys/thirdparty/@ui5/webcomponents/dist/Input.js` |
+| 4. Middleware tries to match    | For applications, the internal matching regex resolves to `^/thirdparty/(.*)$`      | Does NOT match `/resources/demo/hotkeys/thirdparty/...`               |
+| 5. Falls through to file server | Looks for the file on disk                                                          | **404 -- file does not exist**                                        |
+
+The redirect target (`demo/hotkeys/thirdparty/...`) is never reachable because:
+
+- The middleware stores the bundled module under its **original npm name** (`@ui5/webcomponents/dist/Input`), not the namespace-prefixed name
+- The namespace rewriting that prefixes module names with `demo/hotkeys/thirdparty/` only runs at **build time** (in the task), not during dev serve (in the middleware)
+- The middleware's internal routing regex for application-type projects uses `/` as the project namespace prefix instead of `/resources/demo/hotkeys/`, so it can never match the namespace-prefixed path
+
+With `useRelativeModulePaths: true`, step 2 is skipped entirely. The middleware serves the bundled module directly at its original path (`/resources/@ui5/webcomponents/dist/Input.js`), which matches the bundle entry stored under `@ui5/webcomponents/dist/Input`.
 
 ## Standalone Scenario Status
 

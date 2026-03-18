@@ -154,9 +154,9 @@ Then use the component directly in XML views:
 
 In workspace development, run `npm run generate` in the webc package first so that `dist/custom-elements.json` exists. The `generate` script produces the CEM alongside CSS and i18n assets.
 
-**Why `useRelativeModulePaths: true`?** The middleware's default behavior (`addToNamespace: true` without `useRelativeModulePaths`) creates a redirect ("Stellvertreter") from the original module path to a namespace-prefixed path (e.g., `demo/hotkeys/thirdparty/@ui5/webcomponents/dist/Input`). However, during dev serve, the bundle entries are stored under their original npm names -- the namespace rewriting only runs at build time (`ui5-tooling-modules-task`, not the middleware). This means the redirect target can never be resolved, resulting in 404. Setting `useRelativeModulePaths: true` skips the redirect and serves the bundled module directly at its original path. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
+The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
 
-The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate.
+`useRelativeModulePaths: true` is required because the middleware's default Stellvertreter redirect mechanism has a routing bug for application-type projects during dev serve. See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for the detailed path trace and root cause analysis.
 
 #### 3b. `WebComponent.extend()` bridge (explicit control)
 
