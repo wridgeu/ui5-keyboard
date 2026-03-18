@@ -76,7 +76,7 @@ And evaluate what is currently covered by this repository's demos.
 
 ### Middleware Configuration for Seamless Web Components
 
-The `ui5-tooling-modules` middleware requires `addToNamespace: true` with `useRelativeModulePaths: true` for dev serve. The build task uses `addToNamespace: true` without `useRelativeModulePaths`. Framework version must be >= 1.120.0. See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project for the official build-time reference.
+Framework version in `ui5.yaml` must be >= 1.120.0. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official SAP reference for the build-time setup.
 
 ```yaml
 builder:
@@ -85,6 +85,7 @@ builder:
       afterTask: replaceVersion
       configuration:
         addToNamespace: true
+
 server:
   customMiddleware:
     - name: ui5-tooling-transpile-middleware
@@ -96,29 +97,34 @@ server:
         useRelativeModulePaths: true
 ```
 
-#### Module paths: where things are vs. where the browser looks
+The SAP reference project configures only the task with `addToNamespace: true` and leaves the middleware at defaults (no `useRelativeModulePaths`). That configuration works for production builds but does not work for dev serve. The reference project has the same dev-serve gap; see the explanation below.
 
-All examples use an app with namespace `demo/hotkeys` loading `@ui5/webcomponents/dist/Input`.
+#### How `addToNamespace` and `useRelativeModulePaths` affect module paths
 
-During dev serve, the middleware bundles the module in memory and stores it under its original npm name. The `addToNamespace` flag controls whether the browser is redirected to a namespace-prefixed path or gets the module directly.
+When `addToNamespace: true` is set, the middleware wraps each npm module in a small redirect ("Stellvertreter") that points the browser to a namespace-prefixed path under `thirdparty/`. This is intentional: at build time, the task physically places modules at that namespace-prefixed path, so the redirect resolves to a real file. During dev serve, the middleware bundles modules in memory but stores them under their original npm name. The namespace rewriting of entry-point modules is a build-only step ([ui5-community/ui5-ecosystem-showcase#1049](https://github.com/ui5-community/ui5-ecosystem-showcase/issues/1049)). Full dev-serve rewriting is deferred until the UI5 tooling supports iterative builds.
 
-| Config (middleware)                                     | Browser requests                                       | Module stored at (in memory)    | Result             |
-| ------------------------------------------------------- | ------------------------------------------------------ | ------------------------------- | ------------------ |
-| `addToNamespace: true` (default)                        | `/resources/demo/hotkeys/thirdparty/@ui5/.../Input.js` | `@ui5/webcomponents/dist/Input` | **404** (mismatch) |
-| `addToNamespace: true` + `useRelativeModulePaths: true` | `/resources/@ui5/webcomponents/dist/Input.js`          | `@ui5/webcomponents/dist/Input` | Works              |
-| `addToNamespace: false`                                 | `/resources/@ui5/webcomponents/dist/Input.js`          | `@ui5/webcomponents/dist/Input` | Works              |
+`useRelativeModulePaths: true` skips the redirect entirely. The middleware serves the bundled module at its original npm path, which matches how it is stored in memory.
 
-During build, the task rewrites module names to include the namespace prefix. The built output actually places the file at `demo/hotkeys/thirdparty/@ui5/.../Input.js`, so the redirect target exists on disk.
+The table below shows the effect of each configuration during dev serve. All paths use an app with namespace `demo/hotkeys` loading `@ui5/webcomponents/dist/Input` as an example.
 
-| Config (task)          | Built file path                                       | Result              |
-| ---------------------- | ----------------------------------------------------- | ------------------- |
-| `addToNamespace: true` | `resources/demo/hotkeys/thirdparty/@ui5/.../Input.js` | Works (file exists) |
+**Dev serve (middleware):**
 
-The 404 in the first row happens because `addToNamespace: true` tells the middleware to redirect the browser to the namespace-prefixed path via a "Stellvertreter" (substitute module). This redirect is intentional design: the middleware creates a proxy module at the original npm path that delegates to the namespace-prefixed path. However, the namespace rewriting of entry-point modules only runs at build time, not during dev serve. So the browser follows the redirect to a path that only exists after `ui5 build`.
+| `addToNamespace` | `useRelativeModulePaths` | Browser requests                                                                     | Module stored at                                    | Result             |
+| ---------------- | ------------------------ | ------------------------------------------------------------------------------------ | --------------------------------------------------- | ------------------ |
+| `true` (default) | `false` (default)        | `/resources/demo/hotkeys/thirdparty/@ui5/.../Input.js` (via Stellvertreter redirect) | `@ui5/webcomponents/dist/Input` (original npm name) | 404, path mismatch |
+| `true`           | `true`                   | `/resources/@ui5/webcomponents/dist/Input.js` (no redirect)                          | `@ui5/webcomponents/dist/Input`                     | Resolves correctly |
+| `false`          | (ignored)                | `/resources/@ui5/webcomponents/dist/Input.js` (no redirect)                          | `@ui5/webcomponents/dist/Input`                     | Resolves correctly |
 
-This is a [known limitation](https://github.com/ui5-community/ui5-ecosystem-showcase/issues/1049) acknowledged by the maintainer. Full entry-point rewriting during dev serve is deferred until the UI5 tooling supports iterative builds.
+**Production build (task):**
 
-`useRelativeModulePaths: true` is the documented workaround. It tells the middleware to skip the Stellvertreter redirect and serve the bundled module directly at its original path.
+| `addToNamespace` | Output file on disk                                                                   | Result             |
+| ---------------- | ------------------------------------------------------------------------------------- | ------------------ |
+| `true`           | `resources/demo/hotkeys/thirdparty/@ui5/.../Input.js` (namespace-prefixed, rewritten) | Resolves correctly |
+| `false`          | `resources/@ui5/webcomponents/dist/Input.js` (original npm path)                      | Resolves correctly |
+
+The first row in the dev-serve table is the default configuration and what the SAP reference project uses. The Stellvertreter redirect sends the browser to the namespace-prefixed path, but at dev time no module exists there because the in-memory bundle stores it under its npm name. The task rewrites module names during build, so the same redirect resolves correctly in production.
+
+`addToNamespace: true` + `useRelativeModulePaths: true` is the correct combination for dev serve. The task does not need `useRelativeModulePaths`; it rewrites module paths regardless.
 
 ## Standalone Scenario Status
 
