@@ -21,4 +21,11 @@ describe("KioskKeyboard Accessibility Media Emulation", () => {
     const kb = await getKeyboard("kb-qwerty");
     await matchElementSnapshotInSection(kb, "kb-qwerty-forced-colors");
   });
+
+  it("should match prefers-reduced-motion mode", async () => {
+    await setEmulatedMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
+    await openVisualPage();
+    const kb = await getKeyboard("kb-qwerty");
+    await matchElementSnapshotInSection(kb, "kb-qwerty-reduced-motion");
+  });
 });
