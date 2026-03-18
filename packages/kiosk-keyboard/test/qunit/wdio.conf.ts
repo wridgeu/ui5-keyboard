@@ -20,7 +20,14 @@ const server = createServerManager(
 const testIds = readQUnitTestIds(TESTSUITE_FILE);
 
 const cpus = (os.availableParallelism?.() ?? os.cpus().length) || 4;
-const parallel = Math.min(cpus, 5);
+const requestedParallel = Number(process.env.KIOSK_QUNIT_MAX_INSTANCES ?? "");
+// Leave one CPU free for Chrome/UI5 server overhead and cap the suite below the
+// flakier 5-worker setting that occasionally timed out on Windows.
+const safeParallel = Math.max(1, cpus - 1);
+const parallel =
+  Number.isFinite(requestedParallel) && requestedParallel > 0
+    ? Math.min(Math.floor(requestedParallel), safeParallel)
+    : Math.min(safeParallel, 4);
 
 // Generate one spec file per QUnit test so WDIO can run them in parallel.
 const specs = generateQUnitSpecs(

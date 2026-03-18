@@ -12,7 +12,7 @@ export {
 
 /** Navigate to the visual test page and wait for all keyboards to fully render. */
 export async function openVisualPage(): Promise<void> {
-  await browser.url("/test/pages/visual.html");
+  await browser.url("/test/pages/visual.html", { wait: "interactive" });
   await browser.waitUntil(async () => browser.execute(() => customElements.get("kiosk-keyboard") !== undefined), {
     timeout: 10_000,
     timeoutMsg: "kiosk-keyboard not registered",

@@ -113,10 +113,30 @@ describe("KioskKeyboard Interactive States", () => {
       timeoutMsg: "Shift key did not become active",
     });
     await $("body").moveTo({ xOffset: 0, yOffset: 0 });
+    await browser.execute(
+      (el: HTMLElement) => {
+        el.dataset.snapshotPrevPointerEvents = el.style.pointerEvents;
+        el.style.pointerEvents = "none";
+      },
+      await kb,
+    );
+    await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
 
     try {
       await matchElementSnapshotInSection(kb, "kb-shift-active");
     } finally {
+      await browser.execute(
+        (el: HTMLElement) => {
+          const previousPointerEvents = el.dataset.snapshotPrevPointerEvents ?? "";
+          if (previousPointerEvents) {
+            el.style.pointerEvents = previousPointerEvents;
+          } else {
+            el.style.removeProperty("pointer-events");
+          }
+          delete el.dataset.snapshotPrevPointerEvents;
+        },
+        await kb,
+      );
       await shiftKey.click();
       await shiftKey.click();
     }

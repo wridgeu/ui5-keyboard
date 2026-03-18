@@ -12,11 +12,8 @@ export {
 
 export const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 
-/** Navigate to the visual test page and wait for UI5 to finish rendering. */
-export async function openVisualPage(): Promise<void> {
-  await browser.url(VISUAL_PAGE);
-  // wdi5 "ui5" service handles UI5 bootstrap sync; additionally wait for
-  // the last keyboard on the page to render keys (order-independent)
+/** Wait until the visual page has rendered keyboard roots and their keys. */
+export async function waitForVisualKeyboardsReady(): Promise<void> {
   await browser.waitUntil(
     async () =>
       browser.execute(() => {
@@ -27,6 +24,14 @@ export async function openVisualPage(): Promise<void> {
       }),
     { timeout: 10_000, timeoutMsg: "Keyboard keys not rendered" },
   );
+}
+
+/** Navigate to the visual test page and wait for UI5 to finish rendering. */
+export async function openVisualPage(page = VISUAL_PAGE): Promise<void> {
+  await browser.url(page, { wait: "interactive" });
+  // wdi5 "ui5" service handles UI5 bootstrap sync; additionally wait for
+  // the last keyboard on the page to render keys (order-independent)
+  await waitForVisualKeyboardsReady();
 }
 
 /** Get the rendered KioskKeyboard element inside a container. */

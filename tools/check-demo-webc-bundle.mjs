@@ -14,7 +14,6 @@ const controllerPath = path.join(
   "controller",
   "KioskWebComponent.controller.ts",
 );
-const packageJsonPath = path.join(repoRoot, "packages", "kiosk-keyboard-webc", "package.json");
 const demoRequire = createRequire(demoPackageJsonPath);
 
 const controllerSource = fs.readFileSync(controllerPath, "utf8");
@@ -25,19 +24,41 @@ if (!controllerSource.includes('import "kiosk-keyboard-webc/bundle";')) {
   );
 }
 
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-const bundleExport = packageJson?.exports?.["./bundle"]?.default;
-if (typeof bundleExport !== "string" || bundleExport.length === 0) {
-  throw new Error("kiosk-keyboard-webc/package.json is missing the public './bundle' export.");
+const npmExecPath = process.env.npm_execpath;
+const npmCommand = npmExecPath ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm";
+function runNpm(args) {
+  const spawnArgs = npmExecPath ? [npmExecPath, ...args] : args;
+  const result = spawnSync(npmCommand, spawnArgs, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    shell: false,
+  });
+
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+  }
+
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
 }
+
+runNpm(["run", "build:dev", "-w", "packages/kiosk-keyboard-webc"]);
 
 let resolvedBundlePath;
 try {
   resolvedBundlePath = demoRequire.resolve("kiosk-keyboard-webc/bundle");
 } catch (error) {
   throw new Error(
-    "packages/demo-app cannot resolve the public 'kiosk-keyboard-webc/bundle' entry. " +
-      "Build the web component package first so its exported dist files exist.",
+    "packages/demo-app cannot resolve the public 'kiosk-keyboard-webc/bundle' entry after rebuilding the package.",
     { cause: error },
   );
 }
@@ -46,31 +67,6 @@ if (!fs.existsSync(resolvedBundlePath)) {
   throw new Error(`Resolved 'kiosk-keyboard-webc/bundle' to '${resolvedBundlePath}', but that file does not exist.`);
 }
 
-const npmExecPath = process.env.npm_execpath;
-const npmCommand = npmExecPath ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm";
-const spawnArgs = npmExecPath
-  ? [npmExecPath, "run", "build", "-w", "packages/demo-app"]
-  : ["run", "build", "-w", "packages/demo-app"];
-const result = spawnSync(npmCommand, spawnArgs, {
-  cwd: repoRoot,
-  encoding: "utf8",
-  shell: false,
-});
-
-if (result.stdout) {
-  process.stdout.write(result.stdout);
-}
-
-if (result.stderr) {
-  process.stderr.write(result.stderr);
-}
-
-if (result.error) {
-  throw result.error;
-}
-
-if (result.status !== 0) {
-  process.exit(result.status ?? 1);
-}
+runNpm(["run", "build", "-w", "packages/demo-app"]);
 
 process.stdout.write(`Verified demo build for the public kiosk-keyboard-webc/bundle entry (${resolvedBundlePath}).\n`);

@@ -38,6 +38,8 @@ export const config: wdi5Config = {
 
   specs: [
     path.resolve(__dirname, "visual.test.ts"),
+    path.resolve(__dirname, "visual-container.test.ts"),
+    path.resolve(__dirname, "visual-enhancements.test.ts"),
     path.resolve(__dirname, "visual-themes.test.ts"),
     path.resolve(__dirname, "rtl.test.ts"),
     path.resolve(__dirname, "accessibility-media.test.ts"),
@@ -56,6 +58,9 @@ export const config: wdi5Config = {
   ],
 
   logLevel: "warn",
+
+  connectionRetryTimeout: 300_000,
+  connectionRetryCount: 2,
 
   baseUrl: `http://localhost:${PORT}`,
 

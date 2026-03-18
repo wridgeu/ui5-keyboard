@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
 import { browser, $ } from "@wdio/globals";
-import { VISUAL_PAGE } from "./test-helpers.js";
+import { VISUAL_PAGE, openVisualPage } from "./test-helpers.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
@@ -15,10 +15,7 @@ describe("README screenshots", () => {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
     for (const theme of THEMES) {
-      await browser.url(`${VISUAL_PAGE}?sap-ui-theme=${theme}`);
-
-      const readyMarker = await $("#kb-stable-height .ui5KioskKeyboard");
-      await readyMarker.waitForExist({ timeout: 20_000 });
+      await openVisualPage(`${VISUAL_PAGE}?sap-ui-theme=${theme}`);
 
       // Element screenshots can place the virtual pointer on descendant keys,
       // which may trigger :hover and create non-deterministic key colors

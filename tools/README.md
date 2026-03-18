@@ -210,7 +210,7 @@ What it does:
 Build-time smoke check that keeps the documented UI5 bridge path honest.
 
 - Verifies the demo still imports `kiosk-keyboard-webc/bundle`
-- Resolves that public entry from `packages/demo-app` and fails if the exported file is missing
+- Rebuilds `packages/kiosk-keyboard-webc` and resolves that public entry from `packages/demo-app`
 - Rebuilds `packages/demo-app`
 - Fails if the documented public bundle path stops being buildable in the demo
 
