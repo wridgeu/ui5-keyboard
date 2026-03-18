@@ -985,10 +985,6 @@ export default class KioskKeyboard extends Control {
     if (width === undefined) {
       width = dom.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
     }
-    if (height === undefined) {
-      height = dom.getBoundingClientRect().height;
-    }
-
     const narrowThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqNarrowThreshold", 30, remPx);
     const compactThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqCompactThreshold", 20, remPx);
     const isCompact = width <= compactThresh;
@@ -1014,6 +1010,9 @@ export default class KioskKeyboard extends Control {
       dom.style.minHeight = "";
     }
 
+    if (height === undefined) {
+      height = dom.getBoundingClientRect().height;
+    }
     const naturalHeight = dom.scrollHeight;
 
     if (previousMinHeight) {

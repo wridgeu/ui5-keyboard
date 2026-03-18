@@ -516,6 +516,32 @@ QUnit.test("Custom height threshold: cq-tiny triggers at overridden tiny thresho
   kb.destroy();
 });
 
+QUnit.test("Height constraint detection works with stableHeight active", async (assert) => {
+  const kb = new KioskKeyboard({ stableHeight: true });
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  // Force key height to make the keyboard naturally taller than 16rem
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+
+  // First render unconstrained to let stableHeight cache a large _maxHeight
+  kb.refreshResponsiveState();
+
+  // Now constrain the container to 12rem (below the tiny threshold)
+  dom.style.height = `${12 * remPx}px`;
+  dom.style.overflow = "hidden";
+
+  // Trigger responsive sizing again -- this should detect the constraint
+  // even though stableHeight has set a large minHeight from the prior render
+  kb.refreshResponsiveState();
+
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied despite stableHeight");
+
+  kb.destroy();
+});
+
 QUnit.test("Responsive class preserves custom font-size below the cap", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
