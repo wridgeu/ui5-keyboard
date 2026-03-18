@@ -158,7 +158,7 @@ In workspace development, run `npm run generate` in the webc package first so th
 
 The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
 
-`useRelativeModulePaths: true` is required because the middleware's default redirect mechanism has a routing bug for application-type projects during dev serve. See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for the config/path reference table and root cause.
+`useRelativeModulePaths: true` is needed because the middleware's default redirect ("Stellvertreter") points the browser to a namespace-prefixed path that only exists after `ui5 build`, not during `ui5 serve`. This is a [known limitation](https://github.com/ui5-community/ui5-ecosystem-showcase/issues/1049) of the middleware. `useRelativeModulePaths: true` skips the redirect and serves modules at their original npm paths. See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for the config/path reference table.
 
 The demo app in this repository uses Path B (section 3b below) for the `kiosk-keyboard` web component specifically, because the manual bridge was chosen for explicit metadata control. Path A is used in the demo app for `@ui5/webcomponents/dist` components (e.g. `KioskInputIds.view.xml`).
 

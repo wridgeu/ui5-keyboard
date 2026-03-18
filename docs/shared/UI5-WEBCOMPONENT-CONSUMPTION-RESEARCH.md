@@ -114,9 +114,11 @@ During build, the task rewrites module names to include the namespace prefix. Th
 | ---------------------- | ----------------------------------------------------- | ------------------- |
 | `addToNamespace: true` | `resources/demo/hotkeys/thirdparty/@ui5/.../Input.js` | Works (file exists) |
 
-The 404 in the first row happens because `addToNamespace: true` tells the middleware to redirect the browser to the namespace-prefixed path, but the middleware itself never rewrites the bundle entry to that path. That rewriting is a build-only step. So the browser asks for a path that only exists after `ui5 build`, not during `ui5 serve`.
+The 404 in the first row happens because `addToNamespace: true` tells the middleware to redirect the browser to the namespace-prefixed path via a "Stellvertreter" (substitute module). This redirect is intentional design: the middleware creates a proxy module at the original npm path that delegates to the namespace-prefixed path. However, the namespace rewriting of entry-point modules only runs at build time, not during dev serve. So the browser follows the redirect to a path that only exists after `ui5 build`.
 
-`useRelativeModulePaths: true` fixes this by telling the middleware to skip the redirect and serve the module at the path where it actually is.
+This is a [known limitation](https://github.com/ui5-community/ui5-ecosystem-showcase/issues/1049) acknowledged by the maintainer. Full entry-point rewriting during dev serve is deferred until the UI5 tooling supports iterative builds.
+
+`useRelativeModulePaths: true` is the documented workaround. It tells the middleware to skip the Stellvertreter redirect and serve the bundled module directly at its original path.
 
 ## Standalone Scenario Status
 
