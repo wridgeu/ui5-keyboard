@@ -113,6 +113,22 @@ QUnit.test("Works in a textarea with newlines", (assert) => {
   assert.deepEqual(result, [7, 7], "Cursor after insertion");
 });
 
+QUnit.test("Returns null and does not modify a readOnly input", (assert) => {
+  const input = makeInput("abc", [1, 1]);
+  input.readOnly = true;
+  const result = insertText(input, "X", [1, 1]);
+  assert.strictEqual(result, null, "Returns null for readOnly input");
+  assert.strictEqual(input.value, "abc", "Value unchanged");
+});
+
+QUnit.test("Returns null and does not modify a disabled input", (assert) => {
+  const input = makeInput("abc", [1, 1]);
+  input.disabled = true;
+  const result = insertText(input, "X", [1, 1]);
+  assert.strictEqual(result, null, "Returns null for disabled input");
+  assert.strictEqual(input.value, "abc", "Value unchanged");
+});
+
 // ──────────────────────────────────────────────
 // handleBackspace
 // ──────────────────────────────────────────────
@@ -207,6 +223,22 @@ QUnit.test("Selection removal takes precedence over grapheme deletion", (assert)
 
   assert.strictEqual(input.value, "abc", "Selection removed (the emoji)");
   assert.deepEqual(result, [1, 1], "Cursor at selection start");
+});
+
+QUnit.test("Returns null and does not modify a readOnly input", (assert) => {
+  const input = makeInput("abc", [2, 2]);
+  input.readOnly = true;
+  const result = handleBackspace(input, [2, 2]);
+  assert.strictEqual(result, null, "Returns null for readOnly input");
+  assert.strictEqual(input.value, "abc", "Value unchanged");
+});
+
+QUnit.test("Returns null and does not modify a disabled input", (assert) => {
+  const input = makeInput("abc", [2, 2]);
+  input.disabled = true;
+  const result = handleBackspace(input, [2, 2]);
+  assert.strictEqual(result, null, "Returns null for disabled input");
+  assert.strictEqual(input.value, "abc", "Value unchanged");
 });
 
 // ──────────────────────────────────────────────

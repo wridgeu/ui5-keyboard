@@ -45,7 +45,8 @@ export function insertText(
   text: string,
   cursor?: CursorPos,
   customResolver?: TargetResolverFn | null,
-): CursorPos {
+): CursorPos | null {
+  if (dom.readOnly || dom.disabled) return null;
   const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
   const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
@@ -78,6 +79,7 @@ export function handleBackspace(
   cursor?: CursorPos,
   customResolver?: TargetResolverFn | null,
 ): CursorPos | null {
+  if (dom.readOnly || dom.disabled) return null;
   const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
   const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
 

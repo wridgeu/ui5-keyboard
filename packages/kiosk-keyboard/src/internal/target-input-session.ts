@@ -31,7 +31,9 @@ export default class TargetInputSession {
   insertText(text: string): void {
     const dom = this._getTargetDomRef();
     if (!dom) return;
-    this._cursorPos = opsInsertText(dom, text, this._cursorPos ?? undefined, this._customResolver);
+    const pos = opsInsertText(dom, text, this._cursorPos ?? undefined, this._customResolver);
+    if (!pos) return;
+    this._cursorPos = pos;
     this._lastKnownValue = dom.value;
     this._targetDirty = true;
   }
@@ -55,7 +57,9 @@ export default class TargetInputSession {
       // insert a newline and must not mark the session dirty for change firing.
       // Textareas never emit change on Enter, and fireChangeIfDirty() also
       // skips textarea targets by design.
-      this._cursorPos = opsInsertText(dom, "\n", this._cursorPos ?? undefined, this._customResolver);
+      const pos = opsInsertText(dom, "\n", this._cursorPos ?? undefined, this._customResolver);
+      if (!pos) return;
+      this._cursorPos = pos;
       this._lastKnownValue = dom.value;
       return;
     }
