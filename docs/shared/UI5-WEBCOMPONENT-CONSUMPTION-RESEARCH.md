@@ -71,7 +71,7 @@ And evaluate what is currently covered by this repository's demos.
   - native UI5 Web Component input usage in XML (`xmlns:webc="@ui5/webcomponents/dist"`)
   - custom-element bridge controls in `packages/demo-app/webapp/control/`
 - Kept `ui5-tooling-modules` middleware/task so npm web-component modules resolve correctly in the UI5 app.
-- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses both: `@ui5/webcomponents/dist/Input` is auto-wrapped via CEM, while `kiosk-keyboard-webc` uses a manual bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts`. Set `addToNamespace: false` in the middleware config to enable seamless WC transformation (the default `addToNamespace: true` has a routing issue for application-type projects). Framework version in `ui5.yaml` must be >= 1.120.0.
+- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses both: `@ui5/webcomponents/dist/Input` is auto-wrapped via CEM, while `kiosk-keyboard-webc` uses a manual bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts`. Set `addToNamespace: false` in the middleware config to enable seamless WC transformation (the default `addToNamespace: true` has a routing issue for application-type projects). Framework version in `ui5.yaml` must be >= 1.120.0. See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project for the official reference setup.
 - Updated interop e2e harness to avoid deprecated/global-core access patterns.
 
 ## Standalone Scenario Status

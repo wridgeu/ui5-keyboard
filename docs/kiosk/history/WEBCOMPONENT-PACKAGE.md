@@ -1340,9 +1340,17 @@ DOM. Browser support: uniform across Chrome, Firefox, Safari.
 The demo app needs to consume `<kiosk-keyboard>` inside a UI5 XML view.
 Research confirms two proven paths, both available in this monorepo today.
 
-### Path A: Auto-generated wrappers (recommended)
+> **Outcome:** The demo app uses Path B (manual bridge at
+> `packages/demo-app/webapp/control/KioskKeyboardWebc.ts`) for the
+> `<kiosk-keyboard>` web component. Path A (auto-generated wrappers)
+> is used for `@ui5/webcomponents/dist/Input` in `KioskInputIds.view.xml`.
+> Both paths coexist without conflict.
+> See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration)
+> project for the official SAP reference setup.
 
-`ui5-tooling-modules` (v3.34.6, already installed) auto-detects a
+### Path A: Auto-generated wrappers (CEM-driven)
+
+`ui5-tooling-modules` (v3.34+, already installed) auto-detects a
 `"customElements"` field in a package's `package.json`, parses the Custom
 Elements Manifest, and generates `sap.ui.core.webc.WebComponent.extend()`
 wrappers at dev-serve and build time.
@@ -1358,31 +1366,52 @@ Requirements:
 2. The `custom-elements.json` follows the
    [Custom Elements Manifest](https://github.com/webcomponents/custom-elements-manifest)
    schema. The `@ui5/webcomponents-tools` build generates this
-   automatically for `UI5Element`-based components.
+   automatically for `UI5Element`-based components. In workspace
+   development, run `npm run generate` in the webc package so
+   `dist/custom-elements.json` exists at serve time.
 
 3. Add `"kiosk-keyboard-webc": "file:../kiosk-keyboard-webc"` to the
    demo app's `package.json` dependencies. npm workspaces ensure it is
    resolvable from `node_modules`.
 
+4. The `ui5-tooling-modules-middleware` must be configured with
+   `addToNamespace: false` to bypass a routing issue with the default
+   redirect mechanism for application-type projects. The UI5 framework
+   version in `ui5.yaml` must be >= 1.120.0.
+
+   ```yaml
+   server:
+     customMiddleware:
+       - name: ui5-tooling-modules-middleware
+         afterMiddleware: compression
+         configuration:
+           addToNamespace: false
+   ```
+
 Once set up, XML views consume the component directly:
 
 ```xml
-<mvc:View xmlns:kiosk="kiosk-keyboard-webc/dist">
-  <kiosk:KioskKeyboard
+<mvc:View xmlns:kb="kiosk-keyboard-webc/dist">
+  <kb:KioskKeyboard
     docked="true"
     auto-show="true"
     for="myInput" />
 </mvc:View>
 ```
 
-This is the same pattern the demo app already uses for
+This is the same pattern the demo app uses for
 `xmlns:webc="@ui5/webcomponents/dist"` in `KioskInputIds.view.xml`.
 
-### Path B: Manual WebComponent.extend() bridge (fallback)
+### Path B: Manual WebComponent.extend() bridge (explicit control)
 
-Already proven in `webapp/control/KioskInput.ts`. A manual bridge gives
-full control over property mapping, event transformation, and method
-delegation. Use this if the auto-generated wrapper needs customization:
+Already proven in `webapp/control/KioskKeyboardWebc.ts`. A manual bridge
+gives full control over property mapping, event transformation, and method
+delegation. Use this when you want typed UI5 events, imperative methods,
+or when the auto-generated wrapper needs customization.
+
+Since UI5 >= 1.138, the WebComponent bridge auto-converts camelCase event
+names to kebab-case DOM events (e.g. `keyPress` maps to `key-press`).
+Explicit event `mapping: { to: "..." }` is not needed.
 
 ```ts
 import WebComponent from "sap/ui/core/webc/WebComponent";
@@ -1391,14 +1420,14 @@ const KioskKeyboardBridge = WebComponent.extend("demo.hotkeys.control.KioskKeybo
   metadata: {
     tag: "kiosk-keyboard",
     properties: {
-      layout: { type: "string", mapping: "property" },
-      docked: { type: "boolean", mapping: "property" },
-      autoShow: { type: "boolean", mapping: { type: "property", to: "auto-show" } },
-      // ...
+      layout: { type: "string", defaultValue: "", mapping: { type: "property", to: "layout" } },
+      docked: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "docked" } },
+      autoShow: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "auto-show" } },
+      // ... see packages/demo-app/webapp/control/KioskKeyboardWebc.ts for full mapping
     },
     events: {
-      keyPress: { mapping: { to: "key-press" } },
-      afterOpen: { mapping: { to: "after-open" } },
+      keyPress: {}, // auto-maps to "key-press" DOM event (UI5 >= 1.138)
+      afterOpen: {}, // auto-maps to "after-open" DOM event
       // ...
     },
     methods: ["show", "close", "registerLayout"],
