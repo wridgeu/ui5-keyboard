@@ -455,12 +455,14 @@ Four Horizon variant bundles exist (required by the UI5 WC build tooling) but ar
 npm run generate     →  ui5nps generate (theme CSS modules, i18n JSON, i18n-defaults.ts)
 tsc                  →  TypeScript compilation (src/ → dist/)
 npm run build:bundle →  vite build (dist/bundle.esm.js → dist/kiosk-keyboard.bundle.js)
-npm run generateAPI  →  CEM generation + validation (on-demand, see CUSTOM-ELEMENTS-MANIFEST.md)
+npm run generateAPI  →  CEM generation + validation (also included in npm run build)
 ```
+
+`npm run build` executes the full pipeline in order: `build:dev`, `build:bundle`, then `generateAPI`.
 
 The bundle step uses Vite in library mode with `inlineDynamicImports: true` to produce a single self-contained file that inlines all UI5 WC framework dependencies.
 
-CEM generation (`generateAPI`) is a separate on-demand step that produces `custom-elements.json`, IDE integration files (VS Code, JetBrains), and validates the public API documentation. See [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md) for details.
+CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration files (VS Code, JetBrains), and validates the public API documentation. Running it directly is still useful when iterating only on API docs or manifest output. See [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md) for details.
 
 ### Package Exports
 

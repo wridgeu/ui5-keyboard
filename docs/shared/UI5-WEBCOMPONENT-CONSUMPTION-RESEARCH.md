@@ -131,9 +131,10 @@ This avoids deprecated `sap.ui.webc.main` while still demonstrating practical we
 
 1. Install dependencies at repo root (`npm install`).
 2. For standalone web component pages, run `npm run start:kiosk-webc` and open `http://localhost:8084/test/pages/index.html`.
-3. For UI5 integration examples, run `npm start` and open `http://localhost:8080/index.html#/kiosk/input-ids`.
+3. For this repo's current demo-app integration path, build the workspace libraries first on a fresh clone or after library changes (`npm run build`).
+4. Then run `npm start` and open `http://localhost:8080/index.html#/kiosk/input-ids`.
 
-This keeps both the standalone and UI5 integration examples reproducible.
+This keeps both the standalone and the current demo-app integration examples reproducible. Source-based or package-specific consumption flows can differ; follow the package-local docs for those scenarios.
 
 ## Practical Rule-of-Thumb
 

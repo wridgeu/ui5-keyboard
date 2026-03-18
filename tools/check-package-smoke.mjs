@@ -71,6 +71,7 @@ function assertFilesPresent(packageName, files, requiredFiles) {
 }
 
 for (const pkg of packages) {
+  runNpm(["run", "clean"], pkg.dir);
   runNpm(pkg.buildArgs, repoRoot);
 
   const packOutput = runNpm(["pack", "--dry-run", "--json"], pkg.dir);

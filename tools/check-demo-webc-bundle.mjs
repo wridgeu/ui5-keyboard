@@ -51,6 +51,7 @@ function runNpm(args) {
   }
 }
 
+runNpm(["run", "clean", "-w", "packages/kiosk-keyboard-webc"]);
 runNpm(["run", "build:dev", "-w", "packages/kiosk-keyboard-webc"]);
 
 let resolvedBundlePath;
