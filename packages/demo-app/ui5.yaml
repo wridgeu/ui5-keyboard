@@ -14,10 +14,6 @@ builder:
   customTasks:
     - name: ui5-tooling-modules-task
       afterTask: replaceVersion
-      configuration:
-        pluginOptions:
-          webcomponents:
-            skip: true
     - name: ui5-tooling-transpile-task
       afterTask: replaceVersion
       configuration:
@@ -27,9 +23,10 @@ server:
     - name: ui5-tooling-modules-middleware
       afterMiddleware: compression
       configuration:
+        addToNamespace: false
         pluginOptions:
           webcomponents:
-            skip: true
+            force: true
     - name: ui5-tooling-transpile-middleware
       afterMiddleware: compression
       configuration:
