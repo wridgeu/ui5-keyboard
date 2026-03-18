@@ -229,13 +229,13 @@ packages/kiosk-keyboard-webc/
 
 ### Events (via `@event` decorator)
 
-| Event                  | Detail                               | Description                   |
-| ---------------------- | ------------------------------------ | ----------------------------- |
-| `key-press`            | `{ key: string, shiftKey: boolean }` | A key was pressed             |
-| `after-open`           | `{}`                                 | Keyboard opened (docked mode) |
-| `after-close`          | `{}`                                 | Keyboard closed (docked mode) |
-| `layout-change`        | `{ layout: string }`                 | Layout switched               |
-| `keyboard-type-change` | `{ keyboardType: string }`           | Keyboard type changed         |
+| Event                  | Detail                                                                          | Description                   |
+| ---------------------- | ------------------------------------------------------------------------------- | ----------------------------- |
+| `key-press`            | `{ key: string, shiftKey: boolean, char?: string }`                             | A key was pressed             |
+| `after-open`           | `{}`                                                                            | Keyboard opened (docked mode) |
+| `after-close`          | `{}`                                                                            | Keyboard closed (docked mode) |
+| `layout-change`        | `{ layout: string }`                                                            | Layout switched               |
+| `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Keyboard type changed         |
 
 ### Slots
 
@@ -1381,14 +1381,15 @@ Requirements:
    dev serve the bundle entries are stored under original npm names
    (the namespace rewriting only runs at build time), so the redirect
    target is a 404. The UI5 framework version in `ui5.yaml` must be
-
-   > = 1.120.0.
+   \>= 1.120.0.
 
    ```yaml
    server:
      customMiddleware:
-       - name: ui5-tooling-modules-middleware
+       - name: ui5-tooling-transpile-middleware
          afterMiddleware: compression
+       - name: ui5-tooling-modules-middleware
+         afterMiddleware: ui5-tooling-transpile-middleware
          configuration:
            addToNamespace: true
            useRelativeModulePaths: true

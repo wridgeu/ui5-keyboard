@@ -137,8 +137,10 @@ builder:
         addToNamespace: true
 server:
   customMiddleware:
-    - name: ui5-tooling-modules-middleware
+    - name: ui5-tooling-transpile-middleware
       afterMiddleware: compression
+    - name: ui5-tooling-modules-middleware
+      afterMiddleware: ui5-tooling-transpile-middleware
       configuration:
         addToNamespace: true
         useRelativeModulePaths: true
@@ -156,11 +158,13 @@ In workspace development, run `npm run generate` in the webc package first so th
 
 The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
 
-`useRelativeModulePaths: true` is required because the middleware's default Stellvertreter redirect mechanism has a routing bug for application-type projects during dev serve. See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for the detailed path trace and root cause analysis.
+`useRelativeModulePaths: true` is required because the middleware's default redirect mechanism has a routing bug for application-type projects during dev serve. See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for the config/path reference table and root cause.
+
+The demo app in this repository uses Path B (section 3b below) for the `kiosk-keyboard` web component specifically, because the manual bridge was chosen for explicit metadata control. Path A is used in the demo app for `@ui5/webcomponents/dist` components (e.g. `KioskInputIds.view.xml`).
 
 #### 3b. `WebComponent.extend()` bridge (explicit control)
 
-For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events.
+For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events. Since UI5 >= 1.138, camelCase event names in `metadata.events` auto-convert to kebab-case DOM events (e.g. `keyPress` maps to `key-press`), so explicit `mapping: { to: "..." }` on events is not needed.
 
 This repository's demo app includes a complete bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts` that can be used as a template. A dedicated smoke check (`npm run test:demo:webc-bundle`) verifies the bridge entry point stays resolvable.
 

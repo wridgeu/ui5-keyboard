@@ -82,11 +82,15 @@ The `ui5-tooling-modules` middleware requires `addToNamespace: true` with `useRe
 builder:
   customTasks:
     - name: ui5-tooling-modules-task
+      afterTask: replaceVersion
       configuration:
         addToNamespace: true
 server:
   customMiddleware:
+    - name: ui5-tooling-transpile-middleware
+      afterMiddleware: compression
     - name: ui5-tooling-modules-middleware
+      afterMiddleware: ui5-tooling-transpile-middleware
       configuration:
         addToNamespace: true
         useRelativeModulePaths: true
