@@ -53,9 +53,9 @@
     "./dist/*": "./dist/*"
   },
   "scripts": {
-    "clean": "rimraf dist src/generated",
+    "clean": "rimraf dist src/generated tsconfig.tsbuildinfo",
     "generate": "ui5nps generate",
-    "build:dev": "npm run generate && tsc",
+    "build:dev": "npm run generate && tsc --build --force",
     "build": "npm run build:dev && npm run build:bundle && npm run generateAPI",
     "build:bundle": "vite build",
     "prestart": "npm run generate",

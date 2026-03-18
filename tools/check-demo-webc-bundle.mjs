@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const demoPackageJsonPath = path.join(repoRoot, "packages", "demo-app", "package.json");
 const controllerPath = path.join(
   repoRoot,
   "packages",
@@ -13,6 +15,7 @@ const controllerPath = path.join(
   "KioskWebComponent.controller.ts",
 );
 const packageJsonPath = path.join(repoRoot, "packages", "kiosk-keyboard-webc", "package.json");
+const demoRequire = createRequire(demoPackageJsonPath);
 
 const controllerSource = fs.readFileSync(controllerPath, "utf8");
 if (!controllerSource.includes('import "kiosk-keyboard-webc/bundle";')) {
@@ -26,6 +29,21 @@ const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const bundleExport = packageJson?.exports?.["./bundle"]?.default;
 if (typeof bundleExport !== "string" || bundleExport.length === 0) {
   throw new Error("kiosk-keyboard-webc/package.json is missing the public './bundle' export.");
+}
+
+let resolvedBundlePath;
+try {
+  resolvedBundlePath = demoRequire.resolve("kiosk-keyboard-webc/bundle");
+} catch (error) {
+  throw new Error(
+    "packages/demo-app cannot resolve the public 'kiosk-keyboard-webc/bundle' entry. " +
+      "Build the web component package first so its exported dist files exist.",
+    { cause: error },
+  );
+}
+
+if (!fs.existsSync(resolvedBundlePath)) {
+  throw new Error(`Resolved 'kiosk-keyboard-webc/bundle' to '${resolvedBundlePath}', but that file does not exist.`);
 }
 
 const npmExecPath = process.env.npm_execpath;
@@ -55,4 +73,4 @@ if (result.status !== 0) {
   process.exit(result.status ?? 1);
 }
 
-process.stdout.write("Verified demo build for the public kiosk-keyboard-webc/bundle entry.\n");
+process.stdout.write(`Verified demo build for the public kiosk-keyboard-webc/bundle entry (${resolvedBundlePath}).\n`);

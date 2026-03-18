@@ -158,7 +158,7 @@ That path is viable, but this repository does not currently use it as the primar
 
 This repository's demo app uses `WebComponent.extend()` because it gives explicit UI5-side property, event, method, and association metadata.
 
-The repo also keeps a dedicated smoke check for this exact public entry point via `npm run test:demo:webc-bundle`, so the documented UI5 bridge path stays buildable instead of only being described in prose.
+The repo also keeps a dedicated smoke check for this exact public entry point via `npm run test:demo:webc-bundle`, so the documented UI5 bridge path stays resolvable from the demo app and buildable instead of only being described in prose.
 
 ```ts
 import "kiosk-keyboard-webc/bundle";
