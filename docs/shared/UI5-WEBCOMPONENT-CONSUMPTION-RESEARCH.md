@@ -92,25 +92,27 @@ server:
         useRelativeModulePaths: true
 ```
 
-#### Why `useRelativeModulePaths: true` is needed during dev serve
+#### Module paths: where things are vs. where the browser looks
 
-Without it, the middleware creates a redirect that fails for application-type projects. Here is the path trace for an app with namespace `demo/hotkeys` requesting `@ui5/webcomponents/dist/Input`:
+All examples use an app with namespace `demo/hotkeys` loading `@ui5/webcomponents/dist/Input`.
 
-| Step                            | What happens                                                                        | Path                                                                  |
-| ------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 1. Browser requests module      | `GET`                                                                               | `/resources/@ui5/webcomponents/dist/Input.js`                         |
-| 2. Middleware creates redirect  | Responds with a "Stellvertreter" module that loads from the namespace-prefixed path | `demo/hotkeys/thirdparty/@ui5/webcomponents/dist/Input`               |
-| 3. Browser follows redirect     | `GET`                                                                               | `/resources/demo/hotkeys/thirdparty/@ui5/webcomponents/dist/Input.js` |
-| 4. Middleware tries to match    | For applications, the internal matching regex resolves to `^/thirdparty/(.*)$`      | Does NOT match `/resources/demo/hotkeys/thirdparty/...`               |
-| 5. Falls through to file server | Looks for the file on disk                                                          | **404 -- file does not exist**                                        |
+During dev serve, the middleware bundles the module in memory and stores it under its original npm name. The `addToNamespace` flag controls whether the browser is redirected to a namespace-prefixed path or gets the module directly.
 
-The redirect target (`demo/hotkeys/thirdparty/...`) is never reachable because:
+| Config (middleware)                                     | Browser requests                                       | Module stored at (in memory)    | Result             |
+| ------------------------------------------------------- | ------------------------------------------------------ | ------------------------------- | ------------------ |
+| `addToNamespace: true` (default)                        | `/resources/demo/hotkeys/thirdparty/@ui5/.../Input.js` | `@ui5/webcomponents/dist/Input` | **404** (mismatch) |
+| `addToNamespace: true` + `useRelativeModulePaths: true` | `/resources/@ui5/webcomponents/dist/Input.js`          | `@ui5/webcomponents/dist/Input` | Works              |
+| `addToNamespace: false`                                 | `/resources/@ui5/webcomponents/dist/Input.js`          | `@ui5/webcomponents/dist/Input` | Works              |
 
-- The middleware stores the bundled module under its **original npm name** (`@ui5/webcomponents/dist/Input`), not the namespace-prefixed name
-- The namespace rewriting that prefixes module names with `demo/hotkeys/thirdparty/` only runs at **build time** (in the task), not during dev serve (in the middleware)
-- The middleware's internal routing regex for application-type projects uses `/` as the project namespace prefix instead of `/resources/demo/hotkeys/`, so it can never match the namespace-prefixed path
+During build, the task rewrites module names to include the namespace prefix. The built output actually places the file at `demo/hotkeys/thirdparty/@ui5/.../Input.js`, so the redirect target exists on disk.
 
-With `useRelativeModulePaths: true`, step 2 is skipped entirely. The middleware serves the bundled module directly at its original path (`/resources/@ui5/webcomponents/dist/Input.js`), which matches the bundle entry stored under `@ui5/webcomponents/dist/Input`.
+| Config (task)          | Built file path                                       | Result              |
+| ---------------------- | ----------------------------------------------------- | ------------------- |
+| `addToNamespace: true` | `resources/demo/hotkeys/thirdparty/@ui5/.../Input.js` | Works (file exists) |
+
+The 404 in the first row happens because `addToNamespace: true` tells the middleware to redirect the browser to the namespace-prefixed path, but the middleware itself never rewrites the bundle entry to that path. That rewriting is a build-only step. So the browser asks for a path that only exists after `ui5 build`, not during `ui5 serve`.
+
+`useRelativeModulePaths: true` fixes this by telling the middleware to skip the redirect and serve the module at the path where it actually is.
 
 ## Standalone Scenario Status
 
