@@ -99,7 +99,7 @@ Each package has up to three wdio configs:
 | `wdio-device.conf.ts` | Responsive device matrix (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) | Same, different port |
 | `wdio-flp.conf.ts`    | FLP sandbox (kiosk only)                                                | UI5 serve            |
 
-Desktop configs run all `**/*.test.ts` files (including container and enhancement tests). Device configs run a focused subset: `visual.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, `accessibility-media.test.ts`. Container tests with fixed-width wrappers (e.g. 400px) are desktop-only because they would overflow a 320px phone viewport.
+Desktop configs run all `**/*.test.ts` files. Device configs run the responsive visual matrix: `visual.test.ts`, `visual-container.test.ts`, `visual-enhancements.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, and `accessibility-media.test.ts`. The visual fixtures and section-isolation helpers are sized so the container and fallback suites also run on phone and tablet profiles without clipping.
 
 Baselines are stored in per-profile subfolders:
 

@@ -37,6 +37,73 @@ export async function getKeyboardRoot(hostId: string) {
   return $(`#${hostId}`).$(">>>.kiosk-keyboard");
 }
 
+type DockedKeyboardState = {
+  open: boolean;
+  hiddenClass: boolean;
+  visibility: string;
+  pointerEvents: string;
+};
+
+async function readDockedKeyboardState(hostId: string): Promise<DockedKeyboardState> {
+  return browser.execute((id: string) => {
+    type DomContract = {
+      selectors?: { root?: string };
+      classes?: { rootHidden?: string };
+    };
+
+    const host = document.getElementById(id) as (HTMLElement & { open?: boolean; isOpen?: () => boolean }) | null;
+    if (!host) {
+      throw new Error(`Docked keyboard host #${id} not found`);
+    }
+
+    const ctor = customElements.get(host.localName) as { DOM?: DomContract } | undefined;
+    const rootSelector = ctor?.DOM?.selectors?.root ?? ".kiosk-keyboard";
+    const hiddenClass = ctor?.DOM?.classes?.rootHidden ?? "kiosk-keyboard--hidden";
+    const root = host.shadowRoot?.querySelector<HTMLElement>(rootSelector);
+    if (!root) {
+      throw new Error(`Docked keyboard root for #${id} not found`);
+    }
+
+    const styles = getComputedStyle(root);
+    return {
+      open: typeof host.isOpen === "function" ? host.isOpen() : Boolean(host.open),
+      hiddenClass: root.classList.contains(hiddenClass),
+      visibility: styles.visibility,
+      pointerEvents: styles.pointerEvents,
+    };
+  }, hostId);
+}
+
+export async function waitForDockedKeyboardOpen(hostId: string, timeout = 5_000): Promise<DockedKeyboardState> {
+  await browser.waitUntil(
+    async () => {
+      const state = await readDockedKeyboardState(hostId);
+      return state.open && !state.hiddenClass && state.visibility !== "hidden" && state.pointerEvents !== "none";
+    },
+    {
+      timeout,
+      timeoutMsg: `Docked keyboard #${hostId} did not become visibly open`,
+    },
+  );
+
+  return readDockedKeyboardState(hostId);
+}
+
+export async function waitForDockedKeyboardClosed(hostId: string, timeout = 5_000): Promise<DockedKeyboardState> {
+  await browser.waitUntil(
+    async () => {
+      const state = await readDockedKeyboardState(hostId);
+      return !state.open && state.hiddenClass && state.visibility === "hidden" && state.pointerEvents === "none";
+    },
+    {
+      timeout,
+      timeoutMsg: `Docked keyboard #${hostId} did not become visibly closed`,
+    },
+  );
+
+  return readDockedKeyboardState(hostId);
+}
+
 type SnapshotElement = WebdriverIO.Element | ChainablePromiseElement;
 
 type SnapshotGeometry = {

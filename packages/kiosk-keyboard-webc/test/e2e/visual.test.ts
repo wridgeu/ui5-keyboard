@@ -5,6 +5,8 @@ import {
   forceHoverState,
   clearForcedHoverState,
   matchElementSnapshotInSection,
+  waitForDockedKeyboardOpen,
+  waitForDockedKeyboardClosed,
 } from "./test-helpers.js";
 
 describe("KioskKeyboard Web Component - Visual Regression", () => {
@@ -143,8 +145,11 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
       kb.show();
     });
 
+    const dockedState = await waitForDockedKeyboardOpen("kb-docked");
+    expect(dockedState.open).toBe(true);
+    expect(dockedState.hiddenClass).toBe(false);
+
     const kb = await getKeyboardRoot("kb-docked");
-    await kb.waitForDisplayed({ timeout: 5_000 });
     try {
       await matchElementSnapshotInSection(kb, "webc-docked-open");
     } finally {
@@ -167,12 +172,9 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
       kb.show();
     });
 
-    const classes = await browser.execute(() => {
-      const root = document.getElementById("kb-docked")?.shadowRoot?.querySelector(".kiosk-keyboard");
-      return root?.className ?? "";
-    });
-
-    expect(classes).toContain("kiosk-keyboard--hidden");
+    const dockedState = await waitForDockedKeyboardClosed("kb-docked");
+    expect(dockedState.open).toBe(false);
+    expect(dockedState.hiddenClass).toBe(true);
   });
 
   it("should open docked keyboard with mobile-keyboard='Custom' on coarse pointers", async function () {
@@ -187,13 +189,15 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
       kb.show();
     });
 
-    const kb = await getKeyboardRoot("kb-docked-custom");
-    await kb.waitForDisplayed({ timeout: 5_000 });
-
-    // Clean up
-    await browser.execute(() => {
-      const kb = document.getElementById("kb-docked-custom") as HTMLElement & { close(): void };
-      kb.close();
-    });
+    try {
+      const dockedState = await waitForDockedKeyboardOpen("kb-docked-custom");
+      expect(dockedState.open).toBe(true);
+      expect(dockedState.hiddenClass).toBe(false);
+    } finally {
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-docked-custom") as HTMLElement & { close(): void };
+        kb.close();
+      });
+    }
   });
 });
