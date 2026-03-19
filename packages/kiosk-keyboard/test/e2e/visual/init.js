@@ -108,4 +108,10 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
 
   // 25. Narrow + height-constrained (320x250)
   new KioskKeyboard().placeAt("kb-narrow-short");
+
+  // 26. Viewport-width height-constrained (250px)
+  new KioskKeyboard().placeAt("kb-vw-height-short");
+
+  // 27. Viewport-width severely height-constrained (180px)
+  new KioskKeyboard().placeAt("kb-vw-height-tiny");
 });

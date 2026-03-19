@@ -99,7 +99,7 @@ Each package has up to three wdio configs:
 | `wdio-device.conf.ts` | Responsive device matrix (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) | Same, different port |
 | `wdio-flp.conf.ts`    | FLP sandbox (kiosk only)                                                | UI5 serve            |
 
-Desktop configs run all `**/*.test.ts` files. Device configs run the responsive visual matrix: `visual.test.ts`, `visual-container.test.ts`, `visual-enhancements.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, and `accessibility-media.test.ts`. The visual fixtures and section-isolation helpers are sized so the container and fallback suites also run on phone and tablet profiles without clipping.
+Desktop configs run all `**/*.test.ts` files. Device configs run the responsive visual matrix: `visual.test.ts`, `visual-container.test.ts`, `visual-enhancements.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, and `accessibility-media.test.ts`. Container tests use fixed-width fixtures (400-600px) that cannot fit on viewports narrower than the fixture, so `visual-container.test.ts` is excluded from device profiles with `width < 400` at config level.
 
 Baselines are stored in per-profile subfolders:
 
@@ -230,7 +230,7 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 
 **Cropped/clipped baseline images**: The element was not fully inside the viewport when the screenshot was taken. Ensure the test uses `matchElementSnapshotInSection()` (not a bare `toMatchElementSnapshot`) and that the test page wraps each keyboard in a `.section` div.
 
-**"no such node" / stale element errors on device profiles**: Chrome's WebDriver BiDi protocol can intermittently lose element references during heavy DOM manipulation in mobile emulation mode. Re-running the test usually succeeds. If the error is consistent, check that the element is re-queried after any page navigation.
+**"no such node" / stale element errors on device profiles**: Chrome's WebDriver BiDi protocol can intermittently lose element references during heavy DOM manipulation in mobile emulation mode. Device configs use `specFileRetries: 1` to automatically retry the failing spec file once, which handles the vast majority of these transient errors. If the error is consistent across retries, check that the element is re-queried after any page navigation.
 
 **Baseline diffs after Chrome version bump**: Expected. Regenerate ALL baselines across both packages and all device profiles. Review the diffs visually before committing.
 

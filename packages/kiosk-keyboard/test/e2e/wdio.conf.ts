@@ -2,7 +2,12 @@ import url from "node:url";
 import path from "node:path";
 import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
-import { CHROME_VERSION, DESKTOP_WINDOW_SIZE } from "../../../../tools/wdio-device-profiles.js";
+import {
+  CHROME_VERSION,
+  DESKTOP_WINDOW_SIZE,
+  resolveCachedBinaries,
+  buildChromedriverOptions,
+} from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const PORT = 8085;
@@ -40,7 +45,9 @@ export const config: wdi5Config = {
       browserVersion: CHROME_VERSION,
       "goog:chromeOptions": {
         args: chromeArgs,
+        ...(resolveCachedBinaries().chrome ? { binary: resolveCachedBinaries().chrome } : {}),
       },
+      ...(buildChromedriverOptions() ? { "wdio:chromedriverOptions": buildChromedriverOptions() } : {}),
     },
   ],
 

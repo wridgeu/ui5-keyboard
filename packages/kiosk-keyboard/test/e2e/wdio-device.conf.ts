@@ -4,6 +4,7 @@ import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
 import {
   buildChromeOptions,
+  buildChromedriverOptions,
   deviceProfiles,
   CHROME_VERSION,
   DEVICE_BASE_PORTS,
@@ -38,7 +39,10 @@ export const config: wdi5Config = {
 
   specs: [
     path.resolve(__dirname, "visual.test.ts"),
-    path.resolve(__dirname, "visual-container.test.ts"),
+    // Fixed-width container tests (400-600px fixtures) only on profiles wide
+    // enough to hold them. Viewport-width responsive tests run on all profiles.
+    ...(profile.width >= 400 ? [path.resolve(__dirname, "visual-container.test.ts")] : []),
+    path.resolve(__dirname, "visual-container-responsive.test.ts"),
     path.resolve(__dirname, "visual-enhancements.test.ts"),
     path.resolve(__dirname, "visual-themes.test.ts"),
     path.resolve(__dirname, "rtl.test.ts"),
@@ -54,13 +58,14 @@ export const config: wdi5Config = {
       browserVersion: CHROME_VERSION,
       "wdio:maxInstances": 1,
       "goog:chromeOptions": buildChromeOptions(profile, headless),
+      ...(buildChromedriverOptions() ? { "wdio:chromedriverOptions": buildChromedriverOptions() } : {}),
     },
   ],
 
   logLevel: "warn",
 
-  connectionRetryTimeout: 300_000,
-  connectionRetryCount: 2,
+  connectionRetryTimeout: 120_000,
+  connectionRetryCount: 3,
 
   baseUrl: `http://localhost:${PORT}`,
 
@@ -68,6 +73,9 @@ export const config: wdi5Config = {
     skipInjectUI5OnStart: true,
     waitForUI5Timeout: 20_000,
   },
+
+  specFileRetries: 1,
+  specFileRetriesDelay: 500,
 
   framework: "mocha",
   mochaOpts: {

@@ -3,6 +3,7 @@ import path from "node:path";
 import { createViteServerManager } from "../../../../tools/wdio-server.js";
 import {
   buildChromeOptions,
+  buildChromedriverOptions,
   deviceProfiles,
   CHROME_VERSION,
   DEVICE_BASE_PORTS,
@@ -47,15 +48,19 @@ export const config: WebdriverIO.Config = {
       browserVersion: CHROME_VERSION,
       "wdio:maxInstances": 1,
       "goog:chromeOptions": buildChromeOptions(profile, headless),
+      ...(buildChromedriverOptions() ? { "wdio:chromedriverOptions": buildChromedriverOptions() } : {}),
     },
   ],
 
   logLevel: "warn",
 
-  connectionRetryTimeout: 300_000,
-  connectionRetryCount: 2,
+  connectionRetryTimeout: 120_000,
+  connectionRetryCount: 3,
 
   baseUrl: `http://localhost:${PORT}`,
+
+  specFileRetries: 1,
+  specFileRetriesDelay: 500,
 
   framework: "mocha",
   mochaOpts: {

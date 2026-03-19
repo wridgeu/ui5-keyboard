@@ -1,5 +1,9 @@
 /** Shared device profiles for phone/tablet e2e testing via Chrome mobileEmulation. */
 
+import os from "node:os";
+import fs from "node:fs";
+import { computeExecutablePath, Browser } from "@puppeteer/browsers";
+
 /**
  * Pinned Chrome version for visual regression testing.
  *
@@ -8,6 +12,48 @@
  * all visual baselines and verify the diffs visually.
  */
 export const CHROME_VERSION = "145.0.7632.160";
+
+/**
+ * Resolve cached Chrome-for-Testing and ChromeDriver binary paths without
+ * network I/O.
+ *
+ * WDIO 9 calls `resolveBuildId`, `canDownload`, and `install` on every
+ * worker start, each making HTTP requests to the Chrome-for-Testing CDN.
+ * On slow networks this adds 5-9 minutes per worker. Passing both binary
+ * paths via `goog:chromeOptions.binary` and `wdio:chromedriverOptions.binary`
+ * short-circuits this entirely (per WDIO docs, both must be set).
+ *
+ * Returns `undefined` entries if the cached binaries are not found (first
+ * run), in which case WDIO falls back to its normal download-and-cache flow.
+ */
+export function resolveCachedBinaries(): { chrome?: string; chromedriver?: string } {
+  const result: { chrome?: string; chromedriver?: string } = {};
+  const cacheDir = os.tmpdir();
+  try {
+    const chromePath = computeExecutablePath({
+      browser: Browser.CHROME,
+      buildId: CHROME_VERSION,
+      cacheDir,
+    });
+    if (fs.existsSync(chromePath)) result.chrome = chromePath;
+  } catch {
+    // computeExecutablePath can throw if platform detection fails
+  }
+  try {
+    const driverPath = computeExecutablePath({
+      browser: Browser.CHROMEDRIVER,
+      buildId: CHROME_VERSION,
+      cacheDir,
+    });
+    if (fs.existsSync(driverPath)) result.chromedriver = driverPath;
+  } catch {
+    // same
+  }
+  return result;
+}
+
+// Resolve once at config load time, not per-call
+const _cachedBinaries = resolveCachedBinaries();
 
 /** Default window size for desktop e2e tests. */
 export const DESKTOP_WINDOW_SIZE = "1440,900";
@@ -52,6 +98,10 @@ export const deviceProfiles: Record<string, DeviceProfile> = {
  * Uses Chrome's `mobileEmulation` to set viewport size, DPR and touch mode
  * instead of `--window-size`, so that CSS media queries like `(hover: none)`
  * and `(pointer: coarse)` evaluate correctly.
+ *
+ * When a cached Chrome binary is found, `binary` is set so that WDIO skips
+ * its per-worker HTTP calls to the Chrome-for-Testing CDN (see
+ * `resolveCachedChromeBinary`).
  */
 export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
   const args = ["--disable-gpu", "--no-sandbox"];
@@ -59,6 +109,7 @@ export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
 
   return {
     args,
+    ...(_cachedBinaries.chrome ? { binary: _cachedBinaries.chrome } : {}),
     mobileEmulation: {
       deviceMetrics: {
         width: profile.width,
@@ -69,4 +120,13 @@ export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
       },
     },
   };
+}
+
+/**
+ * Build `wdio:chromedriverOptions` that points to the cached ChromeDriver
+ * binary (if available). Must be paired with `goog:chromeOptions.binary` to
+ * fully skip WDIO's per-worker CDN calls.
+ */
+export function buildChromedriverOptions(): Record<string, string> | undefined {
+  return _cachedBinaries.chromedriver ? { binary: _cachedBinaries.chromedriver } : undefined;
 }
