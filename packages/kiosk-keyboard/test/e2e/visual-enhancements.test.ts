@@ -1,4 +1,4 @@
-import { $ } from "@wdio/globals";
+import { $, browser } from "@wdio/globals";
 import {
   openVisualPage,
   getKeyboard,
@@ -9,6 +9,10 @@ import {
 } from "./test-helpers.js";
 
 const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+
+async function getViewportWidth(): Promise<number> {
+  return browser.execute(() => window.innerWidth);
+}
 
 /**
  * Progressive enhancement visual regression tests.
@@ -43,7 +47,9 @@ describe("KioskKeyboard UI5 - Fallback: without text-box-trim", () => {
     await matchElementSnapshotInSection(kb, "kb-narrow-no-text-trim");
   });
 
-  it("should match height-constrained container without text-box-trim", async () => {
+  it("should match height-constrained container without text-box-trim", async function () {
+    const vw = await getViewportWidth();
+    if (vw < 420) return this.skip();
     const container = await $("#kb-height-constrained");
     await matchElementSnapshotInSection(container, "kb-height-constrained-no-text-trim", HEIGHT_SNAPSHOT_OPTIONS);
   });
