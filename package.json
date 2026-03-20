@@ -83,8 +83,9 @@
     "test:tools": "node --test tools/test/*.test.mjs",
     "report:visual:kiosk": "npm run test:e2e:report -w packages/kiosk-keyboard",
     "report:visual:webc": "npm run test:e2e:report -w packages/kiosk-keyboard-webc",
-    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:tools && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices:sequential",
-    "check:parallel": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:tools && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices",
+    "check:baselines": "node tools/check-visual-baselines.mjs",
+    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run check:baselines && npm run typecheck && npm run test:tools && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices:sequential",
+    "check:parallel": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run check:baselines && npm run typecheck && npm run test:tools && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices",
     "prepare": "husky",
     "commitlint": "commitlint --edit"
   },
