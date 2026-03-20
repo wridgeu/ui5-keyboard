@@ -91,14 +91,9 @@ async function waitForKeyboardLabel(expected: string, timeout = 10_000): Promise
 }
 
 /**
- * Focus the first input on the i18n page to trigger keyboard open.
+ * Wait for the inline keyboard on the i18n page to be visible.
  */
-async function focusFirstInput(): Promise<void> {
-  await browser.execute(() => {
-    const input = document.querySelector<HTMLElement>("[id$='i18nNameInput'] input, [id$='i18nNameInput-inner']");
-    input?.focus();
-  });
-  // Wait for keyboard to be visible
+async function waitForKeyboardVisible(): Promise<void> {
   await getKeyboard().waitForDisplayed({ timeout: 5_000 });
 }
 
@@ -113,7 +108,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
     it("should show French labels after applying French bundle", async () => {
       await openAppTile();
       await navigateToI18nPage();
-      await focusFirstInput();
+      await waitForKeyboardVisible();
 
       // Apply French mode
       await selectI18nMode("French");
@@ -132,7 +127,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
       // Re-enter app
       await openAppTile();
       await navigateToI18nPage();
-      await focusFirstInput();
+      await waitForKeyboardVisible();
 
       // Keyboard should show default English labels (i18n was auto-reset)
       await waitForKeyboardLabel("Virtual Keyboard");
@@ -153,7 +148,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
     it("should show uppercased labels after applying hook", async () => {
       await openAppTile();
       await navigateToI18nPage();
-      await focusFirstInput();
+      await waitForKeyboardVisible();
 
       // Apply Hook mode (uppercases special-key labels)
       await selectI18nMode("Hook");
@@ -172,7 +167,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
       // Re-enter app
       await openAppTile();
       await navigateToI18nPage();
-      await focusFirstInput();
+      await waitForKeyboardVisible();
 
       // Hook should be cleared - default labels restored
       await waitForKeyboardLabel("Virtual Keyboard");

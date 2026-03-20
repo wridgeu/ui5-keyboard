@@ -1,6 +1,5 @@
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
 import { Scope } from "../constants";
@@ -10,9 +9,9 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
   default:
     "Built-in English aria-labels (no customization). Special keys show icons; their text is only exposed to screen readers.",
   french:
-    "French aria-labels loaded via configureI18n() with a bundleName. Shift → Maj, Enter → Entrée, Space → Espace (visible on key).",
+    "French aria-labels loaded via configureI18n() with a bundleName. Shift -> Maj, Enter -> Entr\u00e9e, Space -> Espace (visible on key).",
   override:
-    'Partial English overrides via enhancement bundle. Enter → "Go", Backspace → "Delete", keyboard aria-label → "Touch Keyboard".',
+    'Partial English overrides via enhancement bundle. Enter -> "Go", Backspace -> "Delete", keyboard aria-label -> "Touch Keyboard".',
   hook: 'Programmatic override hook. Uppercases special-key aria-labels (SHIFT, ENTER, etc.) and sets the keyboard aria-label to "Custom Keyboard".',
 };
 
@@ -22,31 +21,46 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
  * 2. Overriding existing labels via enhancement bundle
  * 3. Programmatic override hook
  *
+ * Includes an ARIA Label Inspector that reads resolved labels from
+ * the keyboard DOM after each mode change.
+ *
  * @name demo.hotkeys.controller.KioskI18nExtensibility
  */
 export default class KioskI18nExtensibility extends BaseController {
   private static readonly _MODEL_NAME = "i18nDemo";
+  private _inspectorDelegate: object | null = null;
 
   onInit(): void {
     this.getView()!.setModel(
       new JSONModel({
         activeMode: "default",
         modeDescription: MODE_DESCRIPTIONS["default"],
-        lastKey: "None",
+        inspector: {
+          keyboardLabel: "...",
+          roleDescription: "...",
+          shiftKey: "...",
+          enterKey: "...",
+          backspaceKey: "...",
+          spaceKey: "...",
+        },
       }),
       KioskI18nExtensibility._MODEL_NAME,
     );
+
+    this._inspectorDelegate = {
+      onAfterRendering: () => this._updateAriaInspector(),
+    };
+    (this.byId("i18nKeyboard") as KioskKeyboard).addEventDelegate(this._inspectorDelegate, this);
 
     this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
     this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
-    this._setKeyboardRouteActive(false);
-  }
-
-  onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    this._getViewModel().setProperty("/lastKey", this.formatKeyPress(event));
+    if (this._inspectorDelegate) {
+      (this.byId("i18nKeyboard") as KioskKeyboard | undefined)?.removeEventDelegate(this._inspectorDelegate);
+    }
+    this._resetI18n();
   }
 
   onModeChange(event: SegmentedButton$SelectionChangeEvent): void {
@@ -67,14 +81,11 @@ export default class KioskI18nExtensibility extends BaseController {
         break;
     }
 
-    const vm = this._getViewModel();
-    vm.setProperty("/activeMode", key);
-    vm.setProperty("/modeDescription", MODE_DESCRIPTIONS[key] ?? "");
+    this._getViewModel().setData({ activeMode: key, modeDescription: MODE_DESCRIPTIONS[key] ?? "" }, true);
   }
 
   onNavBack(): void {
     this._resetI18n();
-    this._setKeyboardRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
@@ -124,30 +135,41 @@ export default class KioskI18nExtensibility extends BaseController {
     });
   }
 
+  // ── ARIA Inspector ─────────────────────────────
+
+  private _updateAriaInspector(): void {
+    const keyboard = this.byId("i18nKeyboard") as KioskKeyboard | undefined;
+    const dom = keyboard?.getDomRef();
+    if (!dom) return;
+
+    const readKeyLabel = (dataKey: string): string => {
+      const el = dom.querySelector(`[data-key="${CSS.escape(dataKey)}"]`);
+      return el?.getAttribute("aria-label") ?? "?";
+    };
+
+    this._getViewModel().setData(
+      {
+        inspector: {
+          keyboardLabel: dom.getAttribute("aria-label") ?? "?",
+          roleDescription: dom.getAttribute("aria-roledescription") ?? "?",
+          shiftKey: readKeyLabel("{shift}"),
+          enterKey: readKeyLabel("{enter}"),
+          backspaceKey: readKeyLabel("{backspace}"),
+          spaceKey: readKeyLabel(" "),
+        },
+      },
+      true,
+    );
+  }
+
   // ── Route lifecycle ────────────────────────────
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
     const routeName = event.getParameter("name");
-    this._setKeyboardRouteActive(routeName === Scope.KioskI18nExtensibility);
-  }
-
-  private _setKeyboardRouteActive(active: boolean): void {
-    const keyboard = this.byId("i18nKeyboard") as KioskKeyboard | undefined;
-    if (!keyboard) return;
-
-    if (active) {
-      keyboard.setAutoShow(true);
-      return;
+    if (routeName !== Scope.KioskI18nExtensibility) {
+      this._resetI18n();
+      this._getViewModel().setData({ activeMode: "default", modeDescription: MODE_DESCRIPTIONS["default"] }, true);
     }
-
-    this._resetI18n();
-    keyboard.close();
-    keyboard.setAutoShow(false);
-
-    const vm = this._getViewModel();
-    vm.setProperty("/activeMode", "default");
-    vm.setProperty("/modeDescription", MODE_DESCRIPTIONS["default"]);
-    vm.setProperty("/lastKey", "None");
   }
 
   private _getViewModel(): JSONModel {

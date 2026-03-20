@@ -6,74 +6,78 @@
     <Page titleAlignment="Center" title="i18n Extensibility Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
             <MessageStrip
-                text="Switch the i18n mode below, then tap an input field. Special keys use icons -- their translated text appears as aria-labels (for screen readers) and as visible text on the Space key."
+                text="Switch the i18n mode below to see how ARIA labels change. Special keys use icons -- their translated text appears as aria-labels (for screen readers) and as visible text on the Space key."
                 type="Information"
                 showIcon="true"
                 class="sapUiSmallMarginBottom" />
 
-            <HBox width="100%" gap="1rem" class="sapUiSmallMarginBottom" alignItems="Stretch">
-                <Panel headerText="Controls">
-                    <layoutData>
-                        <FlexItemData growFactor="2" baseSize="0" />
-                    </layoutData>
-                    <VBox class="sapUiSmallMargin">
-                        <Label text="i18n Mode:" />
-                        <SegmentedButton width="100%" selectedKey="{i18nDemo>/activeMode}" selectionChange=".onModeChange" class="sapUiTinyMarginTop">
-                            <items>
-                                <SegmentedButtonItem key="default" text="Default" />
-                                <SegmentedButtonItem key="french" text="French" />
-                                <SegmentedButtonItem key="override" text="Overrides" />
-                                <SegmentedButtonItem key="hook" text="Hook" />
-                            </items>
-                        </SegmentedButton>
-                        <Text text="{i18nDemo>/modeDescription}" class="sapUiSmallMarginTop" />
-                    </VBox>
-                </Panel>
-                <Panel headerText="Event Log">
-                    <layoutData>
-                        <FlexItemData growFactor="1" baseSize="0" />
-                    </layoutData>
-                    <VBox class="sapUiSmallMargin">
-                        <HBox>
-                            <Label text="Active Mode:" class="sapUiSmallMarginEnd" />
-                            <ObjectStatus text="{i18nDemo>/activeMode}" state="Success" />
-                        </HBox>
-                        <HBox>
-                            <Label text="Last Key:" class="sapUiSmallMarginEnd" />
-                            <ObjectStatus text="{i18nDemo>/lastKey}" state="Information" />
-                        </HBox>
-                    </VBox>
-                </Panel>
-            </HBox>
-
-            <Panel class="sapUiSmallMarginBottom" headerText="Target Inputs (tap any input)">
+            <!-- i18n Mode selector -->
+            <Panel headerText="i18n Mode" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Label text="Full Name" labelFor="i18nNameInput" />
-                    <Input
-                        id="i18nNameInput"
-                        placeholder="John Doe"
-                        width="100%" />
-                    <Label text="Email" labelFor="i18nEmailInput" class="sapUiSmallMarginTop" />
-                    <Input
-                        id="i18nEmailInput"
-                        placeholder="john@example.com"
-                        width="100%" />
-                    <Label text="Notes" labelFor="i18nNotesInput" class="sapUiSmallMarginTop" />
-                    <TextArea
-                        id="i18nNotesInput"
-                        placeholder="Additional notes..."
-                        rows="3"
-                        width="100%" />
+                    <SegmentedButton width="100%" selectedKey="{i18nDemo>/activeMode}" selectionChange=".onModeChange">
+                        <items>
+                            <SegmentedButtonItem key="default" text="Default" />
+                            <SegmentedButtonItem key="french" text="French" />
+                            <SegmentedButtonItem key="override" text="Overrides" />
+                            <SegmentedButtonItem key="hook" text="Hook" />
+                        </items>
+                    </SegmentedButton>
+                    <Text text="{i18nDemo>/modeDescription}" class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
 
+            <!-- ARIA Label Inspector -->
+            <Panel headerText="Resolved ARIA Labels" class="sapUiSmallMarginBottom">
+                <HBox wrap="Wrap" class="sapUiSmallMargin">
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <layoutData>
+                            <FlexItemData baseSize="11rem" growFactor="0" />
+                        </layoutData>
+                        <Label text="Keyboard label" design="Light" />
+                        <ObjectStatus text="{i18nDemo>/inspector/keyboardLabel}" state="Information" />
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <layoutData>
+                            <FlexItemData baseSize="11rem" growFactor="0" />
+                        </layoutData>
+                        <Label text="Role description" design="Light" />
+                        <ObjectStatus text="{i18nDemo>/inspector/roleDescription}" state="Information" />
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <layoutData>
+                            <FlexItemData baseSize="11rem" growFactor="0" />
+                        </layoutData>
+                        <Label text="Shift key" design="Light" />
+                        <ObjectStatus text="{i18nDemo>/inspector/shiftKey}" state="Information" />
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <layoutData>
+                            <FlexItemData baseSize="11rem" growFactor="0" />
+                        </layoutData>
+                        <Label text="Enter key" design="Light" />
+                        <ObjectStatus text="{i18nDemo>/inspector/enterKey}" state="Information" />
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <layoutData>
+                            <FlexItemData baseSize="11rem" growFactor="0" />
+                        </layoutData>
+                        <Label text="Backspace key" design="Light" />
+                        <ObjectStatus text="{i18nDemo>/inspector/backspaceKey}" state="Information" />
+                    </VBox>
+                    <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                        <layoutData>
+                            <FlexItemData baseSize="11rem" growFactor="0" />
+                        </layoutData>
+                        <Label text="Space key" design="Light" />
+                        <ObjectStatus text="{i18nDemo>/inspector/spaceKey}" state="Information" />
+                    </VBox>
+                </HBox>
+            </Panel>
+
+            <!-- Keyboard Preview (inline, always visible) -->
             <kiosk:KioskKeyboard
                 id="i18nKeyboard"
-                docked="true"
-                autoShow="true"
-                autoType="true"
-                inputIds="i18nNameInput,i18nEmailInput,i18nNotesInput"
-                keyPress=".onKeyPress" />
+                layout="qwerty" />
         </content>
     </Page>
 </mvc:View>
