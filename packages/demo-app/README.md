@@ -109,7 +109,7 @@ Landing page linking to all kiosk demos.
 ### Dialog Integration (`#/kiosk/dialog`)
 
 - Dialog without embedded keyboard (docked keyboard auto-closes/reopens with focus changes)
-- Dialog with embedded keyboard (`stableHeight` pattern)
+- Dialog with embedded keyboard
 
 ### Input IDs Targeting (`#/kiosk/input-ids`)
 

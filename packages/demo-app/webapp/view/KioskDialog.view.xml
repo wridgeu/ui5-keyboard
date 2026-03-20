@@ -41,7 +41,7 @@
                         text="Approach B: Dialog with Embedded Keyboard"
                         press=".onOpenDialogB"
                         class="sapUiSmallMarginTop sapUiSmallMarginBottom" />
-                    <Text text="Dialog with its own inline KioskKeyboard targeting the dialog input. Uses stableHeight to prevent dialog repositioning." />
+                    <Text text="Dialog with its own inline KioskKeyboard targeting the dialog input." />
                 </VBox>
             </Panel>
 

@@ -70,11 +70,6 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
         defaultValue: "",
         mapping: { type: "property", to: "for" },
       },
-      stableHeight: {
-        type: "boolean",
-        defaultValue: false,
-        mapping: { type: "property", to: "stable-height" },
-      },
       mobileKeyboard: {
         type: "string",
         defaultValue: "Auto",

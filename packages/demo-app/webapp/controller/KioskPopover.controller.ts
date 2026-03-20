@@ -26,7 +26,6 @@ export default class KioskPopover extends BaseController {
       this._keyboard = new KioskKeyboard({
         keyboardType: "Full",
         ariaLabel: "Virtual Keyboard",
-        stableHeight: true,
       });
     }
     this._keyboard.setTargetInput(input);
@@ -37,6 +36,7 @@ export default class KioskPopover extends BaseController {
         placement: "Bottom",
         content: [this._keyboard],
         contentWidth: "24rem",
+        contentHeight: "18rem",
       });
       this.getView()!.addDependent(this._popover);
     }
