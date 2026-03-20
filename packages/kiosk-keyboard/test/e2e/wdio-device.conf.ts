@@ -41,7 +41,7 @@ export const config: wdi5Config = {
     path.resolve(__dirname, "visual.test.ts"),
     // Fixed-width container tests (400-600px fixtures) only on profiles wide
     // enough to hold them. Viewport-width responsive tests run on all profiles.
-    ...(profile.width >= 400 ? [path.resolve(__dirname, "visual-container.test.ts")] : []),
+    ...(profile.width >= 360 ? [path.resolve(__dirname, "visual-container.test.ts")] : []),
     path.resolve(__dirname, "visual-container-responsive.test.ts"),
     path.resolve(__dirname, "visual-enhancements.test.ts"),
     path.resolve(__dirname, "visual-themes.test.ts"),
