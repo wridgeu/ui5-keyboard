@@ -516,8 +516,8 @@ QUnit.test("Custom height threshold: cq-tiny triggers at overridden tiny thresho
   kb.destroy();
 });
 
-QUnit.test("Height constraint detection works with stableHeight active", async (assert) => {
-  const kb = new KioskKeyboard({ stableHeight: true });
+QUnit.test("Height breakpoints adapt when container constrains the keyboard", async (assert) => {
+  const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
@@ -525,19 +525,33 @@ QUnit.test("Height constraint detection works with stableHeight active", async (
 
   // Force key height to make the keyboard naturally taller than 16rem
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-
-  // First render unconstrained to let stableHeight cache a large _maxHeight
   kb.refreshResponsiveState();
 
-  // Now constrain the container to 12rem (below the tiny threshold)
-  dom.style.height = `${12 * remPx}px`;
+  // Unconstrained: no height classes
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "Not short when unconstrained");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Not tiny when unconstrained");
+
+  // Constrain to 15rem (below short threshold of 16rem)
+  dom.style.height = `${15 * remPx}px`;
   dom.style.overflow = "hidden";
-
-  // Trigger responsive sizing again -- this should detect the constraint
-  // even though stableHeight has set a large minHeight from the prior render
   kb.refreshResponsiveState();
 
-  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied despite stableHeight");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied in constrained container");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Not tiny at 15rem");
+
+  // Constrain further to 11rem (below tiny threshold of 12rem)
+  dom.style.height = `${11 * remPx}px`;
+  kb.refreshResponsiveState();
+
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied at 11rem");
+
+  // Release constraint
+  dom.style.height = "";
+  dom.style.overflow = "";
+  kb.refreshResponsiveState();
+
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared when unconstrained");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared when unconstrained");
 
   kb.destroy();
 });
