@@ -209,7 +209,6 @@ packages/kiosk-keyboard-webc/
 | `docked`         | `docked`          | `Boolean`                                | `false`                        | Fixed to viewport bottom                    |
 | `open`           | `open`            | `Boolean`                                | `false`                        | Visible state (docked mode)                 |
 | `disabled`       | `disabled`        | `Boolean`                                | `false`                        | Disables all interaction                    |
-| `stableHeight`   | `stable-height`   | `Boolean`                                | `false`                        | Maintain height across layouts              |
 | `autoShow`       | `auto-show`       | `Boolean`                                | `false`                        | Auto show/close on focus                    |
 | `autoType`       | `auto-type`       | `Boolean`                                | `false`                        | Auto-detect numpad vs full                  |
 | `for`            | `for`             | `String`                                 | `""`                           | Target input element ID                     |

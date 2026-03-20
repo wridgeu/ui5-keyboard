@@ -27,7 +27,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Public Methods (Complete)](#public-methods-complete)
   - [Static Methods (Complete)](#static-methods-complete)
 - [Layouts](#layouts)
-  - [Stable Height](#stable-height)
+  - [Constrained Containers and Popovers](#constrained-containers-and-popovers)
   - [Custom Layouts](#custom-layouts)
 - [Function Keys (F1-F12)](#function-keys-f1-f12)
 - [Locale-Based Default Layout](#locale-based-default-layout)
@@ -312,7 +312,6 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 | `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"`  | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).                |
 | `fKeyMode`       | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`) or `Native` (dispatch synthetic keydown + native actions). |
 | `inputIds`       | `string[]`                 | `[]`        | Input control IDs for multi-input targeting. See [inputIds](#inputids).                                |
-| `stableHeight`   | `boolean`                  | `false`     | Maintain consistent minimum height across layout switches. See [Stable Height](#stable-height).        |
 
 ### Associations
 
@@ -464,31 +463,31 @@ kb.getBaseLayout(); // "qwertz-de"
 kb.resetLayout(); // back to qwertz-de
 ```
 
-### Stable Height
+### Constrained Containers and Popovers
 
-The `stableHeight` property enables consistent minimum height across layout switches. When enabled, switching from QWERTY (5 rows) to numeric (4 rows) does not shrink the keyboard: the rows expand to fill the available space, providing larger touch targets and preventing layout shifts.
+When the keyboard is placed inside a fixed-height container (a `sap.m.Popover`, `sap.m.Dialog`, or any element with a CSS height), its responsive height breakpoints adapt the layout automatically:
 
-This is **opt-in** (`false` by default) and only effective for non-docked Full keyboards. Docked keyboards always minimize their footprint.
+| Container height | Behavior                                                 |
+| ---------------- | -------------------------------------------------------- |
+| Above 16 rem     | Full layout (default key sizes)                          |
+| 12 -- 16 rem     | Compact layout (`cq-short` -- reduced key height)        |
+| Below 12 rem     | Minimal layout (`cq-tiny` -- further reduced key height) |
 
-> **When to use `stableHeight`:**
->
-> Enable `stableHeight="true"` when the keyboard is rendered inside a **`sap.m.Popover`** or any container that reacts to content height changes. `sap.m.Popover` in particular will close automatically when its content height changes during a resize event on scrolled pages (due to a coordinate-system mismatch in `_applyPosition`). The stable height prevents this by ensuring layout switches never change the keyboard's outer dimensions.
->
-> For keyboards embedded **inline on a page** (not in a Popover), `stableHeight` is typically not needed; the surrounding layout can accommodate height changes naturally.
->
-> **Latch behavior:** `stableHeight` records the maximum observed height and never shrinks automatically, even after a container resize or orientation change. This is by design: the keyboard cannot distinguish a container resize from a layout switch. If you need to reset after an orientation change, toggle the property off and on (`setStableHeight(false); setStableHeight(true);`).
->
-> **Runtime styling changes:** If you change `--ui5KioskKeyboard-*` sizing variables at runtime while the keyboard stays inside a fixed-height or `stableHeight`-latched box, the browser may not emit a `ResizeHandler` callback because the rendered outer size does not change. In that advanced case, call `refreshResponsiveState()` after the CSS update to force a fresh responsive-height measurement.
+The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-cqShortThreshold`, `--ui5KioskKeyboard-cqTinyThreshold`).
 
 ```xml
-<!-- Recommended: keyboard inside a Popover -->
-<Popover>
-  <kiosk:KioskKeyboard stableHeight="true" targetInput="myInput" />
+<!-- Keyboard inside a Popover: set contentHeight so the keyboard has a fixed container -->
+<Popover contentWidth="24rem" contentHeight="18rem">
+  <kiosk:KioskKeyboard targetInput="myInput" />
 </Popover>
 
-<!-- Default: inline keyboard, no stable height needed -->
-<kiosk:KioskKeyboard targetInput="myInput" />
+<!-- Keyboard inside a fixed-height div -->
+<core:HTML content="&lt;div style='height: 18rem; overflow: hidden'&gt;" />
+  <kiosk:KioskKeyboard targetInput="myInput" />
+<core:HTML content="&lt;/div&gt;" />
 ```
+
+> **Tip:** You can also fine-tune key sizes via `--ui5KioskKeyboard-keyHeight` and other [CSS custom properties](#css-custom-properties) to fit more content into a smaller container without relying solely on the automatic breakpoints.
 
 ### Custom Layouts
 
@@ -1461,7 +1460,7 @@ npm run typecheck
 
 **Layout switches cause the keyboard to change size:**
 
-- Enable `stableHeight="true"` to maintain consistent height. This is especially important inside `sap.m.Popover`, which may close on content height changes
+- Set a fixed `contentHeight` on the `sap.m.Popover` to prevent content resizing during layout switches. See [Constrained Containers and Popovers](#constrained-containers-and-popovers)
 
 **Physical keyboard highlighting doesn't work for custom layout keys:**
 

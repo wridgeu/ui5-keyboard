@@ -115,7 +115,6 @@ This design was chosen for:
 | `disabled`        | boolean | `false`     | Disables key interaction                    |
 | `for`             | string  | `""`        | Target element ID                           |
 | `input-ids`       | string  | `""`        | Comma-separated IDs for auto-show filtering |
-| `stable-height`   | boolean | `false`     | Maintain max height across layout switches  |
 | `accessible-name` | string  | `""`        | Custom ARIA label                           |
 | `mobile-keyboard` | string  | `"Auto"`    | `"Auto"`, `"Native"`, `"Custom"`            |
 | `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`           |

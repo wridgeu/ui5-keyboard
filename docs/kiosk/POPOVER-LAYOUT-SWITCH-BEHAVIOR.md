@@ -1,41 +1,34 @@
-# Known Limitations
+# Known Limitation: `sap.m.Popover` Layout-Switch Close
 
-## KioskKeyboard layout switch closes `sap.m.Popover`
+## Affects
 
-**Affects**: KioskKeyboard (Full type) inside `sap.m.Popover` on scrollable pages
+KioskKeyboard (Full type) inside `sap.m.Popover` on scrollable pages (OpenUI5 1.144.0+).
 
-**Symptom**: Switching between layouts (e.g. ABC ↔ 123) inside a Popover causes the Popover to close immediately.
+## Symptom
 
-**Root cause**: A coordinate-system mismatch in `sap.m.Popover._applyPosition` (OpenUI5 1.144.0). When the keyboard's content height changes during a layout switch, the Popover's `ResizeHandler` fires and `_applyPosition` runs an off-screen check:
+Switching between layouts (e.g. ABC / 123) inside a Popover causes it to close immediately.
 
-```javascript
-var oRect = jQuery(oPosition.of).rect(); // document-absolute coordinates
-if (bFromResize
-    && $popoverWithinArea.height() == that._initialWindowDimensions.height
-    && (oRect.top + oRect.height <= 0
-        || oRect.top >= $popoverWithinArea.height() // compares absolute Y against viewport height
-        || ...)) {
-    that.close();
-}
+## Root Cause
+
+A coordinate-system mismatch in `sap.m.Popover._applyPosition`. When the keyboard's content height changes during a layout switch, the Popover's `ResizeHandler` fires and `_applyPosition` compares the trigger element's **document-absolute** coordinates against the **viewport height**. On a scrolled page the trigger's absolute `top` exceeds the viewport height, so the Popover considers it "off-screen" and closes -- even though it is perfectly visible.
+
+## Recommended Workaround
+
+Set a fixed `contentHeight` on the Popover so that layout switches do not change the Popover's outer dimensions. The keyboard's responsive height breakpoints (`cq-short`, `cq-tiny`) adapt the internal layout automatically:
+
+```xml
+<Popover contentWidth="24rem" contentHeight="18rem">
+  <kiosk:KioskKeyboard targetInput="myInput" />
+</Popover>
 ```
 
-`jQuery.rect()` returns **document-absolute** coordinates (includes scroll offset), but the check compares them against the **viewport height**. On a scrolled page, the trigger element's absolute `top` (e.g. 3374px) exceeds the viewport height (e.g. 893px), so the Popover considers the trigger "off-screen" and closes, even though it is perfectly visible in the viewport.
+Alternatively, set a CSS `height` on the keyboard element itself or on a wrapper `<div>` inside the Popover. Any approach that prevents the Popover content area from resizing during layout switches avoids the bug.
 
-**Sequence of events**:
+## Additional Sizing Options
 
-1. User clicks a layout-switch key (e.g. "123" or "ABC")
-2. `setLayout()` → `setProperty()` → `invalidate()` → UI5 re-renders the keyboard
-3. The new layout has a different number of rows (QWERTY=5, numeric/special=4), changing the keyboard's DOM height
-4. `ResizeHandler.checkSizes` detects the height change
-5. `Popover._onOrientationChange` → `oPopup._applyPosition(pos, true)`
-6. The buggy off-screen check fires with `bFromResize=true`
-7. `jQuery(trigger).rect().top` returns document-absolute Y (e.g. 3374)
-8. `3374 >= 893` → Popover closes
+The keyboard exposes CSS custom properties for fine-grained control:
 
-**Conditions for the bug to manifest**:
+- `--ui5KioskKeyboard-keyHeight` -- individual key touch-target height
+- `--ui5KioskKeyboard-cqShortThreshold` / `--ui5KioskKeyboard-cqTinyThreshold` -- breakpoint thresholds (rem)
 
-- The page must be scrollable (trigger button far down the page in document coordinates)
-- The keyboard content must change height (different row counts between layouts)
-- The window must not have been resized (otherwise the virtual-keyboard guard skips the check)
-
-**Current mitigation**: Use `stableHeight="true"` for non-docked `Full` keyboards embedded in `sap.m.Popover`. With `stableHeight` enabled, the keyboard tracks the maximum rendered height and applies it as `min-height`, preventing the content resize that triggers the Popover reposition bug. The behavior is opt-in (default `false`) so inline/non-popover integrations keep natural resizing.
+These allow consumers to tune the keyboard to fit a specific container size without relying solely on the automatic breakpoints.
