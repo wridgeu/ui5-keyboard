@@ -1,7 +1,7 @@
 /**
  * Shift / Caps Lock state machine.
  *
- * Single click: off -> shift (auto-releases after one key).
+ * Single click: off → shift (auto-releases after one key).
  * Double-click (within threshold): activates caps lock.
  * Click while caps-locked: off.
  */
@@ -24,23 +24,23 @@ export class ShiftState {
   /**
    * Handles a shift key press.
    *
-   * - If caps lock is on -> turn everything off.
-   * - If shift is on and pressed again within the double-click window -> caps lock.
-   * - Otherwise -> activate one-shot shift.
+   * - If caps lock is on → turn everything off.
+   * - If shift is on and pressed again within the double-click window → caps lock.
+   * - Otherwise → activate one-shot shift.
    */
   toggle(): void {
     const now = performance.now();
 
     if (this._capsLock) {
-      // Caps lock -> off
+      // Caps lock → off
       this._capsLock = false;
       this._active = false;
     } else if (this._active && now - this._lastToggleTime < ShiftState.DOUBLE_CLICK_MS) {
-      // Double-click -> caps lock
+      // Double-click → caps lock
       this._active = false;
       this._capsLock = true;
     } else {
-      // Off (or stale shift) -> one-shot shift
+      // Off (or stale shift) → one-shot shift
       this._active = true;
     }
 

@@ -624,6 +624,10 @@ kiosk-keyboard {
 
 For troubleshooting, the root element toggles internal classes such as `kiosk-keyboard--cq-sm`, `kiosk-keyboard--cq-xs`, `kiosk-keyboard--cq-short`, and `kiosk-keyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
 
+#### Constrained Containers
+
+When the keyboard is placed inside a fixed-height container, its responsive height breakpoints adapt the layout automatically. The `cq-short` class activates below 16 rem (reduced key height), and `cq-tiny` below 12 rem (further reduced). Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
+
 The height constraint must affect the **host element's own dimensions** -- the component measures `clientHeight` on itself. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the host's layout box, so the keyboard will be clipped instead of adapting.
 
 ```html
