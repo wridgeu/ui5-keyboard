@@ -123,7 +123,6 @@ export default class KioskKeyboard extends Control {
   declare private _baseLayout: string;
   declare private _keyboardTypeExplicit: boolean;
   declare private _suppressedInputId: string | null;
-  declare private _maxHeight: number;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
   declare private _focusClaimService: FocusClaimService;
   declare private _targetSession: TargetInputSession;
@@ -311,25 +310,6 @@ export default class KioskKeyboard extends Control {
       inputIds: {
         type: "string[]",
         defaultValue: [],
-        group: "Behavior",
-      },
-      /**
-       * When `true`, the keyboard maintains a consistent minimum height
-       * across layout switches. Prevents visual layout shifts and works
-       * around a `sap.m.Popover` bug where content height changes can
-       * trigger spurious close.
-       *
-       * Only effective for non-docked Full keyboards. Docked keyboards
-       * always minimize their footprint.
-       *
-       * @example <caption>XML view - keyboard inside a Popover</caption>
-       * <Popover>
-       *   <kiosk:KioskKeyboard stableHeight="true" targetInput="myInput" />
-       * </Popover>
-       */
-      stableHeight: {
-        type: "boolean",
-        defaultValue: false,
         group: "Behavior",
       },
     },
@@ -830,7 +810,6 @@ export default class KioskKeyboard extends Control {
     this._pressedKeyEl = null;
     this._keyboardTypeExplicit = false;
     this._suppressedInputId = null;
-    this._maxHeight = 0;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._deferredFocusOutCloseId = null;
     this._focusClaimService = new FocusClaimService(
@@ -1005,19 +984,10 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
-    const previousMinHeight = dom.style.minHeight;
-    if (previousMinHeight) {
-      dom.style.minHeight = "";
-    }
-
     if (height === undefined) {
       height = dom.getBoundingClientRect().height;
     }
     const naturalHeight = dom.scrollHeight;
-
-    if (previousMinHeight) {
-      dom.style.minHeight = previousMinHeight;
-    }
 
     const constrained = naturalHeight > height + 1;
     const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
@@ -1036,29 +1006,6 @@ export default class KioskKeyboard extends Control {
     const docked = this.getDocked();
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootDocked, docked);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this._open);
-  }
-
-  /** Updates stable-height minHeight based on current mode and measured height. */
-  private _syncStableHeight(dom: HTMLElement | null): void {
-    // Opt-in stable height: maintain consistent minHeight across layout
-    // switches for non-docked Full keyboards. Prevents layout shifts in
-    // Popover scenarios and works around a sap.m.Popover bug where
-    // content-height changes trigger a spurious close.
-    // Docked keyboards are excluded: they pin to the viewport edge so
-    // minimising their footprint is more valuable than preventing shifts.
-    if (dom && this.getStableHeight() && this.getKeyboardType() === KeyboardType.Full && !this.getDocked()) {
-      const h = dom.getBoundingClientRect().height;
-      if (h > this._maxHeight) {
-        this._maxHeight = h;
-      }
-      dom.style.minHeight = `${this._maxHeight}px`;
-      return;
-    }
-
-    if (dom) {
-      dom.style.minHeight = "";
-    }
-    this._maxHeight = 0;
   }
 
   exit(): void {
@@ -1373,7 +1320,6 @@ export default class KioskKeyboard extends Control {
     if (!dom) return this;
 
     this._syncResponsiveSizing(dom);
-    this._syncStableHeight(dom);
     return this;
   }
 
@@ -1451,7 +1397,6 @@ export default class KioskKeyboard extends Control {
     if (dom) {
       this._syncResponsiveSizing(dom);
     }
-    this._syncStableHeight(dom);
     return this;
   }
 

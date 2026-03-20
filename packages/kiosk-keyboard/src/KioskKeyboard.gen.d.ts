@@ -117,17 +117,6 @@ declare module "./KioskKeyboard" {
         inputIds?: string[] | PropertyBindingInfo | `{${string}}`;
 
         /**
-         * When `true`, the keyboard maintains a consistent minimum height
-        across layout switches. Prevents visual layout shifts and works
-        around a `sap.m.Popover` bug where content height changes can
-        trigger spurious close.
-        
-        Only effective for non-docked Full keyboards. Docked keyboards
-        always minimize their footprint.
-         */
-        stableHeight?: boolean | PropertyBindingInfo | `{${string}}`;
-
-        /**
          * The input control to type into (e.g. `sap.m.Input`, `sap.m.TextArea`).
         For targeting multiple inputs, use the `inputIds` property instead.
          */
@@ -521,43 +510,6 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
         setInputIds(inputIds: string[]): this;
-
-        // property: stableHeight
-
-        /**
-         * Gets current value of property "stableHeight".
-         *
-         * When `true`, the keyboard maintains a consistent minimum height
-        across layout switches. Prevents visual layout shifts and works
-        around a `sap.m.Popover` bug where content height changes can
-        trigger spurious close.
-        
-        Only effective for non-docked Full keyboards. Docked keyboards
-        always minimize their footprint.
-         *
-         * Default value is: false
-         * @returns Value of property "stableHeight"
-         */
-        getStableHeight(): boolean;
-
-        /**
-         * Sets a new value for property "stableHeight".
-         *
-         * When `true`, the keyboard maintains a consistent minimum height
-        across layout switches. Prevents visual layout shifts and works
-        around a `sap.m.Popover` bug where content height changes can
-        trigger spurious close.
-        
-        Only effective for non-docked Full keyboards. Docked keyboards
-        always minimize their footprint.
-         *
-         * When called with a value of "null" or "undefined", the default value of the property will be restored.
-         *
-         * Default value is: false
-         * @param [stableHeight=false] New value for property "stableHeight"
-         * @returns Reference to "this" in order to allow method chaining
-         */
-        setStableHeight(stableHeight: boolean): this;
 
         // association: targetInput
 
