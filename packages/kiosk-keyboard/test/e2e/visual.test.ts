@@ -147,20 +147,17 @@ describe("KioskKeyboard Interactive States", () => {
     await isolateSection(toggleBtn);
     try {
       await scrollElementIntoView(toggleBtn);
-      // Use programmatic show() via sap.ui.getCore to open the docked keyboard.
-      // DOM click on the toggle button works on desktop but hangs under mobile
-      // emulation (pointer: coarse) because focus/click event dispatch differs.
+      // Use programmatic show() via Element.getElementById (UI5 1.119+) to open
+      // the docked keyboard. DOM click on the toggle button hangs under Chrome
+      // mobile emulation (pointer: coarse) because focus/click event dispatch
+      // differs. The programmatic approach works on all device profiles.
       await browser.execute(() => {
         const kbDom = document.querySelector("#kb-docked .ui5KioskKeyboard");
-        if (kbDom) {
-          const core = (window as any).sap?.ui?.getCore?.();
-          const control = core?.byId?.(kbDom.id);
-          if (control?.show) {
-            control.show();
-          } else {
-            // Fallback: try button click (desktop)
-            (document.getElementById("toggle-docked") as HTMLButtonElement | null)?.click();
-          }
+        if (!kbDom) return;
+        const Element = (window as any).sap?.ui?.require?.("sap/ui/core/Element");
+        const control = Element?.getElementById?.(kbDom.id);
+        if (control?.show) {
+          control.show();
         }
       });
       const dockedKb = await $("#kb-docked .ui5KioskKeyboard");
