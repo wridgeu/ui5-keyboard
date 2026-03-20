@@ -1598,15 +1598,6 @@ describe("kiosk-keyboard", () => {
       expect(label).to.equal("Virtual Keyboard");
     });
 
-    it("reflects stable-height boolean attribute", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard stable-height></kiosk-keyboard>
-        `,
-      );
-      expect(el.stableHeight).to.be.true;
-    });
-
     it("reflects mobile-keyboard attribute to property", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
@@ -1815,31 +1806,6 @@ describe("kiosk-keyboard", () => {
       expect(fontSize).to.be.closeTo(0.75 * remPx, 1, "Custom font-size 0.75rem should be preserved");
     });
 
-    it("refreshResponsiveState re-evaluates classes when stableHeight masks compact-size shrink", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty" stable-height style="height: 15rem; overflow: hidden"></kiosk-keyboard>
-        `,
-      );
-      await nextRender();
-      await waitForResponsiveSync();
-
-      const root = rootDiv(el);
-      expect(root.classList.contains(DOM.classes.rootCqShort), "starts constrained in cozy mode").to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqTiny), "starts above tiny breakpoint").to.be.false;
-
-      el.setAttribute("data-ui5-compact-size", "");
-      await waitForResponsiveSync();
-
-      expect(root.classList.contains(DOM.classes.rootCqShort), "stays stale without manual refresh").to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqTiny), "stays non-tiny before refresh").to.be.false;
-
-      el.refreshResponsiveState();
-
-      expect(root.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after refresh").to.be.false;
-      expect(root.classList.contains(DOM.classes.rootCqTiny), "cq-tiny stays cleared after refresh").to.be.false;
-    });
-
     it("measures host content height so padded hosts still trigger height breakpoints", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
@@ -1859,93 +1825,32 @@ describe("kiosk-keyboard", () => {
       ).to.be.true;
       expect(root.classList.contains(DOM.classes.rootCqTiny), "padding case stays above tiny breakpoint").to.be.false;
     });
-  });
 
-  // ── stableHeight type guard ──
-
-  describe("stableHeight type guard", () => {
-    it("does not apply minHeight on non-Full keyboard types", async () => {
+    it("adapts responsively in a fixed-height host", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
-          <kiosk-keyboard layout="numpad" keyboard-type="Numpad" stable-height></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" style="height: 15rem; overflow: hidden"></kiosk-keyboard>
         `,
       );
       await nextRender();
+      await waitForResponsiveSync();
 
       const root = rootDiv(el);
-      expect(root.style.minHeight).to.equal("", "minHeight should not be set for Numpad with stableHeight");
-    });
 
-    it("applies minHeight on Full keyboard type", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty" keyboard-type="Full" stable-height></kiosk-keyboard>
-        `,
-      );
-      await nextRender();
+      // 15rem host triggers cq-short (threshold: 16rem)
+      expect(root.classList.contains(DOM.classes.rootCqShort), "cq-short applied at 15rem").to.be.true;
+      expect(root.classList.contains(DOM.classes.rootCqTiny), "not tiny at 15rem").to.be.false;
 
-      const root = rootDiv(el);
-      expect(root.style.minHeight).to.not.equal("", "minHeight should be set for Full keyboard with stableHeight");
-    });
+      // No minHeight is set on the root
+      expect(root.style.minHeight).to.equal("");
 
-    it("preserves minHeight across layout switches", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty" stable-height></kiosk-keyboard>
-        `,
-      );
-      await nextRender();
-
-      const root = rootDiv(el);
-      const initialMinHeight = parseFloat(root.style.minHeight);
-      expect(initialMinHeight).to.be.greaterThan(0, "Has initial minHeight");
-
-      // Switch to numeric (fewer rows, shorter content)
+      // Switch layout -- keyboard remains within the fixed host
       el.layout = "numeric";
       await nextRender();
+      await waitForResponsiveSync();
 
-      const minHeightAfterSwitch = parseFloat(root.style.minHeight);
-      expect(minHeightAfterSwitch).to.be.at.least(
-        initialMinHeight,
-        "minHeight preserved after switching to shorter layout",
-      );
-    });
-
-    it("clears minHeight when stableHeight is toggled off", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty" stable-height></kiosk-keyboard>
-        `,
-      );
-      await nextRender();
-
-      const root = rootDiv(el);
-      expect(root.style.minHeight).to.not.equal("", "minHeight should be set initially");
-
-      el.stableHeight = false;
-      await nextRender();
-      el.refreshResponsiveState();
-
-      expect(root.style.minHeight).to.equal("", "minHeight should be cleared after disabling stableHeight");
-    });
-
-    it("clears minHeight when keyboard becomes docked", async () => {
-      const container = await fixture(html`
-        <div>
-          <input id="dock-target" type="text" />
-          <kiosk-keyboard layout="qwerty" stable-height for="dock-target"></kiosk-keyboard>
-        </div>
-      `);
-      const el = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
-      await nextRender();
-
-      const root = rootDiv(el);
-      expect(root.style.minHeight).to.not.equal("", "minHeight should be set for non-docked Full keyboard");
-
-      el.docked = true;
-      await nextRender();
-
-      expect(root.style.minHeight).to.equal("", "minHeight should be cleared when docked");
+      // No minHeight after layout switch
+      expect(root.style.minHeight).to.equal("", "no minHeight after layout switch");
     });
   });
 
