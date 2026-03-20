@@ -5,32 +5,57 @@
     xmlns="sap.m">
     <Page titleAlignment="Center" title="Popover Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="Keyboard in Popover" class="sapUiSmallMarginBottom">
+            <Panel headerText="A) Generous container (19 rem)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="Press the keyboard icon to open a popover containing a virtual keyboard targeting that input." />
+                    <Text text="contentHeight='19rem' gives the full-size keyboard enough room. Slightly more empty space when the numeric layout is active, but no scrollbar." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="First Name" class="sapUiSmallMarginEnd" />
-                        <Input id="firstName" placeholder="Jane" width="14rem" />
+                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Input id="inputA" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
                             type="Transparent"
-                            press=".onOpenKeyboard"
+                            press=".onOpenKeyboardA"
                             ariaHasPopup="Dialog">
                             <customData>
-                                <core:CustomData key="inputId" value="firstName" />
+                                <core:CustomData key="inputId" value="inputA" />
                             </customData>
                         </Button>
                     </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="B) Compact container (16 rem)" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="contentHeight='16rem' triggers the cq-short breakpoint. The keyboard automatically reduces key height to 2.25 rem and fits without a scrollbar." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Last Name" class="sapUiSmallMarginEnd" />
-                        <Input id="lastName" placeholder="Doe" width="14rem" />
+                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Input id="inputB" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
                             type="Transparent"
-                            press=".onOpenKeyboard"
+                            press=".onOpenKeyboardB"
                             ariaHasPopup="Dialog">
                             <customData>
-                                <core:CustomData key="inputId" value="lastName" />
+                                <core:CustomData key="inputId" value="inputB" />
+                            </customData>
+                        </Button>
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="C) Height on the keyboard element" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="No contentHeight on the Popover. Instead, the keyboard element itself gets a fixed height (18 rem) via addStyleClass. The Popover sizes to its content and never scrolls." />
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Input id="inputC" placeholder="Jane Doe" width="14rem" />
+                        <Button
+                            icon="sap-icon://keyboard-and-mouse"
+                            type="Transparent"
+                            press=".onOpenKeyboardC"
+                            ariaHasPopup="Dialog">
+                            <customData>
+                                <core:CustomData key="inputId" value="inputC" />
                             </customData>
                         </Button>
                     </HBox>
