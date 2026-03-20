@@ -14,8 +14,8 @@
  *   --fix   Lists the commands to run to generate missing baselines.
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { resolve, basename, relative, join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { resolve, relative, join } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const FIX_MODE = process.argv.includes("--fix");

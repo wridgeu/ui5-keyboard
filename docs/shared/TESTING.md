@@ -99,7 +99,7 @@ Each package has up to three wdio configs:
 | `wdio-device.conf.ts` | Responsive device matrix (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) | Same, different port |
 | `wdio-flp.conf.ts`    | FLP sandbox (kiosk only)                                                | UI5 serve            |
 
-Desktop configs run all `**/*.test.ts` files. Device configs run the responsive visual matrix: `visual.test.ts`, `visual-container.test.ts`, `visual-enhancements.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, and `accessibility-media.test.ts`. Container tests use fixed-width fixtures (400-600px) that cannot fit on viewports narrower than the fixture, so `visual-container.test.ts` is excluded from device profiles with `width < 400` at config level.
+Desktop configs run all `**/*.test.ts` files. Device configs run the responsive visual matrix: `visual.test.ts`, `visual-container.test.ts`, `visual-container-responsive.test.ts`, `visual-enhancements.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, and `accessibility-media.test.ts`. Container tests use fixed-width fixtures (400-600px) that cannot fit on viewports narrower than the fixture, so `visual-container.test.ts` is excluded from device profiles with `width < 400` at config level. The `visual-container-responsive.test.ts` file uses viewport-width fixtures and runs on all profiles.
 
 Baselines are stored in per-profile subfolders:
 
@@ -176,9 +176,10 @@ npm run test:e2e:tablet:update -w packages/kiosk-keyboard-webc
 
 **After updating, always:**
 
-1. Run `git diff --stat` to verify only expected baselines changed.
-2. Spot-check the updated images (open them directly or use the report).
-3. Commit ALL related changes together: new baselines, deleted old baselines, and any code changes. Leaving orphaned baseline files in the repository causes confusion.
+1. Run `npm run check:baselines` to verify every snapshot tag has a baseline for desktop and all device profiles. This catches cases where a new test was added but baselines were only generated for a subset of profiles. Run with `--fix` to see the commands needed to generate any missing ones.
+2. Run `git diff --stat` to verify only expected baselines changed.
+3. Spot-check the updated images (open them directly or use the report).
+4. Commit ALL related changes together: new baselines, deleted old baselines, and any code changes. Leaving orphaned baseline files in the repository causes confusion.
 
 ### Mismatch threshold
 
