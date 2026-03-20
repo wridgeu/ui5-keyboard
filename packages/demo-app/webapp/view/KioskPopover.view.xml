@@ -5,9 +5,9 @@
     xmlns="sap.m">
     <Page titleAlignment="Center" title="Popover Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <content>
-            <Panel headerText="A) Generous container (19 rem)" class="sapUiSmallMarginBottom">
+            <Panel headerText="A) Generous height (19 rem)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="contentHeight='19rem' gives the full-size keyboard enough room. Slightly more empty space when the numeric layout is active, but no scrollbar." />
+                    <Text text="The keyboard element gets height: 19rem via a CSS class. Full-size keys fit comfortably with no responsive breakpoints triggered." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Full Name" class="sapUiSmallMarginEnd" />
                         <Input id="inputA" placeholder="Jane Doe" width="14rem" />
@@ -24,9 +24,9 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="B) Compact container (16 rem)" class="sapUiSmallMarginBottom">
+            <Panel headerText="B) Compact height (15 rem)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="contentHeight='16rem' triggers the cq-short breakpoint. The keyboard automatically reduces key height to 2.25 rem and fits without a scrollbar." />
+                    <Text text="The keyboard element gets height: 15rem. This triggers the cq-short breakpoint and the keyboard automatically reduces key height to fit." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Full Name" class="sapUiSmallMarginEnd" />
                         <Input id="inputB" placeholder="Jane Doe" width="14rem" />
@@ -43,9 +43,9 @@
                 </VBox>
             </Panel>
 
-            <Panel headerText="C) Height on the keyboard element" class="sapUiSmallMarginBottom">
+            <Panel headerText="C) Custom CSS variables" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="No contentHeight on the Popover. Instead, the keyboard element itself gets a fixed height (18 rem) via addStyleClass. The Popover sizes to its content and never scrolls." />
+                    <Text text="Instead of constraining the height, reduce --ui5KioskKeyboard-keyHeight and --ui5KioskKeyboard-keyGap so the keyboard naturally fits in a smaller space." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Full Name" class="sapUiSmallMarginEnd" />
                         <Input id="inputC" placeholder="Jane Doe" width="14rem" />

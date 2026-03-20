@@ -5,10 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UI5 Keyboard Libraries Demo</title>
     <style>
-      /* Demo: fixed height on the keyboard element itself (Popover scenario C) */
-      .demoPopoverKeyboardFixedHeight {
-        height: 18rem;
+      /* Popover demo: constrain the keyboard element directly so responsive
+         height breakpoints detect the constraint. overflow:hidden prevents
+         the Popover from adding a scrollbar. */
+      .demoPopoverKbGenerous {
+        height: 19rem;
         overflow: hidden;
+      }
+      .demoPopoverKbCompact {
+        height: 15rem;
+        overflow: hidden;
+      }
+      /* Instead of height constraints, shrink keys via CSS custom properties
+         so the keyboard naturally fits in less vertical space.
+         Double-class selector beats the single-class defaults in the library. */
+      .ui5KioskKeyboard.demoPopoverKbCustomVars {
+        --ui5KioskKeyboard-keyHeight: 2.25rem;
+        --ui5KioskKeyboard-keyGap: 0.25rem;
+        --ui5KioskKeyboard-padding: 0.5rem;
       }
     </style>
     <script

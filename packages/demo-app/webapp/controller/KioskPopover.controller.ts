@@ -8,11 +8,13 @@ import BaseController from "./BaseController";
 /**
  * Popover-mounted keyboard demo showing three sizing strategies.
  *
- * A) Generous container  -- contentHeight="19rem", full-size keys
- * B) Compact container   -- contentHeight="16rem", triggers cq-short
- * C) Height on keyboard  -- no contentHeight, fixed height on keyboard element
+ * All three set a fixed height on the keyboard element itself so the
+ * responsive height breakpoints can detect the constraint. The Popover
+ * sizes to its content automatically.
  *
- * Each scenario lazily creates and reuses its own Popover + KioskKeyboard.
+ * A) Generous height (19 rem) -- full-size keys, no breakpoints triggered
+ * B) Compact height (15 rem)  -- triggers cq-short, keys shrink to 2.25 rem
+ * C) Custom CSS vars          -- reduce key height so keyboard fits naturally
  *
  * @name demo.hotkeys.controller.KioskPopover
  */
@@ -26,7 +28,7 @@ export default class KioskPopover extends BaseController {
   private _popoverC: Popover | null = null;
   private _keyboardC: KioskKeyboard | null = null;
 
-  // ── A) Generous container (19 rem) ──
+  // ── A) Generous height on the keyboard element ──
 
   onOpenKeyboardA(event: Button$PressEvent): void {
     const button = event.getSource();
@@ -37,16 +39,16 @@ export default class KioskPopover extends BaseController {
         keyboardType: "Full",
         ariaLabel: "Virtual Keyboard (generous)",
       });
+      this._keyboardA.addStyleClass("demoPopoverKbGenerous");
     }
     this._keyboardA.setTargetInput(input);
 
     if (!this._popoverA) {
       this._popoverA = new Popover({
         title: "Generous (19 rem)",
-        placement: "Bottom",
+        placement: "Auto",
         content: [this._keyboardA],
         contentWidth: "24rem",
-        contentHeight: "19rem",
       });
       this.getView()!.addDependent(this._popoverA);
     }
@@ -54,7 +56,7 @@ export default class KioskPopover extends BaseController {
     this._popoverA.openBy(button);
   }
 
-  // ── B) Compact container (16 rem, triggers cq-short) ──
+  // ── B) Compact height on the keyboard element (triggers cq-short) ──
 
   onOpenKeyboardB(event: Button$PressEvent): void {
     const button = event.getSource();
@@ -65,16 +67,16 @@ export default class KioskPopover extends BaseController {
         keyboardType: "Full",
         ariaLabel: "Virtual Keyboard (compact)",
       });
+      this._keyboardB.addStyleClass("demoPopoverKbCompact");
     }
     this._keyboardB.setTargetInput(input);
 
     if (!this._popoverB) {
       this._popoverB = new Popover({
-        title: "Compact (16 rem)",
-        placement: "Bottom",
+        title: "Compact (15 rem)",
+        placement: "Auto",
         content: [this._keyboardB],
         contentWidth: "24rem",
-        contentHeight: "16rem",
       });
       this.getView()!.addDependent(this._popoverB);
     }
@@ -82,7 +84,7 @@ export default class KioskPopover extends BaseController {
     this._popoverB.openBy(button);
   }
 
-  // ── C) Height on the keyboard element ──
+  // ── C) Custom CSS variables to fit naturally ──
 
   onOpenKeyboardC(event: Button$PressEvent): void {
     const button = event.getSource();
@@ -91,18 +93,16 @@ export default class KioskPopover extends BaseController {
     if (!this._keyboardC) {
       this._keyboardC = new KioskKeyboard({
         keyboardType: "Full",
-        ariaLabel: "Virtual Keyboard (element height)",
+        ariaLabel: "Virtual Keyboard (custom vars)",
       });
-      // Fixed height directly on the keyboard element, not on the Popover.
-      // The keyboard's responsive breakpoints adapt automatically.
-      this._keyboardC.addStyleClass("demoPopoverKeyboardFixedHeight");
+      this._keyboardC.addStyleClass("demoPopoverKbCustomVars");
     }
     this._keyboardC.setTargetInput(input);
 
     if (!this._popoverC) {
       this._popoverC = new Popover({
-        title: "Element Height (18 rem)",
-        placement: "Bottom",
+        title: "Custom CSS Vars",
+        placement: "Auto",
         content: [this._keyboardC],
         contentWidth: "24rem",
       });

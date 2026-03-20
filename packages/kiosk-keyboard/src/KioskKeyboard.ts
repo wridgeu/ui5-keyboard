@@ -39,6 +39,7 @@ import {
 import type { KioskI18nConfig, KioskI18nOverrideHook } from "./types";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
+import { ShiftState } from "./internal/shift-state";
 import TargetInputSession from "./internal/target-input-session";
 
 export type { KioskKeyboardDomContract } from "./KioskKeyboardRenderer";
@@ -105,8 +106,7 @@ export default class KioskKeyboard extends Control {
   }
 
   // ── ManagedObject field trap: declare strips these from Babel output ──
-  declare private _shiftActive: boolean;
-  declare private _capsLock: boolean;
+  declare private _shiftState: ShiftState;
   declare private _lastFocusedKeyId: string | null;
   declare private _open: boolean;
   declare private _boundFocusIn: (e: FocusEvent) => void;
@@ -776,8 +776,7 @@ export default class KioskKeyboard extends Control {
 
   init(): void {
     KioskKeyboard._instances.add(this);
-    this._shiftActive = false;
-    this._capsLock = false;
+    this._shiftState = new ShiftState();
     this._lastFocusedKeyId = null;
     this._open = false;
     this._autoShowActive = false;
@@ -1168,9 +1167,8 @@ export default class KioskKeyboard extends Control {
     this._targetSession.resetForTargetSwitch();
 
     // Reset shift/caps state for the new input context
-    if (this._shiftActive || this._capsLock) {
-      this._shiftActive = false;
-      this._capsLock = false;
+    if (this._shiftState.isShifted) {
+      this._shiftState.reset();
       this.invalidate();
     }
 
@@ -1682,12 +1680,12 @@ export default class KioskKeyboard extends Control {
 
   /** Returns true for one-shot Shift and Caps Lock mode. */
   private _isShiftActive(): boolean {
-    return this._shiftActive || this._isCapsLock();
+    return this._shiftState.isShifted;
   }
 
   /** Returns true when Caps Lock mode is active. */
   private _isCapsLock(): boolean {
-    return this._capsLock;
+    return this._shiftState.isCapsLock;
   }
 
   /** Resolve the effective layout used by the renderer. */
@@ -2109,21 +2107,13 @@ export default class KioskKeyboard extends Control {
     }
 
     // Auto-release shift (not caps lock)
-    if (this._shiftActive && !this._capsLock) {
-      this._shiftActive = false;
+    if (this._shiftState.autoRelease()) {
       this.invalidate();
     }
   }
 
   private _toggleShift(): void {
-    if (this._capsLock) {
-      this._capsLock = false;
-      this._shiftActive = false;
-    } else if (this._shiftActive) {
-      this._capsLock = true;
-    } else {
-      this._shiftActive = true;
-    }
+    this._shiftState.toggle();
     this.invalidate();
   }
 
