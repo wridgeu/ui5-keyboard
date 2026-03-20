@@ -12,6 +12,11 @@ export {
 
 export const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
 
+/** Returns the current viewport width in CSS pixels. */
+export async function getViewportWidth(): Promise<number> {
+  return browser.execute(() => window.innerWidth);
+}
+
 /** Wait until the visual page has rendered keyboard roots and their keys. */
 export async function waitForVisualKeyboardsReady(): Promise<void> {
   await browser.waitUntil(

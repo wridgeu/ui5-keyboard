@@ -1,7 +1,8 @@
-import { $, browser } from "@wdio/globals";
+import { $ } from "@wdio/globals";
 import {
   openVisualPage,
   getKeyboard,
+  getViewportWidth,
   injectStyleOverride,
   removeStyleOverride,
   DISABLE_TEXT_BOX_TRIM,
@@ -9,10 +10,6 @@ import {
 } from "./test-helpers.js";
 
 const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
-
-async function getViewportWidth(): Promise<number> {
-  return browser.execute(() => window.innerWidth);
-}
 
 /**
  * Progressive enhancement visual regression tests.

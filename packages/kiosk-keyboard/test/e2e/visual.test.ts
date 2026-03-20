@@ -147,10 +147,8 @@ describe("KioskKeyboard Interactive States", () => {
     await isolateSection(toggleBtn);
     try {
       await scrollElementIntoView(toggleBtn);
-      // Use programmatic show() via Element.getElementById (UI5 1.119+) to open
-      // the docked keyboard. DOM click on the toggle button hangs under Chrome
-      // mobile emulation (pointer: coarse) because focus/click event dispatch
-      // differs. The programmatic approach works on all device profiles.
+      // Open docked keyboard via Element.getElementById + show(). DOM click on
+      // the toggle button hangs under Chrome mobile emulation (pointer: coarse).
       await browser.execute(() => {
         const kbDom = document.querySelector("#kb-docked .ui5KioskKeyboard");
         if (!kbDom) return;

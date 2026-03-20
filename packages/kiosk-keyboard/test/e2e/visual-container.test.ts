@@ -1,11 +1,7 @@
-import { $, browser } from "@wdio/globals";
-import { openVisualPage, getKeyboard, matchElementSnapshotInSection } from "./test-helpers.js";
+import { $ } from "@wdio/globals";
+import { openVisualPage, getKeyboard, getViewportWidth, matchElementSnapshotInSection } from "./test-helpers.js";
 
 const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
-
-async function getViewportWidth(): Promise<number> {
-  return browser.execute(() => window.innerWidth);
-}
 
 describe("KioskKeyboard Fixed Container Visual Regression", () => {
   before(async () => {
