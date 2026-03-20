@@ -69,6 +69,13 @@
         overflow: hidden;
       }
       /* Ancestor-constrained fixtures: flex parent constrains the keyboard */
+      #kb-ancestor-constrained-wrap,
+      #kb-ancestor-tiny-wrap {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+      }
       #kb-ancestor-constrained-wrap {
         display: flex;
         flex-direction: column;
@@ -223,12 +230,12 @@
 
     <div class="section">
       <h2>23. Ancestor-Constrained (flex parent 400x250)</h2>
-      <div class="keyboard-container" id="kb-ancestor-constrained-wrap"></div>
+      <div id="kb-ancestor-constrained-wrap"></div>
     </div>
 
     <div class="section">
       <h2>24. Ancestor-Constrained Severely (flex parent 400x180)</h2>
-      <div class="keyboard-container" id="kb-ancestor-tiny-wrap"></div>
+      <div id="kb-ancestor-tiny-wrap"></div>
     </div>
 
     <div class="section">
