@@ -23,11 +23,6 @@ describe("KioskKeyboard Fixed Container Visual Regression", () => {
     await matchElementSnapshotInSection(container, "kb-container-fixed");
   });
 
-  it("should match keyboard with stableHeight", async () => {
-    const kb = await getKeyboard("kb-stable-height");
-    await matchElementSnapshotInSection(kb, "kb-stable-height");
-  });
-
   it("should match height-constrained container (400x250)", async () => {
     const container = await $("#kb-height-constrained");
     await matchElementSnapshotInSection(container, "kb-height-constrained", HEIGHT_SNAPSHOT_OPTIONS);

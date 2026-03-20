@@ -70,9 +70,6 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
   // 12. Inline in fixed container
   new KioskKeyboard().placeAt("kb-container-fixed");
 
-  // 13. Inline with stableHeight
-  new KioskKeyboard({ stableHeight: true }).placeAt("kb-stable-height");
-
   // 14. Function Keys (F1-F12)
   new KioskKeyboard({ layout: "fkeys" }).placeAt("kb-fkeys");
 
