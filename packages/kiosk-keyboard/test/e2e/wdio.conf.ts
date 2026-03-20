@@ -7,6 +7,7 @@ import {
   DESKTOP_WINDOW_SIZE,
   resolveCachedBinaries,
   buildChromedriverOptions,
+  ensureBrowsersDownloaded,
 } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
@@ -85,6 +86,10 @@ export const config: wdi5Config = {
     ],
   ],
 
-  onPrepare: () => server.onPrepare(),
+  onPrepare: async () => {
+    await ensureBrowsersDownloaded();
+    await server.onPrepare();
+  },
+  onWorkerStart: () => server.ensureRunning(),
   onComplete: () => server.onComplete(),
 };

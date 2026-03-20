@@ -8,6 +8,7 @@ import {
   deviceProfiles,
   CHROME_VERSION,
   DEVICE_BASE_PORTS,
+  ensureBrowsersDownloaded,
 } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
@@ -75,7 +76,7 @@ export const config: wdi5Config = {
   },
 
   specFileRetries: 1,
-  specFileRetriesDelay: 500,
+  specFileRetriesDelay: 0,
 
   framework: "mocha",
   mochaOpts: {
@@ -102,6 +103,10 @@ export const config: wdi5Config = {
     ],
   ],
 
-  onPrepare: () => server.onPrepare(),
+  onPrepare: async () => {
+    await ensureBrowsersDownloaded();
+    await server.onPrepare();
+  },
+  onWorkerStart: () => server.ensureRunning(),
   onComplete: () => server.onComplete(),
 };

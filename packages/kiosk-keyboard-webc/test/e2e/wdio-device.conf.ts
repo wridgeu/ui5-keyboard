@@ -60,7 +60,7 @@ export const config: WebdriverIO.Config = {
   baseUrl: `http://localhost:${PORT}`,
 
   specFileRetries: 1,
-  specFileRetriesDelay: 500,
+  specFileRetriesDelay: 0,
 
   framework: "mocha",
   mochaOpts: {

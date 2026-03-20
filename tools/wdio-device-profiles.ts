@@ -2,7 +2,7 @@
 
 import os from "node:os";
 import fs from "node:fs";
-import { computeExecutablePath, Browser } from "@puppeteer/browsers";
+import { computeExecutablePath, Browser, install } from "@puppeteer/browsers";
 
 /**
  * Pinned Chrome version for visual regression testing.
@@ -50,6 +50,39 @@ export function resolveCachedBinaries(): { chrome?: string; chromedriver?: strin
     // same
   }
   return result;
+}
+
+/**
+ * Pre-downloads Chrome and ChromeDriver to the shared cache directory so
+ * that worker processes find them immediately via `resolveCachedBinaries`.
+ *
+ * Call this in `onPrepare` (before any workers spawn). On subsequent runs
+ * where binaries are already cached, this returns instantly (filesystem
+ * check only, no network I/O).
+ */
+export async function ensureBrowsersDownloaded(): Promise<void> {
+  const cached = resolveCachedBinaries();
+  if (cached.chrome && cached.chromedriver) return;
+
+  const cacheDir = os.tmpdir();
+  const tasks: Promise<unknown>[] = [];
+
+  if (!cached.chrome) {
+    tasks.push(
+      install({ browser: Browser.CHROME, buildId: CHROME_VERSION, cacheDir }).then(() =>
+        console.log(`[wdio] Chrome ${CHROME_VERSION} downloaded to cache`),
+      ),
+    );
+  }
+  if (!cached.chromedriver) {
+    tasks.push(
+      install({ browser: Browser.CHROMEDRIVER, buildId: CHROME_VERSION, cacheDir }).then(() =>
+        console.log(`[wdio] ChromeDriver ${CHROME_VERSION} downloaded to cache`),
+      ),
+    );
+  }
+
+  await Promise.all(tasks);
 }
 
 // Resolve once at config load time, not per-call

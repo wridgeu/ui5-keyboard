@@ -166,8 +166,14 @@ function createChildServerManager(opts: {
 }) {
   const { port, packageRoot, label, spawnArgs, startupTimeout, readinessPath } = opts;
   let serverProcess: ChildProcess | undefined;
+  /** Retained across the full server lifetime so crash diagnostics include recent output. */
+  let serverOutput: ReturnType<typeof createStartupOutputBuffer> | undefined;
+  /** Set by the post-startup exit listener when the process exits unexpectedly. */
+  let crashInfo: { code: number | null; signal: string | null } | undefined;
 
   async function start(): Promise<void> {
+    crashInfo = undefined;
+
     if (await probePort(port)) {
       // Port is occupied -- verify it's actually serving the expected content.
       // Stale processes from killed test runs keep the port open but serve
@@ -180,7 +186,7 @@ function createChildServerManager(opts: {
       }
       return;
     }
-    const startupOutput = createStartupOutputBuffer();
+    serverOutput = createStartupOutputBuffer();
     serverProcess = spawn(process.execPath, spawnArgs, {
       cwd: packageRoot,
       stdio: ["ignore", "pipe", "pipe"],
@@ -188,15 +194,15 @@ function createChildServerManager(opts: {
       windowsHide: process.platform === "win32",
     });
 
-    serverProcess.stdout?.on("data", (chunk) => startupOutput.append("stdout", chunk));
-    serverProcess.stderr?.on("data", (chunk) => startupOutput.append("stderr", chunk));
+    serverProcess.stdout?.on("data", (chunk) => serverOutput!.append("stdout", chunk));
+    serverProcess.stderr?.on("data", (chunk) => serverOutput!.append("stderr", chunk));
 
-    const startupFailure = createStartupFailureMonitor(serverProcess, label, () => startupOutput.format());
+    const startupFailure = createStartupFailureMonitor(serverProcess, label, () => serverOutput!.format());
 
     try {
       await Promise.race([
         waitForServer(port, startupTimeout, readinessPath).catch((error) => {
-          throw new Error(`${(error as Error).message}${startupOutput.format()}`, { cause: error });
+          throw new Error(`${(error as Error).message}${serverOutput!.format()}`, { cause: error });
         }),
         startupFailure.promise,
       ]);
@@ -210,9 +216,47 @@ function createChildServerManager(opts: {
     }
 
     startupFailure.complete();
+
+    // Continue monitoring for unexpected crashes after successful startup.
+    // The startupFailureMonitor only covers the startup phase; this listener
+    // catches mid-run crashes so ensureRunning() can detect and restart.
+    serverProcess.once("exit", (code, signal) => {
+      const output = serverOutput?.format() ?? "";
+      console.error(
+        `[wdio-server] ${label} exited unexpectedly ` + `(code=${code ?? "null"}, signal=${signal ?? "null"})${output}`,
+      );
+      crashInfo = { code, signal };
+      serverProcess = undefined;
+    });
+  }
+
+  /**
+   * Verifies the server is alive and restarts it if it crashed or became
+   * unresponsive. Intended to be called from `onWorkerStart` so that each
+   * spec file starts with a healthy dev server.
+   */
+  async function ensureRunning(): Promise<void> {
+    if (serverProcess && !crashInfo) {
+      // Process is alive according to the exit listener; do a quick HTTP
+      // health check to catch the "alive but hung" edge case.
+      if (await probeHttp(port, readinessPath)) return;
+      console.warn(`[wdio-server] ${label} is unresponsive, restarting...`);
+    } else if (crashInfo) {
+      console.warn(
+        `[wdio-server] ${label} crashed ` + `(code=${crashInfo.code}, signal=${crashInfo.signal}), restarting...`,
+      );
+    }
+    // Clean up the dead/hung process before restarting.
+    if (serverProcess?.pid) {
+      await killProcessTree(serverProcess.pid);
+      serverProcess = undefined;
+      await waitForPortToClose(port, 5_000).catch(() => {});
+    }
+    await start();
   }
 
   async function stop(): Promise<void> {
+    crashInfo = undefined;
     if (!serverProcess?.pid) return;
     const pid = serverProcess.pid;
     serverProcess = undefined;
@@ -223,6 +267,7 @@ function createChildServerManager(opts: {
   return {
     onPrepare: start,
     onComplete: stop,
+    ensureRunning,
     [Symbol.asyncDispose]: stop,
   };
 }
