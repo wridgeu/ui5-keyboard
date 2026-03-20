@@ -118,6 +118,39 @@ async function assertSnapshotTargetIsUsable(element: SnapshotElement, name: stri
         `scroll=${geometry.scrollWidth}x${geometry.scrollHeight}.`,
     );
   }
+
+  // Check for nested overflow in keyboard children when the target is a wrapper
+  const isKeyboard = await browser.execute(
+    (el: HTMLElement) => el.classList.contains("ui5KioskKeyboard"),
+    await element,
+  );
+  if (!isKeyboard) {
+    const nestedOverflow = await browser.execute(
+      (el: HTMLElement) => {
+        const kb = el.querySelector(".ui5KioskKeyboard") as HTMLElement | null;
+        if (!kb) return null;
+        const tolerance = 2;
+        if (kb.scrollWidth > kb.clientWidth + tolerance || kb.scrollHeight > kb.clientHeight + tolerance) {
+          return {
+            clientWidth: kb.clientWidth,
+            clientHeight: kb.clientHeight,
+            scrollWidth: kb.scrollWidth,
+            scrollHeight: kb.scrollHeight,
+          };
+        }
+        return null;
+      },
+      await element,
+    );
+
+    if (nestedOverflow) {
+      throw new Error(
+        `Snapshot target '${name}' contains a keyboard child with internal overflow. ` +
+          `keyboard client=${nestedOverflow.clientWidth}x${nestedOverflow.clientHeight} ` +
+          `scroll=${nestedOverflow.scrollWidth}x${nestedOverflow.scrollHeight}.`,
+      );
+    }
+  }
 }
 
 async function shouldScrollSnapshotTarget(element: SnapshotElement): Promise<boolean> {
