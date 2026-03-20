@@ -143,11 +143,6 @@ describe("KioskKeyboard Interactive States", () => {
   });
 
   it("should match docked mode", async () => {
-    const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
-    if (isCoarse) {
-      return;
-    }
-
     const toggleBtn = await $("#toggle-docked");
     await isolateSection(toggleBtn);
     try {
