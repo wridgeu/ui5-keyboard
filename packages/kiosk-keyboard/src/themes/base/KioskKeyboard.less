@@ -57,8 +57,10 @@
 /* Keyboard container            */
 /* ============================= */
 
-.ui5KioskKeyboard {
-  /* ---- Public custom property defaults ---- */
+/* Public custom property defaults at zero specificity so that any consumer
+   class (e.g. .myKeyboard { --ui5KioskKeyboard-keyHeight: 2rem; }) wins
+   without needing specificity tricks. */
+:where(.ui5KioskKeyboard) {
   --ui5KioskKeyboard-padding: 0.75rem;
   --ui5KioskKeyboard-keyGap: @_ui5KioskKeyGap;
   --ui5KioskKeyboard-keyHeight: @_ui5KioskKeyHeight;
@@ -86,7 +88,9 @@
   --ui5KioskKeyboard-cqCompactThreshold: 20rem;
   --ui5KioskKeyboard-cqShortThreshold: 16rem;
   --ui5KioskKeyboard-cqTinyThreshold: 12rem;
+}
 
+.ui5KioskKeyboard {
   /* ---- Private styling aliases ---- */
   --_ui5KioskKeyboard-padding: ~"var(--ui5KioskKeyboard-padding)";
   --_ui5KioskKeyboard-keyGap: ~"var(--ui5KioskKeyboard-keyGap)";

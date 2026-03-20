@@ -18,8 +18,9 @@
       }
       /* Instead of height constraints, shrink keys via CSS custom properties
          so the keyboard naturally fits in less vertical space.
-         Double-class selector beats the single-class defaults in the library. */
-      .ui5KioskKeyboard.demoPopoverKbCustomVars {
+         A single class is enough -- the library sets defaults at zero specificity
+         via :where(.ui5KioskKeyboard). */
+      .demoPopoverKbCustomVars {
         --ui5KioskKeyboard-keyHeight: 2.25rem;
         --ui5KioskKeyboard-keyGap: 0.25rem;
         --ui5KioskKeyboard-padding: 0.5rem;
