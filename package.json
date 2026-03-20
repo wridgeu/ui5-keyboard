@@ -113,10 +113,6 @@
     "typescript": "~5.9.3",
     "wdio-qunit-service": "^2.0.0"
   },
-  "lint-staged": {
-    "!(*.gen).{ts,js,mjs,cjs,json,yaml,yml,md,html,css,less}": "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
-    "!(*.gen).{ts,js,mjs,cjs}": "oxlint --fix"
-  },
   "engines": {
     "node": ">=22"
   }
