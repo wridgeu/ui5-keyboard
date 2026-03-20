@@ -971,26 +971,35 @@ export default class KioskKeyboard extends Control {
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
 
-    // Height classes -- only apply when the keyboard is externally constrained
-    // (host height < natural content height). This prevents naturally short
-    // keyboards (F-Keys, Nav) from triggering height breakpoints.
-    // Also skip for docked keyboards (viewport-driven, not container-constrained)
-    // and numpad (already compact, shouldn't shrink further).
+    // Height classes -- only apply when the keyboard has enough rows that its
+    // natural height would exceed the threshold. This prevents naturally short
+    // keyboards (F-Keys, Nav with 1-2 rows) from triggering height breakpoints.
+    // Skip for docked keyboards (viewport-driven) and numpad (already compact).
+    //
+    // Previous approach removed responsive classes before measuring scrollHeight
+    // to detect constraint. This caused height oscillation: applying --cq-tiny
+    // shrank content below max-height, triggering ResizeObserver, which removed
+    // classes, grew content, re-applied classes -- every frame. The row-count
+    // approach is stable because it doesn't modify classes during measurement.
     const docked = this.getDocked();
     const isNumpad = this.getKeyboardType() === KeyboardType.Numpad;
-    dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
     if (docked || isNumpad) {
+      dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
       return;
     }
 
     if (height === undefined) {
       height = dom.getBoundingClientRect().height;
     }
-    const naturalHeight = dom.scrollHeight;
 
-    const constrained = naturalHeight > height + 1;
+    // A keyboard with >= 4 rows (e.g. full QWERTY: 5 rows at 3rem + gaps +
+    // padding ~= 18rem / 288px) would naturally exceed the short threshold
+    // (16rem / 256px). Layouts with fewer rows (F-Keys: 1 row, Nav: 2 rows)
+    // are naturally short and should never trigger height breakpoints.
+    const rowCount = dom.querySelectorAll(`.${KIOSK_KEYBOARD_DOM.classes.row}`).length;
     const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
     const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
+    const constrained = rowCount >= 4;
     const isShort = constrained && height <= shortThresh;
     const isTiny = constrained && height <= tinyThresh;
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
