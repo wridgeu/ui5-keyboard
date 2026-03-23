@@ -1818,7 +1818,6 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       await waitForResponsiveSync();
 
-      const root = rootDiv(el);
       expect(
         el.classList.contains(DOM.classes.hostCqShort),
         "content-box height triggers cq-short despite host padding",
@@ -2162,7 +2161,6 @@ describe("kiosk-keyboard", () => {
       el.refreshResponsiveState();
       await waitForResponsiveSync();
 
-      const root = rootDiv(el);
       expect(el.classList.contains(DOM.classes.hostCqShort)).to.be.true;
     });
   });

@@ -223,7 +223,7 @@ function createChildServerManager(opts: {
     serverProcess.once("exit", (code, signal) => {
       const output = serverOutput?.format() ?? "";
       console.error(
-        `[wdio-server] ${label} exited unexpectedly ` + `(code=${code ?? "null"}, signal=${signal ?? "null"})${output}`,
+        `[wdio-server] ${label} exited unexpectedly (code=${code ?? "null"}, signal=${signal ?? "null"})${output}`,
       );
       crashInfo = { code, signal };
       serverProcess = undefined;
@@ -243,7 +243,7 @@ function createChildServerManager(opts: {
       console.warn(`[wdio-server] ${label} is unresponsive, restarting...`);
     } else if (crashInfo) {
       console.warn(
-        `[wdio-server] ${label} crashed ` + `(code=${crashInfo.code}, signal=${crashInfo.signal}), restarting...`,
+        `[wdio-server] ${label} crashed (code=${crashInfo.code}, signal=${crashInfo.signal}), restarting...`,
       );
     }
     // Clean up the dead/hung process before restarting.
