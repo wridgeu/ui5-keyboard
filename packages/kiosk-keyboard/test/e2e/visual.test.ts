@@ -1,4 +1,5 @@
 import { $, browser } from "@wdio/globals";
+import type Element from "sap/ui/core/Element";
 import {
   openVisualPage,
   getKeyboard,
@@ -155,8 +156,8 @@ describe("KioskKeyboard Interactive States", () => {
       await browser.execute(() => {
         const kbDom = document.querySelector("#kb-docked .ui5KioskKeyboard");
         if (!kbDom) return;
-        const Element = sap.ui.require("sap/ui/core/Element") as typeof import("sap/ui/core/Element").default;
-        Element?.getElementById?.(kbDom.id)?.show?.();
+        const Elem: typeof Element | undefined = sap.ui.require("sap/ui/core/Element");
+        Elem?.getElementById?.(kbDom.id)?.show?.();
       });
       const dockedKb = await $("#kb-docked .ui5KioskKeyboard");
       await dockedKb.waitForDisplayed({ timeout: 5_000 });
