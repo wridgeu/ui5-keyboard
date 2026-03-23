@@ -124,7 +124,10 @@ describe("KioskKeyboard WebC - Fallback: without color-mix()", () => {
     await removeShadowStyleOverride("disable-color-mix");
   });
 
-  it("should match hovered key shadows without color-mix()", async () => {
+  it("should match hovered key shadows without color-mix()", async function () {
+    const supportsHover = await browser.execute(() => window.matchMedia("(hover: hover)").matches);
+    if (!supportsHover) return this.skip();
+
     const kb = await getKeyboardRoot("kb-qwerty");
     await forceHoverState("kb-qwerty", '[data-key="f"]');
     try {
