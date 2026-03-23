@@ -91,7 +91,10 @@ describe("KioskKeyboard Interactive States", () => {
     await openVisualPage();
   });
 
-  it("should match key hover state", async () => {
+  it("should match key hover state", async function () {
+    const supportsHover = await browser.execute(() => window.matchMedia("(hover: hover)").matches);
+    if (!supportsHover) return this.skip();
+
     const kb = await getKeyboard("kb-qwerty");
     await isolateSection(kb);
     try {
