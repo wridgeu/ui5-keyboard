@@ -68,12 +68,12 @@
         max-height: 180px;
         overflow: hidden;
       }
-      /* Ancestor-constrained fixtures: flex parent constrains the keyboard */
+      /* Ancestor-constrained fixtures: flex parent constrains the keyboard.
+         No border-radius or overflow:hidden on the wrapper -- the keyboard
+         root already has its own border-radius, border, and overflow:hidden,
+         so adding them here would double-clip the outermost key corners. */
       #kb-ancestor-constrained-wrap,
       #kb-ancestor-tiny-wrap {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
         box-sizing: border-box;
       }
       #kb-ancestor-constrained-wrap {
@@ -81,7 +81,6 @@
         flex-direction: column;
         width: 400px;
         height: 250px;
-        overflow: hidden;
       }
       #kb-ancestor-constrained-wrap .ui5KioskKeyboard {
         flex: 1;
@@ -93,7 +92,6 @@
         flex-direction: column;
         width: 400px;
         height: 180px;
-        overflow: hidden;
       }
       #kb-ancestor-tiny-wrap .ui5KioskKeyboard {
         flex: 1;
