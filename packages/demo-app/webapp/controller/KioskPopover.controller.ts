@@ -5,6 +5,18 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
+interface PopoverVariant {
+  styleClass: string;
+  ariaLabel: string;
+  title: string;
+}
+
+const VARIANTS: Record<string, PopoverVariant> = {
+  A: { styleClass: "demoPopoverKbGenerous", ariaLabel: "Virtual Keyboard (generous)", title: "Generous (19 rem)" },
+  B: { styleClass: "demoPopoverKbCompact", ariaLabel: "Virtual Keyboard (compact)", title: "Compact (15 rem)" },
+  C: { styleClass: "demoPopoverKbCustomVars", ariaLabel: "Virtual Keyboard (custom vars)", title: "Custom CSS Vars" },
+};
+
 /**
  * Popover-mounted keyboard demo showing three sizing strategies.
  *
@@ -19,97 +31,42 @@ import BaseController from "./BaseController";
  * @name demo.hotkeys.controller.KioskPopover
  */
 export default class KioskPopover extends BaseController {
-  private _popoverA: Popover | null = null;
-  private _keyboardA: KioskKeyboard | null = null;
-
-  private _popoverB: Popover | null = null;
-  private _keyboardB: KioskKeyboard | null = null;
-
-  private _popoverC: Popover | null = null;
-  private _keyboardC: KioskKeyboard | null = null;
-
-  // ── A) Generous height on the keyboard element ──
+  private _keyboards = new Map<string, KioskKeyboard>();
+  private _popovers = new Map<string, Popover>();
 
   onOpenKeyboardA(event: Button$PressEvent): void {
-    const button = event.getSource();
-    const input = this.byId(button.data("inputId") as string) as Input;
-
-    if (!this._keyboardA) {
-      this._keyboardA = new KioskKeyboard({
-        keyboardType: "Full",
-        ariaLabel: "Virtual Keyboard (generous)",
-      });
-      this._keyboardA.addStyleClass("demoPopoverKbGenerous");
-    }
-    this._keyboardA.setTargetInput(input);
-
-    if (!this._popoverA) {
-      this._popoverA = new Popover({
-        title: "Generous (19 rem)",
-        placement: "Auto",
-        content: [this._keyboardA],
-        contentWidth: "24rem",
-      });
-      this.getView()!.addDependent(this._popoverA);
-    }
-
-    this._popoverA.openBy(button);
+    this._openVariant("A", event);
   }
-
-  // ── B) Compact height on the keyboard element (triggers cq-short) ──
 
   onOpenKeyboardB(event: Button$PressEvent): void {
-    const button = event.getSource();
-    const input = this.byId(button.data("inputId") as string) as Input;
-
-    if (!this._keyboardB) {
-      this._keyboardB = new KioskKeyboard({
-        keyboardType: "Full",
-        ariaLabel: "Virtual Keyboard (compact)",
-      });
-      this._keyboardB.addStyleClass("demoPopoverKbCompact");
-    }
-    this._keyboardB.setTargetInput(input);
-
-    if (!this._popoverB) {
-      this._popoverB = new Popover({
-        title: "Compact (15 rem)",
-        placement: "Auto",
-        content: [this._keyboardB],
-        contentWidth: "24rem",
-      });
-      this.getView()!.addDependent(this._popoverB);
-    }
-
-    this._popoverB.openBy(button);
+    this._openVariant("B", event);
   }
 
-  // ── C) Custom CSS variables to fit naturally ──
-
   onOpenKeyboardC(event: Button$PressEvent): void {
+    this._openVariant("C", event);
+  }
+
+  private _openVariant(key: string, event: Button$PressEvent): void {
+    const variant = VARIANTS[key];
     const button = event.getSource();
     const input = this.byId(button.data("inputId") as string) as Input;
 
-    if (!this._keyboardC) {
-      this._keyboardC = new KioskKeyboard({
-        keyboardType: "Full",
-        ariaLabel: "Virtual Keyboard (custom vars)",
-      });
-      this._keyboardC.addStyleClass("demoPopoverKbCustomVars");
+    let keyboard = this._keyboards.get(key);
+    if (!keyboard) {
+      keyboard = new KioskKeyboard({ keyboardType: "Full", ariaLabel: variant.ariaLabel });
+      keyboard.addStyleClass(variant.styleClass);
+      this._keyboards.set(key, keyboard);
     }
-    this._keyboardC.setTargetInput(input);
+    keyboard.setTargetInput(input);
 
-    if (!this._popoverC) {
-      this._popoverC = new Popover({
-        title: "Custom CSS Vars",
-        placement: "Auto",
-        content: [this._keyboardC],
-        contentWidth: "24rem",
-      });
-      this.getView()!.addDependent(this._popoverC);
+    let popover = this._popovers.get(key);
+    if (!popover) {
+      popover = new Popover({ title: variant.title, placement: "Auto", content: [keyboard], contentWidth: "24rem" });
+      this.getView()!.addDependent(popover);
+      this._popovers.set(key, popover);
     }
 
-    this._popoverC.openBy(button);
+    popover.openBy(button);
   }
 
   onNavBack(): void {
@@ -117,16 +74,10 @@ export default class KioskPopover extends BaseController {
   }
 
   onExit(): void {
-    this._popoverA?.destroy();
-    this._popoverA = null;
-    this._keyboardA = null;
-
-    this._popoverB?.destroy();
-    this._popoverB = null;
-    this._keyboardB = null;
-
-    this._popoverC?.destroy();
-    this._popoverC = null;
-    this._keyboardC = null;
+    for (const popover of this._popovers.values()) {
+      popover.destroy();
+    }
+    this._popovers.clear();
+    this._keyboards.clear();
   }
 }
