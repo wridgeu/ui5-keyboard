@@ -183,30 +183,50 @@ export async function assertSnapshotTargetIsUsable(
       selector,
     );
     if (!isKeyboard) {
-      const nestedOverflow = await browser.execute(
-        (el: HTMLElement, sel: string) => {
-          const kb = el.querySelector(sel) as HTMLElement | null;
-          if (!kb) return null;
-          const tolerance = 2;
-          if (kb.scrollWidth > kb.clientWidth + tolerance || kb.scrollHeight > kb.clientHeight + tolerance) {
-            return {
-              clientWidth: kb.clientWidth,
-              clientHeight: kb.clientHeight,
-              scrollWidth: kb.scrollWidth,
-              scrollHeight: kb.scrollHeight,
-            };
-          }
-          return null;
-        },
-        await element,
-        selector,
-      );
+      // Wait briefly for responsive sizing to stabilize. UI5's ResizeHandler
+      // and the WebC ResizeObserver + rAF coalescing may not have fired yet
+      // when the test reaches the snapshot. Retry for up to 2 seconds.
+      const resolved = await element;
+      let lastOverflow: {
+        clientWidth: number;
+        clientHeight: number;
+        scrollWidth: number;
+        scrollHeight: number;
+      } | null = null;
+      try {
+        await browser.waitUntil(
+          async () => {
+            lastOverflow = await browser.execute(
+              (el: HTMLElement, sel: string) => {
+                const kb = el.querySelector(sel) as HTMLElement | null;
+                if (!kb) return null;
+                const tolerance = 2;
+                if (kb.scrollWidth > kb.clientWidth + tolerance || kb.scrollHeight > kb.clientHeight + tolerance) {
+                  return {
+                    clientWidth: kb.clientWidth,
+                    clientHeight: kb.clientHeight,
+                    scrollWidth: kb.scrollWidth,
+                    scrollHeight: kb.scrollHeight,
+                  };
+                }
+                return null;
+              },
+              resolved,
+              selector,
+            );
+            return lastOverflow === null;
+          },
+          { timeout: 2000, interval: 100, timeoutMsg: "" },
+        );
+      } catch {
+        // timeout -- lastOverflow holds the final measured state
+      }
 
-      if (nestedOverflow) {
+      if (lastOverflow) {
         throw new Error(
           `Snapshot target '${name}' contains a keyboard child with internal overflow. ` +
-            `keyboard client=${nestedOverflow.clientWidth}x${nestedOverflow.clientHeight} ` +
-            `scroll=${nestedOverflow.scrollWidth}x${nestedOverflow.scrollHeight}.`,
+            `keyboard client=${lastOverflow.clientWidth}x${lastOverflow.clientHeight} ` +
+            `scroll=${lastOverflow.scrollWidth}x${lastOverflow.scrollHeight}.`,
         );
       }
     }
