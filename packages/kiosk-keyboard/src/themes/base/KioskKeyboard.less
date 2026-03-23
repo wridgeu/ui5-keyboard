@@ -26,8 +26,8 @@
  * Shadows (set to "none" for a flat appearance):
  *   --ui5KioskKeyboard-keyShadow             Key resting shadow
  *   --ui5KioskKeyboard-keyShadowHover        Key hover shadow
- *   --ui5KioskKeyboard-modifierShadow        Modifier/action key resting shadow
- *   --ui5KioskKeyboard-modifierShadowHover   Modifier/action key hover shadow
+ *   --ui5KioskKeyboard-modifierShadow        Modifier key resting shadow
+ *   --ui5KioskKeyboard-modifierShadowHover   Modifier key hover shadow
  *
  * Docked mode:
  *   --ui5KioskKeyboard-dockedMaxWidth   Max width when docked (default: 1024px)
@@ -123,6 +123,7 @@
   max-width: var(--_ui5KioskKeyboard-maxWidth);
   box-sizing: border-box;
   container-type: inline-size;
+  container-name: keyboard;
 
   /* ---- Mode: Numpad ---- */
   &--numpad {
@@ -384,14 +385,17 @@
   --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.875rem)";
 }
 
-/* ---- Height-responsive classes (JS-driven) ---- */
-.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) {
+/* ---- Height-responsive classes (JS-driven) ----
+   :where() gives zero specificity so any consumer class selector
+   (e.g. .myKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }) wins.
+   Source order ensures these still beat the :where(.ui5KioskKeyboard) defaults. */
+:where(.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad)) {
   --ui5KioskKeyboard-keyHeight: 2.25rem;
   --ui5KioskKeyboard-keyGap: 0.25rem;
   --ui5KioskKeyboard-padding: 0.5rem;
 }
 
-.ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) {
+:where(.ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad)) {
   --ui5KioskKeyboard-keyHeight: 1.75rem;
   --ui5KioskKeyboard-keyGap: 0.125rem;
   --ui5KioskKeyboard-padding: 0.25rem;

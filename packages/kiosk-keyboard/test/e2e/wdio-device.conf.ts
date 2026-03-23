@@ -34,6 +34,8 @@ const server = createServerManager(
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 
+const chromedriverOpts = buildChromedriverOptions();
+
 export const config: wdi5Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
@@ -42,7 +44,7 @@ export const config: wdi5Config = {
     path.resolve(__dirname, "visual.test.ts"),
     // Fixed-width container tests (400-600px fixtures) only on profiles wide
     // enough to hold them. Viewport-width responsive tests run on all profiles.
-    ...(profile.width >= 360 ? [path.resolve(__dirname, "visual-container.test.ts")] : []),
+    ...(profile.width >= 400 ? [path.resolve(__dirname, "visual-container.test.ts")] : []),
     path.resolve(__dirname, "visual-container-responsive.test.ts"),
     path.resolve(__dirname, "visual-enhancements.test.ts"),
     path.resolve(__dirname, "visual-themes.test.ts"),
@@ -59,7 +61,7 @@ export const config: wdi5Config = {
       browserVersion: CHROME_VERSION,
       "wdio:maxInstances": 1,
       "goog:chromeOptions": buildChromeOptions(profile, headless),
-      ...(buildChromedriverOptions() ? { "wdio:chromedriverOptions": buildChromedriverOptions() } : {}),
+      ...(chromedriverOpts ? { "wdio:chromedriverOptions": chromedriverOpts } : {}),
     },
   ],
 

@@ -28,6 +28,9 @@ const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];
 if (headless) chromeArgs.unshift("--headless=new");
 
+const cachedBinaries = resolveCachedBinaries();
+const chromedriverOpts = buildChromedriverOptions();
+
 export const config: wdi5Config = {
   runner: "local",
   tsConfigPath: path.resolve(__dirname, "tsconfig.json"),
@@ -46,9 +49,9 @@ export const config: wdi5Config = {
       browserVersion: CHROME_VERSION,
       "goog:chromeOptions": {
         args: chromeArgs,
-        ...(resolveCachedBinaries().chrome ? { binary: resolveCachedBinaries().chrome } : {}),
+        ...(cachedBinaries.chrome ? { binary: cachedBinaries.chrome } : {}),
       },
-      ...(buildChromedriverOptions() ? { "wdio:chromedriverOptions": buildChromedriverOptions() } : {}),
+      ...(chromedriverOpts ? { "wdio:chromedriverOptions": chromedriverOpts } : {}),
     },
   ],
 

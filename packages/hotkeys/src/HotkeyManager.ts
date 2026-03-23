@@ -49,8 +49,10 @@ type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"
  * including `sap.ui.core.routing.Router` and `sap.m.routing.Router`.
  */
 export interface RouterLike {
-  attachBeforeRouteMatched(handler: Function, listener?: object): unknown;
-  detachBeforeRouteMatched(handler: Function, listener?: object): unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UI5 router duck-type compatibility
+  attachBeforeRouteMatched(handler: (...args: any[]) => void, listener?: object): unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UI5 router duck-type compatibility
+  detachBeforeRouteMatched(handler: (...args: any[]) => void, listener?: object): unknown;
 }
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";

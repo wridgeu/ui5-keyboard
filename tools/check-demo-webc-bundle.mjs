@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { runNpm } from "./run-npm.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const demoPackageJsonPath = path.join(repoRoot, "packages", "demo-app", "package.json");
@@ -24,35 +24,8 @@ if (!controllerSource.includes('import "kiosk-keyboard-webc/bundle";')) {
   );
 }
 
-const npmExecPath = process.env.npm_execpath;
-const npmCommand = npmExecPath ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm";
-function runNpm(args) {
-  const spawnArgs = npmExecPath ? [npmExecPath, ...args] : args;
-  const result = spawnSync(npmCommand, spawnArgs, {
-    cwd: repoRoot,
-    encoding: "utf8",
-    shell: false,
-  });
-
-  if (result.stdout) {
-    process.stdout.write(result.stdout);
-  }
-
-  if (result.stderr) {
-    process.stderr.write(result.stderr);
-  }
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
-}
-
-runNpm(["run", "clean", "-w", "packages/kiosk-keyboard-webc"]);
-runNpm(["run", "build:dev", "-w", "packages/kiosk-keyboard-webc"]);
+runNpm(["run", "clean", "-w", "packages/kiosk-keyboard-webc"], repoRoot);
+runNpm(["run", "build:dev", "-w", "packages/kiosk-keyboard-webc"], repoRoot);
 
 let resolvedBundlePath;
 try {
@@ -68,6 +41,6 @@ if (!fs.existsSync(resolvedBundlePath)) {
   throw new Error(`Resolved 'kiosk-keyboard-webc/bundle' to '${resolvedBundlePath}', but that file does not exist.`);
 }
 
-runNpm(["run", "build", "-w", "packages/demo-app"]);
+runNpm(["run", "build", "-w", "packages/demo-app"], repoRoot);
 
 process.stdout.write(`Verified demo build for the public kiosk-keyboard-webc/bundle entry (${resolvedBundlePath}).\n`);

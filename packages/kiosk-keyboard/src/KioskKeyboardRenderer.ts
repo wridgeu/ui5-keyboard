@@ -4,8 +4,7 @@ import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
-
-const glyphSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+import { isSingleGlyph } from "./internal/grapheme";
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({
   classes: Object.freeze({
@@ -300,7 +299,7 @@ const KioskKeyboardRenderer = {
       } else {
         const label = _getKeyLabel(key);
         rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
-        if (this.isSingleGlyphLabel(label)) {
+        if (isSingleGlyph(label)) {
           rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
         } else if (key.type !== "modifier" && key.type !== "action") {
           rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);
@@ -310,15 +309,6 @@ const KioskKeyboardRenderer = {
         rm.close("span");
       }
     }
-  },
-
-  isSingleGlyphLabel(label: string): boolean {
-    let count = 0;
-    for (const _segment of glyphSegmenter.segment(label)) {
-      count += 1;
-      if (count > 1) return false;
-    }
-    return count === 1;
   },
 };
 

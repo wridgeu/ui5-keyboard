@@ -1,10 +1,8 @@
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { runNpm } from "./run-npm.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const npmExecPath = process.env.npm_execpath;
-const npmCommand = npmExecPath ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm";
 
 const packages = [
   {
@@ -33,33 +31,6 @@ const packages = [
     ],
   },
 ];
-
-function runNpm(args, cwd) {
-  const spawnArgs = npmExecPath ? [npmExecPath, ...args] : args;
-  const result = spawnSync(npmCommand, spawnArgs, {
-    cwd,
-    encoding: "utf8",
-    shell: false,
-  });
-
-  if (result.stdout) {
-    process.stdout.write(result.stdout);
-  }
-
-  if (result.stderr) {
-    process.stderr.write(result.stderr);
-  }
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
-
-  return result.stdout;
-}
 
 function assertFilesPresent(packageName, files, requiredFiles) {
   const packedFiles = new Set(files.map((file) => file.path));

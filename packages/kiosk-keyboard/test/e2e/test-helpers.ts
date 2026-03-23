@@ -1,13 +1,17 @@
-import { browser, $, expect } from "@wdio/globals";
-import type { ChainablePromiseElement } from "webdriverio";
+import { browser, $ } from "@wdio/globals";
+import type { SnapshotElement, MatchSnapshotOptions } from "../../../../tools/wdio-test-helpers.js";
+import { matchElementSnapshotInSection as _matchBase } from "../../../../tools/wdio-test-helpers.js";
 
-// Re-export shared CDP helpers so consumers import everything from one place
+// Re-export shared helpers so consumers import everything from one place
 export {
   setEmulatedMediaFeatures,
   clearEmulatedMediaFeatures,
   setDocumentDirection,
   injectStyleOverride,
   removeStyleOverride,
+  isolateSection,
+  restoreSections,
+  scrollElementIntoView,
 } from "../../../../tools/wdio-test-helpers.js";
 
 export const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
@@ -44,180 +48,23 @@ export function getKeyboard(containerId: string) {
   return $(`#${containerId} .ui5KioskKeyboard`);
 }
 
-type SnapshotElement = WebdriverIO.Element | ChainablePromiseElement;
-
-type SnapshotGeometry = {
-  position: string;
-  rect: {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-    width: number;
-    height: number;
-  };
-  clientWidth: number;
-  clientHeight: number;
-  scrollWidth: number;
-  scrollHeight: number;
-  viewportWidth: number;
-  viewportHeight: number;
-};
-
-async function readSnapshotGeometry(element: SnapshotElement): Promise<SnapshotGeometry> {
-  const target = await element;
-  return browser.execute((el: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
-    return {
-      position: getComputedStyle(el).position,
-      rect: {
-        left: rect.left,
-        top: rect.top,
-        right: rect.right,
-        bottom: rect.bottom,
-        width: rect.width,
-        height: rect.height,
-      },
-      clientWidth: el.clientWidth,
-      clientHeight: el.clientHeight,
-      scrollWidth: el.scrollWidth,
-      scrollHeight: el.scrollHeight,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-    };
-  }, target);
-}
-
-async function assertSnapshotTargetIsUsable(element: SnapshotElement, name: string): Promise<void> {
-  const geometry = await readSnapshotGeometry(element);
-  const tolerancePx = 2;
-
-  if (geometry.clientWidth <= 0 || geometry.clientHeight <= 0) {
-    throw new Error(
-      `Snapshot target '${name}' has zero size (${geometry.clientWidth}x${geometry.clientHeight}). ` +
-        `Visible element snapshots require a rendered target.`,
-    );
-  }
-
-  if (
-    geometry.position !== "fixed" &&
-    (geometry.rect.left < -tolerancePx ||
-      geometry.rect.top < -tolerancePx ||
-      geometry.rect.right > geometry.viewportWidth + tolerancePx ||
-      geometry.rect.bottom > geometry.viewportHeight + tolerancePx)
-  ) {
-    throw new Error(
-      `Snapshot target '${name}' does not fully fit inside the viewport after scrolling. ` +
-        `rect=${geometry.rect.width}x${geometry.rect.height}@(${geometry.rect.left},${geometry.rect.top}) ` +
-        `viewport=${geometry.viewportWidth}x${geometry.viewportHeight}.`,
-    );
-  }
-
-  if (
-    geometry.scrollWidth > geometry.clientWidth + tolerancePx ||
-    geometry.scrollHeight > geometry.clientHeight + tolerancePx
-  ) {
-    throw new Error(
-      `Snapshot target '${name}' is internally clipped or overflowing. ` +
-        `client=${geometry.clientWidth}x${geometry.clientHeight} ` +
-        `scroll=${geometry.scrollWidth}x${geometry.scrollHeight}.`,
-    );
-  }
-
-  // Check for nested overflow in keyboard children when the target is a wrapper
-  const isKeyboard = await browser.execute(
-    (el: HTMLElement) => el.classList.contains("ui5KioskKeyboard"),
-    await element,
-  );
-  if (!isKeyboard) {
-    const nestedOverflow = await browser.execute(
-      (el: HTMLElement) => {
-        const kb = el.querySelector(".ui5KioskKeyboard") as HTMLElement | null;
-        if (!kb) return null;
-        const tolerance = 2;
-        if (kb.scrollWidth > kb.clientWidth + tolerance || kb.scrollHeight > kb.clientHeight + tolerance) {
-          return {
-            clientWidth: kb.clientWidth,
-            clientHeight: kb.clientHeight,
-            scrollWidth: kb.scrollWidth,
-            scrollHeight: kb.scrollHeight,
-          };
-        }
-        return null;
-      },
-      await element,
-    );
-
-    if (nestedOverflow) {
-      throw new Error(
-        `Snapshot target '${name}' contains a keyboard child with internal overflow. ` +
-          `keyboard client=${nestedOverflow.clientWidth}x${nestedOverflow.clientHeight} ` +
-          `scroll=${nestedOverflow.scrollWidth}x${nestedOverflow.scrollHeight}.`,
-      );
-    }
-  }
-}
-
-async function shouldScrollSnapshotTarget(element: SnapshotElement): Promise<boolean> {
-  const target = await element;
-  return browser.execute((el: HTMLElement) => getComputedStyle(el).position !== "fixed", target);
-}
-
-export async function isolateSection(element: SnapshotElement): Promise<void> {
-  const target = await element;
-  await browser.execute((el: HTMLElement) => {
-    const activeSection = el.closest(".section");
-    if (!activeSection) return;
-
-    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
-      if (section === activeSection) return;
-      if (!("snapshotPrevDisplay" in section.dataset)) {
-        section.dataset.snapshotPrevDisplay = section.style.display;
-      }
-      section.style.display = "none";
-    });
-  }, target);
-}
-
-export async function restoreSections(): Promise<void> {
-  await browser.execute(() => {
-    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
-      if (!("snapshotPrevDisplay" in section.dataset)) return;
-      const previousDisplay = section.dataset.snapshotPrevDisplay ?? "";
-      if (previousDisplay) {
-        section.style.display = previousDisplay;
-      } else {
-        section.style.removeProperty("display");
-      }
-      delete section.dataset.snapshotPrevDisplay;
-    });
-  });
-}
-
-export async function scrollElementIntoView(element: SnapshotElement): Promise<void> {
-  const target = await element;
-  await browser.execute((el: HTMLElement) => {
-    el.scrollIntoView({ block: "center", inline: "center" });
-  }, target);
-}
-
+/**
+ * Wrapper around the shared `matchElementSnapshotInSection` that enables the
+ * nested `.ui5KioskKeyboard` overflow check by default. The UI5-control
+ * package snapshots wrapper containers that hold a keyboard child, so this
+ * extra validation catches internal keyboard overflow before a baseline is
+ * captured.
+ */
 export async function matchElementSnapshotInSection(
   element: SnapshotElement,
   name: string,
-  options?: { ignoreAntialiasing?: boolean },
+  options?: MatchSnapshotOptions,
 ): Promise<void> {
-  const target = await element;
-  await isolateSection(target);
-  try {
-    if (await shouldScrollSnapshotTarget(target)) {
-      await scrollElementIntoView(target);
-    }
-    await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
-    await assertSnapshotTargetIsUsable(target, name);
-    await expect(target).toMatchElementSnapshot(name, options);
-  } finally {
-    await restoreSections();
-  }
+  return _matchBase(element, name, {
+    checkNestedKeyboardOverflow: true,
+    nestedKeyboardSelector: ".ui5KioskKeyboard",
+    ...options,
+  });
 }
 
 /**

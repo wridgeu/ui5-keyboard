@@ -93,6 +93,7 @@
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
     "@openui5/types": "1.144.0",
+    "@puppeteer/browsers": "^2.13.0",
     "@types/node": "^22.0.0",
     "@types/qunit": "^2.19.13",
     "@types/sinon": "^21.0.0",
@@ -114,6 +115,6 @@
     "wdio-qunit-service": "^2.0.0"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.14"
   }
 }

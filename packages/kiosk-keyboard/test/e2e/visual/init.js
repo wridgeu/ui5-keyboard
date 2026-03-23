@@ -70,45 +70,45 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
   // 12. Inline in fixed container
   new KioskKeyboard().placeAt("kb-container-fixed");
 
-  // 14. Function Keys (F1-F12)
+  // 13. Function Keys (F1-F12)
   new KioskKeyboard({ layout: "fkeys" }).placeAt("kb-fkeys");
 
-  // 15. Navigation Keys
+  // 14. Navigation Keys
   new KioskKeyboard({ layout: "nav" }).placeAt("kb-nav");
 
-  // 16. QWERTY with F-Key Row
+  // 15. QWERTY with F-Key Row
   new KioskKeyboard({ layout: "qwerty-fk" }).placeAt("kb-qwerty-fk");
 
-  // 17. QWERTZ-DE with F-Key Row
+  // 16. QWERTZ-DE with F-Key Row
   new KioskKeyboard({ layout: "qwertz-de-fk" }).placeAt("kb-qwertz-de-fk");
 
-  // 18. QWERTY with Nav Row
+  // 17. QWERTY with Nav Row
   new KioskKeyboard({ layout: "qwerty-nav" }).placeAt("kb-qwerty-nav");
 
-  // 19. QWERTZ-DE with Nav Row
+  // 18. QWERTZ-DE with Nav Row
   new KioskKeyboard({ layout: "qwertz-de-nav" }).placeAt("kb-qwertz-de-nav");
 
-  // 20. Glyph stress layout
+  // 19. Glyph stress layout
   new KioskKeyboard({ layout: "glyph-stress" }).placeAt("kb-glyph-stress");
 
-  // 21. Height-constrained container
+  // 20. Height-constrained container
   new KioskKeyboard().placeAt("kb-height-constrained");
 
-  // 22. Severely height-constrained container
+  // 21. Severely height-constrained container
   new KioskKeyboard().placeAt("kb-height-tiny");
 
-  // 23. Ancestor-constrained (flex parent 400x250)
+  // 22. Ancestor-constrained (flex parent 400x250)
   new KioskKeyboard().placeAt("kb-ancestor-constrained-wrap");
 
-  // 24. Ancestor-constrained severely (flex parent 400x180)
+  // 23. Ancestor-constrained severely (flex parent 400x180)
   new KioskKeyboard().placeAt("kb-ancestor-tiny-wrap");
 
-  // 25. Narrow + height-constrained (320x250)
+  // 24. Narrow + height-constrained (320x250)
   new KioskKeyboard().placeAt("kb-narrow-short");
 
-  // 26. Viewport-width height-constrained (250px)
+  // 25. Viewport-width height-constrained (250px)
   new KioskKeyboard().placeAt("kb-vw-height-short");
 
-  // 27. Viewport-width severely height-constrained (180px)
+  // 26. Viewport-width severely height-constrained (180px)
   new KioskKeyboard().placeAt("kb-vw-height-tiny");
 });

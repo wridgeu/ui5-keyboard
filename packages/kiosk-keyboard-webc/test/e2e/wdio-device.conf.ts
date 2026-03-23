@@ -7,6 +7,7 @@ import {
   deviceProfiles,
   CHROME_VERSION,
   DEVICE_BASE_PORTS,
+  ensureBrowsersDownloaded,
 } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
@@ -25,6 +26,8 @@ const PORT = BASE_PORT + profile.portOffset;
 const server = createViteServerManager(PORT, PACKAGE_ROOT, 60_000, "/test/pages/index.html");
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
+
+const chromedriverOpts = buildChromedriverOptions();
 
 export const config: WebdriverIO.Config = {
   runner: "local",
@@ -48,7 +51,7 @@ export const config: WebdriverIO.Config = {
       browserVersion: CHROME_VERSION,
       "wdio:maxInstances": 1,
       "goog:chromeOptions": buildChromeOptions(profile, headless),
-      ...(buildChromedriverOptions() ? { "wdio:chromedriverOptions": buildChromedriverOptions() } : {}),
+      ...(chromedriverOpts ? { "wdio:chromedriverOptions": chromedriverOpts } : {}),
     },
   ],
 
@@ -86,6 +89,10 @@ export const config: WebdriverIO.Config = {
     ],
   ],
 
-  onPrepare: () => server.onPrepare(),
+  onPrepare: async () => {
+    await ensureBrowsersDownloaded();
+    await server.onPrepare();
+  },
+  onWorkerStart: () => server.ensureRunning(),
   onComplete: () => server.onComplete(),
 };

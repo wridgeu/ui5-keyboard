@@ -135,6 +135,7 @@ export default class KioskKeyboard extends Control {
   declare private _responsiveObservedDom: HTMLElement | null;
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
   declare private _responsiveSyncFrameId: number | null;
+  /** Cached row count, updated in onAfterRendering to avoid DOM queries on every resize. */
 
   static readonly metadata = {
     library: "ui5.kiosk" as const,
@@ -954,15 +955,14 @@ export default class KioskKeyboard extends Control {
    * constrained (host height < natural content height). Skipped for docked and numpad.
    * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
    */
-  private _applyResponsiveSizeClasses(dom: HTMLElement, width?: number, height?: number): void {
+  private _applyResponsiveSizeClasses(dom: HTMLElement): void {
     const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
     const cs = window.getComputedStyle(dom);
 
-    // Default to content-box width (matching container query semantics and the
+    // Content-box width (matching container query semantics and the
     // WebC package) so breakpoints fire at the same container size in both packages.
-    if (width === undefined) {
-      width = dom.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
-    }
+    const width =
+      dom.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
     const narrowThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqNarrowThreshold", 30, remPx);
     const compactThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqCompactThreshold", 20, remPx);
     const isCompact = width <= compactThresh;
@@ -971,29 +971,33 @@ export default class KioskKeyboard extends Control {
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
 
-    // Height classes -- only apply when the keyboard has enough rows that its
-    // natural height would exceed the threshold. This prevents naturally short
-    // keyboards (F-Keys, Nav) from triggering height breakpoints.
-    // Skip for docked keyboards (viewport-driven) and numpad (already compact).
+    // Height classes -- detect external height constraints by comparing the
+    // keyboard's natural (unconstrained) content height against its rendered
+    // height. Skip for docked keyboards (viewport-driven) and numpad.
+    dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
+
     const docked = this.getDocked();
     const isNumpad = this.getKeyboardType() === KeyboardType.Numpad;
     if (docked || isNumpad) {
-      dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
       return;
     }
 
-    if (height === undefined) {
-      height = dom.getBoundingClientRect().height;
+    // scrollHeight reports the full content height even under overflow: hidden.
+    // If the element ever uses overflow: clip, scrollHeight may equal
+    // clientHeight in some browsers, breaking constrained detection.
+    const naturalHeight = dom.scrollHeight;
+    const renderedHeight = dom.getBoundingClientRect().height;
+
+    // Only apply when externally constrained (natural content > rendered).
+    // The +1px tolerance avoids oscillation from sub-pixel rounding.
+    if (naturalHeight <= renderedHeight + 1) {
+      return;
     }
 
-    // Keyboards with 4+ rows naturally exceed the short threshold when
-    // unconstrained. Fewer rows (F-Keys, Nav) are naturally short.
-    const rowCount = dom.querySelectorAll(`.${KIOSK_KEYBOARD_DOM.classes.row}`).length;
     const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
     const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
-    const constrained = rowCount >= 4;
-    const isShort = constrained && height <= shortThresh;
-    const isTiny = constrained && height <= tinyThresh;
+    const isShort = renderedHeight <= shortThresh;
+    const isTiny = renderedHeight <= tinyThresh;
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }

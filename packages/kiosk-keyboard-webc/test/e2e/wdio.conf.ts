@@ -6,6 +6,7 @@ import {
   DESKTOP_WINDOW_SIZE,
   resolveCachedBinaries,
   buildChromedriverOptions,
+  ensureBrowsersDownloaded,
 } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
@@ -18,6 +19,9 @@ const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
 const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];
 if (headless) chromeArgs.unshift("--headless=new");
+
+const cachedBinaries = resolveCachedBinaries();
+const chromedriverOpts = buildChromedriverOptions();
 
 export const config: WebdriverIO.Config = {
   runner: "local",
@@ -33,9 +37,9 @@ export const config: WebdriverIO.Config = {
       browserVersion: CHROME_VERSION,
       "goog:chromeOptions": {
         args: chromeArgs,
-        ...(resolveCachedBinaries().chrome ? { binary: resolveCachedBinaries().chrome } : {}),
+        ...(cachedBinaries.chrome ? { binary: cachedBinaries.chrome } : {}),
       },
-      ...(buildChromedriverOptions() ? { "wdio:chromedriverOptions": buildChromedriverOptions() } : {}),
+      ...(chromedriverOpts ? { "wdio:chromedriverOptions": chromedriverOpts } : {}),
     },
   ],
 
@@ -67,6 +71,10 @@ export const config: WebdriverIO.Config = {
     ],
   ],
 
-  onPrepare: () => server.onPrepare(),
+  onPrepare: async () => {
+    await ensureBrowsersDownloaded();
+    await server.onPrepare();
+  },
+  onWorkerStart: () => server.ensureRunning(),
   onComplete: () => server.onComplete(),
 };

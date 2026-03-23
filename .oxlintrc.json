@@ -23,6 +23,7 @@
     "eqeqeq": "warn",
     "no-console": "warn",
     "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unsafe-function-type": "error",
     "unicorn/no-null": "off",
     "unicorn/prefer-event-target": "off",
     "unicorn/prefer-top-level-await": "off",

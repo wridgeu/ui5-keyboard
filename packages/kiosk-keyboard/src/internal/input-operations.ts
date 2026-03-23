@@ -6,6 +6,14 @@ import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme";
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
 export type CursorPos = [number, number];
 
+/** Resolves the effective cursor range from an explicit tuple or the DOM selection. */
+function resolveCursor(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos {
+  if (cursor) return cursor;
+  const len = dom.value.length;
+  const start = dom.selectionStart ?? len;
+  return [start, dom.selectionEnd ?? start];
+}
+
 function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): number {
   const len = value.length;
   const pos = Math.max(0, Math.min(caret, len));
@@ -47,8 +55,7 @@ export function insertText(
   customResolver?: TargetResolverFn | null,
 ): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
-  const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
-  const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
+  const [start, end] = resolveCursor(dom, cursor);
   const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
   const newPos = start + text.length;
 
@@ -80,8 +87,7 @@ export function handleBackspace(
   customResolver?: TargetResolverFn | null,
 ): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
-  const start = cursor ? cursor[0] : (dom.selectionStart ?? dom.value.length);
-  const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
+  const [start, end] = resolveCursor(dom, cursor);
 
   let newValue: string;
   let newPos: number;
@@ -119,9 +125,8 @@ export function handleNavigation(
   key: string,
   cursor?: CursorPos,
 ): CursorPos | null {
+  const [start, end] = resolveCursor(dom, cursor);
   const len = dom.value.length;
-  const start = cursor ? cursor[0] : (dom.selectionStart ?? len);
-  const end = cursor ? cursor[1] : (dom.selectionEnd ?? start);
 
   let newPos: number | null = null;
 

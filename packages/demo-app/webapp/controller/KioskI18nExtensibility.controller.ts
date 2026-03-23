@@ -1,5 +1,6 @@
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import type { Route$PatternMatchedEvent } from "sap/ui/core/routing/Route";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
 import { Scope } from "../constants";
@@ -28,7 +29,8 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
  */
 export default class KioskI18nExtensibility extends BaseController {
   private static readonly _MODEL_NAME = "i18nDemo";
-  private _inspectorDelegate: object | null = null;
+  private _active = false;
+  private _inspectorDelegate: { onAfterRendering: () => void } | null = null;
 
   onInit(): void {
     this.getView()!.setModel(
@@ -52,11 +54,15 @@ export default class KioskI18nExtensibility extends BaseController {
     };
     (this.byId("i18nKeyboard") as KioskKeyboard).addEventDelegate(this._inspectorDelegate, this);
 
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    const router = this.getTypedComponent().getRouter();
+    router.getRoute(Scope.KioskI18nExtensibility)?.attachPatternMatched(this._onPatternMatched, this);
+    router.attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    const router = this.getTypedComponent().getRouter();
+    router.getRoute(Scope.KioskI18nExtensibility)?.detachPatternMatched(this._onPatternMatched, this);
+    router.detachRouteMatched(this._onRouteMatched, this);
     if (this._inspectorDelegate) {
       (this.byId("i18nKeyboard") as KioskKeyboard | undefined)?.removeEventDelegate(this._inspectorDelegate);
     }
@@ -164,9 +170,15 @@ export default class KioskI18nExtensibility extends BaseController {
 
   // ── Route lifecycle ────────────────────────────
 
+  private _onPatternMatched(_event: Route$PatternMatchedEvent): void {
+    this._active = true;
+  }
+
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
+    if (!this._active) return;
     const routeName = event.getParameter("name");
     if (routeName !== Scope.KioskI18nExtensibility) {
+      this._active = false;
       this._resetI18n();
       this._getViewModel().setData({ activeMode: "default", modeDescription: MODE_DESCRIPTIONS["default"] }, true);
     }

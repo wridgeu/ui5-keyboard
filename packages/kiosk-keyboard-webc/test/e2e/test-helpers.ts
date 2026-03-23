@@ -1,7 +1,8 @@
-import { browser, $, expect } from "@wdio/globals";
-import type { ChainablePromiseElement } from "webdriverio";
+import { browser, $ } from "@wdio/globals";
+import type { SnapshotElement, MatchSnapshotOptions } from "../../../../tools/wdio-test-helpers.js";
+import { matchElementSnapshotInSection as _matchBase } from "../../../../tools/wdio-test-helpers.js";
 
-// Re-export shared CDP helpers so consumers import everything from one place
+// Re-export shared helpers so consumers import everything from one place
 export {
   setEmulatedMediaFeatures,
   clearEmulatedMediaFeatures,
@@ -104,157 +105,21 @@ export async function waitForDockedKeyboardClosed(hostId: string, timeout = 5_00
   return readDockedKeyboardState(hostId);
 }
 
-type SnapshotElement = WebdriverIO.Element | ChainablePromiseElement;
-
-type SnapshotGeometry = {
-  position: string;
-  rect: {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-    width: number;
-    height: number;
-  };
-  clientWidth: number;
-  clientHeight: number;
-  scrollWidth: number;
-  scrollHeight: number;
-  viewportWidth: number;
-  viewportHeight: number;
-};
-
-async function readSnapshotGeometry(element: SnapshotElement): Promise<SnapshotGeometry> {
-  const target = await element;
-  return browser.execute((el: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
-    return {
-      position: getComputedStyle(el).position,
-      rect: {
-        left: rect.left,
-        top: rect.top,
-        right: rect.right,
-        bottom: rect.bottom,
-        width: rect.width,
-        height: rect.height,
-      },
-      clientWidth: el.clientWidth,
-      clientHeight: el.clientHeight,
-      scrollWidth: el.scrollWidth,
-      scrollHeight: el.scrollHeight,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-    };
-  }, target);
-}
-
-async function assertSnapshotTargetIsUsable(element: SnapshotElement, name: string): Promise<void> {
-  const geometry = await readSnapshotGeometry(element);
-  const tolerancePx = 2;
-
-  if (geometry.clientWidth <= 0 || geometry.clientHeight <= 0) {
-    throw new Error(
-      `Snapshot target '${name}' has zero size (${geometry.clientWidth}x${geometry.clientHeight}). ` +
-        `Visible element snapshots require a rendered target.`,
-    );
-  }
-
-  if (
-    geometry.position !== "fixed" &&
-    (geometry.rect.left < -tolerancePx ||
-      geometry.rect.top < -tolerancePx ||
-      geometry.rect.right > geometry.viewportWidth + tolerancePx ||
-      geometry.rect.bottom > geometry.viewportHeight + tolerancePx)
-  ) {
-    throw new Error(
-      `Snapshot target '${name}' does not fully fit inside the viewport after scrolling. ` +
-        `rect=${geometry.rect.width}x${geometry.rect.height}@(${geometry.rect.left},${geometry.rect.top}) ` +
-        `viewport=${geometry.viewportWidth}x${geometry.viewportHeight}.`,
-    );
-  }
-
-  if (
-    geometry.scrollWidth > geometry.clientWidth + tolerancePx ||
-    geometry.scrollHeight > geometry.clientHeight + tolerancePx
-  ) {
-    throw new Error(
-      `Snapshot target '${name}' is internally clipped or overflowing. ` +
-        `client=${geometry.clientWidth}x${geometry.clientHeight} ` +
-        `scroll=${geometry.scrollWidth}x${geometry.scrollHeight}.`,
-    );
-  }
-}
-
-async function shouldScrollSnapshotTarget(element: SnapshotElement): Promise<boolean> {
-  const target = await element;
-  return browser.execute((el: HTMLElement) => getComputedStyle(el).position !== "fixed", target);
-}
-
 /**
- * Hide all `.section` wrappers on the page except the one containing the
- * target element. This reduces page height so that `scrollIntoView` can
- * reliably position the target fully inside the viewport, preventing the
- * WDIO visual service from clipping the element screenshot at the viewport
- * boundary.
- *
- * Shadow DOM elements cannot reach light-DOM ancestors via `closest()`,
- * so the helper traverses through the shadow host first.
+ * Wrapper around the shared `matchElementSnapshotInSection` that enables
+ * shadow host traversal by default. The web component's snapshot targets
+ * live inside shadow DOM and cannot reach light-DOM `.section` ancestors
+ * via `closest()` without first stepping out through the shadow host.
  */
-export async function isolateSection(element: SnapshotElement): Promise<void> {
-  const target = await element;
-  await browser.execute((el: HTMLElement) => {
-    const root = el.getRootNode();
-    const host = root instanceof ShadowRoot ? root.host : el;
-    const activeSection = (host as Element).closest(".section");
-    if (!activeSection) return;
-
-    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
-      if (section === activeSection) return;
-      if (!("snapshotPrevDisplay" in section.dataset)) {
-        section.dataset.snapshotPrevDisplay = section.style.display;
-      }
-      section.style.display = "none";
-    });
-  }, target);
-}
-
-export async function restoreSections(): Promise<void> {
-  await browser.execute(() => {
-    document.querySelectorAll<HTMLElement>(".section").forEach((section) => {
-      if (!("snapshotPrevDisplay" in section.dataset)) return;
-      const previousDisplay = section.dataset.snapshotPrevDisplay ?? "";
-      if (previousDisplay) {
-        section.style.display = previousDisplay;
-      } else {
-        section.style.removeProperty("display");
-      }
-      delete section.dataset.snapshotPrevDisplay;
-    });
-  });
-}
-
 export async function matchElementSnapshotInSection(
   element: SnapshotElement,
   name: string,
-  options?: { ignoreAntialiasing?: boolean },
+  options?: MatchSnapshotOptions,
 ): Promise<void> {
-  const target = await element;
-  await isolateSection(target);
-  try {
-    if (await shouldScrollSnapshotTarget(target)) {
-      await browser.execute((el: HTMLElement) => {
-        el.scrollIntoView({ block: "center", inline: "center" });
-      }, target);
-    }
-    await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
-    await assertSnapshotTargetIsUsable(target, name);
-    await expect(target).toMatchElementSnapshot(name, {
-      ignoreAntialiasing: true,
-      ...options,
-    });
-  } finally {
-    await restoreSections();
-  }
+  return _matchBase(element, name, {
+    traverseShadowHosts: true,
+    ...options,
+  });
 }
 
 /**
@@ -394,10 +259,6 @@ export const DISABLE_CONTAINER_QUERIES = `
   }
   .kiosk-keyboard--cq-xs .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem) !important;
-  }
-  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-short:not(.kiosk-keyboard--numpad) .kiosk-key,
-  .kiosk-keyboard--cq-xs.kiosk-keyboard--cq-tiny:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem) !important;
   }
 `;
 

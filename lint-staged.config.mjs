@@ -1,15 +1,10 @@
-import micromatch from "micromatch";
-
-/** Files that should never be formatted or linted by lint-staged. */
-const IGNORE = ["**/*.gen.d.ts", "**/src/generated/**"];
-
 /**
  * Filter out auto-generated files that tools should not rewrite.
- * micromatch negation globs cannot reliably exclude compound extensions
- * like `.gen.d.ts` in JSON config, so we use the function syntax instead.
+ * Matches the same patterns as the former micromatch globs:
+ *   **\/*.gen.d.ts   and   **\/src/generated/**
  */
 function exclude(files) {
-  return micromatch.not(files, IGNORE);
+  return files.filter((f) => !f.endsWith(".gen.d.ts") && !f.replace(/\\/g, "/").includes("/src/generated/"));
 }
 
 export default {

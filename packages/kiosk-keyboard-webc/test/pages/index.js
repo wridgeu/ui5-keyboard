@@ -135,6 +135,21 @@ const i18nStatus = document.getElementById("i18n-status");
 const i18nInspector = document.getElementById("i18n-aria-inspector");
 const kbI18n = document.getElementById("kb-i18n");
 
+function createInspectorCard(label, value) {
+  const card = document.createElement("div");
+  card.style.cssText =
+    "padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px";
+  const labelEl = document.createElement("div");
+  labelEl.style.cssText = "font-size: 11px; color: var(--muted-color)";
+  labelEl.textContent = label;
+  const valueEl = document.createElement("div");
+  valueEl.style.fontWeight = "bold";
+  valueEl.textContent = value;
+  card.appendChild(labelEl);
+  card.appendChild(valueEl);
+  return card;
+}
+
 function updateAriaInspector() {
   const root = kbI18n.shadowRoot;
   if (!root) return;
@@ -142,24 +157,15 @@ function updateAriaInspector() {
   const kbAriaLabel = kbGroup ? kbGroup.getAttribute("aria-label") : "?";
   const kbRoleDesc = kbGroup ? kbGroup.getAttribute("aria-roledescription") : "?";
 
-  let html =
-    `<div style="padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px">` +
-    `<div style="font-size: 11px; color: var(--muted-color)">aria-label (keyboard)</div>` +
-    `<div style="font-weight: bold">${kbAriaLabel}</div></div>`;
-  html +=
-    `<div style="padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px">` +
-    `<div style="font-size: 11px; color: var(--muted-color)">aria-roledescription</div>` +
-    `<div style="font-weight: bold">${kbRoleDesc}</div></div>`;
-
-  for (const spec of INSPECTED_KEYS) {
-    const keyEl = root.querySelector(`[data-key="${CSS.escape(spec.value)}"]`);
-    const ariaLabel = keyEl ? keyEl.getAttribute("aria-label") : "?";
-    html +=
-      `<div style="padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px">` +
-      `<div style="font-size: 11px; color: var(--muted-color)">${spec.label}</div>` +
-      `<div style="font-weight: bold">${ariaLabel}</div></div>`;
-  }
-  i18nInspector.innerHTML = html;
+  i18nInspector.replaceChildren(
+    createInspectorCard("aria-label (keyboard)", kbAriaLabel),
+    createInspectorCard("aria-roledescription", kbRoleDesc),
+    ...INSPECTED_KEYS.map((spec) => {
+      const keyEl = root.querySelector(`[data-key="${CSS.escape(spec.value)}"]`);
+      const ariaLabel = keyEl ? keyEl.getAttribute("aria-label") : "?";
+      return createInspectorCard(spec.label, ariaLabel);
+    }),
+  );
 }
 
 // Initial render of ARIA inspector

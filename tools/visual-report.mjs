@@ -73,10 +73,20 @@ console.log(`Found output.json file(s): ${outputJsonFiles.map((f) => f.replace(a
 // Step 1: Generate HTML report (non-interactive CLI mode)
 const reportDir = resolve(absDir, "report");
 console.log(`Generating HTML report in ${reportDir}...`);
-execSync(`npx wdio-visual-reporter --jsonOutput="${outputJson}" --reportFolder="${reportDir}"`, { stdio: "inherit" });
+try {
+  execSync(`npx wdio-visual-reporter --jsonOutput="${outputJson}" --reportFolder="${reportDir}"`, { stdio: "inherit" });
+} catch (error) {
+  console.error(`Failed to generate visual report: ${error.message}`);
+  process.exit(1);
+}
 
 // Step 2: Serve the report
 const reportAppDir = resolve(reportDir, "report");
 console.log("\nServing visual report...");
 console.log("Open the URL shown below in your browser. Press Ctrl+C to stop.\n");
-execSync(`npx sirv-cli "${reportAppDir}" --single --open`, { stdio: "inherit" });
+try {
+  execSync(`npx sirv-cli "${reportAppDir}" --single --open`, { stdio: "inherit" });
+} catch (error) {
+  console.error(`Failed to serve visual report: ${error.message}`);
+  process.exit(1);
+}

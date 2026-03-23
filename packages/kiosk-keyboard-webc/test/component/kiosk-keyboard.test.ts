@@ -1820,10 +1820,10 @@ describe("kiosk-keyboard", () => {
 
       const root = rootDiv(el);
       expect(
-        root.classList.contains(DOM.classes.rootCqShort),
+        el.classList.contains(DOM.classes.hostCqShort),
         "content-box height triggers cq-short despite host padding",
       ).to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqTiny), "padding case stays above tiny breakpoint").to.be.false;
+      expect(el.classList.contains(DOM.classes.hostCqTiny), "padding case stays above tiny breakpoint").to.be.false;
     });
 
     it("adapts responsively in a fixed-height host", async () => {
@@ -1838,8 +1838,8 @@ describe("kiosk-keyboard", () => {
       const root = rootDiv(el);
 
       // 15rem host triggers cq-short (threshold: 16rem)
-      expect(root.classList.contains(DOM.classes.rootCqShort), "cq-short applied at 15rem").to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqTiny), "not tiny at 15rem").to.be.false;
+      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short applied at 15rem").to.be.true;
+      expect(el.classList.contains(DOM.classes.hostCqTiny), "not tiny at 15rem").to.be.false;
 
       // No minHeight is set on the root
       expect(root.style.minHeight).to.equal("");
@@ -2163,7 +2163,7 @@ describe("kiosk-keyboard", () => {
       await waitForResponsiveSync();
 
       const root = rootDiv(el);
-      expect(root.classList.contains(DOM.classes.rootCqShort)).to.be.true;
+      expect(el.classList.contains(DOM.classes.hostCqShort)).to.be.true;
     });
   });
 });

@@ -537,7 +537,7 @@ class KioskKeyboard extends UI5Element {
     if (KioskKeyboard._pendingI18nRefresh) return;
     KioskKeyboard._pendingI18nRefresh = true;
 
-    queueMicrotask(() => {
+    requestAnimationFrame(() => {
       KioskKeyboard._pendingI18nRefresh = false;
       if (KioskKeyboard._instances.size === 0) return;
       void reRenderAllUI5Elements({ tag: KioskKeyboard.getMetadata().getTag() });
@@ -1622,8 +1622,8 @@ class KioskKeyboard extends UI5Element {
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
     root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
 
-    // ── Height ──
-    root.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
+    // ── Height ── (classes live on host so consumer overrides always win)
+    this.classList.remove(KIOSK_KEYBOARD_DOM.classes.hostCqShort, KIOSK_KEYBOARD_DOM.classes.hostCqTiny);
 
     // Skip for docked keyboards (viewport-driven, not container-constrained)
     // and numpad (already compact, shouldn't shrink further).
@@ -1631,6 +1631,9 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
+    // scrollHeight reports full content height even under overflow: hidden.
+    // If root ever uses overflow: clip instead, scrollHeight may equal
+    // clientHeight in some browsers, breaking constrained detection.
     const naturalHeight = root.scrollHeight;
 
     // Compare against the host content box, not the host border box. This
@@ -1648,8 +1651,8 @@ class KioskKeyboard extends UI5Element {
     const tinyThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-tiny-threshold", 12, remPx);
     const isTiny = hostHeight <= tinyThresh;
     const isShort = hostHeight <= shortThresh;
-    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
-    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
+    this.classList.toggle(KIOSK_KEYBOARD_DOM.classes.hostCqShort, isShort && !isTiny);
+    this.classList.toggle(KIOSK_KEYBOARD_DOM.classes.hostCqTiny, isTiny);
   }
 }
 

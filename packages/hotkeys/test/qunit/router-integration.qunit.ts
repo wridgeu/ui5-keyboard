@@ -3,21 +3,21 @@ import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { destroyHotkeyManager, fireKey } from "./test-helpers";
 
 interface MockRouter {
-  attachBeforeRouteMatched: (handler: Function, listener: object) => void;
-  detachBeforeRouteMatched: (handler: Function, listener: object) => void;
+  attachBeforeRouteMatched: (handler: (...args: any[]) => void, listener: object) => void;
+  detachBeforeRouteMatched: (handler: (...args: any[]) => void, listener: object) => void;
   fireRouteMatched: (name: string) => void;
   fireRouteMatchedUndefined: () => void;
 }
 
 function createMockRouter(): MockRouter {
-  let _handler: Function | null = null;
+  let _handler: ((...args: any[]) => void) | null = null;
   let _listener: object | null = null;
   return {
-    attachBeforeRouteMatched(h: Function, l: object) {
+    attachBeforeRouteMatched(h: (...args: any[]) => void, l: object) {
       _handler = h;
       _listener = l;
     },
-    detachBeforeRouteMatched(_h: Function, l: object) {
+    detachBeforeRouteMatched(_h: (...args: any[]) => void, l: object) {
       if (_listener === l) {
         _handler = null;
         _listener = null;

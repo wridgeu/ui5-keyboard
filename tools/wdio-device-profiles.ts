@@ -94,7 +94,7 @@ export const DESKTOP_WINDOW_SIZE = "1440,900";
 /**
  * Base ports for device-emulation test servers, keyed by package directory name.
  *
- * Each device profile adds its `portOffset` (phone: +1, tablet: +2) to the
+ * Each device profile adds its `portOffset` (phone-sm: +1, phone-md: +2, phone-lg: +3, tablet: +4) to the
  * base port so that profiles can run in parallel without collisions.
  * Desktop e2e ports are separate and defined directly in their wdio.conf.ts.
  *
@@ -134,7 +134,7 @@ export const deviceProfiles: Record<string, DeviceProfile> = {
  *
  * When a cached Chrome binary is found, `binary` is set so that WDIO skips
  * its per-worker HTTP calls to the Chrome-for-Testing CDN (see
- * `resolveCachedChromeBinary`).
+ * `resolveCachedBinaries`).
  */
 export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
   const args = ["--disable-gpu", "--no-sandbox"];
