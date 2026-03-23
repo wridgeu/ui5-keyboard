@@ -39,8 +39,11 @@ export class ShiftState {
       // Double-click → caps lock
       this._active = false;
       this._capsLock = true;
+    } else if (this._active) {
+      // Shift on, pressed again outside double-click window → off
+      this._active = false;
     } else {
-      // Off (or stale shift) → one-shot shift
+      // Off → one-shot shift
       this._active = true;
     }
 

@@ -32,17 +32,18 @@ QUnit.test("click while caps-locked turns everything off", (assert) => {
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
 });
 
-QUnit.test("second click after timeout re-activates shift, not caps lock", (assert) => {
+QUnit.test("second click after timeout turns shift off, not caps lock", (assert) => {
   const state = new ShiftState();
   const stub = sinon.stub(performance, "now");
   try {
     stub.returns(1000);
     state.toggle(); // shift on at t=1000
+    assert.ok(state.isShifted, "shifted after first click");
 
     stub.returns(1000 + ShiftState.DOUBLE_CLICK_MS + 100);
-    state.toggle(); // stale shift -> new shift (not caps lock)
+    state.toggle(); // outside double-click window -> off
 
-    assert.ok(state.isShifted, "shifted");
+    assert.strictEqual(state.isShifted, false, "not shifted -- second slow click turns off");
     assert.strictEqual(state.isCapsLock, false, "not caps lock -- outside double-click window");
   } finally {
     stub.restore();

@@ -963,12 +963,15 @@ class KioskKeyboard extends UI5Element {
   }
 
   _getKeyLabel(key: KeyDefinition): string {
+    const base = key.label ?? key.value;
     if (this._shifted) {
       if (key.shiftLabel) return key.shiftLabel;
       if (key.shiftValue) return key.shiftValue;
-      if (key.value.length === 1) return key.value.toUpperCase();
+      // Single printable characters get uppercased; whitespace-only keys
+      // (e.g. space bar) keep their original label to avoid blank labels.
+      if (key.value.length === 1 && key.value.trim()) return key.value.toUpperCase();
     }
-    return key.label ?? key.value;
+    return base;
   }
 
   _getKeyAriaLabel(key: KeyDefinition): string {

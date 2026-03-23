@@ -1761,7 +1761,7 @@ export default class KioskKeyboard extends Control {
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
     const base = entry ? this._getKeyAriaLabel(key) : (key.label ?? key.value);
     if (!base) return "";
-    return shift && !entry && key.value.length === 1 ? base.toUpperCase() : base;
+    return shift && !entry && key.value.length === 1 && key.value.trim() ? base.toUpperCase() : base;
   }
 
   // ──────────────────────────────────────────────

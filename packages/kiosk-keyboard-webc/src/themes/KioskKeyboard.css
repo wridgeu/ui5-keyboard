@@ -196,13 +196,13 @@
    <kiosk-keyboard> overrides these defaults.
    :where() zeroes out the argument specificity, giving :host(:where(...))
    a total of (0,0,1) -- the minimum for the host pseudo-class. */
-:host(:where(.cq-short)) {
+:host(.cq-short) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
 }
 
-:host(:where(.cq-tiny)) {
+:host(.cq-tiny) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;
