@@ -34,6 +34,7 @@ import {
   type KeyPressEventDetail,
   type LayoutChangeEventDetail,
   type KeyboardTypeChangeEventDetail,
+  type TargetInputChangeEventDetail,
 } from "./types.js";
 
 import KioskKeyboardTemplate, { KIOSK_KEYBOARD_DOM } from "./KioskKeyboardTemplate.js";
@@ -190,6 +191,14 @@ function resolveRemThreshold(
  * @since 0.1.0
  */
 @event("keyboard-type-change", { bubbles: true })
+/**
+ * Fired when the target input changes (focus switches to a different input
+ * in auto-show mode, or `setTargetElement()` is called programmatically).
+ * @param {HTMLInputElement | HTMLTextAreaElement | null} targetElement The new target element, or null if cleared.
+ * @public
+ * @since 0.1.0
+ */
+@event("target-input-change", { bubbles: true })
 class KioskKeyboard extends UI5Element {
   /**
    * Stable DOM hook contract for tests and DOM assertions.
@@ -206,6 +215,7 @@ class KioskKeyboard extends UI5Element {
     "after-close": void;
     "layout-change": LayoutChangeEventDetail;
     "keyboard-type-change": KeyboardTypeChangeEventDetail;
+    "target-input-change": TargetInputChangeEventDetail;
   };
 
   // ── Static registry delegates ──
@@ -836,6 +846,8 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   setTargetElement(el: HTMLInputElement | HTMLTextAreaElement | null): void {
+    const previous = this._targetElement;
+
     // Restore the old target's inputmode before switching so it's not left suppressed.
     if (this._open) {
       this._restoreInputMode();
@@ -852,6 +864,10 @@ class KioskKeyboard extends UI5Element {
     if (this._open) {
       this._suppressInputMode();
       this._syncPhysicalKeyHighlight();
+    }
+
+    if (el !== previous) {
+      this.fireDecoratorEvent("target-input-change", { targetElement: el });
     }
   }
 
@@ -1275,6 +1291,10 @@ class KioskKeyboard extends UI5Element {
       this._restoreInputMode();
       this._suppressInputMode();
       this._syncPhysicalKeyHighlight();
+    }
+
+    if (targetChanged) {
+      this.fireDecoratorEvent("target-input-change", { targetElement: inputEl });
     }
   }
 

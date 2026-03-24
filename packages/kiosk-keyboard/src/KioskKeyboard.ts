@@ -390,6 +390,16 @@ export default class KioskKeyboard extends Control {
           autoDetected: { type: "boolean" },
         },
       },
+      /**
+       * Fired when the target input changes (focus switches to a different
+       * input in auto-show mode, or `setTargetInput()` is called programmatically).
+       */
+      targetInputChange: {
+        parameters: {
+          /** The control ID of the new target input, or empty string if cleared. */
+          targetInput: { type: "string" },
+        },
+      },
       /** Fired when `show()` opens the docked keyboard (not tied to CSS transition end). */
       afterOpen: {},
       /** Fired when `close()` closes the docked keyboard (not tied to CSS transition end). */
@@ -1144,6 +1154,8 @@ export default class KioskKeyboard extends Control {
    * Also moves the physical keyboard highlight delegation to the new target.
    */
   setTargetInput(target?: string | Control): this {
+    const previousTarget = this.getTargetInput();
+
     // Capture pending change on the old target. The event is deferred to
     // after all state transitions so that re-entrant calls (from a change
     // handler that synchronously focuses another input) see settled state.
@@ -1224,6 +1236,11 @@ export default class KioskKeyboard extends Control {
     // focusing another input), the inner call sees consistent state
     // and its result becomes the final state.
     fireDeferredChange?.();
+
+    const newTarget = this.getTargetInput();
+    if (newTarget !== previousTarget) {
+      this.fireEvent("targetInputChange", { targetInput: newTarget });
+    }
 
     return this;
   }
@@ -2205,6 +2222,16 @@ export default class KioskKeyboard extends Control {
   private _highlightKey(key: string, add: boolean): void {
     const dom = this.getDomRef();
     if (!dom) return;
+
+    if (!add) {
+      // Clear all highlights on any keyup. When Shift releases before the
+      // character key, keyup reports the unshifted value (e.g. "2" not "@"),
+      // so a targeted removal would miss the shifted key's highlight.
+      dom
+        .querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`)
+        .forEach((el) => el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight));
+      return;
+    }
 
     const mapped = KioskKeyboard._KEY_TO_DATA_KEY[key];
     const el =

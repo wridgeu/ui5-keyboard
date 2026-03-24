@@ -8,6 +8,7 @@ export type {
   KeyPressEventDetail,
   LayoutChangeEventDetail,
   KeyboardTypeChangeEventDetail,
+  TargetInputChangeEventDetail,
   KeyDefinition,
   KeyRow,
   LayoutDefinition,

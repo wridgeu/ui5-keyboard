@@ -143,6 +143,12 @@ declare module "./KioskKeyboard" {
         keyboardTypeChange?: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void;
 
         /**
+         * Fired when the target input changes (focus switches to a different
+        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         */
+        targetInputChange?: (event: KioskKeyboard$TargetInputChangeEvent) => void;
+
+        /**
          * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          */
         afterOpen?: (event: KioskKeyboard$AfterOpenEvent) => void;
@@ -485,6 +491,32 @@ declare module "./KioskKeyboard" {
          */
         fireKeyboardTypeChange(parameters?: KioskKeyboard$KeyboardTypeChangeEventParameters): this;
 
+        // event: targetInputChange
+
+        /**
+         * Fired when the target input changes (focus switches to a different
+        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         */
+        attachTargetInputChange(fn: (event: KioskKeyboard$TargetInputChangeEvent) => void, listener?: object): this;
+
+        /**
+         * Fired when the target input changes (focus switches to a different
+        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         */
+        attachTargetInputChange<CustomDataType extends object>(data: CustomDataType, fn: (event: KioskKeyboard$TargetInputChangeEvent, data: CustomDataType) => void, listener?: object): this;
+
+        /**
+         * Fired when the target input changes (focus switches to a different
+        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         */
+        detachTargetInputChange(fn: (event: KioskKeyboard$TargetInputChangeEvent) => void, listener?: object): this;
+
+        /**
+         * Fired when the target input changes (focus switches to a different
+        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         */
+        fireTargetInputChange(parameters?: KioskKeyboard$TargetInputChangeEventParameters): this;
+
         // event: afterOpen
 
         /**
@@ -561,6 +593,15 @@ declare module "./KioskKeyboard" {
     }
 
     /**
+     * Interface describing the parameters of KioskKeyboard's 'targetInputChange' event.
+     * Fired when the target input changes (focus switches to a different
+    input in auto-show mode, or `setTargetInput()` is called programmatically).
+     */
+    export interface KioskKeyboard$TargetInputChangeEventParameters {
+        targetInput?: string;
+    }
+
+    /**
      * Interface describing the parameters of KioskKeyboard's 'afterOpen' event.
      * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
      */
@@ -596,6 +637,13 @@ declare module "./KioskKeyboard" {
     explicit `setKeyboardType()`, or `resetKeyboardType()`.
      */
     export type KioskKeyboard$KeyboardTypeChangeEvent = Event<KioskKeyboard$KeyboardTypeChangeEventParameters>;
+
+    /**
+     * Type describing the KioskKeyboard's 'targetInputChange' event.
+     * Fired when the target input changes (focus switches to a different
+    input in auto-show mode, or `setTargetInput()` is called programmatically).
+     */
+    export type KioskKeyboard$TargetInputChangeEvent = Event<KioskKeyboard$TargetInputChangeEventParameters>;
 
     /**
      * Type describing the KioskKeyboard's 'afterOpen' event.

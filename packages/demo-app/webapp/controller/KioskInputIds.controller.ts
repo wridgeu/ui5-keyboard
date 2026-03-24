@@ -37,9 +37,12 @@ export default class KioskInputIds extends BaseController {
       KioskInputIds._MODEL_NAME,
     );
 
-    // Track target changes via afterOpen/key events
+    // Track target changes
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
     kb.attachEvent("afterOpen", () => {
+      this._updateTargetStatus();
+    });
+    kb.attachEvent("targetInputChange", () => {
       this._updateTargetStatus();
     });
 

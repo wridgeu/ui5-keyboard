@@ -104,6 +104,11 @@ const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboar
           autoDetected: { type: "boolean" },
         },
       },
+      targetInputChange: {
+        parameters: {
+          targetElement: { type: "any" },
+        },
+      },
     },
     associations: {
       ariaLabelledBy: { type: "sap.ui.core.Control", multiple: true, singularName: "ariaLabelledBy" },

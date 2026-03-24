@@ -177,3 +177,13 @@ export interface KeyboardTypeChangeEventDetail {
   previousKeyboardType: `${KeyboardType}`;
   autoDetected: boolean;
 }
+
+/**
+ * Detail payload for the `target-input-change` event.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export interface TargetInputChangeEventDetail {
+  targetElement: HTMLInputElement | HTMLTextAreaElement | null;
+}
