@@ -1,0 +1,29 @@
+/* Width-responsive container query rules.
+   Imported via @import (inline) in library.source.less to bypass the
+   LESS 1.6.3 preprocessor which does not recognize @container at-rules.
+   Only CSS custom properties are used -- no LESS variables needed. */
+
+@container keyboard (max-width: 30rem) {
+  .ui5KioskKey {
+    --ui5KioskKeyboard-keyFontSize: min(var(--_ui5KioskKeyboard-keyFontBase), 1rem);
+  }
+}
+
+@container keyboard (max-width: 20rem) {
+  .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
+    --_ui5KioskKeyboard-keyPadding: var(--_ui5KioskKeyboard-keyPaddingXs);
+  }
+
+  .ui5KioskKey {
+    --ui5KioskKeyboard-keyFontSize: min(var(--_ui5KioskKeyboard-keyFontBase), 0.875rem);
+  }
+}
+
+/* Mixed: narrow width (@container) + constrained height (JS class).
+   Applies the most aggressive font-size cap when both conditions are met. */
+@container keyboard (max-width: 20rem) {
+  .ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) .ui5KioskKey,
+  .ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
+    --ui5KioskKeyboard-keyFontSize: min(var(--_ui5KioskKeyboard-keyFontBase), 0.75rem);
+  }
+}

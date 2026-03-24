@@ -42,8 +42,6 @@
  *   --ui5KioskKeyboard-numpadKeyMinWidth   Numpad key min-width (default: 4rem)
  *
  * Responsive thresholds (rem):
- *   --ui5KioskKeyboard-cqNarrowThreshold   Width for --cq-sm class (default: 30rem)
- *   --ui5KioskKeyboard-cqCompactThreshold  Width for --cq-xs class (default: 20rem)
  *   --ui5KioskKeyboard-cqShortThreshold    Height for --cq-short class (default: 16rem)
  *   --ui5KioskKeyboard-cqTinyThreshold     Height for --cq-tiny class (default: 12rem)
  *
@@ -85,12 +83,9 @@
   --ui5KioskKeyboard-numpadMaxWidth: 20rem;
   --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
 
-  /* ---- Responsive breakpoint thresholds (rem) ----
-     Override to control when width/height compact classes activate.
-     Width thresholds affect --cq-sm / --cq-xs class toggling.
+  /* ---- Responsive height thresholds (rem) ----
+     Override to control when height compact classes activate.
      Height thresholds control --cq-short / --cq-tiny classes. */
-  --ui5KioskKeyboard-cqNarrowThreshold: 30rem;
-  --ui5KioskKeyboard-cqCompactThreshold: 20rem;
   --ui5KioskKeyboard-cqShortThreshold: 16rem;
   --ui5KioskKeyboard-cqTinyThreshold: 12rem;
 }
@@ -387,22 +382,6 @@
   }
 }
 
-/* ---- Responsive font scaling ----
-   Uses min() to cap rather than hard-replace the consumer-provided value.
-   A consumer who sets --ui5KioskKeyboard-keyFontSize: 0.75rem keeps that
-   value; one who sets 1.5rem gets capped to 1rem / 0.875rem. ---- */
-.ui5KioskKeyboard--cq-sm .ui5KioskKey {
-  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 1rem)";
-}
-
-.ui5KioskKeyboard--cq-xs:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
-  --_ui5KioskKeyboard-keyPadding: ~"var(--_ui5KioskKeyboard-keyPaddingXs)";
-}
-
-.ui5KioskKeyboard--cq-xs .ui5KioskKey {
-  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.875rem)";
-}
-
 /* ---- Height-responsive classes (JS-driven) ----
    :where() gives zero specificity so any consumer class selector
    (e.g. .myKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }) wins.
@@ -417,12 +396,6 @@
   --ui5KioskKeyboard-keyHeight: 1.75rem;
   --ui5KioskKeyboard-keyGap: 0.125rem;
   --ui5KioskKeyboard-padding: 0.25rem;
-}
-
-/* Mixed: narrow + short */
-.ui5KioskKeyboard--cq-xs.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) .ui5KioskKey,
-.ui5KioskKeyboard--cq-xs.ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
-  --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.75rem)";
 }
 
 /* Progressive enhancement: text-box-trim

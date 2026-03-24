@@ -946,28 +946,18 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Applies width and height responsive classes to the keyboard root element.
+   * Applies height-responsive classes to the keyboard root element.
    *
-   * Width: toggles `cq-xs` / `cq-sm` classes at 20rem / 30rem breakpoints.
-   * Height: toggles `cq-short` / `cq-tiny` classes when the keyboard is externally
+   * Toggles `cq-short` / `cq-tiny` classes when the keyboard is externally
    * constrained (host height < natural content height). Skipped for docked and numpad.
    * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
+   *
+   * Width breakpoints are handled purely by CSS `@container` queries (see
+   * KioskKeyboard.container-queries.css), so no JS width measurement is needed.
    */
   private _applyResponsiveSizeClasses(dom: HTMLElement): void {
     const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
     const cs = window.getComputedStyle(dom);
-
-    // Content-box width (matching container query semantics and the
-    // WebC package) so breakpoints fire at the same container size in both packages.
-    const width =
-      dom.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
-    const narrowThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqNarrowThreshold", 30, remPx);
-    const compactThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqCompactThreshold", 20, remPx);
-    const isCompact = width <= compactThresh;
-    const isNarrow = width <= narrowThresh;
-
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
 
     // Height classes -- detect external height constraints by comparing the
     // keyboard's natural (unconstrained) content height against its rendered
