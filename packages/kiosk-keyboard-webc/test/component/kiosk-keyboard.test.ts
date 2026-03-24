@@ -1242,16 +1242,16 @@ describe("kiosk-keyboard", () => {
     });
   });
 
-  // ── Instance layout registration ──
+  // ── Static layout registration ──
 
-  describe("instance layout registration", () => {
-    it("registerLayout on instance makes layout available for rendering", async () => {
+  describe("static layout registration", () => {
+    it("registerLayout makes layout available for rendering", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard></kiosk-keyboard>
         `,
       );
-      el.registerLayout("test-pin", [
+      KioskKeyboard.registerLayout("test-pin", [
         [{ value: "1" }, { value: "2" }, { value: "3" }],
         [{ value: "4" }, { value: "5" }, { value: "6" }],
       ]);
@@ -1265,20 +1265,19 @@ describe("kiosk-keyboard", () => {
       expect(values).to.have.lengthOf(6);
 
       // Clean up
-      el.unregisterLayout("test-pin");
+      KioskKeyboard.unregisterLayout("test-pin");
     });
 
-    it("layout registered on one instance is visible to another", async () => {
+    it("layout registered via static method is visible to all instances", async () => {
       const container = await fixture(html`
         <div>
           <kiosk-keyboard id="kb-a"></kiosk-keyboard>
           <kiosk-keyboard id="kb-b"></kiosk-keyboard>
         </div>
       `);
-      const kbA = container.querySelector<KioskKeyboard>("#kb-a")!;
       const kbB = container.querySelector<KioskKeyboard>("#kb-b")!;
 
-      kbA.registerLayout("shared-test", [[{ value: "x" }, { value: "y" }]]);
+      KioskKeyboard.registerLayout("shared-test", [[{ value: "x" }, { value: "y" }]]);
       kbB.layout = "shared-test";
       await nextRender();
 
@@ -1288,17 +1287,17 @@ describe("kiosk-keyboard", () => {
       expect(values).to.include("y");
 
       // Clean up
-      kbA.unregisterLayout("shared-test");
+      KioskKeyboard.unregisterLayout("shared-test");
     });
 
-    it("unregisterLayout on instance removes layout", async () => {
+    it("unregisterLayout removes layout", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard></kiosk-keyboard>
         `,
       );
-      el.registerLayout("temp-layout", [[{ value: "a" }]]);
-      el.unregisterLayout("temp-layout");
+      KioskKeyboard.registerLayout("temp-layout", [[{ value: "a" }]]);
+      KioskKeyboard.unregisterLayout("temp-layout");
 
       // Should fall back to default since temp-layout is gone
       el.layout = "temp-layout";
