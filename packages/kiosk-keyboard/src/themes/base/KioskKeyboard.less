@@ -140,9 +140,9 @@
       min-width: var(--_ui5KioskKeyboard-numpadKeyMinWidth);
     }
 
-    /* Numpad action keys (Enter, Backspace) are primary interaction targets,
-       not subordinate labels -- bypass the min() font-size cap so their icons
-       scale with the larger numpad key font. */
+    /* Numpad modifier and action keys are primary interaction targets,
+       not subordinate labels -- bypass the min() font-size cap so their
+       icons scale with the larger numpad key font. */
     .ui5KioskKey--modifier,
     .ui5KioskKey--action {
       font-size: var(--ui5KioskKeyboard-keyFontSize);

@@ -571,6 +571,11 @@ QUnit.test("Height breakpoints still fire when root has extra consumer padding",
   dom.style.padding = "1.5rem";
   dom.style.height = `${15 * remPx}px`;
   dom.style.overflow = "hidden";
+
+  // Guard: the keyboard must be naturally taller than the constraint for
+  // height classes to activate (otherwise the test passes for the wrong reason).
+  assert.ok(dom.scrollHeight > 15 * remPx, "keyboard naturally exceeds constrained height");
+
   kb.refreshResponsiveState();
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied despite extra padding");
