@@ -484,11 +484,11 @@ kb.resetLayout(); // back to qwertz-de
 
 When the keyboard is placed inside a fixed-height container (a `sap.m.Popover`, `sap.m.Dialog`, or any element with a CSS height), its responsive height breakpoints adapt the layout automatically:
 
-| Container height | Behavior                                                 |
-| ---------------- | -------------------------------------------------------- |
-| Above 16 rem     | Full layout (default key sizes)                          |
-| 12 -- 16 rem     | Compact layout (`cq-short` -- reduced key height)        |
-| Below 12 rem     | Minimal layout (`cq-tiny` -- further reduced key height) |
+| Container height | Behavior                                               |
+| ---------------- | ------------------------------------------------------ |
+| Above 16 rem     | Full layout (default key sizes)                        |
+| 12-16 rem        | Compact layout (`cq-short`, reduced key height)        |
+| Below 12 rem     | Minimal layout (`cq-tiny`, further reduced key height) |
 
 The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-cqShortThreshold`, `--ui5KioskKeyboard-cqTinyThreshold`).
 

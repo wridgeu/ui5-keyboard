@@ -659,7 +659,7 @@ your chosen widths:
 This is more flexible than the previous threshold variables: you can
 set any property at any number of breakpoints.
 
-The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`--cq-short`, `--cq-tiny`) activate. Override them to tune height breakpoints for your container:
+The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`cq-short`, `cq-tiny`) activate. Override them to tune height breakpoints for your container:
 
 ```css
 kiosk-keyboard {
@@ -673,7 +673,7 @@ For troubleshooting, the root element toggles internal classes such as `kiosk-ke
 
 When the keyboard is placed inside a fixed-height container, its responsive height breakpoints adapt the layout automatically. The `cq-short` class activates below 16 rem (reduced key height), and `cq-tiny` below 12 rem (further reduced). Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
 
-The height constraint must affect the **host element's own dimensions** -- the component measures `clientHeight` on itself. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the host's layout box, so the keyboard will be clipped instead of adapting.
+The height constraint must affect the **host element's own dimensions**; the component measures `clientHeight` on itself. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the host's layout box, so the keyboard will be clipped instead of adapting.
 
 ```html
 <!-- Works: constraint on the host element -->

@@ -10,4 +10,5 @@ They are kept as historical context and are not the primary source of truth for 
 - [i18n Extensibility](./I18N-EXTENSIBILITY.md)
 - [i18n Extensibility Implementation Plan](./I18N-EXTENSIBILITY-IMPL-PLAN.md)
 - [Native F-Key Mode](./NATIVE-FKEY-MODE.md)
+- [CSS-First Responsive Simplification](./CSS-FIRST-RESPONSIVE-SIMPLIFICATION.md)
 - [Remove stableHeight Property](./REMOVE-STABLE-HEIGHT.md)

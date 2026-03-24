@@ -10,11 +10,13 @@ Fixes four bugs in the Custom Elements Manifest (CEM) generation tooling.
 
 **File:** `lib/cem/custom-elements-manifest.config.mjs`
 
-The `alphabetical-sort-plugin` recursively sorts every array in the CEM by `name`, including `parameters` arrays. Method parameters are positional -- their array order must match the function signature's declaration order. The sort destroys this, producing incorrect method signatures in VS Code custom data, JetBrains web-types, and any documentation generated from the CEM.
+The `alphabetical-sort-plugin` recursively sorts every array in the CEM by `name`, including `parameters` arrays. Method parameters are positional; their array order must match the function signature's declaration order. The sort destroys this, producing incorrect method signatures in VS Code custom data, JetBrains web-types, and any documentation generated from the CEM.
 
 **Example:** `registerLayout(sName, oDefinition)` becomes `registerLayout(oDefinition, sName)` in the CEM because `o` sorts before `s`.
 
 This also affects the upstream UI5 Web Components themselves (e.g., `UI5Element.fireEvent` parameters are reversed in their own CEM).
+
+In theory, parameter order in the CEM should not matter: each parameter object carries its own `name`, `type`, and other identifying properties, so consumers could identify parameters by these properties rather than by position. However, without the `rest: true` fix ([Bug 2](#bug-2-rest-parameters-not-emitted-in-cem)), a rest parameter that gets sorted out of its trailing position would be indistinguishable from a regular parameter, since the `rest` property that marks it as variadic was never emitted. The combination of both bugs means a sorted rest parameter silently loses its variadic semantics.
 
 **Fix:** Skip sorting for `parameters` and `mixins` arrays (both are order-dependent per the CEM spec).
 
@@ -34,7 +36,7 @@ This also affects the upstream UI5 Web Components themselves (e.g., `UI5Element.
 
 **File:** `lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js`
 
-The `handleParametersAndReturnType` function builds parameter objects from the TypeScript AST but never checks `param.dotDotDotToken` (the AST node for `...` rest syntax). The CEM schema defines a `rest: boolean` property on `Parameter` for this purpose, but it is never populated.
+The `handleParametersAndReturnType` function builds parameter objects from the TypeScript AST but never checks `param.dotDotDotToken` (the AST node for `...` rest syntax). The CEM schema defines a `rest: boolean` property on `Parameter` for this purpose, but it is never populated. This compounds with [Bug 1](#bug-1-alphabetical-sort-plugin-sorts-method-parameters): if parameters are sorted alphabetically and the `rest` flag is missing, a variadic trailing parameter can be moved to any position with no remaining signal that it was variadic.
 
 **Fix:** Check `param.dotDotDotToken` and emit `rest: true` when present.
 
