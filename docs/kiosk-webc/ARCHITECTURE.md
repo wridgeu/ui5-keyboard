@@ -421,7 +421,31 @@ The `Assets.ts` module calls `insertFontFace()` at import time to load the SAP "
 
 The extra-narrow `*-xs` padding variables exist because wide single-glyph labels (`@`, `%`, `&`) start to look cramped before the 48px touch target itself needs to shrink. At `≤ 20rem`, non-numpad keys switch to `--kiosk-keyboard-key-padding-xs`, which defaults to a tighter `2px` inline inset. The default uses `min(...)` so a consumer-provided smaller padding is preserved, while still allowing explicit overrides for compact embedded layouts.
 
-Responsive sizing is explained by four internal root classes: `kiosk-keyboard--cq-sm`, `kiosk-keyboard--cq-xs`, `kiosk-keyboard--cq-short`, and `kiosk-keyboard--cq-tiny`. They are useful for understanding the implementation, but the supported styling surface remains the public `--kiosk-keyboard-*` variables above.
+### Responsive Sizing
+
+Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted).
+
+**Width responsiveness** is handled entirely by CSS `@container` queries on the `.kiosk-keyboard` root element, which sets `container-name: keyboard; container-type: inline-size`. Two breakpoints exist:
+
+- **30rem (narrow):** Caps `--kiosk-keyboard-key-font-size` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
+- **20rem (compact):** Additionally reduces key inline padding for non-numpad keys and applies a tighter font-size cap of `0.875rem`.
+
+No JavaScript is involved in width responsiveness. The `min()` capping pattern ensures that a consumer who sets a small font-size keeps it, while large values are reduced at narrow widths.
+
+**Height responsiveness** uses JS (`ResizeObserver`) to detect when the host element is externally height-constrained (i.e., `scrollHeight` exceeds the host content-box height). When constrained, it applies classes on the **host** element:
+
+- `.cq-short` (host height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
+- `.cq-tiny` (host height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
+
+Height classes live on the host element so that CSS rules use `:host(:where(.cq-short))` -- the `:where()` wrapper gives zero specificity for the class argument, keeping the overall rule at `(0,1,0)`. Any consumer selector with at least one class (e.g., `kiosk-keyboard.my-kb`) beats these via the shadow DOM cascade.
+
+A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host(:where(.cq-short, .cq-tiny))` applies the most aggressive font-size cap of `0.75rem`.
+
+Height thresholds are configurable via CSS custom properties: `--kiosk-keyboard-cq-short-threshold` (default `16rem`) and `--kiosk-keyboard-cq-tiny-threshold` (default `12rem`).
+
+Docked keyboards and numpad mode skip height class application (docked keyboards are viewport-driven; numpads are already compact).
+
+**Consumer overrides:** All default values are declared on `:host` with standard specificity. Consumer selectors with at least one class always win. For custom width breakpoints, wrap the keyboard in a container element and write `@container` rules targeting the keyboard's own `container-name: keyboard`.
 
 ### Key Visual Variants
 

@@ -487,11 +487,31 @@ Keys use SAP button parameters for visual consistency with the rest of the UI:
 
 Keys use `flex: <grow> 1 0` for proportional sizing within rows. Width classes (`--w1-5`, `--w2`, `--space`) set the flex-grow factor. This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
 
-Because UI5 controls render into light DOM (no shadow DOM container queries), the control uses `sap/ui/core/ResizeHandler` to observe the root element's inline size and toggle responsive CSS classes (`ui5KioskKeyboard--cq-xs`, `ui5KioskKeyboard--cq-sm`) from JavaScript. The `_syncResponsiveSizing` method registers the handler after rendering and tears it down on destroy.
+Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted).
 
-The public sizing variables deliberately separate normal and extra-narrow spacing. `--ui5KioskKeyboard-keyPaddingInline` keeps the default inline inset for regular widths, while `--ui5KioskKeyboard-keyPaddingInlineXs` is applied only in `ui5KioskKeyboard--cq-xs` for non-numpad keys. Its default (`min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)`) trims the stock padding from `0.25rem` to `0.125rem` so wide glyphs like `@`, `%`, and `&` get more horizontal breathing room on phone-sized rows without reducing key height or touch-target size. The `min(...)` form preserves any consumer override that is already smaller.
+**Width responsiveness** is handled entirely by CSS `@container` queries. The root `.ui5KioskKeyboard` element sets `container-name: keyboard; container-type: inline-size`. Two breakpoints exist:
 
-The responsive classes explain when the compact variables take effect, but they are implementation details; consumers should adjust the documented `--ui5KioskKeyboard-*` custom properties instead of styling those classes directly.
+- **30rem (narrow):** Caps `--ui5KioskKeyboard-keyFontSize` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
+- **20rem (compact):** Additionally reduces key inline padding for non-numpad keys and applies a tighter font-size cap of `0.875rem`.
+
+No JavaScript is involved in width responsiveness. Because UI5's vendored LESS 1.6.3 parser does not recognize `@container` at-rules, the container query rules live in a separate plain CSS file (`KioskKeyboard.container-queries.css`) that is pulled in via `@import (inline)` in `library.source.less`. The `(inline)` flag tells the LESS compiler to include the file verbatim without parsing it.
+
+**Height responsiveness** uses JS (`sap/ui/core/ResizeHandler`, UI5's centralized resize handling) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). When constrained, it applies classes on the root element:
+
+- `ui5KioskKeyboard--cq-short` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
+- `ui5KioskKeyboard--cq-tiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
+
+Height classes use `:where()` wrapper selectors for zero specificity (e.g., `:where(.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad))`). Any consumer class selector (e.g., `.myKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }`) wins without needing specificity tricks.
+
+A combined rule in the container queries CSS applies when both narrow width and constrained height are active, using the most aggressive font-size cap of `0.75rem`.
+
+Height thresholds are configurable via CSS custom properties: `--ui5KioskKeyboard-cqShortThreshold` (default `16rem`) and `--ui5KioskKeyboard-cqTinyThreshold` (default `12rem`).
+
+Docked keyboards and numpad mode skip height class application (docked keyboards are viewport-driven; numpads are already compact).
+
+The public sizing variables deliberately separate normal and extra-narrow spacing. `--ui5KioskKeyboard-keyPaddingInline` keeps the default inline inset for regular widths, while `--ui5KioskKeyboard-keyPaddingInlineXs` is applied at the 20rem `@container` breakpoint for non-numpad keys. Its default (`min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)`) trims the stock padding from `0.25rem` to `0.125rem` so wide glyphs like `@`, `%`, and `&` get more horizontal breathing room on phone-sized rows without reducing key height or touch-target size. The `min(...)` form preserves any consumer override that is already smaller.
+
+**Consumer overrides:** All default values use `:where()` for zero specificity. Consumer selectors with at least one class always win. For custom width breakpoints, consumers can write `@container keyboard (max-width: ...)` rules directly since the keyboard's root element sets `container-name: keyboard`.
 
 ### Content Density
 
