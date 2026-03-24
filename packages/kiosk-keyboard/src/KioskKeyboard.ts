@@ -135,8 +135,6 @@ export default class KioskKeyboard extends Control {
   declare private _responsiveObservedDom: HTMLElement | null;
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
   declare private _responsiveSyncFrameId: number | null;
-  /** Cached row count, updated in onAfterRendering to avoid DOM queries on every resize. */
-
   static readonly metadata = {
     library: "ui5.kiosk" as const,
     properties: {
@@ -1317,6 +1315,9 @@ export default class KioskKeyboard extends Control {
    * Call this after runtime CSS changes that affect intrinsic keyboard height
    * without triggering a ResizeHandler callback, such as fixed-height styling
    * combined with updated `--ui5KioskKeyboard-*` sizing variables.
+   *
+   * @public
+   * @since 0.1.0
    */
   refreshResponsiveState(): this {
     const dom = this.getDomRef() as HTMLElement | null;

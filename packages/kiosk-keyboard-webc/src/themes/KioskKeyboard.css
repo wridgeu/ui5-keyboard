@@ -193,9 +193,7 @@
    consumer overrides of the public CSS custom properties always win.
    Per the CSS Scoping spec, at equal specificity the outer (document) context
    beats shadow-internal :host() rules, so any consumer selector targeting
-   <kiosk-keyboard> overrides these defaults.
-   :where() zeroes out the argument specificity, giving :host(:where(...))
-   a total of (0,0,1) -- the minimum for the host pseudo-class. */
+   <kiosk-keyboard> overrides these defaults without needing extra specificity. */
 :host(.cq-short) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;

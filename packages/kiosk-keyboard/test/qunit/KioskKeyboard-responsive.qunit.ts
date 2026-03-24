@@ -556,6 +556,29 @@ QUnit.test("Height breakpoints adapt when container constrains the keyboard", as
   kb.destroy();
 });
 
+QUnit.test("Height breakpoints still fire when root has extra consumer padding", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  // Force tall keys so the keyboard is naturally taller than 16rem
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  // Add extra consumer padding (the root already has its default padding,
+  // this adds more). getBoundingClientRect().height includes this padding,
+  // so the threshold comparison accounts for it.
+  dom.style.padding = "1.5rem";
+  dom.style.height = `${15 * remPx}px`;
+  dom.style.overflow = "hidden";
+  kb.refreshResponsiveState();
+
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied despite extra padding");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Not tiny at 15rem with padding");
+
+  kb.destroy();
+});
+
 QUnit.test("Responsive class preserves custom font-size below the cap", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

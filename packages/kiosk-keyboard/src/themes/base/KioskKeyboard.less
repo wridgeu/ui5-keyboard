@@ -13,6 +13,9 @@
  *   --ui5KioskKeyboard-padding          Container padding (default: 0.75rem)
  *   --ui5KioskKeyboard-keyGap           Gap between keys and rows (default: 0.375rem)
  *   --ui5KioskKeyboard-keyHeight        Key height / touch target (default: 3rem)
+ *   --ui5KioskKeyboard-keyPadding       Full key padding shorthand (default: 0 <inline>)
+ *   --ui5KioskKeyboard-keyPaddingXs     Full key padding shorthand at xs width
+ *                                       (default: 0 <inline-xs>)
  *   --ui5KioskKeyboard-keyPaddingInline Horizontal key padding (default: 0.25rem)
  *   --ui5KioskKeyboard-keyPaddingInlineXs Horizontal key padding on extra-narrow keyboards
  *                                       (default: min(keyPaddingInline, 0.125rem))
@@ -97,6 +100,8 @@
   --_ui5KioskKeyboard-keyHeight: ~"var(--ui5KioskKeyboard-keyHeight)";
   --_ui5KioskKeyboard-keyPaddingInline: ~"var(--ui5KioskKeyboard-keyPaddingInline)";
   --_ui5KioskKeyboard-keyPaddingInlineXs: ~"var(--ui5KioskKeyboard-keyPaddingInlineXs)";
+  --_ui5KioskKeyboard-keyPadding: ~"var(--ui5KioskKeyboard-keyPadding, 0 var(--_ui5KioskKeyboard-keyPaddingInline))";
+  --_ui5KioskKeyboard-keyPaddingXs: ~"var(--ui5KioskKeyboard-keyPaddingXs, 0 var(--_ui5KioskKeyboard-keyPaddingInlineXs))";
   --_ui5KioskKeyboard-keyFontBase: ~"var(--ui5KioskKeyboard-keyFontSize)";
   --_ui5KioskKeyboard-keyShadow: ~"var(--ui5KioskKeyboard-keyShadow)";
   --_ui5KioskKeyboard-keyShadowHover: ~"var(--ui5KioskKeyboard-keyShadowHover)";
@@ -133,6 +138,14 @@
 
     .ui5KioskKey {
       min-width: var(--_ui5KioskKeyboard-numpadKeyMinWidth);
+    }
+
+    /* Numpad action keys (Enter, Backspace) are primary interaction targets,
+       not subordinate labels -- bypass the min() font-size cap so their icons
+       scale with the larger numpad key font. */
+    .ui5KioskKey--modifier,
+    .ui5KioskKey--action {
+      font-size: var(--ui5KioskKeyboard-keyFontSize);
     }
   }
 
@@ -191,7 +204,7 @@
   justify-content: center;
   flex: 1 1 0;
   height: var(--_ui5KioskKeyboard-keyHeight);
-  padding: 0 var(--_ui5KioskKeyboard-keyPaddingInline);
+  padding: var(--_ui5KioskKeyboard-keyPadding);
   border: 1px solid @sapUiButtonBorderColor;
   border-radius: @sapUiButtonBorderCornerRadius;
   background: @sapUiButtonBackground;
@@ -378,7 +391,7 @@
 }
 
 .ui5KioskKeyboard--cq-xs:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
-  --_ui5KioskKeyboard-keyPaddingInline: ~"var(--_ui5KioskKeyboard-keyPaddingInlineXs)";
+  --_ui5KioskKeyboard-keyPadding: ~"var(--_ui5KioskKeyboard-keyPaddingXs)";
 }
 
 .ui5KioskKeyboard--cq-xs .ui5KioskKey {

@@ -935,6 +935,9 @@ class KioskKeyboard extends UI5Element {
    * without producing a reliable resize signal, for example when compact mode
    * or custom CSS vars change the underlying natural content height within a
    * fixed-height host.
+   *
+   * @public
+   * @since 0.1.0
    */
   refreshResponsiveState(): void {
     const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
