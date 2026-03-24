@@ -189,18 +189,17 @@
 }
 
 /* ---- Height-responsive classes (JS-driven via ResizeObserver) ----
-   Height classes (.cq-short / .cq-tiny) live on the HOST element so that
-   consumer overrides of the public CSS custom properties always win.
-   Per the CSS Scoping spec, at equal specificity the outer (document) context
-   beats shadow-internal :host() rules, so any consumer selector targeting
-   <kiosk-keyboard> overrides these defaults without needing extra specificity. */
-:host(.cq-short) {
+   Height classes (.cq-short / .cq-tiny) live on the HOST element.
+   :where() zeroes the class argument specificity so the :host(:where(...))
+   rules stay at (0,1,0). Any outer consumer selector with at least one class
+   (e.g. kiosk-keyboard.my-kb) beats these via the shadow DOM cascade. */
+:host(:where(.cq-short)) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
 }
 
-:host(.cq-tiny) {
+:host(:where(.cq-tiny)) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;
@@ -211,8 +210,8 @@
    This single rule replaces the @container mixed rule, the --cq-width-custom
    mixed rule, and the @supports-not mixed rule -- all three scenarios are
    covered because JS always sets both width and height classes. */
-:host(.cq-short) .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key,
-:host(.cq-tiny) .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
+:host(:where(.cq-short)) .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key,
+:host(:where(.cq-tiny)) .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
   --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
 }
 
@@ -444,14 +443,14 @@
 /* Compact density               */
 /* ============================= */
 
-:host([data-ui5-compact-size]) {
+:host(:where([data-ui5-compact-size])) {
   --kiosk-keyboard-padding: 0.5rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-key-height: var(--sapElement_Height, 2.25rem);
   --kiosk-keyboard-key-font-size: var(--sapFontSize, 0.875rem);
 }
 
-:host([data-ui5-compact-size]) .kiosk-keyboard--numpad {
+:host(:where([data-ui5-compact-size])) .kiosk-keyboard--numpad {
   --kiosk-keyboard-numpad-key-min-width: 3rem;
   --kiosk-keyboard-key-height: 2.75rem;
   --kiosk-keyboard-key-font-size: 1.125rem;
