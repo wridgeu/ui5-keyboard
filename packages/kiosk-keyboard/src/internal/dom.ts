@@ -1,3 +1,5 @@
+import Log from "sap/base/Log";
+
 /**
  * Regex to extract row and column indices from a key element ID.
  *
@@ -85,7 +87,7 @@ export function resolveWithCustomResolver(
       const custom = customResolver(el);
       if (isInputOrTextarea(custom)) return custom;
     } catch (err) {
-      console.warn("[kiosk-keyboard] Custom target resolver threw:", err);
+      Log.warning("Custom target resolver threw: " + String(err), undefined, "ui5.kiosk.KioskKeyboard");
       return resolveInputOrTextarea(el);
     }
   }

@@ -242,7 +242,14 @@ import type {
 
 For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`.
 
-All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) and instance convenience delegates (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`) are part of the stable API surface.
+All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) are part of the stable API surface. Following the UI5 Web Components convention, registry operations are static-only -- import the class and call them directly:
+
+```js
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+
+KioskKeyboard.registerLayout("pin-pad", [...]);
+KioskKeyboard.registerLocaleLayout("de", "qwertz-de");
+```
 
 Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
 
@@ -294,19 +301,15 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Methods
 
-| Method                                 | Description                                                                                                                                                           |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `show()`                               | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.                 |
-| `close()`                              | Closes the docked keyboard (sets `open = false`).                                                                                                                     |
-| `isOpen()`                             | Returns whether the docked keyboard is open.                                                                                                                          |
-| `setTargetElement(el)`                 | Programmatically sets the target input/textarea.                                                                                                                      |
-| `setTargetResolver(fn)`                | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                               |
-| `resetKeyboardType()`                  | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                                  |
-| `refreshResponsiveState()`             | Recomputes responsive width/height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing. |
-| `registerLayout(name, definition)`     | Registers a custom layout (delegates to shared registry).                                                                                                             |
-| `unregisterLayout(name)`               | Removes a custom layout (delegates to shared registry).                                                                                                               |
-| `registerLocaleLayout(locale, layout)` | Maps a BCP-47 locale to a layout name (delegates to shared registry).                                                                                                 |
-| `unregisterLocaleLayout(locale)`       | Removes a locale mapping (delegates to shared registry).                                                                                                              |
+| Method                     | Description                                                                                                                                                     |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.           |
+| `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                               |
+| `isOpen()`                 | Returns whether the docked keyboard is open.                                                                                                                    |
+| `setTargetElement(el)`     | Programmatically sets the target input/textarea.                                                                                                                |
+| `setTargetResolver(fn)`    | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                         |
+| `resetKeyboardType()`      | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                            |
+| `refreshResponsiveState()` | Recomputes responsive height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing. |
 
 `after-open` and `after-close` fire synchronously when the `open` state flips.
 They report the state transition itself, not animation completion.
@@ -327,6 +330,9 @@ They report the state transition itself, not animation completion.
 | `KioskKeyboard.resetLocaleLayouts()`                 | Resets locale mappings to defaults.                |
 | `KioskKeyboard.getLocaleLayout()`                    | Returns the layout for the current browser locale. |
 | `KioskKeyboard.setI18nResolver(fn)`                  | Sets a custom i18n resolver callback.              |
+
+> [!NOTE]
+> Following the [UI5 Web Components convention](https://github.com/SAP/ui5-webcomponents), registry operations are static methods on the component class. Import the class and call them directly. In environments without ES module imports (e.g., plain `<script>` tags), the static API is also accessible via `customElements.get('kiosk-keyboard').registerLayout(...)` or `document.querySelector('kiosk-keyboard').constructor.registerLayout(...)`.
 
 `KioskKeyboard.DOM` is a supported read-only DOM hook contract for tests and DOM assertions. Prefer it over hard-coded shadow selectors. Styling customizations should still use the documented host attributes and public `--kiosk-keyboard-*` CSS custom properties.
 
@@ -374,25 +380,25 @@ KioskKeyboard.registerLayout("my-layout", [
 ]);
 ```
 
-Or via DOM (no ES import needed; requires a bundler or import map, see note above):
+Or via the custom elements registry (no ES class import needed):
 
 ```html
 <script type="module">
   import "kiosk-keyboard-webc/bundle";
+
+  customElements.whenDefined("kiosk-keyboard").then(() => {
+    const KioskKeyboard = customElements.get("kiosk-keyboard");
+    KioskKeyboard.registerLayout("pin-pad", [
+      [{ value: "1" }, { value: "2" }, { value: "3" }],
+      [{ value: "4" }, { value: "5" }, { value: "6" }],
+      [{ value: "7" }, { value: "8" }, { value: "9" }],
+      [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
+    ]);
+  });
 </script>
 
 <input id="my-input" type="text" />
-<kiosk-keyboard id="kb" layout="pin-pad" for="my-input"></kiosk-keyboard>
-
-<script>
-  const kb = document.querySelector("#kb");
-  kb.registerLayout("pin-pad", [
-    [{ value: "1" }, { value: "2" }, { value: "3" }],
-    [{ value: "4" }, { value: "5" }, { value: "6" }],
-    [{ value: "7" }, { value: "8" }, { value: "9" }],
-    [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
-  ]);
-</script>
+<kiosk-keyboard layout="pin-pad" for="my-input"></kiosk-keyboard>
 ```
 
 > [!NOTE]

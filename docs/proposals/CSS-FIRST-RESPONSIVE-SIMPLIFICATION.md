@@ -1,14 +1,12 @@
 # CSS-First Responsive Simplification
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Remove the JS-driven width responsive path from both packages, keeping CSS `@container` queries as the sole width-responsive mechanism. Add browser compatibility documentation to both package READMEs.
 
 **Architecture:** Width responsiveness moves from a dual CSS+JS system (CSS `@container` for defaults, JS `ResizeObserver` + classes for custom thresholds) to pure CSS `@container`. Height responsiveness stays JS-driven (no CSS alternative exists for `container-type: inline-size`). The consumer-configurable width threshold CSS variables (`cqNarrowThreshold` / `cqCompactThreshold`) are removed as a feature -- consumers who need custom width breakpoints write their own `@container` rules targeting the keyboard's CSS custom properties.
 
 **Tech Stack:** CSS (container queries), TypeScript, LESS, QUnit, Web Test Runner, WDIO visual regression
 
-**Status:** Proposed
+**Status:** Implemented
 
 ---
 

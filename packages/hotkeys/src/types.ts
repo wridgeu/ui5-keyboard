@@ -25,7 +25,7 @@ export type Platform = LibraryPlatform;
 export type ConflictBehavior = LibraryConflictBehavior;
 
 // ──────────────────────────────────────────────
-// Type-safe Hotkey union (Feature 12)
+// Type-safe Hotkey string union with IDE autocomplete
 // ──────────────────────────────────────────────
 
 type Letter =

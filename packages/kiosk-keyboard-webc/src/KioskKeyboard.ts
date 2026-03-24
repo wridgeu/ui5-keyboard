@@ -275,6 +275,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * Check whether a layout is secondary (non-alphabetic).
    * Secondary layouts cannot become the base layout.
+   * @param name Layout name to check.
    * @public
    * @since 0.1.0
    */
@@ -511,7 +512,7 @@ class KioskKeyboard extends UI5Element {
   private _layoutSwitchedByUser = false;
   private _pendingAnnouncement: string | null = null;
   private _deferredFocusOutCloseId: number | null = null;
-  /** ResizeObserver for responsive width/height class updates. */
+  /** ResizeObserver for height-responsive class updates. */
   private _resizeObserver: ResizeObserver | null = null;
   /** The current root element observed for intrinsic content size changes. */
   private _responsiveObservedRoot: HTMLElement | null = null;
@@ -774,51 +775,6 @@ class KioskKeyboard extends UI5Element {
     }
   }
 
-  // ── Public API ── Layout registry (instance delegates) ──
-  //
-  // These delegate to the shared module-level registry so that DOM-based
-  // consumers (no ES import) can call them via querySelector:
-  //   document.querySelector('kiosk-keyboard').registerLayout(…)
-  //
-  // The registry is shared - layouts registered on one instance are
-  // visible to all <kiosk-keyboard> elements on the page.
-
-  /**
-   * Registers a custom layout. Delegates to the shared layout registry.
-   * @public
-   * @since 0.1.0
-   */
-  registerLayout(name: string, definition: LayoutDefinition): void {
-    registerLayout(name, definition);
-  }
-
-  /**
-   * Removes a custom layout. Delegates to the shared layout registry.
-   * @public
-   * @since 0.1.0
-   */
-  unregisterLayout(name: string): void {
-    unregisterLayout(name);
-  }
-
-  /**
-   * Registers a locale-to-layout mapping. Delegates to the shared layout registry.
-   * @public
-   * @since 0.1.0
-   */
-  registerLocaleLayout(locale: string, layout: string): void {
-    registerLocaleLayout(locale, layout);
-  }
-
-  /**
-   * Removes a locale-to-layout mapping. Delegates to the shared layout registry.
-   * @public
-   * @since 0.1.0
-   */
-  unregisterLocaleLayout(locale: string): void {
-    unregisterLocaleLayout(locale);
-  }
-
   // ── Public API ──
 
   /**
@@ -925,7 +881,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Recomputes responsive width/height classes from the current live DOM.
+   * Recomputes responsive height classes from the current live DOM.
    *
    * Call this after runtime styling changes that alter intrinsic keyboard height
    * without producing a reliable resize signal, for example when compact mode
@@ -941,7 +897,7 @@ class KioskKeyboard extends UI5Element {
 
     this._syncResponsiveObserverTargets(root);
 
-    // Apply responsive sizing classes (width + height) after each render.
+    // Apply responsive height classes after each render.
     // This ensures classes survive template re-renders which reconcile the
     // class attribute to only what the template specifies.
     this._applyResponsiveClasses();

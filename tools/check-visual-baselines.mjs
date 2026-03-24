@@ -60,8 +60,15 @@ const TAG_PATTERNS = [
 ];
 
 // Tags that are legitimately skipped on touch-emulated device profiles
-// (e.g. docked mode tests that early-return on pointer:coarse).
-const TOUCH_PROFILE_SKIP_TAGS = new Set(["kb-docked", "webc-docked-open"]);
+// (e.g. docked mode tests that early-return on pointer:coarse,
+// hover tests that skip when matchMedia("(hover: hover)") is false).
+const TOUCH_PROFILE_SKIP_TAGS = new Set([
+  "kb-docked",
+  "webc-docked-open",
+  "kb-key-hovered",
+  "webc-key-hovered",
+  "webc-key-hovered-no-color-mix",
+]);
 const TOUCH_PROFILES = new Set(["phone-sm", "phone-md", "phone-lg", "tablet"]);
 
 function extractTags(filePath) {

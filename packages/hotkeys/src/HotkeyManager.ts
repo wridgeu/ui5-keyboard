@@ -180,7 +180,7 @@ export default class HotkeyManager extends BaseObject {
   private _focusFallback: FocusFallbackTracker;
 
   /**
-   * Private constructor - use `HotkeyManager.getInstance()`.
+   * Not intended to be called directly. Use `HotkeyManager.getInstance()`.
    */
   constructor() {
     super();

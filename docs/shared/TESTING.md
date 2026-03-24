@@ -244,8 +244,9 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 | 8081      | Hotkeys QUnit                                                        |
 | 8082      | Kiosk keyboard QUnit runner                                          |
 | 8083      | Kiosk FLP e2e                                                        |
-| 8086      | Kiosk webc (Vite: E2E desktop)                                       |
+| 8084      | Kiosk webc manual dev server (`npm run start:kiosk-webc`)            |
 | 8085      | Kiosk keyboard E2E desktop + visual page                             |
+| 8086      | Kiosk webc (Vite: E2E desktop)                                       |
 | 8092-8095 | Kiosk device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) |
 | 8087-8090 | Webc device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`)  |
 

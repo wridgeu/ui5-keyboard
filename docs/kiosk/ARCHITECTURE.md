@@ -68,10 +68,10 @@ The `sap.m` dependency is required because the control uses `sap.ui.core.Element
 Because `Control` extends `ManagedObject`, the class field initializer trap applies. All private fields use `declare` and are initialized in `init()`:
 
 ```ts
-declare private _shiftActive: boolean;
+declare private _shiftState: ShiftState;
 // ... initialized in init()
 init(): void {
-  this._shiftActive = false;
+  this._shiftState = new ShiftState();
 }
 ```
 
@@ -211,19 +211,19 @@ Critically, this does **not** call `dom.focus()`. This avoids stealing focus fro
 
 ## Shift & Caps Lock
 
-The Shift key implements a three-state cycle managed by two boolean flags:
+The Shift key implements a three-state cycle managed by a `ShiftState` class backed by a `const enum Mode { Off, Shift, CapsLock }`:
 
 ```
-State        _shiftActive  _capsLock  isShiftActive()
-─────────    ────────────  ─────────  ───────────────
-Off          false         false      false
-Shift        true          false      true
-Caps Lock    true*         true       true
+State        Mode         isShifted  isCapsLock
+─────────    ───────────  ─────────  ──────────
+Off          Mode.Off     false      false
+Shift        Mode.Shift   true       false
+Caps Lock    Mode.CapsLock true      true
 ```
 
-\* `_shiftActive` is set to `false` when entering Caps Lock, but `isShiftActive()` returns `true` because it checks `_shiftActive || _capsLock`.
+**Double-click detection**: A second Shift press within 400ms (`ShiftState.DOUBLE_CLICK_MS`) of the first activates Caps Lock. A single press outside that window toggles one-shot Shift. Pressing Shift while Caps Lock is active turns everything off.
 
-**Auto-release**: After typing a character with Shift active (not Caps Lock), `_shiftActive` is set to `false` and `invalidate()` is called to update the display. Caps Lock is sticky and does not auto-release.
+**Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and returns `true`, triggering `invalidate()` to update the display. Caps Lock is sticky and does not auto-release.
 
 ## Layout System
 
@@ -464,11 +464,14 @@ The control implements roving tabindex for arrow key navigation:
 ```
 themes/
   base/
-    KioskKeyboard.less      All styles using @sapUi* LESS parameters
-    library.source.less     Imports KioskKeyboard.less
+    KioskKeyboard.less                  All styles using @sapUi* LESS parameters
+    KioskKeyboard.container-queries.css Width-responsive @container rules (plain CSS)
+    library.source.less                 Imports KioskKeyboard.less + container-queries.css (inline)
   sap_horizon/
-    library.source.less     Imports base + SAP Horizon theme globals
+    library.source.less                 Imports base + SAP Horizon theme globals
 ```
+
+`KioskKeyboard.container-queries.css` is imported via `@import (inline)` to bypass the LESS 1.6.3 preprocessor which does not recognize `@container` at-rules. It uses only CSS custom properties, no LESS variables.
 
 The base stylesheet references SAP theme parameters exclusively, with no hardcoded colors. This ensures automatic theming support for all Horizon variants (light, dark, HCB, HCW).
 
@@ -528,7 +531,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | Auto-show vs input owned by other kbd   | `_wouldClaimInput()` checks `_isTargetOfOther()`                                 |
 | Focus moves to claimed input while open | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                |
 | Layout switch in non-Full mode          | Silently ignored (no event, no state change)                                     |
-| Shift auto-release vs Caps Lock         | Only `_shiftActive` auto-releases, not `_capsLock`                               |
+| Shift auto-release vs Caps Lock         | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`       |
 | `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references                                  |
 | No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings                                   |
 | `setTargetInput` re-render              | `setAssociation(name, value, true)` suppresses invalidation                      |

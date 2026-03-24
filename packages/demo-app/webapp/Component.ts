@@ -112,11 +112,10 @@ export default class Component extends UIComponent {
     return this._hotkeyManager;
   }
 
-  destroy(): void {
+  exit(): void {
     this._hotkeys.destroyAll();
     this._hotkeyManager.destroy();
     this.getRouter().detachRouteMatched(this._routeMatchedHandler, this);
     document.removeEventListener("keydown", this._keyDownHandler, true);
-    super.destroy();
   }
 }

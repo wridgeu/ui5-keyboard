@@ -281,7 +281,7 @@ export default class FocusFallbackTracker {
     }
 
     if (depth >= MAX_DEPTH) {
-      console.warn("[ui5-lib-hotkeys] FocusFallbackTracker: MAX_DEPTH reached while building active-element path.");
+      Log.warning("MAX_DEPTH reached while building active-element path.", undefined, LOG_COMPONENT);
     }
 
     if (!path.includes(document)) {

@@ -47,6 +47,7 @@ function resolveLocaleMappedLayout(locale: string): string | null {
  * Registers a custom keyboard layout.
  *
  * Built-in layouts cannot be overwritten. Attempting to do so logs a warning.
+ * @internal
  */
 export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
   const name = normalizeLowerString(sName, "layout name");
@@ -78,6 +79,7 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
 /**
  * Removes a previously registered custom layout.
  * Built-in layouts cannot be removed.
+ * @internal
  */
 export function unregisterLayout(sName: string): void {
   const name = normalizeLowerString(sName, "layout name");
@@ -93,6 +95,7 @@ export function unregisterLayout(sName: string): void {
 
 /**
  * Removes all custom layouts and keeps built-in layouts intact.
+ * @internal
  */
 export function resetCustomLayouts(): void {
   // eslint-disable-next-line unicorn/no-useless-spread -- snapshot keys before deleting during iteration
@@ -106,6 +109,7 @@ export function resetCustomLayouts(): void {
 /**
  * Returns the layout definition for the given name, or undefined
  * if no such layout is registered.
+ * @internal
  */
 export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
   const name = normalizeLowerString(sName, "layout name");
@@ -116,6 +120,7 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
 /**
  * Returns the layout for the given name, falling back to
  * the default layout when the name is not registered.
+ * @internal
  */
 export function getLayoutOrDefault(sName: string): LayoutDefinition {
   const fallback = layouts.get(DEFAULT_LAYOUT);
@@ -125,12 +130,18 @@ export function getLayoutOrDefault(sName: string): LayoutDefinition {
   return layouts.get(name) ?? fallback;
 }
 
-/** Returns the names of all registered layouts (built-in + custom). */
+/**
+ * Returns the names of all registered layouts (built-in + custom).
+ * @internal
+ */
 export function getRegisteredLayoutNames(): string[] {
   return [...layouts.keys()];
 }
 
-/** Returns whether the given layout name is a built-in layout. */
+/**
+ * Returns whether the given layout name is a built-in layout.
+ * @internal
+ */
 export function isBuiltInLayout(sName: string): boolean {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return false;
@@ -139,6 +150,7 @@ export function isBuiltInLayout(sName: string): boolean {
 
 /**
  * Registers a mapping from a BCP-47 language tag (or prefix) to a layout name.
+ * @internal
  */
 export function registerLocaleLayout(sLocale: string, sLayout: string): void {
   const locale = normalizeLowerString(sLocale, "locale map key");
@@ -156,6 +168,7 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
 
 /**
  * Removes a locale -> layout mapping.
+ * @internal
  */
 export function unregisterLocaleLayout(sLocale: string): void {
   const locale = normalizeLowerString(sLocale, "locale map key");
@@ -166,6 +179,7 @@ export function unregisterLocaleLayout(sLocale: string): void {
 
 /**
  * Resets locale mappings to the built-in defaults.
+ * @internal
  */
 export function resetLocaleLayouts(): void {
   LOCALE_LAYOUT_MAP.clear();
@@ -184,6 +198,7 @@ export function resetLocaleLayouts(): void {
  * 1. Exact BCP-47 match (e.g. "de-at")
  * 2. Language prefix (e.g. "de")
  * 3. Default layout fallback ("qwerty")
+ * @internal
  */
 export function getLocaleLayout(): string {
   try {

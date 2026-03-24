@@ -1,0 +1,50 @@
+diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs b/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
+index 5af121e..7f1abab 100644
+--- a/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
++++ b/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
+@@ -183,7 +183,7 @@ function processClass(ts, classNode, moduleDoc) {
+ 	// Slots (with accessor), methods and fields
+ 	for (let i = 0; i < (currClass.members?.length || 0); i++) {
+ 		const member = currClass.members[i];
+-		const classNodeMember = classNode.members?.find(nodeMember => nodeMember.name?.text === member?.name && nodeMember.jsDoc?.[0]);
++		const classNodeMember = classNode.members?.find(nodeMember => nodeMember.name?.text === member?.name && nodeMember.jsDoc?.[0] && (!!member.static === !!(nodeMember.modifiers?.some(m => m.kind === ts.SyntaxKind.StaticKeyword))));
+ 		const classNodeMemberJSdoc = classNodeMember?.jsDoc?.[0];
+ 
+ 		if (!classNodeMember || !classNodeMemberJSdoc) continue;
+@@ -239,7 +239,7 @@ function processClass(ts, classNode, moduleDoc) {
+ 				}
+ 
+ 				if (currClass.customElement && member.privacy === "public") {
+-					const tsProgramMember = tsProgramClassNode.members.find(m => ts.isPropertyDeclaration(m) && m.name?.text === member.name);
++					const tsProgramMember = tsProgramClassNode.members.find(m => (ts.isPropertyDeclaration(m) || ts.isGetAccessorDeclaration(m) || ts.isSetAccessorDeclaration(m)) && m.name?.text === member.name);
+ 					const attributeValue = typeChecker.typeToString(typeChecker.getTypeAtLocation(tsProgramMember), tsProgramMember);
+ 
+ 					if (attributeValue === "boolean" && member.default === "true") {
+@@ -595,7 +595,11 @@ export default {
+ 
+ 					for (const key in obj) {
+ 						if (Array.isArray(obj[key])) {
+-							sortByName(obj[key]);
++							// Skip sorting for order-dependent arrays (parameter position,
++							// mixin application order) per CEM spec constraints.
++							if (key !== "parameters" && key !== "mixins") {
++								sortByName(obj[key]);
++							}
+ 							obj[key].forEach(item => sortArraysInObject(item));
+ 						} else if (typeof obj[key] === 'object') {
+ 							sortArraysInObject(obj[key]);
+diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js b/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js
+index 32f121e..b1e0937 100644
+--- a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js
++++ b/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js
+@@ -58,6 +58,10 @@ export function handleParametersAndReturnType(functionLike, node) {
+       parameter.optional = true;
+     }
+ 
++    if(param?.dotDotDotToken) {
++      parameter.rest = true;
++    }
++
+     if(param?.type) {
+       parameter.type = {text: param.type.getText() }
+     }

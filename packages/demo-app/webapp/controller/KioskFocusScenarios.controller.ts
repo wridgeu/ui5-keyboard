@@ -164,11 +164,8 @@ export default class KioskFocusScenarios extends BaseController {
   }
 
   private _addLogEntry(event: string, detail: string, state: string): void {
-    const entries = this._logModel.getProperty("/entries") as LogEntry[];
-    entries.unshift({ time: new Date(), event, detail, state });
-    if (entries.length > KioskFocusScenarios._MAX_LOG) {
-      entries.length = KioskFocusScenarios._MAX_LOG;
-    }
-    this._logModel.setProperty("/entries", entries);
+    const current = this._logModel.getProperty("/entries") as LogEntry[];
+    const next = [{ time: new Date(), event, detail, state }, ...current].slice(0, KioskFocusScenarios._MAX_LOG);
+    this._logModel.setProperty("/entries", next);
   }
 }

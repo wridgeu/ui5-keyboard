@@ -19,9 +19,8 @@ const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
  * tests inject CSS overrides to disable text-box-trim, capturing the
  * fallback rendering that non-supporting browsers would show.
  *
- * The UI5 control uses JS-driven classes for width-responsive sizing
- * (not native @container queries), so container query fallback testing
- * is handled in the WebC package only.
+ * Both the UI5 control and the WebC package use native CSS @container
+ * queries for width-responsive sizing. Only height remains JS-driven.
  */
 
 describe("KioskKeyboard UI5 - Fallback: without text-box-trim", () => {

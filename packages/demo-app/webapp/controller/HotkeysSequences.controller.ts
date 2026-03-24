@@ -1,4 +1,5 @@
 import MessageToast from "sap/m/MessageToast";
+import type JSONModel from "sap/ui/model/json/JSONModel";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
@@ -53,7 +54,7 @@ export default class HotkeysSequences extends BaseController {
     }
   }
 
-  private _createPendingHandler(stateModel: import("sap/ui/model/json/JSONModel").default) {
+  private _createPendingHandler(stateModel: JSONModel) {
     return (info: { completedSteps: number; totalSteps: number; nextKey: string }) => {
       if (this._pendingTimer) {
         clearTimeout(this._pendingTimer);

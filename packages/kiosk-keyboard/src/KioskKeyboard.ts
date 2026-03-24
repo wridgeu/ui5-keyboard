@@ -818,6 +818,7 @@ export default class KioskKeyboard extends Control {
     );
     this._targetResolverInstance = null;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
+    this._rendererApi = null;
     this._responsiveResizeHandlerId = null;
     this._responsiveObservedDom = null;
     this._responsiveSyncFrameId = null;
