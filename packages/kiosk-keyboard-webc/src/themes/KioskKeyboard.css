@@ -226,6 +226,9 @@
     min-width: var(--_kiosk-keyboard-numpad-key-min-width);
   }
 
+  /* Numpad modifier and action keys are primary interaction targets,
+     not subordinate labels -- bypass the min() font-size cap so their
+     icons scale with the larger numpad key font. */
   & .kiosk-key--modifier,
   & .kiosk-key--action {
     font-size: var(--kiosk-keyboard-key-font-size);
