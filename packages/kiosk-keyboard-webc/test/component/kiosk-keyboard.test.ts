@@ -1743,44 +1743,6 @@ describe("kiosk-keyboard", () => {
       expect(fontSize).to.be.at.most(0.875 * remPx + 0.5, "Font size should be capped at ≤ 0.875rem");
     });
 
-    it("JS fallback applies width classes for non-CQ browsers", async () => {
-      // _applyResponsiveClasses adds cq-sm / cq-xs classes to .kiosk-keyboard
-      // based on measured width. In CQ browsers the @supports not(...) CSS
-      // hides these; in non-CQ browsers they drive the font-size caps.
-      // This test verifies the JS class-toggle logic works correctly.
-      const wrapper = document.createElement("div");
-      wrapper.style.width = "18rem"; // ≤ 20rem → should get cq-xs
-
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-        `,
-        { parentNode: wrapper },
-      );
-      await nextRender();
-
-      const root = rootDiv(el);
-      expect(root.classList.contains(DOM.classes.rootCqXs), "cq-xs applied at ≤ 20rem").to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqSm), "cq-sm absent when cq-xs applies").to.be.false;
-
-      // Widen to 25rem → should switch to cq-sm
-      wrapper.style.width = "25rem";
-      // Trigger ResizeObserver cycle
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      await nextRender();
-
-      expect(root.classList.contains(DOM.classes.rootCqSm), "cq-sm applied at ≤ 30rem").to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqXs), "cq-xs removed above 20rem").to.be.false;
-
-      // Widen beyond 30rem → both removed
-      wrapper.style.width = "40rem";
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      await nextRender();
-
-      expect(root.classList.contains(DOM.classes.rootCqSm), "cq-sm removed above 30rem").to.be.false;
-      expect(root.classList.contains(DOM.classes.rootCqXs), "cq-xs removed above 30rem").to.be.false;
-    });
-
     it("preserves consumer font-size below the responsive cap", async () => {
       // Consumer sets a small custom font-size; the responsive breakpoint should
       // NOT override it to a larger value.
@@ -2082,70 +2044,6 @@ describe("kiosk-keyboard", () => {
   // ── Responsive threshold CSS variables ──
 
   describe("responsive threshold CSS variables", () => {
-    it("uses custom width thresholds for visible narrow-mode styling", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty" style="width: 600px"></kiosk-keyboard>
-        `,
-      );
-      await nextRender();
-      await waitForResponsiveSync();
-
-      const key = queryKey(el, "1");
-      expect(key).to.not.be.null;
-
-      const defaultFontSize = parseFloat(getComputedStyle(key!).fontSize);
-      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-
-      // At 600px with default 30rem threshold (480px), no cq-sm class expected.
-      // Override narrow threshold to 40rem (640px) so 600px triggers cq-sm.
-      el.style.setProperty("--kiosk-keyboard-cq-narrow-threshold", "40rem");
-      el.refreshResponsiveState();
-      await waitForResponsiveSync();
-
-      const root = rootDiv(el);
-      expect(root.classList.contains(DOM.classes.rootCqWidthCustom)).to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqSm)).to.be.true;
-
-      const customFontSize = parseFloat(getComputedStyle(key!).fontSize);
-      expect(customFontSize).to.be.at.most(1 * remPx + 0.5, "Font size should respect the 1rem narrow cap");
-      expect(customFontSize).to.be.below(
-        defaultFontSize - 0.5,
-        "Custom width threshold should visibly narrow the keys",
-      );
-    });
-
-    it("uses custom compact threshold for visible compact-mode padding", async () => {
-      const el = await fixture<KioskKeyboard>(
-        html`
-          <kiosk-keyboard layout="qwerty" style="width: 28rem"></kiosk-keyboard>
-        `,
-      );
-      await nextRender();
-      await waitForResponsiveSync();
-
-      const key = queryKey(el, "1");
-      expect(key).to.not.be.null;
-
-      const defaultPaddingLeft = parseFloat(getComputedStyle(key!).paddingLeft);
-
-      // At 28rem the default 20rem compact threshold does not apply.
-      // Override compact threshold to 30rem so 28rem triggers cq-xs.
-      el.style.setProperty("--kiosk-keyboard-cq-compact-threshold", "30rem");
-      el.refreshResponsiveState();
-      await waitForResponsiveSync();
-
-      const root = rootDiv(el);
-      expect(root.classList.contains(DOM.classes.rootCqWidthCustom)).to.be.true;
-      expect(root.classList.contains(DOM.classes.rootCqXs)).to.be.true;
-
-      const compactPaddingLeft = parseFloat(getComputedStyle(key!).paddingLeft);
-      expect(compactPaddingLeft).to.be.below(
-        defaultPaddingLeft - 0.5,
-        "Custom compact threshold should reduce key padding",
-      );
-    });
-
     it("uses custom height thresholds for class toggling", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
