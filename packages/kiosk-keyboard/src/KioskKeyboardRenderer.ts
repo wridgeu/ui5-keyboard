@@ -8,8 +8,6 @@ import { isSingleGlyph } from "./internal/grapheme";
 
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 
-export { KIOSK_KEYBOARD_DOM, type KioskKeyboardDomContract } from "./internal/dom-contract";
-
 /**
  * Renderer for the KioskKeyboard control.
  *

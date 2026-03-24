@@ -5,8 +5,6 @@ import { KeyboardType } from "./types.js";
 
 import { KIOSK_KEYBOARD_DOM } from "./core/dom-contract.js";
 
-export { KIOSK_KEYBOARD_DOM, type KioskKeyboardDomContract } from "./core/dom-contract.js";
-
 /**
  * JSX template for `<kiosk-keyboard>`.
  *

@@ -9,7 +9,8 @@ import type { LayoutDefinition, KeyDefinition } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
-import KioskKeyboardRenderer, { KIOSK_KEYBOARD_DOM } from "./KioskKeyboardRenderer";
+import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
+import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, keyElementId, resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
 import { KeyboardType, type KeyboardTypeValue, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
@@ -42,7 +43,7 @@ import FocusClaimService from "./internal/focus-claim-service";
 import { ShiftState } from "./internal/shift-state";
 import TargetInputSession from "./internal/target-input-session";
 
-export type { KioskKeyboardDomContract } from "./KioskKeyboardRenderer";
+export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
 type InputFocusDelegation = {
   onfocusin: () => void;

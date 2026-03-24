@@ -37,10 +37,11 @@ import {
   type TargetInputChangeEventDetail,
 } from "./types.js";
 
-import KioskKeyboardTemplate, { KIOSK_KEYBOARD_DOM } from "./KioskKeyboardTemplate.js";
+import KioskKeyboardTemplate from "./KioskKeyboardTemplate.js";
+import { KIOSK_KEYBOARD_DOM } from "./core/dom-contract.js";
 import styles from "./generated/themes/KioskKeyboard.css.js";
 
-export type { KioskKeyboardDomContract } from "./KioskKeyboardTemplate.js";
+export type { KioskKeyboardDomContract } from "./core/dom-contract.js";
 
 // ── Register ui5-icon + needed icons so they resolve inside shadow DOM ──
 import "@ui5/webcomponents/dist/Icon.js";
