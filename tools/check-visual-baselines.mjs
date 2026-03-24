@@ -71,6 +71,14 @@ const TOUCH_PROFILE_SKIP_TAGS = new Set([
 ]);
 const TOUCH_PROFILES = new Set(["phone-sm", "phone-md", "phone-lg", "tablet"]);
 
+// Tags that are runtime-skipped on specific profiles due to viewport width guards.
+// Maps profile name -> set of tags that are skipped via `if (vw < N) return this.skip()`.
+const PROFILE_SKIP_TAGS = {
+  "phone-sm": new Set(["kb-height-constrained-no-text-trim"]), // vw 320 < 420
+  "phone-md": new Set(["kb-height-constrained-no-text-trim"]), // vw 390 < 420
+  "phone-lg": new Set(["kb-wide"]), // vw 430 < 620
+};
+
 function extractTags(filePath) {
   const content = readFileSync(filePath, "utf-8");
   const tags = new Set();
@@ -134,6 +142,8 @@ for (const pkg of PACKAGES) {
       for (const tag of tags) {
         // Skip tags that are known to be runtime-skipped on touch profiles
         if (isTouch && TOUCH_PROFILE_SKIP_TAGS.has(tag)) continue;
+        // Skip tags that are runtime-skipped due to viewport width guards
+        if (PROFILE_SKIP_TAGS[profile]?.has(tag)) continue;
 
         const baselinePath = join(baselineDir, profile, `${tag}.png`);
         if (!existsSync(baselinePath)) {
