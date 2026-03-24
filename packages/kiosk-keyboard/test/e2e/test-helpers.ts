@@ -1,6 +1,7 @@
 import { browser, $ } from "@wdio/globals";
 import type { SnapshotElement, MatchSnapshotOptions } from "../../../../tools/wdio-test-helpers.js";
 import { matchElementSnapshotInSection as _matchBase } from "../../../../tools/wdio-test-helpers.js";
+import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/internal/dom-contract.js";
 
 // Re-export shared helpers so consumers import everything from one place
 export {
@@ -25,12 +26,12 @@ export async function getViewportWidth(): Promise<number> {
 export async function waitForVisualKeyboardsReady(): Promise<void> {
   await browser.waitUntil(
     async () =>
-      browser.execute(() => {
-        const keyboards = document.querySelectorAll(".ui5KioskKeyboard");
+      browser.execute((rootSel: string) => {
+        const keyboards = document.querySelectorAll(rootSel);
         if (keyboards.length === 0) return false;
         const last = keyboards[keyboards.length - 1];
         return last.querySelectorAll('[role="button"]').length > 0;
-      }),
+      }, DOM.selectors.root),
     { timeout: 10_000, timeoutMsg: "Keyboard keys not rendered" },
   );
 }
@@ -45,7 +46,7 @@ export async function openVisualPage(page = VISUAL_PAGE): Promise<void> {
 
 /** Get the rendered KioskKeyboard element inside a container. */
 export function getKeyboard(containerId: string) {
-  return $(`#${containerId} .ui5KioskKeyboard`);
+  return $(`#${containerId} ${DOM.selectors.root}`);
 }
 
 /**
@@ -62,7 +63,7 @@ export async function matchElementSnapshotInSection(
 ): Promise<void> {
   return _matchBase(element, name, {
     checkNestedKeyboardOverflow: true,
-    nestedKeyboardSelector: ".ui5KioskKeyboard",
+    nestedKeyboardSelector: DOM.selectors.root,
     ...options,
   });
 }
@@ -106,15 +107,15 @@ export async function clearForcedHoverState(selector: string): Promise<void> {
 
 /** CSS override to disable the text-box-trim progressive enhancement. */
 export const DISABLE_TEXT_BOX_TRIM = `
-  .ui5KioskKey__label,
-  .ui5KioskKey__label--glyph {
+  .${DOM.classes.keyLabel},
+  .${DOM.classes.keyLabelGlyph} {
     text-box-trim: none !important;
     text-box-edge: auto !important;
   }
-  .ui5KioskKey__label {
+  .${DOM.classes.keyLabel} {
     line-height: 1.2 !important;
   }
-  .ui5KioskKey__label--glyph {
+  .${DOM.classes.keyLabelGlyph} {
     line-height: 1 !important;
   }
 `;

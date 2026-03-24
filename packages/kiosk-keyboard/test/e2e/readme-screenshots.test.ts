@@ -3,6 +3,7 @@ import path from "node:path";
 import url from "node:url";
 import { browser, $ } from "@wdio/globals";
 import { VISUAL_PAGE, openVisualPage } from "./test-helpers.js";
+import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/internal/dom-contract.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
@@ -21,14 +22,14 @@ describe("README screenshots", () => {
       // which may trigger :hover and create non-deterministic key colors
       // (notably visible in high-contrast themes). Disable pointer interactions
       // on keyboard roots during capture to keep screenshots stable.
-      await browser.execute(() => {
-        const keyboards = document.querySelectorAll(".ui5KioskKeyboard");
+      await browser.execute((rootSel: string) => {
+        const keyboards = document.querySelectorAll(rootSel);
         for (const el of keyboards) {
           (el as HTMLElement).style.pointerEvents = "none";
         }
-      });
+      }, DOM.selectors.root);
 
-      const inlineWide = await $("#kb-wide .ui5KioskKeyboard");
+      const inlineWide = await $(`#kb-wide ${DOM.selectors.root}`);
       await inlineWide.waitForDisplayed({ timeout: 20_000 });
       await inlineWide.saveScreenshot(path.join(OUTPUT_DIR, `kiosk-inline-wide-${theme}.png`));
     }

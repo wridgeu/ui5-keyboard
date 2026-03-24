@@ -3,78 +3,9 @@ import { keyElementId } from "./core/dom-utils.js";
 import { isSingleGlyph } from "./core/grapheme.js";
 import { KeyboardType } from "./types.js";
 
-export const KIOSK_KEYBOARD_DOM = Object.freeze({
-  classes: Object.freeze({
-    root: "kiosk-keyboard",
-    rootDocked: "kiosk-keyboard--docked",
-    rootDisabled: "kiosk-keyboard--disabled",
-    rootHidden: "kiosk-keyboard--hidden",
-    rootNumpad: "kiosk-keyboard--numpad",
-    rootNumeric: "kiosk-keyboard--numeric",
-    /** Height-responsive classes live on the host element (not the inner root)
-     *  so that consumer overrides of public CSS custom properties on the host
-     *  always win via the CSS cascade (outer context beats shadow at same specificity). */
-    hostCqShort: "cq-short",
-    hostCqTiny: "cq-tiny",
-    row: "kiosk-row",
-    key: "kiosk-key",
-    keyModifier: "kiosk-key--modifier",
-    keyAction: "kiosk-key--action",
-    keyShiftActive: "kiosk-key--shift-active",
-    keyCapsLock: "kiosk-key--caps-lock",
-    keyHighlight: "kiosk-key--highlight",
-    keyLabel: "kiosk-key__label",
-    keyLabelGlyph: "kiosk-key__label--glyph",
-    keyLabelMulti: "kiosk-key__label--multi",
-    keyIcon: "kiosk-key__icon",
-    liveRegion: "kiosk-keyboard__live-region",
-  }),
-  attributes: Object.freeze({
-    key: "data-key",
-    shiftValue: "data-shift-value",
-  }),
-  selectors: Object.freeze({
-    root: ".kiosk-keyboard",
-    row: ".kiosk-row",
-    key: ".kiosk-key",
-    keyHook: "[data-key]",
-    focusableKey: '.kiosk-key[tabindex="0"]',
-    keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
-    keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
-    liveRegion: ".kiosk-keyboard__live-region",
-  }),
-  /** All CSS part names exposed by the component. */
-  parts: Object.freeze(["keyboard", "row", "key", "modifier", "action", "key-label", "key-icon"]),
+import { KIOSK_KEYBOARD_DOM } from "./core/dom-contract.js";
 
-  /**
-   * Ready-to-use `exportparts` attribute value for wrapper components.
-   *
-   * When `<kiosk-keyboard>` is placed inside another shadow DOM host,
-   * CSS `::part()` selectors cannot cross multiple shadow boundaries.
-   * Set `exportparts` on the inner `<kiosk-keyboard>` to forward all
-   * parts to the outer host:
-   *
-   * ```html
-   * <!-- Inside my-wrapper's shadow DOM template -->
-   * <kiosk-keyboard exportparts="keyboard, row, key, modifier, action, key-label, key-icon">
-   * </kiosk-keyboard>
-   * ```
-   *
-   * Or programmatically:
-   * ```js
-   * import KioskKeyboard from "kiosk-keyboard-webc/dist/KioskKeyboard.js";
-   * this.shadowRoot.querySelector('kiosk-keyboard')
-   *   .setAttribute('exportparts', KioskKeyboard.DOM.exportParts);
-   * ```
-   */
-  exportParts: "keyboard, row, key, modifier, action, key-label, key-icon",
-
-  keyWidthClass(width: string): string {
-    return `kiosk-key--w${width.replace(".", "-")}`;
-  },
-} as const);
-
-export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;
+export { KIOSK_KEYBOARD_DOM, type KioskKeyboardDomContract } from "./core/dom-contract.js";
 
 /**
  * JSX template for `<kiosk-keyboard>`.

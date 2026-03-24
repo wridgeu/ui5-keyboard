@@ -6,49 +6,9 @@ import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
 import { isSingleGlyph } from "./internal/grapheme";
 
-export const KIOSK_KEYBOARD_DOM = Object.freeze({
-  classes: Object.freeze({
-    root: "ui5KioskKeyboard",
-    rootDocked: "ui5KioskKeyboard--docked",
-    rootClosed: "ui5KioskKeyboard--closed",
-    rootDisabled: "ui5KioskKeyboard--disabled",
-    rootCqShort: "ui5KioskKeyboard--cq-short",
-    rootCqTiny: "ui5KioskKeyboard--cq-tiny",
-    row: "ui5KioskRow",
-    key: "ui5KioskKey",
-    keySpace: "ui5KioskKey--space",
-    keyModifier: "ui5KioskKey--modifier",
-    keyAction: "ui5KioskKey--action",
-    keyActive: "ui5KioskKey--active",
-    keyCapsLock: "ui5KioskKey--capsLock",
-    keyPressed: "ui5KioskKey--pressed",
-    keyHighlight: "ui5KioskKey--highlight",
-    keyLabel: "ui5KioskKey__label",
-    keyLabelGlyph: "ui5KioskKey__label--glyph",
-    keyLabelMulti: "ui5KioskKey__label--multi",
-    keyIcon: "ui5KioskKey__icon",
-  }),
-  attributes: Object.freeze({
-    key: "data-key",
-    shiftValue: "data-shift-value",
-  }),
-  selectors: Object.freeze({
-    root: ".ui5KioskKeyboard",
-    row: ".ui5KioskRow",
-    key: ".ui5KioskKey",
-    focusableKey: '.ui5KioskKey[tabindex="0"]',
-    keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
-    keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
-  }),
-  keyboardTypeClass(type: string): string {
-    return `ui5KioskKeyboard--${type.toLowerCase()}`;
-  },
-  keyWidthClass(width: string): string {
-    return width === "space" ? "ui5KioskKey--space" : `ui5KioskKey--w${width.replace(".", "-")}`;
-  },
-} as const);
+import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 
-export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;
+export { KIOSK_KEYBOARD_DOM, type KioskKeyboardDomContract } from "./internal/dom-contract";
 
 /**
  * Renderer for the KioskKeyboard control.

@@ -1,6 +1,7 @@
 import { browser, $ } from "@wdio/globals";
 import type { SnapshotElement, MatchSnapshotOptions } from "../../../../tools/wdio-test-helpers.js";
 import { matchElementSnapshotInSection as _matchBase } from "../../../../tools/wdio-test-helpers.js";
+import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 // Re-export shared helpers so consumers import everything from one place
 export {
@@ -35,7 +36,7 @@ export async function openVisualPage(): Promise<void> {
 /** Get the shadow DOM root element of a kiosk-keyboard by host ID. */
 export async function getKeyboardRoot(hostId: string) {
   // WDIO pierces shadow DOM with >>> (deep selector)
-  return $(`#${hostId}`).$(">>>.kiosk-keyboard");
+  return $(`#${hostId}`).$(`>>>${DOM.selectors.root}`);
 }
 
 type DockedKeyboardState = {
@@ -214,15 +215,15 @@ export async function removeShadowStyleOverride(id = "wdio-shadow-css-override")
 
 /** CSS override to disable the text-box-trim progressive enhancement. */
 export const DISABLE_TEXT_BOX_TRIM = `
-  .kiosk-key__label,
-  .kiosk-key__label--glyph {
+  .${DOM.classes.keyLabel},
+  .${DOM.classes.keyLabelGlyph} {
     text-box-trim: none !important;
     text-box-edge: auto !important;
   }
-  .kiosk-key__label {
+  .${DOM.classes.keyLabel} {
     line-height: 1.2 !important;
   }
-  .kiosk-key__label--glyph {
+  .${DOM.classes.keyLabelGlyph} {
     line-height: 1 !important;
   }
 `;
