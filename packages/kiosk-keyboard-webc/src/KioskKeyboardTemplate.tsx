@@ -11,9 +11,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootHidden: "kiosk-keyboard--hidden",
     rootNumpad: "kiosk-keyboard--numpad",
     rootNumeric: "kiosk-keyboard--numeric",
-    rootCqWidthCustom: "kiosk-keyboard--cq-width-custom",
-    rootCqSm: "kiosk-keyboard--cq-sm",
-    rootCqXs: "kiosk-keyboard--cq-xs",
     /** Height-responsive classes live on the host element (not the inner root)
      *  so that consumer overrides of public CSS custom properties on the host
      *  always win via the CSS cascade (outer context beats shadow at same specificity). */

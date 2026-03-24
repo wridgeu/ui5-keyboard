@@ -128,10 +128,6 @@ function resolveRemThreshold(
   return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
 }
 
-function differsFromDefaultThreshold(valuePx: number, fallbackRem: number, remPx: number): boolean {
-  return Math.abs(valuePx - fallbackRem * remPx) > 0.01;
-}
-
 /**
  * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
  *
@@ -1591,13 +1587,9 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Applies width and height responsive classes to the root element.
+   * Applies height responsive classes to the host element.
    *
-   * Width: mirrors the default @container inline-size breakpoints via JS
-   * classes. In CQ browsers, the default 30rem / 20rem breakpoints are still
-   * handled natively by CSS, but when consumers override the public width
-   * threshold variables we add a dedicated class so CSS can honor the custom
-   * thresholds instead of the fixed @container defaults.
+   * Width responsiveness is handled purely by CSS @container queries.
    *
    * Height: applied in all browsers -- detects external height constraints
    * (host height < natural content height) and applies compact layout.
@@ -1612,21 +1604,7 @@ class KioskKeyboard extends UI5Element {
     if (!root) return;
 
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-
-    // ── Width ──
     const cs = getComputedStyle(root);
-    const rootContentWidth =
-      root.clientWidth - (Number.parseFloat(cs.paddingLeft) || 0) - (Number.parseFloat(cs.paddingRight) || 0);
-
-    const narrowThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-narrow-threshold", 30, remPx);
-    const compactThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-compact-threshold", 20, remPx);
-    const isCompact = rootContentWidth <= compactThresh;
-    const isNarrow = rootContentWidth <= narrowThresh;
-    const hasCustomWidthThresholds =
-      differsFromDefaultThreshold(narrowThresh, 30, remPx) || differsFromDefaultThreshold(compactThresh, 20, remPx);
-    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqWidthCustom, hasCustomWidthThresholds);
-    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqSm, isNarrow && !isCompact);
-    root.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqXs, isCompact);
 
     // ── Height ── (classes live on host so consumer overrides always win)
     this.classList.remove(KIOSK_KEYBOARD_DOM.classes.hostCqShort, KIOSK_KEYBOARD_DOM.classes.hostCqTiny);
