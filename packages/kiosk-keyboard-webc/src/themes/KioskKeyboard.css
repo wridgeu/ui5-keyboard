@@ -31,14 +31,6 @@
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 
-  /* ---- Responsive breakpoint thresholds (rem) ----
-     Override to control when width/height compact classes activate.
-     The default width behavior uses CSS @container breakpoints (30rem/20rem).
-     When consumers override the width thresholds, JS-driven classes take over
-     so the public CSS variables remain authoritative.
-     Height thresholds always drive JS-applied --cq-short / --cq-tiny classes. */
-  --kiosk-keyboard-cq-narrow-threshold: 30rem;
-  --kiosk-keyboard-cq-compact-threshold: 20rem;
   --kiosk-keyboard-cq-short-threshold: 16rem;
   --kiosk-keyboard-cq-tiny-threshold: 12rem;
 }
@@ -110,38 +102,10 @@
 }
 
 /* ---- Responsive font scaling ----
-   Width-responsive sizing uses two mechanisms:
-   1. CSS @container queries (30rem / 20rem) handle the default breakpoints
-      in CQ-capable browsers instantly and without JS involvement.
-   2. JS always sets --cq-sm / --cq-xs classes on every resize. Their CSS
-      rules activate in two contexts:
-      a. @supports not (container-type: inline-size) -- non-CQ browsers
-         where native @container is unavailable.
-      b. .kiosk-keyboard--cq-width-custom -- all browsers, when consumers
-         override width threshold CSS variables, since @container cannot
-         read custom property values.
-   Both use min() to cap rather than hard-replace consumer-provided values.
-   A consumer who sets --kiosk-keyboard-key-font-size: 0.75rem keeps that
+   @container queries (30rem / 20rem) handle width-responsive sizing.
+   min() caps rather than hard-replaces consumer-provided values:
+   a consumer who sets --kiosk-keyboard-key-font-size: 0.75rem keeps that
    value; one who sets 1.5rem gets capped to 1rem / 0.875rem. ---- */
-
-/* JS-driven width classes: non-CQ fallback path (--cq-sm/--cq-xs also
-   serve --cq-width-custom in all browsers; see custom-threshold block below) */
-@supports not (container-type: inline-size) {
-  .kiosk-keyboard--cq-sm .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
-  }
-  .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --_kiosk-keyboard-key-padding: var(
-      --kiosk-keyboard-key-padding-xs,
-      0 min(var(--_kiosk-keyboard-key-padding-inline), var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem))
-    );
-  }
-  .kiosk-keyboard--cq-xs .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
-  }
-}
-
-/* CSS @container rules (instant response in CQ-capable browsers) */
 @container keyboard (max-width: 30rem) {
   .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
@@ -161,33 +125,6 @@
   }
 }
 
-/* Consumer-overridden width thresholds (all browsers, including CQ-capable).
-   @container cannot read CSS custom properties, so when consumers override
-   the width threshold variables this block resets the fixed @container
-   defaults to base values and re-applies from JS-driven --cq-sm/--cq-xs. */
-.kiosk-keyboard--cq-width-custom .kiosk-key {
-  --kiosk-keyboard-key-font-size: var(--_kiosk-keyboard-key-font-base);
-}
-
-.kiosk-keyboard--cq-width-custom:not(.kiosk-keyboard--numpad) .kiosk-key {
-  --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding, 0 var(--_kiosk-keyboard-key-padding-inline));
-}
-
-.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-sm .kiosk-key {
-  --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 1rem);
-}
-
-.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
-  --_kiosk-keyboard-key-padding: var(
-    --kiosk-keyboard-key-padding-xs,
-    0 min(var(--_kiosk-keyboard-key-padding-inline), var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem))
-  );
-}
-
-.kiosk-keyboard--cq-width-custom.kiosk-keyboard--cq-xs .kiosk-key {
-  --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.875rem);
-}
-
 /* ---- Height-responsive classes (JS-driven via ResizeObserver) ----
    Height classes (.cq-short / .cq-tiny) live on the HOST element.
    :where() zeroes the class argument specificity so the :host(:where(...))
@@ -205,14 +142,12 @@
   --kiosk-keyboard-padding: 0.25rem;
 }
 
-/* Mixed: narrow width (xs) + constrained height (short/tiny).
-   Height classes are on the host, width classes on the inner root.
-   This single rule replaces the @container mixed rule, the --cq-width-custom
-   mixed rule, and the @supports-not mixed rule -- all three scenarios are
-   covered because JS always sets both width and height classes. */
-:host(:where(.cq-short)) .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key,
-:host(:where(.cq-tiny)) .kiosk-keyboard--cq-xs:not(.kiosk-keyboard--numpad) .kiosk-key {
-  --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
+/* Mixed: narrow width (xs @container) + constrained height (JS class).
+   Applies the most aggressive font-size cap when both conditions are met. */
+@container keyboard (max-width: 20rem) {
+  :host(:where(.cq-short, .cq-tiny)) .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
+  }
 }
 
 /* ---- Mode: Numpad ---- */
