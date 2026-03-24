@@ -77,6 +77,23 @@ If/when this package is published, install it directly from npm:
 npm install kiosk-keyboard-webc
 ```
 
+## Browser Compatibility
+
+The keyboard requires modern browser features for full functionality:
+
+| Feature               | Used for                 | Baseline                                |
+| --------------------- | ------------------------ | --------------------------------------- |
+| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+   |
+| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+   |
+| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+   |
+| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+    |
+| CSS `color-mix()`     | Theme-adaptive shadows   | Chrome 111+, Firefox 113+, Safari 16.2+ |
+| Shadow DOM v1         | Component encapsulation  | Chrome 53+, Firefox 63+, Safari 10+     |
+
+All features are supported in browsers released since mid-2023. In older
+browsers, the keyboard renders at full size without width-responsive font
+scaling. Shadow colors fall back to static `rgba()` values.
+
 ## Consumption Modes
 
 ### 1. Standalone via `kiosk-keyboard-webc/bundle` (recommended)
@@ -590,8 +607,6 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                                | Box shadow for modifier keys on hover           |
 | `--kiosk-keyboard-numpad-max-width`      | `20rem`                                                   | Max width for numpad layout                     |
 | `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                                    | Minimum key width in numpad layout              |
-| `--kiosk-keyboard-cq-narrow-threshold`   | `30rem`                                                   | Width threshold for `--cq-sm` class             |
-| `--kiosk-keyboard-cq-compact-threshold`  | `20rem`                                                   | Width threshold for `--cq-xs` class             |
 | `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                                   | Height threshold for `--cq-short` class         |
 | `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                                   | Height threshold for `--cq-tiny` class          |
 
@@ -607,22 +622,46 @@ kiosk-keyboard {
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Width-responsive font scaling uses CSS container queries in capable browsers and falls back to JS-driven classes (via `ResizeObserver`) in older webviews that lack container query support. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. In the extra-narrow `≤ 20rem` mode, non-numpad keys also switch from `--kiosk-keyboard-key-padding` to `--kiosk-keyboard-key-padding-xs`. The default reduces horizontal padding from `0.25rem` to `0.125rem` because wide glyphs such as `@`, `%`, and `&` become visually cramped before the touch target itself needs to shrink. The `min(...)` default keeps any smaller consumer override intact, while still letting consumers opt into a roomier or tighter compact mode explicitly. Height-responsive sizing detects when the host element's layout box is smaller than the keyboard's natural content height and reduces key height, gaps, and modifier font-size automatically.
+Width-responsive font scaling uses CSS `@container` queries. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. In the extra-narrow `≤ 20rem` mode, non-numpad keys also switch from `--kiosk-keyboard-key-padding` to `--kiosk-keyboard-key-padding-xs`. The default reduces horizontal padding from `0.25rem` to `0.125rem` because wide glyphs such as `@`, `%`, and `&` become visually cramped before the touch target itself needs to shrink. The `min(...)` default keeps any smaller consumer override intact, while still letting consumers opt into a roomier or tighter compact mode explicitly. Height-responsive sizing detects when the host element's layout box is smaller than the keyboard's natural content height and reduces key height, gaps, and modifier font-size automatically.
 
-The four `--kiosk-keyboard-cq-*-threshold` variables control when responsive classes (`--cq-sm`, `--cq-xs`, `--cq-short`, `--cq-tiny`) activate. Override them to tune breakpoints for your container:
+### Custom Width Breakpoints
+
+The keyboard responds to its container width via CSS container queries
+at 30rem (narrow) and 20rem (compact). To define custom breakpoints,
+wrap the keyboard in a container and override CSS custom properties at
+your chosen widths:
 
 ```css
-/* Trigger compact mode earlier for a tight sidebar */
+.my-panel {
+  container-type: inline-size;
+}
+
+@container (max-width: 40rem) {
+  kiosk-keyboard.my-keyboard {
+    --kiosk-keyboard-key-font-size: 1rem;
+  }
+}
+
+@container (max-width: 25rem) {
+  kiosk-keyboard.my-keyboard {
+    --kiosk-keyboard-key-font-size: 0.875rem;
+    --kiosk-keyboard-key-padding: 0 0.125rem;
+  }
+}
+```
+
+This is more flexible than the previous threshold variables: you can
+set any property at any number of breakpoints.
+
+The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`--cq-short`, `--cq-tiny`) activate. Override them to tune height breakpoints for your container:
+
+```css
 kiosk-keyboard {
-  --kiosk-keyboard-cq-narrow-threshold: 25rem;
   --kiosk-keyboard-cq-short-threshold: 14rem;
 }
 ```
 
-> [!NOTE]
-> The default width behavior uses native CSS `@container` breakpoints at `30rem` / `20rem` for instant response. When you override `--kiosk-keyboard-cq-narrow-threshold` or `--kiosk-keyboard-cq-compact-threshold`, the component automatically switches to class-driven width styling so the custom breakpoints become authoritative in CQ and non-CQ browsers alike.
-
-For troubleshooting, the root element toggles internal classes such as `kiosk-keyboard--cq-sm`, `kiosk-keyboard--cq-xs`, `kiosk-keyboard--cq-short`, and `kiosk-keyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
+For troubleshooting, the root element toggles internal classes such as `kiosk-keyboard--cq-short` and `kiosk-keyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
 
 #### Constrained Containers
 

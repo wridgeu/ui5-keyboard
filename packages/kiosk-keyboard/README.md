@@ -16,6 +16,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 - [Features](#features)
 - [Installation](#installation)
+- [Browser Compatibility](#browser-compatibility)
 - [Getting Started](#getting-started)
 - [Quick Start](#quick-start)
 - [API Stability](#api-stability)
@@ -113,6 +114,22 @@ npm install
 ```
 
 If/when this package is published, you can install it directly from npm (`ui5-lib-kiosk-keyboard`).
+
+## Browser Compatibility
+
+The keyboard requires modern browser features for full functionality:
+
+| Feature               | Used for                 | Baseline                                |
+| --------------------- | ------------------------ | --------------------------------------- |
+| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+   |
+| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+   |
+| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+   |
+| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+    |
+| CSS `color-mix()`     | Theme-adaptive shadows   | Chrome 111+, Firefox 113+, Safari 16.2+ |
+
+All features are supported in browsers released since mid-2023. In older
+browsers, the keyboard renders at full size without width-responsive font
+scaling. Shadow colors fall back to static `rgba()` values.
 
 ## Getting Started
 
@@ -1107,8 +1124,6 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                                 | Modifier key hover shadow                         |
 | `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                                   | Numpad container max-width                        |
 | `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                                    | Numpad key min-width                              |
-| `--ui5KioskKeyboard-cqNarrowThreshold`   | `30rem`                                                   | Width threshold for `ui5KioskKeyboard--cq-sm`     |
-| `--ui5KioskKeyboard-cqCompactThreshold`  | `20rem`                                                   | Width threshold for `ui5KioskKeyboard--cq-xs`     |
 | `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-short` |
 | `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-tiny`  |
 
@@ -1124,9 +1139,34 @@ By default, the inline keyboard takes the full width of its container (`100%`). 
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Responsive font scaling follows the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. In the extra-narrow `≤ 20rem` mode, non-numpad keys also switch from `--ui5KioskKeyboard-keyPaddingInline` to `--ui5KioskKeyboard-keyPaddingInlineXs`. The default reduces horizontal padding from `0.25rem` to `0.125rem` because wide glyphs such as `@`, `%`, and `&` become visually cramped before the touch target itself needs to shrink. The `min(...)` default keeps any smaller consumer override intact, while still letting consumers opt into a roomier or tighter compact mode explicitly. Height-responsive sizing detects when the control's rendered DOM element is smaller than its natural content height and reduces key height, gaps, and modifier font-size automatically.
+Responsive font scaling uses CSS `@container` queries on the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. In the extra-narrow `≤ 20rem` mode, non-numpad keys also switch from `--ui5KioskKeyboard-keyPaddingInline` to `--ui5KioskKeyboard-keyPaddingInlineXs`. The default reduces horizontal padding from `0.25rem` to `0.125rem` because wide glyphs such as `@`, `%`, and `&` become visually cramped before the touch target itself needs to shrink. The `min(...)` default keeps any smaller consumer override intact, while still letting consumers opt into a roomier or tighter compact mode explicitly. Height-responsive sizing detects when the control's rendered DOM element is smaller than its natural content height and reduces key height, gaps, and modifier font-size automatically.
 
-For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-sm`, `ui5KioskKeyboard--cq-xs`, `ui5KioskKeyboard--cq-short`, and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
+### Custom Width Breakpoints
+
+The keyboard responds to its container width via CSS container queries
+at 30rem (narrow) and 20rem (compact). Because the UI5 control renders
+in the light DOM, consumers can reference the keyboard's container name
+directly to define custom breakpoints:
+
+```css
+@container keyboard (max-width: 40rem) {
+  .myKeyboard .ui5KioskKey {
+    --ui5KioskKeyboard-keyFontSize: 1rem;
+  }
+}
+
+@container keyboard (max-width: 25rem) {
+  .myKeyboard .ui5KioskKey {
+    --ui5KioskKeyboard-keyFontSize: 0.875rem;
+    --ui5KioskKeyboard-keyPaddingInline: 0.125rem;
+  }
+}
+```
+
+This is more flexible than the previous threshold variables: you can
+set any property at any number of breakpoints.
+
+For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-short` and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
 The height constraint must affect the **control's own rendered element**. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the control's layout box, so the keyboard will be clipped instead of adapting. Apply `max-height` directly to the keyboard's root element (via CSS targeting `.ui5KioskKeyboard`), or use a flex parent that propagates the constraint.
 
