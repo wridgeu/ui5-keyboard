@@ -187,16 +187,12 @@ export async function assertSnapshotTargetIsUsable(
       // and the WebC ResizeObserver + rAF coalescing may not have fired yet
       // when the test reaches the snapshot. Retry for up to 2 seconds.
       const resolved = await element;
-      let lastOverflow: {
-        clientWidth: number;
-        clientHeight: number;
-        scrollWidth: number;
-        scrollHeight: number;
-      } | null = null;
+      type OverflowInfo = { clientWidth: number; clientHeight: number; scrollWidth: number; scrollHeight: number };
+      let lastOverflow: OverflowInfo | null = null;
       try {
         await browser.waitUntil(
           async () => {
-            lastOverflow = await browser.execute(
+            lastOverflow = (await browser.execute(
               (el: HTMLElement, sel: string) => {
                 const kb = el.querySelector(sel) as HTMLElement | null;
                 if (!kb) return null;
@@ -213,7 +209,7 @@ export async function assertSnapshotTargetIsUsable(
               },
               resolved,
               selector,
-            );
+            )) as OverflowInfo | null;
             return lastOverflow === null;
           },
           { timeout: 2000, interval: 100, timeoutMsg: "" },
@@ -222,11 +218,14 @@ export async function assertSnapshotTargetIsUsable(
         // timeout -- lastOverflow holds the final measured state
       }
 
-      if (lastOverflow) {
+      // TypeScript doesn't track that lastOverflow is reassigned inside the
+      // waitUntil async closure, so it narrows the type to null/never here.
+      const overflow = lastOverflow as OverflowInfo | null;
+      if (overflow) {
         throw new Error(
           `Snapshot target '${name}' contains a keyboard child with internal overflow. ` +
-            `keyboard client=${lastOverflow.clientWidth}x${lastOverflow.clientHeight} ` +
-            `scroll=${lastOverflow.scrollWidth}x${lastOverflow.scrollHeight}.`,
+            `keyboard client=${overflow.clientWidth}x${overflow.clientHeight} ` +
+            `scroll=${overflow.scrollWidth}x${overflow.scrollHeight}.`,
         );
       }
     }

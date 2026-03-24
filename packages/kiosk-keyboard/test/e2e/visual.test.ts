@@ -157,7 +157,8 @@ describe("KioskKeyboard Interactive States", () => {
         const kbDom = document.querySelector("#kb-docked .ui5KioskKeyboard");
         if (!kbDom) return;
         const Elem: typeof Element | undefined = sap.ui.require("sap/ui/core/Element");
-        Elem?.getElementById?.(kbDom.id)?.show?.();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-cast: getElementById returns UI5Element, show() lives on KioskKeyboard
+        (Elem?.getElementById?.(kbDom.id) as any)?.show?.();
       });
       const dockedKb = await $("#kb-docked .ui5KioskKeyboard");
       await dockedKb.waitForDisplayed({ timeout: 5_000 });
