@@ -1300,7 +1300,7 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Recomputes responsive width/height classes from the current live DOM.
+   * Recomputes responsive height classes from the current live DOM.
    *
    * Call this after runtime CSS changes that affect intrinsic keyboard height
    * without triggering a ResizeHandler callback, such as fixed-height styling

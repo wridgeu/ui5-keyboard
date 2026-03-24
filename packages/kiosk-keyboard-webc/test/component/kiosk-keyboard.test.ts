@@ -1720,7 +1720,7 @@ describe("kiosk-keyboard", () => {
     it("container query triggers on .kiosk-keyboard width, not :host width", async () => {
       // Place the component in an 800px wide wrapper but cap the keyboard itself to 18rem.
       // After the container-query fix, breakpoints evaluate against the .kiosk-keyboard
-      // box (≤ 18rem → cq-xs), not the wide :host.
+      // box (≤ 18rem triggers the @container narrow breakpoint), not the wide :host.
       // NOTE: fixture({ parentNode }) appends the wrapper to body and registers
       // it for cleanup, so do NOT also call document.body.appendChild() or wrapper.remove().
       const wrapper = document.createElement("div");
