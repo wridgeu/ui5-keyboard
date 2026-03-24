@@ -139,27 +139,18 @@ export function getRenderedLayoutKeys(keyboard: KioskKeyboard): string[][] {
   );
 }
 
-/** Call the private _applyResponsiveSizeClasses for unit testing responsive breakpoints.
- *  Stubs DOM measurement APIs so the method measures the supplied width/height.
+/** Call the private _applyResponsiveSizeClasses for unit testing height breakpoints.
+ *  Stubs DOM measurement APIs so the method measures the supplied height.
+ *  Width breakpoints are now handled purely by CSS @container queries.
  *  @param naturalHeight - the keyboard's unconstrained content height (scrollHeight).
  *         When larger than `height`, the keyboard is considered externally constrained. */
-export function applyResponsiveSizeClasses(
+export function applyResponsiveHeightClasses(
   keyboard: KioskKeyboard,
   dom: Element,
-  width: number,
   height: number,
   naturalHeight?: number,
 ): void {
   const htmlDom = dom as HTMLElement;
-
-  // Stub clientWidth to return width + padding so content-box calculation yields `width`.
-  const cs = window.getComputedStyle(htmlDom);
-  const padLeft = Number.parseFloat(cs.paddingLeft) || 0;
-  const padRight = Number.parseFloat(cs.paddingRight) || 0;
-  const origClientWidth =
-    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(htmlDom), "clientWidth") ??
-    Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
-  Object.defineProperty(htmlDom, "clientWidth", { value: width + padLeft + padRight, configurable: true });
 
   // Stub scrollHeight to control the natural (unconstrained) content height.
   // When naturalHeight > height, the method treats the keyboard as constrained.
@@ -181,9 +172,6 @@ export function applyResponsiveSizeClasses(
     keyboard._applyResponsiveSizeClasses(htmlDom);
   } finally {
     // Restore originals
-    if (origClientWidth) {
-      Object.defineProperty(htmlDom, "clientWidth", origClientWidth);
-    }
     if (naturalHeight !== undefined && origScrollHeight) {
       Object.defineProperty(htmlDom, "scrollHeight", origScrollHeight);
     }
