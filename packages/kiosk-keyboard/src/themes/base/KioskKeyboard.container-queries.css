@@ -3,22 +3,26 @@
    LESS 1.6.3 preprocessor which does not recognize @container at-rules.
    Only CSS custom properties are used -- no LESS variables needed.
 
+   All selectors use :where() for zero specificity so consumer overrides
+   always win. Source order in the compiled CSS ensures these still beat
+   the :where(.ui5KioskKeyboard) defaults from the LESS file.
+
    min() caps rather than hard-replaces consumer-provided values:
    a consumer who sets --ui5KioskKeyboard-keyFontSize: 0.75rem keeps that
    value; one who sets 1.5rem gets capped to 1rem / 0.875rem at narrow widths. */
 
 @container keyboard (max-width: 30rem) {
-  .ui5KioskKey {
+  :where(.ui5KioskKey) {
     --ui5KioskKeyboard-keyFontSize: min(var(--_ui5KioskKeyboard-keyFontBase), 1rem);
   }
 }
 
 @container keyboard (max-width: 20rem) {
-  .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
+  :where(.ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskKey) {
     --_ui5KioskKeyboard-keyPadding: var(--_ui5KioskKeyboard-keyPaddingXs);
   }
 
-  .ui5KioskKey {
+  :where(.ui5KioskKey) {
     --ui5KioskKeyboard-keyFontSize: min(var(--_ui5KioskKeyboard-keyFontBase), 0.875rem);
   }
 }
@@ -26,8 +30,8 @@
 /* Mixed: narrow width (@container) + constrained height (JS class).
    Applies the most aggressive font-size cap when both conditions are met. */
 @container keyboard (max-width: 20rem) {
-  .ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) .ui5KioskKey,
-  .ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
+  :where(.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) .ui5KioskKey),
+  :where(.ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey) {
     --ui5KioskKeyboard-keyFontSize: min(var(--_ui5KioskKeyboard-keyFontBase), 0.75rem);
   }
 }
