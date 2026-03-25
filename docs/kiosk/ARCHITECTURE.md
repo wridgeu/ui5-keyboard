@@ -499,7 +499,7 @@ Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted)
 
 No JavaScript is involved in width responsiveness. Because UI5's vendored LESS 1.6.3 parser does not recognize `@container` at-rules, the container query rules live in a separate plain CSS file (`KioskKeyboard.container-queries.css`) that is pulled in via `@import (inline)` in `library.source.less`. The `(inline)` flag tells the LESS compiler to include the file verbatim without parsing it.
 
-**Height responsiveness** uses JS (`sap/ui/core/ResizeHandler`, UI5's centralized resize handling) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). When constrained, it applies classes on the root element:
+**Height responsiveness** uses JS (`sap/ui/core/ResizeHandler`, UI5's centralized resize handling) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 
 - `ui5KioskKeyboard--cq-short` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `ui5KioskKeyboard--cq-tiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.

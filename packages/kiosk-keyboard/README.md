@@ -505,20 +505,16 @@ The keyboard root element sets `max-height: 100%; min-height: 0; overflow: hidde
 The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-cqShortThreshold`, `--ui5KioskKeyboard-cqTinyThreshold`).
 
 ```xml
-<!-- Automatic: Popover with contentHeight constrains the keyboard -->
-<Popover contentWidth="24rem" contentHeight="18rem">
-  <kiosk:KioskKeyboard targetInput="myInput" />
-</Popover>
-
 <!-- Automatic: flex parent constrains the keyboard -->
 <VBox height="250px">
   <kiosk:KioskKeyboard targetInput="myInput" />
 </VBox>
 
-<!-- Manual CSS needed: height: auto ancestor chain breaks propagation -->
-<core:HTML content="&lt;div style='max-height: 250px; overflow: hidden'&gt;" />
-  <kiosk:KioskKeyboard targetInput="myInput" />
-<core:HTML content="&lt;/div&gt;" />
+<!-- Manual CSS needed: Popover wraps content in height: auto divs that break propagation -->
+<Popover contentWidth="24rem" contentHeight="18rem">
+  <kiosk:KioskKeyboard targetInput="myInput" class="myConstrainedKeyboard" />
+</Popover>
+<!-- .myConstrainedKeyboard { height: 15rem; } -->
 ```
 
 > **Tip:** You can also fine-tune key sizes via `--ui5KioskKeyboard-keyHeight` and other [CSS custom properties](#css-custom-properties) to fit more content into a smaller container without relying solely on the automatic breakpoints.

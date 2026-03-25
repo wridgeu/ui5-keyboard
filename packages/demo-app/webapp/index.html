@@ -6,15 +6,14 @@
     <title>UI5 Keyboard Libraries Demo</title>
     <style>
       /* Popover demo: constrain the keyboard element directly so responsive
-         height breakpoints detect the constraint. overflow:hidden prevents
-         the Popover from adding a scrollbar. */
+         height breakpoints detect the constraint. Popover intermediate divs
+         are height: auto, so the keyboard needs an explicit height here.
+         overflow: hidden is already set by the keyboard root by default. */
       .demoPopoverKbGenerous {
         height: 19rem;
-        overflow: hidden;
       }
       .demoPopoverKbCompact {
         height: 15rem;
-        overflow: hidden;
       }
       /* Instead of height constraints, shrink keys via CSS custom properties
          so the keyboard naturally fits in less vertical space.
