@@ -19,6 +19,7 @@
 import { existsSync, globSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { execSync } from "node:child_process";
+import { serveStatic } from "./serve-static.mjs";
 
 const screenshotDir = process.argv[2];
 if (!screenshotDir) {
@@ -83,10 +84,4 @@ try {
 // Step 2: Serve the report
 const reportAppDir = resolve(reportDir, "report");
 console.log("\nServing visual report...");
-console.log("Open the URL shown below in your browser. Press Ctrl+C to stop.\n");
-try {
-  execSync(`npx sirv-cli "${reportAppDir}" --single --open`, { stdio: "inherit" });
-} catch (error) {
-  console.error(`Failed to serve visual report: ${error.message}`);
-  process.exit(1);
-}
+serveStatic(reportAppDir, { fallback: "index.html" });
