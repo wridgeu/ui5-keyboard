@@ -8,6 +8,7 @@ import {
   CHROME_VERSION,
   DEVICE_BASE_PORTS,
   ensureBrowsersDownloaded,
+  cleanScreenshots,
 } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
@@ -91,6 +92,7 @@ export const config: WebdriverIO.Config = {
 
   onPrepare: async () => {
     await ensureBrowsersDownloaded();
+    cleanScreenshots(path.resolve(__dirname, `__screenshots__/${profile.id}`));
     await server.onPrepare();
   },
   onWorkerStart: () => server.ensureRunning(),
