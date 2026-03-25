@@ -4,6 +4,9 @@
 
 :host {
   display: block;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
 
   /* ---- Public custom property defaults ---- */
   --kiosk-keyboard-padding: 0.75rem;

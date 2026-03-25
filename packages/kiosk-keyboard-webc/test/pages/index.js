@@ -62,9 +62,9 @@ document.getElementById("toggle-docked").addEventListener("click", () => {
   else docked.show();
 });
 
-// Custom layout via instance method (no class import needed)
+// Custom layout via static method
 const kbCustom = document.getElementById("kb-custom");
-kbCustom.registerLayout("demo-pin", [
+KioskKeyboard.registerLayout("demo-pin", [
   [{ value: "1" }, { value: "2" }, { value: "3" }],
   [{ value: "4" }, { value: "5" }, { value: "6" }],
   [{ value: "7" }, { value: "8" }, { value: "9" }],

@@ -672,26 +672,54 @@ kiosk-keyboard {
 
 For troubleshooting, the host element (`<kiosk-keyboard>`) toggles internal classes `cq-short` and `cq-tiny`. They indicate when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
 
+#### Responsive Behavior Overview
+
+| Scenario                                                       | Detection                                                                  | Adapts automatically?      | Consumer CSS needed?                 |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------- | ------------------------------------ |
+| **Width** (any container width)                                | CSS `@container` queries at 30rem / 20rem                                  | Yes                        | No                                   |
+| **Height** -- flex/grid parent with fixed height               | Host inherits constraint via `max-height: 100%; min-height: 0`             | Yes                        | No                                   |
+| **Height** -- explicit constraint on host                      | Host `max-height` or `height` limits `clientHeight`                        | Yes                        | No                                   |
+| **Height** -- `height: auto` parent (unconstrained)            | `max-height: 100%` resolves to no constraint                               | Correctly stays full size  | No                                   |
+| **Height** -- deeply nested ancestor constraint (no flex/grid) | Intermediate `height: auto` ancestors break `max-height: 100%` propagation | No                         | `max-height` or `height` on the host |
+| **Docked mode**                                                | Viewport-driven, fixed positioning                                         | Skipped (always full size) | No                                   |
+| **Compact density**                                            | `data-ui5-compact-size` attribute                                          | Yes                        | No                                   |
+
+Height-responsive classes (`cq-short` below 16rem, `cq-tiny` below 12rem) activate when the host element's layout box is smaller than the keyboard's natural content height. Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
+
 #### Constrained Containers
 
-When the keyboard is placed inside a fixed-height container, its responsive height breakpoints adapt the layout automatically. The `cq-short` class activates below 16 rem (reduced key height), and `cq-tiny` below 12 rem (further reduced). Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
-
-The height constraint must affect the **host element's own dimensions**; the component measures `clientHeight` on itself. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the host's layout box, so the keyboard will be clipped instead of adapting.
+The host element sets `max-height: 100%; min-height: 0; overflow: hidden` by default, so placing the keyboard inside a flex or grid parent with a fixed height automatically triggers responsive scaling without any CSS on the keyboard itself.
 
 ```html
-<!-- Works: constraint on the host element -->
-<kiosk-keyboard style="max-height: 250px; overflow: hidden"></kiosk-keyboard>
-
-<!-- Works: flex parent propagates constraint to the host -->
+<!-- Automatic: flex parent constrains the host -->
 <div style="display: flex; flex-direction: column; height: 250px">
-  <kiosk-keyboard style="flex: 1; min-height: 0; overflow: hidden"></kiosk-keyboard>
-</div>
-
-<!-- Does NOT work: wrapper clips paint but host renders at natural height -->
-<div style="max-height: 250px; overflow: hidden">
   <kiosk-keyboard></kiosk-keyboard>
 </div>
+
+<!-- Automatic: grid parent constrains the host -->
+<div style="display: grid; grid-template-rows: 1fr; height: 250px">
+  <kiosk-keyboard></kiosk-keyboard>
+</div>
+
+<!-- Automatic: explicit constraint on the host -->
+<kiosk-keyboard style="max-height: 250px"></kiosk-keyboard>
+
+<!-- Manual CSS needed: height: auto ancestor chain breaks max-height: 100% propagation -->
+<div style="max-height: 250px; overflow: hidden">
+  <kiosk-keyboard style="max-height: inherit"></kiosk-keyboard>
+</div>
 ```
+
+Consumer CSS overrides always win. The host's `max-height`, `min-height`, and `overflow` can be overridden from outside the shadow DOM without `!important`:
+
+```css
+kiosk-keyboard.my-keyboard {
+  max-height: none;
+  overflow: visible;
+}
+```
+
+Customization hooks: `::part()` selectors for structural changes, `--kiosk-keyboard-*` CSS custom properties for sizing and theming. See [CSS Parts](#css-parts) and [Public CSS Custom Properties](#public-css-custom-properties).
 
 Most runtime style changes are picked up automatically through rendering and `ResizeObserver`. If you change `--kiosk-keyboard-*` sizing variables at runtime within a fixed-height host, the rendered outer size may not change, so `ResizeObserver` will not fire. In that case, call `refreshResponsiveState()` after the style update to force a fresh responsive measurement.
 

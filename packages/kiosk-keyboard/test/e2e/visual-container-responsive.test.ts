@@ -20,4 +20,19 @@ describe("KioskKeyboard Responsive Height-Constrained Visual Regression", () => 
     const container = await $("#kb-vw-height-tiny");
     await matchElementSnapshotInSection(container, "kb-vw-height-tiny", HEIGHT_SNAPSHOT_OPTIONS);
   });
+
+  it("should match flex parent auto-detect (400x250, no CSS on keyboard)", async () => {
+    const wrap = await $("#kb-flex-auto-wrap");
+    await matchElementSnapshotInSection(wrap, "kb-flex-auto", HEIGHT_SNAPSHOT_OPTIONS);
+  });
+
+  it("should match grid parent auto-detect (400x250, no CSS on keyboard)", async () => {
+    const wrap = await $("#kb-grid-auto-wrap");
+    await matchElementSnapshotInSection(wrap, "kb-grid-auto", HEIGHT_SNAPSHOT_OPTIONS);
+  });
+
+  it("should render unconstrained keyboard at full size (regression guard)", async () => {
+    const kb = await getKeyboard("kb-unconstrained");
+    await matchElementSnapshotInSection(kb, "kb-unconstrained", HEIGHT_SNAPSHOT_OPTIONS);
+  });
 });

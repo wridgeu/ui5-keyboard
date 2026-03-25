@@ -480,9 +480,21 @@ kb.getBaseLayout(); // "qwertz-de"
 kb.resetLayout(); // back to qwertz-de
 ```
 
+### Responsive Behavior Overview
+
+| Scenario                                                       | Detection                                                                  | Adapts automatically?      | Consumer CSS needed?                          |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------- | --------------------------------------------- |
+| **Width** (any container width)                                | CSS `@container` queries at 30rem / 20rem                                  | Yes                        | No                                            |
+| **Height** -- flex/grid parent with fixed height               | Root element inherits constraint via `max-height: 100%; min-height: 0`     | Yes                        | No                                            |
+| **Height** -- explicit constraint on root                      | `max-height` or `height` on the keyboard root                              | Yes                        | No                                            |
+| **Height** -- `height: auto` parent (unconstrained)            | `max-height: 100%` resolves to no constraint                               | Correctly stays full size  | No                                            |
+| **Height** -- deeply nested ancestor constraint (no flex/grid) | Intermediate `height: auto` ancestors break `max-height: 100%` propagation | No                         | `max-height` or `height` on the keyboard root |
+| **Docked mode**                                                | Viewport-driven, fixed positioning                                         | Skipped (always full size) | No                                            |
+| **Compact density**                                            | `sapUiSizeCompact` CSS class                                               | Yes                        | No                                            |
+
 ### Constrained Containers and Popovers
 
-When the keyboard is placed inside a fixed-height container (a `sap.m.Popover`, `sap.m.Dialog`, or any element with a CSS height), its responsive height breakpoints adapt the layout automatically:
+The keyboard root element sets `max-height: 100%; min-height: 0; overflow: hidden` by default, so placing it inside a flex or grid parent with a fixed height automatically triggers responsive scaling without any additional CSS.
 
 | Container height | Behavior                                               |
 | ---------------- | ------------------------------------------------------ |
@@ -493,13 +505,18 @@ When the keyboard is placed inside a fixed-height container (a `sap.m.Popover`, 
 The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-cqShortThreshold`, `--ui5KioskKeyboard-cqTinyThreshold`).
 
 ```xml
-<!-- Keyboard inside a Popover: set contentHeight so the keyboard has a fixed container -->
+<!-- Automatic: Popover with contentHeight constrains the keyboard -->
 <Popover contentWidth="24rem" contentHeight="18rem">
   <kiosk:KioskKeyboard targetInput="myInput" />
 </Popover>
 
-<!-- Keyboard inside a fixed-height div -->
-<core:HTML content="&lt;div style='height: 18rem; overflow: hidden'&gt;" />
+<!-- Automatic: flex parent constrains the keyboard -->
+<VBox height="250px">
+  <kiosk:KioskKeyboard targetInput="myInput" />
+</VBox>
+
+<!-- Manual CSS needed: height: auto ancestor chain breaks propagation -->
+<core:HTML content="&lt;div style='max-height: 250px; overflow: hidden'&gt;" />
   <kiosk:KioskKeyboard targetInput="myInput" />
 <core:HTML content="&lt;/div&gt;" />
 ```

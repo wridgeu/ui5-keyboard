@@ -1812,6 +1812,77 @@ describe("kiosk-keyboard", () => {
       // No minHeight after layout switch
       expect(root.style.minHeight).to.equal("", "no minHeight after layout switch");
     });
+
+    it("auto-detects height constraint from flex parent without CSS on keyboard", async () => {
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "display: flex; flex-direction: column; height: 250px;";
+
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+        { parentNode: wrapper },
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      // Host constrained by flex parent
+      expect(el.clientHeight).to.be.at.most(250, "host respects flex parent height");
+
+      // Responsive class applied and key height actually reduced (cq-short = 2.25rem)
+      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short class applied").to.be.true;
+      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
+      const keyHeight = parseFloat(getComputedStyle(key!).height);
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      expect(keyHeight).to.be.at.most(2.25 * remPx + 1, "key height reduced to cq-short level");
+      expect(keyHeight).to.be.lessThan(3 * remPx, "key height smaller than default 3rem");
+    });
+
+    it("auto-detects height constraint from grid parent without CSS on keyboard", async () => {
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "display: grid; grid-template-rows: 1fr; height: 250px;";
+
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+        { parentNode: wrapper },
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      expect(el.clientHeight).to.be.at.most(250, "host respects grid parent height");
+
+      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short class applied").to.be.true;
+      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
+      const keyHeight = parseFloat(getComputedStyle(key!).height);
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      expect(keyHeight).to.be.at.most(2.25 * remPx + 1, "key height reduced to cq-short level");
+      expect(keyHeight).to.be.lessThan(3 * remPx, "key height smaller than default 3rem");
+    });
+
+    it("does not trigger height classes when parent is unconstrained", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      // Host auto-sizes to content -- no constraint detected
+      const root = rootDiv(el);
+      expect(root.scrollHeight).to.be.at.most(el.clientHeight + 1, "no overflow in unconstrained host");
+
+      expect(el.classList.contains(DOM.classes.hostCqShort), "no cq-short").to.be.false;
+      expect(el.classList.contains(DOM.classes.hostCqTiny), "no cq-tiny").to.be.false;
+
+      // Key height at full default (3rem)
+      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
+      const keyHeight = parseFloat(getComputedStyle(key!).height);
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      expect(keyHeight).to.be.closeTo(3 * remPx, 1, "key height at full 3rem default");
+    });
   });
 
   // ── Shadow-DOM inputmode suppression ──

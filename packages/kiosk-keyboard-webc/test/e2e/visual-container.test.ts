@@ -52,4 +52,19 @@ describe("KioskKeyboard Web Component - Fixed Container Visual Regression", () =
     const kb = await getKeyboardRoot("kb-custom-threshold");
     await matchElementSnapshotInSection(kb, "webc-custom-threshold", HEIGHT_SNAPSHOT_OPTIONS);
   });
+
+  it("should match flex parent auto-detect (250px, no CSS on keyboard)", async () => {
+    const wrap = await $("#kb-flex-auto-wrap");
+    await matchElementSnapshotInSection(wrap, "webc-flex-auto", HEIGHT_SNAPSHOT_OPTIONS);
+  });
+
+  it("should match grid parent auto-detect (250px, no CSS on keyboard)", async () => {
+    const wrap = await $("#kb-grid-auto-wrap");
+    await matchElementSnapshotInSection(wrap, "webc-grid-auto", HEIGHT_SNAPSHOT_OPTIONS);
+  });
+
+  it("should render unconstrained keyboard at full size (regression guard)", async () => {
+    const kb = await getKeyboardRoot("kb-unconstrained");
+    await matchElementSnapshotInSection(kb, "webc-unconstrained", HEIGHT_SNAPSHOT_OPTIONS);
+  });
 });

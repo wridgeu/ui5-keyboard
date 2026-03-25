@@ -137,4 +137,13 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
 
   // 26. Viewport-width severely height-constrained (180px)
   new KioskKeyboard().placeAt("kb-vw-height-tiny");
+
+  // 27. Flex parent auto-detect (no CSS on keyboard)
+  new KioskKeyboard().placeAt("kb-flex-auto-wrap");
+
+  // 28. Grid parent auto-detect (no CSS on keyboard)
+  new KioskKeyboard().placeAt("kb-grid-auto-wrap");
+
+  // 29. Unconstrained (regression guard)
+  new KioskKeyboard().placeAt("kb-unconstrained");
 });
