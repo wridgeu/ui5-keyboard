@@ -10,6 +10,14 @@ export default defineConfig({
     dedupe: ["@ui5/webcomponents-base"],
     tsconfigPaths: true,
   },
+  server: {
+    watch: {
+      // Exclude generated/output directories from file watching so that
+      // prior coverage or visual regression runs do not trigger Vite
+      // page reloads during e2e tests.
+      ignored: ["**/coverage/**", "**/__screenshots__/**", "**/dist/**"],
+    },
+  },
   build: {
     lib: {
       entry: path.resolve(__dirname, "src/bundle.esm.ts"),
