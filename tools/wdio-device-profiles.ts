@@ -2,6 +2,7 @@
 
 import os from "node:os";
 import fs from "node:fs";
+import path from "node:path";
 import { computeExecutablePath, Browser, install } from "@puppeteer/browsers";
 
 /**
@@ -163,8 +164,6 @@ export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
 export function buildChromedriverOptions(): Record<string, string> | undefined {
   return _cachedBinaries.chromedriver ? { binary: _cachedBinaries.chromedriver } : undefined;
 }
-
-import path from "node:path";
 
 /**
  * Remove stale `actual/` and `diff/` screenshots from a previous run.

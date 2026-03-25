@@ -33,8 +33,12 @@ function isPathContained(filePath, allowedRoot) {
  * @param {Record<string, string>} [opts.routes]  URL prefix -> filesystem directory map.
  */
 export function serveStatic(root, { port = 0, open = true, fallback, routes } = {}) {
+  // Pre-sort route prefixes by length descending so longer prefixes match first.
+  // Done once at startup rather than per-request.
+  const sortedRoutePrefixes = routes ? Object.keys(routes).toSorted((a, b) => b.length - a.length) : [];
+
   const server = createServer((req, res) => {
-    handleRequest(req, res, root, { fallback, routes }).catch((err) => {
+    handleRequest(req, res, root, { fallback, routes, sortedRoutePrefixes }).catch((err) => {
       console.error("Request handler error:", err);
       if (!res.headersSent) {
         res.writeHead(500, { "Content-Type": "text/plain" });
@@ -67,7 +71,7 @@ export function serveStatic(root, { port = 0, open = true, fallback, routes } = 
   return server;
 }
 
-async function handleRequest(req, res, root, { fallback, routes }) {
+async function handleRequest(req, res, root, { fallback, routes, sortedRoutePrefixes }) {
   const { pathname } = new URL(req.url ?? "/", "http://localhost");
   const urlPath = decodeURIComponent(pathname);
 
@@ -75,7 +79,7 @@ async function handleRequest(req, res, root, { fallback, routes }) {
   let containmentRoot = root;
 
   if (routes) {
-    const matchedPrefix = Object.keys(routes).find((prefix) => urlPath.startsWith(prefix + "/") || urlPath === prefix);
+    const matchedPrefix = sortedRoutePrefixes.find((prefix) => urlPath.startsWith(prefix + "/") || urlPath === prefix);
     if (matchedPrefix) {
       const relativePart = urlPath.slice(matchedPrefix.length);
       filePath = join(routes[matchedPrefix], relativePart);
@@ -111,7 +115,7 @@ async function handleRequest(req, res, root, { fallback, routes }) {
 async function tryServe(path, res) {
   let resolvedPath = path;
 
-  if (resolvedPath.endsWith("/") || resolvedPath.endsWith("\\")) {
+  if (resolvedPath.endsWith("/")) {
     resolvedPath = join(resolvedPath, "index.html");
   }
 

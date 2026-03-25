@@ -174,8 +174,8 @@ for (let pkgIdx = 0; pkgIdx < packages.length; pkgIdx++) {
   }
 }
 
-// Sort: by package then tag
-tagEntries.sort((a, b) => a.pkg.localeCompare(b.pkg) || a.tag.localeCompare(b.tag));
+// Sort: by package then tag (toSorted to avoid mutating the array during construction)
+const sortedTagEntries = tagEntries.toSorted((a, b) => a.pkg.localeCompare(b.pkg) || a.tag.localeCompare(b.tag));
 
 console.log(`Packages: ${packages.map((p) => p.pkg).join(", ")}`);
 console.log(`Profiles: ${allColumns.join(", ")}`);
@@ -186,7 +186,7 @@ console.log(`Tags:     ${tagEntries.length}`);
 const routes = {};
 for (const p of packages) {
   const prefix = multiPackage ? `/${p.pkg}` : "";
-  routes[`${prefix}/baselines/desktop`] = p.absBaselines;
+  routes[`${prefix}/baselines/${config.rootProfile}`] = p.absBaselines;
   for (const profile of p.profiles) {
     routes[`${prefix}/baselines/${profile}`] = join(p.absBaselines, profile);
   }
@@ -246,7 +246,7 @@ function generateHtml() {
     })
     .join("\n");
 
-  const rows = tagEntries
+  const rows = sortedTagEntries
     .map((entry, i) => {
       const { tag, pkg, pkgIdx } = entry;
       const p = packages[pkgIdx];
@@ -270,8 +270,8 @@ function generateHtml() {
           const baselineCell = `<td>${imgCell(baselineSrc, baselineFsPath)}</td>`;
           if (!includeScreenshots) return baselineCell;
 
-          const actualSrc = `${urlPrefix}/screenshots/${col}/actual/${tag}.png`;
-          const diffSrc = `${urlPrefix}/screenshots/${col}/diff/${tag}.png`;
+          const actualSrc = `${urlPrefix}/screenshots/${col}/${config.actualDir}/${tag}.png`;
+          const diffSrc = `${urlPrefix}/screenshots/${col}/${config.diffDir}/${tag}.png`;
           const sDir = p.screenshotsDir ?? "";
           const actualFsDir =
             col === config.rootProfile ? join(sDir, config.actualDir) : join(sDir, col, config.actualDir);
@@ -521,7 +521,7 @@ function generateHtml() {
   .img-missing img { display: none; }
   .img-missing .file-path { opacity: 0.6; }
   .img-missing::before {
-    content: "No file -- run e2e tests to generate";
+    content: "No file - run e2e tests to generate";
     display: flex;
     align-items: center;
     justify-content: center;
@@ -599,27 +599,48 @@ ${rows}
   <img id="lightbox-img" alt="">
 </div>
 <script>
-// Theme: initialize from system preference
+// -- URL state persistence --
+const params = new URLSearchParams(location.search);
+
+function updateUrl(key, value) {
+  const p = new URLSearchParams(location.search);
+  if (value === null || value === undefined) p.delete(key);
+  else p.set(key, value);
+  const qs = p.toString();
+  history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+}
+
+// -- Theme --
 const themeBtn = document.getElementById('theme-toggle');
 function applyTheme(dark) {
   document.body.classList.toggle('dark', dark);
   themeBtn.textContent = dark ? '\u2600\uFE0F' : '\uD83C\uDF19';
+  updateUrl('theme', dark ? 'dark' : 'light');
 }
-applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+const initTheme = params.get('theme');
+applyTheme(initTheme ? initTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches);
 function toggleTheme() {
   applyTheme(!document.body.classList.contains('dark'));
 }
 
-let screenshotsVisible = false;
-function toggleScreenshots() {
-  screenshotsVisible = !screenshotsVisible;
+// -- Screenshots toggle --
+let screenshotsVisible = params.get('diff') === '1';
+function applyScreenshots() {
   const cols = document.querySelectorAll('.ss-col');
   const display = screenshotsVisible ? '' : 'none';
   for (const col of cols) col.style.display = display;
-  document.getElementById('toggle-screenshots').textContent =
-    screenshotsVisible ? 'Hide actual/diff' : 'Show actual/diff';
+  const btn = document.getElementById('toggle-screenshots');
+  if (btn) btn.textContent = screenshotsVisible ? 'Hide actual/diff' : 'Show actual/diff';
+  updateUrl('diff', screenshotsVisible ? '1' : null);
+}
+applyScreenshots();
+function toggleScreenshots() {
+  screenshotsVisible = !screenshotsVisible;
+  applyScreenshots();
 }
 
+// -- Package filter --
+const pkgFilter = document.getElementById('pkg-filter');
 function filterPackage(pkg) {
   const rows = document.querySelectorAll('tbody tr');
   let visibleIdx = 0;
@@ -632,6 +653,12 @@ function filterPackage(pkg) {
       visibleIdx++;
     }
   }
+  updateUrl('pkg', pkg === 'all' ? null : pkg);
+}
+const initPkg = params.get('pkg');
+if (initPkg && pkgFilter) {
+  pkgFilter.value = initPkg;
+  filterPackage(initPkg);
 }
 
 const lightbox = document.getElementById('lightbox');
@@ -666,19 +693,19 @@ document.addEventListener('keydown', (e) => {
     const colIdx = [...th.parentElement.children].indexOf(th);
     const startX = e.clientX;
     const startWidth = th.offsetWidth;
+    const varName = \`--col-\${colIdx}-w\`;
+    const columnCells = table.querySelectorAll(\`tr > :nth-child(\${colIdx + 1})\`);
     handle.classList.add('dragging');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
     function onMove(ev) {
       const width = Math.max(40, startWidth + (ev.clientX - startX));
-      // Apply width to all cells in this column via nth-child
-      const varName = '--col-' + colIdx + '-w';
-      table.style.setProperty(varName, width + 'px');
-      for (const cell of table.querySelectorAll('tr > :nth-child(' + (colIdx + 1) + ')')) {
-        cell.style.width = 'var(' + varName + ')';
-        cell.style.minWidth = 'var(' + varName + ')';
-        cell.style.maxWidth = 'var(' + varName + ')';
+      table.style.setProperty(varName, \`\${width}px\`);
+      for (const cell of columnCells) {
+        cell.style.width = \`var(\${varName})\`;
+        cell.style.minWidth = \`var(\${varName})\`;
+        cell.style.maxWidth = \`var(\${varName})\`;
       }
     }
     function onUp() {
