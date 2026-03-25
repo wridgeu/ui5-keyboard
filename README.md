@@ -293,8 +293,8 @@ npm run test:kiosk:e2e:docs            # Regenerate README kiosk screenshots
 # use the package scripts documented in packages/kiosk-keyboard/README.md,
 # packages/kiosk-keyboard-webc/README.md, or docs/shared/TESTING.md.
 
-# Coverage
-npm run test:coverage                  # Kiosk webc coverage (unit + component)
+# Coverage (kiosk-keyboard-webc only)
+npm run test:coverage -w packages/kiosk-keyboard-webc
 ```
 
 ### Code Quality
@@ -334,6 +334,10 @@ ui5-lib-keyboard/
 | [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                      | Hotkeys sequence system design and rationale         |
 | [UI5 Web Component Consumption](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption guidance               |
 | [Docs Index](./docs/README.md)                                                          | Full index of all docs (incl. internal & historical) |
+
+## A note on how this was built
+
+Large parts of this project were _vibe coded_. I built most of the tooling, tests, and infrastructure with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges in the developer tooling or test scaffolding, that is probably why. The library code itself (the keyboard controls and web components) was held to normal review standards throughout.
 
 ## License
 
