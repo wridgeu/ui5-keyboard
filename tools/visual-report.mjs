@@ -57,7 +57,7 @@ function mergeOutputJsonFiles(files) {
     if (Array.isArray(data)) {
       merged.push(...data);
     } else if (data && typeof data === "object") {
-      // Push the entire object as-is; the reporter may expect individual entries
+      console.warn(`Warning: ${file} contains an object, not an array. Merge heuristic applied.`);
       merged.push(data);
     }
   }
@@ -68,8 +68,8 @@ function mergeOutputJsonFiles(files) {
   return combinedPath;
 }
 
-const outputJson = mergeOutputJsonFiles(outputJsonFiles);
 console.log(`Found output.json file(s): ${outputJsonFiles.map((f) => f.replace(absDir, ".")).join(", ")}`);
+const outputJson = mergeOutputJsonFiles(outputJsonFiles);
 
 // Step 1: Generate HTML report (non-interactive CLI mode)
 const reportDir = resolve(absDir, "report");

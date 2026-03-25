@@ -159,12 +159,7 @@ npm run browse:baselines:kiosk   # kiosk-keyboard package
 npm run browse:baselines:webc    # kiosk-keyboard-webc package
 ```
 
-This opens a gallery grouped by snapshot tag with columns for each device profile. To also include actual/diff screenshots from the last test run, pass `--include-screenshots`:
-
-```bash
-node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__ \
-  --include-screenshots packages/kiosk-keyboard/test/e2e/__screenshots__
-```
+This opens a gallery grouped by snapshot tag with columns for each device profile. Actual/diff screenshots from the last test run are included behind a toggle button. If no test run has been executed yet, the toggle is still available but screenshot cells will be empty.
 
 ### Updating baselines
 

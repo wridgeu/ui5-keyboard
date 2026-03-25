@@ -5,58 +5,78 @@
  * optionally screenshot) images and serves it locally.
  *
  * Usage:
- *   node tools/visual-browse.mjs <baselinesDir> [--include-screenshots <screenshotsDir>]
+ *   node tools/visual-browse.mjs <baselinesDir...> [--include-screenshots [dir]]
  *
  * Examples:
+ *   # Single package
  *   node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__
+ *
+ *   # Single package with explicit screenshots dir
  *   node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__ \
  *     --include-screenshots packages/kiosk-keyboard/test/e2e/__screenshots__
+ *
+ *   # Multiple packages (screenshots inferred from __baselines__ -> __screenshots__)
+ *   node tools/visual-browse.mjs \
+ *     packages/kiosk-keyboard/test/e2e/__baselines__ \
+ *     packages/kiosk-keyboard-webc/test/e2e/__baselines__ \
+ *     --include-screenshots
  */
 
 import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, parse, resolve, sep } from "node:path";
+import { basename, dirname, join, parse, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { serveStatic } from "./serve-static.mjs";
 
-const args = process.argv.slice(2);
-const screenshotsIdx = args.indexOf("--include-screenshots");
-let screenshotsDir = null;
+// -- Arg parsing --
+
+const rawArgs = process.argv.slice(2);
+const screenshotsIdx = rawArgs.indexOf("--include-screenshots");
+let includeScreenshots = false;
+let explicitScreenshotsDir = null;
 
 if (screenshotsIdx !== -1) {
-  screenshotsDir = args[screenshotsIdx + 1];
-  if (!screenshotsDir) {
-    console.error("Error: --include-screenshots requires a directory argument.");
-    process.exit(1);
+  includeScreenshots = true;
+  const nextArg = rawArgs[screenshotsIdx + 1];
+  // If the next arg exists and is not a flag, treat it as an explicit path
+  if (nextArg && !nextArg.startsWith("--")) {
+    explicitScreenshotsDir = nextArg;
+    rawArgs.splice(screenshotsIdx, 2);
+  } else {
+    rawArgs.splice(screenshotsIdx, 1);
   }
-  args.splice(screenshotsIdx, 2);
 }
 
-const baselinesDir = args[0];
-if (!baselinesDir) {
-  console.error("Usage: node tools/visual-browse.mjs <baselinesDir> [--include-screenshots <dir>]");
+const baselinesDirs = rawArgs.filter((a) => !a.startsWith("--"));
+if (baselinesDirs.length === 0) {
+  console.error("Usage: node tools/visual-browse.mjs <baselinesDir...> [--include-screenshots [dir]]");
   console.error("");
   console.error("Examples:");
   console.error("  node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__");
-  console.error("  node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__ \\");
-  console.error("    --include-screenshots packages/kiosk-keyboard/test/e2e/__screenshots__");
+  console.error(
+    "  node tools/visual-browse.mjs pkg1/test/e2e/__baselines__ pkg2/test/e2e/__baselines__ --include-screenshots",
+  );
   process.exit(1);
 }
 
-const absBaselines = resolve(baselinesDir);
-if (!existsSync(absBaselines)) {
-  console.error(`Baselines directory not found: ${absBaselines}`);
-  process.exit(1);
-}
+/**
+ * Convention mapping for @wdio/visual-service output structure.
+ * Update here if the testing infrastructure changes.
+ */
+const config = {
+  /** Profile name for baselines stored directly in the root (not in a subdirectory). */
+  rootProfile: "desktop",
+  /** Directory name for screenshot output (sibling of __baselines__). */
+  screenshotsDir: "__screenshots__",
+  /** Subdirectory for actual screenshots within a profile's screenshot folder. */
+  actualDir: "actual",
+  /** Subdirectory for diff images within a profile's screenshot folder. */
+  diffDir: "diff",
+  /** Workspace root segment used to derive package names and repo-relative paths. */
+  packagesSegment: "packages",
+};
 
-if (screenshotsDir) {
-  screenshotsDir = resolve(screenshotsDir);
-  if (!existsSync(screenshotsDir)) {
-    console.error(`Screenshots directory not found: ${screenshotsDir}`);
-    process.exit(1);
-  }
-}
+// -- Helpers --
 
-/** Return entries in a directory, or [] if the directory does not exist. */
 function safeReaddir(dir) {
   try {
     return readdirSync(dir);
@@ -65,7 +85,6 @@ function safeReaddir(dir) {
   }
 }
 
-/** True when `p` is a directory. */
 function isDir(p) {
   try {
     return statSync(p).isDirectory();
@@ -74,115 +93,188 @@ function isDir(p) {
   }
 }
 
-// Collect profiles: subdirectories of the baselines dir.
-const entries = safeReaddir(absBaselines);
-const profiles = entries.filter((e) => isDir(join(absBaselines, e))).toSorted();
-
-// Collect tags: filenames without .png, grouped by profile.
-// "desktop" represents files directly in the baselines root.
-function pngTags(dir) {
-  return safeReaddir(dir)
-    .filter((f) => f.endsWith(".png"))
-    .map((f) => parse(f).name);
-}
-
-const tagsByProfile = new Map();
-tagsByProfile.set("desktop", pngTags(absBaselines));
-for (const profile of profiles) {
-  tagsByProfile.set(profile, pngTags(join(absBaselines, profile)));
-}
-
-const allColumns = ["desktop", ...profiles];
-const allTags = [...new Set(allColumns.flatMap((p) => tagsByProfile.get(p) ?? []))].toSorted();
-
-// Derive a human-friendly package name from the baselines path.
-// e.g. ".../packages/kiosk-keyboard/test/e2e/__baselines__" -> "kiosk-keyboard"
 function derivePackageName(dir) {
   const parts = dir.split(sep);
-  const pkgIdx = parts.indexOf("packages");
+  const pkgIdx = parts.indexOf(config.packagesSegment);
   if (pkgIdx !== -1 && pkgIdx + 1 < parts.length) {
     return parts[pkgIdx + 1];
   }
   return basename(dir);
 }
 
-/** Return a path relative to the repo root (for display under images). */
 function toRepoRelative(absPath) {
   const parts = absPath.split(sep);
-  const pkgIdx = parts.indexOf("packages");
+  const pkgIdx = parts.indexOf(config.packagesSegment);
   const relevant = pkgIdx !== -1 ? parts.slice(pkgIdx) : [basename(absPath)];
   return relevant.join("/");
 }
 
-const packageName = derivePackageName(absBaselines);
-
-console.log(`Package:  ${packageName}`);
-console.log(`Profiles: ${allColumns.join(", ")}`);
-console.log(`Tags:     ${allTags.length}`);
-
-const routes = {};
-
-// Baselines routes
-routes["/baselines/desktop"] = absBaselines;
-for (const profile of profiles) {
-  routes[`/baselines/${profile}`] = join(absBaselines, profile);
+function pngTags(dir) {
+  return safeReaddir(dir)
+    .filter((f) => f.endsWith(".png"))
+    .map((f) => parse(f).name);
 }
 
-// Screenshots routes (when provided)
-if (screenshotsDir) {
-  // Desktop actuals/diffs live directly under actual/ and diff/
-  routes["/screenshots/desktop/actual"] = join(screenshotsDir, "actual");
-  routes["/screenshots/desktop/diff"] = join(screenshotsDir, "diff");
+/** Infer __screenshots__ from __baselines__ path. */
+function inferScreenshotsDir(baselinesAbsDir) {
+  return join(dirname(baselinesAbsDir), config.screenshotsDir);
+}
 
+// -- Build per-package data --
+
+/** @type {{ pkg: string, absBaselines: string, screenshotsDir: string | null, profiles: string[], tagsByProfile: Map<string, string[]> }[]} */
+const packages = [];
+
+for (const dir of baselinesDirs) {
+  const absBaselines = resolve(dir);
+  if (!existsSync(absBaselines)) {
+    console.error(`Baselines directory not found: ${absBaselines}`);
+    process.exit(1);
+  }
+
+  const pkg = derivePackageName(absBaselines);
+  const entries = safeReaddir(absBaselines);
+  const profiles = entries.filter((e) => isDir(join(absBaselines, e))).toSorted();
+
+  const tagsByProfile = new Map();
+  tagsByProfile.set(config.rootProfile, pngTags(absBaselines));
   for (const profile of profiles) {
-    routes[`/screenshots/${profile}/actual`] = join(screenshotsDir, profile, "actual");
-    routes[`/screenshots/${profile}/diff`] = join(screenshotsDir, profile, "diff");
+    tagsByProfile.set(profile, pngTags(join(absBaselines, profile)));
+  }
+
+  let screenshotsDir = null;
+  if (includeScreenshots) {
+    if (explicitScreenshotsDir && baselinesDirs.length === 1) {
+      screenshotsDir = resolve(explicitScreenshotsDir);
+    } else {
+      screenshotsDir = inferScreenshotsDir(absBaselines);
+    }
+    if (!existsSync(screenshotsDir)) {
+      console.warn(`Screenshots directory not found for ${pkg}: ${screenshotsDir}`);
+      console.warn("The toggle will be available but screenshot cells will be empty.\n");
+    }
+  }
+
+  packages.push({ pkg, absBaselines, screenshotsDir, profiles, tagsByProfile });
+}
+
+// Merge profiles across packages (they should be the same, but be safe)
+const allProfiles = [...new Set(packages.flatMap((p) => p.profiles))].toSorted();
+const allColumns = [config.rootProfile, ...allProfiles];
+const multiPackage = packages.length > 1;
+const titleText = multiPackage ? "Visual Baselines" : `${packages[0].pkg} -- Visual Baselines`;
+
+// Build combined tag list: [{tag, pkg, pkgIdx}]
+const tagEntries = [];
+for (let pkgIdx = 0; pkgIdx < packages.length; pkgIdx++) {
+  const p = packages[pkgIdx];
+  const pkgTags = [...new Set(allColumns.flatMap((col) => p.tagsByProfile.get(col) ?? []))].toSorted();
+  for (const tag of pkgTags) {
+    tagEntries.push({ tag, pkg: p.pkg, pkgIdx });
   }
 }
 
-const hasScreenshots = !!screenshotsDir;
+// Sort: by package then tag
+tagEntries.sort((a, b) => a.pkg.localeCompare(b.pkg) || a.tag.localeCompare(b.tag));
 
-/**
- * Build a cell that shows the image with its relative file path underneath.
- * The path shown is relative to the repo root so it can be opened manually.
- */
+console.log(`Packages: ${packages.map((p) => p.pkg).join(", ")}`);
+console.log(`Profiles: ${allColumns.join(", ")}`);
+console.log(`Tags:     ${tagEntries.length}`);
+
+// -- Routes --
+
+const routes = {};
+for (const p of packages) {
+  const prefix = multiPackage ? `/${p.pkg}` : "";
+  routes[`${prefix}/baselines/desktop`] = p.absBaselines;
+  for (const profile of p.profiles) {
+    routes[`${prefix}/baselines/${profile}`] = join(p.absBaselines, profile);
+  }
+  if (p.screenshotsDir) {
+    routes[`${prefix}/screenshots/${config.rootProfile}/${config.actualDir}`] = join(
+      p.screenshotsDir,
+      config.actualDir,
+    );
+    routes[`${prefix}/screenshots/${config.rootProfile}/${config.diffDir}`] = join(p.screenshotsDir, config.diffDir);
+    for (const profile of p.profiles) {
+      routes[`${prefix}/screenshots/${profile}/${config.actualDir}`] = join(
+        p.screenshotsDir,
+        profile,
+        config.actualDir,
+      );
+      routes[`${prefix}/screenshots/${profile}/${config.diffDir}`] = join(p.screenshotsDir, profile, config.diffDir);
+    }
+  }
+}
+
+// -- HTML generation --
+
 function imgCell(src, fsRelPath) {
   const pathLabel = fsRelPath ? `<span class="file-path">${fsRelPath}</span>` : "";
-  return `<a href="${src}" target="_blank"><img src="${src}" loading="lazy" onerror="this.closest('td').innerHTML='<span class=\\'placeholder\\'>---</span>'"></a>${pathLabel}`;
+  return `<img src="${src}" loading="lazy" class="zoomable" onerror="this.parentElement.classList.add('img-missing')">${pathLabel}`;
+}
+
+function notInProfileCell(extraClass) {
+  const cls = extraClass ? `not-in-profile ${extraClass}` : "not-in-profile";
+  return `<td class="${cls}"><span class="placeholder">Not in profile</span></td>`;
 }
 
 function generateHtml() {
-  const screenshotToggle = hasScreenshots
-    ? `<button id="toggle-screenshots" onclick="toggleScreenshots()">Show actual/diff</button>`
+  const screenshotToggle = includeScreenshots
+    ? `<button id="toggle-screenshots" class="header-btn" onclick="toggleScreenshots()">Show actual/diff</button>`
     : "";
+
+  const packageFilter = multiPackage
+    ? `<select id="pkg-filter" onchange="filterPackage(this.value)">
+        <option value="all">All libraries</option>
+        ${packages.map((p) => `<option value="${p.pkg}">${p.pkg}</option>`).join("\n")}
+       </select>`
+    : "";
+
+  function resizableTh(label, extraClass) {
+    const cls = extraClass ? ` class="${extraClass}"` : "";
+    const style = extraClass?.includes("ss-col") ? ' style="display:none"' : "";
+    return `<th${cls}${style}>${label}<span class="col-resize-handle"></span></th>`;
+  }
 
   const profileHeaders = allColumns
     .map((col) => {
-      const baselineHeader = `<th>${col}</th>`;
-      if (!hasScreenshots) return baselineHeader;
-      return [
-        baselineHeader,
-        `<th class="ss-col" style="display:none">${col} actual</th>`,
-        `<th class="ss-col" style="display:none">${col} diff</th>`,
-      ].join("\n");
+      const baselineHeader = resizableTh(col);
+      if (!includeScreenshots) return baselineHeader;
+      return [baselineHeader, resizableTh(`${col} actual`, "ss-col"), resizableTh(`${col} diff`, "ss-col")].join("\n");
     })
     .join("\n");
 
-  const rows = allTags
-    .map((tag, i) => {
+  const rows = tagEntries
+    .map((entry, i) => {
+      const { tag, pkg, pkgIdx } = entry;
+      const p = packages[pkgIdx];
       const rowClass = i % 2 === 0 ? "even" : "odd";
+      const urlPrefix = multiPackage ? `/${pkg}` : "";
+      const pkgBadge = multiPackage ? `<span class="pkg-badge">${pkg}</span>` : "";
+
       const cells = allColumns
         .map((col) => {
-          const baselineSrc = `/baselines/${col}/${tag}.png`;
-          const baselineFsDir = col === "desktop" ? absBaselines : join(absBaselines, col);
+          const profileTags = p.tagsByProfile.get(col) ?? [];
+          const tagExists = profileTags.includes(tag);
+
+          if (!tagExists) {
+            if (!includeScreenshots) return notInProfileCell();
+            return [notInProfileCell(), notInProfileCell("ss-col"), notInProfileCell("ss-col")].join("\n");
+          }
+
+          const baselineSrc = `${urlPrefix}/baselines/${col}/${tag}.png`;
+          const baselineFsDir = col === config.rootProfile ? p.absBaselines : join(p.absBaselines, col);
           const baselineFsPath = toRepoRelative(join(baselineFsDir, `${tag}.png`));
           const baselineCell = `<td>${imgCell(baselineSrc, baselineFsPath)}</td>`;
-          if (!hasScreenshots) return baselineCell;
+          if (!includeScreenshots) return baselineCell;
 
-          const actualSrc = `/screenshots/${col}/actual/${tag}.png`;
-          const diffSrc = `/screenshots/${col}/diff/${tag}.png`;
-          const actualFsDir = col === "desktop" ? join(screenshotsDir, "actual") : join(screenshotsDir, col, "actual");
-          const diffFsDir = col === "desktop" ? join(screenshotsDir, "diff") : join(screenshotsDir, col, "diff");
+          const actualSrc = `${urlPrefix}/screenshots/${col}/actual/${tag}.png`;
+          const diffSrc = `${urlPrefix}/screenshots/${col}/diff/${tag}.png`;
+          const sDir = p.screenshotsDir ?? "";
+          const actualFsDir =
+            col === config.rootProfile ? join(sDir, config.actualDir) : join(sDir, col, config.actualDir);
+          const diffFsDir = col === config.rootProfile ? join(sDir, config.diffDir) : join(sDir, col, config.diffDir);
           return [
             baselineCell,
             `<td class="ss-col" style="display:none">${imgCell(actualSrc, toRepoRelative(join(actualFsDir, `${tag}.png`)))}</td>`,
@@ -191,7 +283,7 @@ function generateHtml() {
         })
         .join("\n");
 
-      return `<tr class="${rowClass}"><td class="tag-cell">${tag}</td>\n${cells}</tr>`;
+      return `<tr class="${rowClass}" data-pkg="${pkg}"><td class="tag-cell"><span class="tag-name">${tag}</span>${pkgBadge}</td>\n${cells}</tr>`;
     })
     .join("\n");
 
@@ -200,78 +292,142 @@ function generateHtml() {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${packageName} - Visual Baselines</title>
+<title>${titleText}</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
 
-  body {
+  :root {
+    --bg: #f5f5f5;
+    --bg-surface: #fff;
+    --bg-header: #fafafa;
+    --bg-row-even: #fff;
+    --bg-row-odd: #fafafa;
+    --bg-hover: #f0f4ff;
+    --bg-control: #fff;
+    --bg-control-hover: #eee;
+    --bg-placeholder: #f0f0f0;
+    --bg-badge: #e8edf3;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --text-heading: #555;
+    --text-badge: #778;
+    --text-placeholder: #bbb;
+    --border: #e8e8e8;
+    --border-strong: #ddd;
+    --border-control: #ccc;
+    color-scheme: light;
+  }
+  body.dark {
+    --bg: #111;
+    --bg-surface: #1a1a1a;
+    --bg-header: #1e1e1e;
+    --bg-row-even: #1a1a1a;
+    --bg-row-odd: #1e1e1e;
+    --bg-hover: #1a2233;
+    --bg-control: #222;
+    --bg-control-hover: #2a2a2a;
+    --bg-placeholder: #282828;
+    --bg-badge: #2a2f38;
+    --text: #ddd;
+    --text-muted: #888;
+    --text-heading: #888;
+    --text-badge: #889;
+    --text-placeholder: #555;
+    --border: #2a2a2a;
+    --border-strong: #333;
+    --border-control: #444;
+    color-scheme: dark;
+  }
+
+  html, body {
     margin: 0;
-    padding: 24px 28px;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
     font-family: system-ui, -apple-system, sans-serif;
-    background: #f5f5f5;
-    color: #1a1a1a;
     line-height: 1.5;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
   }
 
   header {
-    max-width: 960px;
-    margin-bottom: 20px;
-  }
-  h1 {
-    margin: 0 0 2px;
-    font-size: 1.3rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--border-strong);
+    background: var(--bg);
+    flex-shrink: 0;
   }
   .summary {
-    color: #666;
-    margin: 0 0 14px;
-    font-size: 0.85rem;
-  }
-
-  #toggle-screenshots {
-    padding: 5px 12px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    background: #fff;
-    cursor: pointer;
+    color: var(--text-muted);
+    margin: 0;
     font-size: 0.8rem;
-    font-family: inherit;
-    transition: background 0.1s;
+    white-space: nowrap;
   }
-  #toggle-screenshots:hover { background: #eee; }
+  h1 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .header-spacer { flex: 1; }
+
+  .header-btn, #pkg-filter, #theme-toggle {
+    padding: 4px 10px;
+    border: 1px solid var(--border-control);
+    border-radius: 3px;
+    background: var(--bg-control);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .header-btn:hover, #pkg-filter:hover, #theme-toggle:hover {
+    background: var(--bg-control-hover);
+  }
+  #theme-toggle { font-size: 0.9rem; padding: 2px 8px; }
 
   .table-wrapper {
+    flex: 1;
     overflow: auto;
-    max-height: calc(100vh - 120px);
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #fff;
+    background: var(--bg-surface);
   }
 
   table {
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 0.82rem;
     width: max-content;
   }
   th, td {
-    border: 1px solid #e8e8e8;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
     padding: 10px 12px;
     text-align: center;
     vertical-align: top;
+    overflow: hidden;
   }
   thead th {
     position: sticky;
     top: 0;
-    background: #fafafa;
-    border-bottom: 2px solid #ddd;
+    background: var(--bg-header);
+    border-bottom: 2px solid var(--border-strong);
     z-index: 2;
     font-weight: 600;
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #555;
+    color: var(--text-heading);
     padding: 8px 12px;
+    overflow: hidden;
   }
 
   .tag-cell {
@@ -282,19 +438,61 @@ function generateHtml() {
     font-weight: 600;
     font-size: 0.8rem;
     text-align: left;
-    white-space: nowrap;
-    background: inherit;
     padding: 10px 14px;
+    border-right: 2px solid var(--border-strong);
+    overflow: hidden;
   }
+  .tag-name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  tr.even .tag-cell { background: var(--bg-row-even); }
+  tr.odd .tag-cell  { background: var(--bg-row-odd); }
+  tr:hover .tag-cell { background: var(--bg-hover); }
   thead th:first-child {
     position: sticky;
     left: 0;
     z-index: 3;
+    border-right: 2px solid var(--border-strong);
+  }
+  .col-resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+  }
+  .col-resize-handle:hover,
+  .col-resize-handle.dragging {
+    background: var(--bg-hover);
   }
 
-  tr.even { background: #fff; }
-  tr.odd  { background: #fafafa; }
-  tr:hover { background: #f0f4ff; }
+  tr.even { background: var(--bg-row-even); }
+  tr.odd  { background: var(--bg-row-odd); }
+  tr:hover { background: var(--bg-hover); }
+
+  .pkg-badge {
+    display: block;
+    font-size: 0.58rem;
+    font-weight: 400;
+    font-family: system-ui, sans-serif;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--bg-badge);
+    color: var(--text-badge);
+    margin-top: 3px;
+    letter-spacing: 0;
+    text-transform: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: fit-content;
+    max-width: 100%;
+  }
 
   td img {
     max-width: 280px;
@@ -304,18 +502,38 @@ function generateHtml() {
     margin: 0 auto;
     border-radius: 3px;
   }
-  td a { display: block; text-decoration: none; }
+  img.zoomable { cursor: zoom-in; }
 
   .file-path {
     display: block;
     margin-top: 6px;
     font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
     font-size: 0.68rem;
-    color: #999;
+    color: var(--text-muted);
     word-break: break-all;
     line-height: 1.3;
     max-width: 280px;
     text-align: center;
+  }
+
+  .not-in-profile { opacity: 0.5; }
+  .img-missing img { display: none; }
+  .img-missing .file-path { opacity: 0.6; }
+  .img-missing::before {
+    content: "No file -- run e2e tests to generate";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 200px;
+    height: 80px;
+    background: var(--bg-placeholder);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    border-radius: 3px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 8px;
+    line-height: 1.4;
   }
 
   .placeholder {
@@ -324,44 +542,50 @@ function generateHtml() {
     justify-content: center;
     width: 120px;
     height: 80px;
-    background: #f0f0f0;
-    color: #bbb;
+    background: var(--bg-placeholder);
+    color: var(--text-placeholder);
     font-size: 0.75rem;
     border-radius: 3px;
     margin: 0 auto;
   }
 
-  @media (prefers-color-scheme: dark) {
-    body { background: #111; color: #ddd; }
-    .table-wrapper { background: #1a1a1a; border-color: #333; }
-    th, td { border-color: #2a2a2a; }
-    thead th { background: #1e1e1e; border-bottom-color: #333; color: #888; }
-    tr.even { background: #1a1a1a; }
-    tr.odd  { background: #1e1e1e; }
-    tr:hover { background: #1a2233; }
-    .placeholder { background: #282828; color: #555; }
-    .file-path { color: #666; }
-    .summary { color: #888; }
-    #toggle-screenshots {
-      background: #222;
-      border-color: #444;
-      color: #ddd;
-    }
-    #toggle-screenshots:hover { background: #2a2a2a; }
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.85);
+    cursor: zoom-out;
+    align-items: center;
+    justify-content: center;
   }
+  #lightbox.open { display: flex; }
+  #lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Dark mode is handled entirely via CSS custom properties on body.dark */
 </style>
 </head>
 <body>
 <header>
-  <h1>${packageName} -- Visual Baselines</h1>
-  <p class="summary">${allTags.length} tags across ${allColumns.length} profiles</p>
+  <span class="summary">${tagEntries.length} tags, ${allColumns.length} profiles</span>
+  <span class="header-spacer"></span>
+  <h1>${titleText}</h1>
+  <span class="header-spacer"></span>
+  ${packageFilter}
   ${screenshotToggle}
+  <button id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode"></button>
 </header>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr>
-<th>Tag</th>
+<th>Tag<span class="col-resize-handle"></span></th>
 ${profileHeaders}
 </tr>
 </thead>
@@ -370,7 +594,21 @@ ${rows}
 </tbody>
 </table>
 </div>
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" alt="">
+</div>
 <script>
+// Theme: initialize from system preference
+const themeBtn = document.getElementById('theme-toggle');
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', dark);
+  themeBtn.textContent = dark ? '\u2600\uFE0F' : '\uD83C\uDF19';
+}
+applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+function toggleTheme() {
+  applyTheme(!document.body.classList.contains('dark'));
+}
+
 let screenshotsVisible = false;
 function toggleScreenshots() {
   screenshotsVisible = !screenshotsVisible;
@@ -379,6 +617,79 @@ function toggleScreenshots() {
   for (const col of cols) col.style.display = display;
   document.getElementById('toggle-screenshots').textContent =
     screenshotsVisible ? 'Hide actual/diff' : 'Show actual/diff';
+}
+
+function filterPackage(pkg) {
+  const rows = document.querySelectorAll('tbody tr');
+  let visibleIdx = 0;
+  for (const row of rows) {
+    const show = pkg === 'all' || row.dataset.pkg === pkg;
+    row.style.display = show ? '' : 'none';
+    if (show) {
+      row.classList.toggle('even', visibleIdx % 2 === 0);
+      row.classList.toggle('odd', visibleIdx % 2 === 1);
+      visibleIdx++;
+    }
+  }
+}
+
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+
+document.addEventListener('click', (e) => {
+  const img = e.target.closest('img.zoomable');
+  if (!img) return;
+  lightboxImg.src = img.src;
+  lightbox.classList.add('open');
+});
+
+function closeLightbox() {
+  lightbox.classList.remove('open');
+  lightboxImg.src = '';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+// Column resize: drag any header's right edge to resize that column
+{
+  const table = document.querySelector('table');
+
+  table.addEventListener('mousedown', (e) => {
+    const handle = e.target.closest('.col-resize-handle');
+    if (!handle) return;
+    e.preventDefault();
+
+    const th = handle.parentElement;
+    const colIdx = [...th.parentElement.children].indexOf(th);
+    const startX = e.clientX;
+    const startWidth = th.offsetWidth;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(ev) {
+      const width = Math.max(40, startWidth + (ev.clientX - startX));
+      // Apply width to all cells in this column via nth-child
+      const varName = '--col-' + colIdx + '-w';
+      table.style.setProperty(varName, width + 'px');
+      for (const cell of table.querySelectorAll('tr > :nth-child(' + (colIdx + 1) + ')')) {
+        cell.style.width = 'var(' + varName + ')';
+        cell.style.minWidth = 'var(' + varName + ')';
+        cell.style.maxWidth = 'var(' + varName + ')';
+      }
+    }
+    function onUp() {
+      handle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 </script>
 </body>

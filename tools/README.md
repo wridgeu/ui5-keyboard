@@ -228,12 +228,30 @@ node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__ \
   --include-screenshots packages/kiosk-keyboard/test/e2e/__screenshots__
 ```
 
-Root-level shortcuts (baselines only):
+Package-level:
+
+```bash
+npm run test:e2e:browse -w packages/kiosk-keyboard
+npm run test:e2e:browse -w packages/kiosk-keyboard-webc
+```
+
+Root-level:
 
 ```bash
 npm run browse:baselines:kiosk
 npm run browse:baselines:webc
 ```
+
+All scripts include screenshots by default. The actual/diff columns are hidden behind a toggle in the gallery. If no screenshots exist yet (tests haven't been run), the toggle is still available but cells will be empty.
+
+### Dependencies on test infrastructure
+
+`visual-browse.mjs` and `serve-static.mjs` depend on the directory layout produced by `@wdio/visual-service`. If the testing infrastructure changes, these assumptions may need updating:
+
+- **Baseline directory:** `__baselines__/` with device profiles as subdirectories (`phone-sm/`, `phone-md/`, `phone-lg/`, `tablet/`). Desktop baselines are files directly in the root. If new device profiles are added, they are picked up automatically (any subdirectory is treated as a profile).
+- **Screenshot directory:** `__screenshots__/` with `actual/` and `diff/` subdirectories. Device profiles mirror the baseline structure with `<profile>/actual/` and `<profile>/diff/`.
+- **Image format:** PNG files named `<tag>.png` where `<tag>` matches the snapshot tag used in tests.
+- **If `@wdio/visual-service` changes its output structure**, update the route mapping in `visual-browse.mjs` (the `routes` object near the bottom of the file) and possibly `visual-report.mjs`.
 
 ## `check-demo-webc-bundle.mjs`
 

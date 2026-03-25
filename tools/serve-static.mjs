@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { spawn } from "node:child_process";
 
 const MIME_TYPES = {
@@ -15,6 +15,13 @@ const MIME_TYPES = {
   ".ico": "image/x-icon",
 };
 
+/** Verify that a resolved file path stays within the allowed root directory. */
+function isPathContained(filePath, allowedRoot) {
+  const resolved = resolve(filePath);
+  const root = resolve(allowedRoot);
+  return resolved === root || resolved.startsWith(root + sep);
+}
+
 /**
  * Serve a directory over HTTP and open the browser.
  *
@@ -26,70 +33,22 @@ const MIME_TYPES = {
  * @param {Record<string, string>} [opts.routes]  URL prefix -> filesystem directory map.
  */
 export function serveStatic(root, { port = 0, open = true, fallback, routes } = {}) {
-  const server = createServer(async (req, res) => {
-    const { pathname } = new URL(req.url ?? "/", "http://localhost");
-    const urlPath = decodeURIComponent(pathname);
-
-    let filePath;
-
-    if (routes) {
-      const matchedPrefix = Object.keys(routes).find(
-        (prefix) => urlPath.startsWith(prefix + "/") || urlPath === prefix,
-      );
-      if (matchedPrefix) {
-        const relativePart = urlPath.slice(matchedPrefix.length);
-        filePath = join(routes[matchedPrefix], relativePart);
+  const server = createServer((req, res) => {
+    handleRequest(req, res, root, { fallback, routes }).catch((err) => {
+      console.error("Request handler error:", err);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "text/plain" });
+        res.end("Internal Server Error");
       }
-    }
-
-    if (!filePath) {
-      filePath = join(root, urlPath);
-    }
-
-    async function tryServe(path) {
-      let resolvedPath = path;
-
-      // If path ends with a directory separator or has no extension, try index.html
-      if (resolvedPath.endsWith("/") || resolvedPath.endsWith("\\")) {
-        resolvedPath = join(resolvedPath, "index.html");
-      }
-
-      let data;
-      try {
-        data = await readFile(resolvedPath);
-      } catch {
-        // Check if it's a directory by trying index.html
-        try {
-          data = await readFile(join(resolvedPath, "index.html"));
-          resolvedPath = join(resolvedPath, "index.html");
-        } catch {
-          return null;
-        }
-      }
-
-      const ext = extname(resolvedPath).toLowerCase();
-      const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
-      res.writeHead(200, { "Content-Type": contentType });
-      res.end(data);
-      return true;
-    }
-
-    const served = await tryServe(filePath);
-    if (served) return;
-
-    // SPA fallback
-    if (fallback) {
-      const fallbackPath = join(root, fallback);
-      const fallbackServed = await tryServe(fallbackPath);
-      if (fallbackServed) return;
-    }
-
-    res.writeHead(404, { "Content-Type": "text/plain" });
-    res.end(`404 Not Found: ${urlPath}`);
+    });
   });
 
   server.listen(port, "127.0.0.1", () => {
     const address = server.address();
+    if (!address || typeof address === "string") {
+      console.error("Unexpected server address:", address);
+      return;
+    }
     const url = `http://localhost:${address.port}`;
     console.log(`Serving ${root}`);
     console.log(`Listening on ${url}`);
@@ -106,4 +65,71 @@ export function serveStatic(root, { port = 0, open = true, fallback, routes } = 
   });
 
   return server;
+}
+
+async function handleRequest(req, res, root, { fallback, routes }) {
+  const { pathname } = new URL(req.url ?? "/", "http://localhost");
+  const urlPath = decodeURIComponent(pathname);
+
+  let filePath;
+  let containmentRoot = root;
+
+  if (routes) {
+    const matchedPrefix = Object.keys(routes).find((prefix) => urlPath.startsWith(prefix + "/") || urlPath === prefix);
+    if (matchedPrefix) {
+      const relativePart = urlPath.slice(matchedPrefix.length);
+      filePath = join(routes[matchedPrefix], relativePart);
+      containmentRoot = routes[matchedPrefix];
+    }
+  }
+
+  if (!filePath) {
+    filePath = join(root, urlPath);
+  }
+
+  // Prevent path traversal outside the intended directory
+  if (!isPathContained(filePath, containmentRoot)) {
+    res.writeHead(403, { "Content-Type": "text/plain" });
+    res.end("403 Forbidden");
+    return;
+  }
+
+  const served = await tryServe(filePath, res);
+  if (served) return;
+
+  // SPA fallback
+  if (fallback) {
+    const fallbackPath = join(root, fallback);
+    const fallbackServed = await tryServe(fallbackPath, res);
+    if (fallbackServed) return;
+  }
+
+  res.writeHead(404, { "Content-Type": "text/plain" });
+  res.end(`404 Not Found: ${urlPath}`);
+}
+
+async function tryServe(path, res) {
+  let resolvedPath = path;
+
+  if (resolvedPath.endsWith("/") || resolvedPath.endsWith("\\")) {
+    resolvedPath = join(resolvedPath, "index.html");
+  }
+
+  let data;
+  try {
+    data = await readFile(resolvedPath);
+  } catch {
+    try {
+      data = await readFile(join(resolvedPath, "index.html"));
+      resolvedPath = join(resolvedPath, "index.html");
+    } catch {
+      return false;
+    }
+  }
+
+  const ext = extname(resolvedPath).toLowerCase();
+  const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
+  res.writeHead(200, { "Content-Type": contentType });
+  res.end(data);
+  return true;
 }
