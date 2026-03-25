@@ -216,7 +216,8 @@ function imgCell(src, fsRelPath) {
 
 function notInProfileCell(extraClass) {
   const cls = extraClass ? `not-in-profile ${extraClass}` : "not-in-profile";
-  return `<td class="${cls}"><span class="placeholder">Not in profile</span></td>`;
+  const hide = extraClass?.includes("ss-col") ? ' style="display:none"' : "";
+  return `<td class="${cls}"${hide}><span class="placeholder">Not in profile</span></td>`;
 }
 
 function generateHtml() {
