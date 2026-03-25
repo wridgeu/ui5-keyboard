@@ -80,5 +80,6 @@ export const config: WebdriverIO.Config = {
     await server.onPrepare();
   },
   onWorkerStart: () => server.ensureRunning(),
+  beforeSuite: () => server.ensureRunning(),
   onComplete: () => server.onComplete(),
 };

@@ -98,5 +98,6 @@ export const config: wdi5Config = {
     await server.onPrepare();
   },
   onWorkerStart: () => server.ensureRunning(),
+  beforeSuite: () => server.ensureRunning(),
   onComplete: () => server.onComplete(),
 };

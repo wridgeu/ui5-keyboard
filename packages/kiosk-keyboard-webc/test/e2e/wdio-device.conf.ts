@@ -82,10 +82,12 @@ export const config: WebdriverIO.Config = {
         formatImageName: "{tag}",
         screenshotPath: path.resolve(__dirname, `__screenshots__/${profile.id}`),
         autoSaveBaseline: updateVisualBaseline,
-        createJsonReportFiles: true,
         disableCSSAnimation: true,
         hideScrollBars: true,
         waitForFontsLoaded: true,
+        compareOptions: {
+          createJsonReportFiles: true,
+        },
       },
     ],
   ],
@@ -96,5 +98,9 @@ export const config: WebdriverIO.Config = {
     await server.onPrepare();
   },
   onWorkerStart: () => server.ensureRunning(),
+  // onWorkerStart runs once per worker process, not per spec file. If the
+  // server crashes mid-run, subsequent specs in the same worker would see a
+  // dead server. beforeSuite runs before each spec file, closing that gap.
+  beforeSuite: () => server.ensureRunning(),
   onComplete: () => server.onComplete(),
 };

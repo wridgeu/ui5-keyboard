@@ -209,15 +209,26 @@ for (const p of packages) {
 
 // -- HTML generation --
 
-function imgCell(src, fsRelPath) {
+/**
+ * @param {"baseline"|"actual"|"diff"} colType
+ * @param {boolean} [hasActual] - For diff cells: whether a matching actual screenshot exists.
+ *   When true, a missing diff means "no differences" (good). When false, "tests not run".
+ */
+function imgCell(src, fsRelPath, colType = "baseline", hasActual = false) {
   const pathLabel = fsRelPath ? `<span class="file-path">${fsRelPath}</span>` : "";
-  return `<img src="${src}" loading="lazy" class="zoomable" onerror="this.parentElement.classList.add('img-missing')">${pathLabel}`;
+  const extraData = colType === "diff" ? `this.parentElement.dataset.hasActual='${hasActual}';` : "";
+  return `<img src="${src}" loading="lazy" class="zoomable" onerror="this.parentElement.classList.add('img-missing');this.parentElement.dataset.colType='${colType}';${extraData}">${pathLabel}`;
 }
 
-function notInProfileCell(extraClass) {
+/**
+ * @param {string} [extraClass]
+ * @param {string} [reason] - Short explanation shown below the placeholder label.
+ */
+function notInProfileCell(extraClass, reason) {
   const cls = extraClass ? `not-in-profile ${extraClass}` : "not-in-profile";
   const hide = extraClass?.includes("ss-col") ? ' style="display:none"' : "";
-  return `<td class="${cls}"${hide}><span class="placeholder">Not in profile</span></td>`;
+  const reasonHtml = reason ? `<span class="skip-reason">${reason}</span>` : "";
+  return `<td class="${cls}"${hide}><span class="placeholder">Skipped${reasonHtml}</span></td>`;
 }
 
 function generateHtml() {
@@ -260,14 +271,19 @@ function generateHtml() {
           const tagExists = profileTags.includes(tag);
 
           if (!tagExists) {
-            if (!includeScreenshots) return notInProfileCell();
-            return [notInProfileCell(), notInProfileCell("ss-col"), notInProfileCell("ss-col")].join("\n");
+            // Build a short reason: list which profiles DO have this tag
+            const presentIn = allColumns.filter((c) => (p.tagsByProfile.get(c) ?? []).includes(tag));
+            const reason = presentIn.length ? `Only in ${presentIn.join(", ")}` : "";
+            if (!includeScreenshots) return notInProfileCell(undefined, reason);
+            return [notInProfileCell(undefined, reason), notInProfileCell("ss-col"), notInProfileCell("ss-col")].join(
+              "\n",
+            );
           }
 
           const baselineSrc = `${urlPrefix}/baselines/${col}/${tag}.png`;
           const baselineFsDir = col === config.rootProfile ? p.absBaselines : join(p.absBaselines, col);
           const baselineFsPath = toRepoRelative(join(baselineFsDir, `${tag}.png`));
-          const baselineCell = `<td>${imgCell(baselineSrc, baselineFsPath)}</td>`;
+          const baselineCell = `<td>${imgCell(baselineSrc, baselineFsPath, "baseline")}</td>`;
           if (!includeScreenshots) return baselineCell;
 
           const actualSrc = `${urlPrefix}/screenshots/${col}/${config.actualDir}/${tag}.png`;
@@ -276,10 +292,11 @@ function generateHtml() {
           const actualFsDir =
             col === config.rootProfile ? join(sDir, config.actualDir) : join(sDir, col, config.actualDir);
           const diffFsDir = col === config.rootProfile ? join(sDir, config.diffDir) : join(sDir, col, config.diffDir);
+          const actualFileExists = existsSync(join(actualFsDir, `${tag}.png`));
           return [
             baselineCell,
-            `<td class="ss-col" style="display:none">${imgCell(actualSrc, toRepoRelative(join(actualFsDir, `${tag}.png`)))}</td>`,
-            `<td class="ss-col" style="display:none">${imgCell(diffSrc, toRepoRelative(join(diffFsDir, `${tag}.png`)))}</td>`,
+            `<td class="ss-col" style="display:none">${imgCell(actualSrc, toRepoRelative(join(actualFsDir, `${tag}.png`)), "actual")}</td>`,
+            `<td class="ss-col" style="display:none">${imgCell(diffSrc, toRepoRelative(join(diffFsDir, `${tag}.png`)), "diff", actualFileExists)}</td>`,
           ].join("\n");
         })
         .join("\n");
@@ -316,6 +333,7 @@ function generateHtml() {
     --border: #e8e8e8;
     --border-strong: #ddd;
     --border-control: #ccc;
+    --text-success: #2e7d32;
     color-scheme: light;
   }
   body.dark {
@@ -336,6 +354,7 @@ function generateHtml() {
     --text-placeholder: #555;
     --border: #2a2a2a;
     --border-strong: #333;
+    --text-success: #66bb6a;
     --border-control: #444;
     color-scheme: dark;
   }
@@ -521,7 +540,7 @@ function generateHtml() {
   .img-missing img { display: none; }
   .img-missing .file-path { opacity: 0.6; }
   .img-missing::before {
-    content: "No file - run e2e tests to generate";
+    content: "No baseline found";
     display: flex;
     align-items: center;
     justify-content: center;
@@ -536,18 +555,40 @@ function generateHtml() {
     padding: 8px;
     line-height: 1.4;
   }
+  .img-missing[data-col-type="actual"]::before {
+    content: "No screenshot - run e2e tests first";
+  }
+  .img-missing[data-col-type="diff"][data-has-actual="true"]::before {
+    content: "\\2714  No differences";
+    color: var(--text-success);
+  }
+  .img-missing[data-col-type="diff"][data-has-actual="false"]::before {
+    content: "No screenshot - run e2e tests first";
+  }
 
   .placeholder {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 120px;
-    height: 80px;
+    gap: 4px;
+    width: 160px;
+    min-height: 80px;
     background: var(--bg-placeholder);
     color: var(--text-placeholder);
     font-size: 0.75rem;
     border-radius: 3px;
     margin: 0 auto;
+    padding: 8px;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .skip-reason {
+    display: block;
+    font-size: 0.6rem;
+    opacity: 0.7;
+    max-width: 140px;
+    word-break: break-word;
   }
 
   #lightbox {
