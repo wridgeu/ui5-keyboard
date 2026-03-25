@@ -287,6 +287,7 @@ class KioskKeyboard extends UI5Element {
    * Check whether a layout is secondary (non-alphabetic).
    * Secondary layouts cannot become the base layout.
    * @param name Layout name to check.
+   * @returns True if the layout is secondary.
    * @public
    * @since 0.1.0
    */
@@ -843,6 +844,7 @@ class KioskKeyboard extends UI5Element {
 
   /**
    * Programmatically sets the input element that receives typed characters.
+   * @param el The input or textarea element to type into, or `null` to clear.
    * @public
    * @since 0.1.0
    */
@@ -880,6 +882,7 @@ class KioskKeyboard extends UI5Element {
    * Return the native `<input>` or `<textarea>` to type into, or `null`
    * to fall back to the built-in resolver (which traverses light DOM and
    * up to 3 levels of shadow DOM).
+   * @param resolver Custom resolver function, or `null` to clear.
    * @public
    * @since 0.1.0
    */

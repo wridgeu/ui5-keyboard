@@ -33,6 +33,22 @@ index 5af121e..7f1abab 100644
  							obj[key].forEach(item => sortArraysInObject(item));
  						} else if (typeof obj[key] === 'object') {
  							sortArraysInObject(obj[key]);
+diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/class-jsdoc.js b/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/class-jsdoc.js
+index a985674..a214662 100644
+--- a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/class-jsdoc.js
++++ b/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/class-jsdoc.js
+@@ -108,7 +108,10 @@ export function classJsDocPlugin() {
+              */
+             if(jsDoc?.comment) {
+               if(has(jsDoc?.comment)) {
+-                classDoc.description = jsDoc.comment.map(com => `${safe(() => com?.name?.getText()) ?? ''}${com.text}`).join('');
++                classDoc.description = jsDoc.comment.map(com => {
++                  const name = safe(() => com?.name?.getText());
++                  return name ? (com.text?.trim() || name) : (com.text ?? '');
++                }).join('');
+               } else {
+                 classDoc.description = normalizeDescription(jsDoc.comment);
+               }
 diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js b/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js
 index 32f121e..b1e0937 100644
 --- a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/createFunctionLike.js
@@ -48,3 +64,19 @@ index 32f121e..b1e0937 100644
      if(param?.type) {
        parameter.type = {text: param.type.getText() }
      }
+diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/handlers.js b/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/handlers.js
+index a684c61..e8b2e01 100644
+--- a/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/handlers.js
++++ b/node_modules/@ui5/webcomponents-tools/lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/handlers.js
+@@ -48,7 +48,10 @@ export function handleJsDoc(doc, node) {
+   node?.jsDoc?.forEach(jsDocComment => {
+     if(jsDocComment?.comment) {
+       if(has(jsDocComment?.comment)) {
+-        doc.description = jsDocComment.comment.map(com => `${safe(() => com?.name?.getText()) ?? ''}${com.text}`).join('');
++        doc.description = jsDocComment.comment.map(com => {
++          const name = safe(() => com?.name?.getText());
++          return name ? (com.text?.trim() || name) : (com.text ?? '');
++        }).join('');
+       } else {
+         doc.description = normalizeDescription(jsDocComment.comment);
+       }

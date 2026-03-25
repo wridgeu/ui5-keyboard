@@ -4,7 +4,9 @@ Local patches applied via [patch-package](https://github.com/ds300/patch-package
 
 ## @ui5/webcomponents-tools+2.20.0
 
-Fixes four bugs in the Custom Elements Manifest (CEM) generation tooling.
+Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling.
+
+**Note on upstream ownership:** `@ui5/webcomponents-tools` ships a bundled, patched copy of the community `@custom-elements-manifest/analyzer` under `lib/cem/patch/`. Bugs 1, 3, and 4 are in SAP's own `lib/cem/custom-elements-manifest.config.mjs` and can be filed directly against [SAP/ui5-webcomponents](https://github.com/SAP/ui5-webcomponents). Bugs 2 and 5 are in the bundled analyzer copy (`lib/cem/patch/@custom-elements-manifest/analyzer/`) which originates from [open-wc/custom-elements-manifest](https://github.com/open-wc/custom-elements-manifest). SAP can apply these to their bundled copy, but the root fix belongs in the community repo.
 
 ### Bug 1: `alphabetical-sort-plugin` sorts method parameters
 
@@ -84,6 +86,29 @@ This also affects the upstream UI5 Web Components (e.g., `Dialog.open` shows `"a
 ```diff
 -const tsProgramMember = tsProgramClassNode.members.find(m => ts.isPropertyDeclaration(m) && m.name?.text === member.name);
 +const tsProgramMember = tsProgramClassNode.members.find(m => (ts.isPropertyDeclaration(m) || ts.isGetAccessorDeclaration(m) || ts.isSetAccessorDeclaration(m)) && m.name?.text === member.name);
+```
+
+### Bug 5: `{@link}` inline tags concatenate target and display text
+
+**Files:**
+
+- `lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/creators/handlers.js`
+- `lib/cem/patch/@custom-elements-manifest/analyzer/src/features/analyse-phase/class-jsdoc.js`
+
+When a JSDoc description contains `{@link Target display}`, TypeScript's AST represents the inline tag as a node with `name` (the target reference) and `text` (the display text). The analyzer concatenates both without a separator, producing `Targetdisplay` in the CEM description.
+
+**Example:** `{@link KioskKeyboard.registerLocaleLayout registerLocaleLayout}` becomes `KioskKeyboard.registerLocaleLayoutregisterLocaleLayout` in the CEM output.
+
+The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc.js` (class descriptions). Both files use the identical pattern.
+
+**Fix:** For inline link tags, use the display text when present, otherwise fall back to the target name.
+
+```diff
+-doc.description = jsDocComment.comment.map(com => `${safe(() => com?.name?.getText()) ?? ''}${com.text}`).join('');
++doc.description = jsDocComment.comment.map(com => {
++  const name = safe(() => com?.name?.getText());
++  return name ? (com.text?.trim() || name) : (com.text ?? '');
++}).join('');
 ```
 
 ### Upstream
