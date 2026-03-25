@@ -21,7 +21,7 @@ interface LogEntry {
  * Focus scenarios demo - interactive testbed for verifying docked KioskKeyboard
  * focus transitions, auto-show/close behavior, and deferred focus handling.
  *
- * @name demo.hotkeys.controller.KioskFocusScenarios
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskFocusScenarios extends BaseController {
   private static readonly _MAX_LOG = 80;

@@ -8,7 +8,7 @@ import BaseController from "./BaseController";
  * Two independent KioskKeyboard instances on one page - demonstrates
  * instance isolation via `inputIds`.
  *
- * @name demo.hotkeys.controller.KioskMultiKeyboard
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskMultiKeyboard extends BaseController {
   private _sharedScenarioInitialized: boolean = false;

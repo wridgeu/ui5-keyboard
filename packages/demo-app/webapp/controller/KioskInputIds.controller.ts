@@ -21,7 +21,7 @@ type AlertButton$DemoAlertEvent = UI5Event<AlertButtonDemoAlertEventParameters>;
  * Demonstrates the `inputIds` property - the keyboard only responds to
  * focus events from the listed input controls.
  *
- * @name demo.hotkeys.controller.KioskInputIds
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskInputIds extends BaseController {
   private static readonly _MODEL_NAME = "inputIds";

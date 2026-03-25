@@ -13,7 +13,7 @@ import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
  * No scope management code needed - `enableRouterIntegration()` in
  * the Component handles it.
  *
- * @name demo.hotkeys.controller.Detail
+ * @namespace demo.hotkeys.controller
  */
 export default class Detail extends BaseController {
   private _manager!: HotkeyManager;

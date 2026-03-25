@@ -15,7 +15,7 @@ import "kiosk-keyboard-webc/bundle";
  * converts the web component's `CustomEvent.detail` into UI5 event
  * parameters accessible via `oEvent.getParameter()`.
  *
- * @name demo.hotkeys.controller.KioskWebComponent
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskWebComponent extends BaseController {
   private static readonly _MODEL_NAME = "webc";

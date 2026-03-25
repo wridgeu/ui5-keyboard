@@ -12,7 +12,7 @@ import BaseController from "./BaseController";
  * Self-service check-in form with Enter-to-advance, progress tracking,
  * and auto-type switching between Full and Numpad.
  *
- * @name demo.hotkeys.controller.KioskFormWorkflow
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskFormWorkflow extends BaseController {
   private static readonly _FIELD_IDS = ["nameInput", "emailInput", "phoneInput", "guestsInput", "notesInput"];

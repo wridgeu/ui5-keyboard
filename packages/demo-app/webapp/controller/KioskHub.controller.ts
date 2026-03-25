@@ -5,7 +5,7 @@ import BaseController from "./BaseController";
 /**
  * Hub landing page for kiosk keyboard demos.
  *
- * @name demo.hotkeys.controller.KioskHub
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskHub extends BaseController {
   onNavBack(): void {

@@ -7,7 +7,7 @@ import BaseController from "./BaseController";
 /**
  * Conflict behavior scenario demo.
  *
- * @name demo.hotkeys.controller.HotkeysConflict
+ * @namespace demo.hotkeys.controller
  */
 export default class HotkeysConflict extends BaseController {
   private static readonly CONFLICT_HOTKEY = "Ctrl+Shift+K";

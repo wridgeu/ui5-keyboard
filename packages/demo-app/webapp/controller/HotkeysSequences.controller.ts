@@ -7,7 +7,7 @@ import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 /**
  * Hotkeys sequence scenario demo.
  *
- * @name demo.hotkeys.controller.HotkeysSequences
+ * @namespace demo.hotkeys.controller
  */
 export default class HotkeysSequences extends BaseController {
   private _hotkeys!: RegistrationGroup;

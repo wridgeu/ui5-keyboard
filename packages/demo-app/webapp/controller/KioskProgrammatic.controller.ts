@@ -16,7 +16,7 @@ import BaseController from "./BaseController";
  * Full programmatic API showcase - demonstrates show/close, keyboard type
  * switching, custom layout registration, and status tracking.
  *
- * @name demo.hotkeys.controller.KioskProgrammatic
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskProgrammatic extends BaseController {
   private static readonly _MODEL_NAME = "programmatic";

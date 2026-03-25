@@ -13,7 +13,7 @@ import BaseController from "./BaseController";
  * A) Dialog without keyboard (docked auto-closes), and
  * B) Dialog with embedded inline keyboard.
  *
- * @name demo.hotkeys.controller.KioskDialog
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskDialog extends BaseController {
   private _dialogA: Dialog | null = null;

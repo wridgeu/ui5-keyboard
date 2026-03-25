@@ -18,7 +18,7 @@ interface LogEntry {
 /**
  * Target-scoped bubbling scenario demo.
  *
- * @name demo.hotkeys.controller.HotkeysTargetBubble
+ * @namespace demo.hotkeys.controller
  */
 export default class HotkeysTargetBubble extends BaseController {
   private static readonly _MAX_LOG = 80;

@@ -12,7 +12,7 @@ import BaseController from "./BaseController";
  * Enhanced docked keyboard demo - ports the original Kiosk view and adds
  * a controls panel for enabled, mobileKeyboard, and layout switching.
  *
- * @name demo.hotkeys.controller.KioskDocked
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskDocked extends BaseController {
   private static readonly _MODEL_NAME = "docked";

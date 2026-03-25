@@ -6,29 +6,28 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 interface PopoverVariant {
-  styleClass: string;
+  styleClass?: string;
   ariaLabel: string;
   title: string;
+  contentHeight?: string;
 }
 
 const VARIANTS: Record<string, PopoverVariant> = {
   A: { styleClass: "demoPopoverKbGenerous", ariaLabel: "Virtual Keyboard (generous)", title: "Generous (19 rem)" },
   B: { styleClass: "demoPopoverKbCompact", ariaLabel: "Virtual Keyboard (compact)", title: "Compact (15 rem)" },
   C: { styleClass: "demoPopoverKbCustomVars", ariaLabel: "Virtual Keyboard (custom vars)", title: "Custom CSS Vars" },
+  D: { ariaLabel: "Virtual Keyboard (automatic)", title: "Automatic (15 rem)", contentHeight: "15rem" },
 };
 
 /**
- * Popover-mounted keyboard demo showing three sizing strategies.
- *
- * All three set a fixed height on the keyboard element itself so the
- * responsive height breakpoints can detect the constraint. The Popover
- * sizes to its content automatically.
+ * Popover-mounted keyboard demo showing four sizing strategies.
  *
  * A) Generous height (19 rem) -- full-size keys, no breakpoints triggered
  * B) Compact height (15 rem)  -- triggers cq-short, keys shrink to 2.25 rem
  * C) Custom CSS vars          -- reduce key height so keyboard fits naturally
+ * D) Popover contentHeight    -- demonstrates the limitation: intermediate wrappers break auto-detection
  *
- * @name demo.hotkeys.controller.KioskPopover
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskPopover extends BaseController {
   private _keyboards = new Map<string, KioskKeyboard>();
@@ -46,6 +45,10 @@ export default class KioskPopover extends BaseController {
     this._openVariant("C", event);
   }
 
+  onOpenKeyboardD(event: Button$PressEvent): void {
+    this._openVariant("D", event);
+  }
+
   private _openVariant(key: string, event: Button$PressEvent): void {
     const variant = VARIANTS[key];
     const button = event.getSource();
@@ -54,14 +57,20 @@ export default class KioskPopover extends BaseController {
     let keyboard = this._keyboards.get(key);
     if (!keyboard) {
       keyboard = new KioskKeyboard({ keyboardType: "Full", ariaLabel: variant.ariaLabel });
-      keyboard.addStyleClass(variant.styleClass);
+      if (variant.styleClass) keyboard.addStyleClass(variant.styleClass);
       this._keyboards.set(key, keyboard);
     }
     keyboard.setTargetInput(input);
 
     let popover = this._popovers.get(key);
     if (!popover) {
-      popover = new Popover({ title: variant.title, placement: "Auto", content: [keyboard], contentWidth: "24rem" });
+      popover = new Popover({
+        title: variant.title,
+        placement: "Auto",
+        content: [keyboard],
+        contentWidth: "24rem",
+        ...(variant.contentHeight ? { contentHeight: variant.contentHeight } : {}),
+      });
       this.getView()!.addDependent(popover);
       this._popovers.set(key, popover);
     }

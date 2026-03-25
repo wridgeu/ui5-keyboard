@@ -9,7 +9,7 @@ import BaseController from "./BaseController";
  * Component-level keyboard demo - the keyboard is created once, placed
  * in the `sap-ui-static` UIArea, and reused while this controller instance lives.
  *
- * @name demo.hotkeys.controller.KioskComponent
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskComponent extends BaseController {
   /** Static: destroyed in onExit, lazily recreated in onInit. */

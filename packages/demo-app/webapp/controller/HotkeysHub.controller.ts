@@ -5,7 +5,7 @@ import BaseController from "./BaseController";
 /**
  * Hub landing page for hotkeys scenarios.
  *
- * @name demo.hotkeys.controller.HotkeysHub
+ * @namespace demo.hotkeys.controller
  */
 export default class HotkeysHub extends BaseController {
   onNavBack(): void {

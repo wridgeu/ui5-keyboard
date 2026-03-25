@@ -9,7 +9,7 @@ import type Component from "../Component";
  * Provides typed accessors for the owner component and state model,
  * eliminating repeated `as Component` / `as JSONModel` casts in every controller.
  *
- * @name demo.hotkeys.controller.BaseController
+ * @namespace demo.hotkeys.controller
  */
 export default class BaseController extends Controller {
   getTypedComponent(): Component {

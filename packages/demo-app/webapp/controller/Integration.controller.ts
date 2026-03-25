@@ -8,7 +8,7 @@ import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 /**
  * Combined integration demo for ui5.hotkeys and ui5.kiosk.
  *
- * @name demo.hotkeys.controller.Integration
+ * @namespace demo.hotkeys.controller
  */
 export default class Integration extends BaseController {
   private static readonly COMBO_HOTKEY = "Ctrl+Shift+M";

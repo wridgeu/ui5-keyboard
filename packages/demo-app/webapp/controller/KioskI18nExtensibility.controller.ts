@@ -25,7 +25,7 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
  * Includes an ARIA Label Inspector that reads resolved labels from
  * the keyboard DOM after each mode change.
  *
- * @name demo.hotkeys.controller.KioskI18nExtensibility
+ * @namespace demo.hotkeys.controller
  */
 export default class KioskI18nExtensibility extends BaseController {
   private static readonly _MODEL_NAME = "i18nDemo";

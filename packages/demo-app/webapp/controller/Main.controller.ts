@@ -4,7 +4,7 @@ import BaseController from "./BaseController";
 /**
  * Welcome page controller for demo navigation.
  *
- * @name demo.hotkeys.controller.Main
+ * @namespace demo.hotkeys.controller
  */
 export default class Main extends BaseController {
   onMainEntryPress(event: ListBase$ItemPressEvent): void {

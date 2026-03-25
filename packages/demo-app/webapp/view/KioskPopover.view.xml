@@ -61,6 +61,24 @@
                     </HBox>
                 </VBox>
             </Panel>
+            <Panel headerText="D) Popover contentHeight (no keyboard CSS)" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="The Popover has contentHeight: 15rem but no CSS on the keyboard. The Popover's intermediate wrapper divs have height: auto, so max-height: 100% cannot propagate. The keyboard renders at full size and overflows -- demonstrating the limitation documented in the README." />
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Input id="inputD" placeholder="Jane Doe" width="14rem" />
+                        <Button
+                            icon="sap-icon://keyboard-and-mouse"
+                            type="Transparent"
+                            press=".onOpenKeyboardD"
+                            ariaHasPopup="Dialog">
+                            <customData>
+                                <core:CustomData key="inputId" value="inputD" />
+                            </customData>
+                        </Button>
+                    </HBox>
+                </VBox>
+            </Panel>
         </content>
     </Page>
 </mvc:View>
