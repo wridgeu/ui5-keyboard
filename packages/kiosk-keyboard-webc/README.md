@@ -590,6 +590,8 @@ my-wrapper::part(key) {
 
 The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and raw shadow DOM class names remain private implementation details. For tests and DOM assertions, use the stable `KioskKeyboard.DOM` contract instead of hard-coded selectors. This package currently expects customization through host attributes and public CSS variables rather than shadow-internal selectors.
 
+For the rationale behind default values, breakpoint thresholds, and scaling factors, see the [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md).
+
 Override these on the `:host` or a parent element to customize appearance:
 
 | Property                                 | Default                                                   | Description                                     |
@@ -609,6 +611,7 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-docked-shadow`         | _(subtle)_                                                | Box shadow for the docked container             |
 | `--kiosk-keyboard-docked-z-index`        | `100`                                                     | Z-index for the docked keyboard                 |
 | `--kiosk-keyboard-modifier-font-size`    | `var(--sapFontSize, 0.875rem)`                            | Modifier / action key font size                 |
+| `--kiosk-keyboard-modifier-font-scale`   | `0.8`                                                     | Max modifier font as a fraction of key font     |
 | `--kiosk-keyboard-modifier-shadow`       | _(subtle)_                                                | Box shadow for modifier keys at rest            |
 | `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                                | Box shadow for modifier keys on hover           |
 | `--kiosk-keyboard-numpad-max-width`      | `20rem`                                                   | Max width for numpad layout                     |
@@ -667,7 +670,7 @@ kiosk-keyboard {
 }
 ```
 
-For troubleshooting, the root element toggles internal classes such as `kiosk-keyboard--cq-short` and `kiosk-keyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
+For troubleshooting, the host element (`<kiosk-keyboard>`) toggles internal classes `cq-short` and `cq-tiny`. They indicate when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
 
 #### Constrained Containers
 
@@ -699,7 +702,7 @@ Key labels use three scaling tiers:
 | Tier                  | Applies to                                     | Scaling                                                                                                                                           |
 | --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling, rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                              |
-| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                                                          |
+| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, calc(100cqi * 0.35), 1em)`.                                                    |
 | **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Defaults to the theme's base font-size (`--sapFontSize`). Scaled down in height-constrained containers via `--kiosk-keyboard-modifier-font-size`. |
 
 Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stacking layer.

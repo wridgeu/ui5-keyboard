@@ -16,6 +16,7 @@
 
 - [Arrow and Navigation Key Layouts](./history/ARROW-KEY-LAYOUT.md)
 - [Black-Box Test Plan](./history/BLACKBOX-TEST-PLAN.md)
+- [CSS-First Responsive Simplification](./history/CSS-FIRST-RESPONSIVE-SIMPLIFICATION.md)
 - [Function Key Row (F1-F12)](./history/FUNCTION-KEYS.md)
 - [Grapheme-Aware Editing](./history/GRAPHEME-AWARE-EDITING.md)
 - [i18n Extensibility](./history/I18N-EXTENSIBILITY.md)

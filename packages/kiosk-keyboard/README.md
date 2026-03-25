@@ -1103,6 +1103,8 @@ Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_hor
 
 The documented `--ui5KioskKeyboard-*` variables are the supported styling API. Internal `--_ui5KioskKeyboard-*` aliases and renderer classes remain private implementation details and may change without notice.
 
+For the rationale behind default values, breakpoint thresholds, and scaling factors, see the [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md).
+
 Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
 | Property                                 | Default                                                   | Description                                       |

@@ -10,6 +10,8 @@
  * single source of truth.
  */
 
+const _parts = Object.freeze(["keyboard", "row", "key", "modifier", "action", "key-label", "key-icon"]);
+
 export const KIOSK_KEYBOARD_DOM = Object.freeze({
   classes: Object.freeze({
     root: "kiosk-keyboard",
@@ -51,7 +53,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     liveRegion: ".kiosk-keyboard__live-region",
   }),
   /** All CSS part names exposed by the component. */
-  parts: Object.freeze(["keyboard", "row", "key", "modifier", "action", "key-label", "key-icon"]),
+  parts: _parts,
 
   /**
    * Ready-to-use `exportparts` attribute value for wrapper components.
@@ -74,11 +76,11 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
    *   .setAttribute('exportparts', KioskKeyboard.DOM.exportParts);
    * ```
    */
-  exportParts: "keyboard, row, key, modifier, action, key-label, key-icon",
+  exportParts: _parts.join(", "),
 
   keyWidthClass(width: string): string {
     return `kiosk-key--w${width.replace(".", "-")}`;
   },
-} as const);
+});
 
 export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;

@@ -82,10 +82,12 @@ export const config: wdi5Config = {
         formatImageName: "{tag}",
         screenshotPath: path.resolve(__dirname, "__screenshots__"),
         autoSaveBaseline: updateVisualBaseline,
-        createJsonReportFiles: true,
         disableCSSAnimation: true,
         hideScrollBars: true,
         waitForFontsLoaded: true,
+        compareOptions: {
+          createJsonReportFiles: true,
+        },
       },
     ],
   ],
