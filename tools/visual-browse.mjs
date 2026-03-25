@@ -14,7 +14,7 @@
  */
 
 import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, join, parse, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { serveStatic } from "./serve-static.mjs";
 
@@ -83,7 +83,7 @@ const profiles = entries.filter((e) => isDir(join(absBaselines, e))).toSorted();
 function pngTags(dir) {
   return safeReaddir(dir)
     .filter((f) => f.endsWith(".png"))
-    .map((f) => f.replace(/\.png$/, ""));
+    .map((f) => parse(f).name);
 }
 
 const tagsByProfile = new Map();
@@ -98,7 +98,7 @@ const allTags = [...new Set(allColumns.flatMap((p) => tagsByProfile.get(p) ?? []
 // Derive a human-friendly package name from the baselines path.
 // e.g. ".../packages/kiosk-keyboard/test/e2e/__baselines__" -> "kiosk-keyboard"
 function derivePackageName(dir) {
-  const parts = dir.replace(/\\/g, "/").split("/");
+  const parts = dir.split(sep);
   const pkgIdx = parts.indexOf("packages");
   if (pkgIdx !== -1 && pkgIdx + 1 < parts.length) {
     return parts[pkgIdx + 1];
@@ -108,7 +108,10 @@ function derivePackageName(dir) {
 
 /** Return a path relative to the repo root (for display under images). */
 function toRepoRelative(absPath) {
-  return absPath.replace(/\\/g, "/").replace(/^.*?packages\//, "packages/");
+  const parts = absPath.split(sep);
+  const pkgIdx = parts.indexOf("packages");
+  const relevant = pkgIdx !== -1 ? parts.slice(pkgIdx) : [basename(absPath)];
+  return relevant.join("/");
 }
 
 const packageName = derivePackageName(absBaselines);

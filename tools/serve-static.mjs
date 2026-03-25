@@ -27,8 +27,8 @@ const MIME_TYPES = {
  */
 export function serveStatic(root, { port = 0, open = true, fallback, routes } = {}) {
   const server = createServer(async (req, res) => {
-    const rawUrl = req.url ?? "/";
-    const urlPath = decodeURIComponent(rawUrl.split("?")[0]);
+    const { pathname } = new URL(req.url ?? "/", "http://localhost");
+    const urlPath = decodeURIComponent(pathname);
 
     let filePath;
 

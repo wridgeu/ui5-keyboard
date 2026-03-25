@@ -203,7 +203,37 @@ What it does:
 - finds `output.json` in the target screenshots folder and one level of device subfolders
 - merges multiple JSON outputs into `output-combined.json` when needed
 - runs `wdio-visual-reporter` to generate the HTML report
-- serves the generated report locally with `sirv-cli`
+- serves the generated report locally
+
+## `visual-browse.mjs`
+
+Opens a local gallery of visual regression baseline images, grouped by snapshot tag with columns per device profile (desktop, phone-sm, phone-md, phone-lg, tablet).
+
+### Usage
+
+```bash
+node tools/visual-browse.mjs <baselinesDir> [--include-screenshots <screenshotsDir>]
+```
+
+Example:
+
+```bash
+node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__
+```
+
+With actual/diff screenshots from the last test run:
+
+```bash
+node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__ \
+  --include-screenshots packages/kiosk-keyboard/test/e2e/__screenshots__
+```
+
+Root-level shortcuts (baselines only):
+
+```bash
+npm run browse:baselines:kiosk
+npm run browse:baselines:webc
+```
 
 ## `check-demo-webc-bundle.mjs`
 
