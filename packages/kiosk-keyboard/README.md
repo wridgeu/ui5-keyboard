@@ -1187,6 +1187,30 @@ directly to define custom breakpoints:
 This is more flexible than the previous threshold variables: you can
 set any property at any number of breakpoints.
 
+#### Tuning for Complex-Script Layouts
+
+Layouts with visually complex glyphs (Arabic, Thai, Devanagari, CJK) may
+appear cramped at narrow widths because their characters need more
+horizontal space than Latin letters at the same font size. The built-in
+Arabic layout at phone-sm width (320 px) is a good reference case.
+
+Override `--ui5KioskKeyboard-keyFontSize` on the keyboard container to
+tune readability for your target script and container width:
+
+```css
+/* Slightly reduce font size for the Arabic layout at narrow widths */
+@container keyboard (max-width: 30rem) {
+  .myArabicKeyboard .ui5KioskKey {
+    --ui5KioskKeyboard-keyFontSize: 0.85rem;
+  }
+}
+```
+
+The `min()` capping in the responsive container queries preserves your
+override at narrow widths while still preventing oversized keys at
+desktop width. This approach works for any layout, including custom
+layouts registered via `registerLayout()`.
+
 For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-short` and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
 The height constraint must affect the **control's own rendered element**. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the control's layout box, so the keyboard will be clipped instead of adapting. Apply `max-height` directly to the keyboard's root element (via CSS targeting `.ui5KioskKeyboard`), or use a flex parent that propagates the constraint.

@@ -666,6 +666,28 @@ your chosen widths:
 This is more flexible than the previous threshold variables: you can
 set any property at any number of breakpoints.
 
+#### Tuning for Complex-Script Layouts
+
+Layouts with visually complex glyphs (Arabic, Thai, Devanagari, CJK) may
+appear cramped at narrow widths because their characters need more
+horizontal space than Latin letters at the same font size. The built-in
+Arabic layout at phone-sm width (320 px) is a good reference case.
+
+Override `--kiosk-keyboard-key-font-size` on the host to tune readability
+for your target script and container width:
+
+```css
+/* Slightly reduce font size for the Arabic layout at narrow widths */
+kiosk-keyboard[layout="arabic"] {
+  --kiosk-keyboard-key-font-size: 0.85rem;
+}
+```
+
+The `min()` capping in the responsive container queries preserves your
+override at narrow widths while still preventing oversized keys at
+desktop width. This approach works for any layout, including custom
+layouts registered via `registerLayout()`.
+
 The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`cq-short`, `cq-tiny`) activate. Override them to tune height breakpoints for your container:
 
 ```css
