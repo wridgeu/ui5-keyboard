@@ -5,7 +5,7 @@
     xmlns:custom="demo/hotkeys/control"
     xmlns:webc="@ui5/webcomponents/dist"
     xmlns:kiosk="ui5.kiosk">
-    <Page titleAlignment="Center" title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
         <content>
             <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

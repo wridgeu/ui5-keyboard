@@ -3,7 +3,7 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kioskWebc="demo.hotkeys.control">
-    <Page titleAlignment="Center" title="Kiosk Keyboard -- Web Component" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Kiosk Keyboard -- Web Component" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
         <content>
             <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
