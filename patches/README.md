@@ -115,10 +115,39 @@ The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc
 
 Repository: https://github.com/SAP/ui5-webcomponents
 
-To draft a GitHub issue based on these patches, run:
-
-```
-npx patch-package @ui5/webcomponents-tools --create-issue
-```
-
 These patches should be removed once the upstream issues are resolved.
+
+## less-openui5+0.11.6
+
+Adds `@container` at-rule support to the vendored LESS 1.6.3 parser.
+
+### `@container` directive not recognized by LESS parser
+
+**File:** `lib/thirdparty/less/parser.js`
+
+The vendored LESS 1.6.3 parser has a switch statement of recognized CSS at-rules (`@media`, `@supports`, `@keyframes`, etc.) that it passes through as block directives. `@container` is not in the list, so `@container keyboard (max-width: 30rem) { ... }` causes a parse error.
+
+The current workaround is a separate `KioskKeyboard.container-queries.css` file imported via `@import (inline)` to bypass the LESS parser entirely. With this patch, `@container` rules can be written directly in LESS files.
+
+`@container` has a single syntax form (identifier + block), identical to `@supports` and `@keyframes`, so the one-line addition to the switch statement is sufficient.
+
+Note: `@layer` was also investigated but has multiple syntax forms (anonymous blocks, named blocks, ordering statements, dotted namespaces) that require more extensive parser changes. See the upstream LESS.js PRs #4337, #4340, #4349, #4351 for the full implementation.
+
+**Fix:** Add `@container` to the recognized block-with-identifier directives.
+
+```diff
+                     case "@supports":
+                     case "@keyframes":
++                    case "@container":
+                         hasBlock = true;
+                         hasIdentifier = true;
+                         break;
+```
+
+### Upstream
+
+Repository: https://github.com/SAP/less-openui5
+
+Upstream PR: https://github.com/SAP/less-openui5/pull/453
+
+This patch should be removed once less-openui5 updates its vendored LESS parser.

@@ -464,14 +464,13 @@ The control implements roving tabindex for arrow key navigation:
 ```
 themes/
   base/
-    KioskKeyboard.less                  All styles using @sapUi* LESS parameters
-    KioskKeyboard.container-queries.css Width-responsive @container rules (plain CSS)
-    library.source.less                 Imports KioskKeyboard.less + container-queries.css (inline)
+    KioskKeyboard.less                  All styles including @container rules
+    library.source.less                 Imports KioskKeyboard.less
   sap_horizon/
     library.source.less                 Imports base + SAP Horizon theme globals
 ```
 
-`KioskKeyboard.container-queries.css` is imported via `@import (inline)` to bypass the LESS 1.6.3 preprocessor which does not recognize `@container` at-rules. It uses only CSS custom properties, no LESS variables.
+`@container` at-rules are written directly in the LESS file. The vendored LESS 1.6.3 parser in `less-openui5` does not recognize `@container` natively, so a local `patch-package` patch adds it to the parser's recognized directive list (see `patches/less-openui5+0.11.6.patch`).
 
 The base stylesheet references SAP theme parameters exclusively, with no hardcoded colors. This ensures automatic theming support for all Horizon variants (light, dark, HCB, HCW).
 
@@ -497,7 +496,7 @@ Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted)
 - **30rem (narrow):** Caps `--ui5KioskKeyboard-keyFontSize` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
 - **20rem (compact):** Additionally reduces key inline padding for non-numpad keys and applies a tighter font-size cap of `0.875rem`.
 
-No JavaScript is involved in width responsiveness. Because UI5's vendored LESS 1.6.3 parser does not recognize `@container` at-rules, the container query rules live in a separate plain CSS file (`KioskKeyboard.container-queries.css`) that is pulled in via `@import (inline)` in `library.source.less`. The `(inline)` flag tells the LESS compiler to include the file verbatim without parsing it.
+No JavaScript is involved in width responsiveness. The `@container` rules are written directly in `KioskKeyboard.less`, enabled by a local `patch-package` patch that adds `@container` to the vendored LESS 1.6.3 parser's recognized directive list.
 
 **Height responsiveness** uses JS (`sap/ui/core/ResizeHandler`, UI5's centralized resize handling) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 

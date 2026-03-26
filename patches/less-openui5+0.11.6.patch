@@ -1,0 +1,12 @@
+diff --git a/node_modules/less-openui5/lib/thirdparty/less/parser.js b/node_modules/less-openui5/lib/thirdparty/less/parser.js
+index faa0653..ec496a2 100644
+--- a/node_modules/less-openui5/lib/thirdparty/less/parser.js
++++ b/node_modules/less-openui5/lib/thirdparty/less/parser.js
+@@ -1706,6 +1706,7 @@ less.Parser = function Parser(env) {
+                     case "@document":
+                     case "@supports":
+                     case "@keyframes":
++                    case "@container":
+                         hasBlock = true;
+                         hasIdentifier = true;
+                         break;

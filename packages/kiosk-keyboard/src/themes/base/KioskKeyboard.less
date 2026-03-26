@@ -401,6 +401,40 @@
   --ui5KioskKeyboard-padding: 0.25rem;
 }
 
+/* ============================= */
+/* Width-responsive @container   */
+/* ============================= */
+
+/* min() caps rather than hard-replaces consumer-provided values:
+   a consumer who sets --ui5KioskKeyboard-keyFontSize: 0.75rem keeps that
+   value; one who sets 1.5rem gets capped to 1rem / 0.875rem at narrow widths.
+   All selectors use :where() for zero specificity so consumer overrides
+   always win. */
+
+@container keyboard (max-width: 30rem) {
+  :where(.ui5KioskKey) {
+    --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 1rem)";
+  }
+}
+
+@container keyboard (max-width: 20rem) {
+  :where(.ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskKey) {
+    --_ui5KioskKeyboard-keyPadding: ~"var(--_ui5KioskKeyboard-keyPaddingXs)";
+  }
+
+  :where(.ui5KioskKey) {
+    --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.875rem)";
+  }
+}
+
+/* Mixed: narrow width (@container) + constrained height (JS class). */
+@container keyboard (max-width: 20rem) {
+  :where(.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) .ui5KioskKey),
+  :where(.ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey) {
+    --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.75rem)";
+  }
+}
+
 /* Progressive enhancement: text-box-trim
    Trims invisible half-leading above and below text, giving true optical
    centering inside keys without line-height workarounds for descender safety.
