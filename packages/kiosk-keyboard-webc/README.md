@@ -13,8 +13,8 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework: plain HTML, React, Vue, Angular
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
-- **Multiple layouts**: QWERTY, QWERTZ-DE, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
-- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`)
+- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Arabic, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
+- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`)
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show**: opens/closes automatically when target inputs receive/lose focus
@@ -22,7 +22,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **F-key and navigation key support**: configurable modes: `Virtual`, `Native`, `None`
 - **Grapheme-aware**: correct backspace/navigation for emoji and multi-code-unit characters
 - **Accessible**: ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
-- **i18n**: built-in English/German, extensible via custom resolver
+- **i18n**: built-in English/German/Japanese/Arabic, extensible via custom resolver
 - **Custom layouts**: register/unregister layouts at runtime
 
 ## Keyboard Overview
@@ -352,19 +352,21 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 
 ## Built-in Layouts
 
-| Name            | Description                               |
-| --------------- | ----------------------------------------- |
-| `qwerty`        | Standard US QWERTY                        |
-| `qwertz-de`     | German QWERTZ with umlauts and ß          |
-| `numeric`       | Numbers + common symbols                  |
-| `special`       | Extended symbols (`#+=`, currencies)      |
-| `numpad`        | Calculator-style number pad               |
-| `fkeys`         | F1-F12 function keys                      |
-| `nav`           | Navigation keys (arrows, Home, End, etc.) |
-| `qwerty-fk`     | QWERTY + F-key row                        |
-| `qwertz-de-fk`  | QWERTZ-DE + F-key row                     |
-| `qwerty-nav`    | QWERTY + navigation row                   |
-| `qwertz-de-nav` | QWERTZ-DE + navigation row                |
+| Name            | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `qwerty`        | Standard US QWERTY                                 |
+| `qwertz-de`     | German QWERTZ with umlauts and ß                   |
+| `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) |
+| `arabic`        | Arabic (standard Arabic 101 layout)                |
+| `numeric`       | Numbers + common symbols                           |
+| `special`       | Extended symbols (`#+=`, currencies)               |
+| `numpad`        | Calculator-style number pad                        |
+| `fkeys`         | F1-F12 function keys                               |
+| `nav`           | Navigation keys (arrows, Home, End, etc.)          |
+| `qwerty-fk`     | QWERTY + F-key row                                 |
+| `qwertz-de-fk`  | QWERTZ-DE + F-key row                              |
+| `qwerty-nav`    | QWERTY + navigation row                            |
+| `qwertz-de-nav` | QWERTZ-DE + navigation row                         |
 
 ## Custom Layouts
 
