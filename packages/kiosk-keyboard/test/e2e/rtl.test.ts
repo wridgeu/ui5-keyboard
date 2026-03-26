@@ -25,4 +25,11 @@ describe("KioskKeyboard RTL (Right-to-Left)", () => {
     const kb = await getKeyboard("kb-numeric");
     await matchElementSnapshotInSection(kb, "kb-numeric-rtl");
   });
+
+  it("should match Arabic layout in RTL", async () => {
+    await openVisualPage();
+    await setDocumentDirection("rtl");
+    const kb = await getKeyboard("kb-arabic");
+    await matchElementSnapshotInSection(kb, "kb-arabic-rtl");
+  });
 });

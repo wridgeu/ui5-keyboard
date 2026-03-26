@@ -13,6 +13,8 @@ import qwertyFk from "../layouts/qwerty-fk";
 import qwertzDeFk from "../layouts/qwertz-de-fk";
 import qwertyNav from "../layouts/qwerty-nav";
 import qwertzDeNav from "../layouts/qwertz-de-nav";
+import jaRomaji from "../layouts/ja-romaji";
+import arabic from "../layouts/arabic";
 
 const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
@@ -26,12 +28,18 @@ const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwertz-de-fk", qwertzDeFk],
   ["qwerty-nav", qwertyNav],
   ["qwertz-de-nav", qwertzDeNav],
+  ["ja-romaji", jaRomaji],
+  ["arabic", arabic],
 ]);
 
 /** Built-in layout names that cannot be overwritten by registerLayout. */
 const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
 
-const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([["de", "qwertz-de"]]);
+const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
+  ["de", "qwertz-de"],
+  ["ja", "ja-romaji"],
+  ["ar", "arabic"],
+]);
 
 /** BCP-47 language prefix -> layout name. Checked after exact match. */
 const LOCALE_LAYOUT_MAP: Map<string, string> = new Map(DEFAULT_LOCALE_LAYOUT_MAP);

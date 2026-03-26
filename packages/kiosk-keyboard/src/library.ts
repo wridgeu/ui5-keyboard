@@ -37,6 +37,10 @@ export const KeyboardLayout = Object.freeze({
   QwertyNav: "qwerty-nav",
   /** German QWERTZ layout with navigation row on top. */
   QwertzDeNav: "qwertz-de-nav",
+  /** Japanese Romaji layout (QWERTY base with JIS punctuation). */
+  JaRomaji: "ja-romaji",
+  /** Arabic keyboard layout (standard Arabic 101). */
+  Arabic: "arabic",
 } as const);
 
 /**

@@ -540,11 +540,31 @@ QUnit.test("getLocaleLayout returns qwerty for English locale", (assert) => {
   }
 });
 
-QUnit.test("getLocaleLayout falls back to qwerty for unmapped locale", (assert) => {
+QUnit.test("getLocaleLayout resolves ja to ja-romaji", (assert) => {
   const currentLang = Localization.getLanguage();
   try {
     Localization.setLanguage("ja");
-    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Japanese (unmapped) falls back to qwerty");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "ja-romaji", "Japanese resolves to ja-romaji");
+  } finally {
+    Localization.setLanguage(currentLang);
+  }
+});
+
+QUnit.test("getLocaleLayout resolves ar to arabic", (assert) => {
+  const currentLang = Localization.getLanguage();
+  try {
+    Localization.setLanguage("ar");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "arabic", "Arabic resolves to arabic");
+  } finally {
+    Localization.setLanguage(currentLang);
+  }
+});
+
+QUnit.test("getLocaleLayout falls back to qwerty for unmapped locale", (assert) => {
+  const currentLang = Localization.getLanguage();
+  try {
+    Localization.setLanguage("zh");
+    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Chinese (unmapped) falls back to qwerty");
   } finally {
     Localization.setLanguage(currentLang);
   }
