@@ -23,5 +23,5 @@
    Must match the UI5 selector .sapMPage.sapUiContentPadding > section
    which sets padding: 1rem via shorthand. */
 .sapMPage.demoDockedPage > section {
-  padding-bottom: 20rem;
+  padding-bottom: 22rem;
 }
