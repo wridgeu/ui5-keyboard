@@ -20,14 +20,15 @@ This also affects the upstream UI5 Web Components themselves (e.g., `UI5Element.
 
 In theory, parameter order in the CEM should not matter: each parameter object carries its own `name`, `type`, and other identifying properties, so consumers could identify parameters by these properties rather than by position. However, without the `rest: true` fix ([Bug 2](#bug-2-rest-parameters-not-emitted-in-cem)), a rest parameter that gets sorted out of its trailing position would be indistinguishable from a regular parameter, since the `rest` property that marks it as variadic was never emitted. The combination of both bugs means a sorted rest parameter silently loses its variadic semantics.
 
-**Fix:** Skip sorting for `parameters` and `mixins` arrays (both are order-dependent per the CEM spec).
+**Fix:** Skip sorting for `parameters` and `mixins` arrays. Mixin order is mandated by the CEM schema; parameter order is consumed positionally by IDE completions and documentation generators.
 
 ```diff
  for (const key in obj) {
      if (Array.isArray(obj[key])) {
 -        sortByName(obj[key]);
-+        // Skip sorting for order-dependent arrays (parameter position,
-+        // mixin application order) per CEM spec constraints.
++        // Skip sorting for order-dependent arrays. Mixin order is
++        // mandated by the CEM schema; parameter order is consumed
++        // positionally by IDE completions and documentation generators.
 +        if (key !== "parameters" && key !== "mixins") {
 +            sortByName(obj[key]);
 +        }
