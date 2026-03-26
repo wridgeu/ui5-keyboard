@@ -56,7 +56,11 @@ export interface KeyDefinition {
   /** The character or action this key produces. */
   value: string;
 
-  /** Display label shown on the key face. Defaults to `value`. */
+  /**
+   * Display label shown on the key face. Defaults to `value`.
+   * When an icon is also present, both render together.
+   * Set to `""` to suppress the label for icon-only display.
+   */
   label?: string;
 
   /** Label to show when Shift is active. */
@@ -71,7 +75,12 @@ export interface KeyDefinition {
   /** Visual style category. */
   type?: KeyType;
 
-  /** Icon identifier for icon-only keys. */
+  /**
+   * Icon displayed on the key face.
+   * SAP icon URI (e.g. `"sap-icon://accept"`) or Unicode character / emoji (e.g. `"\u23CE"`).
+   * When both icon and label are present, both render together.
+   * Set `label` to `""` for icon-only display; set `icon` to `""` to suppress a built-in icon.
+   */
   icon?: string;
 }
 
