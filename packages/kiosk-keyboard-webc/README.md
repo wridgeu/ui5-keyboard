@@ -596,6 +596,8 @@ Override these on the `:host` or a parent element to customize appearance:
 
 | Property                                 | Default                                                   | Description                                     |
 | ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
+| `--kiosk-keyboard-border`                | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless) |
+| `--kiosk-keyboard-border-radius`         | _(theme)_                                                 | Container border radius                         |
 | `--kiosk-keyboard-padding`               | `0.75rem`                                                 | Container padding                               |
 | `--kiosk-keyboard-key-gap`               | `0.375rem`                                                | Gap between keys                                |
 | `--kiosk-keyboard-key-height`            | `3rem`                                                    | Key height                                      |

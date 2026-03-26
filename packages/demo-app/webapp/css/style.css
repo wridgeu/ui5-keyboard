@@ -18,6 +18,13 @@
   --ui5KioskKeyboard-padding: 0.5rem;
 }
 
+/* Popover demo: remove the keyboard container border so it blends
+   seamlessly with the popover. */
+.demoPopoverKbBorderless {
+  --ui5KioskKeyboard-border: none;
+  --ui5KioskKeyboard-borderRadius: 0;
+}
+
 /* Docked-keyboard pages: add bottom padding so the page content
    can be scrolled above the fixed-position keyboard.
    Must match the UI5 selector .sapMPage.sapUiContentPadding > section

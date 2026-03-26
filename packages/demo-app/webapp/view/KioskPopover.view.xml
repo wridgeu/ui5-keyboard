@@ -61,9 +61,9 @@
                     </HBox>
                 </VBox>
             </Panel>
-            <Panel headerText="D) Popover contentHeight (no keyboard CSS)" class="sapUiSmallMarginBottom">
+            <Panel headerText="D) Borderless (blends with popover)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="The Popover has contentHeight: 15rem but no CSS on the keyboard. The Popover's intermediate wrapper divs have height: auto, so max-height: 100% cannot propagate. The keyboard renders at full size and overflows -- demonstrating the limitation documented in the README." />
+                    <Text text="Remove the keyboard container border via --ui5KioskKeyboard-border: none so the keyboard blends seamlessly into the popover chrome." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Full Name" class="sapUiSmallMarginEnd" />
                         <Input id="inputD" placeholder="Jane Doe" width="14rem" />
@@ -74,6 +74,25 @@
                             ariaHasPopup="Dialog">
                             <customData>
                                 <core:CustomData key="inputId" value="inputD" />
+                            </customData>
+                        </Button>
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="E) Popover contentHeight (no keyboard CSS)" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <Text text="The Popover has contentHeight: 15rem but no CSS on the keyboard. The Popover's intermediate wrapper divs have height: auto, so max-height: 100% cannot propagate. The keyboard renders at full size and overflows -- demonstrating the limitation documented in the README." />
+                    <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Input id="inputE" placeholder="Jane Doe" width="14rem" />
+                        <Button
+                            icon="sap-icon://keyboard-and-mouse"
+                            type="Transparent"
+                            press=".onOpenKeyboardE"
+                            ariaHasPopup="Dialog">
+                            <customData>
+                                <core:CustomData key="inputId" value="inputE" />
                             </customData>
                         </Button>
                     </HBox>
