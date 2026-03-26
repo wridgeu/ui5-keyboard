@@ -683,10 +683,11 @@ kiosk-keyboard[layout="arabic"] {
 }
 ```
 
-The `min()` capping in the responsive container queries preserves your
-override at narrow widths while still preventing oversized keys at
-desktop width. This approach works for any layout, including custom
-layouts registered via `registerLayout()`.
+At narrow widths, the responsive container queries cap font size via
+`min()` but cannot raise it above your value, so a smaller override is
+preserved. At desktop widths no cap applies and your value is used
+as-is. This approach works for any layout, including custom layouts
+registered via `registerLayout()`.
 
 The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`cq-short`, `cq-tiny`) activate. Override them to tune height breakpoints for your container:
 
