@@ -119,30 +119,25 @@ These patches should be removed once the upstream issues are resolved.
 
 ## less-openui5+0.11.6
 
-Adds `@container` at-rule support to the vendored LESS 1.6.3 parser.
+Adds `@container` and `@layer` at-rule support to the vendored LESS 1.6.3 parser.
 
-### `@container` directive not recognized by LESS parser
+**Files:**
 
-**File:** `lib/thirdparty/less/parser.js`
+- `lib/thirdparty/less/parser.js`
+- `lib/thirdparty/less/tree/directive.js`
 
-The vendored LESS 1.6.3 parser has a switch statement of recognized CSS at-rules (`@media`, `@supports`, `@keyframes`, etc.) that it passes through as block directives. `@container` is not in the list, so `@container keyboard (max-width: 30rem) { ... }` causes a parse error.
+The vendored LESS 1.6.3 parser has a switch statement of recognized CSS at-rules (`@media`, `@supports`, `@keyframes`, etc.) that it passes through as block directives. `@container` and `@layer` are not in the list, so using them in LESS causes a parse error.
 
-The current workaround is a separate `KioskKeyboard.container-queries.css` file imported via `@import (inline)` to bypass the LESS parser entirely. With this patch, `@container` rules can be written directly in LESS files.
+The patch adds both directives to the recognized list and handles all `@layer` syntax forms:
 
-`@container` has a single syntax form (identifier + block), identical to `@supports` and `@keyframes`, so the one-line addition to the switch statement is sufficient.
+- `@layer name { ... }` (named block)
+- `@layer { ... }` (anonymous block)
+- `@layer name1, name2;` (ordering statement)
+- `@layer framework.layout { ... }` (dotted namespace)
 
-Note: `@layer` was also investigated but has multiple syntax forms (anonymous blocks, named blocks, ordering statements, dotted namespaces) that require more extensive parser changes. See the upstream LESS.js PRs #4337, #4340, #4349, #4351 for the full implementation.
+The approach follows the modern LESS 4.x parser (PRs #4337, #4340, #4349, #4351) adapted to the 1.6.3 architecture. The identifier regex is widened from `/^[^{]+/` to `/^[^{;]+/` so it stops at semicolons (for ordering statements). A fallback after failed block parsing handles the semicolon-terminated ordering form. The `genCSS` method in `directive.js` is adjusted to skip the leading space for empty-value directives.
 
-**Fix:** Add `@container` to the recognized block-with-identifier directives.
-
-```diff
-                     case "@supports":
-                     case "@keyframes":
-+                    case "@container":
-                         hasBlock = true;
-                         hasIdentifier = true;
-                         break;
-```
+**Regression test:** `node patches/less-openui5-test.mjs` compiles a fixture with all directive types and verifies correct output.
 
 ### Upstream
 
