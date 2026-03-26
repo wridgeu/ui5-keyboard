@@ -13,8 +13,8 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework: plain HTML, React, Vue, Angular
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
-- **Multiple layouts**: QWERTY, QWERTZ-DE, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
-- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`)
+- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Arabic, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
+- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`)
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show**: opens/closes automatically when target inputs receive/lose focus
@@ -22,7 +22,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **F-key and navigation key support**: configurable modes: `Virtual`, `Native`, `None`
 - **Grapheme-aware**: correct backspace/navigation for emoji and multi-code-unit characters
 - **Accessible**: ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
-- **i18n**: built-in English/German, extensible via custom resolver
+- **i18n**: built-in English/German/Japanese/Arabic, extensible via custom resolver
 - **Custom layouts**: register/unregister layouts at runtime
 
 ## Keyboard Overview
@@ -352,19 +352,21 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 
 ## Built-in Layouts
 
-| Name            | Description                               |
-| --------------- | ----------------------------------------- |
-| `qwerty`        | Standard US QWERTY                        |
-| `qwertz-de`     | German QWERTZ with umlauts and ß          |
-| `numeric`       | Numbers + common symbols                  |
-| `special`       | Extended symbols (`#+=`, currencies)      |
-| `numpad`        | Calculator-style number pad               |
-| `fkeys`         | F1-F12 function keys                      |
-| `nav`           | Navigation keys (arrows, Home, End, etc.) |
-| `qwerty-fk`     | QWERTY + F-key row                        |
-| `qwertz-de-fk`  | QWERTZ-DE + F-key row                     |
-| `qwerty-nav`    | QWERTY + navigation row                   |
-| `qwertz-de-nav` | QWERTZ-DE + navigation row                |
+| Name            | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `qwerty`        | Standard US QWERTY                                 |
+| `qwertz-de`     | German QWERTZ with umlauts and ß                   |
+| `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) |
+| `arabic`        | Arabic (standard Arabic 101 layout)                |
+| `numeric`       | Numbers + common symbols                           |
+| `special`       | Extended symbols (`#+=`, currencies)               |
+| `numpad`        | Calculator-style number pad                        |
+| `fkeys`         | F1-F12 function keys                               |
+| `nav`           | Navigation keys (arrows, Home, End, etc.)          |
+| `qwerty-fk`     | QWERTY + F-key row                                 |
+| `qwertz-de-fk`  | QWERTZ-DE + F-key row                              |
+| `qwerty-nav`    | QWERTY + navigation row                            |
+| `qwertz-de-nav` | QWERTZ-DE + navigation row                         |
 
 ## Custom Layouts
 
@@ -451,7 +453,7 @@ kb.setTargetResolver(null);
 
 ## Internationalization (i18n)
 
-The keyboard ships with English and German translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
+The keyboard ships with English, German, Japanese, and Arabic translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
 
 Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls both visible labels for special keys (Shift, Enter, Backspace, Space), `aria-label` for icon-only keys (where `label=""`), the keyboard's `aria-label`, `aria-roledescription`, and live region announcements (shift/caps lock state changes, keyboard open/close).
 
@@ -664,6 +666,29 @@ your chosen widths:
 This is more flexible than the previous threshold variables: you can
 set any property at any number of breakpoints.
 
+#### Tuning for Complex-Script Layouts
+
+Layouts with visually complex glyphs (Arabic, Thai, Devanagari, CJK) may
+appear cramped at narrow widths because their characters need more
+horizontal space than Latin letters at the same font size. The built-in
+Arabic layout at phone-sm width (320 px) is a good reference case.
+
+Override `--kiosk-keyboard-key-font-size` on the host to tune readability
+for your target script and container width:
+
+```css
+/* Slightly reduce font size for the Arabic layout at narrow widths */
+kiosk-keyboard[layout="arabic"] {
+  --kiosk-keyboard-key-font-size: 0.85rem;
+}
+```
+
+At narrow widths, the responsive container queries cap font size via
+`min()` but cannot raise it above your value, so a smaller override is
+preserved. At desktop widths no cap applies and your value is used
+as-is. This approach works for any layout, including custom layouts
+registered via `registerLayout()`.
+
 The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`cq-short`, `cq-tiny`) activate. Override them to tune height breakpoints for your container:
 
 ```css
@@ -827,7 +852,7 @@ src/
 ├── layouts/                   # Built-in layout definitions
 │   ├── index.ts               # Layout registry
 │   ├── default-layout.ts     # Default layout name constant
-│   ├── qwerty.ts, qwertz-de.ts, numeric.ts, special.ts, numpad.ts
+│   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, arabic.ts, numeric.ts, special.ts, numpad.ts
 │   ├── fkeys.ts, nav.ts      # Standalone F-key/nav layouts
 │   ├── fkey-row.ts, nav-row.ts  # Shared rows for composite layouts
 │   └── qwerty-fk.ts, qwertz-de-fk.ts, qwerty-nav.ts, qwertz-de-nav.ts
