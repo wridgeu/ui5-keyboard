@@ -1194,18 +1194,19 @@ appear cramped at narrow widths because their characters need more
 horizontal space than Latin letters at the same font size. The built-in
 Arabic layout at phone-sm width (320 px) is a good reference case.
 
-Override `--ui5KioskKeyboard-keyFontSize` on the keyboard's root element
-to tune readability for your target script:
+Override `--ui5KioskKeyboard-keyFontSize` on the keyboard root to tune
+readability for your target script:
 
 ```css
 /* Reduce font size for a keyboard displaying complex-script glyphs */
-.myArabicKeyboard .ui5KioskKeyboard {
+.ui5KioskKeyboard {
   --ui5KioskKeyboard-keyFontSize: 0.85rem;
 }
 ```
 
-Since the UI5 control renders in the light DOM, standard CSS selectors
-work directly. The `min()` capping in the responsive container queries
+All component styles live inside `@layer kiosk-keyboard`, so any
+unlayered consumer CSS wins regardless of specificity -- no extra wrapper
+class is needed. The `min()` capping in the responsive container queries
 preserves your override at narrow widths while still preventing oversized
 keys at desktop width. This approach works for any layout, including
 custom layouts registered via `registerLayout()`.
