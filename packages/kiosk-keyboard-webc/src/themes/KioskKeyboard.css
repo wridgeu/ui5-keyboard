@@ -34,6 +34,7 @@
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 
+  --kiosk-keyboard-key-border: 1px solid var(--sapButton_BorderColor, #bfbfbf);
   --kiosk-keyboard-border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
   --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   --kiosk-keyboard-cq-short-threshold: 16rem;
@@ -87,6 +88,7 @@
   --_kiosk-keyboard-docked-z-index: var(--kiosk-keyboard-docked-z-index);
   --_kiosk-keyboard-modifier-shadow: var(--kiosk-keyboard-modifier-shadow);
   --_kiosk-keyboard-modifier-shadow-hover: var(--kiosk-keyboard-modifier-shadow-hover);
+  --_kiosk-keyboard-key-border: var(--kiosk-keyboard-key-border);
   --_kiosk-keyboard-border: var(--kiosk-keyboard-border);
   --_kiosk-keyboard-border-radius: var(--kiosk-keyboard-border-radius);
   --_kiosk-keyboard-numpad-max-width: var(--kiosk-keyboard-numpad-max-width);
@@ -236,7 +238,7 @@
   flex: 1 1 0;
   height: var(--_kiosk-keyboard-key-height);
   padding: var(--_kiosk-keyboard-key-padding);
-  border: 1px solid var(--sapButton_BorderColor, #bfbfbf);
+  border: var(--_kiosk-keyboard-key-border);
   border-radius: var(--sapButton_BorderCornerRadius, 0.5rem);
   background: var(--sapButton_Background, #fff);
   color: var(--sapButton_TextColor, #32363a);
