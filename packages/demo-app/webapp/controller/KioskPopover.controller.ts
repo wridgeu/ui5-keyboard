@@ -16,7 +16,8 @@ const VARIANTS: Record<string, PopoverVariant> = {
   A: { styleClass: "demoPopoverKbGenerous", ariaLabel: "Virtual Keyboard (generous)", title: "Generous (19 rem)" },
   B: { styleClass: "demoPopoverKbCompact", ariaLabel: "Virtual Keyboard (compact)", title: "Compact (15 rem)" },
   C: { styleClass: "demoPopoverKbCustomVars", ariaLabel: "Virtual Keyboard (custom vars)", title: "Custom CSS Vars" },
-  D: { ariaLabel: "Virtual Keyboard (automatic)", title: "Automatic (15 rem)", contentHeight: "15rem" },
+  D: { styleClass: "demoPopoverKbBorderless", ariaLabel: "Virtual Keyboard (borderless)", title: "Borderless" },
+  E: { ariaLabel: "Virtual Keyboard (automatic)", title: "Automatic (15 rem)", contentHeight: "15rem" },
 };
 
 /**
@@ -25,7 +26,8 @@ const VARIANTS: Record<string, PopoverVariant> = {
  * A) Generous height (19 rem) -- full-size keys, no breakpoints triggered
  * B) Compact height (15 rem)  -- triggers cq-short, keys shrink to 2.25 rem
  * C) Custom CSS vars          -- reduce key height so keyboard fits naturally
- * D) Popover contentHeight    -- demonstrates the limitation: intermediate wrappers break auto-detection
+ * D) Borderless               -- removes container border to blend with popover chrome
+ * E) Popover contentHeight    -- demonstrates the limitation: intermediate wrappers break auto-detection
  *
  * @namespace demo.hotkeys.controller
  */
@@ -47,6 +49,10 @@ export default class KioskPopover extends BaseController {
 
   onOpenKeyboardD(event: Button$PressEvent): void {
     this._openVariant("D", event);
+  }
+
+  onOpenKeyboardE(event: Button$PressEvent): void {
+    this._openVariant("E", event);
   }
 
   private _openVariant(key: string, event: Button$PressEvent): void {

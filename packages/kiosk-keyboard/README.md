@@ -1122,6 +1122,8 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
 | Property                                 | Default                                                   | Description                                       |
 | ---------------------------------------- | --------------------------------------------------------- | ------------------------------------------------- |
+| `--ui5KioskKeyboard-border`              | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)   |
+| `--ui5KioskKeyboard-borderRadius`        | _(theme)_                                                 | Container border radius                           |
 | `--ui5KioskKeyboard-padding`             | `0.75rem`                                                 | Container padding                                 |
 | `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                                | Gap between keys and rows                         |
 | `--ui5KioskKeyboard-keyHeight`           | `3rem`                                                    | Key height / touch target                         |
