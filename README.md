@@ -345,9 +345,9 @@ Contributions are welcome. Whether you file a bug report, suggest a feature, or 
 - **Pull Requests:** Fork the repo, create a branch, and open a PR against `main`. Please run `npm run check` before submitting to verify tests, linting, and formatting pass.
 - **Questions:** Open a discussion or issue if something is unclear.
 
-## A note on how this was built
+## A note on how this was built (Disclaimer)
 
-Large parts of this project were _vibe coded_. I built most of the tooling, tests, and infrastructure with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges in the developer tooling or test scaffolding, that is probably why. The library code itself (the keyboard controls and web components) was held to normal review standards throughout.
+Large parts of this project were _vibe coded_. I built it with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges, that is probably why.
 
 ## License
 
