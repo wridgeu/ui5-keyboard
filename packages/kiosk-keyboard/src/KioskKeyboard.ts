@@ -1766,12 +1766,24 @@ export default class KioskKeyboard extends Control {
 
   /** The display label for a key (may be empty for icon-only keys). */
   private _getKeyLabel(key: KeyDefinition): string {
+    // Explicit empty label suppresses display text (icon-only opt-out)
+    if (key.label === "") return "";
+
     const shift = this._isShiftActive();
     if (shift && key.shiftLabel) return key.shiftLabel;
+
+    // Explicit non-empty label always wins over i18n
+    if (key.label !== undefined) {
+      return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
+    }
+
+    // No explicit label: i18n for special keys, value for regular keys
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    const base = entry ? this._getKeyAriaLabel(key) : (key.label ?? key.value);
+    if (entry) return getText(entry[0], entry[1]);
+
+    const base = key.value;
     if (!base) return "";
-    return shift && !entry && key.value.length === 1 && key.value.trim() ? base.toUpperCase() : base;
+    return shift && key.value.length === 1 && key.value.trim() ? base.toUpperCase() : base;
   }
 
   // ──────────────────────────────────────────────
