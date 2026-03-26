@@ -1752,7 +1752,7 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Accessible label for a key - always non-empty.
-   * For icon-only keys (label=""), resolves to a human-readable name.
+   * Used as aria-label when no visible text is present.
    */
   private _getKeyAriaLabel(key: KeyDefinition): string {
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
@@ -1764,7 +1764,7 @@ export default class KioskKeyboard extends Control {
     return display || key.value;
   }
 
-  /** The display label for a key (may be empty for icon-only keys). */
+  /** The display label for a key. Empty string when label is suppressed (icon-only opt-out). */
   private _getKeyLabel(key: KeyDefinition): string {
     // Explicit empty label suppresses display text (icon-only opt-out)
     if (key.label === "") return "";

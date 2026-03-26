@@ -76,7 +76,17 @@ export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:$
  * { value: "1", shiftLabel: "!", shiftValue: "!" }
  * ```
  *
- * @example Action key with icon
+ * @example Action key with icon and label
+ * ```ts
+ * {
+ *   value: "{backspace}",
+ *   icon: "sap-icon://arrow-left",
+ *   width: "2",
+ *   type: "action",
+ * }
+ * ```
+ *
+ * @example Icon-only key (label suppressed)
  * ```ts
  * {
  *   value: "{backspace}",
@@ -84,6 +94,17 @@ export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:$
  *   icon: "sap-icon://arrow-left",
  *   width: "2",
  *   type: "action",
+ * }
+ * ```
+ *
+ * @example Unicode icon with text label
+ * ```ts
+ * {
+ *   value: "{shift}",
+ *   icon: "\u21E7",
+ *   label: "Shift",
+ *   width: "2.25",
+ *   type: "modifier",
  * }
  * ```
  *
@@ -112,9 +133,9 @@ export interface KeyDefinition {
   /**
    * Display label shown on the key face. Defaults to `value`.
    *
-   * Set to `""` (empty string) for icon-only keys.
-   * The renderer will use the key's `icon` property for display and
-   * fall back to a built-in aria-label for accessibility.
+   * When an icon is also present (via `icon` property or built-in),
+   * both icon and label render together (icon above label by default).
+   * Set to `""` (empty string) to suppress the label for icon-only display.
    */
   label?: string;
 
@@ -165,21 +186,28 @@ export interface KeyDefinition {
   type?: KeyType;
 
   /**
-   * SAP icon URI for icon-only keys.
+   * Icon displayed on the key face.
    *
-   * When set, the key renders the icon instead of text. The icon receives
-   * `aria-hidden="true"`; the key's accessibility is handled by the
-   * `aria-label` attribute.
+   * Accepts two value types:
+   * - **SAP icon URI** (e.g. `"sap-icon://accept"`) - rendered via the
+   *   platform icon component
+   * - **Unicode character or emoji** (e.g. `"\u21E7"`, `"\u23CE"`, `"\uD83D\uDD0D"`) -
+   *   rendered as a text span styled at icon font size
    *
-   * The following special keys render built-in icons by default (no need to
-   * set this property):
+   * When both `icon` and a non-empty `label` are present, both render
+   * together (icon above label by default). Set `label` to `""` for
+   * icon-only display.
+   *
+   * The following special keys render built-in icons by default (no need
+   * to set this property):
    * - `{shift}` - `sap-icon://arrow-top` (Caps Lock uses `sap-icon://locked`)
    * - `{enter}` - `sap-icon://accept`
    * - `{backspace}` - `sap-icon://arrow-left`
    *
-   * To override a default icon, set this property to a different icon URI.
+   * Set to `""` (empty string) to suppress a built-in icon.
    *
    * @example "sap-icon://arrow-left"
+   * @example "\u23CE"
    */
   icon?: string;
 }
@@ -202,12 +230,13 @@ export type KeyRow = KeyDefinition[];
  * Each entry is a row of keys rendered top-to-bottom. Use this type
  * with {@link KioskKeyboard.registerLayout} to register custom layouts.
  *
- * **Accessibility:** For icon-only keys (where `label` is `""`), the renderer
- * automatically generates an `aria-label` from the key's `value` using i18n
- * translations for built-in special keys (`{backspace}`, `{enter}`, `{shift}`,
- * `" "`). For custom icon-only keys with non-standard values, ensure the
- * `value` is human-readable (e.g. `"Delete"` rather than `"del"`) since it
- * will be used as the accessible name.
+ * **Accessibility:** Keys with visible text labels get their accessible name
+ * from the visible text. For icon-only keys (where `label` is `""`), the
+ * renderer sets an `aria-label` using i18n translations for built-in special
+ * keys (`{backspace}`, `{enter}`, `{shift}`, `" "`). For custom icon-only
+ * keys with non-standard values, ensure the `value` is human-readable
+ * (e.g. `"Delete"` rather than `"del"`) since it will be used as the
+ * accessible name.
  *
  * @example Minimal custom layout
  * ```ts
