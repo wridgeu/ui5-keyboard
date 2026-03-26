@@ -34,6 +34,8 @@
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 
+  --kiosk-keyboard-border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
+  --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   --kiosk-keyboard-cq-short-threshold: 16rem;
   --kiosk-keyboard-cq-tiny-threshold: 12rem;
 }
@@ -85,6 +87,8 @@
   --_kiosk-keyboard-docked-z-index: var(--kiosk-keyboard-docked-z-index);
   --_kiosk-keyboard-modifier-shadow: var(--kiosk-keyboard-modifier-shadow);
   --_kiosk-keyboard-modifier-shadow-hover: var(--kiosk-keyboard-modifier-shadow-hover);
+  --_kiosk-keyboard-border: var(--kiosk-keyboard-border);
+  --_kiosk-keyboard-border-radius: var(--kiosk-keyboard-border-radius);
   --_kiosk-keyboard-numpad-max-width: var(--kiosk-keyboard-numpad-max-width);
   --_kiosk-keyboard-numpad-key-min-width: var(--kiosk-keyboard-numpad-key-min-width);
 
@@ -95,8 +99,8 @@
   gap: var(--_kiosk-keyboard-key-gap);
   padding: var(--_kiosk-keyboard-padding);
   background: var(--sapGroup_ContentBackground, #fff);
-  border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
-  border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
+  border: var(--_kiosk-keyboard-border);
+  border-radius: var(--_kiosk-keyboard-border-radius);
   user-select: none;
   touch-action: manipulation;
   width: 100%;
@@ -186,7 +190,7 @@
   z-index: var(--_kiosk-keyboard-docked-z-index);
   max-width: var(--_kiosk-keyboard-docked-max-width);
   margin-inline: auto;
-  border-radius: var(--sapElement_BorderCornerRadius, 0.75rem) var(--sapElement_BorderCornerRadius, 0.75rem) 0 0;
+  border-radius: var(--_kiosk-keyboard-border-radius) var(--_kiosk-keyboard-border-radius) 0 0;
   border-bottom: none;
   box-shadow: var(--_kiosk-keyboard-docked-shadow);
   transform: translateY(0);

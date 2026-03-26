@@ -26,6 +26,10 @@
  *                                       keyFontSize (default: 0.8, set to 1 to disable cap)
  *   --ui5KioskKeyboard-maxWidth         Max inline width (default: 100%)
  *
+ * Container:
+ *   --ui5KioskKeyboard-border           Container border (default: 1px solid <theme border color>)
+ *   --ui5KioskKeyboard-borderRadius     Container border radius (default: theme corner radius)
+ *
  * Shadows (set to "none" for a flat appearance):
  *   --ui5KioskKeyboard-keyShadow             Key resting shadow
  *   --ui5KioskKeyboard-keyShadowHover        Key hover shadow
@@ -82,6 +86,8 @@
     --ui5KioskKeyboard-modifierShadowHover: 0 2px 4px fade(@sapUiContentShadowColor, 18%);
     --ui5KioskKeyboard-numpadMaxWidth: 20rem;
     --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
+    --ui5KioskKeyboard-border: 1px solid @sapUiGroupTitleBorderColor;
+    --ui5KioskKeyboard-borderRadius: @sapUiElementBorderCornerRadius;
     --ui5KioskKeyboard-cqShortThreshold: 16rem;
     --ui5KioskKeyboard-cqTinyThreshold: 12rem;
 
@@ -102,6 +108,8 @@
     --_ui5KioskKeyboard-dockedZIndex: ~"var(--ui5KioskKeyboard-dockedZIndex)";
     --_ui5KioskKeyboard-modifierShadow: ~"var(--ui5KioskKeyboard-modifierShadow)";
     --_ui5KioskKeyboard-modifierShadowHover: ~"var(--ui5KioskKeyboard-modifierShadowHover)";
+    --_ui5KioskKeyboard-border: ~"var(--ui5KioskKeyboard-border)";
+    --_ui5KioskKeyboard-borderRadius: ~"var(--ui5KioskKeyboard-borderRadius)";
     --_ui5KioskKeyboard-numpadMaxWidth: ~"var(--ui5KioskKeyboard-numpadMaxWidth)";
     --_ui5KioskKeyboard-numpadKeyMinWidth: ~"var(--ui5KioskKeyboard-numpadKeyMinWidth)";
 
@@ -111,8 +119,8 @@
     gap: var(--_ui5KioskKeyboard-keyGap);
     padding: var(--_ui5KioskKeyboard-padding);
     background: @sapUiGroupContentBackground;
-    border: 1px solid @sapUiGroupTitleBorderColor;
-    border-radius: @sapUiElementBorderCornerRadius;
+    border: var(--_ui5KioskKeyboard-border);
+    border-radius: var(--_ui5KioskKeyboard-borderRadius);
     user-select: none;
     touch-action: manipulation;
     width: 100%;
@@ -152,7 +160,7 @@
       z-index: var(--_ui5KioskKeyboard-dockedZIndex);
       max-width: var(--_ui5KioskKeyboard-dockedMaxWidth);
       margin-inline: auto;
-      border-radius: @sapUiElementBorderCornerRadius @sapUiElementBorderCornerRadius 0 0;
+      border-radius: var(--_ui5KioskKeyboard-borderRadius) var(--_ui5KioskKeyboard-borderRadius) 0 0;
       border-bottom: none;
       box-shadow: var(--_ui5KioskKeyboard-dockedShadow);
       transform: translateY(0);
