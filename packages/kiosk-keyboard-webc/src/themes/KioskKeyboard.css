@@ -562,17 +562,19 @@
 
 .kiosk-key--dual {
   flex-direction: column;
-  gap: 0.1em;
+  gap: 0;
+  overflow: hidden;
 }
 
 .kiosk-key--dual .kiosk-key__icon {
   width: auto;
   height: auto;
-  font-size: 0.85em;
+  font-size: 0.7em;
+  flex-shrink: 0;
 }
 
 .kiosk-key--dual .kiosk-key__label {
-  font-size: clamp(0.4rem, calc(100cqi * 0.28), 0.75em);
+  font-size: clamp(0.35rem, calc(100cqi * 0.25), 0.6em);
   line-height: 1;
   overflow: hidden;
   text-overflow: ellipsis;
