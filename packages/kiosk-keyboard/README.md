@@ -539,15 +539,15 @@ const myLayout: LayoutDefinition = [
 
 **KeyDefinition fields:**
 
-| Field        | Type     | Description                                                                               |
-| ------------ | -------- | ----------------------------------------------------------------------------------------- |
-| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`) |
-| `label`      | `string` | Display label (defaults to `value`). Set to `""` for icon-only.                           |
-| `shiftLabel` | `string` | Label when Shift is active.                                                               |
-| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                            |
-| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                |
-| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.          |
-| `icon`       | `string` | UI5 icon URI for icon-only keys (e.g. `"sap-icon://arrow-left"`).                         |
+| Field        | Type     | Description                                                                                                            |
+| ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`)                              |
+| `label`      | `string` | Display label (defaults to `value`). When `icon` is also set, both render together. Set to `""` to suppress the label. |
+| `shiftLabel` | `string` | Label when Shift is active.                                                                                            |
+| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                                                         |
+| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                             |
+| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                       |
+| `icon`       | `string` | SAP icon URI or Unicode character. Renders above label when both are present. Set `label=""` for icon-only.            |
 
 ---
 
@@ -1087,7 +1087,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 ## Accessibility
 
 - The keyboard root has `role="group"` with a configurable `aria-label` and `aria-roledescription="keyboard"`
-- Each key has `role="button"` with an `aria-label` (resolves to human-readable names for icon-only keys like Backspace and Enter)
+- Each key has `role="button"` with an accessible name from visible text (when icon+label are both present) or `aria-label` (for icon-only keys where `label=""`)
 - The Shift key has `aria-pressed` reflecting its toggle state
 - Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)

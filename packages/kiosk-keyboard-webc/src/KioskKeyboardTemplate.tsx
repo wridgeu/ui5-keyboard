@@ -72,11 +72,11 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 aria-disabled={this.disabled ? "true" : undefined}
                 aria-label={hasLabel ? undefined : this._getKeyAriaLabel(key)}
               >
-                {hasIcon && resolved!.sap ? (
+                {hasIcon && resolved.sap ? (
                   <ui5-icon
                     class={KIOSK_KEYBOARD_DOM.classes.keyIcon}
                     part="key-icon"
-                    name={resolved!.value}
+                    name={resolved.value}
                     mode="Decorative"
                   />
                 ) : hasIcon ? (
@@ -85,7 +85,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                     part="key-icon"
                     aria-hidden="true"
                   >
-                    {resolved!.value}
+                    {resolved.value}
                   </span>
                 ) : null}
                 {hasLabel ? (
