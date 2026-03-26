@@ -32,7 +32,7 @@ function isPathContained(filePath, allowedRoot) {
  * @param {string} [opts.fallback]  Path (relative to root) to serve for unknown routes.
  * @param {Record<string, string>} [opts.routes]  URL prefix -> filesystem directory map.
  * @param {Record<string, () => { body: string | Buffer, contentType?: string }>} [opts.handlers]
- *   URL path -> dynamic handler map. Handlers are called on each request so content is always fresh.
+ *   URL path -> handler map. Called on each request (content is never cached).
  */
 export function serveStatic(root, { port = 0, open = true, fallback, routes, handlers } = {}) {
   // Pre-sort route prefixes by length descending so longer prefixes match first.
@@ -78,11 +78,11 @@ async function handleRequest(req, res, root, { fallback, routes, sortedRoutePref
   const urlPath = decodeURIComponent(pathname);
 
   if (handlers) {
-    const handler = handlers[urlPath] ?? (urlPath === "/" && handlers["/index.html"]) ?? null;
+    const handler = handlers[urlPath] || (urlPath === "/" ? handlers["/index.html"] : undefined);
     if (handler) {
-      const result = handler();
-      res.writeHead(200, { "Content-Type": result.contentType ?? "text/html" });
-      res.end(result.body);
+      const { body, contentType = "text/html" } = handler();
+      res.writeHead(200, { "Content-Type": contentType });
+      res.end(body);
       return;
     }
   }
