@@ -29,15 +29,19 @@ QUnit.module("KioskKeyboard accessibility", {
 // Key roles and ARIA
 // ──────────────────────────────────────────────
 
-QUnit.test("Each key has role=button and aria-label", async (assert) => {
+QUnit.test("Each key has role=button and either visible label or aria-label", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
   const keys = getKeyElements(kb);
   keys.forEach((key) => {
     assert.strictEqual(key.getAttribute("role"), "button", `Key ${key.dataset.key} has role=button`);
-    const label = key.getAttribute("aria-label");
-    assert.ok(label && label.length > 0, `Key ${key.dataset.key} has aria-label`);
+    const visibleLabel = key.querySelector(`.${DOM.classes.keyLabel}`)?.textContent;
+    const ariaLabel = key.getAttribute("aria-label");
+    assert.ok(
+      (visibleLabel && visibleLabel.length > 0) || (ariaLabel && ariaLabel.length > 0),
+      `Key ${key.dataset.key} has visible label or aria-label`,
+    );
   });
 
   kb.destroy();
@@ -341,7 +345,7 @@ QUnit.test('getKeyIcon: " " \u2192 undefined', (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// Rendered aria-label for Special Keys
+// Rendered labels for Keys (visible text or aria-label)
 // ──────────────────────────────────────────────
 
 QUnit.test('Rendered aria-label: {backspace} \u2192 "Backspace"', async (assert) => {
@@ -353,52 +357,62 @@ QUnit.test('Rendered aria-label: {backspace} \u2192 "Backspace"', async (assert)
   kb.destroy();
 });
 
-QUnit.test('Rendered aria-label: {enter} \u2192 "Enter"', async (assert) => {
+QUnit.test('Rendered visible label: {enter} \u2192 "Enter"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getRequiredKeyElement(kb, "{enter}").getAttribute("aria-label"), "Enter");
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "{enter}").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Enter",
+  );
 
   kb.destroy();
 });
 
-QUnit.test('Rendered aria-label: {shift} \u2192 "Shift"', async (assert) => {
+QUnit.test('Rendered visible label: {shift} \u2192 "Shift"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getRequiredKeyElement(kb, "{shift}").getAttribute("aria-label"), "Shift");
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "{shift}").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Shift",
+  );
 
   kb.destroy();
 });
 
-QUnit.test('Rendered aria-label: " " \u2192 "Space"', async (assert) => {
+QUnit.test('Rendered visible label: " " \u2192 "Space"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getRequiredKeyElement(kb, " ").getAttribute("aria-label"), "Space");
+  assert.strictEqual(getRequiredKeyElement(kb, " ").querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Space");
 
   kb.destroy();
 });
 
-QUnit.test('Rendered aria-label: "a" \u2192 "a"', async (assert) => {
+QUnit.test('Rendered visible label: "a" \u2192 "a"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-label"), "a");
+  assert.strictEqual(getRequiredKeyElement(kb, "a").querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "a");
 
   kb.destroy();
 });
 
-QUnit.test('Rendered aria-label after shift: "a" \u2192 "A", "1" \u2192 "!"', async (assert) => {
+QUnit.test('Rendered visible label after shift: "a" \u2192 "A", "1" \u2192 "!"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
   await waitForRender();
 
-  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-label"), "A", "'a' becomes 'A' with shift");
   assert.strictEqual(
-    getRequiredKeyElement(kb, "1").getAttribute("aria-label"),
+    getRequiredKeyElement(kb, "a").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "A",
+    "'a' becomes 'A' with shift",
+  );
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "1").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
     "!",
     "'1' with shiftLabel '!' becomes '!' with shift",
   );

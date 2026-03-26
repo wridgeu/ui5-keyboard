@@ -69,10 +69,10 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
 });
 
 // ──────────────────────────────────────────────
-// 2. Shifted labels and aria-labels
+// 2. Shifted labels update in DOM
 // ──────────────────────────────────────────────
 
-QUnit.test("Shifted labels and aria-labels update in DOM", async (assert) => {
+QUnit.test("Shifted visible labels update in DOM", async (assert) => {
   const layout: LayoutDefinition = [
     [
       { value: "1", shiftLabel: "!", shiftValue: "!" },
@@ -89,18 +89,34 @@ QUnit.test("Shifted labels and aria-labels update in DOM", async (assert) => {
 
   // Unshifted state
   assert.strictEqual(getKey("1").textContent, "1", "Key '1' shows '1' unshifted");
-  assert.strictEqual(getKey("1").getAttribute("aria-label"), "1", "Key '1' aria-label is '1'");
+  assert.strictEqual(
+    getKey("1").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "1",
+    "Key '1' visible label is '1'",
+  );
   assert.strictEqual(getKey("a").textContent, "a", "Key 'a' shows 'a' unshifted");
-  assert.strictEqual(getKey("a").getAttribute("aria-label"), "a", "Key 'a' aria-label is 'a'");
+  assert.strictEqual(
+    getKey("a").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "a",
+    "Key 'a' visible label is 'a'",
+  );
 
   // Activate shift
   tapKey(kb, "{shift}");
   await waitForRender();
 
   assert.strictEqual(getKey("1").textContent, "!", "Key '1' shows '!' when shifted");
-  assert.strictEqual(getKey("1").getAttribute("aria-label"), "!", "Key '1' aria-label is '!'");
+  assert.strictEqual(
+    getKey("1").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "!",
+    "Key '1' visible label is '!'",
+  );
   assert.strictEqual(getKey("a").textContent, "A", "Key 'a' shows 'A' when shifted");
-  assert.strictEqual(getKey("a").getAttribute("aria-label"), "A", "Key 'a' aria-label is 'A'");
+  assert.strictEqual(
+    getKey("a").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "A",
+    "Key 'a' visible label is 'A'",
+  );
 
   // Typing a character auto-releases shift
   tapKey(kb, "a");
@@ -161,25 +177,27 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
 // 4. Special key accessibility labels
 // ──────────────────────────────────────────────
 
-QUnit.test("Special keys render correct aria-labels", async (assert) => {
+QUnit.test("Special keys render correct labels", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
+  // Backspace has label: "" in qwerty, so it remains icon-only with aria-label
   const backspace = getKeyElement(kb, "{backspace}");
   assert.ok(backspace, "Backspace key rendered");
   assert.strictEqual(backspace!.getAttribute("aria-label"), "Backspace", "Backspace aria-label");
 
+  // Enter, Shift, Space now have visible text labels (WCAG 2.5.3)
   const enter = getKeyElement(kb, "{enter}");
   assert.ok(enter, "Enter key rendered");
-  assert.strictEqual(enter!.getAttribute("aria-label"), "Enter", "Enter aria-label");
+  assert.strictEqual(enter!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Enter", "Enter visible label");
 
   const shift = getKeyElement(kb, "{shift}");
   assert.ok(shift, "Shift key rendered");
-  assert.strictEqual(shift!.getAttribute("aria-label"), "Shift", "Shift aria-label");
+  assert.strictEqual(shift!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Shift", "Shift visible label");
 
   const space = getKeyElement(kb, " ");
   assert.ok(space, "Space key rendered");
-  assert.strictEqual(space!.getAttribute("aria-label"), "Space", "Space aria-label");
+  assert.strictEqual(space!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Space", "Space visible label");
 
   kb.destroy();
 });
