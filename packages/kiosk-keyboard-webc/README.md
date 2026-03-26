@@ -453,7 +453,7 @@ kb.setTargetResolver(null);
 
 ## Internationalization (i18n)
 
-The keyboard ships with English and German translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
+The keyboard ships with English, German, Japanese, and Arabic translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
 
 Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls accessibility-facing strings: the keyboard's `aria-label`, `aria-roledescription`, key `aria-label` attributes (for icon-only keys like Shift, Enter, Backspace, Space), and live region announcements (shift/caps lock state changes, keyboard open/close).
 
@@ -829,7 +829,7 @@ src/
 ├── layouts/                   # Built-in layout definitions
 │   ├── index.ts               # Layout registry
 │   ├── default-layout.ts     # Default layout name constant
-│   ├── qwerty.ts, qwertz-de.ts, numeric.ts, special.ts, numpad.ts
+│   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, arabic.ts, numeric.ts, special.ts, numpad.ts
 │   ├── fkeys.ts, nav.ts      # Standalone F-key/nav layouts
 │   ├── fkey-row.ts, nav-row.ts  # Shared rows for composite layouts
 │   └── qwerty-fk.ts, qwertz-de-fk.ts, qwerty-nav.ts, qwertz-de-nav.ts
