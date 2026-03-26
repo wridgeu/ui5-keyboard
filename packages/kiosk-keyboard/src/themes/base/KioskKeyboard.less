@@ -308,6 +308,21 @@
       font-size: var(--ui5KioskKeyboard-keyFontSize);
     }
 
+    /* ---- Dual icon + label ---- */
+    &--dual {
+      flex-direction: column;
+      gap: 0.1em;
+    }
+
+    &--dual &__icon {
+      font-size: 0.85em;
+    }
+
+    &--dual &__label {
+      font-size: ~"clamp(0.4rem, calc(100cqi * 0.28), 0.75em)";
+      line-height: 1;
+    }
+
     /* ---- Variant: Modifier keys (Shift, layout switches) ---- */
     &--modifier {
       background: @sapUiButtonLiteBackground;
