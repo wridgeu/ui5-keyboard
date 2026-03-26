@@ -1,0 +1,27 @@
+/* Popover demo: constrain the keyboard element directly so responsive
+   height breakpoints detect the constraint. Popover intermediate divs
+   are height: auto, so the keyboard needs an explicit height here.
+   overflow: hidden is already set by the keyboard root by default. */
+.demoPopoverKbGenerous {
+  height: 19rem;
+}
+.demoPopoverKbCompact {
+  height: 15rem;
+}
+/* Instead of height constraints, shrink keys via CSS custom properties
+   so the keyboard naturally fits in less vertical space.
+   A single class is enough -- the library sets defaults at zero specificity
+   via :where(.ui5KioskKeyboard). */
+.demoPopoverKbCustomVars {
+  --ui5KioskKeyboard-keyHeight: 2.25rem;
+  --ui5KioskKeyboard-keyGap: 0.25rem;
+  --ui5KioskKeyboard-padding: 0.5rem;
+}
+
+/* Docked-keyboard pages: add bottom padding so the page content
+   can be scrolled above the fixed-position keyboard.
+   Must match the UI5 selector .sapMPage.sapUiContentPadding > section
+   which sets padding: 1rem via shorthand. */
+.sapMPage.demoDockedPage > section {
+  padding-bottom: 22rem;
+}
