@@ -25,6 +25,8 @@ internal/focus-claim-service.ts   Auto-show input claim logic
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
+  messagebundle_ja.properties Japanese translations
+  messagebundle_ar.properties Arabic translations
 layouts/
   index.ts                Layout registry (Record<string, LayoutDefinition>)
   qwerty.ts               Standard QWERTY with number row and shift symbols
@@ -39,6 +41,8 @@ layouts/
   qwerty-fk.ts            QWERTY with F1-F12 row on top
   qwertz-de-fk.ts         QWERTZ-DE with F1-F12 row on top
   qwerty-nav.ts           QWERTY with navigation row on top
+  ja-romaji.ts            Japanese Romaji layout
+  arabic.ts               Arabic layout
   qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 themes/
   base/
@@ -288,7 +292,7 @@ This is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected a
 
 The returned `LanguageTag` has `.language` (lowercase ISO639, e.g. `"de"`) and `.region` (uppercase ISO3166 or `null`, e.g. `"AT"`).
 
-Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`).
+Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`). Default mappings: `{ de → qwertz-de, ja → ja-romaji, ar → arabic }`.
 
 The locale → layout map is extensible via `KioskKeyboard.registerLocaleLayout(locale, layout)`.
 Cleanup is technically optional for most apps because repeated initialization usually reapplies the same mapping without errors or leaks.
@@ -589,6 +593,8 @@ packages/kiosk-keyboard/
       qwerty-fk.ts            QWERTY + F-key row
       qwertz-de-fk.ts         QWERTZ-DE + F-key row
       qwerty-nav.ts           QWERTY + navigation row
+      ja-romaji.ts            Japanese Romaji layout
+      arabic.ts               Arabic layout
       qwertz-de-nav.ts        QWERTZ-DE + navigation row
     themes/
       base/
