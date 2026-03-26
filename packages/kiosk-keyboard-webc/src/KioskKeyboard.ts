@@ -106,7 +106,7 @@ const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
 /** Tracks unsupported fkey names that have already been warned about. */
 const warnedUnsupportedFKeys = new Set<string>();
 
-/** ARIA labels for icon-only special keys. */
+/** Display and ARIA labels for built-in special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
   "{shift}": "KEY_SHIFT",
   "{enter}": "KEY_ENTER",
@@ -967,12 +967,6 @@ class KioskKeyboard extends UI5Element {
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);
     return this._getKeyLabel(key);
-  }
-
-  _getKeyIcon(key: KeyDefinition): string | null {
-    if (key.icon) return key.icon; // custom text icon - rendered as label
-    if (key.value === "{shift}" && this._capsLock) return ICON_SHIFT_LOCKED;
-    return ICON_MAP[key.value] ?? null;
   }
 
   /**

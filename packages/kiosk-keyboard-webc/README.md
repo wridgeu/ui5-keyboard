@@ -414,7 +414,7 @@ interface KeyDefinition {
   shiftValue?: string; // Value when shifted (defaults to value.toUpperCase() for single chars)
   width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
-  icon?: string; // Custom text icon (rendered as label, not <ui5-icon>)
+  icon?: string; // SAP icon URI or Unicode char/emoji; renders above label when both present
 }
 ```
 
@@ -453,7 +453,7 @@ kb.setTargetResolver(null);
 
 The keyboard ships with English and German translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
 
-Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls accessibility-facing strings: the keyboard's `aria-label`, `aria-roledescription`, key `aria-label` attributes (for icon-only keys like Shift, Enter, Backspace, Space), and live region announcements (shift/caps lock state changes, keyboard open/close).
+Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls both visible labels for special keys (Shift, Enter, Backspace, Space), `aria-label` for icon-only keys (where `label=""`), the keyboard's `aria-label`, `aria-roledescription`, and live region announcements (shift/caps lock state changes, keyboard open/close).
 
 **Resource bundle keys:**
 
