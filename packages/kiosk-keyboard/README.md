@@ -1206,10 +1206,11 @@ readability for your target script:
 
 All component styles live inside `@layer kiosk-keyboard`, so any
 unlayered consumer CSS wins regardless of specificity -- no extra wrapper
-class is needed. The `min()` capping in the responsive container queries
-preserves your override at narrow widths while still preventing oversized
-keys at desktop width. This approach works for any layout, including
-custom layouts registered via `registerLayout()`.
+class is needed. At narrow widths, the responsive container queries cap
+font size via `min()` but cannot raise it above your value, so a smaller
+override is preserved. At desktop widths no cap applies and your value
+is used as-is. This approach works for any layout, including custom
+layouts registered via `registerLayout()`.
 
 For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-short` and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
