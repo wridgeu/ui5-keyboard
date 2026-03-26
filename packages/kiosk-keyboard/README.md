@@ -1194,22 +1194,21 @@ appear cramped at narrow widths because their characters need more
 horizontal space than Latin letters at the same font size. The built-in
 Arabic layout at phone-sm width (320 px) is a good reference case.
 
-Override `--ui5KioskKeyboard-keyFontSize` on the keyboard container to
-tune readability for your target script and container width:
+Override `--ui5KioskKeyboard-keyFontSize` on the keyboard's root element
+to tune readability for your target script:
 
 ```css
-/* Slightly reduce font size for the Arabic layout at narrow widths */
-@container keyboard (max-width: 30rem) {
-  .myArabicKeyboard .ui5KioskKey {
-    --ui5KioskKeyboard-keyFontSize: 0.85rem;
-  }
+/* Reduce font size for a keyboard displaying complex-script glyphs */
+.myArabicKeyboard .ui5KioskKeyboard {
+  --ui5KioskKeyboard-keyFontSize: 0.85rem;
 }
 ```
 
-The `min()` capping in the responsive container queries preserves your
-override at narrow widths while still preventing oversized keys at
-desktop width. This approach works for any layout, including custom
-layouts registered via `registerLayout()`.
+Since the UI5 control renders in the light DOM, standard CSS selectors
+work directly. The `min()` capping in the responsive container queries
+preserves your override at narrow widths while still preventing oversized
+keys at desktop width. This approach works for any layout, including
+custom layouts registered via `registerLayout()`.
 
 For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-short` and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
