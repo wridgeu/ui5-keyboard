@@ -58,6 +58,7 @@ const ICON_MAP: Record<string, string> = {
 };
 
 const ICON_SHIFT_LOCKED = "locked";
+const SAP_ICON_PREFIX = "sap-icon://";
 
 // ── Valid enum values for string properties (derived from enums) ──
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
@@ -972,6 +973,35 @@ class KioskKeyboard extends UI5Element {
     if (key.icon) return key.icon; // custom text icon - rendered as label
     if (key.value === "{shift}" && this._capsLock) return ICON_SHIFT_LOCKED;
     return ICON_MAP[key.value] ?? null;
+  }
+
+  /**
+   * Resolve the icon for a key, categorized by type.
+   * Returns null if no icon should render.
+   */
+  _resolveKeyIcon(key: KeyDefinition): { value: string; sap: boolean } | null {
+    if (key.icon === "") return null; // explicit suppression
+
+    const customIcon = key.icon;
+    if (customIcon) {
+      if (customIcon.startsWith(SAP_ICON_PREFIX)) {
+        const name = customIcon.slice(SAP_ICON_PREFIX.length);
+        if (!name) {
+          console.warn(`KioskKeyboard: empty SAP icon URI for key "${key.value}", skipping icon`);
+          return null;
+        }
+        return { value: name, sap: true };
+      }
+      // Unicode / emoji
+      return { value: customIcon, sap: false };
+    }
+
+    // Built-in icons for special keys
+    if (key.value === "{shift}" && this._capsLock) {
+      return { value: ICON_SHIFT_LOCKED, sap: true };
+    }
+    const builtIn = ICON_MAP[key.value];
+    return builtIn ? { value: builtIn, sap: true } : null;
   }
 
   get _ariaLabel(): string {

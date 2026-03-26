@@ -41,11 +41,13 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
           {row.map((key, colIndex) => {
             const id = keyElementId(this._componentId, rowIndex, colIndex);
             const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;
-            const iconName = this._getKeyIcon(key);
-            const isBuiltInIcon = !key.icon && iconName !== null;
             const isShift = key.value === "{shift}";
-            const label = iconName ?? this._getKeyLabel(key);
-            const isSingleGlyphLabel = !isBuiltInIcon && isSingleGlyph(label);
+            const resolved = this._resolveKeyIcon(key);
+            const label = this._getKeyLabel(key);
+            const hasIcon = resolved !== null;
+            const hasLabel = label !== "";
+            const isDual = hasIcon && hasLabel;
+            const isSingleGlyphLabel = !hasIcon && isSingleGlyph(label);
 
             return (
               <div
@@ -59,6 +61,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   [KIOSK_KEYBOARD_DOM.classes.keyShiftActive]: isShift && this._shifted,
                   [KIOSK_KEYBOARD_DOM.classes.keyCapsLock]: isShift && this._capsLock,
                   [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
+                  [KIOSK_KEYBOARD_DOM.classes.keyDual]: isDual,
                 }}
                 part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}`}
                 role="button"
@@ -67,16 +70,25 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 data-shift-value={key.shiftValue || undefined}
                 aria-pressed={isShift ? this._shifted : undefined}
                 aria-disabled={this.disabled ? "true" : undefined}
-                aria-label={this._getKeyAriaLabel(key)}
+                aria-label={hasLabel ? undefined : this._getKeyAriaLabel(key)}
               >
-                {isBuiltInIcon ? (
+                {hasIcon && resolved!.sap ? (
                   <ui5-icon
                     class={KIOSK_KEYBOARD_DOM.classes.keyIcon}
                     part="key-icon"
-                    name={iconName!}
+                    name={resolved!.value}
                     mode="Decorative"
                   />
-                ) : (
+                ) : hasIcon ? (
+                  <span
+                    class={KIOSK_KEYBOARD_DOM.classes.keyIcon}
+                    part="key-icon"
+                    aria-hidden="true"
+                  >
+                    {resolved!.value}
+                  </span>
+                ) : null}
+                {hasLabel ? (
                   <span
                     class={{
                       [KIOSK_KEYBOARD_DOM.classes.keyLabel]: true,
@@ -88,7 +100,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   >
                     {label}
                   </span>
-                )}
+                ) : null}
               </div>
             );
           })}

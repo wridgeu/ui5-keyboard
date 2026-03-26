@@ -65,8 +65,10 @@ describe("icon + label rendering", () => {
   it("SAP icon set, label omitted: renders both icon and value label (dual)", async () => {
     const el = await createKeyboard([[{ value: "x", icon: "sap-icon://home" }]]);
     const keyEl = queryKey(el, "x");
-    expect(queryKeyIcon(keyEl)).to.exist;
-    expect(queryKeyIcon(keyEl)!.getAttribute("aria-hidden")).to.equal("true");
+    const iconEl = queryKeyIcon(keyEl);
+    expect(iconEl).to.exist;
+    // SAP icon rendered via <ui5-icon mode="Decorative"> handles aria-hidden internally
+    expect(iconEl!.tagName.toLowerCase()).to.equal("ui5-icon");
     expect(queryKeyLabel(keyEl)).to.exist;
     expect(queryKeyLabel(keyEl)!.textContent).to.equal("x");
     expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.true;
