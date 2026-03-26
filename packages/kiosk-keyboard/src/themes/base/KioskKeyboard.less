@@ -27,7 +27,11 @@
  *   --ui5KioskKeyboard-maxWidth         Max inline width (default: 100%)
  *
  * Keys:
- *   --ui5KioskKeyboard-keyBorder        Key border (default: 1px solid <theme button border>)
+ *   --ui5KioskKeyboard-keyBorderColor   Key border color override -- when set, forces a visible
+ *                                       border on ALL key types (default, modifier, action).
+ *                                       Unset by default; each key type uses its theme color.
+ *                                       Example for kiosk/industrial use:
+ *                                         --ui5KioskKeyboard-keyBorderColor: @sapUiFieldBorderColor;
  *
  * Container:
  *   --ui5KioskKeyboard-border           Container border (default: 1px solid <theme border color>)
@@ -89,7 +93,6 @@
     --ui5KioskKeyboard-modifierShadowHover: 0 2px 4px fade(@sapUiContentShadowColor, 18%);
     --ui5KioskKeyboard-numpadMaxWidth: 20rem;
     --ui5KioskKeyboard-numpadKeyMinWidth: 4rem;
-    --ui5KioskKeyboard-keyBorder: 1px solid @sapUiButtonBorderColor;
     --ui5KioskKeyboard-border: 1px solid @sapUiGroupTitleBorderColor;
     --ui5KioskKeyboard-borderRadius: @sapUiElementBorderCornerRadius;
     --ui5KioskKeyboard-cqShortThreshold: 16rem;
@@ -112,7 +115,6 @@
     --_ui5KioskKeyboard-dockedZIndex: ~"var(--ui5KioskKeyboard-dockedZIndex)";
     --_ui5KioskKeyboard-modifierShadow: ~"var(--ui5KioskKeyboard-modifierShadow)";
     --_ui5KioskKeyboard-modifierShadowHover: ~"var(--ui5KioskKeyboard-modifierShadowHover)";
-    --_ui5KioskKeyboard-keyBorder: ~"var(--ui5KioskKeyboard-keyBorder)";
     --_ui5KioskKeyboard-border: ~"var(--ui5KioskKeyboard-border)";
     --_ui5KioskKeyboard-borderRadius: ~"var(--ui5KioskKeyboard-borderRadius)";
     --_ui5KioskKeyboard-numpadMaxWidth: ~"var(--ui5KioskKeyboard-numpadMaxWidth)";
@@ -219,7 +221,7 @@
     flex: 1 1 0;
     height: var(--_ui5KioskKeyboard-keyHeight);
     padding: var(--_ui5KioskKeyboard-keyPadding);
-    border: var(--_ui5KioskKeyboard-keyBorder);
+    border: ~"1px solid var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonBorderColor ~")";
     border-radius: @sapUiButtonBorderCornerRadius;
     background: @sapUiButtonBackground;
     color: @sapUiButtonTextColor;
@@ -317,7 +319,7 @@
     &--modifier {
       background: @sapUiButtonLiteBackground;
       color: @sapUiButtonLiteTextColor;
-      border-color: @sapUiButtonLiteBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonLiteBorderColor ~")";
       box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
       font-size: ~"min(var(--ui5KioskKeyboard-modifierFontSize), calc(var(--ui5KioskKeyboard-keyFontSize) * var(--ui5KioskKeyboard-modifierFontScale)))";
 
@@ -344,7 +346,7 @@
     &--action {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
-      border-color: @sapUiButtonEmphasizedBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
       font-size: ~"min(var(--ui5KioskKeyboard-modifierFontSize), calc(var(--ui5KioskKeyboard-keyFontSize) * var(--ui5KioskKeyboard-modifierFontScale)))";
       font-weight: bold;
 
@@ -374,7 +376,7 @@
     &--active {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
-      border-color: @sapUiButtonEmphasizedBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
 
       &:hover {
         background: @sapUiButtonEmphasizedHoverBackground;
@@ -504,21 +506,21 @@
   @media (hover: none) {
     .ui5KioskKey:hover {
       background: @sapUiButtonBackground;
-      border-color: @sapUiButtonBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonBorderColor ~")";
       transform: none;
       box-shadow: var(--_ui5KioskKeyboard-keyShadow);
     }
 
     .ui5KioskKey--modifier:hover {
       background: @sapUiButtonLiteBackground;
-      border-color: @sapUiButtonLiteBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonLiteBorderColor ~")";
       box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
     }
 
     .ui5KioskKey--action:hover,
     .ui5KioskKey--active:hover {
       background: @sapUiButtonEmphasizedBackground;
-      border-color: @sapUiButtonEmphasizedBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
     }
   }
 } /* @layer kiosk-keyboard */
