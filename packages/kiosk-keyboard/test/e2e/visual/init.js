@@ -146,4 +146,10 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
 
   // 29. Unconstrained (regression guard)
   new KioskKeyboard().placeAt("kb-unconstrained");
+
+  // 30. Japanese Romaji
+  new KioskKeyboard({ layout: "ja-romaji" }).placeAt("kb-ja-romaji");
+
+  // 31. Arabic
+  new KioskKeyboard({ layout: "arabic" }).placeAt("kb-arabic");
 });
