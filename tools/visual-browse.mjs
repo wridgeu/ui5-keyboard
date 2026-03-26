@@ -22,9 +22,8 @@
  *     --include-screenshots
  */
 
-import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join, parse, resolve, sep } from "node:path";
-import { tmpdir } from "node:os";
 import { serveStatic } from "./serve-static.mjs";
 
 // -- Arg parsing --
@@ -122,70 +121,72 @@ function inferScreenshotsDir(baselinesAbsDir) {
 
 // -- Build per-package data --
 
-/** @type {{ pkg: string, absBaselines: string, screenshotsDir: string | null, profiles: string[], tagsByProfile: Map<string, string[]> }[]} */
-const packages = [];
-
-for (const dir of baselinesDirs) {
-  const absBaselines = resolve(dir);
-  if (!existsSync(absBaselines)) {
-    console.error(`Baselines directory not found: ${absBaselines}`);
+// Validate baseline directories exist at startup
+const resolvedBaselinesDirs = baselinesDirs.map((dir) => {
+  const abs = resolve(dir);
+  if (!existsSync(abs)) {
+    console.error(`Baselines directory not found: ${abs}`);
     process.exit(1);
   }
+  return abs;
+});
 
-  const pkg = derivePackageName(absBaselines);
-  const entries = safeReaddir(absBaselines);
-  const profiles = entries.filter((e) => isDir(join(absBaselines, e))).toSorted();
+function scanPackages() {
+  const packages = [];
 
-  const tagsByProfile = new Map();
-  tagsByProfile.set(config.rootProfile, pngTags(absBaselines));
-  for (const profile of profiles) {
-    tagsByProfile.set(profile, pngTags(join(absBaselines, profile)));
+  for (const absBaselines of resolvedBaselinesDirs) {
+    const pkg = derivePackageName(absBaselines);
+    const entries = safeReaddir(absBaselines);
+    const profiles = entries.filter((e) => isDir(join(absBaselines, e))).toSorted();
+
+    const tagsByProfile = new Map();
+    tagsByProfile.set(config.rootProfile, pngTags(absBaselines));
+    for (const profile of profiles) {
+      tagsByProfile.set(profile, pngTags(join(absBaselines, profile)));
+    }
+
+    let screenshotsDir = null;
+    if (includeScreenshots) {
+      if (explicitScreenshotsDir && resolvedBaselinesDirs.length === 1) {
+        screenshotsDir = resolve(explicitScreenshotsDir);
+      } else {
+        screenshotsDir = inferScreenshotsDir(absBaselines);
+      }
+    }
+
+    packages.push({ pkg, absBaselines, screenshotsDir, profiles, tagsByProfile });
   }
 
-  let screenshotsDir = null;
-  if (includeScreenshots) {
-    if (explicitScreenshotsDir && baselinesDirs.length === 1) {
-      screenshotsDir = resolve(explicitScreenshotsDir);
-    } else {
-      screenshotsDir = inferScreenshotsDir(absBaselines);
-    }
-    if (!existsSync(screenshotsDir)) {
-      console.warn(`Screenshots directory not found for ${pkg}: ${screenshotsDir}`);
-      console.warn("The toggle will be available but screenshot cells will be empty.\n");
+  const allProfiles = [...new Set(packages.flatMap((p) => p.profiles))].toSorted();
+  const allColumns = [config.rootProfile, ...allProfiles];
+  const multiPackage = packages.length > 1;
+  const titleText = multiPackage ? "Visual Baselines" : `${packages[0].pkg} -- Visual Baselines`;
+
+  const tagEntries = [];
+  for (let pkgIdx = 0; pkgIdx < packages.length; pkgIdx++) {
+    const p = packages[pkgIdx];
+    const pkgTags = [...new Set(allColumns.flatMap((col) => p.tagsByProfile.get(col) ?? []))].toSorted();
+    for (const tag of pkgTags) {
+      tagEntries.push({ tag, pkg: p.pkg, pkgIdx });
     }
   }
 
-  packages.push({ pkg, absBaselines, screenshotsDir, profiles, tagsByProfile });
+  const sortedTagEntries = tagEntries.toSorted((a, b) => a.pkg.localeCompare(b.pkg) || a.tag.localeCompare(b.tag));
+
+  return { packages, allProfiles, allColumns, multiPackage, titleText, tagEntries, sortedTagEntries };
 }
 
-// Merge profiles across packages (they should be the same, but be safe)
-const allProfiles = [...new Set(packages.flatMap((p) => p.profiles))].toSorted();
-const allColumns = [config.rootProfile, ...allProfiles];
-const multiPackage = packages.length > 1;
-const titleText = multiPackage ? "Visual Baselines" : `${packages[0].pkg} -- Visual Baselines`;
-
-// Build combined tag list: [{tag, pkg, pkgIdx}]
-const tagEntries = [];
-for (let pkgIdx = 0; pkgIdx < packages.length; pkgIdx++) {
-  const p = packages[pkgIdx];
-  const pkgTags = [...new Set(allColumns.flatMap((col) => p.tagsByProfile.get(col) ?? []))].toSorted();
-  for (const tag of pkgTags) {
-    tagEntries.push({ tag, pkg: p.pkg, pkgIdx });
-  }
-}
-
-// Sort: by package then tag (toSorted to avoid mutating the array during construction)
-const sortedTagEntries = tagEntries.toSorted((a, b) => a.pkg.localeCompare(b.pkg) || a.tag.localeCompare(b.tag));
-
-console.log(`Packages: ${packages.map((p) => p.pkg).join(", ")}`);
-console.log(`Profiles: ${allColumns.join(", ")}`);
-console.log(`Tags:     ${tagEntries.length}`);
+// Print initial stats
+const initial = scanPackages();
+console.log(`Packages: ${initial.packages.map((p) => p.pkg).join(", ")}`);
+console.log(`Profiles: ${initial.allColumns.join(", ")}`);
+console.log(`Tags:     ${initial.tagEntries.length}`);
 
 // -- Routes --
 
 const routes = {};
-for (const p of packages) {
-  const prefix = multiPackage ? `/${p.pkg}` : "";
+for (const p of initial.packages) {
+  const prefix = initial.multiPackage ? `/${p.pkg}` : "";
   routes[`${prefix}/baselines/${config.rootProfile}`] = p.absBaselines;
   for (const profile of p.profiles) {
     routes[`${prefix}/baselines/${profile}`] = join(p.absBaselines, profile);
@@ -232,6 +233,8 @@ function notInProfileCell(extraClass, reason) {
 }
 
 function generateHtml() {
+  const { packages, allColumns, multiPackage, titleText, tagEntries, sortedTagEntries } = scanPackages();
+
   const screenshotToggle = includeScreenshots
     ? `<button id="toggle-screenshots" class="header-btn" onclick="toggleScreenshots()">Show actual/diff</button>`
     : "";
@@ -765,11 +768,10 @@ document.addEventListener('keydown', (e) => {
 </html>`;
 }
 
-const tmpDir = mkdtempSync(join(tmpdir(), "visual-browse-"));
-const htmlPath = join(tmpDir, "index.html");
-writeFileSync(htmlPath, generateHtml());
+const handlers = {
+  "/index.html": () => ({ body: generateHtml() }),
+};
 
-console.log(`\nGallery written to ${htmlPath}`);
-console.log("Starting server...\n");
+console.log("\nStarting server...\n");
 
-serveStatic(tmpDir, { routes });
+serveStatic(resolve("."), { routes, handlers });
