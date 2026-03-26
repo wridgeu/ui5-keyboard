@@ -555,3 +555,25 @@
   height: 1.25em;
   color: inherit;
 }
+
+/* ============================= */
+/* Dual icon + label             */
+/* ============================= */
+
+.kiosk-key--dual {
+  flex-direction: column;
+  gap: 0.1em;
+}
+
+.kiosk-key--dual .kiosk-key__icon {
+  width: auto;
+  height: auto;
+  font-size: 0.85em;
+}
+
+.kiosk-key--dual .kiosk-key__label {
+  font-size: clamp(0.4rem, calc(100cqi * 0.28), 0.75em);
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
