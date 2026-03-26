@@ -938,12 +938,25 @@ class KioskKeyboard extends UI5Element {
   }
 
   _getKeyLabel(key: KeyDefinition): string {
-    const base = key.label ?? key.value;
-    if (this._shifted) {
-      if (key.shiftLabel) return key.shiftLabel;
+    // Explicit empty label suppresses display text (icon-only opt-out)
+    if (key.label === "") return "";
+
+    const shift = this._shifted;
+    if (shift && key.shiftLabel) return key.shiftLabel;
+
+    // Explicit non-empty label always wins over i18n
+    if (key.label !== undefined) {
+      const base = key.label;
+      return shift && key.value.length === 1 && key.value.trim() ? base.toUpperCase() : base;
+    }
+
+    // No explicit label: use i18n for special keys, value for regular keys
+    const i18nKey = SPECIAL_KEY_LABELS[key.value];
+    if (i18nKey) return getText(i18nKey, key.value);
+
+    const base = key.value;
+    if (shift) {
       if (key.shiftValue) return key.shiftValue;
-      // Single printable characters get uppercased; whitespace-only keys
-      // (e.g. space bar) keep their original label to avoid blank labels.
       if (key.value.length === 1 && key.value.trim()) return key.value.toUpperCase();
     }
     return base;
