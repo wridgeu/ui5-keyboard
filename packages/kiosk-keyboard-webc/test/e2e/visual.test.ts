@@ -78,6 +78,16 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const kb = await getKeyboardRoot("kb-part-styled");
     await matchElementSnapshotInSection(kb, "webc-part-styled");
   });
+
+  it("should match Japanese Romaji layout", async () => {
+    const kb = await getKeyboardRoot("kb-ja-romaji");
+    await matchElementSnapshotInSection(kb, "webc-ja-romaji");
+  });
+
+  it("should match Arabic layout", async () => {
+    const kb = await getKeyboardRoot("kb-arabic");
+    await matchElementSnapshotInSection(kb, "webc-arabic");
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {

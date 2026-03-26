@@ -30,4 +30,11 @@ describe("KioskKeyboard Web Component - RTL (Right-to-Left)", () => {
     const kb = await getKeyboardRoot("kb-numeric");
     await matchElementSnapshotInSection(kb, "webc-numeric-rtl");
   });
+
+  it("should match Arabic layout in RTL", async () => {
+    await openVisualPage();
+    await setDocumentDirection("rtl");
+    const kb = await getKeyboardRoot("kb-arabic");
+    await matchElementSnapshotInSection(kb, "webc-arabic-rtl");
+  });
 });
