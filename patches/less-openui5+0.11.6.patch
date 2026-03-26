@@ -1,12 +1,48 @@
 diff --git a/node_modules/less-openui5/lib/thirdparty/less/parser.js b/node_modules/less-openui5/lib/thirdparty/less/parser.js
-index faa0653..ec496a2 100644
+index faa0653..155b9dc 100644
 --- a/node_modules/less-openui5/lib/thirdparty/less/parser.js
 +++ b/node_modules/less-openui5/lib/thirdparty/less/parser.js
-@@ -1706,6 +1706,7 @@ less.Parser = function Parser(env) {
+@@ -1706,6 +1706,8 @@ less.Parser = function Parser(env) {
                      case "@document":
                      case "@supports":
                      case "@keyframes":
 +                    case "@container":
++                    case "@layer":
                          hasBlock = true;
                          hasIdentifier = true;
                          break;
+@@ -1715,7 +1717,7 @@ less.Parser = function Parser(env) {
+                 }
+ 
+                 if (hasIdentifier) {
+-                    identifier = ($re(/^[^{]+/) || '').trim();
++                    identifier = ($re(/^[^{;]+/) || '').trim();
+                     if (identifier) {
+                         name += " " + identifier;
+                     }
+@@ -1726,6 +1728,9 @@ less.Parser = function Parser(env) {
+                     if (rules) {
+                         return new(tree.Directive)(name, rules, index, env.currentFileInfo);
+                     }
++                    if (nonVendorSpecificName === "@layer" && $char(';')) {
++                        return new(tree.Directive)(name, new(tree.Anonymous)(''), index, env.currentFileInfo);
++                    }
+                 } else {
+                     value = hasExpression ? this.expression() : this.entity();
+                     if (value && $char(';')) {
+diff --git a/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js b/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js
+index a4404bd..204301e 100644
+--- a/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js
++++ b/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js
+@@ -27,8 +27,9 @@ tree.Directive.prototype = {
+         output.add(this.name, this.currentFileInfo, this.index);
+         if (this.rules) {
+             tree.outputRuleset(env, output, this.rules);
+-        } else {
+-            output.add(' ');
++        } else if (this.value) {
++            var val = this.value.value !== undefined ? this.value.value : '';
++            if (val !== '') { output.add(' '); }
+             this.value.genCSS(env, output);
+             output.add(';');
+         }

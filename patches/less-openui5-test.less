@@ -1,0 +1,70 @@
+/* Regression test for less-openui5 parser patch.
+   Run: node patches/less-openui5-test.mjs
+   Verifies @container and @layer directives compile correctly
+   alongside existing at-rules without regressions. */
+
+@supports (display: flex) and (color: red) {
+  .flex {
+    display: flex;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@font-face {
+  font-family: TestFont;
+  src: url(test.woff);
+}
+
+@container sidebar (min-width: 700px) {
+  .card {
+    font-size: 1rem;
+  }
+}
+
+@container keyboard (max-width: 30rem) {
+  .key {
+    font-size: min(var(--base), 1rem);
+  }
+}
+
+@layer reset, base, utilities;
+
+@layer reset {
+  * {
+    margin: 0;
+  }
+}
+
+@layer {
+  .anonymous {
+    color: red;
+  }
+}
+
+@layer theme.dark {
+  .bg {
+    background: #000;
+  }
+}
+
+@media (max-width: 600px) {
+  .mobile {
+    display: block;
+  }
+}
+
+@supports (display: grid) {
+  .parent {
+    .child {
+      color: blue;
+    }
+  }
+}
