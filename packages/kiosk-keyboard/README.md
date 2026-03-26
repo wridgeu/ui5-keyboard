@@ -439,21 +439,23 @@ This contract is read-only and stable for DOM hooks. It is not the styling API; 
 
 ## Layouts
 
-The library ships with eleven built-in layouts:
+The library ships with thirteen built-in layouts:
 
-| Layout          | Description                              | Rows |
-| --------------- | ---------------------------------------- | ---- |
-| `qwerty`        | Standard QWERTY with number row          | 5    |
-| `qwertz-de`     | German QWERTZ with Umlaute (ä, ö, ü, ß)  | 5    |
-| `numeric`       | Numbers with basic operators             | 4    |
-| `special`       | Special characters and symbols           | 4    |
-| `numpad`        | Compact numeric keypad (calculator)      | 5    |
-| `fkeys`         | Function keys F1-F12 (standalone)        | 3    |
-| `nav`           | Navigation keys (arrows, Home/End, Pg)   | 4    |
-| `qwerty-fk`     | QWERTY with F1-F12 row on top            | 6    |
-| `qwertz-de-fk`  | German QWERTZ with F1-F12 row on top     | 6    |
-| `qwerty-nav`    | QWERTY with navigation row on top        | 6    |
-| `qwertz-de-nav` | German QWERTZ with navigation row on top | 6    |
+| Layout          | Description                                        | Rows |
+| --------------- | -------------------------------------------------- | ---- |
+| `qwerty`        | Standard QWERTY with number row                    | 5    |
+| `qwertz-de`     | German QWERTZ with Umlaute (ä, ö, ü, ß)            | 5    |
+| `numeric`       | Numbers with basic operators                       | 4    |
+| `special`       | Special characters and symbols                     | 4    |
+| `numpad`        | Compact numeric keypad (calculator)                | 5    |
+| `fkeys`         | Function keys F1-F12 (standalone)                  | 3    |
+| `nav`           | Navigation keys (arrows, Home/End, Pg)             | 4    |
+| `qwerty-fk`     | QWERTY with F1-F12 row on top                      | 6    |
+| `qwertz-de-fk`  | German QWERTZ with F1-F12 row on top               | 6    |
+| `qwerty-nav`    | QWERTY with navigation row on top                  | 6    |
+| `qwertz-de-nav` | German QWERTZ with navigation row on top           | 6    |
+| `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) | 5    |
+| `arabic`        | Arabic (standard Arabic 101 layout)                | 5    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -704,6 +706,8 @@ When no explicit `layout` is provided, the keyboard auto-detects the appropriate
 | Language | Layout      |
 | -------- | ----------- |
 | `de`     | `qwertz-de` |
+| `ja`     | `ja-romaji` |
+| `ar`     | `arabic`    |
 
 Additional mappings can be registered at runtime:
 
@@ -1401,6 +1405,8 @@ KeyboardLayout.QwertyFk; // "qwerty-fk"
 KeyboardLayout.QwertzDeFk; // "qwertz-de-fk"
 KeyboardLayout.QwertyNav; // "qwerty-nav"
 KeyboardLayout.QwertzDeNav; // "qwertz-de-nav"
+KeyboardLayout.JaRomaji; // "ja-romaji"
+KeyboardLayout.Arabic; // "arabic"
 
 // KeyboardType - keyboard display type
 KeyboardType.Full; // "Full"

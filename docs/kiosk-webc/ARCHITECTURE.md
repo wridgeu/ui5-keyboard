@@ -22,7 +22,7 @@ core/
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
   i18n.ts                 i18n resolution: UI5 WC bundle + custom resolver
 layouts/
-  index.ts                Built-in layout registry (ReadonlyMap of all 11 layouts)
+  index.ts                Built-in layout registry (ReadonlyMap of all 13 layouts)
   default-layout.ts       Default layout name constant: "qwerty"
   qwerty.ts               Standard QWERTY with number row and shift symbols
   qwertz-de.ts            German QWERTZ with Umlaute (ä, ö, ü, ß)
@@ -36,10 +36,14 @@ layouts/
   qwerty-fk.ts            QWERTY with F1-F12 row on top
   qwertz-de-fk.ts         QWERTZ-DE with F1-F12 row on top
   qwerty-nav.ts           QWERTY with navigation row on top
+  ja-romaji.ts            Japanese Romaji layout
+  arabic.ts               Arabic layout
   qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
+  messagebundle_ja.properties Japanese translations
+  messagebundle_ar.properties Arabic translations
 themes/
   KioskKeyboard.css           Component styles using SAP CSS custom properties
   sap_horizon/                Per-theme parameter bundles (4 Horizon variants)
@@ -274,7 +278,7 @@ When no explicit `layout` is set, `getLocaleLayout()` uses `Intl.Locale(navigato
 2. Language prefix (e.g., `"de"`)
 3. Fallback to `"qwerty"`
 
-Default locale map: `{ de → qwertz-de }`. Extensible via `registerLocaleLayout()`.
+Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic }`. Extensible via `registerLocaleLayout()`.
 
 ## Auto-Type Detection
 
