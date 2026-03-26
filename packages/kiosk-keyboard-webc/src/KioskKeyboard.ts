@@ -966,7 +966,7 @@ class KioskKeyboard extends UI5Element {
   _getKeyAriaLabel(key: KeyDefinition): string {
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);
-    return this._getKeyLabel(key);
+    return this._getKeyLabel(key) || key.value;
   }
 
   /**

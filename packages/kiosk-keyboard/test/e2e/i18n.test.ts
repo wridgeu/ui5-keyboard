@@ -57,8 +57,8 @@ describe("KioskKeyboard i18n e2e", () => {
       const kb = await getKeyboard("kb-baseline");
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
       const enterKey = await kb.$('[data-key="\\{enter\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
-      const enterLabel = await enterKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
+      const enterLabel = await (await enterKey.$(".ui5KioskKey__label")).getText();
       await expect(shiftLabel).toBe("Shift");
       await expect(enterLabel).toBe("Enter");
     });
@@ -71,7 +71,7 @@ describe("KioskKeyboard i18n e2e", () => {
 
       const kb = await getKeyboard("kb-french");
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       await expect(shiftLabel).toBe("Maj");
     });
 
@@ -90,7 +90,7 @@ describe("KioskKeyboard i18n e2e", () => {
 
       const kb = await getKeyboard("kb-override");
       const enterKey = await kb.$('[data-key="\\{enter\\}"]');
-      const enterLabel = await enterKey.getAttribute("aria-label");
+      const enterLabel = await (await enterKey.$(".ui5KioskKey__label")).getText();
       await expect(enterLabel).toBe("Go");
 
       const backspaceKey = await kb.$('[data-key="\\{backspace\\}"]');
@@ -104,7 +104,7 @@ describe("KioskKeyboard i18n e2e", () => {
 
       const kb = await getKeyboard("kb-override");
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       // Shift is not in the override bundle, should remain English
       await expect(shiftLabel).toBe("Shift");
     });
@@ -122,7 +122,7 @@ describe("KioskKeyboard i18n e2e", () => {
       });
 
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       // Hook uppercases KEY_* labels
       await expect(shiftLabel).toBe("SHIFT");
     });
@@ -138,7 +138,7 @@ describe("KioskKeyboard i18n e2e", () => {
 
       const kb = await getKeyboard("kb-hook");
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       await expect(shiftLabel).toBe("Shift");
     });
   });

@@ -116,7 +116,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
 
       const kb = await getKeyboard();
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       await expect(shiftLabel).toBe("Maj");
     });
 
@@ -134,7 +134,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
 
       const kb = await getKeyboard();
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       await expect(shiftLabel).toBe("Shift");
     });
   });
@@ -156,7 +156,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
 
       const kb = await getKeyboard();
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       await expect(shiftLabel).toBe("SHIFT");
     });
 
@@ -174,7 +174,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
 
       const kb = await getKeyboard();
       const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await shiftKey.getAttribute("aria-label");
+      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       await expect(shiftLabel).toBe("Shift");
     });
   });
