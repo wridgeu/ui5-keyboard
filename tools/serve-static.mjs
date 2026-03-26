@@ -31,14 +31,16 @@ function isPathContained(filePath, allowedRoot) {
  * @param {boolean} [opts.open=true]  Open browser automatically.
  * @param {string} [opts.fallback]  Path (relative to root) to serve for unknown routes.
  * @param {Record<string, string>} [opts.routes]  URL prefix -> filesystem directory map.
+ * @param {Record<string, () => { body: string | Buffer, contentType?: string }>} [opts.handlers]
+ *   URL path -> dynamic handler map. Handlers are called on each request so content is always fresh.
  */
-export function serveStatic(root, { port = 0, open = true, fallback, routes } = {}) {
+export function serveStatic(root, { port = 0, open = true, fallback, routes, handlers } = {}) {
   // Pre-sort route prefixes by length descending so longer prefixes match first.
   // Done once at startup rather than per-request.
   const sortedRoutePrefixes = routes ? Object.keys(routes).toSorted((a, b) => b.length - a.length) : [];
 
   const server = createServer((req, res) => {
-    handleRequest(req, res, root, { fallback, routes, sortedRoutePrefixes }).catch((err) => {
+    handleRequest(req, res, root, { fallback, routes, sortedRoutePrefixes, handlers }).catch((err) => {
       console.error("Request handler error:", err);
       if (!res.headersSent) {
         res.writeHead(500, { "Content-Type": "text/plain" });
@@ -71,9 +73,19 @@ export function serveStatic(root, { port = 0, open = true, fallback, routes } = 
   return server;
 }
 
-async function handleRequest(req, res, root, { fallback, routes, sortedRoutePrefixes }) {
+async function handleRequest(req, res, root, { fallback, routes, sortedRoutePrefixes, handlers }) {
   const { pathname } = new URL(req.url ?? "/", "http://localhost");
   const urlPath = decodeURIComponent(pathname);
+
+  if (handlers) {
+    const handler = handlers[urlPath] ?? (urlPath === "/" && handlers["/index.html"]) ?? null;
+    if (handler) {
+      const result = handler();
+      res.writeHead(200, { "Content-Type": result.contentType ?? "text/html" });
+      res.end(result.body);
+      return;
+    }
+  }
 
   let filePath;
   let containmentRoot = root;
