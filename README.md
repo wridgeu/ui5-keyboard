@@ -322,6 +322,7 @@ ui5-lib-keyboard/
 │       ├── ui5.yaml           # OpenUI5 dev server config (default)
 │       └── ui5-flp.yaml       # SAPUI5 + FLP sandbox config (preview-middleware)
 ├── tools/                     # Custom oxlint JS plugins (code-quality, comment-quality, test-guardrails) and shared test infrastructure
+├── patches/                   # Local dependency patches (patch-package), applied on npm install
 └── docs/                      # Architecture & design documents
 ```
 
@@ -334,6 +335,15 @@ ui5-lib-keyboard/
 | [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                      | Hotkeys sequence system design and rationale         |
 | [UI5 Web Component Consumption](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption guidance               |
 | [Docs Index](./docs/README.md)                                                          | Full index of all docs (incl. internal & historical) |
+| [Patches](./patches/README.md)                                                          | Local dependency patches applied via patch-package   |
+
+## Contributing
+
+Contributions are welcome. Whether you file a bug report, suggest a feature, or open a pull request, all input is appreciated.
+
+- **Issues:** Use [GitHub Issues](https://github.com/wridgeu/ui5-lib-keyboard/issues) to report bugs or request features.
+- **Pull Requests:** Fork the repo, create a branch, and open a PR against `main`. Please run `npm run check` before submitting to verify tests, linting, and formatting pass.
+- **Questions:** Open a discussion or issue if something is unclear.
 
 ## A note on how this was built
 
