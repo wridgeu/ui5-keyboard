@@ -1,5 +1,5 @@
 diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs b/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
-index 5af121e..7f1abab 100644
+index 5af121e..4a70cd9 100644
 --- a/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
 +++ b/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
 @@ -183,7 +183,7 @@ function processClass(ts, classNode, moduleDoc) {
@@ -20,14 +20,11 @@ index 5af121e..7f1abab 100644
  					const attributeValue = typeChecker.typeToString(typeChecker.getTypeAtLocation(tsProgramMember), tsProgramMember);
  
  					if (attributeValue === "boolean" && member.default === "true") {
-@@ -595,7 +595,11 @@ export default {
+@@ -595,7 +595,9 @@ export default {
  
  					for (const key in obj) {
  						if (Array.isArray(obj[key])) {
 -							sortByName(obj[key]);
-+							// Skip sorting for order-dependent arrays. Mixin order is
-+							// mandated by the CEM schema; parameter order is consumed
-+							// positionally by IDE completions and documentation generators.
 +							if (key !== "parameters" && key !== "mixins") {
 +								sortByName(obj[key]);
 +							}

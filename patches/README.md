@@ -26,9 +26,6 @@ In theory, parameter order in the CEM should not matter: each parameter object c
  for (const key in obj) {
      if (Array.isArray(obj[key])) {
 -        sortByName(obj[key]);
-+        // Skip sorting for order-dependent arrays. Mixin order is
-+        // mandated by the CEM schema; parameter order is consumed
-+        // positionally by IDE completions and documentation generators.
 +        if (key !== "parameters" && key !== "mixins") {
 +            sortByName(obj[key]);
 +        }
