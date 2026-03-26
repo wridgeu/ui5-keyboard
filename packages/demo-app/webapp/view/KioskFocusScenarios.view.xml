@@ -3,7 +3,7 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
-    <Page titleAlignment="Center" title="Focus Scenarios Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Focus Scenarios Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
         <content>
             <MessageStrip
                 text="Use these scenarios to verify focus transitions with the docked KioskKeyboard. Tab, click, or use the buttons and check the event log."

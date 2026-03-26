@@ -39,6 +39,9 @@
       "compact": true,
       "cozy": true
     },
+    "resources": {
+      "css": [{ "uri": "css/style.css" }]
+    },
     "dependencies": {
       "minUI5Version": "1.145.0",
       "libs": {

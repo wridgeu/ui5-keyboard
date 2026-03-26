@@ -4,7 +4,7 @@
     xmlns="sap.m"
     xmlns:l="sap.ui.layout"
     xmlns:kiosk="ui5.kiosk">
-    <Page titleAlignment="Center" title="Multi-Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+    <Page titleAlignment="Center" title="Multi-Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
         <content>
             <Text text="Two independent KioskKeyboard instances on one page. Each keyboard targets its own input via inputIds, so they do not cross-claim targets." class="sapUiSmallMarginBottom" />
 

@@ -4,27 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UI5 Keyboard Libraries Demo</title>
-    <style>
-      /* Popover demo: constrain the keyboard element directly so responsive
-         height breakpoints detect the constraint. Popover intermediate divs
-         are height: auto, so the keyboard needs an explicit height here.
-         overflow: hidden is already set by the keyboard root by default. */
-      .demoPopoverKbGenerous {
-        height: 19rem;
-      }
-      .demoPopoverKbCompact {
-        height: 15rem;
-      }
-      /* Instead of height constraints, shrink keys via CSS custom properties
-         so the keyboard naturally fits in less vertical space.
-         A single class is enough -- the library sets defaults at zero specificity
-         via :where(.ui5KioskKeyboard). */
-      .demoPopoverKbCustomVars {
-        --ui5KioskKeyboard-keyHeight: 2.25rem;
-        --ui5KioskKeyboard-keyGap: 0.25rem;
-        --ui5KioskKeyboard-padding: 0.5rem;
-      }
-    </style>
     <script
       id="sap-ui-bootstrap"
       src="resources/sap-ui-core.js"
