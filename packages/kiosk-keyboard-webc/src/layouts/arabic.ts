@@ -15,7 +15,6 @@ const arabic: LayoutDefinition = [
     { value: "0", shiftValue: "\u0660" },
     {
       value: "{backspace}",
-      label: "",
       width: "2",
       type: "action",
     },

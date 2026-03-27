@@ -144,8 +144,12 @@ QUnit.test("Special key labels reflect enhancement text", async (assert) => {
     "Eingabe",
     "Enter key visible label enhanced",
   );
-  // Backspace has label: "" in qwerty, so it remains icon-only with aria-label
-  assert.strictEqual(backspaceKey?.getAttribute("aria-label"), "L\u00F6schen", "Backspace key aria-label enhanced");
+  // Backspace in qwerty now has visible text label
+  assert.strictEqual(
+    backspaceKey?.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "L\u00F6schen",
+    "Backspace key visible label enhanced",
+  );
 
   input.destroy();
   kb.destroy();

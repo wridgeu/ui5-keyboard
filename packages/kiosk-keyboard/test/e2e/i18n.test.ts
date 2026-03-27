@@ -95,11 +95,8 @@ describe("KioskKeyboard i18n e2e", () => {
 
       await expect(await getKeyLabelText("kb-override", "{enter}")).toBe("Go");
 
-      // Backspace has label="" (icon-only), so it uses aria-label
-      const kbEl = await getKeyboard("kb-override");
-      const backspaceKey = await kbEl.$('[data-key="\\{backspace\\}"]');
-      const backspaceLabel = await backspaceKey.getAttribute("aria-label");
-      await expect(backspaceLabel).toBe("Delete");
+      // Backspace in qwerty has visible text label (overridden to "Delete")
+      await expect(await getKeyLabelText("kb-override", "{backspace}")).toBe("Delete");
     });
 
     it("should keep non-overridden keys at base text", async () => {
