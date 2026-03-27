@@ -73,7 +73,7 @@ const jaRomaji: LayoutDefinition = [
       type: "modifier",
     },
     { value: "\u3001", shiftValue: "\u30FB" },
-    { value: " ", label: "Space", width: "space", type: "space" },
+    { value: " ", width: "space", type: "space" },
     { value: "\u3002", shiftValue: "\u300C" },
     {
       value: "{layout:fkeys}",
