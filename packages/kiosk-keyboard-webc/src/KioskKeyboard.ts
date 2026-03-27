@@ -982,21 +982,26 @@ class KioskKeyboard extends UI5Element {
    * Returns null if no icon should render.
    */
   _resolveKeyIcon(key: KeyDefinition): { value: string; sap: boolean } | null {
-    if (key.icon === "") return null; // explicit suppression
-
-    // CapsLock always overrides the shift icon (matches UI5 renderer priority).
-    // Must be checked before key.icon so capsLockIcon is not dead code.
+    // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
     if (key.value === "{shift}" && this._capsLock) {
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {
         if (!clIcon) return null; // capsLockIcon: "" suppresses icon
-        return clIcon.startsWith(SAP_ICON_PREFIX)
-          ? { value: clIcon.slice(SAP_ICON_PREFIX.length), sap: true }
-          : { value: clIcon, sap: false };
+        if (clIcon.startsWith(SAP_ICON_PREFIX)) {
+          const name = clIcon.slice(SAP_ICON_PREFIX.length);
+          if (!name) {
+            console.warn(`KioskKeyboard: empty SAP icon URI for capsLockIcon on key "${key.value}", skipping icon`);
+            return null;
+          }
+          return { value: name, sap: true };
+        }
+        return { value: clIcon, sap: false };
       }
       const builtIn = ICON_MAP["{shift:capsLock}"];
       return builtIn ? { value: builtIn, sap: true } : null;
     }
+
+    if (key.icon === "") return null; // suppress default-state icon
 
     const customIcon = key.icon;
     if (customIcon) {

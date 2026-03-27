@@ -261,12 +261,26 @@ const KioskKeyboardRenderer = {
 
   /** Resolve the effective icon for a key. Returns the icon string or empty string if none. */
   resolveKeyIcon(oControl: KioskKeyboard, key: KeyDefinition): string {
-    if (key.icon === "") return "";
     const { _isCapsLock } = oControl._getRendererApi();
+
+    // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
     if (key.value === "{shift}" && _isCapsLock()) {
       const Ctor = oControl.constructor as typeof KioskKeyboard;
-      return key.capsLockIcon ?? Ctor.SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
+      const clIcon = key.capsLockIcon;
+      if (clIcon !== undefined) {
+        if (!clIcon) return ""; // capsLockIcon: "" suppresses icon
+        // Validate SAP icon URIs
+        if (IconPool.isIconURI(clIcon) && !IconPool.getIconInfo(clIcon)) {
+          Log.warning(`KioskKeyboard: capsLockIcon "${clIcon}" not found, skipping`, undefined, "KioskKeyboard");
+          return "";
+        }
+        return clIcon;
+      }
+      return Ctor.SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
     }
+
+    if (key.icon === "") return ""; // suppress default-state icon
+
     const Ctor = oControl.constructor as typeof KioskKeyboard;
     const icon = key.icon || Ctor.getKeyIcon(key.value) || "";
     // Validate SAP icon URIs exist in the registry; skip invalid ones
