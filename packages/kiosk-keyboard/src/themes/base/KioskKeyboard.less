@@ -333,6 +333,15 @@
     &--dual &__label {
       font-size: ~"var(--ui5KioskKeyboard-dualLabelSize)";
       line-height: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* At narrow key widths, hide the dual label and show icon-only */
+    @container (max-inline-size: 5rem) {
+      &--dual &__label {
+        display: none;
+      }
     }
 
     /* ---- Variant: Modifier keys (Shift, layout switches) ---- */

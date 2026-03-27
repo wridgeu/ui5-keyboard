@@ -47,7 +47,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             const hasIcon = resolved !== null;
             const hasLabel = label !== "";
             const isDual = hasIcon && hasLabel;
-            const isSingleGlyphLabel = !hasIcon && isSingleGlyph(label);
+            const isSingleGlyphLabel = isSingleGlyph(label);
 
             return (
               <div
