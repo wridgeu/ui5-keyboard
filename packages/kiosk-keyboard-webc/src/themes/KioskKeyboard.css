@@ -567,9 +567,10 @@
 }
 
 .kiosk-key--dual .kiosk-key__icon {
-  width: auto;
-  height: auto;
+  display: inline-block;
   font-size: 0.7em;
+  width: 1.25em;
+  height: 1.25em;
   flex-shrink: 0;
 }
 
