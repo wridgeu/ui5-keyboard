@@ -1789,7 +1789,11 @@ export default class KioskKeyboard extends Control {
 
     const base = key.value;
     if (!base) return "";
-    return shift && key.value.length === 1 && key.value.trim() ? base.toUpperCase() : base;
+    if (shift) {
+      if (key.shiftValue) return key.shiftValue;
+      if (key.value.length === 1 && key.value.trim()) return base.toUpperCase();
+    }
+    return base;
   }
 
   // ──────────────────────────────────────────────
