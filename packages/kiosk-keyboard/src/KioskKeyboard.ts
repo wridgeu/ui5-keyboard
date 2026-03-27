@@ -1769,17 +1769,17 @@ export default class KioskKeyboard extends Control {
     // Explicit empty label suppresses display text (icon-only opt-out)
     if (key.label === "") return "";
 
-    // Caps Lock: shift key shows "Caps Lock" instead of "Shift"
-    if (key.value === "{shift}" && this._isCapsLock()) {
-      return getText("ARIA_CAPS_LOCK", "Caps Lock");
-    }
-
     const shift = this._isShiftActive();
     if (shift && key.shiftLabel) return key.shiftLabel;
 
-    // Explicit non-empty label always wins over i18n
+    // Explicit non-empty label always wins (consumer set it, respect it)
     if (key.label !== undefined) {
       return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
+    }
+
+    // Caps Lock: shift key shows i18n "Caps Lock" when no explicit label is set
+    if (key.value === "{shift}" && this._isCapsLock()) {
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
     }
 
     // No explicit label: i18n for special keys, value for regular keys
