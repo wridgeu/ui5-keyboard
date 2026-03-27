@@ -85,6 +85,16 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
     const kb = await getKeyboard("kb-glyph-stress");
     await matchElementSnapshotInSection(kb, "kb-glyph-stress");
   });
+
+  it("should match Japanese Romaji layout", async () => {
+    const kb = await getKeyboard("kb-ja-romaji");
+    await matchElementSnapshotInSection(kb, "kb-ja-romaji");
+  });
+
+  it("should match Arabic layout", async () => {
+    const kb = await getKeyboard("kb-arabic");
+    await matchElementSnapshotInSection(kb, "kb-arabic");
+  });
 });
 
 describe("KioskKeyboard Interactive States", () => {

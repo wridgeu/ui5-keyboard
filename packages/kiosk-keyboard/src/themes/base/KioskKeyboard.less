@@ -27,11 +27,8 @@
  *   --ui5KioskKeyboard-maxWidth         Max inline width (default: 100%)
  *
  * Keys:
- *   --ui5KioskKeyboard-keyBorderColor   Key border color override -- when set, forces a visible
- *                                       border on ALL key types (default, modifier, action).
- *                                       Unset by default; each key type uses its theme color.
- *                                       Example for kiosk/industrial use:
- *                                         --ui5KioskKeyboard-keyBorderColor: @sapUiFieldBorderColor;
+ *   --ui5KioskKeyboard-keyBorderColor   Uniform border color for all key types (default: unset).
+ *                                       When set, overrides per-type border colors.
  *
  * Container:
  *   --ui5KioskKeyboard-border           Container border (default: 1px solid <theme border color>)

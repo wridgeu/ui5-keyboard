@@ -42,6 +42,8 @@ const BUILTIN_NAMES = [
   "qwertz-de-fk",
   "qwerty-nav",
   "qwertz-de-nav",
+  "ja-romaji",
+  "arabic",
 ];
 
 /** Shared sandbox - every module restores it in afterEach so stubs never leak. */
@@ -273,8 +275,18 @@ QUnit.test("Falls back to language prefix when no exact match", (assert) => {
   assert.strictEqual(getLocaleLayout(), "qwertz-de", "Falls back to de prefix mapping");
 });
 
-QUnit.test("Falls back to DEFAULT_LAYOUT when no mapping matches", (assert) => {
+QUnit.test("Resolves ja to ja-romaji via built-in locale mapping", (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("ja"));
+  assert.strictEqual(getLocaleLayout(), "ja-romaji", "Japanese locale resolves to ja-romaji");
+});
+
+QUnit.test("Resolves ar to arabic via built-in locale mapping", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("ar"));
+  assert.strictEqual(getLocaleLayout(), "arabic", "Arabic locale resolves to arabic");
+});
+
+QUnit.test("Falls back to DEFAULT_LAYOUT when no mapping matches", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("zh"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Unmapped language returns qwerty default");
 });
 

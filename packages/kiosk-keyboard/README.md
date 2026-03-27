@@ -64,7 +64,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 **Layouts**
 
-- Built-in layouts: QWERTY, QWERTZ-DE, numeric, special characters, numpad, function keys, navigation keys
+- Built-in layouts: QWERTY, QWERTZ-DE, Japanese Romaji, Arabic, numeric, special characters, numpad, function keys, navigation keys
 - Variant layouts: QWERTY-FK/QWERTZ-DE-FK and QWERTY-NAV/QWERTZ-DE-NAV
 - Locale-based default layout (auto-detects from UI5 language setting)
 - Runtime layout switching via `{layout:name}` keys
@@ -439,21 +439,23 @@ This contract is read-only and stable for DOM hooks. It is not the styling API; 
 
 ## Layouts
 
-The library ships with eleven built-in layouts:
+The library ships with thirteen built-in layouts:
 
-| Layout          | Description                              | Rows |
-| --------------- | ---------------------------------------- | ---- |
-| `qwerty`        | Standard QWERTY with number row          | 5    |
-| `qwertz-de`     | German QWERTZ with Umlaute (ä, ö, ü, ß)  | 5    |
-| `numeric`       | Numbers with basic operators             | 4    |
-| `special`       | Special characters and symbols           | 4    |
-| `numpad`        | Compact numeric keypad (calculator)      | 5    |
-| `fkeys`         | Function keys F1-F12 (standalone)        | 3    |
-| `nav`           | Navigation keys (arrows, Home/End, Pg)   | 4    |
-| `qwerty-fk`     | QWERTY with F1-F12 row on top            | 6    |
-| `qwertz-de-fk`  | German QWERTZ with F1-F12 row on top     | 6    |
-| `qwerty-nav`    | QWERTY with navigation row on top        | 6    |
-| `qwertz-de-nav` | German QWERTZ with navigation row on top | 6    |
+| Layout          | Description                                        | Rows |
+| --------------- | -------------------------------------------------- | ---- |
+| `qwerty`        | Standard QWERTY with number row                    | 5    |
+| `qwertz-de`     | German QWERTZ with Umlaute (ä, ö, ü, ß)            | 5    |
+| `numeric`       | Numbers with basic operators                       | 4    |
+| `special`       | Special characters and symbols                     | 4    |
+| `numpad`        | Compact numeric keypad (calculator)                | 5    |
+| `fkeys`         | Function keys F1-F12 (standalone)                  | 3    |
+| `nav`           | Navigation keys (arrows, Home/End, Pg)             | 4    |
+| `qwerty-fk`     | QWERTY with F1-F12 row on top                      | 6    |
+| `qwertz-de-fk`  | German QWERTZ with F1-F12 row on top               | 6    |
+| `qwerty-nav`    | QWERTY with navigation row on top                  | 6    |
+| `qwertz-de-nav` | German QWERTZ with navigation row on top           | 6    |
+| `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) | 5    |
+| `arabic`        | Arabic (standard Arabic 101 layout)                | 5    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -704,6 +706,8 @@ When no explicit `layout` is provided, the keyboard auto-detects the appropriate
 | Language | Layout      |
 | -------- | ----------- |
 | `de`     | `qwertz-de` |
+| `ja`     | `ja-romaji` |
+| `ar`     | `arabic`    |
 
 Additional mappings can be registered at runtime:
 
@@ -1183,6 +1187,31 @@ directly to define custom breakpoints:
 This is more flexible than the previous threshold variables: you can
 set any property at any number of breakpoints.
 
+#### Tuning for Complex-Script Layouts
+
+Layouts with visually complex glyphs (Arabic, Thai, Devanagari, CJK) may
+appear cramped at narrow widths because their characters need more
+horizontal space than Latin letters at the same font size. The built-in
+Arabic layout at phone-sm width (320 px) is a good reference case.
+
+Override `--ui5KioskKeyboard-keyFontSize` on the keyboard root to tune
+readability for your target script:
+
+```css
+/* Reduce font size for a keyboard displaying complex-script glyphs */
+.ui5KioskKeyboard {
+  --ui5KioskKeyboard-keyFontSize: 0.85rem;
+}
+```
+
+All component styles live inside `@layer kiosk-keyboard`, so any
+unlayered consumer CSS wins regardless of specificity -- no extra wrapper
+class is needed. At narrow widths, the responsive container queries cap
+font size via `min()` but cannot raise it above your value, so a smaller
+override is preserved. At desktop widths no cap applies and your value
+is used as-is. This approach works for any layout, including custom
+layouts registered via `registerLayout()`.
+
 For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-short` and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
 The height constraint must affect the **control's own rendered element**. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the control's layout box, so the keyboard will be clipped instead of adapting. Apply `max-height` directly to the keyboard's root element (via CSS targeting `.ui5KioskKeyboard`), or use a flex parent that propagates the constraint.
@@ -1237,7 +1266,7 @@ Both `compact` and `cozy` content densities are supported with adjusted key heig
 
 ## Internationalization (i18n)
 
-The library ships with an English resource bundle for all accessibility labels and key names. German (`messagebundle_de.properties`) is also included.
+The library ships with an English resource bundle for all accessibility labels and key names. German (`messagebundle_de.properties`), Japanese (`messagebundle_ja.properties`), and Arabic (`messagebundle_ar.properties`) are also included.
 
 **Resource bundle keys:**
 
@@ -1401,6 +1430,8 @@ KeyboardLayout.QwertyFk; // "qwerty-fk"
 KeyboardLayout.QwertzDeFk; // "qwertz-de-fk"
 KeyboardLayout.QwertyNav; // "qwerty-nav"
 KeyboardLayout.QwertzDeNav; // "qwertz-de-nav"
+KeyboardLayout.JaRomaji; // "ja-romaji"
+KeyboardLayout.Arabic; // "arabic"
 
 // KeyboardType - keyboard display type
 KeyboardType.Full; // "Full"
