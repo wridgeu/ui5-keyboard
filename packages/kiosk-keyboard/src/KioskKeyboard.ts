@@ -1726,6 +1726,7 @@ export default class KioskKeyboard extends Control {
   static readonly SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
     "{backspace}": "sap-icon://arrow-left",
     "{shift}": "sap-icon://arrow-top",
+    "{shift:capsLock}": "sap-icon://locked",
     "{enter}": "sap-icon://accept",
   };
 
@@ -1766,20 +1767,20 @@ export default class KioskKeyboard extends Control {
 
   /** The display label for a key. Empty string when label is suppressed (icon-only opt-out). */
   private _getKeyLabel(key: KeyDefinition): string {
-    // Explicit empty label suppresses display text (icon-only opt-out)
     if (key.label === "") return "";
+
+    // Caps Lock state: use capsLockLabel if defined, else i18n fallback
+    if (key.value === "{shift}" && this._isCapsLock()) {
+      if (key.capsLockLabel !== undefined) return key.capsLockLabel;
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+    }
 
     const shift = this._isShiftActive();
     if (shift && key.shiftLabel) return key.shiftLabel;
 
-    // Explicit non-empty label always wins (consumer set it, respect it)
+    // Explicit label takes priority over i18n
     if (key.label !== undefined) {
       return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
-    }
-
-    // Caps Lock: shift key shows i18n "Caps Lock" when no explicit label is set
-    if (key.value === "{shift}" && this._isCapsLock()) {
-      return getText("ARIA_CAPS_LOCK", "Caps Lock");
     }
 
     // No explicit label: i18n for special keys, value for regular keys

@@ -51,13 +51,12 @@ import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/locked.js";
 
 // ── Icon name map (used by the template to render <ui5-icon>) ──
-const ICON_MAP: Record<string, string> = {
+const ICON_MAP: Readonly<Record<string, string>> = {
   "{shift}": "arrow-top",
+  "{shift:capsLock}": "locked",
   "{enter}": "accept",
   "{backspace}": "arrow-left",
 };
-
-const ICON_SHIFT_LOCKED = "locked";
 const SAP_ICON_PREFIX = "sap-icon://";
 
 // ── Valid enum values for string properties (derived from enums) ──
@@ -939,21 +938,20 @@ class KioskKeyboard extends UI5Element {
   }
 
   _getKeyLabel(key: KeyDefinition): string {
-    // Explicit empty label suppresses display text (icon-only opt-out)
     if (key.label === "") return "";
+
+    // Caps Lock state: use capsLockLabel if defined, else i18n fallback
+    if (key.value === "{shift}" && this._capsLock) {
+      if (key.capsLockLabel !== undefined) return key.capsLockLabel;
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+    }
 
     const shift = this._shifted;
     if (shift && key.shiftLabel) return key.shiftLabel;
 
-    // Explicit non-empty label always wins (consumer set it, respect it)
+    // Explicit label takes priority over i18n
     if (key.label !== undefined) {
-      const base = key.label;
-      return shift && key.value.length === 1 && key.value.trim() ? base.toUpperCase() : base;
-    }
-
-    // Caps Lock: shift key shows i18n "Caps Lock" when no explicit label is set
-    if (key.value === "{shift}" && this._capsLock) {
-      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+      return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
     }
 
     // No explicit label: use i18n for special keys, value for regular keys
@@ -995,9 +993,17 @@ class KioskKeyboard extends UI5Element {
       return { value: customIcon, sap: false };
     }
 
-    // Built-in icons for special keys
+    // Built-in icons for special keys (capsLockIcon overrides the default)
     if (key.value === "{shift}" && this._capsLock) {
-      return { value: ICON_SHIFT_LOCKED, sap: true };
+      const clIcon = key.capsLockIcon;
+      if (clIcon !== undefined) {
+        if (!clIcon) return null; // capsLockIcon: "" suppresses icon
+        return clIcon.startsWith(SAP_ICON_PREFIX)
+          ? { value: clIcon.slice(SAP_ICON_PREFIX.length), sap: true }
+          : { value: clIcon, sap: false };
+      }
+      const builtIn = ICON_MAP["{shift:capsLock}"];
+      return builtIn ? { value: builtIn, sap: true } : null;
     }
     const builtIn = ICON_MAP[key.value];
     return builtIn ? { value: builtIn, sap: true } : null;
