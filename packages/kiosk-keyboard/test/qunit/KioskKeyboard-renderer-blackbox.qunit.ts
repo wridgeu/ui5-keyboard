@@ -440,3 +440,128 @@ QUnit.test("Shift with label='' renders icon only (opt-out)", async (assert) => 
   kb.destroy();
   KioskKeyboard.unregisterLayout("test-icon-label");
 });
+
+// ──────────────────────────────────────────────
+// CapsLock property overrides
+// ──────────────────────────────────────────────
+
+QUnit.test("capsLockLabel overrides visible label during caps lock", async (assert) => {
+  const layout: LayoutDefinition = [
+    [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "CL" }],
+  ];
+  const kb = new KioskKeyboard();
+  KioskKeyboard.registerLayout("test-capslock", layout);
+  kb.setLayout("test-capslock");
+  await placeAndWait(kb);
+
+  // Activate caps lock (double-tap shift)
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  const keyEl = getRequiredKeyElement(kb, "{shift}");
+  assert.strictEqual(
+    keyEl.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "CL",
+    "CapsLock label shows custom value",
+  );
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-capslock");
+});
+
+QUnit.test("capsLockIcon overrides icon during caps lock", async (assert) => {
+  const layout: LayoutDefinition = [
+    [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "\u21E7" }],
+  ];
+  const kb = new KioskKeyboard();
+  KioskKeyboard.registerLayout("test-capslock", layout);
+  kb.setLayout("test-capslock");
+  await placeAndWait(kb);
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  const keyEl = getRequiredKeyElement(kb, "{shift}");
+  const iconEl = keyEl.querySelector(`.${DOM.classes.keyIcon}`);
+  assert.ok(iconEl, "Icon element present");
+  assert.strictEqual(iconEl!.textContent, "\u21E7", "CapsLock icon shows custom Unicode value");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-capslock");
+});
+
+QUnit.test("capsLockIcon: '' suppresses icon during caps lock", async (assert) => {
+  const layout: LayoutDefinition = [
+    [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "" }],
+  ];
+  const kb = new KioskKeyboard();
+  KioskKeyboard.registerLayout("test-capslock", layout);
+  kb.setLayout("test-capslock");
+  await placeAndWait(kb);
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  const keyEl = getRequiredKeyElement(kb, "{shift}");
+  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "No icon during caps lock");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-capslock");
+});
+
+QUnit.test("capsLockLabel: '' suppresses label, aria-label says Caps Lock", async (assert) => {
+  const layout: LayoutDefinition = [
+    [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "" }],
+  ];
+  const kb = new KioskKeyboard();
+  KioskKeyboard.registerLayout("test-capslock", layout);
+  kb.setLayout("test-capslock");
+  await placeAndWait(kb);
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  const keyEl = getRequiredKeyElement(kb, "{shift}");
+  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "No visible label during caps lock");
+  assert.ok(/caps lock/i.test(keyEl.getAttribute("aria-label") ?? ""), "aria-label contains 'Caps Lock'");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-capslock");
+});
+
+QUnit.test("icon: '' + capsLockIcon shows icon only during caps lock", async (assert) => {
+  const layout: LayoutDefinition = [
+    [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", icon: "", capsLockIcon: "\u{1F512}" }],
+  ];
+  const kb = new KioskKeyboard();
+  KioskKeyboard.registerLayout("test-capslock", layout);
+  kb.setLayout("test-capslock");
+  await placeAndWait(kb);
+
+  // Normal state: no icon (icon: "" suppresses)
+  const keyEl = getRequiredKeyElement(kb, "{shift}");
+  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "No icon in normal state");
+
+  // Activate caps lock
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  // CapsLock state: capsLockIcon renders independently
+  assert.ok(
+    getRequiredKeyElement(kb, "{shift}").querySelector(`.${DOM.classes.keyIcon}`),
+    "Icon present during caps lock",
+  );
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-capslock");
+});
