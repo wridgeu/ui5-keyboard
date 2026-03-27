@@ -70,6 +70,15 @@ function getKeyboard() {
   return $(".ui5KioskKeyboard");
 }
 
+/** Get visible label text of a key via native DOM (more reliable than WDIO getText for small elements). */
+async function getShiftLabelText(): Promise<string> {
+  return browser.execute(() => {
+    const kb = document.querySelector(".ui5KioskKeyboard");
+    const key = kb?.querySelector('[data-key="{shift}"]');
+    return key?.querySelector(".ui5KioskKey__label")?.textContent ?? "";
+  });
+}
+
 /**
  * Click a SegmentedButtonItem by its visible text on the i18n page.
  * SegmentedButton renders items as `<li role="option">` - wdio's `li=` selector matches by text.
@@ -114,9 +123,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
       await selectI18nMode("French");
       await waitForKeyboardLabel("Clavier virtuel");
 
-      const kb = await getKeyboard();
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
+      const shiftLabel = await getShiftLabelText();
       await expect(shiftLabel).toBe("Maj");
     });
 
@@ -132,9 +139,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
       // Keyboard should show default English labels (i18n was auto-reset)
       await waitForKeyboardLabel("Virtual Keyboard");
 
-      const kb = await getKeyboard();
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
+      const shiftLabel = await getShiftLabelText();
       await expect(shiftLabel).toBe("Shift");
     });
   });
@@ -154,9 +159,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
       await selectI18nMode("Hook");
       await waitForKeyboardLabel("Custom Keyboard");
 
-      const kb = await getKeyboard();
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
+      const shiftLabel = await getShiftLabelText();
       await expect(shiftLabel).toBe("SHIFT");
     });
 
@@ -172,9 +175,7 @@ describe("FLP lifecycle - i18n auto-reset", () => {
       // Hook should be cleared - default labels restored
       await waitForKeyboardLabel("Virtual Keyboard");
 
-      const kb = await getKeyboard();
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
+      const shiftLabel = await getShiftLabelText();
       await expect(shiftLabel).toBe("Shift");
     });
   });

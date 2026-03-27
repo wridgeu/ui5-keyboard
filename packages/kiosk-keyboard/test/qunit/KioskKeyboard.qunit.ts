@@ -968,7 +968,7 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   const icon = shiftKey.querySelector(".sapUiIcon");
   assert.ok(icon, "Lock icon is rendered inside shift key");
 
-  // Visible label should indicate Caps Lock
+  // Visible label changes to "Caps Lock" during CapsLock state
   assert.strictEqual(
     shiftKey.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
     "Caps Lock",

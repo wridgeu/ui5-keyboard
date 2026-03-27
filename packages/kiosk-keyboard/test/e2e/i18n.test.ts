@@ -18,6 +18,19 @@ async function clickButton(containerId: string, text: string): Promise<void> {
   await btn.click();
 }
 
+/** Get the visible label text of a key via native DOM (more reliable than WDIO getText for small elements). */
+async function getKeyLabelText(containerId: string, dataKey: string): Promise<string> {
+  return browser.execute(
+    (cId: string, dk: string) => {
+      const kb = document.querySelector(`#${cId} .ui5KioskKeyboard`);
+      const key = kb?.querySelector(`[data-key="${dk}"]`);
+      return key?.querySelector(".ui5KioskKey__label")?.textContent ?? "";
+    },
+    containerId,
+    dataKey,
+  );
+}
+
 /** Wait until the keyboard's aria-label matches the expected value after an async action. */
 async function waitForLabel(containerId: string, expected: string, timeout = 5_000): Promise<void> {
   const kb = getKeyboard(containerId);
@@ -54,13 +67,8 @@ describe("KioskKeyboard i18n e2e", () => {
     });
 
     it("should have English key labels", async () => {
-      const kb = await getKeyboard("kb-baseline");
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const enterKey = await kb.$('[data-key="\\{enter\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
-      const enterLabel = await (await enterKey.$(".ui5KioskKey__label")).getText();
-      await expect(shiftLabel).toBe("Shift");
-      await expect(enterLabel).toBe("Enter");
+      await expect(await getKeyLabelText("kb-baseline", "{shift}")).toBe("Shift");
+      await expect(await getKeyLabelText("kb-baseline", "{enter}")).toBe("Enter");
     });
   });
 
@@ -69,10 +77,7 @@ describe("KioskKeyboard i18n e2e", () => {
       await clickButton("controls-french", "Apply French bundle");
       await waitForLabel("kb-french", "Clavier virtuel");
 
-      const kb = await getKeyboard("kb-french");
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
-      await expect(shiftLabel).toBe("Maj");
+      await expect(await getKeyLabelText("kb-french", "{shift}")).toBe("Maj");
     });
 
     it("should restore English labels after reset", async () => {
@@ -88,12 +93,11 @@ describe("KioskKeyboard i18n e2e", () => {
       await clickButton("controls-override", "Apply overrides");
       await waitForLabel("kb-override", "Touch Keyboard");
 
-      const kb = await getKeyboard("kb-override");
-      const enterKey = await kb.$('[data-key="\\{enter\\}"]');
-      const enterLabel = await (await enterKey.$(".ui5KioskKey__label")).getText();
-      await expect(enterLabel).toBe("Go");
+      await expect(await getKeyLabelText("kb-override", "{enter}")).toBe("Go");
 
-      const backspaceKey = await kb.$('[data-key="\\{backspace\\}"]');
+      // Backspace has label="" (icon-only), so it uses aria-label
+      const kbEl = await getKeyboard("kb-override");
+      const backspaceKey = await kbEl.$('[data-key="\\{backspace\\}"]');
       const backspaceLabel = await backspaceKey.getAttribute("aria-label");
       await expect(backspaceLabel).toBe("Delete");
     });
@@ -102,11 +106,8 @@ describe("KioskKeyboard i18n e2e", () => {
       await clickButton("controls-override", "Apply overrides");
       await waitForLabel("kb-override", "Touch Keyboard");
 
-      const kb = await getKeyboard("kb-override");
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       // Shift is not in the override bundle, should remain English
-      await expect(shiftLabel).toBe("Shift");
+      await expect(await getKeyLabelText("kb-override", "{shift}")).toBe("Shift");
     });
   });
 
@@ -121,10 +122,8 @@ describe("KioskKeyboard i18n e2e", () => {
         timeoutMsg: "Hook did not update aria-label in time",
       });
 
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
       // Hook uppercases KEY_* labels
-      await expect(shiftLabel).toBe("SHIFT");
+      await expect(await getKeyLabelText("kb-hook", "{shift}")).toBe("SHIFT");
     });
 
     it("should restore defaults after reset", async () => {
@@ -136,10 +135,7 @@ describe("KioskKeyboard i18n e2e", () => {
       await clickButton("controls-hook", "Reset to defaults");
       await waitForLabel("kb-hook", "Virtual Keyboard");
 
-      const kb = await getKeyboard("kb-hook");
-      const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
-      const shiftLabel = await (await shiftKey.$(".ui5KioskKey__label")).getText();
-      await expect(shiftLabel).toBe("Shift");
+      await expect(await getKeyLabelText("kb-hook", "{shift}")).toBe("Shift");
     });
   });
 });

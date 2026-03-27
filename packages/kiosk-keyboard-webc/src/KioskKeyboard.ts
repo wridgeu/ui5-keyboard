@@ -942,6 +942,11 @@ class KioskKeyboard extends UI5Element {
     // Explicit empty label suppresses display text (icon-only opt-out)
     if (key.label === "") return "";
 
+    // Caps Lock: shift key shows "Caps Lock" instead of "Shift"
+    if (key.value === "{shift}" && this._capsLock) {
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+    }
+
     const shift = this._shifted;
     if (shift && key.shiftLabel) return key.shiftLabel;
 
