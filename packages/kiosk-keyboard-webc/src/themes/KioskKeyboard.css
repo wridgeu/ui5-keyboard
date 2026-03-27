@@ -38,6 +38,10 @@
   --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   --kiosk-keyboard-cq-short-threshold: 16rem;
   --kiosk-keyboard-cq-tiny-threshold: 12rem;
+  /* --kiosk-keyboard-key-border-color: unset by default.
+     When set, applies a uniform border color to all key types
+     (default, modifier, action). Useful for industrial/kiosk
+     deployments where key boundaries must be extra visible. */
 }
 
 /* Shadow colors derive from --sapContent_ShadowColor (a raw color, not a
