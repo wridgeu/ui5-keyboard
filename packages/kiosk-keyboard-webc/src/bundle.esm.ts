@@ -3,8 +3,8 @@
 import "./Assets.js";
 
 export { default as KioskKeyboard } from "./KioskKeyboard.js";
+export { FKeyMode, KeyboardType, MobileKeyboard } from "./types.js";
 export type {
-  FKeyMode,
   KeyPressEventDetail,
   LayoutChangeEventDetail,
   KeyboardTypeChangeEventDetail,

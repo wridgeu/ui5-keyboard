@@ -7,7 +7,6 @@
       "ui5/hotkeys/*": ["./src/*"]
     },
     "types": ["@openui5/types", "@types/qunit", "@types/sinon"],
-    "composite": false,
     "noEmit": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],
