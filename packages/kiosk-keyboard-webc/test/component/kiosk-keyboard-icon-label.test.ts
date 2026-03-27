@@ -204,6 +204,7 @@ describe("icon + label rendering", () => {
     keyEl.click();
     await nextRender();
     expect(queryKeyLabel(keyEl)!.textContent).to.equal("CL");
+    expect(keyEl.getAttribute("aria-label")).to.be.null;
   });
 
   it("capsLockIcon overrides icon during caps lock", async () => {

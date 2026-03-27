@@ -466,6 +466,7 @@ QUnit.test("capsLockLabel overrides visible label during caps lock", async (asse
     "CL",
     "CapsLock label shows custom value",
   );
+  assert.notOk(keyEl.getAttribute("aria-label"), "No redundant aria-label when visible capsLockLabel is present");
 
   kb.destroy();
   KioskKeyboard.unregisterLayout("test-capslock");

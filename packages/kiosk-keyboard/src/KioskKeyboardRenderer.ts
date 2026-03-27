@@ -249,13 +249,15 @@ const KioskKeyboardRenderer = {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.shiftValue, key.shiftValue);
     }
 
-    // Caps Lock always overrides aria-label for shift key (screen readers
-    // need to announce "Caps Lock", not the visible "Shift" text).
-    if (bIsShiftKey && _isCapsLock()) {
-      rm.attr("aria-label", getText("ARIA_CAPS_LOCK", "Caps Lock"));
-    } else if (!label) {
-      // Only set aria-label when there is no visible text label (WCAG 2.5.3)
-      rm.attr("aria-label", _getKeyAriaLabel(key));
+    // Only set aria-label when there is no visible text label (WCAG 2.5.3).
+    // When capsLockLabel provides visible text, that text IS the accessible
+    // name -- adding aria-label would mismatch it.
+    if (!label) {
+      if (bIsShiftKey && _isCapsLock()) {
+        rm.attr("aria-label", getText("ARIA_CAPS_LOCK", "Caps Lock"));
+      } else {
+        rm.attr("aria-label", _getKeyAriaLabel(key));
+      }
     }
   },
 
