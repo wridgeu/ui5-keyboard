@@ -14,6 +14,7 @@ import qwertzDeFk from "../layouts/qwertz-de-fk";
 import qwertyNav from "../layouts/qwerty-nav";
 import qwertzDeNav from "../layouts/qwertz-de-nav";
 import jaRomaji from "../layouts/ja-romaji";
+import jaKana from "../layouts/ja-kana";
 import arabic from "../layouts/arabic";
 
 const layouts: Map<string, LayoutDefinition> = new Map([
@@ -29,6 +30,7 @@ const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwerty-nav", qwertyNav],
   ["qwertz-de-nav", qwertzDeNav],
   ["ja-romaji", jaRomaji],
+  ["ja-kana", jaKana],
   ["arabic", arabic],
 ]);
 
