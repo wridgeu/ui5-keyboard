@@ -1164,6 +1164,29 @@ export default class HotkeyManager extends BaseObject {
   }
 
   /**
+   * Look up registrations by their IDs and return public info objects.
+   * O(n) where n = ids.size, not n = total registrations.
+   * @internal
+   */
+  _getRegistrationInfoByIds(ids: ReadonlySet<string>): HotkeyRegistrationInfo[] {
+    const result: HotkeyRegistrationInfo[] = [];
+    for (const id of ids) {
+      const reg = this._registrations.get(id);
+      if (reg) result.push(this._toRegistrationInfo(reg));
+    }
+    return result;
+  }
+
+  /**
+   * Look up sequence registrations by their IDs and return public info objects.
+   * @internal
+   */
+  _getSequenceRegistrationInfoByIds(ids: ReadonlySet<string>): SequenceRegistrationInfo[] {
+    if (!this._sequenceManager) return [];
+    return this._sequenceManager.getRegistrationInfoByIds(ids);
+  }
+
+  /**
    * Resolve registration IDs for a composedPath node.
    *
    * Merges object-identity hits with id-based index hits so that both

@@ -197,6 +197,19 @@ export default class SequenceManager extends BaseObject {
   }
 
   /**
+   * Look up sequence registrations by their IDs and return public info objects.
+   * O(n) where n = ids.size, not n = total registrations.
+   */
+  getRegistrationInfoByIds(ids: ReadonlySet<string>): SequenceRegistrationInfo[] {
+    const result: SequenceRegistrationInfo[] = [];
+    for (const id of ids) {
+      const reg = this._registrations.get(id);
+      if (reg) result.push(this._toRegistrationInfo(reg));
+    }
+    return result;
+  }
+
+  /**
    * Convert an internal registration to the public flat info shape.
    */
   private _toRegistrationInfo(reg: SequenceRegistration): SequenceRegistrationInfo {
