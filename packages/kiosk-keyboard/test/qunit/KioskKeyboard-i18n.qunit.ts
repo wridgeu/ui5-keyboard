@@ -8,6 +8,7 @@ import { getKeyElement, placeAndWait, waitForRender } from "./test-helpers";
 // Module
 // ──────────────────────────────────────────────
 
+const DOM = KioskKeyboard.DOM;
 const i18nSandbox = sinon.createSandbox();
 
 QUnit.module("KioskKeyboard - i18n integration", {
@@ -133,9 +134,22 @@ QUnit.test("Special key labels reflect enhancement text", async (assert) => {
   const enterKey = getKeyElement(kb, "{enter}");
   const backspaceKey = getKeyElement(kb, "{backspace}");
 
-  assert.strictEqual(shiftKey?.getAttribute("aria-label"), "Umschalt", "Shift key label enhanced");
-  assert.strictEqual(enterKey?.getAttribute("aria-label"), "Eingabe", "Enter key label enhanced");
-  assert.strictEqual(backspaceKey?.getAttribute("aria-label"), "L\u00F6schen", "Backspace key label enhanced");
+  assert.strictEqual(
+    shiftKey?.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Umschalt",
+    "Shift key visible label enhanced",
+  );
+  assert.strictEqual(
+    enterKey?.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Eingabe",
+    "Enter key visible label enhanced",
+  );
+  // Backspace in qwerty now has visible text label
+  assert.strictEqual(
+    backspaceKey?.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "L\u00F6schen",
+    "Backspace key visible label enhanced",
+  );
 
   input.destroy();
   kb.destroy();
@@ -186,7 +200,11 @@ QUnit.test("Enhancement bundle + override hook combined on rendered control", as
   );
 
   const shiftKey = getKeyElement(kb, "{shift}");
-  assert.strictEqual(shiftKey?.getAttribute("aria-label"), "UMSCHALT", "Hook uppercases enhanced shift label");
+  assert.strictEqual(
+    shiftKey?.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "UMSCHALT",
+    "Hook uppercases enhanced shift visible label",
+  );
 
   input.destroy();
   kb.destroy();
@@ -301,9 +319,9 @@ QUnit.test("Destroying last instance auto-resets i18n config and hook", async (a
 
   const shiftKey = getKeyElement(kb2, "{shift}");
   assert.strictEqual(
-    shiftKey?.getAttribute("aria-label"),
+    shiftKey?.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
     "Shift",
-    "Override hook was cleared - fresh keyboard uses default labels",
+    "Override hook was cleared - fresh keyboard uses default visible labels",
   );
 
   input2.destroy();

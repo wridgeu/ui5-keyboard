@@ -411,12 +411,14 @@ Each key is a `KeyDefinition`:
 ```ts
 interface KeyDefinition {
   value: string; // Character to insert, or action like "{shift}", "{enter}", "{backspace}", "{layout:numeric}", "{fkey:F5}"
-  label?: string; // Display label (defaults to value)
+  label?: string; // Display label; omit for auto-resolve (i18n for special keys, value for regular); "" suppresses
   shiftLabel?: string; // Label when shifted
   shiftValue?: string; // Value when shifted (defaults to value.toUpperCase() for single chars)
+  capsLockLabel?: string; // Label for {shift} key in Caps Lock state; omit for i18n "Caps Lock"; "" suppresses
+  capsLockIcon?: string; // Icon for {shift} key in Caps Lock state; independent of icon; defaults to locked icon
   width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
-  icon?: string; // Custom text icon (rendered as label, not <ui5-icon>)
+  icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present
 }
 ```
 
@@ -455,23 +457,23 @@ kb.setTargetResolver(null);
 
 The keyboard ships with English, German, Japanese, and Arabic translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
 
-Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls accessibility-facing strings: the keyboard's `aria-label`, `aria-roledescription`, key `aria-label` attributes (for icon-only keys like Shift, Enter, Backspace, Space), and live region announcements (shift/caps lock state changes, keyboard open/close).
+Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls both visible labels for special keys (Shift, Enter, Backspace, Space), `aria-label` for icon-only keys (where `label=""`), the keyboard's `aria-label`, `aria-roledescription`, and live region announcements (shift/caps lock state changes, keyboard open/close).
 
 **Resource bundle keys:**
 
-| Key                              | Default (English)       | Used for                                                |
-| -------------------------------- | ----------------------- | ------------------------------------------------------- |
-| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `accessibleName` is empty     |
-| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element              |
-| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key         |
-| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key         |
-| `KEY_BACKSPACE`                  | Backspace               | `aria-label` for the Backspace key (icon-only)          |
-| `KEY_SPACE`                      | Space                   | `aria-label` for the Space key                          |
-| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active |
-| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                           |
-| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                           |
-| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`               |
-| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`              |
+| Key                              | Default (English)       | Used for                                                                        |
+| -------------------------------- | ----------------------- | ------------------------------------------------------------------------------- |
+| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `accessibleName` is empty                             |
+| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element                                      |
+| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key                                 |
+| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key                                 |
+| `KEY_BACKSPACE`                  | Backspace               | Label for the Backspace key (visible text; aria-label when label is suppressed) |
+| `KEY_SPACE`                      | Space                   | Label for the Space key (visible text; aria-label when label is suppressed)     |
+| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active                         |
+| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                                                   |
+| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                                                   |
+| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`                                       |
+| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`                                      |
 
 ### Custom i18n Resolver
 
@@ -596,32 +598,36 @@ For the rationale behind default values, breakpoint thresholds, and scaling fact
 
 Override these on the `:host` or a parent element to customize appearance:
 
-| Property                                 | Default                                                   | Description                                     |
-| ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
-| `--kiosk-keyboard-border`                | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless) |
-| `--kiosk-keyboard-border-radius`         | _(theme)_                                                 | Container border radius                         |
-| `--kiosk-keyboard-padding`               | `0.75rem`                                                 | Container padding                               |
-| `--kiosk-keyboard-key-gap`               | `0.375rem`                                                | Gap between keys                                |
-| `--kiosk-keyboard-key-height`            | `3rem`                                                    | Key height                                      |
-| `--kiosk-keyboard-key-font-size`         | `calc(var(--kiosk-keyboard-key-height) * 0.375)`          | Key font size (all key types in Numpad/Numeric) |
-| `--kiosk-keyboard-key-padding-inline`    | `0.25rem`                                                 | Horizontal key padding                          |
-| `--kiosk-keyboard-key-padding`           | `0 0.25rem`                                               | Full padding shorthand (uses padding-inline)    |
-| `--kiosk-keyboard-key-padding-inline-xs` | `min(var(--kiosk-keyboard-key-padding-inline), 0.125rem)` | Horizontal key padding in extra-narrow mode     |
-| `--kiosk-keyboard-key-padding-xs`        | `0 var(--kiosk-keyboard-key-padding-inline-xs)`           | Full padding shorthand in extra-narrow mode     |
-| `--kiosk-keyboard-key-shadow`            | _(subtle)_                                                | Box shadow for keys at rest                     |
-| `--kiosk-keyboard-key-shadow-hover`      | _(subtle)_                                                | Box shadow for keys on hover                    |
-| `--kiosk-keyboard-max-width`             | `100%`                                                    | Max width for the default inline keyboard       |
-| `--kiosk-keyboard-docked-max-width`      | `1024px`                                                  | Max width in docked mode                        |
-| `--kiosk-keyboard-docked-shadow`         | _(subtle)_                                                | Box shadow for the docked container             |
-| `--kiosk-keyboard-docked-z-index`        | `100`                                                     | Z-index for the docked keyboard                 |
-| `--kiosk-keyboard-modifier-font-size`    | `var(--sapFontSize, 0.875rem)`                            | Modifier / action key font size                 |
-| `--kiosk-keyboard-modifier-font-scale`   | `0.8`                                                     | Max modifier font as a fraction of key font     |
-| `--kiosk-keyboard-modifier-shadow`       | _(subtle)_                                                | Box shadow for modifier keys at rest            |
-| `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                                | Box shadow for modifier keys on hover           |
-| `--kiosk-keyboard-numpad-max-width`      | `20rem`                                                   | Max width for numpad layout                     |
-| `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                                    | Minimum key width in numpad layout              |
-| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                                   | Height threshold for `--cq-short` class         |
-| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                                   | Height threshold for `--cq-tiny` class          |
+| Property                                 | Default                                                   | Description                                                 |
+| ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| `--kiosk-keyboard-border`                | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)             |
+| `--kiosk-keyboard-border-radius`         | _(theme)_                                                 | Container border radius                                     |
+| `--kiosk-keyboard-padding`               | `0.75rem`                                                 | Container padding                                           |
+| `--kiosk-keyboard-key-gap`               | `0.375rem`                                                | Gap between keys                                            |
+| `--kiosk-keyboard-key-height`            | `3rem`                                                    | Key height                                                  |
+| `--kiosk-keyboard-key-font-size`         | `calc(var(--kiosk-keyboard-key-height) * 0.375)`          | Key font size (all key types in Numpad/Numeric)             |
+| `--kiosk-keyboard-key-padding-inline`    | `0.25rem`                                                 | Horizontal key padding                                      |
+| `--kiosk-keyboard-key-padding`           | `0 0.25rem`                                               | Full padding shorthand (uses padding-inline)                |
+| `--kiosk-keyboard-key-padding-inline-xs` | `min(var(--kiosk-keyboard-key-padding-inline), 0.125rem)` | Horizontal key padding in extra-narrow mode                 |
+| `--kiosk-keyboard-key-padding-xs`        | `0 var(--kiosk-keyboard-key-padding-inline-xs)`           | Full padding shorthand in extra-narrow mode                 |
+| `--kiosk-keyboard-key-shadow`            | _(subtle)_                                                | Box shadow for keys at rest                                 |
+| `--kiosk-keyboard-key-shadow-hover`      | _(subtle)_                                                | Box shadow for keys on hover                                |
+| `--kiosk-keyboard-max-width`             | `100%`                                                    | Max width for the default inline keyboard                   |
+| `--kiosk-keyboard-docked-max-width`      | `1024px`                                                  | Max width in docked mode                                    |
+| `--kiosk-keyboard-docked-shadow`         | _(subtle)_                                                | Box shadow for the docked container                         |
+| `--kiosk-keyboard-docked-z-index`        | `100`                                                     | Z-index for the docked keyboard                             |
+| `--kiosk-keyboard-modifier-font-size`    | `var(--sapFontSize, 0.875rem)`                            | Modifier / action key font size                             |
+| `--kiosk-keyboard-modifier-font-scale`   | `0.8`                                                     | Max modifier font as a fraction of key font                 |
+| `--kiosk-keyboard-modifier-shadow`       | _(subtle)_                                                | Box shadow for modifier keys at rest                        |
+| `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                                | Box shadow for modifier keys on hover                       |
+| `--kiosk-keyboard-numpad-max-width`      | `20rem`                                                   | Max width for numpad layout                                 |
+| `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                                    | Minimum key width in numpad layout                          |
+| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                                   | Height threshold for `--cq-short` class                     |
+| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                                   | Height threshold for `--cq-tiny` class                      |
+| `--kiosk-keyboard-dual-direction`        | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`) |
+| `--kiosk-keyboard-dual-icon-size`        | `1em`                                                     | Icon font size in dual mode                                 |
+| `--kiosk-keyboard-dual-label-size`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
+| `--kiosk-keyboard-dual-gap`              | `0.15em`                                                  | Gap between icon and label in dual mode                     |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 

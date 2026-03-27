@@ -56,11 +56,43 @@ export interface KeyDefinition {
   /** The character or action this key produces. */
   value: string;
 
-  /** Display label shown on the key face. Defaults to `value`. */
+  /**
+   * Display label shown on the key face.
+   *
+   * - **Omitted**: the renderer resolves the label automatically. For
+   *   special keys (`{shift}`, `{enter}`, `{backspace}`, `" "`), the
+   *   label comes from the i18n bundle (e.g. "Shift", "Backspace",
+   *   "Space"). For regular keys, defaults to `value`.
+   * - **Set to a string**: that string is used as-is.
+   * - **Set to `""`**: the label is suppressed (icon-only display).
+   *
+   * When an icon is also present, both render together (inline by
+   * default, customizable via `--kiosk-keyboard-dual-direction`).
+   *
+   * On `{shift}` keys, this label is replaced during Caps Lock state
+   * by {@link capsLockLabel} (or the i18n fallback "Caps Lock").
+   */
   label?: string;
 
   /** Label to show when Shift is active. */
   shiftLabel?: string;
+
+  /**
+   * Label to show on the `{shift}` key when Caps Lock is active.
+   * Overrides {@link label} when Caps Lock is active.
+   * Defaults to the i18n text for `ARIA_CAPS_LOCK` ("Caps Lock").
+   * Only meaningful on keys with `value: "{shift}"`.
+   */
+  capsLockLabel?: string;
+
+  /**
+   * Icon to show on the `{shift}` key when Caps Lock is active.
+   * Evaluated independently of {@link icon} -- setting `icon` to `""`
+   * does not suppress `capsLockIcon`.
+   * Accepts SAP icon URIs or Unicode/emoji. Defaults to `sap-icon://locked`.
+   * Only meaningful on keys with `value: "{shift}"`.
+   */
+  capsLockIcon?: string;
 
   /** Value to produce when Shift is active. Defaults to `value.toUpperCase()` for single-char keys. */
   shiftValue?: string;
@@ -71,7 +103,13 @@ export interface KeyDefinition {
   /** Visual style category. */
   type?: KeyType;
 
-  /** Icon identifier for icon-only keys. */
+  /**
+   * Icon displayed on the key face.
+   * SAP icon URI (e.g. `"sap-icon://accept"`) or Unicode character / emoji (e.g. `"\u23CE"`).
+   * When both icon and label are present, both render together (inline by
+   * default, customizable via `--kiosk-keyboard-dual-direction`).
+   * Set `label` to `""` for icon-only display; set `icon` to `""` to suppress a built-in icon.
+   */
   icon?: string;
 }
 

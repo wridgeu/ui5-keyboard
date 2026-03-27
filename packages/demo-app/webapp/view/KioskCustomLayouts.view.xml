@@ -8,7 +8,7 @@
             <HBox class="sapUiSmallMarginBottom" gap="1rem">
                 <Panel headerText="Layout Switcher">
                     <VBox class="sapUiSmallMargin">
-                        <Text text="Three custom LayoutDefinitions are registered via registerLayout(). They demonstrate KeyDefinition options such as width, type, icon, unicode values, and label overrides." />
+                        <Text text="Four custom LayoutDefinitions are registered via registerLayout(). They demonstrate KeyDefinition options such as width, type, icon, unicode values, label overrides, and dual icon+label rendering." />
                         <HBox class="sapUiSmallMarginTop">
                             <Button
                                 text="Emoji Picker"
@@ -23,7 +23,12 @@
                             <Button
                                 text="Currency Pad"
                                 press=".onUseCurrency"
-                                type="{= ${state>/customActiveLayout} === 'currency' ? 'Emphasized' : 'Default'}" />
+                                type="{= ${state>/customActiveLayout} === 'currency' ? 'Emphasized' : 'Default'}"
+                                class="sapUiSmallMarginEnd" />
+                            <Button
+                                text="Icon + Label"
+                                press=".onUseIconLabel"
+                                type="{= ${state>/customActiveLayout} === 'icon-label' ? 'Emphasized' : 'Default'}" />
                         </HBox>
                     </VBox>
                 </Panel>

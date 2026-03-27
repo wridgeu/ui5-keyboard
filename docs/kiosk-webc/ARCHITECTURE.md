@@ -238,7 +238,7 @@ interface KeyDefinition {
   shiftValue?: string; // value when shifted
   width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
-  icon?: string; // custom icon name
+  icon?: string; // SAP icon URI or Unicode character; renders alongside label when both present
 }
 ```
 

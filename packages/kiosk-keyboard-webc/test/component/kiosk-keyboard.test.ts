@@ -949,7 +949,7 @@ describe("kiosk-keyboard", () => {
   // ── i18n ──
 
   describe("i18n", () => {
-    it("renders ARIA labels for special keys", async () => {
+    it("renders visible labels for special keys", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
@@ -957,9 +957,10 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
       const shift = queryKey(el, "{shift}")!;
-      const ariaLabel = shift.getAttribute("aria-label")!;
-      expect(ariaLabel.length).to.be.greaterThan(0);
-      expect(ariaLabel).to.not.equal("{shift}");
+      const labelEl = shift.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`);
+      expect(labelEl).to.not.be.null;
+      expect(labelEl!.textContent!.length).to.be.greaterThan(0);
+      expect(labelEl!.textContent).to.not.equal("{shift}");
     });
 
     it("resolver overrides apply", async () => {
@@ -977,7 +978,8 @@ describe("kiosk-keyboard", () => {
         );
         await nextRender();
         const shift = queryKey(el, "{shift}")!;
-        expect(shift.getAttribute("aria-label")).to.equal("Custom Shift");
+        const labelEl = shift.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`);
+        expect(labelEl!.textContent).to.equal("Custom Shift");
       } finally {
         KK.setI18nResolver(null);
       }
@@ -998,8 +1000,11 @@ describe("kiosk-keyboard", () => {
       );
       await nextRender();
 
-      const initialFirstLabel = queryKey(first, "{shift}")!.getAttribute("aria-label");
-      const initialSecondLabel = queryKey(second, "{shift}")!.getAttribute("aria-label");
+      const getLabel = (el: KioskKeyboard) =>
+        queryKey(el, "{shift}")!.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!.textContent;
+
+      const initialFirstLabel = getLabel(first);
+      const initialSecondLabel = getLabel(second);
 
       KK.setI18nResolver((key: string) => {
         if (key === "KEY_SHIFT") return "Live Shift";
@@ -1008,14 +1013,14 @@ describe("kiosk-keyboard", () => {
 
       try {
         await nextRender();
-        expect(queryKey(first, "{shift}")!.getAttribute("aria-label")).to.equal("Live Shift");
-        expect(queryKey(second, "{shift}")!.getAttribute("aria-label")).to.equal("Live Shift");
+        expect(getLabel(first)).to.equal("Live Shift");
+        expect(getLabel(second)).to.equal("Live Shift");
 
         KK.setI18nResolver(null);
         await nextRender();
 
-        expect(queryKey(first, "{shift}")!.getAttribute("aria-label")).to.equal(initialFirstLabel);
-        expect(queryKey(second, "{shift}")!.getAttribute("aria-label")).to.equal(initialSecondLabel);
+        expect(getLabel(first)).to.equal(initialFirstLabel);
+        expect(getLabel(second)).to.equal(initialSecondLabel);
       } finally {
         KK.setI18nResolver(null);
       }
@@ -1326,22 +1331,26 @@ describe("kiosk-keyboard", () => {
       }
     });
 
-    it("special keys have aria-label", async () => {
+    it("special keys are accessible via visible label or aria-label", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
         `,
       );
       await nextRender();
+
+      // Shift and Enter: have visible text labels (icon+label dual rendering)
       const shift = queryKey(el, "{shift}")!;
-      expect(shift.getAttribute("aria-label")).to.not.be.null;
-      expect(shift.getAttribute("aria-label")!.length).to.be.greaterThan(0);
+      const shiftLabel = shift.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`);
+      expect(shiftLabel).to.not.be.null;
+      expect(shiftLabel!.textContent!.length).to.be.greaterThan(0);
 
       const enter = queryKey(el, "{enter}")!;
-      expect(enter.getAttribute("aria-label")).to.not.be.null;
+      expect(enter.querySelector(`.${DOM.classes.keyLabel}`)).to.not.be.null;
 
+      // Backspace: qwerty layout shows icon+label (dual rendering)
       const backspace = queryKey(el, "{backspace}")!;
-      expect(backspace.getAttribute("aria-label")).to.not.be.null;
+      expect(backspace.querySelector(`.${DOM.classes.keyLabel}`)).to.not.be.null;
     });
 
     it("has a live region for announcements", async () => {

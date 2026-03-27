@@ -1726,6 +1726,7 @@ export default class KioskKeyboard extends Control {
   static readonly SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
     "{backspace}": "sap-icon://arrow-left",
     "{shift}": "sap-icon://arrow-top",
+    "{shift:capsLock}": "sap-icon://locked",
     "{enter}": "sap-icon://accept",
   };
 
@@ -1752,7 +1753,7 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Accessible label for a key - always non-empty.
-   * For icon-only keys (label=""), resolves to a human-readable name.
+   * Used as aria-label when no visible text is present.
    */
   private _getKeyAriaLabel(key: KeyDefinition): string {
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
@@ -1764,17 +1765,35 @@ export default class KioskKeyboard extends Control {
     return display || key.value;
   }
 
-  /** The display label for a key (may be empty for icon-only keys). */
+  /** The display label for a key. Empty string when label is suppressed (icon-only opt-out). */
   private _getKeyLabel(key: KeyDefinition): string {
-    const shift = this._isShiftActive();
-    if (shift) {
-      if (key.shiftLabel) return key.shiftLabel;
-      if (key.shiftValue) return key.shiftValue;
+    if (key.label === "") return "";
+
+    // Caps Lock state: use capsLockLabel if defined, else i18n fallback
+    if (key.value === "{shift}" && this._isCapsLock()) {
+      if (key.capsLockLabel !== undefined) return key.capsLockLabel;
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
     }
+
+    const shift = this._isShiftActive();
+    if (shift && key.shiftLabel) return key.shiftLabel;
+
+    // Explicit label takes priority over i18n
+    if (key.label !== undefined) {
+      return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
+    }
+
+    // No explicit label: i18n for special keys, value for regular keys
     const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    const base = entry ? getText(entry[0], entry[1]) : (key.label ?? key.value);
+    if (entry) return getText(entry[0], entry[1]);
+
+    const base = key.value;
     if (!base) return "";
-    return shift && !entry && key.value.length === 1 && key.value.trim() ? base.toUpperCase() : base;
+    if (shift) {
+      if (key.shiftValue) return key.shiftValue;
+      if (key.value.length === 1 && key.value.trim()) return base.toUpperCase();
+    }
+    return base;
   }
 
   // ──────────────────────────────────────────────

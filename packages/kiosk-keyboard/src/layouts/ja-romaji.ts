@@ -15,7 +15,6 @@ const jaRomaji: LayoutDefinition = [
     { value: "0", shiftValue: "~" },
     {
       value: "{backspace}",
-      label: "",
       width: "2",
       type: "action",
     },

@@ -240,7 +240,7 @@ type LayoutDefinition = KeyRow[]; // Array of rows
 type KeyRow = KeyDefinition[]; // Array of keys in a row
 ```
 
-Each key defines its value, optional display label, optional shift variant, width class, visual type, and optional icon.
+Each key defines its value, optional display label, optional shift variant, width class, visual type, and optional icon. When both `icon` and `label` resolve for a key, both render together (inline by default). The layout direction, icon size, label size, and gap are customizable via CSS custom properties (`--ui5KioskKeyboard-dualDirection`, `--ui5KioskKeyboard-dualIconSize`, `--ui5KioskKeyboard-dualLabelSize`, `--ui5KioskKeyboard-dualGap`). The `icon` property accepts SAP icon URIs (e.g. `sap-icon://accept`) or Unicode characters/emojis (e.g. `\u21E7`). Built-in icons for Shift, Enter, and Backspace render automatically alongside their i18n labels.
 
 ### Layout Resolution
 
