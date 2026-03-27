@@ -66,6 +66,20 @@ export interface KeyDefinition {
   /** Label to show when Shift is active. */
   shiftLabel?: string;
 
+  /**
+   * Label to show on the `{shift}` key when Caps Lock is active.
+   * Defaults to the i18n text for `ARIA_CAPS_LOCK` ("Caps Lock").
+   * Only meaningful on keys with `value: "{shift}"`.
+   */
+  capsLockLabel?: string;
+
+  /**
+   * Icon to show on the `{shift}` key when Caps Lock is active.
+   * Accepts SAP icon URIs or Unicode/emoji. Defaults to `sap-icon://locked`.
+   * Only meaningful on keys with `value: "{shift}"`.
+   */
+  capsLockIcon?: string;
+
   /** Value to produce when Shift is active. Defaults to `value.toUpperCase()` for single-char keys. */
   shiftValue?: string;
 

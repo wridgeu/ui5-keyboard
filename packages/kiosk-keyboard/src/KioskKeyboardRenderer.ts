@@ -1,5 +1,6 @@
 import type RenderManager from "sap/ui/core/RenderManager";
 import IconPool from "sap/ui/core/IconPool";
+import Log from "sap/base/Log";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
@@ -262,9 +263,18 @@ const KioskKeyboardRenderer = {
   resolveKeyIcon(oControl: KioskKeyboard, key: KeyDefinition): string {
     if (key.icon === "") return "";
     const { _isCapsLock } = oControl._getRendererApi();
-    if (key.value === "{shift}" && _isCapsLock()) return "sap-icon://locked";
+    if (key.value === "{shift}" && _isCapsLock()) {
+      const Ctor = oControl.constructor as typeof KioskKeyboard;
+      return key.capsLockIcon ?? Ctor.SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
+    }
     const Ctor = oControl.constructor as typeof KioskKeyboard;
-    return key.icon || Ctor.getKeyIcon(key.value) || "";
+    const icon = key.icon || Ctor.getKeyIcon(key.value) || "";
+    // Validate SAP icon URIs exist in the registry; skip invalid ones
+    if (icon && IconPool.isIconURI(icon) && !IconPool.getIconInfo(icon)) {
+      Log.warning(`KioskKeyboard: icon "${icon}" not found, skipping`, undefined, "KioskKeyboard");
+      return "";
+    }
+    return icon;
   },
 
   /** Render the icon element inside a key. Overridable by subclasses. */
