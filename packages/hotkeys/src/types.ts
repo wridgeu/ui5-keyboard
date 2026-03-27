@@ -286,6 +286,8 @@ export interface HotkeyRegistrationHandle {
 export interface HotkeyRegistration {
   /** Unique identifier. */
   id: string;
+  /** Whether the registration is still active (set to `false` on unregister). */
+  active: boolean;
   /** The original hotkey string as provided by the caller. */
   hotkey: string;
   /** The normalized hotkey string (canonical modifier order, resolved Mod). */
@@ -500,6 +502,8 @@ export interface SequenceRegistrationHandle {
  */
 export interface SequenceRegistration {
   id: string;
+  /** Whether the registration is still active (set to `false` on unregister). */
+  active: boolean;
   sequence: string[];
   parsedSteps: ParsedHotkey[];
   callback: HotkeyCallback;
