@@ -967,6 +967,11 @@ class KioskKeyboard extends UI5Element {
   }
 
   _getKeyAriaLabel(key: KeyDefinition): string {
+    // CapsLock always overrides the shift key's aria-label so screen
+    // readers announce "Caps Lock" rather than "Shift" (matches UI5 renderer).
+    if (key.value === "{shift}" && this._capsLock) {
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+    }
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);
     return this._getKeyLabel(key) || key.value;
@@ -978,6 +983,20 @@ class KioskKeyboard extends UI5Element {
    */
   _resolveKeyIcon(key: KeyDefinition): { value: string; sap: boolean } | null {
     if (key.icon === "") return null; // explicit suppression
+
+    // CapsLock always overrides the shift icon (matches UI5 renderer priority).
+    // Must be checked before key.icon so capsLockIcon is not dead code.
+    if (key.value === "{shift}" && this._capsLock) {
+      const clIcon = key.capsLockIcon;
+      if (clIcon !== undefined) {
+        if (!clIcon) return null; // capsLockIcon: "" suppresses icon
+        return clIcon.startsWith(SAP_ICON_PREFIX)
+          ? { value: clIcon.slice(SAP_ICON_PREFIX.length), sap: true }
+          : { value: clIcon, sap: false };
+      }
+      const builtIn = ICON_MAP["{shift:capsLock}"];
+      return builtIn ? { value: builtIn, sap: true } : null;
+    }
 
     const customIcon = key.icon;
     if (customIcon) {
@@ -993,18 +1012,6 @@ class KioskKeyboard extends UI5Element {
       return { value: customIcon, sap: false };
     }
 
-    // Built-in icons for special keys (capsLockIcon overrides the default)
-    if (key.value === "{shift}" && this._capsLock) {
-      const clIcon = key.capsLockIcon;
-      if (clIcon !== undefined) {
-        if (!clIcon) return null; // capsLockIcon: "" suppresses icon
-        return clIcon.startsWith(SAP_ICON_PREFIX)
-          ? { value: clIcon.slice(SAP_ICON_PREFIX.length), sap: true }
-          : { value: clIcon, sap: false };
-      }
-      const builtIn = ICON_MAP["{shift:capsLock}"];
-      return builtIn ? { value: builtIn, sap: true } : null;
-    }
     const builtIn = ICON_MAP[key.value];
     return builtIn ? { value: builtIn, sap: true } : null;
   }

@@ -582,13 +582,20 @@
   text-overflow: ellipsis;
 }
 
-/* At narrow key widths, hide the dual label and show icon-only.
+/* At narrow key widths, visually hide the dual label and show icon-only.
+   Uses the sr-only pattern (not display: none) so the label text stays
+   in the accessibility tree as the key's accessible name.
    The key element has container-type: inline-size, so this fires
    when the individual key is too narrow for readable text alongside
    the icon.  Consumers can override with a higher threshold or
    disable entirely via --kiosk-keyboard-dual-label-size: 0. */
 @container (max-inline-size: 5rem) {
   .kiosk-key--dual .kiosk-key__label {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
