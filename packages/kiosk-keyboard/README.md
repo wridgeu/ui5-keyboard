@@ -1249,7 +1249,7 @@ Keys support different visual styles via the `type` property in `KeyDefinition`:
 | ![Default key](../../docs/shared/images/key-type-default.png) | ![Default key hovered](../../docs/shared/images/key-type-default-hover.png) | ![Modifier key](../../docs/shared/images/key-type-modifier.png) | ![Modifier key hovered](../../docs/shared/images/key-type-modifier-hover.png) |
 
 - **Default**: visible border, SAP button background. Used for character keys.
-- **Modifier**: transparent background, no border (Lite button style). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
+- **Modifier**: transparent background, no border (Lite button style). Used for Shift, Caps Lock, layout switchers, F-keys (F1-F12), and navigation keys (Home, End, Arrows, PgUp, PgDn).
 - **Action**: emphasized style (blue). Used for Enter, Backspace.
 
 Theme preview (QWERTY layout):
