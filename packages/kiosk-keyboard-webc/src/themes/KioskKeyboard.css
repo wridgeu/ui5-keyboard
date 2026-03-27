@@ -581,3 +581,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* At narrow key widths, hide the dual label and show icon-only.
+   The key element has container-type: inline-size, so this fires
+   when the individual key is too narrow for readable text alongside
+   the icon.  Consumers can override with a higher threshold or
+   disable entirely via --kiosk-keyboard-dual-label-size: 0. */
+@container (max-inline-size: 5rem) {
+  .kiosk-key--dual .kiosk-key__label {
+    display: none;
+  }
+}

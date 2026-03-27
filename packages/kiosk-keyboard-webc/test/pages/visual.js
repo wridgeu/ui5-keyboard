@@ -50,9 +50,9 @@ const iconLabelVariationsLayout = [
     { value: "sap-dual", icon: "sap-icon://home", label: "Home" },
     { value: "sap-custom", icon: "sap-icon://settings", label: "Settings" },
     { value: "sap-icon-only", icon: "sap-icon://delete", label: "" },
-    { value: "label-only", label: "Label" },
+    { value: "{layout:numeric}", label: "123", type: "modifier" },
     { value: "blank", icon: "", label: "" },
-    { value: "value-fallback" },
+    { value: "a" },
   ],
   [
     { value: "unicode-shift", icon: "\u21E7", label: "Shift" },
