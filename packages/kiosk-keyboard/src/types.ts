@@ -134,7 +134,8 @@ export interface KeyDefinition {
    * Display label shown on the key face. Defaults to `value`.
    *
    * When an icon is also present (via `icon` property or built-in),
-   * both icon and label render together (icon above label by default).
+   * both icon and label render together (inline by default, customizable
+   * via `--ui5KioskKeyboard-dualDirection`).
    * Set to `""` (empty string) to suppress the label for icon-only display.
    *
    * On `{shift}` keys, this label is replaced during Caps Lock state
@@ -223,7 +224,8 @@ export interface KeyDefinition {
    *   rendered as a text span styled at icon font size
    *
    * When both `icon` and a non-empty `label` are present, both render
-   * together (icon above label by default). Set `label` to `""` for
+   * together (inline by default, customizable via
+   * `--ui5KioskKeyboard-dualDirection`). Set `label` to `""` for
    * icon-only display.
    *
    * The following special keys render built-in icons by default (no need

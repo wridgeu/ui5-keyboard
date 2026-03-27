@@ -416,7 +416,7 @@ interface KeyDefinition {
   shiftValue?: string; // Value when shifted (defaults to value.toUpperCase() for single chars)
   width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
-  icon?: string; // SAP icon URI or Unicode char/emoji; renders above label when both present
+  icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present
 }
 ```
 

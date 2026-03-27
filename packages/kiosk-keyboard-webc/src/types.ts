@@ -58,7 +58,8 @@ export interface KeyDefinition {
 
   /**
    * Display label shown on the key face. Defaults to `value`.
-   * When an icon is also present, both render together.
+   * When an icon is also present, both render together (inline by
+   * default, customizable via `--kiosk-keyboard-dual-direction`).
    * Set to `""` to suppress the label for icon-only display.
    *
    * On `{shift}` keys, this label is replaced during Caps Lock state
@@ -98,7 +99,8 @@ export interface KeyDefinition {
   /**
    * Icon displayed on the key face.
    * SAP icon URI (e.g. `"sap-icon://accept"`) or Unicode character / emoji (e.g. `"\u23CE"`).
-   * When both icon and label are present, both render together.
+   * When both icon and label are present, both render together (inline by
+   * default, customizable via `--kiosk-keyboard-dual-direction`).
    * Set `label` to `""` for icon-only display; set `icon` to `""` to suppress a built-in icon.
    */
   icon?: string;
