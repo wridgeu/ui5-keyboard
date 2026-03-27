@@ -44,6 +44,10 @@
   --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   --kiosk-keyboard-cq-short-threshold: 16rem;
   --kiosk-keyboard-cq-tiny-threshold: 12rem;
+  /* --kiosk-keyboard-key-border-color: unset by default.
+     When set, applies a uniform border color to all key types
+     (default, modifier, action). Useful for industrial/kiosk
+     deployments where key boundaries must be extra visible. */
 }
 
 /* Shadow colors derive from --sapContent_ShadowColor (a raw color, not a
@@ -242,7 +246,7 @@
   flex: 1 1 0;
   height: var(--_kiosk-keyboard-key-height);
   padding: var(--_kiosk-keyboard-key-padding);
-  border: 1px solid var(--sapButton_BorderColor, #bfbfbf);
+  border: 1px solid var(--kiosk-keyboard-key-border-color, var(--sapButton_BorderColor, #bfbfbf));
   border-radius: var(--sapButton_BorderCornerRadius, 0.5rem);
   background: var(--sapButton_Background, #fff);
   color: var(--sapButton_TextColor, #32363a);
@@ -321,7 +325,7 @@
 .kiosk-key--modifier {
   background: var(--sapButton_Lite_Background, transparent);
   color: var(--sapButton_Lite_TextColor, #32363a);
-  border-color: var(--sapButton_Lite_BorderColor, transparent);
+  border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Lite_BorderColor, transparent));
   box-shadow: var(--_kiosk-keyboard-modifier-shadow);
   font-size: min(
     var(--kiosk-keyboard-modifier-font-size),
@@ -346,7 +350,7 @@
 .kiosk-key--action {
   background: var(--sapButton_Emphasized_Background, #0070f2);
   color: var(--sapButton_Emphasized_TextColor, #fff);
-  border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+  border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
   font-size: min(
     var(--kiosk-keyboard-modifier-font-size),
     calc(var(--kiosk-keyboard-key-font-size) * var(--kiosk-keyboard-modifier-font-scale))
@@ -374,7 +378,7 @@
 .kiosk-key--shift-active {
   background: var(--sapButton_Emphasized_Background, #0070f2);
   color: var(--sapButton_Emphasized_TextColor, #fff);
-  border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+  border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
 
   &:hover {
     background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
@@ -456,21 +460,21 @@
 @media (hover: none) {
   .kiosk-key:hover {
     background: var(--sapButton_Background, #fff);
-    border-color: var(--sapButton_BorderColor, #bfbfbf);
+    border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_BorderColor, #bfbfbf));
     transform: none;
     box-shadow: var(--_kiosk-keyboard-key-shadow);
   }
 
   .kiosk-key--modifier:hover {
     background: var(--sapButton_Lite_Background, transparent);
-    border-color: var(--sapButton_Lite_BorderColor, transparent);
+    border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Lite_BorderColor, transparent));
     box-shadow: var(--_kiosk-keyboard-modifier-shadow);
   }
 
   .kiosk-key--action:hover,
   .kiosk-key--shift-active:hover {
     background: var(--sapButton_Emphasized_Background, #0070f2);
-    border-color: var(--sapButton_Emphasized_BorderColor, #0070f2);
+    border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
   }
 }
 

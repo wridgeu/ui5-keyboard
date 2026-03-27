@@ -48,7 +48,7 @@ Keys support different visual styles via the `type` property in `KeyDefinition`:
 | ![Default key](../../docs/shared/images/key-type-default.png) | ![Default key hovered](../../docs/shared/images/key-type-default-hover.png) | ![Modifier key](../../docs/shared/images/key-type-modifier.png) | ![Modifier key hovered](../../docs/shared/images/key-type-modifier-hover.png) |
 
 - **Default**: visible border, `--sapButton_Background`. Used for character keys.
-- **Modifier**: transparent background, no border (`--sapButton_Lite_Background`). Used for Shift, Caps Lock, layout switchers, and similar non-character keys.
+- **Modifier**: transparent background, no border (`--sapButton_Lite_Background`). Used for Shift, Caps Lock, layout switchers, F-keys (F1-F12), and navigation keys (Home, End, Arrows, PgUp, PgDn).
 - **Action**: emphasized style (`--sapButton_Emphasized_Background`). Used for Enter, Backspace.
 
 ### Theme Preview
