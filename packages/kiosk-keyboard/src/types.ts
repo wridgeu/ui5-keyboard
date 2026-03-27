@@ -76,7 +76,17 @@ export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:$
  * { value: "1", shiftLabel: "!", shiftValue: "!" }
  * ```
  *
- * @example Action key with icon
+ * @example Action key with icon and label
+ * ```ts
+ * {
+ *   value: "{backspace}",
+ *   icon: "sap-icon://arrow-left",
+ *   width: "2",
+ *   type: "action",
+ * }
+ * ```
+ *
+ * @example Icon-only key (label suppressed)
  * ```ts
  * {
  *   value: "{backspace}",
@@ -84,6 +94,17 @@ export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:$
  *   icon: "sap-icon://arrow-left",
  *   width: "2",
  *   type: "action",
+ * }
+ * ```
+ *
+ * @example Unicode icon with text label
+ * ```ts
+ * {
+ *   value: "{shift}",
+ *   icon: "\u21E7",
+ *   label: "Shift",
+ *   width: "2.25",
+ *   type: "modifier",
  * }
  * ```
  *
@@ -110,11 +131,21 @@ export interface KeyDefinition {
   value: string;
 
   /**
-   * Display label shown on the key face. Defaults to `value`.
+   * Display label shown on the key face.
    *
-   * Set to `""` (empty string) for icon-only keys.
-   * The renderer will use the key's `icon` property for display and
-   * fall back to a built-in aria-label for accessibility.
+   * - **Omitted**: the renderer resolves the label automatically. For
+   *   special keys (`{shift}`, `{enter}`, `{backspace}`, `" "`), the
+   *   label comes from the i18n bundle (e.g. "Shift", "Backspace",
+   *   "Space"). For regular keys, defaults to `value`.
+   * - **Set to a string**: that string is used as-is.
+   * - **Set to `""`**: the label is suppressed (icon-only display).
+   *
+   * When an icon is also present (via `icon` property or built-in),
+   * both icon and label render together (inline by default, customizable
+   * via `--ui5KioskKeyboard-dualDirection`).
+   *
+   * On `{shift}` keys, this label is replaced during Caps Lock state
+   * by {@link capsLockLabel} (or the i18n fallback "Caps Lock").
    */
   label?: string;
 
@@ -126,6 +157,31 @@ export interface KeyDefinition {
    * the shifted symbol is different from the uppercase (e.g. `"!"` for `"1"`).
    */
   shiftLabel?: string;
+
+  /**
+   * Label to show on the `{shift}` key when Caps Lock is active.
+   * Overrides {@link label} when Caps Lock is active.
+   *
+   * When omitted, the renderer uses the i18n text for `ARIA_CAPS_LOCK`
+   * (default: "Caps Lock"). Set this to customize the Caps Lock label
+   * per layout (e.g. localized or abbreviated text).
+   * Only meaningful on keys with `value: "{shift}"`.
+   */
+  capsLockLabel?: string;
+
+  /**
+   * Icon to show on the `{shift}` key when Caps Lock is active.
+   * Evaluated independently of {@link icon} -- setting `icon` to `""`
+   * does not suppress `capsLockIcon`.
+   *
+   * Accepts the same values as `icon` (SAP icon URI or Unicode/emoji).
+   * When omitted, defaults to `sap-icon://locked`.
+   * Only meaningful on keys with `value: "{shift}"`.
+   *
+   * @example "sap-icon://locked"
+   * @example "\uD83D\uDD12"
+   */
+  capsLockIcon?: string;
 
   /**
    * Value to produce when Shift is active.
@@ -165,21 +221,29 @@ export interface KeyDefinition {
   type?: KeyType;
 
   /**
-   * SAP icon URI for icon-only keys.
+   * Icon displayed on the key face.
    *
-   * When set, the key renders the icon instead of text. The icon receives
-   * `aria-hidden="true"`; the key's accessibility is handled by the
-   * `aria-label` attribute.
+   * Accepts two value types:
+   * - **SAP icon URI** (e.g. `"sap-icon://accept"`) - rendered via the
+   *   platform icon component
+   * - **Unicode character or emoji** (e.g. `"\u21E7"`, `"\u23CE"`, `"\uD83D\uDD0D"`) -
+   *   rendered as a text span styled at icon font size
    *
-   * The following special keys render built-in icons by default (no need to
-   * set this property):
+   * When both `icon` and a non-empty `label` are present, both render
+   * together (inline by default, customizable via
+   * `--ui5KioskKeyboard-dualDirection`). Set `label` to `""` for
+   * icon-only display.
+   *
+   * The following special keys render built-in icons by default (no need
+   * to set this property):
    * - `{shift}` - `sap-icon://arrow-top` (Caps Lock uses `sap-icon://locked`)
    * - `{enter}` - `sap-icon://accept`
    * - `{backspace}` - `sap-icon://arrow-left`
    *
-   * To override a default icon, set this property to a different icon URI.
+   * Set to `""` (empty string) to suppress a built-in icon.
    *
    * @example "sap-icon://arrow-left"
+   * @example "\u23CE"
    */
   icon?: string;
 }
@@ -202,12 +266,13 @@ export type KeyRow = KeyDefinition[];
  * Each entry is a row of keys rendered top-to-bottom. Use this type
  * with {@link KioskKeyboard.registerLayout} to register custom layouts.
  *
- * **Accessibility:** For icon-only keys (where `label` is `""`), the renderer
- * automatically generates an `aria-label` from the key's `value` using i18n
- * translations for built-in special keys (`{backspace}`, `{enter}`, `{shift}`,
- * `" "`). For custom icon-only keys with non-standard values, ensure the
- * `value` is human-readable (e.g. `"Delete"` rather than `"del"`) since it
- * will be used as the accessible name.
+ * **Accessibility:** Keys with visible text labels get their accessible name
+ * from the visible text. For icon-only keys (where `label` is `""`), the
+ * renderer sets an `aria-label` using i18n translations for built-in special
+ * keys (`{backspace}`, `{enter}`, `{shift}`, `" "`). For custom icon-only
+ * keys with non-standard values, ensure the `value` is human-readable
+ * (e.g. `"Delete"` rather than `"del"`) since it will be used as the
+ * accessible name.
  *
  * @example Minimal custom layout
  * ```ts

@@ -239,17 +239,19 @@ describe("kiosk-keyboard web component", () => {
       expect(result.allHaveRole).toBe(true);
     });
 
-    it("special keys have aria-label", async () => {
-      const specialKeysHaveLabel = await browser.execute(() => {
+    it("special keys are accessible via visible text or aria-label", async () => {
+      const specialKeysAccessible = await browser.execute(() => {
         const kb = document.getElementById("kb-qwerty");
         const specialKeys = ["{shift}", "{enter}", "{backspace}"];
         return specialKeys.every((keyVal) => {
           const key = kb?.shadowRoot?.querySelector(`[data-key="${CSS.escape(keyVal)}"]`);
-          const label = key?.getAttribute("aria-label");
-          return label !== null && label !== undefined && label.length > 0;
+          if (!key) return false;
+          const visibleLabel = key.querySelector(".kiosk-key__label");
+          const ariaLabel = key.getAttribute("aria-label");
+          return (visibleLabel?.textContent?.length ?? 0) > 0 || (ariaLabel?.length ?? 0) > 0;
         });
       });
-      expect(specialKeysHaveLabel).toBe(true);
+      expect(specialKeysAccessible).toBe(true);
     });
 
     it("has a live region", async () => {

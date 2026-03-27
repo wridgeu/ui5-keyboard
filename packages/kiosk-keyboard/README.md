@@ -541,15 +541,17 @@ const myLayout: LayoutDefinition = [
 
 **KeyDefinition fields:**
 
-| Field        | Type     | Description                                                                               |
-| ------------ | -------- | ----------------------------------------------------------------------------------------- |
-| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`) |
-| `label`      | `string` | Display label (defaults to `value`). Set to `""` for icon-only.                           |
-| `shiftLabel` | `string` | Label when Shift is active.                                                               |
-| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                            |
-| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                |
-| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.          |
-| `icon`       | `string` | UI5 icon URI for icon-only keys (e.g. `"sap-icon://arrow-left"`).                         |
+| Field           | Type     | Description                                                                                                                                                                             |
+| --------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`         | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`)                                                                                               |
+| `label`         | `string` | Display label. Omit to resolve automatically (i18n for special keys, `value` for regular keys). Set to `""` to suppress (icon-only). When `icon` is also present, both render together. |
+| `shiftLabel`    | `string` | Label when Shift is active.                                                                                                                                                             |
+| `shiftValue`    | `string` | Value when Shift is active (defaults to uppercase of `value`).                                                                                                                          |
+| `capsLockLabel` | `string` | Label for `{shift}` key when Caps Lock is active. Omit for i18n "Caps Lock". Set to `""` to suppress. Only meaningful on `{shift}` keys.                                                |
+| `capsLockIcon`  | `string` | Icon for `{shift}` key when Caps Lock is active. Independent of `icon`. Defaults to `sap-icon://locked`. Only meaningful on `{shift}` keys.                                             |
+| `width`         | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                                              |
+| `type`          | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
+| `icon`          | `string` | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
 
 ---
 
@@ -1091,7 +1093,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 ## Accessibility
 
 - The keyboard root has `role="group"` with a configurable `aria-label` and `aria-roledescription="keyboard"`
-- Each key has `role="button"` with an `aria-label` (resolves to human-readable names for icon-only keys like Backspace and Enter)
+- Each key has `role="button"` with an accessible name from visible text (when icon+label are both present) or `aria-label` (for icon-only keys where `label=""`)
 - The Shift key has `aria-pressed` reflecting its toggle state
 - Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
@@ -1124,29 +1126,33 @@ For the rationale behind default values, breakpoint thresholds, and scaling fact
 
 Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
-| Property                                 | Default                                                   | Description                                       |
-| ---------------------------------------- | --------------------------------------------------------- | ------------------------------------------------- |
-| `--ui5KioskKeyboard-border`              | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)   |
-| `--ui5KioskKeyboard-borderRadius`        | _(theme)_                                                 | Container border radius                           |
-| `--ui5KioskKeyboard-padding`             | `0.75rem`                                                 | Container padding                                 |
-| `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                                | Gap between keys and rows                         |
-| `--ui5KioskKeyboard-keyHeight`           | `3rem`                                                    | Key height / touch target                         |
-| `--ui5KioskKeyboard-keyPaddingInline`    | `0.25rem`                                                 | Horizontal key padding                            |
-| `--ui5KioskKeyboard-keyPaddingInlineXs`  | `min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)` | Horizontal key padding in extra-narrow mode       |
-| `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)`         | Key label font size                               |
-| `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                                 | Key resting shadow                                |
-| `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                                 | Key hover shadow                                  |
-| `--ui5KioskKeyboard-maxWidth`            | `100%`                                                    | Max width for the default inline keyboard         |
-| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                                  | Max width when docked                             |
-| `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                                 | Shadow when docked                                |
-| `--ui5KioskKeyboard-dockedZIndex`        | `100`                                                     | Z-index for the docked keyboard                   |
-| `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                          | Modifier / action key font size                   |
-| `--ui5KioskKeyboard-modifierShadow`      | _(theme)_                                                 | Modifier key resting shadow                       |
-| `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                                 | Modifier key hover shadow                         |
-| `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                                   | Numpad container max-width                        |
-| `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                                    | Numpad key min-width                              |
-| `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-short` |
-| `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-tiny`  |
+| Property                                 | Default                                                   | Description                                                 |
+| ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| `--ui5KioskKeyboard-border`              | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)             |
+| `--ui5KioskKeyboard-borderRadius`        | _(theme)_                                                 | Container border radius                                     |
+| `--ui5KioskKeyboard-padding`             | `0.75rem`                                                 | Container padding                                           |
+| `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                                | Gap between keys and rows                                   |
+| `--ui5KioskKeyboard-keyHeight`           | `3rem`                                                    | Key height / touch target                                   |
+| `--ui5KioskKeyboard-keyPaddingInline`    | `0.25rem`                                                 | Horizontal key padding                                      |
+| `--ui5KioskKeyboard-keyPaddingInlineXs`  | `min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)` | Horizontal key padding in extra-narrow mode                 |
+| `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)`         | Key label font size                                         |
+| `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                                 | Key resting shadow                                          |
+| `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                                 | Key hover shadow                                            |
+| `--ui5KioskKeyboard-maxWidth`            | `100%`                                                    | Max width for the default inline keyboard                   |
+| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                                  | Max width when docked                                       |
+| `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                                 | Shadow when docked                                          |
+| `--ui5KioskKeyboard-dockedZIndex`        | `100`                                                     | Z-index for the docked keyboard                             |
+| `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                          | Modifier / action key font size                             |
+| `--ui5KioskKeyboard-modifierShadow`      | _(theme)_                                                 | Modifier key resting shadow                                 |
+| `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                                 | Modifier key hover shadow                                   |
+| `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                                   | Numpad container max-width                                  |
+| `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                                    | Numpad key min-width                                        |
+| `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-short`           |
+| `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-tiny`            |
+| `--ui5KioskKeyboard-dualDirection`       | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`) |
+| `--ui5KioskKeyboard-dualIconSize`        | `1em`                                                     | Icon font size in dual mode                                 |
+| `--ui5KioskKeyboard-dualLabelSize`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
+| `--ui5KioskKeyboard-dualGap`             | `0.15em`                                                  | Gap between icon and label in dual mode                     |
 
 Override `--ui5KioskKeyboard-dockedZIndex` to adjust the docked keyboard's stacking layer.
 
@@ -1270,19 +1276,19 @@ The library ships with an English resource bundle for all accessibility labels a
 
 **Resource bundle keys:**
 
-| Key                              | Default (English)       | Used for                                                |
-| -------------------------------- | ----------------------- | ------------------------------------------------------- |
-| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `ariaLabel` property is empty |
-| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element              |
-| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key         |
-| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key         |
-| `KEY_BACKSPACE`                  | Backspace               | `aria-label` for the Backspace key (icon-only)          |
-| `KEY_SPACE`                      | Space                   | `aria-label` for the Space key                          |
-| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active |
-| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                           |
-| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                           |
-| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`               |
-| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`              |
+| Key                              | Default (English)       | Used for                                                                        |
+| -------------------------------- | ----------------------- | ------------------------------------------------------------------------------- |
+| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `ariaLabel` property is empty                         |
+| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element                                      |
+| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key                                 |
+| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key                                 |
+| `KEY_BACKSPACE`                  | Backspace               | Label for the Backspace key (visible text; aria-label when label is suppressed) |
+| `KEY_SPACE`                      | Space                   | Label for the Space key (visible text; aria-label when label is suppressed)     |
+| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active                         |
+| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                                                   |
+| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                                                   |
+| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`                                       |
+| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`                                      |
 
 **Adding translations (library contributors):**
 

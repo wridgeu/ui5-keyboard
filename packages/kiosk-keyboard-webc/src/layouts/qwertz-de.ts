@@ -15,7 +15,6 @@ const qwertzDe: LayoutDefinition = [
     { value: "0", shiftValue: "=" },
     {
       value: "{backspace}",
-      label: "",
       width: "2",
       type: "action",
     },
@@ -78,7 +77,7 @@ const qwertzDe: LayoutDefinition = [
       type: "modifier",
     },
     { value: ",", shiftValue: ";" },
-    { value: " ", label: "Space", width: "space", type: "space" },
+    { value: " ", width: "space", type: "space" },
     { value: ".", shiftValue: ":" },
     {
       value: "{layout:fkeys}",

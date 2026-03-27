@@ -1,4 +1,6 @@
 import type RenderManager from "sap/ui/core/RenderManager";
+import IconPool from "sap/ui/core/IconPool";
+import Log from "sap/base/Log";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
@@ -162,18 +164,23 @@ const KioskKeyboardRenderer = {
     ci: number,
     focusTarget: { row: number; col: number },
   ): void {
+    // Resolve icon and label once per key, pass to all sub-hooks
+    const { _getKeyLabel } = oControl._getRendererApi();
+    const icon = this.resolveKeyIcon(oControl, key);
+    const label = _getKeyLabel(key);
+
     rm.openStart("div", keyElementId(oControl.getId(), ri, ci));
-    this.addKeyClasses(rm, oControl, key);
-    this.writeKeyAttributes(rm, oControl, key, ri, ci, focusTarget);
+    this.addKeyClasses(rm, oControl, key, icon, label);
+    this.writeKeyAttributes(rm, oControl, key, ri, ci, focusTarget, label);
     rm.openEnd();
 
-    this.renderKeyContent(rm, oControl, key);
+    this.renderKeyContent(rm, oControl, key, icon, label);
 
     rm.close("div");
   },
 
   /** CSS classes on a key `<div>`. */
-  addKeyClasses(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
+  addKeyClasses(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, icon: string, label: string): void {
     const { _isShiftActive, _isCapsLock } = oControl._getRendererApi();
     rm.class(KIOSK_KEYBOARD_DOM.classes.key);
 
@@ -198,6 +205,11 @@ const KioskKeyboardRenderer = {
         rm.class(KIOSK_KEYBOARD_DOM.classes.keyCapsLock);
       }
     }
+
+    // Dual icon + label class
+    if (icon && label) {
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyDual);
+    }
   },
 
   /** Attributes (`role`, `tabindex`, `data-key`, `aria-*`) on a key `<div>`. */
@@ -208,6 +220,7 @@ const KioskKeyboardRenderer = {
     ri: number,
     ci: number,
     focusTarget: { row: number; col: number },
+    label: string,
   ): void {
     const { _isShiftActive, _isCapsLock, _getKeyAriaLabel } = oControl._getRendererApi();
     const bIsShiftKey = key.value === "{shift}";
@@ -225,7 +238,7 @@ const KioskKeyboardRenderer = {
     const bEnabled = oControl.getEnabled();
     rm.attr("tabindex", bEnabled && bIsFocusTarget ? "0" : "-1");
 
-    if (!oControl.getEnabled()) {
+    if (!bEnabled) {
       rm.attr("aria-disabled", "true");
     }
 
@@ -236,34 +249,83 @@ const KioskKeyboardRenderer = {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.shiftValue, key.shiftValue);
     }
 
-    const ariaLabel = bIsShiftKey && _isCapsLock() ? getText("ARIA_CAPS_LOCK", "Caps Lock") : _getKeyAriaLabel(key);
-    rm.attr("aria-label", ariaLabel);
+    // Only set aria-label when there is no visible text label (WCAG 2.5.3).
+    // When capsLockLabel provides visible text, that text IS the accessible
+    // name -- adding aria-label would mismatch it.
+    if (!label) {
+      if (bIsShiftKey && _isCapsLock()) {
+        rm.attr("aria-label", getText("ARIA_CAPS_LOCK", "Caps Lock"));
+      } else {
+        rm.attr("aria-label", _getKeyAriaLabel(key));
+      }
+    }
   },
 
-  /** Icon or text inside the key. */
-  renderKeyContent(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition): void {
-    const { _isCapsLock, _getKeyLabel } = oControl._getRendererApi();
-    const bIsShiftKey = key.value === "{shift}";
+  /** Resolve the effective icon for a key. Returns the icon string or empty string if none. */
+  resolveKeyIcon(oControl: KioskKeyboard, key: KeyDefinition): string {
+    const { _isCapsLock } = oControl._getRendererApi();
 
-    if (bIsShiftKey && _isCapsLock()) {
-      rm.icon("sap-icon://locked", ["sapUiIcon", KIOSK_KEYBOARD_DOM.classes.keyIcon], { "aria-hidden": "true" });
-    } else {
+    // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
+    if (key.value === "{shift}" && _isCapsLock()) {
       const Ctor = oControl.constructor as typeof KioskKeyboard;
-      const icon = key.icon || Ctor.getKeyIcon(key.value);
-      if (icon) {
-        rm.icon(icon, ["sapUiIcon", KIOSK_KEYBOARD_DOM.classes.keyIcon], { "aria-hidden": "true" });
-      } else {
-        const label = _getKeyLabel(key);
-        rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
-        if (isSingleGlyph(label)) {
-          rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
-        } else if (key.type !== "modifier" && key.type !== "action") {
-          rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);
+      const clIcon = key.capsLockIcon;
+      if (clIcon !== undefined) {
+        if (!clIcon) return ""; // capsLockIcon: "" suppresses icon
+        // Validate SAP icon URIs
+        if (IconPool.isIconURI(clIcon) && !IconPool.getIconInfo(clIcon)) {
+          Log.warning(`KioskKeyboard: capsLockIcon "${clIcon}" not found, skipping`, undefined, "KioskKeyboard");
+          return "";
         }
-        rm.openEnd();
-        rm.text(label);
-        rm.close("span");
+        return clIcon;
       }
+      return Ctor.SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
+    }
+
+    if (key.icon === "") return ""; // suppress default-state icon
+
+    const Ctor = oControl.constructor as typeof KioskKeyboard;
+    const icon = key.icon || Ctor.getKeyIcon(key.value) || "";
+    // Validate SAP icon URIs exist in the registry; skip invalid ones
+    if (icon && IconPool.isIconURI(icon) && !IconPool.getIconInfo(icon)) {
+      Log.warning(`KioskKeyboard: icon "${icon}" not found, skipping`, undefined, "KioskKeyboard");
+      return "";
+    }
+    return icon;
+  },
+
+  /** Render the icon element inside a key. Overridable by subclasses. */
+  renderKeyIcon(rm: RenderManager, _oControl: KioskKeyboard, icon: string): void {
+    if (IconPool.isIconURI(icon)) {
+      rm.icon(icon, ["sapUiIcon", KIOSK_KEYBOARD_DOM.classes.keyIcon], { "aria-hidden": "true" });
+    } else {
+      // Unicode / emoji - render as text span with icon class
+      rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyIcon).attr("aria-hidden", "true").openEnd();
+      rm.text(icon);
+      rm.close("span");
+    }
+  },
+
+  /** Render the label element inside a key. Overridable by subclasses. */
+  renderKeyLabel(rm: RenderManager, _oControl: KioskKeyboard, key: KeyDefinition, label: string): void {
+    rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
+    if (isSingleGlyph(label)) {
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
+    } else if (key.type !== "modifier" && key.type !== "action") {
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);
+    }
+    rm.openEnd();
+    rm.text(label);
+    rm.close("span");
+  },
+
+  /** Icon and/or text inside the key. Overridable by subclasses. */
+  renderKeyContent(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, icon: string, label: string): void {
+    if (icon) {
+      this.renderKeyIcon(rm, oControl, icon);
+    }
+
+    if (label) {
+      this.renderKeyLabel(rm, oControl, key, label);
     }
   },
 };

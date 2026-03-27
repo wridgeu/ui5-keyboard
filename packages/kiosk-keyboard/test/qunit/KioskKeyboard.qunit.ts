@@ -968,8 +968,12 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   const icon = shiftKey.querySelector(".sapUiIcon");
   assert.ok(icon, "Lock icon is rendered inside shift key");
 
-  // Aria-label should indicate Caps Lock
-  assert.strictEqual(shiftKey.getAttribute("aria-label"), "Caps Lock", "Aria-label is Caps Lock");
+  // Visible label changes to "Caps Lock" during CapsLock state
+  assert.strictEqual(
+    shiftKey.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Caps Lock",
+    "Visible label is Caps Lock",
+  );
 
   kb.destroy();
 });
@@ -1023,7 +1027,11 @@ QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (asse
   const icon = shiftKey.querySelector(".sapUiIcon");
   assert.ok(icon, "Shift icon is rendered");
   assert.strictEqual(icon!.getAttribute("aria-label"), "arrow-top", "Shows arrow icon, not lock icon");
-  assert.strictEqual(shiftKey.getAttribute("aria-label"), "Shift", "Aria-label is Shift");
+  assert.strictEqual(
+    shiftKey.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Shift",
+    "Visible label is Shift",
+  );
 
   kb.destroy();
 });

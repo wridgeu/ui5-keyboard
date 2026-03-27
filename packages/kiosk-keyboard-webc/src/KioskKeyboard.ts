@@ -51,13 +51,13 @@ import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/locked.js";
 
 // ── Icon name map (used by the template to render <ui5-icon>) ──
-const ICON_MAP: Record<string, string> = {
+const ICON_MAP: Readonly<Record<string, string>> = {
   "{shift}": "arrow-top",
+  "{shift:capsLock}": "locked",
   "{enter}": "accept",
   "{backspace}": "arrow-left",
 };
-
-const ICON_SHIFT_LOCKED = "locked";
+const SAP_ICON_PREFIX = "sap-icon://";
 
 // ── Valid enum values for string properties (derived from enums) ──
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
@@ -105,7 +105,7 @@ const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
 /** Tracks unsupported fkey names that have already been warned about. */
 const warnedUnsupportedFKeys = new Set<string>();
 
-/** ARIA labels for icon-only special keys. */
+/** Display and ARIA labels for built-in special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
   "{shift}": "KEY_SHIFT",
   "{enter}": "KEY_ENTER",
@@ -938,27 +938,87 @@ class KioskKeyboard extends UI5Element {
   }
 
   _getKeyLabel(key: KeyDefinition): string {
-    const base = key.label ?? key.value;
-    if (this._shifted) {
-      if (key.shiftLabel) return key.shiftLabel;
+    if (key.label === "") return "";
+
+    // Caps Lock state: use capsLockLabel if defined, else i18n fallback
+    if (key.value === "{shift}" && this._capsLock) {
+      if (key.capsLockLabel !== undefined) return key.capsLockLabel;
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+    }
+
+    const shift = this._shifted;
+    if (shift && key.shiftLabel) return key.shiftLabel;
+
+    // Explicit label takes priority over i18n
+    if (key.label !== undefined) {
+      return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
+    }
+
+    // No explicit label: use i18n for special keys, value for regular keys
+    const i18nKey = SPECIAL_KEY_LABELS[key.value];
+    if (i18nKey) return getText(i18nKey, key.value);
+
+    const base = key.value;
+    if (shift) {
       if (key.shiftValue) return key.shiftValue;
-      // Single printable characters get uppercased; whitespace-only keys
-      // (e.g. space bar) keep their original label to avoid blank labels.
       if (key.value.length === 1 && key.value.trim()) return key.value.toUpperCase();
     }
     return base;
   }
 
   _getKeyAriaLabel(key: KeyDefinition): string {
+    // CapsLock always overrides the shift key's aria-label so screen
+    // readers announce "Caps Lock" rather than "Shift" (matches UI5 renderer).
+    if (key.value === "{shift}" && this._capsLock) {
+      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+    }
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);
-    return this._getKeyLabel(key);
+    return this._getKeyLabel(key) || key.value;
   }
 
-  _getKeyIcon(key: KeyDefinition): string | null {
-    if (key.icon) return key.icon; // custom text icon - rendered as label
-    if (key.value === "{shift}" && this._capsLock) return ICON_SHIFT_LOCKED;
-    return ICON_MAP[key.value] ?? null;
+  /**
+   * Resolve the icon for a key, categorized by type.
+   * Returns null if no icon should render.
+   */
+  _resolveKeyIcon(key: KeyDefinition): { value: string; sap: boolean } | null {
+    // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
+    if (key.value === "{shift}" && this._capsLock) {
+      const clIcon = key.capsLockIcon;
+      if (clIcon !== undefined) {
+        if (!clIcon) return null; // capsLockIcon: "" suppresses icon
+        if (clIcon.startsWith(SAP_ICON_PREFIX)) {
+          const name = clIcon.slice(SAP_ICON_PREFIX.length);
+          if (!name) {
+            console.warn(`KioskKeyboard: empty SAP icon URI for capsLockIcon on key "${key.value}", skipping icon`);
+            return null;
+          }
+          return { value: name, sap: true };
+        }
+        return { value: clIcon, sap: false };
+      }
+      const builtIn = ICON_MAP["{shift:capsLock}"];
+      return builtIn ? { value: builtIn, sap: true } : null;
+    }
+
+    if (key.icon === "") return null; // suppress default-state icon
+
+    const customIcon = key.icon;
+    if (customIcon) {
+      if (customIcon.startsWith(SAP_ICON_PREFIX)) {
+        const name = customIcon.slice(SAP_ICON_PREFIX.length);
+        if (!name) {
+          console.warn(`KioskKeyboard: empty SAP icon URI for key "${key.value}", skipping icon`);
+          return null;
+        }
+        return { value: name, sap: true };
+      }
+      // Unicode / emoji
+      return { value: customIcon, sap: false };
+    }
+
+    const builtIn = ICON_MAP[key.value];
+    return builtIn ? { value: builtIn, sap: true } : null;
   }
 
   get _ariaLabel(): string {
