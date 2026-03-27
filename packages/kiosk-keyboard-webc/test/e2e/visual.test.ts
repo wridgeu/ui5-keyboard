@@ -88,6 +88,11 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const kb = await getKeyboardRoot("kb-arabic");
     await matchElementSnapshotInSection(kb, "webc-arabic");
   });
+
+  it("should match icon + label variations", async () => {
+    const kb = await getKeyboardRoot("kb-icon-label-variations");
+    await matchElementSnapshotInSection(kb, "webc-icon-label-variations");
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {
