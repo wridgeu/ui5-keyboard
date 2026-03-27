@@ -35,6 +35,14 @@ describe("layout-registry", () => {
       expect(isBuiltInLayout("numpad")).toBe(true);
     });
 
+    it("has ja-romaji as a built-in layout", () => {
+      expect(isBuiltInLayout("ja-romaji")).toBe(true);
+    });
+
+    it("has arabic as a built-in layout", () => {
+      expect(isBuiltInLayout("arabic")).toBe(true);
+    });
+
     it("returns false for unknown layouts", () => {
       expect(isBuiltInLayout("nonexistent")).toBe(false);
     });
@@ -169,11 +177,31 @@ describe("layout-registry", () => {
       }
     });
 
-    it("returns default layout for valid but unmapped locale", () => {
+    it("resolves ja-JP to ja-romaji via built-in locale mapping", () => {
       const original = navigator.language;
       Object.defineProperty(navigator, "language", { value: "ja-JP", configurable: true });
       try {
-        expect(getLocaleLayout()).toBe("qwerty");
+        expect(getLocaleLayout()).toBe("ja-romaji");
+      } finally {
+        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      }
+    });
+
+    it("resolves ar to arabic via built-in locale mapping", () => {
+      const original = navigator.language;
+      Object.defineProperty(navigator, "language", { value: "ar", configurable: true });
+      try {
+        expect(getLocaleLayout()).toBe("arabic");
+      } finally {
+        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      }
+    });
+
+    it("resolves ar-SA to arabic via language prefix", () => {
+      const original = navigator.language;
+      Object.defineProperty(navigator, "language", { value: "ar-SA", configurable: true });
+      try {
+        expect(getLocaleLayout()).toBe("arabic");
       } finally {
         Object.defineProperty(navigator, "language", { value: original, configurable: true });
       }
