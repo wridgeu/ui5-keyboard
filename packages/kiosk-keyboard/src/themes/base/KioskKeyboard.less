@@ -341,10 +341,17 @@
       text-overflow: ellipsis;
     }
 
-    /* At narrow key widths, hide the dual label and show icon-only */
+    /* At narrow key widths, visually hide the dual label and show icon-only.
+       Uses the sr-only pattern (not display: none) so the label text stays
+       in the accessibility tree as the key's accessible name. */
     @container (max-inline-size: 5rem) {
       &--dual &__label {
-        display: none;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
       }
     }
 
