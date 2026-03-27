@@ -186,7 +186,7 @@ export default class RegistrationGroup {
     for (const handle of this._handles) {
       ids.add(handle.id);
     }
-    return this._manager.getRegistrations().filter((registration) => ids.has(registration.id));
+    return this._manager._getRegistrationInfoByIds(ids);
   }
 
   /**
@@ -198,7 +198,7 @@ export default class RegistrationGroup {
     for (const handle of this._sequenceHandles) {
       ids.add(handle.id);
     }
-    return this._manager.getSequenceRegistrations().filter((r) => ids.has(r.id));
+    return this._manager._getSequenceRegistrationInfoByIds(ids);
   }
 
   private _dispose(): void {
