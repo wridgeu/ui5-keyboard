@@ -57,10 +57,17 @@ export interface KeyDefinition {
   value: string;
 
   /**
-   * Display label shown on the key face. Defaults to `value`.
+   * Display label shown on the key face.
+   *
+   * - **Omitted**: the renderer resolves the label automatically. For
+   *   special keys (`{shift}`, `{enter}`, `{backspace}`, `" "`), the
+   *   label comes from the i18n bundle (e.g. "Shift", "Backspace",
+   *   "Space"). For regular keys, defaults to `value`.
+   * - **Set to a string**: that string is used as-is.
+   * - **Set to `""`**: the label is suppressed (icon-only display).
+   *
    * When an icon is also present, both render together (inline by
    * default, customizable via `--kiosk-keyboard-dual-direction`).
-   * Set to `""` to suppress the label for icon-only display.
    *
    * On `{shift}` keys, this label is replaced during Caps Lock state
    * by {@link capsLockLabel} (or the i18n fallback "Caps Lock").
