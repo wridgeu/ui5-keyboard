@@ -136,6 +136,9 @@ export interface KeyDefinition {
    * When an icon is also present (via `icon` property or built-in),
    * both icon and label render together (icon above label by default).
    * Set to `""` (empty string) to suppress the label for icon-only display.
+   *
+   * On `{shift}` keys, this label is replaced during Caps Lock state
+   * by {@link capsLockLabel} (or the i18n fallback "Caps Lock").
    */
   label?: string;
 
@@ -150,6 +153,7 @@ export interface KeyDefinition {
 
   /**
    * Label to show on the `{shift}` key when Caps Lock is active.
+   * Overrides {@link label} when Caps Lock is active.
    *
    * When omitted, the renderer uses the i18n text for `ARIA_CAPS_LOCK`
    * (default: "Caps Lock"). Set this to customize the Caps Lock label
@@ -160,6 +164,8 @@ export interface KeyDefinition {
 
   /**
    * Icon to show on the `{shift}` key when Caps Lock is active.
+   * Evaluated independently of {@link icon} -- setting `icon` to `""`
+   * does not suppress `capsLockIcon`.
    *
    * Accepts the same values as `icon` (SAP icon URI or Unicode/emoji).
    * When omitted, defaults to `sap-icon://locked`.

@@ -60,6 +60,9 @@ export interface KeyDefinition {
    * Display label shown on the key face. Defaults to `value`.
    * When an icon is also present, both render together.
    * Set to `""` to suppress the label for icon-only display.
+   *
+   * On `{shift}` keys, this label is replaced during Caps Lock state
+   * by {@link capsLockLabel} (or the i18n fallback "Caps Lock").
    */
   label?: string;
 
@@ -68,6 +71,7 @@ export interface KeyDefinition {
 
   /**
    * Label to show on the `{shift}` key when Caps Lock is active.
+   * Overrides {@link label} when Caps Lock is active.
    * Defaults to the i18n text for `ARIA_CAPS_LOCK` ("Caps Lock").
    * Only meaningful on keys with `value: "{shift}"`.
    */
@@ -75,6 +79,8 @@ export interface KeyDefinition {
 
   /**
    * Icon to show on the `{shift}` key when Caps Lock is active.
+   * Evaluated independently of {@link icon} -- setting `icon` to `""`
+   * does not suppress `capsLockIcon`.
    * Accepts SAP icon URIs or Unicode/emoji. Defaults to `sap-icon://locked`.
    * Only meaningful on keys with `value: "{shift}"`.
    */
