@@ -2,12 +2,10 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
-    "baseUrl": ".",
     "paths": {
       "ui5/kiosk/*": ["./src/*"]
     },
     "types": ["@openui5/types", "@types/qunit", "@types/sinon"],
-    "composite": false,
     "noEmit": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],

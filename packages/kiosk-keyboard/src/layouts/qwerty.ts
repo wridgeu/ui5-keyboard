@@ -3,16 +3,16 @@ import type { LayoutDefinition } from "../types";
 const qwerty: LayoutDefinition = [
   // Row 1: number row
   [
-    { value: "1", shiftLabel: "!", shiftValue: "!" },
-    { value: "2", shiftLabel: "@", shiftValue: "@" },
-    { value: "3", shiftLabel: "#", shiftValue: "#" },
-    { value: "4", shiftLabel: "$", shiftValue: "$" },
-    { value: "5", shiftLabel: "%", shiftValue: "%" },
-    { value: "6", shiftLabel: "^", shiftValue: "^" },
-    { value: "7", shiftLabel: "&", shiftValue: "&" },
-    { value: "8", shiftLabel: "*", shiftValue: "*" },
-    { value: "9", shiftLabel: "(", shiftValue: "(" },
-    { value: "0", shiftLabel: ")", shiftValue: ")" },
+    { value: "1", shiftValue: "!" },
+    { value: "2", shiftValue: "@" },
+    { value: "3", shiftValue: "#" },
+    { value: "4", shiftValue: "$" },
+    { value: "5", shiftValue: "%" },
+    { value: "6", shiftValue: "^" },
+    { value: "7", shiftValue: "&" },
+    { value: "8", shiftValue: "*" },
+    { value: "9", shiftValue: "(" },
+    { value: "0", shiftValue: ")" },
     {
       value: "{backspace}",
       width: "2",
@@ -72,9 +72,9 @@ const qwerty: LayoutDefinition = [
       width: "1.5",
       type: "modifier",
     },
-    { value: ",", shiftLabel: "<", shiftValue: "<" },
+    { value: ",", shiftValue: "<" },
     { value: " ", width: "space", type: "space" },
-    { value: ".", shiftLabel: ">", shiftValue: ">" },
+    { value: ".", shiftValue: ">" },
     {
       value: "{layout:fkeys}",
       label: "Fn",

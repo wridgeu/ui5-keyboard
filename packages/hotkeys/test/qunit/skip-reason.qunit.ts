@@ -8,6 +8,7 @@ type Registration = Parameters<typeof recordSkip>[2];
 function makeRegistration(id: string): Registration {
   return {
     id,
+    active: true,
     hotkey: "Escape",
     normalizedHotkey: "Escape",
     parsedHotkey: parseHotkey("Escape", "windows"),
