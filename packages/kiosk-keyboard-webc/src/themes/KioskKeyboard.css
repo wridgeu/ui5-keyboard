@@ -34,6 +34,12 @@
   --kiosk-keyboard-numpad-max-width: 20rem;
   --kiosk-keyboard-numpad-key-min-width: 4rem;
 
+  /* Dual icon + label keys (Shift, Enter, Backspace with visible labels) */
+  --kiosk-keyboard-dual-direction: row;
+  --kiosk-keyboard-dual-icon-size: 1em;
+  --kiosk-keyboard-dual-label-size: 1em;
+  --kiosk-keyboard-dual-gap: 0.15em;
+
   --kiosk-keyboard-border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
   --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   --kiosk-keyboard-cq-short-threshold: 16rem;
@@ -548,9 +554,7 @@
 /* ============================= */
 
 .kiosk-key__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   width: 1.25em;
   height: 1.25em;
   color: inherit;
@@ -561,21 +565,18 @@
 /* ============================= */
 
 .kiosk-key--dual {
-  flex-direction: column;
-  gap: 0;
+  flex-direction: var(--kiosk-keyboard-dual-direction);
+  gap: var(--kiosk-keyboard-dual-gap);
   overflow: hidden;
 }
 
 .kiosk-key--dual .kiosk-key__icon {
-  display: inline-block;
-  font-size: 0.7em;
-  width: 1.25em;
-  height: 1.25em;
+  font-size: var(--kiosk-keyboard-dual-icon-size);
   flex-shrink: 0;
 }
 
 .kiosk-key--dual .kiosk-key__label {
-  font-size: clamp(0.35rem, calc(100cqi * 0.25), 0.6em);
+  font-size: var(--kiosk-keyboard-dual-label-size);
   line-height: 1;
   overflow: hidden;
   text-overflow: ellipsis;

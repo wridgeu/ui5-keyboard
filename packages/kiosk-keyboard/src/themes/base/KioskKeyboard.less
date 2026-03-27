@@ -45,6 +45,12 @@
  *   --ui5KioskKeyboard-numpadMaxWidth      Numpad container max-width (default: 20rem)
  *   --ui5KioskKeyboard-numpadKeyMinWidth   Numpad key min-width (default: 4rem)
  *
+ * Dual icon + label keys (Shift, Enter, Backspace with visible labels):
+ *   --ui5KioskKeyboard-dualDirection      Flex direction: "row" (inline) or "column" (stacked) (default: row)
+ *   --ui5KioskKeyboard-dualIconSize       Icon font size in dual mode (default: 1em)
+ *   --ui5KioskKeyboard-dualLabelSize      Label font size in dual mode (default: 1em, inherits modifier cap)
+ *   --ui5KioskKeyboard-dualGap            Gap between icon and label (default: 0.15em)
+ *
  * Responsive thresholds (rem):
  *   --ui5KioskKeyboard-cqShortThreshold    Height for --cq-short class (default: 16rem)
  *   --ui5KioskKeyboard-cqTinyThreshold     Height for --cq-tiny class (default: 12rem)
@@ -90,6 +96,10 @@
     --ui5KioskKeyboard-borderRadius: @sapUiElementBorderCornerRadius;
     --ui5KioskKeyboard-cqShortThreshold: 16rem;
     --ui5KioskKeyboard-cqTinyThreshold: 12rem;
+    --ui5KioskKeyboard-dualDirection: row;
+    --ui5KioskKeyboard-dualIconSize: 1em;
+    --ui5KioskKeyboard-dualLabelSize: 1em;
+    --ui5KioskKeyboard-dualGap: 0.15em;
 
     /* ---- Private styling aliases ---- */
     --_ui5KioskKeyboard-padding: ~"var(--ui5KioskKeyboard-padding)";
@@ -310,18 +320,18 @@
 
     /* ---- Dual icon + label ---- */
     &--dual {
-      flex-direction: column;
-      gap: 0;
+      flex-direction: ~"var(--ui5KioskKeyboard-dualDirection)";
+      gap: ~"var(--ui5KioskKeyboard-dualGap)";
       overflow: hidden;
     }
 
     &--dual &__icon {
-      font-size: 0.7em;
+      font-size: ~"var(--ui5KioskKeyboard-dualIconSize)";
       flex-shrink: 0;
     }
 
     &--dual &__label {
-      font-size: ~"clamp(0.35rem, calc(100cqi * 0.25), 0.6em)";
+      font-size: ~"var(--ui5KioskKeyboard-dualLabelSize)";
       line-height: 1;
     }
 

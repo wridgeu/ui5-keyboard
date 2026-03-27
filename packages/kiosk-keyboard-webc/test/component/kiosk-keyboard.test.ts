@@ -1348,10 +1348,9 @@ describe("kiosk-keyboard", () => {
       const enter = queryKey(el, "{enter}")!;
       expect(enter.querySelector(`.${DOM.classes.keyLabel}`)).to.not.be.null;
 
-      // Backspace: qwerty layout sets label="" (icon-only), so aria-label is used
+      // Backspace: qwerty layout shows icon+label (dual rendering)
       const backspace = queryKey(el, "{backspace}")!;
-      expect(backspace.getAttribute("aria-label")).to.not.be.null;
-      expect(backspace.getAttribute("aria-label")!.length).to.be.greaterThan(0);
+      expect(backspace.querySelector(`.${DOM.classes.keyLabel}`)).to.not.be.null;
     });
 
     it("has a live region for announcements", async () => {

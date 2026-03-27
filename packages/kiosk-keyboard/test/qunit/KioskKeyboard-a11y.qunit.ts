@@ -348,11 +348,14 @@ QUnit.test('getKeyIcon: " " \u2192 undefined', (assert) => {
 // Rendered labels for Keys (visible text or aria-label)
 // ──────────────────────────────────────────────
 
-QUnit.test('Rendered aria-label: {backspace} \u2192 "Backspace"', async (assert) => {
+QUnit.test('Rendered visible label: {backspace} \u2192 "Backspace"', async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(getRequiredKeyElement(kb, "{backspace}").getAttribute("aria-label"), "Backspace");
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "{backspace}").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Backspace",
+  );
 
   kb.destroy();
 });

@@ -181,10 +181,14 @@ QUnit.test("Special keys render correct labels", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // Backspace has label: "" in qwerty, so it remains icon-only with aria-label
+  // Backspace in qwerty has visible text label (icon+label dual)
   const backspace = getKeyElement(kb, "{backspace}");
   assert.ok(backspace, "Backspace key rendered");
-  assert.strictEqual(backspace!.getAttribute("aria-label"), "Backspace", "Backspace aria-label");
+  assert.strictEqual(
+    backspace!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+    "Backspace",
+    "Backspace visible label",
+  );
 
   // Enter, Shift, Space now have visible text labels (WCAG 2.5.3)
   const enter = getKeyElement(kb, "{enter}");

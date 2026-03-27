@@ -15,7 +15,6 @@ const qwertzDe: LayoutDefinition = [
     { value: "0", shiftLabel: "=", shiftValue: "=" },
     {
       value: "{backspace}",
-      label: "",
       width: "2",
       type: "action",
     },
