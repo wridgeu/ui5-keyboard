@@ -36,8 +36,8 @@ const EMOJI_LAYOUT: LayoutDefinition = [
     { value: "\u{1F431}" },
   ],
   [
-    { value: " ", label: "Space", width: "2", type: "space" },
-    { value: "{backspace}", label: "", icon: "sap-icon://arrow-left", width: "2", type: "action" },
+    { value: " ", width: "2", type: "space" },
+    { value: "{backspace}", width: "2", type: "action" },
     { value: "{enter}", label: "Done", width: "2", type: "action" },
   ],
 ];
@@ -46,11 +46,7 @@ const IP_ADDRESS_LAYOUT: LayoutDefinition = [
   [{ value: "1" }, { value: "2" }, { value: "3" }],
   [{ value: "4" }, { value: "5" }, { value: "6" }],
   [{ value: "7" }, { value: "8" }, { value: "9" }],
-  [
-    { value: ".", label: ".", type: "modifier" },
-    { value: "0" },
-    { value: "{backspace}", label: "", icon: "sap-icon://arrow-left", type: "action" },
-  ],
+  [{ value: ".", label: ".", type: "modifier" }, { value: "0" }, { value: "{backspace}", type: "action" }],
   [{ value: "{enter}", label: "Enter", width: "2", type: "action" }],
 ];
 
@@ -60,9 +56,38 @@ const CURRENCY_LAYOUT: LayoutDefinition = [
   [{ value: "7" }, { value: "8" }, { value: "9" }, { value: "\u00A3", label: "GBP", type: "modifier" }],
   [{ value: "." }, { value: "0" }, { value: "," }, { value: "\u00A5", label: "JPY", type: "modifier" }],
   [
-    { value: " ", label: "Space", width: "space", type: "space" },
-    { value: "{backspace}", label: "", icon: "sap-icon://arrow-left", width: "1.5", type: "action" },
+    { value: " ", width: "space", type: "space" },
+    { value: "{backspace}", width: "1.5", type: "action" },
     { value: "{enter}", label: "Enter", width: "1.5", type: "action" },
+  ],
+];
+
+const ICON_LABEL_LAYOUT: LayoutDefinition = [
+  [
+    { value: "home", icon: "sap-icon://home", label: "Home" },
+    { value: "settings", icon: "sap-icon://settings", label: "Settings" },
+    { value: "delete", icon: "sap-icon://delete", label: "" },
+    { value: "search", icon: "\u{1F50D}", label: "Search" },
+    { value: "globe", icon: "\u{1F310}", label: "Lang" },
+  ],
+  [
+    { value: "{shift}", type: "modifier", width: "2.25" },
+    { value: "{enter}", type: "action", width: "2.25" },
+    { value: "{backspace}", type: "action", width: "2" },
+    { value: " ", type: "space", width: "space" },
+  ],
+  [
+    {
+      value: "{shift}",
+      type: "modifier",
+      width: "2.25",
+      label: "Custom Shift",
+      capsLockLabel: "LOCKED",
+      capsLockIcon: "\u{1F512}",
+    },
+    { value: "a" },
+    { value: "b" },
+    { value: "c" },
   ],
 ];
 
@@ -72,10 +97,12 @@ const LAYOUT_DESCRIPTIONS: Record<string, string> = {
   "ip-address": "3x3 digit grid + dot/0/backspace row + full-width Enter. Minimal pad for IP address entry.",
   currency:
     "4x4 grid with digits and currency symbols ($, EUR, GBP, JPY). Shows label overrides and modifier key type.",
+  "icon-label":
+    "Icon + label rendering modes: SAP icons, Unicode/emoji icons, icon-only, built-in special keys with dual rendering, and capsLock overrides. Double-tap Shift on row 3 to see capsLockLabel/capsLockIcon.",
 };
 
 /**
- * Custom layouts gallery - three LayoutDefinitions registered via
+ * Custom layouts gallery - four LayoutDefinitions registered via
  * registerLayout(), switchable via buttons.
  *
  * @namespace demo.hotkeys.controller
@@ -85,6 +112,7 @@ export default class KioskCustomLayouts extends BaseController {
     KioskKeyboard.registerLayout("emoji", EMOJI_LAYOUT);
     KioskKeyboard.registerLayout("ip-address", IP_ADDRESS_LAYOUT);
     KioskKeyboard.registerLayout("currency", CURRENCY_LAYOUT);
+    KioskKeyboard.registerLayout("icon-label", ICON_LABEL_LAYOUT);
 
     this._switchLayout("emoji");
   }
@@ -103,6 +131,10 @@ export default class KioskCustomLayouts extends BaseController {
 
   onUseCurrency(): void {
     this._switchLayout("currency");
+  }
+
+  onUseIconLabel(): void {
+    this._switchLayout("icon-label");
   }
 
   onNavBack(): void {
