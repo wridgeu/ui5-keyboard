@@ -21,6 +21,7 @@ interface RegistrationOverrides {
 function makeRegistration(id: string, hotkey: string, overrides?: RegistrationOverrides): Registration {
   return {
     id,
+    active: true,
     hotkey,
     normalizedHotkey: hotkey,
     parsedHotkey: parseHotkey(hotkey, "windows"),

@@ -2,10 +2,10 @@ import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
 // Side-effect import: ensures Lib.init() runs even when this module is imported directly
 import "../library";
-import { GLOBAL_SCOPE, normalizeKeyName } from "./constants";
+import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
 import { createIdGenerator } from "./idgen";
-import { matchesKeyboardEvent } from "./match";
+import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
 import type {
@@ -59,7 +59,6 @@ export default class SequenceManager extends BaseObject {
   };
 
   private _registrations: Map<string, SequenceRegistration> = new Map();
-  private _registrationState: Map<string, { active: boolean }> = new Map();
   private _scopeKeyIndex: Map<string, Map<string, Set<SequenceRegistration>>> = new Map();
   private _activeMatches: ActiveMatch[] = [];
   private _pendingCallback: SequencePendingCallback | null = null;
@@ -107,6 +106,7 @@ export default class SequenceManager extends BaseObject {
 
     const registration: SequenceRegistration = {
       id,
+      active: true,
       sequence: sequenceCopy,
       parsedSteps,
       callback,
@@ -122,8 +122,6 @@ export default class SequenceManager extends BaseObject {
 
     this._registrations.set(id, registration);
     this._indexRegistration(registration);
-    const state = { active: true };
-    this._registrationState.set(id, state);
 
     Log.debug(
       `Registered sequence [${sequence.join(", ")}] (id: ${id}, scope: ${registration.scope})`,
@@ -136,7 +134,7 @@ export default class SequenceManager extends BaseObject {
         return id;
       },
       get isActive() {
-        return state.active;
+        return registration.active;
       },
       get sequence() {
         return [...registration.sequence];
@@ -148,12 +146,11 @@ export default class SequenceManager extends BaseObject {
         return registration.description;
       },
       unregister: () => {
-        if (!state.active) return;
-        state.active = false;
+        if (!registration.active) return;
+        registration.active = false;
         const reg = this._registrations.get(id);
         if (reg) this._deindexRegistration(reg);
         this._registrations.delete(id);
-        this._registrationState.delete(id);
         // Clear any active matches for this registration
         this._activeMatches = this._activeMatches.filter((m) => {
           if (m.registration.id === id) {
@@ -164,7 +161,7 @@ export default class SequenceManager extends BaseObject {
         Log.debug(`Unregistered sequence (id: ${id})`, undefined, LOG_COMPONENT);
       },
       setOptions: (newOptions: Partial<UpdatableSequenceOptions>) => {
-        if (!state.active) {
+        if (!registration.active) {
           throw new Error(`Cannot setOptions on unregistered sequence (id: ${id})`);
         }
         if ((newOptions as Record<string, unknown>).scope !== undefined) {
@@ -232,11 +229,10 @@ export default class SequenceManager extends BaseObject {
       clearTimeout(match.timerId);
     }
     this._activeMatches = [];
-    for (const state of this._registrationState.values()) {
-      state.active = false;
+    for (const reg of this._registrations.values()) {
+      reg.active = false;
     }
     this._registrations.clear();
-    this._registrationState.clear();
     this._scopeKeyIndex.clear();
     this._pendingCallback = null;
 
@@ -390,29 +386,7 @@ export default class SequenceManager extends BaseObject {
    * logic in matchesKeyboardEvent (match.ts).
    */
   private _deriveEventKeys(event: KeyboardEvent): string[] {
-    const keys: string[] = [];
-
-    const primary = normalizeKeyName(event.key);
-    keys.push(primary);
-
-    // Fallback: letter from event.code (macOS Option+letter)
-    if (event.code?.startsWith("Key")) {
-      const codeLetter = event.code.slice(3);
-      if (codeLetter.length === 1 && /^[A-Za-z]$/.test(codeLetter)) {
-        const upper = codeLetter.toUpperCase();
-        if (upper !== primary) keys.push(upper);
-      }
-    }
-
-    // Fallback: digit from event.code (Shift+digit)
-    if (event.code?.startsWith("Digit")) {
-      const codeDigit = event.code.slice(5);
-      if (codeDigit.length === 1 && /^[0-9]$/.test(codeDigit)) {
-        if (codeDigit !== primary) keys.push(codeDigit);
-      }
-    }
-
-    return keys;
+    return getCandidateKeys(event);
   }
 
   /**

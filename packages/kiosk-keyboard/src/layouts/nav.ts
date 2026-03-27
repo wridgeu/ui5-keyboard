@@ -1,21 +1,14 @@
 import type { LayoutDefinition } from "../types";
+import navRow from "./nav-row";
 
 const nav: LayoutDefinition = [
-  [
-    { value: "{fkey:Home}", label: "Home", type: "modifier" },
-    { value: "{fkey:ArrowUp}", label: "Up", type: "modifier" },
-    { value: "{fkey:End}", label: "End", type: "modifier" },
-  ],
-  [
-    { value: "{fkey:ArrowLeft}", label: "Left", type: "modifier" },
-    { value: "{fkey:ArrowDown}", label: "Down", type: "modifier" },
-    { value: "{fkey:ArrowRight}", label: "Right", type: "modifier" },
-  ],
-  [
-    { value: "{fkey:PageUp}", label: "PgUp", type: "modifier" },
-    { value: "{fkey:PageDown}", label: "PgDn", type: "modifier" },
-    { value: "{enter}", type: "action" },
-  ],
+  // Row 1: Home / Up / End
+  navRow.slice(0, 3),
+  // Row 2: Left / Down / Right
+  navRow.slice(5, 8),
+  // Row 3: PgUp / PgDn / Enter
+  [...navRow.slice(3, 5), { value: "{enter}", type: "action" as const }],
+  // Row 4: layout controls
   [
     { value: "{layout:base}", label: "ABC", width: "1.5", type: "modifier" },
     {
