@@ -26,6 +26,10 @@
  *                                       keyFontSize (default: 0.8, set to 1 to disable cap)
  *   --ui5KioskKeyboard-maxWidth         Max inline width (default: 100%)
  *
+ * Keys:
+ *   --ui5KioskKeyboard-keyBorderColor   Uniform border color for all key types (default: unset).
+ *                                       When set, overrides per-type border colors.
+ *
  * Container:
  *   --ui5KioskKeyboard-border           Container border (default: 1px solid <theme border color>)
  *   --ui5KioskKeyboard-borderRadius     Container border radius (default: theme corner radius)
@@ -214,7 +218,7 @@
     flex: 1 1 0;
     height: var(--_ui5KioskKeyboard-keyHeight);
     padding: var(--_ui5KioskKeyboard-keyPadding);
-    border: 1px solid @sapUiButtonBorderColor;
+    border: ~"1px solid var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonBorderColor ~")";
     border-radius: @sapUiButtonBorderCornerRadius;
     background: @sapUiButtonBackground;
     color: @sapUiButtonTextColor;
@@ -312,7 +316,7 @@
     &--modifier {
       background: @sapUiButtonLiteBackground;
       color: @sapUiButtonLiteTextColor;
-      border-color: @sapUiButtonLiteBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonLiteBorderColor ~")";
       box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
       font-size: ~"min(var(--ui5KioskKeyboard-modifierFontSize), calc(var(--ui5KioskKeyboard-keyFontSize) * var(--ui5KioskKeyboard-modifierFontScale)))";
 
@@ -339,7 +343,7 @@
     &--action {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
-      border-color: @sapUiButtonEmphasizedBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
       font-size: ~"min(var(--ui5KioskKeyboard-modifierFontSize), calc(var(--ui5KioskKeyboard-keyFontSize) * var(--ui5KioskKeyboard-modifierFontScale)))";
       font-weight: bold;
 
@@ -369,7 +373,7 @@
     &--active {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
-      border-color: @sapUiButtonEmphasizedBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
 
       &:hover {
         background: @sapUiButtonEmphasizedHoverBackground;
@@ -499,21 +503,21 @@
   @media (hover: none) {
     .ui5KioskKey:hover {
       background: @sapUiButtonBackground;
-      border-color: @sapUiButtonBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonBorderColor ~")";
       transform: none;
       box-shadow: var(--_ui5KioskKeyboard-keyShadow);
     }
 
     .ui5KioskKey--modifier:hover {
       background: @sapUiButtonLiteBackground;
-      border-color: @sapUiButtonLiteBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonLiteBorderColor ~")";
       box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
     }
 
     .ui5KioskKey--action:hover,
     .ui5KioskKey--active:hover {
       background: @sapUiButtonEmphasizedBackground;
-      border-color: @sapUiButtonEmphasizedBorderColor;
+      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
     }
   }
 } /* @layer kiosk-keyboard */

@@ -40,6 +40,7 @@ QUnit.test("nav-row exports 8 navigation key definitions", (assert) => {
   assert.strictEqual(navRow.length, 8, "Row has 8 keys");
   assert.strictEqual(navRow[0].value, "{fkey:Home}", "First key is Home");
   assert.strictEqual(navRow[7].value, "{fkey:ArrowRight}", "Last key is ArrowRight");
+  assert.strictEqual(navRow[0].type, "modifier", "Nav-row uses modifier key styling");
 });
 
 QUnit.test("Standalone nav layout renders expected keys", async (assert) => {
