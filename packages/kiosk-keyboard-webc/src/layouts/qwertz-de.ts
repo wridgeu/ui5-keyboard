@@ -62,7 +62,7 @@ const qwertzDe: LayoutDefinition = [
     { value: "b" },
     { value: "n" },
     { value: "m" },
-    { value: "\u00DF", shiftLabel: "?", shiftValue: "?" },
+    { value: "\u00DF", shiftValue: "?" },
     {
       value: "{enter}",
       width: "1.75",

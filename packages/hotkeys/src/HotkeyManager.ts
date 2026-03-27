@@ -154,7 +154,6 @@ export default class HotkeyManager extends BaseObject {
   };
 
   private _registrations: Map<string, HotkeyRegistration> = new Map();
-  private _registrationState: Map<string, { active: boolean }> = new Map();
   private _registrationsByScope: Map<string, ScopeRegistrationBucket> = new Map();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
@@ -247,6 +246,7 @@ export default class HotkeyManager extends BaseObject {
 
     const registration: HotkeyRegistration = {
       id,
+      active: true,
       hotkey,
       normalizedHotkey,
       parsedHotkey,
@@ -255,8 +255,6 @@ export default class HotkeyManager extends BaseObject {
     };
 
     this._registrations.set(id, registration);
-    const state = { active: true };
-    this._registrationState.set(id, state);
     this._indexRegistration(registration);
 
     Log.debug(
@@ -270,7 +268,7 @@ export default class HotkeyManager extends BaseObject {
         return id;
       },
       get isActive() {
-        return state.active;
+        return registration.active;
       },
       get hotkey() {
         return registration.hotkey;
@@ -282,17 +280,16 @@ export default class HotkeyManager extends BaseObject {
         return registration.options.description;
       },
       unregister: () => {
-        if (!state.active) return;
-        state.active = false;
+        if (!registration.active) return;
+        registration.active = false;
 
         this._deindexRegistration(registration);
 
         this._registrations.delete(id);
-        this._registrationState.delete(id);
         Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
       },
       setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
-        if (!state.active) {
+        if (!registration.active) {
           throw new Error(`Cannot setOptions on unregistered handle (id: ${id})`);
         }
         const optionRecord = newOptions as Record<string, unknown>;
@@ -578,9 +575,26 @@ export default class HotkeyManager extends BaseObject {
    */
   getRegistrationsForScope(scopeId: string): ReadonlyArray<HotkeyRegistrationInfo> {
     const normalizedScope = resolveScopeOrGlobal(scopeId);
-    return Array.from(this._registrations.values())
-      .filter((r) => r.options.scope === normalizedScope)
-      .map((r) => this._toRegistrationInfo(r));
+    const bucket = this._registrationsByScope.get(normalizedScope);
+    if (!bucket) return [];
+
+    const result: HotkeyRegistrationInfo[] = [];
+    const seen = new Set<string>();
+    const addFromIds = (ids: Iterable<string>) => {
+      for (const id of ids) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const reg = this._registrations.get(id);
+        if (reg) result.push(this._toRegistrationInfo(reg));
+      }
+    };
+
+    addFromIds(bucket.untargetedIds);
+    for (const ids of bucket.targets.values()) {
+      addFromIds(ids);
+    }
+
+    return result;
   }
 
   /**
@@ -822,12 +836,11 @@ export default class HotkeyManager extends BaseObject {
       this._sequenceManager = null;
     }
 
-    for (const state of this._registrationState.values()) {
-      state.active = false;
+    for (const reg of this._registrations.values()) {
+      reg.active = false;
     }
 
     this._registrations.clear();
-    this._registrationState.clear();
     this._registrationsByScope.clear();
     this._scopeStack = [GLOBAL_SCOPE];
     resetRuntimeCaches();
@@ -1318,11 +1331,7 @@ export default class HotkeyManager extends BaseObject {
       }
       for (const reg of conflicts) {
         this._deindexRegistration(reg);
-        const state = this._registrationState.get(reg.id);
-        if (state) {
-          state.active = false;
-          this._registrationState.delete(reg.id);
-        }
+        reg.active = false;
         this._registrations.delete(reg.id);
         Log.debug(
           `Replaced existing hotkey "${normalizedHotkey}" (id: ${reg.id}) in scope "${scope}"`,

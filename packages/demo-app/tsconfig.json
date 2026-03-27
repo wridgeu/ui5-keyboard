@@ -14,7 +14,6 @@
     },
     "types": ["@openui5/types"],
     "noEmit": true,
-    "composite": false,
     "declaration": false,
     "declarationMap": false
   },

@@ -1,4 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
+import { punctuationRow, symbolBottomRow } from "./symbol-common.js";
 
 const special: LayoutDefinition = [
   // Row 1
@@ -28,40 +29,9 @@ const special: LayoutDefinition = [
     { value: "\u2022" },
   ],
   // Row 3
-  [
-    {
-      value: "{layout:numeric}",
-      label: "123",
-      width: "2.25",
-      type: "modifier",
-    },
-    { value: "." },
-    { value: "," },
-    { value: "?" },
-    { value: "!" },
-    { value: "'" },
-    {
-      value: "{backspace}",
-      label: "",
-      width: "2.25",
-      type: "action",
-    },
-  ],
+  punctuationRow("{layout:numeric}", "123"),
   // Row 4: bottom
-  [
-    {
-      value: "{layout:base}",
-      label: "ABC",
-      width: "1.5",
-      type: "modifier",
-    },
-    { value: " ", label: "Space", width: "space", type: "space" },
-    {
-      value: "{enter}",
-      width: "1.5",
-      type: "action",
-    },
-  ],
+  symbolBottomRow,
 ];
 
 export default special;
