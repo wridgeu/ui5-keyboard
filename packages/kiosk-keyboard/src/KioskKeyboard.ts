@@ -2210,33 +2210,25 @@ export default class KioskKeyboard extends Control {
   // Private - Physical keyboard highlighting
   // ──────────────────────────────────────────────
 
-  /** Maps KeyboardEvent.key names to special-key data-key values. */
+  /** Maps non-derivable KeyboardEvent.key names to special-key data-key values. */
   private static readonly _KEY_TO_DATA_KEY: Record<string, string> = {
     Shift: "{shift}",
     Backspace: "{backspace}",
     Enter: "{enter}",
     Delete: "{backspace}", // virtual keyboard has no separate Delete - highlight Backspace
-    F1: "{fkey:F1}",
-    F2: "{fkey:F2}",
-    F3: "{fkey:F3}",
-    F4: "{fkey:F4}",
-    F5: "{fkey:F5}",
-    F6: "{fkey:F6}",
-    F7: "{fkey:F7}",
-    F8: "{fkey:F8}",
-    F9: "{fkey:F9}",
-    F10: "{fkey:F10}",
-    F11: "{fkey:F11}",
-    F12: "{fkey:F12}",
-    ArrowLeft: "{fkey:ArrowLeft}",
-    ArrowRight: "{fkey:ArrowRight}",
-    ArrowUp: "{fkey:ArrowUp}",
-    ArrowDown: "{fkey:ArrowDown}",
-    Home: "{fkey:Home}",
-    End: "{fkey:End}",
-    PageUp: "{fkey:PageUp}",
-    PageDown: "{fkey:PageDown}",
   };
+
+  /**
+   * Resolves a KeyboardEvent.key name to its data-key attribute value.
+   * Native-dispatchable keys (F1-F12, arrows, Home/End/PgUp/PgDn) are
+   * derived dynamically from the `_NATIVE_DISPATCHABLE_FKEYS` set.
+   */
+  private static _resolveDataKey(key: string): string | undefined {
+    return (
+      KioskKeyboard._KEY_TO_DATA_KEY[key] ??
+      (KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(key) ? `{fkey:${key}}` : undefined)
+    );
+  }
 
   private _highlightKey(key: string, add: boolean): void {
     const dom = this.getDomRef();
@@ -2252,7 +2244,7 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
-    const mapped = KioskKeyboard._KEY_TO_DATA_KEY[key];
+    const mapped = KioskKeyboard._resolveDataKey(key);
     const el =
       dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(mapped ?? key)) ??
       (key.length === 1 ? dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(key.toLowerCase())) : null) ??

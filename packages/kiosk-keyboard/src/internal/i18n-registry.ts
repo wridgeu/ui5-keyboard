@@ -101,7 +101,7 @@ async function loadBundles(): Promise<void> {
   const entries = activeConfig?.enhanceWith;
   if (!entries?.length) {
     enhancementBundles = [];
-    return NO_RELOAD_NEEDED;
+    return;
   }
   // activeConfig is guaranteed non-null here: entries is non-empty,
   // and entries is derived from activeConfig.enhanceWith above.
@@ -263,21 +263,10 @@ function applyConfiguration(config: KioskI18nConfig): Promise<void> {
 }
 
 /**
- * Apply an i18n enhancement configuration.
- *
- * Validates the config, stores it, and asynchronously loads all
- * enhancement bundles. Replaces any previous configuration.
- * Uses a generation counter to discard stale loads when
- * `configureI18n` is called again before a previous load completes.
- *
- * **Graceful degradation:** individual enhancement bundles that fail to
- * load (network error, wrong path) are silently skipped with a
- * `Log.warning`.  The returned promise still resolves - only top-level
- * validation failures cause a rejection.
- *
- * @param config  Enhancement bundle descriptors and locale metadata.
- * @returns Resolves when all enhancement bundles have been loaded
- *          (or individually failed), rejects when top-level validation fails.
+ * Convenience wrapper around {@link configureI18nWithStatus} that returns
+ * only the loading promise (discards the `accepted` flag).
+ * Used by the test suite for concise configuration calls.
+ * @internal
  */
 export function configureI18n(config: KioskI18nConfig): Promise<void> {
   return configureI18nWithStatus(config).promise;
