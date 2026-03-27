@@ -47,124 +47,123 @@ Both layouts get a toggle key to switch between them at runtime:
 
 ## Layout Definition
 
-5 rows following JIS X 6002 kana mapping. The number row produces kana on the base layer and digits on the shift layer.
+5 rows following JIS X 6002 kana mapping. Rows 2-4 have 11-12 keys each (wider than QWERTY) to accommodate the extra kana positions present on the JIS 106-key keyboard. The renderer handles this naturally via flexbox.
 
-### Row 1 (Number Row)
+Reference: [Microsoft kbd106.c driver source](https://github.com/microsoft/Windows-driver-samples/blob/main/input/layout/fe_kbds/jpn/106/kbd106.c) (authoritative JIS X 6002 implementation).
 
-| Position | Base (kana) | Shift (digit/symbol) |
-| -------- | ----------- | -------------------- |
-| 1        | ぬ          | 1                    |
-| 2        | ふ          | 2                    |
-| 3        | あ          | 3                    |
-| 4        | う          | 4                    |
-| 5        | え          | 5                    |
-| 6        | お          | 6                    |
-| 7        | や          | 7                    |
-| 8        | ゆ          | 8                    |
-| 9        | よ          | 9                    |
-| 10       | わ          | 0                    |
-| 11       | {backspace} | (action key)         |
+### Row 1 (Number Row) -- 12 keys
 
-### Row 2 (Upper Letter Row)
+Kana on base layer, digits on shift. Small kana on shift where the base is the full-size counterpart (per JIS: Shift on the same key gives the small version).
 
-| Position | Base | Shift |
-| -------- | ---- | ----- |
-| 1        | た   | --    |
-| 2        | て   | --    |
-| 3        | い   | ぃ    |
-| 4        | す   | --    |
-| 5        | か   | --    |
-| 6        | ん   | --    |
-| 7        | な   | --    |
-| 8        | に   | --    |
-| 9        | ら   | --    |
-| 10       | せ   | を    |
+| Pos | Base        | Shift | JIS key  |
+| --- | ----------- | ----- | -------- |
+| 1   | ぬ          | 1     | 1        |
+| 2   | ふ          | 2     | 2        |
+| 3   | あ          | ぁ    | 3        |
+| 4   | う          | ぅ    | 4        |
+| 5   | え          | ぇ    | 5        |
+| 6   | お          | ぉ    | 6        |
+| 7   | や          | ゃ    | 7        |
+| 8   | ゆ          | ゅ    | 8        |
+| 9   | よ          | ょ    | 9        |
+| 10  | わ          | を    | 0        |
+| 11  | ほ          | --    | -        |
+| 12  | {backspace} | --    | (action) |
 
-### Row 3 (Home Row)
+Note: the number row shift layer produces small kana (ぁ, ぅ, ぇ, ぉ, ゃ, ゅ, ょ, を) per JIS, **not** digits. Digits are accessible via the `{layout:numeric}` switch on row 5. This is faithful to JIS where the number row in kana mode is fully dedicated to kana input.
 
-| Position | Base | Shift |
-| -------- | ---- | ----- |
-| 1        | ち   | --    |
-| 2        | と   | --    |
-| 3        | し   | --    |
-| 4        | は   | --    |
-| 5        | き   | --    |
-| 6        | く   | --    |
-| 7        | ま   | --    |
-| 8        | の   | --    |
-| 9        | り   | --    |
-| 10       | れ   | --    |
+### Row 2 (Upper Letter Row) -- 12 keys
 
-### Row 4 (Lower Row)
+| Pos | Base | Shift | JIS key |
+| --- | ---- | ----- | ------- |
+| 1   | た   | --    | Q       |
+| 2   | て   | --    | W       |
+| 3   | い   | ぃ    | E       |
+| 4   | す   | --    | R       |
+| 5   | か   | --    | T       |
+| 6   | ん   | --    | Y       |
+| 7   | な   | --    | U       |
+| 8   | に   | --    | I       |
+| 9   | ら   | --    | O       |
+| 10  | せ   | --    | P       |
+| 11  | ゛   | --    | @ (JIS) |
+| 12  | ゜   | --    | [ (JIS) |
 
-| Position | Base    | Shift |
-| -------- | ------- | ----- |
-| 1        | {shift} | --    |
-| 2        | つ      | っ    |
-| 3        | さ      | ゃ    |
-| 4        | そ      | ゅ    |
-| 5        | ひ      | ょ    |
-| 6        | こ      | ぁ    |
-| 7        | み      | ぃ    |
-| 8        | も      | ぅ    |
-| 9        | ね      | ぇ    |
-| 10       | {enter} | --    |
+Dakuten (゛) and handakuten (゜) are on their standard JIS positions (after P). This is also the touch-friendly placement -- they are always visible on the base layer without needing shift.
 
-Small kana (っ, ゃ, ゅ, ょ, ぁ, ぃ, ぅ, ぇ) are placed on the shift layer of row 4. This keeps the number row's shift layer free for digits.
+### Row 3 (Home Row) -- 12 keys
 
-### Row 5 (Bottom Row)
+| Pos | Base | Shift | JIS key |
+| --- | ---- | ----- | ------- |
+| 1   | ち   | --    | A       |
+| 2   | と   | --    | S       |
+| 3   | し   | --    | D       |
+| 4   | は   | --    | F       |
+| 5   | き   | --    | G       |
+| 6   | く   | --    | H       |
+| 7   | ま   | --    | J       |
+| 8   | の   | --    | K       |
+| 9   | り   | --    | L       |
+| 10  | れ   | --    | ; (JIS) |
+| 11  | け   | --    | : (JIS) |
+| 12  | む   | --    | ] (JIS) |
 
-| Position | Key                           | Type     |
-| -------- | ----------------------------- | -------- |
-| 1        | {layout:numeric} "123"        | modifier |
-| 2        | {layout:ja-romaji} "ローマ字" | modifier |
-| 3        | ゛ (dakuten)                  | modifier |
-| 4        | ゜ (handakuten)               | modifier |
-| 5        | (space)                       | space    |
-| 6        | 。 (period)                   | default  |
-| 7        | {layout:fkeys} "Fn"           | modifier |
+### Row 4 (Lower Row) -- 12 keys
 
-### Touch-Friendly Addition
+| Pos | Base    | Shift | JIS key |
+| --- | ------- | ----- | ------- |
+| 1   | {shift} | --    | Shift   |
+| 2   | つ      | っ    | Z       |
+| 3   | さ      | --    | X       |
+| 4   | そ      | --    | C       |
+| 5   | ひ      | --    | V       |
+| 6   | こ      | --    | B       |
+| 7   | み      | --    | N       |
+| 8   | も      | --    | M       |
+| 9   | ね      | 、    | , (JIS) |
+| 10  | る      | 。    | . (JIS) |
+| 11  | め      | ・    | / (JIS) |
+| 12  | {enter} | --    | Enter   |
 
-Dakuten (゛) and handakuten (゜) are placed on the base layer as dedicated keys instead of requiring shift. This is a deliberate deviation from physical JIS keyboards, where these marks share keys with other characters. On a touchscreen, having them always visible eliminates the shift-tap-shift cycle that makes voicing mark input tedious.
+Shift+comma (ね) produces 、 (ideographic comma), Shift+period (る) produces 。 (ideographic period), Shift+slash (め) produces ・ (middle dot) -- matching JIS.
 
-The keyboard does not perform composition (combining か + ゛ into が). It produces the standalone combining marks (U+309B, U+309C) as character output. The consuming application or input method handles composition if needed.
+### Row 5 (Bottom Row) -- 6 keys
 
-### Shift Layer: Small Kana
+| Pos | Key                           | Type     |
+| --- | ----------------------------- | -------- |
+| 1   | {layout:numeric} "123"        | modifier |
+| 2   | {layout:ja-romaji} "ローマ字" | modifier |
+| 3   | (space)                       | space    |
+| 4   | ー (prolonged sound mark)     | default  |
+| 5   | 。 (period, convenience)      | default  |
+| 6   | {layout:fkeys} "Fn"           | modifier |
 
-The shift layer provides small kana variants on row 4, and digits on row 1:
+The prolonged sound mark (ー, U+30FC) is included as a convenience key since it is frequently needed in Japanese input. The 。 key provides quick access to the ideographic period without shift.
 
-**Row 4 shift (small kana):**
+### Shift Layer Summary
 
-| Base | Shift |
-| ---- | ----- |
-| つ   | っ    |
-| さ   | ゃ    |
-| そ   | ゅ    |
-| ひ   | ょ    |
-| こ   | ぁ    |
-| み   | ぃ    |
-| も   | ぅ    |
-| ね   | ぇ    |
+Small kana are on the **same key as their full-size counterpart** (standard JIS behavior):
 
-**Row 1 shift (digits):**
+| Key position  | Base | Shift |
+| ------------- | ---- | ----- |
+| Row 1, pos 3  | あ   | ぁ    |
+| Row 1, pos 4  | う   | ぅ    |
+| Row 1, pos 5  | え   | ぇ    |
+| Row 1, pos 6  | お   | ぉ    |
+| Row 1, pos 7  | や   | ゃ    |
+| Row 1, pos 8  | ゆ   | ゅ    |
+| Row 1, pos 9  | よ   | ょ    |
+| Row 1, pos 10 | わ   | を    |
+| Row 2, pos 3  | い   | ぃ    |
+| Row 4, pos 2  | つ   | っ    |
 
-| Base | Shift |
-| ---- | ----- |
-| ぬ   | 1     |
-| ふ   | 2     |
-| あ   | 3     |
-| う   | 4     |
-| え   | 5     |
-| お   | 6     |
-| や   | 7     |
-| ゆ   | 8     |
-| よ   | 9     |
-| わ   | 0     |
+Row 4 punctuation keys produce their JIS shift variants (、, 。, ・). All other keys have no shift variant.
 
-**Row 2 shift:** を on せ position (`{ value: "せ", shiftValue: "を" }`).
+### Touch-Friendly Design
 
-Keys on rows 2-3 without shift variants produce no shift output.
+Dakuten (゛) and handakuten (゜) appear on the base layer at their JIS positions (row 2, after せ). On a physical keyboard these require knowing the JIS-specific key positions; on the virtual keyboard they are always visible and tappable.
+
+The keyboard produces standalone combining marks (U+309B, U+309C) as character output. The consuming application handles composition (e.g., combining か + ゛ into が) if needed.
 
 ## Changes to ja-romaji
 
