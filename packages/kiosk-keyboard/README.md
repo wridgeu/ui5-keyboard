@@ -541,15 +541,15 @@ const myLayout: LayoutDefinition = [
 
 **KeyDefinition fields:**
 
-| Field        | Type     | Description                                                                                                                                                             |
-| ------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`)                                                                               |
-| `label`      | `string` | Display label (defaults to `value`). When `icon` is also set, both render together. Set to `""` to suppress the label.                                                  |
-| `shiftLabel` | `string` | Label when Shift is active.                                                                                                                                             |
-| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                                                                                                          |
-| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                              |
-| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                        |
-| `icon`       | `string` | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only. |
+| Field        | Type     | Description                                                                                                                                                                             |
+| ------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`)                                                                                               |
+| `label`      | `string` | Display label. Omit to resolve automatically (i18n for special keys, `value` for regular keys). Set to `""` to suppress (icon-only). When `icon` is also present, both render together. |
+| `shiftLabel` | `string` | Label when Shift is active.                                                                                                                                                             |
+| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                                                                                                                          |
+| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                                              |
+| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
+| `icon`       | `string` | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
 
 ---
 

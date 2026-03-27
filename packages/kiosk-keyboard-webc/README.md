@@ -411,7 +411,7 @@ Each key is a `KeyDefinition`:
 ```ts
 interface KeyDefinition {
   value: string; // Character to insert, or action like "{shift}", "{enter}", "{backspace}", "{layout:numeric}", "{fkey:F5}"
-  label?: string; // Display label (defaults to value)
+  label?: string; // Display label; omit for auto-resolve (i18n for special keys, value for regular); "" suppresses
   shiftLabel?: string; // Label when shifted
   shiftValue?: string; // Value when shifted (defaults to value.toUpperCase() for single chars)
   width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
