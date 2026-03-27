@@ -192,4 +192,73 @@ describe("icon + label rendering", () => {
     // to satisfy WCAG 2.5.3 (Label in Name)
     expect(keyEl.getAttribute("aria-label")).to.be.null;
   });
+
+  // -- CapsLock property overrides --
+
+  it("capsLockLabel overrides visible label during caps lock", async () => {
+    const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "CL" }]]);
+    const keyEl = queryKey(el, "{shift}");
+    // Activate caps lock (double-tap)
+    keyEl.click();
+    await nextRender();
+    keyEl.click();
+    await nextRender();
+    expect(queryKeyLabel(keyEl)!.textContent).to.equal("CL");
+  });
+
+  it("capsLockIcon overrides icon during caps lock", async () => {
+    const el = await createKeyboard([
+      [{ value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "\u{1F512}" }],
+    ]);
+    const keyEl = queryKey(el, "{shift}");
+    // Activate caps lock
+    keyEl.click();
+    await nextRender();
+    keyEl.click();
+    await nextRender();
+    const iconEl = queryKeyIcon(keyEl);
+    expect(iconEl).to.exist;
+    expect(iconEl!.textContent).to.equal("\u{1F512}");
+  });
+
+  it("capsLockIcon: '' suppresses icon during caps lock", async () => {
+    const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "" }]]);
+    const keyEl = queryKey(el, "{shift}");
+    // Activate caps lock
+    keyEl.click();
+    await nextRender();
+    keyEl.click();
+    await nextRender();
+    expect(queryKeyIcon(keyEl)).to.be.null;
+  });
+
+  it("capsLockLabel: '' suppresses label, aria-label says Caps Lock", async () => {
+    const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "" }]]);
+    const keyEl = queryKey(el, "{shift}");
+    // Activate caps lock
+    keyEl.click();
+    await nextRender();
+    keyEl.click();
+    await nextRender();
+    expect(queryKeyLabel(keyEl)).to.be.null;
+    expect(keyEl.getAttribute("aria-label")).to.match(/caps lock/i);
+  });
+
+  it("icon: '' + capsLockIcon shows icon only during caps lock", async () => {
+    const el = await createKeyboard([
+      [{ value: "{shift}", type: "modifier", width: "2.25", icon: "", capsLockIcon: "\u{1F512}" }],
+    ]);
+    const keyEl = queryKey(el, "{shift}");
+    // Normal state: no icon (icon: "" suppresses)
+    expect(queryKeyIcon(keyEl)).to.be.null;
+    // Activate caps lock
+    keyEl.click();
+    await nextRender();
+    keyEl.click();
+    await nextRender();
+    // CapsLock state: capsLockIcon renders independently
+    const iconEl = queryKeyIcon(keyEl);
+    expect(iconEl).to.exist;
+    expect(iconEl!.textContent).to.equal("\u{1F512}");
+  });
 });
