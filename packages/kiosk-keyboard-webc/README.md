@@ -414,6 +414,8 @@ interface KeyDefinition {
   label?: string; // Display label; omit for auto-resolve (i18n for special keys, value for regular); "" suppresses
   shiftLabel?: string; // Label when shifted
   shiftValue?: string; // Value when shifted (defaults to value.toUpperCase() for single chars)
+  capsLockLabel?: string; // Label for {shift} key in Caps Lock state; omit for i18n "Caps Lock"; "" suppresses
+  capsLockIcon?: string; // Icon for {shift} key in Caps Lock state; independent of icon; defaults to locked icon
   width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present

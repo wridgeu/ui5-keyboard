@@ -541,15 +541,17 @@ const myLayout: LayoutDefinition = [
 
 **KeyDefinition fields:**
 
-| Field        | Type     | Description                                                                                                                                                                             |
-| ------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `value`      | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`)                                                                                               |
-| `label`      | `string` | Display label. Omit to resolve automatically (i18n for special keys, `value` for regular keys). Set to `""` to suppress (icon-only). When `icon` is also present, both render together. |
-| `shiftLabel` | `string` | Label when Shift is active.                                                                                                                                                             |
-| `shiftValue` | `string` | Value when Shift is active (defaults to uppercase of `value`).                                                                                                                          |
-| `width`      | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                                              |
-| `type`       | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
-| `icon`       | `string` | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
+| Field           | Type     | Description                                                                                                                                                                             |
+| --------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`         | `string` | Character or action (`{backspace}`, `{enter}`, `{shift}`, `{layout:name}`, `{fkey:name}`)                                                                                               |
+| `label`         | `string` | Display label. Omit to resolve automatically (i18n for special keys, `value` for regular keys). Set to `""` to suppress (icon-only). When `icon` is also present, both render together. |
+| `shiftLabel`    | `string` | Label when Shift is active.                                                                                                                                                             |
+| `shiftValue`    | `string` | Value when Shift is active (defaults to uppercase of `value`).                                                                                                                          |
+| `capsLockLabel` | `string` | Label for `{shift}` key when Caps Lock is active. Omit for i18n "Caps Lock". Set to `""` to suppress. Only meaningful on `{shift}` keys.                                                |
+| `capsLockIcon`  | `string` | Icon for `{shift}` key when Caps Lock is active. Independent of `icon`. Defaults to `sap-icon://locked`. Only meaningful on `{shift}` keys.                                             |
+| `width`         | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                                              |
+| `type`          | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
+| `icon`          | `string` | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
 
 ---
 
