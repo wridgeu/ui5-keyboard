@@ -17,6 +17,8 @@ const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
   ["de", "qwertz-de"],
   ["ja", "ja-romaji"],
   ["ar", "arabic"],
+  ["ko", "ko-hangul"],
+  ["es", "qwerty-es"],
 ]);
 
 /** BCP-47 language prefix -> layout name. Checked after exact match. */

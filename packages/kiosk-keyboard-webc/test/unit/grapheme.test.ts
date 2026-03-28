@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { graphemeLengthBefore, graphemeLengthAfter, isSingleGlyph, isCJKGlyph } from "../../src/core/grapheme.js";
+import {
+  graphemeLengthBefore,
+  graphemeLengthAfter,
+  isSingleGlyph,
+  isCJKGlyph,
+  isHangulGlyph,
+  isIndicGlyph,
+} from "../../src/core/grapheme.js";
 
 describe("graphemeLengthBefore", () => {
   it("returns 0 at position 0", () => {
@@ -340,5 +347,231 @@ describe("isCJKGlyph", () => {
   it("checks only the first code point for multi-character strings", () => {
     expect(isCJKGlyph("\u3042b")).toBe(true); // hiragana + Latin
     expect(isCJKGlyph("A\u3042")).toBe(false); // Latin + hiragana
+  });
+});
+
+describe("isIndicGlyph", () => {
+  // --- positive: Devanagari ---
+  it("returns true for Devanagari characters", () => {
+    expect(isIndicGlyph("\u0905")).toBe(true); // अ (a)
+    expect(isIndicGlyph("\u0915")).toBe(true); // क (ka)
+    expect(isIndicGlyph("\u0928")).toBe(true); // न (na)
+    expect(isIndicGlyph("\u0939")).toBe(true); // ह (ha)
+    expect(isIndicGlyph("\u0964")).toBe(true); // । (danda - shared Indic punctuation)
+    expect(isIndicGlyph("\u0965")).toBe(true); // ॥ (double danda)
+  });
+
+  it("returns true for Devanagari digits", () => {
+    expect(isIndicGlyph("\u0966")).toBe(true); // ० (zero)
+    expect(isIndicGlyph("\u096F")).toBe(true); // ९ (nine)
+  });
+
+  // --- positive: Bengali ---
+  it("returns true for Bengali characters", () => {
+    expect(isIndicGlyph("\u0985")).toBe(true); // অ (a)
+    expect(isIndicGlyph("\u0995")).toBe(true); // ক (ka)
+    expect(isIndicGlyph("\u09AC")).toBe(true); // ব (ba)
+    expect(isIndicGlyph("\u09B9")).toBe(true); // হ (ha)
+  });
+
+  // --- positive: Gurmukhi ---
+  it("returns true for Gurmukhi characters", () => {
+    expect(isIndicGlyph("\u0A05")).toBe(true); // ਅ (a)
+    expect(isIndicGlyph("\u0A15")).toBe(true); // ਕ (ka)
+    expect(isIndicGlyph("\u0A39")).toBe(true); // ਹ (ha)
+  });
+
+  // --- positive: Gujarati ---
+  it("returns true for Gujarati characters", () => {
+    expect(isIndicGlyph("\u0A85")).toBe(true); // અ (a)
+    expect(isIndicGlyph("\u0A95")).toBe(true); // ક (ka)
+    expect(isIndicGlyph("\u0AB9")).toBe(true); // હ (ha)
+  });
+
+  // --- positive: Oriya ---
+  it("returns true for Oriya characters", () => {
+    expect(isIndicGlyph("\u0B05")).toBe(true); // ଅ (a)
+    expect(isIndicGlyph("\u0B15")).toBe(true); // କ (ka)
+    expect(isIndicGlyph("\u0B39")).toBe(true); // ହ (ha)
+  });
+
+  // --- positive: Tamil ---
+  it("returns true for Tamil characters", () => {
+    expect(isIndicGlyph("\u0B85")).toBe(true); // அ (a)
+    expect(isIndicGlyph("\u0B95")).toBe(true); // க (ka)
+    expect(isIndicGlyph("\u0BA4")).toBe(true); // த (ta)
+    expect(isIndicGlyph("\u0BB9")).toBe(true); // ஹ (ha)
+  });
+
+  // --- positive: Telugu ---
+  it("returns true for Telugu characters", () => {
+    expect(isIndicGlyph("\u0C05")).toBe(true); // అ (a)
+    expect(isIndicGlyph("\u0C15")).toBe(true); // క (ka)
+    expect(isIndicGlyph("\u0C39")).toBe(true); // హ (ha)
+  });
+
+  // --- positive: Kannada ---
+  it("returns true for Kannada characters", () => {
+    expect(isIndicGlyph("\u0C85")).toBe(true); // ಅ (a)
+    expect(isIndicGlyph("\u0C95")).toBe(true); // ಕ (ka)
+    expect(isIndicGlyph("\u0CB9")).toBe(true); // ಹ (ha)
+  });
+
+  // --- positive: Malayalam ---
+  it("returns true for Malayalam characters", () => {
+    expect(isIndicGlyph("\u0D05")).toBe(true); // അ (a)
+    expect(isIndicGlyph("\u0D15")).toBe(true); // ക (ka)
+    expect(isIndicGlyph("\u0D39")).toBe(true); // ഹ (ha)
+  });
+
+  // --- positive: Sinhala ---
+  it("returns true for Sinhala characters", () => {
+    expect(isIndicGlyph("\u0D85")).toBe(true); // අ (a)
+    expect(isIndicGlyph("\u0D9A")).toBe(true); // ක (ka)
+    expect(isIndicGlyph("\u0DC4")).toBe(true); // හ (ha)
+  });
+
+  // --- negative: non-Indic scripts (false-positive guards) ---
+  it("returns false for Latin characters", () => {
+    expect(isIndicGlyph("A")).toBe(false);
+    expect(isIndicGlyph("z")).toBe(false);
+    expect(isIndicGlyph("1")).toBe(false);
+  });
+
+  it("returns false for CJK characters", () => {
+    expect(isIndicGlyph("\u3042")).toBe(false); // あ (hiragana)
+    expect(isIndicGlyph("\u4E00")).toBe(false); // 一 (CJK ideograph)
+    expect(isIndicGlyph("\uAC00")).toBe(false); // 가 (Hangul)
+  });
+
+  it("returns false for Arabic characters", () => {
+    expect(isIndicGlyph("\u0639")).toBe(false); // ع
+    expect(isIndicGlyph("\u0627")).toBe(false); // ا
+  });
+
+  it("returns false for Thai characters", () => {
+    expect(isIndicGlyph("\u0E01")).toBe(false); // ก
+    expect(isIndicGlyph("\u0E2D")).toBe(false); // อ
+  });
+
+  it("returns false for Tibetan characters", () => {
+    expect(isIndicGlyph("\u0F00")).toBe(false); // ༀ
+    expect(isIndicGlyph("\u0F40")).toBe(false); // ཀ
+  });
+
+  it("returns false for Myanmar characters", () => {
+    expect(isIndicGlyph("\u1000")).toBe(false); // က
+    expect(isIndicGlyph("\u1019")).toBe(false); // မ
+  });
+
+  it("returns false for Khmer characters", () => {
+    expect(isIndicGlyph("\u1780")).toBe(false); // ក
+    expect(isIndicGlyph("\u179F")).toBe(false); // ស
+  });
+
+  it("returns false for Lao characters", () => {
+    expect(isIndicGlyph("\u0E81")).toBe(false); // ກ
+    expect(isIndicGlyph("\u0EA5")).toBe(false); // ລ
+  });
+
+  it("returns false for Georgian characters", () => {
+    expect(isIndicGlyph("\u10D0")).toBe(false); // ა
+  });
+
+  it("returns false for Cyrillic characters", () => {
+    expect(isIndicGlyph("\u0410")).toBe(false); // А
+  });
+
+  // --- negative: edge cases ---
+  it("returns false for empty string", () => {
+    expect(isIndicGlyph("")).toBe(false);
+  });
+
+  it("returns false for emoji", () => {
+    expect(isIndicGlyph("😀")).toBe(false);
+  });
+
+  it("checks only the first code point for multi-character strings", () => {
+    expect(isIndicGlyph("\u0905b")).toBe(true); // Devanagari + Latin
+    expect(isIndicGlyph("A\u0905")).toBe(false); // Latin + Devanagari
+  });
+});
+
+describe("isHangulGlyph", () => {
+  // --- positive: Hangul Compatibility Jamo (used by ko-hangul layout) ---
+  it("returns true for Hangul Compatibility Jamo consonants", () => {
+    expect(isHangulGlyph("\u3131")).toBe(true); // ㄱ (kiyeok)
+    expect(isHangulGlyph("\u3134")).toBe(true); // ㄴ (nieun)
+    expect(isHangulGlyph("\u3142")).toBe(true); // ㅂ (pieup)
+    expect(isHangulGlyph("\u314E")).toBe(true); // ㅎ (hieuh)
+  });
+
+  it("returns true for Hangul Compatibility Jamo vowels", () => {
+    expect(isHangulGlyph("\u314F")).toBe(true); // ㅏ (a)
+    expect(isHangulGlyph("\u3153")).toBe(true); // ㅓ (eo)
+    expect(isHangulGlyph("\u3163")).toBe(true); // ㅣ (i)
+  });
+
+  it("returns true for tense (ssang) consonants", () => {
+    expect(isHangulGlyph("\u3132")).toBe(true); // ㄲ (ssangkiyeok)
+    expect(isHangulGlyph("\u3143")).toBe(true); // ㅃ (ssangpieup)
+    expect(isHangulGlyph("\u3146")).toBe(true); // ㅆ (ssangsios)
+  });
+
+  // --- positive: Hangul Syllables ---
+  it("returns true for Hangul syllables", () => {
+    expect(isHangulGlyph("\uAC00")).toBe(true); // 가 (first syllable)
+    expect(isHangulGlyph("\uD7A3")).toBe(true); // 힣 (last syllable)
+    expect(isHangulGlyph("\uD55C")).toBe(true); // 한
+  });
+
+  // --- positive: Hangul Jamo ---
+  it("returns true for Hangul Jamo (conjoining)", () => {
+    expect(isHangulGlyph("\u1100")).toBe(true); // ᄀ (initial consonant)
+    expect(isHangulGlyph("\u1161")).toBe(true); // ᅡ (medial vowel)
+    expect(isHangulGlyph("\u11A8")).toBe(true); // ᆨ (final consonant)
+  });
+
+  // --- positive: halfwidth Hangul ---
+  it("returns true for halfwidth Hangul", () => {
+    expect(isHangulGlyph("\uFFA1")).toBe(true); // ﾡ (halfwidth kiyeok)
+  });
+
+  // --- negative: non-Hangul scripts ---
+  it("returns false for Latin characters", () => {
+    expect(isHangulGlyph("A")).toBe(false);
+    expect(isHangulGlyph("1")).toBe(false);
+  });
+
+  it("returns false for Japanese hiragana/katakana", () => {
+    expect(isHangulGlyph("\u3042")).toBe(false); // あ
+    expect(isHangulGlyph("\u30A2")).toBe(false); // ア
+  });
+
+  it("returns false for CJK ideographs", () => {
+    expect(isHangulGlyph("\u4E00")).toBe(false); // 一
+    expect(isHangulGlyph("\u5B57")).toBe(false); // 字
+  });
+
+  it("returns false for Indic characters", () => {
+    expect(isHangulGlyph("\u0905")).toBe(false); // अ (Devanagari)
+    expect(isHangulGlyph("\u0B85")).toBe(false); // அ (Tamil)
+  });
+
+  it("returns false for Arabic characters", () => {
+    expect(isHangulGlyph("\u0627")).toBe(false); // ا
+  });
+
+  it("returns false for empty string", () => {
+    expect(isHangulGlyph("")).toBe(false);
+  });
+
+  it("returns false for emoji", () => {
+    expect(isHangulGlyph("😀")).toBe(false);
+  });
+
+  it("checks only the first code point for multi-character strings", () => {
+    expect(isHangulGlyph("\u3131b")).toBe(true); // Hangul + Latin
+    expect(isHangulGlyph("A\u3131")).toBe(false); // Latin + Hangul
   });
 });
