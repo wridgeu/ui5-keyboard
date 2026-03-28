@@ -162,7 +162,10 @@ function updateAriaInspector() {
     createInspectorCard("aria-roledescription", kbRoleDesc),
     ...INSPECTED_KEYS.map((spec) => {
       const keyEl = root.querySelector(`[data-key="${CSS.escape(spec.value)}"]`);
-      const ariaLabel = keyEl ? keyEl.getAttribute("aria-label") : "?";
+      // aria-label is only set when there is no visible text (correct a11y).
+      // Fall back to the element's text content (the accessible name a
+      // screen reader would announce).
+      const ariaLabel = keyEl ? keyEl.getAttribute("aria-label") || keyEl.textContent.trim() : "?";
       return createInspectorCard(spec.label, ariaLabel);
     }),
   );
@@ -190,6 +193,10 @@ document.querySelectorAll(".i18n-lang-btn").forEach((btn) => {
       appendLog("kb-i18n", `i18n resolver set for ${btn.textContent.trim()}`);
     }
 
+    // _queueI18nRefresh schedules a rAF before it calls reRenderAllUI5Elements,
+    // so we need to wait one frame for that rAF to fire, then for the render to
+    // finish, before the DOM reflects the new resolver values.
+    await new Promise((r) => requestAnimationFrame(r));
     await renderFinished();
     updateAriaInspector();
   });
