@@ -302,6 +302,10 @@ QUnit.test("CJK punctuation returns true", (assert) => {
   assert.strictEqual(isCJKGlyph("\u309C"), true, "\u309C handakuten");
 });
 
+QUnit.test("ideographic space returns false (Script=Common)", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u3000"), false, "\u3000 has no CJK Script_Extensions");
+});
+
 QUnit.test("CJK unified ideographs returns true", (assert) => {
   assert.strictEqual(isCJKGlyph("\u5B57"), true, "\u5B57 (ji/character) is CJK ideograph");
   assert.strictEqual(isCJKGlyph("\u4E00"), true, "\u4E00 (ichi/one) is CJK ideograph");

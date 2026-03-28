@@ -122,9 +122,12 @@ describe("isCJKGlyph", () => {
   it("returns true for CJK punctuation", () => {
     expect(isCJKGlyph("\u3001")).toBe(true); // 、
     expect(isCJKGlyph("\u3002")).toBe(true); // 。
-    expect(isCJKGlyph("\u3000")).toBe(true); // ideographic space (range start)
     expect(isCJKGlyph("\u309B")).toBe(true); // ゛ dakuten
     expect(isCJKGlyph("\u309C")).toBe(true); // ゜ handakuten
+  });
+
+  it("returns false for ideographic space (Script=Common, no CJK Script_Extensions)", () => {
+    expect(isCJKGlyph("\u3000")).toBe(false);
   });
 
   // --- positive: Chinese ---
@@ -151,8 +154,8 @@ describe("isCJKGlyph", () => {
   });
 
   it("returns true for CJK Compatibility Ideographs", () => {
-    expect(isCJKGlyph("\uF900")).toBe(true); // 豈 (range start)
-    expect(isCJKGlyph("\uFAFF")).toBe(true); // range end
+    expect(isCJKGlyph("\uF900")).toBe(true); // 豈
+    expect(isCJKGlyph("\uFAD9")).toBe(true); // 龎 (last assigned in block)
     expect(isCJKGlyph("\uF90A")).toBe(true); // 金
   });
 
@@ -180,17 +183,17 @@ describe("isCJKGlyph", () => {
   it("returns true for Hangul Compatibility Jamo", () => {
     expect(isCJKGlyph("\u3131")).toBe(true); // ㄱ
     expect(isCJKGlyph("\u314F")).toBe(true); // ㅏ
-    expect(isCJKGlyph("\u318F")).toBe(true); // range end
+    expect(isCJKGlyph("\u318E")).toBe(true); // ��� (last assigned)
   });
 
   it("returns true for Hangul Jamo Extended-A", () => {
     expect(isCJKGlyph("\uA960")).toBe(true); // range start
-    expect(isCJKGlyph("\uA97F")).toBe(true); // range end
+    expect(isCJKGlyph("\uA97C")).toBe(true); // ꥼ (last assigned)
   });
 
   it("returns true for Hangul Jamo Extended-B", () => {
     expect(isCJKGlyph("\uD7B0")).toBe(true); // range start
-    expect(isCJKGlyph("\uD7FF")).toBe(true); // range end
+    expect(isCJKGlyph("\uD7FB")).toBe(true); // ퟻ (last assigned)
   });
 
   // --- positive: Bopomofo (Taiwanese phonetic) ---
@@ -199,6 +202,37 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\u312F")).toBe(true); // range end
     expect(isCJKGlyph("\u31A0")).toBe(true); // ㆠ (Bopomofo Extended start)
     expect(isCJKGlyph("\u31BF")).toBe(true); // Bopomofo Extended end
+  });
+
+  // --- positive: Script_Extensions coverage beyond the old manual ranges ---
+  it("returns true for Kangxi Radicals", () => {
+    expect(isCJKGlyph("\u2F00")).toBe(true); // ⼀ (radical one)
+    expect(isCJKGlyph("\u2FD5")).toBe(true); // ⿕ (radical flute)
+  });
+
+  it("returns true for CJK Radicals Supplement", () => {
+    expect(isCJKGlyph("\u2E80")).toBe(true); // ⺀
+    expect(isCJKGlyph("\u2EF3")).toBe(true); // ⻳
+  });
+
+  it("returns true for CJK Strokes", () => {
+    expect(isCJKGlyph("\u31C0")).toBe(true); // ㇀
+    expect(isCJKGlyph("\u31E3")).toBe(true); // ㇣
+  });
+
+  it("returns true for Katakana Phonetic Extensions", () => {
+    expect(isCJKGlyph("\u31F0")).toBe(true); // ㇰ (ku)
+    expect(isCJKGlyph("\u31FF")).toBe(true); // ㇿ (ro)
+  });
+
+  it("returns true for Enclosed CJK Letters", () => {
+    expect(isCJKGlyph("\u3200")).toBe(true); // ㈀ (parenthesized Hangul kiyeok)
+    expect(isCJKGlyph("\u3280")).toBe(true); // ㊀ (circled ideograph one)
+  });
+
+  it("returns true for halfwidth Hangul", () => {
+    expect(isCJKGlyph("\uFFA1")).toBe(true); // ﾡ (halfwidth Hangul kiyeok)
+    expect(isCJKGlyph("\uFFBE")).toBe(true); // ﾾ (halfwidth Hangul ieung)
   });
 
   // --- negative: non-CJK scripts (false-positive guards) ---
