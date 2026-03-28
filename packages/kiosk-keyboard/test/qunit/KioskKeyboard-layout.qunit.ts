@@ -696,7 +696,7 @@ QUnit.test("ja-kana layout renders 5 rows with correct key counts", async (asser
   assert.strictEqual(getRowKeyValues(kb, 1).length, 12, "Row 2 has 12 keys");
   assert.strictEqual(getRowKeyValues(kb, 2).length, 12, "Row 3 has 12 keys");
   assert.strictEqual(getRowKeyValues(kb, 3).length, 12, "Row 4 has 12 keys");
-  assert.strictEqual(getRowKeyValues(kb, 4).length, 6, "Row 5 has 6 keys");
+  assert.strictEqual(getRowKeyValues(kb, 4).length, 7, "Row 5 has 7 keys");
   kb.destroy();
 });
 
@@ -758,6 +758,7 @@ QUnit.test("ja-kana: small kana shift variants on correct keys", async (assert) 
     "\u308F": "\u3092", // わ → を
     "\u3044": "\u3043", // い → ぃ
     "\u3064": "\u3063", // つ → っ
+    "\u307B": "\u3078", // ほ → へ
   };
 
   for (const [base, expectedSmall] of Object.entries(expectedShifts)) {
