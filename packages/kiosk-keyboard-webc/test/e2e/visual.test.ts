@@ -89,6 +89,35 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "webc-ja-kana");
   });
 
+  it("should match Japanese Kana shifted layout", async () => {
+    const shifted = await browser.execute(() => {
+      const kb = document.getElementById("kb-ja-kana");
+      const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+      shift?.click();
+      return !!shift;
+    });
+    expect(shifted).toBe(true);
+    await browser.waitUntil(
+      async () =>
+        browser.execute(() => {
+          const kb = document.getElementById("kb-ja-kana");
+          return kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]')?.getAttribute("aria-pressed") === "true";
+        }),
+      { timeout: 3_000, timeoutMsg: "Shift key did not become active" },
+    );
+    const kb = await getKeyboardRoot("kb-ja-kana");
+    try {
+      await matchElementSnapshotInSection(kb, "webc-ja-kana-shifted");
+    } finally {
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-ja-kana");
+        const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+        shift?.click();
+        shift?.click();
+      });
+    }
+  });
+
   it("should match Arabic layout", async () => {
     const kb = await getKeyboardRoot("kb-arabic");
     await matchElementSnapshotInSection(kb, "webc-arabic");
