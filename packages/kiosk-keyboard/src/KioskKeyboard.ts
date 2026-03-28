@@ -1341,7 +1341,7 @@ export default class KioskKeyboard extends Control {
     if (!dom) return this;
 
     this._syncResponsiveSizing(dom);
-    this._applyResponsiveSizeClasses(dom);
+    this._scheduleResponsiveSizingSync();
     return this;
   }
 
@@ -2163,7 +2163,14 @@ export default class KioskKeyboard extends Control {
 
     // Optimistic DOM update: apply shift-active / caps-lock classes
     // immediately for instant visual feedback, before the framework
-    // re-render cycle (same pattern as ontouchstart keyPressed class).
+    // re-render cycle.  Same pattern as sap.m.Button._activeButton(),
+    // sap.m.ToggleButton.setPressed(), and this control's own
+    // ontouchstart keyPressed class.
+    //
+    // Note: this duplicates the class logic in KioskKeyboardRenderer's
+    // addKeyClasses hook.  Custom renderers that override addKeyClasses
+    // for shift styling must also override _toggleShift to keep the
+    // optimistic path in sync.
     const isShifted = this._shiftState.isShifted;
     const isCaps = this._shiftState.isCapsLock;
     el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyActive, isShifted);
