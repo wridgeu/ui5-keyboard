@@ -622,6 +622,45 @@ describe("kiosk-keyboard", () => {
       const { detail } = await layoutChangeEvent;
       expect(detail.layout).to.equal("numeric");
     });
+
+    it("tracks base layout through primary layout toggle and secondary roundtrip", async () => {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard layout="ja-romaji"></kiosk-keyboard>
+      `);
+      await nextRender();
+
+      // Step 1: toggle from ja-romaji to ja-kana (primary -> primary)
+      const kanaToggle = queryKey(el, "{layout:ja-kana}");
+      expect(kanaToggle, "ja-kana toggle key should exist on ja-romaji").to.not.be.null;
+
+      let layoutChange = oneEvent(el, "layout-change");
+      kanaToggle!.click();
+      let detail = (await layoutChange).detail;
+      expect(detail.layout).to.equal("ja-kana");
+      await nextRender();
+
+      // Step 2: switch to numeric (secondary layout)
+      const numericKey = queryKey(el, "{layout:numeric}");
+      expect(numericKey, "numeric key should exist on ja-kana").to.not.be.null;
+
+      layoutChange = oneEvent(el, "layout-change");
+      numericKey!.click();
+      detail = (await layoutChange).detail;
+      expect(detail.layout).to.equal("numeric");
+      await nextRender();
+
+      // Step 3: return to base -- should be ja-kana, NOT ja-romaji
+      const baseKey = queryKey(el, "{layout:base}");
+      expect(baseKey, "base key should exist on numeric layout").to.not.be.null;
+
+      layoutChange = oneEvent(el, "layout-change");
+      baseKey!.click();
+      detail = (await layoutChange).detail;
+      expect(detail.layout).to.equal(
+        "ja-kana",
+        "base layout should track the last primary layout (ja-kana), not the initial layout (ja-romaji)",
+      );
+    });
   });
 
   // ── Docked mode ──
