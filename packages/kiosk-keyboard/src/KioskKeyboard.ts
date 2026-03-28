@@ -1333,6 +1333,10 @@ export default class KioskKeyboard extends Control {
    * without triggering a ResizeHandler callback, such as fixed-height styling
    * combined with updated `--ui5KioskKeyboard-*` sizing variables.
    *
+   * The class update is deferred to the next animation frame to avoid
+   * forced reflow. Query the DOM for responsive classes after a
+   * `requestAnimationFrame` callback, not synchronously.
+   *
    * @public
    * @since 0.1.0
    */
