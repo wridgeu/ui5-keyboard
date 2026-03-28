@@ -466,7 +466,25 @@
             <kiosk-keyboard id="kb-ja-romaji" layout="ja-romaji" for="ja-kana-input"></kiosk-keyboard>
           </div>
 
-          <!-- 12. i18n Resolver -->
+          <!-- 12. Korean Hangul (layout toggle to ABC) -->
+          <div class="card">
+            <h2>Korean Hangul</h2>
+            <div style="margin-bottom: 8px">
+              <input id="ko-hangul-input" type="text" placeholder="Hangul input..." />
+            </div>
+            <kiosk-keyboard id="kb-ko-hangul" layout="ko-hangul" for="ko-hangul-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 13. Spanish QWERTY-ES -->
+          <div class="card">
+            <h2>Spanish (QWERTY-ES)</h2>
+            <div style="margin-bottom: 8px">
+              <input id="es-input" type="text" placeholder="Escribir aqu&#237;..." />
+            </div>
+            <kiosk-keyboard id="kb-qwerty-es" layout="qwerty-es" for="es-input"></kiosk-keyboard>
+          </div>
+
+          <!-- 14. i18n Resolver -->
           <div class="card" style="grid-column: 1 / -1">
             <h2>i18n Resolver (accessibility labels)</h2>
             <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">

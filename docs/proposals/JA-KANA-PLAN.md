@@ -15,6 +15,7 @@
 ## Task 1: Create ja-kana layout file (WebC)
 
 **Files:**
+
 - Create: `packages/kiosk-keyboard-webc/src/layouts/ja-kana.ts`
 
 - [ ] **Step 1: Create the layout file**
@@ -40,62 +41,62 @@ import type { LayoutDefinition } from "../types.js";
 const jaKana: LayoutDefinition = [
   // Row 1: number row -- kana base, small kana / を on shift
   [
-    { value: "\u306C" },                                   // ぬ (1)
-    { value: "\u3075" },                                   // ふ (2)
-    { value: "\u3042", shiftValue: "\u3041" },             // あ → ぁ (3)
-    { value: "\u3046", shiftValue: "\u3045" },             // う → ぅ (4)
-    { value: "\u3048", shiftValue: "\u3047" },             // え → ぇ (5)
-    { value: "\u304A", shiftValue: "\u3049" },             // お → ぉ (6)
-    { value: "\u3084", shiftValue: "\u3083" },             // や → ゃ (7)
-    { value: "\u3086", shiftValue: "\u3085" },             // ゆ → ゅ (8)
-    { value: "\u3088", shiftValue: "\u3087" },             // よ → ょ (9)
-    { value: "\u308F", shiftValue: "\u3092" },             // わ → を (0)
-    { value: "\u307B" },                                   // ほ (-)
+    { value: "\u306C" }, // ぬ (1)
+    { value: "\u3075" }, // ふ (2)
+    { value: "\u3042", shiftValue: "\u3041" }, // あ → ぁ (3)
+    { value: "\u3046", shiftValue: "\u3045" }, // う → ぅ (4)
+    { value: "\u3048", shiftValue: "\u3047" }, // え → ぇ (5)
+    { value: "\u304A", shiftValue: "\u3049" }, // お → ぉ (6)
+    { value: "\u3084", shiftValue: "\u3083" }, // や → ゃ (7)
+    { value: "\u3086", shiftValue: "\u3085" }, // ゆ → ゅ (8)
+    { value: "\u3088", shiftValue: "\u3087" }, // よ → ょ (9)
+    { value: "\u308F", shiftValue: "\u3092" }, // わ → を (0)
+    { value: "\u307B" }, // ほ (-)
     { value: "{backspace}", width: "1.5", type: "action" },
   ],
   // Row 2: upper letter row + dakuten/handakuten at JIS positions
   [
-    { value: "\u305F" },                                   // た (Q)
-    { value: "\u3066" },                                   // て (W)
-    { value: "\u3044", shiftValue: "\u3043" },             // い → ぃ (E)
-    { value: "\u3059" },                                   // す (R)
-    { value: "\u304B" },                                   // か (T)
-    { value: "\u3093" },                                   // ん (Y)
-    { value: "\u306A" },                                   // な (U)
-    { value: "\u306B" },                                   // に (I)
-    { value: "\u3089" },                                   // ら (O)
-    { value: "\u305B" },                                   // せ (P)
-    { value: "\u309B", type: "modifier" },                 // ゛ dakuten (@ on JIS)
-    { value: "\u309C", type: "modifier" },                 // ゜ handakuten ([ on JIS)
+    { value: "\u305F" }, // た (Q)
+    { value: "\u3066" }, // て (W)
+    { value: "\u3044", shiftValue: "\u3043" }, // い → ぃ (E)
+    { value: "\u3059" }, // す (R)
+    { value: "\u304B" }, // か (T)
+    { value: "\u3093" }, // ん (Y)
+    { value: "\u306A" }, // な (U)
+    { value: "\u306B" }, // に (I)
+    { value: "\u3089" }, // ら (O)
+    { value: "\u305B" }, // せ (P)
+    { value: "\u309B", type: "modifier" }, // ゛ dakuten (@ on JIS)
+    { value: "\u309C", type: "modifier" }, // ゜ handakuten ([ on JIS)
   ],
   // Row 3: home row + JIS extra keys
   [
-    { value: "\u3061" },                                   // ち (A)
-    { value: "\u3068" },                                   // と (S)
-    { value: "\u3057" },                                   // し (D)
-    { value: "\u306F" },                                   // は (F)
-    { value: "\u304D" },                                   // き (G)
-    { value: "\u304F" },                                   // く (H)
-    { value: "\u307E" },                                   // ま (J)
-    { value: "\u306E" },                                   // の (K)
-    { value: "\u308A" },                                   // り (L)
-    { value: "\u308C" },                                   // れ (; on JIS)
-    { value: "\u3051" },                                   // け (: on JIS)
-    { value: "\u3080" },                                   // む (] on JIS)
+    { value: "\u3061" }, // ち (A)
+    { value: "\u3068" }, // と (S)
+    { value: "\u3057" }, // し (D)
+    { value: "\u306F" }, // は (F)
+    { value: "\u304D" }, // き (G)
+    { value: "\u304F" }, // く (H)
+    { value: "\u307E" }, // ま (J)
+    { value: "\u306E" }, // の (K)
+    { value: "\u308A" }, // り (L)
+    { value: "\u308C" }, // れ (; on JIS)
+    { value: "\u3051" }, // け (: on JIS)
+    { value: "\u3080" }, // む (] on JIS)
   ],
   // Row 4: lower row + shift/enter + JIS punctuation shifts
   [
     { value: "{shift}", width: "1.5", type: "modifier" },
-    { value: "\u3064", shiftValue: "\u3063" },             // つ → っ (Z)
-    { value: "\u3055" },                                   // さ (X)
-    { value: "\u305D" },                                   // そ (C)
-    { value: "\u3072" },                                   // ひ (V)
-    { value: "\u3053" },                                   // こ (B)
-    { value: "\u307F" },                                   // み (N)
-    { value: "\u3082" },                                   // も (M)
-    { value: "\u306D", shiftValue: "\u3001" },             // ね → 、 (,)
-    { value: "\u308B", shiftValue: "\u3002" },             // る → 。 (.)
-    { value: "\u3081", shiftValue: "\u30FB" },             // め → ・ (/)
+    { value: "\u3064", shiftValue: "\u3063" }, // つ → っ (Z)
+    { value: "\u3055" }, // さ (X)
+    { value: "\u305D" }, // そ (C)
+    { value: "\u3072" }, // ひ (V)
+    { value: "\u3053" }, // こ (B)
+    { value: "\u307F" }, // み (N)
+    { value: "\u3082" }, // も (M)
+    { value: "\u306D", shiftValue: "\u3001" }, // ね → 、 (,)
+    { value: "\u308B", shiftValue: "\u3002" }, // る → 。 (.)
+    { value: "\u3081", shiftValue: "\u30FB" }, // め → ・ (/)
     { value: "{enter}", width: "1.5", type: "action" },
   ],
   // Row 5: bottom row
@@ -103,8 +104,8 @@ const jaKana: LayoutDefinition = [
     { value: "{layout:numeric}", label: "123", width: "1.5", type: "modifier" },
     { value: "{layout:ja-romaji}", label: "\u30ED\u30FC\u30DE\u5B57", type: "modifier" }, // ローマ字
     { value: " ", width: "space", type: "space" },
-    { value: "\u30FC" },                                   // ー prolonged sound mark
-    { value: "\u3002" },                                   // 。 period (convenience)
+    { value: "\u30FC" }, // ー prolonged sound mark
+    { value: "\u3002" }, // 。 period (convenience)
     { value: "{layout:fkeys}", label: "Fn", width: "1.5", type: "modifier" },
   ],
 ];
@@ -132,6 +133,7 @@ git commit -m "feat(webc): add JIS kana direct-input layout definition"
 ## Task 2: Create ja-kana layout file (UI5)
 
 **Files:**
+
 - Create: `packages/kiosk-keyboard/src/layouts/ja-kana.ts`
 
 - [ ] **Step 1: Create the layout file**
@@ -157,62 +159,62 @@ import type { LayoutDefinition } from "../types";
 const jaKana: LayoutDefinition = [
   // Row 1: number row -- kana base, small kana / を on shift
   [
-    { value: "\u306C" },                                   // ぬ (1)
-    { value: "\u3075" },                                   // ふ (2)
-    { value: "\u3042", shiftValue: "\u3041" },             // あ → ぁ (3)
-    { value: "\u3046", shiftValue: "\u3045" },             // う → ぅ (4)
-    { value: "\u3048", shiftValue: "\u3047" },             // え → ぇ (5)
-    { value: "\u304A", shiftValue: "\u3049" },             // お → ぉ (6)
-    { value: "\u3084", shiftValue: "\u3083" },             // や → ゃ (7)
-    { value: "\u3086", shiftValue: "\u3085" },             // ゆ → ゅ (8)
-    { value: "\u3088", shiftValue: "\u3087" },             // よ → ょ (9)
-    { value: "\u308F", shiftValue: "\u3092" },             // わ → を (0)
-    { value: "\u307B" },                                   // ほ (-)
+    { value: "\u306C" }, // ぬ (1)
+    { value: "\u3075" }, // ふ (2)
+    { value: "\u3042", shiftValue: "\u3041" }, // あ → ぁ (3)
+    { value: "\u3046", shiftValue: "\u3045" }, // う → ぅ (4)
+    { value: "\u3048", shiftValue: "\u3047" }, // え → ぇ (5)
+    { value: "\u304A", shiftValue: "\u3049" }, // お → ぉ (6)
+    { value: "\u3084", shiftValue: "\u3083" }, // や → ゃ (7)
+    { value: "\u3086", shiftValue: "\u3085" }, // ゆ → ゅ (8)
+    { value: "\u3088", shiftValue: "\u3087" }, // よ → ょ (9)
+    { value: "\u308F", shiftValue: "\u3092" }, // わ → を (0)
+    { value: "\u307B" }, // ほ (-)
     { value: "{backspace}", width: "1.5", type: "action" },
   ],
   // Row 2: upper letter row + dakuten/handakuten at JIS positions
   [
-    { value: "\u305F" },                                   // た (Q)
-    { value: "\u3066" },                                   // て (W)
-    { value: "\u3044", shiftValue: "\u3043" },             // い → ぃ (E)
-    { value: "\u3059" },                                   // す (R)
-    { value: "\u304B" },                                   // か (T)
-    { value: "\u3093" },                                   // ん (Y)
-    { value: "\u306A" },                                   // な (U)
-    { value: "\u306B" },                                   // に (I)
-    { value: "\u3089" },                                   // ら (O)
-    { value: "\u305B" },                                   // せ (P)
-    { value: "\u309B", type: "modifier" },                 // ゛ dakuten (@ on JIS)
-    { value: "\u309C", type: "modifier" },                 // ゜ handakuten ([ on JIS)
+    { value: "\u305F" }, // た (Q)
+    { value: "\u3066" }, // て (W)
+    { value: "\u3044", shiftValue: "\u3043" }, // い → ぃ (E)
+    { value: "\u3059" }, // す (R)
+    { value: "\u304B" }, // か (T)
+    { value: "\u3093" }, // ん (Y)
+    { value: "\u306A" }, // な (U)
+    { value: "\u306B" }, // に (I)
+    { value: "\u3089" }, // ら (O)
+    { value: "\u305B" }, // せ (P)
+    { value: "\u309B", type: "modifier" }, // ゛ dakuten (@ on JIS)
+    { value: "\u309C", type: "modifier" }, // ゜ handakuten ([ on JIS)
   ],
   // Row 3: home row + JIS extra keys
   [
-    { value: "\u3061" },                                   // ち (A)
-    { value: "\u3068" },                                   // と (S)
-    { value: "\u3057" },                                   // し (D)
-    { value: "\u306F" },                                   // は (F)
-    { value: "\u304D" },                                   // き (G)
-    { value: "\u304F" },                                   // く (H)
-    { value: "\u307E" },                                   // ま (J)
-    { value: "\u306E" },                                   // の (K)
-    { value: "\u308A" },                                   // り (L)
-    { value: "\u308C" },                                   // れ (; on JIS)
-    { value: "\u3051" },                                   // け (: on JIS)
-    { value: "\u3080" },                                   // む (] on JIS)
+    { value: "\u3061" }, // ち (A)
+    { value: "\u3068" }, // と (S)
+    { value: "\u3057" }, // し (D)
+    { value: "\u306F" }, // は (F)
+    { value: "\u304D" }, // き (G)
+    { value: "\u304F" }, // く (H)
+    { value: "\u307E" }, // ま (J)
+    { value: "\u306E" }, // の (K)
+    { value: "\u308A" }, // り (L)
+    { value: "\u308C" }, // れ (; on JIS)
+    { value: "\u3051" }, // け (: on JIS)
+    { value: "\u3080" }, // む (] on JIS)
   ],
   // Row 4: lower row + shift/enter + JIS punctuation shifts
   [
     { value: "{shift}", width: "1.5", type: "modifier" },
-    { value: "\u3064", shiftValue: "\u3063" },             // つ → っ (Z)
-    { value: "\u3055" },                                   // さ (X)
-    { value: "\u305D" },                                   // そ (C)
-    { value: "\u3072" },                                   // ひ (V)
-    { value: "\u3053" },                                   // こ (B)
-    { value: "\u307F" },                                   // み (N)
-    { value: "\u3082" },                                   // も (M)
-    { value: "\u306D", shiftValue: "\u3001" },             // ね → 、 (,)
-    { value: "\u308B", shiftValue: "\u3002" },             // る → 。 (.)
-    { value: "\u3081", shiftValue: "\u30FB" },             // め → ・ (/)
+    { value: "\u3064", shiftValue: "\u3063" }, // つ → っ (Z)
+    { value: "\u3055" }, // さ (X)
+    { value: "\u305D" }, // そ (C)
+    { value: "\u3072" }, // ひ (V)
+    { value: "\u3053" }, // こ (B)
+    { value: "\u307F" }, // み (N)
+    { value: "\u3082" }, // も (M)
+    { value: "\u306D", shiftValue: "\u3001" }, // ね → 、 (,)
+    { value: "\u308B", shiftValue: "\u3002" }, // る → 。 (.)
+    { value: "\u3081", shiftValue: "\u30FB" }, // め → ・ (/)
     { value: "{enter}", width: "1.5", type: "action" },
   ],
   // Row 5: bottom row
@@ -220,8 +222,8 @@ const jaKana: LayoutDefinition = [
     { value: "{layout:numeric}", label: "123", width: "1.5", type: "modifier" },
     { value: "{layout:ja-romaji}", label: "\u30ED\u30FC\u30DE\u5B57", type: "modifier" }, // ローマ字
     { value: " ", width: "space", type: "space" },
-    { value: "\u30FC" },                                   // ー prolonged sound mark
-    { value: "\u3002" },                                   // 。 period (convenience)
+    { value: "\u30FC" }, // ー prolonged sound mark
+    { value: "\u3002" }, // 。 period (convenience)
     { value: "{layout:fkeys}", label: "Fn", width: "1.5", type: "modifier" },
   ],
 ];
@@ -241,6 +243,7 @@ git commit -m "feat(ui5): add JIS kana direct-input layout definition"
 ## Task 3: Register ja-kana in both layout registries
 
 **Files:**
+
 - Modify: `packages/kiosk-keyboard-webc/src/layouts/index.ts`
 - Modify: `packages/kiosk-keyboard/src/internal/layout-registry.ts`
 - Modify: `packages/kiosk-keyboard/src/library.ts`
@@ -305,6 +308,7 @@ git commit -m "feat: register ja-kana as built-in layout in both packages"
 ## Task 4: Add layout toggle key to ja-romaji
 
 **Files:**
+
 - Modify: `packages/kiosk-keyboard-webc/src/layouts/ja-romaji.ts`
 - Modify: `packages/kiosk-keyboard/src/layouts/ja-romaji.ts`
 
@@ -368,6 +372,7 @@ git commit -m "feat: add kana toggle key to ja-romaji layout in both packages"
 ## Task 5: WebC unit tests for ja-kana layout structure
 
 **Files:**
+
 - Create: `packages/kiosk-keyboard-webc/test/unit/ja-kana-layout.test.ts`
 
 - [ ] **Step 1: Create the test file**
@@ -411,11 +416,7 @@ describe("ja-kana layout structure", () => {
     for (const row of jaKana) {
       for (const key of row) {
         const v = key.value;
-        const isValid =
-          hiraganaRange.test(v) ||
-          specialKeys.has(v) ||
-          punctuation.has(v) ||
-          layoutKeys.has(v);
+        const isValid = hiraganaRange.test(v) || specialKeys.has(v) || punctuation.has(v) || layoutKeys.has(v);
         expect(isValid, `key value "${v}" (U+${v.codePointAt(0)?.toString(16)}) should be valid`).toBe(true);
       }
     }
@@ -498,6 +499,7 @@ git commit -m "test(webc): add unit tests for ja-kana layout structure"
 ## Task 6: UI5 QUnit tests for ja-kana layout
 
 **Files:**
+
 - Modify: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-layout.qunit.ts`
 
 - [ ] **Step 1: Add ja-kana layout tests**
@@ -567,6 +569,7 @@ git commit -m "test(ui5): add QUnit tests for ja-kana layout structure"
 ## Task 7: Add visual test fixtures
 
 **Files:**
+
 - Modify: `packages/kiosk-keyboard-webc/test/pages/visual.html`
 - Modify: `packages/kiosk-keyboard-webc/test/e2e/visual.test.ts`
 - Modify: `packages/kiosk-keyboard/test/e2e/visual/index.html`
@@ -578,10 +581,10 @@ git commit -m "test(ui5): add QUnit tests for ja-kana layout structure"
 In `packages/kiosk-keyboard-webc/test/pages/visual.html`, add before the closing `</body>`:
 
 ```html
-    <div class="section">
-      <h2>31. Japanese Kana</h2>
-      <kiosk-keyboard id="kb-ja-kana" layout="ja-kana"></kiosk-keyboard>
-    </div>
+<div class="section">
+  <h2>31. Japanese Kana</h2>
+  <kiosk-keyboard id="kb-ja-kana" layout="ja-kana"></kiosk-keyboard>
+</div>
 ```
 
 - [ ] **Step 2: Add WebC visual test**
@@ -589,10 +592,10 @@ In `packages/kiosk-keyboard-webc/test/pages/visual.html`, add before the closing
 In `packages/kiosk-keyboard-webc/test/e2e/visual.test.ts`, add after the Japanese Romaji test:
 
 ```typescript
-  it("should match Japanese Kana layout", async () => {
-    const kb = await getKeyboardRoot("kb-ja-kana");
-    await matchElementSnapshotInSection(kb, "webc-ja-kana");
-  });
+it("should match Japanese Kana layout", async () => {
+  const kb = await getKeyboardRoot("kb-ja-kana");
+  await matchElementSnapshotInSection(kb, "webc-ja-kana");
+});
 ```
 
 - [ ] **Step 3: Add UI5 visual test page section**
@@ -600,8 +603,8 @@ In `packages/kiosk-keyboard-webc/test/e2e/visual.test.ts`, add after the Japanes
 In `packages/kiosk-keyboard/test/e2e/visual/index.html`, add after the ja-romaji section:
 
 ```html
-      <h2>Japanese Kana</h2>
-      <div class="keyboard-container" id="kb-ja-kana"></div>
+<h2>Japanese Kana</h2>
+<div class="keyboard-container" id="kb-ja-kana"></div>
 ```
 
 - [ ] **Step 4: Add UI5 visual test init**
@@ -609,7 +612,7 @@ In `packages/kiosk-keyboard/test/e2e/visual/index.html`, add after the ja-romaji
 In `packages/kiosk-keyboard/test/e2e/visual/init.js`, add after the ja-romaji instantiation:
 
 ```javascript
-  new KioskKeyboard({ layout: "ja-kana" }).placeAt("kb-ja-kana");
+new KioskKeyboard({ layout: "ja-kana" }).placeAt("kb-ja-kana");
 ```
 
 - [ ] **Step 5: Add UI5 visual test**
@@ -617,10 +620,10 @@ In `packages/kiosk-keyboard/test/e2e/visual/init.js`, add after the ja-romaji in
 In `packages/kiosk-keyboard/test/e2e/visual.test.ts`, add after the Japanese Romaji test:
 
 ```typescript
-  it("should match Japanese Kana layout", async () => {
-    const kb = await getKeyboard("kb-ja-kana");
-    await matchElementSnapshotInSection(kb, "kb-ja-kana");
-  });
+it("should match Japanese Kana layout", async () => {
+  const kb = await getKeyboard("kb-ja-kana");
+  await matchElementSnapshotInSection(kb, "kb-ja-kana");
+});
 ```
 
 - [ ] **Step 6: Commit**
@@ -639,6 +642,7 @@ git commit -m "test: add visual regression fixtures for ja-kana layout"
 ## Task 8: Update documentation
 
 **Files:**
+
 - Modify: `packages/kiosk-keyboard/README.md`
 - Modify: `packages/kiosk-keyboard-webc/README.md`
 - Modify: `docs/kiosk/ARCHITECTURE.md`
@@ -649,7 +653,7 @@ git commit -m "test: add visual regression fixtures for ja-kana layout"
 Add `ja-kana` to the layout table (after `ja-romaji`):
 
 ```markdown
-| `ja-kana`       | Japanese Kana direct-input (JIS X 6002)              | 5    |
+| `ja-kana` | Japanese Kana direct-input (JIS X 6002) | 5 |
 ```
 
 Add to the `KeyboardLayout` enum documentation:
@@ -663,7 +667,7 @@ KeyboardLayout.JaKana; // "ja-kana"
 Add `ja-kana` to the layout table (after `ja-romaji`):
 
 ```markdown
-| `ja-kana`       | Japanese Kana direct-input (JIS X 6002)              |
+| `ja-kana` | Japanese Kana direct-input (JIS X 6002) |
 ```
 
 Update the locale-aware description to mention kana:

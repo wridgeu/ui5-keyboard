@@ -116,6 +116,53 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
     const kb = await getKeyboard("kb-arabic");
     await matchElementSnapshotInSection(kb, "kb-arabic");
   });
+
+  it("should match Korean Hangul layout", async () => {
+    const kb = await getKeyboard("kb-ko-hangul");
+    await matchElementSnapshotInSection(kb, "kb-ko-hangul");
+  });
+
+  it("should match Korean Hangul shifted layout", async () => {
+    const kb = await getKeyboard("kb-ko-hangul");
+    const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
+    await shiftKey.click();
+    await shiftKey.waitUntil(async () => (await shiftKey.getAttribute("aria-pressed")) === "true", {
+      timeout: 3_000,
+      timeoutMsg: "Shift key did not become active on ko-hangul",
+    });
+    try {
+      await matchElementSnapshotInSection(kb, "kb-ko-hangul-shifted");
+    } finally {
+      await shiftKey.click();
+      await shiftKey.click();
+    }
+  });
+
+  it("should match Indic glyph stress layout", async () => {
+    const kb = await getKeyboard("kb-indic-stress");
+    await matchElementSnapshotInSection(kb, "kb-indic-stress");
+  });
+
+  it("should match Spanish QWERTY-ES layout", async () => {
+    const kb = await getKeyboard("kb-qwerty-es");
+    await matchElementSnapshotInSection(kb, "kb-qwerty-es");
+  });
+
+  it("should match Spanish QWERTY-ES shifted layout", async () => {
+    const kb = await getKeyboard("kb-qwerty-es");
+    const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
+    await shiftKey.click();
+    await shiftKey.waitUntil(async () => (await shiftKey.getAttribute("aria-pressed")) === "true", {
+      timeout: 3_000,
+      timeoutMsg: "Shift key did not become active on qwerty-es",
+    });
+    try {
+      await matchElementSnapshotInSection(kb, "kb-qwerty-es-shifted");
+    } finally {
+      await shiftKey.click();
+      await shiftKey.click();
+    }
+  });
 });
 
 describe("KioskKeyboard Interactive States", () => {
