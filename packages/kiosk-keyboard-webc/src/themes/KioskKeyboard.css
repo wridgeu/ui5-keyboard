@@ -512,6 +512,8 @@
    room on phone-sized rows. A custom font face could still improve optical
    centering further; see docs/proposals/CUSTOM-FONT-FACE.md. */
 .kiosk-key__label--glyph {
+  display: inline-block;
+  max-inline-size: none;
   overflow: visible;
   text-overflow: clip;
   line-height: 1;
