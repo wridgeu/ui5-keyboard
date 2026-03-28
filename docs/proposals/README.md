@@ -2,6 +2,7 @@
 
 These documents cover repository-wide proposals that are not part of the current contract unless explicitly implemented.
 
+- [CJK Glyph Centering](./CJK-GLYPH-CENTERING.md)
 - [Custom Font Face](./CUSTOM-FONT-FACE.md)
 
 Implemented proposals are moved to [`docs/kiosk/history/`](../kiosk/history/):

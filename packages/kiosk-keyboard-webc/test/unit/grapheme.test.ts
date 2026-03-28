@@ -129,6 +129,21 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\uFF66")).toBe(true); // ヲ (halfwidth)
   });
 
+  it("returns true for Hangul syllables", () => {
+    expect(isCJKGlyph("\uAC00")).toBe(true); // 가 (first Hangul syllable)
+    expect(isCJKGlyph("\uD7A3")).toBe(true); // 힣 (last Hangul syllable)
+  });
+
+  it("returns true for Hangul Jamo", () => {
+    expect(isCJKGlyph("\u1100")).toBe(true); // ᄀ (Jamo initial consonant)
+    expect(isCJKGlyph("\u3131")).toBe(true); // ㄱ (Hangul Compatibility Jamo)
+  });
+
+  it("returns true for Bopomofo", () => {
+    expect(isCJKGlyph("\u3105")).toBe(true); // ㄅ
+    expect(isCJKGlyph("\u31A0")).toBe(true); // ㆠ (Bopomofo Extended)
+  });
+
   it("returns false for Latin characters", () => {
     expect(isCJKGlyph("A")).toBe(false);
     expect(isCJKGlyph("z")).toBe(false);
