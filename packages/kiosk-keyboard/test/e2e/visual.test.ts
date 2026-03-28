@@ -91,6 +91,27 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "kb-ja-romaji");
   });
 
+  it("should match Japanese Kana layout", async () => {
+    const kb = await getKeyboard("kb-ja-kana");
+    await matchElementSnapshotInSection(kb, "kb-ja-kana");
+  });
+
+  it("should match Japanese Kana shifted layout", async () => {
+    const kb = await getKeyboard("kb-ja-kana");
+    const shiftKey = await kb.$('[data-key="\\{shift\\}"]');
+    await shiftKey.click();
+    await shiftKey.waitUntil(async () => (await shiftKey.getAttribute("aria-pressed")) === "true", {
+      timeout: 3_000,
+      timeoutMsg: "Shift key did not become active on ja-kana",
+    });
+    try {
+      await matchElementSnapshotInSection(kb, "kb-ja-kana-shifted");
+    } finally {
+      await shiftKey.click();
+      await shiftKey.click();
+    }
+  });
+
   it("should match Arabic layout", async () => {
     const kb = await getKeyboard("kb-arabic");
     await matchElementSnapshotInSection(kb, "kb-arabic");

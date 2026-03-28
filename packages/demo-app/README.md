@@ -122,16 +122,17 @@ Landing page linking to all kiosk demos.
 ### Programmatic Control (`#/kiosk/programmatic`)
 
 - Imperative API: `show()`, `close()`, type switching, `resetKeyboardType()`
-- Runtime layout registration and selection
+- Runtime layout registration and selection (all built-in layouts including Japanese Kana appear in the layout dropdown)
 - Lifecycle/status events (`afterOpen`, `afterClose`, layout change)
 
 ### Custom Layouts Gallery (`#/kiosk/custom-layouts`)
 
-- Three custom `LayoutDefinition` examples:
+- Four custom `LayoutDefinition` examples:
   - Emoji picker
   - IP address pad
   - Currency pad
-- Demonstrates key width, action keys, icons, and label overrides
+  - Icon + Label (dual icon+label rendering, capsLock overrides)
+- Demonstrates key width, action keys, icons, label overrides, and dual icon+label rendering
 
 ### Component-Level Keyboard (`#/kiosk/component`)
 

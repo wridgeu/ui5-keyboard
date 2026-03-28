@@ -11,6 +11,7 @@ import qwertzDeFk from "./qwertz-de-fk.js";
 import qwertyNav from "./qwerty-nav.js";
 import qwertzDeNav from "./qwertz-de-nav.js";
 import jaRomaji from "./ja-romaji.js";
+import jaKana from "./ja-kana.js";
 import arabic from "./arabic.js";
 
 /** All built-in layouts keyed by name. */
@@ -27,6 +28,7 @@ const builtInLayouts: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["qwerty-nav", qwertyNav],
   ["qwertz-de-nav", qwertzDeNav],
   ["ja-romaji", jaRomaji],
+  ["ja-kana", jaKana],
   ["arabic", arabic],
 ]);
 

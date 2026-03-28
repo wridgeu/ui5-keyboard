@@ -1190,6 +1190,9 @@ class KioskKeyboard extends UI5Element {
     } else {
       this._currentLayout = layoutName;
       this._layoutSwitchedByUser = true;
+      if (!SECONDARY_LAYOUTS.has(layoutName)) {
+        this._baseLayout = layoutName;
+      }
     }
     this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
   }
