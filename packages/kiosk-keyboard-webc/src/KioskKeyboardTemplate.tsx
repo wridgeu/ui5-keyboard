@@ -71,6 +71,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                 data-shift-value={key.shiftValue || undefined}
                 aria-pressed={isShift ? this._shifted : undefined}
                 aria-disabled={this.disabled ? "true" : undefined}
+                title={hasLabel && !isSingleGlyphLabel ? label : undefined}
                 aria-label={hasLabel ? undefined : this._getKeyAriaLabel(key)}
               >
                 {hasIcon && resolved.sap ? (

@@ -538,6 +538,88 @@ QUnit.test("capsLockLabel: '' suppresses label, aria-label says Caps Lock", asyn
   KioskKeyboard.unregisterLayout("test-capslock");
 });
 
+// ──────────────────────────────────────────────
+// Title tooltip for truncated labels
+// ──────────────────────────────────────────────
+
+QUnit.test("multi-character label gets title attribute", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "x", label: "Custom" }]];
+  KioskKeyboard.registerLayout("test-title", layout);
+  const kb = new KioskKeyboard({ layout: "test-title" });
+  await placeAndWait(kb);
+
+  const keyEl = getRequiredKeyElement(kb, "x");
+  assert.strictEqual(keyEl.getAttribute("title"), "Custom", "title matches full label text");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-title");
+});
+
+QUnit.test("single-glyph label does not get title attribute", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "a" }]];
+  KioskKeyboard.registerLayout("test-title", layout);
+  const kb = new KioskKeyboard({ layout: "test-title" });
+  await placeAndWait(kb);
+
+  const keyEl = getRequiredKeyElement(kb, "a");
+  assert.notOk(keyEl.getAttribute("title"), "no title on single-glyph key");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-title");
+});
+
+QUnit.test("empty label does not get title attribute", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "x", label: "" }]];
+  KioskKeyboard.registerLayout("test-title", layout);
+  const kb = new KioskKeyboard({ layout: "test-title" });
+  await placeAndWait(kb);
+
+  const keyEl = getRequiredKeyElement(kb, "x");
+  assert.notOk(keyEl.getAttribute("title"), "no title on empty-label key");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-title");
+});
+
+QUnit.test("special key with i18n label gets title (e.g. Enter)", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const enter = getRequiredKeyElement(kb, "{enter}");
+  assert.strictEqual(enter.getAttribute("title"), "Enter", "Enter key has title");
+
+  const backspace = getRequiredKeyElement(kb, "{backspace}");
+  assert.strictEqual(backspace.getAttribute("title"), "Backspace", "Backspace key has title");
+
+  kb.destroy();
+});
+
+QUnit.test("CJK multi-character label gets title", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "{layout:alpha}", label: "\u30ED\u30FC\u30DE\u5B57" }]];
+  KioskKeyboard.registerLayout("test-title", layout);
+  const kb = new KioskKeyboard({ layout: "test-title" });
+  await placeAndWait(kb);
+
+  const keyEl = getRequiredKeyElement(kb, "{layout:alpha}");
+  assert.strictEqual(keyEl.getAttribute("title"), "\u30ED\u30FC\u30DE\u5B57", "CJK multi-char label gets title");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-title");
+});
+
+QUnit.test("CJK single glyph does not get title", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "x", label: "\u3042" }]];
+  KioskKeyboard.registerLayout("test-title", layout);
+  const kb = new KioskKeyboard({ layout: "test-title" });
+  await placeAndWait(kb);
+
+  const keyEl = getRequiredKeyElement(kb, "x");
+  assert.notOk(keyEl.getAttribute("title"), "no title on single CJK glyph");
+
+  kb.destroy();
+  KioskKeyboard.unregisterLayout("test-title");
+});
+
 QUnit.test("icon: '' + capsLockIcon shows icon only during caps lock", async (assert) => {
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", icon: "", capsLockIcon: "\u{1F512}" }],
