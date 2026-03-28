@@ -4,7 +4,7 @@ Design spec for [#35](https://github.com/wridgeu/ui5-lib-keyboard/issues/35).
 
 ## Scope
 
-Add a `ja-kana` built-in layout where each key press produces a hiragana character directly, following the JIS X 6002 kana key mapping. Both packages (`kiosk-keyboard` and `kiosk-keyboard-webc`) receive identical layout data.
+Add a `ja-kana` built-in layout where each key press produces a hiragana character directly, adapted from the JIS X 6002 kana key mapping for a touchscreen virtual keyboard. All 46 basic hiragana are mapped. Both packages (`kiosk-keyboard` and `kiosk-keyboard-webc`) receive identical layout data.
 
 ### In scope
 
@@ -47,7 +47,7 @@ Both layouts get a toggle key to switch between them at runtime:
 
 ## Layout Definition
 
-5 rows following JIS X 6002 kana mapping. Rows 2-4 have 11-12 keys each (wider than QWERTY) to accommodate the extra kana positions present on the JIS 106-key keyboard. The renderer handles this naturally via flexbox.
+5 rows adapted from JIS X 6002 kana mapping. Rows 2-4 have 11-12 keys each (wider than QWERTY) to accommodate the extra kana positions present on the JIS 106-key keyboard. The renderer handles this naturally via flexbox.
 
 Reference: [Microsoft kbd106.c driver source](https://github.com/microsoft/Windows-driver-samples/blob/main/input/layout/fe_kbds/jpn/106/kbd106.c) (authoritative JIS X 6002 implementation).
 
@@ -67,7 +67,7 @@ Kana on base layer, digits on shift. Small kana on shift where the base is the f
 | 8   | ゆ          | ゅ    | 8        |
 | 9   | よ          | ょ    | 9        |
 | 10  | わ          | を    | 0        |
-| 11  | ほ          | --    | -        |
+| 11  | ほ          | へ    | -        |
 | 12  | {backspace} | --    | (action) |
 
 Note: the number row shift layer produces small kana (ぁ, ぅ, ぇ, ぉ, ゃ, ゅ, ょ, を) per JIS, **not** digits. Digits are accessible via the `{layout:numeric}` switch on row 5. This is faithful to JIS where the number row in kana mode is fully dedicated to kana input.
@@ -127,7 +127,7 @@ Dakuten (゛) and handakuten (゜) are on their standard JIS positions (after P)
 
 Shift+comma (ね) produces 、 (ideographic comma), Shift+period (る) produces 。 (ideographic period), Shift+slash (め) produces ・ (middle dot) -- matching JIS.
 
-### Row 5 (Bottom Row) -- 6 keys
+### Row 5 (Bottom Row) -- 7 keys
 
 | Pos | Key                           | Type     |
 | --- | ----------------------------- | -------- |
@@ -135,8 +135,9 @@ Shift+comma (ね) produces 、 (ideographic comma), Shift+period (る) produces 
 | 2   | {layout:ja-romaji} "ローマ字" | modifier |
 | 3   | (space)                       | space    |
 | 4   | ー (prolonged sound mark)     | default  |
-| 5   | 。 (period, convenience)      | default  |
-| 6   | {layout:fkeys} "Fn"           | modifier |
+| 5   | ろ                            | default  |
+| 6   | 。 (period, convenience)      | default  |
+| 7   | {layout:fkeys} "Fn"           | modifier |
 
 The prolonged sound mark (ー, U+30FC) is included as a convenience key since it is frequently needed in Japanese input. The 。 key provides quick access to the ideographic period without shift.
 
@@ -154,6 +155,7 @@ Small kana are on the **same key as their full-size counterpart** (standard JIS 
 | Row 1, pos 8  | ゆ   | ゅ    |
 | Row 1, pos 9  | よ   | ょ    |
 | Row 1, pos 10 | わ   | を    |
+| Row 1, pos 11 | ほ   | へ    |
 | Row 2, pos 3  | い   | ぃ    |
 | Row 4, pos 2  | つ   | っ    |
 
