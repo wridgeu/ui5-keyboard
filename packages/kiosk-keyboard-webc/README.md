@@ -453,7 +453,7 @@ The `icon` property accepts two value types:
 { value: "{fkey:ArrowUp}", icon: "\u2191", label: "", type: "modifier" }
 
 // Unicode icon with label (dual rendering)
-{ value: "{fkey:Home}", icon: "\u21E4", label: "Home", type: "modifier" }
+{ value: "{fkey:Home}", icon: "\u21F1", label: "Home", type: "modifier" }
 
 // Emoji icon with label
 { value: "search", icon: "\uD83D\uDD0D", label: "Search" }
