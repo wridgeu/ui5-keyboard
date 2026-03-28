@@ -602,6 +602,114 @@ describe("kiosk-keyboard", () => {
     });
   });
 
+  // ── Shift feedback latency KPIs ──
+
+  describe("shift feedback latency", () => {
+    it("shift-active class appears synchronously after click (before rAF)", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      const shift = queryKey(el, "{shift}")!;
+
+      // Click and check IMMEDIATELY - no await
+      shift.click();
+      const shiftEl = queryKey(el, "{shift}")!;
+      expect(
+        shiftEl.classList.contains(DOM.classes.keyShiftActive),
+        "shift-active class should be present synchronously after click",
+      ).to.be.true;
+
+      await nextRender(); // let render cycle complete
+    });
+
+    it("shift-active class removed synchronously when turning off from caps lock", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      // Click 1: shift on
+      queryKey(el, "{shift}")!.click();
+      await nextRender();
+
+      // Click 2 (within 400ms): caps lock on
+      queryKey(el, "{shift}")!.click();
+      await nextRender();
+
+      // Click 3: off - check IMMEDIATELY
+      queryKey(el, "{shift}")!.click();
+      const shiftEl = queryKey(el, "{shift}")!;
+      expect(
+        shiftEl.classList.contains(DOM.classes.keyShiftActive),
+        "shift-active class should be removed synchronously on off",
+      ).to.be.false;
+      expect(
+        shiftEl.classList.contains(DOM.classes.keyCapsLock),
+        "caps-lock class should be removed synchronously on off",
+      ).to.be.false;
+
+      await nextRender();
+    });
+
+    it("caps-lock class appears synchronously on double-click", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      // First click: shift on
+      queryKey(el, "{shift}")!.click();
+      await nextRender();
+
+      // Second click (within 400ms): caps lock
+      queryKey(el, "{shift}")!.click();
+      const shiftEl = queryKey(el, "{shift}")!;
+      expect(
+        shiftEl.classList.contains(DOM.classes.keyCapsLock),
+        "caps-lock class should be present synchronously after double-click",
+      ).to.be.true;
+
+      await nextRender();
+    });
+
+    it("no forced layout reads during shift toggle", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+      // Let any pending responsive sync settle
+      await waitForResponsiveSync();
+
+      // Instrument getComputedStyle to count calls
+      const origGCS = window.getComputedStyle;
+      let gcsCount = 0;
+      window.getComputedStyle = function (...args: Parameters<typeof origGCS>) {
+        gcsCount++;
+        return origGCS.apply(this, args);
+      } as typeof origGCS;
+
+      try {
+        queryKey(el, "{shift}")!.click();
+        await nextRender();
+
+        // After the improvement, shift toggle should not trigger
+        // getComputedStyle calls (responsive sizing deferred to ResizeObserver)
+        expect(gcsCount, "getComputedStyle calls during shift toggle").to.equal(0);
+      } finally {
+        window.getComputedStyle = origGCS;
+      }
+    });
+  });
+
   // ── Layout switching ──
 
   describe("layout switching", () => {
