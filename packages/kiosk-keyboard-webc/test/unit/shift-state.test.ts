@@ -46,6 +46,20 @@ describe("ShiftState", () => {
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
     });
+
+    it("rapid double-click from Off activates caps lock (shift expired then quick re-click)", () => {
+      state.toggle(); // shift on
+      // Simulate time passing beyond double-click threshold
+      vi.spyOn(performance, "now").mockReturnValue(performance.now() + ShiftState.DOUBLE_CLICK_MS + 100);
+      state.toggle(); // shift expired → off
+      expect(state.isShifted).toBe(false);
+
+      // Now quickly double-click (restore real timing)
+      vi.restoreAllMocks();
+      state.toggle(); // off → should be caps lock (rapid click after off)
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(true);
+    });
   });
 
   describe("autoRelease", () => {
