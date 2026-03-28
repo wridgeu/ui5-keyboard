@@ -64,7 +64,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
                   [KIOSK_KEYBOARD_DOM.classes.keyDual]: isDual,
                 }}
-                part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}`}
+                part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}${key.value.startsWith("{fkey:") ? " fkey" : ""}`}
                 role="button"
                 tabindex={isFocusTarget ? 0 : -1}
                 data-key={key.value}

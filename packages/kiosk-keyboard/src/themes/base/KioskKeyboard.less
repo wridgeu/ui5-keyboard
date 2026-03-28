@@ -110,6 +110,10 @@
     --ui5KioskKeyboard-dualIconSize: 1em;
     --ui5KioskKeyboard-dualLabelSize: 1em;
     --ui5KioskKeyboard-dualGap: 0.15em;
+    --ui5KioskKeyboard-fkeyDirection: column;
+    --ui5KioskKeyboard-fkeyIconSize: ~"clamp(1em, 15cqi, 3em)";
+    --ui5KioskKeyboard-fkeyLabelSize: 0.7em;
+    --ui5KioskKeyboard-fkeyGap: 0.05em;
 
     /* ---- Private styling aliases ---- */
     --_ui5KioskKeyboard-padding: ~"var(--ui5KioskKeyboard-padding)";
@@ -358,7 +362,9 @@
 
     /* At narrow key widths, visually hide the dual label and show icon-only.
        Uses the sr-only pattern (not display: none) so the label text stays
-       in the accessibility tree as the key's accessible name. */
+       in the accessibility tree as the key's accessible name.
+       NOTE: CSS custom properties (var()) are not valid inside @container
+       query conditions per CSS spec, so the threshold is hard-coded. */
     @container (max-inline-size: 5rem) {
       &--dual &__label {
         position: absolute;
@@ -368,6 +374,21 @@
         clip-path: inset(50%);
         white-space: nowrap;
       }
+    }
+
+    /* Navigation / function keys: column layout with scaled icon.
+       Scoped to --fkey to avoid affecting Shift/Enter/Backspace. */
+    &--fkey&--dual {
+      flex-direction: ~"var(--ui5KioskKeyboard-fkeyDirection)";
+      gap: ~"var(--ui5KioskKeyboard-fkeyGap)";
+    }
+
+    &--fkey&--dual &__label {
+      font-size: ~"var(--ui5KioskKeyboard-fkeyLabelSize)";
+    }
+
+    &--fkey &__icon {
+      font-size: ~"var(--ui5KioskKeyboard-fkeyIconSize)";
     }
 
     /* ---- Variant: Modifier keys (Shift, layout switches) ---- */
