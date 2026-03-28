@@ -58,3 +58,26 @@ export function isSingleGlyph(label: string): boolean {
   }
   return count === 1;
 }
+
+/**
+ * Returns true when the first code point of `label` falls in a CJK Unicode
+ * range where Latin-optimised `text-box-edge: cap alphabetic` produces
+ * incorrect vertical centering. CJK glyphs extend the full ideographic em
+ * box, so they need script-appropriate text-box metrics instead.
+ *
+ * Covered ranges: Hiragana, Katakana, CJK Unified Ideographs (+ Ext-A),
+ * CJK Compatibility Ideographs, CJK Symbols & Punctuation, Halfwidth
+ * Katakana, and Kanbun.
+ */
+export function isCJKGlyph(label: string): boolean {
+  if (label.length === 0) return false;
+  const cp = label.codePointAt(0)!;
+  return (
+    (cp >= 0x3000 && cp <= 0x30ff) || // CJK Symbols/Punctuation + Hiragana + Katakana
+    (cp >= 0x3190 && cp <= 0x319f) || // Kanbun
+    (cp >= 0x3400 && cp <= 0x4dbf) || // CJK Unified Ideographs Extension A
+    (cp >= 0x4e00 && cp <= 0x9fff) || // CJK Unified Ideographs
+    (cp >= 0xf900 && cp <= 0xfaff) || // CJK Compatibility Ideographs
+    (cp >= 0xff65 && cp <= 0xff9f) // Halfwidth Katakana
+  );
+}

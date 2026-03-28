@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { graphemeLengthBefore, graphemeLengthAfter, isSingleGlyph } from "../../src/core/grapheme.js";
+import { graphemeLengthBefore, graphemeLengthAfter, isSingleGlyph, isCJKGlyph } from "../../src/core/grapheme.js";
 
 describe("graphemeLengthBefore", () => {
   it("returns 0 at position 0", () => {
@@ -98,5 +98,53 @@ describe("isSingleGlyph", () => {
   it("returns true for subdivision flag tag sequence", () => {
     const englandFlag = "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}";
     expect(isSingleGlyph(englandFlag)).toBe(true);
+  });
+});
+
+describe("isCJKGlyph", () => {
+  it("returns true for hiragana", () => {
+    expect(isCJKGlyph("\u3042")).toBe(true); // あ
+    expect(isCJKGlyph("\u306C")).toBe(true); // ぬ
+    expect(isCJKGlyph("\u3093")).toBe(true); // ん
+  });
+
+  it("returns true for katakana", () => {
+    expect(isCJKGlyph("\u30A2")).toBe(true); // ア
+    expect(isCJKGlyph("\u30FC")).toBe(true); // ー prolonged sound mark
+  });
+
+  it("returns true for CJK punctuation", () => {
+    expect(isCJKGlyph("\u3001")).toBe(true); // 、
+    expect(isCJKGlyph("\u3002")).toBe(true); // 。
+    expect(isCJKGlyph("\u309B")).toBe(true); // ゛ dakuten
+    expect(isCJKGlyph("\u309C")).toBe(true); // ゜ handakuten
+  });
+
+  it("returns true for CJK unified ideographs", () => {
+    expect(isCJKGlyph("\u5B57")).toBe(true); // 字
+    expect(isCJKGlyph("\u4E00")).toBe(true); // 一
+  });
+
+  it("returns true for halfwidth katakana", () => {
+    expect(isCJKGlyph("\uFF66")).toBe(true); // ヲ (halfwidth)
+  });
+
+  it("returns false for Latin characters", () => {
+    expect(isCJKGlyph("A")).toBe(false);
+    expect(isCJKGlyph("z")).toBe(false);
+    expect(isCJKGlyph("@")).toBe(false);
+    expect(isCJKGlyph("1")).toBe(false);
+  });
+
+  it("returns false for Arabic characters", () => {
+    expect(isCJKGlyph("\u0639")).toBe(false); // ع
+  });
+
+  it("returns false for empty string", () => {
+    expect(isCJKGlyph("")).toBe(false);
+  });
+
+  it("returns false for emoji", () => {
+    expect(isCJKGlyph("😀")).toBe(false);
   });
 });

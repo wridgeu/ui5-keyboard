@@ -547,6 +547,30 @@
   .kiosk-key__label--glyph {
     text-box-edge: cap alphabetic;
   }
+
+  /* CJK glyphs (hiragana, katakana, kanji) extend the full ideographic em
+     box, which is taller than Latin cap-height.  cap-to-baseline trimming
+     produces a box that is too short on top, shifting the glyph visually
+     upward.  Use font-defined text metrics instead -- these align with the
+     ideographic ascent/descent and center CJK characters correctly.
+     Current browser support: text-box-edge `text` is supported; the more
+     precise `ideographic-ink` value is not yet shipped (tracked upstream in
+     csswg-drafts #10928 and Chromium #365423076). A @supports guard below
+     upgrades to ideographic-ink automatically once browsers ship it. */
+  .kiosk-key__label--glyph-cjk {
+    text-box-edge: text;
+  }
+}
+
+/* Future: ideographic-ink trims to the actual ink bounds of representative
+   CJK characters, giving the web equivalent of native keyboards' measured
+   glyph centering (Android getReferenceCharHeight, iOS CoreText ink rects).
+   No browser supports this as of 2026-03; the block activates automatically
+   once support lands.  See w3c/csswg-drafts#10928. */
+@supports (text-box-edge: ideographic-ink) {
+  .kiosk-key__label--glyph-cjk {
+    text-box-edge: ideographic-ink;
+  }
 }
 
 /* ============================= */
