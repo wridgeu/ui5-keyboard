@@ -77,8 +77,8 @@ export function isSingleGlyph(label: string): boolean {
  * new browser versions, so no manual range maintenance is needed.
  */
 const CJK_RE =
-  /[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}\p{Script_Extensions=Bopomofo}]/u;
+  /^[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}\p{Script_Extensions=Bopomofo}]/u;
 
 export function isCJKGlyph(label: string): boolean {
-  return label.length > 0 && CJK_RE.test(label.charAt(0));
+  return label.length > 0 && CJK_RE.test(label);
 }

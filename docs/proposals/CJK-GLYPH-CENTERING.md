@@ -218,14 +218,25 @@ the line box. Visual regression testing confirmed this produces pixel-level
 changes in all Japanese layouts (ja-kana, ja-kana-shifted, ja-romaji) across all
 device profiles, while leaving all Latin, Arabic, and other layouts unchanged.
 
-### Consumer override: `--kiosk-keyboard-cjk-font-family`
+### Consumer override
 
 The CJK font stack is exposed as a CSS custom property so consumers can override
-it. For example, to use Noto Sans JP exclusively:
+it:
+
+- **WebC**: `--kiosk-keyboard-cjk-font-family`
+- **UI5**: `--ui5KioskKeyboard-cjkFontFamily`
+
+For example, to use Noto Sans JP exclusively:
 
 ```css
+/* WebC */
 kiosk-keyboard {
   --kiosk-keyboard-cjk-font-family: "Noto Sans JP", sans-serif;
+}
+
+/* UI5 */
+.ui5KioskKeyboard {
+  --ui5KioskKeyboard-cjkFontFamily: "Noto Sans JP", sans-serif;
 }
 ```
 

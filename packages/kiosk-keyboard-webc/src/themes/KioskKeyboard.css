@@ -48,6 +48,12 @@
      When set, applies a uniform border color to all key types
      (default, modifier, action). Useful for industrial/kiosk
      deployments where key boundaries must be extra visible. */
+
+  /* --kiosk-keyboard-cjk-font-family: unset by default.
+     When set, overrides the CJK system font stack used for keys whose label
+     is a CJK glyph (hiragana, katakana, kanji, Hangul, Bopomofo). The
+     default fallback is a cross-platform CJK font list defined inline
+     on .kiosk-key__label--glyph-cjk. */
 }
 
 /* Shadow colors derive from --sapContent_ShadowColor (a raw color, not a

@@ -55,6 +55,12 @@
  *   --ui5KioskKeyboard-dualLabelSize      Label font size in dual mode (default: 1em, inherits modifier cap)
  *   --ui5KioskKeyboard-dualGap            Gap between icon and label (default: 0.15em)
  *
+ * CJK (Chinese/Japanese/Korean):
+ *   --ui5KioskKeyboard-cjkFontFamily      Font stack for CJK glyph labels (default: CJK system fonts).
+ *                                         Overrides the 72 font stack for keys whose label is a CJK
+ *                                         glyph, so the browser uses CJK font metrics for both
+ *                                         rendering and line-box calculation.
+ *
  * Responsive thresholds (rem):
  *   --ui5KioskKeyboard-cqShortThreshold    Height for --cq-short class (default: 16rem)
  *   --ui5KioskKeyboard-cqTinyThreshold     Height for --cq-tiny class (default: 12rem)
@@ -479,7 +485,7 @@
     }
   }
 
-  /* CJK font-family override.
+  /* CJK font-family override (--ui5KioskKeyboard-cjkFontFamily).
      The 72 font has no CJK glyphs (Latin/Greek/Cyrillic only). When the browser
      renders hiragana/katakana/Hangul, it falls through "72", "72full", Arial,
      Helvetica to the OS sans-serif default. But the LINE BOX metrics (used by
@@ -490,7 +496,7 @@
      Putting CJK system fonts first for CJK labels ensures the browser uses the
      CJK font's own metrics for both the glyph and the line box. */
   .ui5KioskKey__label--glyph-cjk {
-    font-family: ~"var(--kiosk-keyboard-cjk-font-family, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans JP', 'Apple SD Gothic Neo', 'Malgun Gothic', 'PingFang SC', 'PingFang TC', 'Microsoft YaHei', system-ui, sans-serif)";
+    font-family: ~"var(--ui5KioskKeyboard-cjkFontFamily, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans JP', 'Apple SD Gothic Neo', 'Malgun Gothic', 'PingFang SC', 'PingFang TC', 'Microsoft YaHei', system-ui, sans-serif)";
   }
 
   /* ============================= */
