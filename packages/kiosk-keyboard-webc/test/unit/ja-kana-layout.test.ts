@@ -22,8 +22,8 @@ describe("ja-kana layout structure", () => {
     expect(jaKana[3]).toHaveLength(12);
   });
 
-  it("row 5 has 6 keys", () => {
-    expect(jaKana[4]).toHaveLength(6);
+  it("row 5 has 7 keys", () => {
+    expect(jaKana[4]).toHaveLength(7);
   });
 
   it("all base-layer values are hiragana, special keys, or punctuation", () => {
@@ -53,6 +53,7 @@ describe("ja-kana layout structure", () => {
       "\u308F": "\u3092", // わ → を
       "\u3044": "\u3043", // い → ぃ
       "\u3064": "\u3063", // つ → っ
+      "\u307B": "\u3078", // ほ → へ
     };
 
     const allKeys = jaKana.flat();
