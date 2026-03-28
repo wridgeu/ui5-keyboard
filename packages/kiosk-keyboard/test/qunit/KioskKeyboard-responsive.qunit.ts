@@ -151,7 +151,7 @@ QUnit.test("No height classes for docked keyboards", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Toggling docked mode clears stale height classes immediately", async (assert) => {
+QUnit.test("Toggling docked mode clears stale height classes after render cycle", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -166,6 +166,9 @@ QUnit.test("Toggling docked mode clears stale height classes immediately", async
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied before docking");
 
   kb.setDocked(true);
+  await waitForRender();
+  // Responsive class update is deferred to rAF to avoid forced reflow
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared when docked=true");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared when docked=true");
@@ -189,6 +192,8 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
 
   kb.setKeyboardType("Numpad");
   await waitForRender();
+  // Responsive class update is deferred to rAF in onAfterRendering
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   dom = kb.getDomRef()! as HTMLElement;
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after re-render");
