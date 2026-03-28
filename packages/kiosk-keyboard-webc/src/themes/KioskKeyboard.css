@@ -407,6 +407,10 @@
   background: var(--sapButton_Emphasized_Background, #0070f2);
   color: var(--sapButton_Emphasized_TextColor, #fff);
   border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
+  /* Snap instantly: shift state feedback must not animate through
+     intermediate hover/active colors during the 400ms caps-lock
+     double-click window. */
+  transition: none;
 
   &:hover {
     background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
@@ -417,6 +421,9 @@
 /* ---- Variant: Caps Lock indicator ---- */
 .kiosk-key--caps-lock {
   box-shadow: 0 0 0 2px var(--sapButton_Emphasized_Background, #0070f2);
+  /* Only animate the ring; background/color snap via shift-active's transition: none.
+     Matches the inherited 0.1s from :hover that applied before this rule existed. */
+  transition: box-shadow 0.1s ease;
 }
 
 /* ============================= */
