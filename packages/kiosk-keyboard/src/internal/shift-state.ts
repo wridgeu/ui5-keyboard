@@ -14,7 +14,7 @@ const enum Mode {
 
 export class ShiftState {
   private _mode: Mode = Mode.Off;
-  private _lastToggleTime = 0;
+  private _lastToggleTime = -Infinity;
 
   /** Milliseconds within which a second click counts as double-click. */
   static readonly DOUBLE_CLICK_MS = 400;
@@ -31,17 +31,24 @@ export class ShiftState {
    * Handles a shift key press.
    *
    * - If caps lock is on -> turn everything off.
-   * - If shift is on and pressed again within the double-click window -> caps lock.
+   * - Two rapid clicks within the double-click window -> caps lock,
+   *   regardless of whether the current mode is Shift or Off (the Off
+   *   case covers: Shift held > 400ms -> click turns Off -> quick click
+   *   should still reach CapsLock, not bounce back to Shift).
    * - If shift is on but outside the double-click window -> off.
    * - Otherwise -> activate one-shot shift.
    */
   toggle(): void {
     const now = performance.now();
-    const isDouble = this._mode === Mode.Shift && now - this._lastToggleTime < ShiftState.DOUBLE_CLICK_MS;
+    const withinWindow = now - this._lastToggleTime < ShiftState.DOUBLE_CLICK_MS;
 
     if (this._mode === Mode.CapsLock) {
       this._mode = Mode.Off;
-    } else if (isDouble) {
+    } else if (this._mode === Mode.Shift && withinWindow) {
+      this._mode = Mode.CapsLock;
+    } else if (this._mode === Mode.Off && withinWindow) {
+      // Rapid Off -> CapsLock: the previous click turned Shift off
+      // (or CapsLock off), and this click arrived within the window.
       this._mode = Mode.CapsLock;
     } else if (this._mode === Mode.Shift) {
       this._mode = Mode.Off;
@@ -59,6 +66,9 @@ export class ShiftState {
   autoRelease(): boolean {
     if (this._mode === Mode.Shift) {
       this._mode = Mode.Off;
+      // Close the double-click window so the next toggle() starts a
+      // fresh cycle instead of incorrectly jumping to CapsLock.
+      this._lastToggleTime = -Infinity;
       return true;
     }
     return false;
@@ -67,6 +77,6 @@ export class ShiftState {
   /** Clears both shift and caps lock. */
   reset(): void {
     this._mode = Mode.Off;
-    this._lastToggleTime = 0;
+    this._lastToggleTime = -Infinity;
   }
 }
