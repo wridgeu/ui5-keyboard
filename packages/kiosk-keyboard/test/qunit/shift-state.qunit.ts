@@ -50,6 +50,28 @@ QUnit.test("second click after timeout turns shift off, not caps lock", (assert)
   }
 });
 
+QUnit.test("rapid double-click from Off activates caps lock (shift expired then quick re-click)", (assert) => {
+  const state = new ShiftState();
+  const stub = sinon.stub(performance, "now");
+  try {
+    stub.returns(1000);
+    state.toggle(); // shift on at t=1000
+    assert.ok(state.isShifted, "shifted after first click");
+
+    stub.returns(1000 + ShiftState.DOUBLE_CLICK_MS + 100);
+    state.toggle(); // shift expired -> off
+    assert.strictEqual(state.isShifted, false, "shift turned off after timeout");
+
+    // Quick re-click within 400ms of the off-toggle
+    stub.returns(1000 + ShiftState.DOUBLE_CLICK_MS + 200);
+    state.toggle(); // should be caps lock, not shift
+    assert.ok(state.isShifted, "shifted after rapid re-click");
+    assert.ok(state.isCapsLock, "caps lock activated from Off via rapid double-click");
+  } finally {
+    stub.restore();
+  }
+});
+
 QUnit.test("autoRelease releases shift and returns true", (assert) => {
   const state = new ShiftState();
   state.toggle();
