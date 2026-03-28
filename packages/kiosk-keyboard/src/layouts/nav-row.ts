@@ -3,9 +3,10 @@ import type { KeyRow } from "../types";
 /**
  * Shared navigation key row used by built-in `*-nav` variant layouts.
  *
- * Each key has a Unicode arrow/navigation icon that remains legible at
- * narrow widths (where the text label gets sr-only hidden via the dual
- * key responsive pattern). Keys render as modifier keys (subdued background).
+ * Each key has a Unicode arrow/navigation icon alongside the text label.
+ * At normal widths both render together (e.g. "⇤ Home"). At narrow widths
+ * the dual key responsive pattern sr-only hides the label, leaving the
+ * icon visible and distinct. Keys render as modifier keys (subdued background).
  *
  * Import this to compose custom variant layouts.
  *
