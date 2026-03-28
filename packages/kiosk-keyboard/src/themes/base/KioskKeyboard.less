@@ -324,8 +324,17 @@
     }
 
     /* ---- Icon inside key ---- */
+    /* The inherited font stack (@sapUiFontFamily) does not include the
+       specialized Unicode arrow symbols used by navigation keys (U+21DE-U+21F2).
+       Without explicit symbol font names the glyphs rely on the browser's
+       last-resort fallback, which may fail on platforms with stripped-down font
+       installations (e.g. embedded Android WebView).  The fonts below cover
+       Windows (Segoe UI Symbol), macOS (Apple Symbols), and Linux/Android
+       (Noto Sans Symbols). */
     &__icon {
       font-size: var(--ui5KioskKeyboard-keyFontSize);
+      font-family:
+        @sapUiFontFamily, "Segoe UI Symbol", "Apple Symbols", "Noto Sans Symbols 2", "Noto Sans Symbols", sans-serif;
     }
 
     /* ---- Dual icon + label ---- */
