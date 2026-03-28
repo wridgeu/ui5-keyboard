@@ -683,6 +683,47 @@ QUnit.test("Unknown exact locale mapping falls back to valid language prefix", (
   }
 });
 
+// ──────────────────────────────────────────────
+// ja-kana layout
+// ──────────────────────────────────────────────
+
+QUnit.test("ja-kana layout renders 5 rows with correct key counts", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  const rows = getRowElements(kb);
+  assert.strictEqual(rows.length, 5, "ja-kana has 5 rows");
+  assert.strictEqual(getRowKeyValues(kb, 0).length, 12, "Row 1 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 1).length, 12, "Row 2 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 2).length, 12, "Row 3 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 3).length, 12, "Row 4 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 4).length, 6, "Row 5 has 6 keys");
+  kb.destroy();
+});
+
+QUnit.test("ja-kana first key is ぬ (hiragana nu)", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "\u306C", "First key is ぬ");
+  kb.destroy();
+});
+
+QUnit.test("ja-kana has dakuten and handakuten on base layer", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  const allKeys = getRowKeyValues(kb, 1);
+  assert.ok(allKeys.includes("\u309B"), "Row 2 contains dakuten ゛");
+  assert.ok(allKeys.includes("\u309C"), "Row 2 contains handakuten ゜");
+  kb.destroy();
+});
+
+QUnit.test("ja-kana has layout toggle to ja-romaji", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  const row5Keys = getRowKeyValues(kb, 4);
+  assert.ok(row5Keys.includes("{layout:ja-romaji}"), "Row 5 contains ja-romaji toggle");
+  kb.destroy();
+});
+
 QUnit.test("applySettings injects locale layout when no explicit layout", (assert) => {
   const currentLang = Localization.getLanguage();
   try {
