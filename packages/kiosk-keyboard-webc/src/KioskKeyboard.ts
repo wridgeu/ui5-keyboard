@@ -1086,9 +1086,13 @@ class KioskKeyboard extends UI5Element {
       this._shiftState.toggle();
 
       // Optimistic DOM update: apply shift-active / caps-lock classes
-      // immediately for instant visual feedback, before the async
-      // re-render cycle. The template binding maintains the state
-      // across subsequent re-renders (same pattern as _highlightKey).
+      // immediately for instant visual feedback, before the rAF-deferred
+      // Preact re-render cycle.  The template class binding maintains the
+      // state across subsequent re-renders (same pattern as _highlightKey).
+      // Preact will redundantly setAttribute("class", ...) on the next
+      // render because its VDOM-to-VDOM diff always detects a change
+      // (class objects are freshly created each render, never === equal).
+      // The redundant DOM write is idempotent and harmless.
       const isShifted = this._shiftState.isShifted;
       const isCaps = this._shiftState.isCapsLock;
       keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
