@@ -110,6 +110,7 @@
     --ui5KioskKeyboard-dualIconSize: 1em;
     --ui5KioskKeyboard-dualLabelSize: 1em;
     --ui5KioskKeyboard-dualGap: 0.15em;
+    --ui5KioskKeyboard-dualLabelThreshold: 5rem;
 
     /* ---- Private styling aliases ---- */
     --_ui5KioskKeyboard-padding: ~"var(--ui5KioskKeyboard-padding)";
@@ -358,8 +359,9 @@
 
     /* At narrow key widths, visually hide the dual label and show icon-only.
        Uses the sr-only pattern (not display: none) so the label text stays
-       in the accessibility tree as the key's accessible name. */
-    @container (max-inline-size: 5rem) {
+       in the accessibility tree as the key's accessible name.
+       Consumers can override via --ui5KioskKeyboard-dualLabelThreshold. */
+    @container (max-inline-size: ~"var(--ui5KioskKeyboard-dualLabelThreshold)") {
       &--dual &__label {
         position: absolute;
         width: 1px;
@@ -370,6 +372,30 @@
       }
     }
 
+    /* At wide key widths, switch dual keys to column layout (icon stacked
+       above label).  Prevents the "icon looks lost" appearance on wide
+       nav-only layouts where keys span ~33% of the keyboard. */
+    @container (min-inline-size: 10rem) {
+      &--dual {
+        flex-direction: column;
+        gap: 0.05em;
+      }
+
+      &--dual &__label {
+        font-size: 0.7em;
+      }
+    }
+
+    /* Navigation / function keys: scale icon with key width so it remains
+       proportionate at all sizes.  Uses the {fkey:*} data-key convention
+       to target only nav keys without affecting Shift/Enter/Backspace. */
+  }
+
+  .ui5KioskKey--fkey .ui5KioskKey__icon {
+    font-size: ~"clamp(1em, 15cqi, 3em)";
+  }
+
+  .ui5KioskKey {
     /* ---- Variant: Modifier keys (Shift, layout switches) ---- */
     &--modifier {
       background: @sapUiButtonLiteBackground;
