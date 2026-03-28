@@ -13,6 +13,8 @@ import qwertzDeNav from "./qwertz-de-nav.js";
 import jaRomaji from "./ja-romaji.js";
 import jaKana from "./ja-kana.js";
 import arabic from "./arabic.js";
+import koHangul from "./ko-hangul.js";
+import qwertyEs from "./qwerty-es.js";
 
 /** All built-in layouts keyed by name. */
 const builtInLayouts: ReadonlyMap<string, LayoutDefinition> = new Map([
@@ -30,6 +32,8 @@ const builtInLayouts: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["ja-romaji", jaRomaji],
   ["ja-kana", jaKana],
   ["arabic", arabic],
+  ["ko-hangul", koHangul],
+  ["qwerty-es", qwertyEs],
 ]);
 
 export default builtInLayouts;

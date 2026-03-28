@@ -120,7 +120,7 @@ QUnit.test("No forced layout reads (getComputedStyle) during shift toggle", asyn
 
   const origGCS = window.getComputedStyle;
   let gcsCount = 0;
-  window.getComputedStyle = function (...args: Parameters<typeof origGCS>) {
+  window.getComputedStyle = function (this: Window, ...args: Parameters<typeof origGCS>) {
     gcsCount++;
     return origGCS.apply(this, args);
   } as typeof origGCS;

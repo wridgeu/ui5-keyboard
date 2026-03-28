@@ -1,4 +1,11 @@
-import { graphemeLengthAfter, graphemeLengthBefore, isCJKGlyph, isSingleGlyph } from "ui5/kiosk/internal/grapheme";
+import {
+  graphemeLengthAfter,
+  graphemeLengthBefore,
+  isCJKGlyph,
+  isHangulGlyph,
+  isIndicGlyph,
+  isSingleGlyph,
+} from "ui5/kiosk/internal/grapheme";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
@@ -347,4 +354,123 @@ QUnit.test("empty string returns false", (assert) => {
 
 QUnit.test("emoji returns false", (assert) => {
   assert.strictEqual(isCJKGlyph("\uD83D\uDE00"), false, "emoji is not CJK");
+});
+
+// ── Unit tests: isHangulGlyph ────────────────────────────────────
+
+QUnit.module("isHangulGlyph");
+
+QUnit.test("Hangul Compatibility Jamo consonants return true", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u3131"), true, "\u3131 kiyeok");
+  assert.strictEqual(isHangulGlyph("\u3134"), true, "\u3134 nieun");
+  assert.strictEqual(isHangulGlyph("\u3142"), true, "\u3142 pieup");
+  assert.strictEqual(isHangulGlyph("\u314E"), true, "\u314E hieuh");
+});
+
+QUnit.test("Hangul Compatibility Jamo vowels return true", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u314F"), true, "\u314F a");
+  assert.strictEqual(isHangulGlyph("\u3153"), true, "\u3153 eo");
+  assert.strictEqual(isHangulGlyph("\u3163"), true, "\u3163 i");
+});
+
+QUnit.test("tense (ssang) consonants return true", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u3132"), true, "\u3132 ssangkiyeok");
+  assert.strictEqual(isHangulGlyph("\u3143"), true, "\u3143 ssangpieup");
+  assert.strictEqual(isHangulGlyph("\u3146"), true, "\u3146 ssangsios");
+});
+
+QUnit.test("Hangul syllables return true", (assert) => {
+  assert.strictEqual(isHangulGlyph("\uAC00"), true, "\uAC00 first syllable");
+  assert.strictEqual(isHangulGlyph("\uD7A3"), true, "\uD7A3 last syllable");
+  assert.strictEqual(isHangulGlyph("\uD55C"), true, "\uD55C han");
+});
+
+QUnit.test("Hangul Jamo (conjoining) return true", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u1100"), true, "\u1100 initial consonant");
+  assert.strictEqual(isHangulGlyph("\u1161"), true, "\u1161 medial vowel");
+});
+
+QUnit.test("Japanese hiragana/katakana return false", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u3042"), false, "\u3042 hiragana a");
+  assert.strictEqual(isHangulGlyph("\u30A2"), false, "\u30A2 katakana a");
+});
+
+QUnit.test("CJK ideographs return false", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u4E00"), false, "\u4E00 CJK ideograph");
+});
+
+QUnit.test("Latin characters return false", (assert) => {
+  assert.strictEqual(isHangulGlyph("A"), false, "uppercase Latin");
+  assert.strictEqual(isHangulGlyph("1"), false, "digit");
+});
+
+QUnit.test("empty string returns false", (assert) => {
+  assert.strictEqual(isHangulGlyph(""), false, "empty string");
+});
+
+// ── Unit tests: isIndicGlyph ─────────────────────────────────────
+
+QUnit.module("isIndicGlyph");
+
+QUnit.test("Devanagari characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0905"), true, "\u0905 Devanagari a");
+  assert.strictEqual(isIndicGlyph("\u0915"), true, "\u0915 Devanagari ka");
+  assert.strictEqual(isIndicGlyph("\u0964"), true, "\u0964 danda (shared)");
+  assert.strictEqual(isIndicGlyph("\u0965"), true, "\u0965 double danda");
+});
+
+QUnit.test("Bengali characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0985"), true, "\u0985 Bengali a");
+  assert.strictEqual(isIndicGlyph("\u0995"), true, "\u0995 Bengali ka");
+});
+
+QUnit.test("Tamil characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0B85"), true, "\u0B85 Tamil a");
+  assert.strictEqual(isIndicGlyph("\u0B95"), true, "\u0B95 Tamil ka");
+});
+
+QUnit.test("Telugu characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0C05"), true, "\u0C05 Telugu a");
+});
+
+QUnit.test("Kannada characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0C85"), true, "\u0C85 Kannada a");
+});
+
+QUnit.test("Malayalam characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0D05"), true, "\u0D05 Malayalam a");
+});
+
+QUnit.test("Sinhala characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0D85"), true, "\u0D85 Sinhala a");
+});
+
+QUnit.test("Gurmukhi characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0A05"), true, "\u0A05 Gurmukhi a");
+});
+
+QUnit.test("Gujarati characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0A85"), true, "\u0A85 Gujarati a");
+});
+
+QUnit.test("Oriya characters return true", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0B05"), true, "\u0B05 Oriya a");
+});
+
+QUnit.test("Latin characters return false", (assert) => {
+  assert.strictEqual(isIndicGlyph("A"), false, "uppercase Latin");
+  assert.strictEqual(isIndicGlyph("1"), false, "digit");
+});
+
+QUnit.test("CJK characters return false", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u3042"), false, "\u3042 hiragana");
+  assert.strictEqual(isIndicGlyph("\uAC00"), false, "\uAC00 Hangul syllable");
+});
+
+QUnit.test("Thai characters return false", (assert) => {
+  assert.strictEqual(isIndicGlyph("\u0E01"), false, "\u0E01 Thai ko kai");
+});
+
+QUnit.test("empty string returns false", (assert) => {
+  assert.strictEqual(isIndicGlyph(""), false, "empty string");
 });
