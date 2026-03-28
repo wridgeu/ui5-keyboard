@@ -88,6 +88,15 @@ QUnit.test("autoRelease does not release caps lock", (assert) => {
   assert.ok(state.isCapsLock, "still caps lock");
 });
 
+QUnit.test("toggle after autoRelease activates shift, not caps lock", (assert) => {
+  const state = new ShiftState();
+  state.toggle(); // shift on
+  state.autoRelease(); // off (typed a character)
+  state.toggle(); // should be shift, not caps lock
+  assert.ok(state.isShifted, "shifted after toggle following autoRelease");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock -- autoRelease closed the double-click window");
+});
+
 QUnit.test("autoRelease returns false when already off", (assert) => {
   const state = new ShiftState();
   assert.strictEqual(state.autoRelease(), false, "nothing to release");

@@ -14,7 +14,7 @@ const enum Mode {
 
 export class ShiftState {
   private _mode: Mode = Mode.Off;
-  private _lastToggleTime = 0;
+  private _lastToggleTime = -Infinity;
 
   /** Milliseconds within which a second click counts as double-click. */
   static readonly DOUBLE_CLICK_MS = 400;
@@ -66,6 +66,9 @@ export class ShiftState {
   autoRelease(): boolean {
     if (this._mode === Mode.Shift) {
       this._mode = Mode.Off;
+      // Close the double-click window so the next toggle() starts a
+      // fresh cycle instead of incorrectly jumping to CapsLock.
+      this._lastToggleTime = -Infinity;
       return true;
     }
     return false;
@@ -74,6 +77,6 @@ export class ShiftState {
   /** Clears both shift and caps lock. */
   reset(): void {
     this._mode = Mode.Off;
-    this._lastToggleTime = 0;
+    this._lastToggleTime = -Infinity;
   }
 }
