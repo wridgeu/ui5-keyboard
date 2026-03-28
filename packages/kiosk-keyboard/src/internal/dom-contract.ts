@@ -33,6 +33,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyLabelMulti: "ui5KioskKey__label--multi",
     keyIcon: "ui5KioskKey__icon",
     keyDual: "ui5KioskKey--dual",
+    keyFkey: "ui5KioskKey--fkey",
   }),
   attributes: Object.freeze({
     key: "data-key",

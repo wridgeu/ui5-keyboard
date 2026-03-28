@@ -210,6 +210,11 @@ const KioskKeyboardRenderer = {
     if (icon && label) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyDual);
     }
+
+    // Function/navigation key class for targeted styling
+    if (key.value.startsWith("{fkey:")) {
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyFkey);
+    }
   },
 
   /** Attributes (`role`, `tabindex`, `data-key`, `aria-*`) on a key `<div>`. */

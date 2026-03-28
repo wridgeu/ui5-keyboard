@@ -480,6 +480,27 @@ kiosk-keyboard {
 | `--kiosk-keyboard-dual-label-size` | `1em`    | Label font size in dual mode                                      |
 | `--kiosk-keyboard-dual-gap`        | `0.15em` | Gap between icon and label                                        |
 
+#### Navigation key overrides
+
+Navigation and function keys (`{fkey:*}`) default to column layout with scaled icons. These properties override the dual defaults for nav keys only:
+
+| Property                           | Default                  | Description                                                |
+| ---------------------------------- | ------------------------ | ---------------------------------------------------------- |
+| `--kiosk-keyboard-fkey-direction`  | `column`                 | Flex direction for nav/function keys                       |
+| `--kiosk-keyboard-fkey-icon-size`  | `clamp(1em, 15cqi, 3em)` | Icon size, scales with key width via container query units |
+| `--kiosk-keyboard-fkey-label-size` | `0.7em`                  | Label size (smaller caption below icon)                    |
+| `--kiosk-keyboard-fkey-gap`        | `0.05em`                 | Gap between icon and label                                 |
+
+```css
+/* Force nav keys to row layout (icon beside label, like other dual keys) */
+kiosk-keyboard {
+  --kiosk-keyboard-fkey-direction: row;
+  --kiosk-keyboard-fkey-icon-size: 1em;
+  --kiosk-keyboard-fkey-label-size: 1em;
+  --kiosk-keyboard-fkey-gap: 0.15em;
+}
+```
+
 ### Responsive behavior
 
 At narrow key widths (below `5rem` per key), dual keys automatically hide the text label using the sr-only pattern. The icon remains visible, and the label stays in the accessibility tree as the key's accessible name. This prevents text truncation ("H...", "P...") while keeping keys distinguishable by their icons.
@@ -629,15 +650,16 @@ KioskKeyboard.setI18nResolver((key, locale) => {
 
 The component exposes CSS shadow parts for structural styling from outside the shadow DOM. Use `::part()` selectors to customize elements that CSS custom properties alone cannot reach (e.g., changing `display`, adding borders to specific elements, or adjusting flex behavior).
 
-| Part        | Element                            | Description                                |
-| ----------- | ---------------------------------- | ------------------------------------------ |
-| `keyboard`  | Root container (`.kiosk-keyboard`) | The outermost keyboard wrapper             |
-| `row`       | Row container (`.kiosk-row`)       | Each row of keys                           |
-| `key`       | Every key element                  | All keys (regular, modifier, and action)   |
-| `modifier`  | Modifier keys (Shift, 123, Fn)     | Combined with `key`: `part="key modifier"` |
-| `action`    | Action keys (Enter, Backspace)     | Combined with `key`: `part="key action"`   |
-| `key-label` | Text label inside a key            | The `<span>` rendering the key's text      |
-| `key-icon`  | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons  |
+| Part        | Element                            | Description                                                                                                                                                      |
+| ----------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keyboard`  | Root container (`.kiosk-keyboard`) | The outermost keyboard wrapper                                                                                                                                   |
+| `row`       | Row container (`.kiosk-row`)       | Each row of keys                                                                                                                                                 |
+| `key`       | Every key element                  | All keys (regular, modifier, and action)                                                                                                                         |
+| `modifier`  | Modifier keys (Shift, 123, Fn)     | Combined with `key`: `part="key modifier"`                                                                                                                       |
+| `action`    | Action keys (Enter, Backspace)     | Combined with `key`: `part="key action"`                                                                                                                         |
+| `fkey`      | Function/navigation keys           | Combined with `key`: `part="key modifier fkey"`. Targets keys with `{fkey:*}` values (Home, End, PgUp, PgDn, Arrow keys) independently from other modifier keys. |
+| `key-label` | Text label inside a key            | The `<span>` rendering the key's text                                                                                                                            |
+| `key-icon`  | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons                                                                                                                        |
 
 ```css
 /* Example: round action keys and increase row gap */
@@ -725,6 +747,10 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-dual-icon-size`        | `1em`                                                     | Icon font size in dual mode                                 |
 | `--kiosk-keyboard-dual-label-size`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
 | `--kiosk-keyboard-dual-gap`              | `0.15em`                                                  | Gap between icon and label in dual mode                     |
+| `--kiosk-keyboard-fkey-direction`        | `column`                                                  | Flex direction for nav/function keys                        |
+| `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 3em)`                                  | Icon size for nav/function keys (scales with key width)     |
+| `--kiosk-keyboard-fkey-label-size`       | `0.7em`                                                   | Label size for nav/function keys                            |
+| `--kiosk-keyboard-fkey-gap`              | `0.05em`                                                  | Gap between icon and label for nav/function keys            |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 

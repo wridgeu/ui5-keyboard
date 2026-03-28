@@ -1043,6 +1043,27 @@ When both `icon` and a non-empty `label` resolve, the key renders in **dual mode
 | `--ui5KioskKeyboard-dualLabelSize` | `1em`    | Label font size in dual mode                                      |
 | `--ui5KioskKeyboard-dualGap`       | `0.15em` | Gap between icon and label                                        |
 
+#### Navigation key overrides
+
+Navigation and function keys (`{fkey:*}`) default to column layout with scaled icons. These properties override the dual defaults for nav keys only. In the UI5 package, nav keys are identified by the `.ui5KioskKey--fkey` class (added automatically for keys with `{fkey:*}` values).
+
+| Property                           | Default                  | Description                                                |
+| ---------------------------------- | ------------------------ | ---------------------------------------------------------- |
+| `--ui5KioskKeyboard-fkeyDirection` | `column`                 | Flex direction for nav/function keys                       |
+| `--ui5KioskKeyboard-fkeyIconSize`  | `clamp(1em, 15cqi, 3em)` | Icon size, scales with key width via container query units |
+| `--ui5KioskKeyboard-fkeyLabelSize` | `0.7em`                  | Label size (smaller caption below icon)                    |
+| `--ui5KioskKeyboard-fkeyGap`       | `0.05em`                 | Gap between icon and label                                 |
+
+```css
+/* Force nav keys to row layout (icon beside label, like other dual keys) */
+.ui5KioskKeyboard {
+  --ui5KioskKeyboard-fkeyDirection: row;
+  --ui5KioskKeyboard-fkeyIconSize: 1em;
+  --ui5KioskKeyboard-fkeyLabelSize: 1em;
+  --ui5KioskKeyboard-fkeyGap: 0.15em;
+}
+```
+
 ### Responsive behavior
 
 At narrow key widths (below `5rem` per key), dual keys automatically hide the text label using the sr-only pattern (`clip-path: inset(50%)`). The icon remains visible, and the label stays in the accessibility tree as the key's accessible name.
@@ -1262,6 +1283,10 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-dualIconSize`        | `1em`                                                     | Icon font size in dual mode                                 |
 | `--ui5KioskKeyboard-dualLabelSize`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
 | `--ui5KioskKeyboard-dualGap`             | `0.15em`                                                  | Gap between icon and label in dual mode                     |
+| `--ui5KioskKeyboard-fkeyDirection`       | `column`                                                  | Flex direction for nav/function keys                        |
+| `--ui5KioskKeyboard-fkeyIconSize`        | `clamp(1em, 15cqi, 3em)`                                  | Icon size for nav/function keys (scales with key width)     |
+| `--ui5KioskKeyboard-fkeyLabelSize`       | `0.7em`                                                   | Label size for nav/function keys                            |
+| `--ui5KioskKeyboard-fkeyGap`             | `0.05em`                                                  | Gap between icon and label for nav/function keys            |
 
 Override `--ui5KioskKeyboard-dockedZIndex` to adjust the docked keyboard's stacking layer.
 
