@@ -467,6 +467,30 @@
     .ui5KioskKey__label--glyph {
       text-box-edge: cap alphabetic;
     }
+
+    /* CJK glyphs (hiragana, katakana, kanji, hangul) extend the full
+       ideographic em box, which is taller than Latin cap-height.
+       cap-to-baseline trimming produces a box that is too short on top,
+       shifting the glyph visually upward.  Use font-defined text metrics
+       instead -- these align with the ideographic ascent/descent and
+       center CJK characters correctly. */
+    .ui5KioskKey__label--glyph-cjk {
+      text-box-edge: text;
+    }
+  }
+
+  /* CJK font-family override.
+     The 72 font has no CJK glyphs (Latin/Greek/Cyrillic only). When the browser
+     renders hiragana/katakana/Hangul, it falls through "72", "72full", Arial,
+     Helvetica to the OS sans-serif default. But the LINE BOX metrics (used by
+     text-box-trim and line-height) still come from the primary font (72), not
+     the fallback that actually provides the glyph. This mismatch between "72
+     metrics for layout" and "system CJK font for rendering" can cause vertical
+     offset.
+     Putting CJK system fonts first for CJK labels ensures the browser uses the
+     CJK font's own metrics for both the glyph and the line box. */
+  .ui5KioskKey__label--glyph-cjk {
+    font-family: ~"var(--kiosk-keyboard-cjk-font-family, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans JP', 'Apple SD Gothic Neo', 'Malgun Gothic', 'PingFang SC', 'PingFang TC', 'Microsoft YaHei', system-ui, sans-serif)";
   }
 
   /* ============================= */

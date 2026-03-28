@@ -218,29 +218,34 @@ the line box. Visual regression testing confirmed this produces pixel-level
 changes in all Japanese layouts (ja-kana, ja-kana-shifted, ja-romaji) across all
 device profiles, while leaving all Latin, Arabic, and other layouts unchanged.
 
-### Future-proofing: `@supports (text-box-edge: ideographic-ink)`
+### Consumer override: `--kiosk-keyboard-cjk-font-family`
 
-A `@supports` block that will automatically upgrade to `ideographic-ink` once
-browsers implement it. This is the web equivalent of Android's
-`getReferenceCharHeight()` approach -- centering based on measured ink bounds
-rather than abstract font metrics.
+The CJK font stack is exposed as a CSS custom property so consumers can override
+it. For example, to use Noto Sans JP exclusively:
+
+```css
+kiosk-keyboard {
+  --kiosk-keyboard-cjk-font-family: "Noto Sans JP", sans-serif;
+}
+```
 
 ## Web Keyboard Comparison
 
-| Library                                                      | CJK-specific centering? | Source                                                                                               |
-| ------------------------------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| [simple-keyboard](https://github.com/hodgef/simple-keyboard) | No                      | Repo-wide search for "cjk", "japanese", "chinese": zero results                                      |
-| [KioskBoard](https://github.com/furcan/KioskBoard)           | No                      | Repo-wide search for "cjk", "japanese", "chinese": zero results                                      |
-| kiosk-keyboard-webc (ours)                                   | Yes                     | `text-box-trim` progressive enhancement + CJK-aware `text-box-edge` + `ideographic-ink` future guard |
+| Library                                                      | CJK-specific centering? | Source                                                                                         |
+| ------------------------------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| [simple-keyboard](https://github.com/hodgef/simple-keyboard) | No                      | Repo-wide search for "cjk", "japanese", "chinese": zero results                                |
+| [KioskBoard](https://github.com/furcan/KioskBoard)           | No                      | Repo-wide search for "cjk", "japanese", "chinese": zero results                                |
+| kiosk-keyboard-webc (ours)                                   | Yes                     | `text-box-trim` progressive enhancement + CJK-aware `text-box-edge` + CJK font-family override |
 
 ## What Remains
 
 1. **Horizontal centering** -- blocked on a custom font solution (see
    [CUSTOM-FONT-FACE.md](./CUSTOM-FONT-FACE.md))
 2. **Vertical centering** -- CJK font-family override ensures matched metrics;
-   `text-box-edge: text` override in place; `ideographic-ink` will auto-activate
-   when browsers ship it
-3. **Punctuation marks** -- inherent to Japanese typography per JLREQ; not a bug.
+   `text-box-edge: text` override in place
+3. **Future: `ideographic-ink`** -- when browsers ship `text-box-edge: ideographic-ink`,
+   adopt it deliberately with tested baselines (tracked in [#52](https://github.com/wridgeu/ui5-lib-keyboard/issues/52))
+4. **Punctuation marks** -- inherent to Japanese typography per JLREQ; not a bug.
    The W3C Chinese Layout Gap Analysis confirms this is a known font-level gap
    across CJK scripts. Punctuation positioning also differs between Simplified
    Chinese (shifted to one side), Traditional Chinese (centered), and Japanese

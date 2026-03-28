@@ -554,15 +554,14 @@
      upward.  Use font-defined text metrics instead -- these align with the
      ideographic ascent/descent and center CJK characters correctly.
      Current browser support: text-box-edge `text` is supported; the more
-     precise `ideographic-ink` value is not yet shipped (tracked upstream in
-     csswg-drafts #10928 and Chromium #365423076). A @supports guard below
-     upgrades to ideographic-ink automatically once browsers ship it. */
+     precise `ideographic-ink` value is not yet shipped (tracked in #52,
+     csswg-drafts #10928, Chromium #365423076). */
   .kiosk-key__label--glyph-cjk {
     text-box-edge: text;
   }
 }
 
-/* CJK font-family override.
+/* CJK font-family override (--kiosk-keyboard-cjk-font-family).
    The 72 font has no CJK glyphs (Latin/Greek/Cyrillic only). When the browser
    renders hiragana/katakana/Hangul, it falls through "72", "72full", Arial,
    Helvetica to the OS sans-serif default. But the LINE BOX metrics (used by
@@ -571,34 +570,26 @@
    metrics for layout" and "system CJK font for rendering" can cause vertical
    offset.
    Putting CJK system fonts first for CJK labels ensures the browser uses the
-   CJK font's own metrics for both the glyph and the line box. */
+   CJK font's own metrics for both the glyph and the line box.
+   Consumers can override the entire stack via --kiosk-keyboard-cjk-font-family. */
 .kiosk-key__label--glyph-cjk {
-  font-family:
+  font-family: var(
+    --kiosk-keyboard-cjk-font-family,
     "Hiragino Sans",
     "Hiragino Kaku Gothic ProN",
-    /* macOS / iOS */ "Yu Gothic UI",
+    "Yu Gothic UI",
     "Yu Gothic",
     "Meiryo",
-    /* Windows */ "Noto Sans CJK JP",
+    "Noto Sans CJK JP",
     "Noto Sans JP",
-    /* Linux / Android */ "Apple SD Gothic Neo",
-    /* macOS Korean */ "Malgun Gothic",
-    /* Windows Korean */ "PingFang SC",
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    "PingFang SC",
     "PingFang TC",
-    /* macOS Chinese */ "Microsoft YaHei",
-    /* Windows Chinese */ system-ui,
-    sans-serif;
-}
-
-/* Future: ideographic-ink trims to the actual ink bounds of representative
-   CJK characters, giving the web equivalent of native keyboards' measured
-   glyph centering (Android getReferenceCharHeight, iOS CoreText ink rects).
-   No browser supports this as of 2026-03; the block activates automatically
-   once support lands.  See w3c/csswg-drafts#10928. */
-@supports (text-box-edge: ideographic-ink) {
-  .kiosk-key__label--glyph-cjk {
-    text-box-edge: ideographic-ink;
-  }
+    "Microsoft YaHei",
+    system-ui,
+    sans-serif
+  );
 }
 
 /* ============================= */
