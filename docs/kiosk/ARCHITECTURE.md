@@ -44,6 +44,8 @@ layouts/
   ja-romaji.ts            Japanese Romaji layout
   ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
   arabic.ts               Arabic layout
+  ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
+  qwerty-es.ts            Spanish QWERTY layout
   qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 themes/
   base/
@@ -293,7 +295,7 @@ This is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected a
 
 The returned `LanguageTag` has `.language` (lowercase ISO639, e.g. `"de"`) and `.region` (uppercase ISO3166 or `null`, e.g. `"AT"`).
 
-Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`). Default mappings: `{ de → qwertz-de, ja → ja-romaji, ar → arabic }`.
+Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`). Default mappings: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`.
 
 The locale → layout map is extensible via `KioskKeyboard.registerLocaleLayout(locale, layout)`.
 Cleanup is technically optional for most apps because repeated initialization usually reapplies the same mapping without errors or leaks.
@@ -597,6 +599,8 @@ packages/kiosk-keyboard/
       ja-romaji.ts            Japanese Romaji layout
       ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
       arabic.ts               Arabic layout
+      ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
+      qwerty-es.ts            Spanish QWERTY layout
       qwertz-de-nav.ts        QWERTZ-DE + navigation row
     themes/
       base/

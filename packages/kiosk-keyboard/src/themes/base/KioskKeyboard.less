@@ -53,12 +53,23 @@
  *   --ui5KioskKeyboard-dualDirection      Flex direction: "row" (inline) or "column" (stacked) (default: row)
  *   --ui5KioskKeyboard-dualIconSize       Icon font size in dual mode (default: 1em)
  *   --ui5KioskKeyboard-dualLabelSize      Label font size in dual mode (default: 1em, inherits modifier cap)
- *   --ui5KioskKeyboard-dualGap            Gap between icon and label (default: 0.15em)
+ *   --ui5KioskKeyboard-dualGap            Gap between icon and label (default: 0.3em)
  *
- * CJK (Chinese/Japanese/Korean):
+ * CJK (Chinese/Japanese):
  *   --ui5KioskKeyboard-cjkFontFamily      Font stack for CJK glyph labels (default: CJK system fonts).
  *                                         Overrides the 72 font stack for keys whose label is a CJK
  *                                         glyph, so the browser uses CJK font metrics for both
+ *                                         rendering and line-box calculation.
+ *
+ * Hangul (Korean):
+ *   --ui5KioskKeyboard-hangulFontFamily   Font stack for Hangul glyph labels (default: Korean system fonts).
+ *                                         Separate from CJK so Korean system fonts are prioritized
+ *                                         over Japanese/Chinese fonts for correct glyph metrics.
+ *
+ * Indic (Devanagari/Bengali/Tamil/...):
+ *   --ui5KioskKeyboard-indicFontFamily    Font stack for Indic glyph labels (default: Indic system fonts).
+ *                                         Overrides the 72 font stack for keys whose label is an Indic
+ *                                         glyph, so the browser uses Indic font metrics for both
  *                                         rendering and line-box calculation.
  *
  * Responsive thresholds (rem):
@@ -109,7 +120,7 @@
     --ui5KioskKeyboard-dualDirection: row;
     --ui5KioskKeyboard-dualIconSize: 1em;
     --ui5KioskKeyboard-dualLabelSize: 1em;
-    --ui5KioskKeyboard-dualGap: 0.15em;
+    --ui5KioskKeyboard-dualGap: 0.3em;
     --ui5KioskKeyboard-fkeyDirection: column;
     --ui5KioskKeyboard-fkeyIconSize: ~"clamp(1em, 15cqi, 3em)";
     --ui5KioskKeyboard-fkeyLabelSize: 0.7em;
@@ -511,7 +522,7 @@
       text-box-edge: cap alphabetic;
     }
 
-    /* CJK glyphs (hiragana, katakana, kanji, hangul) extend the full
+    /* CJK glyphs (hiragana, katakana, kanji) extend the full
        ideographic em box, which is taller than Latin cap-height.
        cap-to-baseline trimming produces a box that is too short on top,
        shifting the glyph visually upward.  Use font-defined text metrics
@@ -520,11 +531,27 @@
     .ui5KioskKey__label--glyph-cjk {
       text-box-edge: text;
     }
+
+    /* Hangul jamo share the CJK vertical em-box characteristics but need a
+       separate class for their Korean-first font stack (see below). The
+       text-box-edge treatment is identical to CJK. */
+    .ui5KioskKey__label--glyph-hangul {
+      text-box-edge: text;
+    }
+
+    /* Indic glyphs (Devanagari, Bengali, Tamil, etc.) have headline systems
+       (shirorekha), descenders, conjuncts, and below-baseline vowel matras
+       that differ from both Latin cap-height and CJK ideographic metrics.
+       Use `text` (text-top to text-bottom) to preserve both the headline
+       space above and the matra/descender space below. */
+    .ui5KioskKey__label--glyph-indic {
+      text-box-edge: text;
+    }
   }
 
   /* CJK font-family override (--ui5KioskKeyboard-cjkFontFamily).
      The 72 font has no CJK glyphs (Latin/Greek/Cyrillic only). When the browser
-     renders hiragana/katakana/Hangul, it falls through "72", "72full", Arial,
+     renders hiragana/katakana/kanji, it falls through "72", "72full", Arial,
      Helvetica to the OS sans-serif default. But the LINE BOX metrics (used by
      text-box-trim and line-height) still come from the primary font (72), not
      the fallback that actually provides the glyph. This mismatch between "72
@@ -534,6 +561,23 @@
      CJK font's own metrics for both the glyph and the line box. */
   .ui5KioskKey__label--glyph-cjk {
     font-family: ~"var(--ui5KioskKeyboard-cjkFontFamily, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans JP', 'Apple SD Gothic Neo', 'Malgun Gothic', 'PingFang SC', 'PingFang TC', 'Microsoft YaHei', system-ui, sans-serif)";
+  }
+
+  /* Hangul font-family override (--ui5KioskKeyboard-hangulFontFamily).
+     Same rationale as CJK above, but with Korean system fonts first.
+     The CJK font stack prioritizes Japanese fonts (Hiragino, Yu Gothic,
+     Meiryo) which produce incorrect metrics when rendering Hangul jamo. */
+  .ui5KioskKey__label--glyph-hangul {
+    font-family: ~"var(--ui5KioskKeyboard-hangulFontFamily, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans CJK KR', 'Noto Sans KR', system-ui, sans-serif)";
+  }
+
+  /* Indic font-family override (--ui5KioskKeyboard-indicFontFamily).
+     Same rationale as CJK above: the 72 font has no Indic glyphs, so the
+     browser falls through to a system font for rendering but still uses 72
+     metrics for the line box.  Putting Indic system fonts first ensures
+     consistent metrics. */
+  .ui5KioskKey__label--glyph-indic {
+    font-family: ~"var(--ui5KioskKeyboard-indicFontFamily, 'Nirmala UI', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Gujarati', 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Sinhala', 'Kohinoor Devanagari', 'Kohinoor Bangla', 'Kohinoor Gujarati', 'Kohinoor Telugu', 'Tamil Sangam MN', 'Malayalam Sangam MN', 'Kannada Sangam MN', 'Gurmukhi Sangam MN', 'Oriya Sangam MN', 'Sinhala Sangam MN', 'Bangla Sangam MN', system-ui, sans-serif)";
   }
 
   /* ============================= */
