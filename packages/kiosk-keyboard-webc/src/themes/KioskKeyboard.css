@@ -38,7 +38,7 @@
   --kiosk-keyboard-dual-direction: row;
   --kiosk-keyboard-dual-icon-size: 1em;
   --kiosk-keyboard-dual-label-size: 1em;
-  --kiosk-keyboard-dual-gap: 0.15em;
+  --kiosk-keyboard-dual-gap: 0.3em;
   /* Navigation / function key defaults (column layout, scaled icon/label).
      Consumers can override these to change nav key rendering independently
      from other dual keys, or set --kiosk-keyboard-dual-direction to force
