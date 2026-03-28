@@ -457,6 +457,8 @@ The library ships with thirteen built-in layouts:
 | `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) | 5    |
 | `ja-kana`       | Japanese Kana direct-input (JIS X 6002)            | 5    |
 | `arabic`        | Arabic (standard Arabic 101 layout)                | 5    |
+| `ko-hangul`     | Korean Hangul Dubeolsik (KS X 5002)                | 5    |
+| `qwerty-es`     | Spanish QWERTY with accented vowels and ñ          | 5    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -711,6 +713,8 @@ When no explicit `layout` is provided, the keyboard auto-detects the appropriate
 | `de`     | `qwertz-de` |
 | `ja`     | `ja-romaji` |
 | `ar`     | `arabic`    |
+| `ko`     | `ko-hangul` |
+| `es`     | `qwerty-es` |
 
 Additional mappings can be registered at runtime:
 
@@ -1573,6 +1577,8 @@ KeyboardLayout.QwertzDeNav; // "qwertz-de-nav"
 KeyboardLayout.JaRomaji; // "ja-romaji"
 KeyboardLayout.JaKana; // "ja-kana"
 KeyboardLayout.Arabic; // "arabic"
+KeyboardLayout.KoHangul; // "ko-hangul"
+KeyboardLayout.QwertyEs; // "qwerty-es"
 
 // KeyboardType - keyboard display type
 KeyboardType.Full; // "Full"
