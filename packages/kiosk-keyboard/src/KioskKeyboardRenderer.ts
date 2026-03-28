@@ -249,6 +249,12 @@ const KioskKeyboardRenderer = {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.shiftValue, key.shiftValue);
     }
 
+    // Native tooltip for labels that may be truncated by text-overflow: ellipsis.
+    // Single-glyph labels use text-overflow: clip and cannot truncate.
+    if (label && !isSingleGlyph(label)) {
+      rm.attr("title", label);
+    }
+
     // Only set aria-label when there is no visible text label (WCAG 2.5.3).
     // When capsLockLabel provides visible text, that text IS the accessible
     // name -- adding aria-label would mismatch it.

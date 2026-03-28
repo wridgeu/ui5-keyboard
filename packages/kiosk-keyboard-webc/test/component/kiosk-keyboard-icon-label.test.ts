@@ -245,6 +245,44 @@ describe("icon + label rendering", () => {
     expect(keyEl.getAttribute("aria-label")).to.match(/caps lock/i);
   });
 
+  // -- Title tooltip for truncated labels --
+
+  it("multi-character label gets title attribute", async () => {
+    const el = await createKeyboard([[{ value: "x", label: "Custom" }]]);
+    const keyEl = queryKey(el, "x");
+    expect(keyEl.getAttribute("title")).to.equal("Custom");
+  });
+
+  it("single-glyph label does not get title attribute", async () => {
+    const el = await createKeyboard([[{ value: "a" }]]);
+    const keyEl = queryKey(el, "a");
+    expect(keyEl.getAttribute("title")).to.be.null;
+  });
+
+  it("empty label does not get title attribute", async () => {
+    const el = await createKeyboard([[{ value: "x", label: "" }]]);
+    const keyEl = queryKey(el, "x");
+    expect(keyEl.getAttribute("title")).to.be.null;
+  });
+
+  it("special key with i18n label gets title (e.g. Enter)", async () => {
+    const el = await createKeyboard([[{ value: "{enter}", type: "action", width: "2.25" }]]);
+    const keyEl = queryKey(el, "{enter}");
+    expect(keyEl.getAttribute("title")).to.match(/enter/i);
+  });
+
+  it("CJK multi-character label gets title", async () => {
+    const el = await createKeyboard([[{ value: "{layout:alpha}", label: "\u30ED\u30FC\u30DE\u5B57" }]]);
+    const keyEl = queryKey(el, "{layout:alpha}");
+    expect(keyEl.getAttribute("title")).to.equal("\u30ED\u30FC\u30DE\u5B57");
+  });
+
+  it("CJK single glyph does not get title", async () => {
+    const el = await createKeyboard([[{ value: "x", label: "\u3042" }]]);
+    const keyEl = queryKey(el, "x");
+    expect(keyEl.getAttribute("title")).to.be.null;
+  });
+
   it("icon: '' + capsLockIcon shows icon only during caps lock", async () => {
     const el = await createKeyboard([
       [{ value: "{shift}", type: "modifier", width: "2.25", icon: "", capsLockIcon: "\u{1F512}" }],
