@@ -562,6 +562,34 @@
   }
 }
 
+/* CJK font-family override.
+   The 72 font has no CJK glyphs (Latin/Greek/Cyrillic only). When the browser
+   renders hiragana/katakana/Hangul, it falls through "72", "72full", Arial,
+   Helvetica to the OS sans-serif default. But the LINE BOX metrics (used by
+   text-box-trim and line-height) still come from the primary font (72), not
+   the fallback that actually provides the glyph. This mismatch between "72
+   metrics for layout" and "system CJK font for rendering" can cause vertical
+   offset.
+   Putting CJK system fonts first for CJK labels ensures the browser uses the
+   CJK font's own metrics for both the glyph and the line box. */
+.kiosk-key__label--glyph-cjk {
+  font-family:
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    /* macOS / iOS */ "Yu Gothic UI",
+    "Yu Gothic",
+    "Meiryo",
+    /* Windows */ "Noto Sans CJK JP",
+    "Noto Sans JP",
+    /* Linux / Android */ "Apple SD Gothic Neo",
+    /* macOS Korean */ "Malgun Gothic",
+    /* Windows Korean */ "PingFang SC",
+    "PingFang TC",
+    /* macOS Chinese */ "Microsoft YaHei",
+    /* Windows Chinese */ system-ui,
+    sans-serif;
+}
+
 /* Future: ideographic-ink trims to the actual ink bounds of representative
    CJK characters, giving the web equivalent of native keyboards' measured
    glyph centering (Android getReferenceCharHeight, iOS CoreText ink rects).

@@ -183,6 +183,41 @@ ranges:
 Applied to single-glyph key labels where `isCJKGlyph()` returns true. Overrides
 `text-box-edge` from `cap alphabetic` to `text`.
 
+### CJK font-family override
+
+The 72 font has no CJK glyphs. When the browser renders hiragana/katakana, it
+falls through the font stack (`"72", "72full", Arial, Helvetica, sans-serif`)
+to the OS default. But the **line box metrics** (used by `text-box-trim` and
+`line-height`) still come from the primary font (72), not the fallback that
+actually provides the glyph. This mismatch causes vertical offset.
+
+The fix puts CJK system fonts first for CJK labels:
+
+```css
+.kiosk-key__label--glyph-cjk {
+  font-family:
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    /* macOS / iOS */ "Yu Gothic UI",
+    "Yu Gothic",
+    "Meiryo",
+    /* Windows */ "Noto Sans CJK JP",
+    "Noto Sans JP",
+    /* Linux / Android */ "Apple SD Gothic Neo",
+    /* macOS Korean */ "Malgun Gothic",
+    /* Windows Korean */ "PingFang SC",
+    "PingFang TC",
+    /* macOS Chinese */ "Microsoft YaHei",
+    /* Windows Chinese */ system-ui,
+    sans-serif;
+}
+```
+
+This ensures the browser uses the CJK font's own metrics for both the glyph and
+the line box. Visual regression testing confirmed this produces pixel-level
+changes in all Japanese layouts (ja-kana, ja-kana-shifted, ja-romaji) across all
+device profiles, while leaving all Latin, Arabic, and other layouts unchanged.
+
 ### Future-proofing: `@supports (text-box-edge: ideographic-ink)`
 
 A `@supports` block that will automatically upgrade to `ideographic-ink` once
@@ -202,11 +237,14 @@ rather than abstract font metrics.
 
 1. **Horizontal centering** -- blocked on a custom font solution (see
    [CUSTOM-FONT-FACE.md](./CUSTOM-FONT-FACE.md))
-2. **Vertical centering with current fonts** -- architecturally fixed but
-   visually unchanged because Yu Gothic UI maps `text` and `cap alphabetic` to
-   the same metrics. Will improve with fonts that differentiate these metrics or
-   when browsers ship `ideographic-ink`
-3. **Punctuation marks** -- inherent to Japanese typography per JLREQ; not a bug
+2. **Vertical centering** -- CJK font-family override ensures matched metrics;
+   `text-box-edge: text` override in place; `ideographic-ink` will auto-activate
+   when browsers ship it
+3. **Punctuation marks** -- inherent to Japanese typography per JLREQ; not a bug.
+   The W3C Chinese Layout Gap Analysis confirms this is a known font-level gap
+   across CJK scripts. Punctuation positioning also differs between Simplified
+   Chinese (shifted to one side), Traditional Chinese (centered), and Japanese
+   (mixed) -- see the koreader discussion linked in references.
 
 ## References
 
@@ -220,3 +258,7 @@ rather than abstract font metrics.
 - [Apple CoreText CTFont Reference](https://developer.apple.com/documentation/coretext/ctfont-rct)
 - [Microsoft DirectWrite IDWriteFontFace1::GetMetrics](https://learn.microsoft.com/en-us/windows/win32/api/dwrite_1/nf-dwrite_1-idwritefontface1-getmetrics)
 - [Microsoft DWRITE_FONT_METRICS1](https://learn.microsoft.com/en-us/windows/win32/api/dwrite_1/ns-dwrite_1-dwrite_font_metrics1)
+- [W3C Chinese Layout Gap Analysis](https://www.w3.org/TR/clreq-gap/) -- confirms CJK punctuation centering is a known font-level gap
+- [koreader #6162: CJK punctuation positioning](https://github.com/koreader/koreader/issues/6162) -- SC vs TC vs JA punctuation differences
+- [Typotheque: Typesetting CJK Text](https://www.typotheque.com/articles/typesetting-cjk-text)
+- [Adobe InCopy: Formatting CJK Characters](https://helpx.adobe.com/incopy/using/formatting-cjk-characters.html)
