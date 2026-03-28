@@ -42,6 +42,7 @@ layouts/
   qwertz-de-fk.ts         QWERTZ-DE with F1-F12 row on top
   qwerty-nav.ts           QWERTY with navigation row on top
   ja-romaji.ts            Japanese Romaji layout
+  ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
   arabic.ts               Arabic layout
   qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 themes/
@@ -594,6 +595,7 @@ packages/kiosk-keyboard/
       qwertz-de-fk.ts         QWERTZ-DE + F-key row
       qwerty-nav.ts           QWERTY + navigation row
       ja-romaji.ts            Japanese Romaji layout
+      ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
       arabic.ts               Arabic layout
       qwertz-de-nav.ts        QWERTZ-DE + navigation row
     themes/
