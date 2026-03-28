@@ -313,6 +313,15 @@
       line-height: 1;
     }
 
+    /* East Asian single-glyph labels (kana, ideographs, CJK punctuation)
+       sit a little high in SAP 72full at keyboard sizes. Use a script-level
+       optical offset instead of per-glyph tweaks, and avoid the Latin
+       cap/alphabetic trimming path in supporting browsers. */
+    &__label--east-asian {
+      line-height: 1.1;
+      transform: translateY(0.07em);
+    }
+
     &__label--multi {
       font-size: ~"clamp(0.5rem, calc(100cqi * 0.35), 1em)";
     }
@@ -466,6 +475,11 @@
 
     .ui5KioskKey__label--glyph {
       text-box-edge: cap alphabetic;
+    }
+
+    .ui5KioskKey__label--east-asian {
+      text-box-edge: text;
+      line-height: normal;
     }
   }
 

@@ -6,7 +6,7 @@ import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
-import { isSingleGlyph } from "./internal/grapheme";
+import { hasOnlyEastAsianGlyphs, isSingleGlyph } from "./internal/grapheme";
 
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 
@@ -307,9 +307,13 @@ const KioskKeyboardRenderer = {
 
   /** Render the label element inside a key. Overridable by subclasses. */
   renderKeyLabel(rm: RenderManager, _oControl: KioskKeyboard, key: KeyDefinition, label: string): void {
+    const isSingleGlyphLabel = isSingleGlyph(label);
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
-    if (isSingleGlyph(label)) {
+    if (isSingleGlyphLabel) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
+      if (hasOnlyEastAsianGlyphs(label)) {
+        rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelEastAsian);
+      }
     } else if (key.type !== "modifier" && key.type !== "action") {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);
     }

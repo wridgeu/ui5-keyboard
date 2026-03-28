@@ -226,6 +226,9 @@ export const DISABLE_TEXT_BOX_TRIM = `
   .${DOM.classes.keyLabelGlyph} {
     line-height: 1 !important;
   }
+  .${DOM.classes.keyLabelEastAsian} {
+    line-height: 1.1 !important;
+  }
 `;
 
 /**

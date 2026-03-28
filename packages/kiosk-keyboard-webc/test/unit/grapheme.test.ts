@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { graphemeLengthBefore, graphemeLengthAfter, isSingleGlyph } from "../../src/core/grapheme.js";
+import {
+  graphemeLengthBefore,
+  graphemeLengthAfter,
+  hasOnlyEastAsianGlyphs,
+  isSingleGlyph,
+} from "../../src/core/grapheme.js";
 
 describe("graphemeLengthBefore", () => {
   it("returns 0 at position 0", () => {
@@ -98,5 +103,21 @@ describe("isSingleGlyph", () => {
   it("returns true for subdivision flag tag sequence", () => {
     const englandFlag = "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}";
     expect(isSingleGlyph(englandFlag)).toBe(true);
+  });
+});
+
+describe("hasOnlyEastAsianGlyphs", () => {
+  it("returns true for kana and Japanese punctuation", () => {
+    expect(hasOnlyEastAsianGlyphs("ぬ")).toBe(true);
+    expect(hasOnlyEastAsianGlyphs("゛")).toBe(true);
+    expect(hasOnlyEastAsianGlyphs("。")).toBe(true);
+    expect(hasOnlyEastAsianGlyphs("かな")).toBe(true);
+  });
+
+  it("returns false for non-East-Asian labels", () => {
+    expect(hasOnlyEastAsianGlyphs("A")).toBe(false);
+    expect(hasOnlyEastAsianGlyphs("ض")).toBe(false);
+    expect(hasOnlyEastAsianGlyphs("😀")).toBe(false);
+    expect(hasOnlyEastAsianGlyphs("")).toBe(false);
   });
 });

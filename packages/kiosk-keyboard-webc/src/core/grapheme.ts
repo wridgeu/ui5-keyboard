@@ -7,6 +7,9 @@
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
+/** East Asian punctuation, kana, and common CJK ideograph ranges used by built-in layouts. */
+const EAST_ASIAN_GLYPH_RE = /^[\u3000-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]+$/u;
+
 /** 40 code units covers all known grapheme clusters (longest: subdivision flag tags at ~28). */
 const GRAPHEME_TAIL_WINDOW = 40;
 
@@ -57,4 +60,15 @@ export function isSingleGlyph(label: string): boolean {
     if (count > 1) return false;
   }
   return count === 1;
+}
+
+/**
+ * Returns true when every code point in the label uses East Asian glyph
+ * metrics (kana, common CJK punctuation, or common Han ranges).
+ *
+ * Combined with {@link isSingleGlyph} to opt single-glyph key labels into
+ * ideographic text-box metrics instead of Latin cap/alphabetic metrics.
+ */
+export function hasOnlyEastAsianGlyphs(label: string): boolean {
+  return label.length > 0 && EAST_ASIAN_GLYPH_RE.test(label);
 }

@@ -1,4 +1,9 @@
-import { graphemeLengthAfter, graphemeLengthBefore, isSingleGlyph } from "ui5/kiosk/internal/grapheme";
+import {
+  graphemeLengthAfter,
+  graphemeLengthBefore,
+  hasOnlyEastAsianGlyphs,
+  isSingleGlyph,
+} from "ui5/kiosk/internal/grapheme";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
@@ -278,4 +283,20 @@ QUnit.test("ZWJ sequence returns true", (assert) => {
 QUnit.test("two separate emoji returns false", (assert) => {
   assert.strictEqual(isSingleGlyph("😀😀"), false, "two emoji is not one glyph");
   assert.strictEqual(isSingleGlyph("🇩🇪🇫🇷"), false, "two flag emoji is not one glyph");
+});
+
+QUnit.module("hasOnlyEastAsianGlyphs");
+
+QUnit.test("kana and Japanese punctuation return true", (assert) => {
+  assert.strictEqual(hasOnlyEastAsianGlyphs("ぬ"), true, "hiragana uses East Asian metrics");
+  assert.strictEqual(hasOnlyEastAsianGlyphs("゛"), true, "dakuten uses East Asian metrics");
+  assert.strictEqual(hasOnlyEastAsianGlyphs("。"), true, "Japanese punctuation uses East Asian metrics");
+  assert.strictEqual(hasOnlyEastAsianGlyphs("かな"), true, "multi-glyph kana label still matches script check");
+});
+
+QUnit.test("non-East-Asian labels return false", (assert) => {
+  assert.strictEqual(hasOnlyEastAsianGlyphs("A"), false, "Latin label does not use East Asian metrics");
+  assert.strictEqual(hasOnlyEastAsianGlyphs("ض"), false, "Arabic label does not use East Asian metrics");
+  assert.strictEqual(hasOnlyEastAsianGlyphs("😀"), false, "emoji does not use East Asian metrics");
+  assert.strictEqual(hasOnlyEastAsianGlyphs(""), false, "empty label does not use East Asian metrics");
 });

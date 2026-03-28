@@ -517,6 +517,15 @@
   line-height: 1;
 }
 
+/* East Asian single-glyph labels (kana, ideographs, CJK punctuation) sit a
+   little high in SAP 72full at keyboard sizes. Use a script-level optical
+   offset instead of per-glyph tweaks, and avoid the Latin cap/alphabetic
+   trimming path in supporting browsers. */
+.kiosk-key__label--east-asian {
+  line-height: 1.1;
+  transform: translateY(0.07em);
+}
+
 /* Multi-character labels (F1, F10, Home, PgUp, Space):
    scale font proportionally to the key's own inline width (cqi),
    capped at 1em so it never exceeds the base key font-size.
@@ -546,6 +555,11 @@
      overflow is already visible (see kiosk-key__label--glyph above). */
   .kiosk-key__label--glyph {
     text-box-edge: cap alphabetic;
+  }
+
+  .kiosk-key__label--east-asian {
+    text-box-edge: text;
+    line-height: normal;
   }
 }
 
