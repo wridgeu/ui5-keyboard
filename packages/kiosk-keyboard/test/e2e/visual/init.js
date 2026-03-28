@@ -152,4 +152,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
 
   // 31. Arabic
   new KioskKeyboard({ layout: "arabic" }).placeAt("kb-arabic");
+
+  // 32. Japanese Kana
+  new KioskKeyboard({ layout: "ja-kana" }).placeAt("kb-ja-kana");
 });

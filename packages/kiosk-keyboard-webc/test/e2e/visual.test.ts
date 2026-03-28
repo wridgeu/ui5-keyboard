@@ -84,6 +84,11 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "webc-ja-romaji");
   });
 
+  it("should match Japanese Kana layout", async () => {
+    const kb = await getKeyboardRoot("kb-ja-kana");
+    await matchElementSnapshotInSection(kb, "webc-ja-kana");
+  });
+
   it("should match Arabic layout", async () => {
     const kb = await getKeyboardRoot("kb-arabic");
     await matchElementSnapshotInSection(kb, "webc-arabic");

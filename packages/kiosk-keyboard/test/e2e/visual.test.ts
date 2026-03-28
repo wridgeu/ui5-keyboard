@@ -91,6 +91,11 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "kb-ja-romaji");
   });
 
+  it("should match Japanese Kana layout", async () => {
+    const kb = await getKeyboard("kb-ja-kana");
+    await matchElementSnapshotInSection(kb, "kb-ja-kana");
+  });
+
   it("should match Arabic layout", async () => {
     const kb = await getKeyboard("kb-arabic");
     await matchElementSnapshotInSection(kb, "kb-arabic");
