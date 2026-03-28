@@ -1053,7 +1053,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 
 - **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
-- **Icons** always have `aria-hidden="true"`.
+- **Icons** always have `aria-hidden="true"` -- they are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
 
 ### Built-in icons
 
