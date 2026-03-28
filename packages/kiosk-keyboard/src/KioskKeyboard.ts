@@ -908,12 +908,22 @@ export default class KioskKeyboard extends Control {
       }
     }
 
-    this.refreshResponsiveState();
+    // Sync the ResizeHandler registration with the current DOM element,
+    // then defer responsive class reapplication to the next animation frame.
+    // Re-renders wipe root classes, but deferring avoids forced reflow
+    // (getComputedStyle + scrollHeight) in the render frame. The 1-frame
+    // delay for responsive sizing is imperceptible; the ResizeHandler
+    // already uses rAF for resize-triggered updates.
+    const dom = this.getDomRef() as HTMLElement | null;
+    if (dom) {
+      this._syncResponsiveSizing(dom);
+      this._scheduleResponsiveSizingSync();
+    }
 
     this._setupInputIds();
   }
 
-  /** Mirrors container-query breakpoints with UI5-managed root classes. */
+  /** Ensures a ResizeHandler is attached to the current DOM element. */
   private _syncResponsiveSizing(dom: HTMLElement | null): void {
     if (!dom) {
       this._teardownResponsiveSizing();
@@ -927,8 +937,6 @@ export default class KioskKeyboard extends Control {
         this._scheduleResponsiveSizingSync();
       });
     }
-
-    this._applyResponsiveSizeClasses(dom);
   }
 
   /** Deregisters the UI5 ResizeHandler and clears the observed DOM reference. */
@@ -1325,6 +1333,10 @@ export default class KioskKeyboard extends Control {
    * without triggering a ResizeHandler callback, such as fixed-height styling
    * combined with updated `--ui5KioskKeyboard-*` sizing variables.
    *
+   * The class update is deferred to the next animation frame to avoid
+   * forced reflow. Query the DOM for responsive classes after a
+   * `requestAnimationFrame` callback, not synchronously.
+   *
    * @public
    * @since 0.1.0
    */
@@ -1333,6 +1345,7 @@ export default class KioskKeyboard extends Control {
     if (!dom) return this;
 
     this._syncResponsiveSizing(dom);
+    this._scheduleResponsiveSizingSync();
     return this;
   }
 
@@ -2057,7 +2070,7 @@ export default class KioskKeyboard extends Control {
     const shift = this._isShiftActive();
 
     if (keyValue === "{shift}") {
-      this._toggleShift();
+      this._toggleShift(el);
       return;
     }
 
@@ -2149,8 +2162,24 @@ export default class KioskKeyboard extends Control {
     }
   }
 
-  private _toggleShift(): void {
+  private _toggleShift(el: HTMLElement): void {
     this._shiftState.toggle();
+
+    // Optimistic DOM update: apply shift-active / caps-lock classes
+    // immediately for instant visual feedback, before the framework
+    // re-render cycle.  Same pattern as sap.m.Button._activeButton(),
+    // sap.m.ToggleButton.setPressed(), and this control's own
+    // ontouchstart keyPressed class.
+    //
+    // Note: this duplicates the class logic in KioskKeyboardRenderer's
+    // addKeyClasses hook.  Custom renderers that override addKeyClasses
+    // for shift styling must also override _toggleShift to keep the
+    // optimistic path in sync.
+    const isShifted = this._shiftState.isShifted;
+    const isCaps = this._shiftState.isCapsLock;
+    el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyActive, isShifted);
+    el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyCapsLock, isCaps);
+
     this.invalidate();
   }
 
