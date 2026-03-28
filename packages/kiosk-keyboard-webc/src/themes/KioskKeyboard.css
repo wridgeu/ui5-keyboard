@@ -39,7 +39,14 @@
   --kiosk-keyboard-dual-icon-size: 1em;
   --kiosk-keyboard-dual-label-size: 1em;
   --kiosk-keyboard-dual-gap: 0.15em;
-  --kiosk-keyboard-dual-label-threshold: 5rem;
+  /* Navigation / function key defaults (column layout, scaled icon/label).
+     Consumers can override these to change nav key rendering independently
+     from other dual keys, or set --kiosk-keyboard-dual-direction to force
+     all dual keys (including nav) to the same direction. */
+  --kiosk-keyboard-fkey-direction: column;
+  --kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 3em);
+  --kiosk-keyboard-fkey-label-size: 0.7em;
+  --kiosk-keyboard-fkey-gap: 0.05em;
 
   --kiosk-keyboard-border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
   --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
@@ -647,9 +654,10 @@
    in the accessibility tree as the key's accessible name.
    The key element has container-type: inline-size, so this fires
    when the individual key is too narrow for readable text alongside
-   the icon.  Consumers can override the threshold via
-   --kiosk-keyboard-dual-label-threshold (default 5rem). */
-@container (max-inline-size: var(--kiosk-keyboard-dual-label-threshold)) {
+   the icon.
+   NOTE: CSS custom properties (var()) are not valid inside @container
+   query conditions per CSS spec, so the threshold is hard-coded. */
+@container (max-inline-size: 5rem) {
   .kiosk-key--dual .kiosk-key__label {
     position: absolute;
     width: 1px;
@@ -660,25 +668,28 @@
   }
 }
 
-/* At wide key widths, switch dual keys to column layout (icon stacked
-   above label).  The icon scales proportionally with the key width
-   using container query units (cqi), and the label shrinks to a
-   secondary caption.  This prevents the "icon looks lost" appearance
-   on wide nav-only layouts where keys span ~33% of the keyboard. */
-@container (min-inline-size: 10rem) {
-  .kiosk-key--dual {
-    flex-direction: column;
-    gap: 0.05em;
-  }
-
-  .kiosk-key--dual .kiosk-key__label {
-    font-size: 0.7em;
-  }
+/* Navigation / function keys: column layout with scaled icon.
+   Stacks icon above label and scales the icon proportionally with key
+   width using container query units (cqi).  This prevents the "icon
+   looks lost" appearance on wide nav-only layouts where each key spans
+   ~33% of the keyboard.
+   Scoped to [data-key^="{fkey:"] to avoid affecting Shift/Enter/
+   Backspace which are also dual keys but should keep row layout.
+   NOTE: We cannot use a @container query to conditionally apply
+   flex-direction on the container element itself -- container queries
+   match descendants, not the container.  Since .kiosk-key has
+   container-type: inline-size, a @container rule targeting .kiosk-key
+   would resolve against the nearest *ancestor* container (the keyboard
+   wrapper), not the individual key width. */
+[data-key^="{fkey:"].kiosk-key--dual {
+  flex-direction: var(--kiosk-keyboard-fkey-direction);
+  gap: var(--kiosk-keyboard-fkey-gap);
 }
 
-/* Navigation / function keys: scale icon with key width so it remains
-   proportionate at all sizes.  Uses the {fkey:*} data-key convention
-   to target only nav keys without affecting Shift/Enter/Backspace. */
+[data-key^="{fkey:"].kiosk-key--dual .kiosk-key__label {
+  font-size: var(--kiosk-keyboard-fkey-label-size);
+}
+
 [data-key^="{fkey:"] .kiosk-key__icon {
-  font-size: clamp(1em, 15cqi, 3em);
+  font-size: var(--kiosk-keyboard-fkey-icon-size);
 }
