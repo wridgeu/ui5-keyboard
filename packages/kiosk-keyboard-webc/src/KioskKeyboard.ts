@@ -915,6 +915,10 @@ class KioskKeyboard extends UI5Element {
    * or custom CSS vars change the underlying natural content height within a
    * fixed-height host.
    *
+   * The class update is deferred to the next animation frame to avoid
+   * forced reflow. Query the DOM for responsive classes after a
+   * `requestAnimationFrame` callback, not synchronously.
+   *
    * @public
    * @since 0.1.0
    */
