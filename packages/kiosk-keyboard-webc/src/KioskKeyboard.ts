@@ -719,7 +719,14 @@ class KioskKeyboard extends UI5Element {
       this._pendingAnnouncement = null;
     }
 
-    this.refreshResponsiveState();
+    // Sync observer targets so newly rendered root elements are observed.
+    // Responsive height classes live on the host element (not in shadow DOM),
+    // so they survive template re-renders and don't need reapplication here.
+    // Actual height class updates are handled by the ResizeObserver callback
+    // via _scheduleResponsiveClassUpdate(), avoiding forced reflow in the
+    // render frame.
+    const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
+    if (root) this._syncResponsiveObserverTargets(root);
   }
 
   onInvalidation(changeInfo: ChangeInfo): void {
@@ -917,10 +924,10 @@ class KioskKeyboard extends UI5Element {
 
     this._syncResponsiveObserverTargets(root);
 
-    // Apply responsive height classes after each render.
-    // This ensures classes survive template re-renders which reconcile the
-    // class attribute to only what the template specifies.
-    this._applyResponsiveClasses();
+    // Schedule responsive class update via rAF to avoid forced reflow.
+    // Host element classes survive shadow DOM re-renders, so synchronous
+    // reapplication is unnecessary.
+    this._scheduleResponsiveClassUpdate();
   }
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
@@ -1077,6 +1084,16 @@ class KioskKeyboard extends UI5Element {
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: nextShifted });
       if (!allowed) return;
       this._shiftState.toggle();
+
+      // Optimistic DOM update: apply shift-active / caps-lock classes
+      // immediately for instant visual feedback, before the async
+      // re-render cycle. The template binding maintains the state
+      // across subsequent re-renders (same pattern as _highlightKey).
+      const isShifted = this._shiftState.isShifted;
+      const isCaps = this._shiftState.isCapsLock;
+      keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
+      keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyCapsLock, isCaps);
+
       this._syncShiftState();
       return;
     }
