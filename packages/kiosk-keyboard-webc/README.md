@@ -13,8 +13,8 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework: plain HTML, React, Vue, Angular
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
-- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Arabic, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
-- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`)
+- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
+- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`). Use `registerLocaleLayout("ja", "ja-kana")` to switch the Japanese default to kana input.
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show**: opens/closes automatically when target inputs receive/lose focus
@@ -357,6 +357,7 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 | `qwerty`        | Standard US QWERTY                                 |
 | `qwertz-de`     | German QWERTZ with umlauts and ß                   |
 | `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) |
+| `ja-kana`       | Japanese Kana direct-input (JIS X 6002)            |
 | `arabic`        | Arabic (standard Arabic 101 layout)                |
 | `numeric`       | Numbers + common symbols                           |
 | `special`       | Extended symbols (`#+=`, currencies)               |
@@ -858,7 +859,7 @@ src/
 ├── layouts/                   # Built-in layout definitions
 │   ├── index.ts               # Layout registry
 │   ├── default-layout.ts     # Default layout name constant
-│   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, arabic.ts, numeric.ts, special.ts, numpad.ts
+│   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, ja-kana.ts, arabic.ts, numeric.ts, special.ts, numpad.ts
 │   ├── fkeys.ts, nav.ts      # Standalone F-key/nav layouts
 │   ├── fkey-row.ts, nav-row.ts  # Shared rows for composite layouts
 │   └── qwerty-fk.ts, qwertz-de-fk.ts, qwerty-nav.ts, qwertz-de-nav.ts

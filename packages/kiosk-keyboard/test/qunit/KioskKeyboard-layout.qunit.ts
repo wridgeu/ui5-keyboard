@@ -683,6 +683,132 @@ QUnit.test("Unknown exact locale mapping falls back to valid language prefix", (
   }
 });
 
+// ──────────────────────────────────────────────
+// ja-kana layout
+// ──────────────────────────────────────────────
+
+QUnit.test("ja-kana layout renders 5 rows with correct key counts", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  const rows = getRowElements(kb);
+  assert.strictEqual(rows.length, 5, "ja-kana has 5 rows");
+  assert.strictEqual(getRowKeyValues(kb, 0).length, 12, "Row 1 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 1).length, 12, "Row 2 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 2).length, 12, "Row 3 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 3).length, 12, "Row 4 has 12 keys");
+  assert.strictEqual(getRowKeyValues(kb, 4).length, 7, "Row 5 has 7 keys");
+  kb.destroy();
+});
+
+QUnit.test("ja-kana first key is ぬ (hiragana nu)", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "\u306C", "First key is ぬ");
+  kb.destroy();
+});
+
+QUnit.test("ja-kana has dakuten and handakuten on base layer", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  const allKeys = getRowKeyValues(kb, 1);
+  assert.ok(allKeys.includes("\u309B"), "Row 2 contains dakuten ゛");
+  assert.ok(allKeys.includes("\u309C"), "Row 2 contains handakuten ゜");
+  kb.destroy();
+});
+
+QUnit.test("ja-kana has layout toggle to ja-romaji", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  const row5Keys = getRowKeyValues(kb, 4);
+  assert.ok(row5Keys.includes("{layout:ja-romaji}"), "Row 5 contains ja-romaji toggle");
+  kb.destroy();
+});
+
+QUnit.test("ja-kana: all base values are hiragana, special keys, or punctuation", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+  const hiraganaRange = /^[\u3040-\u309F]$/;
+  const specialKeys = new Set(["{backspace}", "{enter}", "{shift}", " "]);
+  const punctuation = new Set(["\u309B", "\u309C", "\u30FC", "\u3002"]);
+  const layoutKeys = new Set(["{layout:numeric}", "{layout:ja-romaji}", "{layout:fkeys}"]);
+
+  for (let r = 0; r < 5; r++) {
+    for (const val of getRowKeyValues(kb, r)) {
+      const isValid = hiraganaRange.test(val) || specialKeys.has(val) || punctuation.has(val) || layoutKeys.has(val);
+      assert.ok(isValid, `key "${val}" (U+${val.codePointAt(0)?.toString(16)}) is valid`);
+    }
+  }
+  kb.destroy();
+});
+
+QUnit.test("ja-kana: small kana shift variants on correct keys", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+
+  // Verify shift variants via data-shift-value attribute (renderer stores them on the DOM)
+  const allKeys = Array.from(getKeyElements(kb));
+  const expectedShifts: Record<string, string> = {
+    "\u3042": "\u3041", // あ → ぁ
+    "\u3046": "\u3045", // う → ぅ
+    "\u3048": "\u3047", // え → ぇ
+    "\u304A": "\u3049", // お → ぉ
+    "\u3084": "\u3083", // や → ゃ
+    "\u3086": "\u3085", // ゆ → ゅ
+    "\u3088": "\u3087", // よ → ょ
+    "\u308F": "\u3092", // わ → を
+    "\u3044": "\u3043", // い → ぃ
+    "\u3064": "\u3063", // つ → っ
+    "\u307B": "\u3078", // ほ → へ
+  };
+
+  for (const [base, expectedSmall] of Object.entries(expectedShifts)) {
+    const keyEl = allKeys.find((el) => el.dataset.key === base);
+    assert.ok(keyEl, `key for ${base} exists`);
+    assert.strictEqual(
+      keyEl?.getAttribute(DOM.attributes.shiftValue),
+      expectedSmall,
+      `shift of ${base} should be ${expectedSmall}`,
+    );
+  }
+
+  kb.destroy();
+});
+
+QUnit.test("ja-kana: row 4 punctuation shift variants", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+
+  // Verify JIS punctuation shift variants via data-shift-value on row 4 keys
+  const allKeys = Array.from(getKeyElements(kb));
+  const ne = allKeys.find((el) => el.dataset.key === "\u306D"); // ね
+  const ru = allKeys.find((el) => el.dataset.key === "\u308B"); // る
+  const me = allKeys.find((el) => el.dataset.key === "\u3081"); // め
+
+  assert.strictEqual(ne?.getAttribute(DOM.attributes.shiftValue), "\u3001", "ね shift is 、 (ideographic comma)");
+  assert.strictEqual(ru?.getAttribute(DOM.attributes.shiftValue), "\u3002", "る shift is 。 (ideographic period)");
+  assert.strictEqual(me?.getAttribute(DOM.attributes.shiftValue), "\u30FB", "め shift is ・ (middle dot)");
+
+  kb.destroy();
+});
+
+QUnit.test("ja-kana: backspace, enter, shift, space have correct types", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+
+  const allKeys = Array.from(getKeyElements(kb));
+  const backspace = allKeys.find((el) => el.dataset.key === "{backspace}");
+  const enter = allKeys.find((el) => el.dataset.key === "{enter}");
+  const shift = allKeys.find((el) => el.dataset.key === "{shift}");
+  const space = allKeys.find((el) => el.dataset.key === " ");
+
+  assert.ok(backspace?.classList.contains(DOM.classes.keyAction), "Backspace has action type");
+  assert.ok(enter?.classList.contains(DOM.classes.keyAction), "Enter has action type");
+  assert.ok(shift?.classList.contains(DOM.classes.keyModifier), "Shift has modifier type");
+  assert.ok(space?.classList.contains(DOM.classes.keySpace), "Space has space type");
+
+  kb.destroy();
+});
+
 QUnit.test("applySettings injects locale layout when no explicit layout", (assert) => {
   const currentLang = Localization.getLanguage();
   try {

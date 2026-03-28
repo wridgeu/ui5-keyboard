@@ -64,7 +64,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 **Layouts**
 
-- Built-in layouts: QWERTY, QWERTZ-DE, Japanese Romaji, Arabic, numeric, special characters, numpad, function keys, navigation keys
+- Built-in layouts: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, numeric, special characters, numpad, function keys, navigation keys
 - Variant layouts: QWERTY-FK/QWERTZ-DE-FK and QWERTY-NAV/QWERTZ-DE-NAV
 - Locale-based default layout (auto-detects from UI5 language setting)
 - Runtime layout switching via `{layout:name}` keys
@@ -455,6 +455,7 @@ The library ships with thirteen built-in layouts:
 | `qwerty-nav`    | QWERTY with navigation row on top                  | 6    |
 | `qwertz-de-nav` | German QWERTZ with navigation row on top           | 6    |
 | `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) | 5    |
+| `ja-kana`       | Japanese Kana direct-input (JIS X 6002)            | 5    |
 | `arabic`        | Arabic (standard Arabic 101 layout)                | 5    |
 
 Layout switching is driven by special key values in the layout definition:
@@ -1437,6 +1438,7 @@ KeyboardLayout.QwertzDeFk; // "qwertz-de-fk"
 KeyboardLayout.QwertyNav; // "qwerty-nav"
 KeyboardLayout.QwertzDeNav; // "qwertz-de-nav"
 KeyboardLayout.JaRomaji; // "ja-romaji"
+KeyboardLayout.JaKana; // "ja-kana"
 KeyboardLayout.Arabic; // "arabic"
 
 // KeyboardType - keyboard display type

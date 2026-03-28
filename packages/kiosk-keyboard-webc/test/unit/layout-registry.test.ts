@@ -39,6 +39,10 @@ describe("layout-registry", () => {
       expect(isBuiltInLayout("ja-romaji")).toBe(true);
     });
 
+    it("has ja-kana as a built-in layout", () => {
+      expect(isBuiltInLayout("ja-kana")).toBe(true);
+    });
+
     it("has arabic as a built-in layout", () => {
       expect(isBuiltInLayout("arabic")).toBe(true);
     });

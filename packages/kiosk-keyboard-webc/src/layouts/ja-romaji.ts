@@ -76,8 +76,8 @@ const jaRomaji: LayoutDefinition = [
     { value: " ", width: "space", type: "space" },
     { value: "\u3002", shiftValue: "\u300C" },
     {
-      value: "{layout:fkeys}",
-      label: "Fn",
+      value: "{layout:ja-kana}",
+      label: "\u304B\u306A", // かな
       width: "1.5",
       type: "modifier",
     },
