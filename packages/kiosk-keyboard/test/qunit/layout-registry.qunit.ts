@@ -43,6 +43,7 @@ const BUILTIN_NAMES = [
   "qwerty-nav",
   "qwertz-de-nav",
   "ja-romaji",
+  "ja-kana",
   "arabic",
 ];
 
