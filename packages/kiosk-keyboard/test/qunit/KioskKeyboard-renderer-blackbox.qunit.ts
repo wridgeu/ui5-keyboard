@@ -69,6 +69,75 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
 });
 
 // ──────────────────────────────────────────────
+// 1b. Shift feedback latency KPIs
+// ──────────────────────────────────────────────
+
+QUnit.test("Shift-active class appears synchronously after tap (before re-render)", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Tap shift and check IMMEDIATELY - no waitForRender
+  tapKey(kb, "{shift}");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "active class present synchronously after tap");
+
+  await waitForRender(); // let render complete
+  kb.destroy();
+});
+
+QUnit.test("Shift-active class removed synchronously when turning off from caps", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Tap 1: shift on
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  // Tap 2 (within 400ms): caps lock on
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  // Tap 3: off - check IMMEDIATELY (before waitForRender)
+  tapKey(kb, "{shift}");
+  assert.notOk(
+    hasKeyClass(kb, "{shift}", DOM.classes.keyActive),
+    "active class removed synchronously after tap-off from caps",
+  );
+  assert.notOk(
+    hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock),
+    "capsLock class removed synchronously after tap-off from caps",
+  );
+
+  await waitForRender();
+  kb.destroy();
+});
+
+QUnit.test("No forced layout reads (getComputedStyle) during shift toggle", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Let any pending responsive sync settle
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  const origGCS = window.getComputedStyle;
+  let gcsCount = 0;
+  window.getComputedStyle = function (...args: Parameters<typeof origGCS>) {
+    gcsCount++;
+    return origGCS.apply(this, args);
+  } as typeof origGCS;
+
+  try {
+    tapKey(kb, "{shift}");
+    await waitForRender();
+
+    assert.strictEqual(gcsCount, 0, "getComputedStyle should not be called during shift toggle");
+  } finally {
+    window.getComputedStyle = origGCS;
+  }
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
 // 2. Shifted labels update in DOM
 // ──────────────────────────────────────────────
 

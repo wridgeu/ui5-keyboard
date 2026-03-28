@@ -151,7 +151,7 @@ QUnit.test("No height classes for docked keyboards", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Toggling docked mode clears stale height classes immediately", async (assert) => {
+QUnit.test("Toggling docked mode clears stale height classes after render cycle", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -166,6 +166,9 @@ QUnit.test("Toggling docked mode clears stale height classes immediately", async
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied before docking");
 
   kb.setDocked(true);
+  await waitForRender();
+  // Responsive class update is deferred to rAF to avoid forced reflow
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared when docked=true");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared when docked=true");
@@ -189,6 +192,8 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
 
   kb.setKeyboardType("Numpad");
   await waitForRender();
+  // Responsive class update is deferred to rAF in onAfterRendering
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   dom = kb.getDomRef()! as HTMLElement;
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after re-render");
@@ -223,6 +228,7 @@ QUnit.test("Intrinsic height changes from CSS vars update height classes without
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "Still stale before refresh");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Still non-tiny before refresh");
   kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied at 15rem after key height grows");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny absent at 15rem");
@@ -250,6 +256,7 @@ QUnit.test("Intrinsic height shrink clears height classes without outer resize",
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Still stale before refresh");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Still non-tiny before refresh");
   kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared after intrinsic height shrinks");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared after intrinsic height shrinks");
@@ -344,6 +351,7 @@ QUnit.test("Height breakpoints adapt when container constrains the keyboard", as
   // Force key height to make the keyboard naturally taller than 16rem
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   // Unconstrained: no height classes
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "Not short when unconstrained");
@@ -353,6 +361,7 @@ QUnit.test("Height breakpoints adapt when container constrains the keyboard", as
   dom.style.height = `${15 * remPx}px`;
   dom.style.overflow = "hidden";
   kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied in constrained container");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Not tiny at 15rem");
@@ -360,6 +369,7 @@ QUnit.test("Height breakpoints adapt when container constrains the keyboard", as
   // Constrain further to 11rem (below tiny threshold of 12rem)
   dom.style.height = `${11 * remPx}px`;
   kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied at 11rem");
 
@@ -367,6 +377,7 @@ QUnit.test("Height breakpoints adapt when container constrains the keyboard", as
   dom.style.height = "";
   dom.style.overflow = "";
   kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cq-short cleared when unconstrained");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny cleared when unconstrained");
@@ -395,6 +406,7 @@ QUnit.test("Height breakpoints still fire when root has extra consumer padding",
   assert.ok(dom.scrollHeight > 15 * remPx, "keyboard naturally exceeds constrained height");
 
   kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cq-short applied despite extra padding");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Not tiny at 15rem with padding");

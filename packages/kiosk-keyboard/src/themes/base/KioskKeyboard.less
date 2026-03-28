@@ -453,6 +453,10 @@
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
+      /* Snap instantly: shift state feedback must not animate through
+         intermediate hover/active colors during the 400ms caps-lock
+         double-click window. */
+      transition: none;
 
       &:hover {
         background: @sapUiButtonEmphasizedHoverBackground;
@@ -463,6 +467,9 @@
     /* ---- Variant: Caps Lock indicator ---- */
     &--capsLock {
       box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
+      /* Only animate the ring; background/color snap via --active's transition: none.
+         Matches the inherited 0.1s from :hover that applied before this rule existed. */
+      transition: box-shadow 0.1s ease;
     }
   }
 
