@@ -270,4 +270,90 @@ describe("kiosk-keyboard web component", () => {
       expect(count).toBe(1);
     });
   });
+
+  describe("ja-kana layout toggle", () => {
+    it("switches from ja-romaji to ja-kana via toggle key", async () => {
+      await waitForKeys("kb-ja-romaji");
+      // The ja-romaji layout has a かな toggle key
+      const toggled = await browser.execute(() => {
+        const kb = document.getElementById("kb-ja-romaji");
+        const toggle = kb?.shadowRoot?.querySelector('[data-key="\\{layout:ja-kana\\}"]') as HTMLElement | null;
+        toggle?.click();
+        return !!toggle;
+      });
+      expect(toggled).toBe(true);
+
+      // After toggle, the first key should be a hiragana character (ぬ = U+306C)
+      await browser.waitUntil(
+        async () =>
+          browser.execute(() => {
+            const kb = document.getElementById("kb-ja-romaji");
+            const firstKey = kb?.shadowRoot?.querySelector('[role="button"]');
+            return firstKey?.getAttribute("data-key") === "\u306C";
+          }),
+        { timeout: 3_000, timeoutMsg: "Layout did not switch to ja-kana" },
+      );
+
+      // Switch back via the ローマ字 toggle key
+      const switchedBack = await browser.execute(() => {
+        const kb = document.getElementById("kb-ja-romaji");
+        const toggle = kb?.shadowRoot?.querySelector('[data-key="\\{layout:ja-romaji\\}"]') as HTMLElement | null;
+        toggle?.click();
+        return !!toggle;
+      });
+      expect(switchedBack).toBe(true);
+
+      // Verify we're back on romaji (first key should be "1")
+      await browser.waitUntil(
+        async () =>
+          browser.execute(() => {
+            const kb = document.getElementById("kb-ja-romaji");
+            const firstKey = kb?.shadowRoot?.querySelector('[role="button"]');
+            return firstKey?.getAttribute("data-key") === "1";
+          }),
+        { timeout: 3_000, timeoutMsg: "Layout did not switch back to ja-romaji" },
+      );
+    });
+
+    it("pressing a kana key produces a hiragana character", async () => {
+      // First switch to ja-kana
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-ja-romaji");
+        const toggle = kb?.shadowRoot?.querySelector('[data-key="\\{layout:ja-kana\\}"]') as HTMLElement | null;
+        toggle?.click();
+      });
+      await browser.waitUntil(
+        async () =>
+          browser.execute(() => {
+            const kb = document.getElementById("kb-ja-romaji");
+            return kb?.shadowRoot?.querySelector('[data-key="\u306C"]') !== null;
+          }),
+        { timeout: 3_000 },
+      );
+
+      // Clear input and click a kana key (た = U+305F, Q position)
+      await browser.execute(() => {
+        const input = document.getElementById("ja-kana-input") as HTMLInputElement;
+        input.value = "";
+        input.focus();
+      });
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-ja-romaji");
+        const taKey = kb?.shadowRoot?.querySelector('[data-key="\u305F"]') as HTMLElement | null;
+        taKey?.click();
+      });
+
+      const value = await browser.execute(() => {
+        return (document.getElementById("ja-kana-input") as HTMLInputElement).value;
+      });
+      expect(value).toBe("\u305F"); // た
+
+      // Switch back to romaji for cleanup
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-ja-romaji");
+        const toggle = kb?.shadowRoot?.querySelector('[data-key="\\{layout:ja-romaji\\}"]') as HTMLElement | null;
+        toggle?.click();
+      });
+    });
+  });
 });
