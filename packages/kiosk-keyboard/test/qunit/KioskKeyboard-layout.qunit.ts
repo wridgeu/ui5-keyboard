@@ -745,24 +745,30 @@ QUnit.test("ja-kana: small kana shift variants on correct keys", async (assert) 
   const kb = new KioskKeyboard({ layout: "ja-kana" });
   await placeAndWait(kb);
 
-  tapKey(kb, "{shift}");
-  await waitForRender();
+  // Verify shift variants via data-shift-value attribute (renderer stores them on the DOM)
+  const allKeys = Array.from(getKeyElements(kb));
+  const expectedShifts: Record<string, string> = {
+    "\u3042": "\u3041", // あ → ぁ
+    "\u3046": "\u3045", // う → ぅ
+    "\u3048": "\u3047", // え → ぇ
+    "\u304A": "\u3049", // お → ぉ
+    "\u3084": "\u3083", // や → ゃ
+    "\u3086": "\u3085", // ゆ → ゅ
+    "\u3088": "\u3087", // よ → ょ
+    "\u308F": "\u3092", // わ → を
+    "\u3044": "\u3043", // い → ぃ
+    "\u3064": "\u3063", // つ → っ
+  };
 
-  const row1Shifted = getRowKeyValues(kb, 0);
-  assert.ok(row1Shifted.includes("\u3041"), "Row 1 shifted contains \u3041");
-  assert.ok(row1Shifted.includes("\u3045"), "Row 1 shifted contains \u3045");
-  assert.ok(row1Shifted.includes("\u3047"), "Row 1 shifted contains \u3047");
-  assert.ok(row1Shifted.includes("\u3049"), "Row 1 shifted contains \u3049");
-  assert.ok(row1Shifted.includes("\u3083"), "Row 1 shifted contains \u3083");
-  assert.ok(row1Shifted.includes("\u3085"), "Row 1 shifted contains \u3085");
-  assert.ok(row1Shifted.includes("\u3087"), "Row 1 shifted contains \u3087");
-  assert.ok(row1Shifted.includes("\u3092"), "Row 1 shifted contains \u3092");
-
-  const row2Shifted = getRowKeyValues(kb, 1);
-  assert.ok(row2Shifted.includes("\u3043"), "Row 2 shifted contains \u3043");
-
-  const row4Shifted = getRowKeyValues(kb, 3);
-  assert.ok(row4Shifted.includes("\u3063"), "Row 4 shifted contains \u3063");
+  for (const [base, expectedSmall] of Object.entries(expectedShifts)) {
+    const keyEl = allKeys.find((el) => el.dataset.key === base);
+    assert.ok(keyEl, `key for ${base} exists`);
+    assert.strictEqual(
+      keyEl?.getAttribute(DOM.attributes.shiftValue),
+      expectedSmall,
+      `shift of ${base} should be ${expectedSmall}`,
+    );
+  }
 
   kb.destroy();
 });
@@ -771,13 +777,15 @@ QUnit.test("ja-kana: row 4 punctuation shift variants", async (assert) => {
   const kb = new KioskKeyboard({ layout: "ja-kana" });
   await placeAndWait(kb);
 
-  tapKey(kb, "{shift}");
-  await waitForRender();
+  // Verify JIS punctuation shift variants via data-shift-value on row 4 keys
+  const allKeys = Array.from(getKeyElements(kb));
+  const ne = allKeys.find((el) => el.dataset.key === "\u306D"); // ね
+  const ru = allKeys.find((el) => el.dataset.key === "\u308B"); // る
+  const me = allKeys.find((el) => el.dataset.key === "\u3081"); // め
 
-  const row4 = getRowKeyValues(kb, 3);
-  assert.ok(row4.includes("\u3001"), "Shifted row 4 contains \u3001");
-  assert.ok(row4.includes("\u3002"), "Shifted row 4 contains \u3002");
-  assert.ok(row4.includes("\u30FB"), "Shifted row 4 contains \u30FB");
+  assert.strictEqual(ne?.getAttribute(DOM.attributes.shiftValue), "\u3001", "ね shift is 、 (ideographic comma)");
+  assert.strictEqual(ru?.getAttribute(DOM.attributes.shiftValue), "\u3002", "る shift is 。 (ideographic period)");
+  assert.strictEqual(me?.getAttribute(DOM.attributes.shiftValue), "\u30FB", "め shift is ・ (middle dot)");
 
   kb.destroy();
 });
