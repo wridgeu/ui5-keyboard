@@ -58,3 +58,25 @@ export function isSingleGlyph(label: string): boolean {
   }
   return count === 1;
 }
+
+/**
+ * Matches the first character of a string against CJK script families using
+ * Unicode Script_Extensions property escapes. This covers Han, Hiragana,
+ * Katakana, Hangul, and Bopomofo -- including shared characters like CJK
+ * punctuation, Kangxi radicals, and halfwidth forms that `Script=` alone
+ * would miss.
+ *
+ * Used to detect glyphs where Latin-optimised `text-box-edge: cap alphabetic`
+ * produces incorrect vertical centering. CJK glyphs extend the full
+ * ideographic em box, so they need script-appropriate text-box metrics.
+ *
+ * Relies on ES2018 Unicode property escapes (Chrome 64+, Firefox 78+,
+ * Safari 11.1+). The engine's Unicode data updates automatically with
+ * new browser versions, so no manual range maintenance is needed.
+ */
+const CJK_RE =
+  /^[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}\p{Script_Extensions=Bopomofo}]/u;
+
+export function isCJKGlyph(label: string): boolean {
+  return label.length > 0 && CJK_RE.test(label);
+}

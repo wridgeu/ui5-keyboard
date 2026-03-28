@@ -34,6 +34,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyHighlight: "kiosk-key--highlight",
     keyLabel: "kiosk-key__label",
     keyLabelGlyph: "kiosk-key__label--glyph",
+    keyLabelGlyphCjk: "kiosk-key__label--glyph-cjk",
     keyLabelMulti: "kiosk-key__label--multi",
     keyIcon: "kiosk-key__icon",
     keyDual: "kiosk-key--dual",
