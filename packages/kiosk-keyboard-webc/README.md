@@ -423,6 +423,102 @@ interface KeyDefinition {
 }
 ```
 
+## Icon + Label Rendering
+
+Keys can display an icon, a label, or both. The combination of `icon` and `label` properties determines what renders:
+
+| `icon`  | `label`    | Rendered output                                         |
+| ------- | ---------- | ------------------------------------------------------- |
+| omitted | omitted    | Label auto-resolved from i18n (special keys) or `value` |
+| omitted | `"Custom"` | Custom label text only                                  |
+| omitted | `""`       | Blank key (no content)                                  |
+| set     | omitted    | Icon + auto-resolved label (dual rendering)             |
+| set     | `"Custom"` | Icon + custom label (dual rendering)                    |
+| set     | `""`       | Icon only                                               |
+| `""`    | omitted    | Label only (built-in icon suppressed)                   |
+| `""`    | `""`       | Blank key (no content)                                  |
+
+### Icon types
+
+The `icon` property accepts two value types:
+
+- **SAP icon URI** (e.g. `"sap-icon://accept"`) -- rendered via `<ui5-icon>`
+- **Unicode character or emoji** (e.g. `"\u2191"`, `"\u23CE"`, `"\uD83D\uDD0D"`) -- rendered as a text span styled at icon size
+
+```ts
+// SAP icon with label
+{ value: "{enter}", icon: "sap-icon://accept", label: "Enter", type: "action" }
+
+// Unicode arrow icon, label suppressed (icon-only)
+{ value: "{fkey:ArrowUp}", icon: "\u2191", label: "", type: "modifier" }
+
+// Unicode icon with label (dual rendering)
+{ value: "{fkey:Home}", icon: "\u21E4", label: "Home", type: "modifier" }
+
+// Emoji icon with label
+{ value: "search", icon: "\uD83D\uDD0D", label: "Search" }
+```
+
+### Dual rendering (icon + label)
+
+When both `icon` and a non-empty `label` resolve, the key renders in **dual mode**: icon and label side by side. The layout direction defaults to `row` (inline) and is customizable via CSS custom properties:
+
+```css
+/* Stack icon above label instead of side by side */
+kiosk-keyboard {
+  --kiosk-keyboard-dual-direction: column;
+  --kiosk-keyboard-dual-gap: 0.1em;
+  --kiosk-keyboard-dual-icon-size: 0.85em;
+  --kiosk-keyboard-dual-label-size: 0.75em;
+}
+```
+
+| Property                           | Default  | Description                                                       |
+| ---------------------------------- | -------- | ----------------------------------------------------------------- |
+| `--kiosk-keyboard-dual-direction`  | `row`    | Flex direction (`row`, `column`, `row-reverse`, `column-reverse`) |
+| `--kiosk-keyboard-dual-icon-size`  | `1em`    | Icon font size in dual mode                                       |
+| `--kiosk-keyboard-dual-label-size` | `1em`    | Label font size in dual mode                                      |
+| `--kiosk-keyboard-dual-gap`        | `0.15em` | Gap between icon and label                                        |
+
+### Responsive behavior
+
+At narrow key widths (below `5rem` per key), dual keys automatically hide the text label using the sr-only pattern. The icon remains visible, and the label stays in the accessibility tree as the key's accessible name. This prevents text truncation ("H...", "P...") while keeping keys distinguishable by their icons.
+
+This behavior is driven by a CSS `@container` query on individual keys (`container-type: inline-size`). It applies only to dual keys (those with both icon and label).
+
+### Accessibility
+
+- **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
+- **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
+- **Icons** always have `aria-hidden="true"` -- they are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
+
+### Built-in icons
+
+These special keys render built-in icons by default (no need to set `icon`):
+
+| Key           | Icon                    | Default label (from i18n) |
+| ------------- | ----------------------- | ------------------------- |
+| `{shift}`     | `sap-icon://arrow-top`  | "Shift"                   |
+| `{enter}`     | `sap-icon://accept`     | "Enter"                   |
+| `{backspace}` | `sap-icon://arrow-left` | "Backspace"               |
+
+Set `icon: ""` to suppress a built-in icon. Set `label: ""` to suppress the label (icon-only display).
+
+### Caps Lock overrides
+
+On `{shift}` keys, the Caps Lock state can override both icon and label independently:
+
+```ts
+{
+  value: "{shift}",
+  type: "modifier",
+  capsLockLabel: "LOCKED",     // replaces label during Caps Lock
+  capsLockIcon: "\uD83D\uDD12", // replaces icon during Caps Lock
+}
+```
+
+`capsLockIcon` is evaluated independently of `icon` -- setting `icon: ""` does not suppress `capsLockIcon`.
+
 ## Custom Target Resolver
 
 By default, the keyboard finds the native `<input>` or `<textarea>` inside a host element by traversing light DOM and up to 3 levels of shadow DOM. This covers standard HTML inputs, UI5 web components (`<ui5-input>`, `<ui5-step-input>`, `<ui5-textarea>`), and similar.
