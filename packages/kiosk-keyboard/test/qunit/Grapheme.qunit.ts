@@ -1,4 +1,4 @@
-import { graphemeLengthAfter, graphemeLengthBefore, isSingleGlyph } from "ui5/kiosk/internal/grapheme";
+import { graphemeLengthAfter, graphemeLengthBefore, isCJKGlyph, isSingleGlyph } from "ui5/kiosk/internal/grapheme";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
@@ -278,4 +278,73 @@ QUnit.test("ZWJ sequence returns true", (assert) => {
 QUnit.test("two separate emoji returns false", (assert) => {
   assert.strictEqual(isSingleGlyph("😀😀"), false, "two emoji is not one glyph");
   assert.strictEqual(isSingleGlyph("🇩🇪🇫🇷"), false, "two flag emoji is not one glyph");
+});
+
+// ── Unit tests: isCJKGlyph ──────────────────────────────────────
+
+QUnit.module("isCJKGlyph");
+
+QUnit.test("hiragana returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u3042"), true, "\u3042 (a) is hiragana");
+  assert.strictEqual(isCJKGlyph("\u306C"), true, "\u306C (nu) is hiragana");
+  assert.strictEqual(isCJKGlyph("\u3093"), true, "\u3093 (n) is hiragana");
+});
+
+QUnit.test("katakana returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u30A2"), true, "\u30A2 (a) is katakana");
+  assert.strictEqual(isCJKGlyph("\u30FC"), true, "\u30FC prolonged sound mark is katakana");
+});
+
+QUnit.test("CJK punctuation returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u3001"), true, "\u3001 ideographic comma");
+  assert.strictEqual(isCJKGlyph("\u3002"), true, "\u3002 ideographic full stop");
+  assert.strictEqual(isCJKGlyph("\u309B"), true, "\u309B dakuten");
+  assert.strictEqual(isCJKGlyph("\u309C"), true, "\u309C handakuten");
+});
+
+QUnit.test("ideographic space returns false (Script=Common)", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u3000"), false, "\u3000 has no CJK Script_Extensions");
+});
+
+QUnit.test("CJK unified ideographs returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u5B57"), true, "\u5B57 (ji/character) is CJK ideograph");
+  assert.strictEqual(isCJKGlyph("\u4E00"), true, "\u4E00 (ichi/one) is CJK ideograph");
+});
+
+QUnit.test("halfwidth katakana returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\uFF66"), true, "\uFF66 halfwidth wo");
+});
+
+QUnit.test("Hangul syllables returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\uAC00"), true, "\uAC00 first Hangul syllable");
+  assert.strictEqual(isCJKGlyph("\uD7A3"), true, "\uD7A3 last Hangul syllable");
+});
+
+QUnit.test("Hangul Jamo returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u1100"), true, "\u1100 Jamo initial consonant");
+  assert.strictEqual(isCJKGlyph("\u3131"), true, "\u3131 Hangul Compatibility Jamo");
+});
+
+QUnit.test("Bopomofo returns true", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u3105"), true, "\u3105 Bopomofo");
+  assert.strictEqual(isCJKGlyph("\u31A0"), true, "\u31A0 Bopomofo Extended");
+});
+
+QUnit.test("Latin characters return false", (assert) => {
+  assert.strictEqual(isCJKGlyph("A"), false, "uppercase Latin");
+  assert.strictEqual(isCJKGlyph("z"), false, "lowercase Latin");
+  assert.strictEqual(isCJKGlyph("@"), false, "at sign");
+  assert.strictEqual(isCJKGlyph("1"), false, "digit");
+});
+
+QUnit.test("Arabic characters return false", (assert) => {
+  assert.strictEqual(isCJKGlyph("\u0639"), false, "\u0639 Arabic ain");
+});
+
+QUnit.test("empty string returns false", (assert) => {
+  assert.strictEqual(isCJKGlyph(""), false, "empty string");
+});
+
+QUnit.test("emoji returns false", (assert) => {
+  assert.strictEqual(isCJKGlyph("\uD83D\uDE00"), false, "emoji is not CJK");
 });
