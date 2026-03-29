@@ -575,12 +575,12 @@ kiosk-keyboard {
 
 Navigation and function keys (`{fkey:*}`) default to column layout with scaled icons. These properties override the dual defaults for nav keys only:
 
-| Property                           | Default                  | Description                                                |
-| ---------------------------------- | ------------------------ | ---------------------------------------------------------- |
-| `--kiosk-keyboard-fkey-direction`  | `column`                 | Flex direction for nav/function keys                       |
-| `--kiosk-keyboard-fkey-icon-size`  | `clamp(1em, 15cqi, 3em)` | Icon size, scales with key width via container query units |
-| `--kiosk-keyboard-fkey-label-size` | `0.7em`                  | Label size (smaller caption below icon)                    |
-| `--kiosk-keyboard-fkey-gap`        | `0.05em`                 | Gap between icon and label                                 |
+| Property                           | Default                                     | Description                                                |
+| ---------------------------------- | ------------------------------------------- | ---------------------------------------------------------- |
+| `--kiosk-keyboard-fkey-direction`  | `column`                                    | Flex direction for nav/function keys                       |
+| `--kiosk-keyboard-fkey-icon-size`  | `clamp(1em, 15cqi, 3em)`                    | Icon size, scales with key width via container query units |
+| `--kiosk-keyboard-fkey-label-size` | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Label size, scales responsively with key width             |
+| `--kiosk-keyboard-fkey-gap`        | `0.05em`                                    | Gap between icon and label                                 |
 
 ```css
 /* Force nav keys to row layout (icon beside label, like other dual keys) */
@@ -840,7 +840,7 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-dual-gap`              | `0.15em`                                                  | Gap between icon and label in dual mode                     |
 | `--kiosk-keyboard-fkey-direction`        | `column`                                                  | Flex direction for nav/function keys                        |
 | `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 3em)`                                  | Icon size for nav/function keys (scales with key width)     |
-| `--kiosk-keyboard-fkey-label-size`       | `0.7em`                                                   | Label size for nav/function keys                            |
+| `--kiosk-keyboard-fkey-label-size`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`               | Label size for nav/function keys (responsive)               |
 | `--kiosk-keyboard-fkey-gap`              | `0.05em`                                                  | Gap between icon and label for nav/function keys            |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).

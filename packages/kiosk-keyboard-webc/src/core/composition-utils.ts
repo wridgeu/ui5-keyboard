@@ -1,12 +1,13 @@
 /** Per-instance composition state. Each middleware holds its own. */
 export interface CompositionState {
+  composing: boolean;
   preeditStart: number;
   preeditLength: number;
 }
 
 /** Creates a fresh composition state for a middleware instance. */
 export function createCompositionState(): CompositionState {
-  return { preeditStart: -1, preeditLength: 0 };
+  return { composing: false, preeditStart: 0, preeditLength: 0 };
 }
 
 /**
@@ -14,6 +15,7 @@ export function createCompositionState(): CompositionState {
  */
 export function startComposition(state: CompositionState, target: HTMLInputElement | HTMLTextAreaElement): void {
   const pos = target.selectionStart ?? target.value.length;
+  state.composing = true;
   state.preeditStart = pos;
   state.preeditLength = 0;
   target.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
@@ -51,11 +53,12 @@ export function updateComposition(
 export function endComposition(state: CompositionState, target: HTMLInputElement | HTMLTextAreaElement): void {
   const committed = target.value.slice(state.preeditStart, state.preeditStart + state.preeditLength);
   target.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: committed }));
-  state.preeditStart = -1;
+  state.composing = false;
+  state.preeditStart = 0;
   state.preeditLength = 0;
 }
 
 /** Returns whether a composition is currently active. */
 export function isComposing(state: CompositionState): boolean {
-  return state.preeditStart >= 0;
+  return state.composing;
 }

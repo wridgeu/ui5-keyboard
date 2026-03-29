@@ -1,3 +1,5 @@
+import type { ParsedHotkey } from "../types";
+
 /**
  * Set of `<input>` types that are considered editable text fields.
  * Button-like inputs (button, submit, reset) and non-text inputs
@@ -74,8 +76,8 @@ export function isInputElement(target: EventTarget | null): boolean {
  * - Ctrl/Meta combos and Escape → `false` (allow in inputs)
  * - Single keys and Alt/Shift-only combos → `true` (suppress in inputs)
  */
-export function resolveIgnoreInputs(option: boolean | "auto", ctrl: boolean, meta: boolean, key: string): boolean {
+export function resolveIgnoreInputs(option: boolean | "auto", hotkey: ParsedHotkey): boolean {
   if (option !== "auto") return option;
   // Ctrl/Meta combos and Escape should work in inputs; everything else is suppressed
-  return !(ctrl || meta || key === "Escape");
+  return !(hotkey.ctrl || hotkey.meta || hotkey.key === "Escape");
 }
