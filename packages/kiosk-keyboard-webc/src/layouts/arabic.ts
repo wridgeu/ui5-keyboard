@@ -1,4 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
+import { _registerBuiltInLayout } from "../core/layout-registry.js";
 
 const arabic: LayoutDefinition = [
   // Row 1: Western Arabic numerals (default), Arabic-Indic on shift
@@ -88,5 +89,7 @@ const arabic: LayoutDefinition = [
     },
   ],
 ];
+
+_registerBuiltInLayout("arabic", arabic);
 
 export default arabic;
