@@ -15,5 +15,6 @@ export type {
   KeyWidth,
   KeyType,
   SpecialKeyValue,
+  CompositionMiddleware,
 } from "./types.js";
 export type { KioskKeyboardDomContract } from "./KioskKeyboard.js";

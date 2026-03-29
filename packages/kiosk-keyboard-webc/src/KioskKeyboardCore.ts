@@ -24,12 +24,13 @@ import {
   unregisterLocaleLayout,
   resetLocaleLayouts,
 } from "./core/layout-registry.js";
-import { getMiddlewareForLayout, deactivateMiddleware } from "./core/middleware-registry.js";
+import { getMiddlewareForLayout, deactivateMiddleware, registerMiddleware } from "./core/middleware-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
   KeyboardType,
   MobileKeyboard,
   FKeyMode,
+  type CompositionMiddleware,
   type LayoutDefinition,
   type KeyDefinition,
   type KeyPressEventDetail,
@@ -376,6 +377,17 @@ class KioskKeyboard extends UI5Element {
     KioskKeyboard._queueI18nRefresh();
   }
 
+  /**
+   * Register composition middleware for one or more layouts.
+   * @param layouts Layout names the middleware applies to.
+   * @param factory Factory function that creates a fresh middleware instance.
+   * @public
+   * @since 0.1.0
+   */
+  static registerMiddleware(layouts: string[], factory: () => CompositionMiddleware): void {
+    registerMiddleware(layouts, factory);
+  }
+
   // ── Public reactive properties (synced with attributes) ──
 
   /**
@@ -684,7 +696,8 @@ class KioskKeyboard extends UI5Element {
   }
 
   onExitDOM(): void {
-    deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout);
+    const mw = getMiddlewareForLayout(this._currentLayout || this._baseLayout || this.layout);
+    if (mw) mw.reset();
     KioskKeyboard._instances.delete(this);
     this._teardownAutoShow();
     this._teardownPhysicalKeyHighlight();
@@ -1371,6 +1384,9 @@ class KioskKeyboard extends UI5Element {
     }
 
     const targetChanged = this._targetElement !== inputEl;
+    if (targetChanged) {
+      deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
+    }
     this._targetElement = inputEl;
     this._targetFromAutoShow = true;
 

@@ -17,3 +17,4 @@ import "./layouts/arabic.js";
 
 export { default, default as KioskKeyboard } from "./KioskKeyboardCore.js";
 export type { KioskKeyboardDomContract } from "./KioskKeyboardCore.js";
+export type { CompositionMiddleware } from "./types.js";
