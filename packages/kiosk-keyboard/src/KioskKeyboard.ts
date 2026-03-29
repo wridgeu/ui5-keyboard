@@ -28,6 +28,10 @@ import {
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
 import {
+  getMiddlewareForLayout as registryGetMiddlewareForLayout,
+  deactivateMiddleware as registryDeactivateMiddleware,
+} from "./internal/middleware-registry";
+import {
   configureI18nWithStatus as registryConfigureI18nWithStatus,
   resetI18nConfiguration as registryResetI18n,
   setI18nOverrideHook as registrySetOverrideHook,
@@ -2092,6 +2096,7 @@ export default class KioskKeyboard extends Control {
       if (this.getKeyboardType() === KeyboardType.Full) {
         const raw = keyValue.slice("{layout:".length, -1).trim();
         if (raw) {
+          registryDeactivateMiddleware(this.getLayout());
           const name = raw === "base" ? this._baseLayout : raw;
           const previousLayout = this.getLayout();
           this.setLayout(name);
@@ -2153,6 +2158,21 @@ export default class KioskKeyboard extends Control {
     }
 
     if (this.fireEvent("keyPress", { key: effective, shiftKey: shift }, true)) {
+      // ── Composition middleware ──
+      const mw = registryGetMiddlewareForLayout(this.getLayout());
+      if (mw) {
+        const targetEl = this._getTargetElement();
+        const mwTarget = targetEl
+          ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
+          : null;
+        if (mwTarget && mw.handleKey(keyValue, mwTarget)) {
+          if (this._shiftState.autoRelease()) {
+            this.invalidate();
+          }
+          return;
+        }
+      }
+
       this._targetSession.insertText(effective);
     }
 
