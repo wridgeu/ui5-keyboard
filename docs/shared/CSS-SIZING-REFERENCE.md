@@ -378,7 +378,7 @@ All public CSS custom properties defined on `:host`, listed with their default v
 | `--kiosk-keyboard-docked-z-index`        | `100`                                           | [Structural Properties](#structural-properties)                                 |
 | `--kiosk-keyboard-border`                | `1px solid --sapGroup_TitleBorderColor`         | [Structural Properties](#structural-properties)                                 |
 | `--kiosk-keyboard-border-radius`         | `var(--sapElement_BorderCornerRadius, 0.75rem)` | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-key-border-color`      | (unset)                                         | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-key-border-color`      | not declared                                    | [Structural Properties](#structural-properties)                                 |
 | `--kiosk-keyboard-numpad-max-width`      | `20rem`                                         | [Numpad Mode](#numpad-mode)                                                     |
 | `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                          | [Numpad Mode](#numpad-mode)                                                     |
 | `--kiosk-keyboard-dual-direction`        | `row`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
@@ -391,7 +391,7 @@ All public CSS custom properties defined on `:host`, listed with their default v
 | `--kiosk-keyboard-fkey-gap`              | `0.05em`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
 | `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
 | `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
-| `--kiosk-keyboard-cjk-font-family`       | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
-| `--kiosk-keyboard-hangul-font-family`    | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
-| `--kiosk-keyboard-indic-font-family`     | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
-| `--kiosk-keyboard-arabic-font-family`    | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-cjk-font-family`       | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-hangul-font-family`    | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-indic-font-family`     | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-arabic-font-family`    | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
