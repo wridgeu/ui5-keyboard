@@ -40,6 +40,7 @@ export default defineConfig({
         "layouts/fkey-row": path.resolve(__dirname, "src/layouts/fkey-row.ts"),
         "layouts/nav-row": path.resolve(__dirname, "src/layouts/nav-row.ts"),
         "middleware/kana-dakuten": path.resolve(__dirname, "src/middleware/kana-dakuten.ts"),
+        "middleware/hangul-compose": path.resolve(__dirname, "src/middleware/hangul-compose.ts"),
         "bundle.esm": path.resolve(__dirname, "src/bundle.esm.ts"),
       },
       formats: ["es"],
