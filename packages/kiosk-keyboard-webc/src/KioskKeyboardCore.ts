@@ -107,6 +107,17 @@ const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
 /** Tracks unsupported fkey names that have already been warned about. */
 const warnedUnsupportedFKeys = new Set<string>();
 
+// ── Internal provenance types ──
+
+/** Who last set keyboardType. "auto:VALUE" = set by _setKeyboardTypeInternal for VALUE. */
+type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
+
+/** Why _targetElement was set -- drives focusout cleanup policy. */
+type TargetSource = "autoShow" | "explicit";
+
+/** Why _currentLayout was last changed -- drives _getResolvedLayout bypass. */
+type LayoutSource = "user" | "external";
+
 /** Display and ARIA labels for built-in special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
   "{shift}": "KEY_SHIFT",
@@ -526,15 +537,14 @@ class KioskKeyboard extends UI5Element {
 
   private _shiftState = new ShiftState();
   private _baseLayout = "";
-  private _keyboardTypeExplicit = false;
-  private _lastAutoDetectedType: string | null = null;
+  private _keyboardTypeSource: KeyboardTypeSource = "unset";
   private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
-  private _targetFromAutoShow = false;
+  private _targetSource: TargetSource = "explicit";
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   private _lastFocusedKeyId: string | null = null;
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
-  private _layoutSwitchedByUser = false;
+  private _layoutSource: LayoutSource = "external";
   private _pendingAnnouncement: string | null = null;
   private _deferredFocusOutCloseId: number | null = null;
   /** ResizeObserver for height-responsive class updates. */
@@ -715,7 +725,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     this._targetElement = null;
-    this._targetFromAutoShow = false;
+    this._targetSource = "explicit";
     this._targetResolver = null;
 
     if (this._deferredFocusOutCloseId !== null) {
@@ -749,7 +759,7 @@ class KioskKeyboard extends UI5Element {
 
     if (name === "layout") {
       // A programmatic layout change overrides any user-driven layout switch
-      this._layoutSwitchedByUser = false;
+      this._layoutSource = "external";
       if (!SECONDARY_LAYOUTS.has(this.layout)) {
         this._baseLayout = this.layout;
       }
@@ -762,16 +772,15 @@ class KioskKeyboard extends UI5Element {
         console.warn(
           `[kiosk-keyboard] Invalid keyboardType "${this.keyboardType}". Valid values: ${[...VALID_KEYBOARD_TYPES].join(", ")}.`,
         );
-        this.keyboardType = KeyboardType.Full;
+        // Use _setKeyboardTypeInternal so the re-entrant onInvalidation
+        // sees an "auto:" source and does not lock out future auto-detection.
+        this._setKeyboardTypeInternal(KeyboardType.Full);
         return;
       }
-      const autoDetected = this._lastAutoDetectedType === this.keyboardType;
-      this._lastAutoDetectedType = null;
-      if (!autoDetected) {
-        this._keyboardTypeExplicit = true;
-      }
+      const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
+      this._keyboardTypeSource = autoDetected ? "unset" : "explicit";
       // Reset user layout switch and shift state - a keyboardType change implies a new layout context
-      this._layoutSwitchedByUser = false;
+      this._layoutSource = "external";
       this._shiftState.reset();
       this._syncShiftState();
       this.fireDecoratorEvent("keyboard-type-change", {
@@ -883,7 +892,7 @@ class KioskKeyboard extends UI5Element {
     this._syncShiftState();
 
     this._targetElement = el;
-    this._targetFromAutoShow = false;
+    this._targetSource = "explicit";
 
     if (this._open) {
       this._suppressInputMode();
@@ -919,7 +928,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   resetKeyboardType(): void {
-    this._keyboardTypeExplicit = false;
+    this._keyboardTypeSource = "unset";
     this._setKeyboardTypeInternal(KeyboardType.Full);
   }
 
@@ -955,7 +964,7 @@ class KioskKeyboard extends UI5Element {
   _getResolvedLayout(): LayoutDefinition {
     // An explicit layout switch (via {layout:...} key) takes precedence,
     // even when keyboardType constrains the default layout.
-    if (this._layoutSwitchedByUser) return getLayoutOrDefault(this._currentLayout);
+    if (this._layoutSource === "user") return getLayoutOrDefault(this._currentLayout);
 
     const type = this.keyboardType;
     if (type === KeyboardType.Numpad) return getLayoutOrDefault("numpad");
@@ -1237,10 +1246,10 @@ class KioskKeyboard extends UI5Element {
     const layoutName = value.slice(8, -1);
     if (layoutName === "base") {
       this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
-      this._layoutSwitchedByUser = false;
+      this._layoutSource = "external";
     } else {
       this._currentLayout = layoutName;
-      this._layoutSwitchedByUser = true;
+      this._layoutSource = "user";
       if (!SECONDARY_LAYOUTS.has(layoutName)) {
         this._baseLayout = layoutName;
       }
@@ -1307,7 +1316,7 @@ class KioskKeyboard extends UI5Element {
   /** Sets keyboardType without marking it as explicit (for auto-detection). */
   private _setKeyboardTypeInternal(value: `${KeyboardType}`): void {
     if (value === this.keyboardType) return;
-    this._lastAutoDetectedType = value;
+    this._keyboardTypeSource = `auto:${value}`;
     this.keyboardType = value;
   }
 
@@ -1326,7 +1335,7 @@ class KioskKeyboard extends UI5Element {
     if (this._targetElement) {
       if (!this._targetElement.isConnected) {
         this._targetElement = null;
-        this._targetFromAutoShow = false;
+        this._targetSource = "explicit";
       } else {
         return this._targetElement;
       }
@@ -1389,11 +1398,11 @@ class KioskKeyboard extends UI5Element {
       deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
     }
     this._targetElement = inputEl;
-    this._targetFromAutoShow = true;
+    this._targetSource = "autoShow";
 
     // Detect keyboard type before open - this may trigger onInvalidation for
     // keyboardType, but the target is already set so subsequent logic is safe.
-    if (this.autoType && !this._keyboardTypeExplicit) {
+    if (this.autoType && this._keyboardTypeSource !== "explicit") {
       const detected = detectKeyboardType(inputEl);
       if (detected !== this.keyboardType) {
         this._setKeyboardTypeInternal(detected);
@@ -1438,9 +1447,9 @@ class KioskKeyboard extends UI5Element {
       }
 
       if (this._open) this.close();
-      if (this._targetFromAutoShow) {
+      if (this._targetSource === "autoShow") {
         this._targetElement = null;
-        this._targetFromAutoShow = false;
+        this._targetSource = "explicit";
       }
     });
   }

@@ -280,7 +280,7 @@ export default class SequenceManager extends BaseObject {
       const nextStep = reg.parsedSteps[match.stepIndex];
 
       // If focused into an input mid-sequence, drop matches that suppress in inputs
-      if (resolveIgnoreInputs(reg.ignoreInputs, nextStep.ctrl, nextStep.meta, nextStep.key) && isInput) continue;
+      if (resolveIgnoreInputs(reg.ignoreInputs, nextStep) && isInput) continue;
 
       if (matchesKeyboardEvent(event, nextStep)) {
         consumed = true;
@@ -410,7 +410,7 @@ export default class SequenceManager extends BaseObject {
 
       for (const reg of regSet) {
         const firstStep = reg.parsedSteps[0];
-        if (resolveIgnoreInputs(reg.ignoreInputs, firstStep.ctrl, firstStep.meta, firstStep.key) && isInput) continue;
+        if (resolveIgnoreInputs(reg.ignoreInputs, firstStep) && isInput) continue;
 
         if (!this._isRegistrationEnabled(reg)) continue;
 

@@ -45,7 +45,7 @@
      all dual keys (including nav) to the same direction. */
   --kiosk-keyboard-fkey-direction: column;
   --kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 3em);
-  --kiosk-keyboard-fkey-label-size: 0.7em;
+  --kiosk-keyboard-fkey-label-size: clamp(0.5rem, calc(100cqi * 0.35), 0.7em);
   --kiosk-keyboard-fkey-gap: 0.05em;
 
   --kiosk-keyboard-border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
@@ -76,6 +76,11 @@
      Gujarati, Gurmukhi, Oriya, Sinhala). The default fallback is a
      cross-platform Indic font list defined inline
      on .kiosk-key__label--glyph-indic. */
+
+  /* --kiosk-keyboard-arabic-font-family: unset by default.
+     When set, overrides the Arabic system font stack used for keys whose label
+     is an Arabic glyph. The default fallback is a cross-platform Arabic font
+     list defined inline on .kiosk-key__label--glyph-arabic. */
 }
 
 /* Shadow colors derive from --sapContent_ShadowColor (a raw color, not a
@@ -261,6 +266,23 @@
   display: flex;
   gap: var(--_kiosk-keyboard-key-gap);
   justify-content: center;
+}
+
+/* ---- F-key row wrap ----
+   12 F-keys on one row cannot fit readable labels at narrow widths.
+   At <=35rem (560px), flex-wrap splits the row into 2×6 with each key
+   taking exactly 1/6 of the row. Above that threshold, all 12 fit on
+   one line with the default flex: 1 1 0.
+   Uses :has() (Chrome 105+, Safari 15.4+, Firefox 121+); non-supporting
+   browsers keep the single-row truncated fallback. */
+@container keyboard (max-width: 35rem) {
+  .kiosk-row:has(> [data-key^="{fkey:"]) {
+    flex-wrap: wrap;
+  }
+
+  [data-key^="{fkey:"].kiosk-key {
+    flex: 1 0 calc((100% - 5 * var(--_kiosk-keyboard-key-gap)) / 6);
+  }
 }
 
 /* ============================= */
@@ -610,6 +632,13 @@
   .kiosk-key__label--glyph-indic {
     text-box-edge: text;
   }
+
+  /* Arabic glyphs have extended ascenders, descenders, and diacritical marks
+     that differ from Latin cap-height metrics. Use `text` to preserve the
+     full vertical extent needed for vowel points and tanwin marks. */
+  .kiosk-key__label--glyph-arabic {
+    text-box-edge: text;
+  }
 }
 
 /* CJK font-family override (--kiosk-keyboard-cjk-font-family).
@@ -692,6 +721,26 @@
     "Oriya Sangam MN",
     "Sinhala Sangam MN",
     "Bangla Sangam MN",
+    system-ui,
+    sans-serif
+  );
+}
+
+/* Arabic font-family override (--kiosk-keyboard-arabic-font-family).
+   Same rationale as CJK above: the 72 font has no Arabic glyphs, so the
+   browser falls through to a system font for rendering but still uses 72
+   metrics for the line box.  Putting Arabic system fonts first ensures
+   consistent metrics.
+   Consumers can override the entire stack via --kiosk-keyboard-arabic-font-family. */
+.kiosk-key__label--glyph-arabic {
+  font-family: var(
+    --kiosk-keyboard-arabic-font-family,
+    "Segoe UI",
+    "Geeza Pro",
+    "Noto Sans Arabic",
+    "Noto Naskh Arabic",
+    "Tahoma",
+    "Arabic Typesetting",
     system-ui,
     sans-serif
   );

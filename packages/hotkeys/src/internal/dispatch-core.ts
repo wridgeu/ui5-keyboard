@@ -50,12 +50,7 @@ export function findMatchInScope(options: FindMatchOptions): HotkeyRegistration 
       continue;
     }
 
-    const shouldIgnoreInputs = resolveIgnoreInputs(
-      opts.ignoreInputs,
-      registration.parsedHotkey.ctrl,
-      registration.parsedHotkey.meta,
-      registration.parsedHotkey.key,
-    );
+    const shouldIgnoreInputs = resolveIgnoreInputs(opts.ignoreInputs, registration.parsedHotkey);
     if (shouldIgnoreInputs && isInput) {
       recordSkip(skipInfo, UnhandledReason.InputSuppressed, registration, toRegistrationInfo);
       if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.InputSuppressed });
