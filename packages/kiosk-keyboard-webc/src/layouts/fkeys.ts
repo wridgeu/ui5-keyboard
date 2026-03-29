@@ -1,4 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
+import { _registerBuiltInLayout } from "../core/layout-registry.js";
 import fkeyRow from "./fkey-row.js";
 
 const fkeys: LayoutDefinition = [
@@ -13,5 +14,7 @@ const fkeys: LayoutDefinition = [
     { value: "{enter}", width: "1.5", type: "action" },
   ],
 ];
+
+_registerBuiltInLayout("fkeys", fkeys);
 
 export default fkeys;
