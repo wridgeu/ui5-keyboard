@@ -1,4 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
+import { _registerBuiltInLayout } from "../core/layout-registry.js";
 
 const qwertzDe: LayoutDefinition = [
   // Row 1: number row (German shift symbols)
@@ -87,5 +88,7 @@ const qwertzDe: LayoutDefinition = [
     },
   ],
 ];
+
+_registerBuiltInLayout("qwertz-de", qwertzDe);
 
 export default qwertzDe;

@@ -85,6 +85,15 @@ sap.ui.define([], () => {
       "shift-state": {
         title: "QUnit tests for ui5.kiosk - ShiftState",
       },
+      "middleware-registry": {
+        title: "QUnit tests for ui5.kiosk - middleware-registry",
+      },
+      "kana-dakuten": {
+        title: "QUnit tests for ui5.kiosk - kana-dakuten middleware",
+      },
+      "hangul-compose": {
+        title: "QUnit tests for ui5.kiosk - hangul-compose middleware",
+      },
     },
   };
 });

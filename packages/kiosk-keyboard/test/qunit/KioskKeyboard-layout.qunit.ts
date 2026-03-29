@@ -440,16 +440,18 @@ QUnit.test("Custom layout works as base layout for {layout:base} roundtrip", asy
   kb.destroy();
 });
 
-QUnit.test("registerLayout rejects overwrite of built-in layout", (assert) => {
+QUnit.test("registerLayout allows overriding built-in layout", (assert) => {
   const original = KioskKeyboard.getRegisteredLayout("qwerty");
-  assert.ok(original, "qwerty exists before overwrite attempt");
+  assert.ok(original, "qwerty exists before override attempt");
 
-  // Attempt to overwrite built-in
-  KioskKeyboard.registerLayout("qwerty", [[{ value: "HACKED" }]]);
+  const custom: LayoutDefinition = [[{ value: "CUSTOM" }]];
+  KioskKeyboard.registerLayout("qwerty", custom);
 
-  // Should still be the original
   const after = KioskKeyboard.getRegisteredLayout("qwerty");
-  assert.deepEqual(after, original, "Built-in qwerty layout was NOT overwritten");
+  assert.deepEqual(after, custom, "Built-in qwerty layout was overridden");
+
+  // Restore original so other tests are not affected
+  KioskKeyboard.registerLayout("qwerty", original!);
 });
 
 QUnit.test("unregisterLayout removes a custom layout", (assert) => {

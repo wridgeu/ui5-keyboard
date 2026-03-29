@@ -443,3 +443,23 @@ export interface KioskI18nOverrideContext {
  * @since 0.1.0
  */
 export type KioskI18nOverrideHook = (ctx: KioskI18nOverrideContext) => string | undefined;
+
+// ── Composition middleware types ──────────────────
+
+/**
+ * Composition middleware intercepts key events for layouts that need
+ * script-specific processing (e.g., kana dakuten, Hangul jamo composition).
+ *
+ * @public
+ * @since 0.1.0
+ */
+export interface CompositionMiddleware {
+  /** Process a key event. Returns true if consumed (keyboard skips default handling). */
+  handleKey(key: string, target: HTMLInputElement | HTMLTextAreaElement): boolean;
+
+  /** Force-commit any in-progress composition. Returns committed text or null. */
+  commit(): string | null;
+
+  /** Clear all composition state without committing. */
+  reset(): void;
+}

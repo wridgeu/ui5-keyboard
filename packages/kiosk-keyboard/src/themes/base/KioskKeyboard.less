@@ -371,21 +371,10 @@
       text-overflow: ellipsis;
     }
 
-    /* At narrow key widths, visually hide the dual label and show icon-only.
-       Uses the sr-only pattern (not display: none) so the label text stays
-       in the accessibility tree as the key's accessible name.
-       NOTE: CSS custom properties (var()) are not valid inside @container
-       query conditions per CSS spec, so the threshold is hard-coded. */
-    @container (max-inline-size: 5rem) {
-      &--dual &__label {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip-path: inset(50%);
-        white-space: nowrap;
-      }
-    }
+    /* Icon-only threshold for dual keys: moved outside this ruleset
+       because LESS does not resolve & inside @container blocks. See
+       the @container (max-inline-size) rule near the keyboard-level
+       container queries below. */
 
     /* Navigation / function keys: column layout with scaled icon.
        Scoped to --fkey to avoid affecting Shift/Enter/Backspace. */
@@ -481,6 +470,22 @@
       /* Only animate the ring; background/color snap via --active's transition: none.
          Matches the inherited 0.1s from :hover that applied before this rule existed. */
       transition: box-shadow 0.1s ease;
+    }
+  }
+
+  /* At narrow key widths, visually hide the dual label and show icon-only.
+     Uses the sr-only pattern (not display: none) so the label text stays
+     in the accessibility tree as the key's accessible name.
+     Written outside the .ui5KioskKey ruleset because LESS does not
+     resolve & inside @container blocks. */
+  @container (max-inline-size: 7rem) {
+    .ui5KioskKey--dual .ui5KioskKey__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
   }
 

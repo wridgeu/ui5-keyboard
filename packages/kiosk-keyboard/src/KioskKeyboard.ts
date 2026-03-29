@@ -5,7 +5,7 @@ import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
 import { SECONDARY_LAYOUTS } from "./types";
-import type { LayoutDefinition, KeyDefinition } from "./types";
+import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
@@ -27,6 +27,11 @@ import {
   resetLocaleLayouts as registryResetLocales,
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
+import {
+  getMiddlewareForLayout as registryGetMiddlewareForLayout,
+  deactivateMiddleware as registryDeactivateMiddleware,
+  registerMiddleware as registryRegisterMiddleware,
+} from "./internal/middleware-registry";
 import {
   configureI18nWithStatus as registryConfigureI18nWithStatus,
   resetI18nConfiguration as registryResetI18n,
@@ -500,6 +505,19 @@ export default class KioskKeyboard extends Control {
    */
   static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
     registryRegisterLayout(sName, oDefinition);
+  }
+
+  /**
+   * Register composition middleware for one or more layouts.
+   *
+   * @param aLayouts Layout names the middleware applies to.
+   * @param fnFactory Factory function that creates a fresh middleware instance.
+   * @public
+   * @static
+   * @since 0.1.0
+   */
+  static registerMiddleware(aLayouts: string[], fnFactory: () => CompositionMiddleware): void {
+    registryRegisterMiddleware(aLayouts, fnFactory);
   }
 
   /**
@@ -1021,6 +1039,8 @@ export default class KioskKeyboard extends Control {
   }
 
   exit(): void {
+    const mw = registryGetMiddlewareForLayout(this.getLayout());
+    if (mw) mw.reset();
     KioskKeyboard._instances.delete(this);
 
     // When the last living instance is destroyed, auto-reset i18n state
@@ -2074,6 +2094,27 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
+    // ── Composition middleware (must see {backspace}/{enter} before default handling) ──
+    if (
+      keyValue === "{backspace}" ||
+      keyValue === "{enter}" ||
+      (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
+    ) {
+      const mw = registryGetMiddlewareForLayout(this.getLayout());
+      if (mw) {
+        const targetEl = this._getTargetElement();
+        const mwTarget = targetEl
+          ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
+          : null;
+        if (mwTarget && mw.handleKey(keyValue, mwTarget as HTMLInputElement | HTMLTextAreaElement)) {
+          if (this._shiftState.autoRelease()) {
+            this.invalidate();
+          }
+          return;
+        }
+      }
+    }
+
     if (keyValue === "{backspace}") {
       if (this.fireEvent("keyPress", { key: "Backspace", shiftKey: shift }, true)) {
         this._targetSession.handleBackspace();
@@ -2092,6 +2133,7 @@ export default class KioskKeyboard extends Control {
       if (this.getKeyboardType() === KeyboardType.Full) {
         const raw = keyValue.slice("{layout:".length, -1).trim();
         if (raw) {
+          registryDeactivateMiddleware(this.getLayout());
           const name = raw === "base" ? this._baseLayout : raw;
           const previousLayout = this.getLayout();
           this.setLayout(name);

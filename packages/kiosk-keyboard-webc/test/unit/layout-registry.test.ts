@@ -11,8 +11,25 @@ import {
   unregisterLocaleLayout,
   resetLocaleLayouts,
   getLocaleLayout,
+  _registerBuiltInLayout,
 } from "../../src/core/layout-registry.js";
 import type { LayoutDefinition } from "../../src/types.js";
+
+// Import all layouts to trigger self-registration (like the full entry would)
+import "../../src/layouts/qwerty.js";
+import "../../src/layouts/qwertz-de.js";
+import "../../src/layouts/numeric.js";
+import "../../src/layouts/special.js";
+import "../../src/layouts/numpad.js";
+import "../../src/layouts/fkeys.js";
+import "../../src/layouts/nav.js";
+import "../../src/layouts/qwerty-fk.js";
+import "../../src/layouts/qwertz-de-fk.js";
+import "../../src/layouts/qwerty-nav.js";
+import "../../src/layouts/qwertz-de-nav.js";
+import "../../src/layouts/ja-romaji.js";
+import "../../src/layouts/ja-kana.js";
+import "../../src/layouts/arabic.js";
 
 const CUSTOM_LAYOUT: LayoutDefinition = [[{ value: "a" }, { value: "b" }, { value: "c" }]];
 
@@ -65,10 +82,9 @@ describe("layout-registry", () => {
       expect(getRegisteredLayout("custom")).toBe(CUSTOM_LAYOUT);
     });
 
-    it("cannot overwrite built-in layouts", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    it("can override built-in layouts", () => {
       registerLayout("qwerty", CUSTOM_LAYOUT);
-      expect(spy).toHaveBeenCalled();
+      expect(getRegisteredLayout("qwerty")).toBe(CUSTOM_LAYOUT);
     });
 
     it("rejects empty layout name", () => {
@@ -313,6 +329,29 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       unregisterLocaleLayout(undefined as unknown as string);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
+    });
+  });
+
+  describe("_registerBuiltInLayout", () => {
+    it("registers a layout and marks it as built-in", () => {
+      _registerBuiltInLayout("test-builtin", CUSTOM_LAYOUT);
+      expect(getRegisteredLayout("test-builtin")).toBe(CUSTOM_LAYOUT);
+      expect(isBuiltInLayout("test-builtin")).toBe(true);
+    });
+
+    it("is idempotent -- silently skips if name already exists", () => {
+      const first: LayoutDefinition = [[{ value: "x" }]];
+      const second: LayoutDefinition = [[{ value: "y" }]];
+      _registerBuiltInLayout("idem-test", first);
+      _registerBuiltInLayout("idem-test", second);
+      expect(getRegisteredLayout("idem-test")).toBe(first);
+    });
+
+    it("does not warn on duplicate registration", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      _registerBuiltInLayout("no-warn-test", CUSTOM_LAYOUT);
+      _registerBuiltInLayout("no-warn-test", CUSTOM_LAYOUT);
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 });

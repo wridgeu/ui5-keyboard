@@ -1,4 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
+import { _registerBuiltInLayout } from "../core/layout-registry.js";
 
 const qwerty: LayoutDefinition = [
   // Row 1: number row
@@ -83,5 +84,7 @@ const qwerty: LayoutDefinition = [
     },
   ],
 ];
+
+_registerBuiltInLayout("qwerty", qwerty);
 
 export default qwerty;

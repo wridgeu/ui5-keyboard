@@ -1,4 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
+import { _registerBuiltInLayout } from "../core/layout-registry.js";
 
 /**
  * Japanese kana direct-input layout following JIS X 6002.
@@ -85,5 +86,7 @@ const jaKana: LayoutDefinition = [
     { value: "{layout:fkeys}", label: "Fn", width: "1.5", type: "modifier" },
   ],
 ];
+
+_registerBuiltInLayout("ja-kana", jaKana);
 
 export default jaKana;

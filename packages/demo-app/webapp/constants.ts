@@ -23,4 +23,5 @@ export const Scope = {
   KioskFocusScenarios: "kioskFocusScenarios",
   KioskI18nExtensibility: "kioskI18nExtensibility",
   KioskWebComponent: "kioskWebComponent",
+  KioskScriptInput: "kioskScriptInput",
 } as const;
