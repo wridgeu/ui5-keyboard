@@ -608,7 +608,7 @@ When `handleKey` returns `true`, the keyboard skips default handling. The middle
 Middleware lifecycle:
 
 - **Layout switch**: `commit()` is called, instance discarded. A fresh instance is created when the layout activates again.
-- **Component destroyed**: `commit()` is called to flush any pending composition.
+- **Component destroyed**: `reset()` is called. In-progress composition is discarded, not flushed.
 
 ---
 

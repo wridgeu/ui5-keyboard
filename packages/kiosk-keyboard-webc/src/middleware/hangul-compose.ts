@@ -10,13 +10,10 @@ import {
 import { insertText } from "../core/input-operations.js";
 import { _registerMiddleware } from "../core/middleware-registry.js";
 
-// ── Unicode constants ──
 const S_BASE = 0xac00;
 const V_COUNT = 21;
 const T_COUNT = 28;
 const N_COUNT = V_COUNT * T_COUNT; // 588
-
-// ── Compatibility jamo -> composition jamo mappings ──
 
 const COMPAT_TO_L: ReadonlyMap<number, number> = new Map([
   [0x3131, 0], // ㄱ
@@ -139,7 +136,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
 
   return {
     handleKey(key: string, el: HTMLInputElement | HTMLTextAreaElement): boolean {
-      // Handle backspace during composition
       if (key === "{backspace}") {
         if (!isComposing(compState)) return false;
         if (phase === "LVT") {
@@ -166,7 +162,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
       }
 
       if (key.length !== 1) {
-        // Non-character key (e.g. {enter}, {shift}) -- commit and pass through
         if (isComposing(compState)) {
           commitPreedit(el);
           resetInternal();
@@ -178,7 +173,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
       const lIdx = COMPAT_TO_L.get(code);
       const vIdx = COMPAT_TO_V.get(code);
 
-      // Not a jamo character -- commit and pass through
       if (lIdx === undefined && vIdx === undefined) {
         if (isComposing(compState)) {
           commitPreedit(el);
@@ -186,8 +180,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
         }
         return false;
       }
-
-      // ── State machine ──
 
       if (phase === "empty") {
         if (lIdx !== undefined) {
@@ -199,7 +191,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (vIdx !== undefined) {
-          // Bare vowel -- insert directly, no composition
           insertText(el, key);
           return true;
         }
@@ -214,7 +205,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (lIdx !== undefined) {
-          // Another L -- commit current, start new
           commitPreedit(el);
           resetInternal();
           startComposition(compState, el);
@@ -229,7 +219,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
       if (phase === "LV") {
         const tIdx = COMPAT_TO_T.get(code);
         if (tIdx !== undefined && lIdx !== undefined) {
-          // Consonant that can be trailing -- treat as T
           curT = tIdx;
           phase = "LVT";
           updateComposition(compState, el, composeSyllable(curL, curV, curT));
@@ -237,14 +226,12 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (vIdx !== undefined) {
-          // Another vowel -- commit current LV, insert bare vowel
           commitPreedit(el);
           resetInternal();
           insertText(el, key);
           return true;
         }
         if (lIdx !== undefined) {
-          // Consonant that cannot be trailing -- commit LV, start new L
           commitPreedit(el);
           resetInternal();
           startComposition(compState, el);
@@ -258,14 +245,12 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
 
       if (phase === "LVT") {
         if (vIdx !== undefined) {
-          // Steal the trailing consonant: decompose LVT -> LV + stolen T as new L + V
+          // T-stealing: decompose LVT -> LV, use stolen T as leading consonant of new syllable
           const stolenL = T_TO_L.get(curT);
           if (stolenL !== undefined) {
-            // Rewrite current syllable to LV (drop T)
             updateComposition(compState, el, composeSyllable(curL, curV));
             commitPreedit(el);
             resetInternal();
-            // Start new syllable with stolen consonant + new vowel
             startComposition(compState, el);
             curL = stolenL;
             curV = vIdx;
@@ -276,7 +261,6 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
           }
         }
         if (lIdx !== undefined) {
-          // New leading consonant -- commit current LVT, start new
           commitPreedit(el);
           resetInternal();
           startComposition(compState, el);
