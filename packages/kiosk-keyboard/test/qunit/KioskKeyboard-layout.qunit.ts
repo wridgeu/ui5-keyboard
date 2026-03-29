@@ -440,16 +440,18 @@ QUnit.test("Custom layout works as base layout for {layout:base} roundtrip", asy
   kb.destroy();
 });
 
-QUnit.test("registerLayout rejects overwrite of built-in layout", (assert) => {
+QUnit.test("registerLayout allows overriding built-in layout", (assert) => {
   const original = KioskKeyboard.getRegisteredLayout("qwerty");
-  assert.ok(original, "qwerty exists before overwrite attempt");
+  assert.ok(original, "qwerty exists before override attempt");
 
-  // Attempt to overwrite built-in
-  KioskKeyboard.registerLayout("qwerty", [[{ value: "HACKED" }]]);
+  const custom: LayoutDefinition = [[{ value: "CUSTOM" }]];
+  KioskKeyboard.registerLayout("qwerty", custom);
 
-  // Should still be the original
   const after = KioskKeyboard.getRegisteredLayout("qwerty");
-  assert.deepEqual(after, original, "Built-in qwerty layout was NOT overwritten");
+  assert.deepEqual(after, custom, "Built-in qwerty layout was overridden");
+
+  // Restore original so other tests are not affected
+  KioskKeyboard.registerLayout("qwerty", original!);
 });
 
 QUnit.test("unregisterLayout removes a custom layout", (assert) => {
@@ -1011,6 +1013,118 @@ QUnit.test("locale registry APIs handle non-string arguments safely", (assert) =
 // ──────────────────────────────────────────────
 // Cross-Layout Special Char Consistency
 // ──────────────────────────────────────────────
+
+// ──────────────────────────────────────────────
+// ko-hangul layout
+// ──────────────────────────────────────────────
+
+QUnit.test("ko-hangul layout renders 5 rows with correct key counts", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ko-hangul" });
+  await placeAndWait(kb);
+  const rows = getRowElements(kb);
+  assert.strictEqual(rows.length, 5, "ko-hangul has 5 rows");
+  assert.strictEqual(getRowKeyValues(kb, 0).length, 11, "Row 1 has 11 keys (digits + backspace)");
+  assert.strictEqual(getRowKeyValues(kb, 1).length, 10, "Row 2 has 10 keys (Q-P jamo)");
+  assert.strictEqual(getRowKeyValues(kb, 2).length, 9, "Row 3 has 9 keys (A-L jamo)");
+  assert.strictEqual(getRowKeyValues(kb, 3).length, 11, "Row 4 has 11 keys (shift + Z-M + , . + enter)");
+  assert.strictEqual(getRowKeyValues(kb, 4).length, 5, "Row 5 has 5 keys");
+  kb.destroy();
+});
+
+QUnit.test("ko-hangul home row contains standard Dubeolsik jamo", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ko-hangul" });
+  await placeAndWait(kb);
+  const homeRow = getRowKeyValues(kb, 2);
+  const expected = ["\u3141", "\u3134", "\u3147", "\u3139", "\u314E", "\u3157", "\u3153", "\u314F", "\u3163"];
+  assert.deepEqual(homeRow, expected, "Home row matches A-L Dubeolsik positions");
+  kb.destroy();
+});
+
+QUnit.test("ko-hangul has ABC toggle to qwerty", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ko-hangul" });
+  await placeAndWait(kb);
+  const row5Keys = getRowKeyValues(kb, 4);
+  assert.ok(row5Keys.includes("{layout:qwerty}"), "Row 5 contains qwerty toggle (ABC)");
+  kb.destroy();
+});
+
+QUnit.test("ko-hangul has standard slash with ?-on-shift", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ko-hangul" });
+  await placeAndWait(kb);
+  const row5 = getRowKeyValues(kb, 4);
+  assert.ok(row5.includes("/"), "Row 5 contains / key");
+  kb.destroy();
+});
+
+QUnit.test("ko-hangul: backspace, enter, shift, space have correct types", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ko-hangul" });
+  await placeAndWait(kb);
+  const root = kb.getDomRef()!;
+  assert.ok(
+    root.querySelector('[data-key="{backspace}"]')!.classList.contains(DOM.classes.keyAction),
+    "Backspace is action",
+  );
+  assert.ok(root.querySelector('[data-key="{enter}"]')!.classList.contains(DOM.classes.keyAction), "Enter is action");
+  assert.ok(
+    root.querySelector('[data-key="{shift}"]')!.classList.contains(DOM.classes.keyModifier),
+    "Shift is modifier",
+  );
+  assert.ok(root.querySelector('[data-key=" "]')!.classList.contains(DOM.classes.keySpace), "Space is space");
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// qwerty-es layout
+// ──────────────────────────────────────────────
+
+QUnit.test("qwerty-es layout renders 5 rows with correct key counts", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty-es" });
+  await placeAndWait(kb);
+  const rows = getRowElements(kb);
+  assert.strictEqual(rows.length, 5, "qwerty-es has 5 rows");
+  assert.strictEqual(getRowKeyValues(kb, 0).length, 11, "Row 1 has 11 keys (digits + backspace)");
+  assert.strictEqual(getRowKeyValues(kb, 1).length, 10, "Row 2 has 10 keys (Q-P)");
+  assert.strictEqual(getRowKeyValues(kb, 2).length, 10, "Row 3 has 10 keys (A-L + ñ)");
+  assert.strictEqual(getRowKeyValues(kb, 3).length, 9, "Row 4 has 9 keys (shift + Z-M + enter)");
+  assert.strictEqual(getRowKeyValues(kb, 4).length, 6, "Row 5 has 6 keys");
+  kb.destroy();
+});
+
+QUnit.test("qwerty-es has dedicated ñ on home row", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty-es" });
+  await placeAndWait(kb);
+  const homeRow = getRowKeyValues(kb, 2);
+  assert.ok(homeRow.includes("\u00F1"), "Home row contains ñ");
+  assert.strictEqual(homeRow[homeRow.length - 1], "\u00F1", "ñ is the last key in home row");
+  kb.destroy();
+});
+
+QUnit.test("qwerty-es has inverted punctuation ¿ with ¡ on shift", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty-es" });
+  await placeAndWait(kb);
+  const root = kb.getDomRef()!;
+  const invQuestion = root.querySelector('[data-key="\u00BF"]');
+  assert.ok(invQuestion, "¿ key exists");
+  assert.strictEqual(invQuestion!.getAttribute("data-shift-value"), "\u00A1", "Shift of ¿ is ¡");
+  kb.destroy();
+});
+
+QUnit.test("qwerty-es: backspace, enter, shift, space have correct types", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty-es" });
+  await placeAndWait(kb);
+  const root = kb.getDomRef()!;
+  assert.ok(
+    root.querySelector('[data-key="{backspace}"]')!.classList.contains(DOM.classes.keyAction),
+    "Backspace is action",
+  );
+  assert.ok(root.querySelector('[data-key="{enter}"]')!.classList.contains(DOM.classes.keyAction), "Enter is action");
+  assert.ok(
+    root.querySelector('[data-key="{shift}"]')!.classList.contains(DOM.classes.keyModifier),
+    "Shift is modifier",
+  );
+  assert.ok(root.querySelector('[data-key=" "]')!.classList.contains(DOM.classes.keySpace), "Space is space");
+  kb.destroy();
+});
 
 QUnit.test("Numeric layout keys identical regardless of base layout (qwerty vs qwertz-de)", async (assert) => {
   const kbQwerty = new KioskKeyboard({ layout: "qwerty", keyboardType: "Numeric" });

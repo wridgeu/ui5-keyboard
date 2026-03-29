@@ -43,6 +43,10 @@ export const KeyboardLayout = Object.freeze({
   JaKana: "ja-kana",
   /** Arabic keyboard layout (standard Arabic 101). */
   Arabic: "arabic",
+  /** Korean Hangul Dubeolsik layout (KS X 5002). */
+  KoHangul: "ko-hangul",
+  /** Spanish QWERTY layout with accented vowels and inverted punctuation. */
+  QwertyEs: "qwerty-es",
 } as const);
 
 /**

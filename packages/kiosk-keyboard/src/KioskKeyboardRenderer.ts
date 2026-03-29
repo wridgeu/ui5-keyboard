@@ -6,7 +6,7 @@ import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
-import { isCJKGlyph, isSingleGlyph } from "./internal/grapheme";
+import { isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./internal/grapheme";
 
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 
@@ -321,8 +321,12 @@ const KioskKeyboardRenderer = {
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
     if (isSingleGlyph(label)) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
-      if (isCJKGlyph(label)) {
+      if (isHangulGlyph(label)) {
+        rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphHangul);
+      } else if (isCJKGlyph(label)) {
         rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphCjk);
+      } else if (isIndicGlyph(label)) {
+        rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphIndic);
       }
     } else if (key.type !== "modifier" && key.type !== "action") {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);

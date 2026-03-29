@@ -16,6 +16,8 @@ import qwertzDeNav from "../layouts/qwertz-de-nav";
 import jaRomaji from "../layouts/ja-romaji";
 import jaKana from "../layouts/ja-kana";
 import arabic from "../layouts/arabic";
+import koHangul from "../layouts/ko-hangul";
+import qwertyEs from "../layouts/qwerty-es";
 
 // ── Middleware self-registration (side-effect imports) ──
 import "../middleware/kana-dakuten";
@@ -36,6 +38,8 @@ const layouts: Map<string, LayoutDefinition> = new Map([
   ["ja-romaji", jaRomaji],
   ["ja-kana", jaKana],
   ["arabic", arabic],
+  ["ko-hangul", koHangul],
+  ["qwerty-es", qwertyEs],
 ]);
 
 /** Built-in layout names. Used by isBuiltInLayout and unregisterLayout protection. */
@@ -45,6 +49,8 @@ const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
   ["de", "qwertz-de"],
   ["ja", "ja-romaji"],
   ["ar", "arabic"],
+  ["ko", "ko-hangul"],
+  ["es", "qwerty-es"],
 ]);
 
 /** BCP-47 language prefix -> layout name. Checked after exact match. */

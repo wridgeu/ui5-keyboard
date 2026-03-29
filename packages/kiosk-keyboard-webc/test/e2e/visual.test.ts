@@ -127,6 +127,79 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     const kb = await getKeyboardRoot("kb-icon-label-variations");
     await matchElementSnapshotInSection(kb, "webc-icon-label-variations");
   });
+
+  it("should match Korean Hangul layout", async () => {
+    const kb = await getKeyboardRoot("kb-ko-hangul");
+    await matchElementSnapshotInSection(kb, "webc-ko-hangul");
+  });
+
+  it("should match Korean Hangul shifted layout", async () => {
+    const shifted = await browser.execute(() => {
+      const kb = document.getElementById("kb-ko-hangul");
+      const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+      shift?.click();
+      return !!shift;
+    });
+    expect(shifted).toBe(true);
+    await browser.waitUntil(
+      async () =>
+        browser.execute(() => {
+          const kb = document.getElementById("kb-ko-hangul");
+          return kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]')?.getAttribute("aria-pressed") === "true";
+        }),
+      { timeout: 3_000, timeoutMsg: "Shift key did not become active on ko-hangul" },
+    );
+    const kb = await getKeyboardRoot("kb-ko-hangul");
+    try {
+      await matchElementSnapshotInSection(kb, "webc-ko-hangul-shifted");
+    } finally {
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-ko-hangul");
+        const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+        shift?.click();
+        shift?.click();
+      });
+    }
+  });
+
+  it("should match Indic glyph stress layout", async () => {
+    const kb = await getKeyboardRoot("kb-indic-stress");
+    await matchElementSnapshotInSection(kb, "webc-indic-stress");
+  });
+
+  it("should match Spanish QWERTY-ES layout", async () => {
+    const kb = await getKeyboardRoot("kb-qwerty-es");
+    await matchElementSnapshotInSection(kb, "webc-qwerty-es");
+  });
+
+  it("should match Spanish QWERTY-ES shifted layout", async () => {
+    const shifted = await browser.execute(() => {
+      const kb = document.getElementById("kb-qwerty-es");
+      const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+      shift?.click();
+      return !!shift;
+    });
+    expect(shifted).toBe(true);
+    await browser.waitUntil(
+      async () =>
+        browser.execute(() => {
+          const kb = document.getElementById("kb-qwerty-es");
+          return kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]')?.getAttribute("aria-pressed") === "true";
+        }),
+      { timeout: 3_000, timeoutMsg: "Shift key did not become active on qwerty-es" },
+    );
+    const kb = await getKeyboardRoot("kb-qwerty-es");
+    try {
+      await matchElementSnapshotInSection(kb, "webc-qwerty-es-shifted");
+    } finally {
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-qwerty-es");
+        const shift = kb?.shadowRoot?.querySelector('[data-key="\\{shift\\}"]') as HTMLElement | null;
+        shift?.click();
+        shift?.click();
+      });
+    }
+  });
 });
 
 describe("KioskKeyboard Web Component - Interactive States", () => {
