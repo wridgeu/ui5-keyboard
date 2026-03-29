@@ -7,7 +7,7 @@ import builtInLayouts from "../layouts/index.js";
 // that layouts registered once are available to all <kiosk-keyboard> elements.
 const layouts: Map<string, LayoutDefinition> = new Map(builtInLayouts);
 
-/** Built-in layout names that cannot be overwritten by registerLayout. */
+/** Built-in layout names. Used by unregisterLayout and resetCustomLayouts to protect the built-in set. */
 const BUILTIN_LAYOUTS: Set<string> = new Set(layouts.keys());
 
 /**

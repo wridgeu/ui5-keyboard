@@ -337,14 +337,10 @@ QUnit.test("Skips exact match when region is empty", (assert) => {
 
 QUnit.module("layout-registry - registerLayout validation", { afterEach: commonAfterEach });
 
-QUnit.test("Rejects overwriting a built-in layout", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  for (const name of BUILTIN_NAMES) {
-    registerLayout(name, makeLayout());
-  }
-  assert.strictEqual(spy.callCount, BUILTIN_NAMES.length, "Warning logged for each built-in layout");
-  assert.ok(spy.firstCall.args[0].includes("Cannot overwrite built-in layout"), "Warning message is clear");
+QUnit.test("registerLayout can override built-in layouts", (assert) => {
+  const custom = makeLayout();
+  registerLayout("qwerty", custom);
+  assert.deepEqual(getRegisteredLayout("qwerty"), custom, "qwerty overridden with custom layout");
 });
 
 QUnit.test("Rejects empty layout definition", (assert) => {
