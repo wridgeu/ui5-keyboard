@@ -177,6 +177,14 @@ Values come from SAP Fiori design tokens, not arbitrary constants:
 | Padding    | 0.5rem   | Matches cq-short to keep compact density visually consistent with constrained mode |
 | Gap        | 0.25rem  | Matches cq-short                                                                   |
 
+Compact density also adjusts numpad sizing:
+
+| Property      | Value    | Rationale                                                                                  |
+| ------------- | -------- | ------------------------------------------------------------------------------------------ |
+| Key height    | 2.75rem  | Smaller than default numpad (3.5rem) but larger than compact (2.25rem) for touch targeting |
+| Font-size     | 1.125rem | Matches default full-keyboard font-size; large enough for calculator-style feel            |
+| Min key width | 3rem     | Narrower than default numpad (4rem) to match compact proportions                           |
+
 ## Shadow Opacities
 
 Shadows derive from `--sapContent_ShadowColor` via `color-mix()`, with static `rgba()` fallbacks for browsers that do not support `color-mix()`.
@@ -227,3 +235,157 @@ The space bar takes 6x the flex-grow of a standard key. In a typical bottom row 
 ```
 
 Icons are sized at 125% of the current font-size (`1.25em`). This makes icons slightly larger than adjacent text so they appear visually balanced at the same optical weight.
+
+The icon font stack appends symbol fonts (`Segoe UI Symbol`, `Apple Symbols`, `Noto Sans Symbols 2`) after the SAP font family. Navigation key icons use Unicode arrow symbols (U+21DE-U+21F2) that are absent from the 72 font and may fail on stripped-down platforms (embedded Android WebView) without these explicit fallbacks.
+
+## Dual Icon + Label Keys
+
+```css
+--kiosk-keyboard-dual-direction: row;
+--kiosk-keyboard-dual-icon-size: 1em;
+--kiosk-keyboard-dual-label-size: 1em;
+--kiosk-keyboard-dual-gap: 0.3em;
+```
+
+When a key has both an icon and a text label (Shift, Enter, Backspace), the `.kiosk-key--dual` class applies flex layout with configurable direction and sizing.
+
+| Property   | Default | Purpose                                                  |
+| ---------- | ------- | -------------------------------------------------------- |
+| Direction  | `row`   | Icon and label side by side; set to `column` for stacked |
+| Icon size  | `1em`   | Inherits from the key's computed font-size               |
+| Label size | `1em`   | Same as icon; can be reduced for subordinate labels      |
+| Gap        | `0.3em` | Space between icon and label, scales with font-size      |
+
+At narrow key widths (below 7rem per-key inline size), the dual label is visually hidden using the `sr-only` pattern (not `display: none`) so the text remains in the accessibility tree as the key's accessible name.
+
+## Navigation / Function Key Styling
+
+```css
+--kiosk-keyboard-fkey-direction: column;
+--kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 3em);
+--kiosk-keyboard-fkey-label-size: 0.7em;
+--kiosk-keyboard-fkey-gap: 0.05em;
+```
+
+Navigation and function keys (`{fkey:*}`) override the dual-key defaults with a column layout that stacks the icon above a smaller caption label.
+
+| Property   | Default                  | Rationale                                                      |
+| ---------- | ------------------------ | -------------------------------------------------------------- |
+| Direction  | `column`                 | Icon above label; consumers can set to `row` for side-by-side  |
+| Icon size  | `clamp(1em, 15cqi, 3em)` | Scales with key width (cqi units), clamped between 1em and 3em |
+| Label size | `0.7em`                  | Smaller caption below the icon for visual hierarchy            |
+| Gap        | `0.05em`                 | Tight spacing since icon and label have distinct visual weight |
+
+The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `[data-key^="{fkey:"]` elements to avoid affecting Shift/Enter/Backspace.
+
+## Structural Properties
+
+```css
+--kiosk-keyboard-border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
+--kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
+--kiosk-keyboard-max-width: 100%;
+--kiosk-keyboard-docked-max-width: 1024px;
+--kiosk-keyboard-docked-z-index: 100;
+```
+
+| Property         | Default   | Source / rationale                                                            |
+| ---------------- | --------- | ----------------------------------------------------------------------------- |
+| Border           | 1px solid | Uses `--sapGroup_TitleBorderColor` for consistent SAP Fiori group styling     |
+| Border radius    | 0.75rem   | Uses `--sapElement_BorderCornerRadius`; docked mode zeroes bottom corners     |
+| Max width        | 100%      | Inline keyboard fills its container                                           |
+| Docked max width | 1024px    | Prevents the docked keyboard from stretching across ultra-wide displays       |
+| Docked z-index   | 100       | Sits above page content but below modal dialogs (SAP Fiori modals use higher) |
+
+### Key Border Color
+
+`--kiosk-keyboard-key-border-color` is unset by default. When set, it applies a uniform border color across all key types (default, modifier, action), overriding the per-variant SAP button border colors. Useful for industrial/kiosk deployments where key boundaries must be extra visible.
+
+## Height-Responsive Threshold Variables
+
+```css
+--kiosk-keyboard-cq-short-threshold: 16rem;
+--kiosk-keyboard-cq-tiny-threshold: 12rem;
+```
+
+These thresholds are read by the ResizeObserver in JavaScript to toggle `.cq-short` and `.cq-tiny` classes on the host element. Exposing them as CSS custom properties allows consumers to adjust when the height breakpoints trigger without modifying JavaScript. See [Height-Responsive Breakpoints](#height-responsive-breakpoints) for the sizing values at each tier.
+
+## Script-Specific Font Stacks
+
+The SAP 72 font has no CJK, Hangul, or Indic glyphs. When rendering these scripts, the browser falls through the font stack to OS defaults. However, the line-box metrics (used by `text-box-trim` and `line-height`) still come from the primary font (72), causing vertical offset. Putting script-specific system fonts first for labeled keys ensures the browser uses matched glyph and line-box metrics.
+
+Each script class has a dedicated CSS custom property for consumer overrides:
+
+| Script family | CSS class                         | Override variable                     | Default stack (abbreviated)                                |
+| ------------- | --------------------------------- | ------------------------------------- | ---------------------------------------------------------- |
+| CJK           | `.kiosk-key__label--glyph-cjk`    | `--kiosk-keyboard-cjk-font-family`    | Hiragino Sans, Yu Gothic UI, Meiryo, Noto Sans CJK JP, ... |
+| Hangul        | `.kiosk-key__label--glyph-hangul` | `--kiosk-keyboard-hangul-font-family` | Apple SD Gothic Neo, Malgun Gothic, Noto Sans CJK KR, ...  |
+| Indic         | `.kiosk-key__label--glyph-indic`  | `--kiosk-keyboard-indic-font-family`  | Nirmala UI, Noto Sans Devanagari, Noto Sans Bengali, ...   |
+
+Hangul gets a separate class from CJK so Korean system fonts are prioritized over Japanese/Chinese fonts for correct glyph metrics. See [CJK Glyph Centering](../proposals/CJK-GLYPH-CENTERING.md) for background.
+
+## Text-box-trim Progressive Enhancement
+
+```css
+@supports (text-box-trim: trim-both) {
+  .kiosk-key__label {
+    text-box-trim: trim-both;
+    text-box-edge: text;
+    line-height: normal;
+  }
+  .kiosk-key__label--glyph {
+    text-box-edge: cap alphabetic;
+  }
+  .kiosk-key__label--glyph-cjk,
+  .kiosk-key__label--glyph-hangul,
+  .kiosk-key__label--glyph-indic {
+    text-box-edge: text;
+  }
+}
+```
+
+Trims invisible half-leading above and below text, giving true optical centering inside keys. Single-glyph Latin labels use `cap alphabetic` for tighter metrics. CJK, Hangul, and Indic labels fall back to `text` because `cap alphabetic` is a Latin-specific metric that produces incorrect trimming for these scripts.
+
+Browser support: Chrome 133+, Edge 133+, Safari 18.2+. Non-supporting browsers keep the existing `line-height` behavior unchanged.
+
+## Complete Variable Reference
+
+All public CSS custom properties defined on `:host`, listed with their default values.
+
+| Variable                                 | Default                                         | Section                                                                         |
+| ---------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `--kiosk-keyboard-padding`               | `0.75rem`                                       | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
+| `--kiosk-keyboard-key-gap`               | `0.375rem`                                      | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
+| `--kiosk-keyboard-key-height`            | `3rem`                                          | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
+| `--kiosk-keyboard-key-font-size`         | `calc(key-height * 0.375)`                      | [Key Font-Size Ratio](#key-font-size-ratio-0375)                                |
+| `--kiosk-keyboard-key-padding-inline`    | `0.25rem`                                       | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-padding`           | `0 key-padding-inline`                          | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-padding-inline-xs` | `min(key-padding-inline, 0.125rem)`             | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-padding-xs`        | `0 key-padding-inline-xs`                       | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-shadow`            | `0 1px 2px rgba(34,53,72,0.1)`                  | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-key-shadow-hover`      | `0 2px 4px rgba(34,53,72,0.15)`                 | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-shadow`       | `0 1px 2px rgba(34,53,72,0.14)`                 | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-shadow-hover` | `0 2px 4px rgba(34,53,72,0.18)`                 | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-docked-shadow`         | `0 -4px 20px rgba(34,53,72,0.2)`                | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-font-size`    | `var(--sapFontSize, 0.875rem)`                  | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
+| `--kiosk-keyboard-modifier-font-scale`   | `0.8`                                           | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
+| `--kiosk-keyboard-max-width`             | `100%`                                          | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-docked-max-width`      | `1024px`                                        | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-docked-z-index`        | `100`                                           | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-border`                | `1px solid --sapGroup_TitleBorderColor`         | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-border-radius`         | `var(--sapElement_BorderCornerRadius, 0.75rem)` | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-key-border-color`      | (unset)                                         | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-numpad-max-width`      | `20rem`                                         | [Numpad Mode](#numpad-mode)                                                     |
+| `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                          | [Numpad Mode](#numpad-mode)                                                     |
+| `--kiosk-keyboard-dual-direction`        | `row`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-dual-icon-size`        | `1em`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-dual-label-size`       | `1em`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-dual-gap`              | `0.3em`                                         | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-fkey-direction`        | `column`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 3em)`                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-label-size`       | `0.7em`                                         | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-gap`              | `0.05em`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
+| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
+| `--kiosk-keyboard-cjk-font-family`       | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-hangul-font-family`    | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-indic-font-family`     | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
