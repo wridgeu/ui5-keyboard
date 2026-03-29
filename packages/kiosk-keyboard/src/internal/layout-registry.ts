@@ -19,6 +19,10 @@ import arabic from "../layouts/arabic";
 import koHangul from "../layouts/ko-hangul";
 import qwertyEs from "../layouts/qwerty-es";
 
+// ── Middleware self-registration (side-effect imports) ──
+import "../middleware/kana-dakuten";
+import "../middleware/hangul-compose";
+
 const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
   ["qwertz-de", qwertzDe],
@@ -38,7 +42,7 @@ const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwerty-es", qwertyEs],
 ]);
 
-/** Built-in layout names that cannot be overwritten by registerLayout. */
+/** Built-in layout names. Used by isBuiltInLayout and unregisterLayout protection. */
 const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
 
 const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
@@ -84,9 +88,8 @@ function resolveLocaleMappedLayout(locale: string): string | null {
  * Registers a custom keyboard layout that can then be used via
  * `setLayout(name)` or declaratively as `layout="name"` in XML views.
  *
- * Built-in layouts (qwerty, qwertz-de, numeric, special, numpad)
- * cannot be overwritten. Attempting to do so logs a warning and is
- * ignored.
+ * Can override any layout, including built-ins. Validates structure
+ * before registering.
  *
  * @param sName Layout identifier (lowercase, e.g. "azerty-fr")
  * @param oDefinition Array of rows, each containing key definitions
@@ -94,15 +97,6 @@ function resolveLocaleMappedLayout(locale: string): string | null {
 export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return;
-
-  if (BUILTIN_LAYOUTS.has(name)) {
-    Log.warning(
-      `Cannot overwrite built-in layout "${name}". Use a different name for custom layouts.`,
-      undefined,
-      "ui5.kiosk.KioskKeyboard",
-    );
-    return;
-  }
 
   if (
     !Array.isArray(oDefinition) ||

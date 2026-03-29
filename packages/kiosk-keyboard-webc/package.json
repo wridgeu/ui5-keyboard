@@ -34,6 +34,10 @@
       "types": "./dist/KioskKeyboard.d.ts",
       "default": "./dist/KioskKeyboard.js"
     },
+    "./core": {
+      "types": "./dist/KioskKeyboardCore.d.ts",
+      "default": "./dist/KioskKeyboardCore.js"
+    },
     "./bundle": {
       "types": "./dist/bundle.esm.d.ts",
       "default": "./dist/bundle.esm.js"
@@ -42,13 +46,13 @@
       "types": "./dist/Assets.d.ts",
       "default": "./dist/Assets.js"
     },
-    "./layouts/fkey-row": {
-      "types": "./dist/layouts/fkey-row.d.ts",
-      "default": "./dist/layouts/fkey-row.js"
+    "./layouts/*": {
+      "types": "./dist/layouts/*.d.ts",
+      "default": "./dist/layouts/*.js"
     },
-    "./layouts/nav-row": {
-      "types": "./dist/layouts/nav-row.d.ts",
-      "default": "./dist/layouts/nav-row.js"
+    "./middleware/*": {
+      "types": "./dist/middleware/*.d.ts",
+      "default": "./dist/middleware/*.js"
     },
     "./dist/*": "./dist/*"
   },

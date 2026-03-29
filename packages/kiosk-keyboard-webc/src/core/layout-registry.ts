@@ -1,14 +1,24 @@
 import type { LayoutDefinition } from "../types.js";
 import DEFAULT_LAYOUT from "../layouts/default-layout.js";
-import builtInLayouts from "../layouts/index.js";
 
 // Module-level singleton - shared across all component instances (and across
 // micro-frontends if they import the same module). This is intentional so
 // that layouts registered once are available to all <kiosk-keyboard> elements.
-const layouts: Map<string, LayoutDefinition> = new Map(builtInLayouts);
+const layouts: Map<string, LayoutDefinition> = new Map();
 
-/** Built-in layout names that cannot be overwritten by registerLayout. */
-const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
+/** Built-in layout names. Used by unregisterLayout and resetCustomLayouts to protect the built-in set. */
+const BUILTIN_LAYOUTS: Set<string> = new Set();
+
+/**
+ * Registers a built-in layout. Idempotent: silently skips if the name
+ * is already registered. Used internally by self-registering layout modules.
+ * @internal
+ */
+export function _registerBuiltInLayout(name: string, def: LayoutDefinition): void {
+  if (layouts.has(name)) return;
+  layouts.set(name, def);
+  BUILTIN_LAYOUTS.add(name);
+}
 
 /** Layouts that serve as secondary views (not base alphabetic layouts). */
 export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
@@ -50,21 +60,13 @@ function resolveLocaleMappedLayout(locale: string): string | null {
 }
 
 /**
- * Registers a custom keyboard layout.
- *
- * Built-in layouts cannot be overwritten. Attempting to do so logs a warning.
+ * Registers a custom keyboard layout. Can override any layout, including
+ * built-ins. Validates structure before registering.
  * @internal
  */
 export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return;
-
-  if (BUILTIN_LAYOUTS.has(name)) {
-    console.warn(
-      `[kiosk-keyboard] Cannot overwrite built-in layout "${name}". Use a different name for custom layouts.`,
-    );
-    return;
-  }
 
   if (
     !Array.isArray(oDefinition) ||

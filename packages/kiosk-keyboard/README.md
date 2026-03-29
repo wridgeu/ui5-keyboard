@@ -402,7 +402,7 @@ The generated file above covers UI5 metadata accessors. The convenience/runtime 
 
 | Method                                 | Returns                             | Description                                                                    |
 | -------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------ |
-| `registerLayout(name, definition)`     | `void`                              | Register a custom layout. Built-in layouts cannot be overwritten.              |
+| `registerLayout(name, definition)`     | `void`                              | Register a custom layout. Can override built-in layouts.                       |
 | `unregisterLayout(name)`               | `void`                              | Remove a previously registered custom layout. Built-in layouts are protected.  |
 | `resetCustomLayouts()`                 | `void`                              | Remove all custom layouts and keep built-in layouts.                           |
 | `getRegisteredLayout(name)`            | `LayoutDefinition?`                 | Get the definition for a layout name, or `undefined`.                          |
@@ -421,6 +421,7 @@ The generated file above covers UI5 metadata accessors. The convenience/runtime 
 | `getI18nConfiguration()`               | `Readonly<KioskI18nConfig> \| null` | Frozen snapshot of the active i18n config (for debugging).                     |
 | `setGlobalTargetResolver(fn)`          | `void`                              | Set a global custom resolver for locating native inputs. Pass `null` to clear. |
 | `getGlobalTargetResolver()`            | `Function \| null`                  | Returns the global target resolver, or `null`.                                 |
+| `registerMiddleware(layouts, factory)` | `void`                              | Register composition middleware for one or more layout names.                  |
 
 ### DOM Contract
 
@@ -555,6 +556,61 @@ const myLayout: LayoutDefinition = [
 | `width`         | `string` | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                                              |
 | `type`          | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
 | `icon`          | `string` | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
+
+---
+
+## Composition Middleware
+
+Some scripts require processing between key press and text insertion. For example, Japanese Kana needs dakuten/handakuten composition (ka + dakuten = ga), and Korean Hangul needs jamo-to-syllable composition (individual consonants and vowels combine into syllable blocks).
+
+The UI5 library includes composition middleware that activates automatically when the associated layout is active. No configuration needed -- the middleware is always available in the library preload.
+
+### Built-in Middleware
+
+| Middleware       | Layout      | Behavior                                                 |
+| ---------------- | ----------- | -------------------------------------------------------- |
+| `kana-dakuten`   | `ja-kana`   | Composes base kana + dakuten/handakuten into voiced kana |
+| `hangul-compose` | `ko-hangul` | Composes jamo into Hangul syllable blocks with preedit   |
+
+### Custom Middleware
+
+Implement the `CompositionMiddleware` interface and register it via the static API:
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import type { CompositionMiddleware } from "ui5/kiosk/types";
+
+function createMyMiddleware(): CompositionMiddleware {
+  return {
+    handleKey(key, target) {
+      // Return true if consumed (keyboard skips default handling).
+      // Return false to pass through to default behavior.
+      return false;
+    },
+    commit() {
+      // Force-commit any in-progress composition. Return committed text or null.
+      return null;
+    },
+    reset() {
+      // Clear state without committing.
+    },
+  };
+}
+
+KioskKeyboard.registerMiddleware(["my-layout"], createMyMiddleware);
+```
+
+The `handleKey` method receives:
+
+- `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
+- `target`: the DOM input element the keyboard is typing into
+
+When `handleKey` returns `true`, the keyboard skips default handling. The middleware is responsible for modifying the target's value (use `insertText` from `ui5/kiosk/internal/input-operations` to properly update the UI5 control's model binding).
+
+Middleware lifecycle:
+
+- **Layout switch**: `commit()` is called, instance discarded. A fresh instance is created when the layout activates again.
+- **Component destroyed**: `reset()` is called. In-progress composition is discarded, not flushed.
 
 ---
 

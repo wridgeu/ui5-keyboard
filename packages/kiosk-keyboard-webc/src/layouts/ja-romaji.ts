@@ -1,4 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
+import { _registerBuiltInLayout } from "../core/layout-registry.js";
 
 const jaRomaji: LayoutDefinition = [
   // Row 1: number row (JIS shifted symbols)
@@ -83,5 +84,7 @@ const jaRomaji: LayoutDefinition = [
     },
   ],
 ];
+
+_registerBuiltInLayout("ja-romaji", jaRomaji);
 
 export default jaRomaji;

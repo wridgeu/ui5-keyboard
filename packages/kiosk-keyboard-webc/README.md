@@ -330,6 +330,7 @@ They report the state transition itself, not animation completion.
 | `KioskKeyboard.resetLocaleLayouts()`                 | Resets locale mappings to defaults.                |
 | `KioskKeyboard.getLocaleLayout()`                    | Returns the layout for the current browser locale. |
 | `KioskKeyboard.setI18nResolver(fn)`                  | Sets a custom i18n resolver callback.              |
+| `KioskKeyboard.registerMiddleware(layouts, factory)` | Registers composition middleware for layouts.      |
 
 > [!NOTE]
 > Following the [UI5 Web Components convention](https://github.com/SAP/ui5-webcomponents), registry operations are static methods on the component class. Import the class and call them directly. In environments without ES module imports (e.g., plain `<script>` tags), the static API is also accessible via `customElements.get('kiosk-keyboard').registerLayout(...)` or `document.querySelector('kiosk-keyboard').constructor.registerLayout(...)`.
@@ -424,6 +425,94 @@ interface KeyDefinition {
   icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present
 }
 ```
+
+## Modular Imports (Tree-Shaking)
+
+The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. For applications that need only a subset, import from the core entry and add layouts individually:
+
+```ts
+import "kiosk-keyboard-webc/Assets";
+import { KioskKeyboard } from "kiosk-keyboard-webc/core";
+import "kiosk-keyboard-webc/layouts/qwerty";
+import "kiosk-keyboard-webc/layouts/numeric";
+```
+
+Only the imported layouts are bundled. The core entry exports the same `KioskKeyboard` class; it simply starts with zero built-in layouts.
+
+Available subpath imports:
+
+| Import                                  | Description                      |
+| --------------------------------------- | -------------------------------- |
+| `kiosk-keyboard-webc`                   | Full entry (all layouts)         |
+| `kiosk-keyboard-webc/core`              | Core only (no layouts)           |
+| `kiosk-keyboard-webc/layouts/<name>`    | Individual layout                |
+| `kiosk-keyboard-webc/middleware/<name>` | Composition middleware           |
+| `kiosk-keyboard-webc/bundle`            | Single-file bundle (CDN/scripts) |
+| `kiosk-keyboard-webc/Assets`            | Theme + i18n registration        |
+
+## Composition Middleware
+
+Some scripts require processing between key press and text insertion. For example, Japanese Kana needs dakuten/handakuten composition (ka + dakuten = ga), and Korean Hangul needs jamo-to-syllable composition (individual consonants and vowels combine into syllable blocks).
+
+Composition middleware modules handle this automatically. Import the middleware for the layouts you use:
+
+```ts
+import "kiosk-keyboard-webc/middleware/kana-dakuten"; // Japanese kana composition
+import "kiosk-keyboard-webc/middleware/hangul-compose"; // Korean Hangul jamo composition
+```
+
+Middleware activates automatically when its associated layout is active and deactivates (committing any in-progress composition) on layout switch. No properties or configuration needed.
+
+### Built-in Middleware
+
+| Module                                          | Layout      | Behavior                                                 |
+| ----------------------------------------------- | ----------- | -------------------------------------------------------- |
+| `kiosk-keyboard-webc/middleware/kana-dakuten`   | `ja-kana`   | Composes base kana + dakuten/handakuten into voiced kana |
+| `kiosk-keyboard-webc/middleware/hangul-compose` | `ko-hangul` | Composes jamo into Hangul syllable blocks with preedit   |
+
+### Custom Middleware
+
+Implement the `CompositionMiddleware` interface and register it:
+
+```ts
+import type { CompositionMiddleware } from "kiosk-keyboard-webc";
+import { KioskKeyboard } from "kiosk-keyboard-webc/core";
+
+function createMyMiddleware(): CompositionMiddleware {
+  return {
+    handleKey(key, target) {
+      // Return true if consumed (keyboard skips default handling).
+      // Return false to pass through to default behavior.
+      return false;
+    },
+    commit() {
+      // Force-commit any in-progress composition. Return committed text or null.
+      return null;
+    },
+    reset() {
+      // Clear state without committing.
+    },
+  };
+}
+
+KioskKeyboard.registerMiddleware(["my-layout"], createMyMiddleware);
+```
+
+The `handleKey` method receives:
+
+- `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
+- `target`: the input element the keyboard is typing into
+
+When `handleKey` returns `true`, the keyboard skips its default text insertion, backspace, and enter handling. The middleware is responsible for modifying the target's value.
+
+Middleware lifecycle:
+
+- **Layout switch**: `commit()` is called, instance discarded. A fresh instance is created when the layout activates again.
+- **Component destroyed**: `reset()` is called. In-progress composition is discarded, not flushed.
+- **Focus change**: `commit()` is called to avoid orphaned preedit text.
+
+> [!NOTE]
+> The middleware registry follows the same pattern as the layout registry. It is shared across all keyboard instances. `registerMiddleware` can override built-in middleware.
 
 ## Icon + Label Rendering
 

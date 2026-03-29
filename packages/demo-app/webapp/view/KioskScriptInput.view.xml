@@ -1,0 +1,60 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskScriptInput"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:kiosk="ui5.kiosk">
+    <Page titleAlignment="Center" title="Script Input &amp; Middleware" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <content>
+            <Panel class="sapUiSmallMarginBottom" headerText="Japanese Kana">
+                <VBox class="sapUiSmallMargin">
+                    <Label text="Kana Input" labelFor="kanaInput" />
+                    <Input
+                        id="kanaInput"
+                        placeholder="ひらがな入力"
+                        width="100%" />
+                    <kiosk:KioskKeyboard
+                        id="kanaKeyboard"
+                        layout="ja-kana"
+                        autoType="true"
+                        targetInput="kanaInput"
+                        class="sapUiSmallMarginTop" />
+                    <Text text="Dakuten/handakuten composition middleware active" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel class="sapUiSmallMarginBottom" headerText="Korean Hangul">
+                <VBox class="sapUiSmallMargin">
+                    <Label text="Hangul Input" labelFor="hangulInput" />
+                    <Input
+                        id="hangulInput"
+                        placeholder="한글 입력"
+                        width="100%" />
+                    <kiosk:KioskKeyboard
+                        id="hangulKeyboard"
+                        layout="ko-hangul"
+                        autoType="true"
+                        targetInput="hangulInput"
+                        class="sapUiSmallMarginTop" />
+                    <Text text="Jamo-to-syllable composition middleware active" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
+            <Panel class="sapUiSmallMarginBottom" headerText="Indic Scripts">
+                <VBox class="sapUiSmallMargin">
+                    <Label text="Indic Input" labelFor="indicInput" />
+                    <Input
+                        id="indicInput"
+                        placeholder="हिन्दी"
+                        width="100%" />
+                    <kiosk:KioskKeyboard
+                        id="indicKeyboard"
+                        layout="qwerty"
+                        autoType="true"
+                        targetInput="indicInput"
+                        class="sapUiSmallMarginTop" />
+                    <Text text="Devanagari glyph rendering test" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+        </content>
+    </Page>
+</mvc:View>
