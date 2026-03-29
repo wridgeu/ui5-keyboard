@@ -870,11 +870,12 @@ class KioskKeyboard extends UI5Element {
     this._targetElement = el;
     this._targetFromAutoShow = false;
 
-    // Suppress the new target and sync highlight if the keyboard is open
     if (this._open) {
       this._suppressInputMode();
-      this._syncPhysicalKeyHighlight();
     }
+    // Always sync highlight: cleans up listeners on the old target even
+    // when the keyboard is closed, preventing a listener leak.
+    this._syncPhysicalKeyHighlight();
 
     if (el !== previous) {
       this.fireDecoratorEvent("target-input-change", { targetElement: el });

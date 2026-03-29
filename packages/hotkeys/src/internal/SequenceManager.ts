@@ -395,14 +395,6 @@ export default class SequenceManager extends BaseObject {
   }
 
   /**
-   * Derive candidate keys from a keyboard event, mirroring the matching
-   * logic in matchesKeyboardEvent (match.ts).
-   */
-  private _deriveEventKeys(event: KeyboardEvent): string[] {
-    return getCandidateKeys(event);
-  }
-
-  /**
    * Start new sequence matches for registrations in the given scope.
    */
   private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean): boolean {
@@ -410,7 +402,7 @@ export default class SequenceManager extends BaseObject {
     if (!keyMap) return false;
 
     let started = false;
-    const candidateKeys = this._deriveEventKeys(event);
+    const candidateKeys = getCandidateKeys(event);
 
     for (const candidateKey of candidateKeys) {
       const regSet = keyMap.get(candidateKey);
