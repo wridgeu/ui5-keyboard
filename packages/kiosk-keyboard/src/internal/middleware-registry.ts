@@ -3,9 +3,6 @@ import type { CompositionMiddleware } from "../types";
 /** Factory functions keyed by layout name. */
 const factories: Map<string, () => CompositionMiddleware> = new Map();
 
-/** Built-in factory names (protected by _registerMiddleware idempotency). */
-const builtInMiddleware: Set<string> = new Set();
-
 /** Active middleware instances keyed by layout name. Lazily created. */
 const instances: Map<string, CompositionMiddleware> = new Map();
 
@@ -18,7 +15,6 @@ export function _registerMiddleware(layouts: string[], factory: () => Compositio
   for (const layout of layouts) {
     if (factories.has(layout)) continue;
     factories.set(layout, factory);
-    builtInMiddleware.add(layout);
   }
 }
 
@@ -70,5 +66,4 @@ export function _resetMiddleware(): void {
   }
   instances.clear();
   factories.clear();
-  builtInMiddleware.clear();
 }

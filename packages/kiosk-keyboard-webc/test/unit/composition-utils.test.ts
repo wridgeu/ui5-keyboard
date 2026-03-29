@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { CompositionState } from "../../src/core/composition-utils.js";
 import {
+  createCompositionState,
   startComposition,
   updateComposition,
   endComposition,
-  _resetComposition,
 } from "../../src/core/composition-utils.js";
 
 describe("composition-utils", () => {
   let input: HTMLInputElement;
+  let state: CompositionState;
 
   beforeEach(() => {
-    _resetComposition();
+    state = createCompositionState();
     input = document.createElement("input");
     input.value = "hello";
     input.setSelectionRange(5, 5);
@@ -20,7 +22,7 @@ describe("composition-utils", () => {
     it("dispatches compositionstart event", () => {
       const spy = vi.fn();
       input.addEventListener("compositionstart", spy);
-      startComposition(input);
+      startComposition(state, input);
       expect(spy).toHaveBeenCalledOnce();
     });
   });
@@ -29,16 +31,16 @@ describe("composition-utils", () => {
     it("replaces preedit text and dispatches compositionupdate", () => {
       const spy = vi.fn();
       input.addEventListener("compositionupdate", spy);
-      startComposition(input);
-      updateComposition(input, "\u304B"); // か
+      startComposition(state, input);
+      updateComposition(state, input, "\u304B"); // か
       expect(input.value).toBe("hello\u304B");
       expect(spy).toHaveBeenCalledOnce();
     });
 
     it("replaces previous preedit on subsequent calls", () => {
-      startComposition(input);
-      updateComposition(input, "\u304B"); // か
-      updateComposition(input, "\u304C"); // が
+      startComposition(state, input);
+      updateComposition(state, input, "\u304B"); // か
+      updateComposition(state, input, "\u304C"); // が
       expect(input.value).toBe("hello\u304C");
     });
   });
@@ -47,19 +49,19 @@ describe("composition-utils", () => {
     it("dispatches compositionend and commits preedit", () => {
       const spy = vi.fn();
       input.addEventListener("compositionend", spy);
-      startComposition(input);
-      updateComposition(input, "\u304C"); // が
-      endComposition(input);
+      startComposition(state, input);
+      updateComposition(state, input, "\u304C"); // が
+      endComposition(state, input);
       expect(input.value).toBe("hello\u304C");
       expect(spy).toHaveBeenCalledOnce();
     });
 
     it("clears preedit tracking so next startComposition is fresh", () => {
-      startComposition(input);
-      updateComposition(input, "\u304B"); // か
-      endComposition(input);
-      startComposition(input);
-      updateComposition(input, "\u305F"); // た
+      startComposition(state, input);
+      updateComposition(state, input, "\u304B"); // か
+      endComposition(state, input);
+      startComposition(state, input);
+      updateComposition(state, input, "\u305F"); // た
       expect(input.value).toBe("hello\u304B\u305F");
     });
   });
