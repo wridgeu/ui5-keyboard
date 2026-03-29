@@ -430,7 +430,7 @@ The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. For app
 
 ```ts
 import "kiosk-keyboard-webc/Assets";
-import "kiosk-keyboard-webc/core";
+import { KioskKeyboard } from "kiosk-keyboard-webc/core";
 import "kiosk-keyboard-webc/layouts/qwerty";
 import "kiosk-keyboard-webc/layouts/numeric";
 ```
@@ -506,7 +506,7 @@ When `handleKey` returns `true`, the keyboard skips its default text insertion, 
 Middleware lifecycle:
 
 - **Layout switch**: `commit()` is called, instance discarded. A fresh instance is created when the layout activates again.
-- **Component destroyed**: `commit()` is called to flush any pending composition.
+- **Component destroyed**: `reset()` is called. In-progress composition is discarded, not flushed.
 - **Focus change**: `commit()` is called to avoid orphaned preedit text.
 
 > [!NOTE]
