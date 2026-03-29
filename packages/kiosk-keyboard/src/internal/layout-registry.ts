@@ -17,6 +17,9 @@ import jaRomaji from "../layouts/ja-romaji";
 import jaKana from "../layouts/ja-kana";
 import arabic from "../layouts/arabic";
 
+// ── Middleware self-registration (side-effect imports) ──
+import "../middleware/kana-dakuten";
+
 const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
   ["qwertz-de", qwertzDe],
