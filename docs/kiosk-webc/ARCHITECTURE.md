@@ -39,6 +39,8 @@ layouts/
   ja-romaji.ts            Japanese Romaji layout
   ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
   arabic.ts               Arabic layout
+  ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
+  qwerty-es.ts            Spanish QWERTY layout
   qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
@@ -279,7 +281,7 @@ When no explicit `layout` is set, `getLocaleLayout()` uses `Intl.Locale(navigato
 2. Language prefix (e.g., `"de"`)
 3. Fallback to `"qwerty"`
 
-Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic }`. Extensible via `registerLocaleLayout()`.
+Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`. Extensible via `registerLocaleLayout()`.
 
 ## Auto-Type Detection
 

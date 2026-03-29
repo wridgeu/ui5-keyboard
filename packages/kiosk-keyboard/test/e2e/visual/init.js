@@ -155,4 +155,36 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
 
   // 32. Japanese Kana
   new KioskKeyboard({ layout: "ja-kana" }).placeAt("kb-ja-kana");
+
+  // 33. Korean Hangul
+  new KioskKeyboard({ layout: "ko-hangul" }).placeAt("kb-ko-hangul");
+
+  // 34. Indic glyph stress layout: exercises Indic script detection and
+  // font-family / text-box-edge overrides across all 10 supported scripts.
+  KioskKeyboard.registerLayout("indic-stress", [
+    [
+      { value: "\u0905" }, // अ Devanagari
+      { value: "\u0915" }, // क
+      { value: "\u0928" }, // न
+      { value: "\u0939" }, // ह
+      { value: "\u0964" }, // । danda
+      { value: "\u0985" }, // অ Bengali
+      { value: "\u0995" }, // ক
+      { value: "\u09B9" }, // হ
+    ],
+    [
+      { value: "\u0A05" }, // ਅ Gurmukhi
+      { value: "\u0A85" }, // અ Gujarati
+      { value: "\u0B05" }, // ଅ Oriya
+      { value: "\u0B85" }, // அ Tamil
+      { value: "\u0C05" }, // అ Telugu
+      { value: "\u0C85" }, // ಅ Kannada
+      { value: "\u0D05" }, // അ Malayalam
+      { value: "\u0D85" }, // අ Sinhala
+    ],
+  ]);
+  new KioskKeyboard({ layout: "indic-stress" }).placeAt("kb-indic-stress");
+
+  // 35. Spanish (QWERTY-ES)
+  new KioskKeyboard({ layout: "qwerty-es" }).placeAt("kb-qwerty-es");
 });

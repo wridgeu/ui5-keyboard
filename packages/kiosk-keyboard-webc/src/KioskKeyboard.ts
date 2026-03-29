@@ -14,6 +14,8 @@ import "./layouts/qwertz-de-nav.js";
 import "./layouts/ja-romaji.js";
 import "./layouts/ja-kana.js";
 import "./layouts/arabic.js";
+import "./layouts/ko-hangul.js";
+import "./layouts/qwerty-es.js";
 
 export { default, default as KioskKeyboard } from "./KioskKeyboardCore.js";
 export type { KioskKeyboardDomContract } from "./KioskKeyboardCore.js";
