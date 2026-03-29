@@ -59,21 +59,13 @@ function resolveLocaleMappedLayout(locale: string): string | null {
 }
 
 /**
- * Registers a custom keyboard layout.
- *
- * Built-in layouts cannot be overwritten. Attempting to do so logs a warning.
+ * Registers a custom keyboard layout. Can override any layout, including
+ * built-ins. Validates structure before registering.
  * @internal
  */
 export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return;
-
-  if (BUILTIN_LAYOUTS.has(name)) {
-    console.warn(
-      `[kiosk-keyboard] Cannot overwrite built-in layout "${name}". Use a different name for custom layouts.`,
-    );
-    return;
-  }
 
   if (
     !Array.isArray(oDefinition) ||
