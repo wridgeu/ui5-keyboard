@@ -32,6 +32,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyLabelGlyphCjk: "ui5KioskKey__label--glyph-cjk",
     keyLabelGlyphHangul: "ui5KioskKey__label--glyph-hangul",
     keyLabelGlyphIndic: "ui5KioskKey__label--glyph-indic",
+    keyLabelGlyphArabic: "ui5KioskKey__label--glyph-arabic",
     keyLabelMulti: "ui5KioskKey__label--multi",
     keyIcon: "ui5KioskKey__icon",
     keyDual: "ui5KioskKey--dual",

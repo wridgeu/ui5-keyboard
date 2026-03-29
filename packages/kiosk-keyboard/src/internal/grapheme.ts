@@ -61,21 +61,7 @@ export function isSingleGlyph(label: string): boolean {
   return count === 1;
 }
 
-/**
- * Matches the first character of a string against CJK script families using
- * Unicode Script_Extensions property escapes. This covers Han, Hiragana,
- * Katakana, Hangul, and Bopomofo -- including shared characters like CJK
- * punctuation, Kangxi radicals, and halfwidth forms that `Script=` alone
- * would miss.
- *
- * Used to detect glyphs where Latin-optimised `text-box-edge: cap alphabetic`
- * produces incorrect vertical centering. CJK glyphs extend the full
- * ideographic em box, so they need script-appropriate text-box metrics.
- *
- * Relies on ES2018 Unicode property escapes (Chrome 64+, Firefox 78+,
- * Safari 11.1+). The engine's Unicode data updates automatically with
- * new browser versions, so no manual range maintenance is needed.
- */
+/** CJK: Han, Hiragana, Katakana, Hangul, Bopomofo. Note: includes Hangul -- check isHangulGlyph() first for Korean-specific handling. */
 const CJK_RE =
   /^[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}\p{Script_Extensions=Bopomofo}]/u;
 
@@ -83,50 +69,24 @@ export function isCJKGlyph(label: string): boolean {
   return label.length > 0 && CJK_RE.test(label);
 }
 
-/**
- * Matches the first character of a string against Hangul script using
- * Unicode Script_Extensions property escapes. This covers Hangul Jamo,
- * Hangul Compatibility Jamo, Hangul Syllables, and Hangul Jamo Extended
- * blocks -- including halfwidth Hangul and enclosed Hangul letters that
- * `Script=` alone would miss.
- *
- * Kept separate from {@link isCJKGlyph} because Hangul needs a Korean-first
- * font stack for correct glyph metrics. While Hangul shares the CJK
- * `text-box-edge: text` treatment, the default CJK font stack prioritizes
- * Japanese fonts (Hiragino, Yu Gothic, Meiryo) which produce incorrect
- * metrics when rendering Hangul jamo. A dedicated class allows the CSS to
- * use Korean system fonts first (Malgun Gothic, Apple SD Gothic Neo).
- *
- * Note: `isCJKGlyph()` still returns true for Hangul (Hangul is part of
- * the CJK regex). Renderers should check `isHangulGlyph()` first and
- * apply the more specific Hangul class, falling through to CJK only for
- * non-Hangul CJK characters.
- */
+/** Hangul: Jamo, Compatibility Jamo, Syllables, Extended blocks. Separate from CJK for Korean-first font stack. */
 const HANGUL_RE = /^[\p{Script_Extensions=Hangul}]/u;
 
 export function isHangulGlyph(label: string): boolean {
   return label.length > 0 && HANGUL_RE.test(label);
 }
 
-/**
- * Matches the first character of a string against Indic (Brahmic) script
- * families using Unicode Script_Extensions property escapes. This covers
- * Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada,
- * Malayalam, and Sinhala -- including shared characters like danda (U+0964)
- * and Devanagari digits that `Script=` alone would miss.
- *
- * Kept separate from {@link isCJKGlyph} because Indic scripts have
- * fundamentally different vertical metrics: headline systems (shirorekha),
- * descenders, and conjuncts versus the uniform ideographic em box of CJK.
- * This distinction allows each group to use its own `text-box-edge` tuning.
- *
- * Relies on ES2018 Unicode property escapes (Chrome 64+, Firefox 78+,
- * Safari 11.1+). The engine's Unicode data updates automatically with
- * new browser versions, so no manual range maintenance is needed.
- */
+/** Indic (Brahmic): Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam, Sinhala. */
 const INDIC_RE =
   /^[\p{Script_Extensions=Devanagari}\p{Script_Extensions=Bengali}\p{Script_Extensions=Gurmukhi}\p{Script_Extensions=Gujarati}\p{Script_Extensions=Oriya}\p{Script_Extensions=Tamil}\p{Script_Extensions=Telugu}\p{Script_Extensions=Kannada}\p{Script_Extensions=Malayalam}\p{Script_Extensions=Sinhala}]/u;
 
 export function isIndicGlyph(label: string): boolean {
   return label.length > 0 && INDIC_RE.test(label);
+}
+
+/** Arabic: Basic Arabic, Supplement, Extended-A/B, Presentation Forms. Also covers Persian, Urdu, Kurdish. */
+const ARABIC_RE = /^[\p{Script_Extensions=Arabic}]/u;
+
+export function isArabicGlyph(label: string): boolean {
+  return label.length > 0 && ARABIC_RE.test(label);
 }

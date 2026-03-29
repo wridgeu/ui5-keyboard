@@ -123,7 +123,7 @@
     --ui5KioskKeyboard-dualGap: 0.3em;
     --ui5KioskKeyboard-fkeyDirection: column;
     --ui5KioskKeyboard-fkeyIconSize: ~"clamp(1em, 15cqi, 3em)";
-    --ui5KioskKeyboard-fkeyLabelSize: 0.7em;
+    --ui5KioskKeyboard-fkeyLabelSize: ~"clamp(0.5rem, calc(100cqi * 0.35), 0.7em)";
     --ui5KioskKeyboard-fkeyGap: 0.05em;
 
     /* ---- Private styling aliases ---- */
@@ -236,6 +236,17 @@
     display: flex;
     gap: var(--_ui5KioskKeyboard-keyGap);
     justify-content: center;
+  }
+
+  /* F-key row wrap: 12 F-keys split into 2×6 at narrow widths (<=35rem). */
+  @container keyboard (max-width: 35rem) {
+    .ui5KioskRow:has(> [data-key^="{fkey:"]) {
+      flex-wrap: wrap;
+    }
+
+    [data-key^="{fkey:"].ui5KioskKey {
+      flex: 1 0 ~"calc((100% - 5 * var(--_ui5KioskKeyboard-keyGap)) / 6)";
+    }
   }
 
   /* ============================= */
@@ -552,6 +563,13 @@
     .ui5KioskKey__label--glyph-indic {
       text-box-edge: text;
     }
+
+    /* Arabic glyphs have extended ascenders, descenders, and diacritical marks
+       that differ from Latin cap-height metrics. Use `text` to preserve the
+       full vertical extent needed for vowel points and tanwin marks. */
+    .ui5KioskKey__label--glyph-arabic {
+      text-box-edge: text;
+    }
   }
 
   /* CJK font-family override (--ui5KioskKeyboard-cjkFontFamily).
@@ -583,6 +601,15 @@
      consistent metrics. */
   .ui5KioskKey__label--glyph-indic {
     font-family: ~"var(--ui5KioskKeyboard-indicFontFamily, 'Nirmala UI', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Gujarati', 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Sinhala', 'Kohinoor Devanagari', 'Kohinoor Bangla', 'Kohinoor Gujarati', 'Kohinoor Telugu', 'Tamil Sangam MN', 'Malayalam Sangam MN', 'Kannada Sangam MN', 'Gurmukhi Sangam MN', 'Oriya Sangam MN', 'Sinhala Sangam MN', 'Bangla Sangam MN', system-ui, sans-serif)";
+  }
+
+  /* Arabic font-family override (--ui5KioskKeyboard-arabicFontFamily).
+     Same rationale as CJK above: the 72 font has no Arabic glyphs, so the
+     browser falls through to a system font for rendering but still uses 72
+     metrics for the line box.  Putting Arabic system fonts first ensures
+     consistent metrics. */
+  .ui5KioskKey__label--glyph-arabic {
+    font-family: ~"var(--ui5KioskKeyboard-arabicFontFamily, 'Segoe UI', 'Geeza Pro', 'Noto Sans Arabic', 'Noto Naskh Arabic', 'Tahoma', 'Arabic Typesetting', system-ui, sans-serif)";
   }
 
   /* ============================= */

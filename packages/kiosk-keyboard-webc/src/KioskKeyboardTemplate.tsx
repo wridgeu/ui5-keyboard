@@ -1,6 +1,6 @@
 import type KioskKeyboard from "./KioskKeyboardCore.js";
 import { keyElementId } from "./core/dom-utils.js";
-import { isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
+import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
 import { KeyboardType } from "./types.js";
 
 import { KIOSK_KEYBOARD_DOM } from "./core/dom-contract.js";
@@ -50,7 +50,8 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             const isSingleGlyphLabel = isSingleGlyph(label);
             const isHangul = isSingleGlyphLabel && isHangulGlyph(label);
             const isCJK = isSingleGlyphLabel && !isHangul && isCJKGlyph(label);
-            const isIndic = isSingleGlyphLabel && !isHangul && !isCJK && isIndicGlyph(label);
+            const isIndic = isSingleGlyphLabel && isIndicGlyph(label);
+            const isArabic = isSingleGlyphLabel && isArabicGlyph(label);
 
             return (
               <div
@@ -96,6 +97,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                       [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphCjk]: isCJK,
                       [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphHangul]: isHangul,
                       [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphIndic]: isIndic,
+                      [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphArabic]: isArabic,
                       [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]:
                         !isSingleGlyphLabel && key.type !== "modifier" && key.type !== "action",
                     }}
