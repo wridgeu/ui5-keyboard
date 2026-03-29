@@ -19,6 +19,7 @@ import arabic from "../layouts/arabic";
 
 // ── Middleware self-registration (side-effect imports) ──
 import "../middleware/kana-dakuten";
+import "../middleware/hangul-compose";
 
 const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
