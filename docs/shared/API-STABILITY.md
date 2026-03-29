@@ -41,22 +41,27 @@ Stable runtime hooks on the `KioskKeyboard` class include:
 
 The stable consumer surface consists of the package entry points and the `<kiosk-keyboard>` custom element:
 
-- `kiosk-keyboard-webc/bundle` - ESM entry point that registers the custom element and re-exports the class and public types
-- `kiosk-keyboard-webc` - bare component class; prefer the bundle entry for most use cases
-- `kiosk-keyboard-webc/Assets` - supported companion entry for theme and i18n registration when consuming the bare class
+- `kiosk-keyboard-webc/bundle` - ESM entry point that registers the custom element, all built-in layouts, and middleware; re-exports the class and public types
+- `kiosk-keyboard-webc` - bare component class with all built-in layouts; prefer the bundle entry for most use cases
+- `kiosk-keyboard-webc/core` - tree-shakeable core without built-in layouts or middleware; consumers import individual layouts and middleware as needed
+- `kiosk-keyboard-webc/Assets` - supported companion entry for theme and i18n registration when consuming the bare class or core
+- `kiosk-keyboard-webc/layouts/*` - individual layout modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); each self-registers on import
 - `kiosk-keyboard-webc/layouts/fkey-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/layouts/nav-row` - stable shared row for custom layout composition
+- `kiosk-keyboard-webc/middleware/*` - individual middleware modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); each self-registers on import
 
 Stable exports from the bundle entry:
 
 - `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
-- Type exports: `FKeyMode`, `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`
+- Enum exports: `FKeyMode`, `KeyboardType`, `MobileKeyboard`
+- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `TargetInputChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
 
-Static methods on `KioskKeyboard` (layout and locale registry):
+Static methods on `KioskKeyboard` (layout, locale, and middleware registry):
 
 - `registerLayout` / `unregisterLayout` / `resetCustomLayouts`
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
 - `registerLocaleLayout` / `unregisterLocaleLayout` / `resetLocaleLayouts` / `getLocaleLayout`
+- `registerMiddleware`
 - `setI18nResolver`
 
 Additional stable runtime hooks on the class:
@@ -85,7 +90,7 @@ For `ui5.kiosk`, these two layout row modules are additionally treated as stable
 
 ### `kiosk-keyboard-webc`
 
-Modules under `core/*` (`shift-state`, `dom-utils`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
+Modules under `core/*` (`shift-state`, `dom-utils`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
 
 The `layouts/*` directory contains built-in layout definitions. Individual layout files (e.g. `layouts/qwerty`, `layouts/numeric`) are not a stable import surface; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules are additionally treated as stable for composing custom variant layouts:
 

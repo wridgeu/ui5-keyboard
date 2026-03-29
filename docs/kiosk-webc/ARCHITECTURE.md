@@ -5,11 +5,14 @@ This document describes the internal architecture, design decisions, and edge ca
 ## Module Overview
 
 ```
-KioskKeyboard.ts          Web component: state, event delegation, target input integration,
-                          locale detection, auto-type, mobile keyboard suppression
+KioskKeyboard.ts          Web component: imports all built-in layouts, re-exports public types
+KioskKeyboardCore.ts      Core component: state, event delegation, target input integration,
+                          locale detection, auto-type, mobile keyboard suppression.
+                          Tree-shakeable entry point (no built-in layouts or middleware).
 KioskKeyboardTemplate.tsx JSX template: Preact-based, UI5 WC jsxRenderer
 Assets.ts                 Registers theme parameter bundles and i18n loaders
-bundle.esm.ts             ESM entry point: imports Assets, re-exports component + public types
+bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all layouts + middleware),
+                          re-exports component class, enums, and public types
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, FKeyMode,
                           SpecialKeyValue, KeyWidth, KeyType, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
@@ -21,8 +24,13 @@ core/
   input-operations.ts     Target input text operations (insert, backspace, navigation)
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
   i18n.ts                 i18n resolution: UI5 WC bundle + custom resolver
+  middleware-registry.ts  Middleware factory registration, lazy instantiation, deactivation
+  composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)
+middleware/
+  kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
+  hangul-compose.ts       Korean Hangul jamo composition middleware (ko-hangul layout)
 layouts/
-  index.ts                Built-in layout registry (ReadonlyMap of all 13 layouts)
+  index.ts                Built-in layout registry (ReadonlyMap of all 16 layouts)
   default-layout.ts       Default layout name constant: "qwerty"
   qwerty.ts               Standard QWERTY with number row and shift symbols
   qwertz-de.ts            German QWERTZ with Umlaute (ä, ö, ü, ß)
@@ -498,12 +506,17 @@ CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration 
 
 ```json
 {
-  ".": "dist/KioskKeyboard.js", // tree-shakeable (requires separate Asset import)
-  "./bundle": "dist/bundle.esm.js", // self-contained with Assets
+  ".": "dist/KioskKeyboard.js", // all built-in layouts, no Assets
+  "./core": "dist/KioskKeyboardCore.js", // tree-shakeable core without layouts or middleware
+  "./bundle": "dist/bundle.esm.js", // self-contained with Assets + all layouts + all middleware
   "./Assets": "dist/Assets.js", // theme + i18n registration only
+  "./layouts/*": "dist/layouts/*.js", // individual self-registering layout modules
+  "./middleware/*": "dist/middleware/*.js", // individual self-registering middleware modules
   "./dist/*": "dist/*" // catch-all
 }
 ```
+
+The `./core` entry is the tree-shaking entry point: it exports the component class with zero built-in layouts and no middleware. Consumers import only the layouts and middleware they need via `./layouts/*` and `./middleware/*`. Each layout and middleware module self-registers on import via internal `_registerBuiltInLayout()` / `_registerMiddleware()` calls.
 
 ## Testing Strategy
 

@@ -12,3 +12,4 @@ They are kept as historical context and are not the primary source of truth for 
 - [Native F-Key Mode](./NATIVE-FKEY-MODE.md)
 - [CSS-First Responsive Simplification](./CSS-FIRST-RESPONSIVE-SIMPLIFICATION.md)
 - [Remove stableHeight Property](./REMOVE-STABLE-HEIGHT.md)
+- [Web Component Package](./WEBCOMPONENT-PACKAGE.md)

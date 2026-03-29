@@ -148,6 +148,53 @@ The EventDispatcher detects AltGr via two mechanisms:
 
 Events identified as AltGr are silently dropped in the pre-filter step, preventing false hotkey matches.
 
+## Composition Middleware
+
+A **composition middleware** is a self-registering module that intercepts key presses for a specific layout and transforms them before they reach the target input. This enables script-specific input processing without modifying the core keyboard component.
+
+### How it works
+
+1. A middleware module calls `_registerMiddleware(["layout-name"], factoryFn)` on import.
+2. When the associated layout becomes active, the keyboard lazily instantiates the middleware via the factory function.
+3. On each key press, the middleware's `handleKey()` method is called first. It can consume the key (returning `true`), compose multiple keys into a single output character, or pass through to default handling (returning `false`).
+4. When the layout is deactivated, `reset()` is called to clear any pending composition state.
+
+### Current implementations
+
+- **Kana dakuten** (`middleware/kana-dakuten.ts`): Composes hiragana base characters with dakuten/handakuten marks for the `ja-kana` layout. Table lookup of ~50 mappings.
+- **Hangul compose** (`middleware/hangul-compose.ts`): Composes Korean jamo (consonants and vowels) into Hangul syllable blocks for the `ko-hangul` layout. Implements the Unicode Hangul Syllable Composition Algorithm.
+
+### Consumer API
+
+Consumers can register custom middleware via `KioskKeyboard.registerMiddleware(layouts, factory)`. The `CompositionMiddleware` interface requires three methods: `handleKey()`, `commit()`, and `reset()`.
+
+## Tree-Shaking (WebC)
+
+**Tree-shaking** is the process of eliminating unused code from the final bundle. The `kiosk-keyboard-webc` package supports tree-shaking via split entry points.
+
+### Entry points
+
+| Entry                              | What it includes                                                    |
+| ---------------------------------- | ------------------------------------------------------------------- |
+| `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
+| `kiosk-keyboard-webc`              | Component with all built-in layouts (no Assets, no middleware)      |
+| `kiosk-keyboard-webc/core`         | Component only, zero layouts, zero middleware                       |
+| `kiosk-keyboard-webc/layouts/*`    | Individual self-registering layout modules                          |
+| `kiosk-keyboard-webc/middleware/*` | Individual self-registering middleware modules                      |
+
+### Usage
+
+To include only QWERTY and the kana dakuten middleware:
+
+```ts
+import "kiosk-keyboard-webc/Assets";
+import { KioskKeyboard } from "kiosk-keyboard-webc/core";
+import "kiosk-keyboard-webc/layouts/qwerty";
+import "kiosk-keyboard-webc/middleware/kana-dakuten";
+```
+
+Layouts and middleware self-register on import via internal `_registerBuiltInLayout()` and `_registerMiddleware()` calls.
+
 ## composedPath()
 
 `Event.composedPath()` returns the full propagation path of a DOM event as an array of `EventTarget` nodes, from the innermost target to `window`.
