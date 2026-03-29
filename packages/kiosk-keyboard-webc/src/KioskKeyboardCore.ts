@@ -24,6 +24,7 @@ import {
   unregisterLocaleLayout,
   resetLocaleLayouts,
 } from "./core/layout-registry.js";
+import { getMiddlewareForLayout, deactivateMiddleware } from "./core/middleware-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
   KeyboardType,
@@ -1114,6 +1115,18 @@ class KioskKeyboard extends UI5Element {
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;
 
+    // ── Composition middleware ──
+    const middleware = getMiddlewareForLayout(
+      this._currentLayout || this._baseLayout || this.layout || getLocaleLayout(),
+    );
+    if (middleware) {
+      const mwTarget = this._resolveTarget();
+      if (mwTarget && middleware.handleKey(value, mwTarget)) {
+        this._autoReleaseShift();
+        return;
+      }
+    }
+
     const target = this._resolveTarget();
 
     if (value === "{backspace}") {
@@ -1208,6 +1221,7 @@ class KioskKeyboard extends UI5Element {
   // ── Layout switch / F-key handling ──
 
   private _handleLayoutSwitch(value: string): void {
+    deactivateMiddleware(this._currentLayout);
     const layoutName = value.slice(8, -1);
     if (layoutName === "base") {
       this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
