@@ -80,7 +80,11 @@ const COMPAT_TO_T: ReadonlyMap<number, number> = new Map([
   [0x314e, 27], // ㅎ
 ]);
 
-/** Map trailing consonant index back to leading consonant index for T-stealing. */
+/**
+ * Maps trailing consonant (jongseong) index to leading consonant (choseong) index.
+ * Used during T-stealing: when a vowel follows an LVT syllable, the trailing
+ * consonant detaches and becomes the leading consonant of the next syllable.
+ */
 const T_TO_L: ReadonlyMap<number, number> = new Map([
   [1, 0], // ㄱ
   [2, 1], // ㄲ
@@ -105,10 +109,28 @@ function jamoL(index: number): string {
   return String.fromCharCode(0x1100 + index);
 }
 
+/** Composes a Hangul syllable character from L/V/T indices per Unicode Standard (SBase + L*NCount + V*TCount + T). */
 function composeSyllable(l: number, v: number, t = 0): string {
   return String.fromCharCode(S_BASE + l * N_COUNT + v * T_COUNT + t);
 }
 
+/**
+ * Hangul syllable composition phase.
+ *
+ * A syllable block is built from up to three components defined by the
+ * Unicode Standard (UAX #15, Section 3.12):
+ * - **L** -- Leading consonant (choseong, e.g. ㄱ)
+ * - **V** -- Vowel (jungseong, e.g. ㅏ)
+ * - **T** -- Trailing consonant (jongseong, e.g. ㄴ)
+ *
+ * Phases track how far composition has progressed:
+ * - `"empty"` -- No active composition.
+ * - `"L"` -- Leading consonant entered, waiting for vowel.
+ * - `"LV"` -- Leading + vowel entered (e.g. 가), waiting for trailing or next syllable.
+ * - `"LVT"` -- Full syllable (e.g. 간). A following vowel triggers T-stealing:
+ *   the trailing consonant detaches and becomes the leading consonant of a
+ *   new syllable (간 + ㅏ -> 가 + 나).
+ */
 type Phase = "empty" | "L" | "LV" | "LVT";
 
 function createHangulComposeMiddleware(): CompositionMiddleware {
