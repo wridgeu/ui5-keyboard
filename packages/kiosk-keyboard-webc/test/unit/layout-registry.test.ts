@@ -11,6 +11,7 @@ import {
   unregisterLocaleLayout,
   resetLocaleLayouts,
   getLocaleLayout,
+  _registerBuiltInLayout,
 } from "../../src/core/layout-registry.js";
 import type { LayoutDefinition } from "../../src/types.js";
 
@@ -313,6 +314,29 @@ describe("layout-registry", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
       unregisterLocaleLayout(undefined as unknown as string);
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
+    });
+  });
+
+  describe("_registerBuiltInLayout", () => {
+    it("registers a layout and marks it as built-in", () => {
+      _registerBuiltInLayout("test-builtin", CUSTOM_LAYOUT);
+      expect(getRegisteredLayout("test-builtin")).toBe(CUSTOM_LAYOUT);
+      expect(isBuiltInLayout("test-builtin")).toBe(true);
+    });
+
+    it("is idempotent -- silently skips if name already exists", () => {
+      const first: LayoutDefinition = [[{ value: "x" }]];
+      const second: LayoutDefinition = [[{ value: "y" }]];
+      _registerBuiltInLayout("idem-test", first);
+      _registerBuiltInLayout("idem-test", second);
+      expect(getRegisteredLayout("idem-test")).toBe(first);
+    });
+
+    it("does not warn on duplicate registration", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      _registerBuiltInLayout("no-warn-test", CUSTOM_LAYOUT);
+      _registerBuiltInLayout("no-warn-test", CUSTOM_LAYOUT);
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 });

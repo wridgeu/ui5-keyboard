@@ -8,7 +8,18 @@ import builtInLayouts from "../layouts/index.js";
 const layouts: Map<string, LayoutDefinition> = new Map(builtInLayouts);
 
 /** Built-in layout names that cannot be overwritten by registerLayout. */
-const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
+const BUILTIN_LAYOUTS: Set<string> = new Set(layouts.keys());
+
+/**
+ * Registers a built-in layout. Idempotent: silently skips if the name
+ * is already registered. Used internally by self-registering layout modules.
+ * @internal
+ */
+export function _registerBuiltInLayout(name: string, def: LayoutDefinition): void {
+  if (layouts.has(name)) return;
+  layouts.set(name, def);
+  BUILTIN_LAYOUTS.add(name);
+}
 
 /** Layouts that serve as secondary views (not base alphabetic layouts). */
 export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
