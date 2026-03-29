@@ -1232,7 +1232,7 @@ class KioskKeyboard extends UI5Element {
   // ── Layout switch / F-key handling ──
 
   private _handleLayoutSwitch(value: string): void {
-    deactivateMiddleware(this._currentLayout);
+    deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
     const layoutName = value.slice(8, -1);
     if (layoutName === "base") {
       this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
