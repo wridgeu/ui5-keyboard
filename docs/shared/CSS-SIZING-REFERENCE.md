@@ -263,20 +263,24 @@ At narrow key widths (below 7rem per-key inline size), the dual label is visuall
 ```css
 --kiosk-keyboard-fkey-direction: column;
 --kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 3em);
---kiosk-keyboard-fkey-label-size: 0.7em;
+--kiosk-keyboard-fkey-label-size: clamp(0.5rem, calc(100cqi * 0.35), 0.7em);
 --kiosk-keyboard-fkey-gap: 0.05em;
 ```
 
 Navigation and function keys (`{fkey:*}`) override the dual-key defaults with a column layout that stacks the icon above a smaller caption label.
 
-| Property   | Default                  | Rationale                                                      |
-| ---------- | ------------------------ | -------------------------------------------------------------- |
-| Direction  | `column`                 | Icon above label; consumers can set to `row` for side-by-side  |
-| Icon size  | `clamp(1em, 15cqi, 3em)` | Scales with key width (cqi units), clamped between 1em and 3em |
-| Label size | `0.7em`                  | Smaller caption below the icon for visual hierarchy            |
-| Gap        | `0.05em`                 | Tight spacing since icon and label have distinct visual weight |
+| Property   | Default                                     | Rationale                                                      |
+| ---------- | ------------------------------------------- | -------------------------------------------------------------- |
+| Direction  | `column`                                    | Icon above label; consumers can set to `row` for side-by-side  |
+| Icon size  | `clamp(1em, 15cqi, 3em)`                    | Scales with key width (cqi units), clamped between 1em and 3em |
+| Label size | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Scales responsively; floor 8px, ceiling 0.7em of parent        |
+| Gap        | `0.05em`                                    | Tight spacing since icon and label have distinct visual weight |
 
 The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `[data-key^="{fkey:"]` elements to avoid affecting Shift/Enter/Backspace.
+
+### F-Key Row Wrap
+
+At narrow widths (<=35rem / 560px), a `@container` query combined with `:has()` causes the 12-key F-key row to split into two rows of six. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row with flex-wrap. Above 35rem, all 12 keys fit on a single row. This is a progressive enhancement: browsers without `:has()` support (pre-2023) keep the single-row truncated fallback.
 
 ## Structural Properties
 
@@ -311,7 +315,7 @@ These thresholds are read by the ResizeObserver in JavaScript to toggle `.cq-sho
 
 ## Script-Specific Font Stacks
 
-The SAP 72 font has no CJK, Hangul, or Indic glyphs. When rendering these scripts, the browser falls through the font stack to OS defaults. However, the line-box metrics (used by `text-box-trim` and `line-height`) still come from the primary font (72), causing vertical offset. Putting script-specific system fonts first for labeled keys ensures the browser uses matched glyph and line-box metrics.
+The SAP 72 font has no CJK, Hangul, Indic, or Arabic glyphs. When rendering these scripts, the browser falls through the font stack to OS defaults. However, the line-box metrics (used by `text-box-trim` and `line-height`) still come from the primary font (72), causing vertical offset. Putting script-specific system fonts first for labeled keys ensures the browser uses matched glyph and line-box metrics.
 
 Each script class has a dedicated CSS custom property for consumer overrides:
 
@@ -320,8 +324,9 @@ Each script class has a dedicated CSS custom property for consumer overrides:
 | CJK           | `.kiosk-key__label--glyph-cjk`    | `--kiosk-keyboard-cjk-font-family`    | Hiragino Sans, Yu Gothic UI, Meiryo, Noto Sans CJK JP, ... |
 | Hangul        | `.kiosk-key__label--glyph-hangul` | `--kiosk-keyboard-hangul-font-family` | Apple SD Gothic Neo, Malgun Gothic, Noto Sans CJK KR, ...  |
 | Indic         | `.kiosk-key__label--glyph-indic`  | `--kiosk-keyboard-indic-font-family`  | Nirmala UI, Noto Sans Devanagari, Noto Sans Bengali, ...   |
+| Arabic        | `.kiosk-key__label--glyph-arabic` | `--kiosk-keyboard-arabic-font-family` | Segoe UI, Geeza Pro, Noto Sans Arabic, Tahoma, ...         |
 
-Hangul gets a separate class from CJK so Korean system fonts are prioritized over Japanese/Chinese fonts for correct glyph metrics. See [CJK Glyph Centering](../proposals/CJK-GLYPH-CENTERING.md) for background.
+Hangul gets a separate class from CJK so Korean system fonts are prioritized over Japanese/Chinese fonts for correct glyph metrics. Arabic gets its own class because its vertical metrics (extended ascenders, descenders, diacritical marks) differ from Latin `cap alphabetic` trimming. See [CJK Glyph Centering](../proposals/CJK-GLYPH-CENTERING.md) for background on the text-box-edge approach.
 
 ## Text-box-trim Progressive Enhancement
 
@@ -382,10 +387,11 @@ All public CSS custom properties defined on `:host`, listed with their default v
 | `--kiosk-keyboard-dual-gap`              | `0.3em`                                         | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
 | `--kiosk-keyboard-fkey-direction`        | `column`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
 | `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 3em)`                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
-| `--kiosk-keyboard-fkey-label-size`       | `0.7em`                                         | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-label-size`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`     | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
 | `--kiosk-keyboard-fkey-gap`              | `0.05em`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
 | `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
 | `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
 | `--kiosk-keyboard-cjk-font-family`       | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
 | `--kiosk-keyboard-hangul-font-family`    | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
 | `--kiosk-keyboard-indic-font-family`     | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-arabic-font-family`    | (unset)                                         | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
