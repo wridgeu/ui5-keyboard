@@ -66,10 +66,9 @@ describe("layout-registry", () => {
       expect(getRegisteredLayout("custom")).toBe(CUSTOM_LAYOUT);
     });
 
-    it("cannot overwrite built-in layouts", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    it("can override built-in layouts", () => {
       registerLayout("qwerty", CUSTOM_LAYOUT);
-      expect(spy).toHaveBeenCalled();
+      expect(getRegisteredLayout("qwerty")).toBe(CUSTOM_LAYOUT);
     });
 
     it("rejects empty layout name", () => {
