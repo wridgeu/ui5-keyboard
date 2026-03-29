@@ -684,6 +684,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   onExitDOM(): void {
+    deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout);
     KioskKeyboard._instances.delete(this);
     this._teardownAutoShow();
     this._teardownPhysicalKeyHighlight();
@@ -1115,19 +1116,16 @@ class KioskKeyboard extends UI5Element {
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;
 
+    const target = this._resolveTarget();
+
     // ── Composition middleware ──
     const middleware = getMiddlewareForLayout(
       this._currentLayout || this._baseLayout || this.layout || getLocaleLayout(),
     );
-    if (middleware) {
-      const mwTarget = this._resolveTarget();
-      if (mwTarget && middleware.handleKey(value, mwTarget)) {
-        this._autoReleaseShift();
-        return;
-      }
+    if (middleware && target && middleware.handleKey(value, target)) {
+      this._autoReleaseShift();
+      return;
     }
-
-    const target = this._resolveTarget();
 
     if (value === "{backspace}") {
       if (target) handleBackspace(target);

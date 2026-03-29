@@ -1,5 +1,6 @@
 import type { CompositionMiddleware } from "../types";
 import { _registerMiddleware } from "../internal/middleware-registry";
+import { insertText } from "../internal/input-operations";
 
 const DAKUTEN = "\u309B"; // ゛
 const HANDAKUTEN = "\u309C"; // ゜
@@ -53,23 +54,14 @@ function createKanaDakutenMiddleware(): CompositionMiddleware {
 
       if (!composed) return false;
 
-      target.value = value.slice(0, pos - 1) + composed + value.slice(pos);
-      try {
-        target.setSelectionRange(pos, pos);
-      } catch {
-        // May throw on certain input types
-      }
-      target.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: composed }));
-      return true;
+      return insertText(target, composed, [pos - 1, pos]) !== null;
     },
 
     commit(): string | null {
       return null;
     },
 
-    reset(): void {
-      // no state
-    },
+    reset(): void {},
   };
 }
 
