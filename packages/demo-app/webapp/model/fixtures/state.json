@@ -103,7 +103,7 @@
     },
     {
       "title": "Script Input & Middleware",
-      "description": "Japanese kana, Korean Hangul, Arabic, and Indic script input with composition middleware",
+      "description": "Japanese kana, Korean Hangul, and Arabic script input with composition middleware",
       "route": "kioskScriptInput"
     }
   ],
