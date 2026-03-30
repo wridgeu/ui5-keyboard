@@ -342,13 +342,14 @@ Hangul gets a separate class from CJK so Korean system fonts are prioritized ove
   }
   .kiosk-key__label--glyph-cjk,
   .kiosk-key__label--glyph-hangul,
-  .kiosk-key__label--glyph-indic {
+  .kiosk-key__label--glyph-indic,
+  .kiosk-key__label--glyph-arabic {
     text-box-edge: text;
   }
 }
 ```
 
-Trims invisible half-leading above and below text, giving true optical centering inside keys. Single-glyph Latin labels use `cap alphabetic` for tighter metrics. CJK, Hangul, and Indic labels fall back to `text` because `cap alphabetic` is a Latin-specific metric that produces incorrect trimming for these scripts.
+Trims invisible half-leading above and below text, giving true optical centering inside keys. Single-glyph Latin labels use `cap alphabetic` for tighter metrics. CJK, Hangul, Indic, and Arabic labels fall back to `text` because `cap alphabetic` is a Latin-specific metric that produces incorrect trimming for these scripts.
 
 Browser support: Chrome 133+, Edge 133+, Safari 18.2+. Non-supporting browsers keep the existing `line-height` behavior unchanged.
 
