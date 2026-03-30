@@ -39,6 +39,24 @@
                 </VBox>
             </Panel>
 
+            <Panel class="sapUiSmallMarginBottom" headerText="Arabic">
+                <VBox class="sapUiSmallMargin">
+                    <Label text="Arabic Input" labelFor="arabicInput" />
+                    <Input
+                        id="arabicInput"
+                        placeholder="اكتب هنا"
+                        textDirection="RTL"
+                        width="100%" />
+                    <kiosk:KioskKeyboard
+                        id="arabicKeyboard"
+                        layout="arabic"
+                        autoType="true"
+                        targetInput="arabicInput"
+                        class="sapUiSmallMarginTop" />
+                    <Text text="RTL layout with Arabic-Indic numeral shift layer" class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
             <Panel class="sapUiSmallMarginBottom" headerText="Indic Scripts">
                 <VBox class="sapUiSmallMargin">
                     <Label text="Indic Input" labelFor="indicInput" />
