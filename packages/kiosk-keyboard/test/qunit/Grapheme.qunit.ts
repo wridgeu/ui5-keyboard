@@ -554,10 +554,24 @@ QUnit.test("Hebrew characters return false", (assert) => {
   assert.strictEqual(isArabicGlyph("\u05EA"), false, "\u05EA tav");
 });
 
+QUnit.test("Cyrillic characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0410"), false, "\u0410 A");
+  assert.strictEqual(isArabicGlyph("\u042F"), false, "\u042F Ya");
+});
+
+QUnit.test("Thai characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0E01"), false, "\u0E01 ko kai");
+});
+
 QUnit.test("empty string returns false", (assert) => {
   assert.strictEqual(isArabicGlyph(""), false, "empty string");
 });
 
 QUnit.test("emoji returns false", (assert) => {
   assert.strictEqual(isArabicGlyph("\uD83D\uDE00"), false, "emoji is not Arabic");
+});
+
+QUnit.test("checks only the first code point for multi-character strings", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0627b"), true, "Arabic + Latin");
+  assert.strictEqual(isArabicGlyph("A\u0627"), false, "Latin + Arabic");
 });

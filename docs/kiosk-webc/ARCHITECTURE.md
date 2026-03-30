@@ -300,7 +300,7 @@ When `autoType` is enabled and the keyboard auto-shows for a focused input, `det
 3. HTML `type`: `"number"`, `"tel"` → `"Numpad"`
 4. Default: `"Full"`
 
-An `_keyboardTypeExplicit` flag tracks whether `keyboardType` was set explicitly. Explicit values disable auto-detection.
+A `_keyboardTypeSource` tag (`"unset" | "explicit" | "auto:VALUE"`) tracks who last set `keyboardType`. Explicit values disable auto-detection; auto-detected values encode which type was detected so the `onInvalidation` handler can distinguish consumer-driven changes from auto-detection round-trips.
 
 ## Docked Mode
 
