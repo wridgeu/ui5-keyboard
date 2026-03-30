@@ -325,6 +325,10 @@ const KioskKeyboardRenderer = {
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
     if (isSingleGlyph(label)) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
+      // Hangul uses strict \p{Script=Hangul} so shared CJK punctuation
+      // (、。・) falls through to isCJKGlyph(). The else-if chain prevents
+      // double-classification. Indic and Arabic are disjoint by Unicode
+      // definition, so no guards are needed for them.
       if (isHangulGlyph(label)) {
         rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphHangul);
       } else if (isCJKGlyph(label)) {
