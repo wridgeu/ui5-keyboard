@@ -1,6 +1,6 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
-import ManagedObject from "sap/ui/base/ManagedObject";
+import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
@@ -63,6 +63,9 @@ type InputModeSuppressionState = {
   originalInputMode: string | null;
   refCount: number;
 };
+
+/** Who last set keyboardType. "auto:VALUE" = auto-detected for VALUE. */
+type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
 
 /**
  * Resolves a CSS custom property holding a rem-based threshold to pixels.
@@ -127,7 +130,7 @@ export default class KioskKeyboard extends Control {
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
   declare private _baseLayout: string;
-  declare private _keyboardTypeExplicit: boolean;
+  declare private _keyboardTypeSource: KeyboardTypeSource;
   declare private _suppressedInputId: string | null;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
   declare private _focusClaimService: FocusClaimService;
@@ -142,7 +145,7 @@ export default class KioskKeyboard extends Control {
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
   declare private _responsiveSyncFrameId: number | null;
   static readonly metadata = {
-    library: "ui5.kiosk" as const,
+    library: "ui5.kiosk",
     properties: {
       /**
        * Active layout name. Only effective when keyboardType is "Full".
@@ -357,7 +360,9 @@ export default class KioskKeyboard extends Control {
       keyPress: {
         allowPreventDefault: true,
         parameters: {
+          /** The key value that was pressed (character, or a {@link KeyName} constant for non-character keys). */
           key: { type: "string" },
+          /** Whether the Shift modifier was active when the key was pressed. */
           shiftKey: { type: "boolean" },
         },
       },
@@ -372,6 +377,7 @@ export default class KioskKeyboard extends Control {
        */
       layoutChange: {
         parameters: {
+          /** The name of the newly active layout. */
           layout: { type: "string" },
         },
       },
@@ -835,7 +841,7 @@ export default class KioskKeyboard extends Control {
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
-    this._keyboardTypeExplicit = false;
+    this._keyboardTypeSource = "unset";
     this._suppressedInputId = null;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._deferredFocusOutCloseId = null;
@@ -1081,9 +1087,9 @@ export default class KioskKeyboard extends Control {
     if (!bEnabled) {
       this._redirectFocusToTargetIfOwned();
     }
-    // Intentionally bypasses super.setEnabled() - the renderer and
-    // _syncDockedDomState handle CSS classes and aria-disabled at
-    // render time, so the generic Control.setEnabled logic is not needed.
+    // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
+    // and per-key aria-disabled attributes at render time. Uses setProperty
+    // directly because Control has no base setEnabled implementation to delegate to.
     return this.setProperty("enabled", bEnabled) as this;
   }
 
@@ -1308,7 +1314,7 @@ export default class KioskKeyboard extends Control {
    */
   setKeyboardType(sType: KeyboardTypeValue): this {
     const sPrevious = this.getKeyboardType();
-    this._keyboardTypeExplicit = true;
+    this._keyboardTypeSource = "explicit";
     this.setProperty("keyboardType", sType);
     if (sType !== sPrevious) {
       this.fireEvent("keyboardTypeChange", {
@@ -1334,7 +1340,7 @@ export default class KioskKeyboard extends Control {
    */
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
-    this._keyboardTypeExplicit = false;
+    this._keyboardTypeSource = "unset";
     this.setProperty("keyboardType", KeyboardType.Full);
     if (KeyboardType.Full !== sPrevious) {
       this.fireEvent("keyboardTypeChange", {
@@ -1373,7 +1379,7 @@ export default class KioskKeyboard extends Control {
    * Whether keyboardType has been explicitly set and auto-type is locked.
    */
   isKeyboardTypeExplicit(): boolean {
-    return this._keyboardTypeExplicit;
+    return this._keyboardTypeSource === "explicit";
   }
 
   /**
@@ -2020,9 +2026,10 @@ export default class KioskKeyboard extends Control {
 
     // Auto-detect keyboard type from input metadata.
     // Skip if re-entrancy (from deferred change handler) superseded this target.
-    if (this.getAutoType() && !this._keyboardTypeExplicit && this.getTargetInput() === ui5Control.getId()) {
+    if (this.getAutoType() && this._keyboardTypeSource !== "explicit" && this.getTargetInput() === ui5Control.getId()) {
       const detected = detectKbType(ui5Control, this._getEffectiveResolver());
       const previous = this.getKeyboardType();
+      this._keyboardTypeSource = `auto:${detected}`;
       this.setProperty("keyboardType", detected);
       if (detected !== previous) {
         this.fireEvent("keyboardTypeChange", {

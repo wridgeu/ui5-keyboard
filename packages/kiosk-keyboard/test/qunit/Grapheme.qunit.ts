@@ -1,6 +1,7 @@
 import {
   graphemeLengthAfter,
   graphemeLengthBefore,
+  isArabicGlyph,
   isCJKGlyph,
   isHangulGlyph,
   isIndicGlyph,
@@ -305,6 +306,7 @@ QUnit.test("katakana returns true", (assert) => {
 QUnit.test("CJK punctuation returns true", (assert) => {
   assert.strictEqual(isCJKGlyph("\u3001"), true, "\u3001 ideographic comma");
   assert.strictEqual(isCJKGlyph("\u3002"), true, "\u3002 ideographic full stop");
+  assert.strictEqual(isCJKGlyph("\u30FB"), true, "\u30FB katakana middle dot");
   assert.strictEqual(isCJKGlyph("\u309B"), true, "\u309B dakuten");
   assert.strictEqual(isCJKGlyph("\u309C"), true, "\u309C handakuten");
 });
@@ -404,6 +406,12 @@ QUnit.test("Latin characters return false", (assert) => {
   assert.strictEqual(isHangulGlyph("1"), false, "digit");
 });
 
+QUnit.test("shared CJK punctuation returns false (Script=Common, not Hangul)", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u3001"), false, "\u3001 ideographic comma");
+  assert.strictEqual(isHangulGlyph("\u3002"), false, "\u3002 ideographic full stop");
+  assert.strictEqual(isHangulGlyph("\u30FB"), false, "\u30FB katakana middle dot");
+});
+
 QUnit.test("empty string returns false", (assert) => {
   assert.strictEqual(isHangulGlyph(""), false, "empty string");
 });
@@ -473,4 +481,97 @@ QUnit.test("Thai characters return false", (assert) => {
 
 QUnit.test("empty string returns false", (assert) => {
   assert.strictEqual(isIndicGlyph(""), false, "empty string");
+});
+
+// ── Unit tests: isArabicGlyph ──────────────────────────────────────
+
+QUnit.module("isArabicGlyph");
+
+QUnit.test("basic Arabic letters return true", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0627"), true, "\u0627 alef");
+  assert.strictEqual(isArabicGlyph("\u0628"), true, "\u0628 ba");
+  assert.strictEqual(isArabicGlyph("\u062A"), true, "\u062A ta");
+  assert.strictEqual(isArabicGlyph("\u0639"), true, "\u0639 ain");
+  assert.strictEqual(isArabicGlyph("\u0641"), true, "\u0641 fa");
+  assert.strictEqual(isArabicGlyph("\u0644"), true, "\u0644 lam");
+  assert.strictEqual(isArabicGlyph("\u0645"), true, "\u0645 mim");
+  assert.strictEqual(isArabicGlyph("\u0646"), true, "\u0646 nun");
+  assert.strictEqual(isArabicGlyph("\u064A"), true, "\u064A ya");
+});
+
+QUnit.test("Arabic diacritical marks return true", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u064E"), true, "\u064E fatha");
+  assert.strictEqual(isArabicGlyph("\u064F"), true, "\u064F damma");
+  assert.strictEqual(isArabicGlyph("\u0650"), true, "\u0650 kasra");
+  assert.strictEqual(isArabicGlyph("\u0651"), true, "\u0651 shadda");
+  assert.strictEqual(isArabicGlyph("\u0652"), true, "\u0652 sukun");
+});
+
+QUnit.test("Arabic-Indic digits return true", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0660"), true, "\u0660 zero");
+  assert.strictEqual(isArabicGlyph("\u0669"), true, "\u0669 nine");
+});
+
+QUnit.test("Persian characters return true", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u067E"), true, "\u067E pe");
+  assert.strictEqual(isArabicGlyph("\u0686"), true, "\u0686 che");
+  assert.strictEqual(isArabicGlyph("\u0698"), true, "\u0698 zhe");
+  assert.strictEqual(isArabicGlyph("\u06AF"), true, "\u06AF gaf");
+});
+
+QUnit.test("Urdu characters return true", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0679"), true, "\u0679 tte");
+  assert.strictEqual(isArabicGlyph("\u0688"), true, "\u0688 ddal");
+  assert.strictEqual(isArabicGlyph("\u0691"), true, "\u0691 rreh");
+  assert.strictEqual(isArabicGlyph("\u06BA"), true, "\u06BA noon ghunna");
+  assert.strictEqual(isArabicGlyph("\u06D2"), true, "\u06D2 yeh barree");
+});
+
+QUnit.test("Arabic Presentation Forms return true", (assert) => {
+  assert.strictEqual(isArabicGlyph("\uFB50"), true, "\uFB50 alef wasla isolated");
+  assert.strictEqual(isArabicGlyph("\uFE70"), true, "\uFE70 fathatan isolated");
+  assert.strictEqual(isArabicGlyph("\uFEFC"), true, "\uFEFC lam alef final");
+});
+
+QUnit.test("Latin characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("A"), false, "uppercase Latin");
+  assert.strictEqual(isArabicGlyph("z"), false, "lowercase Latin");
+  assert.strictEqual(isArabicGlyph("1"), false, "digit");
+});
+
+QUnit.test("CJK characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u3042"), false, "\u3042 hiragana");
+  assert.strictEqual(isArabicGlyph("\uAC00"), false, "\uAC00 Hangul syllable");
+});
+
+QUnit.test("Indic characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0905"), false, "\u0905 Devanagari a");
+  assert.strictEqual(isArabicGlyph("\u0B85"), false, "\u0B85 Tamil a");
+});
+
+QUnit.test("Hebrew characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u05D0"), false, "\u05D0 aleph");
+  assert.strictEqual(isArabicGlyph("\u05EA"), false, "\u05EA tav");
+});
+
+QUnit.test("Cyrillic characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0410"), false, "\u0410 A");
+  assert.strictEqual(isArabicGlyph("\u042F"), false, "\u042F Ya");
+});
+
+QUnit.test("Thai characters return false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0E01"), false, "\u0E01 ko kai");
+});
+
+QUnit.test("empty string returns false", (assert) => {
+  assert.strictEqual(isArabicGlyph(""), false, "empty string");
+});
+
+QUnit.test("emoji returns false", (assert) => {
+  assert.strictEqual(isArabicGlyph("\uD83D\uDE00"), false, "emoji is not Arabic");
+});
+
+QUnit.test("checks only the first code point for multi-character strings", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u0627b"), true, "Arabic + Latin");
+  assert.strictEqual(isArabicGlyph("A\u0627"), false, "Latin + Arabic");
 });

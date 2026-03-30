@@ -4,7 +4,7 @@ import Log from "sap/base/Log";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
-import { KEY_ID_SUFFIX_RE, keyElementId } from "./internal/dom";
+import { KEY_ID_SUFFIX_RE, classifyRow, keyElementId } from "./internal/dom";
 import { KeyboardType } from "./library";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./internal/grapheme";
 
@@ -142,6 +142,10 @@ const KioskKeyboardRenderer = {
   ): void {
     rm.openStart("div", `${oControl.getId()}-row-${ri}`);
     rm.class(KIOSK_KEYBOARD_DOM.classes.row);
+    const rowKind = classifyRow(row);
+    if (rowKind) {
+      rm.attr(KIOSK_KEYBOARD_DOM.attributes.rowKind, rowKind);
+    }
     rm.openEnd();
 
     row.forEach((key, ci) => {
@@ -321,6 +325,10 @@ const KioskKeyboardRenderer = {
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
     if (isSingleGlyph(label)) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
+      // Hangul uses strict \p{Script=Hangul} so shared CJK punctuation
+      // (、。・) falls through to isCJKGlyph(). The else-if chain prevents
+      // double-classification. Indic and Arabic are disjoint by Unicode
+      // definition, so no guards are needed for them.
       if (isHangulGlyph(label)) {
         rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphHangul);
       } else if (isCJKGlyph(label)) {

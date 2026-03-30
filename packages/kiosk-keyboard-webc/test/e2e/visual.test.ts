@@ -285,6 +285,42 @@ describe("KioskKeyboard Web Component - Interactive States", () => {
     }
   });
 
+  it("should match docked + disabled mode", async function () {
+    const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
+    if (isCoarse) {
+      this.skip();
+      return;
+    }
+
+    await browser.execute(() => {
+      const kb = document.getElementById("kb-docked-disabled") as HTMLElement & { show(): void };
+      kb.show();
+    });
+
+    // Cannot use waitForDockedKeyboardOpen because it checks pointer-events !== "none",
+    // but disabled keyboards intentionally set pointer-events: none. Wait for the
+    // hidden class to be removed instead (the keyboard slides in but stays disabled).
+    await browser.waitUntil(
+      async () =>
+        browser.execute((id: string) => {
+          const host = document.getElementById(id) as (HTMLElement & { open: boolean }) | null;
+          const root = host?.shadowRoot?.querySelector(".kiosk-keyboard");
+          return !!host?.open && !root?.classList.contains("kiosk-keyboard--hidden");
+        }, "kb-docked-disabled"),
+      { timeout: 5_000, timeoutMsg: "Docked disabled keyboard did not open" },
+    );
+
+    const kb = await getKeyboardRoot("kb-docked-disabled");
+    try {
+      await matchElementSnapshotInSection(kb, "webc-docked-disabled");
+    } finally {
+      await browser.execute(() => {
+        const kb = document.getElementById("kb-docked-disabled") as HTMLElement & { close(): void };
+        kb.close();
+      });
+    }
+  });
+
   it("should keep docked mode closed on coarse pointers", async function () {
     const isCoarse = await browser.execute(() => window.matchMedia("(pointer: coarse)").matches);
     if (!isCoarse) {

@@ -1,5 +1,5 @@
 import type KioskKeyboard from "./KioskKeyboardCore.js";
-import { keyElementId } from "./core/dom-utils.js";
+import { classifyRow, keyElementId } from "./core/dom-utils.js";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
 import { KeyboardType } from "./types.js";
 
@@ -37,7 +37,12 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       onKeyDown={this._boundOnKeyDown}
     >
       {layout.map((row, rowIndex) => (
-        <div class={KIOSK_KEYBOARD_DOM.classes.row} part="row" key={`row-${rowIndex}`}>
+        <div
+          class={KIOSK_KEYBOARD_DOM.classes.row}
+          part="row"
+          key={`row-${rowIndex}`}
+          data-row-kind={classifyRow(row)}
+        >
           {row.map((key, colIndex) => {
             const id = keyElementId(this._componentId, rowIndex, colIndex);
             const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;
@@ -48,10 +53,11 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             const hasLabel = label !== "";
             const isDual = hasIcon && hasLabel;
             const isSingleGlyphLabel = isSingleGlyph(label);
-            // Hangul is a subset of the CJK regex, so it needs an explicit exclusion guard.
-            // Indic and Arabic are disjoint from all other script families by Unicode
-            // definition (no character belongs to multiple Script_Extensions groups below),
-            // so no priority guards are needed for them.
+            // The Hangul regex uses strict \p{Script=Hangul} (not Script_Extensions)
+            // so shared CJK punctuation (、。・) falls through to isCJKGlyph().
+            // The !isHangul guard on isCJK prevents double-classification of
+            // actual Hangul characters. Indic and Arabic are disjoint from all
+            // other script families by Unicode definition, so no guards are needed.
             const isHangul = isSingleGlyphLabel && isHangulGlyph(label);
             const isCJK = isSingleGlyphLabel && !isHangul && isCJKGlyph(label);
             const isIndic = isSingleGlyphLabel && isIndicGlyph(label);

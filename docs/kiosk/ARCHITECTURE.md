@@ -323,17 +323,18 @@ Detection uses static `ReadonlySet` constants for each check, avoiding repeated 
 
 ### Explicit vs Auto-Detected Type
 
-A private `_keyboardTypeExplicit` flag tracks whether the developer explicitly set `keyboardType`. The custom `setKeyboardType()` setter sets this flag to `true`. Auto-detection uses `setProperty("keyboardType", ...)` directly to bypass the flag.
+A private `_keyboardTypeSource` tag (typed `"unset" | "explicit" | "auto:VALUE"`) tracks who last set `keyboardType`. The custom `setKeyboardType()` setter sets this to `"explicit"`. Auto-detection sets it to `"auto:Numpad"` (or the detected value) before calling `setProperty("keyboardType", ...)` directly.
 
-Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" }` in the constructor will call `setKeyboardType("Numpad")` which sets the flag, so auto-detection is disabled.
+Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" }` in the constructor will call `setKeyboardType("Numpad")` which sets the tag to `"explicit"`, so auto-detection is disabled.
 
 ### Integration Point
 
 In `_onDocumentFocusIn`, after resolving the UI5 control and before `show()`:
 
 ```ts
-if (this.getAutoType() && !this._keyboardTypeExplicit) {
-  const detected = this._detectKeyboardType(ui5Control);
+if (this.getAutoType() && this._keyboardTypeSource !== "explicit") {
+  const detected = detectKbType(ui5Control, this._getEffectiveResolver());
+  this._keyboardTypeSource = `auto:${detected}`;
   this.setProperty("keyboardType", detected); // bypasses custom setter
 }
 ```
@@ -548,8 +549,8 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | `inputIds` with `autoShow`              | `_resolveClaimableControl()` filters by `inputIds`; delegation triggers `show()` |
 | `inputIds` aggregation churn            | `_setupInputIds()` rebinds delegates by control ID on each auto-show `focusin`   |
 | Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                          |
-| Explicit `keyboardType` vs auto-type    | `_keyboardTypeExplicit` flag disables auto-detection                             |
-| Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the flag                         |
+| Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                 |
+| Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                   |
 | `inputmode` restore on target switch    | `_suppressNativeKeyboard()` restores previous before suppressing new             |
 | `inputmode` restore on destroy          | `exit()` calls `_restoreNativeKeyboard()`                                        |
 | Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop             |
