@@ -53,10 +53,11 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             const hasLabel = label !== "";
             const isDual = hasIcon && hasLabel;
             const isSingleGlyphLabel = isSingleGlyph(label);
-            // Hangul is a subset of the CJK regex, so it needs an explicit exclusion guard.
-            // Indic and Arabic are disjoint from all other script families by Unicode
-            // definition (no character belongs to multiple Script_Extensions groups below),
-            // so no priority guards are needed for them.
+            // The Hangul regex uses strict \p{Script=Hangul} (not Script_Extensions)
+            // so shared CJK punctuation (、。・) falls through to isCJKGlyph().
+            // The !isHangul guard on isCJK prevents double-classification of
+            // actual Hangul characters. Indic and Arabic are disjoint from all
+            // other script families by Unicode definition, so no guards are needed.
             const isHangul = isSingleGlyphLabel && isHangulGlyph(label);
             const isCJK = isSingleGlyphLabel && !isHangul && isCJKGlyph(label);
             const isIndic = isSingleGlyphLabel && isIndicGlyph(label);
