@@ -35,3 +35,5 @@ server:
         useRelativeModulePaths: true
     - name: ui5-middleware-livereload
       afterMiddleware: compression
+      configuration:
+        exclusions: "__baselines__|__screenshots__|\\.png$"
