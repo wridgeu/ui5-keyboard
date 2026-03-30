@@ -1,5 +1,5 @@
 import type KioskKeyboard from "./KioskKeyboardCore.js";
-import { keyElementId } from "./core/dom-utils.js";
+import { classifyRow, keyElementId } from "./core/dom-utils.js";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
 import { KeyboardType } from "./types.js";
 
@@ -37,7 +37,12 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       onKeyDown={this._boundOnKeyDown}
     >
       {layout.map((row, rowIndex) => (
-        <div class={KIOSK_KEYBOARD_DOM.classes.row} part="row" key={`row-${rowIndex}`}>
+        <div
+          class={KIOSK_KEYBOARD_DOM.classes.row}
+          part="row"
+          key={`row-${rowIndex}`}
+          data-row-kind={classifyRow(row)}
+        >
           {row.map((key, colIndex) => {
             const id = keyElementId(this._componentId, rowIndex, colIndex);
             const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;

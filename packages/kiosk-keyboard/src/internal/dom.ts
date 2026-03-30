@@ -20,6 +20,34 @@ export function keyElementId(controlId: string, row: number, col: number): strin
   return `${controlId}-key-${row}-${col}`;
 }
 
+const FKEY_FNUM_RE = /^\{fkey:F\d+\}$/;
+const NAV_KEYS: ReadonlySet<string> = new Set([
+  "{fkey:Home}",
+  "{fkey:End}",
+  "{fkey:ArrowUp}",
+  "{fkey:ArrowDown}",
+  "{fkey:ArrowLeft}",
+  "{fkey:ArrowRight}",
+  "{fkey:PageUp}",
+  "{fkey:PageDown}",
+]);
+
+/**
+ * Classifies a layout row by its content for CSS targeting via `data-row-kind`.
+ *
+ * Content-driven so custom layouts get correct kinds automatically.
+ *
+ * - `"fkey"` -- all keys are function keys (F1, F2, ... pattern)
+ * - `"nav"` -- all keys are known navigation keys (arrows, Home/End, PgUp/PgDn)
+ * - `undefined` -- everything else (character rows, mixed rows, custom fkey rows)
+ */
+export function classifyRow(row: ReadonlyArray<{ value: string }>): "fkey" | "nav" | undefined {
+  if (row.length === 0) return undefined;
+  if (row.every((k) => FKEY_FNUM_RE.test(k.value))) return "fkey";
+  if (row.every((k) => NAV_KEYS.has(k.value))) return "nav";
+  return undefined;
+}
+
 /** Type guard: returns true if the value is an HTMLInputElement or HTMLTextAreaElement. */
 export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;

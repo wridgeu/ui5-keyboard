@@ -41,6 +41,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
   attributes: Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
+    rowKind: "data-row-kind",
   }),
   selectors: Object.freeze({
     root: ".ui5KioskKeyboard",
