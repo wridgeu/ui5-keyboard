@@ -6,6 +6,7 @@ import {
   isCJKGlyph,
   isHangulGlyph,
   isIndicGlyph,
+  isArabicGlyph,
 } from "../../src/core/grapheme.js";
 
 describe("graphemeLengthBefore", () => {
@@ -240,6 +241,13 @@ describe("isCJKGlyph", () => {
   it("returns true for halfwidth Hangul", () => {
     expect(isCJKGlyph("\uFFA1")).toBe(true); // ﾡ (halfwidth Hangul kiyeok)
     expect(isCJKGlyph("\uFFBE")).toBe(true); // ﾾ (halfwidth Hangul ieung)
+  });
+
+  // --- positive: shared CJK punctuation (must NOT be claimed by Hangul) ---
+  it("returns true for shared CJK punctuation that also has Script_Extensions=Hangul", () => {
+    expect(isCJKGlyph("\u3001")).toBe(true); // 、 ideographic comma
+    expect(isCJKGlyph("\u3002")).toBe(true); // 。 ideographic full stop
+    expect(isCJKGlyph("\u30FB")).toBe(true); // ・ katakana middle dot
   });
 
   // --- negative: non-CJK scripts (false-positive guards) ---
@@ -562,6 +570,19 @@ describe("isHangulGlyph", () => {
     expect(isHangulGlyph("\u0627")).toBe(false); // ا
   });
 
+  // --- negative: shared CJK punctuation that has Script_Extensions=Hangul but Script=Common ---
+  it("returns false for ideographic comma (shared CJK, not Hangul-exclusive)", () => {
+    expect(isHangulGlyph("\u3001")).toBe(false); // 、
+  });
+
+  it("returns false for ideographic full stop (shared CJK, not Hangul-exclusive)", () => {
+    expect(isHangulGlyph("\u3002")).toBe(false); // 。
+  });
+
+  it("returns false for katakana middle dot (shared CJK, not Hangul-exclusive)", () => {
+    expect(isHangulGlyph("\u30FB")).toBe(false); // ・
+  });
+
   it("returns false for empty string", () => {
     expect(isHangulGlyph("")).toBe(false);
   });
@@ -573,5 +594,114 @@ describe("isHangulGlyph", () => {
   it("checks only the first code point for multi-character strings", () => {
     expect(isHangulGlyph("\u3131b")).toBe(true); // Hangul + Latin
     expect(isHangulGlyph("A\u3131")).toBe(false); // Latin + Hangul
+  });
+});
+
+describe("isArabicGlyph", () => {
+  // --- positive: Basic Arabic letters ---
+  it("returns true for basic Arabic letters", () => {
+    expect(isArabicGlyph("\u0627")).toBe(true); // ا (alef)
+    expect(isArabicGlyph("\u0628")).toBe(true); // ب (ba)
+    expect(isArabicGlyph("\u062A")).toBe(true); // ت (ta)
+    expect(isArabicGlyph("\u0639")).toBe(true); // ع (ain)
+    expect(isArabicGlyph("\u0641")).toBe(true); // ف (fa)
+    expect(isArabicGlyph("\u0642")).toBe(true); // ق (qaf)
+    expect(isArabicGlyph("\u0643")).toBe(true); // ك (kaf)
+    expect(isArabicGlyph("\u0644")).toBe(true); // ل (lam)
+    expect(isArabicGlyph("\u0645")).toBe(true); // م (mim)
+    expect(isArabicGlyph("\u0646")).toBe(true); // ن (nun)
+    expect(isArabicGlyph("\u0647")).toBe(true); // ه (ha)
+    expect(isArabicGlyph("\u064A")).toBe(true); // ي (ya)
+  });
+
+  // --- positive: Arabic diacritical marks ---
+  it("returns true for Arabic diacritical marks", () => {
+    expect(isArabicGlyph("\u0650")).toBe(true); // ِ (kasra)
+    expect(isArabicGlyph("\u064E")).toBe(true); // َ (fatha)
+    expect(isArabicGlyph("\u064F")).toBe(true); // ُ (damma)
+    expect(isArabicGlyph("\u0651")).toBe(true); // ّ (shadda)
+    expect(isArabicGlyph("\u0652")).toBe(true); // ْ (sukun)
+  });
+
+  // --- positive: Arabic-Indic digits ---
+  it("returns true for Arabic-Indic digits", () => {
+    expect(isArabicGlyph("\u0660")).toBe(true); // ٠ (zero)
+    expect(isArabicGlyph("\u0669")).toBe(true); // ٩ (nine)
+  });
+
+  // --- positive: Persian characters ---
+  it("returns true for Persian (Farsi) characters", () => {
+    expect(isArabicGlyph("\u067E")).toBe(true); // پ (pe)
+    expect(isArabicGlyph("\u0686")).toBe(true); // چ (che)
+    expect(isArabicGlyph("\u0698")).toBe(true); // ژ (zhe)
+    expect(isArabicGlyph("\u06AF")).toBe(true); // گ (gaf)
+  });
+
+  // --- positive: Urdu characters ---
+  it("returns true for Urdu characters", () => {
+    expect(isArabicGlyph("\u0679")).toBe(true); // ٹ (tte)
+    expect(isArabicGlyph("\u0688")).toBe(true); // ڈ (ddal)
+    expect(isArabicGlyph("\u0691")).toBe(true); // ڑ (rreh)
+    expect(isArabicGlyph("\u06BA")).toBe(true); // ں (noon ghunna)
+    expect(isArabicGlyph("\u06BE")).toBe(true); // ھ (heh doachashmee)
+    expect(isArabicGlyph("\u06D2")).toBe(true); // ے (yeh barree)
+  });
+
+  // --- positive: Arabic Presentation Forms-A ---
+  it("returns true for Arabic Presentation Forms-A", () => {
+    expect(isArabicGlyph("\uFB50")).toBe(true); // ﭐ (alef wasla isolated)
+    expect(isArabicGlyph("\uFBD3")).toBe(true); // ﯓ (ng isolated)
+  });
+
+  // --- positive: Arabic Presentation Forms-B ---
+  it("returns true for Arabic Presentation Forms-B", () => {
+    expect(isArabicGlyph("\uFE70")).toBe(true); // ﹰ (fathatan isolated)
+    expect(isArabicGlyph("\uFEFC")).toBe(true); // ﻼ (lam alef final)
+  });
+
+  // --- negative: non-Arabic scripts (false-positive guards) ---
+  it("returns false for Latin characters", () => {
+    expect(isArabicGlyph("A")).toBe(false);
+    expect(isArabicGlyph("z")).toBe(false);
+    expect(isArabicGlyph("1")).toBe(false);
+  });
+
+  it("returns false for CJK characters", () => {
+    expect(isArabicGlyph("\u3042")).toBe(false); // あ (hiragana)
+    expect(isArabicGlyph("\u4E00")).toBe(false); // 一 (CJK ideograph)
+    expect(isArabicGlyph("\uAC00")).toBe(false); // 가 (Hangul)
+  });
+
+  it("returns false for Indic characters", () => {
+    expect(isArabicGlyph("\u0905")).toBe(false); // अ (Devanagari)
+    expect(isArabicGlyph("\u0B85")).toBe(false); // அ (Tamil)
+  });
+
+  it("returns false for Hebrew characters", () => {
+    expect(isArabicGlyph("\u05D0")).toBe(false); // א (aleph)
+    expect(isArabicGlyph("\u05EA")).toBe(false); // ת (tav)
+  });
+
+  it("returns false for Cyrillic characters", () => {
+    expect(isArabicGlyph("\u0410")).toBe(false); // А
+    expect(isArabicGlyph("\u042F")).toBe(false); // Я
+  });
+
+  it("returns false for Thai characters", () => {
+    expect(isArabicGlyph("\u0E01")).toBe(false); // ก
+  });
+
+  // --- negative: edge cases ---
+  it("returns false for empty string", () => {
+    expect(isArabicGlyph("")).toBe(false);
+  });
+
+  it("returns false for emoji", () => {
+    expect(isArabicGlyph("😀")).toBe(false);
+  });
+
+  it("checks only the first code point for multi-character strings", () => {
+    expect(isArabicGlyph("\u0627b")).toBe(true); // Arabic + Latin
+    expect(isArabicGlyph("A\u0627")).toBe(false); // Latin + Arabic
   });
 });
