@@ -202,7 +202,9 @@ export enum FKeyMode {
  * @since 0.1.0
  */
 export interface KeyPressEventDetail {
+  /** The key value that was pressed (character, or a key constant for non-character keys). */
   key: string;
+  /** Whether the Shift modifier was active when the key was pressed. */
   shiftKey: boolean;
   /**
    * The character that would be inserted (after shift resolution).
@@ -219,6 +221,7 @@ export interface KeyPressEventDetail {
  * @since 0.1.0
  */
 export interface LayoutChangeEventDetail {
+  /** The name of the newly active layout. */
   layout: string;
 }
 
@@ -229,8 +232,11 @@ export interface LayoutChangeEventDetail {
  * @since 0.1.0
  */
 export interface KeyboardTypeChangeEventDetail {
+  /** The new keyboard type. */
   keyboardType: `${KeyboardType}`;
+  /** The previous keyboard type. */
   previousKeyboardType: `${KeyboardType}`;
+  /** Whether this change was triggered by auto-type detection. */
   autoDetected: boolean;
 }
 
@@ -241,5 +247,6 @@ export interface KeyboardTypeChangeEventDetail {
  * @since 0.1.0
  */
 export interface TargetInputChangeEventDetail {
+  /** The new target input element, or `null` if cleared. */
   targetElement: HTMLInputElement | HTMLTextAreaElement | null;
 }

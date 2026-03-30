@@ -404,8 +404,8 @@ The component manages:
 - **Auto-show**: `focusin`/`focusout` document listeners (capture phase),
   same pattern as the UI5 control but using DOM IDs directly instead of
   UI5 control IDs
-- **Keyboard type**: explicit vs auto-detected, same `_keyboardTypeExplicit`
-  flag pattern
+- **Keyboard type**: explicit vs auto-detected, same `_keyboardTypeSource`
+  provenance tag pattern (`"unset" | "explicit" | "auto:VALUE"`)
 
 #### Target input resolution
 

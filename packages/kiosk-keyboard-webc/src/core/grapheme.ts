@@ -67,8 +67,18 @@ export function isCJKGlyph(label: string): boolean {
   return label.length > 0 && CJK_RE.test(label);
 }
 
-/** Hangul: Jamo, Compatibility Jamo, Syllables, Extended blocks. Separate from CJK for Korean-first font stack. */
-const HANGUL_RE = /^[\p{Script_Extensions=Hangul}]/u;
+/**
+ * Hangul: Jamo, Compatibility Jamo, Syllables, Extended blocks.
+ * Separate from CJK for Korean-first font stack.
+ *
+ * Uses strict `\p{Script=Hangul}` (not Script_Extensions) because shared
+ * CJK punctuation like ideographic comma (U+3001), ideographic full stop
+ * (U+3002), and katakana middle dot (U+30FB) have Script_Extensions=Hangul
+ * but Script=Common. Using Script_Extensions here would claim these shared
+ * characters for the Hangul font stack instead of letting them fall through
+ * to the broader CJK detector.
+ */
+const HANGUL_RE = /^[\p{Script=Hangul}]/u;
 
 export function isHangulGlyph(label: string): boolean {
   return label.length > 0 && HANGUL_RE.test(label);

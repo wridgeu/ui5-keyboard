@@ -6,12 +6,12 @@
 
 CJK glyphs (hiragana, katakana, Hangul, kanji) can appear visually offset within their keys due to font glyph metrics, not CSS layout. The issue has two dimensions: vertical offset (text-box-edge metrics mismatch) and horizontal offset (asymmetric font side bearings).
 
-## What Was Implemented
+## Implementation
 
-- **CJK glyph detection** (`isCJKGlyph()`, `isHangulGlyph()`, `isIndicGlyph()`) identifying script-specific characters by Unicode range
+- **Script glyph detection** (`isCJKGlyph()`, `isHangulGlyph()`, `isIndicGlyph()`, `isArabicGlyph()`) identifying script-specific characters via Unicode `\p{Script_Extensions=...}` properties (Hangul uses strict `\p{Script=Hangul}` to avoid claiming shared CJK punctuation)
 - **`.kiosk-key__label--glyph-cjk`** class with `text-box-edge: text` override (progressive enhancement under `@supports (text-box-trim: trim-both)`)
-- **CJK font-family override**: CJK system fonts placed first in the stack for CJK labels, ensuring matched glyph and line-box metrics. Exposed via `--kiosk-keyboard-cjk-font-family`, `--kiosk-keyboard-hangul-font-family`, and `--kiosk-keyboard-indic-font-family` consumer overrides
-- **Separate Hangul and Indic classes** with dedicated font stacks for correct per-script metrics
+- **Script font-family overrides**: script-specific system fonts placed first in the stack, ensuring matched glyph and line-box metrics. Exposed via `--kiosk-keyboard-cjk-font-family`, `--kiosk-keyboard-hangul-font-family`, `--kiosk-keyboard-indic-font-family`, and `--kiosk-keyboard-arabic-font-family` consumer overrides
+- **Separate Hangul, Indic, and Arabic classes** with dedicated font stacks for correct per-script metrics
 
 ## What Remains
 

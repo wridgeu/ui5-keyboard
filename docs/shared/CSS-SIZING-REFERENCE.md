@@ -280,7 +280,7 @@ The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-on
 
 ### F-Key Row Wrap
 
-At narrow widths (<=35rem / 560px), a `@container` query combined with `:has()` causes the 12-key F-key row to split into two rows of six. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row with flex-wrap. Above 35rem, all 12 keys fit on a single row. This is a progressive enhancement: browsers without `:has()` support (pre-2023) keep the single-row truncated fallback.
+At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind="fkey"]` rows and splits them into two rows of six via `flex-wrap`. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row. Above 35rem, all 12 keys fit on a single row. Navigation rows (`[data-row-kind="nav"]`) are unaffected and always stay on a single row. The `data-row-kind` attribute is set automatically by `classifyRow()` based on row content.
 
 ## Structural Properties
 
@@ -342,13 +342,14 @@ Hangul gets a separate class from CJK so Korean system fonts are prioritized ove
   }
   .kiosk-key__label--glyph-cjk,
   .kiosk-key__label--glyph-hangul,
-  .kiosk-key__label--glyph-indic {
+  .kiosk-key__label--glyph-indic,
+  .kiosk-key__label--glyph-arabic {
     text-box-edge: text;
   }
 }
 ```
 
-Trims invisible half-leading above and below text, giving true optical centering inside keys. Single-glyph Latin labels use `cap alphabetic` for tighter metrics. CJK, Hangul, and Indic labels fall back to `text` because `cap alphabetic` is a Latin-specific metric that produces incorrect trimming for these scripts.
+Trims invisible half-leading above and below text, giving true optical centering inside keys. Single-glyph Latin labels use `cap alphabetic` for tighter metrics. CJK, Hangul, Indic, and Arabic labels fall back to `text` because `cap alphabetic` is a Latin-specific metric that produces incorrect trimming for these scripts.
 
 Browser support: Chrome 133+, Edge 133+, Safari 18.2+. Non-supporting browsers keep the existing `line-height` behavior unchanged.
 
