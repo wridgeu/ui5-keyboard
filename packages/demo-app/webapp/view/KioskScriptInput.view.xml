@@ -57,22 +57,6 @@
                 </VBox>
             </Panel>
 
-            <Panel class="sapUiSmallMarginBottom" headerText="Indic Scripts">
-                <VBox class="sapUiSmallMargin">
-                    <Label text="Indic Input" labelFor="indicInput" />
-                    <Input
-                        id="indicInput"
-                        placeholder="हिन्दी"
-                        width="100%" />
-                    <kiosk:KioskKeyboard
-                        id="indicKeyboard"
-                        layout="qwerty"
-                        autoType="true"
-                        targetInput="indicInput"
-                        class="sapUiSmallMarginTop" />
-                    <Text text="Devanagari glyph rendering test" class="sapUiSmallMarginTop" />
-                </VBox>
-            </Panel>
         </content>
     </Page>
 </mvc:View>

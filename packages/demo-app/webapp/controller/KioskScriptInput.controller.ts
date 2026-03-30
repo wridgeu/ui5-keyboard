@@ -2,7 +2,7 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Script input demo for Japanese kana, Korean Hangul, Arabic, and Indic scripts.
+ * Script input demo for Japanese kana, Korean Hangul, and Arabic.
  * Each keyboard section uses composition middleware automatically.
  *
  * @namespace demo.hotkeys.controller
