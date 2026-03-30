@@ -62,6 +62,34 @@ export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElem
   return null;
 }
 
+const FKEY_FNUM_RE = /^\{fkey:F\d+\}$/;
+const NAV_KEYS: ReadonlySet<string> = new Set([
+  "{fkey:Home}",
+  "{fkey:End}",
+  "{fkey:ArrowUp}",
+  "{fkey:ArrowDown}",
+  "{fkey:ArrowLeft}",
+  "{fkey:ArrowRight}",
+  "{fkey:PageUp}",
+  "{fkey:PageDown}",
+]);
+
+/**
+ * Classifies a layout row by its content for CSS targeting via `data-row-kind`.
+ *
+ * Content-driven so custom layouts get correct kinds automatically.
+ *
+ * - `"fkey"` -- all keys are function keys (F1, F2, ... pattern)
+ * - `"nav"` -- all keys are known navigation keys (arrows, Home/End, PgUp/PgDn)
+ * - `undefined` -- everything else (character rows, mixed rows, custom fkey rows)
+ */
+export function classifyRow(row: ReadonlyArray<{ value: string }>): "fkey" | "nav" | undefined {
+  if (row.length === 0) return undefined;
+  if (row.every((k) => FKEY_FNUM_RE.test(k.value))) return "fkey";
+  if (row.every((k) => NAV_KEYS.has(k.value))) return "nav";
+  return undefined;
+}
+
 /** Callback type for custom target resolution. */
 type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
 

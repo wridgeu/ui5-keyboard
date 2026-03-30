@@ -238,13 +238,14 @@
     justify-content: center;
   }
 
-  /* F-key row wrap: 12 F-keys split into 2×6 at narrow widths (<=35rem). */
+  /* F-key row wrap: 12 F-keys split into 2×6 at narrow widths (<=35rem).
+     Targets [data-row-kind="fkey"] set by classifyRow(). Nav rows unaffected. */
   @container keyboard (max-width: 35rem) {
-    .ui5KioskRow:has(> [data-key^="{fkey:"]) {
+    .ui5KioskRow[data-row-kind="fkey"] {
       flex-wrap: wrap;
     }
 
-    [data-key^="{fkey:"].ui5KioskKey {
+    .ui5KioskRow[data-row-kind="fkey"] > .ui5KioskKey {
       flex: 1 0 ~"calc((100% - 5 * var(--_ui5KioskKeyboard-keyGap)) / 6)";
     }
   }
