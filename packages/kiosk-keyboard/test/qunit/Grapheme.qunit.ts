@@ -306,6 +306,7 @@ QUnit.test("katakana returns true", (assert) => {
 QUnit.test("CJK punctuation returns true", (assert) => {
   assert.strictEqual(isCJKGlyph("\u3001"), true, "\u3001 ideographic comma");
   assert.strictEqual(isCJKGlyph("\u3002"), true, "\u3002 ideographic full stop");
+  assert.strictEqual(isCJKGlyph("\u30FB"), true, "\u30FB katakana middle dot");
   assert.strictEqual(isCJKGlyph("\u309B"), true, "\u309B dakuten");
   assert.strictEqual(isCJKGlyph("\u309C"), true, "\u309C handakuten");
 });
@@ -403,6 +404,12 @@ QUnit.test("CJK ideographs return false", (assert) => {
 QUnit.test("Latin characters return false", (assert) => {
   assert.strictEqual(isHangulGlyph("A"), false, "uppercase Latin");
   assert.strictEqual(isHangulGlyph("1"), false, "digit");
+});
+
+QUnit.test("shared CJK punctuation returns false (Script=Common, not Hangul)", (assert) => {
+  assert.strictEqual(isHangulGlyph("\u3001"), false, "\u3001 ideographic comma");
+  assert.strictEqual(isHangulGlyph("\u3002"), false, "\u3002 ideographic full stop");
+  assert.strictEqual(isHangulGlyph("\u30FB"), false, "\u30FB katakana middle dot");
 });
 
 QUnit.test("empty string returns false", (assert) => {
