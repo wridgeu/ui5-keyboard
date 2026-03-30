@@ -271,6 +271,45 @@ describe("kiosk-keyboard web component", () => {
     });
   });
 
+  describe("row classification (data-row-kind)", () => {
+    it("marks F-key rows as fkey", async () => {
+      await waitForKeys("kb-qwerty-fk");
+      const kinds = await browser.execute(() => {
+        const kb = document.getElementById("kb-qwerty-fk");
+        const rows = Array.from(kb?.shadowRoot?.querySelectorAll(".kiosk-row") ?? []);
+        return rows.map((r) => r.getAttribute("data-row-kind"));
+      });
+      // First row is the F-key row (F1-F12)
+      expect(kinds[0]).toBe("fkey");
+      // Remaining rows (number, qwerty, asdf, zxcv, bottom) have no kind
+      expect(kinds.slice(1).every((k) => k === null)).toBe(true);
+    });
+
+    it("marks nav rows as nav", async () => {
+      await waitForKeys("kb-nav");
+      const kinds = await browser.execute(() => {
+        const kb = document.getElementById("kb-nav");
+        const rows = Array.from(kb?.shadowRoot?.querySelectorAll(".kiosk-row") ?? []);
+        return rows.map((r) => r.getAttribute("data-row-kind"));
+      });
+      // Nav layout has nav rows followed by a control row (ABC, Backspace, Fn)
+      const navCount = kinds.filter((k) => k === "nav").length;
+      const nullCount = kinds.filter((k) => k === null).length;
+      expect(navCount).toBeGreaterThan(0);
+      expect(nullCount).toBeGreaterThan(0);
+    });
+
+    it("does not classify regular character rows", async () => {
+      await waitForKeys("kb-qwerty");
+      const kinds = await browser.execute(() => {
+        const kb = document.getElementById("kb-qwerty");
+        const rows = Array.from(kb?.shadowRoot?.querySelectorAll(".kiosk-row") ?? []);
+        return rows.map((r) => r.getAttribute("data-row-kind"));
+      });
+      expect(kinds.every((k) => k === null)).toBe(true);
+    });
+  });
+
   describe("ja-kana layout toggle", () => {
     it("switches from ja-romaji to ja-kana via toggle key", async () => {
       await waitForKeys("kb-ja-romaji");
