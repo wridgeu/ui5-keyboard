@@ -360,7 +360,9 @@ export default class KioskKeyboard extends Control {
       keyPress: {
         allowPreventDefault: true,
         parameters: {
+          /** The key value that was pressed (character, or a {@link KeyName} constant for non-character keys). */
           key: { type: "string" },
+          /** Whether the Shift modifier was active when the key was pressed. */
           shiftKey: { type: "boolean" },
         },
       },
@@ -375,6 +377,7 @@ export default class KioskKeyboard extends Control {
        */
       layoutChange: {
         parameters: {
+          /** The name of the newly active layout. */
           layout: { type: "string" },
         },
       },
