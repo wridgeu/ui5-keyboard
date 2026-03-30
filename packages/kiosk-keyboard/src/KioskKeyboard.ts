@@ -64,6 +64,9 @@ type InputModeSuppressionState = {
   refCount: number;
 };
 
+/** Who last set keyboardType. "auto:VALUE" = auto-detected for VALUE. */
+type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
+
 /**
  * Resolves a CSS custom property holding a rem-based threshold to pixels.
  * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem * remPx`
@@ -127,7 +130,7 @@ export default class KioskKeyboard extends Control {
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
   declare private _baseLayout: string;
-  declare private _keyboardTypeExplicit: boolean;
+  declare private _keyboardTypeSource: KeyboardTypeSource;
   declare private _suppressedInputId: string | null;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
   declare private _focusClaimService: FocusClaimService;
@@ -835,7 +838,7 @@ export default class KioskKeyboard extends Control {
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
-    this._keyboardTypeExplicit = false;
+    this._keyboardTypeSource = "unset";
     this._suppressedInputId = null;
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._deferredFocusOutCloseId = null;
@@ -1308,7 +1311,7 @@ export default class KioskKeyboard extends Control {
    */
   setKeyboardType(sType: KeyboardTypeValue): this {
     const sPrevious = this.getKeyboardType();
-    this._keyboardTypeExplicit = true;
+    this._keyboardTypeSource = "explicit";
     this.setProperty("keyboardType", sType);
     if (sType !== sPrevious) {
       this.fireEvent("keyboardTypeChange", {
@@ -1334,7 +1337,7 @@ export default class KioskKeyboard extends Control {
    */
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
-    this._keyboardTypeExplicit = false;
+    this._keyboardTypeSource = "unset";
     this.setProperty("keyboardType", KeyboardType.Full);
     if (KeyboardType.Full !== sPrevious) {
       this.fireEvent("keyboardTypeChange", {
@@ -1373,7 +1376,7 @@ export default class KioskKeyboard extends Control {
    * Whether keyboardType has been explicitly set and auto-type is locked.
    */
   isKeyboardTypeExplicit(): boolean {
-    return this._keyboardTypeExplicit;
+    return this._keyboardTypeSource === "explicit";
   }
 
   /**
@@ -2020,9 +2023,10 @@ export default class KioskKeyboard extends Control {
 
     // Auto-detect keyboard type from input metadata.
     // Skip if re-entrancy (from deferred change handler) superseded this target.
-    if (this.getAutoType() && !this._keyboardTypeExplicit && this.getTargetInput() === ui5Control.getId()) {
+    if (this.getAutoType() && this._keyboardTypeSource !== "explicit" && this.getTargetInput() === ui5Control.getId()) {
       const detected = detectKbType(ui5Control, this._getEffectiveResolver());
       const previous = this.getKeyboardType();
+      this._keyboardTypeSource = `auto:${detected}`;
       this.setProperty("keyboardType", detected);
       if (detected !== previous) {
         this.fireEvent("keyboardTypeChange", {
