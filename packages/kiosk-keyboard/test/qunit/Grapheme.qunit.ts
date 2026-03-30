@@ -483,7 +483,7 @@ QUnit.test("empty string returns false", (assert) => {
   assert.strictEqual(isIndicGlyph(""), false, "empty string");
 });
 
-// -- Unit tests: isArabicGlyph -────────────────────────────────────
+// ── Unit tests: isArabicGlyph ──────────────────────────────────────
 
 QUnit.module("isArabicGlyph");
 

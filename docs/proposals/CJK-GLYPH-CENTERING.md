@@ -6,7 +6,7 @@
 
 CJK glyphs (hiragana, katakana, Hangul, kanji) can appear visually offset within their keys due to font glyph metrics, not CSS layout. The issue has two dimensions: vertical offset (text-box-edge metrics mismatch) and horizontal offset (asymmetric font side bearings).
 
-## What Was Implemented
+## Implementation
 
 - **Script glyph detection** (`isCJKGlyph()`, `isHangulGlyph()`, `isIndicGlyph()`, `isArabicGlyph()`) identifying script-specific characters via Unicode `\p{Script_Extensions=...}` properties (Hangul uses strict `\p{Script=Hangul}` to avoid claiming shared CJK punctuation)
 - **`.kiosk-key__label--glyph-cjk`** class with `text-box-edge: text` override (progressive enhancement under `@supports (text-box-trim: trim-both)`)
