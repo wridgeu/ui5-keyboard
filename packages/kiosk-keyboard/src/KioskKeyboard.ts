@@ -1,6 +1,6 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
-import ManagedObject from "sap/ui/base/ManagedObject";
+import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
@@ -142,7 +142,7 @@ export default class KioskKeyboard extends Control {
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
   declare private _responsiveSyncFrameId: number | null;
   static readonly metadata = {
-    library: "ui5.kiosk" as const,
+    library: "ui5.kiosk",
     properties: {
       /**
        * Active layout name. Only effective when keyboardType is "Full".
