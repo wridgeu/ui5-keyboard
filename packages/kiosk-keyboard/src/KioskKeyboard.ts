@@ -1081,9 +1081,9 @@ export default class KioskKeyboard extends Control {
     if (!bEnabled) {
       this._redirectFocusToTargetIfOwned();
     }
-    // Intentionally bypasses super.setEnabled() - the renderer and
-    // _syncDockedDomState handle CSS classes and aria-disabled at
-    // render time, so the generic Control.setEnabled logic is not needed.
+    // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
+    // and per-key aria-disabled attributes at render time. Uses setProperty
+    // directly because Control has no base setEnabled implementation to delegate to.
     return this.setProperty("enabled", bEnabled) as this;
   }
 
