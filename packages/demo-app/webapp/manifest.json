@@ -168,6 +168,11 @@
           "target": "kioskWebComponent"
         },
         {
+          "name": "kioskWebComponentTooling",
+          "pattern": "kiosk/web-component-tooling",
+          "target": "kioskWebComponentTooling"
+        },
+        {
           "name": "kioskScriptInput",
           "pattern": "kiosk/script-input",
           "target": "kioskScriptInput"
@@ -253,6 +258,10 @@
         "kioskWebComponent": {
           "id": "kioskWebComponent",
           "name": "KioskWebComponent"
+        },
+        "kioskWebComponentTooling": {
+          "id": "kioskWebComponentTooling",
+          "name": "KioskWebComponentTooling"
         },
         "kioskScriptInput": {
           "id": "kioskScriptInput",
