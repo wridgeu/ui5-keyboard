@@ -253,6 +253,50 @@ All scripts include screenshots by default. The actual/diff columns are hidden b
 - **Image format:** PNG files named `<tag>.png` where `<tag>` matches the snapshot tag used in tests.
 - **If `@wdio/visual-service` changes its output structure**, update the route mapping in `visual-browse.mjs` (the `routes` object near the bottom of the file) and possibly `visual-report.mjs`.
 
+## `check-visual-baselines.mjs`
+
+Validates that every visual snapshot tag referenced in test files has a corresponding baseline image for desktop and every device profile. Prevents regressions where a test is added but device-profile baselines are missing.
+
+### Usage
+
+```bash
+node tools/check-visual-baselines.mjs [--fix]
+```
+
+- Without `--fix`: reports missing baselines and exits non-zero if any are found.
+- With `--fix`: lists the commands to run to generate the missing baselines.
+
+Run via `npm run check:baselines`.
+
+## `run-npm.mjs`
+
+Utility module for running npm commands synchronously from within Node scripts.
+
+### `runNpm(args, cwd)`
+
+Spawns `npm` with the given arguments in the specified working directory. Forwards stdout/stderr and exits the process on failure. Returns the captured stdout string.
+
+```js
+import { runNpm } from "./run-npm.mjs";
+runNpm(["run", "build"], "packages/hotkeys");
+```
+
+## `serve-static.mjs`
+
+Lightweight HTTP file server module used by `visual-browse.mjs` and `visual-report.mjs`.
+
+### `serveStatic(root, opts?)`
+
+Serves a directory over HTTP and optionally opens the browser. Supports route prefix mapping, custom request handlers, and a fallback path for SPA-style routing. Includes path traversal protection.
+
+| Option     | Type                       | Default | Description                                            |
+| ---------- | -------------------------- | ------- | ------------------------------------------------------ |
+| `port`     | `number`                   | `0`     | Port to listen on (`0` = OS-assigned)                  |
+| `open`     | `boolean`                  | `true`  | Open browser automatically                             |
+| `fallback` | `string`                   | -       | Path (relative to root) to serve for unknown routes    |
+| `routes`   | `Record<string, string>`   | -       | URL prefix to filesystem directory mapping             |
+| `handlers` | `Record<string, Function>` | -       | URL path to handler function mapping (dynamic content) |
+
 ## `check-demo-webc-bundle.mjs`
 
 Build-time smoke check that keeps the documented UI5 bridge path honest.
@@ -334,6 +378,26 @@ Run via `npm run test:packages:smoke`.
 | `package.json`                              | `report:visual:kiosk`, `report:visual:webc` |
 | `packages/kiosk-keyboard/package.json`      | `test:e2e:report`                           |
 | `packages/kiosk-keyboard-webc/package.json` | `test:e2e:report`                           |
+
+### `check-visual-baselines.mjs`
+
+| Consumer       | Integration       |
+| -------------- | ----------------- |
+| `package.json` | `check:baselines` |
+
+### `serve-static.mjs`
+
+| Consumer            | Integration                      |
+| ------------------- | -------------------------------- |
+| `visual-browse.mjs` | HTTP server for baseline gallery |
+| `visual-report.mjs` | HTTP server for visual report    |
+
+### `run-npm.mjs`
+
+| Consumer                     | Integration                           |
+| ---------------------------- | ------------------------------------- |
+| `check-demo-webc-bundle.mjs` | Runs npm build commands synchronously |
+| `check-package-smoke.mjs`    | Runs npm pack commands synchronously  |
 
 ## `tsconfig.json`
 

@@ -298,6 +298,7 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `after-close`          | -                                                                               | Fired when the docked keyboard enters the closed state. State-change hook only; not a CSS transition-end event. |
 | `layout-change`        | `{ layout: string }`                                                            | Fired when layout switches.                                                                                     |
 | `keyboard-type-change` | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                               |
+| `target-input-change`  | `{ targetElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the target input changes (auto-show focus switch or programmatic `setTargetElement`).                |
 
 ## Methods
 
@@ -777,7 +778,7 @@ The `KioskKeyboard.DOM.exportParts` constant provides a ready-to-use attribute v
 
 ```html
 <!-- Inside my-wrapper's shadow DOM template -->
-<kiosk-keyboard exportparts="keyboard, row, key, modifier, action, key-label, key-icon"></kiosk-keyboard>
+<kiosk-keyboard exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon"></kiosk-keyboard>
 ```
 
 Or programmatically:
