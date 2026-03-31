@@ -1,7 +1,6 @@
 {
   "name": "kiosk-keyboard-webc",
   "version": "0.1.0",
-  "private": true,
   "description": "Native web component variant of the kiosk keyboard, built on UI5 Web Components framework",
   "keywords": [
     "custom-element",
