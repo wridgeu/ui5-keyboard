@@ -49,6 +49,7 @@
       "types": "./dist/middleware/*.d.ts",
       "default": "./dist/middleware/*.js"
     },
+    "./dist/*": "./dist/*",
     "./*": "./dist/*"
   },
   "scripts": {
