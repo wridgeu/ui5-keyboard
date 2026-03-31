@@ -65,6 +65,7 @@ const TAG_PATTERNS = [
 const TOUCH_PROFILE_SKIP_TAGS = new Set([
   "kb-docked",
   "webc-docked-open",
+  "webc-docked-disabled",
   "kb-key-hovered",
   "webc-key-hovered",
   "webc-key-hovered-no-color-mix",
