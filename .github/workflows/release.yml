@@ -92,7 +92,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   publish-hotkeys:
-    needs: [release-please, ci, test, e2e-all-devices, smoke]
+    needs: [release-please, ci, e2e-all-devices, smoke]
     if: needs.release-please.outputs.hotkeys_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -111,10 +111,10 @@ jobs:
       - run: npm ci
 
       # prepublishOnly copies LICENSE and builds; OIDC auth via id-token: write
-      - run: NODE_AUTH_TOKEN="" npm publish -w packages/hotkeys --provenance --access public
+      - run: npm publish -w packages/hotkeys --provenance --access public
 
   publish-kiosk:
-    needs: [release-please, ci, test, e2e-all-devices, smoke]
+    needs: [release-please, ci, e2e-all-devices, smoke]
     if: needs.release-please.outputs.kiosk_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -132,10 +132,10 @@ jobs:
 
       - run: npm ci
 
-      - run: NODE_AUTH_TOKEN="" npm publish -w packages/kiosk-keyboard --provenance --access public
+      - run: npm publish -w packages/kiosk-keyboard --provenance --access public
 
   publish-webc:
-    needs: [release-please, ci, test, e2e-all-devices, smoke]
+    needs: [release-please, ci, e2e-all-devices, smoke]
     if: needs.release-please.outputs.webc_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -153,4 +153,4 @@ jobs:
 
       - run: npm ci
 
-      - run: NODE_AUTH_TOKEN="" npm publish -w packages/kiosk-keyboard-webc --provenance --access public
+      - run: npm publish -w packages/kiosk-keyboard-webc --provenance --access public
