@@ -1,4 +1,12 @@
-# ui5-lib-kiosk-keyboard
+<p align="center">
+  <a href="https://www.npmjs.com/package/ui5-lib-kiosk-keyboard"><img src="https://img.shields.io/npm/v/ui5-lib-kiosk-keyboard.svg" alt="npm"></a>
+  <a href="https://npmx.dev/package/ui5-lib-kiosk-keyboard"><img src="https://img.shields.io/npm/v/ui5-lib-kiosk-keyboard?label=npmx.dev&color=0a0a0a" alt="npmx"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+  <a href="https://openui5.org/"><img src="https://img.shields.io/badge/OpenUI5-1.144.0-green.svg" alt="UI5"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-blue.svg" alt="TypeScript"></a>
+</p>
+
+<h1 align="center">ui5-lib-kiosk-keyboard</h1>
 
 > Part of the [ui5-lib-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [kiosk-keyboard-webc](../kiosk-keyboard-webc/README.md).
 
