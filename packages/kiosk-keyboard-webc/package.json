@@ -33,6 +33,10 @@
       "types": "./dist/KioskKeyboard.d.ts",
       "default": "./dist/KioskKeyboard.js"
     },
+    "./core": {
+      "types": "./dist/KioskKeyboardCore.d.ts",
+      "default": "./dist/KioskKeyboardCore.js"
+    },
     "./bundle": {
       "types": "./dist/bundle.esm.d.ts",
       "default": "./dist/bundle.esm.js"

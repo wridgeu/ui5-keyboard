@@ -1,4 +1,4 @@
-import type KioskKeyboard from "./KioskKeyboard.js";
+import type KioskKeyboard from "./KioskKeyboardCore.js";
 import { classifyRow, keyElementId } from "./core/dom-utils.js";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
 import { KeyboardType } from "./types.js";
