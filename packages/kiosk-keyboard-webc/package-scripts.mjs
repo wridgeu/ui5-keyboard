@@ -26,9 +26,10 @@ const scripts = {
   },
 
   generateAPI: {
-    default: "ui5nps generateAPI.generateCEM generateAPI.validateCEM",
+    default: "ui5nps generateAPI.generateCEM generateAPI.validateCEM generateAPI.normalizeCEM",
     generateCEM: `ui5nps-script "${LIB}/cem/cem.js" analyze --config "${LIB}/cem/custom-elements-manifest.config.mjs"`,
     validateCEM: `ui5nps-script "${LIB}/cem/validate.js"`,
+    normalizeCEM: "node ./normalize-cem-paths.mjs",
   },
 
   generate: {
