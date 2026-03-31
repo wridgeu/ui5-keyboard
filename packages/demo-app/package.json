@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prestart": "node -e \"Promise.all([import('node:fs'),import('node:path')]).then(([f,p])=>{const t=p.resolve('..','kiosk-keyboard-webc','dist');try{f.readdirSync('webapp/lib')}catch{try{f.unlinkSync('webapp/lib')}catch{};f.symlinkSync(t,'webapp/lib','junction')}})\"",
+    "prestart": "node -e \"import('node:fs').then(f=>{f.mkdirSync('webapp/lib',{recursive:true});f.copyFileSync('../kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js','webapp/lib/kiosk-keyboard.bundle.js')})\"",
     "start": "ui5 serve --port 8080 -o index.html",
     "start:flp": "ui5 serve --config ui5-flp.yaml --port 8080 -o test/flp.html",
     "build": "ui5 build --clean-dest",

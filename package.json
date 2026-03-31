@@ -28,7 +28,7 @@
     "clean:kiosk": "npm run clean -w packages/kiosk-keyboard",
     "clean:kiosk-webc": "npm run clean -w packages/kiosk-keyboard-webc",
     "clean:demo": "npm run clean -w packages/demo-app",
-    "start": "npm run start:demo",
+    "start": "npm run build && npm run start:demo",
     "start:demo": "npm run start -w packages/demo-app",
     "start:flp": "npm run start:flp -w packages/demo-app",
     "start:hotkeys": "npm run start:qunit -w packages/hotkeys",
