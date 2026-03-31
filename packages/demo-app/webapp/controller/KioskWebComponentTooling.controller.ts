@@ -5,16 +5,15 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Controller for the native `<kiosk-keyboard>` web component demo page.
+ * Controller for the tooling-native web component demo page.
  *
- * Events are bound declaratively in the XML view via the bridge control's
- * event metadata (e.g. `keyPress=".onKeyPress"`). The bridge automatically
- * converts the web component's `CustomEvent.detail` into UI5 event
- * parameters accessible via `oEvent.getParameter()`.
+ * No manual bridge, no side-effect import. The `kiosk-keyboard-webc`
+ * XML namespace is resolved entirely by ui5-tooling-modules at dev/build
+ * time, which auto-generates the WebComponent wrapper on the fly.
  *
  * @namespace demo.hotkeys.controller
  */
-export default class KioskWebComponent extends BaseController {
+export default class KioskWebComponentTooling extends BaseController {
   private static readonly _MODEL_NAME = "webc";
 
   onInit(): void {
@@ -23,7 +22,7 @@ export default class KioskWebComponent extends BaseController {
         lastKey: "None",
         layout: "qwerty",
       }),
-      KioskWebComponent._MODEL_NAME,
+      KioskWebComponentTooling._MODEL_NAME,
     );
 
     this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
@@ -38,8 +37,6 @@ export default class KioskWebComponent extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
-  // ── Bridge event handlers (bound in XML view) ──
-
   onKeyPress(event: Event<{ key: string; shiftKey: boolean; char?: string }>): void {
     const key = event.getParameter("key") ?? "";
     const shift = event.getParameter("shiftKey") ?? false;
@@ -51,15 +48,13 @@ export default class KioskWebComponent extends BaseController {
     this._getViewModel().setProperty("/layout", layout);
   }
 
-  // ── Route lifecycle ──
-
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
     const routeName = event.getParameter("name");
-    this._setKeyboardRouteActive(routeName === Scope.KioskWebComponent);
+    this._setKeyboardRouteActive(routeName === Scope.KioskWebComponentTooling);
   }
 
   private _setKeyboardRouteActive(active: boolean): void {
-    const control = this.byId("webcKeyboard");
+    const control = this.byId("toolingKeyboard");
     if (!control) return;
 
     if (active) {
@@ -67,7 +62,6 @@ export default class KioskWebComponent extends BaseController {
       return;
     }
 
-    // Deactivate: close keyboard and disable auto-show
     if ("close" in control) {
       (control.close as () => void)();
     }
@@ -79,6 +73,6 @@ export default class KioskWebComponent extends BaseController {
   }
 
   private _getViewModel(): JSONModel {
-    return this.getView()!.getModel(KioskWebComponent._MODEL_NAME) as JSONModel;
+    return this.getView()!.getModel(KioskWebComponentTooling._MODEL_NAME) as JSONModel;
   }
 }
