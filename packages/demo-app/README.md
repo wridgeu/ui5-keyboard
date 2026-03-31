@@ -154,10 +154,82 @@ Landing page linking to all kiosk demos.
 - Multi-language script input demo with composition middleware
 - Arabic, Japanese Kana, Korean Hangul layouts with live input
 
-### Web Component (Native) (`#/kiosk/web-component`)
+### Web Component -- Manual Bridge (`#/kiosk/web-component`)
 
-- Native `<kiosk-keyboard>` web component consumed via `WebComponent.extend()` bridge
-- Demonstrates the web component variant inside the UI5 demo shell
+- Native `<kiosk-keyboard>` web component consumed via a hand-written `WebComponent.extend()` bridge control
+- Demonstrates the manual integration pattern for apps that want full control over the wrapper metadata
+
+### Web Component -- Tooling Native (`#/kiosk/web-component-tooling`)
+
+- Same `<kiosk-keyboard>` web component consumed directly via XML namespace (`xmlns:kiosk="kiosk-keyboard-webc"`)
+- The `ui5-tooling-modules` middleware auto-generates the UI5 wrapper from the Custom Elements Manifest (CEM)
+- No manual bridge, no explicit bundle import -- the middleware handles everything
+
+## Web Component Consumption
+
+The `kiosk-keyboard-webc` package provides the `<kiosk-keyboard>` custom element built on the UI5 Web Components framework (`UI5Element`). It can be consumed in three ways.
+
+### 1. Tooling Native (recommended for UI5 apps)
+
+The `ui5-tooling-modules` middleware reads the package's Custom Elements Manifest (`customElements` field in `package.json`) and auto-generates a `sap.ui.core.webc.WebComponent` wrapper at dev/build time. No application code needed beyond the XML namespace:
+
+```xml
+<mvc:View xmlns:kiosk="kiosk-keyboard-webc">
+  <kiosk:KioskKeyboard docked="true" autoShow="true" />
+</mvc:View>
+```
+
+The middleware applies **tag scoping** (e.g., `kiosk-keyboard` becomes `kiosk-keyboard-e24fedd4`) to prevent collisions when multiple web component packages or versions coexist. The scoped tag is transparent to the app developer -- the middleware-generated wrapper handles it internally.
+
+**Requirements:**
+
+- `ui5-tooling-modules` middleware configured in `ui5.yaml`
+- `kiosk-keyboard-webc` installed as a dependency (not devDependency)
+- The webc package must be built (`dist/` must exist with tsc output + CEM)
+
+### 2. Manual Bridge (`WebComponent.extend()`)
+
+For apps that want explicit control over the wrapper metadata, or apps that cannot use `ui5-tooling-modules`, a hand-written bridge control maps web component attributes, events, and methods to UI5 control APIs:
+
+```typescript
+import WebComponent from "sap/ui/core/webc/WebComponent";
+
+const MyBridge = WebComponent.extend("my.app.control.KioskKeyboard", {
+  metadata: {
+    tag: "kiosk-keyboard",
+    properties: { layout: { type: "string", mapping: { type: "property", to: "layout" } } },
+    events: { keyPress: { parameters: { key: { type: "string" } } } },
+    methods: ["show", "close"],
+  },
+});
+```
+
+The bridge requires the `<kiosk-keyboard>` custom element to be **registered in the browser's custom elements registry** before the bridge creates elements. In the demo app this is done by loading the self-contained CDN bundle (`kiosk-keyboard.bundle.js`) via a `<script type="module">` tag.
+
+**Why not `import "kiosk-keyboard-webc/bundle"`?** When `ui5-tooling-modules` is active, it intercepts all imports from packages that have a `customElements` field in `package.json`. The middleware converts the import to an AMD module, applies tag scoping, and generates its own wrapper -- which conflicts with the manual bridge's unscoped `tag: "kiosk-keyboard"`. Loading the CDN bundle outside the middleware's `/resources/` path bypasses this entirely.
+
+**Scoping interaction:** The tooling-native path registers the scoped tag (`kiosk-keyboard-<hash>`). The manual bridge path registers the unscoped tag (`kiosk-keyboard`). These are separate entries in the browser's `customElements` registry and coexist without conflict. Both share the same layout registry (singleton module state).
+
+### 3. Native npm/Browser Consumption (no UI5)
+
+For non-UI5 apps, the package provides:
+
+- **CDN bundle** (`dist/kiosk-keyboard.bundle.js`): Self-contained, zero external dependencies. Load via `<script type="module">` and use `<kiosk-keyboard>` directly in HTML.
+- **ESM modules** (`dist/*.js`): Flat tsc output with bare specifiers (`@ui5/webcomponents-base/*`). Requires a bundler or dev server (e.g., Vite) that resolves bare imports.
+
+Smoke test pages in the webc package: `test/pages/consume-cdn.html` and `test/pages/consume-esm.html`.
+
+### Key Technical Details
+
+| Aspect                         | Tooling Native                   | Manual Bridge                        | Native npm                         |
+| ------------------------------ | -------------------------------- | ------------------------------------ | ---------------------------------- |
+| Wrapper                        | Auto-generated from CEM          | Hand-written `WebComponent.extend()` | None (raw custom element)          |
+| Tag name                       | Scoped (`kiosk-keyboard-<hash>`) | Unscoped (`kiosk-keyboard`)          | Unscoped                           |
+| Element registration           | Middleware Rollup pipeline       | CDN bundle `<script>` tag            | ESM import or CDN bundle           |
+| Layouts included               | Yes (main entry imports all)     | Yes (CDN bundle includes all)        | CDN: all; ESM: via `bundle.esm.js` |
+| UI5 data binding               | Yes                              | Yes                                  | N/A                                |
+| Requires `ui5-tooling-modules` | Yes                              | No                                   | No                                 |
+| Requires built `dist/`         | Yes                              | Yes (CDN bundle)                     | Yes                                |
 
 ## Route Map
 
@@ -181,4 +253,5 @@ Landing page linking to all kiosk demos.
 - `#/kiosk/focus-scenarios` focus transition and deferred close demo
 - `#/kiosk/i18n-extensibility` i18n extension demo
 - `#/kiosk/script-input` script input and composition middleware demo
-- `#/kiosk/web-component` native web component bridge demo
+- `#/kiosk/web-component` manual bridge demo (WebComponent.extend)
+- `#/kiosk/web-component-tooling` tooling-native demo (auto-generated wrapper)
