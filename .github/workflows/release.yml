@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force-publish:
+        description: "Force npm publish for all packages (bypass release_created check)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  e2e-all-devices:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Cache UI5 framework resources
+        uses: actions/cache@v4
+        with:
+          path: ~/.ui5
+          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
+          restore-keys: ui5-
+
+      - run: npm ci
+
+      - name: Run all-device e2e tests
+        run: npm run test:e2e:all-devices:sequential
+
+  smoke:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Cache UI5 framework resources
+        uses: actions/cache@v4
+        with:
+          path: ~/.ui5
+          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
+          restore-keys: ui5-
+
+      - run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Package smoke tests
+        run: npm run test:packages:smoke
+
+      - name: Demo web component bundle check
+        run: npm run test:demo:webc-bundle
+
+  release-please:
+    needs: [ci, e2e-all-devices, smoke]
+    runs-on: ubuntu-latest
+    outputs:
+      hotkeys_release_created: ${{ steps.release.outputs['packages/hotkeys--release_created'] }}
+      kiosk_release_created: ${{ steps.release.outputs['packages/kiosk-keyboard--release_created'] }}
+      webc_release_created: ${{ steps.release.outputs['packages/kiosk-keyboard-webc--release_created'] }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish-hotkeys:
+    needs: [release-please, ci, test, e2e-all-devices, smoke]
+    if: needs.release-please.outputs.hotkeys_release_created == 'true' || inputs.force-publish == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      # prepublishOnly copies LICENSE and builds; OIDC auth via id-token: write
+      - run: NODE_AUTH_TOKEN="" npm publish -w packages/hotkeys --provenance --access public
+
+  publish-kiosk:
+    needs: [release-please, ci, test, e2e-all-devices, smoke]
+    if: needs.release-please.outputs.kiosk_release_created == 'true' || inputs.force-publish == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - run: NODE_AUTH_TOKEN="" npm publish -w packages/kiosk-keyboard --provenance --access public
+
+  publish-webc:
+    needs: [release-please, ci, test, e2e-all-devices, smoke]
+    if: needs.release-please.outputs.webc_release_created == 'true' || inputs.force-publish == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - run: NODE_AUTH_TOKEN="" npm publish -w packages/kiosk-keyboard-webc --provenance --access public
