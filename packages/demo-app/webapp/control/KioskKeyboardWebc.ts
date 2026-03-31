@@ -8,7 +8,7 @@ import WebComponent from "sap/ui/core/webc/WebComponent";
 // This is the pattern a consumer would use with a manual bridge: load the web
 // component bundle via a <script> tag in their HTML (or a dynamic script load
 // as shown here) and write the WebComponent.extend() wrapper by hand.
-const _loaded: Promise<void> = new Promise((resolve, reject) => {
+void new Promise<void>((resolve, reject) => {
   if (customElements.get("kiosk-keyboard")) {
     resolve();
     return;
@@ -19,8 +19,7 @@ const _loaded: Promise<void> = new Promise((resolve, reject) => {
   s.onload = () => customElements.whenDefined("kiosk-keyboard").then(() => resolve(), reject);
   s.onerror = reject;
   document.head.appendChild(s);
-});
-void _loaded;
+}).catch((err) => console.error("[KioskKeyboardWebc] Failed to load CDN bundle:", err));
 
 /**
  * UI5 bridge control for the `<kiosk-keyboard>` native web component.
