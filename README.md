@@ -1,6 +1,8 @@
-# ui5-lib-keyboard
+<h1 align="center">ui5-lib-keyboard</h1>
 
+<p align="center">
 UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications.
+</p>
 
 ## Packages
 
