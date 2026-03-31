@@ -149,6 +149,11 @@ Landing page linking to all kiosk demos.
 - New language bundles and label overrides
 - Programmatic override hooks for runtime text customization
 
+### Script Input (`#/kiosk/script-input`)
+
+- Multi-language script input demo with composition middleware
+- Arabic, Japanese Kana, Korean Hangul layouts with live input
+
 ### Web Component (Native) (`#/kiosk/web-component`)
 
 - Native `<kiosk-keyboard>` web component consumed via `WebComponent.extend()` bridge
@@ -175,4 +180,5 @@ Landing page linking to all kiosk demos.
 - `#/kiosk/custom-layouts` custom layout gallery
 - `#/kiosk/focus-scenarios` focus transition and deferred close demo
 - `#/kiosk/i18n-extensibility` i18n extension demo
+- `#/kiosk/script-input` script input and composition middleware demo
 - `#/kiosk/web-component` native web component bridge demo

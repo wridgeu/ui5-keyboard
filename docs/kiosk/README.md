@@ -3,13 +3,13 @@
 ## Current
 
 - [Architecture](./ARCHITECTURE.md)
+- [Error Handling and DX Consistency](./ERROR-HANDLING-DX.md)
 - [Popover Layout Switch Behavior](./POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)
 - [UI5 Transpile Crash Deep Dive](./AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)
 
 ## Proposals
 
 - [Backward Compatibility](./proposals/BACKWARD-COMPATIBILITY.md)
-- [Error Handling and DX Consistency](./ERROR-HANDLING-DX.md)
 - [Tab and Done Keys](./proposals/TAB-AND-DONE-KEYS.md)
 
 ## History

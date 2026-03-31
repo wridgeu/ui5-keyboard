@@ -37,12 +37,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
       onKeyDown={this._boundOnKeyDown}
     >
       {layout.map((row, rowIndex) => (
-        <div
-          class={KIOSK_KEYBOARD_DOM.classes.row}
-          part="row"
-          key={`row-${rowIndex}`}
-          data-row-kind={classifyRow(row)}
-        >
+        <div class={KIOSK_KEYBOARD_DOM.classes.row} part="row" key={`row-${rowIndex}`} data-row-kind={classifyRow(row)}>
           {row.map((key, colIndex) => {
             const id = keyElementId(this._componentId, rowIndex, colIndex);
             const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;
