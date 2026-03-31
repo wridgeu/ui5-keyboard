@@ -12,6 +12,10 @@
       "ui5/kiosk/*": ["../kiosk-keyboard/src/*"]
     },
     "types": ["@openui5/types"],
+    // Side-effect imports (e.g. "kiosk-keyboard-webc/bundle") are resolved at runtime
+    // by ui5-tooling-modules, not by TypeScript. Disable the TS 6.0 default that
+    // requires compile-time resolution of side-effect imports.
+    "noUncheckedSideEffectImports": false,
     "noEmit": true,
     "declaration": false,
     "declarationMap": false
