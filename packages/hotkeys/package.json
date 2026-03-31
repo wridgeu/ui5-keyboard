@@ -1,7 +1,6 @@
 {
   "name": "ui5-lib-hotkeys",
   "version": "0.1.0",
-  "private": true,
   "description": "Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications",
   "keywords": [
     "hotkeys",
