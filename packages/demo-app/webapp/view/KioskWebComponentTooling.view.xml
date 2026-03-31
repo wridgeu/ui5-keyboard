@@ -1,0 +1,51 @@
+<mvc:View
+    controllerName="demo.hotkeys.controller.KioskWebComponentTooling"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:kiosk="kiosk-keyboard-webc">
+    <Page titleAlignment="Center" title="Kiosk Keyboard -- Tooling Native" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
+        <content>
+            <Panel headerText="Status" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <HBox>
+                        <Label text="Last Key:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{webc>/lastKey}" state="Information" />
+                    </HBox>
+                    <HBox>
+                        <Label text="Layout:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{webc>/layout}" state="Success" />
+                    </HBox>
+                </VBox>
+            </Panel>
+
+            <Panel headerText="Docked Keyboard (tap any input)" class="sapUiSmallMarginBottom">
+                <VBox class="sapUiSmallMargin">
+                    <MessageStrip
+                        text="This page uses the native &lt;kiosk-keyboard&gt; web component directly via XML namespace, resolved by ui5-tooling-modules. No manual bridge, no explicit bundle import."
+                        type="Information"
+                        showIcon="true" />
+                    <Label text="Full Name" labelFor="toolingNameInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="toolingNameInput"
+                        placeholder="John Doe"
+                        width="100%" />
+                    <Label text="Email" labelFor="toolingEmailInput" class="sapUiSmallMarginTop" />
+                    <Input
+                        id="toolingEmailInput"
+                        placeholder="john@example.com"
+                        width="100%" />
+                </VBox>
+            </Panel>
+
+            <kiosk:KioskKeyboard
+                id="toolingKeyboard"
+                docked="true"
+                autoShow="true"
+                autoType="true"
+                inputIds="toolingNameInput,toolingEmailInput"
+                accessibleName="Tooling Native Keyboard"
+                keyPress=".onKeyPress"
+                layoutChange=".onLayoutChange" />
+        </content>
+    </Page>
+</mvc:View>
