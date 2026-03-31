@@ -1,5 +1,26 @@
 import WebComponent from "sap/ui/core/webc/WebComponent";
-import "kiosk-keyboard-webc/bundle";
+
+// Register <kiosk-keyboard> by loading the self-contained CDN bundle from the
+// app-local lib/ directory. This path is served by the UI5 dev server as a
+// static file -- it does NOT go through ui5-tooling-modules, so the web
+// component registers with its canonical (unscoped) tag name.
+//
+// This is the pattern a consumer would use with a manual bridge: load the web
+// component bundle via a <script> tag in their HTML (or a dynamic script load
+// as shown here) and write the WebComponent.extend() wrapper by hand.
+const _loaded: Promise<void> = new Promise((resolve, reject) => {
+  if (customElements.get("kiosk-keyboard")) {
+    resolve();
+    return;
+  }
+  const s = document.createElement("script");
+  s.type = "module";
+  s.src = sap.ui.require.toUrl("") + "/../lib/kiosk-keyboard.bundle.js";
+  s.onload = () => customElements.whenDefined("kiosk-keyboard").then(() => resolve(), reject);
+  s.onerror = reject;
+  document.head.appendChild(s);
+});
+void _loaded;
 
 /**
  * UI5 bridge control for the `<kiosk-keyboard>` native web component.
@@ -14,7 +35,7 @@ import "kiosk-keyboard-webc/bundle";
  *
  * Event mappings: Since UI5 >= 1.138, the WebComponent bridge auto-converts
  * camelCase event names to kebab-case DOM events via `sap/base/strings/hyphenate`
- * (e.g. `keyPress` → `key-press`). Explicit `mapping: { to: "..." }` is not
+ * (e.g. `keyPress` -> `key-press`). Explicit `mapping: { to: "..." }` is not
  * needed as long as `minUI5Version` in manifest.json is >= 1.138.
  */
 const KioskKeyboardWebc = WebComponent.extend("demo.hotkeys.control.KioskKeyboardWebc", {

@@ -1,3 +1,23 @@
+// Built-in layouts -- side-effect imports trigger self-registration.
+// These must be in the main entry point (not only in bundle.esm.ts) so that
+// ui5-tooling-modules' auto-generated wrapper includes them.
+import "./layouts/qwerty.js";
+import "./layouts/qwertz-de.js";
+import "./layouts/numeric.js";
+import "./layouts/special.js";
+import "./layouts/numpad.js";
+import "./layouts/fkeys.js";
+import "./layouts/nav.js";
+import "./layouts/qwerty-fk.js";
+import "./layouts/qwertz-de-fk.js";
+import "./layouts/qwerty-nav.js";
+import "./layouts/qwertz-de-nav.js";
+import "./layouts/ja-romaji.js";
+import "./layouts/ja-kana.js";
+import "./layouts/arabic.js";
+import "./layouts/ko-hangul.js";
+import "./layouts/qwerty-es.js";
+
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
 import property from "@ui5/webcomponents-base/dist/decorators/property.js";
