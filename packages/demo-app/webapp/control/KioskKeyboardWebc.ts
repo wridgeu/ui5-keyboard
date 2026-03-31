@@ -1,4 +1,5 @@
 import WebComponent from "sap/ui/core/webc/WebComponent";
+import "kiosk-keyboard-webc/bundle";
 
 /**
  * UI5 bridge control for the `<kiosk-keyboard>` native web component.

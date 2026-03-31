@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Native Consumption -- ESM (tsc output)</title>
+    <style>
+      body {
+        margin: 2rem;
+        font-family: sans-serif;
+      }
+      h1 {
+        font-size: 1.2rem;
+      }
+      p {
+        color: #666;
+        font-size: 0.85rem;
+      }
+      input {
+        font-size: 1rem;
+        padding: 0.5rem;
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 1rem;
+      }
+    </style>
+    <!--
+      Bare ESM imports -- requires a dev server that resolves bare specifiers
+      (e.g., `npm start` which runs Vite). Validates the flat tsc output and
+      module graph work in a real browser.
+    -->
+    <script type="module">
+      import "../../dist/bundle.esm.js";
+    </script>
+  </head>
+  <body>
+    <h1>ESM Consumption (tsc output)</h1>
+    <p>
+      Imports <code>dist/bundle.esm.js</code> (flat tsc output). Bare specifiers like
+      <code>@ui5/webcomponents-base</code> are resolved by Vite. Run via <code>npm start</code>.
+    </p>
+    <input id="target" type="text" placeholder="Click here, then type on the keyboard" />
+    <kiosk-keyboard layout="qwerty" for="target" docked auto-show></kiosk-keyboard>
+  </body>
+</html>
