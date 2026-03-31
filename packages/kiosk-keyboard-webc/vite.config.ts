@@ -20,36 +20,18 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: {
-        KioskKeyboard: path.resolve(__dirname, "src/KioskKeyboard.ts"),
-        KioskKeyboardCore: path.resolve(__dirname, "src/KioskKeyboardCore.ts"),
-        "layouts/qwerty": path.resolve(__dirname, "src/layouts/qwerty.ts"),
-        "layouts/qwertz-de": path.resolve(__dirname, "src/layouts/qwertz-de.ts"),
-        "layouts/numeric": path.resolve(__dirname, "src/layouts/numeric.ts"),
-        "layouts/special": path.resolve(__dirname, "src/layouts/special.ts"),
-        "layouts/numpad": path.resolve(__dirname, "src/layouts/numpad.ts"),
-        "layouts/fkeys": path.resolve(__dirname, "src/layouts/fkeys.ts"),
-        "layouts/nav": path.resolve(__dirname, "src/layouts/nav.ts"),
-        "layouts/qwerty-fk": path.resolve(__dirname, "src/layouts/qwerty-fk.ts"),
-        "layouts/qwertz-de-fk": path.resolve(__dirname, "src/layouts/qwertz-de-fk.ts"),
-        "layouts/qwerty-nav": path.resolve(__dirname, "src/layouts/qwerty-nav.ts"),
-        "layouts/qwertz-de-nav": path.resolve(__dirname, "src/layouts/qwertz-de-nav.ts"),
-        "layouts/ja-romaji": path.resolve(__dirname, "src/layouts/ja-romaji.ts"),
-        "layouts/ja-kana": path.resolve(__dirname, "src/layouts/ja-kana.ts"),
-        "layouts/arabic": path.resolve(__dirname, "src/layouts/arabic.ts"),
-        "layouts/fkey-row": path.resolve(__dirname, "src/layouts/fkey-row.ts"),
-        "layouts/nav-row": path.resolve(__dirname, "src/layouts/nav-row.ts"),
-        "middleware/kana-dakuten": path.resolve(__dirname, "src/middleware/kana-dakuten.ts"),
-        "middleware/hangul-compose": path.resolve(__dirname, "src/middleware/hangul-compose.ts"),
-        "bundle.esm": path.resolve(__dirname, "src/bundle.esm.ts"),
-      },
+      // Only build the standalone CDN bundle. Individual module files are
+      // produced by tsc in build:dev and must remain as flat ESM so that
+      // ui5-tooling-modules can process them (same pattern as @ui5/webcomponents).
+      entry: path.resolve(__dirname, "src/bundle.esm.ts"),
+      fileName: "kiosk-keyboard.bundle",
       formats: ["es"],
     },
     outDir: "dist",
     emptyOutDir: false,
     rolldownOptions: {
       output: {
-        chunkFileNames: "chunks/[name]-[hash].js",
+        inlineDynamicImports: true,
       },
     },
   },
