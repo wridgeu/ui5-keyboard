@@ -2150,9 +2150,18 @@ describe("kiosk-keyboard", () => {
 
   describe("CSS parts", () => {
     it("exposes a frozen parts list and exportParts string on DOM contract", () => {
-      expect(DOM.parts).to.deep.equal(["keyboard", "row", "key", "modifier", "action", "key-label", "key-icon"]);
+      expect(DOM.parts).to.deep.equal([
+        "keyboard",
+        "row",
+        "key",
+        "modifier",
+        "action",
+        "fkey",
+        "key-label",
+        "key-icon",
+      ]);
       expect(Object.isFrozen(DOM.parts)).to.be.true;
-      expect(DOM.exportParts).to.equal("keyboard, row, key, modifier, action, key-label, key-icon");
+      expect(DOM.exportParts).to.equal("keyboard, row, key, modifier, action, fkey, key-label, key-icon");
     });
 
     it("exportParts string matches the parts array", () => {
@@ -2163,7 +2172,7 @@ describe("kiosk-keyboard", () => {
     it("all declared parts appear in rendered shadow DOM", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
-          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+          <kiosk-keyboard layout="fkeys"></kiosk-keyboard>
         `,
       );
       await nextRender();
