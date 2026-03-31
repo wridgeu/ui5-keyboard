@@ -1,6 +1,6 @@
 import WebComponent from "sap/ui/core/webc/WebComponent";
 
-// Register <kiosk-keyboard> by loading the self-contained CDN bundle from the
+// Register <kiosk-keyboard> by loading the self-contained standalone bundle from the
 // app-local lib/ directory. This path is served by the UI5 dev server as a
 // static file -- it does NOT go through ui5-tooling-modules, so the web
 // component registers with its canonical (unscoped) tag name.
@@ -19,7 +19,7 @@ void new Promise<void>((resolve, reject) => {
   s.onload = () => customElements.whenDefined("kiosk-keyboard").then(() => resolve(), reject);
   s.onerror = reject;
   document.head.appendChild(s);
-}).catch((err) => console.error("[KioskKeyboardWebc] Failed to load CDN bundle:", err));
+}).catch((err) => console.error("[KioskKeyboardWebc] Failed to load standalone bundle:", err));
 
 /**
  * UI5 bridge control for the `<kiosk-keyboard>` native web component.

@@ -20,7 +20,7 @@ export default defineConfig({
   },
   build: {
     lib: {
-      // Only build the standalone CDN bundle. Individual module files are
+      // Only build the standalone bundle. Individual module files are
       // produced by tsc in build:dev and must remain as flat ESM so that
       // ui5-tooling-modules can process them (same pattern as @ui5/webcomponents).
       entry: path.resolve(__dirname, "src/bundle.esm.ts"),

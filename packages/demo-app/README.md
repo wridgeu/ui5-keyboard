@@ -204,9 +204,9 @@ const MyBridge = WebComponent.extend("my.app.control.KioskKeyboard", {
 });
 ```
 
-The bridge requires the `<kiosk-keyboard>` custom element to be **registered in the browser's custom elements registry** before the bridge creates elements. In the demo app this is done by loading the self-contained CDN bundle (`kiosk-keyboard.bundle.js`) via a `<script type="module">` tag.
+The bridge requires the `<kiosk-keyboard>` custom element to be **registered in the browser's custom elements registry** before the bridge creates elements. In the demo app this is done by loading the self-contained standalone bundle (`kiosk-keyboard.bundle.js`) via a `<script type="module">` tag.
 
-**Why not `import "kiosk-keyboard-webc/bundle"`?** When `ui5-tooling-modules` is active, it intercepts all imports from packages that have a `customElements` field in `package.json`. The middleware converts the import to an AMD module, applies tag scoping, and generates its own wrapper -- which conflicts with the manual bridge's unscoped `tag: "kiosk-keyboard"`. Loading the CDN bundle outside the middleware's `/resources/` path bypasses this entirely.
+**Why not `import "kiosk-keyboard-webc/bundle"`?** When `ui5-tooling-modules` is active, it intercepts all imports from packages that have a `customElements` field in `package.json`. The middleware converts the import to an AMD module, applies tag scoping, and generates its own wrapper -- which conflicts with the manual bridge's unscoped `tag: "kiosk-keyboard"`. Loading the standalone bundle outside the middleware's `/resources/` path bypasses this entirely.
 
 **Scoping interaction:** The tooling-native path registers the scoped tag (`kiosk-keyboard-<hash>`). The manual bridge path registers the unscoped tag (`kiosk-keyboard`). These are separate entries in the browser's `customElements` registry and coexist without conflict. Both share the same layout registry (singleton module state).
 
@@ -214,10 +214,10 @@ The bridge requires the `<kiosk-keyboard>` custom element to be **registered in 
 
 For non-UI5 apps, the package provides:
 
-- **CDN bundle** (`dist/kiosk-keyboard.bundle.js`): Self-contained, zero external dependencies. Load via `<script type="module">` and use `<kiosk-keyboard>` directly in HTML.
+- **standalone bundle** (`dist/kiosk-keyboard.bundle.js`): Self-contained, zero external dependencies. Load via `<script type="module">` and use `<kiosk-keyboard>` directly in HTML.
 - **ESM modules** (`dist/*.js`): Flat tsc output with bare specifiers (`@ui5/webcomponents-base/*`). Requires a bundler or dev server (e.g., Vite) that resolves bare imports.
 
-Smoke test pages in the webc package: `test/pages/consume-cdn.html` and `test/pages/consume-esm.html`.
+Smoke test pages in the webc package: `test/pages/consume-bundle.html` and `test/pages/consume-esm.html`.
 
 ### Key Technical Details
 
@@ -225,11 +225,11 @@ Smoke test pages in the webc package: `test/pages/consume-cdn.html` and `test/pa
 | ------------------------------ | -------------------------------- | ------------------------------------ | ---------------------------------- |
 | Wrapper                        | Auto-generated from CEM          | Hand-written `WebComponent.extend()` | None (raw custom element)          |
 | Tag name                       | Scoped (`kiosk-keyboard-<hash>`) | Unscoped (`kiosk-keyboard`)          | Unscoped                           |
-| Element registration           | Middleware Rollup pipeline       | CDN bundle `<script>` tag            | ESM import or CDN bundle           |
-| Layouts included               | Yes (main entry imports all)     | Yes (CDN bundle includes all)        | CDN: all; ESM: via `bundle.esm.js` |
+| Element registration           | Middleware Rollup pipeline       | standalone bundle `<script>` tag     | ESM import or standalone bundle    |
+| Layouts included               | Yes (main entry imports all)     | Yes (standalone bundle includes all) | CDN: all; ESM: via `bundle.esm.js` |
 | UI5 data binding               | Yes                              | Yes                                  | N/A                                |
 | Requires `ui5-tooling-modules` | Yes                              | No                                   | No                                 |
-| Requires built `dist/`         | Yes                              | Yes (CDN bundle)                     | Yes                                |
+| Requires built `dist/`         | Yes                              | Yes (standalone bundle)              | Yes                                |
 
 ## Route Map
 
