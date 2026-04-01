@@ -61,26 +61,6 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "kb-nav");
   });
 
-  it("should match QWERTY with F-Key row", async () => {
-    const kb = await getKeyboard("kb-qwerty-fk");
-    await matchElementSnapshotInSection(kb, "kb-qwerty-fk");
-  });
-
-  it("should match QWERTZ-DE with F-Key row", async () => {
-    const kb = await getKeyboard("kb-qwertz-de-fk");
-    await matchElementSnapshotInSection(kb, "kb-qwertz-de-fk");
-  });
-
-  it("should match QWERTY with Nav row", async () => {
-    const kb = await getKeyboard("kb-qwerty-nav");
-    await matchElementSnapshotInSection(kb, "kb-qwerty-nav");
-  });
-
-  it("should match QWERTZ-DE with Nav row", async () => {
-    const kb = await getKeyboard("kb-qwertz-de-nav");
-    await matchElementSnapshotInSection(kb, "kb-qwertz-de-nav");
-  });
-
   it("should match glyph stress layout in a narrow container", async () => {
     const kb = await getKeyboard("kb-glyph-stress");
     await matchElementSnapshotInSection(kb, "kb-glyph-stress");

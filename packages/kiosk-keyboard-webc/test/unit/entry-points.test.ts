@@ -15,10 +15,6 @@ import "../../src/layouts/special.js";
 import "../../src/layouts/numpad.js";
 import "../../src/layouts/fkeys.js";
 import "../../src/layouts/nav.js";
-import "../../src/layouts/qwerty-fk.js";
-import "../../src/layouts/qwertz-de-fk.js";
-import "../../src/layouts/qwerty-nav.js";
-import "../../src/layouts/qwertz-de-nav.js";
 import "../../src/layouts/ja-romaji.js";
 import "../../src/layouts/ja-kana.js";
 import "../../src/layouts/arabic.js";
@@ -31,10 +27,6 @@ const ALL_BUILTIN_NAMES = [
   "numpad",
   "fkeys",
   "nav",
-  "qwerty-fk",
-  "qwertz-de-fk",
-  "qwerty-nav",
-  "qwertz-de-nav",
   "ja-romaji",
   "ja-kana",
   "arabic",
@@ -63,8 +55,8 @@ describe("entry-points: idempotent registration", () => {
   it("importing layout modules does not produce warnings", () => {
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     // Layouts were already imported at module level above.
-    // The combinator layouts (e.g., qwerty-fk) import base layouts (qwerty),
-    // which means _registerBuiltInLayout is called multiple times for "qwerty".
+    // Multiple layout modules import shared dependencies (e.g., layout-registry),
+    // so _registerBuiltInLayout may be called multiple times for the same name.
     // Verify this produced no warnings.
     expect(spy).not.toHaveBeenCalled();
   });

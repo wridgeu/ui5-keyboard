@@ -54,26 +54,6 @@ describe("KioskKeyboard Web Component - Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "webc-nav");
   });
 
-  it("should match QWERTY with F-Key row", async () => {
-    const kb = await getKeyboardRoot("kb-qwerty-fk");
-    await matchElementSnapshotInSection(kb, "webc-qwerty-fk");
-  });
-
-  it("should match QWERTZ-DE with F-Key row", async () => {
-    const kb = await getKeyboardRoot("kb-qwertz-de-fk");
-    await matchElementSnapshotInSection(kb, "webc-qwertz-de-fk");
-  });
-
-  it("should match QWERTY with Nav row", async () => {
-    const kb = await getKeyboardRoot("kb-qwerty-nav");
-    await matchElementSnapshotInSection(kb, "webc-qwerty-nav");
-  });
-
-  it("should match QWERTZ-DE with Nav row", async () => {
-    const kb = await getKeyboardRoot("kb-qwertz-de-nav");
-    await matchElementSnapshotInSection(kb, "webc-qwertz-de-nav");
-  });
-
   it("should match consumer part styling via ::part()", async () => {
     const kb = await getKeyboardRoot("kb-part-styled");
     await matchElementSnapshotInSection(kb, "webc-part-styled");

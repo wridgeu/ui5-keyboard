@@ -38,13 +38,11 @@ const BUILTIN_NAMES = [
   "numpad",
   "fkeys",
   "nav",
-  "qwerty-fk",
-  "qwertz-de-fk",
-  "qwerty-nav",
-  "qwertz-de-nav",
   "ja-romaji",
   "ja-kana",
   "arabic",
+  "ko-hangul",
+  "qwerty-es",
 ];
 
 /** Shared sandbox - every module restores it in afterEach so stubs never leak. */

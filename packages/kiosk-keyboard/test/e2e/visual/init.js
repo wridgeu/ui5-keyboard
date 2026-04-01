@@ -102,19 +102,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
   // 14. Navigation Keys
   new KioskKeyboard({ layout: "nav" }).placeAt("kb-nav");
 
-  // 15. QWERTY with F-Key Row
-  new KioskKeyboard({ layout: "qwerty-fk" }).placeAt("kb-qwerty-fk");
-
-  // 16. QWERTZ-DE with F-Key Row
-  new KioskKeyboard({ layout: "qwertz-de-fk" }).placeAt("kb-qwertz-de-fk");
-
-  // 17. QWERTY with Nav Row
-  new KioskKeyboard({ layout: "qwerty-nav" }).placeAt("kb-qwerty-nav");
-
-  // 18. QWERTZ-DE with Nav Row
-  new KioskKeyboard({ layout: "qwertz-de-nav" }).placeAt("kb-qwertz-de-nav");
-
-  // 19. Glyph stress layout
+  // 15. Glyph stress layout
   new KioskKeyboard({ layout: "glyph-stress" }).placeAt("kb-glyph-stress");
 
   // 20. Height-constrained container
