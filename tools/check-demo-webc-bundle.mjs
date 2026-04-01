@@ -1,46 +1,46 @@
 import fs from "node:fs";
 import path from "node:path";
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { runNpm } from "./run-npm.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const demoPackageJsonPath = path.join(repoRoot, "packages", "demo-app", "package.json");
-const controllerPath = path.join(
-  repoRoot,
-  "packages",
-  "demo-app",
-  "webapp",
-  "controller",
-  "KioskWebComponent.controller.ts",
-);
-const demoRequire = createRequire(demoPackageJsonPath);
 
-const controllerSource = fs.readFileSync(controllerPath, "utf8");
-if (!controllerSource.includes('import "kiosk-keyboard-webc/bundle";')) {
+// The manual bridge control loads the standalone bundle outside ui5-tooling-modules
+// to avoid middleware interception (see demo-app README "Web Component Consumption").
+// Verify the control file still references the standalone bundle.
+const controlPath = path.join(repoRoot, "packages", "demo-app", "webapp", "control", "KioskKeyboardWebc.ts");
+const controlSource = fs.readFileSync(controlPath, "utf8");
+if (!controlSource.includes("kiosk-keyboard.bundle.js")) {
   throw new Error(
-    "Demo app no longer imports the public 'kiosk-keyboard-webc/bundle' entry point in " +
-      "KioskWebComponent.controller.ts.",
+    "Demo app bridge control no longer references the standalone bundle " +
+      "(kiosk-keyboard.bundle.js) in KioskKeyboardWebc.ts. The manual bridge " +
+      "requires loading the bundle outside ui5-tooling-modules.",
   );
 }
 
+// Rebuild (tsc + vite bundle) and verify the standalone bundle exists
 runNpm(["run", "clean", "-w", "packages/kiosk-keyboard-webc"], repoRoot);
-runNpm(["run", "build:dev", "-w", "packages/kiosk-keyboard-webc"], repoRoot);
+runNpm(["run", "build:kiosk-webc"], repoRoot);
 
-let resolvedBundlePath;
-try {
-  resolvedBundlePath = demoRequire.resolve("kiosk-keyboard-webc/bundle");
-} catch (error) {
+const bundleSrc = path.join(repoRoot, "packages", "kiosk-keyboard-webc", "dist", "kiosk-keyboard.bundle.js");
+if (!fs.existsSync(bundleSrc)) {
   throw new Error(
-    "packages/demo-app cannot resolve the public 'kiosk-keyboard-webc/bundle' entry after rebuilding the package.",
-    { cause: error },
+    `Standalone bundle not found at ${bundleSrc} after build. ` +
+      "The manual bridge demo and native consumption paths depend on this file.",
   );
 }
 
-if (!fs.existsSync(resolvedBundlePath)) {
-  throw new Error(`Resolved 'kiosk-keyboard-webc/bundle' to '${resolvedBundlePath}', but that file does not exist.`);
+// Verify the copy script works (prestart hook)
+runNpm(["run", "prestart", "-w", "packages/demo-app"], repoRoot);
+const copiedBundle = path.join(repoRoot, "packages", "demo-app", "webapp", "lib", "kiosk-keyboard.bundle.js");
+if (!fs.existsSync(copiedBundle)) {
+  throw new Error(
+    `Standalone bundle was not copied to ${copiedBundle}. ` +
+      "The prestart script (tools/copy-webc-bundle.mjs) must copy the bundle for the manual bridge demo.",
+  );
 }
 
+// Build the demo app (validates both tooling-native and manual bridge paths)
 runNpm(["run", "build", "-w", "packages/demo-app"], repoRoot);
 
-process.stdout.write(`Verified demo build for the public kiosk-keyboard-webc/bundle entry (${resolvedBundlePath}).\n`);
+process.stdout.write("Verified demo build: standalone bundle exists, copy script works, demo builds successfully.\n");
