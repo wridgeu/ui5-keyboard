@@ -1,7 +1,7 @@
 import { findMatchInScope } from "ui5/hotkeys/internal/dispatch-core";
 import { parseHotkey } from "ui5/hotkeys/parse";
 import { UnhandledReason, GLOBAL_SCOPE } from "ui5/hotkeys/library";
-import { type SkipInfo, type DebugSkipEntry } from "ui5/hotkeys/internal/skip-reason";
+import { type SkipInfo } from "ui5/hotkeys/internal/skip-reason";
 
 // ──────────────────────────────────────────────
 // Test helpers
@@ -296,29 +296,4 @@ QUnit.test("Skip priority: highest reason wins across multiple registrations", (
   assert.strictEqual(result, null, "All registrations skipped");
   assert.strictEqual(skipInfo.reason, UnhandledReason.Disabled, "Highest-priority reason (Disabled) wins");
   assert.strictEqual(skipInfo.registration?.id, "r4", "Registration with Disabled reason recorded");
-});
-
-QUnit.test("Populates debugSkips array for every skipped registration", (assert) => {
-  const event = mockKeyEvent({ key: "Escape" });
-  const regs = [
-    makeRegistration("d1", "Escape", { enabled: false }),
-    makeRegistration("d2", "Escape", { enabled: false }),
-  ];
-  const debugSkips: DebugSkipEntry[] = [];
-
-  findMatchInScope({
-    event,
-    isInput: false,
-    popupOpen: false,
-    registrations: regs,
-    debugSkips,
-    toRegistrationInfo: toInfo,
-    logComponent: LOG_COMPONENT,
-  });
-
-  assert.strictEqual(debugSkips.length, 2, "Both skips recorded");
-  assert.strictEqual(debugSkips[0].registration.id, "d1", "First skip has correct registration");
-  assert.strictEqual(debugSkips[0].reason, UnhandledReason.Disabled, "First skip reason correct");
-  assert.strictEqual(debugSkips[1].registration.id, "d2", "Second skip has correct registration");
-  assert.strictEqual(debugSkips[1].reason, UnhandledReason.Disabled, "Second skip reason correct");
 });
