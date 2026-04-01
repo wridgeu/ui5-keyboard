@@ -4,7 +4,7 @@ Demo application for all three workspace libraries:
 
 - `ui5-lib-hotkeys` (`ui5.hotkeys`)
 - `ui5-lib-kiosk-keyboard` (`ui5.kiosk`)
-- `kiosk-keyboard-webc` (native web component, consumed via `WebComponent.extend()` bridge)
+- `kiosk-keyboard-webc` (native web component, consumed via `ui5-tooling-modules`)
 
 ## Run
 
@@ -26,7 +26,7 @@ This app is a scenario catalog for keyboard-heavy UX in UI5. It shows:
 - conflict strategies and target-element scoped shortcuts
 - input-safe behavior (`ignoreInputs: "auto"`) and conditional hotkeys (`enabled()`)
 - virtual keyboard patterns for docked, popover, dialog, multi-instance, and programmatic control
-- integration with native UI5 web components and custom web components (bridge input approach)
+- integration with native UI5 web components and custom web components
 
 ## Hotkeys Scenarios
 
@@ -154,24 +154,19 @@ Landing page linking to all kiosk demos.
 - Multi-language script input demo with composition middleware
 - Arabic, Japanese Kana, Korean Hangul layouts with live input
 
-### Web Component -- Manual Bridge (`#/kiosk/web-component`)
+### Web Component (`#/kiosk/web-component-tooling`)
 
-- Native `<kiosk-keyboard>` web component consumed via a hand-written `WebComponent.extend()` bridge control
-- Demonstrates the manual integration pattern for apps that want full control over the wrapper metadata
-
-### Web Component -- Tooling Native (`#/kiosk/web-component-tooling`)
-
-- Same `<kiosk-keyboard>` web component consumed directly via XML namespace (`xmlns:kiosk="kiosk-keyboard-webc"`)
+- `<kiosk-keyboard>` web component consumed directly via XML namespace (`xmlns:kiosk="kiosk-keyboard-webc"`)
 - The `ui5-tooling-modules` middleware auto-generates the UI5 wrapper from the Custom Elements Manifest (CEM)
-- No manual bridge, no explicit bundle import -- the middleware handles everything
+- No manual bridge, no explicit bundle import - the middleware handles everything
 
 ## Web Component Consumption
 
 The `kiosk-keyboard-webc` package provides the `<kiosk-keyboard>` custom element built on the UI5 Web Components framework (`UI5Element`). It can be consumed in three ways.
 
-### 1. Tooling Native (recommended for UI5 apps)
+### 1. UI5 Consumption (Tooling Native)
 
-The `ui5-tooling-modules` middleware reads the package's Custom Elements Manifest (`customElements` field in `package.json`) and auto-generates a `sap.ui.core.webc.WebComponent` wrapper at dev/build time. No application code needed beyond the XML namespace:
+The recommended path for UI5 apps. The `ui5-tooling-modules` middleware reads the package's Custom Elements Manifest (`customElements` field in `package.json`) and auto-generates a `sap.ui.core.webc.WebComponent` wrapper at dev/build time. No application code needed beyond the XML namespace:
 
 ```xml
 <mvc:View xmlns:kiosk="kiosk-keyboard-webc">
@@ -179,7 +174,7 @@ The `ui5-tooling-modules` middleware reads the package's Custom Elements Manifes
 </mvc:View>
 ```
 
-The middleware applies **tag scoping** (e.g., `kiosk-keyboard` becomes `kiosk-keyboard-e24fedd4`) to prevent collisions when multiple web component packages or versions coexist. The scoped tag is transparent to the app developer -- the middleware-generated wrapper handles it internally.
+The middleware applies **tag scoping** (e.g., `kiosk-keyboard` becomes `kiosk-keyboard-e24fedd4`) to prevent collisions when multiple web component packages or versions coexist. The scoped tag is transparent to the app developer - the middleware-generated wrapper handles it internally.
 
 **Requirements:**
 
@@ -187,30 +182,45 @@ The middleware applies **tag scoping** (e.g., `kiosk-keyboard` becomes `kiosk-ke
 - `kiosk-keyboard-webc` installed as a dependency (not devDependency)
 - The webc package must be built (`dist/` must exist with tsc output + CEM)
 
-### 2. Manual Bridge (`WebComponent.extend()`)
+### Alternative: Manual Bridge (Reference)
 
-For apps that want explicit control over the wrapper metadata, or apps that cannot use `ui5-tooling-modules`, a hand-written bridge control maps web component attributes, events, and methods to UI5 control APIs:
+For apps that want explicit control over the wrapper metadata, or apps that cannot use `ui5-tooling-modules`, a hand-written `WebComponent.extend()` bridge maps web component attributes, events, and methods to UI5 control APIs. There is no demo page for this pattern; the documentation below is a complete reference.
+
+**Minimal bridge example:**
 
 ```typescript
 import WebComponent from "sap/ui/core/webc/WebComponent";
 
-const MyBridge = WebComponent.extend("my.app.control.KioskKeyboard", {
+const KioskKeyboardBridge = WebComponent.extend("my.app.control.KioskKeyboard", {
   metadata: {
     tag: "kiosk-keyboard",
-    properties: { layout: { type: "string", mapping: { type: "property", to: "layout" } } },
-    events: { keyPress: { parameters: { key: { type: "string" } } } },
-    methods: ["show", "close"],
+    properties: {
+      layout: { type: "string", defaultValue: "", mapping: { type: "property", to: "layout" } },
+      docked: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "docked" } },
+      autoShow: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "autoShow" } },
+      autoType: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "autoType" } },
+    },
+    events: {
+      keyPress: { parameters: { key: { type: "string" }, shiftKey: { type: "boolean" } } },
+      layoutChange: { parameters: { layout: { type: "string" } } },
+      keyboardTypeChange: { parameters: { keyboardType: { type: "string" } } },
+      afterOpen: {},
+      afterClose: {},
+    },
+    methods: ["show", "close", "isOpen", "setTargetElement", "resetKeyboardType"],
   },
 });
+
+export default KioskKeyboardBridge;
 ```
 
-The bridge requires the `<kiosk-keyboard>` custom element to be **registered in the browser's custom elements registry** before the bridge creates elements. In the demo app this is done by loading the self-contained standalone bundle (`kiosk-keyboard.bundle.js`) via a `<script type="module">` tag.
+**When to use this:** The manual bridge is useful when `ui5-tooling-modules` is not available, or when you need explicit control over the wrapper metadata (property types, event parameters, exposed methods).
 
-**Why not `import "kiosk-keyboard-webc/bundle"`?** When `ui5-tooling-modules` is active, it intercepts all imports from packages that have a `customElements` field in `package.json`. The middleware converts the import to an AMD module, applies tag scoping, and generates its own wrapper -- which conflicts with the manual bridge's unscoped `tag: "kiosk-keyboard"`. Loading the standalone bundle outside the middleware's `/resources/` path bypasses this entirely.
+**Scoping constraint:** The bridge specifies `tag: "kiosk-keyboard"` (the canonical, unscoped name). The `ui5-tooling-modules` middleware registers only the scoped tag (`kiosk-keyboard-<hash>`), which the bridge cannot discover. You must load the standalone bundle (`dist/kiosk-keyboard.bundle.js`) as a `<script type="module">` tag from a path outside the middleware's `/resources/` scope so that the unscoped tag is registered in the browser's `customElements` registry. An ES module import like `import "kiosk-keyboard-webc/bundle"` will not work when the middleware is active, because it intercepts all imports from packages with a `customElements` field.
 
-**Scoping interaction:** The tooling-native path registers the scoped tag (`kiosk-keyboard-<hash>`). The manual bridge path registers the unscoped tag (`kiosk-keyboard`). These are separate entries in the browser's `customElements` registry and coexist without conflict. Both share the same layout registry (singleton module state).
+**Coexistence:** The tooling-native scoped tag and the bridge's unscoped tag are separate entries in the `customElements` registry and coexist without conflict. Both share the same layout registry (singleton module state).
 
-### 3. Native npm/Browser Consumption (no UI5)
+### 2. Native npm/Browser Consumption (no UI5)
 
 For non-UI5 apps, the package provides:
 
@@ -221,15 +231,66 @@ Smoke test pages in the webc package: `test/pages/consume-bundle.html` and `test
 
 ### Key Technical Details
 
-| Aspect                         | Tooling Native                   | Manual Bridge                        | Native npm                         |
-| ------------------------------ | -------------------------------- | ------------------------------------ | ---------------------------------- |
-| Wrapper                        | Auto-generated from CEM          | Hand-written `WebComponent.extend()` | None (raw custom element)          |
-| Tag name                       | Scoped (`kiosk-keyboard-<hash>`) | Unscoped (`kiosk-keyboard`)          | Unscoped                           |
-| Element registration           | Middleware Rollup pipeline       | standalone bundle `<script>` tag     | ESM import or standalone bundle    |
-| Layouts included               | Yes (main entry imports all)     | Yes (standalone bundle includes all) | CDN: all; ESM: via `bundle.esm.js` |
-| UI5 data binding               | Yes                              | Yes                                  | N/A                                |
-| Requires `ui5-tooling-modules` | Yes                              | No                                   | No                                 |
-| Requires built `dist/`         | Yes                              | Yes (standalone bundle)              | Yes                                |
+| Aspect                         | Tooling Native                   | Manual Bridge (reference, no demo page) | Native npm                         |
+| ------------------------------ | -------------------------------- | --------------------------------------- | ---------------------------------- |
+| Wrapper                        | Auto-generated from CEM          | Hand-written `WebComponent.extend()`    | None (raw custom element)          |
+| Tag name                       | Scoped (`kiosk-keyboard-<hash>`) | Unscoped (`kiosk-keyboard`)             | Unscoped                           |
+| Element registration           | Middleware Rollup pipeline       | standalone bundle `<script>` tag        | ESM import or standalone bundle    |
+| Layouts included               | Yes (main entry imports all)     | Yes (standalone bundle includes all)    | CDN: all; ESM: via `bundle.esm.js` |
+| UI5 data binding               | Yes                              | Yes                                     | N/A                                |
+| Requires `ui5-tooling-modules` | Yes                              | No                                      | No                                 |
+| Requires built `dist/`         | Yes                              | Yes (standalone bundle)                 | Yes                                |
+
+## Layout Composition
+
+The package ships primary layouts (qwerty, numpad, arabic, etc.) and building block rows (`fkey-row`, `nav-row`). Combined layouts like `qwerty-fk` (QWERTY + F-key row) are not built-in - they are trivial compositions that consumers can build at runtime:
+
+```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import { fkeyRow } from "kiosk-keyboard-webc/layouts/fkey-row";
+
+const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
+KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);
+```
+
+The Custom Layouts demo page (`#/kiosk/custom-layouts`) shows examples of building composite layouts from rows and individual key definitions.
+
+## CSS for Custom Layouts and Foreign Scripts
+
+The component's CSS handles responsive behavior automatically via `@container` queries and `ResizeObserver`. Consumers typically do not need custom CSS, but the following details are useful when building custom or foreign-script layouts.
+
+**F-key rows:** At container widths of 35rem or below, `flex-wrap` splits 12 F-keys into two rows of six. This targets elements with `[data-row-kind="fkey"]`, an attribute set by the template's `classifyRow()` function.
+
+**Navigation rows:** Nav keys render with both an icon and a text label (dual rendering). At narrow key widths (below 7rem per key), the text label is visually hidden using the sr-only pattern so the label remains in the accessibility tree while only the icon is visible.
+
+**Arabic and RTL:** The component detects the `dir` attribute on the host element. Arabic layout keys use an Arabic-first font stack via the `--kiosk-keyboard-arabic-font-family` custom property.
+
+**Height-responsive classes:** The `.cq-short` and `.cq-tiny` classes are driven by a `ResizeObserver` on the host element, not by media queries. They activate when the host's layout box height drops below configurable thresholds (`--kiosk-keyboard-cq-short-threshold` at 16rem, `--kiosk-keyboard-cq-tiny-threshold` at 12rem). These reduce key height, gap, and padding automatically.
+
+**CSS custom properties consumers can override:**
+
+- `--kiosk-keyboard-key-font-size` - base key font size (container queries cap this at narrow widths)
+- `--kiosk-keyboard-key-height` - key height
+- `--kiosk-keyboard-key-gap` - gap between keys
+- `--kiosk-keyboard-padding` - container padding
+- `--kiosk-keyboard-max-width` - max width for inline keyboards
+- `--kiosk-keyboard-docked-max-width` - max width for docked keyboards
+- `--kiosk-keyboard-cjk-font-family` - font stack for CJK glyph keys
+- `--kiosk-keyboard-hangul-font-family` - font stack for Korean Hangul keys
+- `--kiosk-keyboard-arabic-font-family` - font stack for Arabic glyph keys
+
+See the [webc package README](../kiosk-keyboard-webc/README.md#public-css-custom-properties) for the full property list.
+
+**`::part()` selectors for external styling:**
+
+- `keyboard` - root container
+- `row` - each row of keys
+- `key` - every key element
+- `modifier` - modifier keys (Shift, layout switches, F-keys)
+- `action` - action keys (Enter, Backspace)
+- `fkey` - function/navigation keys specifically
+- `key-label` - text label inside a key
+- `key-icon` - icon inside a key
 
 ## Route Map
 
@@ -253,5 +314,4 @@ Smoke test pages in the webc package: `test/pages/consume-bundle.html` and `test
 - `#/kiosk/focus-scenarios` focus transition and deferred close demo
 - `#/kiosk/i18n-extensibility` i18n extension demo
 - `#/kiosk/script-input` script input and composition middleware demo
-- `#/kiosk/web-component` bridge demo (manual WebComponent.extend, unscoped tag)
-- `#/kiosk/web-component-tooling` tooling demo (auto-generated wrapper, scoped tag)
+- `#/kiosk/web-component-tooling` web component demo (auto-generated wrapper via CEM, scoped tag)
