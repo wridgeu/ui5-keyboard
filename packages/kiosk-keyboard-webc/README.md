@@ -71,18 +71,16 @@ Keys support different visual styles via the `type` property in `KeyDefinition`:
 
 ## Installation
 
-> This package is currently workspace-only (`private: true`) and not published to npm.
+Install from npm:
+
+```bash
+npm install kiosk-keyboard-webc
+```
 
 In this monorepo, install all workspace dependencies once at the repository root:
 
 ```bash
 npm install
-```
-
-If/when this package is published, install it directly from npm:
-
-```bash
-npm install kiosk-keyboard-webc
 ```
 
 ## Browser Compatibility
@@ -203,7 +201,7 @@ const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
     properties: {
       layout: { type: "string", defaultValue: "", mapping: { type: "property", to: "layout" } },
       docked: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "docked" } },
-      // ... see packages/demo-app/webapp/control/KioskKeyboardWebc.ts for full mapping
+      // ... see the demo-app README for the full bridge property mapping reference
     },
   },
 });
