@@ -163,11 +163,6 @@
           "target": "kioskI18nExtensibility"
         },
         {
-          "name": "kioskWebComponent",
-          "pattern": "kiosk/web-component",
-          "target": "kioskWebComponent"
-        },
-        {
           "name": "kioskWebComponentTooling",
           "pattern": "kiosk/web-component-tooling",
           "target": "kioskWebComponentTooling"
@@ -254,10 +249,6 @@
         "kioskI18nExtensibility": {
           "id": "kioskI18nExtensibility",
           "name": "KioskI18nExtensibility"
-        },
-        "kioskWebComponent": {
-          "id": "kioskWebComponent",
-          "name": "KioskWebComponent"
         },
         "kioskWebComponentTooling": {
           "id": "kioskWebComponentTooling",
