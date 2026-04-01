@@ -46,9 +46,6 @@ sap.ui.define([], () => {
       "dialog-scope": {
         title: "QUnit tests for ui5.hotkeys - Dialog & Fragment Scopes",
       },
-      "debug-mode": {
-        title: "QUnit tests for ui5.hotkeys - Debug Mode",
-      },
       SequenceManager: {
         title: "QUnit tests for ui5.hotkeys - SequenceManager",
       },

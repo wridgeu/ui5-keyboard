@@ -3,6 +3,7 @@ import path from "node:path";
 import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
 import {
+  BASE_CHROME_ARGS,
   CHROME_VERSION,
   DESKTOP_WINDOW_SIZE,
   resolveCachedBinaries,
@@ -26,7 +27,7 @@ const server = createServerManager(
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const runReadmeScreenshots = process.argv.includes("--readme-screenshots");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
-const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];
+const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, ...BASE_CHROME_ARGS];
 if (headless) chromeArgs.unshift("--headless=new");
 
 const cachedBinaries = resolveCachedBinaries();
