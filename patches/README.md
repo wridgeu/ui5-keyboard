@@ -109,6 +109,32 @@ The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc
 +}).join('');
 ```
 
+### Bug 6: Type reference module paths use platform-dependent separators
+
+**File:** `lib/cem/utils.mjs`
+
+The `getTypeReferenceModulePath` function uses `path.join()` and `path.dirname()` to resolve relative type references (e.g., when `FKeyMode` is imported from `./types.js`). On Windows, `path.join()` produces backslashes (`dist\types.js`). The resulting CEM module paths must use forward slashes because `ui5-tooling-modules` normalizes resolved filesystem paths to forward slashes (line 199 of `rollup-plugin-webcomponents.js`) before matching them against CEM class aliases. A CEM with backslash paths creates aliases that never match.
+
+The CEM specification itself does not mandate a separator format. However, ES module specifiers, npm package paths, and the de facto convention across all existing CEM consumers (IDE plugins, documentation generators, ui5-tooling-modules) use forward slashes. The `@ui5/webcomponents` team builds on Linux CI and has never encountered the issue.
+
+**Evidence from `ui5-tooling-modules`:**
+
+```javascript
+// rollup-plugin-webcomponents.js:198-200
+modulePath = modulePath.substr(metadata.npmPackagePath.length + 1);
+modulePath = modulePath.replace(/\\/g, "/"); // normalizes to forward slashes
+const moduleName = `${npmPackage}/${modulePath}`;
+```
+
+The middleware normalizes resolved paths to forward slashes, then looks up `moduleName` against the class alias map. The alias was created from the CEM's `declaration.module` field. If the CEM contains backslashes, the alias won't match.
+
+**Fix:** Use `path.posix.join()` and `path.posix.dirname()` instead of the platform-dependent `path.join()` and `path.dirname()`. These produce forward slashes on all platforms. The input (`modulePath`) is a CEM module path (already forward slashes from earlier processing), not a filesystem path, so `path.posix` is semantically correct.
+
+```diff
+-                path.join(path.dirname(modulePath), currentModuleSpecifier.text)
++                path.posix.join(path.posix.dirname(modulePath), currentModuleSpecifier.text)
+```
+
 ### Upstream
 
 Repository: https://github.com/SAP/ui5-webcomponents
