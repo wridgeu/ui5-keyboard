@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import type { LayoutDefinition } from "../../src/types.js";
 import {
   getRegisteredLayout,
@@ -24,29 +24,13 @@ const CUSTOM_LAYOUT: LayoutDefinition = [
 ];
 
 describe("core entry: lean consumption", () => {
-  it("no built-in layouts are registered when using core entry", () => {
-    // The core entry does not import layout files, so the registry
-    // should only contain layouts registered by other test files in
-    // the same vitest process (if any). This test checks that the
-    // core entry itself does not add layouts.
-    const names = getRegisteredLayoutNames();
-    // "qwerty" is a built-in -- if it's registered, the core entry
-    // leaked layout imports.
-    for (const name of names) {
-      if (isBuiltInLayout(name)) {
-        // A built-in is present -- this could be from another test file
-        // in the same process. We can't fully isolate vitest modules,
-        // so we just verify the core entry CLASS is available.
-        break;
-      }
-    }
-    // The key assertion: the class itself is usable.
+  it("exports the component class with full static registration API", () => {
+    // The core entry (KioskKeyboardCore) provides the component class
+    // without importing any built-in layout files. Layout isolation
+    // cannot be tested here because vitest shares module state across
+    // test files in the same process -- it is an architectural guarantee
+    // of the source file, not a runtime-testable property.
     expect(KioskKeyboard).toBeDefined();
-    expect(typeof KioskKeyboard.registerLayout).toBe("function");
-    expect(typeof KioskKeyboard.getRegisteredLayoutNames).toBe("function");
-  });
-
-  it("exports the component class with static registration API", () => {
     expect(typeof KioskKeyboard.registerLayout).toBe("function");
     expect(typeof KioskKeyboard.unregisterLayout).toBe("function");
     expect(typeof KioskKeyboard.getRegisteredLayout).toBe("function");

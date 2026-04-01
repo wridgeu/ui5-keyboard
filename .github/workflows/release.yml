@@ -44,6 +44,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Run all-device e2e tests
         run: npm run test:e2e:all-devices:sequential
 
@@ -76,6 +85,12 @@ jobs:
 
       - name: Demo web component bundle check
         run: npm run test:demo:webc-bundle
+
+      - name: Verify package contents
+        run: |
+          npm pack -w packages/hotkeys --dry-run 2>&1
+          npm pack -w packages/kiosk-keyboard --dry-run 2>&1
+          npm pack -w packages/kiosk-keyboard-webc --dry-run 2>&1
 
   release-please:
     needs: [ci, e2e-all-devices, smoke]

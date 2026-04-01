@@ -293,7 +293,7 @@ always ships all built-in layouts. This matches the ecosystem convention.
 
 1. **Upstream CEM analyzer fix for Windows paths:** If `@ui5/webcomponents-tools`
    switches from `path.join()` to `path.posix.join()` in the type reference code
-   path, the `normalize-cem-paths.mjs` workaround can be removed.
+   path, the `@ui5/webcomponents-tools` patch in `patches/` can be removed.
 
 2. **Middleware per-package scoping control:** If `ui5-tooling-modules` adds
    per-package scoping config (e.g., `pluginOptions.webcomponents.scopeExclude`),
