@@ -1,7 +1,7 @@
 import type { KeyRow } from "../types";
 
 /**
- * Shared navigation key row used by built-in `*-nav` variant layouts.
+ * Shared navigation key row. Import and prepend to a base layout to add navigation keys.
  *
  * Each key has a Unicode arrow/navigation icon alongside the text label.
  * At normal widths both render together (e.g. "⇱ Home"). At narrow widths
