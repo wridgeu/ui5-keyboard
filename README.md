@@ -330,14 +330,15 @@ ui5-lib-keyboard/
 
 ## Documentation
 
-| Document                                                                                | Description                                          |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [Glossary](./docs/GLOSSARY.md)                                                          | Shared terms and concepts across all packages        |
-| [API Stability Policy](./docs/shared/API-STABILITY.md)                                  | Stable vs internal import boundaries                 |
-| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                                      | Hotkeys sequence system design and rationale         |
-| [UI5 Web Component Consumption](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption guidance               |
-| [Docs Index](./docs/README.md)                                                          | Full index of all docs (incl. internal & historical) |
-| [Patches](./patches/README.md)                                                          | Local dependency patches applied via patch-package   |
+| Document                                                                       | Description                                           |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| [Glossary](./docs/GLOSSARY.md)                                                 | Shared terms and concepts across all packages         |
+| [API Stability Policy](./docs/shared/API-STABILITY.md)                         | Stable vs internal import boundaries                  |
+| [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                             | Hotkeys sequence system design and rationale          |
+| [Web Component Consumption](./docs/web-component-consumption.md)               | Build pipeline, exports, tag scoping, and limitations |
+| [Consumption Research](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption comparison              |
+| [Docs Index](./docs/README.md)                                                 | Full index of all docs (incl. internal & historical)  |
+| [Patches](./patches/README.md)                                                 | Local dependency patches applied via patch-package    |
 
 ## Contributing
 

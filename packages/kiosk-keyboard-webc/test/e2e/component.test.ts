@@ -272,7 +272,7 @@ describe("kiosk-keyboard web component", () => {
   });
 
   describe("row classification (data-row-kind)", () => {
-    it("marks F-key rows as fkey", async () => {
+    it("marks F-key rows as fkey and leaves control row unclassified", async () => {
       await waitForKeys("kb-fkeys");
       const kinds = await browser.execute(() => {
         const kb = document.getElementById("kb-fkeys");
@@ -280,8 +280,9 @@ describe("kiosk-keyboard web component", () => {
         return rows.map((r) => r.getAttribute("data-row-kind"));
       });
       // fkeys standalone layout: first two rows are fkey rows, last row is control
-      const fkeyCount = kinds.filter((k) => k === "fkey").length;
-      expect(fkeyCount).toBeGreaterThan(0);
+      expect(kinds[0]).toBe("fkey");
+      expect(kinds[1]).toBe("fkey");
+      expect(kinds[2]).toBe(null);
     });
 
     it("marks nav rows as nav", async () => {

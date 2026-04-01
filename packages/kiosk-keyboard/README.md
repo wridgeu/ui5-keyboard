@@ -113,15 +113,13 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 
 ## Installation
 
-> This package is currently workspace-only (`private: true`) and not published to npm.
-
-In this monorepo, dependencies are managed via npm workspaces:
+Install from npm:
 
 ```bash
-npm install
+npm install ui5-lib-kiosk-keyboard
 ```
 
-If/when this package is published, you can install it directly from npm (`ui5-lib-kiosk-keyboard`).
+In this monorepo, dependencies are managed via npm workspaces (`npm install` at the root).
 
 ## Browser Compatibility
 
@@ -448,26 +446,22 @@ This contract is read-only and stable for DOM hooks. It is not the styling API; 
 
 ## Layouts
 
-The library ships with thirteen built-in layouts:
+The library ships with twelve built-in layouts:
 
-| Layout          | Description                                        | Rows |
-| --------------- | -------------------------------------------------- | ---- |
-| `qwerty`        | Standard QWERTY with number row                    | 5    |
-| `qwertz-de`     | German QWERTZ with Umlaute (ä, ö, ü, ß)            | 5    |
-| `numeric`       | Numbers with basic operators                       | 4    |
-| `special`       | Special characters and symbols                     | 4    |
-| `numpad`        | Compact numeric keypad (calculator)                | 5    |
-| `fkeys`         | Function keys F1-F12 (standalone)                  | 3    |
-| `nav`           | Navigation keys (arrows, Home/End, Pg)             | 4    |
-| `qwerty-fk`     | QWERTY with F1-F12 row on top                      | 6    |
-| `qwertz-de-fk`  | German QWERTZ with F1-F12 row on top               | 6    |
-| `qwerty-nav`    | QWERTY with navigation row on top                  | 6    |
-| `qwertz-de-nav` | German QWERTZ with navigation row on top           | 6    |
-| `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) | 5    |
-| `ja-kana`       | Japanese Kana direct-input (JIS X 6002)            | 5    |
-| `arabic`        | Arabic (standard Arabic 101 layout)                | 5    |
-| `ko-hangul`     | Korean Hangul Dubeolsik (KS X 5002)                | 5    |
-| `qwerty-es`     | Spanish QWERTY with accented vowels and ñ          | 5    |
+| Layout      | Description                                        | Rows |
+| ----------- | -------------------------------------------------- | ---- |
+| `qwerty`    | Standard QWERTY with number row                    | 5    |
+| `qwertz-de` | German QWERTZ with Umlaute (ä, ö, ü, ß)            | 5    |
+| `numeric`   | Numbers with basic operators                       | 4    |
+| `special`   | Special characters and symbols                     | 4    |
+| `numpad`    | Compact numeric keypad (calculator)                | 5    |
+| `fkeys`     | Function keys F1-F12 (standalone)                  | 3    |
+| `nav`       | Navigation keys (arrows, Home/End, Pg)             | 4    |
+| `ja-romaji` | Japanese Romaji (QWERTY base with JIS punctuation) | 5    |
+| `ja-kana`   | Japanese Kana direct-input (JIS X 6002)            | 5    |
+| `arabic`    | Arabic (standard Arabic 101 layout)                | 5    |
+| `ko-hangul` | Korean Hangul Dubeolsik (KS X 5002)                | 5    |
+| `qwerty-es` | Spanish QWERTY with accented vowels and ñ          | 5    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -630,13 +624,23 @@ SAP GUI transactions rely heavily on function keys (F1 Help, F3 Back, F4 Value H
 
 The `qwerty` and `qwertz-de` layouts include an **Fn** button on the bottom row. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default, no configuration needed.
 
-### Approach 2: Variant layouts with F-key row
+### Approach 2: Composed layout with permanent F-key row
 
-Use `qwerty-fk` or `qwertz-de-fk` to render a full keyboard with an F1-F12 row permanently visible on top (6 rows total):
+Compose a custom layout with the shared `fkey-row` module to render a full keyboard with an F1-F12 row permanently visible on top (6 rows total):
+
+```ts
+import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import fkeyRow from "ui5/kiosk/layouts/fkey-row";
+
+const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
+KioskKeyboard.registerLayout("qwerty-fk", [fkeyRow, ...qwertyBase]);
+```
 
 ```xml
 <kiosk:KioskKeyboard layout="qwerty-fk" targetInput="myInput" />
 ```
+
+See [Custom F-key variant layouts](#custom-f-key-variant-layouts) for more details.
 
 ### Approach 3: Standalone fkeys layout
 
@@ -654,7 +658,7 @@ Use the `nav` layout for directional/navigation keys (Arrow keys, Home/End, Page
 <kiosk:KioskKeyboard layout="nav" targetInput="myInput" />
 ```
 
-Or use `qwerty-nav` / `qwertz-de-nav` for integrated top-row navigation.
+Compose a variant with the shared `nav-row` module for integrated top-row navigation (same pattern as the F-key composition above).
 
 Navigation keys fire `keyPress` and also perform default caret navigation on the target input/textarea:
 
@@ -734,7 +738,7 @@ This mirrors how SAP GUI intercepts physical F-keys and maps them to transaction
 
 ### Custom F-key variant layouts
 
-Import the shared `fkey-row` module to compose custom layouts with an F-key row on top, the same row used by the built-in `qwerty-fk` and `qwertz-de-fk` layouts:
+Import the shared `fkey-row` module to compose custom layouts with an F-key row on top:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
@@ -1658,10 +1662,6 @@ KeyboardLayout.Special; // "special"
 KeyboardLayout.Numpad; // "numpad"
 KeyboardLayout.Fkeys; // "fkeys"
 KeyboardLayout.Nav; // "nav"
-KeyboardLayout.QwertyFk; // "qwerty-fk"
-KeyboardLayout.QwertzDeFk; // "qwertz-de-fk"
-KeyboardLayout.QwertyNav; // "qwerty-nav"
-KeyboardLayout.QwertzDeNav; // "qwertz-de-nav"
 KeyboardLayout.JaRomaji; // "ja-romaji"
 KeyboardLayout.JaKana; // "ja-kana"
 KeyboardLayout.Arabic; // "arabic"
