@@ -432,6 +432,58 @@ interface KeyDefinition {
 }
 ```
 
+## Function Keys (F1-F12)
+
+### F-key modes
+
+The `f-key-mode` attribute controls how function key presses are handled:
+
+| Value       | Behavior                                                                                                                                                                                |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input.                                                                                  |
+| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below). |
+| `"None"`    | The F-key row is hidden entirely.                                                                                                                                                       |
+
+### Native mode: synthetic keydown events
+
+When `f-key-mode="Native"`, the component dispatches a synthetic `keydown` event to the target input for all F-keys (F1-F12) and navigation keys (ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown).
+
+**Important:** browsers treat synthetic `KeyboardEvent` instances as untrusted (`isTrusted: false`) and block them from triggering security-sensitive browser actions. A synthetic F5 keydown does **not** reload the page. A synthetic F11 does **not** toggle fullscreen.
+
+To work around this limitation, the component has built-in action handlers for exactly two keys:
+
+- **F5**: calls `location.reload()`
+- **F11**: toggles fullscreen via `document.requestFullscreen()` / `document.exitFullscreen()`
+
+All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the target input but have no built-in browser action beyond what the app handles.
+
+### Handling F-keys in consumer code
+
+For any F-key the app wants to act on, listen to the `key-press` event. The `key` detail contains the `{fkey:*}` action string:
+
+```typescript
+keyboard.addEventListener("key-press", (e) => {
+  const { key } = e.detail;
+  if (key === "{fkey:F1}") {
+    e.preventDefault(); // optional: suppress default key-press behavior
+    showHelpDialog();
+  }
+});
+```
+
+When `f-key-mode="Native"`, the synthetic `keydown` is dispatched to the target input **before** `key-press` fires. This means any global keyboard shortcut system listening on the document (for example, a hotkeys library) will also see the F-key event, independent of whether the `key-press` handler calls `preventDefault()`.
+
+To suppress the built-in F5 reload or F11 fullscreen actions specifically, call `preventDefault()` on the `key-press` event:
+
+```typescript
+keyboard.addEventListener("key-press", (e) => {
+  if (e.detail.key === "{fkey:F5}") {
+    e.preventDefault(); // prevent location.reload()
+    myApp.refreshData();
+  }
+});
+```
+
 ## Modular Imports (Tree-Shaking)
 
 The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. For applications that need only a subset, import individual layouts alongside the main entry:

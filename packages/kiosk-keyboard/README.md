@@ -696,15 +696,39 @@ keyboard.attachKeyPress((event) => {
 
 Set `fKeyMode="Native"` to opt into browser-style F-key handling.
 
-- The keyboard dispatches a synthetic `keydown` for the F-key.
-- If that event is not `preventDefault()`'d, built-in native actions run for:
-  - `F5`: `location.reload()`
-  - `F11`: fullscreen toggle
-- `keyPress` still fires afterward for compatibility.
+The component dispatches a synthetic `KeyboardEvent("keydown")` to the target input for all F-keys (F1-F12) and navigation keys (ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown). `keyPress` still fires afterward for compatibility.
+
+**Important:** browsers treat synthetic `KeyboardEvent` instances as untrusted (`isTrusted: false`) and block them from triggering security-sensitive browser actions such as page reload, fullscreen, or developer tools. A synthetic F5 keydown does **not** reload the page.
+
+To work around this limitation, the component has built-in action handlers for exactly two keys:
+
+- **F5**: calls `location.reload()` (unless `keyPress` is cancelled with `preventDefault()`)
+- **F11**: toggles fullscreen via `document.requestFullscreen()` / `document.exitFullscreen()` (unless cancelled)
+
+All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the target input but have no built-in browser action. The `keyPress` event is where the consuming app handles those keys.
 
 ```xml
 <kiosk:KioskKeyboard layout="qwerty" fKeyMode="Native" targetInput="myInput" />
 ```
+
+Handle other F-keys via the `keyPress` event:
+
+```typescript
+onKeyPress(event: Event<{ key: string }>): void {
+  if (event.getParameter("key") === "{fkey:F1}") {
+    event.preventDefault(); // optional: suppress default key-press behavior
+    this.showHelpDialog();
+  }
+}
+```
+
+Or in XML view:
+
+```xml
+<kiosk:KioskKeyboard fKeyMode="Native" keyPress=".onKeyPress" />
+```
+
+When `fKeyMode="Native"`, the synthetic `keydown` is dispatched to the target input **before** `keyPress` fires. Any global keyboard shortcut system listening on the document (for example, ui5-lib-hotkeys) will also see the F-key event, independent of whether the `keyPress` handler calls `preventDefault()`.
 
 This mirrors how SAP GUI intercepts physical F-keys and maps them to transaction commands. The virtual keyboard fires the event; your application provides the meaning.
 
