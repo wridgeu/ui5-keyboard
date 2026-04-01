@@ -21,7 +21,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework: plain HTML, React, Vue, Angular
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
-- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation (and composites like `qwerty-fk`, `qwerty-nav`)
+- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation. Composite variants (e.g., QWERTY + F-key row) are trivial to compose from building block rows.
 - **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Use `registerLocaleLayout("ja", "ja-kana")` to switch the Japanese default to kana input.
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
@@ -185,13 +185,13 @@ The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless
 
 `useRelativeModulePaths: true` is needed for dev serve. Without it, the middleware redirects module requests to a namespace-prefixed path (`demo/hotkeys/thirdparty/...`) that only exists after `ui5 build`. During dev serve, modules are stored under their original npm names and the redirect target does not resolve. This is intentional middleware design ([ui5-community/ui5-ecosystem-showcase#1049](https://github.com/ui5-community/ui5-ecosystem-showcase/issues/1049)); the namespace rewriting of entry-point modules is a build-only step. `useRelativeModulePaths: true` skips the redirect and serves modules at their npm paths directly. See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for a full path-mapping reference.
 
-The demo app in this repository uses Path B (section 3b below) for the `kiosk-keyboard` web component specifically, because the manual bridge was chosen for explicit metadata control. Path A is used in the demo app for `@ui5/webcomponents/dist` components (e.g. `KioskInputIds.view.xml`).
+The demo app in this repository uses Path A (CEM-driven) for the `kiosk-keyboard` web component. The manual bridge (Path B below) is documented as a reference for consumers who need explicit metadata control.
 
-#### 3b. `WebComponent.extend()` bridge (explicit control)
+#### 3b. `WebComponent.extend()` bridge (reference)
 
 For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events. Since UI5 >= 1.138, camelCase event names in `metadata.events` auto-convert to kebab-case DOM events (e.g. `keyPress` maps to `key-press`), so explicit `mapping: { to: "..." }` on events is not needed.
 
-This repository's demo app includes a complete bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts` that can be used as a template. A dedicated smoke check (`npm run test:demo:webc-bundle`) verifies the bridge entry point stays resolvable.
+See the demo-app README for a minimal bridge code example and scoping constraints.
 
 ```ts
 import WebComponent from "sap/ui/core/webc/WebComponent";
@@ -259,7 +259,7 @@ KioskKeyboard.registerLayout("pin-pad", [...]);
 KioskKeyboard.registerLocaleLayout("de", "qwertz-de");
 ```
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable imports for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
@@ -362,24 +362,23 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 
 ## Built-in Layouts
 
-| Name            | Description                                        |
-| --------------- | -------------------------------------------------- |
-| `qwerty`        | Standard US QWERTY                                 |
-| `qwertz-de`     | German QWERTZ with umlauts and ß                   |
-| `ja-romaji`     | Japanese Romaji (QWERTY base with JIS punctuation) |
-| `ja-kana`       | Japanese Kana direct-input (JIS X 6002)            |
-| `arabic`        | Arabic (standard Arabic 101 layout)                |
-| `numeric`       | Numbers + common symbols                           |
-| `special`       | Extended symbols (`#+=`, currencies)               |
-| `numpad`        | Calculator-style number pad                        |
-| `fkeys`         | F1-F12 function keys                               |
-| `nav`           | Navigation keys (arrows, Home, End, etc.)          |
-| `qwerty-fk`     | QWERTY + F-key row                                 |
-| `qwertz-de-fk`  | QWERTZ-DE + F-key row                              |
-| `qwerty-nav`    | QWERTY + navigation row                            |
-| `qwertz-de-nav` | QWERTZ-DE + navigation row                         |
-| `ko-hangul`     | Korean Hangul Dubeolsik (KS X 5002)                |
-| `qwerty-es`     | Spanish QWERTY with accented vowels and ñ          |
+| Name        | Description                                        |
+| ----------- | -------------------------------------------------- |
+| `qwerty`    | Standard US QWERTY                                 |
+| `qwertz-de` | German QWERTZ with umlauts and ss                  |
+| `ja-romaji` | Japanese Romaji (QWERTY base with JIS punctuation) |
+| `ja-kana`   | Japanese Kana direct-input (JIS X 6002)            |
+| `arabic`    | Arabic (standard Arabic 101 layout)                |
+| `numeric`   | Numbers + common symbols                           |
+| `special`   | Extended symbols (`#+=`, currencies)               |
+| `numpad`    | Calculator-style number pad                        |
+| `fkeys`     | F1-F12 function keys                               |
+| `nav`       | Navigation keys (arrows, Home, End, etc.)          |
+| `ko-hangul` | Korean Hangul Dubeolsik (KS X 5002)                |
+| `qwerty-es` | Spanish QWERTY with accented vowels and n-tilde    |
+
+Combined variants (e.g., QWERTY + F-key row) are not built-in. They are
+trivial compositions - see [Layout Composition](#layout-composition) above.
 
 ## Custom Layouts
 
@@ -437,27 +436,38 @@ interface KeyDefinition {
 
 ## Modular Imports (Tree-Shaking)
 
-The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. For applications that need only a subset, import from the core entry and add layouts individually:
+The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. For applications that need only a subset, import individual layouts alongside the main entry:
 
 ```ts
 import "kiosk-keyboard-webc/Assets";
-import { KioskKeyboard } from "kiosk-keyboard-webc/core";
+import KioskKeyboard from "kiosk-keyboard-webc";
 import "kiosk-keyboard-webc/layouts/qwerty";
 import "kiosk-keyboard-webc/layouts/numeric";
 ```
-
-Only the imported layouts are bundled. The core entry exports the same `KioskKeyboard` class; it simply starts with zero built-in layouts.
 
 Available subpath imports:
 
 | Import                                  | Description                      |
 | --------------------------------------- | -------------------------------- |
 | `kiosk-keyboard-webc`                   | Full entry (all layouts)         |
-| `kiosk-keyboard-webc/core`              | Core only (no layouts)           |
 | `kiosk-keyboard-webc/layouts/<name>`    | Individual layout                |
 | `kiosk-keyboard-webc/middleware/<name>` | Composition middleware           |
 | `kiosk-keyboard-webc/bundle`            | Single-file bundle (CDN/scripts) |
 | `kiosk-keyboard-webc/Assets`            | Theme + i18n registration        |
+
+### Layout Composition
+
+The package ships primary layouts and building block rows (`fkey-row`, `nav-row`).
+Combined layouts (e.g., QWERTY + F-key row) are not built-in - they are trivial
+compositions consumers can build:
+
+```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import { fkeyRow } from "kiosk-keyboard-webc/layouts/fkey-row";
+
+const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
+KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);
+```
 
 ## Composition Middleware
 
@@ -485,7 +495,7 @@ Implement the `CompositionMiddleware` interface and register it:
 
 ```ts
 import type { CompositionMiddleware } from "kiosk-keyboard-webc";
-import { KioskKeyboard } from "kiosk-keyboard-webc/core";
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 
 function createMyMiddleware(): CompositionMiddleware {
   return {
@@ -1083,8 +1093,7 @@ src/
 │   ├── default-layout.ts     # Default layout name constant
 │   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, ja-kana.ts, arabic.ts, ko-hangul.ts, qwerty-es.ts, numeric.ts, special.ts, numpad.ts
 │   ├── fkeys.ts, nav.ts      # Standalone F-key/nav layouts
-│   ├── fkey-row.ts, nav-row.ts  # Shared rows for composite layouts
-│   └── qwerty-fk.ts, qwertz-de-fk.ts, qwerty-nav.ts, qwertz-de-nav.ts
+│   └── fkey-row.ts, nav-row.ts  # Shared rows for composite layouts
 ├── themes/
 │   ├── KioskKeyboard.css      # Component styles
 │   └── sap_horizon*/          # Theme parameter bundles
