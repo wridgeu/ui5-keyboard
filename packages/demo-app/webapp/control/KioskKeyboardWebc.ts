@@ -5,9 +5,12 @@ import WebComponent from "sap/ui/core/webc/WebComponent";
 // static file -- it does NOT go through ui5-tooling-modules, so the web
 // component registers with its canonical (unscoped) tag name.
 //
-// This is the pattern a consumer would use with a manual bridge: load the web
-// component bundle via a <script> tag in their HTML (or a dynamic script load
-// as shown here) and write the WebComponent.extend() wrapper by hand.
+// This workaround is necessary because ui5-tooling-modules intercepts ALL
+// imports from packages with a `customElements` field in package.json. A normal
+// `import "kiosk-keyboard-webc/bundle"` would be converted to AMD, scoped, and
+// wrapped -- conflicting with the manual bridge's unscoped tag. Loading the
+// standalone bundle outside /resources/ bypasses the middleware entirely.
+// See the demo-app README "Web Component Consumption" section for details.
 void new Promise<void>((resolve, reject) => {
   if (customElements.get("kiosk-keyboard")) {
     resolve();

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Native Consumption -- ESM (tsc output)</title>
+    <title>ESM Consumption (tsc output)</title>
     <style>
       body {
         margin: 2rem;
@@ -23,6 +23,21 @@
         max-width: 400px;
         margin-bottom: 1rem;
       }
+      #status {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        display: inline-block;
+      }
+      #status.pass {
+        background: #d4edda;
+        color: #155724;
+      }
+      #status.fail {
+        background: #f8d7da;
+        color: #721c24;
+      }
     </style>
     <!--
       Bare ESM imports -- requires a dev server that resolves bare specifiers
@@ -39,7 +54,34 @@
       Imports <code>dist/bundle.esm.js</code> (flat tsc output). Bare specifiers like
       <code>@ui5/webcomponents-base</code> are resolved by Vite. Run via <code>npm start</code>.
     </p>
+    <div id="status">Checking...</div>
+    <br />
     <input id="target" type="text" placeholder="Click here, then type on the keyboard" />
     <kiosk-keyboard layout="qwerty" for="target" docked auto-show></kiosk-keyboard>
+
+    <script type="module">
+      const status = document.getElementById("status");
+      const checks = [];
+      try {
+        await customElements.whenDefined("kiosk-keyboard");
+        checks.push("element registered");
+
+        const el = document.querySelector("kiosk-keyboard");
+        if (!el || !el.shadowRoot) throw new Error("no shadow root");
+        checks.push("shadow DOM present");
+
+        const rows = el.shadowRoot.querySelectorAll("[part='row']");
+        if (rows.length === 0) throw new Error("no keyboard rows rendered");
+        checks.push(`${rows.length} rows rendered`);
+
+        status.textContent = `PASS: ${checks.join(", ")}`;
+        status.className = "pass";
+        document.title = "PASS - ESM Consumption";
+      } catch (err) {
+        status.textContent = `FAIL: ${err.message} (after: ${checks.join(", ") || "none"})`;
+        status.className = "fail";
+        document.title = "FAIL - ESM Consumption";
+      }
+    </script>
   </body>
 </html>
