@@ -1,4 +1,5 @@
 import JSONModel from "sap/ui/model/json/JSONModel";
+import type Element from "sap/ui/core/Element";
 import type Event from "sap/ui/base/Event";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import { Scope } from "../constants";
@@ -21,6 +22,7 @@ export default class KioskWebComponentTooling extends BaseController {
       new JSONModel({
         lastKey: "None",
         layout: "qwerty",
+        registeredTag: "(loading...)",
       }),
       KioskWebComponentTooling._MODEL_NAME,
     );
@@ -59,6 +61,7 @@ export default class KioskWebComponentTooling extends BaseController {
 
     if (active) {
       control.setProperty("autoShow", true);
+      this._readRegisteredTag(control);
       return;
     }
 
@@ -70,6 +73,17 @@ export default class KioskWebComponentTooling extends BaseController {
     const viewModel = this._getViewModel();
     viewModel.setProperty("/lastKey", "None");
     viewModel.setProperty("/layout", "qwerty");
+  }
+
+  private _readRegisteredTag(control: Element): void {
+    const update = () => {
+      const domRef = control.getDomRef();
+      if (domRef) {
+        this._getViewModel().setProperty("/registeredTag", `<${domRef.tagName.toLowerCase()}>`);
+      }
+    };
+    if (!control.getDomRef()) setTimeout(update, 0);
+    else update();
   }
 
   private _getViewModel(): JSONModel {

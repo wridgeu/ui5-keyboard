@@ -106,6 +106,50 @@ resolve through `"./*": "./dist/*"`, producing `dist/dist/KioskKeyboard.js`
 (double-dist, non-existent). The middleware constructs this path from the CEM's
 `declaration.module` field. See the "Exports Map Double-Dist" section below.
 
+## How Tag Scoping Works
+
+Tag scoping is a `ui5-tooling-modules` feature designed for **multi-version
+isolation**. On a Fiori Launchpad, multiple apps may load different versions of
+the same web component package. Without scoping, the second app's
+`customElements.define("kiosk-keyboard", ...)` would throw because the tag is
+already taken by the first app's version.
+
+Scoping solves this by appending a hash derived from the package version to
+every tag name. `kiosk-keyboard` becomes `kiosk-keyboard-e24fedd4`. Each app
+version gets its own registry entry, so they coexist without collisions.
+
+**Scoping is universal.** It applies to all packages the middleware detects via
+the `customElements` field in `package.json` -- including first-party
+`@ui5/webcomponents`. A `<ui5-button>` is scoped to `<ui5-button-abc123>` the
+same way `<kiosk-keyboard>` is scoped to `<kiosk-keyboard-e24fedd4>`. The
+auto-generated `WebComponent` wrapper hides this from the app developer: you
+write `<ui5:Button>` in XML, and the wrapper creates the scoped DOM element
+internally.
+
+**Why this affects the manual bridge.** A hand-written `WebComponent.extend()`
+bridge specifies `tag: "kiosk-keyboard"` (the canonical, unscoped name). At
+runtime, the UI5 bridge calls `customElements.get("kiosk-keyboard")` to look up
+the constructor. If the component was only loaded through the middleware, only
+the scoped tag (`kiosk-keyboard-e24fedd4`) exists in the registry -- the
+unscoped `kiosk-keyboard` was never defined. The bridge finds nothing, and the
+element stays unupgraded.
+
+There is no middleware API to query "what is the scoped name for this tag?" The
+bridge cannot dynamically discover the hash. This is why loading the standalone
+bundle outside the middleware is a necessity, not a preference: it registers the
+canonical unscoped tag so the manual bridge can find it.
+
+**Coexistence.** Both the scoped and unscoped tags can coexist in the same page.
+They are separate entries in the `customElements` registry, each pointing to
+(potentially different instances of) the component constructor. They share the
+same layout registry because it is a module-level singleton -- layout data is
+not tied to the tag name.
+
+The demo app's web component pages show the actual registered tag name at
+runtime. On the tooling-native page, you will see the scoped tag with its hash
+(which changes on every build). On the manual bridge page, you will see the
+canonical unscoped tag.
+
 ## Lean Consumption (Advanced)
 
 The package offers two entry points:
