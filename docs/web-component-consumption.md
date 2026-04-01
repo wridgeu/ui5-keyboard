@@ -16,7 +16,7 @@ via side-effect imports.
 This "one component, many plugins" pattern is unusual in the web components ecosystem
 and surfaced several tooling limitations.
 
-## Three Consumption Paths
+## Consumption Paths
 
 ### 1. UI5 Tooling-Native
 
@@ -49,25 +49,7 @@ wrapper at dev/build time.
 - The main entry (`KioskKeyboard.js`) must import all layouts, because the
   middleware only loads the module the CEM points to
 
-### 2. UI5 Manual Bridge (`WebComponent.extend()`)
-
-For apps that want explicit control over the wrapper metadata or cannot use
-`ui5-tooling-modules`. The developer writes a `WebComponent.extend()` bridge
-and loads the web component outside the middleware.
-
-**Why not a simple import?** When `ui5-tooling-modules` is active, it intercepts
-ALL imports from packages with a `customElements` field. The middleware converts
-the import to AMD, applies tag scoping, and generates its own wrapper -- which
-conflicts with a hand-written bridge using the unscoped tag. Loading the standalone
-bundle as a `<script type="module">` from a path outside `/resources/` bypasses
-the middleware entirely.
-
-**Scoping interaction:** The tooling-native path registers `kiosk-keyboard-<hash>`
-(scoped). The manual bridge registers `kiosk-keyboard` (unscoped). These are
-separate entries in the browser's `customElements` registry and coexist without
-conflict. Both share the same layout registry (singleton module state).
-
-### 3. Native npm/Browser
+### 2. Native npm/Browser
 
 For non-UI5 consumers:
 
@@ -145,34 +127,33 @@ They are separate entries in the `customElements` registry, each pointing to
 same layout registry because it is a module-level singleton -- layout data is
 not tied to the tag name.
 
-The demo app's web component pages show the actual registered tag name at
-runtime. On the tooling-native page, you will see the scoped tag with its hash
-(which changes on every build). On the manual bridge page, you will see the
-canonical unscoped tag.
+The demo app's web component tooling page shows the actual registered tag name
+at runtime. You will see the scoped tag with its hash (which changes on every
+build). The manual bridge demo was removed in the April 2026 architecture
+simplification; the bridge pattern is documented as a reference in the
+demo-app README.
 
 ## Lean Consumption (Advanced)
 
-The package offers two entry points:
+The default entry (`kiosk-keyboard-webc`) includes the component class and all
+built-in layouts. The `./core` named export was removed in the April 2026
+architecture simplification (the class was flattened from a re-export pattern
+into a single file, making a separate core entry unnecessary).
 
-| Entry          | Import path                | What you get                        |
-| -------------- | -------------------------- | ----------------------------------- |
-| Full (default) | `kiosk-keyboard-webc`      | Component + all 16 built-in layouts |
-| Core (lean)    | `kiosk-keyboard-webc/core` | Component only, no layouts          |
-
-The `"./core"` named export points to `dist/KioskKeyboardCore.js`, which contains
-the component class without any layout side-effect imports. The CEM correctly
-handles this re-export pattern -- the class and `custom-element-definition` are
-attributed to the full entry (`dist/KioskKeyboard.js`), not the core file.
-The middleware never sees the core export; it only processes the main entry.
-
-With the core entry, consumers cherry-pick layouts:
+Consumers who want selective layout loading can import individual layouts via
+subpath imports:
 
 ```typescript
-import KioskKeyboard from "kiosk-keyboard-webc/core";
+import KioskKeyboard from "kiosk-keyboard-webc";
 import "kiosk-keyboard-webc/layouts/qwerty";
 import "kiosk-keyboard-webc/layouts/numeric";
 KioskKeyboard.registerLayout("my-custom", myDefinition);
 ```
+
+Available layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
+`numeric`, `arabic`, `ja-kana`, `ko-hangul`). The shared building-block rows
+`kiosk-keyboard-webc/layouts/fkey-row` and `kiosk-keyboard-webc/layouts/nav-row`
+are stable imports for composing custom variant layouts.
 
 ## Limitations and Workarounds
 
@@ -235,56 +216,64 @@ is different from the canonical tag (`kiosk-keyboard`). A hand-written
 
 **Root cause:** Scoping is always enabled in the middleware's dev server
 (`ui5 serve`). The `pluginOptions.webcomponents.scoping` config only applies
-to the build task (`ui5 build`), not the middleware. This is by design -- the
+to the build task (`ui5 build`), not the middleware. This is by design - the
 dev server always scopes to match production behavior.
 
 **Workaround:** Load the standalone bundle from a path outside `/resources/`
 (e.g., `webapp/lib/kiosk-keyboard.bundle.js`). The UI5 dev server serves
 `webapp/` files at the root path without middleware interception. The standalone
-bundle registers the canonical (unscoped) tag. The demo app's `prestart` script
-copies the bundle from the webc package's dist.
+bundle registers the canonical (unscoped) tag.
 
-**Status:** Workaround in place. This is inherent to how scoping works and is
-not a bug -- scoping is designed for multi-version isolation.
+**Note (April 2026):** The manual bridge demo page was removed in the
+architecture simplification. The bridge pattern is documented as a reference in
+the demo-app README, including a minimal `WebComponent.extend()` code example.
+Consumers who need the bridge pattern can implement it from that reference
+without a dedicated demo page.
+
+**Status:** This is inherent to how scoping works and is not a bug - scoping is
+designed for multi-version isolation.
 
 ### CEM Re-Export Handling
 
-**Problem (initially assumed):** When the component class lives in
-`KioskKeyboardCore.ts` and is re-exported from `KioskKeyboard.ts`, the CEM
-analyzer might put the class declaration in the wrong module.
+**Historical context:** When the component class lived in `KioskKeyboardCore.ts`
+and was re-exported from `KioskKeyboard.ts`, the CEM analyzer needed to follow
+the re-export chain to attribute the class declaration to the correct module.
 
-**Investigation result:** The CEM analyzer correctly follows `export { default }
-from "./KioskKeyboardCore.js"` and attributes the class declaration to the
-re-exporting module (`dist/KioskKeyboard.js`). The `custom-element-definition`
-export also appears in the correct module.
+**Investigation result (pre-April 2026):** The CEM analyzer correctly followed
+`export { default } from "./KioskKeyboardCore.js"` and attributed the class
+declaration to the re-exporting module (`dist/KioskKeyboard.js`). The
+`custom-element-definition` export also appeared in the correct module. A
+CEM post-processing step that was initially added to propagate the CE def
+export was found to be unnecessary and was removed.
 
-**Previous workaround (removed):** A CEM post-processing step propagated the
-CE def export from the declaring module to the re-exporting module. This was
-unnecessary -- the analyzer handles it natively.
+**Known quirk:** The CEM analyzer wrapped re-export `declaration.module` paths
+in extra quotes: `"\"./KioskKeyboardCore.js\""` instead of
+`"./KioskKeyboardCore.js"`. This was a cosmetic bug in the analyzer but did not
+affect the middleware's class lookup because the CE def export was correctly
+attributed.
 
-**Known quirk:** The CEM analyzer wraps re-export `declaration.module` paths in
-extra quotes: `"\"./KioskKeyboardCore.js\""` instead of `"./KioskKeyboardCore.js"`.
-This is a cosmetic bug in the analyzer but does not affect the middleware's class
-lookup because the CE def export (which the middleware uses) is correctly attributed.
+**Resolution (April 2026):** The re-export pattern was eliminated entirely.
+The class now lives directly in `KioskKeyboard.ts` with no re-export from a
+separate core file. This removes the cross-module reference chain that the CEM
+analyzer had to follow and makes the extra-quotes quirk moot.
 
-**Status:** No workaround needed. The extra quotes are in the `js` export's
-`declaration.module`, not in the `custom-element-definition` export.
+**Status:** Resolved. The re-export investigation is preserved here for context
+in case similar patterns are introduced in the future.
 
-### Named `./core` Export
+### Named `./core` Export (Removed)
 
-The `"./core"` named export in `package.json` points to `dist/KioskKeyboardCore.js`.
-This was initially abandoned due to concerns about CEM re-export handling and
-middleware interference. Investigation revealed:
+The `"./core"` named export formerly pointed to `dist/KioskKeyboardCore.js`,
+providing a lean entry point without layout side-effect imports. Investigation
+had confirmed:
 
-1. The CEM analyzer correctly follows re-exports and attributes the class to the
-   re-exporting module (`KioskKeyboard.js`), not the declaring module (`KioskKeyboardCore.js`).
-2. The middleware never processes the `./core` export because it only resolves the
+1. The CEM analyzer correctly followed re-exports and attributed the class to the
+   re-exporting module (`KioskKeyboard.js`), not the declaring module.
+2. The middleware never processed the `./core` export because it only resolves the
    main entry from the CEM's `custom-element-definition` export.
-3. The extra quotes bug in `declaration.module` for re-exports is cosmetic -- it
-   only affects the `js` export, not the `custom-element-definition` export.
 
-**Status:** Named `./core` export is in place. The lean path also works via the
-wildcard (`kiosk-keyboard-webc/KioskKeyboardCore`).
+**Resolution (April 2026):** The `./core` export was removed when the class was
+flattened into a single file. Consumers who want selective layout loading can
+import individual layouts via `kiosk-keyboard-webc/layouts/*` subpath imports.
 
 ### Middleware Always Intercepts `webComponentsPackage` Imports
 
@@ -329,27 +318,26 @@ pattern, not the plugin-level pattern. This is why:
 - The middleware loads everything the main entry imports
 - There is no way to express "this component works without these plugins" in the CEM
 
-For lean consumption, the package offers the `KioskKeyboardCore` wildcard path
-as an escape hatch. But the primary consumption model (main entry, tooling-native)
-always ships all built-in layouts. This matches the ecosystem convention.
+For lean consumption, consumers can import individual layouts via
+`kiosk-keyboard-webc/layouts/*` subpath imports. But the primary consumption
+model (main entry, tooling-native) always ships all built-in layouts. This
+matches the ecosystem convention.
 
 ## Future Considerations
 
 1. **Upstream CEM analyzer fix for Windows paths:** If `@ui5/webcomponents-tools`
    switches from `path.join()` to `path.posix.join()` in the type reference code
-   path, the `@ui5/webcomponents-tools` patch in `patches/` can be removed.
+   path, the `@ui5/webcomponents-tools` patch in `patches/` can be removed. Note:
+   the April 2026 class flattening eliminated the cross-module type references
+   that were the primary trigger for this issue. The patch may no longer be needed;
+   verify by temporarily removing it and rebuilding on Windows.
 
 2. **Middleware per-package scoping control:** If `ui5-tooling-modules` adds
    per-package scoping config (e.g., `pluginOptions.webcomponents.scopeExclude`),
-   the manual bridge demo could use a simple `import` instead of the standalone
-   bundle workaround.
+   consumers using the manual bridge pattern could use a simple `import` instead
+   of the standalone bundle workaround.
 
-3. **Middleware `pluginOptions` in dev server:** The `scoping` option currently
-   only works in the build task, not the middleware. If the middleware exposes
-   `pluginOptions.webcomponents`, the demo app could disable scoping during
-   development.
-
-4. **CEM support for optional imports:** If the CEM spec adds a concept of
+3. **CEM support for optional imports:** If the CEM spec adds a concept of
    optional or pluggable dependencies, the middleware could distinguish between
    required and optional side-effect imports. This would enable proper lean
    consumption through the tooling path.

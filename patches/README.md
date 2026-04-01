@@ -135,6 +135,13 @@ The middleware normalizes resolved paths to forward slashes, then looks up `modu
 +                path.posix.join(path.posix.dirname(modulePath), currentModuleSpecifier.text)
 ```
 
+**Status update (April 2026):** The class was flattened from a re-export pattern
+(KioskKeyboard.ts re-exporting from KioskKeyboardCore.ts) into a single file.
+This eliminated the cross-module type references that were the primary trigger
+for this path normalization issue. The patch may no longer be needed - verify
+by temporarily removing it and rebuilding on Windows. If the CEM produces
+correct forward-slash paths without the patch, it can be removed.
+
 ### Upstream
 
 Repository: https://github.com/SAP/ui5-webcomponents
