@@ -93,6 +93,17 @@ const _cachedBinaries = resolveCachedBinaries();
 export const DESKTOP_WINDOW_SIZE = "1440,900";
 
 /**
+ * Base Chrome CLI flags shared by all wdio configs.
+ *
+ * - `--disable-gpu` avoids GPU-related issues in headless mode.
+ * - `--no-sandbox` is required on CI runners (rootless containers).
+ * - `--disable-dev-shm-usage` makes Chrome write shared-memory files to
+ *   `/tmp` instead of the size-limited `/dev/shm` partition, preventing
+ *   renderer crashes on GitHub Actions and similar Linux CI environments.
+ */
+export const BASE_CHROME_ARGS = ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"];
+
+/**
  * Base ports for device-emulation test servers, keyed by package directory name.
  *
  * Each device profile adds its `portOffset` (phone-sm: +1, phone-md: +2, phone-lg: +3, tablet: +4) to the
@@ -138,7 +149,7 @@ export const deviceProfiles: Record<string, DeviceProfile> = {
  * `resolveCachedBinaries`).
  */
 export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
-  const args = ["--disable-gpu", "--no-sandbox"];
+  const args = [...BASE_CHROME_ARGS];
   if (headless) args.unshift("--headless=new");
 
   return {

@@ -3,6 +3,7 @@ import path from "node:path";
 import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
 import {
+  BASE_CHROME_ARGS,
   CHROME_VERSION,
   DESKTOP_WINDOW_SIZE,
   ensureBrowsersDownloaded,
@@ -16,7 +17,7 @@ const PACKAGE_ROOT = path.resolve(__dirname, "../../../../packages/demo-app");
 const server = createServerManager(PORT, PACKAGE_ROOT, "ui5-flp.yaml", 120_000, "/test/flp.html");
 
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
-const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];
+const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, ...BASE_CHROME_ARGS];
 if (headless) chromeArgs.unshift("--headless=new");
 
 export const config: wdi5Config = {
