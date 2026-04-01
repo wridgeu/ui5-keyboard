@@ -238,19 +238,19 @@ describe("middleware integration", () => {
   });
 
   describe("registerMiddleware static method via component class", () => {
-    it("KioskKeyboardCore exposes registerMiddleware as a static method", async () => {
-      const { default: KioskKeyboardCore } = await import("../../src/KioskKeyboard.js");
-      expect(typeof KioskKeyboardCore.registerMiddleware).toBe("function");
+    it("KioskKeyboard exposes registerMiddleware as a static method", async () => {
+      const { default: KioskKeyboard } = await import("../../src/KioskKeyboard.js");
+      expect(typeof KioskKeyboard.registerMiddleware).toBe("function");
     });
 
     it("static registerMiddleware delegates to the registry and activates for a layout", async () => {
-      const { default: KioskKeyboardCore } = await import("../../src/KioskKeyboard.js");
+      const { default: KioskKeyboard } = await import("../../src/KioskKeyboard.js");
       const customMw: CompositionMiddleware = {
         handleKey: () => true,
         commit: () => "custom",
         reset: () => {},
       };
-      KioskKeyboardCore.registerMiddleware(["test-layout"], () => customMw);
+      KioskKeyboard.registerMiddleware(["test-layout"], () => customMw);
       const mw = getMiddlewareForLayout("test-layout");
       expect(mw).not.toBeNull();
       expect(mw!.commit()).toBe("custom");
