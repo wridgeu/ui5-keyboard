@@ -66,6 +66,9 @@ const jaRomaji: LayoutDefinition = [
     },
   ],
   // Row 5: bottom row (Japanese punctuation)
+  // No {layout:fkeys} Fn key here -- intentional. Japanese IME convention
+  // places the primary toggle between Romaji/Kana in this position. Users
+  // access F-keys by switching to ja-kana first, which has the Fn button.
   [
     {
       value: "{layout:numeric}",

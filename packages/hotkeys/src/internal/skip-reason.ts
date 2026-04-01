@@ -13,15 +13,17 @@ export interface SkipInfo {
 /**
  * Higher number = more specific/useful reason. When multiple registrations
  * are skipped, the most informative reason is reported.
+ *
+ * Only reasons that flow through {@link recordSkip} are listed here.
+ * `Suspended` is emitted directly via `_emitUnhandled` and bypasses this table.
  */
-const SKIP_PRIORITY: Record<UnhandledReason, number> = {
+const SKIP_PRIORITY: Partial<Record<UnhandledReason, number>> = {
   [UnhandledReason.NoMatch]: 0,
   [UnhandledReason.TargetMismatch]: 1,
   [UnhandledReason.RepeatIgnored]: 2,
   [UnhandledReason.InputSuppressed]: 3,
   [UnhandledReason.PopupSuppressed]: 4,
   [UnhandledReason.Disabled]: 5,
-  [UnhandledReason.Suspended]: 6,
 };
 
 /**
@@ -33,7 +35,7 @@ export function recordSkip(
   registration: HotkeyRegistration,
   toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo,
 ): void {
-  if (skipInfo && SKIP_PRIORITY[reason] > SKIP_PRIORITY[skipInfo.reason]) {
+  if (skipInfo && (SKIP_PRIORITY[reason] ?? -1) > (SKIP_PRIORITY[skipInfo.reason] ?? -1)) {
     skipInfo.reason = reason;
     skipInfo.registration = toRegistrationInfo(registration);
   }

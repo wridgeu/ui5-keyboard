@@ -28,7 +28,6 @@ i18n/
   messagebundle_ja.properties Japanese translations
   messagebundle_ar.properties Arabic translations
 layouts/
-  index.ts                Layout registry (Record<string, LayoutDefinition>)
   qwerty.ts               Standard QWERTY with number row and shift symbols
   qwertz-de.ts            German QWERTZ with Umlaute (ä, ö, ü, ß)
   numeric.ts              Number pad with basic operators
@@ -36,17 +35,13 @@ layouts/
   numpad.ts               Compact calculator-style keypad
   fkeys.ts                Standalone function key layout (F1-F12)
   nav.ts                  Standalone navigation layout (arrows + Home/End/Page)
-  fkey-row.ts             Shared F1-F12 row used by *-fk variants
-  nav-row.ts              Shared navigation row used by *-nav variants
-  qwerty-fk.ts            QWERTY with F1-F12 row on top
-  qwertz-de-fk.ts         QWERTZ-DE with F1-F12 row on top
-  qwerty-nav.ts           QWERTY with navigation row on top
+  fkey-row.ts             Shared F1-F12 row for consumer-composed *-fk variants
+  nav-row.ts              Shared navigation row for consumer-composed *-nav variants
   ja-romaji.ts            Japanese Romaji layout
   ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
   arabic.ts               Arabic layout
   ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
   qwerty-es.ts            Spanish QWERTY layout
-  qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 themes/
   base/
     KioskKeyboard.less    Base styles using SAP LESS parameters
@@ -584,7 +579,6 @@ packages/kiosk-keyboard/
       target-input-session.ts Target state + commit handling
       focus-claim-service.ts  Auto-show claim decisions
     layouts/
-      index.ts                Layout registry
       qwerty.ts               Standard QWERTY layout
       qwertz-de.ts            German QWERTZ layout
       numeric.ts              Numeric layout
@@ -592,17 +586,13 @@ packages/kiosk-keyboard/
       numpad.ts               Compact numpad layout
       fkeys.ts                Standalone F-key layout
       nav.ts                  Standalone navigation layout
-      fkey-row.ts             Shared F-key row
-      nav-row.ts              Shared navigation row
-      qwerty-fk.ts            QWERTY + F-key row
-      qwertz-de-fk.ts         QWERTZ-DE + F-key row
-      qwerty-nav.ts           QWERTY + navigation row
+      fkey-row.ts             Shared F-key row for consumer-composed variants
+      nav-row.ts              Shared navigation row for consumer-composed variants
       ja-romaji.ts            Japanese Romaji layout
       ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
       arabic.ts               Arabic layout
       ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
       qwerty-es.ts            Spanish QWERTY layout
-      qwertz-de-nav.ts        QWERTZ-DE + navigation row
     themes/
       base/
         KioskKeyboard.less    Base styles (SAP LESS parameters)

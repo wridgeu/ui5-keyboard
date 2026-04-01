@@ -29,7 +29,6 @@ middleware/
   kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
   hangul-compose.ts       Korean Hangul jamo composition middleware (ko-hangul layout)
 layouts/
-  index.ts                Built-in layout registry (ReadonlyMap of all 12 self-registering layouts)
   default-layout.ts       Default layout name constant: "qwerty"
   qwerty.ts               Standard QWERTY with number row and shift symbols
   qwertz-de.ts            German QWERTZ with Umlaute (ä, ö, ü, ß)
@@ -38,17 +37,13 @@ layouts/
   numpad.ts               Compact calculator-style keypad
   fkeys.ts                Standalone function key layout (F1-F12)
   nav.ts                  Standalone navigation layout (arrows + Home/End/Page)
-  fkey-row.ts             Shared F1-F12 row used by *-fk variants
-  nav-row.ts              Shared navigation row used by *-nav variants
-  qwerty-fk.ts            QWERTY with F1-F12 row on top
-  qwertz-de-fk.ts         QWERTZ-DE with F1-F12 row on top
-  qwerty-nav.ts           QWERTY with navigation row on top
+  fkey-row.ts             Shared F1-F12 row (import and prepend to compose custom variants)
+  nav-row.ts              Shared navigation row (import and prepend to compose custom variants)
   ja-romaji.ts            Japanese Romaji layout
   ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
   arabic.ts               Arabic layout
   ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
   qwerty-es.ts            Spanish QWERTY layout
-  qwertz-de-nav.ts        QWERTZ-DE with navigation row on top
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
@@ -266,11 +261,13 @@ keyboardType    Resolved layout
 
 ### Layout Composition
 
-Composite layouts use spread syntax to compose shared rows:
+Composite layouts are composed at registration time using the shared row modules:
 
 ```ts
-// qwerty-fk.ts
-export default [fkeyRow, ...qwerty] satisfies LayoutDefinition;
+import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
+import qwerty from "kiosk-keyboard-webc/layouts/qwerty";
+
+KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);
 ```
 
 ### Layout Registration

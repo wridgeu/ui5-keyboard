@@ -4,7 +4,7 @@ Local patches applied via [patch-package](https://github.com/ds300/patch-package
 
 ## @ui5/webcomponents-tools+2.20.0
 
-Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling.
+Fixes four bugs in the Custom Elements Manifest (CEM) generation tooling. (Bug 6 was removed -- see below.)
 
 **Note on upstream ownership:** `@ui5/webcomponents-tools` ships a bundled, patched copy of the community `@custom-elements-manifest/analyzer` under `lib/cem/patch/`. Bugs 1, 3, and 4 are in SAP's own `lib/cem/custom-elements-manifest.config.mjs` and can be filed directly against [SAP/ui5-webcomponents](https://github.com/SAP/ui5-webcomponents). Bugs 2 and 5 are in the bundled analyzer copy (`lib/cem/patch/@custom-elements-manifest/analyzer/`) which originates from [open-wc/custom-elements-manifest](https://github.com/open-wc/custom-elements-manifest). SAP can apply these to their bundled copy, but the root fix belongs in the community repo.
 
@@ -109,38 +109,17 @@ The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc
 +}).join('');
 ```
 
-### Bug 6: Type reference module paths use platform-dependent separators
+### Bug 6: Type reference module paths use platform-dependent separators (removed)
+
+> **Removed from the patch (April 2026).** Documented here for historical context.
 
 **File:** `lib/cem/utils.mjs`
 
-The `getTypeReferenceModulePath` function uses `path.join()` and `path.dirname()` to resolve relative type references (e.g., when `FKeyMode` is imported from `./types.js`). On Windows, `path.join()` produces backslashes (`dist\types.js`). The resulting CEM module paths must use forward slashes because `ui5-tooling-modules` normalizes resolved filesystem paths to forward slashes (line 199 of `rollup-plugin-webcomponents.js`) before matching them against CEM class aliases. A CEM with backslash paths creates aliases that never match.
+The `getTypeReferenceModulePath` function uses `path.join()` and `path.dirname()` to resolve relative type references. On Windows, `path.join()` produces backslashes (`dist\types.js`), but CEM module paths must use forward slashes because `ui5-tooling-modules` normalizes resolved filesystem paths to forward slashes before matching them against CEM class aliases. A CEM with backslash paths creates aliases that never match.
 
-The CEM specification itself does not mandate a separator format. However, ES module specifiers, npm package paths, and the de facto convention across all existing CEM consumers (IDE plugins, documentation generators, ui5-tooling-modules) use forward slashes. The `@ui5/webcomponents` team builds on Linux CI and has never encountered the issue.
+The fix was to use `path.posix.join()` and `path.posix.dirname()` instead of the platform-dependent equivalents.
 
-**Evidence from `ui5-tooling-modules`:**
-
-```javascript
-// rollup-plugin-webcomponents.js:198-200
-modulePath = modulePath.substr(metadata.npmPackagePath.length + 1);
-modulePath = modulePath.replace(/\\/g, "/"); // normalizes to forward slashes
-const moduleName = `${npmPackage}/${modulePath}`;
-```
-
-The middleware normalizes resolved paths to forward slashes, then looks up `moduleName` against the class alias map. The alias was created from the CEM's `declaration.module` field. If the CEM contains backslashes, the alias won't match.
-
-**Fix:** Use `path.posix.join()` and `path.posix.dirname()` instead of the platform-dependent `path.join()` and `path.dirname()`. These produce forward slashes on all platforms. The input (`modulePath`) is a CEM module path (already forward slashes from earlier processing), not a filesystem path, so `path.posix` is semantically correct.
-
-```diff
--                path.join(path.dirname(modulePath), currentModuleSpecifier.text)
-+                path.posix.join(path.posix.dirname(modulePath), currentModuleSpecifier.text)
-```
-
-**Status update (April 2026):** The class was flattened from a re-export pattern
-(KioskKeyboard.ts re-exporting from KioskKeyboardCore.ts) into a single file.
-This eliminated the cross-module type references that were the primary trigger
-for this path normalization issue. The patch may no longer be needed - verify
-by temporarily removing it and rebuilding on Windows. If the CEM produces
-correct forward-slash paths without the patch, it can be removed.
+**Why it was removed:** The class was flattened from a re-export pattern (`KioskKeyboard.ts` re-exporting from `KioskKeyboardCore.ts`) into a single file. This eliminated the cross-module type references that were the primary trigger for the path normalization issue. With all types defined in the same module, `getTypeReferenceModulePath` is no longer called for our component's type references, making the patch unnecessary. The upstream bug still exists for components that use cross-module type references on Windows, but it no longer affects this project.
 
 ### Upstream
 
