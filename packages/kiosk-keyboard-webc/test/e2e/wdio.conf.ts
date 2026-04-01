@@ -2,6 +2,7 @@ import url from "node:url";
 import path from "node:path";
 import { createViteServerManager } from "../../../../tools/wdio-server.js";
 import {
+  BASE_CHROME_ARGS,
   CHROME_VERSION,
   DESKTOP_WINDOW_SIZE,
   resolveCachedBinaries,
@@ -18,7 +19,7 @@ const server = createViteServerManager(PORT, PACKAGE_ROOT, 60_000, "/test/pages/
 
 const headless = !process.env.HEADED && !process.argv.includes("--headed");
 const updateVisualBaseline = process.argv.includes("--update-visual-baseline");
-const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, "--disable-gpu", "--no-sandbox"];
+const chromeArgs = [`--window-size=${DESKTOP_WINDOW_SIZE}`, ...BASE_CHROME_ARGS];
 if (headless) chromeArgs.unshift("--headless=new");
 
 const cachedBinaries = resolveCachedBinaries();
