@@ -18,6 +18,8 @@ import "../../src/layouts/nav.js";
 import "../../src/layouts/ja-romaji.js";
 import "../../src/layouts/ja-kana.js";
 import "../../src/layouts/arabic.js";
+import "../../src/layouts/ko-hangul.js";
+import "../../src/layouts/qwerty-es.js";
 
 const ALL_BUILTIN_NAMES = [
   "qwerty",
@@ -30,6 +32,8 @@ const ALL_BUILTIN_NAMES = [
   "ja-romaji",
   "ja-kana",
   "arabic",
+  "ko-hangul",
+  "qwerty-es",
 ];
 
 describe("entry-points: full entry", () => {

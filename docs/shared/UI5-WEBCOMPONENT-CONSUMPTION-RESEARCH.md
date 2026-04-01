@@ -71,7 +71,7 @@ And evaluate what is currently covered by this repository's demos.
   - native UI5 Web Component input usage in XML (`xmlns:webc="@ui5/webcomponents/dist"`)
   - custom-element bridge controls in `packages/demo-app/webapp/control/`
 - Kept `ui5-tooling-modules` middleware/task so npm web-component modules resolve correctly in the UI5 app.
-- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses both: `@ui5/webcomponents/dist/Input` is auto-wrapped via CEM, while `kiosk-keyboard-webc` uses a manual bridge at `packages/demo-app/webapp/control/KioskKeyboardWebc.ts`.
+- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses auto-wrapping via CEM for `@ui5/webcomponents/dist/Input`. The manual bridge for `kiosk-keyboard-webc` was removed; the bridge pattern is documented as a reference in the demo-app README.
 - Updated interop e2e harness to avoid deprecated/global-core access patterns.
 
 ### Middleware Configuration for Seamless Web Components
