@@ -32,7 +32,6 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
   - [Registration Group](#registration-group)
   - [Scope Management](#scope-management)
   - [Router Integration](#router-integration)
-  - [Debug Mode](#debug-mode)
   - [Unhandled Key Callback](#unhandled-key-callback)
   - [Target Elements](#target-elements)
   - [Suspend Guard](#suspend-guard)
@@ -71,9 +70,7 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - Hotkey recorder for "press a key" settings UIs
 - Held-key state tracking with macOS stuck-key fix
 - Hotkey validation with browser and SAP Fiori conflict warnings
-- Debug mode with detailed per-keypress logging
-
-**Developer Experience**
+  **Developer Experience**
 
 - Type-safe `Hotkey` string type with IDE autocomplete for known key combinations
 - Live option updates via `handle.setOptions()` without re-registering
@@ -313,8 +310,6 @@ const manager = HotkeyManager.getInstance();
 | `createRecorder(options)`              | Create a HotkeyRecorder instance                       |
 | `getKeyStateTracker()`                 | Access the held-key state tracker                      |
 | `setUnhandledHandler(callback)`        | Set callback for unhandled key events                  |
-| `setDebugMode(enabled)`                | Enable/disable detailed keypress logging               |
-| `isDebugMode()`                        | Check if debug mode is on                              |
 | `registerSequence(seq, cb, opts?)`     | Register a multi-key sequence, returns a handle        |
 | `getSequenceRegistrations()`           | Get all active sequence registrations                  |
 | `getSequenceRegistrationsForScope(id)` | Filter sequence registrations by scope                 |
@@ -542,21 +537,6 @@ if (manager.hasRouterIntegration()) {
 
 > [!IMPORTANT]
 > Dialog scopes still require manual `pushScope`/`popScope` since they're not route-based.
-
-### Debug Mode
-
-Enable detailed per-keypress logging to diagnose why a hotkey didn't fire:
-
-```ts
-manager.setDebugMode(true);
-```
-
-Every keypress is logged (via `Log.debug`) with:
-
-- Key pressed + modifiers, active scope, input/dialog state
-- Matched registration (if any) with scope, id, and description
-- All skipped registrations with reasons (disabled, input suppressed, etc.)
-- External conflicts from browser/SAP blocklists
 
 ### Unhandled Key Callback
 
@@ -953,11 +933,11 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 
 **Hotkey doesn't fire:**
 
-1. Check if the correct scope is active: use `manager.getActiveScope()` or enable debug mode
-2. If focus is in a text field, single-key hotkeys are suppressed by default (`ignoreInputs: "auto"`). Use `Ctrl`/`Mod` combos or set `ignoreInputs: false`
-3. Check if the registration is disabled: `handle.setOptions({ enabled: true })`
-4. Check for popup suppression: `suppressInPopups: true` blocks hotkeys when a dialog is open
-5. Enable debug mode (`manager.setDebugMode(true)`) and check the browser console for detailed per-keypress logs
+1. Check if the correct scope is active: use `manager.getActiveScope()`
+2. Use `setUnhandledHandler()` to see why keys are not matching (disabled, input suppressed, popup suppressed, etc.)
+3. If focus is in a text field, single-key hotkeys are suppressed by default (`ignoreInputs: "auto"`). Use `Ctrl`/`Mod` combos or set `ignoreInputs: false`
+4. Check if the registration is disabled: `handle.setOptions({ enabled: true })`
+5. Check for popup suppression: `suppressInPopups: true` blocks hotkeys when a dialog is open
 
 **Hotkey fires the wrong handler:**
 
