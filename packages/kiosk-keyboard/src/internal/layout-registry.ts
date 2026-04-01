@@ -9,10 +9,6 @@ import special from "../layouts/special";
 import numpad from "../layouts/numpad";
 import fkeys from "../layouts/fkeys";
 import nav from "../layouts/nav";
-import qwertyFk from "../layouts/qwerty-fk";
-import qwertzDeFk from "../layouts/qwertz-de-fk";
-import qwertyNav from "../layouts/qwerty-nav";
-import qwertzDeNav from "../layouts/qwertz-de-nav";
 import jaRomaji from "../layouts/ja-romaji";
 import jaKana from "../layouts/ja-kana";
 import arabic from "../layouts/arabic";
@@ -31,10 +27,6 @@ const layouts: Map<string, LayoutDefinition> = new Map([
   ["numpad", numpad],
   ["fkeys", fkeys],
   ["nav", nav],
-  ["qwerty-fk", qwertyFk],
-  ["qwertz-de-fk", qwertzDeFk],
-  ["qwerty-nav", qwertyNav],
-  ["qwertz-de-nav", qwertzDeNav],
   ["ja-romaji", jaRomaji],
   ["ja-kana", jaKana],
   ["arabic", arabic],

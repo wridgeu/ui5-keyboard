@@ -1,10 +1,8 @@
 import type { KeyRow } from "../types";
 
 /**
- * Shared F1-F12 key row used by the built-in variant layouts (`qwerty-fk`,
- * `qwertz-de-fk`). Keys render as modifier keys (subdued background).
- *
- * Import this to compose custom variant layouts:
+ * Shared F1-F12 key row. Import and prepend to a base layout to add function keys.
+ * Keys render as modifier keys (subdued background).
  *
  * ```ts
  * import fkeyRow from "ui5/kiosk/layouts/fkey-row";
