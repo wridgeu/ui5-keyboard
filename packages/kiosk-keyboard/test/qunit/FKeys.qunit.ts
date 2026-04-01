@@ -5,7 +5,6 @@ import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   getKeyElement,
   getRequiredKeyElement,
-  getRowElement,
   getRowElements,
   hasKeyClass,
   isShiftActive,
@@ -16,6 +15,11 @@ import {
 
 const DOM = KioskKeyboard.DOM;
 
+// Composite layout for tests that need both shift and F-key rows.
+// Consumers build these inline now that pre-built combined layouts are removed.
+const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
+KioskKeyboard.registerLayout("test-qwerty-fk", [fkeyRow, ...qwertyBase]);
+
 // ──────────────────────────────────────────────
 // Module
 // ──────────────────────────────────────────────
@@ -23,6 +27,8 @@ const DOM = KioskKeyboard.DOM;
 QUnit.module("FKeys", {
   afterEach() {
     KioskKeyboard.resetCustomLayouts();
+    // Re-register test composite after resetCustomLayouts clears it
+    KioskKeyboard.registerLayout("test-qwerty-fk", [fkeyRow, ...qwertyBase]);
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -32,15 +38,11 @@ QUnit.module("FKeys", {
 // Layout registration
 // ──────────────────────────────────────────────
 
-QUnit.test("fkeys, qwerty-fk, qwertz-de-fk are registered built-in layouts", (assert) => {
+QUnit.test("fkeys is a registered built-in layout", (assert) => {
   assert.ok(KioskKeyboard.isBuiltInLayout("fkeys"), "fkeys is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("qwerty-fk"), "qwerty-fk is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("qwertz-de-fk"), "qwertz-de-fk is built-in");
 
   const names = KioskKeyboard.getRegisteredLayoutNames();
   assert.ok(names.includes("fkeys"), "fkeys in registered names");
-  assert.ok(names.includes("qwerty-fk"), "qwerty-fk in registered names");
-  assert.ok(names.includes("qwertz-de-fk"), "qwertz-de-fk in registered names");
 });
 
 QUnit.test("fkey-row module exports F1-F12 key definitions", (assert) => {
@@ -98,43 +100,6 @@ QUnit.test("Standalone fkeys layout contains F1-F12 + ABC + Enter", async (asser
 });
 
 // ──────────────────────────────────────────────
-// Variant layouts rendering
-// ──────────────────────────────────────────────
-
-QUnit.test("qwerty-fk layout renders 6 rows (F-key row + 5 base rows)", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwerty-fk" });
-  await placeAndWait(kb);
-
-  const rows = getRowElements(kb);
-  assert.strictEqual(rows.length, 6, "qwerty-fk layout has 6 rows");
-
-  // First row should contain F-keys
-  const firstRow = getRowElement(kb, 0);
-  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F1}")), "First row contains F1");
-  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F12}")), "First row contains F12");
-
-  kb.destroy();
-});
-
-QUnit.test("qwertz-de-fk layout renders 6 rows (F-key row + 5 base rows)", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwertz-de-fk" });
-  await placeAndWait(kb);
-
-  const rows = getRowElements(kb);
-  assert.strictEqual(rows.length, 6, "qwertz-de-fk layout has 6 rows");
-
-  // First row should contain F-keys
-  const firstRow = getRowElement(kb, 0);
-  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F1}")), "First row contains F1");
-  assert.ok(firstRow.querySelector(KioskKeyboard.DOM.selectors.keyByValue("{fkey:F12}")), "First row contains F12");
-
-  // Should also contain German-specific keys (umlauts)
-  assert.ok(getKeyElement(kb, "\u00FC"), "Contains \u00FC key from qwertz-de base");
-
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
 // F-key press events
 // ──────────────────────────────────────────────
 
@@ -179,7 +144,7 @@ QUnit.test("F-key tap does NOT insert text", async (assert) => {
 });
 
 QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwerty-fk" });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-fk" });
   await placeAndWait(kb);
 
   // Activate shift
@@ -195,7 +160,7 @@ QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
 });
 
 QUnit.test("F-key tap fires keyPress with shiftKey=true when shift active", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwerty-fk" });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-fk" });
   await placeAndWait(kb);
 
   let shiftKey = false;
@@ -275,7 +240,7 @@ QUnit.test("ABC button on fkeys layout returns to base layout", async (assert) =
 
 QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   const input = new Input();
-  const kb = new KioskKeyboard({ layout: "qwerty-fk", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", targetInput: input });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -304,7 +269,7 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
 QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (assert) => {
   const input = new Input();
   const kb = new KioskKeyboard({
-    layout: "qwerty-fk",
+    layout: "test-qwerty-fk",
     targetInput: input,
   });
   kb.setFKeyMode("Native");

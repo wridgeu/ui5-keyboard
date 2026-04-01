@@ -17,23 +17,26 @@ import {
 
 const DOM = KioskKeyboard.DOM;
 
+// Composite layout for tests that need both nav row and base layout rows.
+// Consumers build these inline now that pre-built combined layouts are removed.
+const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
+KioskKeyboard.registerLayout("test-qwerty-nav", [navRow, ...qwertyBase]);
+
 QUnit.module("NavKeys", {
   afterEach() {
     KioskKeyboard.resetCustomLayouts();
+    // Re-register test composite after resetCustomLayouts clears it
+    KioskKeyboard.registerLayout("test-qwerty-nav", [navRow, ...qwertyBase]);
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
 });
 
-QUnit.test("nav and *-nav variants are registered built-in layouts", (assert) => {
+QUnit.test("nav is a registered built-in layout", (assert) => {
   assert.ok(KioskKeyboard.isBuiltInLayout("nav"), "nav is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("qwerty-nav"), "qwerty-nav is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("qwertz-de-nav"), "qwertz-de-nav is built-in");
 
   const names = KioskKeyboard.getRegisteredLayoutNames();
   assert.ok(names.includes("nav"), "nav in registered names");
-  assert.ok(names.includes("qwerty-nav"), "qwerty-nav in registered names");
-  assert.ok(names.includes("qwertz-de-nav"), "qwertz-de-nav in registered names");
 });
 
 QUnit.test("nav-row exports 8 navigation key definitions", (assert) => {
@@ -234,7 +237,7 @@ QUnit.test("PageUp moves caret to start, PageDown moves to end", async (assert) 
 
 QUnit.test("Physical Arrow key highlights matching virtual nav key", async (assert) => {
   const input = new Input();
-  const kb = new KioskKeyboard({ layout: "qwerty-nav", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-nav", targetInput: input });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
