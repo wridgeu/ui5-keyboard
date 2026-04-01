@@ -8,6 +8,10 @@
             <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <HBox>
+                        <Label text="Registered Tag:" class="sapUiSmallMarginEnd" />
+                        <ObjectStatus text="{webc>/registeredTag}" state="Warning" />
+                    </HBox>
+                    <HBox>
                         <Label text="Last Key:" class="sapUiSmallMarginEnd" />
                         <ObjectStatus text="{webc>/lastKey}" state="Information" />
                     </HBox>

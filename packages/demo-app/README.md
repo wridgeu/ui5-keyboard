@@ -253,5 +253,5 @@ Smoke test pages in the webc package: `test/pages/consume-bundle.html` and `test
 - `#/kiosk/focus-scenarios` focus transition and deferred close demo
 - `#/kiosk/i18n-extensibility` i18n extension demo
 - `#/kiosk/script-input` script input and composition middleware demo
-- `#/kiosk/web-component` manual bridge demo (WebComponent.extend)
-- `#/kiosk/web-component-tooling` tooling-native demo (auto-generated wrapper)
+- `#/kiosk/web-component` bridge demo (manual WebComponent.extend, unscoped tag)
+- `#/kiosk/web-component-tooling` tooling demo (auto-generated wrapper, scoped tag)
