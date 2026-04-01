@@ -29,14 +29,6 @@ export const KeyboardLayout = Object.freeze({
   Fkeys: "fkeys",
   /** Navigation keys (arrows, Home/End, Page keys) standalone layout. */
   Nav: "nav",
-  /** QWERTY layout with F1-F12 row on top. */
-  QwertyFk: "qwerty-fk",
-  /** German QWERTZ layout with F1-F12 row on top. */
-  QwertzDeFk: "qwertz-de-fk",
-  /** QWERTY layout with navigation row on top. */
-  QwertyNav: "qwerty-nav",
-  /** German QWERTZ layout with navigation row on top. */
-  QwertzDeNav: "qwertz-de-nav",
   /** Japanese Romaji layout (QWERTY base with JIS punctuation). */
   JaRomaji: "ja-romaji",
   /** Japanese Kana direct-input layout (JIS X 6002). */
