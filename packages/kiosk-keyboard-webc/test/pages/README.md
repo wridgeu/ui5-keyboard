@@ -1,6 +1,6 @@
 # Test Pages
 
-Standalone pages for manual testing, screenshot generation, and visual inspection of `kiosk-keyboard-webc`.
+Standalone pages for manual testing, screenshot generation, visual inspection, and consumption smoke tests of `kiosk-keyboard-webc`.
 
 ## Pages
 
@@ -8,6 +8,14 @@ Standalone pages for manual testing, screenshot generation, and visual inspectio
 - `key-style-demo.html`: key type comparison page used for README screenshots
 - `visual.html`: visual regression matrix used by WebdriverIO
 - `visual-themes.html`: focused theme preview page for theme-specific visual checks
+
+## Consumption Smoke Tests
+
+Minimal HTML pages that verify each consumption path works end-to-end. Each page includes programmatic assertions (element registration, shadow DOM, rendered rows) and reports PASS/FAIL visually and in `document.title`.
+
+- `consume-bundle.html`: **standalone bundle** -- loads `dist/kiosk-keyboard.bundle.js` via `<script>` tag. No bundler, no import map, no dev server needed. Open via any static server.
+- `consume-esm.html`: **ESM (regular import)** -- imports `dist/bundle.esm.js` with bare specifiers. Requires Vite to resolve `@ui5/webcomponents-base`. Run via `npm start`.
+- `consume-core.html`: **core/lean import** -- imports only `KioskKeyboardCore` (no built-in layouts), cherry-picks `numeric`, and registers a custom layout. Validates that lean consumption works. Requires Vite. Run via `npm start`.
 
 ## Running
 
