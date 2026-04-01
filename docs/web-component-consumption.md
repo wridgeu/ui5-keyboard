@@ -151,16 +151,14 @@ forward slashes.
 encountered this. The fix would be `path.posix.join()` or a post-normalization
 in the analyzer. No upstream fix exists as of `@ui5/webcomponents-tools@2.19.2`.
 
-**Workaround:** A post-generation script (`normalize-cem-paths.mjs`) replaces
-`\\` with `/` in the CEM JSON. This runs as the last step of `generateAPI` in
-`package-scripts.mjs`.
+**Fix:** A `patch-package` patch on `@ui5/webcomponents-tools` replaces
+`path.join()` / `path.dirname()` with `path.posix.join()` / `path.posix.dirname()`
+in `lib/cem/utils.mjs`. This produces forward slashes on all platforms. The input
+is a CEM module path (not a filesystem path), so `path.posix` is semantically
+correct. See `patches/README.md` Bug 6 for the full rationale and evidence from
+`ui5-tooling-modules` source code.
 
-**Current status:** The normalize script is in place as a safety net. Testing on
-Windows with Node.js 24 and `@ui5/webcomponents-tools@2.19.2` showed forward
-slashes in the generated CEM even without the script. The backslash behavior
-may depend on the Node.js version, the tools version, or the specific code path
-in the analyzer. The script is harmless (no-op when no backslashes exist) and
-should be kept until the upstream code is confirmed to use `path.posix.join()`.
+**Status:** Fixed via patch. Remove when the upstream adopts `path.posix`.
 
 ### Exports Map Double-Dist Resolution
 
