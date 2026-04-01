@@ -70,7 +70,8 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - Hotkey recorder for "press a key" settings UIs
 - Held-key state tracking with macOS stuck-key fix
 - Hotkey validation with browser and SAP Fiori conflict warnings
-  **Developer Experience**
+
+**Developer Experience**
 
 - Type-safe `Hotkey` string type with IDE autocomplete for known key combinations
 - Live option updates via `handle.setOptions()` without re-registering
@@ -86,15 +87,13 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 
 ## Installation
 
-> This package is currently workspace-only (`private: true`) and not published to npm.
-
-In this monorepo, dependencies are managed via npm workspaces:
+Install from npm:
 
 ```bash
-npm install
+npm install ui5-lib-hotkeys
 ```
 
-If/when this package is published, you can install it directly from npm (`ui5-lib-hotkeys`).
+In this monorepo, dependencies are managed via npm workspaces (`npm install` at the root).
 
 The package ships:
 

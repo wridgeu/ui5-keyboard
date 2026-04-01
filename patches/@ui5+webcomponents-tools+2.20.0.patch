@@ -78,16 +78,3 @@ index a684c61..e8b2e01 100644
        } else {
          doc.description = normalizeDescription(jsDocComment.comment);
        }
-diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/utils.mjs b/node_modules/@ui5/webcomponents-tools/lib/cem/utils.mjs
-index 95e57ca..e45b4f2 100644
---- a/node_modules/@ui5/webcomponents-tools/lib/cem/utils.mjs
-+++ b/node_modules/@ui5/webcomponents-tools/lib/cem/utils.mjs
-@@ -166,7 +166,7 @@ const findImportPath = (ts, sourceFile, typeName, modulePath) => {
- 
-         if (currentModuleSpecifier?.text?.startsWith(".")) {
-             return (
--                path.join(path.dirname(modulePath), currentModuleSpecifier.text)
-+                path.posix.join(path.posix.dirname(modulePath), currentModuleSpecifier.text)
-                     ?.replace("src", "dist")?.replace(".ts", ".js") || undefined
-             );
-         } else {

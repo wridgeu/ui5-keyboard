@@ -8,13 +8,10 @@
 
 ## History
 
+- [Backward Compatibility](./history/BACKWARD-COMPATIBILITY.md) (rejected)
 - [Black-Box Test Plan](./history/BLACKBOX-TEST-PLAN.md)
 - [Centralized EventDispatcher & Suspend Guard](./history/implemented-proposals/HOTKEY-MANAGER-SUSPEND-GUARD.md)
 
-## Proposals
-
-- [Backward Compatibility](./proposals/BACKWARD-COMPATIBILITY.md)
-
 ## Notes
 
-- Files under `proposals/` are planning snapshots and may diverge from the current implementation over time.
+- Files under `history/` are implementation-era notes and rejected proposals kept for context.

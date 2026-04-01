@@ -727,7 +727,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   onExitDOM(): void {
-    const mw = getMiddlewareForLayout(this._currentLayout || this._baseLayout || this.layout);
+    const mw = getMiddlewareForLayout(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
     if (mw) mw.reset();
     KioskKeyboard._instances.delete(this);
     this._teardownAutoShow();

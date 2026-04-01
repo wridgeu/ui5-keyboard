@@ -26,6 +26,8 @@ import "../../src/layouts/nav.js";
 import "../../src/layouts/ja-romaji.js";
 import "../../src/layouts/ja-kana.js";
 import "../../src/layouts/arabic.js";
+import "../../src/layouts/ko-hangul.js";
+import "../../src/layouts/qwerty-es.js";
 
 const CUSTOM_LAYOUT: LayoutDefinition = [[{ value: "a" }, { value: "b" }, { value: "c" }]];
 
@@ -58,6 +60,14 @@ describe("layout-registry", () => {
 
     it("has arabic as a built-in layout", () => {
       expect(isBuiltInLayout("arabic")).toBe(true);
+    });
+
+    it("has ko-hangul as a built-in layout", () => {
+      expect(isBuiltInLayout("ko-hangul")).toBe(true);
+    });
+
+    it("has qwerty-es as a built-in layout", () => {
+      expect(isBuiltInLayout("qwerty-es")).toBe(true);
     });
 
     it("returns false for unknown layouts", () => {

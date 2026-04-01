@@ -178,7 +178,6 @@ Consumers can register custom middleware via `KioskKeyboard.registerMiddleware(l
 | ---------------------------------- | ------------------------------------------------------------------- |
 | `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
 | `kiosk-keyboard-webc`              | Component with all built-in layouts (no Assets, no middleware)      |
-| `kiosk-keyboard-webc/core`         | Component only, zero layouts, zero middleware                       |
 | `kiosk-keyboard-webc/layouts/*`    | Individual self-registering layout modules                          |
 | `kiosk-keyboard-webc/middleware/*` | Individual self-registering middleware modules                      |
 
@@ -188,7 +187,7 @@ To include only QWERTY and the kana dakuten middleware:
 
 ```ts
 import "kiosk-keyboard-webc/Assets";
-import { KioskKeyboard } from "kiosk-keyboard-webc/core";
+import KioskKeyboard from "kiosk-keyboard-webc";
 import "kiosk-keyboard-webc/layouts/qwerty";
 import "kiosk-keyboard-webc/middleware/kana-dakuten";
 ```
