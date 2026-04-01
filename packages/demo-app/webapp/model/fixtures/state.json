@@ -97,13 +97,8 @@
       "route": "kioskI18nExtensibility"
     },
     {
-      "title": "Web Component (Bridge)",
-      "description": "Manual WebComponent.extend() bridge with explicit bundle import and full property/event mapping.",
-      "route": "kioskWebComponent"
-    },
-    {
-      "title": "Web Component (Tooling)",
-      "description": "Native XML namespace consumption via ui5-tooling-modules. No manual bridge, no side-effect import. Requires kiosk-keyboard-webc to be built (dist/ must exist).",
+      "title": "Web Component",
+      "description": "Native XML namespace consumption via ui5-tooling-modules. The middleware auto-generates the UI5 wrapper from the Custom Elements Manifest.",
       "route": "kioskWebComponentTooling"
     },
     {
