@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prestart": "node ../../tools/copy-webc-bundle.mjs",
     "start": "ui5 serve --port 8080 -o index.html",
     "start:flp": "ui5 serve --config ui5-flp.yaml --port 8080 -o test/flp.html",
     "build": "ui5 build --clean-dest",
