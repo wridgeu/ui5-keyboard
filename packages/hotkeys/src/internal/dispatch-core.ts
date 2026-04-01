@@ -3,7 +3,7 @@ import { UnhandledReason } from "../library";
 import { matchesKeyboardEvent } from "./match";
 import { resolveIgnoreInputs } from "./dom";
 import type { HotkeyRegistration, HotkeyRegistrationInfo } from "../types";
-import { recordSkip, type DebugSkipEntry, type SkipInfo } from "./skip-reason";
+import { recordSkip, type SkipInfo } from "./skip-reason";
 
 interface FindMatchOptions {
   event: KeyboardEvent;
@@ -11,7 +11,6 @@ interface FindMatchOptions {
   popupOpen: boolean;
   registrations: ReadonlyArray<HotkeyRegistration>;
   skipInfo?: SkipInfo | null;
-  debugSkips?: DebugSkipEntry[] | null;
   toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo;
   logComponent: string;
 }
@@ -20,7 +19,7 @@ interface FindMatchOptions {
  * Find first matching registration for a specific scope.
  */
 export function findMatchInScope(options: FindMatchOptions): HotkeyRegistration | null {
-  const { event, isInput, popupOpen, registrations, skipInfo, debugSkips, toRegistrationInfo, logComponent } = options;
+  const { event, isInput, popupOpen, registrations, skipInfo, toRegistrationInfo, logComponent } = options;
 
   for (const registration of registrations) {
     const opts = registration.options;
@@ -40,26 +39,22 @@ export function findMatchInScope(options: FindMatchOptions): HotkeyRegistration 
     }
     if (!enabled) {
       recordSkip(skipInfo, UnhandledReason.Disabled, registration, toRegistrationInfo);
-      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.Disabled });
       continue;
     }
 
     if (opts.ignoreRepeat && event.repeat) {
       recordSkip(skipInfo, UnhandledReason.RepeatIgnored, registration, toRegistrationInfo);
-      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.RepeatIgnored });
       continue;
     }
 
     const shouldIgnoreInputs = resolveIgnoreInputs(opts.ignoreInputs, registration.parsedHotkey);
     if (shouldIgnoreInputs && isInput) {
       recordSkip(skipInfo, UnhandledReason.InputSuppressed, registration, toRegistrationInfo);
-      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.InputSuppressed });
       continue;
     }
 
     if (opts.suppressInPopups && popupOpen) {
       recordSkip(skipInfo, UnhandledReason.PopupSuppressed, registration, toRegistrationInfo);
-      if (debugSkips) debugSkips.push({ registration, reason: UnhandledReason.PopupSuppressed });
       continue;
     }
 

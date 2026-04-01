@@ -11,14 +11,6 @@ export interface SkipInfo {
 }
 
 /**
- * Debug skip entry for debug mode - records ALL skipped registrations.
- */
-export interface DebugSkipEntry {
-  registration: HotkeyRegistration;
-  reason: UnhandledReason;
-}
-
-/**
  * Higher number = more specific/useful reason. When multiple registrations
  * are skipped, the most informative reason is reported.
  */

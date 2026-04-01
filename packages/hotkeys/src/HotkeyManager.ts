@@ -13,12 +13,12 @@ import { GLOBAL_SCOPE } from "./internal/constants";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
-import { keyboardEventToHotkey /* debug-mode only */, parseHotkey } from "./internal/parse";
+import { parseHotkey } from "./internal/parse";
 import { resolveRequiredScope, resolveScopeOrGlobal } from "./internal/scope";
 import { resetRuntimeCaches, runtimeHooks } from "./internal/runtime";
 import { findMatchInScope } from "./internal/dispatch-core";
 import { matchesKeyboardEvent } from "./internal/match";
-import { recordSkip, type DebugSkipEntry, type SkipInfo } from "./internal/skip-reason";
+import { recordSkip, type SkipInfo } from "./internal/skip-reason";
 import type {
   Hotkey,
   HotkeyCallback,
@@ -165,9 +165,6 @@ export default class HotkeyManager extends BaseObject {
 
   // Optional callback for unhandled key events
   private _unhandledCallback: UnhandledCallback | null = null;
-
-  // Debug mode
-  private _debugMode = false;
 
   // Centralized event dispatcher - owns all DOM listeners
   private _dispatcher: EventDispatcher;
@@ -748,32 +745,6 @@ export default class HotkeyManager extends BaseObject {
     this._unhandledCallback = callback;
   }
 
-  // ──────────────────────────────────────────────
-  // Debug mode
-  // ──────────────────────────────────────────────
-
-  /**
-   * Enable or disable debug mode.
-   *
-   * When enabled, every key event is logged with detailed information:
-   * - Key pressed + modifiers, active scope, input/dialog state
-   * - Matched registration (if any) with scope, id, description
-   * - All skipped registrations with reasons
-   * - External conflicts from browser/SAP blocklists
-   */
-  setDebugMode(enabled: boolean): void {
-    this._assertAlive("setDebugMode");
-    this._debugMode = enabled;
-    Log.info(`Debug mode ${enabled ? "enabled" : "disabled"}`, undefined, LOG_COMPONENT);
-  }
-
-  /**
-   * Whether debug mode is currently enabled.
-   */
-  isDebugMode(): boolean {
-    return this._debugMode;
-  }
-
   /**
    * Register an element ID as a generic root node.
    *
@@ -845,7 +816,6 @@ export default class HotkeyManager extends BaseObject {
     this._scopeStack = [GLOBAL_SCOPE];
     resetRuntimeCaches();
     this._unhandledCallback = null;
-    this._debugMode = false;
     instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -875,54 +845,25 @@ export default class HotkeyManager extends BaseObject {
     // Check popup state (lazy-loaded)
     const popupOpen = this._checkPopupOpen();
 
-    // Allocate skip tracking when either unhandled callback or debug mode needs it
-    const needsSkipTracking = this._unhandledCallback !== null || this._debugMode;
-    const skipInfo: SkipInfo | null = needsSkipTracking ? { reason: UnhandledReason.NoMatch } : null;
-    const debugSkips: DebugSkipEntry[] | null = this._debugMode ? [] : null;
+    const skipInfo: SkipInfo | null = this._unhandledCallback !== null ? { reason: UnhandledReason.NoMatch } : null;
 
     // Pass 1: target-scoped registrations - innermost match wins.
-    const targetMatch = this._matchTargetRegistrations(
-      event,
-      eventPath,
-      activeScope,
-      isInput,
-      popupOpen,
-      skipInfo,
-      debugSkips,
-    );
+    const targetMatch = this._matchTargetRegistrations(event, eventPath, activeScope, isInput, popupOpen, skipInfo);
 
     if (targetMatch) {
       this._executeMatch(event, targetMatch);
-      if (this._debugMode) {
-        this._logDebugEvent(event, activeScope, isInput, popupOpen, targetMatch, debugSkips);
-      }
     }
 
     // Pass 2: untargeted registrations (only if no target match stopped propagation)
     if (!targetMatch || !targetMatch.options.stopPropagation) {
-      const untargetedMatch = this._matchUntargetedRegistrations(
-        event,
-        activeScope,
-        isInput,
-        popupOpen,
-        skipInfo,
-        debugSkips,
-      );
+      const untargetedMatch = this._matchUntargetedRegistrations(event, activeScope, isInput, popupOpen, skipInfo);
       if (untargetedMatch) {
         this._executeMatch(event, untargetedMatch);
-        if (this._debugMode) {
-          this._logDebugEvent(event, activeScope, isInput, popupOpen, untargetedMatch, debugSkips);
-        }
         return { consumed: true, eventContext: null };
       }
     }
 
     if (targetMatch) return { consumed: true, eventContext: null };
-
-    // Nothing matched - pass event context to emitUnhandled via return value
-    if (this._debugMode) {
-      this._logDebugEvent(event, activeScope, isInput, popupOpen, null, debugSkips);
-    }
 
     return { consumed: false, eventContext: { activeScope, isInput, popupOpen, skipInfo } };
   }
@@ -1046,7 +987,6 @@ export default class HotkeyManager extends BaseObject {
     isInput: boolean,
     popupOpen: boolean,
     skipInfo: SkipInfo | null,
-    debugSkips: DebugSkipEntry[] | null,
   ): HotkeyRegistration | null {
     const matchOpts = {
       event,
@@ -1061,7 +1001,6 @@ export default class HotkeyManager extends BaseObject {
       ...matchOpts,
       registrations: this._getScopeRegistrations(activeScope, null),
       skipInfo,
-      debugSkips,
     });
     if (activeScopeMatch) return activeScopeMatch;
 
@@ -1071,7 +1010,6 @@ export default class HotkeyManager extends BaseObject {
         ...matchOpts,
         registrations: this._getScopeRegistrations(GLOBAL_SCOPE, null),
         skipInfo,
-        debugSkips,
       });
     }
 
@@ -1093,7 +1031,6 @@ export default class HotkeyManager extends BaseObject {
     isInput: boolean,
     popupOpen: boolean,
     skipInfo: SkipInfo | null,
-    debugSkips: DebugSkipEntry[] | null,
   ): HotkeyRegistration | null {
     const pathSet = new Set(eventPath);
     const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
@@ -1115,7 +1052,6 @@ export default class HotkeyManager extends BaseObject {
           popupOpen,
           registrations,
           skipInfo,
-          debugSkips,
           toRegistrationInfo: (reg) => this._toRegistrationInfo(reg),
           logComponent: LOG_COMPONENT,
         });
@@ -1128,7 +1064,7 @@ export default class HotkeyManager extends BaseObject {
 
     // Skip-reason pass for off-path targets: record TargetMismatch for
     // registrations whose key combo matches but target is not in the path.
-    if (skipInfo || debugSkips) {
+    if (skipInfo) {
       for (const scope of scopesToCheck) {
         const bucket = this._registrationsByScope.get(scope);
         if (!bucket) continue;
@@ -1141,7 +1077,6 @@ export default class HotkeyManager extends BaseObject {
             const reg = this._registrations.get(id);
             if (reg && matchesKeyboardEvent(event, reg.parsedHotkey)) {
               recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, (r) => this._toRegistrationInfo(r));
-              if (debugSkips) debugSkips.push({ registration: reg, reason: UnhandledReason.TargetMismatch });
             }
           }
         }
@@ -1216,60 +1151,6 @@ export default class HotkeyManager extends BaseObject {
       merged.add(id);
     }
     return merged;
-  }
-
-  // ──────────────────────────────────────────────
-  // Private: Debug logging
-  // ──────────────────────────────────────────────
-
-  private _logDebugEvent(
-    event: KeyboardEvent,
-    activeScope: string,
-    isInput: boolean,
-    popupOpen: boolean,
-    matched: HotkeyRegistration | null,
-    debugSkips: DebugSkipEntry[] | null,
-  ): void {
-    const modifiers: string[] = [];
-    if (event.ctrlKey) modifiers.push("Ctrl");
-    if (event.altKey) modifiers.push("Alt");
-    if (event.shiftKey) modifiers.push("Shift");
-    if (event.metaKey) modifiers.push("Meta");
-    const keyCombo = [...modifiers, event.key].join("+");
-
-    const lines: string[] = [
-      `[HotkeyDebug] Key: ${keyCombo}`,
-      `  Scope: ${activeScope} | Input: ${isInput} | Popup: ${popupOpen} | Repeat: ${event.repeat}`,
-    ];
-
-    if (matched) {
-      lines.push(
-        `  MATCHED: "${matched.normalizedHotkey}" (id: ${matched.id}, scope: ${matched.options.scope}` +
-          `${matched.options.description ? `, desc: "${matched.options.description}"` : ""})`,
-      );
-    } else {
-      lines.push("  NO MATCH");
-    }
-
-    if (debugSkips && debugSkips.length > 0) {
-      lines.push("  Skipped:");
-      for (const skip of debugSkips) {
-        lines.push(`    - "${skip.registration.normalizedHotkey}" (id: ${skip.registration.id}): ${skip.reason}`);
-      }
-    }
-
-    const validate = this._getValidateModule();
-    if (validate) {
-      const normalized = keyboardEventToHotkey(event);
-      if (normalized) {
-        const browserConflict = validate.BROWSER_SHORTCUTS.get(normalized);
-        const sapConflict = validate.SAP_SHORTCUTS.get(normalized);
-        if (browserConflict) lines.push(`  Browser conflict: ${browserConflict}`);
-        if (sapConflict) lines.push(`  SAP conflict: ${sapConflict}`);
-      }
-    }
-
-    Log.debug(lines.join("\n"), undefined, LOG_COMPONENT);
   }
 
   /** Lazy import to avoid circular deps at module level. */
