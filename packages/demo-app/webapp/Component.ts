@@ -60,7 +60,11 @@ export default class Component extends UIComponent {
         this._routeMatchedHandler();
       })
       .catch((err: unknown) => {
-        Log.warning(`State model fixture failed to load: ${err}`, undefined, "demo.hotkeys.Component");
+        Log.warning(
+          "State model fixture failed to load",
+          err instanceof Error ? err : String(err),
+          "demo.hotkeys.Component",
+        );
       });
 
     // Register global shortcuts (active across all views).

@@ -327,7 +327,11 @@ export default class SequenceManager extends BaseObject {
           scope: reg.scope,
         });
       } catch (error) {
-        Log.error(`Error in sequence callback for [${reg.sequence.join(", ")}]: ${error}`, undefined, LOG_COMPONENT);
+        Log.error(
+          `Sequence callback threw for [${reg.sequence.join(", ")}]`,
+          error instanceof Error ? error : String(error),
+          LOG_COMPONENT,
+        );
       }
       return true;
     }
@@ -356,8 +360,8 @@ export default class SequenceManager extends BaseObject {
       return typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
     } catch (error) {
       Log.error(
-        `Error evaluating enabled() for sequence [${reg.sequence.join(", ")}]: ${error}`,
-        undefined,
+        `enabled() threw for sequence [${reg.sequence.join(", ")}]`,
+        error instanceof Error ? error : String(error),
         LOG_COMPONENT,
       );
       return false;
@@ -447,8 +451,8 @@ export default class SequenceManager extends BaseObject {
       });
     } catch (error) {
       Log.error(
-        `Error in sequence pending callback for [${reg.sequence.join(", ")}], step ${stepIndex}: ${error}`,
-        undefined,
+        `Sequence pending callback threw for [${reg.sequence.join(", ")}], step ${stepIndex}`,
+        error instanceof Error ? error : String(error),
         LOG_COMPONENT,
       );
     }

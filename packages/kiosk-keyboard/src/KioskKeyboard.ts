@@ -701,7 +701,11 @@ export default class KioskKeyboard extends Control {
         KioskKeyboard._invalidateAllInstances();
       })
       .catch((e) => {
-        Log.warning(`configureI18n: failed to load enhancement bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+        Log.warning(
+          "configureI18n: failed to load enhancement bundles",
+          e instanceof Error ? e : String(e),
+          "ui5.kiosk.KioskKeyboard",
+        );
       });
 
     return loaded;
@@ -880,7 +884,11 @@ export default class KioskKeyboard extends Control {
         void staleReload
           .then(() => KioskKeyboard._invalidateAllInstances())
           .catch((e) => {
-            Log.warning(`init: failed to reload stale i18n bundles: ${e}`, undefined, "ui5.kiosk.KioskKeyboard");
+            Log.warning(
+              "init: failed to reload stale i18n bundles",
+              e instanceof Error ? e : String(e),
+              "ui5.kiosk.KioskKeyboard",
+            );
           })
           .finally(() => {
             if (KioskKeyboard._lastReloadPromise === staleReload) {
