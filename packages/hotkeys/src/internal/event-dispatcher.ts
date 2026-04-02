@@ -286,7 +286,7 @@ export default class EventDispatcher {
       try {
         if (this._interceptor.onKeyDown(event)) return;
       } catch (error) {
-        Log.error(`Error in interceptor onKeyDown: ${error}`, undefined, LOG_COMPONENT);
+        Log.error("Interceptor onKeyDown threw", error instanceof Error ? error : String(error), LOG_COMPONENT);
         event.preventDefault();
         // Do NOT stopImmediatePropagation - let analytics/a11y listeners still observe the event
         return;

@@ -225,7 +225,11 @@ export default class KeyStateTracker {
       try {
         this._changeCallback(this.getHeldKeys());
       } catch (error) {
-        Log.error(`Error in KeyStateTracker change callback: ${error}`, undefined, LOG_COMPONENT);
+        Log.error(
+          "KeyStateTracker change callback threw",
+          error instanceof Error ? error : String(error),
+          LOG_COMPONENT,
+        );
       }
     }
   }
