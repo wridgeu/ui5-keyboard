@@ -10,6 +10,9 @@ The following proposals were fully implemented and their documentation removed (
 - **Japanese and Arabic Layouts** (ja-romaji, ja-kana, arabic) -- implemented in both packages
 - **Icon + Text Keys** (dual icon/label on modifier and action keys) -- implemented via `--kiosk-keyboard-dual-*` CSS variables
 - **Composition Middleware** (script-specific input processing) -- implemented as middleware registry with kana dakuten and hangul compose
-- **Layout Tree-Shaking** (split entry points for WebC) -- implemented via `./core`, `./layouts/*`, `./middleware/*` exports
+
+The following proposals were superseded or rejected:
+
+- **Layout Tree-Shaking** (split entry points for WebC) -- superseded: the main entry now includes all built-in layouts; subpath imports remain for middleware and bundle only
 
 When a proposal is implemented, deferred, or rejected, update its status line and move it to a more appropriate long-term location if needed.

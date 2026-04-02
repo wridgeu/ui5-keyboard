@@ -542,7 +542,7 @@ Consumers who want selective layout loading can import the main entry (which inc
 | Data binding      | UI5 `setValue()` / `fireLiveChange()`                      | Native `InputEvent` dispatch                           |
 | i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook | UI5 WC `i18nBundle` + custom resolver                  |
 | Tag               | `<kiosk:KioskKeyboard />` (XML)                            | `<kiosk-keyboard>` (HTML)                              |
-| Distribution      | UI5 library (preload)                                      | ESM bundle or tree-shakeable import                    |
+| Distribution      | UI5 library (preload)                                      | ESM with subpath imports                               |
 
 ## Edge Cases
 

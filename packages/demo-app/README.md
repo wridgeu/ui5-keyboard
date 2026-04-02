@@ -197,8 +197,8 @@ const KioskKeyboardBridge = WebComponent.extend("my.app.control.KioskKeyboard", 
     properties: {
       layout: { type: "string", defaultValue: "", mapping: { type: "property", to: "layout" } },
       docked: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "docked" } },
-      autoShow: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "autoShow" } },
-      autoType: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "autoType" } },
+      autoShow: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "auto-show" } },
+      autoType: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "auto-type" } },
     },
     events: {
       keyPress: { parameters: { key: { type: "string" }, shiftKey: { type: "boolean" } } },
@@ -247,7 +247,7 @@ The package ships primary layouts (qwerty, numpad, arabic, etc.) and building bl
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
-import { fkeyRow } from "kiosk-keyboard-webc/layouts/fkey-row";
+import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
 const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
 KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);

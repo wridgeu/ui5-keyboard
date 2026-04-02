@@ -484,26 +484,16 @@ keyboard.addEventListener("key-press", (e) => {
 });
 ```
 
-## Modular Imports (Tree-Shaking)
+## Subpath Imports
 
-The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. For applications that need only a subset, import individual layouts alongside the main entry:
+The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for middleware, the CDN bundle, and asset registration:
 
-```ts
-import "kiosk-keyboard-webc/Assets";
-import KioskKeyboard from "kiosk-keyboard-webc";
-import "kiosk-keyboard-webc/layouts/qwerty";
-import "kiosk-keyboard-webc/layouts/numeric";
-```
-
-Available subpath imports:
-
-| Import                                  | Description                      |
-| --------------------------------------- | -------------------------------- |
-| `kiosk-keyboard-webc`                   | Full entry (all layouts)         |
-| `kiosk-keyboard-webc/layouts/<name>`    | Individual layout                |
-| `kiosk-keyboard-webc/middleware/<name>` | Composition middleware           |
-| `kiosk-keyboard-webc/bundle`            | Single-file bundle (CDN/scripts) |
-| `kiosk-keyboard-webc/Assets`            | Theme + i18n registration        |
+| Import                                  | Description                       |
+| --------------------------------------- | --------------------------------- |
+| `kiosk-keyboard-webc`                   | Full entry (all built-in layouts) |
+| `kiosk-keyboard-webc/middleware/<name>` | Composition middleware            |
+| `kiosk-keyboard-webc/bundle`            | Single-file bundle (CDN/scripts)  |
+| `kiosk-keyboard-webc/Assets`            | Theme + i18n registration         |
 
 ### Layout Composition
 
@@ -513,7 +503,7 @@ compositions consumers can build:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
-import { fkeyRow } from "kiosk-keyboard-webc/layouts/fkey-row";
+import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
 const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
 KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);
