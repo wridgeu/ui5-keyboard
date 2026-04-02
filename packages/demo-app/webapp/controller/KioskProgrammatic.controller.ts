@@ -108,6 +108,21 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   onUseQwertyNav(): void {
+    if (!KioskKeyboard.getRegisteredLayout("qwerty-nav")) {
+      const base = KioskKeyboard.getRegisteredLayout("qwerty");
+      if (!base) {
+        MessageToast.show("Base layout qwerty is unavailable");
+        return;
+      }
+      const qwertyNav: LayoutDefinition = [navRow, ...base];
+      KioskKeyboard.registerLayout("qwerty-nav", qwertyNav);
+
+      const select = this.byId("layoutSelect") as Select;
+      if (!select.getItemByKey("qwerty-nav")) {
+        select.addItem(new Item({ key: "qwerty-nav", text: "qwerty-nav" }));
+      }
+    }
+
     const kb = this._getKeyboard();
     kb.resetKeyboardType();
     kb.setLayout("qwerty-nav");
