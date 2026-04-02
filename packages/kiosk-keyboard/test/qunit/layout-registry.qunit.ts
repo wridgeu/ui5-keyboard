@@ -284,6 +284,16 @@ QUnit.test("Resolves ar to arabic via built-in locale mapping", (assert) => {
   assert.strictEqual(getLocaleLayout(), "arabic", "Arabic locale resolves to arabic");
 });
 
+QUnit.test("Resolves ko to ko-hangul via built-in locale mapping", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("ko"));
+  assert.strictEqual(getLocaleLayout(), "ko-hangul", "Korean locale resolves to ko-hangul");
+});
+
+QUnit.test("Resolves es to qwerty-es via built-in locale mapping", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("es"));
+  assert.strictEqual(getLocaleLayout(), "qwerty-es", "Spanish locale resolves to qwerty-es");
+});
+
 QUnit.test("Falls back to DEFAULT_LAYOUT when no mapping matches", (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("zh"));
   assert.strictEqual(getLocaleLayout(), "qwerty", "Unmapped language returns qwerty default");
