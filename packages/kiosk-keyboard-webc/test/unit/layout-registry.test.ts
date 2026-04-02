@@ -233,6 +233,46 @@ describe("layout-registry", () => {
       }
     });
 
+    it("resolves ko to ko-hangul via built-in locale mapping", () => {
+      const original = navigator.language;
+      Object.defineProperty(navigator, "language", { value: "ko", configurable: true });
+      try {
+        expect(getLocaleLayout()).toBe("ko-hangul");
+      } finally {
+        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      }
+    });
+
+    it("resolves ko-KR to ko-hangul via language prefix", () => {
+      const original = navigator.language;
+      Object.defineProperty(navigator, "language", { value: "ko-KR", configurable: true });
+      try {
+        expect(getLocaleLayout()).toBe("ko-hangul");
+      } finally {
+        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      }
+    });
+
+    it("resolves es to qwerty-es via built-in locale mapping", () => {
+      const original = navigator.language;
+      Object.defineProperty(navigator, "language", { value: "es", configurable: true });
+      try {
+        expect(getLocaleLayout()).toBe("qwerty-es");
+      } finally {
+        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      }
+    });
+
+    it("resolves es-ES to qwerty-es via language prefix", () => {
+      const original = navigator.language;
+      Object.defineProperty(navigator, "language", { value: "es-ES", configurable: true });
+      try {
+        expect(getLocaleLayout()).toBe("qwerty-es");
+      } finally {
+        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      }
+    });
+
     it("resolves a registered locale mapping", () => {
       registerLayout("azerty", CUSTOM_LAYOUT);
       registerLocaleLayout("fr", "azerty");
