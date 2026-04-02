@@ -174,7 +174,7 @@ export function getText(key: string, fallback: string): string {
         resolved = hooked;
       }
     } catch (e) {
-      Log.warning(`i18n override hook threw: ${e instanceof Error ? e.message : String(e)}`, undefined, LOG_COMPONENT);
+      Log.warning("i18n override hook threw", e instanceof Error ? e : String(e), LOG_COMPONENT);
     }
   }
 

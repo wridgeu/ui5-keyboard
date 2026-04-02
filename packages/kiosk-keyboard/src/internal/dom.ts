@@ -115,7 +115,7 @@ export function resolveWithCustomResolver(
       const custom = customResolver(el);
       if (isInputOrTextarea(custom)) return custom;
     } catch (err) {
-      Log.warning("Custom target resolver threw: " + String(err), undefined, "ui5.kiosk.KioskKeyboard");
+      Log.warning("Custom target resolver threw", err instanceof Error ? err : String(err), "ui5.kiosk.KioskKeyboard");
       return resolveInputOrTextarea(el);
     }
   }

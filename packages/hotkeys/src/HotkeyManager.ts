@@ -631,7 +631,11 @@ export default class HotkeyManager extends BaseObject {
     try {
       enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
     } catch (error) {
-      Log.warning(`Error evaluating enabled() for "${reg.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
+      Log.warning(
+        `enabled() threw for "${reg.normalizedHotkey}"`,
+        error instanceof Error ? error : String(error),
+        LOG_COMPONENT,
+      );
       enabled = false;
     }
     return {
@@ -937,7 +941,7 @@ export default class HotkeyManager extends BaseObject {
     try {
       this._unhandledCallback(context);
     } catch (error) {
-      Log.error(`Error in unhandled callback: ${error}`, undefined, LOG_COMPONENT);
+      Log.error("Unhandled-key callback threw", error instanceof Error ? error : String(error), LOG_COMPONENT);
     }
   }
 
@@ -974,7 +978,11 @@ export default class HotkeyManager extends BaseObject {
         scope: opts.scope,
       });
     } catch (error) {
-      Log.error(`Error in hotkey callback for "${matched.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
+      Log.error(
+        `Hotkey callback threw for "${matched.normalizedHotkey}"`,
+        error instanceof Error ? error : String(error),
+        LOG_COMPONENT,
+      );
     }
   }
 
