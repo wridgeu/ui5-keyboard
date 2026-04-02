@@ -168,18 +168,18 @@ A **composition middleware** is a self-registering module that intercepts key pr
 
 Consumers can register custom middleware via `KioskKeyboard.registerMiddleware(layouts, factory)`. The `CompositionMiddleware` interface requires three methods: `handleKey()`, `commit()`, and `reset()`.
 
-## Tree-Shaking (WebC)
+## Subpath Imports (WebC)
 
-**Tree-shaking** is the process of eliminating unused code from the final bundle. The `kiosk-keyboard-webc` package supports tree-shaking via split entry points.
+The `kiosk-keyboard-webc` package exposes subpath imports for different consumption scenarios. The main entry includes all built-in layouts.
 
 ### Entry points
 
 | Entry                              | What it includes                                                    |
 | ---------------------------------- | ------------------------------------------------------------------- |
+| `kiosk-keyboard-webc`              | Component with all built-in layouts                                 |
 | `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
-| `kiosk-keyboard-webc`              | Component with all built-in layouts (no Assets, no middleware)      |
-| `kiosk-keyboard-webc/layouts/*`    | Individual self-registering layout modules                          |
 | `kiosk-keyboard-webc/middleware/*` | Individual self-registering middleware modules                      |
+| `kiosk-keyboard-webc/Assets`       | Theme and i18n registration                                         |
 
 ### Usage
 
