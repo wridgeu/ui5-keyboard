@@ -182,7 +182,9 @@ function createChildServerManager(opts: {
       if (!(await probeHttp(port, readinessPath))) {
         throw new SevereServiceError(
           `Port ${port} is occupied by a process that does not serve '${readinessPath}'. ` +
-            `Kill the stale or wrong process (netstat -aon | findstr :${port}) and retry.`,
+            `Kill the stale or wrong process and retry.\n` +
+            `  Windows: netstat -aon | findstr :${port}\n` +
+            `  Linux/macOS: lsof -i :${port}`,
         );
       }
       return;
