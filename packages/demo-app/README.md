@@ -12,11 +12,24 @@ From repo root:
 
 ```bash
 npm install
-npm run build        # required: builds library dist/ artifacts used by the demo
 npm start
 ```
 
 Application URL: `http://localhost:8080/index.html`
+
+### Build dependencies
+
+The demo app consumes three workspace libraries:
+
+- `ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard` are transpiled from source at dev time by `ui5-tooling-transpile` (no pre-build needed).
+- `kiosk-keyboard-webc` must be built before the demo can start because `ui5-tooling-modules` reads the Custom Elements Manifest (CEM) from its `dist/` folder to auto-generate the UI5 wrapper. `npm start` at the repo root handles this automatically via `npm run build:kiosk-webc`.
+
+If you start the demo app directly (`npm run start -w packages/demo-app`), you must build the webc package first:
+
+```bash
+npm run build:kiosk-webc
+npm run start -w packages/demo-app
+```
 
 ## Purpose
 

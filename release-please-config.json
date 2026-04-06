@@ -17,12 +17,26 @@
     "packages/hotkeys": {
       "release-type": "node",
       "package-name": "ui5-lib-hotkeys",
-      "include-component-in-tag": true
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "src/manifest.json",
+          "jsonpath": "$['sap.app'].applicationVersion.version"
+        }
+      ]
     },
     "packages/kiosk-keyboard": {
       "release-type": "node",
       "package-name": "ui5-lib-kiosk-keyboard",
-      "include-component-in-tag": true
+      "include-component-in-tag": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "src/manifest.json",
+          "jsonpath": "$['sap.app'].applicationVersion.version"
+        }
+      ]
     },
     "packages/kiosk-keyboard-webc": {
       "release-type": "node",
