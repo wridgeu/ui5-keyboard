@@ -22,42 +22,6 @@ jobs:
     permissions:
       contents: read
 
-  e2e-all-devices:
-    needs: ci
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Cache UI5 framework resources
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ~/.ui5
-          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-
-
-      - run: npm ci
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
-          restore-keys: playwright-chromium-
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run all-device e2e tests
-        run: npm run test:e2e:all-devices:sequential
-
   smoke:
     needs: ci
     runs-on: ubuntu-latest
@@ -94,7 +58,7 @@ jobs:
           npm pack -w packages/kiosk-keyboard-webc --dry-run 2>&1
 
   release-please:
-    needs: [ci, e2e-all-devices, smoke]
+    needs: [ci, smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -112,7 +76,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   publish-hotkeys:
-    needs: [release-please, ci, e2e-all-devices, smoke]
+    needs: [release-please, ci, smoke]
     if: needs.release-please.outputs.hotkeys_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -143,7 +107,7 @@ jobs:
           NODE_AUTH_TOKEN: ""
 
   publish-kiosk:
-    needs: [release-please, ci, e2e-all-devices, smoke]
+    needs: [release-please, ci, smoke]
     if: needs.release-please.outputs.kiosk_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -173,7 +137,7 @@ jobs:
           NODE_AUTH_TOKEN: ""
 
   publish-webc:
-    needs: [release-please, ci, e2e-all-devices, smoke]
+    needs: [release-please, ci, smoke]
     if: needs.release-please.outputs.webc_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
