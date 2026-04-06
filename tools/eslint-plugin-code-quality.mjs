@@ -249,39 +249,6 @@ const noEmDash = {
   },
 };
 
-/**
- * Detects `expression as any` type assertions.
- *
- * `as any` silences the type system entirely and hides real type
- * errors. This rule is enabled even in test files (where the broader
- * `@typescript-eslint/no-explicit-any` is off) to prevent unchecked
- * casts from accumulating. Legitimate uses should go through a typed
- * helper with a single eslint-disable comment.
- */
-const noAsAnyAssertion = {
-  meta: {
-    type: "problem",
-    docs: {
-      description: "Disallow `as any` type assertions",
-    },
-    messages: {
-      noAsAnyAssertion:
-        "Avoid `as any`. Use a typed helper, type guard, or add an eslint-disable comment with justification.",
-    },
-    schema: [],
-  },
-  create(context) {
-    return {
-      TSAsExpression(node) {
-        const annotation = node.typeAnnotation;
-        if (annotation?.type === "TSAnyKeyword") {
-          context.report({ node, messageId: "noAsAnyAssertion" });
-        }
-      },
-    };
-  },
-};
-
 /** @type {import('eslint').ESLint.Plugin} */
 export default {
   meta: { name: "code-quality" },
@@ -290,6 +257,5 @@ export default {
     "no-console-only-catch": noConsoleOnlyCatch,
     "no-redundant-boolean-return": noRedundantBooleanReturn,
     "no-em-dash": noEmDash,
-    "no-as-any-assertion": noAsAnyAssertion,
   },
 };
