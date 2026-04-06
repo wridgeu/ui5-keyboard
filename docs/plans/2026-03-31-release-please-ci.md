@@ -2,20 +2,20 @@
 
 **Goal:** Set up Release Please for independent versioning/publishing of 3 library packages, with a CI pipeline that runs fast checks on PRs and comprehensive validation before releases on main.
 
-**Architecture:** Two GitHub Actions workflows -- `ci.yml` (PR validation + reusable) and `release.yml` (full suite + release-please + per-package OIDC npm publish). Release Please runs in monorepo mode with independent versioning per package. CI is split so PRs only run validation + core tests, while main runs the full matrix (all-device e2e, Windows smoke, package smoke) before any release is created.
+**Architecture:** Two GitHub Actions workflows -- `ci.yml` (PR validation + reusable) and `release.yml` (full suite + release-please + per-package OIDC npm publish). Release Please runs in monorepo mode with independent versioning per package. CI is split so PRs only run validation + core tests, while main runs the full matrix (all-device e2e, package smoke) before any release is created.
 
-**Tech Stack:** Release Please v4 action, GitHub Actions, OIDC npm provenance, Node 24 (primary) / Node 22 (compat)
+**Tech Stack:** Release Please v4 action, GitHub Actions, OIDC npm provenance, Node 24
 
 ---
 
 ### CI minutes optimization strategy
 
-| Trigger      | What runs                                                                                                | Approx. wall-clock |
-| ------------ | -------------------------------------------------------------------------------------------------------- | ------------------ |
-| PR to main   | validate + test (QUnit, vitest, component tests, kiosk desktop e2e)                                      | ~15 min            |
-| Push to main | All of the above + all-device e2e + package smoke + Windows smoke + release-please + conditional publish | ~55 min            |
+| Trigger      | What runs                                                                                | Approx. wall-clock |
+| ------------ | ---------------------------------------------------------------------------------------- | ------------------ |
+| PR to main   | validate + test (QUnit, vitest, component tests, kiosk desktop e2e)                      | ~15 min            |
+| Push to main | All of the above + all-device e2e + package smoke + release-please + conditional publish | ~45 min            |
 
-The expensive jobs (all-device e2e, Windows, smoke) only run on main, not on every PR push.
+The expensive jobs (all-device e2e, smoke) only run on main, not on every PR push.
 
 ---
 
@@ -336,32 +336,8 @@ jobs:
       - name: Demo web component bundle check
         run: npm run test:demo:webc-bundle
 
-  windows-smoke:
-    needs: ci
-    runs-on: windows-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Cache UI5 framework resources
-        uses: actions/cache@v4
-        with:
-          path: ~/.ui5
-          key: ui5-win-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-win-
-
-      - run: npm ci
-
-      - name: QUnit smoke test
-        run: npm run test:qunit
-
   release-please:
-    needs: [ci, e2e-all-devices, smoke, windows-smoke]
+    needs: [ci, e2e-all-devices, smoke]
     runs-on: ubuntu-latest
     outputs:
       hotkeys_release_created: ${{ steps.release.outputs['packages/hotkeys--release_created'] }}
@@ -442,13 +418,13 @@ jobs:
 Notes:
 
 - `cancel-in-progress: false` ensures sequential release processing (never cancel a release mid-flight)
-- release-please only runs after ALL test jobs pass (ci + e2e + smoke + windows)
+- release-please only runs after ALL test jobs pass (ci + e2e + smoke)
 - Each publish job has scoped permissions (`contents: read`, `id-token: write`)
 - `NODE_AUTH_TOKEN=""` prevents PAT override, forces OIDC authentication
 - `prepublishOnly` in each package handles LICENSE copy + build automatically
 - webc publish gets 15 min timeout (Vite build + API generation is heavier)
 - `force-publish` input publishes ALL packages (useful for re-publish after npm outage)
-- e2e-all-devices, smoke, and windows-smoke run in parallel after ci completes
+- e2e-all-devices and smoke run in parallel after ci completes
 
 - [ ] **Step 2: Validate YAML syntax**
 
@@ -469,9 +445,9 @@ node -e "
 git add .github/workflows/release.yml
 git commit -m "ci: add release workflow with Release Please and npm publish
 
-Runs full test matrix on main (CI + all-device e2e + package smoke +
-Windows smoke), then Release Please for versioning, then per-package
-npm publish with OIDC provenance. Supports force-publish via dispatch."
+Runs full test matrix on main (CI + all-device e2e + package smoke),
+then Release Please for versioning, then per-package npm publish with
+OIDC provenance. Supports force-publish via dispatch."
 ```
 
 ---
@@ -611,7 +587,7 @@ gh pr create --title "ci: add Release Please and CI/CD pipeline" --body "$(cat <
 
 - Add Release Please monorepo configuration for independent versioning of 3 library packages
 - Add CI workflow (PRs): validation (format, lint, typecheck, baselines) + core tests (QUnit, vitest, component, desktop e2e)
-- Add Release workflow (main): full CI + all-device e2e + package smoke + Windows smoke + Release Please + per-package npm publish with OIDC provenance
+- Add Release workflow (main): full CI + all-device e2e + package smoke + Release Please + per-package npm publish with OIDC provenance
 - Enable npm publishing for hotkeys, kiosk-keyboard, and kiosk-keyboard-webc (remove private flag)
 
 ## CI minutes optimization
@@ -619,7 +595,7 @@ gh pr create --title "ci: add Release Please and CI/CD pipeline" --body "$(cat <
 | Trigger | Jobs | Approx. time |
 |---------|------|-------------|
 | PR | validate + test | ~15 min |
-| Main push | validate + test + e2e-all-devices + smoke + windows-smoke + release-please + publish | ~55 min |
+| Main push | validate + test + e2e-all-devices + smoke + release-please + publish | ~45 min |
 
 ## Prerequisites for first publish
 

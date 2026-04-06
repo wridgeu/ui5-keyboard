@@ -1,4 +1,4 @@
-<h1 align="center">ui5-lib-keyboard</h1>
+<h1 align="center">ui5-lib-keyboard[^ai]</h1>
 
 <p align="center">
 UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications.
@@ -230,7 +230,7 @@ Both UI5 libraries use standard UI5 lifecycle management (`destroy()`) and coexi
 
 ## Development
 
-Monorepo using npm workspaces. Requires Node >= 22.
+Monorepo using npm workspaces. Requires Node >= 24.
 
 ```bash
 npm install                 # Install all workspaces
@@ -348,10 +348,8 @@ Contributions are welcome. Whether you file a bug report, suggest a feature, or 
 - **Pull Requests:** Fork the repo, create a branch, and open a PR against `main`. Please run `npm run check` before submitting to verify tests, linting, and formatting pass.
 - **Questions:** Open a discussion or issue if something is unclear.
 
-## A note on how this was built (Disclaimer)
-
-Large parts of this project were _vibe coded_. I built it with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges, that is probably why.
-
 ## License
 
 [MIT](./LICENSE)
+
+[^ai]: Large parts of this project were _vibe coded_. I built it with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges, that is probably why.

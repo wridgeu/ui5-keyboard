@@ -20,13 +20,13 @@ const DOM = KioskKeyboard.DOM;
 // Composite layout for tests that need both nav row and base layout rows.
 // Consumers build these inline now that pre-built combined layouts are removed.
 const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
-KioskKeyboard.registerLayout("test-qwerty-nav", [navRow, ...qwertyBase]);
 
 QUnit.module("NavKeys", {
-  afterEach() {
+  beforeEach() {
     KioskKeyboard.resetCustomLayouts();
-    // Re-register test composite after resetCustomLayouts clears it
     KioskKeyboard.registerLayout("test-qwerty-nav", [navRow, ...qwertyBase]);
+  },
+  afterEach() {
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

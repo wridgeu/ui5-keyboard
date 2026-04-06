@@ -18,17 +18,17 @@ const DOM = KioskKeyboard.DOM;
 // Composite layout for tests that need both shift and F-key rows.
 // Consumers build these inline now that pre-built combined layouts are removed.
 const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
-KioskKeyboard.registerLayout("test-qwerty-fk", [fkeyRow, ...qwertyBase]);
 
 // ──────────────────────────────────────────────
 // Module
 // ──────────────────────────────────────────────
 
 QUnit.module("FKeys", {
-  afterEach() {
+  beforeEach() {
     KioskKeyboard.resetCustomLayouts();
-    // Re-register test composite after resetCustomLayouts clears it
     KioskKeyboard.registerLayout("test-qwerty-fk", [fkeyRow, ...qwertyBase]);
+  },
+  afterEach() {
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
