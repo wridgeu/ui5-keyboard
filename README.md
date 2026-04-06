@@ -342,6 +342,7 @@ ui5-lib-keyboard/
 | [Consumption Research](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption comparison              |
 | [Docs Index](./docs/README.md)                                                 | Full index of all docs (incl. internal & historical)  |
 | [Patches](./patches/README.md)                                                 | Local dependency patches applied via patch-package    |
+| [Tools](./tools/README.md)                                                     | Custom oxlint plugins, shared test infra, dev scripts |
 
 ## Contributing
 

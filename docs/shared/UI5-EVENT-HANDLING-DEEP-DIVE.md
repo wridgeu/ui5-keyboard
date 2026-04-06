@@ -492,10 +492,10 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 - [Keyboard Handling for SAPUI5 UI Elements](https://github.com/SAP-docs/sapui5/blob/main/docs/04_Essentials/keyboard-handling-for-sapui5-ui-elements-6b741a6.md)
 - [Browser Events](https://github.com/SAP-docs/sapui5/blob/main/docs/09_Developing_Controls/browser-events-91f1b38.md)
 - [Event Handler Methods](https://github.com/SAP-docs/sapui5/blob/main/docs/09_Developing_Controls/event-handler-methods-bdf3e98.md)
-- [Keyboard Usage of ARIA Role Mapped Controls](https://sapui5.hana.ondemand.com/sdk/docs/topics/e6cd5476193f48d1a273de990276c9bc.html)
-- [Implementing Focus Handling](https://sapui5.hana.ondemand.com/sdk/docs/topics/91f19f036f4d1014b6dd926db0e91070.html)
-- [Mobile Events](https://sapui5.hana.ondemand.com/sdk/docs/topics/9860cd2b183540f48ee054bcef44a8b5.html)
-- [Devices Supporting Mouse and Touch](https://sapui5.hana.ondemand.com/sdk/docs/topics/1f9de72bea734beaafa86b80c2c4222c.html)
+- [Keyboard Usage of ARIA Role Mapped Controls](https://ui5.sap.com/sdk/docs/topics/e6cd5476193f48d1a273de990276c9bc.html)
+- [Implementing Focus Handling](https://ui5.sap.com/sdk/docs/topics/91f19f036f4d1014b6dd926db0e91070.html)
+- [Mobile Events](https://ui5.sap.com/sdk/docs/topics/9860cd2b183540f48ee054bcef44a8b5.html)
+- [Devices Supporting Mouse and Touch](https://ui5.sap.com/sdk/docs/topics/1f9de72bea734beaafa86b80c2c4222c.html)
 - [SAP Fiori Elements Keyboard Shortcuts](https://github.com/SAP-docs/sapui5/blob/main/docs/06_SAP_Fiori_Elements/keyboard-shortcuts-0cd318c.md)
 
 ### OpenUI5 Source Code

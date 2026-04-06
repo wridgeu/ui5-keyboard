@@ -241,6 +241,4 @@ Run with `UI5_CEM_MODE=dev` to see all validation errors. Common issues:
 
 - [Custom Elements Manifest spec](https://github.com/webcomponents/custom-elements-manifest)
 - [CEM Analyzer](https://custom-elements-manifest.open-wc.org/)
-- [UI5 Web Components Tools](https://github.com/niclas-nicol/nicl/blob/master/packages/tools/README.md) (CEM config and plugins)
-- [VS Code HTML Custom Data](https://github.com/niclas-nicol/vscode-custom-data)
-- [JetBrains Web Types](https://github.com/niclas-nicol/nicl/blob/master/packages/tools/README.md)
+- [UI5 Web Components Tools](https://github.com/SAP/ui5-webcomponents/tree/main/packages/tools) (CEM config, VS Code custom data, and JetBrains web types)

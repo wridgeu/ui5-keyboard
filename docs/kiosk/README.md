@@ -27,5 +27,6 @@
 
 ## Notes
 
-- Files under `proposals/` are forward-looking design notes.
-- Files under `history/` capture implementation-era decisions and are intentionally kept as historical context.
+- Files under [`proposals/`](./proposals/) are forward-looking design notes.
+- Files under [`history/`](./history/) capture implementation-era decisions and are intentionally kept as historical context.
+- Files under [`images/`](./images/) contain theme screenshots and regeneration instructions.

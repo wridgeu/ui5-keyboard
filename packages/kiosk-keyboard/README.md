@@ -525,7 +525,7 @@ The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-c
 <!-- .myConstrainedKeyboard { height: 15rem; } -->
 ```
 
-> **Tip:** You can also fine-tune key sizes via `--ui5KioskKeyboard-keyHeight` and other [CSS custom properties](#css-custom-properties) to fit more content into a smaller container without relying solely on the automatic breakpoints.
+> **Tip:** You can also fine-tune key sizes via `--ui5KioskKeyboard-keyHeight` and other [CSS custom properties](#public-css-custom-properties) to fit more content into a smaller container without relying solely on the automatic breakpoints.
 
 ### Custom Layouts
 

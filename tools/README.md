@@ -34,11 +34,10 @@ Custom oxlint JS plugin that catches AI-generated code anti-patterns. Loaded via
 | `code-quality/no-console-only-catch`       | warn     | Flags catch blocks with only a console call (error swallowed)           |
 | `code-quality/no-redundant-boolean-return` | warn     | Flags `if (x) return true; else return false;` (simplify to `return x`) |
 | `code-quality/no-em-dash`                  | warn     | Flags em-dashes (U+2014) in strings and comments (AI text marker)       |
-| `code-quality/no-as-any-assertion`         | warn     | Flags `as any` type assertions; use typed helpers or type guards        |
 
 `no-double-type-assertion` is disabled in test files (`*.test.ts`, `*.spec.ts`, `*.qunit.ts`) since test mocks legitimately use double assertions to pass invalid types.
 
-Inspired by [unguard](https://github.com/anthropics/unguard)'s `no-type-assertion` / `no-inline-type-assertion` rules and common AI-slop detection patterns from tools like [KarpeSlop](https://github.com/CodeDeficient/KarpeSlop) and [sloplint](https://github.com/dannote/sloplint).
+Inspired by common AI-slop detection patterns from tools like [KarpeSlop](https://github.com/CodeDeficient/KarpeSlop) and [sloplint](https://github.com/dannote/sloplint).
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
