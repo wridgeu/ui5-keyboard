@@ -5,7 +5,7 @@
     "type": "library",
     "embeds": [],
     "applicationVersion": {
-      "version": "${version}"
+      "version": "0.1.0"
     },
     "title": "UI5 Kiosk Keyboard",
     "description": "On-screen virtual keyboard control for SAPUI5/OpenUI5 applications",

@@ -2,6 +2,7 @@
   "name": "demo-hotkeys-app",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "start": "ui5 serve --port 8080 -o index.html",
