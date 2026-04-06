@@ -1,8 +1,11 @@
-<h1 align="center">ui5-lib-keyboard[^ai]</h1>
+<h1 align="center">ui5-lib-keyboard</h1>
 
 <p align="center">
 UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications.
 </p>
+
+> [!CAUTION]
+> Large parts of this project were _vibe coded_. I built it with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges, that is probably why.
 
 ## Packages
 
@@ -351,5 +354,3 @@ Contributions are welcome. Whether you file a bug report, suggest a feature, or 
 ## License
 
 [MIT](./LICENSE)
-
-[^ai]: Large parts of this project were _vibe coded_. I built it with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges, that is probably why.
