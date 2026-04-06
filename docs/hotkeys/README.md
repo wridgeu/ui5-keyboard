@@ -12,6 +12,10 @@
 - [Black-Box Test Plan](./history/BLACKBOX-TEST-PLAN.md)
 - [Centralized EventDispatcher & Suspend Guard](./history/implemented-proposals/HOTKEY-MANAGER-SUSPEND-GUARD.md)
 
+## [Proposals](./proposals/)
+
+No active proposals.
+
 ## Notes
 
-- Files under `history/` are implementation-era notes and rejected proposals kept for context.
+- Files under [`history/`](./history/) are implementation-era notes and rejected proposals kept for context.

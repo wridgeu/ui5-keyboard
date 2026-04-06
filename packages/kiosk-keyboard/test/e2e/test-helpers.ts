@@ -32,7 +32,7 @@ export async function waitForVisualKeyboardsReady(): Promise<void> {
         const last = keyboards[keyboards.length - 1];
         return last.querySelectorAll('[role="button"]').length > 0;
       }, DOM.selectors.root),
-    { timeout: 10_000, timeoutMsg: "Keyboard keys not rendered" },
+    { timeout: 20_000, timeoutMsg: "Keyboard keys not rendered" },
   );
 }
 

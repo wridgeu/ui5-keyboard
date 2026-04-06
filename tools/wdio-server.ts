@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import { type ChildProcess, spawn } from "node:child_process";
 import ts from "typescript";
 import treeKill from "tree-kill";
+import { SevereServiceError } from "webdriverio";
 
 const require = createRequire(import.meta.url);
 
@@ -179,7 +180,7 @@ function createChildServerManager(opts: {
       // Stale processes from killed test runs keep the port open but serve
       // nothing, causing "Keyboard keys not rendered" timeouts downstream.
       if (!(await probeHttp(port, readinessPath))) {
-        throw new Error(
+        throw new SevereServiceError(
           `Port ${port} is occupied by a process that does not serve '${readinessPath}'. ` +
             `Kill the stale or wrong process (netstat -aon | findstr :${port}) and retry.`,
         );
@@ -202,7 +203,7 @@ function createChildServerManager(opts: {
     try {
       await Promise.race([
         waitForServer(port, startupTimeout, readinessPath).catch((error) => {
-          throw new Error(`${(error as Error).message}${serverOutput!.format()}`, { cause: error });
+          throw new SevereServiceError(`${(error as Error).message}${serverOutput!.format()}`);
         }),
         startupFailure.promise,
       ]);
@@ -212,7 +213,10 @@ function createChildServerManager(opts: {
         await killProcessTree(serverProcess.pid);
       }
       serverProcess = undefined;
-      throw error;
+      // Re-throw as SevereServiceError so WDIO aborts instead of running
+      // workers against a broken/missing dev server.
+      if (error instanceof SevereServiceError) throw error;
+      throw new SevereServiceError((error as Error).message);
     }
 
     startupFailure.complete();

@@ -84,6 +84,6 @@ FLP-reserved shortcuts (F6, Shift+F6, Alt+0) are included in `BROWSER_SHORTCUTS`
 ## References
 
 - [UI5 CommandExecution focus issue #2788](https://github.com/SAP/openui5/issues/2788)
-- [Fiori Elements keyboard shortcuts](https://sapui5.hana.ondemand.com/sdk/docs/topics/0cd318c83ec5473d9a091c1782d03c21.html)
+- [Fiori Elements keyboard shortcuts](https://ui5.sap.com/sdk/docs/topics/0cd318c83ec5473d9a091c1782d03c21.html)
 - [FLP keyboard shortcuts](https://help.sap.com/docs/btp/sap-fiori-launchpad-for-sap-btp/keyboard-shortcuts-5823b11296014b819d98fb108b4bc1c4)
 - [TanStack Hotkeys](https://github.com/TanStack/hotkeys)
