@@ -74,7 +74,7 @@ const outputJson = mergeOutputJsonFiles(outputJsonFiles);
 // Step 1: Generate HTML report (non-interactive CLI mode)
 const reportDir = resolve(absDir, "report");
 console.log(`Generating HTML report in ${reportDir}...`);
-const result = spawnSync("npx", ["wdio-visual-reporter", `--jsonOutput=${outputJson}`, `--reportFolder=${reportDir}`], {
+const result = spawnSync(`npx wdio-visual-reporter --jsonOutput="${outputJson}" --reportFolder="${reportDir}"`, {
   stdio: "inherit",
   shell: true,
 });
