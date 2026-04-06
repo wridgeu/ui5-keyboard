@@ -18,7 +18,7 @@
 
 import { existsSync, globSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { serveStatic } from "./serve-static.mjs";
 
 const screenshotDir = process.argv[2];
@@ -74,10 +74,12 @@ const outputJson = mergeOutputJsonFiles(outputJsonFiles);
 // Step 1: Generate HTML report (non-interactive CLI mode)
 const reportDir = resolve(absDir, "report");
 console.log(`Generating HTML report in ${reportDir}...`);
-try {
-  execSync(`npx wdio-visual-reporter --jsonOutput="${outputJson}" --reportFolder="${reportDir}"`, { stdio: "inherit" });
-} catch (error) {
-  console.error(`Failed to generate visual report: ${error.message}`);
+const result = spawnSync("npx", ["wdio-visual-reporter", `--jsonOutput=${outputJson}`, `--reportFolder=${reportDir}`], {
+  stdio: "inherit",
+  shell: true,
+});
+if (result.status !== 0) {
+  console.error(`Failed to generate visual report (exit code ${result.status}).`);
   process.exit(1);
 }
 
