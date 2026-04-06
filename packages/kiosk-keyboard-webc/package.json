@@ -93,14 +93,14 @@
     "generateAPI": "ui5nps generateAPI"
   },
   "dependencies": {
-    "@ui5/webcomponents": "~2.19.2",
-    "@ui5/webcomponents-base": "~2.19.2",
-    "@ui5/webcomponents-icons": "~2.19.2",
-    "@ui5/webcomponents-theming": "~2.19.2"
+    "@ui5/webcomponents": "~2.20.0",
+    "@ui5/webcomponents-base": "~2.20.0",
+    "@ui5/webcomponents-icons": "~2.20.0",
+    "@ui5/webcomponents-theming": "~2.20.0"
   },
   "devDependencies": {
     "@open-wc/testing": "~4.0.0",
-    "@ui5/webcomponents-tools": "~2.19.2",
+    "@ui5/webcomponents-tools": "2.20.0",
     "@vitest/coverage-v8": "~4.1.0",
     "@wdio/cli": "~9.27.0",
     "@wdio/globals": "~9.27.0",
