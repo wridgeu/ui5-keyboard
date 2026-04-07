@@ -4,9 +4,8 @@ import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from ".
 const fixture = document.getElementById("qunit-fixture")!;
 
 /**
- * Shared module hooks that ensure a clean HotkeyManager singleton
- * before and after every test. The try-catch guards handle the case
- * where the manager is not yet initialized or already destroyed.
+ * Shared module hooks that ensure a clean HotkeyManager instance
+ * before and after every test.
  */
 function freshManagerHooks() {
   return {

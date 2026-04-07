@@ -9,7 +9,7 @@ Multi-key sequence support for vim-style `g g`, Emacs-style `C-x C-s`, and VS Co
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
-const manager = HotkeyManager.getInstance();
+const manager = new HotkeyManager();
 
 // Register a two-key sequence
 manager.registerSequence(

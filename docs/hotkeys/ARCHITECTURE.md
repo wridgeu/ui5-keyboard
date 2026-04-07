@@ -7,7 +7,7 @@ This document describes the internal architecture, design decisions, and edge ca
 The library is split into focused, single-responsibility modules:
 
 ```
-HotkeyManager.ts     Singleton manager, scope stack, hotkey/sequence dispatch
+HotkeyManager.ts     Central manager, scope stack, hotkey/sequence dispatch
 RegistrationGroup.ts Scoped batch registration with auto-cleanup
 internal/SequenceManager.ts Multi-key sequence matching (e.g., G then E)
 KeyStateTracker.ts   Held-key state tracking with macOS stuck-key fix
@@ -47,9 +47,9 @@ The library uses the modern `Lib.init()` API with `apiVersion: 2`, not the depre
 - BaseObject does not call `init()` during construction, so class field initializers work safely.
 - The library has no need for data binding, properties, or aggregations.
 
-### Singleton Pattern
+### Instance Lifecycle
 
-The manager is a strict singleton accessed via `HotkeyManager.getInstance()`. The constructor is not exposed. `destroy()` tears down all state and nulls the instance, allowing a fresh singleton to be created later (useful for testing and component lifecycle).
+`HotkeyManager` is a regular class with a public constructor. There is no singleton. The Component creates it in `init()` and destroys it in `exit()`. Controllers access it via `getOwnerComponent().getHotkeyManager()`. `destroy()` tears down all DOM listeners, finalizes all groups, and clears all internal state.
 
 ## Event Handling
 
@@ -332,7 +332,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 packages/hotkeys/
   src/
     library.ts           UI5 Lib.init() entry point, apiVersion 2
-    HotkeyManager.ts     Core singleton, scope stack, dispatch routing
+    HotkeyManager.ts     Central manager, scope stack, dispatch routing
     RegistrationGroup.ts Scoped batch registration with auto-cleanup
     KeyStateTracker.ts   Held-key state tracking
     HotkeyRecorder.ts    Keyboard shortcut recorder

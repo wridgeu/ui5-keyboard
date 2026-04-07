@@ -114,8 +114,8 @@ async function waitForKeyboardVisible(): Promise<void> {
 // Validates that the demo app can be entered via tile click, a demo
 // scenario executed (i18n customization), and after navigating back to
 // the FLP home page, the app can be re-entered with a clean state.
-// This tests the module lifecycle contract: modules survive Component
-// destroy/recreate, and Component.exit() must not destroy singletons.
+// This tests the Component lifecycle contract: Component.exit() destroys
+// the HotkeyManager, and Component.init() creates a fresh instance.
 
 describe("FLP lifecycle - Component re-entry", () => {
   before(async () => {
