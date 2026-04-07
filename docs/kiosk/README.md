@@ -3,6 +3,7 @@
 ## Current
 
 - [Architecture](./ARCHITECTURE.md)
+- [Responsive Layout Patterns](./RESPONSIVE-LAYOUT-PATTERNS.md)
 - [Popover Layout Switch Behavior](./POPOVER-LAYOUT-SWITCH-BEHAVIOR.md)
 - [UI5 Transpile Crash Deep Dive](./AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)
 
