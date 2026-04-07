@@ -22,8 +22,7 @@ export default class Component extends UIComponent {
   init(): void {
     super.init();
 
-    // Initialize the HotkeyManager singleton
-    this._hotkeyManager = HotkeyManager.getInstance();
+    this._hotkeyManager = new HotkeyManager();
     this._hotkeys = this._hotkeyManager.createGroup();
 
     // Enable automatic scope management via the router on the group.
@@ -115,11 +114,7 @@ export default class Component extends UIComponent {
   }
 
   exit(): void {
-    // Clean up only what this Component instance owns.
-    // The HotkeyManager singleton must not be destroyed here -- in FLP,
-    // modules survive Component destroy/recreate cycles.
-    // Router integration is cleaned up automatically on re-entry.
-    this._hotkeys.destroyAll();
+    this._hotkeyManager.destroy();
     document.removeEventListener("keydown", this._keyDownHandler, true);
   }
 }
