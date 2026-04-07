@@ -205,6 +205,12 @@ export default class RegistrationGroup {
   /** @internal Called by HotkeyManager.destroy() to finalize lifecycle-bound groups. */
   _onManagerDestroy(): void {
     if (this._destroyed) return;
+
+    if (this._routerCleanup) {
+      this._routerCleanup();
+      this._routerCleanup = null;
+    }
+
     this._handles.clear();
     this._sequenceHandles.clear();
     this._destroyed = true;

@@ -1,6 +1,5 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
-import { destroyHotkeyManager, fireKey } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
 interface MockRouter {
   attachBeforeRouteMatched: (handler: (...args: any[]) => void, listener: object) => void;
@@ -46,18 +45,20 @@ QUnit.module("Router Integration", {
 });
 
 QUnit.test("Route change pushes scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  group.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main", "Active scope is 'main' after route change");
 });
 
 QUnit.test("Route change resets previous scopes", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  group.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -67,9 +68,10 @@ QUnit.test("Route change resets previous scopes", (assert) => {
 });
 
 QUnit.test("Hotkey fires in correct route scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  group.enableRouterIntegration(router);
 
   let mainCalled = false;
   let detailCalled = false;
@@ -102,9 +104,10 @@ QUnit.test("Hotkey fires in correct route scope", (assert) => {
 });
 
 QUnit.test("Global hotkey still fires after route change", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  group.enableRouterIntegration(router);
 
   let globalCalled = false;
   manager.register("Ctrl+S", () => {
@@ -117,43 +120,44 @@ QUnit.test("Global hotkey still fires after route change", (assert) => {
 });
 
 QUnit.test("Detach cleanup on destroy", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  group.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
 
+  group.destroyAll();
   manager.destroy();
 
-  // Get a fresh manager - route changes should have no effect
-  const newManager = HotkeyManager.getInstance();
+  const newManager = createHotkeyManager();
   router.fireRouteMatched("detail");
   assert.strictEqual(newManager.getActiveScope(), GLOBAL_SCOPE, "New manager unaffected by old router");
 });
 
 QUnit.test("Calling enableRouterIntegration twice replaces the previous router", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router1 = createMockRouter();
   const router2 = createMockRouter();
 
-  manager.enableRouterIntegration(router1);
-  manager.enableRouterIntegration(router2);
+  group.enableRouterIntegration(router1);
+  group.enableRouterIntegration(router2);
 
-  // The second router should be active -- fire a route match on it
   manager.pushScope("initial");
   router2.fireRouteMatched("newRoute");
   assert.strictEqual(manager.getActiveScope(), "newRoute", "Second router is active");
 
-  // The first router should be detached -- firing on it has no effect
   router1.fireRouteMatched("staleRoute");
   assert.strictEqual(manager.getActiveScope(), "newRoute", "First router is detached");
 });
 
 QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  group.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -163,54 +167,36 @@ QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
   assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Scope reset to global when route name is undefined");
 });
 
-QUnit.test("hasRouterIntegration reflects router integration state", (assert) => {
-  const manager = HotkeyManager.getInstance();
+QUnit.test("destroyAll detaches router integration", (assert) => {
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
   const router = createMockRouter();
-
-  assert.notOk(manager.hasRouterIntegration(), "False before enable");
-
-  manager.enableRouterIntegration(router);
-  assert.ok(manager.hasRouterIntegration(), "True after enable");
-
-  manager.disableRouterIntegration();
-  assert.notOk(manager.hasRouterIntegration(), "False after disable");
-});
-
-// ──────────────────────────────────────────────
-// disableRouterIntegration (C3)
-// ──────────────────────────────────────────────
-
-QUnit.test("disableRouterIntegration: disable stops scope updates", (assert) => {
-  const manager = HotkeyManager.getInstance();
-  const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  group.enableRouterIntegration(router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
 
-  manager.disableRouterIntegration();
+  group.destroyAll();
   router.fireRouteMatched("detail");
-  // Scope should NOT change - router is detached
-  assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after disable");
+  assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after group destroyed");
 });
 
-QUnit.test("disableRouterIntegration: no-op when not enabled", (assert) => {
-  const manager = HotkeyManager.getInstance();
-
-  manager.disableRouterIntegration();
-  assert.ok(true, "No error when calling disableRouterIntegration without enable");
-});
-
-QUnit.test("disableRouterIntegration: re-enable after disable", (assert) => {
-  const manager = HotkeyManager.getInstance();
+QUnit.test("New group can re-enable router integration after previous group destroyed", (assert) => {
+  const manager = createHotkeyManager();
+  const group1 = manager.createGroup();
   const router = createMockRouter();
+  group1.enableRouterIntegration(router);
 
-  manager.enableRouterIntegration(router);
-  manager.disableRouterIntegration();
+  router.fireRouteMatched("main");
+  assert.strictEqual(manager.getActiveScope(), "main");
+
+  group1.destroyAll();
   manager.resetToGlobalScope();
 
-  // Re-enable and verify it works again
-  manager.enableRouterIntegration(router);
+  const group2 = manager.createGroup();
+  group2.enableRouterIntegration(router);
   router.fireRouteMatched("settings");
-  assert.strictEqual(manager.getActiveScope(), "settings", "Scope changes after re-enable");
+  assert.strictEqual(manager.getActiveScope(), "settings", "New group's router integration works");
+
+  group2.destroyAll();
 });

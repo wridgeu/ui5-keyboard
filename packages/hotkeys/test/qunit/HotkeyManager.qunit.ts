@@ -1,7 +1,6 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
-import { destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 let restoreRuntimeHooks: (() => void) | null = null;
@@ -22,17 +21,11 @@ QUnit.module("HotkeyManager", {
 });
 
 // ──────────────────────────────────────────────
-// Core: singleton, register, unregister
+// Core: register, unregister
 // ──────────────────────────────────────────────
 
-QUnit.test("getInstance returns singleton", (assert) => {
-  const a = HotkeyManager.getInstance();
-  const b = HotkeyManager.getInstance();
-  assert.strictEqual(a, b, "Same instance returned");
-});
-
 QUnit.test("Register and fire simple hotkey", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let fired = false;
   let receivedEvent: KeyboardEvent | null = null;
 
@@ -47,7 +40,7 @@ QUnit.test("Register and fire simple hotkey", (assert) => {
 });
 
 QUnit.test("Register and fire Ctrl+S", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let receivedDetails: { hotkey: string } | null = null;
 
   manager.register("Ctrl+S", (_event, details) => {
@@ -59,7 +52,7 @@ QUnit.test("Register and fire Ctrl+S", (assert) => {
 });
 
 QUnit.test("Unregister prevents callback", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   const handle = manager.register("Escape", () => {
@@ -74,7 +67,7 @@ QUnit.test("Unregister prevents callback", (assert) => {
 });
 
 QUnit.test("Double unregister is a silent no-op", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const handle = manager.register("Escape", () => {});
 
   handle.unregister();
@@ -87,7 +80,7 @@ QUnit.test("Double unregister is a silent no-op", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Disabled registration is skipped", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register(
@@ -103,7 +96,7 @@ QUnit.test("Disabled registration is skipped", (assert) => {
 });
 
 QUnit.test("enabled as function: evaluated on each keypress", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let canFire = false;
   let callCount = 0;
 
@@ -130,7 +123,7 @@ QUnit.test("enabled as function: evaluated on each keypress", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("ignoreRepeat skips repeated keydown", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let count = 0;
 
   manager.register(
@@ -152,7 +145,7 @@ QUnit.test("ignoreRepeat skips repeated keydown", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Scope: hotkey only fires in active scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let globalCalled = false;
   let editorCalled = false;
 
@@ -179,7 +172,7 @@ QUnit.test("Scope: hotkey only fires in active scope", (assert) => {
 });
 
 QUnit.test("Scope push/pop lifecycle", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let editorCalled = false;
 
   manager.register(
@@ -205,7 +198,7 @@ QUnit.test("Scope push/pop lifecycle", (assert) => {
 });
 
 QUnit.test("pushScope trims whitespace and activates normalized scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let editorCalled = false;
 
   manager.register(
@@ -224,7 +217,7 @@ QUnit.test("pushScope trims whitespace and activates normalized scope", (assert)
 });
 
 QUnit.test("popScope trims whitespace and pops normalized scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.pushScope("editor");
   assert.strictEqual(manager.getActiveScope(), "editor", "Editor scope pushed");
@@ -234,7 +227,7 @@ QUnit.test("popScope trims whitespace and pops normalized scope", (assert) => {
 });
 
 QUnit.test("pushScope and popScope whitespace-only values throw", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.pushScope("main");
   assert.throws(() => manager.pushScope("   "), /non-empty string/, "Whitespace-only pushScope is rejected");
@@ -248,7 +241,7 @@ QUnit.test("pushScope and popScope whitespace-only values throw", (assert) => {
 });
 
 QUnit.test("register throws for empty scope string", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   assert.throws(
     () => manager.register("Escape", () => {}, { scope: "" }),
@@ -264,7 +257,7 @@ QUnit.test("register throws for empty scope string", (assert) => {
 });
 
 QUnit.test("Scoped handler takes priority over global for same key", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let globalCalled = false;
   let editorCalled = false;
 
@@ -292,7 +285,7 @@ QUnit.test("Scoped handler takes priority over global for same key", (assert) =>
 });
 
 QUnit.test("popScope throws on mismatch", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   manager.pushScope("editor");
 
   assert.throws(() => manager.popScope("dialog"), /Cannot pop scope/, "Throws on scope mismatch");
@@ -302,13 +295,13 @@ QUnit.test("popScope throws on mismatch", (assert) => {
 });
 
 QUnit.test("popScope throws when only global scope remains", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   assert.throws(() => manager.popScope(GLOBAL_SCOPE), /Cannot pop the global scope/, "Cannot pop global scope");
 });
 
 QUnit.test("resetToGlobalScope pops all non-global scopes", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.pushScope("main");
   manager.pushScope("dialog");
@@ -322,48 +315,27 @@ QUnit.test("resetToGlobalScope pops all non-global scopes", (assert) => {
   assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "No-op when already at global");
 });
 
-QUnit.test("pushScope allows duplicate scope and pops correctly", (assert) => {
-  const manager = HotkeyManager.getInstance();
-  let editorCalled = false;
-  let globalCalled = false;
+QUnit.test("pushScope rejects duplicate top scope", (assert) => {
+  const manager = createHotkeyManager();
 
-  manager.register("F5", () => {
-    globalCalled = true;
-  });
-  manager.register(
-    "F5",
-    () => {
-      editorCalled = true;
-    },
-    { scope: "editor" },
+  manager.pushScope("editor");
+  assert.strictEqual(manager.getActiveScope(), "editor");
+
+  assert.throws(() => manager.pushScope("editor"), /already the active scope/, "Duplicate top scope is rejected");
+
+  // Different scope on top is fine
+  manager.pushScope("dialog");
+  assert.strictEqual(manager.getActiveScope(), "dialog");
+});
+
+QUnit.test("pushScope rejects GLOBAL_SCOPE", (assert) => {
+  const manager = createHotkeyManager();
+
+  assert.throws(
+    () => manager.pushScope("__global__"),
+    /Cannot push the global scope/,
+    "Pushing GLOBAL_SCOPE is rejected",
   );
-
-  // Push editor twice
-  manager.pushScope("editor");
-  manager.pushScope("editor");
-  assert.strictEqual(manager.getActiveScope(), "editor", "Active scope is editor");
-
-  fireKey("F5");
-  assert.ok(editorCalled, "Editor handler fires with duplicate scope on stack");
-  assert.notOk(globalCalled, "Global handler suppressed");
-
-  // First pop - still in editor
-  editorCalled = false;
-  manager.popScope("editor");
-  assert.strictEqual(manager.getActiveScope(), "editor", "Still editor after first pop");
-
-  fireKey("F5");
-  assert.ok(editorCalled, "Editor handler still fires after first pop");
-
-  // Second pop - back to global
-  editorCalled = false;
-  globalCalled = false;
-  manager.popScope("editor");
-  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Back to global after second pop");
-
-  fireKey("F5");
-  assert.ok(globalCalled, "Global handler fires after both pops");
-  assert.notOk(editorCalled, "Editor handler no longer fires");
 });
 
 // ──────────────────────────────────────────────
@@ -371,7 +343,7 @@ QUnit.test("pushScope allows duplicate scope and pops correctly", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Conflict behavior: warn (default) allows both", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let firstCalled = false;
 
   manager.register("Escape", () => {
@@ -388,7 +360,7 @@ QUnit.test("Conflict behavior: warn (default) allows both", (assert) => {
 });
 
 QUnit.test("Conflict behavior: error throws", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.register("Escape", () => {});
 
@@ -400,7 +372,7 @@ QUnit.test("Conflict behavior: error throws", (assert) => {
 });
 
 QUnit.test("Conflict behavior: replace removes old registration", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let oldCalled = false;
   let newCalled = false;
 
@@ -423,7 +395,7 @@ QUnit.test("Conflict behavior: replace removes old registration", (assert) => {
 });
 
 QUnit.test("Conflict behavior: same key/scope on different targets does not conflict", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let firstCalled = false;
   let secondCalled = false;
 
@@ -464,7 +436,7 @@ QUnit.test("Conflict behavior: same key/scope on different targets does not conf
 // ──────────────────────────────────────────────
 
 QUnit.test("auto ignoreInputs: single key suppressed in text input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   // F5 with default ignoreInputs: "auto" - should suppress in input
@@ -481,7 +453,7 @@ QUnit.test("auto ignoreInputs: single key suppressed in text input", (assert) =>
 });
 
 QUnit.test("auto ignoreInputs: Ctrl combo fires in text input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   // Ctrl+S with default ignoreInputs: "auto" - should fire even in input
@@ -498,7 +470,7 @@ QUnit.test("auto ignoreInputs: Ctrl combo fires in text input", (assert) => {
 });
 
 QUnit.test("auto ignoreInputs: Escape fires in text input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Escape", () => {
@@ -514,7 +486,7 @@ QUnit.test("auto ignoreInputs: Escape fires in text input", (assert) => {
 });
 
 QUnit.test("ignoreInputs: false allows single key in input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register(
@@ -534,7 +506,7 @@ QUnit.test("ignoreInputs: false allows single key in input", (assert) => {
 });
 
 QUnit.test("ignoreInputs: true suppresses Ctrl combo in input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register(
@@ -554,7 +526,7 @@ QUnit.test("ignoreInputs: true suppresses Ctrl combo in input", (assert) => {
 });
 
 QUnit.test("ignoreInputs: true suppresses Escape in input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register(
@@ -578,7 +550,7 @@ QUnit.test("ignoreInputs: true suppresses Escape in input", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("suppressInPopups: suppresses when popup is open", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register(
@@ -601,7 +573,7 @@ QUnit.test("suppressInPopups: suppresses when popup is open", (assert) => {
 });
 
 QUnit.test("suppressInPopups: false (default) fires even with popup open", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   // Default suppressInPopups: false
@@ -620,7 +592,7 @@ QUnit.test("suppressInPopups: false (default) fires even with popup open", (asse
 // ──────────────────────────────────────────────
 
 QUnit.test("Callback error is caught and does not crash", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.register("F1", () => {
     throw new Error("Intentional test error");
@@ -644,7 +616,7 @@ QUnit.test("Callback error is caught and does not crash", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("getRegistrations returns all registrations", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.register("Escape", () => {});
   manager.register("Ctrl+S", () => {});
@@ -654,7 +626,7 @@ QUnit.test("getRegistrations returns all registrations", (assert) => {
 });
 
 QUnit.test("getRegistrationsForScope filters by scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.register("Escape", () => {}, { scope: GLOBAL_SCOPE });
   manager.register("Ctrl+S", () => {}, { scope: "editor" });
@@ -665,7 +637,7 @@ QUnit.test("getRegistrationsForScope filters by scope", (assert) => {
 });
 
 QUnit.test("scope introspection normalizes whitespace consistently", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.register("Escape", () => {}, { scope: GLOBAL_SCOPE });
   manager.register("Ctrl+S", () => {}, { scope: "editor" });
@@ -682,19 +654,19 @@ QUnit.test("scope introspection normalizes whitespace consistently", (assert) =>
 // ──────────────────────────────────────────────
 
 QUnit.test("destroy cleans up everything", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   manager.register("Escape", () => {});
 
   manager.destroy();
 
   // Getting a new instance should give a fresh manager
-  const newManager = HotkeyManager.getInstance();
+  const newManager = createHotkeyManager();
   assert.strictEqual(newManager.getRegistrations().length, 0, "New instance has no registrations");
   assert.strictEqual(newManager.getActiveScope(), GLOBAL_SCOPE, "Scope stack reset");
 });
 
 QUnit.test("destroy is idempotent (safe to call twice)", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   manager.register("Escape", () => {});
   manager.pushScope("editor");
 
@@ -704,13 +676,13 @@ QUnit.test("destroy is idempotent (safe to call twice)", (assert) => {
   manager.destroy();
 
   // A fresh instance should still work
-  const fresh = HotkeyManager.getInstance();
+  const fresh = createHotkeyManager();
   assert.strictEqual(fresh.getRegistrations().length, 0, "Fresh instance after double destroy");
   assert.strictEqual(fresh.getActiveScope(), GLOBAL_SCOPE, "Scope stack clean after double destroy");
 });
 
 QUnit.test("destroy invalidates hotkey and sequence handles", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const hotkeyHandle = manager.register("Escape", () => {});
   const sequenceHandle = manager.registerSequence(["G", "E"], () => {});
 
@@ -739,7 +711,7 @@ QUnit.test("destroy invalidates hotkey and sequence handles", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("preventDefault: true (default) prevents default", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.register("F5", () => {});
 
@@ -748,7 +720,7 @@ QUnit.test("preventDefault: true (default) prevents default", (assert) => {
 });
 
 QUnit.test("preventDefault: false does not prevent default", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   manager.register("F5", () => {}, { preventDefault: false });
 
@@ -757,7 +729,7 @@ QUnit.test("preventDefault: false does not prevent default", (assert) => {
 });
 
 QUnit.test("stopPropagation: true (default) stops propagation", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let propagated = false;
 
   // Add a bubble-phase listener that would fire if propagation is not stopped
@@ -774,7 +746,7 @@ QUnit.test("stopPropagation: true (default) stops propagation", (assert) => {
 });
 
 QUnit.test("stopPropagation: false allows propagation", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let propagated = false;
 
   const listener = () => {
@@ -794,7 +766,7 @@ QUnit.test("stopPropagation: false allows propagation", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let firstCalled = false;
 
   manager.register("Escape", () => {
@@ -814,7 +786,7 @@ QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => 
 // ──────────────────────────────────────────────
 
 QUnit.test("IME composition events are ignored", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Enter", () => {
@@ -838,7 +810,7 @@ QUnit.test("IME composition events are ignored", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Pure modifier key presses are ignored", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   // Register Ctrl+S - pressing Ctrl alone should not fire anything
@@ -863,7 +835,7 @@ QUnit.test("Pure modifier key presses are ignored", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Unhandled: fires with no_match when no registration exists", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let ctx: any = null;
 
   manager.setUnhandledHandler((c) => {
@@ -878,7 +850,7 @@ QUnit.test("Unhandled: fires with no_match when no registration exists", (assert
 });
 
 QUnit.test("Unhandled: fires with disabled reason when registration is disabled", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let ctx: any = null;
 
   const handle = manager.register(
@@ -900,7 +872,7 @@ QUnit.test("Unhandled: fires with disabled reason when registration is disabled"
 });
 
 QUnit.test("Unhandled: fires with input_suppressed for single key in input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let ctx: any = null;
 
   manager.register("F5", () => {
@@ -922,7 +894,7 @@ QUnit.test("Unhandled: fires with input_suppressed for single key in input", (as
 });
 
 QUnit.test("Unhandled: fires with popup_suppressed when popup open", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let ctx: any = null;
 
   manager.register(
@@ -946,7 +918,7 @@ QUnit.test("Unhandled: fires with popup_suppressed when popup open", (assert) =>
 });
 
 QUnit.test("Unhandled: fires with repeat_ignored when key held", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let handlerFired = false;
   let ctx: any = null;
 
@@ -969,7 +941,7 @@ QUnit.test("Unhandled: fires with repeat_ignored when key held", (assert) => {
 });
 
 QUnit.test("Unhandled: does NOT fire for IME composing events", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let unhandledCalled = false;
 
   manager.setUnhandledHandler(() => {
@@ -988,7 +960,7 @@ QUnit.test("Unhandled: does NOT fire for IME composing events", (assert) => {
 });
 
 QUnit.test("Unhandled: does NOT fire for pure modifier presses", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let unhandledCalled = false;
 
   manager.setUnhandledHandler(() => {
@@ -1007,7 +979,7 @@ QUnit.test("Unhandled: does NOT fire for pure modifier presses", (assert) => {
 });
 
 QUnit.test("Unhandled: does NOT fire when a hotkey IS handled", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let handlerFired = false;
   let unhandledCalled = false;
 
@@ -1025,7 +997,7 @@ QUnit.test("Unhandled: does NOT fire when a hotkey IS handled", (assert) => {
 });
 
 QUnit.test("Unhandled: does NOT fire no_match for sequence progression/completion", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let sequenceCalled = false;
   let unhandledCount = 0;
 
@@ -1047,7 +1019,7 @@ QUnit.test("Unhandled: does NOT fire no_match for sequence progression/completio
 });
 
 QUnit.test("Unhandled: does NOT fire no_match when target hotkey handles event", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let targetCalled = false;
   let unhandledCalled = false;
 
@@ -1074,7 +1046,7 @@ QUnit.test("Unhandled: does NOT fire no_match when target hotkey handles event",
 });
 
 QUnit.test("Unhandled: nested targets do not emit no_match when inner target handles", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let innerCalled = false;
   let unhandledCalled = false;
 
@@ -1107,7 +1079,7 @@ QUnit.test("Unhandled: nested targets do not emit no_match when inner target han
 });
 
 QUnit.test("Unhandled: nested target no_match is emitted once", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let unhandledCount = 0;
   let lastReason = "";
 
@@ -1133,7 +1105,7 @@ QUnit.test("Unhandled: nested target no_match is emitted once", (assert) => {
 });
 
 QUnit.test("Unhandled: nested inner no_match is suppressed after ancestor handles", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let outerCalled = false;
   let unhandledCalled = false;
 
@@ -1167,7 +1139,7 @@ QUnit.test("Unhandled: nested inner no_match is suppressed after ancestor handle
 });
 
 QUnit.test("Unhandled: passes correct activeScope in context", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let ctx: any = null;
 
   manager.pushScope("detail");
@@ -1181,7 +1153,7 @@ QUnit.test("Unhandled: passes correct activeScope in context", (assert) => {
 });
 
 QUnit.test("Unhandled: null removes the callback", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let unhandledCalled = false;
 
   manager.setUnhandledHandler(() => {
@@ -1199,7 +1171,7 @@ QUnit.test("Unhandled: null removes the callback", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("setOptions: toggle enabled", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let count = 0;
 
   const handle = manager.register("Escape", () => {
@@ -1218,7 +1190,7 @@ QUnit.test("setOptions: toggle enabled", (assert) => {
 });
 
 QUnit.test("setOptions: update description", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   const handle = manager.register("Escape", () => {}, { description: "Close" });
 
@@ -1230,7 +1202,7 @@ QUnit.test("setOptions: update description", (assert) => {
 });
 
 QUnit.test("setOptions: update ignoreRepeat", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let count = 0;
 
   const handle = manager.register("F5", () => {
@@ -1249,7 +1221,7 @@ QUnit.test("setOptions: update ignoreRepeat", (assert) => {
 });
 
 QUnit.test("setOptions: update preventDefault", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   const handle = manager.register("F5", () => {});
 
@@ -1264,7 +1236,7 @@ QUnit.test("setOptions: update preventDefault", (assert) => {
 });
 
 QUnit.test("setOptions: update stopPropagation", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let propagated = false;
 
   const listener = () => {
@@ -1287,7 +1259,7 @@ QUnit.test("setOptions: update stopPropagation", (assert) => {
 });
 
 QUnit.test("setOptions: update ignoreInputs", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let count = 0;
 
   // Register with default ignoreInputs: "auto" - single key suppressed in inputs
@@ -1309,7 +1281,7 @@ QUnit.test("setOptions: update ignoreInputs", (assert) => {
 });
 
 QUnit.test("setOptions: update suppressInPopups", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let count = 0;
 
   const handle = manager.register(
@@ -1331,7 +1303,7 @@ QUnit.test("setOptions: update suppressInPopups", (assert) => {
 });
 
 QUnit.test("setOptions: throws on unregistered handle", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const handle = manager.register("Escape", () => {});
   handle.unregister();
 
@@ -1339,7 +1311,7 @@ QUnit.test("setOptions: throws on unregistered handle", (assert) => {
 });
 
 QUnit.test("setOptions: throws on scope change", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const handle = manager.register("Escape", () => {});
 
   assert.throws(
@@ -1351,7 +1323,7 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
 });
 
 QUnit.test("setOptions: throws on conflictBehavior change", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const handle = manager.register("Escape", () => {});
 
   assert.throws(
@@ -1368,7 +1340,7 @@ QUnit.test("setOptions: throws on conflictBehavior change", (assert) => {
 
 QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1400,7 +1372,7 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
 
 QUnit.test("AltGr: AltGraph modifier state suppresses Ctrl+Alt hotkey on Windows", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1425,7 +1397,7 @@ QUnit.test("AltGr: AltGraph modifier state suppresses Ctrl+Alt hotkey on Windows
 
 QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1448,7 +1420,7 @@ QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
 
 QUnit.test("AltGr: guard only active on Windows", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "linux" });
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1471,7 +1443,7 @@ QUnit.test("AltGr: guard only active on Windows", (assert) => {
 
 QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1485,7 +1457,7 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
 
 QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1513,7 +1485,7 @@ QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (ass
 // ──────────────────────────────────────────────
 
 QUnit.test("Target element: hotkey fires on target element", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   const div = document.createElement("div");
@@ -1540,7 +1512,7 @@ QUnit.test("Target element: hotkey fires on target element", (assert) => {
 });
 
 QUnit.test("Target element: document events don't fire target hotkey", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let targetCalled = false;
 
   const div = document.createElement("div");
@@ -1561,7 +1533,7 @@ QUnit.test("Target element: document events don't fire target hotkey", (assert) 
 });
 
 QUnit.test("Target element: document and target coexist", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let docCalled = false;
   let targetCalled = false;
 
@@ -1602,7 +1574,7 @@ QUnit.test("Target element: document and target coexist", (assert) => {
 });
 
 QUnit.test("Target element: with scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   const div = document.createElement("div");
@@ -1638,7 +1610,7 @@ QUnit.test("Target element: with scope", (assert) => {
 });
 
 QUnit.test("Target element: setOptions swaps target", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   const div1 = document.createElement("div");
@@ -1680,7 +1652,7 @@ QUnit.test("Target element: setOptions swaps target", (assert) => {
 });
 
 QUnit.test("Target element: setOptions target swap triggers conflict detection (error)", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   const div1 = document.createElement("div");
   div1.tabIndex = 0;
@@ -1717,7 +1689,7 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
 });
 
 QUnit.test("Target element: setOptions target swap triggers conflict detection (replace)", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let oldCalled = false;
   let swappedCalled = false;
 
@@ -1758,7 +1730,7 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
 });
 
 QUnit.test("Target element: unregister removes listener", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   const div = document.createElement("div");
@@ -1786,7 +1758,7 @@ QUnit.test("Target element: unregister removes listener", (assert) => {
 });
 
 QUnit.test("Target element: replace cleans up old target listener", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let oldCalled = false;
 
   const div = document.createElement("div");
@@ -1836,7 +1808,7 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
 // ──────────────────────────────────────────────
 
 QUnit.test("Handle exposes hotkey, scope, and description", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   const handle = manager.register("Mod+S", () => {}, {
     scope: "editor",
@@ -1849,7 +1821,7 @@ QUnit.test("Handle exposes hotkey, scope, and description", (assert) => {
 });
 
 QUnit.test("Handle description reflects setOptions update", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   const handle = manager.register("Escape", () => {}, { description: "Close" });
 
@@ -1858,7 +1830,7 @@ QUnit.test("Handle description reflects setOptions update", (assert) => {
 });
 
 QUnit.test("Handle defaults: scope is global, description is empty", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   const handle = manager.register("F5", () => {});
 
@@ -1871,7 +1843,7 @@ QUnit.test("Handle defaults: scope is global, description is empty", (assert) =>
 // ──────────────────────────────────────────────
 
 QUnit.test("enabled function throwing: hotkey does not fire and manager stays operational", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register(
@@ -1899,7 +1871,7 @@ QUnit.test("enabled function throwing: hotkey does not fire and manager stays op
 });
 
 QUnit.test("enabled function throwing: getRegistrations shows enabled as false", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
   const handle = manager.register("F3", () => {}, {
     enabled: () => {
@@ -1916,7 +1888,7 @@ QUnit.test("enabled function throwing: getRegistrations shows enabled as false",
 // ──────────────────────────────────────────────
 
 QUnit.test("Target element: two registrations on same target, unregister one", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let firstCalled = false;
   let secondCalled = false;
 

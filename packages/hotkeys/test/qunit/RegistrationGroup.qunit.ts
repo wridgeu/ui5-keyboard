@@ -1,5 +1,4 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { destroyHotkeyManager, fireKey } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
 QUnit.module("RegistrationGroup", {
   beforeEach() {
@@ -11,7 +10,7 @@ QUnit.module("RegistrationGroup", {
 });
 
 QUnit.test("createGroup returns a RegistrationGroup", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
 
   assert.ok(group, "Group is truthy");
@@ -20,7 +19,7 @@ QUnit.test("createGroup returns a RegistrationGroup", (assert) => {
 });
 
 QUnit.test("group.register delegates to manager and tracks handle", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
   let called = false;
 
@@ -38,7 +37,7 @@ QUnit.test("group.register delegates to manager and tracks handle", (assert) => 
 
 QUnit.test("group.registerSequence delegates and tracks", (assert) => {
   assert.expect(4);
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
 
   const handle = group.registerSequence(["G", "I"], () => {
@@ -54,7 +53,7 @@ QUnit.test("group.registerSequence delegates and tracks", (assert) => {
 });
 
 QUnit.test("getRegistrations/getSequenceRegistrations return only this group's entries", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const groupA = manager.createGroup();
   const groupB = manager.createGroup();
 
@@ -77,7 +76,7 @@ QUnit.test("getRegistrations/getSequenceRegistrations return only this group's e
 });
 
 QUnit.test("destroyAll unregisters all handles", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
   let hotkeyCalled = false;
 
@@ -100,7 +99,7 @@ QUnit.test("destroyAll unregisters all handles", (assert) => {
 });
 
 QUnit.test("destroyAll only affects its own group", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const groupA = manager.createGroup();
   const groupB = manager.createGroup();
 
@@ -130,7 +129,7 @@ QUnit.test("destroyAll only affects its own group", (assert) => {
 });
 
 QUnit.test("destroyAll is idempotent", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
 
   group.register("F5", () => {});
@@ -142,7 +141,7 @@ QUnit.test("destroyAll is idempotent", (assert) => {
 });
 
 QUnit.test("manager destroy finalizes group lifecycle", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
 
   const hotkeyHandle = group.register("F5", () => {});
@@ -162,7 +161,7 @@ QUnit.test("manager destroy finalizes group lifecycle", (assert) => {
 });
 
 QUnit.test("size reflects active registrations", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
 
   const h1 = group.register("F5", () => {});
@@ -175,7 +174,7 @@ QUnit.test("size reflects active registrations", (assert) => {
 });
 
 QUnit.test("size decrements for individually unregistered sequences", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
 
   group.register("F5", () => {});
@@ -188,7 +187,7 @@ QUnit.test("size decrements for individually unregistered sequences", (assert) =
 });
 
 QUnit.test("Registering on a destroyed group throws", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
 
   group.destroyAll();
@@ -207,7 +206,7 @@ QUnit.test("Registering on a destroyed group throws", (assert) => {
 });
 
 QUnit.test("Handles returned by group are normal handles", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
   let count = 0;
 
@@ -234,7 +233,7 @@ QUnit.test("Handles returned by group are normal handles", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("onPending fires on intermediate key and dies with unregister", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
   const calls: string[] = [];
 
@@ -257,7 +256,7 @@ QUnit.test("onPending fires on intermediate key and dies with unregister", (asse
 });
 
 QUnit.test("onPending dies with group.destroyAll", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
   const calls: string[] = [];
 
@@ -281,7 +280,7 @@ QUnit.test("onPending dies with group.destroyAll", (assert) => {
 });
 
 QUnit.test("onPending takes precedence over global setSequencePendingHandler", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
   const calls: string[] = [];
 
@@ -303,7 +302,7 @@ QUnit.test("onPending takes precedence over global setSequencePendingHandler", (
 });
 
 QUnit.test("global pending handler fires when onPending is not set", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const group = manager.createGroup();
   const calls: string[] = [];
 

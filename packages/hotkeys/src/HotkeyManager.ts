@@ -1,6 +1,5 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
-import type Router from "sap/ui/core/routing/Router";
 import { ConflictBehavior, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./internal/SequenceManager";
@@ -39,8 +38,6 @@ import type {
 import type { HotkeyRegistration, ResolvedHotkeyOptions } from "./internal/types";
 
 type ValidateModule = typeof import("./validate");
-
-type RouteMatchedEvent = Parameters<Parameters<Router["attachBeforeRouteMatched"]>[0]>[0];
 
 /**
  * Minimal router contract for hotkey scope integration.
@@ -123,7 +120,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
 }
 
 /**
- * Singleton keyboard shortcut manager for UI5 applications.
+ * Keyboard shortcut manager for UI5 applications.
  *
  * Owns an internal EventDispatcher that attaches a single `window`-level
  * `keydown` listener and dispatches matching hotkeys to registered callbacks
@@ -137,12 +134,11 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
  * import HotkeyManager from "ui5/hotkeys/HotkeyManager";
  *
  * // In Component.init():
- * const manager = HotkeyManager.getInstance();
- * manager.enableRouterIntegration(this.getRouter());
+ * const manager = new HotkeyManager();
  *
  * manager.register("Mod+S", (event) => { ... }, {
  *   description: "Save",
- *   scope: "editor", // scope name = route name
+ *   scope: "editor",
  * });
  * ```
  */
@@ -151,18 +147,12 @@ export default class HotkeyManager extends BaseObject {
     library: "ui5.hotkeys",
   };
 
-  /** Singleton instance, bound to the class (module-level shared state). */
-  private static _instance: HotkeyManager | null = null;
-
   private _registrations: Map<string, HotkeyRegistration> = new Map();
   private _registrationsByScope: Map<string, ScopeRegistrationBucket> = new Map();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
   private _groups: Set<RegistrationGroup> = new Set();
   private _destroyed = false;
-
-  // Router integration cleanup
-  private _routerCleanup: (() => void) | null = null;
 
   // Optional callback for unhandled key events
   private _unhandledCallback: UnhandledCallback | null = null;
@@ -177,7 +167,11 @@ export default class HotkeyManager extends BaseObject {
   private _focusFallback: FocusFallbackTracker;
 
   /**
-   * Not intended to be called directly. Use `HotkeyManager.getInstance()`.
+   * Create a new HotkeyManager instance.
+   *
+   * Typically created once in `Component.init()` and destroyed in
+   * `Component.exit()`. Controllers access it via
+   * `getOwnerComponent().getHotkeyManager()`.
    */
   constructor() {
     super();
@@ -192,21 +186,6 @@ export default class HotkeyManager extends BaseObject {
     this._focusFallback = new FocusFallbackTracker();
 
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
-  }
-
-  /**
-   * Get or create the singleton HotkeyManager instance.
-   *
-   * If the previous instance was destroyed (e.g., during FLP cross-app
-   * navigation via `Component.exit()`), a fresh instance is created
-   * automatically. Existing references to the destroyed instance remain
-   * permanently invalid - callers must re-acquire via `getInstance()`.
-   */
-  static getInstance(): HotkeyManager {
-    if (!HotkeyManager._instance || HotkeyManager._instance._destroyed) {
-      HotkeyManager._instance = new HotkeyManager();
-    }
-    return HotkeyManager._instance;
   }
 
   /**
@@ -404,6 +383,16 @@ export default class HotkeyManager extends BaseObject {
   pushScope(scopeId: string): void {
     this._assertAlive("pushScope");
     const normalized = resolveRequiredScope(scopeId);
+
+    if (normalized === GLOBAL_SCOPE) {
+      throw new Error("Cannot push the global scope -- it is always at the bottom of the stack");
+    }
+
+    const top = this._scopeStack.at(-1);
+    if (top === normalized) {
+      throw new Error(`Cannot push scope "${normalized}": it is already the active scope`);
+    }
+
     this._scopeStack.push(normalized);
     Log.debug(`Pushed scope "${normalized}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
   }
@@ -471,90 +460,6 @@ export default class HotkeyManager extends BaseObject {
       this._scopeStack = [GLOBAL_SCOPE];
       Log.debug(`Reset to global scope (popped ${depth} scope(s))`, undefined, LOG_COMPONENT);
     }
-  }
-
-  // ──────────────────────────────────────────────
-  // Router integration
-  // ──────────────────────────────────────────────
-
-  /**
-   * Enable automatic scope management via a UI5 Router.
-   *
-   * Attaches to the router's `beforeRouteMatched` event. On each route change:
-   * 1. All non-global scopes are popped (handles browser back/forward, FLP cross-nav)
-   * 2. The matched route's name is pushed as the new active scope
-   *
-   * This means controllers don't need to manage view-level scopes at all -
-   * just register hotkeys with `scope` matching the route name.
-   *
-   * **Dialog scopes** still require manual `pushScope`/`popScope` since
-   * they are not route-based.
-   *
-   * Call before `router.initialize()`.
-   *
-   * @param router - A `sap.ui.core.routing.Router` or `sap.m.routing.Router` instance.
-   * @throws Error if router integration is already enabled.
-   *
-   * @example
-   * ```ts
-   * // Component.init()
-   * const manager = HotkeyManager.getInstance();
-   * manager.enableRouterIntegration(this.getRouter());
-   * this.getRouter().initialize();
-   *
-   * // Controller - just register, no scope management needed:
-   * manager.register("F5", handler, { scope: "main" }); // "main" = route name
-   * ```
-   */
-  enableRouterIntegration(router: RouterLike): void {
-    this._assertAlive("enableRouterIntegration");
-    // If a previous router was registered, detach from it first.
-    // This handles FLP Component re-entry where the old router is
-    // destroyed but the singleton manager persists.
-    if (this._routerCleanup) {
-      this._routerCleanup();
-      this._routerCleanup = null;
-    }
-
-    const handler = (event: RouteMatchedEvent) => {
-      this.resetToGlobalScope();
-      const routeName = event.getParameter("name");
-      if (routeName) {
-        this.pushScope(routeName);
-      }
-    };
-
-    router.attachBeforeRouteMatched(handler, this);
-    this._routerCleanup = () => {
-      router.detachBeforeRouteMatched(handler, this);
-    };
-
-    Log.info("Router integration enabled", undefined, LOG_COMPONENT);
-  }
-
-  /**
-   * Disable router integration without destroying the manager.
-   *
-   * Detaches the `beforeRouteMatched` handler. The scope stack is left
-   * in its current state - call `resetToGlobalScope()` if needed.
-   *
-   * @throws Error if router integration is not enabled.
-   */
-  disableRouterIntegration(): void {
-    this._assertAlive("disableRouterIntegration");
-    if (!this._routerCleanup) return;
-
-    this._routerCleanup();
-    this._routerCleanup = null;
-
-    Log.info("Router integration disabled", undefined, LOG_COMPONENT);
-  }
-
-  /**
-   * Whether router integration is currently active.
-   */
-  hasRouterIntegration(): boolean {
-    return this._routerCleanup !== null;
   }
 
   // ──────────────────────────────────────────────
@@ -780,23 +685,14 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   /**
-   * Destroy the manager: remove all listeners, clear registrations,
-   * and null the singleton reference.
+   * Destroy the manager: remove all DOM listeners, finalize all groups,
+   * clear all registrations, and reset internal state.
    *
-   * Follows UI5 `BaseObject.destroy()` pattern. Call from
-   * `Component.exit()` to ensure proper FLP cross-app cleanup.
-   *
-   * After destruction, all existing references become permanently
-   * invalid (methods throw via `_assertAlive`). A subsequent
-   * `getInstance()` creates a fresh manager with no registrations.
+   * Call from `Component.exit()` to ensure proper cleanup.
+   * After destruction, all methods throw via `_assertAlive`.
    */
   destroy(): void {
     this._destroyed = true;
-
-    if (this._routerCleanup) {
-      this._routerCleanup();
-      this._routerCleanup = null;
-    }
 
     // Destroy the dispatcher first - removes all DOM listeners, invalidates
     // guards, notifies interceptor/recorders, destroys KeyStateTracker.
@@ -822,7 +718,6 @@ export default class HotkeyManager extends BaseObject {
     this._scopeStack = [GLOBAL_SCOPE];
     resetRuntimeCaches();
     this._unhandledCallback = null;
-    HotkeyManager._instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
 

@@ -1,15 +1,15 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 import { FOCUS_PATH_FALLBACK_TTL_MS } from "ui5/hotkeys/internal/FocusFallbackTracker";
 import type Log from "sap/base/Log";
-import { destroyHotkeyManager, fireBlur, fireKey, fireKeyOn, fireKeyUp, resetHotkeyManager } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireBlur, fireKey, fireKeyOn, fireKeyUp } from "./test-helpers";
 
 let manager: HotkeyManager;
 
 QUnit.module("EventDispatcher & Suspend Guard", {
   beforeEach() {
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -571,7 +571,7 @@ QUnit.test("Destroy removes all window listeners", (assert) => {
 QUnit.test("Re-create after destroy works", (assert) => {
   manager.destroy();
 
-  const newManager = HotkeyManager.getInstance();
+  const newManager = createHotkeyManager();
   let fired = false;
   newManager.register("F5", () => {
     fired = true;
@@ -1006,7 +1006,7 @@ QUnit.test("recorder.destroy() untracks from dispatcher - no double-destroy on m
   assert.ok(recorder2.isDestroyed, "Second recorder destroyed by manager teardown");
 
   // Re-create manager works cleanly
-  const newManager = HotkeyManager.getInstance();
+  const newManager = createHotkeyManager();
   const newRecorder = newManager.createRecorder({ onRecord: () => {} });
   assert.notOk(newRecorder.isDestroyed, "New recorder is functional after clean re-creation");
   newRecorder.destroy();
@@ -1540,7 +1540,7 @@ let clock: ReturnType<typeof sinon.useFakeTimers>;
 QUnit.module("Focus fallback for Escape", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -1725,7 +1725,7 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
 QUnit.module("Generic root ID API", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -1918,7 +1918,7 @@ QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (
 
 QUnit.module("Shadow DOM target matching", {
   beforeEach() {
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -1996,7 +1996,7 @@ QUnit.test("nested shadow DOM: target on outer host matches when focus is two sh
 
 QUnit.module("ActiveElement path augmentation", {
   beforeEach() {
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -2045,7 +2045,7 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
 QUnit.module("UIArea generic root detection", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
