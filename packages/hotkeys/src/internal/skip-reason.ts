@@ -1,5 +1,6 @@
 import { UnhandledReason } from "../library";
-import type { HotkeyRegistration, HotkeyRegistrationInfo } from "../types";
+import type { HotkeyRegistrationInfo } from "../types";
+import type { HotkeyRegistration } from "./types";
 
 /**
  * Tracks why a matching registration was skipped during event processing.

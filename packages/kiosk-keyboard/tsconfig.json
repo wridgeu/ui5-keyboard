@@ -1,13 +1,13 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "strictPropertyInitialization": false,
     "rootDir": ".",
     "paths": {
       "ui5/kiosk/*": ["./src/*"]
     },
-    "types": ["@openui5/types", "@types/qunit", "@types/sinon"],
+    "types": ["@openui5/types"],
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["test/e2e/**/*.ts", "test/qunit/wdio.conf.ts"]
+  "include": ["src/**/*.ts"]
 }

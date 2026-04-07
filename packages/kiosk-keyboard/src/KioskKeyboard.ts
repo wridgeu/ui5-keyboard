@@ -4,7 +4,7 @@ import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
-import { SECONDARY_LAYOUTS } from "./types";
+import { SECONDARY_LAYOUTS } from "./internal/types";
 import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
@@ -254,20 +254,16 @@ export default class KioskKeyboard extends Control {
        * Controls whether the KioskKeyboard or the native on-screen
        * keyboard is used.
        *
-       * - `"Custom"` (default) - always uses the KioskKeyboard and
-       *   suppresses the native keyboard via `inputmode="none"`.
-       *   Best for **dedicated kiosk terminals** without a physical
-       *   keyboard.
-       * - `"Native"` - always defers to the native keyboard; the
-       *   KioskKeyboard will not open on focus.
-       * - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
-       *   to the native keyboard on phones and tablets. This is
-       *   intended for **kiosk terminals running a desktop OS**
-       *   (no physical keyboard) that should still let mobile
-       *   visitors use their native keyboard. On a regular
-       *   laptop/desktop with a physical keyboard the virtual
+       * - `"Auto"` (default) - uses KioskKeyboard on desktop browsers,
+       *   defers to the native keyboard on phones and tablets. On a
+       *   regular laptop/desktop with a physical keyboard the virtual
        *   keyboard **will** still appear - use `"Native"` if that
        *   is not desired.
+       * - `"Custom"` - always uses the KioskKeyboard and suppresses
+       *   the native keyboard via `inputmode="none"`. Best for
+       *   **dedicated kiosk terminals** without a physical keyboard.
+       * - `"Native"` - always defers to the native keyboard; the
+       *   KioskKeyboard will not open on focus.
        *
        * @example <caption>XML view - kiosk terminal setup</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Custom" />
@@ -277,7 +273,7 @@ export default class KioskKeyboard extends Control {
        */
       mobileKeyboard: {
         type: "ui5.kiosk.MobileKeyboard",
-        defaultValue: "Custom",
+        defaultValue: "Auto",
         group: "Behavior",
       },
       /**
@@ -2170,9 +2166,15 @@ export default class KioskKeyboard extends Control {
         return;
       }
 
+      const fKeyMode = this.getFKeyMode();
+
+      if (fKeyMode === FKeyMode.None) {
+        return;
+      }
+
       let nativeAllowed = true;
 
-      if (this.getFKeyMode() === FKeyMode.Native) {
+      if (fKeyMode === FKeyMode.Native) {
         if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
           nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shift);
           if (nativeAllowed) {

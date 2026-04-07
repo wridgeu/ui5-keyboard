@@ -13,11 +13,11 @@ import type {
   Platform,
   SequenceOptions,
   SequencePendingCallback,
-  SequenceRegistration,
   SequenceRegistrationHandle,
   SequenceRegistrationInfo,
   UpdatableSequenceOptions,
 } from "../types";
+import type { SequenceRegistration } from "./types";
 
 const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
@@ -164,7 +164,7 @@ export default class SequenceManager extends BaseObject {
         if (!registration.active) {
           throw new Error(`Cannot setOptions on unregistered sequence (id: ${id})`);
         }
-        if ((newOptions as Record<string, unknown>).scope !== undefined) {
+        if ("scope" in newOptions) {
           throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
         }
         const reg = this._registrations.get(id);

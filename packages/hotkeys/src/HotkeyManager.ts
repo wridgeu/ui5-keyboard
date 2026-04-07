@@ -23,13 +23,11 @@ import type {
   Hotkey,
   HotkeyCallback,
   HotkeyOptions,
-  HotkeyRegistration,
   HotkeyRegistrationHandle,
   HotkeyRegistrationInfo,
   KeyboardDispatchGuard,
   KeyStateTrackerApi,
   Platform,
-  ResolvedHotkeyOptions,
   SequenceOptions,
   SequencePendingCallback,
   SequenceRegistrationHandle,
@@ -38,6 +36,7 @@ import type {
   UnhandledCallback,
   UpdatableHotkeyOptions,
 } from "./types";
+import type { HotkeyRegistration, ResolvedHotkeyOptions } from "./internal/types";
 
 type ValidateModule = typeof import("./validate");
 
@@ -289,11 +288,10 @@ export default class HotkeyManager extends BaseObject {
         if (!registration.active) {
           throw new Error(`Cannot setOptions on unregistered handle (id: ${id})`);
         }
-        const optionRecord = newOptions as Record<string, unknown>;
-        if (optionRecord.scope !== undefined) {
+        if ("scope" in newOptions) {
           throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
         }
-        if (optionRecord.conflictBehavior !== undefined) {
+        if ("conflictBehavior" in newOptions) {
           throw new Error("Cannot change conflictBehavior via setOptions - unregister and re-register instead");
         }
         const opts = registration.options;

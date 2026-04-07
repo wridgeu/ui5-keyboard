@@ -1,4 +1,4 @@
-import type { TargetElement } from "ui5/kiosk/types";
+import type { TargetElement } from "ui5/kiosk/internal/types";
 
 import {
   insertText,

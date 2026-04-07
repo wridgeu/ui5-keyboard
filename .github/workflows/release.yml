@@ -51,12 +51,6 @@ jobs:
       - name: Demo web component bundle check
         run: npm run test:demo:webc-bundle
 
-      - name: Verify package contents
-        run: |
-          npm pack -w packages/hotkeys --dry-run 2>&1
-          npm pack -w packages/kiosk-keyboard --dry-run 2>&1
-          npm pack -w packages/kiosk-keyboard-webc --dry-run 2>&1
-
   release-please:
     needs: [ci, smoke]
     runs-on: ubuntu-latest

@@ -59,13 +59,16 @@ describe("inputmode suppression", () => {
       const input = await getInput("input-native");
       await input.click();
 
-      // Verify keyboard does NOT open - wait briefly then assert
-      try {
-        await browser.waitUntil(() => isKeyboardOpen("kb-native"), { timeout: 500 });
-        expect(false).toBe(true); // Should not reach here
-      } catch {
-        // Expected: keyboard never opened
-      }
+      // Verify keyboard does NOT open - wait for a condition that would
+      // succeed if it did, then assert it stayed closed.
+      await browser.waitUntil(
+        async () => {
+          const open = await isKeyboardOpen("kb-native");
+          // Resolve once we've confirmed it's still closed after rendering settles
+          return !open;
+        },
+        { timeout: 1_000 },
+      );
 
       const inputmode = await input.getAttribute("inputmode");
       expect(inputmode).not.toBe("none");

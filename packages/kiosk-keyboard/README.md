@@ -337,18 +337,18 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 
 ### Properties
 
-| Property         | Type                       | Default     | Description                                                                                            |
-| ---------------- | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
-| `layout`         | `string`                   | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.            |
-| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                          |
-| `enabled`        | `boolean`                  | `true`      | Whether the keyboard is interactive.                                                                   |
-| `ariaLabel`      | `string`                   | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.          |
-| `docked`         | `boolean`                  | `false`     | Anchor to the bottom of the viewport with slide animation.                                             |
-| `autoShow`       | `boolean`                  | `false`     | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                             |
-| `autoType`       | `boolean`                  | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                      |
-| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Custom"`  | Native keyboard behavior: `Custom` (suppress), `Native` (defer), `Auto` (device-aware).                |
-| `fKeyMode`       | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`) or `Native` (dispatch synthetic keydown + native actions). |
-| `inputIds`       | `string[]`                 | `[]`        | Input control IDs for multi-input targeting. See [inputIds](#inputids).                                |
+| Property         | Type                       | Default     | Description                                                                                                                                 |
+| ---------------- | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`         | `string`                   | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.                                                 |
+| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                                                               |
+| `enabled`        | `boolean`                  | `true`      | Whether the keyboard is interactive.                                                                                                        |
+| `ariaLabel`      | `string`                   | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.                                               |
+| `docked`         | `boolean`                  | `false`     | Anchor to the bottom of the viewport with slide animation.                                                                                  |
+| `autoShow`       | `boolean`                  | `false`     | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                                                                  |
+| `autoType`       | `boolean`                  | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                                                           |
+| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                     |
+| `fKeyMode`       | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action). |
+| `inputIds`       | `string[]`                 | `[]`        | Input control IDs for multi-input targeting. See [inputIds](#inputids).                                                                     |
 
 ### Associations
 
@@ -842,7 +842,7 @@ Both `show()` and `close()` are idempotent; calling them multiple times has no e
 
 The docked keyboard uses `position: fixed` with `z-index: var(--ui5KioskKeyboard-dockedZIndex)` (default `100`) and a `box-shadow` for visual separation.
 
-With `mobileKeyboard="Auto"`, coarse-pointer devices intentionally defer to the native on-screen keyboard. In that mode, calling `show()` keeps the custom docked keyboard closed. The default is `mobileKeyboard="Custom"`, which always opens the UI5 control.
+With `mobileKeyboard="Auto"` (the default), coarse-pointer devices intentionally defer to the native on-screen keyboard. In that mode, calling `show()` keeps the custom docked keyboard closed. Set `mobileKeyboard="Custom"` to always open the UI5 control regardless of device.
 
 ---
 
@@ -1418,6 +1418,8 @@ directly to define custom breakpoints:
 This is more flexible than the previous threshold variables: you can
 set any property at any number of breakpoints.
 
+For a complete guide covering all built-in breakpoints, row wrapping behavior, and patterns for switching entire layouts per device size, see the [Responsive Layout Patterns](../../docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md) guide.
+
 #### Tuning for Complex-Script Layouts
 
 Layouts with visually complex glyphs (Arabic, Thai, Devanagari, CJK) may
@@ -1773,7 +1775,7 @@ npm run typecheck
 
 **Native keyboard appears alongside the virtual keyboard:**
 
-- Set `mobileKeyboard="Custom"` (the default) to suppress native keyboard via `inputmode="none"`
+- Set `mobileKeyboard="Custom"` to suppress native keyboard via `inputmode="none"`
 - If the target control re-renders while the keyboard is open, the suppression may be lost; see [Mobile Keyboard Detection](#mobile-keyboard-detection)
 
 **Layout switches cause the keyboard to change size:**

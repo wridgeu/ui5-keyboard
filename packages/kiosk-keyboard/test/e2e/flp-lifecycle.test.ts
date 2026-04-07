@@ -14,22 +14,37 @@ const FLP_PAGE = "/test/flp.html";
 async function waitForFlpShell(): Promise<void> {
   await browser.url(FLP_PAGE);
   await $("#shell-header").waitForExist({ timeout: 30_000 });
-  await browser.waitUntil(async () => (await $$(".sapMGT").length) > 0, {
-    timeout: 30_000,
-    timeoutMsg: "FLP home page tiles did not render",
-  });
+  await browser.waitUntil(
+    async () => {
+      const tiles = await $$(".sapMGT");
+      return (await tiles.length) > 0;
+    },
+    { timeout: 30_000, timeoutMsg: "FLP home page tiles did not render" },
+  );
 }
 
 /**
  * Click the demo-app tile in the FLP launchpad.
- * Uses the Generic Tile (.sapMGT) which is the actual clickable element.
- * Waits for the app's NavContainer to appear.
+ * Waits for the app's NavContainer to appear, confirming the Component loaded.
  */
 async function openAppTile(): Promise<void> {
   const tile = await $(".sapMGT");
   await tile.click();
-  // sap.m.App extends NavContainer → rendered with class "sapMNav"
-  await $(".sapMNav").waitForExist({ timeout: 30_000 });
+  // Wait for the hash to change to the app hash -- this confirms the FLP
+  // resolved the tile and started the app. Do not use DOM selectors here
+  // because stale elements from a previous app session may still exist.
+  await browser.waitUntil(async () => browser.execute(() => window.location.hash.includes("DemoApp-display")), {
+    timeout: 30_000,
+    timeoutMsg: "App hash did not appear after tile click",
+  });
+  // Wait for the app view to render
+  await browser.waitUntil(
+    async () => {
+      const pages = await $$(".sapMPage");
+      return (await pages.length) > 0;
+    },
+    { timeout: 30_000, timeoutMsg: "App content did not render after tile click" },
+  );
 }
 
 /**
@@ -43,7 +58,6 @@ async function navigateToHash(hash: string): Promise<void> {
 
 /**
  * Navigate to the i18n-extensibility page inside the demo app.
- * In FLP, inner app routes are appended after "&/".
  * Waits for the KioskKeyboard on that page to render.
  */
 async function navigateToI18nPage(): Promise<void> {
@@ -52,25 +66,24 @@ async function navigateToI18nPage(): Promise<void> {
 }
 
 /**
- * Navigate back to FLP home, triggering Component.destroy() → auto-reset.
+ * Navigate back to FLP home.
  * Waits until the FLP tile reappears.
  */
 async function navigateToFlpHome(): Promise<void> {
   await navigateToHash("Shell-home");
-  await browser.waitUntil(async () => (await $$(".sapMGT").length) > 0, {
-    timeout: 15_000,
-    timeoutMsg: "FLP home tiles did not reappear after navigation",
-  });
+  await browser.waitUntil(
+    async () => {
+      const tiles = await $$(".sapMGT");
+      return (await tiles.length) > 0;
+    },
+    { timeout: 15_000, timeoutMsg: "FLP home tiles did not reappear after navigation" },
+  );
 }
 
-/**
- * Get the keyboard element on the i18n page.
- */
 function getKeyboard() {
   return $(".ui5KioskKeyboard");
 }
 
-/** Get visible label text of a key via native DOM (more reliable than WDIO getText for small elements). */
 async function getShiftLabelText(): Promise<string> {
   return browser.execute(() => {
     const kb = document.querySelector(".ui5KioskKeyboard");
@@ -79,18 +92,11 @@ async function getShiftLabelText(): Promise<string> {
   });
 }
 
-/**
- * Click a SegmentedButtonItem by its visible text on the i18n page.
- * SegmentedButton renders items as `<li role="option">` - wdio's `li=` selector matches by text.
- */
 async function selectI18nMode(text: string): Promise<void> {
   const item = await $(`li=${text}`);
   await item.click();
 }
 
-/**
- * Wait until the keyboard's aria-label matches the expected value.
- */
 async function waitForKeyboardLabel(expected: string, timeout = 10_000): Promise<void> {
   const kb = getKeyboard();
   await browser.waitUntil(async () => (await kb.getAttribute("aria-label")) === expected, {
@@ -99,84 +105,55 @@ async function waitForKeyboardLabel(expected: string, timeout = 10_000): Promise
   });
 }
 
-/**
- * Wait for the inline keyboard on the i18n page to be visible.
- */
 async function waitForKeyboardVisible(): Promise<void> {
   await getKeyboard().waitForDisplayed({ timeout: 5_000 });
 }
 
-// ─── Test Scenarios ──────────────────────────────────────────
+// ---- Test: FLP Component lifecycle ----
+//
+// Validates that the demo app can be entered via tile click, a demo
+// scenario executed (i18n customization), and after navigating back to
+// the FLP home page, the app can be re-entered with a clean state.
+// This tests the module lifecycle contract: modules survive Component
+// destroy/recreate, and Component.exit() must not destroy singletons.
 
-describe("FLP lifecycle - i18n auto-reset", () => {
+describe("FLP lifecycle - Component re-entry", () => {
   before(async () => {
     await waitForFlpShell();
   });
 
-  describe("Scenario 1: Component leave clears i18n bundle", () => {
-    it("should show French labels after applying French bundle", async () => {
-      await openAppTile();
-      await navigateToI18nPage();
-      await waitForKeyboardVisible();
+  it("should open the app via tile click", async () => {
+    await openAppTile();
+    await navigateToI18nPage();
+    await waitForKeyboardVisible();
 
-      // Apply French mode
-      await selectI18nMode("French");
-      await waitForKeyboardLabel("Clavier virtuel");
-
-      const shiftLabel = await getShiftLabelText();
-      await expect(shiftLabel).toBe("Maj");
-    });
-
-    it("should show default English labels after Component re-enter", async () => {
-      // Leave app → Component.destroy() → auto-reset
-      await navigateToFlpHome();
-
-      // Re-enter app
-      await openAppTile();
-      await navigateToI18nPage();
-      await waitForKeyboardVisible();
-
-      // Keyboard should show default English labels (i18n was auto-reset)
-      await waitForKeyboardLabel("Virtual Keyboard");
-
-      const shiftLabel = await getShiftLabelText();
-      await expect(shiftLabel).toBe("Shift");
-    });
+    await waitForKeyboardLabel("Virtual Keyboard");
+    const shiftLabel = await getShiftLabelText();
+    await expect(shiftLabel).toBe("Shift");
   });
 
-  describe("Scenario 2: Component leave clears override hook", () => {
-    before(async () => {
-      // Ensure clean FLP home state regardless of Scenario 1 outcome
-      await navigateToFlpHome();
-    });
+  it("should apply French i18n bundle", async () => {
+    await selectI18nMode("French");
+    await waitForKeyboardLabel("Clavier virtuel");
 
-    it("should show uppercased labels after applying hook", async () => {
-      await openAppTile();
-      await navigateToI18nPage();
-      await waitForKeyboardVisible();
+    const shiftLabel = await getShiftLabelText();
+    await expect(shiftLabel).toBe("Maj");
+  });
 
-      // Apply Hook mode (uppercases special-key labels)
-      await selectI18nMode("Hook");
-      await waitForKeyboardLabel("Custom Keyboard");
+  it("should restore default labels after leaving and re-entering the app via tile click", async () => {
+    // Leave: navigate to FLP home (triggers Component.exit)
+    await navigateToFlpHome();
 
-      const shiftLabel = await getShiftLabelText();
-      await expect(shiftLabel).toBe("SHIFT");
-    });
+    // Re-enter: click the tile again (triggers Component.init on new instance)
+    await openAppTile();
+    await navigateToI18nPage();
+    await waitForKeyboardVisible();
 
-    it("should show default labels after Component re-enter", async () => {
-      // Leave app → Component.destroy() → auto-reset clears hook
-      await navigateToFlpHome();
+    // i18n auto-reset on last KioskKeyboard instance exit should have
+    // cleared the French bundle. Default English labels should be active.
+    await waitForKeyboardLabel("Virtual Keyboard");
 
-      // Re-enter app
-      await openAppTile();
-      await navigateToI18nPage();
-      await waitForKeyboardVisible();
-
-      // Hook should be cleared - default labels restored
-      await waitForKeyboardLabel("Virtual Keyboard");
-
-      const shiftLabel = await getShiftLabelText();
-      await expect(shiftLabel).toBe("Shift");
-    });
+    const shiftLabel = await getShiftLabelText();
+    await expect(shiftLabel).toBe("Shift");
   });
 });

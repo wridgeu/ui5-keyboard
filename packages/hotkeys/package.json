@@ -51,5 +51,8 @@
     "@wdio/spec-reporter": "~9.27.0",
     "ui5-tooling-transpile": "~3.11.0",
     "wdio-qunit-service": "~2.0.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

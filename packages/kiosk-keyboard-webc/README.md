@@ -77,6 +77,22 @@ Install from npm:
 npm install kiosk-keyboard-webc
 ```
 
+### Peer Dependencies
+
+This package declares the UI5 Web Components framework as **peer dependencies**. Your application must install them alongside this package:
+
+```bash
+npm install @ui5/webcomponents @ui5/webcomponents-base @ui5/webcomponents-icons @ui5/webcomponents-theming
+```
+
+If your app already uses UI5 Web Components (e.g., `@ui5/webcomponents` buttons, inputs, etc.), these are already installed and no extra action is needed. The peer dependency ensures a single shared instance of the framework registries (custom elements, themes, i18n), avoiding duplicate registration errors.
+
+### Tree-Shaking
+
+The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Layouts, middleware, theme/i18n asset registration, and the convenience bundle entry are marked as side-effectful because they self-register on import.
+
+> **Note:** All built-in layouts are statically imported by the main `KioskKeyboard` entry point, so they are always included in the bundle. Middleware modules (`kiosk-keyboard-webc/middleware/*`) are opt-in and only included when explicitly imported by the consumer.
+
 In this monorepo, install all workspace dependencies once at the repository root:
 
 ```bash
