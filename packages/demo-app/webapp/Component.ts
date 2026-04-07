@@ -4,9 +4,7 @@ import JSONModel from "sap/ui/model/json/JSONModel";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import { formatForDisplay } from "ui5/hotkeys/format";
-import { DEMO_WEBC_TAGS_REGISTERED } from "demo/hotkeys/webc/register";
-
-void DEMO_WEBC_TAGS_REGISTERED;
+import "demo/hotkeys/webc/register";
 
 /**
  * @name demo.hotkeys.Component
