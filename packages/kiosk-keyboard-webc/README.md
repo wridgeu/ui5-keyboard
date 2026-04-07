@@ -230,10 +230,9 @@ See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPON
 Recommended stable consumer entry points and imports:
 
 ```ts
-import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import { KioskKeyboard, FKeyMode, KeyboardType, MobileKeyboard } from "kiosk-keyboard-webc/bundle";
 
 import type {
-  FKeyMode,
   KeyPressEventDetail,
   LayoutChangeEventDetail,
   KeyboardTypeChangeEventDetail,
@@ -373,7 +372,7 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 | `fkeys`     | F1-F12 function keys                               |
 | `nav`       | Navigation keys (arrows, Home, End, etc.)          |
 | `ko-hangul` | Korean Hangul Dubeolsik (KS X 5002)                |
-| `qwerty-es` | Spanish QWERTY with accented vowels and n-tilde    |
+| `qwerty-es` | Spanish QWERTY with accented vowels and ñ          |
 
 Combined variants (e.g., QWERTY + F-key row) are not built-in. They are
 trivial compositions - see [Layout Composition](#layout-composition) above.

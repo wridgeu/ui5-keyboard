@@ -2,5 +2,5 @@
 
 These documents describe forward-looking design ideas and may diverge from the current implementation.
 
-- [Backward Compatibility](../history/BACKWARD-COMPATIBILITY.md)
+- [Error Handling and DX Consistency](./ERROR-HANDLING-DX.md)
 - [Tab and Done Keys](./TAB-AND-DONE-KEYS.md)
