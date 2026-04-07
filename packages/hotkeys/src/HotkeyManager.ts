@@ -39,18 +39,6 @@ import type { HotkeyRegistration, ResolvedHotkeyOptions } from "./internal/types
 
 type ValidateModule = typeof import("./validate");
 
-/**
- * Minimal router contract for hotkey scope integration.
- * Any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched` satisfies this,
- * including `sap.ui.core.routing.Router` and `sap.m.routing.Router`.
- */
-export interface RouterLike {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UI5 router duck-type compatibility
-  attachBeforeRouteMatched(handler: (...args: any[]) => void, listener?: object): unknown;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- UI5 router duck-type compatibility
-  detachBeforeRouteMatched(handler: (...args: any[]) => void, listener?: object): unknown;
-}
-
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 const idGen = createIdGenerator("hk_");
@@ -83,34 +71,16 @@ interface EventContext {
 }
 
 /**
- * Normalize a static target value: only HTMLElement instances are valid targets.
- * Document, Window, and other non-HTMLElement EventTargets are degraded
- * to untargeted (null) with a warning.
- */
-function normalizeStaticTarget(target: HTMLElement | null | undefined): HTMLElement | null {
-  if (target == null) return null; // eslint-disable-line eqeqeq -- intentional nullish check
-  if (target instanceof HTMLElement) return target;
-
-  // Non-HTMLElement target (Document, Window, iframe Document, SVGElement, etc.)
-  Log.warning(
-    `target must be an HTMLElement - received ${Object.prototype.toString.call(target)}, degrading to untargeted`,
-    undefined,
-    LOG_COMPONENT,
-  );
-  return null;
-}
-
-/**
  * Resolve the target option into static element + callback fields.
  * Functions are stored as callbacks for lazy dispatch-time resolution.
  */
-function resolveTarget(target: HTMLElement | (() => HTMLElement | null) | null | undefined): {
-  element: HTMLElement | null;
-  callback: (() => HTMLElement | null) | null;
+function resolveTarget(target: Element | (() => Element | null) | null | undefined): {
+  element: Element | null;
+  callback: (() => Element | null) | null;
 } {
   if (target == null) return { element: null, callback: null }; // eslint-disable-line eqeqeq -- intentional nullish check
   if (typeof target === "function") return { element: null, callback: target };
-  return { element: normalizeStaticTarget(target), callback: null };
+  return { element: target, callback: null };
 }
 
 /**
@@ -995,7 +965,7 @@ export default class HotkeyManager extends BaseObject {
         const reg = this._registrations.get(id);
         if (!reg) continue;
 
-        let resolved: HTMLElement | null;
+        let resolved: Element | null;
         try {
           resolved = reg.options.targetCallback!();
         } catch (error) {
@@ -1174,7 +1144,7 @@ export default class HotkeyManager extends BaseObject {
   private _handleConflict(
     normalizedHotkey: string,
     scope: string,
-    target: HTMLElement | null,
+    target: Element | null,
     conflictBehavior: ConflictBehavior,
   ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;

@@ -1,6 +1,7 @@
 import Log from "sap/base/Log";
+import type Router from "sap/ui/core/routing/Router";
+import type { Router$BeforeRouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type HotkeyManager from "./HotkeyManager";
-import type { RouterLike } from "./HotkeyManager";
 import type {
   Hotkey,
   HotkeyCallback,
@@ -156,7 +157,7 @@ export default class RegistrationGroup {
    *
    * @param router - A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched`.
    */
-  enableRouterIntegration(router: RouterLike): void {
+  enableRouterIntegration(router: Router): void {
     if (this._destroyed) throw new Error("Cannot enableRouterIntegration on a destroyed RegistrationGroup");
 
     if (this._routerCleanup) {
@@ -164,10 +165,10 @@ export default class RegistrationGroup {
       this._routerCleanup = null;
     }
 
-    const handler = (event: { getParameter(name: string): string | undefined }) => {
+    const handler = (event: Router$BeforeRouteMatchedEvent) => {
       this._manager.resetToGlobalScope();
       const routeName = event.getParameter("name");
-      if (routeName) {
+      if (typeof routeName === "string" && routeName) {
         this._manager.pushScope(routeName);
       }
     };

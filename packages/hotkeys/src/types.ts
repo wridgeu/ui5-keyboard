@@ -231,8 +231,8 @@ export interface HotkeyOptions {
    * The hotkey will only fire when the target element appears in the event's
    * `composedPath()`. Scopes still apply - both target and scope must match.
    *
-   * Accepts an `HTMLElement` for static targets, or a **callback**
-   * `() => HTMLElement | null` for lazy resolution. The callback is
+   * Accepts an `Element` for static targets, or a **callback**
+   * `() => Element | null` for lazy resolution. The callback is
    * evaluated on each keydown during target matching. Return `null` to
    * skip the registration for that event (e.g., when `getDomRef()` is
    * not yet available).
@@ -250,7 +250,7 @@ export interface HotkeyOptions {
    * fallback is limited to the Escape key and consumed after a single use.
    * Other keys are not affected by this behavior.
    */
-  target?: HTMLElement | (() => HTMLElement | null) | null;
+  target?: Element | (() => Element | null) | null;
 }
 
 /**

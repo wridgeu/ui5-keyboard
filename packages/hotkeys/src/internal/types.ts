@@ -35,8 +35,8 @@ export interface ResolvedHotkeyOptions {
   ignoreRepeat: boolean;
   suppressInPopups: boolean;
   conflictBehavior: ConflictBehavior;
-  target: HTMLElement | null;
-  targetCallback: (() => HTMLElement | null) | null;
+  target: Element | null;
+  targetCallback: (() => Element | null) | null;
 }
 
 /**

@@ -1173,7 +1173,7 @@ QUnit.test("Interceptor replacement logs warning via sap/base/Log", (assert) => 
 // Target-scoped with same-origin iframe document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped iframe document degrades to untargeted registration", (assert) => {
+QUnit.test("Target-scoped iframe document does not match main window events", (assert) => {
   const done = assert.async();
 
   // Create a same-origin iframe
@@ -1187,18 +1187,22 @@ QUnit.test("Target-scoped iframe document degrades to untargeted registration", 
       assert.ok(iframeDoc, "iframe contentDocument is accessible (same-origin)");
 
       let fired = false;
-      // Register with target set to the iframe's document - degrades to untargeted
+      // Register with target set to the iframe's document.
+      // Document is not an Element, but a JS consumer could pass it.
+      // It gets stored as a targeted registration keyed to the Document node,
+      // which is never in the main window's composedPath().
       const handle = manager.register(
         "Escape",
         () => {
           fired = true;
         },
-        { target: iframeDoc as unknown as HTMLElement },
+        { target: iframeDoc as unknown as Element },
       );
 
-      // After degradation to untargeted, it fires for any key event
+      // The iframe's Document is not in the main window's composedPath,
+      // so this should NOT fire.
       fireKey("Escape");
-      assert.ok(fired, "Registration fires as untargeted after document target degradation");
+      assert.notOk(fired, "iframe document target does not match main window events");
 
       handle.unregister();
     } finally {
