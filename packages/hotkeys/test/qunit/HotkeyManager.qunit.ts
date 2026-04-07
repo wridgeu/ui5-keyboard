@@ -1934,3 +1934,301 @@ QUnit.test("Target element: two registrations on same target, unregister one", (
   assert.notOk(firstCalled, "No first callback after unregistering both handles");
   assert.notOk(secondCalled, "No second callback after unregistering both handles");
 });
+
+// ──────────────────────────────────────────────
+// Target callback (lazy target resolution)
+// ──────────────────────────────────────────────
+
+QUnit.test("Target callback: fires when resolved element is in composedPath", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { target: () => div },
+  );
+
+  fireKeyOn(div, "F5");
+  assert.ok(called, "Callback target fires when element is in event path");
+});
+
+QUnit.test("Target callback: does not fire when resolved element is not in path", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  const target = document.createElement("div");
+  target.tabIndex = 0;
+  fixture.appendChild(target);
+
+  const other = document.createElement("div");
+  other.tabIndex = 0;
+  fixture.appendChild(other);
+
+  manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { target: () => target },
+  );
+
+  fireKeyOn(other, "F5");
+  assert.notOk(called, "Callback target does not fire for events on other elements");
+});
+
+QUnit.test("Target callback: null return skips registration silently", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { target: () => null },
+  );
+
+  fireKey("F5");
+  assert.notOk(called, "Registration with null-returning callback does not fire");
+});
+
+QUnit.test("Target callback: resolved lazily on each keydown", (assert) => {
+  const manager = createHotkeyManager();
+  let callCount = 0;
+  let resolveCount = 0;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register(
+    "F5",
+    () => {
+      callCount++;
+    },
+    {
+      target: () => {
+        resolveCount++;
+        return div;
+      },
+    },
+  );
+
+  fireKeyOn(div, "F5");
+  fireKeyOn(div, "F5");
+
+  assert.strictEqual(resolveCount, 2, "Callback evaluated on each keydown");
+  assert.strictEqual(callCount, 2, "Handler fires both times");
+});
+
+QUnit.test("Target callback: respects scope", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { target: () => div, scope: "detail" },
+  );
+
+  // Wrong scope - should not fire
+  fireKeyOn(div, "F5");
+  assert.notOk(called, "Does not fire in global scope");
+
+  // Correct scope
+  manager.pushScope("detail");
+  fireKeyOn(div, "F5");
+  assert.ok(called, "Fires when scope matches");
+});
+
+QUnit.test("Target callback: throwing callback is caught and skipped", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    {
+      target: () => {
+        throw new Error("boom");
+      },
+    },
+  );
+
+  fireKey("F5");
+  assert.notOk(called, "Registration with throwing callback does not fire");
+});
+
+QUnit.test("Target callback: unregister cleans up", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  const handle = manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { target: () => div },
+  );
+
+  handle.unregister();
+
+  fireKeyOn(div, "F5");
+  assert.notOk(called, "Callback target does not fire after unregister");
+});
+
+QUnit.test("Target callback: setOptions swaps static to callback target", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  const div1 = document.createElement("div");
+  div1.tabIndex = 0;
+  fixture.appendChild(div1);
+
+  const div2 = document.createElement("div");
+  div2.tabIndex = 0;
+  fixture.appendChild(div2);
+
+  const handle = manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { target: div1 },
+  );
+
+  // Swap from static to callback
+  handle.setOptions({ target: () => div2 });
+
+  fireKeyOn(div1, "F5");
+  assert.notOk(called, "Old static target no longer fires");
+
+  fireKeyOn(div2, "F5");
+  assert.ok(called, "New callback target fires");
+});
+
+QUnit.test("Target callback: setOptions swaps callback to static target", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  const div1 = document.createElement("div");
+  div1.tabIndex = 0;
+  fixture.appendChild(div1);
+
+  const div2 = document.createElement("div");
+  div2.tabIndex = 0;
+  fixture.appendChild(div2);
+
+  const handle = manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { target: () => div1 },
+  );
+
+  // Swap from callback to static
+  handle.setOptions({ target: div2 });
+
+  fireKeyOn(div1, "F5");
+  assert.notOk(called, "Old callback target no longer fires");
+
+  fireKeyOn(div2, "F5");
+  assert.ok(called, "New static target fires");
+});
+
+QUnit.test("Target callback: hasTarget reports true in registration info", (assert) => {
+  const manager = createHotkeyManager();
+
+  const div = document.createElement("div");
+  fixture.appendChild(div);
+
+  manager.register("F5", () => {}, { target: () => div });
+
+  const regs = manager.getRegistrations();
+  assert.strictEqual(regs.length, 1, "One registration exists");
+  assert.ok(regs[0].hasTarget, "hasTarget is true for callback target");
+});
+
+QUnit.test("Target callback: coexists with static target and untargeted", (assert) => {
+  const manager = createHotkeyManager();
+  let staticCalled = false;
+  let callbackCalled = false;
+  let untargetedCalled = false;
+
+  const div1 = document.createElement("div");
+  div1.tabIndex = 0;
+  fixture.appendChild(div1);
+
+  const div2 = document.createElement("div");
+  div2.tabIndex = 0;
+  fixture.appendChild(div2);
+
+  manager.register(
+    "F5",
+    () => {
+      staticCalled = true;
+    },
+    { target: div1 },
+  );
+  manager.register(
+    "F5",
+    () => {
+      callbackCalled = true;
+    },
+    { target: () => div2 },
+  );
+  manager.register("F6", () => {
+    untargetedCalled = true;
+  });
+
+  fireKeyOn(div1, "F5");
+  assert.ok(staticCalled, "Static target fires");
+  assert.notOk(callbackCalled, "Callback target does not fire for other element");
+
+  staticCalled = false;
+  fireKeyOn(div2, "F5");
+  assert.notOk(staticCalled, "Static target does not fire for callback element");
+  assert.ok(callbackCalled, "Callback target fires on its element");
+
+  fireKey("F6");
+  assert.ok(untargetedCalled, "Untargeted registration fires normally");
+});
+
+QUnit.test("Target callback: unhandled reports TargetMismatch for off-path callback", (assert) => {
+  const manager = createHotkeyManager();
+  let reason: string | undefined;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register("F5", () => {}, { target: () => div });
+
+  manager.setUnhandledHandler((ctx) => {
+    reason = ctx.reason;
+  });
+
+  // Fire on document, not on div
+  fireKey("F5");
+  assert.strictEqual(reason, "target_mismatch", "TargetMismatch reported for off-path callback target");
+});

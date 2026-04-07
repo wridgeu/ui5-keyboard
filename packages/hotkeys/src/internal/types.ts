@@ -36,6 +36,7 @@ export interface ResolvedHotkeyOptions {
   suppressInPopups: boolean;
   conflictBehavior: ConflictBehavior;
   target: HTMLElement | null;
+  targetCallback: (() => HTMLElement | null) | null;
 }
 
 /**

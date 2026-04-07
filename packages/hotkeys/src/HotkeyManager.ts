@@ -67,6 +67,8 @@ interface ScopeRegistrationBucket {
    * persists until the registration is removed via `unregister()`.
    */
   targetIdIndex: Map<string, Set<string>>;
+  /** Registrations with callback-based targets, resolved lazily at dispatch time. */
+  callbackTargetIds: Set<string>;
 }
 
 /**
@@ -81,11 +83,11 @@ interface EventContext {
 }
 
 /**
- * Normalize a target value: only HTMLElement instances are valid targets.
+ * Normalize a static target value: only HTMLElement instances are valid targets.
  * Document, Window, and other non-HTMLElement EventTargets are degraded
  * to untargeted (null) with a warning.
  */
-function normalizeTarget(target: HTMLElement | null | undefined): HTMLElement | null {
+function normalizeStaticTarget(target: HTMLElement | null | undefined): HTMLElement | null {
   if (target == null) return null; // eslint-disable-line eqeqeq -- intentional nullish check
   if (target instanceof HTMLElement) return target;
 
@@ -99,11 +101,24 @@ function normalizeTarget(target: HTMLElement | null | undefined): HTMLElement | 
 }
 
 /**
+ * Resolve the target option into static element + callback fields.
+ * Functions are stored as callbacks for lazy dispatch-time resolution.
+ */
+function resolveTarget(target: HTMLElement | (() => HTMLElement | null) | null | undefined): {
+  element: HTMLElement | null;
+  callback: (() => HTMLElement | null) | null;
+} {
+  if (target == null) return { element: null, callback: null }; // eslint-disable-line eqeqeq -- intentional nullish check
+  if (typeof target === "function") return { element: null, callback: target };
+  return { element: normalizeStaticTarget(target), callback: null };
+}
+
+/**
  * Merge user-provided options with defaults.
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
   const scope = resolveScopeOrGlobal(options?.scope);
-  const target = normalizeTarget(options?.target);
+  const { element, callback } = resolveTarget(options?.target);
 
   return {
     enabled: options?.enabled ?? true,
@@ -115,7 +130,8 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? false,
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
-    target,
+    target: element,
+    targetCallback: callback,
   };
 }
 
@@ -278,12 +294,15 @@ export default class HotkeyManager extends BaseObject {
         const opts = registration.options;
         // Special case: target swap requires normalization + re-indexing + conflict management
         if (newOptions.target !== undefined) {
-          const currentTarget = opts.target;
-          const nextTarget = normalizeTarget(newOptions.target);
-          if (currentTarget !== nextTarget) {
-            this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
+          const { element: nextTarget, callback: nextCallback } = resolveTarget(newOptions.target);
+          const changed = opts.target !== nextTarget || opts.targetCallback !== nextCallback;
+          if (changed) {
+            if (nextTarget) {
+              this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
+            }
             this._deindexRegistration(registration);
             opts.target = nextTarget;
+            opts.targetCallback = nextCallback;
             this._indexRegistration(registration);
           }
         }
@@ -558,7 +577,7 @@ export default class HotkeyManager extends BaseObject {
       ignoreRepeat: opts.ignoreRepeat,
       suppressInPopups: opts.suppressInPopups,
       conflictBehavior: opts.conflictBehavior,
-      hasTarget: opts.target !== null,
+      hasTarget: opts.target !== null || opts.targetCallback !== null,
     };
   }
 
@@ -967,6 +986,46 @@ export default class HotkeyManager extends BaseObject {
       }
     }
 
+    // Pass 1b: callback-target registrations - resolve lazily and check path.
+    for (const scope of scopesToCheck) {
+      const bucket = this._registrationsByScope.get(scope);
+      if (!bucket || bucket.callbackTargetIds.size === 0) continue;
+
+      for (const id of bucket.callbackTargetIds) {
+        const reg = this._registrations.get(id);
+        if (!reg) continue;
+
+        let resolved: HTMLElement | null;
+        try {
+          resolved = reg.options.targetCallback!();
+        } catch (error) {
+          Log.warning(`target callback threw for "${reg.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
+          continue;
+        }
+
+        if (!resolved || !pathSet.has(resolved)) {
+          if (resolved && skipInfo) {
+            // Target resolved but not in path
+            if (matchesKeyboardEvent(event, reg.parsedHotkey)) {
+              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, (r) => this._toRegistrationInfo(r));
+            }
+          }
+          continue;
+        }
+
+        const matched = findMatchInScope({
+          event,
+          isInput,
+          popupOpen,
+          registrations: [reg],
+          skipInfo,
+          toRegistrationInfo: (r) => this._toRegistrationInfo(r),
+          logComponent: LOG_COMPONENT,
+        });
+        if (matched) return matched;
+      }
+    }
+
     // Skip-reason pass for off-path targets: record TargetMismatch for
     // registrations whose key combo matches but target is not in the path.
     if (skipInfo) {
@@ -1185,6 +1244,7 @@ export default class HotkeyManager extends BaseObject {
         untargetedIds: new Set<string>(),
         targets: new Map<EventTarget, Set<string>>(),
         targetIdIndex: new Map<string, Set<string>>(),
+        callbackTargetIds: new Set<string>(),
       };
       this._registrationsByScope.set(scope, bucket);
     }
@@ -1193,21 +1253,27 @@ export default class HotkeyManager extends BaseObject {
 
   private _indexRegistration(registration: HotkeyRegistration): void {
     const bucket = this._getScopeBucket(registration.options.scope);
-    const target = registration.options.target;
-    if (target) {
-      let ids = bucket.targets.get(target);
+    const opts = registration.options;
+
+    if (opts.targetCallback) {
+      bucket.callbackTargetIds.add(registration.id);
+      return;
+    }
+
+    if (opts.target) {
+      let ids = bucket.targets.get(opts.target);
       if (!ids) {
         ids = new Set<string>();
-        bucket.targets.set(target, ids);
+        bucket.targets.set(opts.target, ids);
       }
       ids.add(registration.id);
 
       // Maintain secondary index by element id for stale-reference fallback
-      if (target instanceof Element && target.id) {
-        let idxIds = bucket.targetIdIndex.get(target.id);
+      if (opts.target instanceof Element && opts.target.id) {
+        let idxIds = bucket.targetIdIndex.get(opts.target.id);
         if (!idxIds) {
           idxIds = new Set<string>();
-          bucket.targetIdIndex.set(target.id, idxIds);
+          bucket.targetIdIndex.set(opts.target.id, idxIds);
         }
         idxIds.add(registration.id);
       }
@@ -1222,13 +1288,16 @@ export default class HotkeyManager extends BaseObject {
     const bucket = this._registrationsByScope.get(scope);
     if (!bucket) return;
 
-    const target = registration.options.target;
-    if (target) {
-      const ids = bucket.targets.get(target);
+    const opts = registration.options;
+
+    if (opts.targetCallback) {
+      bucket.callbackTargetIds.delete(registration.id);
+    } else if (opts.target) {
+      const ids = bucket.targets.get(opts.target);
       if (ids) {
         ids.delete(registration.id);
         if (ids.size === 0) {
-          bucket.targets.delete(target);
+          bucket.targets.delete(opts.target);
         }
       }
 
@@ -1236,12 +1305,12 @@ export default class HotkeyManager extends BaseObject {
       // Note: uses the element's *current* id - if the id was mutated after
       // registration, the entry keyed under the old id becomes orphaned.
       // See the JSDoc on ScopeBucket.targetIdIndex for details.
-      if (target instanceof Element && target.id) {
-        const idxIds = bucket.targetIdIndex.get(target.id);
+      if (opts.target instanceof Element && opts.target.id) {
+        const idxIds = bucket.targetIdIndex.get(opts.target.id);
         if (idxIds) {
           idxIds.delete(registration.id);
           if (idxIds.size === 0) {
-            bucket.targetIdIndex.delete(target.id);
+            bucket.targetIdIndex.delete(opts.target.id);
           }
         }
       }
@@ -1249,7 +1318,7 @@ export default class HotkeyManager extends BaseObject {
       bucket.untargetedIds.delete(registration.id);
     }
 
-    if (bucket.untargetedIds.size === 0 && bucket.targets.size === 0) {
+    if (bucket.untargetedIds.size === 0 && bucket.targets.size === 0 && bucket.callbackTargetIds.size === 0) {
       this._registrationsByScope.delete(scope);
     }
   }

@@ -158,14 +158,18 @@ The global scope is always at the bottom and cannot be popped.
 
 ### Router Integration
 
-`enableRouterIntegration(router)` attaches a handler to the router's `beforeRouteMatched` event. On each route change:
+Router integration is **purely additive**. The `HotkeyManager` works without any router: the scope stack, `pushScope()`/`popScope()`, two-pass matching, and the entire dispatch pipeline function independently. Router integration is a convenience that automates scope transitions for route changes.
+
+`group.enableRouterIntegration(router)` (on `RegistrationGroup`) attaches a handler to the router's `beforeRouteMatched` event. On each route change:
 
 1. The scope stack is reset to global via `resetToGlobalScope()`.
 2. The new route's name is pushed as the active scope.
 
-This removes the need for manual `pushScope`/`popScope` calls in controllers. Each route name becomes a scope ID, and controllers register their hotkeys with `scope: "routeName"`.
+This removes the need for manual `pushScope`/`popScope` calls in route-based applications. Each route name becomes a scope ID, and controllers register their hotkeys with `scope: "routeName"`.
 
-The integration can be disabled by calling `disableRouterIntegration()` (detaches the handler without destroying the manager) or `destroy()` (tears down everything). The detach call requires passing the listener context (`oListener`), which is a requirement of UI5's `detachBeforeRouteMatched` API.
+Applications that do not use routing (reuse components, embedded components, non-routed UIs) simply use `pushScope()`/`popScope()` directly, or register everything on the global scope.
+
+Router integration lives on `RegistrationGroup`, not on `HotkeyManager`. This ties the router listener to the group's lifecycle: `destroyAll()` automatically detaches it. Since `HotkeyManager.destroy()` finalizes all groups, router cleanup is guaranteed on either path. Calling `enableRouterIntegration()` again on the same group silently replaces the previous router listener.
 
 ## Hotkey Parsing
 
@@ -305,26 +309,26 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 
 ## Edge Cases
 
-| Edge Case                                      | How It Is Handled                                      |
-| ---------------------------------------------- | ------------------------------------------------------ |
-| macOS Option+letter produces special character | Fallback to `event.code` for letter keys               |
-| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                |
-| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`     |
-| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`             |
-| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives          |
-| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target              |
-| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute    |
-| Scope priority                                 | Two-pass matching: active scope first, then global     |
-| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`   |
-| sap.m not loaded                               | Lazy-load InstanceManager, only cache positive result  |
-| Router detach requires listener context        | Pass `this` as oListener to `detachBeforeRouteMatched` |
-| Nested target-scoped same key                  | Innermost target in composedPath() wins                |
-| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                |
-| Dispatch suspended via guard                   | Steps 5–7 skipped, UnhandledReason.Suspended reported  |
-| Closed shadow root targets                     | composedPath() stops at boundary, no match             |
-| Detached targets                               | Not in composedPath(), inactive until reattached       |
-| Empty composedPath()                           | Fallback to `[event.target, document, window]`         |
-| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)         |
+| Edge Case                                      | How It Is Handled                                              |
+| ---------------------------------------------- | -------------------------------------------------------------- |
+| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                       |
+| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                        |
+| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`             |
+| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                     |
+| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                  |
+| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target                      |
+| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute            |
+| Scope priority                                 | Two-pass matching: active scope first, then global             |
+| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`           |
+| sap.m not loaded                               | Lazy-load InstanceManager, only cache positive result          |
+| Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched` |
+| Nested target-scoped same key                  | Innermost target in composedPath() wins                        |
+| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                        |
+| Dispatch suspended via guard                   | Steps 5–7 skipped, UnhandledReason.Suspended reported          |
+| Closed shadow root targets                     | composedPath() stops at boundary, no match                     |
+| Detached targets                               | Not in composedPath(), inactive until reattached               |
+| Empty composedPath()                           | Fallback to `[event.target, document, window]`                 |
+| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)                 |
 
 ## Project Layout
 
