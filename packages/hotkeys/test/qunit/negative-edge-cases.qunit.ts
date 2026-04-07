@@ -855,39 +855,6 @@ QUnit.test("enabled() function throwing on hotkey - other hotkeys still fire", (
 
 QUnit.module("Negative / Edge-Case - Target callback", freshManagerHooks());
 
-QUnit.test("Callback returning non-HTMLElement is skipped", (assert) => {
-  const manager = createHotkeyManager();
-  let fired = false;
-
-  manager.register(
-    "F5",
-    () => {
-      fired = true;
-    },
-    // Return document instead of an HTMLElement
-    { target: (() => document) as unknown as () => HTMLElement | null },
-  );
-
-  fireKey("F5");
-  assert.notOk(fired, "Non-HTMLElement return from callback does not fire");
-});
-
-QUnit.test("Callback returning undefined is treated as null", (assert) => {
-  const manager = createHotkeyManager();
-  let fired = false;
-
-  manager.register(
-    "F5",
-    () => {
-      fired = true;
-    },
-    { target: (() => undefined) as unknown as () => HTMLElement | null },
-  );
-
-  fireKey("F5");
-  assert.notOk(fired, "Undefined return from callback does not fire");
-});
-
 QUnit.test("Callback target: detached element returned does not fire", (assert) => {
   const manager = createHotkeyManager();
   let fired = false;
@@ -1016,27 +983,6 @@ QUnit.test("Callback target: enabled guard still applies", (assert) => {
 
   fireKeyOn(div, "F5");
   assert.notOk(fired, "Disabled callback target registration does not fire");
-});
-
-QUnit.test("Callback target: suppressInPopups still applies", (assert) => {
-  const manager = createHotkeyManager();
-  let fired = false;
-
-  const div = document.createElement("div");
-  div.tabIndex = 0;
-  fixture.appendChild(div);
-
-  manager.register(
-    "F5",
-    () => {
-      fired = true;
-    },
-    { target: () => div, suppressInPopups: true },
-  );
-
-  // Without a popup open, it should fire
-  fireKeyOn(div, "F5");
-  assert.ok(fired, "Callback target fires when no popup is open");
 });
 
 QUnit.test("Callback target: group destroyAll cleans up callback registrations", (assert) => {

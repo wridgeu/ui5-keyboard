@@ -997,7 +997,7 @@ export default class HotkeyManager extends BaseObject {
 
         let resolved: HTMLElement | null;
         try {
-          resolved = normalizeStaticTarget(reg.options.targetCallback!());
+          resolved = reg.options.targetCallback!();
         } catch (error) {
           Log.warning(`target callback threw for "${reg.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
           continue;
