@@ -848,3 +848,211 @@ QUnit.test("enabled() function throwing on hotkey - other hotkeys still fire", (
   fireKey("F2");
   assert.ok(safeFired, "Other hotkey fires after enabled() threw on a different registration");
 });
+
+// ══════════════════════════════════════════════
+// Target callback edge cases
+// ══════════════════════════════════════════════
+
+QUnit.module("Negative / Edge-Case - Target callback", freshManagerHooks());
+
+QUnit.test("Callback returning non-HTMLElement is skipped", (assert) => {
+  const manager = createHotkeyManager();
+  let fired = false;
+
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    // Return document instead of an HTMLElement
+    { target: (() => document) as unknown as () => HTMLElement | null },
+  );
+
+  fireKey("F5");
+  assert.notOk(fired, "Non-HTMLElement return from callback does not fire");
+});
+
+QUnit.test("Callback returning undefined is treated as null", (assert) => {
+  const manager = createHotkeyManager();
+  let fired = false;
+
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    { target: (() => undefined) as unknown as () => HTMLElement | null },
+  );
+
+  fireKey("F5");
+  assert.notOk(fired, "Undefined return from callback does not fire");
+});
+
+QUnit.test("Callback target: detached element returned does not fire", (assert) => {
+  const manager = createHotkeyManager();
+  let fired = false;
+
+  const div = document.createElement("div");
+  // Never added to DOM
+
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    { target: () => div },
+  );
+
+  fireKey("F5");
+  assert.notOk(fired, "Detached element from callback does not fire");
+});
+
+QUnit.test("Callback target: element added to DOM after registration", (assert) => {
+  const manager = createHotkeyManager();
+  let fired = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+
+  // Register before element is in DOM
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    { target: () => div },
+  );
+
+  // Not in DOM yet - should not fire
+  fireKey("F5");
+  assert.notOk(fired, "Does not fire before element is in DOM");
+
+  // Add to DOM
+  fixture.appendChild(div);
+  fireKeyOn(div, "F5");
+  assert.ok(fired, "Fires after element is added to DOM");
+});
+
+QUnit.test("Callback target: destroy manager with active callback registrations", (assert) => {
+  const manager = createHotkeyManager();
+  const div = document.createElement("div");
+  fixture.appendChild(div);
+
+  manager.register("F5", () => {}, { target: () => div });
+  manager.register("F6", () => {}, { target: () => div });
+
+  // Should not throw
+  manager.destroy();
+  assert.strictEqual(manager.getRegistrations().length, 0, "No registrations after destroy");
+});
+
+QUnit.test("Callback target: multiple throwing callbacks do not break dispatch", (assert) => {
+  const manager = createHotkeyManager();
+  let safeFired = false;
+
+  manager.register("F5", () => {}, {
+    target: () => {
+      throw new Error("boom 1");
+    },
+  });
+  manager.register("F5", () => {}, {
+    target: () => {
+      throw new Error("boom 2");
+    },
+  });
+  manager.register("F6", () => {
+    safeFired = true;
+  });
+
+  // Both callback targets throw - should not crash
+  fireKey("F5");
+
+  // Other hotkey should still work
+  fireKey("F6");
+  assert.ok(safeFired, "Manager remains functional after multiple callback throws");
+});
+
+QUnit.test("Callback target: ignoreInputs auto suppresses single key in input", (assert) => {
+  const manager = createHotkeyManager();
+  let fired = false;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
+  const div = document.createElement("div");
+  fixture.appendChild(div);
+  div.appendChild(input);
+
+  // Register with callback target and default ignoreInputs (auto)
+  // Single key without modifier - should be suppressed in input
+  manager.register(
+    "G",
+    () => {
+      fired = true;
+    },
+    { target: () => div },
+  );
+
+  fireKeyOn(input, "g");
+  assert.notOk(fired, "Single key suppressed in input via auto ignoreInputs");
+});
+
+QUnit.test("Callback target: enabled guard still applies", (assert) => {
+  const manager = createHotkeyManager();
+  let fired = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    { target: () => div, enabled: false },
+  );
+
+  fireKeyOn(div, "F5");
+  assert.notOk(fired, "Disabled callback target registration does not fire");
+});
+
+QUnit.test("Callback target: suppressInPopups still applies", (assert) => {
+  const manager = createHotkeyManager();
+  let fired = false;
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register(
+    "F5",
+    () => {
+      fired = true;
+    },
+    { target: () => div, suppressInPopups: true },
+  );
+
+  // Without a popup open, it should fire
+  fireKeyOn(div, "F5");
+  assert.ok(fired, "Callback target fires when no popup is open");
+});
+
+QUnit.test("Callback target: group destroyAll cleans up callback registrations", (assert) => {
+  const manager = createHotkeyManager();
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  const group = manager.createGroup();
+  group.register("F5", () => {}, { target: () => div });
+  group.register("F6", () => {}, { target: () => div });
+
+  assert.strictEqual(group.size, 2, "Group has 2 registrations");
+  assert.strictEqual(manager.getRegistrations().length, 2, "Manager has 2 registrations");
+
+  group.destroyAll();
+
+  assert.strictEqual(manager.getRegistrations().length, 0, "All callback registrations cleaned up");
+});
