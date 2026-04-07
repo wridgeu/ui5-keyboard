@@ -32,8 +32,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Properties](#properties)
   - [Associations](#associations)
   - [Events](#events)
-  - [Public Methods (Common)](#public-methods-common)
-  - [Public Methods (Complete)](#public-methods-complete)
+  - [Public Methods](#public-methods)
   - [Static Methods (Complete)](#static-methods-complete)
 - [Layouts](#layouts)
   - [Constrained Containers and Popovers](#constrained-containers-and-popovers)
@@ -255,6 +254,21 @@ Notes:
 - This is mainly a dev-server/runtime option.
 - If you need the library resources inside the app build output as well, prefer mode 1 with `includeDependency`, or copy the resources explicitly as part of your deployment process.
 
+Lazy loading via `"lazy": true` is supported and worth considering if the keyboard is only used on specific views or routes. The library includes CSS, theming, and i18n bundles, so deferring the load avoids pulling those resources at app startup:
+
+```json
+"ui5.kiosk": { "lazy": true }
+```
+
+When the library is used declaratively in an XML view (e.g. `<kiosk:KioskKeyboard .../>`), the framework loads it automatically on first view instantiation. For programmatic usage, load it explicitly before creating controls:
+
+```ts
+import Lib from "sap/ui/core/Lib";
+await Lib.load({ name: "ui5.kiosk" });
+```
+
+For kiosk terminals where the keyboard is always needed, eager loading (the default, no `"lazy"` flag) is simpler.
+
 Use the control in your view or controller as shown in [Quick Start](#quick-start) below.
 
 ---
@@ -354,28 +368,9 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 | `afterOpen`          | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
 | `afterClose`         | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
 
-### Public Methods (Common)
+### Public Methods
 
-| Method                     | Returns           | Description                                                                                                                                                           |
-| -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `setLayout(layout)`        | `this`            | Set active layout (effective when `keyboardType="Full"`).                                                                                                             |
-| `getBaseLayout()`          | `string`          | Get the tracked base (alphabetic) layout used by `{layout:base}`.                                                                                                     |
-| `resetLayout()`            | `this`            | Switch back to the tracked base layout.                                                                                                                               |
-| `setKeyboardType(type)`    | `this`            | Set keyboard display type (`Full`, `Numeric`, `Numpad`) and lock auto-type.                                                                                           |
-| `isKeyboardTypeExplicit()` | `boolean`         | Whether keyboardType is explicitly locked (auto-type disabled).                                                                                                       |
-| `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).                                                                                                        |
-| `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.                                                                                                    |
-| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                                                                                                                  |
-| `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                                                                                                                 |
-| `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                                                                                                                |
-| `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                                                                                                                        |
-| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).                                                                                             |
-| `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                                                                                                             |
-| `refreshResponsiveState()` | `this`            | Recompute responsive width/height classes after runtime CSS changes that do not trigger a reliable resize callback. Usually not needed for normal container resizing. |
-
-### Public Methods (Complete)
-
-Complete list of KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
+KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
 
 | Method                     | Returns           | Description                                                                                                                                                           |
 | -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -393,12 +388,12 @@ Complete list of KioskKeyboard-specific public instance methods (excluding inher
 | `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                                                                                                                        |
 | `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).                                                                                             |
 | `refreshResponsiveState()` | `this`            | Recompute responsive width/height classes after runtime CSS changes that do not trigger a reliable resize callback. Usually not needed for normal container resizing. |
+| `setTargetResolver(fn)`    | `this`            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear.                                                                               |
+| `getTargetResolver()`      | `Function\|null`  | Returns the instance-level target resolver, or `null`.                                                                                                                |
 | `getFocusDomRef()`         | `Element \| null` | Returns the keyboard root DOM reference used for focus handling.                                                                                                      |
 | `getFocusInfo()`           | `object`          | Returns focus state snapshot for UI5 focus restoration.                                                                                                               |
 | `applyFocusInfo(info)`     | `this`            | Restores focus state snapshot previously returned by `getFocusInfo()`.                                                                                                |
 | `getAccessibilityInfo()`   | `object`          | Returns UI5 accessibility metadata for assistive technologies.                                                                                                        |
-| `setTargetResolver(fn)`    | `this`            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear.                                                                               |
-| `getTargetResolver()`      | `Function\|null`  | Returns the instance-level target resolver, or `null`.                                                                                                                |
 
 For full generated typings (including property/event accessors from UI5 metadata), see [`src/KioskKeyboard.gen.d.ts`](src/KioskKeyboard.gen.d.ts) (regenerated by `npm run generate`).
 

@@ -30,14 +30,13 @@ Full-size inline keyboard:
 
 ## Getting Started
 
-This monorepo currently keeps all three library packages workspace-local (`private: true`).
-For local development, install once at the repository root and use the package READMEs for API details:
+The three library packages are not yet published on npm. For local development, install once at the repository root and use the package READMEs for API details:
 
 ```bash
 npm install
 ```
 
-If/when the packages are published, use the install commands below.
+Once the packages are published, use the install commands below.
 For full API details, see:
 
 - **[ui5-lib-hotkeys README](./packages/hotkeys/README.md)**
@@ -154,6 +153,21 @@ In all 3 modes, keep the custom library declarations in your app `manifest.json`
 }
 ```
 
+`ui5.hotkeys` is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
+
+`ui5.kiosk` includes CSS, theming, and i18n bundles. If the keyboard is only used on specific views or routes, consider `"lazy": true` to defer library loading until the keyboard is first needed:
+
+```json
+"ui5.kiosk": { "lazy": true }
+```
+
+When the library is used declaratively in an XML view (e.g. `<kiosk:KioskKeyboard .../>`), the framework loads it automatically on first view instantiation. For programmatic usage, load it explicitly before creating controls:
+
+```ts
+import Lib from "sap/ui/core/Lib";
+await Lib.load({ name: "ui5.kiosk" });
+```
+
 ### Hotkeys
 
 ```bash
@@ -191,7 +205,7 @@ The web component variant (`kiosk-keyboard-webc`) provides the same virtual keyb
 - UI5 apps: resolve npm modules via `ui5-tooling-modules`, then choose CEM-driven wrapper consumption or a `WebComponent.extend()` bridge
 
 ```bash
-# if/when published
+# once published
 npm install kiosk-keyboard-webc
 ```
 
