@@ -506,8 +506,12 @@ export default class HotkeyManager extends BaseObject {
    */
   enableRouterIntegration(router: RouterLike): void {
     this._assertAlive("enableRouterIntegration");
+    // If a previous router was registered, detach from it first.
+    // This handles FLP Component re-entry where the old router is
+    // destroyed but the singleton manager persists.
     if (this._routerCleanup) {
-      throw new Error("Router integration is already enabled");
+      this._routerCleanup();
+      this._routerCleanup = null;
     }
 
     const handler = (event: RouteMatchedEvent) => {
@@ -536,9 +540,7 @@ export default class HotkeyManager extends BaseObject {
    */
   disableRouterIntegration(): void {
     this._assertAlive("disableRouterIntegration");
-    if (!this._routerCleanup) {
-      throw new Error("Router integration is not enabled");
-    }
+    if (!this._routerCleanup) return;
 
     this._routerCleanup();
     this._routerCleanup = null;

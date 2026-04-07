@@ -116,12 +116,10 @@ export default class Component extends UIComponent {
 
   exit(): void {
     // Clean up only what this Component instance owns.
-    // The HotkeyManager is a singleton shared across the module lifecycle --
-    // it must NOT be destroyed here. In FLP, modules survive Component
-    // destroy/recreate cycles. Destroying the singleton would leave it in
-    // a broken state on re-entry.
+    // The HotkeyManager singleton must not be destroyed here -- in FLP,
+    // modules survive Component destroy/recreate cycles.
+    // Router integration is cleaned up automatically on re-entry.
     this._hotkeys.destroyAll();
-    this._hotkeyManager.disableRouterIntegration();
     document.removeEventListener("keydown", this._keyDownHandler, true);
   }
 }

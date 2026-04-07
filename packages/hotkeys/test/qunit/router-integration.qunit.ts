@@ -132,16 +132,22 @@ QUnit.test("Detach cleanup on destroy", (assert) => {
   assert.strictEqual(newManager.getActiveScope(), GLOBAL_SCOPE, "New manager unaffected by old router");
 });
 
-QUnit.test("Error on double enableRouterIntegration", (assert) => {
+QUnit.test("Calling enableRouterIntegration twice replaces the previous router", (assert) => {
   const manager = HotkeyManager.getInstance();
-  const router = createMockRouter();
-  manager.enableRouterIntegration(router);
+  const router1 = createMockRouter();
+  const router2 = createMockRouter();
 
-  assert.throws(
-    () => manager.enableRouterIntegration(router),
-    /already enabled/,
-    "Throws on double enableRouterIntegration",
-  );
+  manager.enableRouterIntegration(router1);
+  manager.enableRouterIntegration(router2);
+
+  // The second router should be active -- fire a route match on it
+  manager.pushScope("initial");
+  router2.fireRouteMatched("newRoute");
+  assert.strictEqual(manager.getActiveScope(), "newRoute", "Second router is active");
+
+  // The first router should be detached -- firing on it has no effect
+  router1.fireRouteMatched("staleRoute");
+  assert.strictEqual(manager.getActiveScope(), "newRoute", "First router is detached");
 });
 
 QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
@@ -188,14 +194,11 @@ QUnit.test("disableRouterIntegration: disable stops scope updates", (assert) => 
   assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after disable");
 });
 
-QUnit.test("disableRouterIntegration: throws when not enabled", (assert) => {
+QUnit.test("disableRouterIntegration: no-op when not enabled", (assert) => {
   const manager = HotkeyManager.getInstance();
 
-  assert.throws(
-    () => manager.disableRouterIntegration(),
-    /not enabled/,
-    "Throws when router integration is not enabled",
-  );
+  manager.disableRouterIntegration();
+  assert.ok(true, "No error when calling disableRouterIntegration without enable");
 });
 
 QUnit.test("disableRouterIntegration: re-enable after disable", (assert) => {
