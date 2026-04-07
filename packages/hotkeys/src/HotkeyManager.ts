@@ -56,7 +56,6 @@ export interface RouterLike {
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
-let instance: HotkeyManager | null = null;
 const idGen = createIdGenerator("hk_");
 
 interface ScopeRegistrationBucket {
@@ -152,6 +151,9 @@ export default class HotkeyManager extends BaseObject {
     library: "ui5.hotkeys",
   };
 
+  /** Singleton instance, bound to the class (module-level shared state). */
+  private static _instance: HotkeyManager | null = null;
+
   private _registrations: Map<string, HotkeyRegistration> = new Map();
   private _registrationsByScope: Map<string, ScopeRegistrationBucket> = new Map();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
@@ -201,10 +203,10 @@ export default class HotkeyManager extends BaseObject {
    * permanently invalid - callers must re-acquire via `getInstance()`.
    */
   static getInstance(): HotkeyManager {
-    if (!instance || instance._destroyed) {
-      instance = new HotkeyManager();
+    if (!HotkeyManager._instance || HotkeyManager._instance._destroyed) {
+      HotkeyManager._instance = new HotkeyManager();
     }
-    return instance;
+    return HotkeyManager._instance;
   }
 
   /**
@@ -820,7 +822,7 @@ export default class HotkeyManager extends BaseObject {
     this._scopeStack = [GLOBAL_SCOPE];
     resetRuntimeCaches();
     this._unhandledCallback = null;
-    instance = null;
+    HotkeyManager._instance = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
 

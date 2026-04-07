@@ -249,11 +249,8 @@ hotkeys.register(
 const handle = hotkeys.register("Mod+D", () => nav(), { description: "Nav" });
 handle.setOptions({ enabled: () => model.getProperty("/isDirty") });
 
-// Clean up all registrations in one call (e.g., in onExit or destroy)
+// Clean up all registrations in one call (e.g., in Component.exit)
 hotkeys.destroyAll();
-
-// In your Component.destroy():
-manager.destroy();
 ```
 
 ## API Stability
@@ -315,7 +312,7 @@ const manager = HotkeyManager.getInstance();
 | `setSequencePendingHandler(callback)`  | Set global callback for mid-sequence progress          |
 | `addGenericRootId(id)`                 | Register an element ID as a generic focus root         |
 | `removeGenericRootId(id)`              | Remove a previously registered generic root ID         |
-| `destroy()`                            | Remove all listeners, clear state, null the singleton  |
+| `destroy()`                            | Full teardown (standalone apps only, not for FLP)      |
 
 ### Registration
 
@@ -450,8 +447,10 @@ Lifecycle guidance (UI5):
 - **Controller (`onInit`/`onExit`)**: create one group in `onInit()`, register through it, call `destroyAll()` in `onExit()`.
   This only unregisters entries that were created through that specific group; other groups stay active.
 - **View lifecycle**: if a view/controller is recreated by routing, do not reuse old groups/handles across instances.
-- **Component lifecycle**: call `HotkeyManager.getInstance().destroy()` in `Component.destroy()` to release listeners and invalidate all existing handles/groups.
-- **After manager destroy**: old handles/groups are intentionally inactive; create fresh registrations from the new manager instance.
+- **Component lifecycle**: call `destroyAll()` on your registration group in `Component.exit()`.
+  Do **not** call `manager.destroy()` -- the singleton is shared module-level state that
+  survives Component destroy/recreate cycles in the Fiori Launchpad.
+  Router integration is cleaned up automatically on the next `enableRouterIntegration()` call during re-entry.
 
 ### Scope Management
 

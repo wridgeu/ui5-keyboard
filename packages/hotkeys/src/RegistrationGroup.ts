@@ -1,4 +1,6 @@
+import Log from "sap/base/Log";
 import type HotkeyManager from "./HotkeyManager";
+import type { RouterLike } from "./HotkeyManager";
 import type {
   Hotkey,
   HotkeyCallback,
@@ -44,6 +46,7 @@ export default class RegistrationGroup {
   private _sequenceHandles: Set<SequenceRegistrationHandle> = new Set();
   private _destroyed = false;
   private _onDispose: (() => void) | null;
+  private _routerCleanup: (() => void) | null = null;
 
   constructor(manager: HotkeyManager, onDispose?: () => void) {
     this._manager = manager;
@@ -142,9 +145,50 @@ export default class RegistrationGroup {
     return wrappedHandle;
   }
 
-  /** Unregister all tracked handles. Safe to call multiple times. */
+  /**
+   * Enable automatic scope management via a UI5 Router.
+   *
+   * Attaches a `beforeRouteMatched` listener that resets the scope stack
+   * and pushes the matched route name as the active scope. The listener
+   * is automatically detached when `destroyAll()` is called.
+   *
+   * Calling this again (e.g., on Component re-entry in FLP) silently
+   * replaces the previous router.
+   *
+   * @param router - A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched`.
+   */
+  enableRouterIntegration(router: RouterLike): void {
+    if (this._destroyed) throw new Error("Cannot enableRouterIntegration on a destroyed RegistrationGroup");
+
+    if (this._routerCleanup) {
+      this._routerCleanup();
+      this._routerCleanup = null;
+    }
+
+    const handler = (event: { getParameter(name: string): string | undefined }) => {
+      this._manager.resetToGlobalScope();
+      const routeName = event.getParameter("name");
+      if (routeName) {
+        this._manager.pushScope(routeName);
+      }
+    };
+
+    router.attachBeforeRouteMatched(handler, this);
+    this._routerCleanup = () => {
+      router.detachBeforeRouteMatched(handler, this);
+    };
+
+    Log.info("Router integration enabled (via group)", undefined, "ui5.hotkeys.RegistrationGroup");
+  }
+
+  /** Unregister all tracked handles and detach router integration. Safe to call multiple times. */
   destroyAll(): void {
     if (this._destroyed) return;
+
+    if (this._routerCleanup) {
+      this._routerCleanup();
+      this._routerCleanup = null;
+    }
 
     for (const h of this._handles) {
       if (h.isActive) h.unregister();
