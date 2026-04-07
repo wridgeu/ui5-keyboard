@@ -243,7 +243,7 @@ export default class KioskKeyboard extends Control {
        * and re-enable auto-type detection.
        *
        * @example <caption>XML view - full auto kiosk setup</caption>
-       * <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" mobileKeyboard="Auto" />
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" />
        */
       autoType: {
         type: "boolean",
@@ -268,8 +268,8 @@ export default class KioskKeyboard extends Control {
        * @example <caption>XML view - kiosk terminal setup</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Custom" />
        *
-       * @example <caption>XML view - let mobile devices use native keyboard</caption>
-       * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
+       * @example <caption>XML view - always defer to native keyboard</caption>
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Native" />
        */
       mobileKeyboard: {
         type: "ui5.kiosk.MobileKeyboard",

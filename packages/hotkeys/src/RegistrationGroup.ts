@@ -152,8 +152,7 @@ export default class RegistrationGroup {
    * and pushes the matched route name as the active scope. The listener
    * is automatically detached when `destroyAll()` is called.
    *
-   * Calling this again (e.g., on Component re-entry in FLP) silently
-   * replaces the previous router.
+   * Calling this again silently replaces the previous router.
    *
    * @param router - A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched`.
    */
