@@ -251,6 +251,21 @@ export interface HotkeyOptions {
    * Other keys are not affected by this behavior.
    */
   target?: Element | (() => Element | null) | null;
+
+  /**
+   * Timeout in ms between sequence steps before the sequence resets.
+   * Only applies to multi-key sequences (space-separated hotkey strings).
+   * Ignored for single-key hotkeys.
+   * @default 1000
+   */
+  timeout?: number;
+
+  /**
+   * Progress callback for intermediate sequence steps.
+   * Fires after each intermediate key with progress info.
+   * Only applies to multi-key sequences. Ignored for single-key hotkeys.
+   */
+  onPending?: SequencePendingCallback;
 }
 
 /**
@@ -258,6 +273,16 @@ export interface HotkeyOptions {
  * Excludes `scope` and `conflictBehavior`, which require unregister + re-register.
  */
 export type UpdatableHotkeyOptions = Omit<HotkeyOptions, "scope" | "conflictBehavior">;
+
+/**
+ * Callback for mid-sequence progress.
+ */
+export type SequencePendingCallback = (info: {
+  sequence: string[];
+  completedSteps: number;
+  totalSteps: number;
+  nextKey: string;
+}) => void;
 
 /**
  * Handle returned by `HotkeyManager.register()` for managing a registration's lifecycle.
@@ -273,6 +298,8 @@ export interface HotkeyRegistrationHandle {
   readonly scope: string;
   /** Human-readable description (current value). */
   readonly description: string;
+  /** The sequence steps if this is a sequence registration, or `null` for single-key hotkeys. */
+  readonly sequence: readonly string[] | null;
   /** Remove this registration and clean up. */
   unregister(): void;
   /**
@@ -305,6 +332,10 @@ export interface HotkeyRegistrationInfo {
   readonly conflictBehavior: ConflictBehavior;
   /** Whether a target element is bound (boolean flag, not DOM reference). */
   readonly hasTarget: boolean;
+  /** The sequence steps if this is a sequence registration, or `null` for single-key hotkeys. */
+  readonly sequence: readonly string[] | null;
+  /** The sequence step timeout in ms, or `null` for single-key hotkeys. */
+  readonly timeout: number | null;
 }
 
 // ──────────────────────────────────────────────
@@ -392,102 +423,3 @@ export interface KeyboardDispatchGuard {
   /** Whether this guard is still actively suspending dispatch. */
   readonly isActive: boolean;
 }
-
-// ──────────────────────────────────────────────
-// Sequence types
-// ──────────────────────────────────────────────
-
-/**
- * Options for registering a key sequence.
- */
-export interface SequenceOptions {
-  /** Human-readable description. */
-  description?: string;
-  /** Timeout in ms between keys before the sequence resets. @default 1000 */
-  timeout?: number;
-  /** Scope - uses HotkeyManager's scope stack. @default "__global__" */
-  scope?: string;
-  /** Whether the sequence is active. @default true */
-  enabled?: boolean | (() => boolean);
-  /**
-   * Suppress the sequence when an input element is focused.
-   * - `true`: Always suppress in inputs.
-   * - `false`: Never suppress in inputs.
-   * - `"auto"`: Suppress for single keys; allow for Ctrl/Meta combos and Escape.
-   * @default "auto"
-   */
-  ignoreInputs?: boolean | "auto";
-  /** Prevent default on the final key. @default true */
-  preventDefault?: boolean;
-  /** Stop propagation on the final key. @default true */
-  stopPropagation?: boolean;
-  /**
-   * Per-registration callback for mid-sequence progress.
-   *
-   * Fires after each intermediate key with progress info (completed steps,
-   * total steps, next expected key). When set, takes precedence over the
-   * global `setSequencePendingHandler` for this registration.
-   *
-   * Dies with the registration - no manual cleanup needed.
-   */
-  onPending?: SequencePendingCallback;
-}
-
-/**
- * Options that can be updated on a live sequence registration via `setOptions()`.
- * Excludes `scope`, which requires unregister + re-register.
- */
-export type UpdatableSequenceOptions = Omit<SequenceOptions, "scope">;
-
-/**
- * Handle for managing a sequence registration lifecycle.
- */
-export interface SequenceRegistrationHandle {
-  /** Unique identifier for this registration. */
-  readonly id: string;
-  /** Whether this registration is still active (not yet unregistered). */
-  readonly isActive: boolean;
-  /** The original sequence keys as registered. */
-  readonly sequence: string[];
-  /** The scope this sequence belongs to. */
-  readonly scope: string;
-  /** Human-readable description (current value). */
-  readonly description: string;
-  /** Remove this registration and clean up. */
-  unregister(): void;
-  /**
-   * Update options on a live registration without re-registering.
-   * All fields except `scope` can be changed.
-   *
-   * @param options - Partial options to merge into the registration.
-   * @throws Error if the handle has been unregistered or if `scope` is provided.
-   */
-  setOptions(options: Partial<UpdatableSequenceOptions>): void;
-}
-
-/**
- * Public view of a sequence registration for introspection.
- * Flat, serializable shape - no closures, no parsed internals.
- */
-export interface SequenceRegistrationInfo {
-  readonly id: string;
-  readonly sequence: readonly string[];
-  readonly scope: string;
-  readonly description: string;
-  /** Resolved to current value (not the closure). */
-  readonly enabled: boolean;
-  readonly timeout: number;
-  readonly ignoreInputs: boolean | "auto";
-  readonly preventDefault: boolean;
-  readonly stopPropagation: boolean;
-}
-
-/**
- * Callback for mid-sequence progress.
- */
-export type SequencePendingCallback = (info: {
-  sequence: string[];
-  completedSteps: number;
-  totalSteps: number;
-  nextKey: string;
-}) => void;

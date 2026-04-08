@@ -8,16 +8,14 @@ import { createIdGenerator } from "./idgen";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
+import type { HotkeyCallback, Platform, SequencePendingCallback } from "../types";
 import type {
-  HotkeyCallback,
-  Platform,
   SequenceOptions,
-  SequencePendingCallback,
+  SequenceRegistration,
   SequenceRegistrationHandle,
   SequenceRegistrationInfo,
   UpdatableSequenceOptions,
-} from "../types";
-import type { SequenceRegistration } from "./types";
+} from "./types";
 
 const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
