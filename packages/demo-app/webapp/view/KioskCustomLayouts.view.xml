@@ -60,7 +60,7 @@
                 <VBox class="sapUiSmallMargin">
                     <kiosk:KioskKeyboard
                         id="customKeyboard"
-                        targetInput="customInput"
+                        controls="customInput"
                         keyPress=".onKeyPress"
                         ariaLabel="Custom Layout Keyboard" />
                 </VBox>

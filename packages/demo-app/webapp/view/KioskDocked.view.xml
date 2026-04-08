@@ -82,7 +82,7 @@
                     <kiosk:KioskKeyboard
                         id="numpadKeyboard"
                         keyboardType="Numpad"
-                        targetInput="numpadInput"
+                        controls="numpadInput"
                         ariaLabel="Numeric Keypad"
                         class="sapUiSmallMarginTop" />
                 </VBox>
@@ -110,7 +110,7 @@
                 docked="true"
                 autoShow="true"
                 autoType="true"
-                inputIds="nameInput,emailInput,ageInput,phoneInput,notesInput"
+                controls="nameInput,emailInput,ageInput,phoneInput,notesInput"
                 enabled="{docked>/kioskEnabled}"
                 fKeyMode="{docked>/kioskFKeyMode}"
                 keyPress=".onKeyPress"

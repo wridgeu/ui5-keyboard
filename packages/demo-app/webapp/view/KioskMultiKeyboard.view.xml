@@ -6,7 +6,7 @@
     xmlns:kiosk="ui5.kiosk">
     <Page titleAlignment="Center" title="Multi-Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
         <content>
-            <Text text="Two independent KioskKeyboard instances on one page. Each keyboard targets its own input via inputIds, so they do not cross-claim targets." class="sapUiSmallMarginBottom" />
+            <Text text="Two independent KioskKeyboard instances on one page. Each keyboard targets its own input via controls, so they do not cross-claim targets." class="sapUiSmallMarginBottom" />
 
             <l:Grid defaultSpan="L6 M12 S12">
                 <Panel headerText="Product Search (Docked Full Keyboard)">
@@ -34,7 +34,7 @@
                         <kiosk:KioskKeyboard
                             id="quantityKeyboard"
                             keyboardType="Numpad"
-                            inputIds="quantityInput"
+                            controls="quantityInput"
                             keyPress=".onQuantityKeyPress"
                             ariaLabel="Quantity Numpad"
                             class="sapUiSmallMarginTop" />
@@ -123,13 +123,13 @@
                     id="sharedKeyboardA"
                     docked="true"
                     mobileKeyboard="Custom"
-                    targetInput="sharedInput"
+                    controls="sharedInput"
                     visible="false" />
                 <kiosk:KioskKeyboard
                     id="sharedKeyboardB"
                     docked="true"
                     mobileKeyboard="Custom"
-                    targetInput="sharedInput"
+                    controls="sharedInput"
                     visible="false" />
             </Panel>
 
@@ -137,7 +137,7 @@
                 id="searchKeyboard"
                 docked="true"
                 autoShow="true"
-                inputIds="searchInput"
+                controls="searchInput"
                 keyPress=".onSearchKeyPress"
                 afterOpen=".onSearchAfterOpen"
                 afterClose=".onSearchAfterClose"

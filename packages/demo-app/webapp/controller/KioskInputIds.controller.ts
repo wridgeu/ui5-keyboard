@@ -18,7 +18,7 @@ type AlertButtonDemoAlertEventParameters = {
 type AlertButton$DemoAlertEvent = UI5Event<AlertButtonDemoAlertEventParameters>;
 
 /**
- * Demonstrates the `inputIds` property - the keyboard only responds to
+ * Demonstrates the `controls` property - the keyboard only responds to
  * focus events from the listed input controls.
  *
  * @namespace demo.hotkeys.controller
@@ -42,7 +42,7 @@ export default class KioskInputIds extends BaseController {
     kb.attachEvent("afterOpen", () => {
       this._updateTargetStatus();
     });
-    kb.attachEvent("targetInputChange", () => {
+    kb.attachEvent("activeControlChange", () => {
       this._updateTargetStatus();
     });
 
@@ -101,7 +101,7 @@ export default class KioskInputIds extends BaseController {
 
   private _updateTargetStatus(): void {
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
-    const targetId = kb.getTargetInput();
+    const targetId = kb.getActiveControl()?.getId();
     this._getViewModel().setProperty("/kioskCurrentTarget", targetId || "None");
   }
 

@@ -95,7 +95,7 @@ export default class KioskDialog extends BaseController {
     });
 
     const dialogKeyboard = new KioskKeyboard({
-      inputIds: [dialogInputId],
+      controls: [dialogInputId],
       ariaLabel: "Dialog Keyboard",
     });
 

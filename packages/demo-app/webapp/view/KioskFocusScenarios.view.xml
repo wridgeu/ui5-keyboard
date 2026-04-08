@@ -17,7 +17,7 @@
                         <FlexItemData growFactor="1" baseSize="20rem" />
                     </layoutData>
                     <VBox class="sapUiSmallMargin">
-                        <!-- 1. Multiple inputIds - keyboard stays open on tab -->
+                        <!-- 1. Multiple controls - keyboard stays open on tab -->
                         <Label text="1. Tab between targeted inputs - keyboard stays open" design="Bold" class="sapUiTinyMarginBottom" />
                         <HBox>
                             <VBox class="sapUiSmallMarginEnd">
@@ -34,7 +34,7 @@
                         <Label text="2. Tab to non-targeted input - keyboard closes" design="Bold" class="sapUiSmallMarginTop sapUiTinyMarginBottom" />
                         <VBox>
                             <Label text="Outside Input (not targeted)" labelFor="outsideInput" />
-                            <Input id="outsideInput" placeholder="Not in inputIds" width="14rem" />
+                            <Input id="outsideInput" placeholder="Not in controls" width="14rem" />
                         </VBox>
 
                         <!-- 3. Non-input focusable - keyboard closes -->
@@ -101,7 +101,7 @@
                 docked="true"
                 autoShow="true"
                 autoType="true"
-                inputIds="focusInput1,focusInput2,compositeStep"
+                controls="focusInput1,focusInput2,compositeStep"
                 keyPress=".onKeyPress"
                 afterOpen=".onAfterOpen"
                 afterClose=".onAfterClose"

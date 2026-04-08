@@ -84,7 +84,7 @@
             <kiosk:KioskKeyboard
                 id="progKeyboard"
                 docked="true"
-                targetInput="progInput"
+                controls="progInput"
                 enabled="{programmatic>/kioskEnabled}"
                 keyPress=".onKeyPress"
                 layoutChange=".onLayoutEvent"
