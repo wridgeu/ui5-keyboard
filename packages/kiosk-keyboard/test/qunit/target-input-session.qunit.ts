@@ -506,7 +506,7 @@ QUnit.test("Deferred callback fires with captured value, not current DOM value",
 
   const cb = session.captureAndClearDirty(); // captures value "original!"
 
-  // Value changes after capture (simulates state transitions in setTargetInput)
+  // Value changes after capture (simulates state transitions in _setActiveTarget)
   input.value = "something-else";
 
   cb!();

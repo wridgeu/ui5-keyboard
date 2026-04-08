@@ -99,7 +99,7 @@ export default class TargetInputSession {
    *
    * Returns a callback that fires the `change` event on the captured
    * element, or `null` when there is nothing to fire. Call the returned
-   * function **after** all state transitions in `setTargetInput` have
+   * function **after** all state transitions in `_setActiveTarget` have
    * completed so that any re-entrant call sees fully settled state.
    */
   captureAndClearDirty(): (() => void) | null {
