@@ -277,6 +277,9 @@ QUnit.test("aria-controls points to active target on initial render", async (ass
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
+  input.focus();
+  await nextUIUpdate();
+
   assert.strictEqual(
     kb.getDomRef()!.getAttribute("aria-controls"),
     input.getId(),
@@ -305,6 +308,9 @@ QUnit.test("aria-controls updates when _setActiveTarget is called", async (asser
 
   const kb = new KioskKeyboard({ controls: [input1.getId()] });
   await placeAndWait(kb);
+
+  input1.focus();
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getDomRef()!.getAttribute("aria-controls"), input1.getId(), "Initially points to input1");
 

@@ -75,6 +75,8 @@ QUnit.test("Shift auto-releases after typing in switched layout", async (assert)
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
+  input.focus();
+
   // Activate shift, then switch to numeric
   tapKey(kb, "{shift}");
   tapKey(kb, "{layout:numeric}");
@@ -146,6 +148,9 @@ QUnit.test("Keyboard stays functional after target control is destroyed", async 
 
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(3, 3);
 
   // Type to verify keyboard works
   tapKey(kb, "d");
@@ -267,6 +272,8 @@ QUnit.test("Deferred change fires for dirty target on rapid switch", async (asse
   const kb = new KioskKeyboard({ controls: [input1.getId()] });
   await placeAndWait(kb);
 
+  input1.focus();
+
   // Type into first input to make it dirty
   tapKey(kb, "a");
   tapKey(kb, "b");
@@ -327,6 +334,8 @@ QUnit.test("_setActiveTarget to empty string clears the target", async (assert) 
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
+  input.focus();
+
   tapKey(kb, "a");
   assert.strictEqual(input.getValue(), "a", "Typing works with target set");
 
@@ -362,6 +371,8 @@ QUnit.test("Backspace at position 0 is a silent no-op", async (assert) => {
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
+  input.focus();
+
   // Backspace on empty input should do nothing
   tapKey(kb, "{backspace}");
   assert.strictEqual(input.getValue(), "", "Empty input stays empty");
@@ -385,6 +396,9 @@ QUnit.test("Backspace at position 0 with non-empty value does not truncate", asy
 
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(5, 5);
 
   // Simulate cursor at position 0: delete all then retype to set cursor at start
   // Type into the input so the session tracks cursor, then delete all characters
@@ -414,6 +428,8 @@ QUnit.test("Multiple backspaces on empty TextArea are silent no-ops", async (ass
 
   const kb = new KioskKeyboard({ controls: [textarea.getId()] });
   await placeAndWait(kb);
+
+  textarea.focus();
 
   // Multiple backspaces on empty textarea
   tapKey(kb, "{backspace}");

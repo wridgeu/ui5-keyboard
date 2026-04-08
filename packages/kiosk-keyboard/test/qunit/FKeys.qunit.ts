@@ -276,6 +276,8 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
+  input.focus();
+
   let observedKey = "";
   let observedShift = false;
   input.getFocusDomRef()!.addEventListener("keydown", (e) => {
@@ -323,6 +325,8 @@ QUnit.test("Native fKeyMode skips native action when keydown is prevented", asyn
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
+  input.focus();
+
   input.getFocusDomRef()!.addEventListener("keydown", (e) => {
     if ((e as KeyboardEvent).key === "F5") {
       e.preventDefault();
@@ -365,6 +369,8 @@ QUnit.test("keyPress preventDefault prevents native dispatch and native action",
   kb.setFKeyMode("Native");
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
+
+  input.focus();
 
   let dispatched = 0;
   input.getFocusDomRef()!.addEventListener("keydown", () => {
@@ -412,6 +418,8 @@ QUnit.test("Native fKeyMode does not dispatch unsupported custom fkey names", as
 
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
+
+  input.focus();
 
   let dispatched = 0;
   input.getFocusDomRef()!.addEventListener("keydown", () => {

@@ -699,6 +699,9 @@ QUnit.test("setEnabled(false) redirects focus to target input when a key has foc
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
+  // Focus the input first to activate the target via focus delegation
+  input.focus();
+
   // Focus a key on the keyboard
   const firstKey = getFirstKeyElement(kb);
   firstKey.focus();
@@ -757,6 +760,9 @@ QUnit.test("setVisible(false) redirects focus to target input when a key has foc
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  // Focus the input first to activate the target via focus delegation
+  input.focus();
 
   // Focus a key on the keyboard
   const firstKey = getFirstKeyElement(kb);

@@ -1806,6 +1806,19 @@ export default class KioskKeyboard extends Control {
       if (other === this) continue;
       if (!other._isAutoShowParticipationActive()) continue;
       if (other._getActiveTargetId() === inputId) return true;
+      // With controls, the active target is only set on focus. However, the
+      // controls list declares ownership: if the input is in another keyboard's
+      // controls AND that keyboard has not been manually re-targeted to a
+      // different input, the input is still claimed.
+      if (other._resolvedControlIds.has(inputId)) {
+        const otherActive = other._getActiveTargetId();
+        // Claimed if: no active target yet (pre-focus), or the active target
+        // IS this input, or the active target is also in controls (meaning the
+        // keyboard hasn't been manually re-targeted outside its controls list).
+        if (!otherActive || otherActive === inputId || other._resolvedControlIds.has(otherActive)) {
+          return true;
+        }
+      }
     }
     return false;
   }

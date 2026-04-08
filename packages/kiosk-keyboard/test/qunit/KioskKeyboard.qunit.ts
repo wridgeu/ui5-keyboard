@@ -896,6 +896,8 @@ QUnit.test("Typing into input inside a Popover", async (assert) => {
     popover.openBy(trigger);
     await waitForRender();
 
+    input.focus();
+
     tapKey(kb, "h");
     tapKey(kb, "i");
     assert.strictEqual(input.getValue(), "hi", "Typing works inside popover");
@@ -929,6 +931,8 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   try {
     popover.openBy(trigger);
     await waitForRender();
+
+    input.focus();
 
     // Tap several keys - popover should remain open
     tapKey(kb, "a");
@@ -1659,8 +1663,11 @@ QUnit.test("backspace works for custom control without value property (DOM fallb
 
 QUnit.test("getActiveControl resolves active control instance", async (assert) => {
   const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
 
   const target = kb.getActiveControl();
   assert.ok(target instanceof Control, "Resolved target is a control instance");
