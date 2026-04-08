@@ -19,8 +19,8 @@ export default class FocusClaimService {
   ]);
 
   constructor(
-    private readonly getInputIds: () => string[],
-    private readonly getResolvedInputControlIds: () => ReadonlySet<string>,
+    private readonly getControls: () => string[],
+    private readonly getResolvedControlIds: () => ReadonlySet<string>,
     private readonly shouldDeferToNative: () => boolean,
     private readonly isTargetOfOther: (inputId: string) => boolean,
   ) {}
@@ -37,17 +37,17 @@ export default class FocusClaimService {
     if (!(ui5Control instanceof Control)) return null;
     if (this.isTargetOfOther(ui5Control.getId())) return null;
 
-    const ids = this.getInputIds();
-    if (ids.length > 0 && !this.isInInputIds(ui5Control)) return null;
+    const ids = this.getControls();
+    if (ids.length > 0 && !this.isInControls(ui5Control)) return null;
     return ui5Control;
   }
 
-  isInInputIds(control: Control): boolean {
-    return this.resolveInputIdsAncestor(control) !== null;
+  isInControls(control: Control): boolean {
+    return this.resolveControlsAncestor(control) !== null;
   }
 
-  resolveInputIdsAncestor(candidate: Control): Control | null {
-    const resolvedIds = this.getResolvedInputControlIds();
+  resolveControlsAncestor(candidate: Control): Control | null {
+    const resolvedIds = this.getResolvedControlIds();
     if (resolvedIds.size === 0) return null;
 
     for (let parent: ManagedObject | null = candidate; parent; parent = parent.getParent()) {
