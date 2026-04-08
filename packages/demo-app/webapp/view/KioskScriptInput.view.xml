@@ -16,7 +16,7 @@
                         id="kanaKeyboard"
                         layout="ja-kana"
                         autoType="true"
-                        targetInput="kanaInput"
+                        controls="kanaInput"
                         class="sapUiSmallMarginTop" />
                     <Text text="Dakuten/handakuten composition middleware active" class="sapUiSmallMarginTop" />
                 </VBox>
@@ -33,7 +33,7 @@
                         id="hangulKeyboard"
                         layout="ko-hangul"
                         autoType="true"
-                        targetInput="hangulInput"
+                        controls="hangulInput"
                         class="sapUiSmallMarginTop" />
                     <Text text="Jamo-to-syllable composition middleware active" class="sapUiSmallMarginTop" />
                 </VBox>
@@ -51,7 +51,7 @@
                         id="arabicKeyboard"
                         layout="arabic"
                         autoType="true"
-                        targetInput="arabicInput"
+                        controls="arabicInput"
                         class="sapUiSmallMarginTop" />
                     <Text text="RTL layout with Arabic-Indic numeral shift layer" class="sapUiSmallMarginTop" />
                 </VBox>

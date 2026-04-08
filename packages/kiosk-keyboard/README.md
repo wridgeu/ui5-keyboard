@@ -44,7 +44,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Input Detection](#input-detection)
 - [Interop Cookbook](#interop-cookbook)
 - [Auto-Type](#auto-type)
-- [inputIds](#inputids)
+- [controls](#controls)
 - [Custom Target Resolver](#custom-target-resolver)
 - [Mobile Keyboard Detection](#mobile-keyboard-detection)
 - [Shift & Caps Lock](#shift--caps-lock)
@@ -280,7 +280,7 @@ Use the control in your view or controller as shown in [Quick Start](#quick-star
 ```xml
 <mvc:View xmlns:kiosk="ui5.kiosk" xmlns:m="sap.m" xmlns:mvc="sap.ui.core.mvc">
   <m:Input id="myInput" value="{/text}" />
-  <kiosk:KioskKeyboard targetInput="myInput" />
+  <kiosk:KioskKeyboard controls="myInput" />
 </mvc:View>
 ```
 
@@ -292,7 +292,7 @@ import Input from "sap/m/Input";
 
 const input = new Input({ value: "" });
 const keyboard = new KioskKeyboard({
-  targetInput: input,
+  controls: [input.getId()],
 });
 ```
 
@@ -348,25 +348,25 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 | `autoType`       | `boolean`                  | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                                                           |
 | `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                     |
 | `fKeyMode`       | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action). |
-| `inputIds`       | `string[]`                 | `[]`        | Input control IDs for multi-input targeting. See [inputIds](#inputids).                                                                     |
+| `controls`       | `string[]`                 | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                             |
 
 ### Associations
 
 | Association       | Type                  | Cardinality | Description                                                  |
 | ----------------- | --------------------- | ----------- | ------------------------------------------------------------ |
-| `targetInput`     | `sap.ui.core.Control` | 0..1        | The input control to type into (e.g. `sap.m.Input`).         |
 | `ariaLabelledBy`  | `sap.ui.core.Control` | 0..n        | Additional labels announced by assistive technologies.       |
 | `ariaDescribedBy` | `sap.ui.core.Control` | 0..n        | Additional descriptions announced by assistive technologies. |
 
 ### Events
 
-| Event                | Parameters                                                                      | Description                                                                                                                                |
-| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
-| `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                                                                      |
-| `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
-| `afterOpen`          | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
-| `afterClose`         | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
+| Event                 | Parameters                                                                      | Description                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `keyPress`            | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
+| `layoutChange`        | `layout: string`                                                                | Fired when the active layout changes.                                                                                                      |
+| `keyboardTypeChange`  | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
+| `afterOpen`           | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
+| `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
+| `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                              |
 
 ### Public Methods
 
@@ -382,11 +382,12 @@ KioskKeyboard-specific public instance methods (excluding inherited UI5 base cla
 | `resetKeyboardType()`      | `this`            | Clear explicit lock, re-enable auto-type.                                                                                                                             |
 | `setAutoShow(autoShow)`    | `this`            | Enable/disable focus-driven open/close behavior (docked mode).                                                                                                        |
 | `setDocked(docked)`        | `this`            | Enable/disable docked positioning and related open state handling.                                                                                                    |
-| `setTargetInput(target)`   | `this`            | Set the target input (no re-render).                                                                                                                                  |
+| `setControls(ids)`         | `this`            | Set the list of control IDs to target (no re-render).                                                                                                                 |
+| `getControls()`            | `string[]`        | Get the current list of control IDs.                                                                                                                                  |
+| `getActiveControl()`       | `Control \| null` | Resolve the currently active (last focused) target control instance.                                                                                                  |
 | `show()`                   | `this`            | Open the docked keyboard. Idempotent.                                                                                                                                 |
 | `close()`                  | `this`            | Close the docked keyboard. Idempotent.                                                                                                                                |
 | `isOpen()`                 | `boolean`         | Whether the docked keyboard is currently open.                                                                                                                        |
-| `getTargetControl()`       | `Control \| null` | Resolve the associated target input to a control instance (typed helper).                                                                                             |
 | `refreshResponsiveState()` | `this`            | Recompute responsive width/height classes after runtime CSS changes that do not trigger a reliable resize callback. Usually not needed for normal container resizing. |
 | `setTargetResolver(fn)`    | `this`            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear.                                                                               |
 | `getTargetResolver()`      | `Function\|null`  | Returns the instance-level target resolver, or `null`.                                                                                                                |
@@ -506,12 +507,12 @@ The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-c
 ```xml
 <!-- Automatic: flex parent constrains the keyboard -->
 <VBox height="250px">
-  <kiosk:KioskKeyboard targetInput="myInput" />
+  <kiosk:KioskKeyboard controls="myInput" />
 </VBox>
 
 <!-- Manual CSS needed: Popover wraps content in height: auto divs that break propagation -->
 <Popover contentWidth="24rem" contentHeight="18rem">
-  <kiosk:KioskKeyboard targetInput="myInput" class="myConstrainedKeyboard" />
+  <kiosk:KioskKeyboard controls="myInput" class="myConstrainedKeyboard" />
 </Popover>
 <!-- .myConstrainedKeyboard { height: 15rem; } -->
 ```
@@ -628,7 +629,7 @@ KioskKeyboard.registerLayout("qwerty-fk", [fkeyRow, ...qwertyBase]);
 ```
 
 ```xml
-<kiosk:KioskKeyboard layout="qwerty-fk" targetInput="myInput" />
+<kiosk:KioskKeyboard layout="qwerty-fk" controls="myInput" />
 ```
 
 See [Custom F-key variant layouts](#custom-f-key-variant-layouts) for more details.
@@ -638,7 +639,7 @@ See [Custom F-key variant layouts](#custom-f-key-variant-layouts) for more detai
 Use the `fkeys` layout directly for an F-key-only keyboard (F1-F12 + Enter):
 
 ```xml
-<kiosk:KioskKeyboard layout="fkeys" targetInput="myInput" />
+<kiosk:KioskKeyboard layout="fkeys" controls="myInput" />
 ```
 
 ### Navigation keys
@@ -646,7 +647,7 @@ Use the `fkeys` layout directly for an F-key-only keyboard (F1-F12 + Enter):
 Use the `nav` layout for directional/navigation keys (Arrow keys, Home/End, PageUp/PageDown):
 
 ```xml
-<kiosk:KioskKeyboard layout="nav" targetInput="myInput" />
+<kiosk:KioskKeyboard layout="nav" controls="myInput" />
 ```
 
 Compose a variant with the shared `nav-row` module for integrated top-row navigation (same pattern as the F-key composition above).
@@ -703,7 +704,7 @@ To work around this limitation, the component has built-in action handlers for e
 All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the target input but have no built-in browser action. The `keyPress` event is where the consuming app handles those keys.
 
 ```xml
-<kiosk:KioskKeyboard layout="qwerty" fKeyMode="Native" targetInput="myInput" />
+<kiosk:KioskKeyboard layout="qwerty" fKeyMode="Native" controls="myInput" />
 ```
 
 Handle other F-keys via the `keyPress` event:
@@ -846,7 +847,7 @@ With `mobileKeyboard="Auto"` (the default), coarse-pointer devices intentionally
 
 When `autoShow="true"` (requires `docked="true"`), the keyboard automatically:
 
-1. **Opens** when any `<input>` or `<textarea>` on the page receives focus, setting it as the target. When `inputIds` is set, only the listed inputs trigger open.
+1. **Opens** when any `<input>` or `<textarea>` on the page receives focus, setting it as the target. When `controls` is set, only the listed inputs trigger open.
 2. **Closes** when focus leaves all inputs (uses `FocusEvent.relatedTarget` for synchronous close decisions, with a one-tick deferred fallback when `relatedTarget` is `null` during browser/shadow-DOM transitions).
 3. **Stays open** when focus moves between the keyboard and an input, or between two inputs.
 
@@ -860,7 +861,7 @@ When multiple `KioskKeyboard` instances exist, auto-show claim arbitration only 
 
 For routed applications with cached views, still prefer one of these patterns for predictable behavior:
 
-- Scope each keyboard with `inputIds` to its own form fields.
+- Scope each keyboard with `controls` to its own form fields.
 - Disable `autoShow` when a route/view becomes inactive (`setAutoShow(false)`) and re-enable on route enter.
 
 ### Input Detection
@@ -890,7 +891,7 @@ still used for focus return behavior when Escape is pressed on a virtual key.
 
 **2. UI5 layer: what the keyboard types into:**
 
-Once an `<input>` or `<textarea>` receives focus, the keyboard uses `Element.closestTo(domElement)` to resolve the owning UI5 control. This resolved control becomes the `targetInput`. For typing to work, the control must:
+Once an `<input>` or `<textarea>` receives focus, the keyboard uses `Element.closestTo(domElement)` to resolve the owning UI5 control. This resolved control becomes the active target. For typing to work, the control must:
 
 | Requirement     | Method/Property                                                                                                   | Used for                                                                      |
 | --------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -909,7 +910,7 @@ If your custom control renders a native `<input>` as its focus DOM ref and is re
 ```ts
 // Custom element that doesn't auto-detect
 myCustomInput.attachBrowserEvent("focusin", () => {
-  keyboard.setTargetInput(myCustomInput);
+  keyboard.setControls([myCustomInput.getId()]);
   keyboard.show();
 });
 myCustomInput.attachBrowserEvent("focusout", () => {
@@ -921,18 +922,18 @@ myCustomInput.attachBrowserEvent("focusout", () => {
 
 ### 1. Integration Style
 
-- Declarative (XML properties like `targetInput`, `inputIds`, `autoShow`, `autoType`) is recommended for standard UI5 forms.
-- Imperative (`setTargetInput()`, `show()`, `close()`) is recommended for dynamic targets, custom controls, and web component bridges.
+- Declarative (XML properties like `controls`, `autoShow`, `autoType`) is recommended for standard UI5 forms.
+- Imperative (`setControls()`, `show()`, `close()`) is recommended for dynamic targets, custom controls, and web component bridges.
 - Mixing both is valid: use declarative defaults, then override imperatively for edge flows.
 
 ### 2. Standard UI5 Controls
 
-Use `sap.m.Input`, `sap.m.TextArea`, or `sap.m.StepInput` with `targetInput` (single field) or `inputIds` (form fields):
+Use `sap.m.Input`, `sap.m.TextArea`, or `sap.m.StepInput` with the `controls` property (single or multiple field IDs):
 
 ```xml
 <m:Input id="firstName" />
 <m:Input id="lastName" />
-<kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" inputIds="firstName,lastName" />
+<kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" controls="firstName,lastName" />
 ```
 
 ### 3. Custom UI5 Controls
@@ -946,7 +947,7 @@ For auto-show + typing to work, the control should:
 Minimal programmatic fallback:
 
 ```ts
-keyboard.setTargetInput(myCustomControl);
+keyboard.setControls([myCustomControl.getId()]);
 keyboard.show();
 ```
 
@@ -980,7 +981,7 @@ Programmatic bridge pattern:
 
 ```ts
 myHost.attachBrowserEvent("focusin", () => {
-  keyboard.setTargetInput(myUi5WrapperControl);
+  keyboard.setControls([myUi5WrapperControl.getId()]);
   keyboard.show();
 });
 
@@ -991,8 +992,8 @@ myHost.attachBrowserEvent("focusout", () => {
 
 ### 5. Do and Don't
 
-- Do use `inputIds` for multi-field forms
-- Do set `targetInput` explicitly for custom/non-standard integrations
+- Do use `controls` for single or multi-field forms
+- Do call `setControls()` explicitly for custom/non-standard integrations
 - Don't rely on implicit auto-detection for arbitrary shadow-hosted inputs
 - Don't assume `afterOpen`/`afterClose` are CSS transition-end events
 
@@ -1034,42 +1035,54 @@ kb.isKeyboardTypeExplicit(); // false
 
 ---
 
-## inputIds
+## controls
 
-The `inputIds` property provides declarative multi-input targeting. Instead of manually calling `setTargetInput()` when focus changes, list all relevant input IDs and the keyboard will automatically target whichever one last received focus.
+The `controls` property provides declarative input targeting. List one or more input control IDs and the keyboard will automatically target whichever one last received focus.
+
+**Single input:**
+
+```xml
+<m:Input id="myInput" />
+<kiosk:KioskKeyboard controls="myInput" />
+```
+
+**Multiple inputs in a form:**
 
 ```xml
 <m:Input id="firstName" />
 <m:Input id="lastName" />
 <m:Input id="email" />
 
-<kiosk:KioskKeyboard inputIds="firstName,lastName,email" />
+<kiosk:KioskKeyboard controls="firstName,lastName,email" />
 ```
 
 **How it works:**
 
 1. The keyboard attaches a focus delegation to each resolved control.
-2. When any of them receives focus, the keyboard sets it as the `targetInput`. In docked + `autoShow` mode, the keyboard also opens automatically.
-3. When `autoShow` is active, `inputIds` acts as a filter: only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
+2. When any of them receives focus, the keyboard sets it as the active target. In docked + `autoShow` mode, the keyboard also opens automatically.
+3. When `autoShow` is active, `controls` acts as a filter: only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
 4. IDs are resolved against the parent View first (view-local IDs), then globally, safe for XML views where IDs are prefixed.
 5. **Composite controls** (e.g. `sap.m.StepInput`) are supported: when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
-
-**`inputIds` vs `targetInput`:**
-
-| Use case                              | Approach                                |
-| ------------------------------------- | --------------------------------------- |
-| Single input                          | `targetInput="myInput"`                 |
-| Multiple inputs in a form             | `inputIds="field1,field2,field3"`       |
-| Dynamic input (determined at runtime) | `setTargetInput(control)` in controller |
-
-When `inputIds` is set, there is no need to also set `targetInput`; the keyboard updates the target association automatically based on focus.
 
 **TypeScript:**
 
 ```ts
 new KioskKeyboard({
-  inputIds: ["firstName", "lastName", "email"],
+  controls: ["firstName", "lastName", "email"],
 });
+```
+
+To retrieve the currently active (last focused) control:
+
+```ts
+const active: Control | null = keyboard.getActiveControl();
+```
+
+For fully dynamic targeting at runtime, call `setControls()` imperatively:
+
+```ts
+keyboard.setControls([myDynamicControl.getId()]);
+keyboard.show();
 ```
 
 ---
@@ -1267,11 +1280,11 @@ The callback receives the focused `HTMLElement` (the host element / DOM ref of t
 
 The `mobileKeyboard` property controls whether the KioskKeyboard or the native on-screen keyboard is used.
 
-| Value      | Behavior                                                                                | Use when                                         |
-| ---------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.** | Dedicated kiosk terminal (no physical keyboard)  |
-| `"Native"` | Always defer to the native keyboard; KioskKeyboard does not open on focus.              | Desktop/mobile app where desktops have keyboards |
-| `"Auto"`   | Desktop browsers → use KioskKeyboard. Phone/tablet → defer to native.                   | Kiosk terminal that also serves mobile visitors  |
+| Value      | Behavior                                                                   | Use when                                         |
+| ---------- | -------------------------------------------------------------------------- | ------------------------------------------------ |
+| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. | Dedicated kiosk terminal (no physical keyboard)  |
+| `"Native"` | Always defer to the native keyboard; KioskKeyboard does not open on focus. | Desktop/mobile app where desktops have keyboards |
+| `"Auto"`   | Desktop browsers → use KioskKeyboard. Phone/tablet → defer to native.      | Kiosk terminal that also serves mobile visitors  |
 
 > **Note:** `"Auto"` relies on `sap/ui/Device` for device detection. Browsers cannot detect whether a physical keyboard is attached, so on any desktop browser, including a regular laptop, the virtual keyboard **will** appear. Use `"Native"` if that is not desired.
 
@@ -1739,7 +1752,7 @@ npm run typecheck
 
 - Ensure both `docked="true"` and `autoShow="true"` are set
 - The focused element must be a text-entry `<input>` or `<textarea>` owned by a UI5 control (`Element.closestTo()` must resolve)
-- If `inputIds` is set, only the listed inputs trigger auto-show
+- If `controls` is set, only the listed inputs trigger auto-show
 - Check the browser console for `Log.warning` messages from `ui5.kiosk.KioskKeyboard`
 
 **Typing does not update the model/binding:**

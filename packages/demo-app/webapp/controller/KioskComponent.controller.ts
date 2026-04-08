@@ -55,7 +55,7 @@ export default class KioskComponent extends BaseController {
     const kb = KioskComponent._keyboard;
     if (kb) {
       const input = this.byId("compInput") as Input;
-      kb.setTargetInput(input);
+      kb.setControls([input.getId()]);
       kb.show();
       this.getStateModel().setProperty("/kioskIsOpen", kb.isOpen());
     }
@@ -100,7 +100,7 @@ export default class KioskComponent extends BaseController {
     if (kb) {
       const input = this.byId("compInput") as Input;
       if (input) {
-        kb.setTargetInput(input);
+        kb.setControls([input.getId()]);
       }
       this.getStateModel().setProperty("/kioskIsOpen", kb.isOpen());
     }

@@ -82,11 +82,11 @@ describe("kiosk-keyboard web component", () => {
       await input.click();
       await input.clearValue();
 
-      // Click the "a" key in the keyboard with for="text-input"
+      // Click the "a" key in the keyboard with controls="text-input"
       const value = await browser.execute(() => {
         const kbs = document.querySelectorAll("kiosk-keyboard");
         for (const kb of kbs) {
-          if (kb.getAttribute("for") === "text-input") {
+          if (kb.getAttribute("controls") === "text-input") {
             const key = kb.shadowRoot?.querySelector('[data-key="a"]');
             if (key) {
               (key as HTMLElement).click();

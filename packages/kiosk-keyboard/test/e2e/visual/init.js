@@ -49,7 +49,7 @@ sap.ui.define(
     // 2. With Input Target
     var input = new Input({ value: "Hello World", width: "300px" });
     input.placeAt("input-area");
-    var kbInput = new KioskKeyboard({ targetInput: input });
+    var kbInput = new KioskKeyboard({ controls: [input.getId()] });
     kbInput.placeAt("kb-with-input");
 
     // 3. Numpad
@@ -88,7 +88,7 @@ sap.ui.define(
     // 10. Shift / CapsLock state
     var shiftInput = new Input({ value: "Test shift", width: "300px" });
     shiftInput.placeAt("input-shift");
-    var kbShift = new KioskKeyboard({ targetInput: shiftInput });
+    var kbShift = new KioskKeyboard({ controls: [shiftInput.getId()] });
     kbShift.placeAt("kb-shift");
 
     // 11. Special characters layout

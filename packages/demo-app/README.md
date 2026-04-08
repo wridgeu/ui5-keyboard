@@ -110,7 +110,7 @@ Landing page linking to all kiosk demos.
 ### Multi-Keyboard (`#/kiosk/multi-keyboard`)
 
 - Two independent keyboard instances on one page
-- Isolation through `inputIds` targeting
+- Isolation through `controls` targeting
 - Docked full keyboard + inline numpad working simultaneously
 - Shared-target ref-count visualization for `inputmode` suppression (open A/B, close order)
 
@@ -124,12 +124,12 @@ Landing page linking to all kiosk demos.
 - Dialog without embedded keyboard (docked keyboard auto-closes/reopens with focus changes)
 - Dialog with embedded keyboard
 
-### Input IDs Targeting (`#/kiosk/input-ids`)
+### Controls Targeting (`#/kiosk/input-ids`)
 
-- Selective targeting using `inputIds`
+- Selective targeting using `controls`
 - Mixed target controls (`Input`, `StepInput`)
-- Native UI5 Web Component input (`@ui5/webcomponents/dist` XML namespace) targeted directly via `inputIds`
-- Custom Web Component input targeted directly via `inputIds` (UI5 wrapper control with `setValue` bridge)
+- Native UI5 Web Component input (`@ui5/webcomponents/dist` XML namespace) targeted directly via `controls`
+- Custom Web Component input targeted directly via `controls` (UI5 wrapper control with `setValue` bridge)
 - Native custom element usage in XML via `sap.ui.core.webc.WebComponent` wrapper controls
 
 ### Programmatic Control (`#/kiosk/programmatic`)
@@ -317,7 +317,7 @@ See the [webc package README](../kiosk-keyboard-webc/README.md#public-css-custom
 - `#/kiosk` kiosk demo hub
 - `#/kiosk/docked` docked + inline numpad
 - `#/kiosk/popover` popover keyboard
-- `#/kiosk/input-ids` selective targeting + custom element bridge
+- `#/kiosk/input-ids` controls targeting + custom element bridge
 - `#/kiosk/programmatic` imperative API and runtime layouts
 - `#/kiosk/component` persistent component-level keyboard
 - `#/kiosk/form-workflow` check-in workflow

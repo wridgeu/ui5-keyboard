@@ -27,7 +27,7 @@
             <Panel headerText="Selective Input Targeting" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <MessageStrip
-                        text="The keyboard targets inputs A, B, StepInput, and the Web Component inputs via inputIds. Focusing C or D does not switch the target. Toggle autoType to switch automatically to Numpad for StepInput and back to Full for text inputs."
+                        text="The keyboard targets inputs A, B, StepInput, and the Web Component inputs via controls. Focusing C or D does not switch the target. Toggle autoType to switch automatically to Numpad for StepInput and back to Full for text inputs."
                         type="Information"
                         showIcon="true" />
                     <HBox class="sapUiSmallMarginTop">
@@ -91,7 +91,7 @@
                 docked="true"
                 autoShow="true"
                 autoType="{inputIds>/kioskAutoType}"
-                inputIds="inputA,inputB,stepInputTarget,ui5WebcInput,wcInputTarget"
+                controls="inputA,inputB,stepInputTarget,ui5WebcInput,wcInputTarget"
                 keyPress=".onKeyPress"
                 keyboardTypeChange=".onKeyboardTypeChange"
                 ariaLabel="Selective Keyboard" />

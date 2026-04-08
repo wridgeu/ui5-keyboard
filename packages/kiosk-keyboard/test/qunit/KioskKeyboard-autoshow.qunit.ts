@@ -116,7 +116,7 @@ QUnit.test("autoShow ignores raw DOM input without UI5 control", async (assert) 
   await nextUIUpdate();
 
   assert.notOk(kb.isOpen(), "Keyboard does not open for raw DOM input");
-  assert.strictEqual(kb.getTargetInput(), null, "No target input was set");
+  assert.strictEqual(kb.getActiveControl(), null, "No target input was set");
 
   kb.destroy();
 });
@@ -178,7 +178,7 @@ QUnit.test(
     await nextUIUpdate();
 
     assert.ok(kb.isOpen(), "Keyboard stays open after deferred close check");
-    assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switched to second input");
+    assert.strictEqual(kb.getActiveControl()?.getId(), input2.getId(), "Target switched to second input");
 
     input1.destroy();
     input2.destroy();
@@ -240,7 +240,7 @@ QUnit.test("Auto-show skips input targeted by another keyboard", async (assert) 
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input,
+    controls: [input.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -269,7 +269,7 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: claimedInput,
+    controls: [claimedInput.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -284,7 +284,7 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
   await nextUIUpdate();
 
   assert.ok(dockedKb.isOpen(), "Docked keyboard opens for unclaimed input");
-  assert.strictEqual(dockedKb.getTargetInput(), freeInput.getId(), "Target set to unclaimed input");
+  assert.strictEqual(dockedKb.getActiveControl()?.getId(), freeInput.getId(), "Target set to unclaimed input");
 
   claimedInput.destroy();
   freeInput.destroy();
@@ -298,7 +298,7 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
 
   const hiddenKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input,
+    controls: [input.getId()],
     visible: false,
   });
   hiddenKb.placeAt("qunit-fixture");
@@ -314,7 +314,7 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
   await nextUIUpdate();
 
   assert.ok(dockedKb.isOpen(), "Docked keyboard opens even when hidden keyboard targets the input");
-  assert.strictEqual(dockedKb.getTargetInput(), input.getId(), "Docked keyboard claims the focused input");
+  assert.strictEqual(dockedKb.getActiveControl()?.getId(), input.getId(), "Docked keyboard claims the focused input");
 
   input.destroy();
   hiddenKb.destroy();
@@ -412,7 +412,7 @@ QUnit.test("Destroying the claiming keyboard frees the input for auto-show", asy
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input,
+    controls: [input.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -447,7 +447,7 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input1,
+    controls: [input1.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -465,7 +465,7 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
   (input1.getFocusDomRef() as HTMLElement).blur();
   await nextUIUpdate();
 
-  inlineKb.setTargetInput(input2);
+  inlineKb.setControls([input2.getId()]);
 
   (input1.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
@@ -485,7 +485,7 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: claimedInput,
+    controls: [claimedInput.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -511,7 +511,7 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
   dockedKb.destroy();
 });
 
-QUnit.test("inputIds rebinds delegates after control recreation in autoShow flow", async (assert) => {
+QUnit.test("controls rebinds delegates after control recreation in autoShow flow", async (assert) => {
   const box = new VBox("churn-box");
   box.placeAt("qunit-fixture");
 
@@ -521,7 +521,7 @@ QUnit.test("inputIds rebinds delegates after control recreation in autoShow flow
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    inputIds: ["churn-input"],
+    controls: ["churn-input"],
   });
   await placeAndWait(kb);
 
@@ -540,13 +540,13 @@ QUnit.test("inputIds rebinds delegates after control recreation in autoShow flow
   box.addItem(input2);
   await nextUIUpdate();
 
-  // Focus the new input - _onDocumentFocusIn must re-resolve inputIds
+  // Focus the new input - _onDocumentFocusIn must re-resolve controls
   // and attach the delegate to the new instance automatically
   (input2.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
 
   assert.ok(kb.isOpen(), "Keyboard reopens for recreated input");
-  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target updated to recreated input");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input2.getId(), "Target updated to recreated input");
 
   box.destroy();
   kb.destroy();

@@ -372,7 +372,7 @@ packages/demo-app/
       KioskDocked.controller.ts       Docked keyboard demo
       KioskProgrammatic.controller.ts Programmatic show/close demo
       KioskPopover.controller.ts      Popover integration demo
-      KioskInputIds.controller.ts     Multi-input targeting demo
+      KioskControls.controller.ts     Multi-input targeting demo
       KioskComponent.controller.ts    Component-level persistent keyboard demo
     view/
       App.view.xml          Root shell container
@@ -382,7 +382,7 @@ packages/demo-app/
       KioskDocked.view.xml        Docked keyboard showcase
       KioskProgrammatic.view.xml  Programmatic control showcase
       KioskPopover.view.xml       Popover integration showcase
-      KioskInputIds.view.xml      inputIds showcase
+      KioskControls.view.xml      controls showcase
       KioskComponent.view.xml     Component-level keyboard showcase
 ```
 

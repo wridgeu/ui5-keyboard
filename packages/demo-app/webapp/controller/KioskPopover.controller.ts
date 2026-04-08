@@ -66,7 +66,7 @@ export default class KioskPopover extends BaseController {
       if (variant.styleClass) keyboard.addStyleClass(variant.styleClass);
       this._keyboards.set(key, keyboard);
     }
-    keyboard.setTargetInput(input);
+    keyboard.setControls([input.getId()]);
 
     let popover = this._popovers.get(key);
     if (!popover) {

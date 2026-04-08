@@ -49,7 +49,7 @@
                 id="dialogDockedKeyboard"
                 docked="true"
                 autoShow="true"
-                inputIds="pageInput"
+                controls="pageInput"
                 keyPress=".onKeyPress"
                 afterOpen=".onDockedAfterOpen"
                 afterClose=".onDockedAfterClose"

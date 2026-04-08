@@ -114,20 +114,19 @@ This design was chosen for:
 
 ### Reactive Properties
 
-| Property          | Type    | Default     | Description                                 |
-| ----------------- | ------- | ----------- | ------------------------------------------- |
-| `layout`          | string  | `""`        | Layout name                                 |
-| `keyboard-type`   | string  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`        |
-| `docked`          | boolean | `false`     | Fixed-position at viewport bottom           |
-| `auto-show`       | boolean | `false`     | Auto open/close on input focus              |
-| `auto-type`       | boolean | `false`     | Auto-detect keyboard type from input        |
-| `disabled`        | boolean | `false`     | Disables key interaction                    |
-| `for`             | string  | `""`        | Target element ID                           |
-| `input-ids`       | string  | `""`        | Comma-separated IDs for auto-show filtering |
-| `accessible-name` | string  | `""`        | Custom ARIA label                           |
-| `mobile-keyboard` | string  | `"Auto"`    | `"Auto"`, `"Native"`, `"Custom"`            |
-| `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`           |
-| `open`            | boolean | `false`     | Opens/closes docked keyboard                |
+| Property          | Type    | Default     | Description                                               |
+| ----------------- | ------- | ----------- | --------------------------------------------------------- |
+| `layout`          | string  | `""`        | Layout name                                               |
+| `keyboard-type`   | string  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`                      |
+| `docked`          | boolean | `false`     | Fixed-position at viewport bottom                         |
+| `auto-show`       | boolean | `false`     | Auto open/close on input focus                            |
+| `auto-type`       | boolean | `false`     | Auto-detect keyboard type from input                      |
+| `disabled`        | boolean | `false`     | Disables key interaction                                  |
+| `controls`        | string  | `""`        | Comma-separated IDs for targeting and auto-show filtering |
+| `accessible-name` | string  | `""`        | Custom ARIA label                                         |
+| `mobile-keyboard` | string  | `"Auto"`    | `"Auto"`, `"Native"`, `"Custom"`                          |
+| `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`                         |
+| `open`            | boolean | `false`     | Opens/closes docked keyboard                              |
 
 Internal reactive properties (no HTML attribute, trigger re-render):
 
@@ -329,7 +328,7 @@ focusin event (capture)
   +-- Guard: disabled, not docked, autoShow off → bail
   +-- Guard: focus on keyboard itself → bail
   +-- Resolve: resolveInputOrTextarea(target)
-  +-- Guard: inputIds filter (with UI5 prefixed ID support)
+  +-- Guard: controls filter (with UI5 prefixed ID support)
   +-- Guard: _isTargetOfOther() → bail
   +-- Auto-detect keyboard type (if autoType)
   +-- Set target, show()
@@ -349,9 +348,9 @@ focusout event (capture)
 
 The deferred close via `requestAnimationFrame` handles the case where focus briefly leaves the input during a click on a keyboard key before the key's `mousedown` fires.
 
-### InputIds Matching
+### Controls Matching
 
-`_matchesInputIds()` supports UI5-style prefixed IDs by walking up to 5 DOM levels and stripping the `*--` view prefix pattern (e.g., `container-app---view--myInput` matches `myInput`).
+`_matchesControls()` supports UI5-style prefixed IDs by walking up to 5 DOM levels and stripping the `*--` view prefix pattern (e.g., `container-app---view--myInput` matches `myInput`).
 
 ## Keyboard Navigation
 
@@ -555,7 +554,7 @@ Consumers who want selective layout loading can import the main entry (which inc
 | Multiple keyboard instances          | Static `_instances` set, `_isTargetOfOther()` isolation, ref-counted inputmode              |
 | Custom resolver crash                | try/catch with fallback to built-in resolver                                                |
 | Layout switch in Numpad/Numeric mode | `{layout:*}` keys switch to the named layout and change keyboardType to Full                |
-| UI5-prefixed DOM IDs                 | `_matchesInputIds()` strips `*--` prefix pattern                                            |
+| UI5-prefixed DOM IDs                 | `_matchesControls()` strips `*--` prefix pattern                                            |
 | Shift auto-release vs Caps Lock      | Only one-shot shift auto-releases, caps lock is sticky                                      |
 | i18n bundle not loaded yet           | English defaults used until async bundle resolves                                           |
 | Physical keyboard highlight on blur  | `blur` listener clears all highlights                                                       |

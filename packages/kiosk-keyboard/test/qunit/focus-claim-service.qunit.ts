@@ -48,15 +48,15 @@ const TypedInput = Control.extend("test.FcsTypedInput", {
 
 function createService(
   overrides: {
-    getInputIds?: () => string[];
-    getResolvedInputControlIds?: () => ReadonlySet<string>;
+    getControls?: () => string[];
+    getResolvedControlIds?: () => ReadonlySet<string>;
     shouldDeferToNative?: () => boolean;
     isTargetOfOther?: (inputId: string) => boolean;
   } = {},
 ): FocusClaimService {
   return new FocusClaimService(
-    overrides.getInputIds ?? (() => []),
-    overrides.getResolvedInputControlIds ?? (() => new Set()),
+    overrides.getControls ?? (() => []),
+    overrides.getResolvedControlIds ?? (() => new Set()),
     overrides.shouldDeferToNative ?? (() => false),
     overrides.isTargetOfOther ?? (() => false),
   );
@@ -211,63 +211,63 @@ QUnit.test("Passes control ID to isTargetOfOther callback", async (assert) => {
   input.destroy();
 });
 
-QUnit.test("Claims any textual input when inputIds is empty", async (assert) => {
+QUnit.test("Claims any textual input when controls is empty", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
   await nextUIUpdate();
 
-  const svc = createService({ getInputIds: () => [] });
+  const svc = createService({ getControls: () => [] });
   const result = svc.resolveClaimableControl(input.getFocusDomRef());
   assert.ok(result instanceof Control, "Returns UI5 control in claim-all mode");
 
   input.destroy();
 });
 
-QUnit.test("Claims input whose ID is in inputIds", async (assert) => {
+QUnit.test("Claims input whose ID is in controls", async (assert) => {
   const input = new Input("fcs-allowed");
   input.placeAt("qunit-fixture");
   await nextUIUpdate();
 
   const svc = createService({
-    getInputIds: () => ["fcs-allowed"],
-    getResolvedInputControlIds: () => new Set(["fcs-allowed"]),
+    getControls: () => ["fcs-allowed"],
+    getResolvedControlIds: () => new Set(["fcs-allowed"]),
   });
 
   const result = svc.resolveClaimableControl(input.getFocusDomRef());
-  assert.ok(result instanceof Control, "Input in inputIds is claimed");
+  assert.ok(result instanceof Control, "Input in controls is claimed");
 
   input.destroy();
 });
 
-QUnit.test("Rejects input whose ID is not in inputIds", async (assert) => {
+QUnit.test("Rejects input whose ID is not in controls", async (assert) => {
   const input = new Input("fcs-excluded");
   input.placeAt("qunit-fixture");
   await nextUIUpdate();
 
   const svc = createService({
-    getInputIds: () => ["some-other-id"],
-    getResolvedInputControlIds: () => new Set(["some-other-id"]),
+    getControls: () => ["some-other-id"],
+    getResolvedControlIds: () => new Set(["some-other-id"]),
   });
 
-  assert.strictEqual(svc.resolveClaimableControl(input.getFocusDomRef()), null, "Input not in inputIds rejected");
+  assert.strictEqual(svc.resolveClaimableControl(input.getFocusDomRef()), null, "Input not in controls rejected");
 
   input.destroy();
 });
 
 // ──────────────────────────────────────────────────
-// resolveInputIdsAncestor
+// resolveControlsAncestor
 // ──────────────────────────────────────────────────
 
-QUnit.module("focus-claim-service - resolveInputIdsAncestor");
+QUnit.module("focus-claim-service - resolveControlsAncestor");
 
 QUnit.test("Returns control when its own ID matches", (assert) => {
   const ctrl = createControl("fcs-self");
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(["fcs-self"]),
+    getResolvedControlIds: () => new Set(["fcs-self"]),
   });
 
-  assert.strictEqual(svc.resolveInputIdsAncestor(ctrl), ctrl, "Direct ID match");
+  assert.strictEqual(svc.resolveControlsAncestor(ctrl), ctrl, "Direct ID match");
 
   ctrl.destroy();
 });
@@ -278,10 +278,10 @@ QUnit.test("Traverses to parent when parent ID matches", (assert) => {
   parent.addDependent(child);
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(["fcs-parent"]),
+    getResolvedControlIds: () => new Set(["fcs-parent"]),
   });
 
-  assert.strictEqual(svc.resolveInputIdsAncestor(child), parent, "Parent match via traversal");
+  assert.strictEqual(svc.resolveControlsAncestor(child), parent, "Parent match via traversal");
 
   parent.destroy();
 });
@@ -294,10 +294,10 @@ QUnit.test("Traverses multiple ancestor levels", (assert) => {
   mid.addDependent(child);
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(["fcs-gp"]),
+    getResolvedControlIds: () => new Set(["fcs-gp"]),
   });
 
-  assert.strictEqual(svc.resolveInputIdsAncestor(child), grandparent, "Grandparent match");
+  assert.strictEqual(svc.resolveControlsAncestor(child), grandparent, "Grandparent match");
 
   grandparent.destroy();
 });
@@ -310,10 +310,10 @@ QUnit.test("Returns closest matching ancestor when multiple ancestors match", (a
   parent.addDependent(child);
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(["fcs-outer", "fcs-inner"]),
+    getResolvedControlIds: () => new Set(["fcs-outer", "fcs-inner"]),
   });
 
-  assert.strictEqual(svc.resolveInputIdsAncestor(child), parent, "Returns nearest matching ancestor");
+  assert.strictEqual(svc.resolveControlsAncestor(child), parent, "Returns nearest matching ancestor");
 
   grandparent.destroy();
 });
@@ -324,10 +324,10 @@ QUnit.test("Returns null when no ancestor matches", (assert) => {
   parent.addDependent(child);
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(["unrelated-id"]),
+    getResolvedControlIds: () => new Set(["unrelated-id"]),
   });
 
-  assert.strictEqual(svc.resolveInputIdsAncestor(child), null, "No matching ancestor");
+  assert.strictEqual(svc.resolveControlsAncestor(child), null, "No matching ancestor");
 
   parent.destroy();
 });
@@ -336,28 +336,28 @@ QUnit.test("Returns null when resolved set is empty", (assert) => {
   const ctrl = createControl("fcs-empty-set");
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(),
+    getResolvedControlIds: () => new Set(),
   });
 
-  assert.strictEqual(svc.resolveInputIdsAncestor(ctrl), null, "Empty resolved set returns null");
+  assert.strictEqual(svc.resolveControlsAncestor(ctrl), null, "Empty resolved set returns null");
 
   ctrl.destroy();
 });
 
 // ──────────────────────────────────────────────────
-// isInInputIds
+// isInControls
 // ──────────────────────────────────────────────────
 
-QUnit.module("focus-claim-service - isInInputIds");
+QUnit.module("focus-claim-service - isInControls");
 
 QUnit.test("Returns true when ancestor is in resolved set", (assert) => {
   const ctrl = createControl("fcs-in");
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(["fcs-in"]),
+    getResolvedControlIds: () => new Set(["fcs-in"]),
   });
 
-  assert.ok(svc.isInInputIds(ctrl), "Control found in inputIds");
+  assert.ok(svc.isInControls(ctrl), "Control found in controls");
 
   ctrl.destroy();
 });
@@ -366,10 +366,10 @@ QUnit.test("Returns false when no ancestor matches", (assert) => {
   const ctrl = createControl("fcs-out");
 
   const svc = createService({
-    getResolvedInputControlIds: () => new Set(["other"]),
+    getResolvedControlIds: () => new Set(["other"]),
   });
 
-  assert.notOk(svc.isInInputIds(ctrl), "Control not in inputIds");
+  assert.notOk(svc.isInControls(ctrl), "Control not in controls");
 
   ctrl.destroy();
 });

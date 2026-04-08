@@ -10,15 +10,17 @@ QUnit.module("KioskKeyboard input black-box", {
 });
 
 // ──────────────────────────────────────────────
-// 1. Default typing into targetInput
+// 1. Default typing into active target
 // ──────────────────────────────────────────────
 
 QUnit.test("Typing characters into target sap.m.Input", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
 
   tapKey(kb, "h");
   tapKey(kb, "e");
@@ -40,8 +42,11 @@ QUnit.test("Backspace removes last character", async (assert) => {
   const input = new Input({ value: "abc" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(3, 3);
 
   tapKey(kb, "{backspace}");
   assert.strictEqual(input.getValue(), "ab", "One character removed by backspace");
@@ -57,8 +62,11 @@ QUnit.test("Space key inserts a space character", async (assert) => {
   const input = new Input({ value: "hi" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(2, 2);
 
   tapKey(kb, " ");
   assert.strictEqual(input.getValue(), "hi ", "Space character appended");
@@ -75,8 +83,10 @@ QUnit.test("keyPress preventDefault stops input insertion", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
 
   kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {
     event.preventDefault();

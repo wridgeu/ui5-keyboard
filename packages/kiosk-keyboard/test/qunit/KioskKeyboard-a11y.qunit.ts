@@ -269,13 +269,16 @@ QUnit.test("removeAriaLabelledBy clears attribute after re-render", async (asser
 // aria-controls
 // ──────────────────────────────────────────────
 
-QUnit.test("aria-controls points to targetInput on initial render", async (assert) => {
+QUnit.test("aria-controls points to active target on initial render", async (assert) => {
   const input = new Input("a11y-target");
   input.placeAt("qunit-fixture");
   await nextUIUpdate();
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
+
+  input.focus();
+  await nextUIUpdate();
 
   assert.strictEqual(
     kb.getDomRef()!.getAttribute("aria-controls"),
@@ -287,7 +290,7 @@ QUnit.test("aria-controls points to targetInput on initial render", async (asser
   kb.destroy();
 });
 
-QUnit.test("aria-controls absent when no targetInput", async (assert) => {
+QUnit.test("aria-controls absent when no active target", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -296,19 +299,23 @@ QUnit.test("aria-controls absent when no targetInput", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("aria-controls updates when setTargetInput is called", async (assert) => {
+QUnit.test("aria-controls updates when active target changes via focus", async (assert) => {
   const input1 = new Input("a11y-input1");
   const input2 = new Input("a11y-input2");
   input1.placeAt("qunit-fixture");
   input2.placeAt("qunit-fixture");
   await nextUIUpdate();
 
-  const kb = new KioskKeyboard({ targetInput: input1 });
+  const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId()] });
   await placeAndWait(kb);
+
+  input1.focus();
+  await nextUIUpdate();
 
   assert.strictEqual(kb.getDomRef()!.getAttribute("aria-controls"), input1.getId(), "Initially points to input1");
 
-  kb.setTargetInput(input2);
+  input2.focus();
+  await nextUIUpdate();
   assert.strictEqual(
     kb.getDomRef()!.getAttribute("aria-controls"),
     input2.getId(),

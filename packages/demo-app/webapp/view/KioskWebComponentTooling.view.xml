@@ -46,7 +46,7 @@
                 docked="true"
                 autoShow="true"
                 autoType="true"
-                inputIds="toolingNameInput,toolingEmailInput"
+                controls="toolingNameInput,toolingEmailInput"
                 accessibleName="Tooling Native Keyboard"
                 keyPress=".onKeyPress"
                 layoutChange=".onLayoutChange" />

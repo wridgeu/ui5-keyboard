@@ -18,7 +18,7 @@ Set a fixed `contentHeight` on the Popover so that layout switches do not change
 
 ```xml
 <Popover contentWidth="24rem" contentHeight="18rem">
-  <kiosk:KioskKeyboard targetInput="myInput" />
+  <kiosk:KioskKeyboard controls="myInput" />
 </Popover>
 ```
 

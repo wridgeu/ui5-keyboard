@@ -241,12 +241,12 @@ export interface KeyboardTypeChangeEventDetail {
 }
 
 /**
- * Detail payload for the `target-input-change` event.
+ * Detail payload for the `active-control-change` event.
  *
  * @public
- * @since 0.1.0
+ * @since 0.2.0
  */
-export interface TargetInputChangeEventDetail {
-  /** The new target input element, or `null` if cleared. */
-  targetElement: HTMLInputElement | HTMLTextAreaElement | null;
+export interface ActiveControlChangeEventDetail {
+  /** The new active input element, or `null` if cleared. */
+  activeElement: HTMLInputElement | HTMLTextAreaElement | null;
 }

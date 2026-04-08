@@ -657,7 +657,7 @@ QUnit.test("Unknown layout name falls back to qwerty", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input, layout: "nonexistent-layout" });
+  const kb = new KioskKeyboard({ controls: [input.getId()], layout: "nonexistent-layout" });
   await placeAndWait(kb);
 
   const qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty")!;
@@ -676,7 +676,7 @@ QUnit.test("Custom layout renders correctly after registration", async (assert) 
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input, layout: "xyz-layout" });
+  const kb = new KioskKeyboard({ controls: [input.getId()], layout: "xyz-layout" });
   await placeAndWait(kb);
 
   const renderedKeys = getRenderedLayoutKeys(kb);
@@ -693,7 +693,7 @@ QUnit.test("Removing current layout makes control fall back to qwerty", async (a
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input, layout: "ephemeral" });
+  const kb = new KioskKeyboard({ controls: [input.getId()], layout: "ephemeral" });
   await placeAndWait(kb);
 
   const ephemeralExpected = makeLayout("e").map((row) => row.map((k) => k.value));

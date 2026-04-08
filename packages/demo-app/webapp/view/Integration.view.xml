@@ -22,7 +22,7 @@
                         ariaLabelledBy="comboInputLabel" />
                     <core:InvisibleText id="comboInputLabel" text="Combined hotkey and virtual keyboard input" />
                     <ObjectStatus text="{state>/comboStatus}" state="Information" class="sapUiSmallMarginTop" />
-                    <kiosk:KioskKeyboard targetInput="comboInput" keyPress=".onKioskKeyPress" class="sapUiSmallMarginTop" />
+                    <kiosk:KioskKeyboard controls="comboInput" keyPress=".onKioskKeyPress" class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
 
