@@ -28,8 +28,7 @@ import {
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
 import {
-  getMiddlewareForLayout as registryGetMiddlewareForLayout,
-  deactivateMiddleware as registryDeactivateMiddleware,
+  getMiddlewareFactory as registryGetMiddlewareFactory,
   registerMiddleware as registryRegisterMiddleware,
 } from "./internal/middleware-registry";
 import {
@@ -108,36 +107,37 @@ export default class KioskKeyboard extends Control {
     super(id, settings);
   }
 
-  // ── ManagedObject field trap: declare strips these from Babel output ──
-  declare private _shiftState: ShiftState;
-  declare private _lastFocusedKeyId: string | null;
-  declare private _open: boolean;
-  declare private _boundFocusIn: (e: FocusEvent) => void;
-  declare private _boundFocusOut: (e: FocusEvent) => void;
-  declare private _autoShowActive: boolean;
-  declare private _inputFocusDelegation: InputFocusDelegation;
-  declare private _registeredInputControlById: Map<string, string>;
-  declare private _resolvedInputControlIds: Set<string>;
+  // ── Private fields (initialized in init(), not at class level) ──
+  private _shiftState!: ShiftState;
+  private _lastFocusedKeyId!: string | null;
+  private _open!: boolean;
+  private _boundFocusIn!: (e: FocusEvent) => void;
+  private _boundFocusOut!: (e: FocusEvent) => void;
+  private _autoShowActive!: boolean;
+  private _inputFocusDelegation!: InputFocusDelegation;
+  private _registeredInputControlById!: Map<string, string>;
+  private _resolvedInputControlIds!: Set<string>;
 
-  declare private _delegatedInstances: Map<string, Control>;
-  declare private _keyHighlightDelegation: KeyHighlightDelegation;
-  declare private _highlightTargetId: string | null;
-  declare private _pressedKeyEl: HTMLElement | null;
-  declare private _baseLayout: string;
-  declare private _keyboardTypeSource: KeyboardTypeSource;
-  declare private _suppressedInputId: string | null;
-  declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
-  declare private _focusClaimService: FocusClaimService;
-  declare private _targetSession: TargetInputSession;
-  declare private _deferredFocusOutCloseId: number | null;
-  declare private _rendererApi: RendererInternalApi | null;
-  declare private _targetResolverInstance: TargetResolverFn | null;
+  private _delegatedInstances!: Map<string, Control>;
+  private _keyHighlightDelegation!: KeyHighlightDelegation;
+  private _highlightTargetId!: string | null;
+  private _pressedKeyEl!: HTMLElement | null;
+  private _baseLayout!: string;
+  private _middleware!: CompositionMiddleware | null;
+  private _keyboardTypeSource!: KeyboardTypeSource;
+  private _suppressedInputId!: string | null;
+  private _boundEscapeKeydown!: (e: KeyboardEvent) => void;
+  private _focusClaimService!: FocusClaimService;
+  private _targetSession!: TargetInputSession;
+  private _deferredFocusOutCloseId!: number | null;
+  private _rendererApi!: RendererInternalApi | null;
+  private _targetResolverInstance!: TargetResolverFn | null;
   /** UI5 ResizeHandler registration ID for root size updates. */
-  declare private _responsiveResizeHandlerId: string | null;
+  private _responsiveResizeHandlerId!: string | null;
   /** Root DOM element currently observed by the resize handler. */
-  declare private _responsiveObservedDom: HTMLElement | null;
+  private _responsiveObservedDom!: HTMLElement | null;
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
-  declare private _responsiveSyncFrameId: number | null;
+  private _responsiveSyncFrameId!: number | null;
   static readonly metadata = {
     library: "ui5.kiosk",
     properties: {
@@ -740,6 +740,7 @@ export default class KioskKeyboard extends Control {
     );
     this._targetResolverInstance = null;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
+    this._middleware = null;
     this._rendererApi = null;
     this._responsiveResizeHandlerId = null;
     this._responsiveObservedDom = null;
@@ -883,8 +884,10 @@ export default class KioskKeyboard extends Control {
   }
 
   exit(): void {
-    const mw = registryGetMiddlewareForLayout(this.getLayout());
-    if (mw) mw.reset();
+    if (this._middleware) {
+      this._middleware.reset();
+      this._middleware = null;
+    }
     KioskKeyboard._instances.delete(this);
 
     // When the last living instance is destroyed, auto-clear i18n resolver
@@ -1933,13 +1936,16 @@ export default class KioskKeyboard extends Control {
       keyValue === "{enter}" ||
       (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
     ) {
-      const mw = registryGetMiddlewareForLayout(this.getLayout());
-      if (mw) {
+      if (!this._middleware) {
+        const factory = registryGetMiddlewareFactory(this.getLayout());
+        if (factory) this._middleware = factory();
+      }
+      if (this._middleware) {
         const targetEl = this._getTargetElement();
         const mwTarget = targetEl
           ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
           : null;
-        if (mwTarget && mw.handleKey(keyValue, mwTarget as HTMLInputElement | HTMLTextAreaElement)) {
+        if (mwTarget && this._middleware.handleKey(keyValue, mwTarget as HTMLInputElement | HTMLTextAreaElement)) {
           if (this._shiftState.autoRelease()) {
             this.invalidate();
           }
@@ -1966,7 +1972,10 @@ export default class KioskKeyboard extends Control {
       if (this.getKeyboardType() === KeyboardType.Full) {
         const raw = keyValue.slice("{layout:".length, -1).trim();
         if (raw) {
-          registryDeactivateMiddleware(this.getLayout());
+          if (this._middleware) {
+            this._middleware.commit();
+            this._middleware = null;
+          }
           const name = raw === "base" ? this._baseLayout : raw;
           const previousLayout = this.getLayout();
           this.setLayout(name);

@@ -1,4 +1,4 @@
-import { getMiddlewareForLayout, deactivateMiddleware } from "ui5/kiosk/internal/middleware-registry";
+import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import "ui5/kiosk/middleware/kana-dakuten";
 
 // --- Helpers ---
@@ -7,7 +7,6 @@ const sandbox = sinon.createSandbox();
 
 function commonAfterEach() {
   sandbox.restore();
-  deactivateMiddleware("ja-kana");
 }
 
 // --- kana-dakuten middleware ---
@@ -15,12 +14,11 @@ function commonAfterEach() {
 QUnit.module("kana-dakuten middleware", { afterEach: commonAfterEach });
 
 QUnit.test("Registers itself for ja-kana layout", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana");
-  assert.notStrictEqual(mw, null, "Middleware registered for ja-kana");
+  assert.notStrictEqual(getMiddlewareFactory("ja-kana"), null, "Factory registered for ja-kana");
 });
 
 QUnit.test("Passes through regular kana (not dakuten/handakuten)", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   input.value = "";
   input.setSelectionRange(0, 0);
@@ -29,7 +27,7 @@ QUnit.test("Passes through regular kana (not dakuten/handakuten)", (assert) => {
 });
 
 QUnit.test("Composes ka + dakuten into ga", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   input.value = "\u304B"; // か
   input.setSelectionRange(1, 1);
@@ -39,7 +37,7 @@ QUnit.test("Composes ka + dakuten into ga", (assert) => {
 });
 
 QUnit.test("Composes ha + handakuten into pa", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   input.value = "\u306F"; // は
   input.setSelectionRange(1, 1);
@@ -49,7 +47,7 @@ QUnit.test("Composes ha + handakuten into pa", (assert) => {
 });
 
 QUnit.test("Composes ha + dakuten into ba", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   input.value = "\u306F"; // は
   input.setSelectionRange(1, 1);
@@ -58,7 +56,7 @@ QUnit.test("Composes ha + dakuten into ba", (assert) => {
 });
 
 QUnit.test("Does not compose when preceding char has no dakuten form", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   input.value = "\u3042"; // あ
   input.setSelectionRange(1, 1);
@@ -67,7 +65,7 @@ QUnit.test("Does not compose when preceding char has no dakuten form", (assert) 
 });
 
 QUnit.test("Does not compose when input is empty", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   input.value = "";
   input.setSelectionRange(0, 0);
@@ -76,21 +74,21 @@ QUnit.test("Does not compose when input is empty", (assert) => {
 });
 
 QUnit.test("Passes through backspace", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   const consumed = mw.handleKey("{backspace}", input);
   assert.strictEqual(consumed, false, "Backspace not consumed");
 });
 
 QUnit.test("Passes through enter", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   const input = document.createElement("input");
   const consumed = mw.handleKey("{enter}", input);
   assert.strictEqual(consumed, false, "Enter not consumed");
 });
 
 QUnit.test("commit and reset are no-ops", (assert) => {
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   assert.strictEqual(mw.commit(), null, "commit returns null");
   mw.reset(); // should not throw
   assert.ok(true, "reset completes without error");
