@@ -897,7 +897,10 @@ export default class KioskKeyboard extends Control {
       KioskKeyboard._globalTargetResolver = null;
     }
 
-    this._cancelDeferredFocusOutClose();
+    if (this._deferredFocusOutCloseId !== null) {
+      cancelAnimationFrame(this._deferredFocusOutCloseId);
+      this._deferredFocusOutCloseId = null;
+    }
     this._disableAutoShow();
     this._teardownInputIds();
     this._removeHighlightDelegation();
@@ -1842,21 +1845,31 @@ export default class KioskKeyboard extends Control {
   private _onDocumentFocusIn(event: FocusEvent): void {
     if (!this.getDocked() || !this._isAutoShowParticipationActive()) return;
 
-    this._cancelDeferredFocusOutClose();
-
     if (this.getInputIds().length > 0) {
       this._setupInputIds();
     }
 
     const target = event.target as HTMLElement;
 
-    // Ignore focus on the keyboard itself
+    // Focus on the keyboard itself -- cancel any pending close, nothing else to do
     const myDom = this.getDomRef();
-    if (myDom && myDom.contains(target)) return;
+    if (myDom && myDom.contains(target)) {
+      if (this._deferredFocusOutCloseId !== null) {
+        cancelAnimationFrame(this._deferredFocusOutCloseId);
+        this._deferredFocusOutCloseId = null;
+      }
+      return;
+    }
 
     // Only claim textual inputs not deferred to native or owned by another instance
     const ui5Control = this._resolveClaimableControl(target);
     if (!ui5Control) return;
+
+    // Focus landed on a claimable input -- cancel any pending close
+    if (this._deferredFocusOutCloseId !== null) {
+      cancelAnimationFrame(this._deferredFocusOutCloseId);
+      this._deferredFocusOutCloseId = null;
+    }
 
     this.setTargetInput(ui5Control);
 
@@ -1882,47 +1895,30 @@ export default class KioskKeyboard extends Control {
   private _onDocumentFocusOut(event: FocusEvent): void {
     if (!this.getDocked() || !this._open) return;
 
-    // Use relatedTarget to decide synchronously whether to close.
-    // relatedTarget is the element that is *receiving* focus.
     const related = event.relatedTarget as HTMLElement | null;
 
-    // Focus staying on the keyboard itself - don't close
+    // Fast path: focus staying on the keyboard itself
     const myDom = this.getDomRef();
     if (myDom && related && myDom.contains(related)) return;
 
-    // Focus moving to an input this keyboard would claim - keep open
+    // Fast path: focus moving to an input this keyboard would claim
     if (this._wouldClaimInput(related)) return;
 
-    // relatedTarget can be null for some browser/shadow-dom transitions.
-    // Defer once and re-check the settled activeElement before closing.
-    if (!related) {
-      this._scheduleDeferredFocusOutClose();
-      return;
+    // Defer to next frame so activeElement has settled, then re-check.
+    // relatedTarget can be null in some browser/shadow-DOM transitions,
+    // and rAF lets us inspect the true destination in all cases.
+    if (this._deferredFocusOutCloseId !== null) {
+      cancelAnimationFrame(this._deferredFocusOutCloseId);
     }
-
-    this.close();
-  }
-
-  private _cancelDeferredFocusOutClose(): void {
-    if (this._deferredFocusOutCloseId === null) return;
-    clearTimeout(this._deferredFocusOutCloseId);
-    this._deferredFocusOutCloseId = null;
-  }
-
-  private _scheduleDeferredFocusOutClose(): void {
-    this._cancelDeferredFocusOutClose();
-    this._deferredFocusOutCloseId = setTimeout(() => {
+    this._deferredFocusOutCloseId = requestAnimationFrame(() => {
       this._deferredFocusOutCloseId = null;
-
       if (!this.getDocked() || !this._open) return;
-
-      const related = document.activeElement as HTMLElement | null;
-      const myDom = this.getDomRef();
-      if (myDom && related && myDom.contains(related)) return;
-      if (this._wouldClaimInput(related)) return;
-
+      const active = document.activeElement as HTMLElement | null;
+      const dom = this.getDomRef();
+      if (dom && active && dom.contains(active)) return;
+      if (this._wouldClaimInput(active)) return;
       this.close();
-    }, 0);
+    });
   }
 
   // ──────────────────────────────────────────────
