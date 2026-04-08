@@ -2,16 +2,7 @@ import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
 import type { Router$BeforeRouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type HotkeyManager from "./HotkeyManager";
-import type {
-  Hotkey,
-  HotkeyCallback,
-  HotkeyOptions,
-  HotkeyRegistrationInfo,
-  HotkeyRegistrationHandle,
-  SequenceOptions,
-  SequenceRegistrationInfo,
-  SequenceRegistrationHandle,
-} from "./types";
+import type { Hotkey, HotkeyCallback, HotkeyOptions, HotkeyRegistrationInfo, HotkeyRegistrationHandle } from "./types";
 
 /**
  * Groups hotkey and sequence registrations for collective lifecycle management.
@@ -33,7 +24,7 @@ import type {
  *
  * onInit(): void {
  *   this._hotkeys.register("F5", handler, { scope: "main" });
- *   this._hotkeys.registerSequence(["G", "I"], handler, { scope: "main" });
+ *   this._hotkeys.register("g i", handler, { scope: "main" });
  * }
  *
  * onExit(): void {
@@ -44,7 +35,6 @@ import type {
 export default class RegistrationGroup {
   private _manager: HotkeyManager;
   private _handles: Set<HotkeyRegistrationHandle> = new Set();
-  private _sequenceHandles: Set<SequenceRegistrationHandle> = new Set();
   private _destroyed = false;
   private _onDispose: (() => void) | null;
   private _routerCleanup: (() => void) | null = null;
@@ -85,6 +75,9 @@ export default class RegistrationGroup {
       get description() {
         return innerHandle.description;
       },
+      get sequence() {
+        return innerHandle.sequence;
+      },
       unregister: () => {
         innerHandle.unregister();
         this._handles.delete(wrappedHandle);
@@ -95,54 +88,6 @@ export default class RegistrationGroup {
     };
 
     this._handles.add(wrappedHandle);
-    return wrappedHandle;
-  }
-
-  /**
-   * Register a multi-key sequence and track its handle in this group.
-   *
-   * The returned handle behaves like a normal sequence handle. Calling
-   * `unregister()` on it also removes it from this group's internal tracking.
-   *
-   * @param sequence - Ordered keys that form the sequence.
-   * @param callback - Callback invoked when the sequence matches.
-   * @param options - Optional sequence configuration.
-   * @returns A lifecycle handle for the new sequence registration.
-   * @throws Error if this group has already been destroyed.
-   */
-  registerSequence(
-    sequence: string[],
-    callback: HotkeyCallback,
-    options?: SequenceOptions,
-  ): SequenceRegistrationHandle {
-    if (this._destroyed) throw new Error("Cannot registerSequence on a destroyed RegistrationGroup");
-    const innerHandle = this._manager.registerSequence(sequence, callback, options);
-    const wrappedHandle: SequenceRegistrationHandle = {
-      get id() {
-        return innerHandle.id;
-      },
-      get isActive() {
-        return innerHandle.isActive;
-      },
-      get sequence() {
-        return innerHandle.sequence;
-      },
-      get scope() {
-        return innerHandle.scope;
-      },
-      get description() {
-        return innerHandle.description;
-      },
-      unregister: () => {
-        innerHandle.unregister();
-        this._sequenceHandles.delete(wrappedHandle);
-      },
-      setOptions: (newOptions) => {
-        innerHandle.setOptions(newOptions);
-      },
-    };
-
-    this._sequenceHandles.add(wrappedHandle);
     return wrappedHandle;
   }
 
@@ -194,10 +139,6 @@ export default class RegistrationGroup {
       if (h.isActive) h.unregister();
     }
     this._handles.clear();
-    for (const h of this._sequenceHandles) {
-      if (h.isActive) h.unregister();
-    }
-    this._sequenceHandles.clear();
     this._destroyed = true;
     this._dispose();
   }
@@ -212,7 +153,6 @@ export default class RegistrationGroup {
     }
 
     this._handles.clear();
-    this._sequenceHandles.clear();
     this._destroyed = true;
     this._dispose();
   }
@@ -224,11 +164,11 @@ export default class RegistrationGroup {
 
   /** Number of active registrations (hotkeys + sequences) in this group. */
   get size(): number {
-    return this._handles.size + this._sequenceHandles.size;
+    return this._handles.size;
   }
 
   /**
-   * Get the group's currently active hotkey registrations.
+   * Get the group's currently active registrations (hotkeys and sequences).
    */
   getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
     if (this._handles.size === 0) return [];
@@ -236,19 +176,7 @@ export default class RegistrationGroup {
     for (const handle of this._handles) {
       ids.add(handle.id);
     }
-    return this._manager._getRegistrationInfoByIds(ids);
-  }
-
-  /**
-   * Get the group's currently active sequence registrations.
-   */
-  getSequenceRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
-    if (this._sequenceHandles.size === 0) return [];
-    const ids = new Set<string>();
-    for (const handle of this._sequenceHandles) {
-      ids.add(handle.id);
-    }
-    return this._manager._getSequenceRegistrationInfoByIds(ids);
+    return this._manager.getRegistrations().filter((info) => ids.has(info.id));
   }
 
   private _dispose(): void {
