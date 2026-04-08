@@ -94,7 +94,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     scope,
     description: options?.description ?? "",
     ignoreRepeat: options?.ignoreRepeat ?? true,
-    suppressInPopups: options?.suppressInPopups ?? false,
+    suppressInPopups: options?.suppressInPopups ?? true,
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
     target: element,
     targetCallback: callback,

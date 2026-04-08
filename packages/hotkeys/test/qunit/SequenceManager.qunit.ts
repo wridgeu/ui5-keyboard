@@ -750,7 +750,7 @@ QUnit.test("suppressInPopups: sequence fires when popup is closed", (assert) => 
   assert.ok(called, "Sequence fires when popup is closed");
 });
 
-QUnit.test("suppressInPopups: false (default) fires even with popup open", (assert) => {
+QUnit.test("suppressInPopups: true (default) suppresses sequence when popup is open", (assert) => {
   const manager = createHotkeyManager();
   let called = false;
 
@@ -764,7 +764,28 @@ QUnit.test("suppressInPopups: false (default) fires even with popup open", (asse
   clock.tick(50);
   fireKey("i");
 
-  assert.ok(called, "Sequence fires with popup open when suppressInPopups is false (default)");
+  assert.notOk(called, "Sequence suppressed with popup open (default suppressInPopups: true)");
+});
+
+QUnit.test("suppressInPopups: false fires sequence even with popup open", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  manager.register(
+    "G I",
+    () => {
+      called = true;
+    },
+    { suppressInPopups: false },
+  );
+
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+
+  fireKey("g");
+  clock.tick(50);
+  fireKey("i");
+
+  assert.ok(called, "Sequence fires with popup open when suppressInPopups is false");
 });
 
 QUnit.test("suppressInPopups: mid-sequence popup opening drops the match", (assert) => {

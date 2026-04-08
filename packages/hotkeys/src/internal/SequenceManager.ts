@@ -115,7 +115,7 @@ export default class SequenceManager extends BaseObject {
       preventDefault: options?.preventDefault ?? true,
       stopPropagation: options?.stopPropagation ?? true,
       onPending: options?.onPending ?? null,
-      suppressInPopups: options?.suppressInPopups ?? false,
+      suppressInPopups: options?.suppressInPopups ?? true,
     };
 
     this._registrations.set(id, registration);

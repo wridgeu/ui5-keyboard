@@ -215,7 +215,7 @@ export interface HotkeyOptions {
   /**
    * Whether to suppress this hotkey when a UI5 popup (dialog or popover) is open.
    * Uses `sap.m.InstanceManager.hasOpenDialog()` and `hasOpenPopover()` when available.
-   * @default false
+   * @default true
    */
   suppressInPopups?: boolean;
 

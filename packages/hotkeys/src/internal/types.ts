@@ -98,7 +98,7 @@ export interface SequenceOptions {
    * Dies with the registration - no manual cleanup needed.
    */
   onPending?: SequencePendingCallback;
-  /** Suppress this sequence when a UI5 dialog or popover is open. @default false */
+  /** Suppress this sequence when a UI5 dialog or popover is open. @default true */
   suppressInPopups?: boolean;
 }
 

@@ -572,11 +572,11 @@ QUnit.test("suppressInPopups: suppresses when popup is open", (assert) => {
   assert.ok(called, "F5 fires when popup is closed");
 });
 
-QUnit.test("suppressInPopups: false (default) fires even with popup open", (assert) => {
+QUnit.test("suppressInPopups: true (default) suppresses when popup is open", (assert) => {
   const manager = createHotkeyManager();
   let called = false;
 
-  // Default suppressInPopups: false
+  // Default suppressInPopups: true
   manager.register("F5", () => {
     called = true;
   });
@@ -584,7 +584,25 @@ QUnit.test("suppressInPopups: false (default) fires even with popup open", (asse
   restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
 
   fireKey("F5");
-  assert.ok(called, "F5 fires even with popup open when suppressInPopups is false");
+  assert.notOk(called, "F5 suppressed with popup open (default suppressInPopups: true)");
+});
+
+QUnit.test("suppressInPopups: false fires even with popup open", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { suppressInPopups: false },
+  );
+
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+
+  fireKey("F5");
+  assert.ok(called, "F5 fires with popup open when suppressInPopups is false");
 });
 
 // ──────────────────────────────────────────────

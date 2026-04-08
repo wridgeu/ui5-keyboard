@@ -335,7 +335,6 @@ manager.register(
     description: "Refresh editor",
     enabled: () => !model.getProperty("/isLoading"),
     ignoreRepeat: true,
-    suppressInPopups: true,
   },
 );
 ```
@@ -351,7 +350,7 @@ manager.register(
 | `scope`            | `string`                   | `"__global__"` | Scope this hotkey belongs to. Use `GLOBAL_SCOPE` constant. Must be non-empty if provided.        |
 | `description`      | `string`                   | `""`           | Human-readable description for cheatsheets                                                       |
 | `ignoreRepeat`     | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
-| `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
+| `suppressInPopups` | `boolean`                  | `true`         | Suppress when a UI5 popup (dialog or popover) is open                                            |
 | `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
 | `target`           | `HTMLElement`              | `null`         | Bind to a specific element instead of the document                                               |
 | `timeout`          | `number`                   | `1000`         | Sequences only: timeout in ms between keys before the sequence resets                            |
@@ -388,7 +387,6 @@ handle.setOptions({
   stopPropagation: false,
   ignoreInputs: true,
   ignoreRepeat: false,
-  suppressInPopups: true,
   target: document.getElementById("myPanel"),
 });
 ```
@@ -999,7 +997,7 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 2. Use `setUnhandledHandler()` to see why keys are not matching (disabled, input suppressed, popup suppressed, etc.)
 3. If focus is in a text field, single-key hotkeys are suppressed by default (`ignoreInputs: "auto"`). Use `Ctrl`/`Mod` combos or set `ignoreInputs: false`
 4. Check if the registration is disabled: `handle.setOptions({ enabled: true })`
-5. Check for popup suppression: `suppressInPopups: true` blocks hotkeys when a dialog is open
+5. Check for popup suppression: `suppressInPopups` defaults to `true`, blocking hotkeys when a dialog is open. Set `suppressInPopups: false` to allow a hotkey through popups
 
 **Hotkey fires the wrong handler:**
 
