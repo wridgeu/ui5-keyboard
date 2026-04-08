@@ -114,19 +114,19 @@ This design was chosen for:
 
 ### Reactive Properties
 
-| Property          | Type    | Default     | Description                                                         |
-| ----------------- | ------- | ----------- | ------------------------------------------------------------------- |
-| `layout`          | string  | `""`        | Layout name                                                         |
-| `keyboard-type`   | string  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`                                |
-| `docked`          | boolean | `false`     | Fixed-position at viewport bottom                                   |
-| `auto-show`       | boolean | `false`     | Auto open/close on input focus                                      |
-| `auto-type`       | boolean | `false`     | Auto-detect keyboard type from input                                |
-| `disabled`        | boolean | `false`     | Disables key interaction                                            |
-| `controls`        | string  | `""`        | Space- or comma-separated IDs for targeting and auto-show filtering |
-| `accessible-name` | string  | `""`        | Custom ARIA label                                                   |
-| `mobile-keyboard` | string  | `"Auto"`    | `"Auto"`, `"Native"`, `"Custom"`                                    |
-| `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`                                   |
-| `open`            | boolean | `false`     | Opens/closes docked keyboard                                        |
+| Property          | Type    | Default     | Description                                               |
+| ----------------- | ------- | ----------- | --------------------------------------------------------- |
+| `layout`          | string  | `""`        | Layout name                                               |
+| `keyboard-type`   | string  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`                      |
+| `docked`          | boolean | `false`     | Fixed-position at viewport bottom                         |
+| `auto-show`       | boolean | `false`     | Auto open/close on input focus                            |
+| `auto-type`       | boolean | `false`     | Auto-detect keyboard type from input                      |
+| `disabled`        | boolean | `false`     | Disables key interaction                                  |
+| `controls`        | string  | `""`        | Comma-separated IDs for targeting and auto-show filtering |
+| `accessible-name` | string  | `""`        | Custom ARIA label                                         |
+| `mobile-keyboard` | string  | `"Auto"`    | `"Auto"`, `"Native"`, `"Custom"`                          |
+| `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`                         |
+| `open`            | boolean | `false`     | Opens/closes docked keyboard                              |
 
 Internal reactive properties (no HTML attribute, trigger re-render):
 

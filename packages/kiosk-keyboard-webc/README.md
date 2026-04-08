@@ -280,19 +280,19 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 
 ## Attributes / Properties
 
-| Attribute         | Property         | Type      | Default     | Description                                                                           |
-| ----------------- | ---------------- | --------- | ----------- | ------------------------------------------------------------------------------------- |
-| `layout`          | `layout`         | `string`  | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.            |
-| `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                 |
-| `open`            | `open`           | `boolean` | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                   |
-| `docked`          | `docked`         | `boolean` | `false`     | Fixed-position mode at bottom of viewport.                                            |
-| `auto-show`       | `autoShow`       | `boolean` | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).               |
-| `auto-type`       | `autoType`       | `boolean` | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                        |
-| `disabled`        | `disabled`       | `boolean` | `false`     | Disables all key interaction.                                                         |
-| `controls`        | `controls`       | `string`  | `""`        | Space- or comma-separated IDs of target elements. Supports single or multiple inputs. |
-| `accessible-name` | `accessibleName` | `string`  | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".            |
-| `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                       |
-| `f-key-mode`      | `fKeyMode`       | `string`  | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.      |
+| Attribute         | Property         | Type      | Default     | Description                                                                      |
+| ----------------- | ---------------- | --------- | ----------- | -------------------------------------------------------------------------------- |
+| `layout`          | `layout`         | `string`  | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.       |
+| `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                            |
+| `open`            | `open`           | `boolean` | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.              |
+| `docked`          | `docked`         | `boolean` | `false`     | Fixed-position mode at bottom of viewport.                                       |
+| `auto-show`       | `autoShow`       | `boolean` | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).          |
+| `auto-type`       | `autoType`       | `boolean` | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                   |
+| `disabled`        | `disabled`       | `boolean` | `false`     | Disables all key interaction.                                                    |
+| `controls`        | `controls`       | `string`  | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.      |
+| `accessible-name` | `accessibleName` | `string`  | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".       |
+| `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                  |
+| `f-key-mode`      | `fKeyMode`       | `string`  | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`. |
 
 ### Keyboard type override via `data-keyboard-type`
 

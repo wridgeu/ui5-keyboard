@@ -87,7 +87,7 @@ sap.ui.define(
       custom.addEventListener("focusin", function () {
         var nativeInput = custom.querySelector("input");
         bridge.setValue(nativeInput ? nativeInput.value : "");
-        keyboard.setControls([bridge.getId()]);
+        keyboard.setControls([...keyboard.getControls(), bridge.getId()]);
         keyboard.show();
         bridge.focus();
       });
@@ -111,7 +111,7 @@ sap.ui.define(
       const adoptShadowBridgeTarget = function () {
         const nativeInput = getShadowInput();
         shadowBridge.setValue(nativeInput ? nativeInput.value : "");
-        keyboard.setControls([shadowBridge.getId()]);
+        keyboard.setControls([...keyboard.getControls(), shadowBridge.getId()]);
         keyboard.show();
         shadowBridge.focus();
       };
@@ -146,7 +146,7 @@ sap.ui.define(
       },
       getKeyboardTargetId: function () {
         var kb = Element.getElementById("interopKeyboard");
-        return kb && kb.getControls ? kb.getControls() : "";
+        return kb && kb.getActiveControl ? (kb.getActiveControl()?.getId() ?? "") : "";
       },
       focusCustomElement: function () {
         var el = document.getElementById("interopCustom");

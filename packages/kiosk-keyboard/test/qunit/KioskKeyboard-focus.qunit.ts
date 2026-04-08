@@ -850,7 +850,7 @@ QUnit.test("applyFocusInfo with preventScroll: false does not throw", async (ass
 // show() auto-target
 // ──────────────────────────────────────────────
 
-QUnit.test("show() auto-targets single controls entry", async (assert) => {
+QUnit.test("single controls entry is auto-targeted after rendering", async (assert) => {
   const input = new Input("auto-target-input");
   input.placeAt("qunit-fixture");
 
