@@ -283,149 +283,32 @@ export type KeyRow = KeyDefinition[];
  */
 export type LayoutDefinition = KeyRow[];
 
-// ── i18n extensibility types ──────────────────────
+// -- i18n resolver type --
 
 /**
- * A single enhancement bundle descriptor.
+ * Resolver callback for programmatic i18n overrides.
  *
- * Exactly one of `bundleName` or `bundleUrl` is required.
- * `bundleName` follows the UI5 module-path convention
- * (e.g. `"my.app.i18n.kiosk"`).
+ * Called for every `getText()` resolution when a resolver is registered.
+ * Receives the message key, current locale (BCP-47 tag), and the text
+ * resolved from the base library bundle.
  *
- * @public
- * @since 0.1.0
- */
-export type KioskI18nEnhancement =
-  | {
-      /** UI5 module name for the resource bundle (e.g. `"my.app.i18n.kiosk"`). */
-      readonly bundleName: string;
-      readonly bundleUrl?: never;
-      /**
-       * Locales this bundle provides translations for, as UI5 locale
-       * codes (e.g. `["", "de", "fr"]`). Use `""` for the root (fallback)
-       * locale. When omitted, inherits from the top-level config.
-       */
-      readonly supportedLocales?: readonly string[];
-      /**
-       * Locale to use when the current UI5 locale is not in `supportedLocales`.
-       * Typically `""` (root) or a specific locale code like `"en"`.
-       * When omitted, inherits from the top-level config.
-       */
-      readonly fallbackLocale?: string;
-    }
-  | {
-      readonly bundleName?: never;
-      /** Absolute or relative URL to a `.properties` file. */
-      readonly bundleUrl: string;
-      /**
-       * Locales this bundle provides translations for, as UI5 locale
-       * codes (e.g. `["", "de", "fr"]`). Use `""` for the root (fallback)
-       * locale. When omitted, inherits from the top-level config.
-       */
-      readonly supportedLocales?: readonly string[];
-      /**
-       * Locale to use when the current UI5 locale is not in `supportedLocales`.
-       * Typically `""` (root) or a specific locale code like `"en"`.
-       * When omitted, inherits from the top-level config.
-       */
-      readonly fallbackLocale?: string;
-    };
-
-/**
- * Configuration object for {@link KioskKeyboard.configureI18n}.
+ * Return a string to override the resolved text. Return `undefined` to
+ * keep the base bundle text. The resolver must be synchronous.
  *
- * @example Enhancement bundle by module name
+ * If the resolver throws, the error is logged and the base text is used.
+ *
+ * @example
  * ```ts
- * await KioskKeyboard.configureI18n({
- *   enhanceWith: [{
- *     bundleName: "my.app.i18n.kiosk",
- *     supportedLocales: ["", "de", "fr"],
- *     fallbackLocale: "",
- *   }],
- * });
- * ```
- *
- * @example Enhancement bundle by URL
- * ```ts
- * await KioskKeyboard.configureI18n({
- *   enhanceWith: [{
- *     bundleUrl: "/i18n/kiosk/messagebundle.properties",
- *     supportedLocales: [""],
- *     fallbackLocale: "",
- *   }],
+ * KioskKeyboard.setI18nResolver((key, locale, resolvedText) => {
+ *   if (key === "KEY_SHIFT" && locale.startsWith("fr")) return "Maj";
+ *   return undefined; // keep base bundle text
  * });
  * ```
  *
  * @public
- * @since 0.1.0
+ * @since 0.2.0
  */
-export interface KioskI18nConfig {
-  /**
-   * Locales that the enhancement bundles provide translations for.
-   * Applies as default `supportedLocales` for enhancement entries
-   * that do not declare their own.
-   *
-   * Does **not** reconfigure the base library bundle - its locale
-   * list is determined by shipped `.properties` files.
-   */
-  readonly supportedLocales?: readonly string[];
-
-  /**
-   * Default fallback locale for enhancement entries that do not
-   * declare their own.
-   */
-  readonly fallbackLocale?: string;
-
-  /**
-   * Additional resource bundles whose texts take precedence over
-   * the base library bundle.  Evaluated in array order; the last
-   * entry that provides a given key wins.
-   */
-  readonly enhanceWith?: readonly KioskI18nEnhancement[];
-}
-
-/**
- * Context passed to the i18n override hook.
- *
- * @public
- * @since 0.1.0
- */
-export interface KioskI18nOverrideContext {
-  /** The message key (e.g. `"KIOSK_KEYBOARD_LABEL"`). */
-  readonly key: string;
-  /**
-   * Current locale as a BCP47 language tag (e.g. `"de"`, `"en-US"`).
-   * Derived from `Localization.getLanguageTag()`.
-   */
-  readonly locale: string;
-  /**
-   * Hardcoded fallback text used when no bundle (base or enhancement)
-   * contains the key. This is the second argument of the internal
-   * `getText(key, fallback)` call, not the base-bundle text.
-   */
-  readonly defaultText: string;
-  /**
-   * Text resolved through the full bundle chain
-   * (base + enhancements) *before* the hook runs.
-   */
-  readonly resolvedText: string;
-}
-
-/**
- * Override hook signature.
- *
- * Return a string to replace `resolvedText`.
- * Return `undefined` to keep the resolved text as-is.
- *
- * The hook must be synchronous - async hooks are not supported.
- * Returning a `Promise` is treated as a non-string value and ignored.
- *
- * If the hook throws, the error is logged and `resolvedText` is used.
- *
- * @public
- * @since 0.1.0
- */
-export type KioskI18nOverrideHook = (ctx: KioskI18nOverrideContext) => string | undefined;
+export type I18nResolver = (key: string, locale: string, resolvedText: string) => string | undefined;
 
 // ── Composition middleware types ──────────────────
 
