@@ -66,8 +66,8 @@ QUnit.test("setDocked(false) closes an open keyboard and restores inputmode", as
   const kb = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -363,8 +363,7 @@ QUnit.test("20 show/close cycles without error or state desync", async (assert) 
 QUnit.test("Rapid cycling preserves inputmode restoration", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ docked: true });
-  (kb as any)._setActiveTarget(input);
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
   await placeAndWait(kb);
 
   const inputEl = input.getFocusDomRef() as HTMLInputElement;

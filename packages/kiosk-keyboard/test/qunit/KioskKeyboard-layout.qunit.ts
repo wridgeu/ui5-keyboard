@@ -256,7 +256,7 @@ QUnit.test("QWERTZ-DE German number row shift symbols", async (assert) => {
 
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  (kb as any)._setActiveTarget(input);
+  kb.setControls([input.getId()]);
   await nextUIUpdate();
 
   // Shift+2 should produce " (double quote) in German layout

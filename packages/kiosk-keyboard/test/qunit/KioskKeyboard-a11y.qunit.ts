@@ -299,14 +299,14 @@ QUnit.test("aria-controls absent when no active target", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("aria-controls updates when _setActiveTarget is called", async (assert) => {
+QUnit.test("aria-controls updates when active target changes via focus", async (assert) => {
   const input1 = new Input("a11y-input1");
   const input2 = new Input("a11y-input2");
   input1.placeAt("qunit-fixture");
   input2.placeAt("qunit-fixture");
   await nextUIUpdate();
 
-  const kb = new KioskKeyboard({ controls: [input1.getId()] });
+  const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId()] });
   await placeAndWait(kb);
 
   input1.focus();
@@ -314,7 +314,8 @@ QUnit.test("aria-controls updates when _setActiveTarget is called", async (asser
 
   assert.strictEqual(kb.getDomRef()!.getAttribute("aria-controls"), input1.getId(), "Initially points to input1");
 
-  (kb as any)._setActiveTarget(input2);
+  input2.focus();
+  await nextUIUpdate();
   assert.strictEqual(
     kb.getDomRef()!.getAttribute("aria-controls"),
     input2.getId(),

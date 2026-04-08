@@ -32,7 +32,7 @@ QUnit.test("Docked auto-show opens on input focus and closes via API", async (as
 
   assert.ok(kb.isOpen(), "Keyboard opens on input focus");
   assert.notOk(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed CSS class removed");
-  assert.strictEqual((kb as any)._getActiveTargetId(), input.getId(), "Target input is set");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input.getId(), "Target input is set");
 
   // Close via public API
   kb.close();
@@ -156,7 +156,7 @@ QUnit.test(
     (inputA.getFocusDomRef() as HTMLElement).focus();
     await nextUIUpdate();
 
-    assert.strictEqual((kb as any)._getActiveTargetId(), inputA.getId(), "Target is inputA after focus");
+    assert.strictEqual(kb.getActiveControl()?.getId(), inputA.getId(), "Target is inputA after focus");
     assert.ok(kb.isOpen(), "Keyboard is open");
 
     // Type a character to mark the session dirty (needed for change event)
@@ -176,7 +176,7 @@ QUnit.test(
     // The final target must be inputC (the last focus destination),
     // NOT inputB (which was superseded by the re-entrant call)
     assert.strictEqual(
-      (kb as any)._getActiveTargetId(),
+      kb.getActiveControl()?.getId(),
       inputC.getId(),
       "Target is inputC - re-entrant _setActiveTarget from change handler wins",
     );
@@ -226,7 +226,7 @@ QUnit.test(
     (inputB.getFocusDomRef() as HTMLElement).focus();
     await nextUIUpdate();
 
-    assert.strictEqual((kb as any)._getActiveTargetId(), inputC.getId(), "Target is inputC - re-entrant call wins");
+    assert.strictEqual(kb.getActiveControl()?.getId(), inputC.getId(), "Target is inputC - re-entrant call wins");
     assert.strictEqual(
       kb.getKeyboardType(),
       "Numpad",

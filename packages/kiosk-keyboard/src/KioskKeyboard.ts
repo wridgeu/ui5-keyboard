@@ -1293,13 +1293,6 @@ export default class KioskKeyboard extends Control {
     if (this._open) return this;
     if (this._shouldDeferToNative()) return this;
 
-    // Auto-target when there's exactly one control and nothing is focused yet
-    const ids = this.getControls();
-    if (ids.length === 1 && !this._getActiveTargetId()) {
-      const control = this._findControlById(ids[0]);
-      control?.focus();
-    }
-
     this._open = true;
     this._suppressNativeKeyboard();
     document.addEventListener("keydown", this._boundEscapeKeydown, true);
@@ -1439,6 +1432,21 @@ export default class KioskKeyboard extends Control {
 
     this._registeredControlById = nextByInputId;
     this._resolvedControlIds = resolvedControlIds;
+
+    // Clear active target if it's no longer among the resolved controls
+    const currentTargetId = this._getActiveTargetId();
+    if (currentTargetId && resolvedControlIds.size > 0 && !resolvedControlIds.has(currentTargetId)) {
+      this._setActiveTarget("");
+    }
+
+    // Auto-target when exactly one control is resolved and nothing is active yet
+    if (resolvedControlIds.size === 1 && !this._getActiveTargetId()) {
+      const onlyId = resolvedControlIds.values().next().value;
+      const control = Element.getElementById(onlyId);
+      if (control instanceof Control) {
+        this._setActiveTarget(control);
+      }
+    }
   }
 
   private _teardownControls(): void {

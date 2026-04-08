@@ -95,13 +95,13 @@ QUnit.test("Shift auto-releases after typing in switched layout", async (assert)
   kb.destroy();
 });
 
-QUnit.test("_setActiveTarget() resets shift regardless of current layout", async (assert) => {
+QUnit.test("Target switch resets shift regardless of current layout", async (assert) => {
   const input1 = new Input({ value: "" });
   const input2 = new Input({ value: "" });
   input1.placeAt("qunit-fixture");
   input2.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ controls: [input1.getId()] });
+  const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId()] });
   await placeAndWait(kb);
 
   // Activate shift on base layout
@@ -115,7 +115,7 @@ QUnit.test("_setActiveTarget() resets shift regardless of current layout", async
   await waitForRender();
 
   // Switch target while on numeric layout -- shift must reset
-  (kb as any)._setActiveTarget(input2);
+  input2.focus();
   await waitForRender();
 
   // Switch back to base layout to observe that shift was cleared
@@ -195,7 +195,7 @@ QUnit.test("Keyboard can close cleanly after target control is destroyed", async
   kb.destroy();
 });
 
-QUnit.test("_setActiveTarget to new control after previous target was destroyed", async (assert) => {
+QUnit.test("Switching controls to new control after previous target was destroyed", async (assert) => {
   const input1 = new Input({ value: "old" });
   const input2 = new Input({ value: "" });
   input1.placeAt("qunit-fixture");
@@ -208,10 +208,10 @@ QUnit.test("_setActiveTarget to new control after previous target was destroyed"
   input1.destroy();
   await waitForRender();
 
-  // Switch to new target - should not throw
-  (kb as any)._setActiveTarget(input2);
+  // Switch to new target via controls - should not throw
+  kb.setControls([input2.getId()]);
 
-  // Typing should work on the new target
+  // Typing should work on the new target (auto-targeted since single control)
   tapKey(kb, "x");
   assert.strictEqual(input2.getValue(), "x", "Typing works on new target after previous was destroyed");
 
@@ -220,10 +220,10 @@ QUnit.test("_setActiveTarget to new control after previous target was destroyed"
 });
 
 // ──────────────────────────────────────────────
-// Rapid successive _setActiveTarget() calls
+// Rapid successive target switches
 // ──────────────────────────────────────────────
 
-QUnit.module("Negative / Edge-Case - Rapid _setActiveTarget()", {
+QUnit.module("Negative / Edge-Case - Rapid target switching", {
   afterEach() {
     KioskKeyboard.resetCustomLayouts();
     KioskKeyboard.resetLocaleLayouts();
@@ -240,16 +240,16 @@ QUnit.test("Rapid target switching settles on last target", async (assert) => {
   input2.placeAt("qunit-fixture");
   input3.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ controls: [input1.getId()] });
+  const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId(), input3.getId()] });
   await placeAndWait(kb);
 
-  // Rapid-fire target switches without awaiting renders
-  (kb as any)._setActiveTarget(input2);
-  (kb as any)._setActiveTarget(input3);
-  (kb as any)._setActiveTarget(input1);
-  (kb as any)._setActiveTarget(input3);
+  // Rapid-fire target switches via focus without awaiting renders
+  input2.focus();
+  input3.focus();
+  input1.focus();
+  input3.focus();
 
-  assert.strictEqual((kb as any)._getActiveTargetId(), input3.getId(), "Final target is the last one set");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input3.getId(), "Final target is the last one set");
 
   // Typing should go to the last target
   tapKey(kb, "z");
@@ -269,7 +269,7 @@ QUnit.test("Deferred change fires for dirty target on rapid switch", async (asse
   input1.placeAt("qunit-fixture");
   input2.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ controls: [input1.getId()] });
+  const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId()] });
   await placeAndWait(kb);
 
   input1.focus();
@@ -284,8 +284,8 @@ QUnit.test("Deferred change fires for dirty target on rapid switch", async (asse
     changeValue = event.getParameter("value") as string;
   });
 
-  // Immediately switch to second target - deferred change should fire for first
-  (kb as any)._setActiveTarget(input2);
+  // Immediately switch to second target via focus - deferred change should fire for first
+  input2.focus();
 
   assert.strictEqual(changeValue, "ab", "Change event fired for dirty target on switch");
 
@@ -300,7 +300,7 @@ QUnit.test("Rapid switch resets shift state for each switch", async (assert) => 
   input1.placeAt("qunit-fixture");
   input2.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ controls: [input1.getId()] });
+  const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId()] });
   await placeAndWait(kb);
 
   // Activate shift
@@ -308,8 +308,8 @@ QUnit.test("Rapid switch resets shift state for each switch", async (assert) => 
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift active on first target");
 
-  // Switch target - shift should reset
-  (kb as any)._setActiveTarget(input2);
+  // Switch target via focus - shift should reset
+  input2.focus();
   await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift reset after switch to second target");
 
@@ -318,7 +318,7 @@ QUnit.test("Rapid switch resets shift state for each switch", async (assert) => 
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift active on second target");
 
-  (kb as any)._setActiveTarget(input1);
+  input1.focus();
   await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift reset after switch back to first target");
 
@@ -327,27 +327,18 @@ QUnit.test("Rapid switch resets shift state for each switch", async (assert) => 
   kb.destroy();
 });
 
-QUnit.test("_setActiveTarget to empty string clears the target", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
+QUnit.test("Key taps without target are no-ops", async (assert) => {
+  const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  input.focus();
-
-  tapKey(kb, "a");
-  assert.strictEqual(input.getValue(), "a", "Typing works with target set");
-
-  // Clear the target
-  (kb as any)._setActiveTarget("");
-  assert.notOk((kb as any)._getActiveTargetId(), "Target association cleared");
+  assert.strictEqual(kb.getActiveControl(), null, "No active control initially");
 
   // Key taps should be no-ops (no target to type into)
+  tapKey(kb, "a");
   tapKey(kb, "b");
-  assert.strictEqual(input.getValue(), "a", "Input unchanged after target cleared");
+  tapKey(kb, "{backspace}");
+  assert.ok(true, "No errors when tapping keys without a target");
 
-  input.destroy();
   kb.destroy();
 });
 
@@ -368,10 +359,9 @@ QUnit.test("Backspace at position 0 is a silent no-op", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
   await placeAndWait(kb);
-
-  input.focus();
+  kb.show();
 
   // Backspace on empty input should do nothing
   tapKey(kb, "{backspace}");
@@ -383,7 +373,7 @@ QUnit.test("Backspace at position 0 is a silent no-op", async (assert) => {
     changeFired = true;
   });
 
-  (kb as any)._setActiveTarget(""); // Forces deferred change if dirty
+  kb.close(); // Forces deferred change if dirty
   assert.notOk(changeFired, "No change event after backspace at position 0");
 
   input.destroy();

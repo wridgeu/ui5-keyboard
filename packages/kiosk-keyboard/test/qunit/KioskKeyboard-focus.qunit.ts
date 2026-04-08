@@ -231,7 +231,7 @@ QUnit.test("Focusing a registered input sets it as target", async (assert) => {
   // Wait for delegation to propagate
   await nextUIUpdate();
 
-  assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target switched to focused input");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input2.getId(), "Target switched to focused input");
 
   input1.destroy();
   input2.destroy();
@@ -282,7 +282,7 @@ QUnit.test("controls resolves view-local IDs when keyboard is inside a View", as
   await nextUIUpdate();
 
   assert.strictEqual(
-    (kb as any)._getActiveTargetId(),
+    kb.getActiveControl()?.getId(),
     input.getId(),
     "View-local input resolved and set as target after focus",
   );
@@ -314,11 +314,11 @@ QUnit.test("controls prefers view-local over global when IDs collide", async (as
   await nextUIUpdate();
 
   assert.strictEqual(
-    (kb as any)._getActiveTargetId(),
+    kb.getActiveControl()?.getId(),
     viewLocalInput.getId(),
     "View-local input takes priority over global with same short ID",
   );
-  assert.notStrictEqual((kb as any)._getActiveTargetId(), globalInput.getId(), "Global control was NOT selected");
+  assert.notStrictEqual(kb.getActiveControl()?.getId(), globalInput.getId(), "Global control was NOT selected");
 
   view.destroy();
   globalInput.destroy();
@@ -339,7 +339,7 @@ QUnit.test("controls falls back to global when not inside a View", async (assert
   await nextUIUpdate();
 
   assert.strictEqual(
-    (kb as any)._getActiveTargetId(),
+    kb.getActiveControl()?.getId(),
     globalInput.getId(),
     "Global input resolved via fallback when keyboard is not inside a View",
   );
@@ -363,7 +363,7 @@ QUnit.test("controls silently skips unresolvable IDs", async (assert) => {
   await nextUIUpdate();
 
   assert.strictEqual(
-    (kb as any)._getActiveTargetId(),
+    kb.getActiveControl()?.getId(),
     input.getId(),
     "Valid input still resolved when mixed with unresolvable IDs",
   );
@@ -401,7 +401,12 @@ QUnit.test("controls deduplicates delegates when aliased IDs resolve to the same
   kb.setControls(["localInput", "myView--localInput"]);
   await nextUIUpdate();
 
-  assert.strictEqual(addCount, 1, "addEventDelegate called exactly once despite aliased IDs");
+  // 1 call for focus delegation (deduped despite two aliases) + 1 call for highlight delegation (auto-target)
+  assert.strictEqual(
+    addCount,
+    2,
+    "addEventDelegate called twice: once for focus delegation (deduped) + once for highlight delegation (auto-target)",
+  );
 
   view.destroy();
 });
@@ -443,11 +448,7 @@ QUnit.test("controls removal of one alias keeps delegate when another alias rema
   dom.focus();
   await nextUIUpdate();
 
-  assert.strictEqual(
-    (kb as any)._getActiveTargetId(),
-    input.getId(),
-    "Input still works as target after alias removal",
-  );
+  assert.strictEqual(kb.getActiveControl()?.getId(), input.getId(), "Input still works as target after alias removal");
 
   view.destroy();
 });
@@ -467,7 +468,7 @@ QUnit.test("controls works with composite controls (StepInput)", async (assert) 
   await nextUIUpdate();
 
   assert.strictEqual(
-    (kb as any)._getActiveTargetId(),
+    kb.getActiveControl()?.getId(),
     stepInput.getId(),
     "StepInput resolved as target via parent chain",
   );
@@ -492,7 +493,7 @@ QUnit.test("controls rebinds delegate when control is destroyed and recreated wi
   // Focus input1 → delegate should set target
   (input1.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
-  assert.strictEqual((kb as any)._getActiveTargetId(), input1.getId(), "Target set for original input instance");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input1.getId(), "Target set for original input instance");
 
   // Destroy and recreate with same explicit ID
   input1.destroy();
@@ -508,7 +509,7 @@ QUnit.test("controls rebinds delegate when control is destroyed and recreated wi
   // Focus the new input - delegate should fire on the new instance
   (input2.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
-  assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target updated to recreated input instance");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input2.getId(), "Target updated to recreated input instance");
 
   box.destroy();
   kb.destroy();

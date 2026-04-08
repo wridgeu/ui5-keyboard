@@ -178,7 +178,7 @@ QUnit.test(
     await nextUIUpdate();
 
     assert.ok(kb.isOpen(), "Keyboard stays open after deferred close check");
-    assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target switched to second input");
+    assert.strictEqual(kb.getActiveControl()?.getId(), input2.getId(), "Target switched to second input");
 
     input1.destroy();
     input2.destroy();
@@ -284,7 +284,7 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
   await nextUIUpdate();
 
   assert.ok(dockedKb.isOpen(), "Docked keyboard opens for unclaimed input");
-  assert.strictEqual((dockedKb as any)._getActiveTargetId(), freeInput.getId(), "Target set to unclaimed input");
+  assert.strictEqual(dockedKb.getActiveControl()?.getId(), freeInput.getId(), "Target set to unclaimed input");
 
   claimedInput.destroy();
   freeInput.destroy();
@@ -314,7 +314,7 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
   await nextUIUpdate();
 
   assert.ok(dockedKb.isOpen(), "Docked keyboard opens even when hidden keyboard targets the input");
-  assert.strictEqual((dockedKb as any)._getActiveTargetId(), input.getId(), "Docked keyboard claims the focused input");
+  assert.strictEqual(dockedKb.getActiveControl()?.getId(), input.getId(), "Docked keyboard claims the focused input");
 
   input.destroy();
   hiddenKb.destroy();
@@ -465,7 +465,7 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
   (input1.getFocusDomRef() as HTMLElement).blur();
   await nextUIUpdate();
 
-  (inlineKb as any)._setActiveTarget(input2);
+  inlineKb.setControls([input2.getId()]);
 
   (input1.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
@@ -546,7 +546,7 @@ QUnit.test("controls rebinds delegates after control recreation in autoShow flow
   await nextUIUpdate();
 
   assert.ok(kb.isOpen(), "Keyboard reopens for recreated input");
-  assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target updated to recreated input");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input2.getId(), "Target updated to recreated input");
 
   box.destroy();
   kb.destroy();

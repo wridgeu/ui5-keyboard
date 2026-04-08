@@ -364,8 +364,8 @@ QUnit.test("show() sets inputmode=none on target input", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -388,8 +388,8 @@ QUnit.test("exit() restores inputmode if keyboard was open", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -430,8 +430,8 @@ QUnit.test("Native mode: programmatic show() does not open keyboard", async (ass
   const kb = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Native",
+    controls: [input.getId()],
   });
-  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   kb.show();
@@ -529,8 +529,8 @@ QUnit.test("Existing inputmode attribute is preserved and restored", async (asse
   const kb = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -553,15 +553,15 @@ QUnit.test("Shared target suppression is ref-counted across keyboard instances",
   const kb1 = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb1 as any)._setActiveTarget(input);
   await placeAndWait(kb1);
 
   const kb2 = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb2 as any)._setActiveTarget(input);
   await placeAndWait(kb2);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -591,15 +591,15 @@ QUnit.test("Destroying one shared keyboard keeps suppression for survivor", asyn
   const kb1 = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb1 as any)._setActiveTarget(input);
   await placeAndWait(kb1);
 
   const kb2 = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input.getId()],
   });
-  (kb2 as any)._setActiveTarget(input);
   await placeAndWait(kb2);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -662,7 +662,7 @@ QUnit.test("Switching target while open restores old and suppresses new", async 
   kb.destroy();
 });
 
-QUnit.test("_setActiveTarget while closed does not suppress inputmode", async (assert) => {
+QUnit.test("Switching target while closed does not suppress inputmode", async (assert) => {
   const input1 = new Input();
   const input2 = new Input();
   input1.placeAt("qunit-fixture");
@@ -671,11 +671,13 @@ QUnit.test("_setActiveTarget while closed does not suppress inputmode", async (a
   const kb = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
+    controls: [input1.getId(), input2.getId()],
   });
-  (kb as any)._setActiveTarget(input1);
   await placeAndWait(kb);
 
-  (kb as any)._setActiveTarget(input2);
+  // Focus input2 to switch target while keyboard is closed
+  input2.focus();
+  await nextUIUpdate();
 
   const dom2 = input2.getFocusDomRef() as HTMLInputElement;
   assert.notStrictEqual(dom2.getAttribute("inputmode"), "none", "input2 not suppressed while closed");
@@ -685,25 +687,35 @@ QUnit.test("_setActiveTarget while closed does not suppress inputmode", async (a
   kb.destroy();
 });
 
-QUnit.test("_setActiveTarget to null while open restores old inputmode", async (assert) => {
+QUnit.test("Removing controls while open restores old inputmode", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
     docked: true,
+    autoShow: true,
     mobileKeyboard: "Custom",
   });
-  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
-  kb.show();
+  // Focus input to trigger autoShow and set target
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  assert.ok(kb.isOpen(), "Keyboard is open");
   assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode suppressed");
 
-  (kb as any)._setActiveTarget("");
-  assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored after clearing target");
+  // Move focus away to clear the target
+  const outside = document.createElement("button");
+  document.getElementById("qunit-fixture")!.appendChild(outside);
+  outside.focus();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await nextUIUpdate();
 
-  kb.close();
+  assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored after focus moves away");
+
+  outside.remove();
   kb.destroy();
   input.destroy();
 });
@@ -718,21 +730,29 @@ QUnit.test("Rapid target switches while open: each intermediate target is restor
 
   const kb = new KioskKeyboard({
     docked: true,
+    autoShow: true,
     mobileKeyboard: "Custom",
   });
-  (kb as any)._setActiveTarget(input1);
   await placeAndWait(kb);
 
-  kb.show();
+  // Focus input1 to open keyboard and set target
+  (input1.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
   const dom1 = input1.getFocusDomRef() as HTMLInputElement;
+  assert.ok(kb.isOpen(), "Keyboard opened");
   assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 suppressed");
 
-  (kb as any)._setActiveTarget(input2);
+  // Switch to input2
+  (input2.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
   const dom2 = input2.getFocusDomRef() as HTMLInputElement;
   assert.notStrictEqual(dom1.getAttribute("inputmode"), "none", "input1 restored after switch to input2");
   assert.strictEqual(dom2.getAttribute("inputmode"), "none", "input2 suppressed");
 
-  (kb as any)._setActiveTarget(input3);
+  // Switch to input3
+  (input3.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
   const dom3 = input3.getFocusDomRef() as HTMLInputElement;
   assert.notStrictEqual(dom2.getAttribute("inputmode"), "none", "input2 restored after switch to input3");
   assert.strictEqual(dom3.getAttribute("inputmode"), "none", "input3 suppressed");
