@@ -215,7 +215,13 @@ export default class HotkeyManager extends BaseObject {
     const id = idGen.next();
 
     // Conflict detection within the same scope
-    this._handleConflict(normalizedHotkey, resolved.scope, resolved.target, resolved.conflictBehavior);
+    this._handleConflict(
+      normalizedHotkey,
+      resolved.scope,
+      resolved.target,
+      resolved.targetCallback,
+      resolved.conflictBehavior,
+    );
 
     this._logValidationWarnings(normalizedHotkey);
 
@@ -282,8 +288,14 @@ export default class HotkeyManager extends BaseObject {
           const { element: nextTarget, callback: nextCallback } = resolveTarget(newOptions.target);
           const changed = opts.target !== nextTarget || opts.targetCallback !== nextCallback;
           if (changed) {
-            if (nextTarget) {
-              this._handleConflict(registration.normalizedHotkey, opts.scope, nextTarget, opts.conflictBehavior);
+            if (nextTarget || nextCallback) {
+              this._handleConflict(
+                registration.normalizedHotkey,
+                opts.scope,
+                nextTarget,
+                nextCallback,
+                opts.conflictBehavior,
+              );
             }
             this._deindexRegistration(registration);
             opts.target = nextTarget;
@@ -1095,20 +1107,6 @@ export default class HotkeyManager extends BaseObject {
   }
 
   /**
-   * Look up registrations by their IDs and return public info objects.
-   * O(n) where n = ids.size, not n = total registrations.
-   * @internal
-   */
-  _getRegistrationInfoByIds(ids: ReadonlySet<string>): HotkeyRegistrationInfo[] {
-    const result: HotkeyRegistrationInfo[] = [];
-    for (const id of ids) {
-      const reg = this._registrations.get(id);
-      if (reg) result.push(this._toRegistrationInfo(reg));
-    }
-    return result;
-  }
-
-  /**
    * Resolve registration IDs for a composedPath node.
    *
    * Merges object-identity hits with id-based index hits so that both
@@ -1198,6 +1196,7 @@ export default class HotkeyManager extends BaseObject {
     normalizedHotkey: string,
     scope: string,
     target: Element | null,
+    targetCallback: (() => Element | null) | null,
     conflictBehavior: ConflictBehavior,
   ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
@@ -1205,7 +1204,11 @@ export default class HotkeyManager extends BaseObject {
     // Use scope-bucket lookup instead of iterating all registrations
     const bucket = this._registrationsByScope.get(scope);
     if (!bucket) return;
-    const ids = target === null ? bucket.untargetedIds : this._getTargetRegistrationIds(bucket, target);
+    const ids = targetCallback
+      ? bucket.callbackTargetIds
+      : target === null
+        ? bucket.untargetedIds
+        : this._getTargetRegistrationIds(bucket, target);
     if (!ids || ids.size === 0) return;
 
     // Find conflicts by matching normalizedHotkey within the bucket

@@ -8,7 +8,7 @@ import { createIdGenerator } from "./idgen";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
-import type { HotkeyCallback, Platform, SequencePendingCallback } from "../types";
+import type { HotkeyCallback, Platform } from "../types";
 import type {
   SequenceOptions,
   SequenceRegistration,
@@ -42,7 +42,7 @@ interface ActiveMatch {
  * Internal key sequence manager for UI5 applications.
  *
  * Not intended for direct use - access sequence functionality through
- * {@link HotkeyManager.registerSequence} and related facade methods.
+ * {@link HotkeyManager.register} with space-separated key format (e.g. `"g i"`).
  *
  * Receives pre-filtered key events from HotkeyManager's document listener
  * (no own listener) and matches multi-key sequences (e.g., ["G", "E"]
@@ -59,7 +59,6 @@ export default class SequenceManager extends BaseObject {
   private _registrations: Map<string, SequenceRegistration> = new Map();
   private _scopeKeyIndex: Map<string, Map<string, Set<SequenceRegistration>>> = new Map();
   private _activeMatches: ActiveMatch[] = [];
-  private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
   private _scopeProvider: () => string;
 
@@ -180,13 +179,6 @@ export default class SequenceManager extends BaseObject {
   }
 
   /**
-   * Set a callback for mid-sequence progress updates.
-   */
-  setPendingCallback(callback: SequencePendingCallback | null): void {
-    this._pendingCallback = callback;
-  }
-
-  /**
    * Get all active registrations.
    * Info objects are flat snapshots - no closures or parsed internals leak.
    */
@@ -245,7 +237,6 @@ export default class SequenceManager extends BaseObject {
     }
     this._registrations.clear();
     this._scopeKeyIndex.clear();
-    this._pendingCallback = null;
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
     super.destroy();
@@ -437,7 +428,7 @@ export default class SequenceManager extends BaseObject {
   }
 
   private _firePendingCallback(reg: SequenceRegistration, stepIndex: number): void {
-    const callback = reg.onPending ?? this._pendingCallback;
+    const callback = reg.onPending;
     if (!callback) return;
 
     try {

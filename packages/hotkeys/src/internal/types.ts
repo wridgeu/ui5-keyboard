@@ -92,8 +92,7 @@ export interface SequenceOptions {
    * Per-registration callback for mid-sequence progress.
    *
    * Fires after each intermediate key with progress info (completed steps,
-   * total steps, next expected key). When set, takes precedence over the
-   * global `setSequencePendingHandler` for this registration.
+   * total steps, next expected key).
    *
    * Dies with the registration - no manual cleanup needed.
    */
