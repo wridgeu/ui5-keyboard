@@ -264,6 +264,22 @@ npm run build               # Build library dist/ artifacts (required before sta
 | `npm run start:kiosk:visual` | Kiosk visual test page (same server as kiosk) | 8082 |
 | `npm run start:kiosk-webc`   | Kiosk web component standalone demo (Vite)    | 8084 |
 
+### Port Map (Test Servers)
+
+Test runners (WDIO) start their own servers on fixed ports. These are not started manually but are useful to know when debugging port conflicts:
+
+| Port        | Purpose                                          | Config                                                      |
+| ----------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| 8081        | Hotkeys QUnit (WDIO)                             | `packages/hotkeys/test/qunit/wdio.conf.ts`                  |
+| 8082        | Kiosk QUnit (WDIO)                               | `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           |
+| 8083        | Kiosk FLP e2e                                    | `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         |
+| 8085        | Kiosk desktop e2e                                | `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             |
+| 8086        | Kiosk webc desktop e2e                           | `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        |
+| 8087 - 8090 | Kiosk webc multi-device e2e (base 8086 + offset) | `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` |
+| 8092 - 8095 | Kiosk multi-device e2e (base 8091 + offset)      | `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      |
+
+Device port offsets: phone-sm +1, phone-md +2, phone-lg +3, tablet +4 (defined in `tools/wdio-device-profiles.ts`).
+
 ### Build
 
 ```bash
