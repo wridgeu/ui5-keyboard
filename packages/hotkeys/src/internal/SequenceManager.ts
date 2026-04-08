@@ -115,6 +115,7 @@ export default class SequenceManager extends BaseObject {
       preventDefault: options?.preventDefault ?? true,
       stopPropagation: options?.stopPropagation ?? true,
       onPending: options?.onPending ?? null,
+      suppressInPopups: options?.suppressInPopups ?? false,
     };
 
     this._registrations.set(id, registration);
@@ -174,6 +175,7 @@ export default class SequenceManager extends BaseObject {
         if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
         if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
         if (newOptions.onPending !== undefined) reg.onPending = newOptions.onPending ?? null;
+        if (newOptions.suppressInPopups !== undefined) reg.suppressInPopups = newOptions.suppressInPopups;
       },
     };
   }
@@ -211,6 +213,7 @@ export default class SequenceManager extends BaseObject {
       ignoreInputs: reg.ignoreInputs,
       preventDefault: reg.preventDefault,
       stopPropagation: reg.stopPropagation,
+      suppressInPopups: reg.suppressInPopups,
     };
   }
 
@@ -233,7 +236,7 @@ export default class SequenceManager extends BaseObject {
    * Process a pre-filtered key event from HotkeyManager.
    * The caller is responsible for ignoring IME, modifier-only, and AltGr events.
    */
-  processKeyEvent(event: KeyboardEvent): boolean {
+  processKeyEvent(event: KeyboardEvent, popupOpen: boolean): boolean {
     // Repeated keydown events from a held key must not advance/start sequences.
     if (event.repeat) return false;
 
@@ -252,6 +255,7 @@ export default class SequenceManager extends BaseObject {
       const reg = match.registration;
       if (!this._isRegistrationActiveInScope(reg, activeScope)) continue;
       if (!this._isRegistrationEnabled(reg)) continue;
+      if (reg.suppressInPopups && popupOpen) continue;
 
       const nextStep = reg.parsedSteps[match.stepIndex];
 
@@ -314,9 +318,9 @@ export default class SequenceManager extends BaseObject {
 
     // 2. Two-pass: check active scope first, then global.
     // Ensures scoped sequences take priority over global ones.
-    let startedMatch = this._startMatchesForScope(event, activeScope, isInput);
+    let startedMatch = this._startMatchesForScope(event, activeScope, isInput, popupOpen);
     if (activeScope !== GLOBAL_SCOPE) {
-      startedMatch = this._startMatchesForScope(event, GLOBAL_SCOPE, isInput) || startedMatch;
+      startedMatch = this._startMatchesForScope(event, GLOBAL_SCOPE, isInput, popupOpen) || startedMatch;
     }
 
     // Fire pending callback for advanced matches (those that progressed from an existing active match)
@@ -377,7 +381,7 @@ export default class SequenceManager extends BaseObject {
   /**
    * Start new sequence matches for registrations in the given scope.
    */
-  private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean): boolean {
+  private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean, popupOpen: boolean): boolean {
     const keyMap = this._scopeKeyIndex.get(scope);
     if (!keyMap) return false;
 
@@ -393,6 +397,7 @@ export default class SequenceManager extends BaseObject {
         if (resolveIgnoreInputs(reg.ignoreInputs, firstStep) && isInput) continue;
 
         if (!this._isRegistrationEnabled(reg)) continue;
+        if (reg.suppressInPopups && popupOpen) continue;
 
         if (!matchesKeyboardEvent(event, firstStep)) continue;
 
