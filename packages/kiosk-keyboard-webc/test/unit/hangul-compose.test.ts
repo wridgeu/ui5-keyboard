@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getMiddlewareForLayout } from "../../src/core/middleware-registry.js";
+import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
 import "../../src/middleware/hangul-compose.js";
 
 describe("hangul-compose middleware", () => {
@@ -9,15 +9,14 @@ describe("hangul-compose middleware", () => {
     input = document.createElement("input");
     input.value = "";
     input.setSelectionRange(0, 0);
-    getMiddlewareForLayout("ko-hangul")?.reset();
   });
 
   function mw() {
-    return getMiddlewareForLayout("ko-hangul")!;
+    return getMiddlewareFactory("ko-hangul")!();
   }
 
   it("registers itself for ko-hangul layout", () => {
-    expect(getMiddlewareForLayout("ko-hangul")).not.toBeNull();
+    expect(getMiddlewareFactory("ko-hangul")).not.toBeNull();
   });
 
   it("single L consonant shows as preedit", () => {

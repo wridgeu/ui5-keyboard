@@ -28,8 +28,7 @@ import {
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
 import {
-  getMiddlewareForLayout as registryGetMiddlewareForLayout,
-  deactivateMiddleware as registryDeactivateMiddleware,
+  getMiddlewareFactory as registryGetMiddlewareFactory,
   registerMiddleware as registryRegisterMiddleware,
 } from "./internal/middleware-registry";
 import {
@@ -124,6 +123,7 @@ export default class KioskKeyboard extends Control {
   declare private _highlightTargetId: string | null;
   declare private _pressedKeyEl: HTMLElement | null;
   declare private _baseLayout: string;
+  declare private _middleware: CompositionMiddleware | null;
   declare private _keyboardTypeSource: KeyboardTypeSource;
   declare private _suppressedInputId: string | null;
   declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
@@ -740,6 +740,7 @@ export default class KioskKeyboard extends Control {
     );
     this._targetResolverInstance = null;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
+    this._middleware = null;
     this._rendererApi = null;
     this._responsiveResizeHandlerId = null;
     this._responsiveObservedDom = null;
@@ -883,8 +884,10 @@ export default class KioskKeyboard extends Control {
   }
 
   exit(): void {
-    const mw = registryGetMiddlewareForLayout(this.getLayout());
-    if (mw) mw.reset();
+    if (this._middleware) {
+      this._middleware.reset();
+      this._middleware = null;
+    }
     KioskKeyboard._instances.delete(this);
 
     // When the last living instance is destroyed, auto-clear i18n resolver
@@ -1933,13 +1936,16 @@ export default class KioskKeyboard extends Control {
       keyValue === "{enter}" ||
       (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
     ) {
-      const mw = registryGetMiddlewareForLayout(this.getLayout());
-      if (mw) {
+      if (!this._middleware) {
+        const factory = registryGetMiddlewareFactory(this.getLayout());
+        if (factory) this._middleware = factory();
+      }
+      if (this._middleware) {
         const targetEl = this._getTargetElement();
         const mwTarget = targetEl
           ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
           : null;
-        if (mwTarget && mw.handleKey(keyValue, mwTarget as HTMLInputElement | HTMLTextAreaElement)) {
+        if (mwTarget && this._middleware.handleKey(keyValue, mwTarget as HTMLInputElement | HTMLTextAreaElement)) {
           if (this._shiftState.autoRelease()) {
             this.invalidate();
           }
@@ -1966,7 +1972,10 @@ export default class KioskKeyboard extends Control {
       if (this.getKeyboardType() === KeyboardType.Full) {
         const raw = keyValue.slice("{layout:".length, -1).trim();
         if (raw) {
-          registryDeactivateMiddleware(this.getLayout());
+          if (this._middleware) {
+            this._middleware.commit();
+            this._middleware = null;
+          }
           const name = raw === "base" ? this._baseLayout : raw;
           const previousLayout = this.getLayout();
           this.setLayout(name);

@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CompositionMiddleware } from "../../src/types.js";
-import {
-  _registerMiddleware,
-  getMiddlewareForLayout,
-  deactivateMiddleware,
-} from "../../src/core/middleware-registry.js";
+import { _registerMiddleware, getMiddlewareFactory } from "../../src/core/middleware-registry.js";
 import {
   createCompositionState,
   startComposition,
@@ -17,20 +13,16 @@ import "../../src/middleware/kana-dakuten.js";
 describe("middleware integration", () => {
   describe("hangul backspace decomposition end-to-end", () => {
     let input: HTMLInputElement;
+    let m: CompositionMiddleware;
 
     beforeEach(() => {
       input = document.createElement("input");
       input.value = "";
       input.setSelectionRange(0, 0);
-      getMiddlewareForLayout("ko-hangul")?.reset();
+      m = getMiddlewareFactory("ko-hangul")!();
     });
 
-    function mw() {
-      return getMiddlewareForLayout("ko-hangul")!;
-    }
-
     it("decomposes LVT -> LV -> L -> empty via sequential backspaces", () => {
-      const m = mw();
       m.handleKey("\u314e", input);
       m.handleKey("\u314f", input);
       m.handleKey("\u3134", input);
@@ -49,7 +41,6 @@ describe("middleware integration", () => {
     });
 
     it("after full backspace decomposition, middleware is ready for new input", () => {
-      const m = mw();
       m.handleKey("\u3131", input);
       m.handleKey("\u314f", input);
       m.handleKey("{backspace}", input);
@@ -61,10 +52,6 @@ describe("middleware integration", () => {
   });
 
   describe("composition state isolation between targets", () => {
-    beforeEach(() => {
-      getMiddlewareForLayout("ko-hangul")?.reset();
-    });
-
     it("composing on input A then switching to input B does not corrupt A", () => {
       const inputA = document.createElement("input");
       inputA.value = "";
@@ -74,7 +61,7 @@ describe("middleware integration", () => {
       inputB.value = "";
       inputB.setSelectionRange(0, 0);
 
-      const m = getMiddlewareForLayout("ko-hangul")!;
+      const m = getMiddlewareFactory("ko-hangul")!();
 
       m.handleKey("\u3131", inputA);
       m.handleKey("\u314f", inputA);
@@ -99,7 +86,7 @@ describe("middleware integration", () => {
       inputB.value = "";
       inputB.setSelectionRange(0, 0);
 
-      const m = getMiddlewareForLayout("ko-hangul")!;
+      const m = getMiddlewareFactory("ko-hangul")!();
 
       m.handleKey("\u3131", inputA);
       expect(inputA.value).toBe("existing\u1100");
@@ -112,11 +99,57 @@ describe("middleware integration", () => {
     });
   });
 
-  describe("component destroy calls reset (not commit)", () => {
-    beforeEach(() => {
-      getMiddlewareForLayout("ko-hangul")?.reset();
+  describe("two components using the same layout get independent instances", () => {
+    it("typing on instance A does not affect instance B", () => {
+      const inputA = document.createElement("input");
+      inputA.value = "";
+      inputA.setSelectionRange(0, 0);
+
+      const inputB = document.createElement("input");
+      inputB.value = "";
+      inputB.setSelectionRange(0, 0);
+
+      const factory = getMiddlewareFactory("ko-hangul")!;
+      const mwA = factory();
+      const mwB = factory();
+
+      mwA.handleKey("\u3131", inputA);
+      mwA.handleKey("\u314f", inputA);
+
+      expect(inputA.value).toBe("\uAC00");
+      expect(inputB.value).toBe("");
+
+      mwB.handleKey("\u3134", inputB);
+      mwB.handleKey("\u3153", inputB);
+
+      expect(inputB.value).toBe("\uB108");
+      expect(inputA.value).toBe("\uAC00");
     });
 
+    it("resetting instance A does not affect instance B", () => {
+      const inputA = document.createElement("input");
+      inputA.value = "";
+      inputA.setSelectionRange(0, 0);
+
+      const inputB = document.createElement("input");
+      inputB.value = "";
+      inputB.setSelectionRange(0, 0);
+
+      const factory = getMiddlewareFactory("ko-hangul")!;
+      const mwA = factory();
+      const mwB = factory();
+
+      mwA.handleKey("\u3131", inputA);
+      mwB.handleKey("\u3134", inputB);
+
+      mwA.reset();
+
+      expect(inputA.value).toBe("");
+      expect(inputB.value).toBe("\u1102");
+    });
+  });
+
+  describe("component destroy calls reset (not commit)", () => {
     it("reset() clears preedit text and dispatches compositionend with empty data", () => {
       const input = document.createElement("input");
       input.value = "";
@@ -125,7 +158,7 @@ describe("middleware integration", () => {
       const compositionEndSpy = vi.fn();
       input.addEventListener("compositionend", compositionEndSpy);
 
-      const m = getMiddlewareForLayout("ko-hangul")!;
+      const m = getMiddlewareFactory("ko-hangul")!();
       m.handleKey("\u3131", input);
       m.handleKey("\u314f", input);
       expect(input.value).toBe("\uAC00");
@@ -143,7 +176,7 @@ describe("middleware integration", () => {
       input.value = "";
       input.setSelectionRange(0, 0);
 
-      const m = getMiddlewareForLayout("ko-hangul")!;
+      const m = getMiddlewareFactory("ko-hangul")!();
       m.handleKey("\u3131", input);
       m.handleKey("\u314f", input);
 
@@ -162,7 +195,7 @@ describe("middleware integration", () => {
       const compositionEndSpy = vi.fn();
       input.addEventListener("compositionend", compositionEndSpy);
 
-      const m = getMiddlewareForLayout("ko-hangul")!;
+      const m = getMiddlewareFactory("ko-hangul")!();
       m.handleKey("\u3131", input);
       m.handleKey("\u314f", input);
 
@@ -180,7 +213,7 @@ describe("middleware integration", () => {
       input.setSelectionRange(1, 1);
       input.readOnly = true;
 
-      const m = getMiddlewareForLayout("ja-kana")!;
+      const m = getMiddlewareFactory("ja-kana")!();
       const consumed = m.handleKey("\u309B", input);
       expect(consumed).toBe(false);
       expect(input.value).toBe("\u304B");
@@ -192,7 +225,7 @@ describe("middleware integration", () => {
       input.setSelectionRange(1, 1);
       input.disabled = true;
 
-      const m = getMiddlewareForLayout("ja-kana")!;
+      const m = getMiddlewareFactory("ja-kana")!();
       const consumed = m.handleKey("\u309B", input);
       expect(consumed).toBe(false);
       expect(input.value).toBe("\u304B");
@@ -251,14 +284,14 @@ describe("middleware integration", () => {
         reset: () => {},
       };
       KioskKeyboard.registerMiddleware(["test-layout"], () => customMw);
-      const mw = getMiddlewareForLayout("test-layout");
-      expect(mw).not.toBeNull();
-      expect(mw!.commit()).toBe("custom");
+      const factory = getMiddlewareFactory("test-layout");
+      expect(factory).not.toBeNull();
+      expect(factory!().commit()).toBe("custom");
     });
   });
 
   describe("middleware deactivation on layout switch", () => {
-    it("calls commit() when deactivateMiddleware is invoked", () => {
+    it("component calls commit() on its own instance during layout switch", () => {
       const commitSpy = vi.fn(() => null);
       const factory = (): CompositionMiddleware => ({
         handleKey: () => false,
@@ -266,27 +299,23 @@ describe("middleware integration", () => {
         reset: () => {},
       });
       _registerMiddleware(["tracked-layout"], factory);
-      getMiddlewareForLayout("tracked-layout");
-      deactivateMiddleware("tracked-layout");
+      const mw = getMiddlewareFactory("tracked-layout")!();
+      mw.commit();
       expect(commitSpy).toHaveBeenCalledOnce();
     });
 
-    it("discards the instance after deactivation so a fresh one is created", () => {
+    it("each factory call produces a distinct instance", () => {
       let instanceCount = 0;
       const factory = (): CompositionMiddleware => {
         instanceCount++;
         return { handleKey: () => false, commit: () => null, reset: () => {} };
       };
       _registerMiddleware(["switch-layout"], factory);
-      const first = getMiddlewareForLayout("switch-layout");
-      deactivateMiddleware("switch-layout");
-      const second = getMiddlewareForLayout("switch-layout");
+      const f = getMiddlewareFactory("switch-layout")!;
+      const first = f();
+      const second = f();
       expect(instanceCount).toBe(2);
       expect(first).not.toBe(second);
-    });
-
-    it("deactivateMiddleware is a no-op for layouts without an active instance", () => {
-      expect(() => deactivateMiddleware("nonexistent")).not.toThrow();
     });
   });
 });

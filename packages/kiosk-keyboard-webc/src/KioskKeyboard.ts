@@ -31,7 +31,7 @@ import {
   unregisterLocaleLayout,
   resetLocaleLayouts,
 } from "./core/layout-registry.js";
-import { getMiddlewareForLayout, deactivateMiddleware, registerMiddleware } from "./core/middleware-registry.js";
+import { getMiddlewareFactory, registerMiddleware } from "./core/middleware-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
   KeyboardType,
@@ -557,6 +557,7 @@ class KioskKeyboard extends UI5Element {
   // ── Non-reactive internal state ──
 
   private _shiftState = new ShiftState();
+  private _middleware: CompositionMiddleware | null = null;
   private _baseLayout = "";
   private _keyboardTypeSource: KeyboardTypeSource = "unset";
   private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
@@ -727,8 +728,10 @@ class KioskKeyboard extends UI5Element {
   }
 
   onExitDOM(): void {
-    const mw = getMiddlewareForLayout(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
-    if (mw) mw.reset();
+    if (this._middleware) {
+      this._middleware.reset();
+      this._middleware = null;
+    }
     KioskKeyboard._instances.delete(this);
     this._teardownAutoShow();
     this._teardownPhysicalKeyHighlight();
@@ -1163,10 +1166,11 @@ class KioskKeyboard extends UI5Element {
     const target = this._resolveTarget();
 
     // ── Composition middleware ──
-    const middleware = getMiddlewareForLayout(
-      this._currentLayout || this._baseLayout || this.layout || getLocaleLayout(),
-    );
-    if (middleware && target && middleware.handleKey(value, target)) {
+    if (!this._middleware) {
+      const factory = getMiddlewareFactory(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
+      if (factory) this._middleware = factory();
+    }
+    if (this._middleware && target && this._middleware.handleKey(value, target)) {
       this._autoReleaseShift();
       return;
     }
@@ -1263,7 +1267,10 @@ class KioskKeyboard extends UI5Element {
   // ── Layout switch / F-key handling ──
 
   private _handleLayoutSwitch(value: string): void {
-    deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
+    if (this._middleware) {
+      this._middleware.commit();
+      this._middleware = null;
+    }
     const layoutName = value.slice("{layout:".length, -1);
     if (layoutName === "base") {
       this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
@@ -1415,8 +1422,9 @@ class KioskKeyboard extends UI5Element {
     }
 
     const targetChanged = this._targetElement !== inputEl;
-    if (targetChanged) {
-      deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
+    if (targetChanged && this._middleware) {
+      this._middleware.commit();
+      this._middleware = null;
     }
     this._targetElement = inputEl;
     this._targetSource = "autoShow";

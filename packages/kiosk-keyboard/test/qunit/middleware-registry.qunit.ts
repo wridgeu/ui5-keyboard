@@ -1,8 +1,7 @@
 import {
   _registerMiddleware,
   registerMiddleware,
-  getMiddlewareForLayout,
-  deactivateMiddleware,
+  getMiddlewareFactory,
   _resetMiddleware,
 } from "ui5/kiosk/internal/middleware-registry";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
@@ -30,14 +29,14 @@ QUnit.module("middleware-registry - _registerMiddleware", { afterEach: commonAft
 
 QUnit.test("Registers a factory for a layout", (assert) => {
   _registerMiddleware(["ja-kana"], mockFactory);
-  const mw = getMiddlewareForLayout("ja-kana");
-  assert.notStrictEqual(mw, null, "Middleware returned for registered layout");
+  const factory = getMiddlewareFactory("ja-kana");
+  assert.notStrictEqual(factory, null, "Factory returned for registered layout");
 });
 
 QUnit.test("Registers the same factory for multiple layouts", (assert) => {
   _registerMiddleware(["ja-kana", "ja-kana-fk"], mockFactory);
-  assert.notStrictEqual(getMiddlewareForLayout("ja-kana"), null, "ja-kana has middleware");
-  assert.notStrictEqual(getMiddlewareForLayout("ja-kana-fk"), null, "ja-kana-fk has middleware");
+  assert.notStrictEqual(getMiddlewareFactory("ja-kana"), null, "ja-kana has factory");
+  assert.notStrictEqual(getMiddlewareFactory("ja-kana-fk"), null, "ja-kana-fk has factory");
 });
 
 QUnit.test("Is idempotent -- first write wins", (assert) => {
@@ -53,12 +52,12 @@ QUnit.test("Is idempotent -- first write wins", (assert) => {
   });
   _registerMiddleware(["ja-kana"], first);
   _registerMiddleware(["ja-kana"], second);
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   assert.strictEqual(mw.handleKey("x", document.createElement("input")), true, "First factory is used, not second");
 });
 
 QUnit.test("Returns null for layouts without middleware", (assert) => {
-  assert.strictEqual(getMiddlewareForLayout("qwerty"), null, "No middleware for unregistered layout");
+  assert.strictEqual(getMiddlewareFactory("qwerty"), null, "No factory for unregistered layout");
 });
 
 // --- registerMiddleware (public, can override) ---
@@ -73,41 +72,28 @@ QUnit.test("Can override built-in middleware", (assert) => {
     reset: () => {},
   });
   registerMiddleware(["ja-kana"], override);
-  const mw = getMiddlewareForLayout("ja-kana")!;
+  const mw = getMiddlewareFactory("ja-kana")!();
   assert.strictEqual(mw.commit(), "override", "Public registerMiddleware overwrites built-in factory");
 });
 
-// --- getMiddlewareForLayout ---
+// --- getMiddlewareFactory ---
 
-QUnit.module("middleware-registry - getMiddlewareForLayout", { afterEach: commonAfterEach });
+QUnit.module("middleware-registry - getMiddlewareFactory", { afterEach: commonAfterEach });
 
-QUnit.test("Creates a fresh instance from factory on first call", (assert) => {
-  let callCount = 0;
-  const factory = (): CompositionMiddleware => {
-    callCount++;
-    return { handleKey: () => false, commit: () => null, reset: () => {} };
-  };
-  _registerMiddleware(["ja-kana"], factory);
-  getMiddlewareForLayout("ja-kana");
-  assert.strictEqual(callCount, 1, "Factory called exactly once");
-});
-
-QUnit.test("Returns the same instance on subsequent calls", (assert) => {
+QUnit.test("Returns the registered factory function", (assert) => {
   _registerMiddleware(["ja-kana"], mockFactory);
-  const a = getMiddlewareForLayout("ja-kana");
-  const b = getMiddlewareForLayout("ja-kana");
-  assert.strictEqual(a, b, "Same instance returned on second call");
+  const factory = getMiddlewareFactory("ja-kana");
+  assert.strictEqual(typeof factory, "function", "Factory is a function");
 });
 
-QUnit.test("Creates a new instance after deactivateMiddleware", (assert) => {
-  let callCount = 0;
-  const factory = (): CompositionMiddleware => {
-    callCount++;
-    return { handleKey: () => false, commit: () => null, reset: () => {} };
-  };
-  _registerMiddleware(["ja-kana"], factory);
-  getMiddlewareForLayout("ja-kana");
-  deactivateMiddleware("ja-kana");
-  getMiddlewareForLayout("ja-kana");
-  assert.strictEqual(callCount, 2, "Factory called again after deactivation");
+QUnit.test("Each factory call creates a fresh instance", (assert) => {
+  _registerMiddleware(["ja-kana"], mockFactory);
+  const factory = getMiddlewareFactory("ja-kana")!;
+  const a = factory();
+  const b = factory();
+  assert.notStrictEqual(a, b, "Each call returns a new instance");
+});
+
+QUnit.test("Returns null for unregistered layouts", (assert) => {
+  assert.strictEqual(getMiddlewareFactory("nonexistent"), null, "No factory for unregistered layout");
 });
