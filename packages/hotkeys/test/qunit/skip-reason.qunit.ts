@@ -24,6 +24,7 @@ function makeRegistration(id: string): Registration {
       suppressInPopups: false,
       conflictBehavior: "warn",
       target: null,
+      targetCallback: null,
     },
   };
 }

@@ -1,3 +1,4 @@
+import type Router from "sap/ui/core/routing/Router";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
@@ -48,7 +49,7 @@ QUnit.test("Route change pushes scope", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
-  group.enableRouterIntegration(router);
+  group.enableRouterIntegration(router as unknown as Router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main", "Active scope is 'main' after route change");
@@ -58,7 +59,7 @@ QUnit.test("Route change resets previous scopes", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
-  group.enableRouterIntegration(router);
+  group.enableRouterIntegration(router as unknown as Router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -71,7 +72,7 @@ QUnit.test("Hotkey fires in correct route scope", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
-  group.enableRouterIntegration(router);
+  group.enableRouterIntegration(router as unknown as Router);
 
   let mainCalled = false;
   let detailCalled = false;
@@ -107,7 +108,7 @@ QUnit.test("Global hotkey still fires after route change", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
-  group.enableRouterIntegration(router);
+  group.enableRouterIntegration(router as unknown as Router);
 
   let globalCalled = false;
   manager.register("Ctrl+S", () => {
@@ -123,7 +124,7 @@ QUnit.test("Detach cleanup on destroy", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
-  group.enableRouterIntegration(router);
+  group.enableRouterIntegration(router as unknown as Router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -142,8 +143,8 @@ QUnit.test("Calling enableRouterIntegration twice replaces the previous router",
   const router1 = createMockRouter();
   const router2 = createMockRouter();
 
-  group.enableRouterIntegration(router1);
-  group.enableRouterIntegration(router2);
+  group.enableRouterIntegration(router1 as unknown as Router);
+  group.enableRouterIntegration(router2 as unknown as Router);
 
   manager.pushScope("initial");
   router2.fireRouteMatched("newRoute");
@@ -157,7 +158,7 @@ QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
-  group.enableRouterIntegration(router);
+  group.enableRouterIntegration(router as unknown as Router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -171,7 +172,7 @@ QUnit.test("destroyAll detaches router integration", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
-  group.enableRouterIntegration(router);
+  group.enableRouterIntegration(router as unknown as Router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -185,7 +186,7 @@ QUnit.test("New group can re-enable router integration after previous group dest
   const manager = createHotkeyManager();
   const group1 = manager.createGroup();
   const router = createMockRouter();
-  group1.enableRouterIntegration(router);
+  group1.enableRouterIntegration(router as unknown as Router);
 
   router.fireRouteMatched("main");
   assert.strictEqual(manager.getActiveScope(), "main");
@@ -194,7 +195,7 @@ QUnit.test("New group can re-enable router integration after previous group dest
   manager.resetToGlobalScope();
 
   const group2 = manager.createGroup();
-  group2.enableRouterIntegration(router);
+  group2.enableRouterIntegration(router as unknown as Router);
   router.fireRouteMatched("settings");
   assert.strictEqual(manager.getActiveScope(), "settings", "New group's router integration works");
 

@@ -95,6 +95,8 @@ declare module "./KioskKeyboard" {
           `PageUp`/`PageDown`) to the current target element (or document
           fallback). If not canceled, built-in native actions run for
           selected keys (`F5`, `F11`).
+        - `"None"`: fire `keyPress` only, skip native dispatch and
+          built-in navigation actions entirely.
          */
         fKeyMode?: FKeyMode | PropertyBindingInfo | `{${string}}`;
 
@@ -330,6 +332,8 @@ declare module "./KioskKeyboard" {
           `PageUp`/`PageDown`) to the current target element (or document
           fallback). If not canceled, built-in native actions run for
           selected keys (`F5`, `F11`).
+        - `"None"`: fire `keyPress` only, skip native dispatch and
+          built-in navigation actions entirely.
          */
         getFKeyMode(): FKeyMode;
 
@@ -342,6 +346,8 @@ declare module "./KioskKeyboard" {
           `PageUp`/`PageDown`) to the current target element (or document
           fallback). If not canceled, built-in native actions run for
           selected keys (`F5`, `F11`).
+        - `"None"`: fire `keyPress` only, skip native dispatch and
+          built-in navigation actions entirely.
          */
         setFKeyMode(fKeyMode: FKeyMode): this;
 

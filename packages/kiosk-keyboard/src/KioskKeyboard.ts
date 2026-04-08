@@ -285,6 +285,8 @@ export default class KioskKeyboard extends Control {
        *   `PageUp`/`PageDown`) to the current target element (or document
        *   fallback). If not canceled, built-in native actions run for
        *   selected keys (`F5`, `F11`).
+       * - `"None"`: fire `keyPress` only, skip native dispatch and
+       *   built-in navigation actions entirely.
        */
       fKeyMode: {
         type: "ui5.kiosk.FKeyMode",
