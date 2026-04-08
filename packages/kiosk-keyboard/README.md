@@ -1036,7 +1036,7 @@ kb.isKeyboardTypeExplicit(); // false
 
 ## controls
 
-The `controls` property provides declarative input targeting. List one or more input control IDs and the keyboard will automatically target whichever one last received focus. This replaces the older separate `targetInput` association and `inputIds` property with a single unified approach.
+The `controls` property provides declarative input targeting. List one or more input control IDs and the keyboard will automatically target whichever one last received focus.
 
 **Single input:**
 
