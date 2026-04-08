@@ -107,37 +107,37 @@ export default class KioskKeyboard extends Control {
     super(id, settings);
   }
 
-  // ── ManagedObject field trap: declare strips these from Babel output ──
-  declare private _shiftState: ShiftState;
-  declare private _lastFocusedKeyId: string | null;
-  declare private _open: boolean;
-  declare private _boundFocusIn: (e: FocusEvent) => void;
-  declare private _boundFocusOut: (e: FocusEvent) => void;
-  declare private _autoShowActive: boolean;
-  declare private _inputFocusDelegation: InputFocusDelegation;
-  declare private _registeredInputControlById: Map<string, string>;
-  declare private _resolvedInputControlIds: Set<string>;
+  // ── Private fields (initialized in init(), not at class level) ──
+  private _shiftState!: ShiftState;
+  private _lastFocusedKeyId!: string | null;
+  private _open!: boolean;
+  private _boundFocusIn!: (e: FocusEvent) => void;
+  private _boundFocusOut!: (e: FocusEvent) => void;
+  private _autoShowActive!: boolean;
+  private _inputFocusDelegation!: InputFocusDelegation;
+  private _registeredInputControlById!: Map<string, string>;
+  private _resolvedInputControlIds!: Set<string>;
 
-  declare private _delegatedInstances: Map<string, Control>;
-  declare private _keyHighlightDelegation: KeyHighlightDelegation;
-  declare private _highlightTargetId: string | null;
-  declare private _pressedKeyEl: HTMLElement | null;
-  declare private _baseLayout: string;
-  declare private _middleware: CompositionMiddleware | null;
-  declare private _keyboardTypeSource: KeyboardTypeSource;
-  declare private _suppressedInputId: string | null;
-  declare private _boundEscapeKeydown: (e: KeyboardEvent) => void;
-  declare private _focusClaimService: FocusClaimService;
-  declare private _targetSession: TargetInputSession;
-  declare private _deferredFocusOutCloseId: number | null;
-  declare private _rendererApi: RendererInternalApi | null;
-  declare private _targetResolverInstance: TargetResolverFn | null;
+  private _delegatedInstances!: Map<string, Control>;
+  private _keyHighlightDelegation!: KeyHighlightDelegation;
+  private _highlightTargetId!: string | null;
+  private _pressedKeyEl!: HTMLElement | null;
+  private _baseLayout!: string;
+  private _middleware!: CompositionMiddleware | null;
+  private _keyboardTypeSource!: KeyboardTypeSource;
+  private _suppressedInputId!: string | null;
+  private _boundEscapeKeydown!: (e: KeyboardEvent) => void;
+  private _focusClaimService!: FocusClaimService;
+  private _targetSession!: TargetInputSession;
+  private _deferredFocusOutCloseId!: number | null;
+  private _rendererApi!: RendererInternalApi | null;
+  private _targetResolverInstance!: TargetResolverFn | null;
   /** UI5 ResizeHandler registration ID for root size updates. */
-  declare private _responsiveResizeHandlerId: string | null;
+  private _responsiveResizeHandlerId!: string | null;
   /** Root DOM element currently observed by the resize handler. */
-  declare private _responsiveObservedDom: HTMLElement | null;
+  private _responsiveObservedDom!: HTMLElement | null;
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
-  declare private _responsiveSyncFrameId: number | null;
+  private _responsiveSyncFrameId!: number | null;
   static readonly metadata = {
     library: "ui5.kiosk",
     properties: {
