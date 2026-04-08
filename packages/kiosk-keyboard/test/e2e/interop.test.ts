@@ -90,7 +90,7 @@ describe("interop: StepInput, TextArea, and bridge custom element", () => {
     await openPage();
   });
 
-  it("opens and targets StepInput via inputIds", async () => {
+  it("opens and targets StepInput via controls", async () => {
     await focusControl("interopStep");
 
     await browser.waitUntil(() => isKeyboardOpen(), {
@@ -102,7 +102,7 @@ describe("interop: StepInput, TextArea, and bridge custom element", () => {
     expect(await isNumpadKeyboard()).toBe(true);
   });
 
-  it("opens and targets TextArea via inputIds", async () => {
+  it("opens and targets TextArea via controls", async () => {
     await blurKeyboard();
     await focusControl("interopTextArea");
 
