@@ -452,6 +452,55 @@ Each lifecycle owner should create exactly one group and destroy it in its corre
 - **View lifecycle**: if a view/controller is recreated by routing, do not reuse old groups/handles across instances.
 - **Component lifecycle**: call `manager.destroy()` in `Component.exit()`. This finalizes all groups, removes all DOM listeners, and clears all state.
 
+#### Reducing Boilerplate with a Controller Extension
+
+If multiple controllers repeat the same `createGroup` / `destroyAll` pattern, a UI5 `ControllerExtension` can encapsulate it once in your app:
+
+```ts
+// app/ext/HotkeyExtension.ts
+import ControllerExtension from "sap/ui/core/mvc/ControllerExtension";
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
+import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
+
+export default class HotkeyExtension extends ControllerExtension {
+  private _hotkeys!: RegistrationGroup;
+
+  static readonly overrides = {
+    onInit(this: HotkeyExtension) {
+      const manager = (this.base.getOwnerComponent() as any).getHotkeyManager() as HotkeyManager;
+      this._hotkeys = manager.createGroup();
+    },
+    onExit(this: HotkeyExtension) {
+      this._hotkeys.destroyAll();
+    },
+  };
+
+  getGroup(): RegistrationGroup {
+    return this._hotkeys;
+  }
+}
+```
+
+Controllers then use the extension as a member:
+
+```ts
+import HotkeyExtension from "app/ext/HotkeyExtension";
+
+export default class Detail extends Controller {
+  hotkeys = HotkeyExtension;
+
+  onInit() {
+    this.hotkeys.getGroup().register("F5", () => this.onRefresh(), {
+      scope: "detail",
+      description: "Refresh",
+    });
+  }
+  // No onExit needed -- the extension handles cleanup
+}
+```
+
+This is an app-level pattern, not shipped by the library, so it adds no bundle cost to consumers who don't need it.
+
 #### Scope Stacking
 
 The scope stack controls which hotkeys are active. The global scope is always at the bottom and cannot be pushed or removed. Each `pushScope()` adds a layer on top; `popScope()` removes it.
