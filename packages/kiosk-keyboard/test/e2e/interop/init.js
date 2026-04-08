@@ -79,7 +79,7 @@ sap.ui.define(
       autoShow: true,
       autoType: true,
       mobileKeyboard: "Custom",
-      inputIds: [input.getId(), step.getId(), textArea.getId(), bridge.getId(), shadowBridge.getId()],
+      controls: [input.getId(), step.getId(), textArea.getId(), bridge.getId(), shadowBridge.getId()],
     });
     keyboard.placeAt("interop-kb");
 
@@ -87,7 +87,7 @@ sap.ui.define(
       custom.addEventListener("focusin", function () {
         var nativeInput = custom.querySelector("input");
         bridge.setValue(nativeInput ? nativeInput.value : "");
-        keyboard.setTargetInput(bridge);
+        keyboard.setControls([bridge.getId()]);
         keyboard.show();
         bridge.focus();
       });
@@ -111,7 +111,7 @@ sap.ui.define(
       const adoptShadowBridgeTarget = function () {
         const nativeInput = getShadowInput();
         shadowBridge.setValue(nativeInput ? nativeInput.value : "");
-        keyboard.setTargetInput(shadowBridge);
+        keyboard.setControls([shadowBridge.getId()]);
         keyboard.show();
         shadowBridge.focus();
       };
@@ -146,7 +146,7 @@ sap.ui.define(
       },
       getKeyboardTargetId: function () {
         var kb = Element.getElementById("interopKeyboard");
-        return kb && kb.getTargetInput ? kb.getTargetInput() : "";
+        return kb && kb.getControls ? kb.getControls() : "";
       },
       focusCustomElement: function () {
         var el = document.getElementById("interopCustom");

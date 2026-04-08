@@ -10,7 +10,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
 
   const inputBaseline = new Input({ value: "Hello World", width: "300px" });
   inputBaseline.placeAt("input-baseline");
-  new KioskKeyboard({ targetInput: inputBaseline }).placeAt("kb-baseline");
+  new KioskKeyboard({ controls: [inputBaseline.getId()] }).placeAt("kb-baseline");
 
   // -- 2. French resolver --
 
@@ -30,7 +30,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
 
   const inputFrench = new Input({ value: "Bonjour", width: "300px" });
   inputFrench.placeAt("input-french");
-  const kbFrench = new KioskKeyboard({ targetInput: inputFrench });
+  const kbFrench = new KioskKeyboard({ controls: [inputFrench.getId()] });
   kbFrench.placeAt("kb-french");
 
   new Button({
@@ -57,7 +57,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
 
   const inputOverride = new Input({ value: "Custom labels", width: "300px" });
   inputOverride.placeAt("input-override");
-  const kbOverride = new KioskKeyboard({ targetInput: inputOverride });
+  const kbOverride = new KioskKeyboard({ controls: [inputOverride.getId()] });
   kbOverride.placeAt("kb-override");
 
   new Button({
@@ -78,7 +78,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
 
   const inputHook = new Input({ value: "Hook demo", width: "300px" });
   inputHook.placeAt("input-hook");
-  const kbHook = new KioskKeyboard({ targetInput: inputHook });
+  const kbHook = new KioskKeyboard({ controls: [inputHook.getId()] });
   kbHook.placeAt("kb-hook");
 
   new Button({

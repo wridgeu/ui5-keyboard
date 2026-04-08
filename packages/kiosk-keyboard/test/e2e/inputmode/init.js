@@ -9,7 +9,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
     docked: true,
     autoShow: true,
     mobileKeyboard: "Custom",
-    targetInput: inputCustom,
+    controls: [inputCustom.getId()],
   });
   kbCustom.placeAt("kb-custom");
 
@@ -20,7 +20,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
     docked: true,
     autoShow: true,
     mobileKeyboard: "Native",
-    targetInput: inputNative,
+    controls: [inputNative.getId()],
   });
   kbNative.placeAt("kb-native");
 
@@ -31,7 +31,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input"], function (KioskKeyboar
     docked: true,
     autoShow: true,
     mobileKeyboard: "Auto",
-    targetInput: inputAuto,
+    controls: [inputAuto.getId()],
   });
   kbAuto.placeAt("kb-auto");
 });

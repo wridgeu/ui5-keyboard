@@ -349,7 +349,7 @@
             auto-show
             auto-type
             mobile-keyboard="Custom"
-            input-ids="docked-input-name,docked-input-email,docked-input-zip,docked-input-notes,docked-step-unpatched,docked-step-patched"
+            controls="docked-input-name,docked-input-email,docked-input-zip,docked-input-notes,docked-step-unpatched,docked-step-patched"
           ></kiosk-keyboard>
         </div>
 
@@ -362,7 +362,7 @@
               <label for="qwerty-input">Target Input</label>
               <input id="qwerty-input" type="text" placeholder="Type here…" />
             </div>
-            <kiosk-keyboard id="kb-qwerty" layout="qwerty" for="qwerty-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-qwerty" layout="qwerty" controls="qwerty-input"></kiosk-keyboard>
           </div>
 
           <!-- 2. QWERTZ-DE with ui5-input -->
@@ -372,7 +372,7 @@
               <ui5-label for="qwertz-input" show-colon>Target Input</ui5-label>
               <ui5-input id="qwertz-input" placeholder="Hier tippen…"></ui5-input>
             </div>
-            <kiosk-keyboard id="kb-qwertz" layout="qwertz-de" for="qwertz-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-qwertz" layout="qwertz-de" controls="qwertz-input"></kiosk-keyboard>
           </div>
 
           <!-- 3. Numpad with ui5-input (Number) -->
@@ -382,7 +382,7 @@
               <ui5-label for="numpad-input" show-colon>Amount</ui5-label>
               <ui5-input id="numpad-input" type="Number" placeholder="0.00"></ui5-input>
             </div>
-            <kiosk-keyboard id="kb-numpad" keyboard-type="Numpad" for="numpad-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-numpad" keyboard-type="Numpad" controls="numpad-input"></kiosk-keyboard>
           </div>
 
           <!-- 4. Numeric with native input -->
@@ -392,7 +392,7 @@
               <label for="numeric-input">PIN / Code</label>
               <input id="numeric-input" type="text" placeholder="Enter code…" />
             </div>
-            <kiosk-keyboard id="kb-numeric" keyboard-type="Numeric" for="numeric-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-numeric" keyboard-type="Numeric" controls="numeric-input"></kiosk-keyboard>
           </div>
 
           <!-- 5. Disabled State -->
@@ -413,7 +413,7 @@
               <textarea id="narrow-input" rows="2" placeholder="Type here…"></textarea>
             </div>
             <div style="max-width: 320px">
-              <kiosk-keyboard id="kb-narrow" layout="qwerty" for="narrow-input"></kiosk-keyboard>
+              <kiosk-keyboard id="kb-narrow" layout="qwerty" controls="narrow-input"></kiosk-keyboard>
             </div>
           </div>
 
@@ -424,7 +424,7 @@
               <label for="text-input">Target Input (native)</label>
               <input id="text-input" type="text" placeholder="Type here via keyboard" />
             </div>
-            <kiosk-keyboard layout="qwerty" for="text-input"></kiosk-keyboard>
+            <kiosk-keyboard layout="qwerty" controls="text-input"></kiosk-keyboard>
           </div>
 
           <!-- 8. Custom Layout (instance registration) -->
@@ -434,7 +434,7 @@
               <label for="custom-layout-input">PIN</label>
               <input id="custom-layout-input" type="text" placeholder="Enter PIN…" />
             </div>
-            <kiosk-keyboard id="kb-custom" layout="demo-pin" for="custom-layout-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-custom" layout="demo-pin" controls="custom-layout-input"></kiosk-keyboard>
           </div>
 
           <!-- 9. ui5-textarea -->
@@ -444,7 +444,7 @@
               <ui5-label for="ui5-textarea" show-colon>Notes</ui5-label>
               <ui5-textarea id="ui5-textarea" placeholder="Multi-line input…" rows="3"></ui5-textarea>
             </div>
-            <kiosk-keyboard id="kb-textarea" layout="qwerty" for="ui5-textarea"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-textarea" layout="qwerty" controls="ui5-textarea"></kiosk-keyboard>
           </div>
 
           <!-- 10. F-Keys (standalone) -->
@@ -460,7 +460,7 @@
               <label for="nav-input">Cursor movement</label>
               <input id="nav-input" type="text" value="hello world" />
             </div>
-            <kiosk-keyboard id="kb-nav" layout="nav" for="nav-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-nav" layout="nav" controls="nav-input"></kiosk-keyboard>
           </div>
 
           <!-- 11. Japanese Kana (layout toggle) -->
@@ -469,7 +469,7 @@
             <div style="margin-bottom: 8px">
               <input id="ja-kana-input" type="text" placeholder="Kana input..." />
             </div>
-            <kiosk-keyboard id="kb-ja-romaji" layout="ja-romaji" for="ja-kana-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-ja-romaji" layout="ja-romaji" controls="ja-kana-input"></kiosk-keyboard>
           </div>
 
           <!-- 12. Korean Hangul (layout toggle to ABC) -->
@@ -478,7 +478,7 @@
             <div style="margin-bottom: 8px">
               <input id="ko-hangul-input" type="text" placeholder="Hangul input..." />
             </div>
-            <kiosk-keyboard id="kb-ko-hangul" layout="ko-hangul" for="ko-hangul-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-ko-hangul" layout="ko-hangul" controls="ko-hangul-input"></kiosk-keyboard>
           </div>
 
           <!-- 13. Spanish QWERTY-ES -->
@@ -487,7 +487,7 @@
             <div style="margin-bottom: 8px">
               <input id="es-input" type="text" placeholder="Escribir aqu&#237;..." />
             </div>
-            <kiosk-keyboard id="kb-qwerty-es" layout="qwerty-es" for="es-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-qwerty-es" layout="qwerty-es" controls="es-input"></kiosk-keyboard>
           </div>
 
           <!-- 14. i18n Resolver -->
