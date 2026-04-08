@@ -104,21 +104,13 @@ declare module "./KioskKeyboard" {
          * List of input control IDs to target. When set, attaches focus
         delegation to each resolved control so the keyboard auto-targets
         whichever input last received focus.
-        
+
         IDs are resolved against the parent View first (view-local IDs),
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
-        
-        Use this instead of `targetInput` when multiple inputs share
-        a single keyboard (e.g. a form with several fields).
          */
-        inputIds?: string[] | PropertyBindingInfo | `{${string}}`;
+        controls?: string[] | PropertyBindingInfo | `{${string}}`;
 
-        /**
-         * The input control to type into (e.g. `sap.m.Input`, `sap.m.TextArea`).
-        For targeting multiple inputs, use the `inputIds` property instead.
-         */
-        targetInput?: Control | string;
         ariaLabelledBy?: Control | string | (Control | string)[];
         ariaDescribedBy?: Control | string | (Control | string)[];
 
@@ -141,10 +133,10 @@ declare module "./KioskKeyboard" {
         keyboardTypeChange?: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void;
 
         /**
-         * Fired when the target input changes (focus switches to a different
-        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         * Fired when the active control changes (focus switches to a different
+        input in the `controls` list).
          */
-        targetInputChange?: (event: KioskKeyboard$TargetInputChangeEvent) => void;
+        activeControlChange?: (event: KioskKeyboard$ActiveControlChangeEvent) => void;
 
         /**
          * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
@@ -468,69 +460,48 @@ declare module "./KioskKeyboard" {
          */
         setFKeyMode(fKeyMode: FKeyMode): this;
 
-        // property: inputIds
+        // property: controls
 
         /**
-         * Gets current value of property "inputIds".
+         * Gets current value of property "controls".
          *
          * List of input control IDs to target. When set, attaches focus
         delegation to each resolved control so the keyboard auto-targets
         whichever input last received focus.
-        
+
         IDs are resolved against the parent View first (view-local IDs),
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
-        
-        Use this instead of `targetInput` when multiple inputs share
-        a single keyboard (e.g. a form with several fields).
          *
          * Default value is: []
-         * @returns Value of property "inputIds"
+         * @returns Value of property "controls"
          */
-        getInputIds(): string[];
+        getControls(): string[];
 
         /**
-         * Sets a new value for property "inputIds".
+         * Sets a new value for property "controls".
          *
          * List of input control IDs to target. When set, attaches focus
         delegation to each resolved control so the keyboard auto-targets
         whichever input last received focus.
-        
+
         IDs are resolved against the parent View first (view-local IDs),
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
-        
-        Use this instead of `targetInput` when multiple inputs share
-        a single keyboard (e.g. a form with several fields).
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: []
-         * @param [inputIds=[]] New value for property "inputIds"
+         * @param [controls=[]] New value for property "controls"
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInputIds(inputIds: string[]): this;
-
-        // association: targetInput
+        setControls(controls: string[]): this;
 
         /**
-         * ID of the element which is the current target of the association "targetInput", or "null".
-         *
-         * The input control to type into (e.g. `sap.m.Input`, `sap.m.TextArea`).
-        For targeting multiple inputs, use the `inputIds` property instead.
+         * Returns the currently active target input control, or null if none.
+         * Read-only -- the active target is managed internally via focus delegation.
          */
-        getTargetInput(): string;
-
-        /**
-         * Sets the associated targetInput.
-         *
-         * The input control to type into (e.g. `sap.m.Input`, `sap.m.TextArea`).
-        For targeting multiple inputs, use the `inputIds` property instead.
-         *
-         * @param targetInput ID of an element which becomes the new target of this "targetInput" association; alternatively, an element instance may be given
-         * @returns Reference to "this" in order to allow method chaining
-         */
-        setTargetInput(targetInput?: string | Control): this;
+        getActiveControl<T extends Control = Control>(): T | null;
 
         // association: ariaLabelledBy
 
@@ -790,13 +761,13 @@ declare module "./KioskKeyboard" {
          */
         fireKeyboardTypeChange(parameters?: KioskKeyboard$KeyboardTypeChangeEventParameters): this;
 
-        // event: targetInputChange
+        // event: activeControlChange
 
         /**
-         * Attaches event handler "fn" to the "targetInputChange" event of this "KioskKeyboard".
+         * Attaches event handler "fn" to the "activeControlChange" event of this "KioskKeyboard".
          *
-         * Fired when the target input changes (focus switches to a different
-        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         * Fired when the active control changes (focus switches to a different
+        input in the `controls` list).
          *
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
@@ -806,13 +777,13 @@ declare module "./KioskKeyboard" {
          *
          * @returns Reference to "this" in order to allow method chaining
          */
-        attachTargetInputChange(fn: (event: KioskKeyboard$TargetInputChangeEvent) => void, listener?: object): this;
+        attachActiveControlChange(fn: (event: KioskKeyboard$ActiveControlChangeEvent) => void, listener?: object): this;
 
         /**
-         * Attaches event handler "fn" to the "targetInputChange" event of this "KioskKeyboard".
+         * Attaches event handler "fn" to the "activeControlChange" event of this "KioskKeyboard".
          *
-         * Fired when the target input changes (focus switches to a different
-        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         * Fired when the active control changes (focus switches to a different
+        input in the `controls` list).
          *
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
@@ -823,13 +794,13 @@ declare module "./KioskKeyboard" {
          *
          * @returns Reference to "this" in order to allow method chaining
          */
-        attachTargetInputChange<CustomDataType extends object>(data: CustomDataType, fn: (event: KioskKeyboard$TargetInputChangeEvent, data: CustomDataType) => void, listener?: object): this;
+        attachActiveControlChange<CustomDataType extends object>(data: CustomDataType, fn: (event: KioskKeyboard$ActiveControlChangeEvent, data: CustomDataType) => void, listener?: object): this;
 
         /**
-         * Detaches event handler "fn" from the "targetInputChange" event of this "KioskKeyboard".
+         * Detaches event handler "fn" from the "activeControlChange" event of this "KioskKeyboard".
          *
-         * Fired when the target input changes (focus switches to a different
-        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         * Fired when the active control changes (focus switches to a different
+        input in the `controls` list).
          *
          * The passed function and listener object must match the ones used for event registration.
          *
@@ -837,21 +808,20 @@ declare module "./KioskKeyboard" {
          * @param listener Context object on which the given function had to be called
          * @returns Reference to "this" in order to allow method chaining
          */
-        detachTargetInputChange(fn: (event: KioskKeyboard$TargetInputChangeEvent) => void, listener?: object): this;
+        detachActiveControlChange(fn: (event: KioskKeyboard$ActiveControlChangeEvent) => void, listener?: object): this;
 
         /**
-         * Fires event "targetInputChange" to attached listeners.
+         * Fires event "activeControlChange" to attached listeners.
          *
-         * Fired when the target input changes (focus switches to a different
-        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         * Fired when the active control changes (focus switches to a different
+        input in the `controls` list).
          *
          * @param parameters Parameters to pass along with the event
-         * @param [mParameters.targetInput] Fired when the target input changes (focus switches to a different
-        input in auto-show mode, or `setTargetInput()` is called programmatically).
+         * @param [mParameters.controlId] The ID of the newly active control.
          *
          * @returns Reference to "this" in order to allow method chaining
          */
-        fireTargetInputChange(parameters?: KioskKeyboard$TargetInputChangeEventParameters): this;
+        fireActiveControlChange(parameters?: KioskKeyboard$ActiveControlChangeEventParameters): this;
 
         // event: afterOpen
 
@@ -997,12 +967,12 @@ declare module "./KioskKeyboard" {
     }
 
     /**
-     * Interface describing the parameters of KioskKeyboard's 'targetInputChange' event.
-     * Fired when the target input changes (focus switches to a different
-    input in auto-show mode, or `setTargetInput()` is called programmatically).
+     * Interface describing the parameters of KioskKeyboard's 'activeControlChange' event.
+     * Fired when the active control changes (focus switches to a different
+    input in the `controls` list).
      */
-    export interface KioskKeyboard$TargetInputChangeEventParameters {
-        targetInput?: string;
+    export interface KioskKeyboard$ActiveControlChangeEventParameters {
+        controlId?: string;
     }
 
     /**
@@ -1043,11 +1013,11 @@ declare module "./KioskKeyboard" {
     export type KioskKeyboard$KeyboardTypeChangeEvent = Event<KioskKeyboard$KeyboardTypeChangeEventParameters>;
 
     /**
-     * Type describing the KioskKeyboard's 'targetInputChange' event.
-     * Fired when the target input changes (focus switches to a different
-    input in auto-show mode, or `setTargetInput()` is called programmatically).
+     * Type describing the KioskKeyboard's 'activeControlChange' event.
+     * Fired when the active control changes (focus switches to a different
+    input in the `controls` list).
      */
-    export type KioskKeyboard$TargetInputChangeEvent = Event<KioskKeyboard$TargetInputChangeEventParameters>;
+    export type KioskKeyboard$ActiveControlChangeEvent = Event<KioskKeyboard$ActiveControlChangeEventParameters>;
 
     /**
      * Type describing the KioskKeyboard's 'afterOpen' event.

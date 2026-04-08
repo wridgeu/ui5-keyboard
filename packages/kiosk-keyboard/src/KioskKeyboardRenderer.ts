@@ -72,7 +72,7 @@ const KioskKeyboardRenderer = {
       label: oControl.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
       roledescription: getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
     });
-    const targetId = oControl.getTargetInput();
+    const targetId = oControl.getActiveControl()?.getId();
     if (targetId) {
       rm.attr("aria-controls", targetId);
     }

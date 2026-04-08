@@ -1112,7 +1112,7 @@ export default class KioskKeyboard extends Control {
    * Returns the ID of the currently active target, or empty string.
    */
   private _getActiveTargetId(): string {
-    return (this.getAssociation("_activeTarget") as string) ?? "";
+    return (this.getAssociation("_activeTarget", null) as string) ?? "";
   }
 
   /**
