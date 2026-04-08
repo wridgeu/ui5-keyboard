@@ -89,7 +89,7 @@ activeControlChange: {
 }
 ```
 
-**Web component:** Custom event `active-control-change` with `detail: { controlId: string }`.
+**Web component:** Custom event `active-control-change` with `detail: { activeElement: HTMLInputElement | HTMLTextAreaElement | null }`.
 
 ### Auto-target convenience
 

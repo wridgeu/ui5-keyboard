@@ -128,24 +128,24 @@ ontouchend
 
 ### Association Pattern
 
-The target input is a UI5 association (`targetInput`), not an aggregation. This means:
+The active target is tracked via a private UI5 association (`_activeTarget`), not an aggregation. This means:
 
 - The keyboard doesn't own the input control
 - The input can exist anywhere in the control tree
 - The association stores just the control ID
 
-For controller code that needs the control instance (not the ID), use `getTargetControl()` as a typed convenience wrapper over the association.
+For controller code that needs the control instance (not the ID), use `getActiveControl()` as a typed convenience wrapper over the private association.
 
-`setTargetInput()` is overridden to pass `true` (suppressInvalidate) to `setAssociation()`, since changing the target doesn't affect the keyboard's visual output and shouldn't trigger a re-render.
+`_setActiveTarget()` is overridden to pass `true` (suppressInvalidate) to `setAssociation()`, since changing the target doesn't affect the keyboard's visual output and shouldn't trigger a re-render.
 
-### setTargetInput Execution Order
+### \_setActiveTarget Execution Order
 
-`setTargetInput()` performs a full state transition from the old target to the new one. The order of operations matters because of a re-entrancy scenario.
+`_setActiveTarget()` performs a full state transition from the old target to the new one. The order of operations matters because of a re-entrancy scenario.
 
 **Normal flow** (no re-entrancy):
 
 ```
-setTargetInput(newInput)
+_setActiveTarget(newInput)
   1. captureAndClearDirty()        - snapshot old target's change data, clear dirty flag
   2. _removeHighlightDelegation()  - remove key highlight from old target
   3. _restoreNativeKeyboard()      - restore old target's inputmode (if keyboard is open)
@@ -161,7 +161,7 @@ setTargetInput(newInput)
 This happens when autoShow is active and a consumer's `change` handler synchronously focuses a third input (e.g. a validation-then-advance pattern in form-heavy apps).
 
 ```
-setTargetInput(inputB)          - target was inputA
+_setActiveTarget(inputB)        - target was inputA
   1. capture inputA's change data, clear dirty
   2. remove inputA's highlight delegation
   3. restore inputA's inputmode
@@ -171,7 +171,7 @@ setTargetInput(inputB)          - target was inputA
   7. suppress inputB's inputmode
   8. fire deferred change on inputA
      └─ handler calls inputC.focus()
-        └─ focusin → _onDocumentFocusIn → setTargetInput(inputC)
+        └─ focusin → _onDocumentFocusIn → _setActiveTarget(inputC)
              1. capture (nothing - not dirty)
              2. remove inputB's highlight delegation
              3. restore inputB's inputmode
@@ -402,7 +402,7 @@ Auto-show uses document-level `focusin`/`focusout` listeners in the capture phas
 
 ### Instance Isolation
 
-A static `_instances` set tracks all living `KioskKeyboard` instances. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any **other** KioskKeyboard instance already has that input as its `targetInput`. If so, auto-show bails out because the input belongs to that keyboard.
+A static `_instances` set tracks all living `KioskKeyboard` instances. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any **other** KioskKeyboard instance already has that input as its active target (`_activeTarget`). If so, auto-show bails out because the input belongs to that keyboard.
 
 This prevents a docked auto-show keyboard from stealing inputs that are explicitly assigned to an inline keyboard (e.g. a numpad paired with a numeric field).
 
@@ -420,14 +420,14 @@ focusin event
   |     - Should we defer to native keyboard?
   |     - Resolve UI5 control via Element.closestTo()
   |     - Is this input owned by another KioskKeyboard instance?
-  |     - Is inputIds set and the control NOT in the list?
+  |     - Is controls set and the control NOT in the list?
   |     No to any  -> ignore (null)
   |     Yes to all -> set as target input
   |                   auto-detect keyboard type (if autoType enabled)
   |                   show()
 ```
 
-The instance isolation and `inputIds` filter checks run inside `_resolveClaimableControl()`. When `inputIds` is set, only inputs in that list pass the filter, and focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally. During each auto-show `focusin`, `_setupInputIds()` reconciles delegates by resolved control IDs so aggregation-bound input recreation (destroy/create churn) is picked up immediately.
+The instance isolation and `controls` filter checks run inside `_resolveClaimableControl()`. When `controls` is set, only inputs in that list pass the filter, and focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally. During each auto-show `focusin`, `_setupControls()` reconciles delegates by resolved control IDs so aggregation-bound input recreation (destroy/create churn) is picked up immediately.
 
 ### Focus-Out Logic
 
@@ -533,13 +533,13 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | Shift auto-release vs Caps Lock         | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`       |
 | `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references                                  |
 | No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings                                   |
-| `setTargetInput` re-render              | `setAssociation(name, value, true)` suppresses invalidation                      |
-| `setTargetInput` re-entrancy            | Change event deferred to after state transitions via `captureAndClearDirty()`    |
+| `_setActiveTarget` re-render            | `setAssociation(name, value, true)` suppresses invalidation                      |
+| `_setActiveTarget` re-entrancy          | Change event deferred to after state transitions via `captureAndClearDirty()`    |
 | Docked show/close during render         | `onAfterRendering` syncs CSS with `_open` state                                  |
 | Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode  |
 | `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                      |
-| `inputIds` with `autoShow`              | `_resolveClaimableControl()` filters by `inputIds`; delegation triggers `show()` |
-| `inputIds` aggregation churn            | `_setupInputIds()` rebinds delegates by control ID on each auto-show `focusin`   |
+| `controls` with `autoShow`              | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()` |
+| `controls` aggregation churn            | `_setupControls()` rebinds delegates by control ID on each auto-show `focusin`   |
 | Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                          |
 | Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                 |
 | Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                   |

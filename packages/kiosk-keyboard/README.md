@@ -359,13 +359,14 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 
 ### Events
 
-| Event                | Parameters                                                                      | Description                                                                                                                                |
-| -------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keyPress`           | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
-| `layoutChange`       | `layout: string`                                                                | Fired when the active layout changes.                                                                                                      |
-| `keyboardTypeChange` | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
-| `afterOpen`          | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
-| `afterClose`         | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
+| Event                 | Parameters                                                                      | Description                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `keyPress`            | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
+| `layoutChange`        | `layout: string`                                                                | Fired when the active layout changes.                                                                                                      |
+| `keyboardTypeChange`  | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
+| `afterOpen`           | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
+| `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
+| `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                              |
 
 ### Public Methods
 
@@ -1279,11 +1280,11 @@ The callback receives the focused `HTMLElement` (the host element / DOM ref of t
 
 The `mobileKeyboard` property controls whether the KioskKeyboard or the native on-screen keyboard is used.
 
-| Value      | Behavior                                                                                | Use when                                         |
-| ---------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. **Default.** | Dedicated kiosk terminal (no physical keyboard)  |
-| `"Native"` | Always defer to the native keyboard; KioskKeyboard does not open on focus.              | Desktop/mobile app where desktops have keyboards |
-| `"Auto"`   | Desktop browsers → use KioskKeyboard. Phone/tablet → defer to native.                   | Kiosk terminal that also serves mobile visitors  |
+| Value      | Behavior                                                                   | Use when                                         |
+| ---------- | -------------------------------------------------------------------------- | ------------------------------------------------ |
+| `"Custom"` | Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. | Dedicated kiosk terminal (no physical keyboard)  |
+| `"Native"` | Always defer to the native keyboard; KioskKeyboard does not open on focus. | Desktop/mobile app where desktops have keyboards |
+| `"Auto"`   | Desktop browsers → use KioskKeyboard. Phone/tablet → defer to native.      | Kiosk terminal that also serves mobile visitors  |
 
 > **Note:** `"Auto"` relies on `sap/ui/Device` for device detection. Browsers cannot detect whether a physical keyboard is attached, so on any desktop browser, including a regular laptop, the virtual keyboard **will** appear. Use `"Native"` if that is not desired.
 

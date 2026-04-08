@@ -227,13 +227,13 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 
 ### Choosing between the UI5 control and the web component
 
-| Criterion         | `ui5-lib-kiosk-keyboard` (UI5 control)            | `kiosk-keyboard-webc` (web component)                         |
-| ----------------- | ------------------------------------------------- | ------------------------------------------------------------- |
-| **Framework**     | SAPUI5 / OpenUI5 only                             | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge) |
-| **Theming**       | LESS variables (`@sapUiButton*`)                  | CSS custom properties + SAP theme token fallbacks             |
-| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback | Built-in EN/DE + `setI18nResolver()` callback                 |
-| **Target inputs** | `controls` property + `setControls()`             | `controls` attribute + `setTargetElement()`                   |
-| **Density**       | UI5 content density (`sapUiSizeCompact`)          | `data-ui5-compact-size` attribute                             |
+| Criterion         | `ui5-lib-kiosk-keyboard` (UI5 control)                       | `kiosk-keyboard-webc` (web component)                         |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| **Framework**     | SAPUI5 / OpenUI5 only                                        | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge) |
+| **Theming**       | LESS variables (`@sapUiButton*`)                             | CSS custom properties + SAP theme token fallbacks             |
+| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback            | Built-in EN/DE + `setI18nResolver()` callback                 |
+| **Target inputs** | `controls` property + `setControls()` + `getActiveControl()` | `controls` attribute + `setTargetElement()` + `activeElement` |
+| **Density**       | UI5 content density (`sapUiSizeCompact`)                     | `data-ui5-compact-size` attribute                             |
 
 Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), layout registry API (`registerLayout`, `registerLocaleLayout`), and special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). Custom layouts work identically across both.
 
@@ -252,6 +252,7 @@ import type {
   KeyPressEventDetail,
   LayoutChangeEventDetail,
   KeyboardTypeChangeEventDetail,
+  ActiveControlChangeEventDetail,
   KeyDefinition,
   KeyRow,
   LayoutDefinition,
@@ -318,12 +319,13 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `after-close`           | -                                                                               | Fired when the docked keyboard enters the closed state. State-change hook only; not a CSS transition-end event. |
 | `layout-change`         | `{ layout: string }`                                                            | Fired when layout switches.                                                                                     |
 | `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                               |
-| `active-control-change` | `{ controlId: string \| null }`                                                 | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).              |
+| `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).              |
 
 ## Methods
 
 | Method                     | Description                                                                                                                                                     |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `activeElement` (getter)   | Read-only. Returns the currently active target input element (`HTMLInputElement \| HTMLTextAreaElement \| null`).                                               |
 | `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.           |
 | `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                               |
 | `isOpen()`                 | Returns whether the docked keyboard is open.                                                                                                                    |

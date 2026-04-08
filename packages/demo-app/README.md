@@ -124,7 +124,7 @@ Landing page linking to all kiosk demos.
 - Dialog without embedded keyboard (docked keyboard auto-closes/reopens with focus changes)
 - Dialog with embedded keyboard
 
-### Input IDs Targeting (`#/kiosk/input-ids`)
+### Controls Targeting (`#/kiosk/input-ids`)
 
 - Selective targeting using `controls`
 - Mixed target controls (`Input`, `StepInput`)
@@ -317,7 +317,7 @@ See the [webc package README](../kiosk-keyboard-webc/README.md#public-css-custom
 - `#/kiosk` kiosk demo hub
 - `#/kiosk/docked` docked + inline numpad
 - `#/kiosk/popover` popover keyboard
-- `#/kiosk/input-ids` selective targeting + custom element bridge
+- `#/kiosk/input-ids` controls targeting + custom element bridge
 - `#/kiosk/programmatic` imperative API and runtime layouts
 - `#/kiosk/component` persistent component-level keyboard
 - `#/kiosk/form-workflow` check-in workflow

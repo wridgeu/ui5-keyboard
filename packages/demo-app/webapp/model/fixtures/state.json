@@ -67,7 +67,7 @@
       "route": "kioskDialog"
     },
     {
-      "title": "Input IDs Targeting",
+      "title": "Controls Targeting",
       "description": "Selective input targeting with controls, native UI5 Web Components, and custom-element bridge integration. First load may be slow due to ad hoc web component registration.",
       "route": "kioskInputIds"
     },
