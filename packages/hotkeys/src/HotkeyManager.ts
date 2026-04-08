@@ -27,15 +27,11 @@ import type {
   KeyboardDispatchGuard,
   KeyStateTrackerApi,
   Platform,
-  SequenceOptions,
-  SequencePendingCallback,
-  SequenceRegistrationHandle,
-  SequenceRegistrationInfo,
   UnhandledContext,
   UnhandledCallback,
   UpdatableHotkeyOptions,
 } from "./types";
-import type { HotkeyRegistration, ResolvedHotkeyOptions } from "./internal/types";
+import type { HotkeyRegistration, ResolvedHotkeyOptions, SequenceOptions } from "./internal/types";
 
 type ValidateModule = typeof import("./validate");
 
@@ -103,6 +99,16 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     target: element,
     targetCallback: callback,
   };
+}
+
+/**
+ * Split a hotkey string into sequence steps.
+ * Returns null if the string is a single-key hotkey.
+ * Whitespace between key descriptors separates steps (matching tinykeys/@github/hotkey convention).
+ */
+function parseSequenceSteps(hotkey: string): string[] | null {
+  const steps = hotkey.trim().split(/\s+/);
+  return steps.length > 1 ? steps : null;
 }
 
 /**
@@ -197,6 +203,12 @@ export default class HotkeyManager extends BaseObject {
    */
   register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle {
     this._assertAlive("register");
+
+    const sequenceSteps = parseSequenceSteps(hotkey);
+    if (sequenceSteps) {
+      return this._registerSequence(hotkey, sequenceSteps, callback, options);
+    }
+
     const resolved = resolveOptions(options);
     const parsedHotkey = parseHotkey(hotkey, this._platform);
     const normalizedHotkey = [...parsedHotkey.modifiers, parsedHotkey.key].join("+");
@@ -241,6 +253,9 @@ export default class HotkeyManager extends BaseObject {
       },
       get description() {
         return registration.options.description;
+      },
+      get sequence() {
+        return null;
       },
       unregister: () => {
         if (!registration.active) return;
@@ -460,7 +475,10 @@ export default class HotkeyManager extends BaseObject {
    * Info objects are flat snapshots - no closures or DOM references leak.
    */
   getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
-    return Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
+    const hotkeys = Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
+    if (!this._sequenceManager) return hotkeys;
+    const sequences = this._sequenceManager.getRegistrations().map((s) => this._sequenceRegToInfo(s));
+    return [...hotkeys, ...sequences];
   }
 
   /**
@@ -486,6 +504,14 @@ export default class HotkeyManager extends BaseObject {
     for (const ids of bucket.targets.values()) {
       addFromIds(ids);
     }
+    addFromIds(bucket.callbackTargetIds);
+
+    if (this._sequenceManager) {
+      const seqRegs = this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope);
+      for (const s of seqRegs) {
+        result.push(this._sequenceRegToInfo(s));
+      }
+    }
 
     return result;
   }
@@ -506,9 +532,7 @@ export default class HotkeyManager extends BaseObject {
    * ```
    */
   findRegistrations(predicate: (info: HotkeyRegistrationInfo) => boolean): ReadonlyArray<HotkeyRegistrationInfo> {
-    return Array.from(this._registrations.values())
-      .map((r) => this._toRegistrationInfo(r))
-      .filter(predicate);
+    return this.getRegistrations().filter(predicate);
   }
 
   /**
@@ -548,64 +572,102 @@ export default class HotkeyManager extends BaseObject {
       suppressInPopups: opts.suppressInPopups,
       conflictBehavior: opts.conflictBehavior,
       hasTarget: opts.target !== null || opts.targetCallback !== null,
+      sequence: null,
+      timeout: null,
     };
   }
 
-  // ──────────────────────────────────────────────
-  // Sequence facade
-  // ──────────────────────────────────────────────
-
-  /**
-   * Register a multi-key sequence (e.g., `["G", "I"]` for go-to-inbox).
-   *
-   * Lazily creates the internal SequenceManager on first call. The
-   * sequence manager uses this HotkeyManager's scope stack for scope
-   * filtering, so scoped sequences and scoped hotkeys share the same
-   * scope lifecycle.
-   *
-   * @param sequence - Array of hotkey strings forming the sequence.
-   * @param callback - Function to invoke when the full sequence is matched.
-   * @param options - Optional configuration (scope, timeout, ignoreInputs, etc.).
-   * @returns A handle for managing the registration lifecycle.
-   */
-  registerSequence(
-    sequence: string[],
+  private _registerSequence(
+    hotkey: string,
+    steps: string[],
     callback: HotkeyCallback,
-    options?: SequenceOptions,
-  ): SequenceRegistrationHandle {
-    this._assertAlive("registerSequence");
-    return this._getSequenceManager().registerSequence(sequence, callback, options);
+    options?: HotkeyOptions,
+  ): HotkeyRegistrationHandle {
+    const seqOptions: SequenceOptions = {
+      description: options?.description,
+      timeout: options?.timeout,
+      scope: options?.scope,
+      enabled: options?.enabled,
+      ignoreInputs: options?.ignoreInputs,
+      preventDefault: options?.preventDefault,
+      stopPropagation: options?.stopPropagation,
+      onPending: options?.onPending,
+    };
+
+    const innerHandle = this._getSequenceManager().registerSequence(steps, callback, seqOptions);
+
+    const handle: HotkeyRegistrationHandle = {
+      get id() {
+        return innerHandle.id;
+      },
+      get isActive() {
+        return innerHandle.isActive;
+      },
+      get hotkey() {
+        return hotkey;
+      },
+      get sequence() {
+        return innerHandle.sequence;
+      },
+      get scope() {
+        return innerHandle.scope;
+      },
+      get description() {
+        return innerHandle.description;
+      },
+      unregister: () => {
+        innerHandle.unregister();
+      },
+      setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
+        if ("scope" in newOptions) {
+          throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
+        }
+        if ("conflictBehavior" in newOptions) {
+          throw new Error("Cannot change conflictBehavior via setOptions - unregister and re-register instead");
+        }
+        innerHandle.setOptions({
+          description: newOptions.description,
+          timeout: newOptions.timeout,
+          enabled: newOptions.enabled,
+          ignoreInputs: newOptions.ignoreInputs,
+          preventDefault: newOptions.preventDefault,
+          stopPropagation: newOptions.stopPropagation,
+          onPending: newOptions.onPending,
+        });
+      },
+    };
+
+    return handle;
   }
 
-  /**
-   * Set a callback for mid-sequence progress updates.
-   *
-   * The callback fires after each intermediate key in a sequence,
-   * providing information about how many steps are completed and
-   * what key is expected next - useful for "waiting for next key…" UI.
-   *
-   * Pass `null` to remove the callback.
-   */
-  setSequencePendingHandler(callback: SequencePendingCallback | null): void {
-    this._assertAlive("setSequencePendingHandler");
-    this._getSequenceManager().setPendingCallback(callback);
-  }
-
-  /**
-   * Get all active sequence registrations.
-   */
-  getSequenceRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
-    if (!this._sequenceManager) return [];
-    return this._sequenceManager.getRegistrations();
-  }
-
-  /**
-   * Get sequence registrations filtered by scope.
-   */
-  getSequenceRegistrationsForScope(scopeId: string): ReadonlyArray<SequenceRegistrationInfo> {
-    if (!this._sequenceManager) return [];
-    const normalizedScope = resolveScopeOrGlobal(scopeId);
-    return this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope);
+  private _sequenceRegToInfo(s: {
+    id: string;
+    sequence: readonly string[];
+    scope: string;
+    description: string;
+    enabled: boolean;
+    timeout: number;
+    ignoreInputs: boolean | "auto";
+    preventDefault: boolean;
+    stopPropagation: boolean;
+  }): HotkeyRegistrationInfo {
+    return {
+      id: s.id,
+      hotkey: s.sequence.join(" "),
+      normalizedHotkey: s.sequence.join(" "),
+      scope: s.scope,
+      description: s.description,
+      enabled: s.enabled,
+      preventDefault: s.preventDefault,
+      stopPropagation: s.stopPropagation,
+      ignoreInputs: s.ignoreInputs,
+      ignoreRepeat: true,
+      suppressInPopups: false,
+      conflictBehavior: "warn" as ConflictBehavior,
+      hasTarget: false,
+      sequence: s.sequence,
+      timeout: s.timeout,
+    };
   }
 
   /**
@@ -1044,15 +1106,6 @@ export default class HotkeyManager extends BaseObject {
       if (reg) result.push(this._toRegistrationInfo(reg));
     }
     return result;
-  }
-
-  /**
-   * Look up sequence registrations by their IDs and return public info objects.
-   * @internal
-   */
-  _getSequenceRegistrationInfoByIds(ids: ReadonlySet<string>): SequenceRegistrationInfo[] {
-    if (!this._sequenceManager) return [];
-    return this._sequenceManager.getRegistrationInfoByIds(ids);
   }
 
   /**
