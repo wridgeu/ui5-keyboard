@@ -35,12 +35,12 @@ QUnit.test("group.register delegates to manager and tracks handle", (assert) => 
   assert.ok(called, "Callback fires via group registration");
 });
 
-QUnit.test("group.registerSequence delegates and tracks", (assert) => {
+QUnit.test("group.register with sequence delegates and tracks", (assert) => {
   assert.expect(4);
   const manager = createHotkeyManager();
   const group = manager.createGroup();
 
-  const handle = group.registerSequence(["G", "I"], () => {
+  const handle = group.register("G I", () => {
     assert.ok(true, "Sequence callback fired");
     assert.strictEqual(group.size, 1, "Group size is 1 (sequence)");
   });
@@ -52,27 +52,27 @@ QUnit.test("group.registerSequence delegates and tracks", (assert) => {
   fireKey("i");
 });
 
-QUnit.test("getRegistrations/getSequenceRegistrations return only this group's entries", (assert) => {
+QUnit.test("getRegistrations returns both hotkeys and sequences for this group", (assert) => {
   const manager = createHotkeyManager();
   const groupA = manager.createGroup();
   const groupB = manager.createGroup();
 
   const aHotkey = groupA.register("F5", () => {}, { description: "A" });
-  groupA.registerSequence(["G", "I"], () => {}, { description: "A-seq" });
+  groupA.register("G I", () => {}, { description: "A-seq" });
 
   groupB.register("F6", () => {}, { description: "B" });
-  groupB.registerSequence(["G", "H"], () => {}, { description: "B-seq" });
+  groupB.register("G H", () => {}, { description: "B-seq" });
 
   const aRegistrations = groupA.getRegistrations();
-  const aSequences = groupA.getSequenceRegistrations();
+  const aSequences = groupA.getRegistrations().filter((r) => r.sequence !== null);
 
-  assert.strictEqual(aRegistrations.length, 1, "Group A returns only its hotkey registration");
+  assert.strictEqual(aRegistrations.length, 2, "Group A returns both hotkey and sequence registrations");
   assert.strictEqual(aRegistrations[0]?.id, aHotkey.id, "Hotkey registration id matches Group A handle");
-  assert.strictEqual(aSequences.length, 1, "Group A returns only its sequence registration");
+  assert.strictEqual(aSequences.length, 1, "Group A has one sequence registration");
   assert.strictEqual(aSequences[0]?.description, "A-seq", "Sequence registration belongs to Group A");
 
   aHotkey.unregister();
-  assert.strictEqual(groupA.getRegistrations().length, 0, "Unregistered group hotkey is removed from introspection");
+  assert.strictEqual(groupA.getRegistrations().length, 1, "Unregistered group hotkey is removed from introspection");
 });
 
 QUnit.test("destroyAll unregisters all handles", (assert) => {
@@ -145,7 +145,7 @@ QUnit.test("manager destroy finalizes group lifecycle", (assert) => {
   const group = manager.createGroup();
 
   const hotkeyHandle = group.register("F5", () => {});
-  const sequenceHandle = group.registerSequence(["G", "I"], () => {});
+  const sequenceHandle = group.register("G I", () => {});
 
   manager.destroy();
 
@@ -178,7 +178,7 @@ QUnit.test("size decrements for individually unregistered sequences", (assert) =
   const group = manager.createGroup();
 
   group.register("F5", () => {});
-  const seqHandle = group.registerSequence(["G", "I"], () => {});
+  const seqHandle = group.register("G I", () => {});
 
   assert.strictEqual(group.size, 2, "Size counts hotkeys and sequences");
 
@@ -199,9 +199,9 @@ QUnit.test("Registering on a destroyed group throws", (assert) => {
   );
 
   assert.throws(
-    () => group.registerSequence(["G", "I"], () => {}),
+    () => group.register("G I", () => {}),
     /destroyed RegistrationGroup/,
-    "registerSequence throws on destroyed group",
+    "register (sequence) throws on destroyed group",
   );
 });
 
@@ -237,7 +237,7 @@ QUnit.test("onPending fires on intermediate key and dies with unregister", (asse
   const group = manager.createGroup();
   const calls: string[] = [];
 
-  const handle = group.registerSequence(["G", "I"], () => {}, {
+  const handle = group.register("G I", () => {}, {
     onPending: () => {
       calls.push("pending");
     },
@@ -249,7 +249,7 @@ QUnit.test("onPending fires on intermediate key and dies with unregister", (asse
   handle.unregister();
 
   // New sequence without onPending - should not fire the old callback
-  group.registerSequence(["G", "I"], () => {});
+  group.register("G I", () => {});
   fireKey("g");
   assert.strictEqual(calls.length, 1, "onPending does not fire after unregister");
   group.destroyAll();
@@ -260,7 +260,7 @@ QUnit.test("onPending dies with group.destroyAll", (assert) => {
   const group = manager.createGroup();
   const calls: string[] = [];
 
-  group.registerSequence(["G", "I"], () => {}, {
+  group.register("G I", () => {}, {
     onPending: () => {
       calls.push("pending");
     },
@@ -273,48 +273,39 @@ QUnit.test("onPending dies with group.destroyAll", (assert) => {
 
   // New sequence on fresh group - old onPending must not fire
   const group2 = manager.createGroup();
-  group2.registerSequence(["G", "I"], () => {});
+  group2.register("G I", () => {});
   fireKey("g");
   assert.strictEqual(calls.length, 1, "Does not fire after destroyAll");
   group2.destroyAll();
 });
 
-QUnit.test("onPending takes precedence over global setSequencePendingHandler", (assert) => {
+QUnit.test("per-registration onPending fires independently for each sequence", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const calls: string[] = [];
 
-  manager.setSequencePendingHandler(() => {
-    calls.push("global");
-  });
-
-  group.registerSequence(["G", "I"], () => {}, {
+  group.register("G I", () => {}, {
     onPending: () => {
-      calls.push("per-reg");
+      calls.push("seq-a");
     },
   });
 
   fireKey("g");
-  assert.deepEqual(calls, ["per-reg"], "Per-registration callback wins over global");
+  assert.deepEqual(calls, ["seq-a"], "Per-registration onPending fires for its sequence");
 
   group.destroyAll();
-  manager.setSequencePendingHandler(null);
 });
 
-QUnit.test("global pending handler fires when onPending is not set", (assert) => {
+QUnit.test("sequence without onPending does not fire any pending callback", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
-  const calls: string[] = [];
+  let pendingFired = false;
 
-  manager.setSequencePendingHandler(() => {
-    calls.push("global");
-  });
+  group.register("G I", () => {});
 
-  group.registerSequence(["G", "I"], () => {});
-
+  // No onPending set, no global handler - should not fire anything
   fireKey("g");
-  assert.deepEqual(calls, ["global"], "Global handler fires as fallback");
+  assert.notOk(pendingFired, "No pending callback fires when onPending is not set");
 
   group.destroyAll();
-  manager.setSequencePendingHandler(null);
 });

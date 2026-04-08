@@ -641,12 +641,15 @@ QUnit.test("scope introspection normalizes whitespace consistently", (assert) =>
 
   manager.register("Escape", () => {}, { scope: GLOBAL_SCOPE });
   manager.register("Ctrl+S", () => {}, { scope: "editor" });
-  manager.registerSequence(["G", "I"], () => {}, { scope: "editor" });
+  manager.register("G I", () => {}, { scope: "editor" });
 
-  assert.strictEqual(manager.getRegistrationsForScope(" editor ").length, 1, "Hotkeys trim scope values");
+  assert.strictEqual(manager.getRegistrationsForScope(" editor ").length, 2, "Registrations trim scope values");
   assert.throws(() => manager.getRegistrationsForScope("   "), /scope must be a non-empty string/);
-  assert.strictEqual(manager.getSequenceRegistrationsForScope(" editor ").length, 1, "Sequences trim scope values");
-  assert.throws(() => manager.getSequenceRegistrationsForScope("   "), /scope must be a non-empty string/);
+  assert.strictEqual(
+    manager.getRegistrationsForScope(" editor ").filter((r) => r.sequence !== null).length,
+    1,
+    "Sequence filter with trimmed scope values",
+  );
 });
 
 // ──────────────────────────────────────────────
@@ -684,7 +687,7 @@ QUnit.test("destroy is idempotent (safe to call twice)", (assert) => {
 QUnit.test("destroy invalidates hotkey and sequence handles", (assert) => {
   const manager = createHotkeyManager();
   const hotkeyHandle = manager.register("Escape", () => {});
-  const sequenceHandle = manager.registerSequence(["G", "E"], () => {});
+  const sequenceHandle = manager.register("G E", () => {});
 
   assert.ok(hotkeyHandle.isActive, "Hotkey handle starts active");
   assert.ok(sequenceHandle.isActive, "Sequence handle starts active");
@@ -1001,7 +1004,7 @@ QUnit.test("Unhandled: does NOT fire no_match for sequence progression/completio
   let sequenceCalled = false;
   let unhandledCount = 0;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     sequenceCalled = true;
   });
 

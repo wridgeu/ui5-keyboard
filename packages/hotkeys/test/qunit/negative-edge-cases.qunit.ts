@@ -176,8 +176,8 @@ QUnit.test("enabled function returning false mid-sequence drops pending match", 
   let sequenceFired = false;
   let isEnabled = true;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       sequenceFired = true;
     },
@@ -203,8 +203,8 @@ QUnit.test("enabled function returning false mid-sequence then re-enabled allows
   let sequenceFired = false;
   let isEnabled = true;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       sequenceFired = true;
     },
@@ -233,8 +233,8 @@ QUnit.test("enabled function throwing mid-sequence drops pending match", (assert
   let sequenceFired = false;
   let shouldThrow = false;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       sequenceFired = true;
     },
@@ -480,14 +480,14 @@ QUnit.test("createRecorder() on destroyed manager throws", (assert) => {
   );
 });
 
-QUnit.test("registerSequence() on destroyed manager throws", (assert) => {
+QUnit.test("register() sequence on destroyed manager throws", (assert) => {
   const manager = createHotkeyManager();
   manager.destroy();
 
   assert.throws(
-    () => manager.registerSequence(["G", "I"], () => {}),
+    () => manager.register("G I", () => {}),
     /destroyed/i,
-    "registerSequence() throws on destroyed manager",
+    "register() with sequence throws on destroyed manager",
   );
 });
 

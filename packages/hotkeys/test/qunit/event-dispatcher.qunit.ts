@@ -147,8 +147,8 @@ QUnit.test("In-progress sequence times out during suspension", (assert) => {
   const clock = sinon.useFakeTimers();
   let seqFired = false;
 
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
@@ -175,8 +175,8 @@ QUnit.test("Suspend mid-sequence, release before timeout - sequence completes", 
   const clock = sinon.useFakeTimers();
   let seqFired = false;
 
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
@@ -526,8 +526,8 @@ QUnit.test("Unhandled: full sequence consumed suppresses unhandled", (assert) =>
   manager.setUnhandledHandler(() => {
     unhandledCount++;
   });
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
@@ -546,7 +546,7 @@ QUnit.test("Unhandled: partial sequence advance suppresses unhandled", (assert) 
   manager.setUnhandledHandler(() => {
     unhandledCount++;
   });
-  manager.registerSequence(["G", "I"], () => {}, { timeout: 500 });
+  manager.register("G I", () => {}, { timeout: 500 });
 
   fireKey("G"); // Partial advance
   assert.strictEqual(unhandledCount, 0, "Unhandled NOT called for partial sequence advance");
@@ -615,8 +615,8 @@ QUnit.test("Same key registered as hotkey AND first step of sequence", (assert) 
   manager.register("G", () => {
     hotkeyFired = true;
   });
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
