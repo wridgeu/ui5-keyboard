@@ -8,6 +8,7 @@ This folder is organized by library area and document lifecycle.
 - [Kiosk Keyboard](./kiosk/README.md)
 - [Kiosk Keyboard Web Component](./kiosk-webc/README.md)
 - [Shared](./shared/README.md)
+- [Future Improvements](./FUTURE-IMPROVEMENTS.md)
 - [Glossary](./GLOSSARY.md)
 - [Web Component Consumption](./web-component-consumption.md)
 - [Implementation Plans](./plans/README.md)
