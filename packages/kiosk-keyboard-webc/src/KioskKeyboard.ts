@@ -43,7 +43,7 @@ import {
   type KeyPressEventDetail,
   type LayoutChangeEventDetail,
   type KeyboardTypeChangeEventDetail,
-  type TargetInputChangeEventDetail,
+  type ActiveControlChangeEventDetail,
 } from "./types.js";
 
 import KioskKeyboardTemplate from "./KioskKeyboardTemplate.js";
@@ -227,13 +227,13 @@ function resolveRemThreshold(
  */
 @event("keyboard-type-change", { bubbles: true })
 /**
- * Fired when the target input changes (focus switches to a different input
+ * Fired when the active control changes (focus switches to a different input
  * in auto-show mode, or `setTargetElement()` is called programmatically).
- * @param {HTMLInputElement | HTMLTextAreaElement | null} targetElement The new target element, or null if cleared.
+ * @param {HTMLInputElement | HTMLTextAreaElement | null} activeElement The new active element, or null if cleared.
  * @public
- * @since 0.1.0
+ * @since 0.2.0
  */
-@event("target-input-change", { bubbles: true })
+@event("active-control-change", { bubbles: true })
 class KioskKeyboard extends UI5Element {
   /**
    * Stable DOM hook contract for tests and DOM assertions.
@@ -250,7 +250,7 @@ class KioskKeyboard extends UI5Element {
     "after-close": void;
     "layout-change": LayoutChangeEventDetail;
     "keyboard-type-change": KeyboardTypeChangeEventDetail;
-    "target-input-change": TargetInputChangeEventDetail;
+    "active-control-change": ActiveControlChangeEventDetail;
   };
 
   // ── Static registry delegates ──
@@ -489,25 +489,16 @@ class KioskKeyboard extends UI5Element {
   disabled = false;
 
   /**
-   * DOM id of the target input element. The keyboard types into this element.
+   * Comma-separated list of target input element IDs. The keyboard targets
+   * these elements via focus delegation. When a single ID is provided,
+   * it acts as the direct target (equivalent to the old `for` attribute).
    *
    * @default ""
    * @public
-   * @since 0.1.0
+   * @since 0.2.0
    */
   @property()
-  for = "";
-
-  /**
-   * Comma-separated list of input element ids that the keyboard should
-   * respond to in auto-show mode. Supports UI5-style prefixed ids.
-   *
-   * @default ""
-   * @public
-   * @since 0.1.0
-   */
-  @property()
-  inputIds = "";
+  controls = "";
 
   /**
    * Accessible name for the keyboard region (ARIA label).
@@ -673,9 +664,9 @@ class KioskKeyboard extends UI5Element {
     return this._open;
   }
 
-  private get _inputIdsList(): string[] {
-    return this.inputIds
-      ? this.inputIds
+  private get _controlsList(): string[] {
+    return this.controls
+      ? this.controls
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean)
@@ -871,6 +862,15 @@ class KioskKeyboard extends UI5Element {
     return this.open;
   }
 
+  /**
+   * Returns the currently active target input element, or null if none.
+   * @public
+   * @since 0.2.0
+   */
+  get activeElement(): HTMLInputElement | HTMLTextAreaElement | null {
+    return this._targetElement;
+  }
+
   /** Executes the open side effects. Called from the `open` setter. */
   private _performOpen(): void {
     if (!this.docked) {
@@ -884,6 +884,19 @@ class KioskKeyboard extends UI5Element {
     if (this._shouldDeferToNative()) {
       this._open = false;
       return;
+    }
+    // Auto-target when there's exactly one control and nothing is focused yet
+    const ids = this._controlsList;
+    if (ids.length === 1 && !this._targetElement) {
+      const el = document.getElementById(ids[0]);
+      if (el) {
+        const input = this._resolveInputFrom(el);
+        if (input) {
+          input.focus();
+          this._targetElement = input;
+          this._targetSource = "explicit";
+        }
+      }
     }
     this._suppressInputMode();
     this._pendingAnnouncement = getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened");
@@ -926,14 +939,14 @@ class KioskKeyboard extends UI5Element {
     this._syncPhysicalKeyHighlight();
 
     if (el !== previous) {
-      this.fireDecoratorEvent("target-input-change", { targetElement: el });
+      this.fireDecoratorEvent("active-control-change", { activeElement: el });
     }
   }
 
   /**
    * Sets a custom resolver that the keyboard uses to locate the native
    * input/textarea inside a host element. Called during auto-show focus
-   * handling and `for` resolution with the focused (or looked-up) element.
+   * handling and `controls` resolution with the focused (or looked-up) element.
    *
    * Return the native `<input>` or `<textarea>` to type into, or `null`
    * to fall back to the built-in resolver (which traverses light DOM and
@@ -1368,9 +1381,9 @@ class KioskKeyboard extends UI5Element {
         return this._targetElement;
       }
     }
-    const forId = this.for;
-    if (forId) {
-      const el = document.getElementById(forId);
+    const ids = this._controlsList;
+    if (ids.length === 1) {
+      const el = document.getElementById(ids[0]);
       if (!el) return null;
       return this._resolveInputFrom(el);
     }
@@ -1416,9 +1429,9 @@ class KioskKeyboard extends UI5Element {
     if (!inputEl) return;
     if (this._isTargetOfOther(inputEl)) return;
 
-    const ids = this._inputIdsList;
+    const ids = this._controlsList;
     if (ids.length > 0) {
-      if (!this._matchesInputIds(target, ids)) return;
+      if (!this._matchesControls(target, ids)) return;
     }
 
     const targetChanged = this._targetElement !== inputEl;
@@ -1453,7 +1466,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     if (targetChanged) {
-      this.fireDecoratorEvent("target-input-change", { targetElement: inputEl });
+      this.fireDecoratorEvent("active-control-change", { activeElement: inputEl });
     }
   }
 
@@ -1471,8 +1484,8 @@ class KioskKeyboard extends UI5Element {
 
       if (active && (this.shadowRoot!.contains(active) || this.contains(active))) return;
       if (active instanceof HTMLElement && this._resolveInputFrom(active)) {
-        const ids = this._inputIdsList;
-        if (ids.length === 0 || this._matchesInputIds(active, ids)) return;
+        const ids = this._controlsList;
+        if (ids.length === 0 || this._matchesControls(active, ids)) return;
       }
 
       if (this._open) this.close();
@@ -1488,13 +1501,12 @@ class KioskKeyboard extends UI5Element {
       if (kb === this) continue;
       if (!kb._isAutoShowParticipationActive()) continue;
       if (kb._targetElement === inputEl) return true;
-      const kbFor = kb.for;
-      if (kbFor) {
-        const forEl = document.getElementById(kbFor);
-        if (!forEl) continue;
-        // Compare both the host element and the resolved input it contains
-        if (forEl === inputEl) return true;
-        if (forEl instanceof HTMLElement && kb._resolveInputFrom(forEl) === inputEl) return true;
+      const ids = kb._controlsList;
+      if (ids.length === 1) {
+        const el = document.getElementById(ids[0]);
+        if (!el) continue;
+        if (el === inputEl) return true;
+        if (el instanceof HTMLElement && kb._resolveInputFrom(el) === inputEl) return true;
       }
     }
     return false;
@@ -1517,7 +1529,7 @@ class KioskKeyboard extends UI5Element {
 
   /**
    * Checks whether the focused element (or a close ancestor) matches one
-   * of the configured inputIds.
+   * of the configured controls.
    *
    * Supports:
    * - Exact DOM id match (plain HTML)
@@ -1525,7 +1537,7 @@ class KioskKeyboard extends UI5Element {
    *   (`*--`) from each ancestor's id, matching the unprefixed control id
    *   (e.g. `"container-app---view--myInput"` matches `"myInput"`)
    */
-  private _matchesInputIds(el: HTMLElement, ids: string[]): boolean {
+  private _matchesControls(el: HTMLElement, ids: string[]): boolean {
     let current: HTMLElement | null = el;
     // Walk up at most 5 levels: input → inner wrapper → control root (+ margin for deeper UI5 nesting)
     for (let i = 0; i < 5 && current; i++) {
