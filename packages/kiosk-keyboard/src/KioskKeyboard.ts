@@ -114,9 +114,9 @@ export default class KioskKeyboard extends Control {
   private _boundFocusIn!: (e: FocusEvent) => void;
   private _boundFocusOut!: (e: FocusEvent) => void;
   private _autoShowActive!: boolean;
-  private _inputFocusDelegation!: InputFocusDelegation;
-  private _registeredInputControlById!: Map<string, string>;
-  private _resolvedInputControlIds!: Set<string>;
+  private _controlsFocusDelegation!: InputFocusDelegation;
+  private _registeredControlById!: Map<string, string>;
+  private _resolvedControlIds!: Set<string>;
 
   private _delegatedInstances!: Map<string, Control>;
   private _keyHighlightDelegation!: KeyHighlightDelegation;
@@ -146,7 +146,7 @@ export default class KioskKeyboard extends Control {
        * Auto-detected from the UI5 locale when omitted.
        *
        * @example <caption>XML view</caption>
-       * <kiosk:KioskKeyboard layout="qwertz-de" targetInput="myInput" />
+       * <kiosk:KioskKeyboard layout="qwertz-de" controls="myInput" />
        *
        * @example <caption>TypeScript - custom layout</caption>
        * KioskKeyboard.registerLayout("azerty-fr", frenchLayout);
@@ -167,7 +167,7 @@ export default class KioskKeyboard extends Control {
        * Call `resetKeyboardType()` to re-enable it.
        *
        * @example <caption>XML view - fixed numpad</caption>
-       * <kiosk:KioskKeyboard keyboardType="Numpad" targetInput="pinInput" />
+       * <kiosk:KioskKeyboard keyboardType="Numpad" controls="pinInput" />
        */
       keyboardType: {
         type: "ui5.kiosk.KeyboardType",
@@ -179,7 +179,7 @@ export default class KioskKeyboard extends Control {
        * visually dimmed and pointer events are disabled.
        *
        * @example <caption>XML view - bind to model</caption>
-       * <kiosk:KioskKeyboard enabled="{/keyboardEnabled}" targetInput="myInput" />
+       * <kiosk:KioskKeyboard enabled="{/keyboardEnabled}" controls="myInput" />
        */
       enabled: {
         type: "boolean",
@@ -191,7 +191,7 @@ export default class KioskKeyboard extends Control {
        * "Virtual Keyboard" from the resource bundle when left empty.
        *
        * @example <caption>XML view</caption>
-       * <kiosk:KioskKeyboard ariaLabel="PIN entry keyboard" targetInput="pinInput" />
+       * <kiosk:KioskKeyboard ariaLabel="PIN entry keyboard" controls="pinInput" />
        */
       ariaLabel: {
         type: "string",
@@ -296,33 +296,22 @@ export default class KioskKeyboard extends Control {
        * then globally. This makes the property safe to use in XML views
        * where control IDs are prefixed by the view ID.
        *
-       * Use this instead of `targetInput` when multiple inputs share
-       * a single keyboard (e.g. a form with several fields).
-       *
        * @example <caption>XML view - target multiple inputs</caption>
        * <m:Input id="name" />
        * <m:Input id="email" />
-       * <kiosk:KioskKeyboard inputIds="name,email" />
+       * <kiosk:KioskKeyboard controls="name,email" />
        *
        * @example <caption>TypeScript</caption>
-       * new KioskKeyboard({ inputIds: ["name", "email"] });
+       * new KioskKeyboard({ controls: ["name", "email"] });
        */
-      inputIds: {
+      controls: {
         type: "string[]",
         defaultValue: [],
         group: "Behavior",
       },
     },
     associations: {
-      /**
-       * The input control to type into (e.g. `sap.m.Input`, `sap.m.TextArea`).
-       * For targeting multiple inputs, use the `inputIds` property instead.
-       *
-       * @example <caption>XML view</caption>
-       * <m:Input id="myInput" />
-       * <kiosk:KioskKeyboard targetInput="myInput" />
-       */
-      targetInput: { type: "sap.ui.core.Control", multiple: false },
+      _activeTarget: { type: "sap.ui.core.Control", multiple: false },
       ariaLabelledBy: {
         type: "sap.ui.core.Control",
         multiple: true,
@@ -395,13 +384,13 @@ export default class KioskKeyboard extends Control {
         },
       },
       /**
-       * Fired when the target input changes (focus switches to a different
-       * input in auto-show mode, or `setTargetInput()` is called programmatically).
+       * Fired when the active target control changes (focus switches to a
+       * different input in auto-show mode, or programmatically).
        */
-      targetInputChange: {
+      activeControlChange: {
         parameters: {
-          /** The control ID of the new target input, or empty string if cleared. */
-          targetInput: { type: "string" },
+          /** The control ID of the new active target, or empty string if cleared. */
+          controlId: { type: "string" },
         },
       },
       /** Fired when `show()` opens the docked keyboard (not tied to CSS transition end). */
@@ -703,20 +692,20 @@ export default class KioskKeyboard extends Control {
     this._autoShowActive = false;
     this._boundFocusIn = this._onDocumentFocusIn.bind(this);
     this._boundFocusOut = this._onDocumentFocusOut.bind(this);
-    this._registeredInputControlById = new Map();
-    this._resolvedInputControlIds = new Set();
+    this._registeredControlById = new Map();
+    this._resolvedControlIds = new Set();
     this._delegatedInstances = new Map();
-    this._inputFocusDelegation = {
+    this._controlsFocusDelegation = {
       onfocusin: () => {
         if (!this.getEnabled()) return;
         const active = Element.getActiveElement();
         if (!(active instanceof Control)) return;
         // For composite controls (e.g. StepInput), the active element is the
-        // inner Input, but inputIds references the outer wrapper. Resolve the
-        // registered ancestor so setTargetInput gets the right control.
-        const ancestor = this._resolveInputIdsAncestor(active);
-        this.setTargetInput(ancestor ?? active);
-        // When docked with autoShow, show the keyboard for inputIds targets
+        // inner Input, but controls references the outer wrapper. Resolve the
+        // registered ancestor so _setActiveTarget gets the right control.
+        const ancestor = this._resolveControlsAncestor(active);
+        this._setActiveTarget(ancestor ?? active);
+        // When docked with autoShow, show the keyboard for controls targets
         if (this.getDocked() && this.getAutoShow() && !this._open) {
           this.show();
         }
@@ -733,8 +722,8 @@ export default class KioskKeyboard extends Control {
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._deferredFocusOutCloseId = null;
     this._focusClaimService = new FocusClaimService(
-      () => this.getInputIds(),
-      () => this._resolvedInputControlIds,
+      () => this.getControls(),
+      () => this._resolvedControlIds,
       () => this._shouldDeferToNative(),
       (id) => this._isTargetOfOther(id),
     );
@@ -783,7 +772,7 @@ export default class KioskKeyboard extends Control {
       this._scheduleResponsiveSizingSync();
     }
 
-    this._setupInputIds();
+    this._setupControls();
   }
 
   /** Ensures a ResizeHandler is attached to the current DOM element. */
@@ -902,7 +891,7 @@ export default class KioskKeyboard extends Control {
 
     this._cancelPendingFocusOutClose();
     this._disableAutoShow();
-    this._teardownInputIds();
+    this._teardownControls();
     this._removeHighlightDelegation();
     this._teardownResponsiveSizing();
     this._restoreNativeKeyboard();
@@ -1023,12 +1012,12 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Sets the target input association without triggering a re-render,
+   * Sets the active target association without triggering a re-render,
    * since the association does not affect the keyboard's visual output.
    * Also moves the physical keyboard highlight delegation to the new target.
    */
-  setTargetInput(target?: string | Control): this {
-    const previousTarget = this.getTargetInput();
+  private _setActiveTarget(target?: string | Control): this {
+    const previousTarget = this._getActiveTargetId();
 
     // Capture pending change on the old target. The event is deferred to
     // after all state transitions so that re-entrant calls (from a change
@@ -1052,12 +1041,12 @@ export default class KioskKeyboard extends Control {
       this.invalidate();
     }
 
-    this.setAssociation("targetInput", target ?? "", true);
+    this.setAssociation("_activeTarget", target ?? "", true);
 
-    const newId = this.getTargetInput();
+    const newId = this._getActiveTargetId();
     if (newId && this._isTargetOfOther(newId)) {
       Log.warning(
-        `KioskKeyboard: targetInput "${newId}" is already targeted by another KioskKeyboard instance`,
+        `KioskKeyboard: active target "${newId}" is already targeted by another KioskKeyboard instance`,
         undefined,
         "ui5.kiosk.KioskKeyboard",
       );
@@ -1074,7 +1063,7 @@ export default class KioskKeyboard extends Control {
         const focusRef = next.getFocusDomRef?.();
         if (focusRef && !resolveWithCustomResolver(focusRef, this._getEffectiveResolver())) {
           Log.warning(
-            `KioskKeyboard: targetInput "${newId}" does not have a textual input DOM ref - ` +
+            `KioskKeyboard: active target "${newId}" does not have a textual input DOM ref - ` +
               "key taps will have no effect. Expected (or containing) HTMLInputElement/HTMLTextAreaElement.",
             undefined,
             "ui5.kiosk.KioskKeyboard",
@@ -1082,7 +1071,7 @@ export default class KioskKeyboard extends Control {
         }
       } else {
         Log.warning(
-          `KioskKeyboard: targetInput "${newId}" could not be resolved - Element.getElementById() returned null`,
+          `KioskKeyboard: active target "${newId}" could not be resolved - Element.getElementById() returned null`,
           undefined,
           "ui5.kiosk.KioskKeyboard",
         );
@@ -1092,7 +1081,7 @@ export default class KioskKeyboard extends Control {
     // Keep aria-controls in sync (setAssociation suppresses re-render)
     const dom = this.getDomRef();
     if (dom) {
-      const resolvedId = this.getTargetInput();
+      const resolvedId = this._getActiveTargetId();
       if (resolvedId) {
         dom.setAttribute("aria-controls", resolvedId);
       } else {
@@ -1106,29 +1095,36 @@ export default class KioskKeyboard extends Control {
     }
 
     // Fire the deferred change event on the OLD target. State is now
-    // settled, so if the handler re-enters setTargetInput (e.g. by
+    // settled, so if the handler re-enters _setActiveTarget (e.g. by
     // focusing another input), the inner call sees consistent state
     // and its result becomes the final state.
     fireDeferredChange?.();
 
-    const newTarget = this.getTargetInput();
+    const newTarget = this._getActiveTargetId();
     if (newTarget !== previousTarget) {
-      this.fireEvent("targetInputChange", { targetInput: newTarget });
+      this.fireEvent("activeControlChange", { controlId: newTarget });
     }
 
     return this;
   }
 
   /**
-   * Custom setter for inputIds.
+   * Returns the ID of the currently active target, or empty string.
+   */
+  private _getActiveTargetId(): string {
+    return (this.getAssociation("_activeTarget") as string) ?? "";
+  }
+
+  /**
+   * Custom setter for controls.
    *
    * Reconciles focus delegates against currently resolved control instances
-   * without forcing a re-render, because inputIds does not affect renderer
+   * without forcing a re-render, because controls does not affect renderer
    * output directly.
    */
-  setInputIds(inputIds: string[]): this {
-    this.setProperty("inputIds", inputIds, true);
-    this._setupInputIds();
+  setControls(controls: string[]): this {
+    this.setProperty("controls", controls, true);
+    this._setupControls();
     return this;
   }
 
@@ -1381,17 +1377,17 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Private - inputIds delegation
+  // Private - controls delegation
   // ──────────────────────────────────────────────
 
-  private _setupInputIds(): void {
-    const ids = this.getInputIds();
+  private _setupControls(): void {
+    const ids = this.getControls();
     const nextByInputId = new Map<string, string>();
     const nextCountsByControlId = new Map<string, number>();
     const prevCountsByControlId = new Map<string, number>();
     const resolvedControlIds = new Set<string>();
 
-    for (const controlId of this._registeredInputControlById.values()) {
+    for (const controlId of this._registeredControlById.values()) {
       prevCountsByControlId.set(controlId, (prevCountsByControlId.get(controlId) ?? 0) + 1);
     }
 
@@ -1412,7 +1408,7 @@ export default class KioskKeyboard extends Control {
       if (!prev) continue;
       // Keep delegate if same controlId in next AND same Control instance
       if (nextCountsByControlId.has(controlId) && Element.getElementById(controlId) === prev) continue;
-      prev.removeEventDelegate(this._inputFocusDelegation);
+      prev.removeEventDelegate(this._controlsFocusDelegation);
     }
 
     // Attach controls newly referenced or whose instance changed.
@@ -1421,7 +1417,7 @@ export default class KioskKeyboard extends Control {
       if (!(control instanceof Control)) continue;
       // Skip if same controlId in prev AND same Control instance
       if (prevCountsByControlId.has(controlId) && this._delegatedInstances.get(controlId) === control) continue;
-      control.addEventDelegate(this._inputFocusDelegation);
+      control.addEventDelegate(this._controlsFocusDelegation);
     }
 
     // Rebuild instance tracking
@@ -1433,17 +1429,17 @@ export default class KioskKeyboard extends Control {
       }
     }
 
-    this._registeredInputControlById = nextByInputId;
-    this._resolvedInputControlIds = resolvedControlIds;
+    this._registeredControlById = nextByInputId;
+    this._resolvedControlIds = resolvedControlIds;
   }
 
-  private _teardownInputIds(): void {
+  private _teardownControls(): void {
     for (const instance of this._delegatedInstances.values()) {
-      instance.removeEventDelegate(this._inputFocusDelegation);
+      instance.removeEventDelegate(this._controlsFocusDelegation);
     }
     this._delegatedInstances.clear();
-    this._registeredInputControlById.clear();
-    this._resolvedInputControlIds.clear();
+    this._registeredControlById.clear();
+    this._resolvedControlIds.clear();
   }
 
   private _findControlById(targetId: string): Control | null {
@@ -1590,12 +1586,12 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Resolves and returns the associated target input control instance.
+   * Resolves and returns the active target control instance.
    *
-   * This is a typed convenience over `getTargetInput()` when controller code
-   * needs the control object rather than the association ID string.
+   * This is a typed convenience over `_getActiveTargetId()` when controller
+   * code needs the control object rather than the association ID string.
    */
-  getTargetControl<T extends Control = Control>(): T | null {
+  getActiveControl<T extends Control = Control>(): T | null {
     const target = this._getTargetElement();
     return target instanceof Control ? (target as T) : null;
   }
@@ -1801,7 +1797,7 @@ export default class KioskKeyboard extends Control {
     for (const other of KioskKeyboard._instances) {
       if (other === this) continue;
       if (!other._isAutoShowParticipationActive()) continue;
-      if (other.getTargetInput() === inputId) return true;
+      if (other._getActiveTargetId() === inputId) return true;
     }
     return false;
   }
@@ -1833,20 +1829,20 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Walks the UI5 parent chain of `candidate` and returns the first control
-   * whose ID matches a resolved inputIds entry, or null. This handles
+   * whose ID matches a resolved controls entry, or null. This handles
    * composite controls (e.g. StepInput wrapping an inner Input) where
-   * `Element.closestTo()` returns the inner control but inputIds references
+   * `Element.closestTo()` returns the inner control but controls references
    * the outer wrapper.
    */
-  private _resolveInputIdsAncestor(candidate: Control): Control | null {
-    return this._focusClaimService.resolveInputIdsAncestor(candidate);
+  private _resolveControlsAncestor(candidate: Control): Control | null {
+    return this._focusClaimService.resolveControlsAncestor(candidate);
   }
 
   private _onDocumentFocusIn(event: FocusEvent): void {
     if (!this.getDocked() || !this._isAutoShowParticipationActive()) return;
 
-    if (this.getInputIds().length > 0) {
-      this._setupInputIds();
+    if (this.getControls().length > 0) {
+      this._setupControls();
     }
 
     const target = event.target as HTMLElement;
@@ -1863,11 +1859,15 @@ export default class KioskKeyboard extends Control {
     // Focus landed on a claimable input -- cancel any pending close
     this._cancelPendingFocusOutClose();
 
-    this.setTargetInput(ui5Control);
+    this._setActiveTarget(ui5Control);
 
     // Auto-detect keyboard type from input metadata.
     // Skip if re-entrancy (from deferred change handler) superseded this target.
-    if (this.getAutoType() && this._keyboardTypeSource !== "explicit" && this.getTargetInput() === ui5Control.getId()) {
+    if (
+      this.getAutoType() &&
+      this._keyboardTypeSource !== "explicit" &&
+      this._getActiveTargetId() === ui5Control.getId()
+    ) {
       const detected = detectKbType(ui5Control, this._getEffectiveResolver());
       const previous = this.getKeyboardType();
       this._keyboardTypeSource = `auto:${detected}`;
@@ -2078,7 +2078,7 @@ export default class KioskKeyboard extends Control {
    * Uses Element registry (the standard UI5 association resolution pattern).
    */
   private _getTargetElement(): Element | null {
-    const id = this.getTargetInput();
+    const id = this._getActiveTargetId();
     if (!id) return null;
     return Element.getElementById(id) ?? null;
   }
@@ -2253,7 +2253,7 @@ export default class KioskKeyboard extends Control {
   private _suppressNativeKeyboard(): void {
     if (this._shouldDeferToNative()) return;
 
-    const inputId = this.getTargetInput();
+    const inputId = this._getActiveTargetId();
     if (!inputId) return;
 
     // Already suppressing this target input
