@@ -127,7 +127,7 @@ QUnit.test("Backspace deletes entire surrogate-pair emoji in one press", async (
 
   const emojiLayout: LayoutDefinition = [[{ value: "😀" }, { value: "{backspace}" }]];
   KioskKeyboard.registerLayout("test-emoji-bs", emojiLayout);
-  const kb = new KioskKeyboard({ layout: "test-emoji-bs", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-emoji-bs", controls: [input.getId()] });
   await placeAndWait(kb);
 
   input.focus();
@@ -154,7 +154,7 @@ QUnit.test("Backspace deletes ZWJ sequence in one press", async (assert) => {
   const emoji = "👨‍👩‍👧";
   const layout: LayoutDefinition = [[{ value: emoji }, { value: "{backspace}" }]];
   KioskKeyboard.registerLayout("test-zwj-bs", layout);
-  const kb = new KioskKeyboard({ layout: "test-zwj-bs", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-zwj-bs", controls: [input.getId()] });
   await placeAndWait(kb);
 
   input.focus();
@@ -178,7 +178,7 @@ QUnit.test("Backspace after mixed ASCII+emoji only removes last grapheme", async
 
   const layout: LayoutDefinition = [[{ value: "a" }, { value: "😀" }, { value: "{backspace}" }]];
   KioskKeyboard.registerLayout("test-mixed-bs", layout);
-  const kb = new KioskKeyboard({ layout: "test-mixed-bs", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-mixed-bs", controls: [input.getId()] });
   await placeAndWait(kb);
 
   input.focus();
@@ -207,7 +207,7 @@ QUnit.test("ArrowLeft and ArrowRight step over emoji as one unit", async (assert
 
   const layout: LayoutDefinition = [[{ value: "{fkey:ArrowLeft}" }, { value: "{fkey:ArrowRight}" }]];
   KioskKeyboard.registerLayout("test-emoji-nav", layout);
-  const kb = new KioskKeyboard({ layout: "test-emoji-nav", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-emoji-nav", controls: [input.getId()] });
   await placeAndWait(kb);
 
   input.focus();

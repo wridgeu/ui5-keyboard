@@ -67,7 +67,7 @@ QUnit.test("setDocked(false) closes an open keyboard and restores inputmode", as
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -168,7 +168,7 @@ QUnit.test("show()/close() are no-ops when docked is false", async (assert) => {
   const kb = new KioskKeyboard({
     docked: false,
     mobileKeyboard: "Custom",
-    targetInput: input,
+    controls: [input.getId()],
   });
   await placeAndWait(kb);
 
@@ -198,7 +198,7 @@ QUnit.test("show()/close() are no-ops when docked is false", async (assert) => {
 
 QUnit.test("Escape closes docked keyboard when virtual key has focus", async (assert) => {
   const input = new Input("escape-test-input");
-  const kb = new KioskKeyboard({ docked: true, targetInput: input.getId() });
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -220,7 +220,7 @@ QUnit.test("Escape closes docked keyboard when virtual key has focus", async (as
 
 QUnit.test("Escape closes docked keyboard when target input has focus", async (assert) => {
   const input = new Input("escape-input-focus");
-  const kb = new KioskKeyboard({ docked: true, targetInput: input.getId() });
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -241,7 +241,7 @@ QUnit.test("Escape closes docked keyboard when target input has focus", async (a
 
 QUnit.test("Escape closes docked keyboard when focus is outside keyboard and target input", async (assert) => {
   const input = new Input("escape-outside-focus");
-  const kb = new KioskKeyboard({ docked: true, targetInput: input.getId() });
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
   input.placeAt("qunit-fixture");
 
   const outside = document.createElement("button");
@@ -265,7 +265,7 @@ QUnit.test("Escape closes docked keyboard when focus is outside keyboard and tar
 
 QUnit.test("Escape on docked keyboard returns focus to target input", async (assert) => {
   const input = new Input("escape-focus-input");
-  const kb = new KioskKeyboard({ docked: true, targetInput: input.getId() });
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -364,7 +364,7 @@ QUnit.test("Rapid cycling preserves inputmode restoration", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ docked: true });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputEl = input.getFocusDomRef() as HTMLInputElement;

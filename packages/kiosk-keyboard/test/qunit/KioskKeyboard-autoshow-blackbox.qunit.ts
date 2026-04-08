@@ -32,7 +32,7 @@ QUnit.test("Docked auto-show opens on input focus and closes via API", async (as
 
   assert.ok(kb.isOpen(), "Keyboard opens on input focus");
   assert.notOk(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed CSS class removed");
-  assert.strictEqual(kb.getTargetInput(), input.getId(), "Target input is set");
+  assert.strictEqual((kb as any)._getActiveTargetId(), input.getId(), "Target input is set");
 
   // Close via public API
   kb.close();
@@ -136,11 +136,11 @@ QUnit.test("keyboardTypeChange event on auto-detected transitions", async (asser
 });
 
 // ──────────────────────────────────────────────
-// 4. Re-entrant setTargetInput via change handler
+// 4. Re-entrant _setActiveTarget via change handler
 // ──────────────────────────────────────────────
 
 QUnit.test(
-  "setTargetInput re-entrancy: change handler focusing another input lands on correct target",
+  "_setActiveTarget re-entrancy: change handler focusing another input lands on correct target",
   async (assert) => {
     const inputA = new Input({ value: "" });
     const inputB = new Input({ value: "" });
@@ -156,7 +156,7 @@ QUnit.test(
     (inputA.getFocusDomRef() as HTMLElement).focus();
     await nextUIUpdate();
 
-    assert.strictEqual(kb.getTargetInput(), inputA.getId(), "Target is inputA after focus");
+    assert.strictEqual((kb as any)._getActiveTargetId(), inputA.getId(), "Target is inputA after focus");
     assert.ok(kb.isOpen(), "Keyboard is open");
 
     // Type a character to mark the session dirty (needed for change event)
@@ -168,17 +168,17 @@ QUnit.test(
       (inputC.getFocusDomRef() as HTMLElement).focus();
     });
 
-    // Focus inputB → triggers setTargetInput(inputB) → deferred change
-    // fires on inputA → handler focuses inputC → setTargetInput(inputC)
+    // Focus inputB → triggers _setActiveTarget(inputB) → deferred change
+    // fires on inputA → handler focuses inputC → _setActiveTarget(inputC)
     (inputB.getFocusDomRef() as HTMLElement).focus();
     await nextUIUpdate();
 
     // The final target must be inputC (the last focus destination),
     // NOT inputB (which was superseded by the re-entrant call)
     assert.strictEqual(
-      kb.getTargetInput(),
+      (kb as any)._getActiveTargetId(),
       inputC.getId(),
-      "Target is inputC - re-entrant setTargetInput from change handler wins",
+      "Target is inputC - re-entrant _setActiveTarget from change handler wins",
     );
 
     inputA.destroy();
@@ -189,7 +189,7 @@ QUnit.test(
 );
 
 // ──────────────────────────────────────────────
-// 5. Re-entrant setTargetInput preserves auto-type from inner call
+// 5. Re-entrant _setActiveTarget preserves auto-type from inner call
 // ──────────────────────────────────────────────
 
 QUnit.test(
@@ -220,13 +220,13 @@ QUnit.test(
       (inputC.getFocusDomRef() as HTMLElement).focus();
     });
 
-    // Focus inputB (text) → triggers setTargetInput(inputB) → deferred change
-    // fires on inputA → handler focuses inputC (number) → setTargetInput(inputC)
+    // Focus inputB (text) → triggers _setActiveTarget(inputB) → deferred change
+    // fires on inputA → handler focuses inputC (number) → _setActiveTarget(inputC)
     // The inner call should detect Numpad; outer call must NOT overwrite it with Full.
     (inputB.getFocusDomRef() as HTMLElement).focus();
     await nextUIUpdate();
 
-    assert.strictEqual(kb.getTargetInput(), inputC.getId(), "Target is inputC - re-entrant call wins");
+    assert.strictEqual((kb as any)._getActiveTargetId(), inputC.getId(), "Target is inputC - re-entrant call wins");
     assert.strictEqual(
       kb.getKeyboardType(),
       "Numpad",

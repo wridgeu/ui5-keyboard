@@ -126,7 +126,7 @@ QUnit.test("F-key tap fires keyPress with correct key name", async (assert) => {
 
 QUnit.test("F-key tap does NOT insert text", async (assert) => {
   const input = new Input({ value: "test" });
-  const kb = new KioskKeyboard({ layout: "fkeys", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "fkeys", controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -240,7 +240,7 @@ QUnit.test("ABC button on fkeys layout returns to base layout", async (assert) =
 
 QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   const input = new Input();
-  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -270,7 +270,7 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
   const input = new Input();
   const kb = new KioskKeyboard({
     layout: "test-qwerty-fk",
-    targetInput: input,
+    controls: [input.getId()],
   });
   kb.setFKeyMode("Native");
   input.placeAt("qunit-fixture");
@@ -317,7 +317,7 @@ QUnit.test("Native fKeyMode skips native action when keydown is prevented", asyn
   const input = new Input();
   const kb = new KioskKeyboard({
     layout: "fkeys",
-    targetInput: input,
+    controls: [input.getId()],
   });
   kb.setFKeyMode("Native");
   input.placeAt("qunit-fixture");
@@ -360,7 +360,7 @@ QUnit.test("keyPress preventDefault prevents native dispatch and native action",
   const input = new Input();
   const kb = new KioskKeyboard({
     layout: "fkeys",
-    targetInput: input,
+    controls: [input.getId()],
   });
   kb.setFKeyMode("Native");
   input.placeAt("qunit-fixture");
@@ -401,7 +401,7 @@ QUnit.test("Native fKeyMode does not dispatch unsupported custom fkey names", as
   const input = new Input();
   const kb = new KioskKeyboard({
     layout: "qwerty",
-    targetInput: input,
+    controls: [input.getId()],
   });
   kb.setFKeyMode("Native");
 

@@ -696,7 +696,7 @@ QUnit.test("getAccessibilityInfo reports focusable=false when disabled", async (
 QUnit.test("setEnabled(false) redirects focus to target input when a key has focus", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   // Focus a key on the keyboard
@@ -755,7 +755,7 @@ QUnit.test("setEnabled(false) keeps docked keyboard open but disabled", async (a
 QUnit.test("setVisible(false) redirects focus to target input when a key has focus", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   // Focus a key on the keyboard
@@ -785,7 +785,7 @@ QUnit.test("setVisible(false) without focus on keyboard does not throw", async (
 });
 
 QUnit.test("setEnabled(false) blurs key when no target input is set", async (assert) => {
-  const kb = new KioskKeyboard(); // no targetInput
+  const kb = new KioskKeyboard(); // no active target
   await placeAndWait(kb);
 
   const firstKey = getFirstKeyElement(kb);

@@ -10,14 +10,14 @@ QUnit.module("KioskKeyboard input black-box", {
 });
 
 // ──────────────────────────────────────────────
-// 1. Default typing into targetInput
+// 1. Default typing into active target
 // ──────────────────────────────────────────────
 
 QUnit.test("Typing characters into target sap.m.Input", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   tapKey(kb, "h");
@@ -40,7 +40,7 @@ QUnit.test("Backspace removes last character", async (assert) => {
   const input = new Input({ value: "abc" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   tapKey(kb, "{backspace}");
@@ -57,7 +57,7 @@ QUnit.test("Space key inserts a space character", async (assert) => {
   const input = new Input({ value: "hi" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   tapKey(kb, " ");
@@ -75,7 +75,7 @@ QUnit.test("keyPress preventDefault stops input insertion", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {

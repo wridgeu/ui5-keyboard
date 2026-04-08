@@ -18,7 +18,7 @@ QUnit.module("KioskKeyboard - i18n integration", {
 QUnit.test("Resolver can change KIOSK_KEYBOARD_LABEL on rendered control", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   KioskKeyboard.setI18nResolver((key) => {
@@ -38,7 +38,7 @@ QUnit.test("Resolver can change KIOSK_KEYBOARD_LABEL on rendered control", async
 QUnit.test("Setting resolver to null restores base labels", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   const originalLabel = kb.getDomRef()?.getAttribute("aria-label");
@@ -63,7 +63,7 @@ QUnit.test("Setting resolver to null restores base labels", async (assert) => {
 QUnit.test("Resolver can override special key labels", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   KioskKeyboard.setI18nResolver((key) => {
@@ -103,7 +103,7 @@ QUnit.test("Resolver can override special key labels", async (assert) => {
 QUnit.test("Resolver receives base-bundle resolved text", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   KioskKeyboard.setI18nResolver((key, _locale, resolvedText) => {
@@ -130,7 +130,7 @@ QUnit.test("Resolver receives base-bundle resolved text", async (assert) => {
 QUnit.test("Destroying last instance auto-clears resolver", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   KioskKeyboard.setI18nResolver(() => "Hooked");
@@ -144,7 +144,7 @@ QUnit.test("Destroying last instance auto-clears resolver", async (assert) => {
   // Verify cleared by rendering a fresh keyboard
   const input2 = new Input({ value: "" });
   input2.placeAt("qunit-fixture");
-  const kb2 = new KioskKeyboard({ targetInput: input2 });
+  const kb2 = new KioskKeyboard({ controls: [input2.getId()] });
   await placeAndWait(kb2);
 
   const shiftKey = getKeyElement(kb2, "{shift}");
@@ -163,8 +163,8 @@ QUnit.test("Destroying one of two instances does NOT clear resolver", async (ass
   const input2 = new Input({ value: "" });
   input1.placeAt("qunit-fixture");
   input2.placeAt("qunit-fixture");
-  const kb1 = new KioskKeyboard({ targetInput: input1 });
-  const kb2 = new KioskKeyboard({ targetInput: input2 });
+  const kb1 = new KioskKeyboard({ controls: [input1.getId()] });
+  const kb2 = new KioskKeyboard({ controls: [input2.getId()] });
   await placeAndWait(kb1);
   await placeAndWait(kb2);
 
@@ -184,7 +184,7 @@ QUnit.test("Destroying one of two instances does NOT clear resolver", async (ass
 QUnit.test("Destroying last instance clears global target resolver", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
   const fakeResolver = (el: HTMLElement) => el.querySelector<HTMLInputElement>("input");

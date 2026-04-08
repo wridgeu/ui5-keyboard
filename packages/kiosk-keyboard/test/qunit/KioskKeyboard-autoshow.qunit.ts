@@ -240,7 +240,7 @@ QUnit.test("Auto-show skips input targeted by another keyboard", async (assert) 
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input,
+    controls: [input.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -269,7 +269,7 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: claimedInput,
+    controls: [claimedInput.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -298,7 +298,7 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
 
   const hiddenKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input,
+    controls: [input.getId()],
     visible: false,
   });
   hiddenKb.placeAt("qunit-fixture");
@@ -412,7 +412,7 @@ QUnit.test("Destroying the claiming keyboard frees the input for auto-show", asy
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input,
+    controls: [input.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -447,7 +447,7 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: input1,
+    controls: [input1.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 
@@ -485,7 +485,7 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
 
   const inlineKb = new KioskKeyboard({
     keyboardType: "Numpad",
-    targetInput: claimedInput,
+    controls: [claimedInput.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
 

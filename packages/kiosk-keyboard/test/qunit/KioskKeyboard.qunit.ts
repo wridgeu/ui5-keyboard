@@ -349,7 +349,7 @@ QUnit.test("keyPress preventDefault skips input insertion", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {
@@ -372,7 +372,7 @@ QUnit.test("Typing into target sap.m.Input", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   tapKey(kb, "h");
@@ -389,7 +389,7 @@ QUnit.test("Backspace deletes last character from target input", async (assert) 
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   tapKey(kb, "{backspace}");
@@ -405,7 +405,7 @@ QUnit.test("Enter inserts newline in TextArea", async (assert) => {
   textarea.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(textarea);
+  (kb as any)._setActiveTarget(textarea);
   await placeAndWait(kb);
 
   tapKey(kb, "{enter}");
@@ -422,7 +422,7 @@ QUnit.test("Enter does nothing for single-line Input", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   tapKey(kb, "{enter}");
@@ -444,7 +444,7 @@ QUnit.test("fireLiveChange is called on target", async (assert) => {
   });
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   tapKey(kb, "x");
@@ -498,10 +498,10 @@ QUnit.test("Disabled keyboard ignores keyboard events", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// setTargetInput (suppressInvalidate)
+// _setActiveTarget (suppressInvalidate)
 // ──────────────────────────────────────────────
 
-QUnit.test("setTargetInput does not trigger re-render", async (assert) => {
+QUnit.test("_setActiveTarget does not trigger re-render", async (assert) => {
   // Place both controls first, then wait for render to settle
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -511,15 +511,15 @@ QUnit.test("setTargetInput does not trigger re-render", async (assert) => {
   await waitForRender();
 
   const domBefore = kb.getDomRef();
-  assert.ok(domBefore, "Keyboard is rendered before setTargetInput");
+  assert.ok(domBefore, "Keyboard is rendered before _setActiveTarget");
 
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
 
   // Wait a tick to let any potential async re-render occur
   await nextUIUpdate();
 
   // Should still be the same DOM ref (no re-render from suppressInvalidate)
-  assert.strictEqual(kb.getDomRef(), domBefore, "DOM ref unchanged after setTargetInput");
+  assert.strictEqual(kb.getDomRef(), domBefore, "DOM ref unchanged after _setActiveTarget");
 
   input.destroy();
   kb.destroy();
@@ -592,7 +592,7 @@ QUnit.test("fireLiveChange receives value parameter", async (assert) => {
   });
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   tapKey(kb, "a");
@@ -616,7 +616,7 @@ QUnit.test("Enter key fires change event on target sap.m.Input", async (assert) 
   });
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   tapKey(kb, "{enter}");
@@ -635,7 +635,7 @@ QUnit.test("Enter key does not fire change on TextArea (inserts newline instead)
   });
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(textarea);
+  (kb as any)._setActiveTarget(textarea);
   await placeAndWait(kb);
 
   tapKey(kb, "{enter}");
@@ -656,7 +656,7 @@ QUnit.test("change fires on close after typing", async (assert) => {
   });
 
   const kb = new KioskKeyboard({ docked: true });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
   kb.show();
 
@@ -680,7 +680,7 @@ QUnit.test("change does NOT fire on close without typing", async (assert) => {
   });
 
   const kb = new KioskKeyboard({ docked: true });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
   kb.show();
   kb.close();
@@ -691,7 +691,7 @@ QUnit.test("change does NOT fire on close without typing", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("change fires on setTargetInput switch after typing", async (assert) => {
+QUnit.test("change fires on active target switch after typing", async (assert) => {
   const input1 = new Input({ value: "" });
   const input2 = new Input({ value: "" });
   input1.placeAt("qunit-fixture");
@@ -703,11 +703,11 @@ QUnit.test("change fires on setTargetInput switch after typing", async (assert) 
   });
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input1);
+  (kb as any)._setActiveTarget(input1);
   await placeAndWait(kb);
 
   tapKey(kb, "x");
-  kb.setTargetInput(input2);
+  (kb as any)._setActiveTarget(input2);
 
   assert.strictEqual(changeValue, "x", "change fired on input1 when switching to input2");
 
@@ -726,7 +726,7 @@ QUnit.test("change doesn't double-fire after Enter then close", async (assert) =
   });
 
   const kb = new KioskKeyboard({ docked: true });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
   kb.show();
 
@@ -750,7 +750,7 @@ QUnit.test("change NOT fired for TextArea on close", async (assert) => {
   });
 
   const kb = new KioskKeyboard({ docked: true });
-  kb.setTargetInput(textarea);
+  (kb as any)._setActiveTarget(textarea);
   await placeAndWait(kb);
   kb.show();
 
@@ -772,7 +772,7 @@ QUnit.test("Physical keydown adds highlight class to matching key", async (asser
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   assert.notOk(hasKeyClass(kb, "q", DOM.classes.keyHighlight), "No highlight initially");
@@ -797,7 +797,7 @@ QUnit.test("Physical keyup removes highlight class", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLElement;
@@ -821,11 +821,11 @@ QUnit.test("Changing target input moves highlight delegation", async (assert) =>
   input2.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input1);
+  (kb as any)._setActiveTarget(input1);
   await placeAndWait(kb);
 
   // Switch target to input2
-  kb.setTargetInput(input2);
+  (kb as any)._setActiveTarget(input2);
 
   // Keydown on input1 should NOT highlight (delegation removed)
   const inputDom1 = input1.getFocusDomRef() as HTMLElement;
@@ -856,7 +856,7 @@ QUnit.test("Keyboard renders inside a Popover", async (assert) => {
   document.getElementById("qunit-fixture")!.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",
@@ -885,7 +885,7 @@ QUnit.test("Typing into input inside a Popover", async (assert) => {
   document.getElementById("qunit-fixture")!.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",
@@ -919,7 +919,7 @@ QUnit.test("Popover stays open while interacting with keyboard", async (assert) 
   document.getElementById("qunit-fixture")!.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",
@@ -1045,7 +1045,7 @@ QUnit.test("Physical Shift+1 highlights the '1' key via data-shift-value", async
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   assert.notOk(hasKeyClass(kb, "1", DOM.classes.keyHighlight), "No highlight initially");
@@ -1081,7 +1081,7 @@ QUnit.test("Layout switching works inside a Popover", async (assert) => {
   document.body.appendChild(trigger);
 
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   const popover = new Popover({
     title: "Kiosk Input",
     contentWidth: "360px",
@@ -1162,7 +1162,7 @@ QUnit.test("Backspace deletes selected text range", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   // Select "bcd" (positions 1-4)
@@ -1182,7 +1182,7 @@ QUnit.test("Backspace at position 0 does nothing", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   // Place cursor at position 0
@@ -1206,7 +1206,7 @@ QUnit.test("Typing inserts at cursor position, not at end", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   // Place cursor between 'a' and 'c'
@@ -1226,7 +1226,7 @@ QUnit.test("Typing replaces selected text", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   // Select "ell"
@@ -1246,7 +1246,7 @@ QUnit.test("Programmatic setValue while unfocused resets cached cursor to end", 
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -1372,7 +1372,7 @@ QUnit.test('Physical "\\\"" highlights "2" key (Shift+2 on QWERTZ-DE)', async (a
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLElement;
@@ -1394,7 +1394,7 @@ QUnit.test('Physical "/" highlights "7" key (Shift+7 on QWERTZ-DE)', async (asse
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLElement;
@@ -1416,7 +1416,7 @@ QUnit.test('Physical "\u00DC" (capital U-umlaut) highlights "\u00FC" key', async
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLElement;
@@ -1438,7 +1438,7 @@ QUnit.test('Physical "\u00FC" (lowercase) highlights its own key directly', asyn
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ layout: "qwertz-de" });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLElement;
@@ -1464,7 +1464,7 @@ QUnit.test("Destroying target while open: tap/backspace/enter/close do not throw
   const input = new Input();
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ docked: true });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
   kb.show();
 
@@ -1501,7 +1501,7 @@ QUnit.test("New input focused after target destroyed adopts correctly via autoSh
   await waitForRender();
 
   assert.ok(kb.isOpen(), "Keyboard remains open after adopting a new input");
-  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switched to the newly focused input");
+  assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target switched to the newly focused input");
 
   input2.destroy();
   kb.destroy();
@@ -1516,7 +1516,7 @@ QUnit.test(
     input2.placeAt("qunit-fixture");
 
     const kb = new KioskKeyboard({ docked: true, mobileKeyboard: "Custom" });
-    kb.setTargetInput(input1);
+    (kb as any)._setActiveTarget(input1);
     await placeAndWait(kb);
 
     const inputDom1 = input1.getFocusDomRef() as HTMLInputElement;
@@ -1531,9 +1531,9 @@ QUnit.test(
     );
 
     input1.destroy();
-    kb.setTargetInput(input2);
+    (kb as any)._setActiveTarget(input2);
 
-    assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switches to surviving input");
+    assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target switches to surviving input");
     assert.strictEqual(inputDom2.getAttribute("inputmode"), "none", "New target inputmode suppressed after switch");
 
     kb.close();
@@ -1624,7 +1624,7 @@ QUnit.test("typing works for custom control without value property (DOM fallback
   custom.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(custom);
+  (kb as any)._setActiveTarget(custom);
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "a");
@@ -1642,7 +1642,7 @@ QUnit.test("backspace works for custom control without value property (DOM fallb
   custom.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard();
-  kb.setTargetInput(custom);
+  (kb as any)._setActiveTarget(custom);
   await placeAndWait(kb);
 
   // Type "ab" then backspace
@@ -1657,12 +1657,12 @@ QUnit.test("backspace works for custom control without value property (DOM fallb
   custom.destroy();
 });
 
-QUnit.test("getTargetControl resolves target control instance", async (assert) => {
+QUnit.test("getActiveControl resolves active control instance", async (assert) => {
   const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ targetInput: input });
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
-  const target = kb.getTargetControl();
+  const target = kb.getActiveControl();
   assert.ok(target instanceof Control, "Resolved target is a control instance");
   assert.strictEqual(target, input, "Resolved target matches the associated control");
 
@@ -1670,11 +1670,11 @@ QUnit.test("getTargetControl resolves target control instance", async (assert) =
   input.destroy();
 });
 
-QUnit.test("getTargetControl returns null when no target is associated", async (assert) => {
+QUnit.test("getActiveControl returns null when no target is associated", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getTargetControl(), null, "Returns null without target association");
+  assert.strictEqual(kb.getActiveControl(), null, "Returns null without target association");
 
   kb.destroy();
 });

@@ -365,7 +365,7 @@ QUnit.test("show() sets inputmode=none on target input", async (assert) => {
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -389,7 +389,7 @@ QUnit.test("exit() restores inputmode if keyboard was open", async (assert) => {
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -431,7 +431,7 @@ QUnit.test("Native mode: programmatic show() does not open keyboard", async (ass
     docked: true,
     mobileKeyboard: "Native",
   });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   kb.show();
@@ -530,7 +530,7 @@ QUnit.test("Existing inputmode attribute is preserved and restored", async (asse
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -554,14 +554,14 @@ QUnit.test("Shared target suppression is ref-counted across keyboard instances",
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb1.setTargetInput(input);
+  (kb1 as any)._setActiveTarget(input);
   await placeAndWait(kb1);
 
   const kb2 = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb2.setTargetInput(input);
+  (kb2 as any)._setActiveTarget(input);
   await placeAndWait(kb2);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -592,14 +592,14 @@ QUnit.test("Destroying one shared keyboard keeps suppression for survivor", asyn
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb1.setTargetInput(input);
+  (kb1 as any)._setActiveTarget(input);
   await placeAndWait(kb1);
 
   const kb2 = new KioskKeyboard({
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb2.setTargetInput(input);
+  (kb2 as any)._setActiveTarget(input);
   await placeAndWait(kb2);
 
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
@@ -662,7 +662,7 @@ QUnit.test("Switching target while open restores old and suppresses new", async 
   kb.destroy();
 });
 
-QUnit.test("setTargetInput while closed does not suppress inputmode", async (assert) => {
+QUnit.test("_setActiveTarget while closed does not suppress inputmode", async (assert) => {
   const input1 = new Input();
   const input2 = new Input();
   input1.placeAt("qunit-fixture");
@@ -672,10 +672,10 @@ QUnit.test("setTargetInput while closed does not suppress inputmode", async (ass
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb.setTargetInput(input1);
+  (kb as any)._setActiveTarget(input1);
   await placeAndWait(kb);
 
-  kb.setTargetInput(input2);
+  (kb as any)._setActiveTarget(input2);
 
   const dom2 = input2.getFocusDomRef() as HTMLInputElement;
   assert.notStrictEqual(dom2.getAttribute("inputmode"), "none", "input2 not suppressed while closed");
@@ -685,7 +685,7 @@ QUnit.test("setTargetInput while closed does not suppress inputmode", async (ass
   kb.destroy();
 });
 
-QUnit.test("setTargetInput to null while open restores old inputmode", async (assert) => {
+QUnit.test("_setActiveTarget to null while open restores old inputmode", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
 
@@ -693,14 +693,14 @@ QUnit.test("setTargetInput to null while open restores old inputmode", async (as
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb.setTargetInput(input);
+  (kb as any)._setActiveTarget(input);
   await placeAndWait(kb);
 
   kb.show();
   const inputDom = input.getFocusDomRef() as HTMLInputElement;
   assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode suppressed");
 
-  kb.setTargetInput("");
+  (kb as any)._setActiveTarget("");
   assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored after clearing target");
 
   kb.close();
@@ -720,19 +720,19 @@ QUnit.test("Rapid target switches while open: each intermediate target is restor
     docked: true,
     mobileKeyboard: "Custom",
   });
-  kb.setTargetInput(input1);
+  (kb as any)._setActiveTarget(input1);
   await placeAndWait(kb);
 
   kb.show();
   const dom1 = input1.getFocusDomRef() as HTMLInputElement;
   assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 suppressed");
 
-  kb.setTargetInput(input2);
+  (kb as any)._setActiveTarget(input2);
   const dom2 = input2.getFocusDomRef() as HTMLInputElement;
   assert.notStrictEqual(dom1.getAttribute("inputmode"), "none", "input1 restored after switch to input2");
   assert.strictEqual(dom2.getAttribute("inputmode"), "none", "input2 suppressed");
 
-  kb.setTargetInput(input3);
+  (kb as any)._setActiveTarget(input3);
   const dom3 = input3.getFocusDomRef() as HTMLInputElement;
   assert.notStrictEqual(dom2.getAttribute("inputmode"), "none", "input2 restored after switch to input3");
   assert.strictEqual(dom3.getAttribute("inputmode"), "none", "input3 suppressed");

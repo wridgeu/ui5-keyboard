@@ -64,7 +64,7 @@ QUnit.test("Standalone nav layout renders expected keys", async (assert) => {
 
 QUnit.test("Navigation key tap fires keyPress and does not insert text", async (assert) => {
   const input = new Input({ value: "test" });
-  const kb = new KioskKeyboard({ layout: "nav", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -89,7 +89,7 @@ QUnit.test("Navigation key tap fires keyPress and does not insert text", async (
 
 QUnit.test("ArrowLeft and ArrowRight move caret in target input", async (assert) => {
   const input = new Input({ value: "55555" });
-  const kb = new KioskKeyboard({ layout: "nav", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -151,7 +151,7 @@ QUnit.test("Consumers can compose fkey-row + nav-row + base layout", async (asse
 
 QUnit.test("ArrowUp and ArrowDown move caret vertically in TextArea", async (assert) => {
   const textarea = new TextArea({ value: "abc\ndefgh\nij", rows: 4 });
-  const kb = new KioskKeyboard({ layout: "nav", targetInput: textarea });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [textarea.getId()] });
   textarea.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -191,7 +191,7 @@ QUnit.test("ArrowUp and ArrowDown move caret vertically in TextArea", async (ass
 
 QUnit.test("ArrowDown clamps column to shorter line", async (assert) => {
   const textarea = new TextArea({ value: "abcdef\nhi", rows: 4 });
-  const kb = new KioskKeyboard({ layout: "nav", targetInput: textarea });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [textarea.getId()] });
   textarea.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -213,7 +213,7 @@ QUnit.test("ArrowDown clamps column to shorter line", async (assert) => {
 
 QUnit.test("PageUp moves caret to start, PageDown moves to end", async (assert) => {
   const input = new Input({ value: "hello world" });
-  const kb = new KioskKeyboard({ layout: "nav", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -237,7 +237,7 @@ QUnit.test("PageUp moves caret to start, PageDown moves to end", async (assert) 
 
 QUnit.test("Physical Arrow key highlights matching virtual nav key", async (assert) => {
   const input = new Input();
-  const kb = new KioskKeyboard({ layout: "test-qwerty-nav", targetInput: input });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-nav", controls: [input.getId()] });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
