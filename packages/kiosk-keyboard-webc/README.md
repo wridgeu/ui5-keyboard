@@ -231,7 +231,7 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 | ----------------- | ----------------------------------------------------- | ------------------------------------------------------------- |
 | **Framework**     | SAPUI5 / OpenUI5 only                                 | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge) |
 | **Theming**       | LESS variables (`@sapUiButton*`)                      | CSS custom properties + SAP theme token fallbacks             |
-| **i18n**          | UI5 ResourceBundle with `configureI18n()` API         | Built-in EN/DE + `setI18nResolver()` callback                 |
+| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback     | Built-in EN/DE + `setI18nResolver()` callback                 |
 | **Target inputs** | UI5 associations (`targetInput`) + `setTargetInput()` | `for` attribute + `setTargetElement()`                        |
 | **Density**       | UI5 content density (`sapUiSizeCompact`)              | `data-ui5-compact-size` attribute                             |
 
@@ -809,7 +809,7 @@ KioskKeyboard.setI18nResolver((key, locale) => {
 **Adding built-in translations (library contributors):** To add a new locale to the library itself, create a properties file in `src/i18n/` following the naming convention `messagebundle_<locale>.properties` (e.g. `messagebundle_fr.properties`). The UI5 Web Components build pipeline picks it up automatically.
 
 > [!NOTE]
-> The UI5 native control (`ui5-lib-kiosk-keyboard`) offers a richer i18n API with enhancement bundles and locale configuration via `configureI18n()`. The web component intentionally uses a simpler single-callback approach since it operates outside the UI5 resource bundle infrastructure. The resolver callback covers the same use cases -- adding languages, overriding texts, connecting to external translation systems -- through a pattern that is more natural for standalone web component consumption.
+> Both the UI5 native control and the web component use the same `setI18nResolver()` callback pattern for i18n customization. The resolver receives the key, current locale, and base text, and returns a string override or `undefined` to keep the default. The UI5 control additionally resolves base text from a UI5 ResourceBundle, while the web component uses built-in EN/DE strings.
 
 ## CSS Parts
 

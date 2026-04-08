@@ -1,6 +1,6 @@
 # Feature: Nav Row Wrapping & Responsive Layout Patterns Documentation
 
-> Status: Proposal
+> Status: Implemented
 
 ## Problem
 

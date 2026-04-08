@@ -152,7 +152,7 @@ export default class HotkeyManager extends BaseObject {
   // Centralized event dispatcher - owns all DOM listeners
   private _dispatcher: EventDispatcher;
 
-  // Lazily created SequenceManager (created on first registerSequence call)
+  // Lazily created SequenceManager (created on first sequence registration via register())
   private _sequenceManager: SequenceManager | null = null;
 
   // Focus-tracking logic - extracted to its own class for maintainability.
@@ -595,6 +595,22 @@ export default class HotkeyManager extends BaseObject {
     callback: HotkeyCallback,
     options?: HotkeyOptions,
   ): HotkeyRegistrationHandle {
+    // Warn about options that are not applicable to sequences
+    if (options?.suppressInPopups) {
+      Log.warning(
+        `Option "suppressInPopups" is ignored for sequence "${hotkey}" - popup suppression is not supported for sequences`,
+        undefined,
+        LOG_COMPONENT,
+      );
+    }
+    if (options?.target != null) {
+      Log.warning(
+        `Option "target" is ignored for sequence "${hotkey}" - element targeting is not supported for sequences`,
+        undefined,
+        LOG_COMPONENT,
+      );
+    }
+
     const seqOptions: SequenceOptions = {
       description: options?.description,
       timeout: options?.timeout,

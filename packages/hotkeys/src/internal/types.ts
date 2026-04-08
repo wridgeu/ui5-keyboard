@@ -41,7 +41,7 @@ export interface ResolvedHotkeyOptions {
 
 /**
  * Internal representation of a fully resolved sequence registration.
- * @internal Use {@link SequenceRegistrationInfo} for public introspection.
+ * @internal Use {@link HotkeyRegistrationInfo} (from `../types`) for public introspection.
  */
 export interface SequenceRegistration {
   id: string;

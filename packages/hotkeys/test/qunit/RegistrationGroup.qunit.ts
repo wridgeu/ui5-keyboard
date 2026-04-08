@@ -301,11 +301,18 @@ QUnit.test("sequence without onPending does not fire any pending callback", (ass
   const group = manager.createGroup();
   let pendingFired = false;
 
+  // Register a second sequence WITH onPending to prove the mechanism works,
+  // then verify the sequence WITHOUT onPending does not trigger it.
   group.register("G I", () => {});
+  group.register("X Y", () => {}, {
+    onPending: () => {
+      pendingFired = true;
+    },
+  });
 
-  // No onPending set, no global handler - should not fire anything
+  // Press "g" - starts the "G I" sequence (no onPending), should NOT fire pendingFired
   fireKey("g");
-  assert.notOk(pendingFired, "No pending callback fires when onPending is not set");
+  assert.notOk(pendingFired, "No pending callback fires for sequence without onPending");
 
   group.destroyAll();
 });
