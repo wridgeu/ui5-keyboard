@@ -110,7 +110,8 @@ declare module "./KioskKeyboard" {
         where control IDs are prefixed by the view ID.
          */
         controls?: string[] | PropertyBindingInfo | `{${string}}`;
-        // _activeTarget is private -- use getActiveControl() to read
+        /** @private Internal active-target tracking. Use {@link getActiveControl} to read. */
+        _activeTarget?: Control | string;
         ariaLabelledBy?: Control | string | (Control | string)[];
         ariaDescribedBy?: Control | string | (Control | string)[];
 
@@ -367,8 +368,9 @@ declare module "./KioskKeyboard" {
          */
         setControls(controls: string[]): this;
 
-        // _activeTarget association is private -- omitted from public types.
-        // Use getActiveControl() to read the active target.
+        // association: _activeTarget (private -- use getActiveControl() instead)
+        /** @private */ get_activeTarget(): string;
+        /** @private */ set_activeTarget(_activeTarget?: string | Control): this;
 
         // association: ariaLabelledBy
         getAriaLabelledBy(): string[];
