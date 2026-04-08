@@ -897,10 +897,7 @@ export default class KioskKeyboard extends Control {
       KioskKeyboard._globalTargetResolver = null;
     }
 
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-      this._deferredFocusOutCloseId = null;
-    }
+    this._cancelPendingFocusOutClose();
     this._disableAutoShow();
     this._teardownInputIds();
     this._removeHighlightDelegation();
@@ -1851,25 +1848,17 @@ export default class KioskKeyboard extends Control {
 
     const target = event.target as HTMLElement;
 
-    // Focus on the keyboard itself -- cancel any pending close, nothing else to do
+    // Ignore focus on the keyboard itself; the rAF callback's own
+    // dom.contains(active) guard will keep the keyboard open.
     const myDom = this.getDomRef();
-    if (myDom && myDom.contains(target)) {
-      if (this._deferredFocusOutCloseId !== null) {
-        cancelAnimationFrame(this._deferredFocusOutCloseId);
-        this._deferredFocusOutCloseId = null;
-      }
-      return;
-    }
+    if (myDom && myDom.contains(target)) return;
 
     // Only claim textual inputs not deferred to native or owned by another instance
     const ui5Control = this._resolveClaimableControl(target);
     if (!ui5Control) return;
 
     // Focus landed on a claimable input -- cancel any pending close
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-      this._deferredFocusOutCloseId = null;
-    }
+    this._cancelPendingFocusOutClose();
 
     this.setTargetInput(ui5Control);
 
@@ -1892,6 +1881,13 @@ export default class KioskKeyboard extends Control {
     this.show();
   }
 
+  private _cancelPendingFocusOutClose(): void {
+    if (this._deferredFocusOutCloseId !== null) {
+      cancelAnimationFrame(this._deferredFocusOutCloseId);
+      this._deferredFocusOutCloseId = null;
+    }
+  }
+
   private _onDocumentFocusOut(event: FocusEvent): void {
     if (!this.getDocked() || !this._open) return;
 
@@ -1907,9 +1903,7 @@ export default class KioskKeyboard extends Control {
     // Defer to next frame so activeElement has settled, then re-check.
     // relatedTarget can be null in some browser/shadow-DOM transitions,
     // and rAF lets us inspect the true destination in all cases.
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-    }
+    this._cancelPendingFocusOutClose();
     this._deferredFocusOutCloseId = requestAnimationFrame(() => {
       this._deferredFocusOutCloseId = null;
       if (!this.getDocked() || !this._open) return;
