@@ -15,7 +15,7 @@ export const MODIFIER_KEYS: ReadonlySet<string> = new Set(["Control", "Shift", "
 /**
  * Canonical modifier order for normalization: Control, Alt, Shift, Meta.
  */
-export const MODIFIER_ORDER: readonly CanonicalModifier[] = ["Control", "Alt", "Shift", "Meta"] as const;
+export const MODIFIER_ORDER: readonly CanonicalModifier[] = ["Control", "Alt", "Shift", "Meta"];
 
 /**
  * Maps common modifier aliases to their canonical form.

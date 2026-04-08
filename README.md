@@ -177,7 +177,7 @@ npm install ui5-lib-hotkeys
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
-const manager = HotkeyManager.getInstance();
+const manager = new HotkeyManager();
 const hotkeys = manager.createGroup();
 
 hotkeys.register("Mod+S", () => onSave(), { description: "Save" });
@@ -233,11 +233,10 @@ The two UI5 libraries are independent (neither depends on the other) but they co
 
 ```ts
 // Controller - register hotkeys alongside the virtual keyboard
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-
 onInit(): void {
-  const manager = HotkeyManager.getInstance();
-  manager.register("Mod+K", () => this.byId("searchField")?.focus(), {
+  const manager = this.getOwnerComponent().getHotkeyManager();
+  const group = manager.createGroup();
+  group.register("Mod+K", () => this.byId("searchField")?.focus(), {
     description: "Focus search",
   });
 }

@@ -1,5 +1,4 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { destroyHotkeyManager, fireKey } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
 let clock: { tick: (ms: number) => number; restore: () => void };
 
@@ -19,10 +18,10 @@ QUnit.module("SequenceManager - Black-Box Contracts", {
 // ──────────────────────────────────────────────
 
 QUnit.test("Completing G E in order fires callback once", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let count = 0;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     count++;
   });
 
@@ -38,10 +37,10 @@ QUnit.test("Completing G E in order fires callback once", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Wrong key mid-sequence resets progress", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     called = true;
   });
 
@@ -59,11 +58,11 @@ QUnit.test("Wrong key mid-sequence resets progress", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Exceeding timeout resets sequence", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       called = true;
     },
@@ -82,16 +81,16 @@ QUnit.test("Exceeding timeout resets sequence", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Active scope sequence wins over global", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let globalFired = false;
   let scopedFired = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     globalFired = true;
   });
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       scopedFired = true;
     },
@@ -112,11 +111,11 @@ QUnit.test("Active scope sequence wins over global", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Sequence keys do not emit no_match to unhandled handler", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let sequenceFired = false;
   let noMatchCount = 0;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     sequenceFired = true;
   });
 
@@ -139,10 +138,10 @@ QUnit.test("Sequence keys do not emit no_match to unhandled handler", (assert) =
 // ──────────────────────────────────────────────
 
 QUnit.test("Disabling via setOptions prevents fire; re-enabling restores it", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let count = 0;
 
-  const handle = manager.registerSequence(["G", "E"], () => {
+  const handle = manager.register("G E", () => {
     count++;
   });
 

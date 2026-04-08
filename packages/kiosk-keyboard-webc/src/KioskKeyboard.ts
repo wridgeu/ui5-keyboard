@@ -1264,7 +1264,7 @@ class KioskKeyboard extends UI5Element {
 
   private _handleLayoutSwitch(value: string): void {
     deactivateMiddleware(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
-    const layoutName = value.slice(8, -1);
+    const layoutName = value.slice("{layout:".length, -1);
     if (layoutName === "base") {
       this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
       this._layoutSource = "external";
@@ -1279,7 +1279,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   private _handleFKeyPress(value: string, shifted: boolean): void {
-    const fkeyName = value.slice(6, -1);
+    const fkeyName = value.slice("{fkey:".length, -1);
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
     if (!allowed) return;
     this._handleFKey(fkeyName, shifted);

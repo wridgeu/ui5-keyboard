@@ -1,5 +1,5 @@
 import Element from "sap/ui/core/Element";
-import type { TargetElement } from "../types";
+import type { TargetElement } from "./types";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme";
 

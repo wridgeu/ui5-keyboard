@@ -30,6 +30,11 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
   - [Registration Options](#registration-options)
   - [Registration Handle](#registration-handle)
   - [Registration Group](#registration-group)
+    - [Groups and Lifecycle](#groups-and-lifecycle)
+    - [Scope Stacking](#scope-stacking)
+    - [Popup Overlay Pattern](#popup-overlay-pattern)
+    - [Router Integration (Group-Level)](#router-integration-group-level)
+    - [FLP Component Pattern](#flp-component-pattern)
   - [Scope Management](#scope-management)
   - [Router Integration](#router-integration)
   - [Unhandled Key Callback](#unhandled-key-callback)
@@ -220,17 +225,17 @@ import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 
 // In your Component.init():
-const manager = HotkeyManager.getInstance();
-manager.enableRouterIntegration(this.getRouter());
+const manager = new HotkeyManager();
 
-// Create a group for collective lifecycle management
+// Create a group and wire up router integration
 const hotkeys: RegistrationGroup = manager.createGroup();
+hotkeys.enableRouterIntegration(this.getRouter());
 
 // Register a global shortcut
 hotkeys.register(
   "Mod+S",
   (event) => {
-    // Save logic -- Cmd+S on Mac, Ctrl+S on Windows/Linux
+    // Save logic - Cmd+S on Mac, Ctrl+S on Windows/Linux
     MessageToast.show("Saved!");
   },
   { description: "Save" },
@@ -249,10 +254,7 @@ hotkeys.register(
 const handle = hotkeys.register("Mod+D", () => nav(), { description: "Nav" });
 handle.setOptions({ enabled: () => model.getProperty("/isDirty") });
 
-// Clean up all registrations in one call (e.g., in onExit or destroy)
-hotkeys.destroyAll();
-
-// In your Component.destroy():
+// Clean up everything in one call (e.g., in Component.exit)
 manager.destroy();
 ```
 
@@ -262,7 +264,7 @@ Recommended stable consumer imports:
 
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import type { RouterLike } from "ui5/hotkeys/HotkeyManager";
+import type Router from "sap/ui/core/routing/Router";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
@@ -279,43 +281,35 @@ The sections below also mention advanced helper modules such as `ui5/hotkeys/val
 
 ## HotkeyManager
 
-The central singleton that manages all keyboard shortcut registrations.
+The central manager that owns all keyboard shortcut registrations, DOM listeners, and scope state.
 
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
-const manager = HotkeyManager.getInstance();
+const manager = new HotkeyManager();
 ```
 
-| Method                                 | Description                                            |
-| -------------------------------------- | ------------------------------------------------------ |
-| `getInstance()`                        | Get or create the singleton                            |
-| `register(hotkey, callback, options?)` | Register a shortcut, returns a handle                  |
-| `createGroup()`                        | Create a registration group for collective cleanup     |
-| `pushScope(scopeId)`                   | Push a scope onto the stack                            |
-| `popScope(scopeId)`                    | Pop the top scope (ID must match current top)          |
-| `getActiveScope()`                     | Get the current top-of-stack scope                     |
-| `getScopeStack()`                      | Get a snapshot of the full scope stack (bottom-to-top) |
-| `resetToGlobalScope()`                 | Pop all non-global scopes in one call                  |
-| `enableRouterIntegration(router)`      | Auto-manage view scopes via router events              |
-| `disableRouterIntegration()`           | Detach router handler without destroying the manager   |
-| `hasRouterIntegration()`               | Check whether router integration is currently active   |
-| `getRegistrations()`                   | Get all active registrations                           |
-| `getRegistrationsForScope(scopeId)`    | Filter registrations by scope                          |
-| `findRegistrations(predicate)`         | Find registrations matching a predicate function       |
-| `getPlatform()`                        | Get the detected platform                              |
-| `suspendDispatch(reason?)`             | Suspend dispatch, returns a guard handle               |
-| `isDispatchSuspended()`                | Whether dispatch is currently suspended                |
-| `createRecorder(options)`              | Create a HotkeyRecorder instance                       |
-| `getKeyStateTracker()`                 | Access the held-key state tracker                      |
-| `setUnhandledHandler(callback)`        | Set callback for unhandled key events                  |
-| `registerSequence(seq, cb, opts?)`     | Register a multi-key sequence, returns a handle        |
-| `getSequenceRegistrations()`           | Get all active sequence registrations                  |
-| `getSequenceRegistrationsForScope(id)` | Filter sequence registrations by scope                 |
-| `setSequencePendingHandler(callback)`  | Set global callback for mid-sequence progress          |
-| `addGenericRootId(id)`                 | Register an element ID as a generic focus root         |
-| `removeGenericRootId(id)`              | Remove a previously registered generic root ID         |
-| `destroy()`                            | Remove all listeners, clear state, null the singleton  |
+| Method                                 | Description                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------- |
+| `register(hotkey, callback, options?)` | Register a shortcut or sequence (space-separated keys), returns a handle     |
+| `createGroup()`                        | Create a registration group for collective cleanup                           |
+| `pushScope(scopeId)`                   | Push a scope onto the stack                                                  |
+| `popScope(scopeId)`                    | Pop the top scope (ID must match current top)                                |
+| `getActiveScope()`                     | Get the current top-of-stack scope                                           |
+| `getScopeStack()`                      | Get a snapshot of the full scope stack (bottom-to-top)                       |
+| `resetToGlobalScope()`                 | Pop all non-global scopes in one call                                        |
+| `getRegistrations()`                   | Get all active registrations (hotkeys and sequences)                         |
+| `getRegistrationsForScope(scopeId)`    | Filter registrations by scope (hotkeys and sequences)                        |
+| `findRegistrations(predicate)`         | Find registrations matching a predicate function                             |
+| `getPlatform()`                        | Get the detected platform                                                    |
+| `suspendDispatch(reason?)`             | Suspend dispatch, returns a guard handle                                     |
+| `isDispatchSuspended()`                | Whether dispatch is currently suspended                                      |
+| `createRecorder(options)`              | Create a HotkeyRecorder instance                                             |
+| `getKeyStateTracker()`                 | Access the held-key state tracker                                            |
+| `setUnhandledHandler(callback)`        | Set callback for unhandled key events                                        |
+| `addGenericRootId(id)`                 | Register an element ID as a generic focus root                               |
+| `removeGenericRootId(id)`              | Remove a previously registered generic root ID                               |
+| `destroy()`                            | Full teardown: removes DOM listeners, finalizes all groups, clears all state |
 
 ### Registration
 
@@ -360,6 +354,8 @@ manager.register(
 | `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
 | `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
 | `target`           | `HTMLElement`              | `null`         | Bind to a specific element instead of the document                                               |
+| `timeout`          | `number`                   | `1000`         | Sequences only: timeout in ms between keys before the sequence resets                            |
+| `onPending`        | `SequencePendingCallback`  | -              | Sequences only: callback fired after each intermediate key match with progress info              |
 
 ### Registration Handle
 
@@ -413,7 +409,7 @@ private _hotkeys!: RegistrationGroup;
 onInit(): void {
   this._hotkeys = manager.createGroup();
   this._hotkeys.register("F5", handler, { scope: "main" });
-  this._hotkeys.registerSequence(["G", "I"], handler, { scope: "main" });
+  this._hotkeys.register("G I", handler, { scope: "main" });
 }
 
 onExit(): void {
@@ -421,37 +417,147 @@ onExit(): void {
 }
 ```
 
-| Property / Method            | Description                                              |
-| ---------------------------- | -------------------------------------------------------- |
-| `register()`                 | Delegates to `manager.register()`, tracks handle         |
-| `registerSequence()`         | Delegates to `manager.registerSequence()`, tracks handle |
-| `getRegistrations()`         | Get this group's active hotkey registrations             |
-| `getSequenceRegistrations()` | Get this group's active sequence registrations           |
-| `destroyAll()`               | Unregister all tracked handles (idempotent)              |
-| `size`                       | Number of currently active registrations                 |
-| `isDestroyed`                | Whether `destroyAll()` has been called                   |
+| Property / Method            | Description                                                   |
+| ---------------------------- | ------------------------------------------------------------- |
+| `register()`                 | Delegates to `manager.register()`, tracks handle              |
+| `enableRouterIntegration(r)` | Attach router-based scope management to this group            |
+| `getRegistrations()`         | Get this group's active registrations (hotkeys and sequences) |
+| `destroyAll()`               | Unregister all tracked handles and detach router (idempotent) |
+| `size`                       | Number of currently active registrations                      |
+| `isDestroyed`                | Whether `destroyAll()` has been called                        |
 
-Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle`. `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
+Handles returned by the group are normal `HotkeyRegistrationHandle`. `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 
 Group-level introspection can drive scoped shortcut UIs:
 
 ```ts
-const hotkeysForThisController = this._hotkeys.getRegistrations();
-const sequencesForThisController = this._hotkeys.getSequenceRegistrations();
+const registrationsForThisController = this._hotkeys.getRegistrations();
 
-// Example: render a quick hint list
-hotkeysForThisController.forEach((entry) => {
+// Example: render a quick hint list (includes both hotkeys and sequences)
+registrationsForThisController.forEach((entry) => {
   console.log(entry.normalizedHotkey, entry.description);
 });
 ```
 
-Lifecycle guidance (UI5):
+#### Groups and Lifecycle
+
+Each lifecycle owner should create exactly one group and destroy it in its corresponding teardown hook. Do not reuse groups across instances.
+
+| Lifecycle owner  | Create group in | Destroy group in                   |
+| ---------------- | --------------- | ---------------------------------- |
+| Controller       | `onInit()`      | `onExit()`                         |
+| Component        | `init()`        | `exit()` (via `manager.destroy()`) |
+| Dialog / Popover | `afterOpen`     | `afterClose`                       |
 
 - **Controller (`onInit`/`onExit`)**: create one group in `onInit()`, register through it, call `destroyAll()` in `onExit()`.
   This only unregisters entries that were created through that specific group; other groups stay active.
 - **View lifecycle**: if a view/controller is recreated by routing, do not reuse old groups/handles across instances.
-- **Component lifecycle**: call `HotkeyManager.getInstance().destroy()` in `Component.destroy()` to release listeners and invalidate all existing handles/groups.
-- **After manager destroy**: old handles/groups are intentionally inactive; create fresh registrations from the new manager instance.
+- **Component lifecycle**: call `manager.destroy()` in `Component.exit()`. This finalizes all groups, removes all DOM listeners, and clears all state.
+
+#### Scope Stacking
+
+The scope stack controls which hotkeys are active. The global scope is always at the bottom and cannot be pushed or removed. Each `pushScope()` adds a layer on top; `popScope()` removes it.
+
+```
+                  ┌─────────────────┐
+  top of stack -> │ confirmDialog   │  <- active scope
+                  ├─────────────────┤
+                  │ detail          │
+                  ├─────────────────┤
+  always present  │ __global__      │  <- fallthrough target
+                  └─────────────────┘
+```
+
+Matching order: the dispatcher checks the topmost scope first. If no scoped handler matches the key, global-scope handlers fire as a fallback. In the diagram above, a hotkey registered with `scope: "confirmDialog"` fires first; if no match is found there, global handlers are checked. Handlers in `"detail"` do not fire while `"confirmDialog"` is on top.
+
+Scope stack guards:
+
+- `pushScope("__global__")` throws. The global scope is always present and must not be pushed manually.
+- `pushScope(x)` where `x` is already the top of the stack throws. This catches duplicate pushes from router integration firing twice for the same route.
+
+#### Popup Overlay Pattern
+
+Dialogs and popovers typically push a dedicated scope so their hotkeys shadow the parent view. When the popup closes, removing the scope restores the parent's hotkeys automatically.
+
+```ts
+// In a controller that opens a confirmation dialog:
+onOpenConfirmDialog(): void {
+  this._confirmGroup = this.getHotkeyManager().createGroup();
+
+  this.getHotkeyManager().pushScope("confirmDialog");
+
+  this._confirmGroup.register("Escape", () => this.onCloseConfirmDialog(), {
+    scope: "confirmDialog",
+    description: "Close confirmation dialog",
+  });
+  this._confirmGroup.register("Enter", () => this.onConfirm(), {
+    scope: "confirmDialog",
+    description: "Confirm action",
+  });
+}
+
+onCloseConfirmDialog(): void {
+  this._confirmGroup.destroyAll();
+  this.getHotkeyManager().popScope("confirmDialog");
+  // Parent view's hotkeys are now active again
+}
+```
+
+#### Router Integration (Group-Level)
+
+Router integration is configured on a `RegistrationGroup`, not on the manager. The group's `destroyAll()` automatically detaches the router listener, so cleanup is guaranteed.
+
+```ts
+// Component.init()
+const manager = new HotkeyManager();
+this._hotkeys = manager.createGroup();
+this._hotkeys.enableRouterIntegration(this.getRouter());
+this.getRouter().initialize();
+```
+
+When the user navigates between routes, the router handler automatically resets to global scope and pushes the matched route name. Dialog scopes still require manual `pushScope`/`popScope` since they are not route-based.
+
+Calling `enableRouterIntegration()` again (e.g., on Component re-entry in FLP) silently replaces the previous router.
+
+#### FLP Component Pattern
+
+In the Fiori Launchpad, Components are destroyed and recreated on each app navigation. The `HotkeyManager` should be created in `init()` and destroyed in `exit()`, giving each app session a fresh instance with clean state.
+
+```ts
+import UIComponent from "sap/ui/core/UIComponent";
+import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
+
+export default class Component extends UIComponent {
+  private _hotkeyManager!: HotkeyManager;
+  private _hotkeys!: RegistrationGroup;
+
+  init(): void {
+    super.init();
+
+    this._hotkeyManager = new HotkeyManager();
+    this._hotkeys = this._hotkeyManager.createGroup();
+    this._hotkeys.enableRouterIntegration(this.getRouter());
+
+    this._hotkeys.register("Mod+S", () => this.save(), {
+      description: "Save",
+    });
+
+    this.getRouter().initialize();
+  }
+
+  getHotkeyManager(): HotkeyManager {
+    return this._hotkeyManager;
+  }
+
+  exit(): void {
+    this._hotkeyManager.destroy();
+  }
+}
+```
+
+> [!WARNING]
+> Never hold onto stale manager references across Component sessions. Each `init()` / `exit()` cycle creates and destroys a fresh `HotkeyManager`. Controllers should always access the manager via `this.getOwnerComponent().getHotkeyManager()` rather than caching it in module-level state.
 
 ### Scope Management
 
@@ -494,48 +600,10 @@ manager.resetToGlobalScope();
 
 ### Router Integration
 
-Automatically manage view scopes based on route changes. No manual `pushScope`/`popScope` needed in controllers:
-
-```ts
-// Component.init()
-const manager = HotkeyManager.getInstance();
-manager.enableRouterIntegration(this.getRouter());
-this.getRouter().initialize();
-```
-
-```ts
-// Main.controller.ts - route name is "main"
-manager.register("F5", () => this.onRefresh(), {
-  scope: "main",
-  description: "Refresh main list",
-});
-```
-
-```ts
-// Detail.controller.ts - route name is "detail"
-manager.register("F5", () => this.onRefreshDetail(), {
-  scope: "detail",
-  description: "Refresh detail view",
-});
-```
-
-When the user navigates from `main` to `detail`, the router handler automatically resets to global scope and pushes `"detail"`. The correct F5 handler fires based on which route is active.
-
-`hasRouterIntegration()` is useful for guarded setup and teardown:
-
-```ts
-if (!manager.hasRouterIntegration()) {
-  manager.enableRouterIntegration(this.getRouter());
-}
-
-// later (e.g. integration toggle / test cleanup)
-if (manager.hasRouterIntegration()) {
-  manager.disableRouterIntegration();
-}
-```
+Router integration is now configured on a `RegistrationGroup` rather than on the manager directly. See [Router Integration (Group-Level)](#router-integration-group-level) for the setup pattern and examples.
 
 > [!IMPORTANT]
-> Dialog scopes still require manual `pushScope`/`popScope` since they're not route-based.
+> Dialog scopes still require manual `pushScope`/`popScope` since they are not route-based. See the [Popup Overlay Pattern](#popup-overlay-pattern) for an example.
 
 ### Unhandled Key Callback
 
@@ -614,16 +682,16 @@ g2.release(); // dispatch resumes
 
 ## Sequences
 
-Multi-key sequences like Vim-style `G` then `E` for "go to editor":
+Multi-key sequences like Vim-style `G` then `E` for "go to editor". Sequences use the same `register()` API as single hotkeys -- pass a space-separated string instead of a single key:
 
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
-const manager = HotkeyManager.getInstance();
+const manager = new HotkeyManager();
 
-// Register a 2-key sequence
-manager.registerSequence(
-  ["G", "E"],
+// Register a 2-key sequence (space-separated)
+manager.register(
+  "G E",
   (event) => {
     router.navTo("editor");
   },
@@ -631,8 +699,8 @@ manager.registerSequence(
 );
 
 // Modifier sequences work too
-manager.registerSequence(
-  ["Ctrl+K", "Ctrl+S"],
+manager.register(
+  "Ctrl+K Ctrl+S",
   (event) => {
     saveAll();
   },
@@ -640,8 +708,8 @@ manager.registerSequence(
 );
 
 // Per-registration progress callback - dies with the registration
-manager.registerSequence(
-  ["G", "I"],
+manager.register(
+  "G I",
   (event) => {
     router.navTo("inbox");
   },
@@ -652,14 +720,9 @@ manager.registerSequence(
     },
   },
 );
-
-// Global fallback for sequences without onPending
-manager.setSequencePendingHandler((info) => {
-  statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps}  - next: ${info.nextKey}`);
-});
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback, takes precedence over the global handler).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback).
 
 > [!NOTE]
 > `scope` must be a non-empty string when provided.

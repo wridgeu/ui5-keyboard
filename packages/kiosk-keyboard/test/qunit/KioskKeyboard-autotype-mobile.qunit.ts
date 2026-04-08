@@ -331,9 +331,9 @@ QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType
   kb.destroy();
 });
 
-QUnit.test("Default mobileKeyboard is Custom", (assert) => {
+QUnit.test("Default mobileKeyboard is Auto", (assert) => {
   const kb = new KioskKeyboard();
-  assert.strictEqual(kb.getMobileKeyboard(), "Custom", "mobileKeyboard defaults to Custom");
+  assert.strictEqual(kb.getMobileKeyboard(), "Auto", "mobileKeyboard defaults to Auto");
   kb.destroy();
 });
 

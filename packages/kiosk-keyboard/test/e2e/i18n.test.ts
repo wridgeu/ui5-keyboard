@@ -48,14 +48,10 @@ describe("KioskKeyboard i18n e2e", () => {
   afterEach(async () => {
     // Reset i18n state between tests to prevent ordering dependencies
     await browser.executeAsync((done: () => void) => {
-      sap.ui.require(
-        ["ui5/kiosk/KioskKeyboard"],
-        (KioskKeyboard: { resetI18nConfiguration: () => void; clearI18nOverrideHook: () => void }) => {
-          KioskKeyboard.resetI18nConfiguration();
-          KioskKeyboard.clearI18nOverrideHook();
-          done();
-        },
-      );
+      sap.ui.require(["ui5/kiosk/KioskKeyboard"], (KioskKeyboard: { setI18nResolver: (fn: null) => void }) => {
+        KioskKeyboard.setI18nResolver(null);
+        done();
+      });
     });
   });
 
@@ -72,7 +68,7 @@ describe("KioskKeyboard i18n e2e", () => {
     });
   });
 
-  describe("2. French enhancement bundle", () => {
+  describe("2. French resolver", () => {
     it("should update labels to French after applying bundle", async () => {
       await clickButton("controls-french", "Apply French bundle");
       await waitForLabel("kb-french", "Clavier virtuel");

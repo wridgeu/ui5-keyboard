@@ -4,7 +4,7 @@ import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import Device from "sap/ui/Device";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
-import { SECONDARY_LAYOUTS } from "./types";
+import { SECONDARY_LAYOUTS } from "./internal/types";
 import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
@@ -33,16 +33,10 @@ import {
   registerMiddleware as registryRegisterMiddleware,
 } from "./internal/middleware-registry";
 import {
-  configureI18nWithStatus as registryConfigureI18nWithStatus,
-  resetI18nConfiguration as registryResetI18n,
-  setI18nOverrideHook as registrySetOverrideHook,
-  clearI18nOverrideHook as registryClearOverrideHook,
-  getI18nConfiguration as registryGetI18nConfiguration,
-  hasConfiguredEnhancements as registryHasConfiguredEnhancements,
-  reloadBundles as registryReloadBundles,
-  reloadIfStale as registryReloadIfStale,
+  setI18nResolver as registrySetResolver,
+  clearI18nResolver as registryClearResolver,
 } from "./internal/i18n-registry";
-import type { KioskI18nConfig, KioskI18nOverrideHook } from "./types";
+import type { I18nResolver } from "./types";
 import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import { ShiftState } from "./internal/shift-state";
@@ -243,7 +237,7 @@ export default class KioskKeyboard extends Control {
        * and re-enable auto-type detection.
        *
        * @example <caption>XML view - full auto kiosk setup</caption>
-       * <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" mobileKeyboard="Auto" />
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" />
        */
       autoType: {
         type: "boolean",
@@ -254,30 +248,26 @@ export default class KioskKeyboard extends Control {
        * Controls whether the KioskKeyboard or the native on-screen
        * keyboard is used.
        *
-       * - `"Custom"` (default) - always uses the KioskKeyboard and
-       *   suppresses the native keyboard via `inputmode="none"`.
-       *   Best for **dedicated kiosk terminals** without a physical
-       *   keyboard.
-       * - `"Native"` - always defers to the native keyboard; the
-       *   KioskKeyboard will not open on focus.
-       * - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
-       *   to the native keyboard on phones and tablets. This is
-       *   intended for **kiosk terminals running a desktop OS**
-       *   (no physical keyboard) that should still let mobile
-       *   visitors use their native keyboard. On a regular
-       *   laptop/desktop with a physical keyboard the virtual
+       * - `"Auto"` (default) - uses KioskKeyboard on desktop browsers,
+       *   defers to the native keyboard on phones and tablets. On a
+       *   regular laptop/desktop with a physical keyboard the virtual
        *   keyboard **will** still appear - use `"Native"` if that
        *   is not desired.
+       * - `"Custom"` - always uses the KioskKeyboard and suppresses
+       *   the native keyboard via `inputmode="none"`. Best for
+       *   **dedicated kiosk terminals** without a physical keyboard.
+       * - `"Native"` - always defers to the native keyboard; the
+       *   KioskKeyboard will not open on focus.
        *
        * @example <caption>XML view - kiosk terminal setup</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Custom" />
        *
-       * @example <caption>XML view - let mobile devices use native keyboard</caption>
-       * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
+       * @example <caption>XML view - always defer to native keyboard</caption>
+       * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Native" />
        */
       mobileKeyboard: {
         type: "ui5.kiosk.MobileKeyboard",
-        defaultValue: "Custom",
+        defaultValue: "Auto",
         group: "Behavior",
       },
       /**
@@ -289,6 +279,8 @@ export default class KioskKeyboard extends Control {
        *   `PageUp`/`PageDown`) to the current target element (or document
        *   fallback). If not canceled, built-in native actions run for
        *   selected keys (`F5`, `F11`).
+       * - `"None"`: fire `keyPress` only, skip native dispatch and
+       *   built-in navigation actions entirely.
        */
       fKeyMode: {
         type: "ui5.kiosk.FKeyMode",
@@ -423,9 +415,6 @@ export default class KioskKeyboard extends Control {
 
   /** All living KioskKeyboard instances - used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
-
-  /** Tracks the current reload promise to avoid duplicate post-reload invalidation across N instances. */
-  private static _lastReloadPromise: Promise<void> | null = null;
 
   /** Native actions executed in `fKeyMode="Native"` when not prevented. */
   private static readonly _NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
@@ -655,139 +644,33 @@ export default class KioskKeyboard extends Control {
     return registryGetLocaleLayout();
   }
 
-  // ──────────────────────────────────────────────
-  // Static delegates - i18n registry (see internal/i18n-registry.ts)
-  // ──────────────────────────────────────────────
+  // --
+  // Static delegates - i18n (see internal/i18n-registry.ts)
+  // --
 
   /**
-   * Configure i18n enhancement bundles and locale metadata.
+   * Set a custom i18n resolver callback for programmatic overrides.
    *
-   * Enhancement bundles provide additional or overriding translations
-   * for the keyboard's built-in text keys.  Useful for adding support
-   * for locales not shipped with the library, or for tenant-specific
-   * wording.
+   * The resolver runs after the base library bundle has been consulted.
+   * Return a string to replace the resolved text, or `undefined` to keep it.
    *
-   * Replaces any previous configuration (not incremental).
+   * Only one resolver is active at a time. Calling again replaces the
+   * previous resolver. Pass `null` to clear the resolver.
    *
-   * Enhancement bundles are loaded asynchronously.  The returned
-   * Promise resolves when all bundles are ready.  The control
-   * renders immediately with base-bundle text, then re-renders
-   * when enhancements are available.
+   * **Lifecycle note:** The resolver is stored in a module-level singleton.
+   * If the resolver closes over Component, Controller, or View references,
+   * those objects cannot be garbage-collected until the resolver is cleared.
+   * The resolver is auto-cleared when the last KioskKeyboard instance is
+   * destroyed.
    *
-   * Invalid configs are rejected via the returned Promise after
-   * logging a warning.
-   *
-   * Both the enhancement configuration and the override hook are
-   * auto-cleared when the last KioskKeyboard instance is destroyed,
-   * preventing cross-app leakage in FLP scenarios.  Call
-   * {@link resetI18nConfiguration} / {@link clearI18nOverrideHook}
-   * explicitly if earlier cleanup is needed.
-   *
-   * @param config  Enhancement bundle descriptors and locale metadata.
-   * @returns Resolves when all enhancement bundles are loaded.
+   * @param fn  The resolver function, or `null` to clear.
    * @public
    * @static
-   * @since 0.1.0
+   * @since 0.2.0
    */
-  static configureI18n(config: KioskI18nConfig): Promise<void> {
-    const { accepted, promise: loaded } = registryConfigureI18nWithStatus(config);
-    if (!accepted) {
-      return loaded;
-    }
-
+  static setI18nResolver(fn: I18nResolver | null): void {
+    registrySetResolver(fn);
     KioskKeyboard._invalidateAllInstances();
-    void loaded
-      .then(() => {
-        KioskKeyboard._invalidateAllInstances();
-      })
-      .catch((e) => {
-        Log.warning(
-          "configureI18n: failed to load enhancement bundles",
-          e instanceof Error ? e : String(e),
-          "ui5.kiosk.KioskKeyboard",
-        );
-      });
-
-    return loaded;
-  }
-
-  /**
-   * Reset i18n enhancement configuration to library defaults.
-   *
-   * Clears all enhancement bundles and cancels any in-flight bundle
-   * loads.  Does not affect the override hook - call
-   * {@link clearI18nOverrideHook} separately if needed.
-   *
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static resetI18nConfiguration(): void {
-    registryResetI18n();
-    KioskKeyboard._invalidateAllInstances();
-  }
-
-  /**
-   * Register a programmatic override hook for resolved i18n texts.
-   *
-   * The hook runs after the base bundle and all enhancement bundles
-   * have been consulted.  Return a string to replace the resolved
-   * text, or `undefined` to keep it.
-   *
-   * Only one hook is active at a time.  Calling this method again
-   * replaces the previous hook.
-   *
-   * **Lifecycle note:** The hook is stored in a module-level singleton
-   * that survives individual control destruction.  If the hook closes
-   * over Component, Controller, or View references, those object
-   * graphs cannot be garbage-collected until the hook is cleared.
-   * The hook is auto-cleared when the last KioskKeyboard instance is
-   * destroyed; call {@link clearI18nOverrideHook} explicitly if
-   * earlier cleanup is needed.
-   *
-   * @param fn  The override function.
-   * @returns `true` when the hook was accepted, `false` when rejected
-   *          (e.g. non-function argument).
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static setI18nOverrideHook(fn: KioskI18nOverrideHook): boolean {
-    const accepted = registrySetOverrideHook(fn);
-    if (accepted) {
-      KioskKeyboard._invalidateAllInstances();
-    }
-    return accepted;
-  }
-
-  /**
-   * Remove the i18n override hook.
-   *
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static clearI18nOverrideHook(): void {
-    if (registryClearOverrideHook()) {
-      KioskKeyboard._invalidateAllInstances();
-    }
-  }
-
-  /**
-   * Returns a frozen snapshot of the active i18n configuration, or
-   * `null` when no configuration has been applied.
-   *
-   * Intended for debugging, logging, and test assertions.
-   * The returned object is a deep copy - mutations do not affect
-   * internal state.
-   *
-   * @returns Frozen configuration snapshot or `null`.
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static getI18nConfiguration(): Readonly<KioskI18nConfig> | null {
-    return registryGetI18nConfiguration();
   }
 
   /** Invalidate all living KioskKeyboard instances to pick up i18n changes. */
@@ -870,62 +753,9 @@ export default class KioskKeyboard extends Control {
     if (localeLayout !== DEFAULT_LAYOUT) {
       this.setLayout(localeLayout);
     }
-
-    // If the locale changed while no instances existed,
-    // onLocalizationChanged was never called. Reload stale bundles
-    // now and re-render once they arrive.
-    // Use the same _lastReloadPromise sentinel as onLocalizationChanged
-    // to avoid registering duplicate .then() callbacks when multiple
-    // instances init simultaneously.
-    if (registryHasConfiguredEnhancements()) {
-      const staleReload = registryReloadIfStale();
-      if (staleReload !== KioskKeyboard._lastReloadPromise) {
-        KioskKeyboard._lastReloadPromise = staleReload;
-        void staleReload
-          .then(() => KioskKeyboard._invalidateAllInstances())
-          .catch((e) => {
-            Log.warning(
-              "init: failed to reload stale i18n bundles",
-              e instanceof Error ? e : String(e),
-              "ui5.kiosk.KioskKeyboard",
-            );
-          })
-          .finally(() => {
-            if (KioskKeyboard._lastReloadPromise === staleReload) {
-              KioskKeyboard._lastReloadPromise = null;
-            }
-          });
-      }
-    }
   }
 
-  // With N instances, this hook is called N times. reloadBundles()
-  // coalesces concurrent calls - only the first triggers the reload.
-  // The static sentinel avoids registering N duplicate .then() callbacks.
   onLocalizationChanged(): void {
-    if (registryHasConfiguredEnhancements()) {
-      const reload = registryReloadBundles();
-      if (reload !== KioskKeyboard._lastReloadPromise) {
-        KioskKeyboard._lastReloadPromise = reload;
-        void reload
-          .then(() => {
-            KioskKeyboard._invalidateAllInstances();
-          })
-          .catch((e) => {
-            Log.warning(
-              `onLocalizationChanged: failed to reload i18n enhancement bundles: ${e}`,
-              undefined,
-              "ui5.kiosk.KioskKeyboard",
-            );
-          })
-          .finally(() => {
-            if (KioskKeyboard._lastReloadPromise === reload) {
-              KioskKeyboard._lastReloadPromise = null;
-            }
-          });
-      }
-    }
-
     this.invalidate();
   }
 
@@ -1057,14 +887,12 @@ export default class KioskKeyboard extends Control {
     if (mw) mw.reset();
     KioskKeyboard._instances.delete(this);
 
-    // When the last living instance is destroyed, auto-reset i18n state
-    // to prevent cross-app leakage in FLP scenarios.  The override hook
-    // is especially critical: it may close over Component/Controller
-    // references that would otherwise never be garbage-collected.
+    // When the last living instance is destroyed, auto-clear i18n resolver
+    // to prevent cross-app leakage in FLP scenarios.  The resolver may
+    // close over Component/Controller references that would otherwise
+    // never be garbage-collected.
     if (KioskKeyboard._instances.size === 0) {
-      registryResetI18n();
-      registryClearOverrideHook();
-      KioskKeyboard._lastReloadPromise = null;
+      registryClearResolver();
       KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.clear();
       KioskKeyboard._globalTargetResolver = null;
     }
@@ -2170,9 +1998,15 @@ export default class KioskKeyboard extends Control {
         return;
       }
 
+      const fKeyMode = this.getFKeyMode();
+
+      if (fKeyMode === FKeyMode.None) {
+        return;
+      }
+
       let nativeAllowed = true;
 
-      if (this.getFKeyMode() === FKeyMode.Native) {
+      if (fKeyMode === FKeyMode.Native) {
         if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
           nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shift);
           if (nativeAllowed) {

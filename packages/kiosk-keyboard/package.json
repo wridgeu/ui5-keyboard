@@ -82,5 +82,8 @@
     "wdio-qunit-service": "~2.0.0",
     "wdio-ui5-service": "~3.0.0",
     "webdriverio": "~9.27.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

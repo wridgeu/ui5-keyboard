@@ -9,7 +9,7 @@ import {
   matchElementSnapshotInSection,
 } from "./test-helpers.js";
 
-const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true };
 
 /**
  * Progressive enhancement visual regression tests.

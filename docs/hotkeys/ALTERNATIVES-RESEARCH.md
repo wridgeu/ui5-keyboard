@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Compared with a production hand-rolled ShortcutHandler and UI5's built-in `CommandExecution`, this library provides a broader feature set: LIFO scope stack with two-pass matching, smart `ignoreInputs: "auto"`, lazy dialog detection, and router integration. TanStack Hotkeys also aligns with several design choices used here (singleton, conflict behaviors, cross-platform Mod).
+Compared with a production hand-rolled ShortcutHandler and UI5's built-in `CommandExecution`, this library provides a broader feature set: LIFO scope stack with two-pass matching, smart `ignoreInputs: "auto"`, lazy dialog detection, and router integration. TanStack Hotkeys also aligns with several design choices used here (conflict behaviors, cross-platform Mod).
 
 ## 1. Comparison: UI5 CommandExecution
 

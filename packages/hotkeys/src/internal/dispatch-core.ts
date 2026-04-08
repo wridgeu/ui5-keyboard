@@ -2,7 +2,8 @@ import Log from "sap/base/Log";
 import { UnhandledReason } from "../library";
 import { matchesKeyboardEvent } from "./match";
 import { resolveIgnoreInputs } from "./dom";
-import type { HotkeyRegistration, HotkeyRegistrationInfo } from "../types";
+import type { HotkeyRegistrationInfo } from "../types";
+import type { HotkeyRegistration } from "./types";
 import { recordSkip, type SkipInfo } from "./skip-reason";
 
 interface FindMatchOptions {

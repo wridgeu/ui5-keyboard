@@ -1,6 +1,5 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
-import { destroyHotkeyManager, fireKey } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
 let restoreRuntimeHooks: (() => void) | null = null;
 
@@ -20,7 +19,7 @@ QUnit.module("Dialog & Fragment Scopes", {
 });
 
 QUnit.test("Dialog scope push/pop with same hotkey", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let globalEscapeCalled = false;
   let dialogEscapeCalled = false;
 
@@ -50,7 +49,7 @@ QUnit.test("Dialog scope push/pop with same hotkey", (assert) => {
 });
 
 QUnit.test("Same hotkey in view vs dialog scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let mainSaveCalled = false;
   let dialogSaveCalled = false;
 
@@ -79,7 +78,7 @@ QUnit.test("Same hotkey in view vs dialog scope", (assert) => {
 });
 
 QUnit.test("suppressInPopups with runtime popup hook", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   manager.register(
@@ -101,7 +100,7 @@ QUnit.test("suppressInPopups with runtime popup hook", (assert) => {
 });
 
 QUnit.test("Nested dialog scopes", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let dialog1Called = false;
   let dialog2Called = false;
 
@@ -138,7 +137,7 @@ QUnit.test("Nested dialog scopes", (assert) => {
 });
 
 QUnit.test("Dialog scope with global fallthrough", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let globalCtrlSCalled = false;
 
   // Global Ctrl+S - no dialog-scoped version
@@ -153,7 +152,7 @@ QUnit.test("Dialog scope with global fallthrough", (assert) => {
 });
 
 QUnit.test("Fragment popup lifecycle: push, register, fire, unregister, pop", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let fragmentCalled = false;
 
   // Simulate opening a fragment popup

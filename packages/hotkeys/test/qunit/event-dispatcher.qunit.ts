@@ -1,15 +1,15 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 import { FOCUS_PATH_FALLBACK_TTL_MS } from "ui5/hotkeys/internal/FocusFallbackTracker";
 import type Log from "sap/base/Log";
-import { destroyHotkeyManager, fireBlur, fireKey, fireKeyOn, fireKeyUp, resetHotkeyManager } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireBlur, fireKey, fireKeyOn, fireKeyUp } from "./test-helpers";
 
 let manager: HotkeyManager;
 
 QUnit.module("EventDispatcher & Suspend Guard", {
   beforeEach() {
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -147,8 +147,8 @@ QUnit.test("In-progress sequence times out during suspension", (assert) => {
   const clock = sinon.useFakeTimers();
   let seqFired = false;
 
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
@@ -175,8 +175,8 @@ QUnit.test("Suspend mid-sequence, release before timeout - sequence completes", 
   const clock = sinon.useFakeTimers();
   let seqFired = false;
 
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
@@ -526,8 +526,8 @@ QUnit.test("Unhandled: full sequence consumed suppresses unhandled", (assert) =>
   manager.setUnhandledHandler(() => {
     unhandledCount++;
   });
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
@@ -546,7 +546,7 @@ QUnit.test("Unhandled: partial sequence advance suppresses unhandled", (assert) 
   manager.setUnhandledHandler(() => {
     unhandledCount++;
   });
-  manager.registerSequence(["G", "I"], () => {}, { timeout: 500 });
+  manager.register("G I", () => {}, { timeout: 500 });
 
   fireKey("G"); // Partial advance
   assert.strictEqual(unhandledCount, 0, "Unhandled NOT called for partial sequence advance");
@@ -571,7 +571,7 @@ QUnit.test("Destroy removes all window listeners", (assert) => {
 QUnit.test("Re-create after destroy works", (assert) => {
   manager.destroy();
 
-  const newManager = HotkeyManager.getInstance();
+  const newManager = createHotkeyManager();
   let fired = false;
   newManager.register("F5", () => {
     fired = true;
@@ -615,8 +615,8 @@ QUnit.test("Same key registered as hotkey AND first step of sequence", (assert) 
   manager.register("G", () => {
     hotkeyFired = true;
   });
-  manager.registerSequence(
-    ["G", "I"],
+  manager.register(
+    "G I",
     () => {
       seqFired = true;
     },
@@ -1006,7 +1006,7 @@ QUnit.test("recorder.destroy() untracks from dispatcher - no double-destroy on m
   assert.ok(recorder2.isDestroyed, "Second recorder destroyed by manager teardown");
 
   // Re-create manager works cleanly
-  const newManager = HotkeyManager.getInstance();
+  const newManager = createHotkeyManager();
   const newRecorder = newManager.createRecorder({ onRecord: () => {} });
   assert.notOk(newRecorder.isDestroyed, "New recorder is functional after clean re-creation");
   newRecorder.destroy();
@@ -1173,7 +1173,7 @@ QUnit.test("Interceptor replacement logs warning via sap/base/Log", (assert) => 
 // Target-scoped with same-origin iframe document
 // ──────────────────────────────────────────────
 
-QUnit.test("Target-scoped iframe document degrades to untargeted registration", (assert) => {
+QUnit.test("Target-scoped iframe document does not match main window events", (assert) => {
   const done = assert.async();
 
   // Create a same-origin iframe
@@ -1187,18 +1187,22 @@ QUnit.test("Target-scoped iframe document degrades to untargeted registration", 
       assert.ok(iframeDoc, "iframe contentDocument is accessible (same-origin)");
 
       let fired = false;
-      // Register with target set to the iframe's document - degrades to untargeted
+      // Register with target set to the iframe's document.
+      // Document is not an Element, but a JS consumer could pass it.
+      // It gets stored as a targeted registration keyed to the Document node,
+      // which is never in the main window's composedPath().
       const handle = manager.register(
         "Escape",
         () => {
           fired = true;
         },
-        { target: iframeDoc as unknown as HTMLElement },
+        { target: iframeDoc as unknown as Element },
       );
 
-      // After degradation to untargeted, it fires for any key event
+      // The iframe's Document is not in the main window's composedPath,
+      // so this should NOT fire.
       fireKey("Escape");
-      assert.ok(fired, "Registration fires as untargeted after document target degradation");
+      assert.notOk(fired, "iframe document target does not match main window events");
 
       handle.unregister();
     } finally {
@@ -1540,7 +1544,7 @@ let clock: ReturnType<typeof sinon.useFakeTimers>;
 QUnit.module("Focus fallback for Escape", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -1725,7 +1729,7 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
 QUnit.module("Generic root ID API", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -1918,7 +1922,7 @@ QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (
 
 QUnit.module("Shadow DOM target matching", {
   beforeEach() {
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -1996,7 +2000,7 @@ QUnit.test("nested shadow DOM: target on outer host matches when focus is two sh
 
 QUnit.module("ActiveElement path augmentation", {
   beforeEach() {
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();
@@ -2045,7 +2049,7 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
 QUnit.module("UIArea generic root detection", {
   beforeEach() {
     clock = sinon.useFakeTimers();
-    manager = resetHotkeyManager();
+    manager = createHotkeyManager();
   },
   afterEach() {
     destroyHotkeyManager();

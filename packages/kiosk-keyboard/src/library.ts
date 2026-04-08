@@ -88,6 +88,8 @@ export const FKeyMode = Object.freeze({
   Virtual: "Virtual",
   /** Native mode: dispatch synthetic `keydown` and run built-in native actions for selected keys. */
   Native: "Native",
+  /** None: fire `keyPress` only, skip native dispatch and built-in navigation actions. */
+  None: "None",
 } as const);
 
 /**

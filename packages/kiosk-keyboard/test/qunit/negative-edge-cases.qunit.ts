@@ -442,8 +442,7 @@ const i18nSandbox = sinon.createSandbox();
 QUnit.module("Negative / Edge-Case - i18n API", {
   afterEach() {
     i18nSandbox.restore();
-    KioskKeyboard.resetI18nConfiguration();
-    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.setI18nResolver(null);
     KioskKeyboard.resetCustomLayouts();
     KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
@@ -451,27 +450,9 @@ QUnit.module("Negative / Edge-Case - i18n API", {
   },
 });
 
-QUnit.test("configureI18n(null) delegates to registry - logs warning and rejects Promise", async (assert) => {
+QUnit.test("setI18nResolver with non-function argument is silently rejected", (assert) => {
   const spy = i18nSandbox.spy(Log, "warning");
 
-  let rejection: unknown;
-  try {
-    await KioskKeyboard.configureI18n(null as never);
-  } catch (error) {
-    rejection = error;
-  }
-
-  assert.ok(rejection instanceof TypeError, "Invalid config rejects via returned Promise");
-  if (rejection instanceof Error) {
-    assert.ok(rejection.message.includes("validation failed"), "Validation rejection message is preserved");
-  }
-
-  assert.ok(spy.calledOnce, "Warning logged for null config");
-});
-
-QUnit.test("setI18nOverrideHook(null) delegates to registry - logs warning, no crash", (assert) => {
-  const spy = i18nSandbox.spy(Log, "warning");
-
-  assert.strictEqual(KioskKeyboard.setI18nOverrideHook(null as never), false, "Returns false for null");
-  assert.ok(spy.calledOnce, "Warning logged for null hook");
+  KioskKeyboard.setI18nResolver("not a function" as never);
+  assert.ok(spy.calledOnce, "Warning logged for non-function argument");
 });

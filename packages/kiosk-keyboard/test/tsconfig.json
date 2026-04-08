@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["@openui5/types", "@types/qunit", "@types/sinon"]
+  },
+  "include": ["../src/**/*.ts", "../src/**/*.d.ts", "**/*.ts"],
+  "exclude": ["e2e/**/*.ts", "qunit/wdio.conf.ts"]
+}

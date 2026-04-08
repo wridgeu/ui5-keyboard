@@ -1,5 +1,4 @@
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 let clock: { tick: (ms: number) => number; restore: () => void };
@@ -16,10 +15,10 @@ QUnit.module("SequenceManager (via HotkeyManager)", {
 });
 
 QUnit.test("2-key sequence fires callback", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     called = true;
   });
 
@@ -31,11 +30,11 @@ QUnit.test("2-key sequence fires callback", (assert) => {
 });
 
 QUnit.test("Timeout resets sequence", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       called = true;
     },
@@ -50,10 +49,10 @@ QUnit.test("Timeout resets sequence", (assert) => {
 });
 
 QUnit.test("Modifier sequences work", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["Ctrl+K", "Ctrl+S"], () => {
+  manager.register("Ctrl+K Ctrl+S", () => {
     called = true;
   });
 
@@ -65,10 +64,10 @@ QUnit.test("Modifier sequences work", (assert) => {
 });
 
 QUnit.test("Mismatch resets sequence", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     called = true;
   });
 
@@ -80,14 +79,14 @@ QUnit.test("Mismatch resets sequence", (assert) => {
 });
 
 QUnit.test("Overlapping sequences: G E vs G G", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let geCalled = false;
   let ggCalled = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     geCalled = true;
   });
-  manager.registerSequence(["G", "G"], () => {
+  manager.register("G G", () => {
     ggCalled = true;
   });
 
@@ -100,10 +99,10 @@ QUnit.test("Overlapping sequences: G E vs G G", (assert) => {
 });
 
 QUnit.test("Repeated keydown does not advance duplicate-key sequence", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "G"], () => {
+  manager.register("G G", () => {
     called = true;
   });
 
@@ -118,11 +117,11 @@ QUnit.test("Repeated keydown does not advance duplicate-key sequence", (assert) 
 });
 
 QUnit.test("Scope filtering", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       called = true;
     },
@@ -142,15 +141,15 @@ QUnit.test("Scope filtering", (assert) => {
 });
 
 QUnit.test("Active scope sequence wins over global on completion", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let scopedCalled = false;
   let globalCalled = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     globalCalled = true;
   });
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       scopedCalled = true;
     },
@@ -167,11 +166,11 @@ QUnit.test("Active scope sequence wins over global on completion", (assert) => {
 });
 
 QUnit.test("Disabled sequence does not fire", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       called = true;
     },
@@ -186,10 +185,10 @@ QUnit.test("Disabled sequence does not fire", (assert) => {
 });
 
 QUnit.test("Unregister clears pending matches", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  const handle = manager.registerSequence(["G", "E"], () => {
+  const handle = manager.register("G E", () => {
     called = true;
   });
 
@@ -205,38 +204,54 @@ QUnit.test("Unregister clears pending matches", (assert) => {
   assert.notOk(called, "Sequence did not fire after unregister");
 });
 
-QUnit.test("getSequenceRegistrations returns active registrations", (assert) => {
-  const manager = HotkeyManager.getInstance();
+QUnit.test("getRegistrations filtered for sequences returns active registrations", (assert) => {
+  const manager = createHotkeyManager();
 
-  assert.strictEqual(manager.getSequenceRegistrations().length, 0, "Empty initially");
+  assert.strictEqual(manager.getRegistrations().filter((r) => r.sequence !== null).length, 0, "Empty initially");
 
-  const h1 = manager.registerSequence(["G", "E"], () => {});
-  const h2 = manager.registerSequence(["G", "G"], () => {});
+  const h1 = manager.register("G E", () => {});
+  const h2 = manager.register("G G", () => {});
 
-  assert.strictEqual(manager.getSequenceRegistrations().length, 2, "Two registrations after adding");
+  assert.strictEqual(
+    manager.getRegistrations().filter((r) => r.sequence !== null).length,
+    2,
+    "Two registrations after adding",
+  );
 
   h1.unregister();
-  assert.strictEqual(manager.getSequenceRegistrations().length, 1, "One registration after unregister");
+  assert.strictEqual(
+    manager.getRegistrations().filter((r) => r.sequence !== null).length,
+    1,
+    "One registration after unregister",
+  );
 
   h2.unregister();
-  assert.strictEqual(manager.getSequenceRegistrations().length, 0, "Empty after all unregistered");
+  assert.strictEqual(
+    manager.getRegistrations().filter((r) => r.sequence !== null).length,
+    0,
+    "Empty after all unregistered",
+  );
 });
 
-QUnit.test("setSequencePendingHandler fires on mid-sequence progress", (assert) => {
-  const manager = HotkeyManager.getInstance();
+QUnit.test("onPending fires on mid-sequence progress", (assert) => {
+  const manager = createHotkeyManager();
   const pendingCalls: { completedSteps: number; totalSteps: number; nextKey: string }[] = [];
 
-  manager.registerSequence(["G", "E", "X"], () => {
-    // Full sequence callback - not relevant for this test
-  });
-
-  manager.setSequencePendingHandler((info) => {
-    pendingCalls.push({
-      completedSteps: info.completedSteps,
-      totalSteps: info.totalSteps,
-      nextKey: info.nextKey,
-    });
-  });
+  manager.register(
+    "G E X",
+    () => {
+      // Full sequence callback - not relevant for this test
+    },
+    {
+      onPending: (info) => {
+        pendingCalls.push({
+          completedSteps: info.completedSteps,
+          totalSteps: info.totalSteps,
+          nextKey: info.nextKey,
+        });
+      },
+    },
+  );
 
   fireKey("g");
   clock.tick(0);
@@ -245,21 +260,23 @@ QUnit.test("setSequencePendingHandler fires on mid-sequence progress", (assert) 
   assert.strictEqual(pendingCalls[0].completedSteps, 1, "1 step completed");
   assert.strictEqual(pendingCalls[0].totalSteps, 3, "3 total steps");
   assert.strictEqual(pendingCalls[0].nextKey, "E", "Next key is E");
-
-  manager.setSequencePendingHandler(null);
 });
 
 QUnit.test("Pending callback error does not crash", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
-    called = true;
-  });
-
-  manager.setSequencePendingHandler(() => {
+  const throwingPending = () => {
     throw new Error("Intentional pending callback error");
-  });
+  };
+
+  manager.register(
+    "G E",
+    () => {
+      called = true;
+    },
+    { onPending: throwingPending },
+  );
 
   fireKey("g");
   clock.tick(50);
@@ -268,9 +285,13 @@ QUnit.test("Pending callback error does not crash", (assert) => {
   assert.ok(called, "Sequence still completes when pending callback throws");
 
   let secondCalled = false;
-  manager.registerSequence(["H", "I"], () => {
-    secondCalled = true;
-  });
+  manager.register(
+    "H I",
+    () => {
+      secondCalled = true;
+    },
+    { onPending: throwingPending },
+  );
 
   fireKey("h");
   clock.tick(50);
@@ -280,10 +301,10 @@ QUnit.test("Pending callback error does not crash", (assert) => {
 });
 
 QUnit.test("Destroy cleans up everything", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     called = true;
   });
 
@@ -295,15 +316,19 @@ QUnit.test("Destroy cleans up everything", (assert) => {
 
   assert.notOk(called, "Sequence did not fire after destroy");
 
-  const newManager = HotkeyManager.getInstance();
-  assert.strictEqual(newManager.getSequenceRegistrations().length, 0, "New instance has no registrations");
+  const newManager = createHotkeyManager();
+  assert.strictEqual(
+    newManager.getRegistrations().filter((r) => r.sequence !== null).length,
+    0,
+    "New instance has no registrations",
+  );
 });
 
 QUnit.test("Sequences are suppressed in input elements by default (auto)", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     called = true;
   });
 
@@ -319,15 +344,15 @@ QUnit.test("Sequences are suppressed in input elements by default (auto)", (asse
 });
 
 QUnit.test("ignoreInputs: false allows sequences in input elements", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   const input = document.createElement("input");
   input.type = "text";
   fixture.appendChild(input);
 
-  manager.registerSequence(
-    ["Ctrl+K", "Ctrl+S"],
+  manager.register(
+    "Ctrl+K Ctrl+S",
     () => {
       called = true;
     },
@@ -341,10 +366,10 @@ QUnit.test("ignoreInputs: false allows sequences in input elements", (assert) =>
 });
 
 QUnit.test("Mid-sequence input focus drops matches with ignoreInputs", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     called = true;
   });
 
@@ -363,56 +388,54 @@ QUnit.test("Mid-sequence input focus drops matches with ignoreInputs", (assert) 
 // Validation
 // ──────────────────────────────────────────────
 
-QUnit.test("1-step sequence throws", (assert) => {
-  const manager = HotkeyManager.getInstance();
-  assert.throws(() => manager.registerSequence(["G"], () => {}), /at least 2 steps/, "Throws for 1-step sequence");
+QUnit.test("Single-key string is a hotkey, not a sequence", (assert) => {
+  const manager = createHotkeyManager();
+  const handle = manager.register("G", () => {});
+  assert.strictEqual(handle.sequence, null, "Single key registers as hotkey, not sequence");
+  handle.unregister();
 });
 
-QUnit.test("Empty sequence throws", (assert) => {
-  const manager = HotkeyManager.getInstance();
-  assert.throws(() => manager.registerSequence([], () => {}), /at least 2 steps/, "Throws for empty sequence");
+QUnit.test("Empty hotkey string throws", (assert) => {
+  const manager = createHotkeyManager();
+  assert.throws(() => manager.register("", () => {}), /must not be empty/, "Throws for empty hotkey string");
 });
 
-QUnit.test("registerSequence throws for invalid timeout values", (assert) => {
-  const manager = HotkeyManager.getInstance();
+QUnit.test("register throws for invalid timeout values", (assert) => {
+  const manager = createHotkeyManager();
 
   assert.throws(
-    () => manager.registerSequence(["G", "E"], () => {}, { timeout: 0 }),
+    () => manager.register("G E", () => {}, { timeout: 0 }),
     /Invalid sequence timeout/,
     "Timeout 0 is rejected",
   );
   assert.throws(
-    () => manager.registerSequence(["G", "E"], () => {}, { timeout: -1 }),
+    () => manager.register("G E", () => {}, { timeout: -1 }),
     /Invalid sequence timeout/,
     "Negative timeout is rejected",
   );
   assert.throws(
-    () => manager.registerSequence(["G", "E"], () => {}, { timeout: Number.NaN }),
+    () => manager.register("G E", () => {}, { timeout: Number.NaN }),
     /Invalid sequence timeout/,
     "NaN timeout is rejected",
   );
 });
 
-QUnit.test("registerSequence throws for empty scope", (assert) => {
-  const manager = HotkeyManager.getInstance();
+QUnit.test("register sequence throws for empty scope", (assert) => {
+  const manager = createHotkeyManager();
 
+  assert.throws(() => manager.register("G E", () => {}, { scope: "" }), /non-empty string/, "Empty scope is rejected");
   assert.throws(
-    () => manager.registerSequence(["G", "E"], () => {}, { scope: "" }),
-    /non-empty string/,
-    "Empty scope is rejected",
-  );
-  assert.throws(
-    () => manager.registerSequence(["G", "E"], () => {}, { scope: "   " }),
+    () => manager.register("G E", () => {}, { scope: "   " }),
     /non-empty string/,
     "Whitespace-only scope is rejected",
   );
 });
 
 QUnit.test("3-key sequence completes", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E", "X"], () => {
+  manager.register("G E X", () => {
     called = true;
   });
 
@@ -426,9 +449,9 @@ QUnit.test("3-key sequence completes", (assert) => {
 });
 
 QUnit.test("Callback error does not crash", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     throw new Error("Intentional test error");
   });
 
@@ -437,7 +460,7 @@ QUnit.test("Callback error does not crash", (assert) => {
   fireKey("e");
 
   let secondCalled = false;
-  manager.registerSequence(["H", "I"], () => {
+  manager.register("H I", () => {
     secondCalled = true;
   });
 
@@ -453,9 +476,9 @@ QUnit.test("Callback error does not crash", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("preventDefault: false does not prevent default on final key", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
-  manager.registerSequence(["G", "E"], () => {}, { preventDefault: false });
+  manager.register("G E", () => {}, { preventDefault: false });
 
   fireKey("g");
   clock.tick(50);
@@ -464,7 +487,7 @@ QUnit.test("preventDefault: false does not prevent default on final key", (asser
 });
 
 QUnit.test("stopPropagation: false allows propagation on final key", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let propagated = false;
 
   const listener = () => {
@@ -472,7 +495,7 @@ QUnit.test("stopPropagation: false allows propagation on final key", (assert) =>
   };
   document.addEventListener("keydown", listener);
 
-  manager.registerSequence(["G", "E"], () => {}, { stopPropagation: false });
+  manager.register("G E", () => {}, { stopPropagation: false });
 
   fireKey("g");
   clock.tick(50);
@@ -487,10 +510,10 @@ QUnit.test("stopPropagation: false allows propagation on final key", (assert) =>
 // ──────────────────────────────────────────────
 
 QUnit.test("setOptions: toggle enabled off", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  const handle = manager.registerSequence(["G", "E"], () => {
+  const handle = manager.register("G E", () => {
     called = true;
   });
 
@@ -503,10 +526,10 @@ QUnit.test("setOptions: toggle enabled off", (assert) => {
 });
 
 QUnit.test("setOptions: disabling mid-sequence drops pending match", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  const handle = manager.registerSequence(["G", "E"], () => {
+  const handle = manager.register("G E", () => {
     called = true;
   });
 
@@ -519,10 +542,10 @@ QUnit.test("setOptions: disabling mid-sequence drops pending match", (assert) =>
 });
 
 QUnit.test("setOptions: toggle enabled back on", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  const handle = manager.registerSequence(["G", "E"], () => {
+  const handle = manager.register("G E", () => {
     called = true;
   });
 
@@ -536,11 +559,11 @@ QUnit.test("setOptions: toggle enabled back on", (assert) => {
 });
 
 QUnit.test("Scope change mid-sequence drops pending match", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       called = true;
     },
@@ -558,16 +581,16 @@ QUnit.test("Scope change mid-sequence drops pending match", (assert) => {
 });
 
 QUnit.test("setOptions: throws on unregistered handle", (assert) => {
-  const manager = HotkeyManager.getInstance();
-  const handle = manager.registerSequence(["G", "E"], () => {});
+  const manager = createHotkeyManager();
+  const handle = manager.register("G E", () => {});
   handle.unregister();
 
   assert.throws(() => handle.setOptions({ enabled: false }), /unregistered/, "Throws on setOptions after unregister");
 });
 
 QUnit.test("setOptions: throws on scope change", (assert) => {
-  const manager = HotkeyManager.getInstance();
-  const handle = manager.registerSequence(["G", "E"], () => {});
+  const manager = createHotkeyManager();
+  const handle = manager.register("G E", () => {});
 
   assert.throws(
     // @ts-expect-error Testing runtime guard for disallowed option
@@ -578,8 +601,8 @@ QUnit.test("setOptions: throws on scope change", (assert) => {
 });
 
 QUnit.test("setOptions: timeout validation rejects invalid values", (assert) => {
-  const manager = HotkeyManager.getInstance();
-  const handle = manager.registerSequence(["G", "E"], () => {});
+  const manager = createHotkeyManager();
+  const handle = manager.register("G E", () => {});
 
   assert.throws(() => handle.setOptions({ timeout: 0 }), /Invalid sequence timeout/, "Timeout 0 is rejected");
 });
@@ -589,10 +612,10 @@ QUnit.test("setOptions: timeout validation rejects invalid values", (assert) => 
 // ──────────────────────────────────────────────
 
 QUnit.test("ignoreInputs: auto suppresses plain-key sequence in input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(["G", "E"], () => {
+  manager.register("G E", () => {
     called = true;
   });
 
@@ -607,14 +630,14 @@ QUnit.test("ignoreInputs: auto suppresses plain-key sequence in input", (assert)
 });
 
 QUnit.test("ignoreInputs: auto allows Ctrl sequence in input", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
   const input = document.createElement("input");
   input.type = "text";
   fixture.appendChild(input);
 
-  manager.registerSequence(["Ctrl+K", "Ctrl+S"], () => {
+  manager.register("Ctrl+K Ctrl+S", () => {
     called = true;
   });
 
@@ -629,9 +652,9 @@ QUnit.test("ignoreInputs: auto allows Ctrl sequence in input", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Handle exposes sequence, scope, and description", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
 
-  const handle = manager.registerSequence(["G", "I"], () => {}, {
+  const handle = manager.register("G I", () => {}, {
     scope: "main",
     description: "Go to Inbox",
   });
@@ -644,8 +667,8 @@ QUnit.test("Handle exposes sequence, scope, and description", (assert) => {
   handle.setOptions({ description: "Navigate to Inbox" });
   assert.strictEqual(handle.description, "Navigate to Inbox", "description reflects setOptions update");
 
-  const snapshot = handle.sequence;
-  snapshot[0] = "X";
+  const snapshot = handle.sequence!;
+  (snapshot as string[])[0] = "X";
   assert.deepEqual(handle.sequence, ["G", "I"], "Mutating sequence snapshot does not mutate registration");
 });
 
@@ -654,11 +677,11 @@ QUnit.test("Handle exposes sequence, scope, and description", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("enabled function throwing: sequence does not start", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   let called = false;
 
-  manager.registerSequence(
-    ["G", "E"],
+  manager.register(
+    "G E",
     () => {
       called = true;
     },

@@ -58,21 +58,28 @@ export function fireBlur(): void {
   window.dispatchEvent(new Event("blur"));
 }
 
+let _testManager: HotkeyManager | null = null;
+
 /**
- * Destroy the HotkeyManager singleton if it currently exists.
+ * Destroy the currently tracked test HotkeyManager instance.
+ * Safe to call when no instance exists or when already destroyed.
  */
 export function destroyHotkeyManager(): void {
+  if (!_testManager) return;
   try {
-    HotkeyManager.getInstance().destroy();
+    _testManager.destroy();
   } catch {
-    // Not initialized yet or already destroyed
+    // Already destroyed
   }
+  _testManager = null;
 }
 
 /**
- * Reset the HotkeyManager singleton and return a fresh instance.
+ * Create a fresh HotkeyManager for testing.
+ * Destroys the previous tracked instance first.
  */
-export function resetHotkeyManager(): HotkeyManager {
+export function createHotkeyManager(): HotkeyManager {
   destroyHotkeyManager();
-  return HotkeyManager.getInstance();
+  _testManager = new HotkeyManager();
+  return _testManager;
 }
