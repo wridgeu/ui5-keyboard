@@ -822,3 +822,30 @@ QUnit.test("applyFocusInfo with preventScroll: false does not throw", async (ass
 
   kb.destroy();
 });
+
+// ──────────────────────────────────────────────
+// show() auto-target
+// ──────────────────────────────────────────────
+
+QUnit.test("show() auto-targets single controls entry", async (assert) => {
+  const input = new Input("auto-target-input");
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    controls: ["auto-target-input"],
+  });
+  await placeAndWait(kb);
+
+  kb.show();
+  await nextUIUpdate();
+
+  assert.strictEqual(
+    kb.getActiveControl()?.getId(),
+    input.getId(),
+    "getActiveControl() returns the single controls entry after show()",
+  );
+
+  input.destroy();
+  kb.destroy();
+});

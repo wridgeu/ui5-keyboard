@@ -1292,6 +1292,14 @@ export default class KioskKeyboard extends Control {
     if (!this.getDocked()) return this;
     if (this._open) return this;
     if (this._shouldDeferToNative()) return this;
+
+    // Auto-target when there's exactly one control and nothing is focused yet
+    const ids = this.getControls();
+    if (ids.length === 1 && !this._getActiveTargetId()) {
+      const control = this._findControlById(ids[0]);
+      control?.focus();
+    }
+
     this._open = true;
     this._suppressNativeKeyboard();
     document.addEventListener("keydown", this._boundEscapeKeydown, true);
