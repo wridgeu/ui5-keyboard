@@ -155,22 +155,22 @@ describe("kiosk-keyboard", () => {
       expect(el.disabled).to.be.true;
     });
 
-    it("reflects for attribute", async () => {
+    it("reflects controls attribute", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
-          <kiosk-keyboard for="my-input"></kiosk-keyboard>
+          <kiosk-keyboard controls="my-input"></kiosk-keyboard>
         `,
       );
-      expect(el.for).to.equal("my-input");
+      expect(el.controls).to.equal("my-input");
     });
 
-    it("stores input-ids as string property", async () => {
+    it("stores controls as string property", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
-          <kiosk-keyboard input-ids="a, b, c"></kiosk-keyboard>
+          <kiosk-keyboard controls="a, b, c"></kiosk-keyboard>
         `,
       );
-      expect(el.inputIds).to.equal("a, b, c");
+      expect(el.controls).to.equal("a, b, c");
     });
 
     it("re-renders when attribute changes", async () => {
@@ -253,7 +253,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="touch-target" type="text" />
-          <kiosk-keyboard layout="numeric" for="touch-target"></kiosk-keyboard>
+          <kiosk-keyboard layout="numeric" controls="touch-target"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -283,7 +283,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="drift-target" type="text" />
-          <kiosk-keyboard layout="numeric" for="drift-target"></kiosk-keyboard>
+          <kiosk-keyboard layout="numeric" controls="drift-target"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -323,7 +323,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="cancel-target" type="text" />
-          <kiosk-keyboard layout="numeric" for="cancel-target"></kiosk-keyboard>
+          <kiosk-keyboard layout="numeric" controls="cancel-target"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#cancel-target")!;
@@ -359,11 +359,11 @@ describe("kiosk-keyboard", () => {
   // ── Target integration ──
 
   describe("target integration", () => {
-    it("types into target input via for attribute", async () => {
+    it("types into target input via controls attribute", async () => {
       const container = await fixture(html`
         <div>
           <input id="target-1" type="text" />
-          <kiosk-keyboard layout="qwerty" for="target-1"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="target-1"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#target-1")!;
@@ -398,7 +398,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <div id="resolver-host"></div>
-          <kiosk-keyboard layout="qwerty" for="resolver-host"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="resolver-host"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -422,12 +422,12 @@ describe("kiosk-keyboard", () => {
     });
 
     it("falls back to built-in resolver when custom resolver throws", async () => {
-      // Use a wrapper div as the for-target so the built-in resolver must
+      // Use a wrapper div as the controls-target so the built-in resolver must
       // actually traverse the DOM to find the <input> inside it.
       const container = await fixture(html`
         <div>
           <div id="throw-host"><input type="text" /></div>
-          <kiosk-keyboard layout="qwerty" for="throw-host"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="throw-host"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -451,12 +451,12 @@ describe("kiosk-keyboard", () => {
     });
 
     it("falls back to built-in resolver when custom resolver returns non-input element", async () => {
-      // Use a wrapper div as the for-target so the built-in resolver must
+      // Use a wrapper div as the controls-target so the built-in resolver must
       // traverse the DOM to find the <input> (not receive it directly).
       const container = await fixture(html`
         <div>
           <div id="fallback-host"><input type="text" /></div>
-          <kiosk-keyboard layout="qwerty" for="fallback-host"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="fallback-host"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -481,7 +481,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="target-3" type="text" value="abc" />
-          <kiosk-keyboard layout="qwerty" for="target-3"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="target-3"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#target-3")!;
@@ -538,7 +538,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="target-shift" type="text" />
-          <kiosk-keyboard layout="qwerty" for="target-shift"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="target-shift"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -580,7 +580,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="target-caps" type="text" />
-          <kiosk-keyboard layout="qwerty" for="target-caps"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="target-caps"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -1058,7 +1058,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="auto-input" type="text" />
-          <kiosk-keyboard layout="qwerty" docked auto-show input-ids="auto-input"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" docked auto-show controls="auto-input"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#auto-input")!;
@@ -1080,7 +1080,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="focus-input" type="text" />
-          <kiosk-keyboard layout="qwerty" for="focus-input"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" controls="focus-input"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -1236,7 +1236,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-none-target" type="text" value="hello" />
-          <kiosk-keyboard layout="nav" for="fkey-none-target" f-key-mode="None"></kiosk-keyboard>
+          <kiosk-keyboard layout="nav" controls="fkey-none-target" f-key-mode="None"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#fkey-none-target")!;
@@ -1254,7 +1254,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-event-target" type="text" value="hello" />
-          <kiosk-keyboard layout="nav" for="fkey-event-target"></kiosk-keyboard>
+          <kiosk-keyboard layout="nav" controls="fkey-event-target"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#fkey-event-target")!;
@@ -1271,7 +1271,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-home-target" type="text" value="hello" />
-          <kiosk-keyboard layout="nav" for="fkey-home-target"></kiosk-keyboard>
+          <kiosk-keyboard layout="nav" controls="fkey-home-target"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#fkey-home-target")!;
@@ -1288,7 +1288,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-end-target" type="text" value="hello" />
-          <kiosk-keyboard layout="nav" for="fkey-end-target"></kiosk-keyboard>
+          <kiosk-keyboard layout="nav" controls="fkey-end-target"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#fkey-end-target")!;
@@ -1305,7 +1305,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-native-target" type="text" value="hello" />
-          <kiosk-keyboard layout="nav" for="fkey-native-target" f-key-mode="Native"></kiosk-keyboard>
+          <kiosk-keyboard layout="nav" controls="fkey-native-target" f-key-mode="Native"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#fkey-native-target")!;
@@ -1333,7 +1333,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="fkey-cancel-target" type="text" value="hello" />
-          <kiosk-keyboard layout="nav" for="fkey-cancel-target" f-key-mode="Native"></kiosk-keyboard>
+          <kiosk-keyboard layout="nav" controls="fkey-cancel-target" f-key-mode="Native"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#fkey-cancel-target")!;
@@ -1610,7 +1610,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="numtype-input" type="number" />
-          <kiosk-keyboard layout="qwerty" docked auto-show auto-type input-ids="numtype-input"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="numtype-input"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#numtype-input")!;
@@ -1814,7 +1814,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="reset-type-input" type="number" />
-          <kiosk-keyboard layout="qwerty" docked auto-show auto-type input-ids="reset-type-input"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-type-input"></kiosk-keyboard>
         </div>
       `);
       const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
@@ -2065,7 +2065,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <shadow-input-host id="shadow-host"></shadow-input-host>
-          <kiosk-keyboard layout="qwerty" docked for="shadow-host"></kiosk-keyboard>
+          <kiosk-keyboard layout="qwerty" docked controls="shadow-host"></kiosk-keyboard>
         </div>
       `);
       const host = container.querySelector<HTMLElement>("#shadow-host")!;
@@ -2128,8 +2128,8 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="multi-kb-input" type="text" />
-          <kiosk-keyboard id="kb-disabled" layout="qwerty" docked disabled for="multi-kb-input"></kiosk-keyboard>
-          <kiosk-keyboard id="kb-active" layout="qwerty" docked auto-show input-ids="multi-kb-input"></kiosk-keyboard>
+          <kiosk-keyboard id="kb-disabled" layout="qwerty" docked disabled controls="multi-kb-input"></kiosk-keyboard>
+          <kiosk-keyboard id="kb-active" layout="qwerty" docked auto-show controls="multi-kb-input"></kiosk-keyboard>
         </div>
       `);
       const input = container.querySelector<HTMLInputElement>("#multi-kb-input")!;
