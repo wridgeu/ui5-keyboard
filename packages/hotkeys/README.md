@@ -291,15 +291,15 @@ const manager = new HotkeyManager();
 
 | Method                                 | Description                                                                  |
 | -------------------------------------- | ---------------------------------------------------------------------------- |
-| `register(hotkey, callback, options?)` | Register a shortcut, returns a handle                                        |
+| `register(hotkey, callback, options?)` | Register a shortcut or sequence (space-separated keys), returns a handle     |
 | `createGroup()`                        | Create a registration group for collective cleanup                           |
 | `pushScope(scopeId)`                   | Push a scope onto the stack                                                  |
 | `popScope(scopeId)`                    | Pop the top scope (ID must match current top)                                |
 | `getActiveScope()`                     | Get the current top-of-stack scope                                           |
 | `getScopeStack()`                      | Get a snapshot of the full scope stack (bottom-to-top)                       |
 | `resetToGlobalScope()`                 | Pop all non-global scopes in one call                                        |
-| `getRegistrations()`                   | Get all active registrations                                                 |
-| `getRegistrationsForScope(scopeId)`    | Filter registrations by scope                                                |
+| `getRegistrations()`                   | Get all active registrations (hotkeys and sequences)                         |
+| `getRegistrationsForScope(scopeId)`    | Filter registrations by scope (hotkeys and sequences)                        |
 | `findRegistrations(predicate)`         | Find registrations matching a predicate function                             |
 | `getPlatform()`                        | Get the detected platform                                                    |
 | `suspendDispatch(reason?)`             | Suspend dispatch, returns a guard handle                                     |
@@ -307,10 +307,6 @@ const manager = new HotkeyManager();
 | `createRecorder(options)`              | Create a HotkeyRecorder instance                                             |
 | `getKeyStateTracker()`                 | Access the held-key state tracker                                            |
 | `setUnhandledHandler(callback)`        | Set callback for unhandled key events                                        |
-| `registerSequence(seq, cb, opts?)`     | Register a multi-key sequence, returns a handle                              |
-| `getSequenceRegistrations()`           | Get all active sequence registrations                                        |
-| `getSequenceRegistrationsForScope(id)` | Filter sequence registrations by scope                                       |
-| `setSequencePendingHandler(callback)`  | Set global callback for mid-sequence progress                                |
 | `addGenericRootId(id)`                 | Register an element ID as a generic focus root                               |
 | `removeGenericRootId(id)`              | Remove a previously registered generic root ID                               |
 | `destroy()`                            | Full teardown: removes DOM listeners, finalizes all groups, clears all state |
@@ -358,6 +354,8 @@ manager.register(
 | `suppressInPopups` | `boolean`                  | `false`        | Suppress when a UI5 popup (dialog or popover) is open                                            |
 | `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
 | `target`           | `HTMLElement`              | `null`         | Bind to a specific element instead of the document                                               |
+| `timeout`          | `number`                   | `1000`         | Sequences only: timeout in ms between keys before the sequence resets                            |
+| `onPending`        | `SequencePendingCallback`  | -              | Sequences only: callback fired after each intermediate key match with progress info              |
 
 ### Registration Handle
 
@@ -411,7 +409,7 @@ private _hotkeys!: RegistrationGroup;
 onInit(): void {
   this._hotkeys = manager.createGroup();
   this._hotkeys.register("F5", handler, { scope: "main" });
-  this._hotkeys.registerSequence(["G", "I"], handler, { scope: "main" });
+  this._hotkeys.register("G I", handler, { scope: "main" });
 }
 
 onExit(): void {
@@ -422,24 +420,21 @@ onExit(): void {
 | Property / Method            | Description                                                   |
 | ---------------------------- | ------------------------------------------------------------- |
 | `register()`                 | Delegates to `manager.register()`, tracks handle              |
-| `registerSequence()`         | Delegates to `manager.registerSequence()`, tracks handle      |
 | `enableRouterIntegration(r)` | Attach router-based scope management to this group            |
-| `getRegistrations()`         | Get this group's active hotkey registrations                  |
-| `getSequenceRegistrations()` | Get this group's active sequence registrations                |
+| `getRegistrations()`         | Get this group's active registrations (hotkeys and sequences) |
 | `destroyAll()`               | Unregister all tracked handles and detach router (idempotent) |
 | `size`                       | Number of currently active registrations                      |
 | `isDestroyed`                | Whether `destroyAll()` has been called                        |
 
-Handles returned by the group are normal `HotkeyRegistrationHandle` / `SequenceRegistrationHandle`. `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
+Handles returned by the group are normal `HotkeyRegistrationHandle`. `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 
 Group-level introspection can drive scoped shortcut UIs:
 
 ```ts
-const hotkeysForThisController = this._hotkeys.getRegistrations();
-const sequencesForThisController = this._hotkeys.getSequenceRegistrations();
+const registrationsForThisController = this._hotkeys.getRegistrations();
 
-// Example: render a quick hint list
-hotkeysForThisController.forEach((entry) => {
+// Example: render a quick hint list (includes both hotkeys and sequences)
+registrationsForThisController.forEach((entry) => {
   console.log(entry.normalizedHotkey, entry.description);
 });
 ```
@@ -687,16 +682,16 @@ g2.release(); // dispatch resumes
 
 ## Sequences
 
-Multi-key sequences like Vim-style `G` then `E` for "go to editor":
+Multi-key sequences like Vim-style `G` then `E` for "go to editor". Sequences use the same `register()` API as single hotkeys -- pass a space-separated string instead of a single key:
 
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
 const manager = new HotkeyManager();
 
-// Register a 2-key sequence
-manager.registerSequence(
-  ["G", "E"],
+// Register a 2-key sequence (space-separated)
+manager.register(
+  "G E",
   (event) => {
     router.navTo("editor");
   },
@@ -704,8 +699,8 @@ manager.registerSequence(
 );
 
 // Modifier sequences work too
-manager.registerSequence(
-  ["Ctrl+K", "Ctrl+S"],
+manager.register(
+  "Ctrl+K Ctrl+S",
   (event) => {
     saveAll();
   },
@@ -713,8 +708,8 @@ manager.registerSequence(
 );
 
 // Per-registration progress callback - dies with the registration
-manager.registerSequence(
-  ["G", "I"],
+manager.register(
+  "G I",
   (event) => {
     router.navTo("inbox");
   },
@@ -725,14 +720,9 @@ manager.registerSequence(
     },
   },
 );
-
-// Global fallback for sequences without onPending
-manager.setSequencePendingHandler((info) => {
-  statusBar.setText(`Sequence: ${info.completedSteps}/${info.totalSteps}  - next: ${info.nextKey}`);
-});
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback, takes precedence over the global handler).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback).
 
 > [!NOTE]
 > `scope` must be a non-empty string when provided.
