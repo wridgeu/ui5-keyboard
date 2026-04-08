@@ -58,6 +58,7 @@ export interface SequenceRegistration {
   preventDefault: boolean;
   stopPropagation: boolean;
   onPending: SequencePendingCallback | null;
+  suppressInPopups: boolean;
 }
 
 // ──────────────────────────────────────────────
@@ -97,6 +98,8 @@ export interface SequenceOptions {
    * Dies with the registration - no manual cleanup needed.
    */
   onPending?: SequencePendingCallback;
+  /** Suppress this sequence when a UI5 dialog or popover is open. @default false */
+  suppressInPopups?: boolean;
 }
 
 /**
@@ -146,4 +149,5 @@ export interface SequenceRegistrationInfo {
   readonly ignoreInputs: boolean | "auto";
   readonly preventDefault: boolean;
   readonly stopPropagation: boolean;
+  readonly suppressInPopups: boolean;
 }

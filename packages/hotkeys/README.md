@@ -722,7 +722,7 @@ manager.register(
 );
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `onPending` (per-registration progress callback).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `suppressInPopups` (suppress when a UI5 dialog/popover is open), `onPending` (per-registration progress callback).
 
 > [!NOTE]
 > `scope` must be a non-empty string when provided.

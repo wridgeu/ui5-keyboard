@@ -596,13 +596,6 @@ export default class HotkeyManager extends BaseObject {
     options?: HotkeyOptions,
   ): HotkeyRegistrationHandle {
     // Warn about options that are not applicable to sequences
-    if (options?.suppressInPopups) {
-      Log.warning(
-        `Option "suppressInPopups" is ignored for sequence "${hotkey}" - popup suppression is not supported for sequences`,
-        undefined,
-        LOG_COMPONENT,
-      );
-    }
     if (options?.target != null) {
       Log.warning(
         `Option "target" is ignored for sequence "${hotkey}" - element targeting is not supported for sequences`,
@@ -620,6 +613,7 @@ export default class HotkeyManager extends BaseObject {
       preventDefault: options?.preventDefault,
       stopPropagation: options?.stopPropagation,
       onPending: options?.onPending,
+      suppressInPopups: options?.suppressInPopups,
     };
 
     const innerHandle = this._getSequenceManager().registerSequence(steps, callback, seqOptions);
@@ -661,6 +655,7 @@ export default class HotkeyManager extends BaseObject {
           preventDefault: newOptions.preventDefault,
           stopPropagation: newOptions.stopPropagation,
           onPending: newOptions.onPending,
+          suppressInPopups: newOptions.suppressInPopups,
         });
       },
     };
@@ -678,6 +673,7 @@ export default class HotkeyManager extends BaseObject {
     ignoreInputs: boolean | "auto";
     preventDefault: boolean;
     stopPropagation: boolean;
+    suppressInPopups: boolean;
   }): HotkeyRegistrationInfo {
     return {
       id: s.id,
@@ -690,7 +686,7 @@ export default class HotkeyManager extends BaseObject {
       stopPropagation: s.stopPropagation,
       ignoreInputs: s.ignoreInputs,
       ignoreRepeat: true,
-      suppressInPopups: false,
+      suppressInPopups: s.suppressInPopups,
       conflictBehavior: "warn" as ConflictBehavior,
       hasTarget: false,
       sequence: s.sequence,
@@ -853,7 +849,8 @@ export default class HotkeyManager extends BaseObject {
    * Delegates to the lazy SequenceManager.
    */
   private _processSequences(event: KeyboardEvent): boolean {
-    return this._sequenceManager?.processKeyEvent(event) ?? false;
+    const popupOpen = this._checkPopupOpen();
+    return this._sequenceManager?.processKeyEvent(event, popupOpen) ?? false;
   }
 
   /**

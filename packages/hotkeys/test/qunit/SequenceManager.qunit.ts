@@ -1,14 +1,20 @@
+import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 let clock: { tick: (ms: number) => number; restore: () => void };
+let restoreRuntimeHooks: (() => void) | null = null;
 
 QUnit.module("SequenceManager (via HotkeyManager)", {
   beforeEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
     destroyHotkeyManager();
     clock = sinon.useFakeTimers();
   },
   afterEach() {
+    restoreRuntimeHooks?.();
+    restoreRuntimeHooks = null;
     clock.restore();
     destroyHotkeyManager();
   },
@@ -696,4 +702,119 @@ QUnit.test("enabled function throwing: sequence does not start", (assert) => {
   clock.tick(50);
   fireKey("e");
   assert.notOk(called, "Sequence not started when enabled() throws");
+});
+
+// ──────────────────────────────────────────────
+// suppressInPopups
+// ──────────────────────────────────────────────
+
+QUnit.test("suppressInPopups: suppresses sequence when popup is open", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  manager.register(
+    "G I",
+    () => {
+      called = true;
+    },
+    { suppressInPopups: true },
+  );
+
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+
+  fireKey("g");
+  clock.tick(50);
+  fireKey("i");
+
+  assert.notOk(called, "Sequence suppressed when popup is open");
+});
+
+QUnit.test("suppressInPopups: sequence fires when popup is closed", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  manager.register(
+    "G I",
+    () => {
+      called = true;
+    },
+    { suppressInPopups: true },
+  );
+
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => false });
+
+  fireKey("g");
+  clock.tick(50);
+  fireKey("i");
+
+  assert.ok(called, "Sequence fires when popup is closed");
+});
+
+QUnit.test("suppressInPopups: false (default) fires even with popup open", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  manager.register("G I", () => {
+    called = true;
+  });
+
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+
+  fireKey("g");
+  clock.tick(50);
+  fireKey("i");
+
+  assert.ok(called, "Sequence fires with popup open when suppressInPopups is false (default)");
+});
+
+QUnit.test("suppressInPopups: mid-sequence popup opening drops the match", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+  let popupOpen = false;
+
+  manager.register(
+    "G I",
+    () => {
+      called = true;
+    },
+    { suppressInPopups: true },
+  );
+
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => popupOpen });
+
+  // First key with popup closed
+  fireKey("g");
+  clock.tick(50);
+
+  // Open popup before second key
+  popupOpen = true;
+  fireKey("i");
+
+  assert.notOk(called, "Sequence dropped when popup opens mid-sequence");
+});
+
+QUnit.test("suppressInPopups: setOptions updates suppression", (assert) => {
+  const manager = createHotkeyManager();
+  let count = 0;
+
+  const handle = manager.register(
+    "G I",
+    () => {
+      count++;
+    },
+    { suppressInPopups: true },
+  );
+
+  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+
+  fireKey("g");
+  clock.tick(50);
+  fireKey("i");
+  assert.strictEqual(count, 0, "Sequence suppressed with popup open");
+
+  handle.setOptions({ suppressInPopups: false });
+  fireKey("g");
+  clock.tick(50);
+  fireKey("i");
+  assert.strictEqual(count, 1, "Sequence fires after setOptions({ suppressInPopups: false })");
 });
