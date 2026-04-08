@@ -174,7 +174,7 @@ QUnit.test(
     dispatchNullRelatedFocusOut(input1.getFocusDomRef() as HTMLElement);
 
     (input2.getFocusDomRef() as HTMLElement).focus();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     await nextUIUpdate();
 
     assert.ok(kb.isOpen(), "Keyboard stays open after deferred close check");
@@ -204,7 +204,7 @@ QUnit.test("autoShow closes when null relatedTarget settles outside claimable in
   dispatchNullRelatedFocusOut(input.getFocusDomRef() as HTMLElement);
 
   outside.focus();
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
   await nextUIUpdate();
 
   assert.notOk(kb.isOpen(), "Keyboard closed after deferred close check");
@@ -227,7 +227,7 @@ QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) =
   dispatchNullRelatedFocusOut(input.getFocusDomRef() as HTMLElement);
 
   kb.destroy();
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.ok(true, "No errors after destroy with deferred close pending");
 
@@ -392,6 +392,7 @@ QUnit.test("Open keyboard still closes and restores inputmode after becoming dis
   await nextUIUpdate();
 
   outside.focus();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
   await nextUIUpdate();
 
   assert.notOk(kb.isOpen(), "Keyboard closes even after becoming disabled");
@@ -500,6 +501,7 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
   assert.ok(dockedKb.isOpen(), "Docked keyboard is open for free input");
 
   (claimedInput.getFocusDomRef() as HTMLElement).focus();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
   await nextUIUpdate();
   assert.notOk(dockedKb.isOpen(), "Docked keyboard closed after focus moved to claimed input");
 
