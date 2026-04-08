@@ -3,8 +3,7 @@ import type { CompositionMiddleware } from "../../src/types.js";
 import {
   _registerMiddleware,
   registerMiddleware,
-  getMiddlewareForLayout,
-  deactivateMiddleware,
+  getMiddlewareFactory,
   _resetMiddleware,
 } from "../../src/core/middleware-registry.js";
 
@@ -24,14 +23,14 @@ describe("middleware-registry", () => {
   describe("_registerMiddleware", () => {
     it("registers a factory for a layout", () => {
       _registerMiddleware(["ja-kana"], mockFactory);
-      const mw = getMiddlewareForLayout("ja-kana");
-      expect(mw).not.toBeNull();
+      const factory = getMiddlewareFactory("ja-kana");
+      expect(factory).not.toBeNull();
     });
 
     it("registers the same factory for multiple layouts", () => {
       _registerMiddleware(["ja-kana", "ja-kana-fk"], mockFactory);
-      expect(getMiddlewareForLayout("ja-kana")).not.toBeNull();
-      expect(getMiddlewareForLayout("ja-kana-fk")).not.toBeNull();
+      expect(getMiddlewareFactory("ja-kana")).not.toBeNull();
+      expect(getMiddlewareFactory("ja-kana-fk")).not.toBeNull();
     });
 
     it("is idempotent -- skips if layout already has middleware", () => {
@@ -39,12 +38,12 @@ describe("middleware-registry", () => {
       const second = () => ({ handleKey: () => false, commit: () => "b", reset: () => {} });
       _registerMiddleware(["ja-kana"], first);
       _registerMiddleware(["ja-kana"], second);
-      const mw = getMiddlewareForLayout("ja-kana")!;
+      const mw = getMiddlewareFactory("ja-kana")!();
       expect(mw.handleKey("x", document.createElement("input"))).toBe(true);
     });
 
     it("returns null for layouts without middleware", () => {
-      expect(getMiddlewareForLayout("qwerty")).toBeNull();
+      expect(getMiddlewareFactory("qwerty")).toBeNull();
     });
   });
 
@@ -53,41 +52,28 @@ describe("middleware-registry", () => {
       _registerMiddleware(["ja-kana"], mockFactory);
       const override = () => ({ handleKey: () => true, commit: () => "override", reset: () => {} });
       registerMiddleware(["ja-kana"], override);
-      const mw = getMiddlewareForLayout("ja-kana")!;
+      const mw = getMiddlewareFactory("ja-kana")!();
       expect(mw.commit()).toBe("override");
     });
   });
 
-  describe("getMiddlewareForLayout", () => {
-    it("creates a fresh instance from factory on first call", () => {
-      let callCount = 0;
-      const factory = () => {
-        callCount++;
-        return { handleKey: () => false, commit: () => null, reset: () => {} };
-      };
-      _registerMiddleware(["ja-kana"], factory);
-      getMiddlewareForLayout("ja-kana");
-      expect(callCount).toBe(1);
-    });
-
-    it("returns the same instance on subsequent calls for same layout", () => {
+  describe("getMiddlewareFactory", () => {
+    it("returns the registered factory function", () => {
       _registerMiddleware(["ja-kana"], mockFactory);
-      const a = getMiddlewareForLayout("ja-kana");
-      const b = getMiddlewareForLayout("ja-kana");
-      expect(a).toBe(b);
+      const factory = getMiddlewareFactory("ja-kana");
+      expect(typeof factory).toBe("function");
     });
 
-    it("creates a new instance after deactivateMiddleware is called", () => {
-      let callCount = 0;
-      const factory = () => {
-        callCount++;
-        return { handleKey: () => false, commit: () => null, reset: () => {} };
-      };
-      _registerMiddleware(["ja-kana"], factory);
-      getMiddlewareForLayout("ja-kana");
-      deactivateMiddleware("ja-kana");
-      getMiddlewareForLayout("ja-kana");
-      expect(callCount).toBe(2);
+    it("each factory call creates a fresh instance", () => {
+      _registerMiddleware(["ja-kana"], mockFactory);
+      const factory = getMiddlewareFactory("ja-kana")!;
+      const a = factory();
+      const b = factory();
+      expect(a).not.toBe(b);
+    });
+
+    it("returns null for unregistered layouts", () => {
+      expect(getMiddlewareFactory("nonexistent")).toBeNull();
     });
   });
 });

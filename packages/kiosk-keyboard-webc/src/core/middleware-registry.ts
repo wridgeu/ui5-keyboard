@@ -3,9 +3,6 @@ import type { CompositionMiddleware } from "../types.js";
 /** Factory functions keyed by layout name. */
 const factories: Map<string, () => CompositionMiddleware> = new Map();
 
-/** Active middleware instances keyed by layout name. Lazily created. */
-const instances: Map<string, CompositionMiddleware> = new Map();
-
 /**
  * Registers a built-in middleware factory for the given layouts.
  * Idempotent: silently skips layouts that already have middleware.
@@ -26,35 +23,14 @@ export function _registerMiddleware(layouts: string[], factory: () => Compositio
 export function registerMiddleware(layouts: string[], factory: () => CompositionMiddleware): void {
   for (const layout of layouts) {
     factories.set(layout, factory);
-    instances.delete(layout);
   }
 }
 
 /**
- * Returns the active middleware instance for the given layout, or null.
- * Lazily creates the instance from the registered factory on first call.
+ * Returns the middleware factory for the given layout, or null.
  */
-export function getMiddlewareForLayout(layout: string): CompositionMiddleware | null {
-  let instance = instances.get(layout);
-  if (!instance) {
-    const factory = factories.get(layout);
-    if (!factory) return null;
-    instance = factory();
-    instances.set(layout, instance);
-  }
-  return instance;
-}
-
-/**
- * Deactivates middleware for a layout: commits any pending composition
- * and discards the instance.
- */
-export function deactivateMiddleware(layout: string): void {
-  const instance = instances.get(layout);
-  if (instance) {
-    instance.commit();
-    instances.delete(layout);
-  }
+export function getMiddlewareFactory(layout: string): (() => CompositionMiddleware) | null {
+  return factories.get(layout) ?? null;
 }
 
 /**
@@ -62,9 +38,5 @@ export function deactivateMiddleware(layout: string): void {
  * @internal
  */
 export function _resetMiddleware(): void {
-  for (const instance of instances.values()) {
-    instance.reset();
-  }
-  instances.clear();
   factories.clear();
 }

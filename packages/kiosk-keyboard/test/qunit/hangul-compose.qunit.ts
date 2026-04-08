@@ -1,4 +1,4 @@
-import { getMiddlewareForLayout, deactivateMiddleware } from "ui5/kiosk/internal/middleware-registry";
+import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import "ui5/kiosk/middleware/hangul-compose";
 
 // --- Helpers ---
@@ -7,12 +7,11 @@ const sandbox = sinon.createSandbox();
 let input: HTMLInputElement;
 
 function mw() {
-  return getMiddlewareForLayout("ko-hangul")!;
+  return getMiddlewareFactory("ko-hangul")!();
 }
 
 function commonAfterEach() {
   sandbox.restore();
-  deactivateMiddleware("ko-hangul");
 }
 
 // --- hangul-compose middleware ---
@@ -22,14 +21,12 @@ QUnit.module("hangul-compose middleware", {
     input = document.createElement("input");
     input.value = "";
     input.setSelectionRange(0, 0);
-    // Deactivate to get a fresh instance for each test
-    deactivateMiddleware("ko-hangul");
   },
   afterEach: commonAfterEach,
 });
 
 QUnit.test("Registers itself for ko-hangul layout", (assert) => {
-  assert.notStrictEqual(getMiddlewareForLayout("ko-hangul"), null, "Middleware registered for ko-hangul");
+  assert.notStrictEqual(getMiddlewareFactory("ko-hangul"), null, "Factory registered for ko-hangul");
 });
 
 QUnit.test("Single L consonant shows as preedit", (assert) => {
