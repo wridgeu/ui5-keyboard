@@ -21,8 +21,8 @@ export default class HotkeysSequences extends BaseController {
 
     const onPending = this._createPendingHandler(stateModel);
 
-    this._hotkeys.registerSequence(
-      ["G", "I"],
+    this._hotkeys.register(
+      "G I",
       () => {
         stateModel.setProperty("/lastAction", "Sequence: G I");
         stateModel.setProperty("/sequenceStatus", "");
@@ -31,8 +31,8 @@ export default class HotkeysSequences extends BaseController {
       { scope: Scope.HotkeysSequences, description: "Go to Inbox", onPending },
     );
 
-    this._hotkeys.registerSequence(
-      ["G", "S"],
+    this._hotkeys.register(
+      "G S",
       () => {
         stateModel.setProperty("/lastAction", "Sequence: G S");
         stateModel.setProperty("/sequenceStatus", "");

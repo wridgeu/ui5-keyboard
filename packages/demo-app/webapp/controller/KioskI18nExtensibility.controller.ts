@@ -10,17 +10,37 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
   default:
     "Built-in English aria-labels (no customization). Special keys show icons; their text is only exposed to screen readers.",
   french:
-    "French aria-labels loaded via configureI18n() with a bundleName. Shift -> Maj, Enter -> Entr\u00e9e, Space -> Espace (visible on key).",
+    "French aria-labels applied via setI18nResolver(). Shift -> Maj, Enter -> Entr\u00e9e, Space -> Espace (visible on key).",
   override:
-    'Partial English overrides via enhancement bundle. Enter -> "Go", Backspace -> "Delete", keyboard aria-label -> "Touch Keyboard".',
-  hook: 'Programmatic override hook. Uppercases special-key aria-labels (SHIFT, ENTER, etc.) and sets the keyboard aria-label to "Custom Keyboard".',
+    'Partial English overrides via resolver. Enter -> "Go", Backspace -> "Delete", keyboard aria-label -> "Touch Keyboard".',
+  hook: 'Programmatic resolver. Uppercases special-key aria-labels (SHIFT, ENTER, etc.) and sets the keyboard aria-label to "Custom Keyboard".',
+};
+
+const FRENCH_TEXTS: Record<string, string> = {
+  KIOSK_KEYBOARD_LABEL: "Clavier virtuel",
+  KIOSK_KEYBOARD_ROLEDESCRIPTION: "clavier",
+  KEY_SHIFT: "Maj",
+  KEY_ENTER: "Entr\u00e9e",
+  KEY_BACKSPACE: "Retour",
+  KEY_SPACE: "Espace",
+  ARIA_CAPS_LOCK: "Verrouillage majuscule",
+  ARIA_CAPS_LOCK_ON: "Verrouillage majuscule activ\u00e9",
+  ARIA_SHIFT_ON: "Majuscule activ\u00e9e",
+  ARIA_KEYBOARD_OPENED: "Clavier virtuel ouvert",
+  ARIA_KEYBOARD_CLOSED: "Clavier virtuel ferm\u00e9",
+};
+
+const OVERRIDE_TEXTS: Record<string, string> = {
+  KIOSK_KEYBOARD_LABEL: "Touch Keyboard",
+  KEY_ENTER: "Go",
+  KEY_BACKSPACE: "Delete",
 };
 
 /**
- * i18n extensibility demo - shows all three customization vectors:
- * 1. New language via enhancement bundle (French)
- * 2. Overriding existing labels via enhancement bundle
- * 3. Programmatic override hook
+ * i18n extensibility demo - shows customization via setI18nResolver():
+ * 1. New language via resolver (French)
+ * 2. Overriding existing labels via resolver
+ * 3. Programmatic resolver with transformation logic
  *
  * Includes an ARIA Label Inspector that reads resolved labels from
  * the keyboard DOM after each mode change.
@@ -95,53 +115,33 @@ export default class KioskI18nExtensibility extends BaseController {
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
   }
 
-  // ── i18n mode helpers ──────────────────────────
+  // -- i18n mode helpers --
 
   private _resetI18n(): void {
-    KioskKeyboard.resetI18nConfiguration();
-    KioskKeyboard.clearI18nOverrideHook();
+    KioskKeyboard.setI18nResolver(null);
   }
 
   private _applyFrench(): void {
-    this._resetI18n();
-    void KioskKeyboard.configureI18n({
-      enhanceWith: [
-        {
-          bundleName: "demo.hotkeys.i18n-kiosk.messagebundle_fr",
-          supportedLocales: [""],
-          fallbackLocale: "",
-        },
-      ],
-    });
+    KioskKeyboard.setI18nResolver((key) => FRENCH_TEXTS[key]);
   }
 
   private _applyOverrides(): void {
-    this._resetI18n();
-    void KioskKeyboard.configureI18n({
-      enhanceWith: [
-        {
-          bundleName: "demo.hotkeys.i18n-kiosk.messagebundle_override",
-          supportedLocales: [""],
-          fallbackLocale: "",
-        },
-      ],
-    });
+    KioskKeyboard.setI18nResolver((key) => OVERRIDE_TEXTS[key]);
   }
 
   private _applyHook(): void {
-    this._resetI18n();
-    KioskKeyboard.setI18nOverrideHook((ctx) => {
-      if (ctx.key === "KIOSK_KEYBOARD_LABEL") {
+    KioskKeyboard.setI18nResolver((key, _locale, resolvedText) => {
+      if (key === "KIOSK_KEYBOARD_LABEL") {
         return "Custom Keyboard";
       }
-      if (ctx.key.startsWith("KEY_")) {
-        return ctx.resolvedText.toUpperCase();
+      if (key.startsWith("KEY_")) {
+        return resolvedText.toUpperCase();
       }
       return undefined;
     });
   }
 
-  // ── ARIA Inspector ─────────────────────────────
+  // -- ARIA Inspector --
 
   private _updateAriaInspector(): void {
     const keyboard = this.byId("i18nKeyboard") as KioskKeyboard | undefined;
@@ -168,7 +168,7 @@ export default class KioskI18nExtensibility extends BaseController {
     );
   }
 
-  // ── Route lifecycle ────────────────────────────
+  // -- Route lifecycle --
 
   private _onPatternMatched(_event: Route$PatternMatchedEvent): void {
     this._active = true;

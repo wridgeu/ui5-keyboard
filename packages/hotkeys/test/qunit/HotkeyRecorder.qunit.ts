@@ -1,6 +1,6 @@
 import HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { destroyHotkeyManager, fireKey } from "./test-helpers";
+import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
 const recorders: HotkeyRecorder[] = [];
 let manager: HotkeyManager;
@@ -13,8 +13,7 @@ function createRecorder(options: { onRecord: (hotkey: string) => void; onCancel?
 
 QUnit.module("HotkeyRecorder", {
   beforeEach() {
-    destroyHotkeyManager();
-    manager = HotkeyManager.getInstance();
+    manager = createHotkeyManager();
   },
   afterEach() {
     for (const r of recorders) {

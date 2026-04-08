@@ -61,6 +61,11 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
     await matchElementSnapshotInSection(kb, "kb-nav");
   });
 
+  it("should match QWERTY + Nav Row combined layout", async () => {
+    const kb = await getKeyboard("kb-qwerty-nav");
+    await matchElementSnapshotInSection(kb, "kb-qwerty-nav");
+  });
+
   it("should match glyph stress layout in a narrow container", async () => {
     const kb = await getKeyboard("kb-glyph-stress");
     await matchElementSnapshotInSection(kb, "kb-glyph-stress");

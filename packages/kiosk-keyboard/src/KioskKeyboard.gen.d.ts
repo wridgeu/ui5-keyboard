@@ -73,20 +73,16 @@ declare module "./KioskKeyboard" {
          * Controls whether the KioskKeyboard or the native on-screen
         keyboard is used.
         
-        - `"Custom"` (default) - always uses the KioskKeyboard and
-          suppresses the native keyboard via `inputmode="none"`.
-          Best for **dedicated kiosk terminals** without a physical
-          keyboard.
-        - `"Native"` - always defers to the native keyboard; the
-          KioskKeyboard will not open on focus.
-        - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
-          to the native keyboard on phones and tablets. This is
-          intended for **kiosk terminals running a desktop OS**
-          (no physical keyboard) that should still let mobile
-          visitors use their native keyboard. On a regular
-          laptop/desktop with a physical keyboard the virtual
+        - `"Auto"` (default) - uses KioskKeyboard on desktop browsers,
+          defers to the native keyboard on phones and tablets. On a
+          regular laptop/desktop with a physical keyboard the virtual
           keyboard **will** still appear - use `"Native"` if that
           is not desired.
+        - `"Custom"` - always uses the KioskKeyboard and suppresses
+          the native keyboard via `inputmode="none"`. Best for
+          **dedicated kiosk terminals** without a physical keyboard.
+        - `"Native"` - always defers to the native keyboard; the
+          KioskKeyboard will not open on focus.
          */
         mobileKeyboard?: MobileKeyboard | PropertyBindingInfo | `{${string}}`;
 
@@ -99,6 +95,8 @@ declare module "./KioskKeyboard" {
           `PageUp`/`PageDown`) to the current target element (or document
           fallback). If not canceled, built-in native actions run for
           selected keys (`F5`, `F11`).
+        - `"None"`: fire `keyPress` only, skip native dispatch and
+          built-in navigation actions entirely.
          */
         fKeyMode?: FKeyMode | PropertyBindingInfo | `{${string}}`;
 
@@ -293,20 +291,16 @@ declare module "./KioskKeyboard" {
          * Controls whether the KioskKeyboard or the native on-screen
         keyboard is used.
         
-        - `"Custom"` (default) - always uses the KioskKeyboard and
-          suppresses the native keyboard via `inputmode="none"`.
-          Best for **dedicated kiosk terminals** without a physical
-          keyboard.
-        - `"Native"` - always defers to the native keyboard; the
-          KioskKeyboard will not open on focus.
-        - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
-          to the native keyboard on phones and tablets. This is
-          intended for **kiosk terminals running a desktop OS**
-          (no physical keyboard) that should still let mobile
-          visitors use their native keyboard. On a regular
-          laptop/desktop with a physical keyboard the virtual
+        - `"Auto"` (default) - uses KioskKeyboard on desktop browsers,
+          defers to the native keyboard on phones and tablets. On a
+          regular laptop/desktop with a physical keyboard the virtual
           keyboard **will** still appear - use `"Native"` if that
           is not desired.
+        - `"Custom"` - always uses the KioskKeyboard and suppresses
+          the native keyboard via `inputmode="none"`. Best for
+          **dedicated kiosk terminals** without a physical keyboard.
+        - `"Native"` - always defers to the native keyboard; the
+          KioskKeyboard will not open on focus.
          */
         getMobileKeyboard(): MobileKeyboard;
 
@@ -314,20 +308,16 @@ declare module "./KioskKeyboard" {
          * Controls whether the KioskKeyboard or the native on-screen
         keyboard is used.
         
-        - `"Custom"` (default) - always uses the KioskKeyboard and
-          suppresses the native keyboard via `inputmode="none"`.
-          Best for **dedicated kiosk terminals** without a physical
-          keyboard.
-        - `"Native"` - always defers to the native keyboard; the
-          KioskKeyboard will not open on focus.
-        - `"Auto"` - uses KioskKeyboard on desktop browsers, defers
-          to the native keyboard on phones and tablets. This is
-          intended for **kiosk terminals running a desktop OS**
-          (no physical keyboard) that should still let mobile
-          visitors use their native keyboard. On a regular
-          laptop/desktop with a physical keyboard the virtual
+        - `"Auto"` (default) - uses KioskKeyboard on desktop browsers,
+          defers to the native keyboard on phones and tablets. On a
+          regular laptop/desktop with a physical keyboard the virtual
           keyboard **will** still appear - use `"Native"` if that
           is not desired.
+        - `"Custom"` - always uses the KioskKeyboard and suppresses
+          the native keyboard via `inputmode="none"`. Best for
+          **dedicated kiosk terminals** without a physical keyboard.
+        - `"Native"` - always defers to the native keyboard; the
+          KioskKeyboard will not open on focus.
          */
         setMobileKeyboard(mobileKeyboard: MobileKeyboard): this;
 
@@ -342,6 +332,8 @@ declare module "./KioskKeyboard" {
           `PageUp`/`PageDown`) to the current target element (or document
           fallback). If not canceled, built-in native actions run for
           selected keys (`F5`, `F11`).
+        - `"None"`: fire `keyPress` only, skip native dispatch and
+          built-in navigation actions entirely.
          */
         getFKeyMode(): FKeyMode;
 
@@ -354,6 +346,8 @@ declare module "./KioskKeyboard" {
           `PageUp`/`PageDown`) to the current target element (or document
           fallback). If not canceled, built-in native actions run for
           selected keys (`F5`, `F11`).
+        - `"None"`: fire `keyPress` only, skip native dispatch and
+          built-in navigation actions entirely.
          */
         setFKeyMode(fKeyMode: FKeyMode): this;
 

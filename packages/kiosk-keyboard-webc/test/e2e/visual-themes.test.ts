@@ -7,7 +7,7 @@ import {
   matchElementSnapshotInSection,
 } from "./test-helpers.js";
 
-const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"] as const;
+const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"];
 
 /** Background colors that match each theme for the page body. */
 const THEME_BACKGROUNDS: Record<string, string> = {

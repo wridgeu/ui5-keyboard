@@ -9,11 +9,11 @@ Multi-key sequence support for vim-style `g g`, Emacs-style `C-x C-s`, and VS Co
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 
-const manager = HotkeyManager.getInstance();
+const manager = new HotkeyManager();
 
-// Register a two-key sequence
-manager.registerSequence(
-  ["Ctrl+K", "Ctrl+C"],
+// Register a two-key sequence (space-separated string)
+manager.register(
+  "Ctrl+K Ctrl+C",
   (event) => {
     // Comment selection
   },
@@ -24,8 +24,8 @@ manager.registerSequence(
 );
 
 // Register a simple two-key sequence without modifiers
-manager.registerSequence(
-  ["G", "G"],
+manager.register(
+  "G G",
   (event) => {
     // Go to top
   },
@@ -36,7 +36,7 @@ manager.registerSequence(
 );
 ```
 
-`SequenceManager` is an internal class managed by `HotkeyManager`. Access sequence functionality through `HotkeyManager.registerSequence()` and related facade methods. It receives pre-filtered key events from the EventDispatcher pipeline (step 6, after hotkey matching) and reads the active scope from `HotkeyManager` for scope-based filtering.
+`SequenceManager` is an internal class managed by `HotkeyManager`. Access sequence functionality through `HotkeyManager.register()` -- a space-separated hotkey string is automatically detected as a sequence. The `SequenceManager` receives pre-filtered key events from the EventDispatcher pipeline (step 6, after hotkey matching) and reads the active scope from `HotkeyManager` for scope-based filtering.
 
 ## Architecture
 
@@ -57,8 +57,8 @@ Sequences use the same two-pass matching as `HotkeyManager`: active scope first,
 Applications can display mid-sequence progress using the per-registration `onPending` callback:
 
 ```ts
-manager.registerSequence(
-  ["G", "E"],
+manager.register(
+  "G E",
   (event) => {
     router.navTo("editor");
   },
@@ -76,8 +76,6 @@ manager.registerSequence(
 ```
 
 `onPending` dies with the registration, so no manual cleanup needed. When the handle is unregistered (or the group is destroyed), the callback is gone.
-
-A global fallback is available via `manager.setSequencePendingHandler()` for cases where a single handler covers all sequences. Per-registration `onPending` takes precedence over the global handler when both are set.
 
 ### Options
 

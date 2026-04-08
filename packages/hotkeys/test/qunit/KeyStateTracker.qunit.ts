@@ -1,8 +1,7 @@
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
-import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { Platform } from "ui5/hotkeys/library";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
-import { destroyHotkeyManager, fireBlur, fireKey, fireKeyUp } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireBlur, fireKey, fireKeyUp } from "./test-helpers";
 
 let restoreRuntimeHooks: (() => void) | null = null;
 
@@ -22,14 +21,14 @@ QUnit.module("KeyStateTracker", {
 });
 
 QUnit.test("getKeyStateTracker returns same instance", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const a = manager.getKeyStateTracker();
   const b = manager.getKeyStateTracker();
   assert.strictEqual(a, b, "Same instance returned");
 });
 
 QUnit.test("Keydown adds key, keyup removes key", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
 
   fireKey("a");
   assert.ok(tracker.isKeyHeld("a"), "Key 'a' is held after keydown");
@@ -39,7 +38,7 @@ QUnit.test("Keydown adds key, keyup removes key", (assert) => {
 });
 
 QUnit.test("isKeyHeld returns correct state", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
 
   assert.notOk(tracker.isKeyHeld("Control"), "Control not held initially");
 
@@ -51,7 +50,7 @@ QUnit.test("isKeyHeld returns correct state", (assert) => {
 });
 
 QUnit.test("getHeldKeys returns snapshot", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
 
   fireKey("a");
   fireKey("b");
@@ -68,7 +67,7 @@ QUnit.test("getHeldKeys returns snapshot", (assert) => {
 });
 
 QUnit.test("Change callback fires on key changes", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
   const changes: string[][] = [];
 
   tracker.setChangeCallback((keys) => {
@@ -86,7 +85,7 @@ QUnit.test("Change callback fires on key changes", (assert) => {
 });
 
 QUnit.test("Blur clears all held keys", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
 
   fireKey("a");
   fireKey("Control", { ctrlKey: true });
@@ -98,7 +97,7 @@ QUnit.test("Blur clears all held keys", (assert) => {
 
 QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
   restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "mac" });
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const tracker = manager.getKeyStateTracker();
 
   fireKey("Meta", { metaKey: true });
@@ -115,7 +114,7 @@ QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
 });
 
 QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
-  const manager = HotkeyManager.getInstance();
+  const manager = createHotkeyManager();
   const tracker = manager.getKeyStateTracker();
 
   fireKey("a");
@@ -124,7 +123,7 @@ QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
   manager.destroy();
 
   // New instance should have fresh tracker
-  const newManager = HotkeyManager.getInstance();
+  const newManager = createHotkeyManager();
   const newTracker = newManager.getKeyStateTracker();
   assert.strictEqual(newTracker.getHeldKeys().length, 0, "New instance has no held keys");
 
@@ -138,7 +137,7 @@ QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("setChangeCallback(null) removes callback", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
   let callCount = 0;
 
   tracker.setChangeCallback(() => {
@@ -154,7 +153,7 @@ QUnit.test("setChangeCallback(null) removes callback", (assert) => {
 });
 
 QUnit.test("Change callback errors are isolated", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
   let safeCallbackCalls = 0;
 
   tracker.setChangeCallback(() => {
@@ -173,7 +172,7 @@ QUnit.test("Change callback errors are isolated", (assert) => {
 });
 
 QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
 
   fireKey("a");
   fireKey("a"); // Same key again
@@ -185,7 +184,7 @@ QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
 });
 
 QUnit.test("Keyup removes held key by code when key value changed", (assert) => {
-  const tracker = HotkeyManager.getInstance().getKeyStateTracker();
+  const tracker = createHotkeyManager().getKeyStateTracker();
 
   fireKey("A", { code: "KeyA", shiftKey: true });
   assert.ok(tracker.isKeyHeld("A"), "Uppercase key is tracked while Shift is held");

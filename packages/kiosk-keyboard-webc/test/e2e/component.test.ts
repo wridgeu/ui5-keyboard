@@ -16,9 +16,9 @@ async function waitForDockedState(kbId: string, hidden: boolean, timeout = 5000)
     async () =>
       browser.execute(
         (id: string, expectHidden: boolean) => {
-          const kb = document.getElementById(id);
-          const isHidden =
-            kb?.shadowRoot?.querySelector(".kiosk-keyboard")?.classList.contains("kiosk-keyboard--hidden") ?? true;
+          const root = document.getElementById(id)?.shadowRoot?.querySelector(".kiosk-keyboard");
+          if (!root) return false;
+          const isHidden = root.classList.contains("kiosk-keyboard--hidden");
           return isHidden === expectHidden;
         },
         kbId,

@@ -1,7 +1,7 @@
 import { $ } from "@wdio/globals";
 import { openVisualPage, getKeyboard, matchElementSnapshotInSection } from "./test-helpers.js";
 
-const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true } as const;
+const HEIGHT_SNAPSHOT_OPTIONS = { ignoreAntialiasing: true };
 
 describe("KioskKeyboard Responsive Height-Constrained Visual Regression", () => {
   before(async () => {

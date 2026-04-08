@@ -1,5 +1,5 @@
 import TargetInputSession from "ui5/kiosk/internal/target-input-session";
-import type { TargetElement } from "ui5/kiosk/types";
+import type { TargetElement } from "ui5/kiosk/internal/types";
 
 const fixture = document.getElementById("qunit-fixture")!;
 

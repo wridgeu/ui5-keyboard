@@ -22,14 +22,13 @@ export default class Component extends UIComponent {
   init(): void {
     super.init();
 
-    // Initialize the HotkeyManager singleton
-    this._hotkeyManager = HotkeyManager.getInstance();
+    this._hotkeyManager = new HotkeyManager();
     this._hotkeys = this._hotkeyManager.createGroup();
 
-    // Enable automatic scope management via the router.
+    // Enable automatic scope management via the router on the group.
     // Route name = scope name. Controllers just register with { scope: "routeName" }.
-    // No pushScope/popScope needed in controllers for view-level scopes.
-    this._hotkeyManager.enableRouterIntegration(this.getRouter());
+    // destroyAll() automatically detaches the router listener.
+    this._hotkeys.enableRouterIntegration(this.getRouter());
 
     // Keep the state model's activeScope in sync with route changes.
     // enableRouterIntegration handles scope push/pop; this listener mirrors it to the model.
@@ -115,9 +114,7 @@ export default class Component extends UIComponent {
   }
 
   exit(): void {
-    this._hotkeys.destroyAll();
     this._hotkeyManager.destroy();
-    this.getRouter().detachRouteMatched(this._routeMatchedHandler, this);
     document.removeEventListener("keydown", this._keyDownHandler, true);
   }
 }

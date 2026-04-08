@@ -11,11 +11,13 @@ export default {
   "*.{ts,js,mjs,cjs,json,yaml,yml,md,html,css,less}": (files) => {
     const filtered = exclude(files);
     if (!filtered.length) return [];
-    return `oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern ${filtered.join(" ")}`;
+    const quoted = filtered.map((f) => `"${f}"`).join(" ");
+    return `oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern ${quoted}`;
   },
   "*.{ts,js,mjs,cjs}": (files) => {
     const filtered = exclude(files);
     if (!filtered.length) return [];
-    return `oxlint --fix ${filtered.join(" ")}`;
+    const quoted = filtered.map((f) => `"${f}"`).join(" ");
+    return `oxlint --fix ${quoted}`;
   },
 };

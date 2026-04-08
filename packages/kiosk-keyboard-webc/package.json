@@ -26,6 +26,13 @@
     "LICENSE"
   ],
   "type": "module",
+  "sideEffects": [
+    "./dist/bundle.esm.js",
+    "./dist/Assets.js",
+    "./dist/generated/**",
+    "./dist/layouts/**",
+    "./dist/middleware/**"
+  ],
   "main": "dist/KioskKeyboard.js",
   "types": "dist/KioskKeyboard.d.ts",
   "exports": {
@@ -92,14 +99,12 @@
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit",
     "generateAPI": "ui5nps generateAPI"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@open-wc/testing": "~4.0.0",
     "@ui5/webcomponents": "~2.20.0",
     "@ui5/webcomponents-base": "~2.20.0",
     "@ui5/webcomponents-icons": "~2.20.0",
-    "@ui5/webcomponents-theming": "~2.20.0"
-  },
-  "devDependencies": {
-    "@open-wc/testing": "~4.0.0",
+    "@ui5/webcomponents-theming": "~2.20.0",
     "@ui5/webcomponents-tools": "2.20.0",
     "@vitest/coverage-v8": "~4.1.0",
     "@wdio/cli": "~9.27.0",
@@ -115,6 +120,15 @@
     "vite": "~8.0.0",
     "vitest": "~4.1.0",
     "webdriverio": "~9.27.0"
+  },
+  "peerDependencies": {
+    "@ui5/webcomponents": "~2.20.0",
+    "@ui5/webcomponents-base": "~2.20.0",
+    "@ui5/webcomponents-icons": "~2.20.0",
+    "@ui5/webcomponents-theming": "~2.20.0"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "customElements": "dist/custom-elements.json",
   "ui5": {

@@ -8,16 +8,14 @@ import { createIdGenerator } from "./idgen";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
+import type { HotkeyCallback, Platform } from "../types";
 import type {
-  HotkeyCallback,
-  Platform,
   SequenceOptions,
-  SequencePendingCallback,
   SequenceRegistration,
   SequenceRegistrationHandle,
   SequenceRegistrationInfo,
   UpdatableSequenceOptions,
-} from "../types";
+} from "./types";
 
 const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
@@ -44,7 +42,7 @@ interface ActiveMatch {
  * Internal key sequence manager for UI5 applications.
  *
  * Not intended for direct use - access sequence functionality through
- * {@link HotkeyManager.registerSequence} and related facade methods.
+ * {@link HotkeyManager.register} with space-separated key format (e.g. `"g i"`).
  *
  * Receives pre-filtered key events from HotkeyManager's document listener
  * (no own listener) and matches multi-key sequences (e.g., ["G", "E"]
@@ -61,7 +59,6 @@ export default class SequenceManager extends BaseObject {
   private _registrations: Map<string, SequenceRegistration> = new Map();
   private _scopeKeyIndex: Map<string, Map<string, Set<SequenceRegistration>>> = new Map();
   private _activeMatches: ActiveMatch[] = [];
-  private _pendingCallback: SequencePendingCallback | null = null;
   private _platform: Platform;
   private _scopeProvider: () => string;
 
@@ -164,7 +161,7 @@ export default class SequenceManager extends BaseObject {
         if (!registration.active) {
           throw new Error(`Cannot setOptions on unregistered sequence (id: ${id})`);
         }
-        if ((newOptions as Record<string, unknown>).scope !== undefined) {
+        if ("scope" in newOptions) {
           throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
         }
         const reg = this._registrations.get(id);
@@ -182,31 +179,11 @@ export default class SequenceManager extends BaseObject {
   }
 
   /**
-   * Set a callback for mid-sequence progress updates.
-   */
-  setPendingCallback(callback: SequencePendingCallback | null): void {
-    this._pendingCallback = callback;
-  }
-
-  /**
    * Get all active registrations.
    * Info objects are flat snapshots - no closures or parsed internals leak.
    */
   getRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
     return Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
-  }
-
-  /**
-   * Look up sequence registrations by their IDs and return public info objects.
-   * O(n) where n = ids.size, not n = total registrations.
-   */
-  getRegistrationInfoByIds(ids: ReadonlySet<string>): SequenceRegistrationInfo[] {
-    const result: SequenceRegistrationInfo[] = [];
-    for (const id of ids) {
-      const reg = this._registrations.get(id);
-      if (reg) result.push(this._toRegistrationInfo(reg));
-    }
-    return result;
   }
 
   /**
@@ -247,7 +224,6 @@ export default class SequenceManager extends BaseObject {
     }
     this._registrations.clear();
     this._scopeKeyIndex.clear();
-    this._pendingCallback = null;
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
     super.destroy();
@@ -439,7 +415,7 @@ export default class SequenceManager extends BaseObject {
   }
 
   private _firePendingCallback(reg: SequenceRegistration, stepIndex: number): void {
-    const callback = reg.onPending ?? this._pendingCallback;
+    const callback = reg.onPending;
     if (!callback) return;
 
     try {

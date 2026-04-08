@@ -35,10 +35,11 @@ export function registerMiddleware(layouts: string[], factory: () => Composition
  * Lazily creates the instance from the registered factory on first call.
  */
 export function getMiddlewareForLayout(layout: string): CompositionMiddleware | null {
-  if (!factories.has(layout)) return null;
   let instance = instances.get(layout);
   if (!instance) {
-    instance = factories.get(layout)!();
+    const factory = factories.get(layout);
+    if (!factory) return null;
+    instance = factory();
     instances.set(layout, instance);
   }
   return instance;

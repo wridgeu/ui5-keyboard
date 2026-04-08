@@ -11,13 +11,10 @@ KioskKeyboardRenderer.ts  Renderer object: flat DOM output, apiVersion 4
 library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
                           plus key-name constants (`KeyName`)
-types.ts                  KeyDefinition, KeyRow, LayoutDefinition interfaces,
-                          KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
-                          KioskI18nOverrideContext types
+types.ts                  KeyDefinition, KeyRow, LayoutDefinition, I18nResolver
 internal/layout-registry.ts  Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
-internal/i18n-registry.ts i18n resolution chain: base bundle + enhancement bundles
-                          + override hook, async loading with generation counter
+internal/i18n-registry.ts i18n resolution: base bundle + optional I18nResolver callback
 internal/detect-keyboard-type.ts  Auto-type detection helpers
 internal/input-operations.ts      Target input text operations
 internal/target-input-session.ts  Per-target dirty/value/change handling
@@ -550,12 +547,8 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | `inputmode` restore on destroy          | `exit()` calls `_restoreNativeKeyboard()`                                        |
 | Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop             |
 | `show()` without target input           | `_suppressNativeKeyboard()` is a no-op when no target element exists             |
-| Enhancement bundle load failure         | `createEnhancementBundle` catches, logs warning, returns `null`; filtered out    |
-| Override hook throws                    | `getText` catches, logs warning, keeps pre-hook `resolvedText`                   |
-| Locale change with no living instances  | `reloadIfStale()` in `init()` detects stale bundles and reloads on next create   |
-| Rapid sequential `configureI18n` calls  | Generation counter discards stale async loads; only latest config is applied     |
-| Locale churn during bundle reload       | `reloadBundles` loop retries up to `MAX_RELOAD_CYCLES` (5), then aborts          |
-| Last `KioskKeyboard` instance destroyed | `exit()` auto-resets i18n config and clears override hook (FLP safety)           |
+| Resolver throws                         | `getText` catches, logs warning, returns base bundle text                        |
+| Last `KioskKeyboard` instance destroyed | `exit()` clears the i18n resolver (FLP safety)                                   |
 
 ## Project Layout
 
@@ -567,13 +560,11 @@ packages/kiosk-keyboard/
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
                                plus KeyName constants
-    types.ts                  KeyDefinition, KeyRow, LayoutDefinition,
-                              KioskI18nConfig, KioskI18nEnhancement, KioskI18nOverrideHook,
-                              KioskI18nOverrideContext
+    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, I18nResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
       dom.ts                  DOM/key ID utilities + input resolver
-      i18n-registry.ts        i18n resolution chain, config, hook, async loading
+      i18n-registry.ts        i18n resolution: base bundle + optional I18nResolver callback
       detect-keyboard-type.ts Auto-type detection
       input-operations.ts     Text insertion/backspace/enter ops
       target-input-session.ts Target state + commit handling

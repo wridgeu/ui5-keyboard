@@ -1,4 +1,4 @@
-import type { TargetElement } from "../types";
+import type { TargetElement } from "./types";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import {
   insertText as opsInsertText,

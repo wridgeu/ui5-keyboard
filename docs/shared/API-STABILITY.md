@@ -15,7 +15,6 @@ The public API contract is intentionally small. Anything outside that contract m
 Use these imports for application code:
 
 - `ui5/hotkeys/HotkeyManager`
-- type-only helper export `RouterLike` from `ui5/hotkeys/HotkeyManager`
 - `ui5/hotkeys/RegistrationGroup`
 - `ui5/hotkeys/KeyStateTracker` (type import; construct via `manager.getKeyStateTracker()`)
 - `ui5/hotkeys/HotkeyRecorder` (type import; construct via `manager.createRecorder()`)

@@ -4,3 +4,4 @@ These documents describe forward-looking design ideas and may diverge from the c
 
 - [Error Handling and DX Consistency](./ERROR-HANDLING-DX.md)
 - [Tab and Done Keys](./TAB-AND-DONE-KEYS.md)
+- [Nav Row Wrapping & Responsive Layout Patterns](./NAV-ROW-WRAPPING-AND-RESPONSIVE-PATTERNS.md)
