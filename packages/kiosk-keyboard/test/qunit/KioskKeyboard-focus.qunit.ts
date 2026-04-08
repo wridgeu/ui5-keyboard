@@ -193,21 +193,21 @@ QUnit.test("Meta+Arrow keys are not intercepted", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// inputIds multi-input targeting
+// controls multi-input targeting
 // ──────────────────────────────────────────────
 
-QUnit.test("inputIds resolves controls and registers focus delegation", async (assert) => {
+QUnit.test("controls resolves controls and registers focus delegation", async (assert) => {
   const input1 = new Input("test-input-1");
   const input2 = new Input("test-input-2");
   input1.placeAt("qunit-fixture");
   input2.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
-    inputIds: ["test-input-1", "test-input-2"],
+    controls: ["test-input-1", "test-input-2"],
   });
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getInputIds().length, 2, "inputIds property has 2 entries");
+  assert.strictEqual(kb.getControls().length, 2, "controls property has 2 entries");
 
   input1.destroy();
   input2.destroy();
@@ -221,7 +221,7 @@ QUnit.test("Focusing a registered input sets it as target", async (assert) => {
   input2.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
-    inputIds: ["target-input-a", "target-input-b"],
+    controls: ["target-input-a", "target-input-b"],
   });
   await placeAndWait(kb);
 
@@ -231,19 +231,19 @@ QUnit.test("Focusing a registered input sets it as target", async (assert) => {
   // Wait for delegation to propagate
   await nextUIUpdate();
 
-  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target switched to focused input");
+  assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target switched to focused input");
 
   input1.destroy();
   input2.destroy();
   kb.destroy();
 });
 
-QUnit.test("exit() cleans up inputIds delegates", async (assert) => {
+QUnit.test("exit() cleans up controls delegates", async (assert) => {
   const input = new Input("cleanup-input");
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
-    inputIds: ["cleanup-input"],
+    controls: ["cleanup-input"],
   });
   await placeAndWait(kb);
 
@@ -254,20 +254,20 @@ QUnit.test("exit() cleans up inputIds delegates", async (assert) => {
   dom.focus();
   dom.blur();
 
-  assert.ok(true, "No errors after destroy with inputIds");
+  assert.ok(true, "No errors after destroy with controls");
 
   input.destroy();
 });
 
 // ──────────────────────────────────────────────
-// inputIds control resolution (view-local vs global)
+// controls control resolution (view-local vs global)
 // ──────────────────────────────────────────────
 
-QUnit.test("inputIds resolves view-local IDs when keyboard is inside a View", async (assert) => {
+QUnit.test("controls resolves view-local IDs when keyboard is inside a View", async (assert) => {
   const view = await XMLView.create({
     definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
       <m:Input id="localInput" />
-      <kiosk:KioskKeyboard id="kb" inputIds="localInput" />
+      <kiosk:KioskKeyboard id="kb" controls="localInput" />
     </mvc:View>`,
   });
   view.placeAt("qunit-fixture");
@@ -281,12 +281,16 @@ QUnit.test("inputIds resolves view-local IDs when keyboard is inside a View", as
   dom.focus();
   await nextUIUpdate();
 
-  assert.strictEqual(kb.getTargetInput(), input.getId(), "View-local input resolved and set as target after focus");
+  assert.strictEqual(
+    (kb as any)._getActiveTargetId(),
+    input.getId(),
+    "View-local input resolved and set as target after focus",
+  );
 
   view.destroy();
 });
 
-QUnit.test("inputIds prefers view-local over global when IDs collide", async (assert) => {
+QUnit.test("controls prefers view-local over global when IDs collide", async (assert) => {
   // Create a global control with a short ID that matches the view-local one
   const globalInput = new Input("collisionInput");
   globalInput.placeAt("qunit-fixture");
@@ -295,7 +299,7 @@ QUnit.test("inputIds prefers view-local over global when IDs collide", async (as
   const view = await XMLView.create({
     definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
       <m:Input id="collisionInput" />
-      <kiosk:KioskKeyboard id="kb" inputIds="collisionInput" />
+      <kiosk:KioskKeyboard id="kb" controls="collisionInput" />
     </mvc:View>`,
   });
   view.placeAt("qunit-fixture");
@@ -310,22 +314,22 @@ QUnit.test("inputIds prefers view-local over global when IDs collide", async (as
   await nextUIUpdate();
 
   assert.strictEqual(
-    kb.getTargetInput(),
+    (kb as any)._getActiveTargetId(),
     viewLocalInput.getId(),
     "View-local input takes priority over global with same short ID",
   );
-  assert.notStrictEqual(kb.getTargetInput(), globalInput.getId(), "Global control was NOT selected");
+  assert.notStrictEqual((kb as any)._getActiveTargetId(), globalInput.getId(), "Global control was NOT selected");
 
   view.destroy();
   globalInput.destroy();
 });
 
-QUnit.test("inputIds falls back to global when not inside a View", async (assert) => {
+QUnit.test("controls falls back to global when not inside a View", async (assert) => {
   const globalInput = new Input("global-resolution-input");
   globalInput.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
-    inputIds: ["global-resolution-input"],
+    controls: ["global-resolution-input"],
   });
   await placeAndWait(kb);
 
@@ -335,7 +339,7 @@ QUnit.test("inputIds falls back to global when not inside a View", async (assert
   await nextUIUpdate();
 
   assert.strictEqual(
-    kb.getTargetInput(),
+    (kb as any)._getActiveTargetId(),
     globalInput.getId(),
     "Global input resolved via fallback when keyboard is not inside a View",
   );
@@ -344,12 +348,12 @@ QUnit.test("inputIds falls back to global when not inside a View", async (assert
   globalInput.destroy();
 });
 
-QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
+QUnit.test("controls silently skips unresolvable IDs", async (assert) => {
   const input = new Input("real-input");
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
-    inputIds: ["nonexistent-input", "real-input"],
+    controls: ["nonexistent-input", "real-input"],
   });
   await placeAndWait(kb);
 
@@ -358,13 +362,17 @@ QUnit.test("inputIds silently skips unresolvable IDs", async (assert) => {
   dom.focus();
   await nextUIUpdate();
 
-  assert.strictEqual(kb.getTargetInput(), input.getId(), "Valid input still resolved when mixed with unresolvable IDs");
+  assert.strictEqual(
+    (kb as any)._getActiveTargetId(),
+    input.getId(),
+    "Valid input still resolved when mixed with unresolvable IDs",
+  );
 
   kb.destroy();
   input.destroy();
 });
 
-QUnit.test("inputIds deduplicates delegates when aliased IDs resolve to the same control", async (assert) => {
+QUnit.test("controls deduplicates delegates when aliased IDs resolve to the same control", async (assert) => {
   // Create a view so that "localInput" resolves via view.byId AND via
   // global registry as "myView--localInput" - both should map to the
   // same sap.m.Input instance.
@@ -389,8 +397,8 @@ QUnit.test("inputIds deduplicates delegates when aliased IDs resolve to the same
     return origAdd(...args);
   };
 
-  // Set inputIds with both the view-local and the global alias
-  kb.setInputIds(["localInput", "myView--localInput"]);
+  // Set controls with both the view-local and the global alias
+  kb.setControls(["localInput", "myView--localInput"]);
   await nextUIUpdate();
 
   assert.strictEqual(addCount, 1, "addEventDelegate called exactly once despite aliased IDs");
@@ -398,7 +406,7 @@ QUnit.test("inputIds deduplicates delegates when aliased IDs resolve to the same
   view.destroy();
 });
 
-QUnit.test("inputIds removal of one alias keeps delegate when another alias remains", async (assert) => {
+QUnit.test("controls removal of one alias keeps delegate when another alias remains", async (assert) => {
   const view = await XMLView.create({
     id: "aliasView",
     definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
@@ -413,7 +421,7 @@ QUnit.test("inputIds removal of one alias keeps delegate when another alias rema
   const kb = view.byId("kb") as KioskKeyboard;
 
   // Register both aliases
-  kb.setInputIds(["sharedInput", "aliasView--sharedInput"]);
+  kb.setControls(["sharedInput", "aliasView--sharedInput"]);
   await nextUIUpdate();
 
   // Spy on removeEventDelegate
@@ -425,27 +433,31 @@ QUnit.test("inputIds removal of one alias keeps delegate when another alias rema
   };
 
   // Remove one alias - delegate should NOT be removed since the other alias still covers it
-  kb.setInputIds(["sharedInput"]);
+  kb.setControls(["sharedInput"]);
   await nextUIUpdate();
 
   assert.strictEqual(removeCount, 0, "removeEventDelegate not called when another alias still covers the control");
 
-  // Focus the input - should still work as a registered inputIds target
+  // Focus the input - should still work as a registered controls target
   const dom = input.getFocusDomRef() as HTMLElement;
   dom.focus();
   await nextUIUpdate();
 
-  assert.strictEqual(kb.getTargetInput(), input.getId(), "Input still works as target after alias removal");
+  assert.strictEqual(
+    (kb as any)._getActiveTargetId(),
+    input.getId(),
+    "Input still works as target after alias removal",
+  );
 
   view.destroy();
 });
 
-QUnit.test("inputIds works with composite controls (StepInput)", async (assert) => {
+QUnit.test("controls works with composite controls (StepInput)", async (assert) => {
   const stepInput = new StepInput("step-input-composite");
   stepInput.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
-    inputIds: ["step-input-composite"],
+    controls: ["step-input-composite"],
   });
   await placeAndWait(kb);
 
@@ -454,13 +466,17 @@ QUnit.test("inputIds works with composite controls (StepInput)", async (assert) 
   innerDom.focus();
   await nextUIUpdate();
 
-  assert.strictEqual(kb.getTargetInput(), stepInput.getId(), "StepInput resolved as target via parent chain");
+  assert.strictEqual(
+    (kb as any)._getActiveTargetId(),
+    stepInput.getId(),
+    "StepInput resolved as target via parent chain",
+  );
 
   stepInput.destroy();
   kb.destroy();
 });
 
-QUnit.test("inputIds rebinds delegate when control is destroyed and recreated with same ID", async (assert) => {
+QUnit.test("controls rebinds delegate when control is destroyed and recreated with same ID", async (assert) => {
   const box = new VBox("recreate-box");
   box.placeAt("qunit-fixture");
 
@@ -469,14 +485,14 @@ QUnit.test("inputIds rebinds delegate when control is destroyed and recreated wi
 
   // Inline (non-docked, no autoShow) keyboard - only _inputFocusDelegation sets target
   const kb = new KioskKeyboard({
-    inputIds: ["recreate-input"],
+    controls: ["recreate-input"],
   });
   await placeAndWait(kb);
 
   // Focus input1 → delegate should set target
   (input1.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
-  assert.strictEqual(kb.getTargetInput(), input1.getId(), "Target set for original input instance");
+  assert.strictEqual((kb as any)._getActiveTargetId(), input1.getId(), "Target set for original input instance");
 
   // Destroy and recreate with same explicit ID
   input1.destroy();
@@ -487,12 +503,12 @@ QUnit.test("inputIds rebinds delegate when control is destroyed and recreated wi
   await nextUIUpdate();
 
   // Trigger reconciliation so the new instance gets the delegate
-  kb.setInputIds(["recreate-input"]);
+  kb.setControls(["recreate-input"]);
 
   // Focus the new input - delegate should fire on the new instance
   (input2.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
-  assert.strictEqual(kb.getTargetInput(), input2.getId(), "Target updated to recreated input instance");
+  assert.strictEqual((kb as any)._getActiveTargetId(), input2.getId(), "Target updated to recreated input instance");
 
   box.destroy();
   kb.destroy();
