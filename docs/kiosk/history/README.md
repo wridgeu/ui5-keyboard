@@ -13,3 +13,4 @@ They are kept as historical context and are not the primary source of truth for 
 - [CSS-First Responsive Simplification](./CSS-FIRST-RESPONSIVE-SIMPLIFICATION.md)
 - [Remove stableHeight Property](./REMOVE-STABLE-HEIGHT.md)
 - [Web Component Package](./WEBCOMPONENT-PACKAGE.md)
+- [Nav Row Wrapping & Responsive Layout Patterns](./NAV-ROW-WRAPPING-AND-RESPONSIVE-PATTERNS.md)

@@ -1,6 +1,6 @@
 # HotkeyManager: Instance-Based Lifecycle
 
-**Status:** Implemented (2026-04-08)
+> Status: **Implemented** (2026-04-08)
 
 ## Problem
 
