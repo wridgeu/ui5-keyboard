@@ -4,16 +4,16 @@ These documents cover repository-wide proposals that are not part of the current
 
 - [CJK Glyph Centering](./CJK-GLYPH-CENTERING.md) (partially implemented, remaining work blocked)
 - [Custom Font Face](./CUSTOM-FONT-FACE.md)
-- [HotkeyManager Instance Lifecycle](./HOTKEYS-INSTANCE-LIFECYCLE.md) -- replace singleton with Component-owned instance
+- [HotkeyManager Instance Lifecycle](./HOTKEYS-INSTANCE-LIFECYCLE.md): replace singleton with Component-owned instance
 
 The following proposals were fully implemented and their documentation removed (the code is the source of truth):
 
-- **Japanese and Arabic Layouts** (ja-romaji, ja-kana, arabic) -- implemented in both packages
-- **Icon + Text Keys** (dual icon/label on modifier and action keys) -- implemented via `--kiosk-keyboard-dual-*` CSS variables
-- **Composition Middleware** (script-specific input processing) -- implemented as middleware registry with kana dakuten and hangul compose
+- **Japanese and Arabic Layouts** (ja-romaji, ja-kana, arabic): implemented in both packages
+- **Icon + Text Keys** (dual icon/label on modifier and action keys): implemented via `--kiosk-keyboard-dual-*` CSS variables
+- **Composition Middleware** (script-specific input processing): implemented as middleware registry with kana dakuten and hangul compose
 
 The following proposals were superseded or rejected:
 
-- **Layout Tree-Shaking** (split entry points for WebC) -- superseded: the main entry now includes all built-in layouts; subpath imports remain for middleware and bundle only
+- **Layout Tree-Shaking** (split entry points for WebC): superseded. The main entry now includes all built-in layouts; subpath imports remain for middleware and bundle only.
 
 When a proposal is implemented, deferred, or rejected, update its status line and move it to a more appropriate long-term location if needed.

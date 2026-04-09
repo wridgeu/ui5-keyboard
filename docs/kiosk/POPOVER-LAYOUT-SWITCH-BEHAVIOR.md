@@ -10,7 +10,7 @@ Switching between layouts (e.g. ABC / 123) inside a Popover causes it to close i
 
 ## Root Cause
 
-A coordinate-system mismatch in `sap.m.Popover._applyPosition`. When the keyboard's content height changes during a layout switch, the Popover's `ResizeHandler` fires and `_applyPosition` compares the trigger element's **document-absolute** coordinates against the **viewport height**. On a scrolled page the trigger's absolute `top` exceeds the viewport height, so the Popover considers it "off-screen" and closes -- even though it is perfectly visible.
+A coordinate-system mismatch in `sap.m.Popover._applyPosition`. When the keyboard's content height changes during a layout switch, the Popover's `ResizeHandler` fires and `_applyPosition` compares the trigger element's **document-absolute** coordinates against the **viewport height**. On a scrolled page the trigger's absolute `top` exceeds the viewport height, so the Popover considers it "off-screen" and closes, even though it is perfectly visible.
 
 ## Recommended Workaround
 
@@ -28,7 +28,7 @@ Alternatively, set a CSS `height` on the keyboard element itself or on a wrapper
 
 The keyboard exposes CSS custom properties for fine-grained control:
 
-- `--ui5KioskKeyboard-keyHeight` -- individual key touch-target height
-- `--ui5KioskKeyboard-cqShortThreshold` / `--ui5KioskKeyboard-cqTinyThreshold` -- breakpoint thresholds (rem)
+- `--ui5KioskKeyboard-keyHeight`: individual key touch-target height
+- `--ui5KioskKeyboard-cqShortThreshold` / `--ui5KioskKeyboard-cqTinyThreshold`: breakpoint thresholds (rem)
 
 These allow consumers to tune the keyboard to fit a specific container size without relying solely on the automatic breakpoints.

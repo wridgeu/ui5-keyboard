@@ -479,7 +479,7 @@ export default class KioskKeyboard extends Control {
    * Register a custom keyboard layout.
    *
    * Registered layouts can be used via `setLayout(name)` or declaratively
-   * with `layout="name"`. Built-in layouts cannot be overwritten.
+   * with `layout="name"`. Can override built-in layouts.
    *
    * @param sName Layout identifier (e.g. "azerty-fr").
    * @param oDefinition Layout rows and key definitions.

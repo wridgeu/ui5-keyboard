@@ -10,7 +10,7 @@ contributors and for evaluating upstream tooling improvements.
 The `kiosk-keyboard-webc` package provides the `<kiosk-keyboard>` custom element,
 built on the UI5 Web Components framework (`UI5Element`). Unlike `@ui5/webcomponents`
 (which ships dozens of independent components), our package is a single component
-with a pluggable layout system -- 12 built-in keyboard layouts that self-register
+with a pluggable layout system: 12 built-in keyboard layouts that self-register
 via side-effect imports, plus 2 shared building-block rows for composing custom variants.
 
 This "one component, many plugins" pattern is unusual in the web components ecosystem
@@ -101,7 +101,7 @@ every tag name. `kiosk-keyboard` becomes `kiosk-keyboard-e24fedd4`. Each app
 version gets its own registry entry, so they coexist without collisions.
 
 **Scoping is universal.** It applies to all packages the middleware detects via
-the `customElements` field in `package.json` -- including first-party
+the `customElements` field in `package.json`, including first-party
 `@ui5/webcomponents`. A `<ui5-button>` is scoped to `<ui5-button-abc123>` the
 same way `<kiosk-keyboard>` is scoped to `<kiosk-keyboard-e24fedd4>`. The
 auto-generated `WebComponent` wrapper hides this from the app developer: you
@@ -112,7 +112,7 @@ internally.
 bridge specifies `tag: "kiosk-keyboard"` (the canonical, unscoped name). At
 runtime, the UI5 bridge calls `customElements.get("kiosk-keyboard")` to look up
 the constructor. If the component was only loaded through the middleware, only
-the scoped tag (`kiosk-keyboard-e24fedd4`) exists in the registry -- the
+the scoped tag (`kiosk-keyboard-e24fedd4`) exists in the registry. The
 unscoped `kiosk-keyboard` was never defined. The bridge finds nothing, and the
 element stays unupgraded.
 
@@ -124,7 +124,7 @@ canonical unscoped tag so the manual bridge can find it.
 **Coexistence.** Both the scoped and unscoped tags can coexist in the same page.
 They are separate entries in the `customElements` registry, each pointing to
 (potentially different instances of) the component constructor. They share the
-same layout registry because it is a module-level singleton -- layout data is
+same layout registry because it is a module-level singleton. Layout data is
 not tied to the tag name.
 
 The demo app's web component tooling page shows the actual registered tag name
@@ -284,7 +284,7 @@ scoping, and generates its own wrapper. There is no per-package opt-out.
 
 **Root cause:** The middleware detects packages by the `customElements` field in
 `package.json`. Once detected, ALL imports from that package are processed. The
-`ui5.webComponentsPackage` flag is informational only -- the middleware does not
+`ui5.webComponentsPackage` flag is informational only. The middleware does not
 check it.
 
 **Consequence:** A manual bridge in the same app must load the web component
@@ -293,12 +293,12 @@ This is the approach used in the demo app.
 
 **Alternatives considered:**
 
-- `pluginOptions.webcomponents.skip: true` -- disables all webcomponent processing,
+- `pluginOptions.webcomponents.skip: true`: disables all webcomponent processing,
   breaking the tooling-native path
-- `skipTransform` config -- applies to module transformation, not webcomponent
+- `skipTransform` config: applies to module transformation, not webcomponent
   processing
-- Separate `ui5.yaml` configs -- possible but adds complexity
-- Removing `customElements` from `package.json` -- breaks the tooling-native path
+- Separate `ui5.yaml` configs: possible but adds complexity
+- Removing `customElements` from `package.json`: breaks the tooling-native path
 
 **Status:** No upstream solution. The demo works around it by serving the
 standalone bundle from `webapp/lib/`.

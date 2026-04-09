@@ -188,7 +188,7 @@ server:
 Then use the component directly in XML views:
 
 ```xml
-<mvc:View xmlns:kb="kiosk-keyboard-webc/dist">
+<mvc:View xmlns:kb="kiosk-keyboard-webc">
   <kb:KioskKeyboard layout="qwerty" docked="true" />
 </mvc:View>
 ```
@@ -264,7 +264,7 @@ import type {
 
 For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`.
 
-All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) are part of the stable API surface. Following the UI5 Web Components convention, registry operations are static-only -- import the class and call them directly:
+All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) are part of the stable API surface. Following the UI5 Web Components convention, registry operations are static-only. Import the class and call them directly:
 
 ```js
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
@@ -442,7 +442,7 @@ interface KeyDefinition {
   shiftValue?: string; // Value when shifted (defaults to value.toUpperCase() for single chars)
   capsLockLabel?: string; // Label for {shift} key in Caps Lock state; omit for i18n "Caps Lock"; "" suppresses
   capsLockIcon?: string; // Icon for {shift} key in Caps Lock state; independent of icon; defaults to locked icon
-  width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
+  width?: KeyWidth; // "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present
 }
@@ -608,8 +608,8 @@ Keys can display an icon, a label, or both. The combination of `icon` and `label
 
 The `icon` property accepts two value types:
 
-- **SAP icon URI** (e.g. `"sap-icon://accept"`) -- rendered via `<ui5-icon>`
-- **Unicode character or emoji** (e.g. `"\u2191"`, `"\u23CE"`, `"\uD83D\uDD0D"`) -- rendered as a text span styled at icon size
+- **SAP icon URI** (e.g. `"sap-icon://accept"`): rendered via `<ui5-icon>`
+- **Unicode character or emoji** (e.g. `"\u2191"`, `"\u23CE"`, `"\uD83D\uDD0D"`): rendered as a text span styled at icon size
 
 ```ts
 // SAP icon with label
@@ -639,12 +639,12 @@ kiosk-keyboard {
 }
 ```
 
-| Property                           | Default  | Description                                                       |
-| ---------------------------------- | -------- | ----------------------------------------------------------------- |
-| `--kiosk-keyboard-dual-direction`  | `row`    | Flex direction (`row`, `column`, `row-reverse`, `column-reverse`) |
-| `--kiosk-keyboard-dual-icon-size`  | `1em`    | Icon font size in dual mode                                       |
-| `--kiosk-keyboard-dual-label-size` | `1em`    | Label font size in dual mode                                      |
-| `--kiosk-keyboard-dual-gap`        | `0.15em` | Gap between icon and label                                        |
+| Property                           | Default | Description                                                       |
+| ---------------------------------- | ------- | ----------------------------------------------------------------- |
+| `--kiosk-keyboard-dual-direction`  | `row`   | Flex direction (`row`, `column`, `row-reverse`, `column-reverse`) |
+| `--kiosk-keyboard-dual-icon-size`  | `1em`   | Icon font size in dual mode                                       |
+| `--kiosk-keyboard-dual-label-size` | `1em`   | Label font size in dual mode                                      |
+| `--kiosk-keyboard-dual-gap`        | `0.3em` | Gap between icon and label                                        |
 
 #### Navigation key overrides
 
@@ -677,7 +677,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 
 - **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
-- **Icons** always have `aria-hidden="true"` -- they are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
+- **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
 
 ### Built-in icons
 
@@ -704,7 +704,7 @@ On `{shift}` keys, the Caps Lock state can override both icon and label independ
 }
 ```
 
-`capsLockIcon` is evaluated independently of `icon` -- setting `icon: ""` does not suppress `capsLockIcon`.
+`capsLockIcon` is evaluated independently of `icon`. Setting `icon: ""` does not suppress `capsLockIcon`.
 
 ## Custom Target Resolver
 
@@ -789,7 +789,7 @@ KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
 
 Calling `KioskKeyboard.setI18nResolver()` automatically re-renders connected keyboard instances, so mounted components pick up new labels without a manual refresh.
 
-Return `undefined` from the resolver for any key you don't want to override -- the built-in translation chain handles the rest. If the resolver throws, the error is logged and the default text is used.
+Return `undefined` from the resolver for any key you don't want to override. The built-in translation chain handles the rest. If the resolver throws, the error is logged and the default text is used.
 
 Pass `null` to clear a previously set resolver:
 
@@ -897,6 +897,7 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-key-padding-xs`        | `0 var(--kiosk-keyboard-key-padding-inline-xs)`           | Full padding shorthand in extra-narrow mode                 |
 | `--kiosk-keyboard-key-shadow`            | _(subtle)_                                                | Box shadow for keys at rest                                 |
 | `--kiosk-keyboard-key-shadow-hover`      | _(subtle)_                                                | Box shadow for keys on hover                                |
+| `--kiosk-keyboard-key-border-color`      | _(not declared)_                                          | Override all key border colors when set                     |
 | `--kiosk-keyboard-max-width`             | `100%`                                                    | Max width for the default inline keyboard                   |
 | `--kiosk-keyboard-docked-max-width`      | `1024px`                                                  | Max width in docked mode                                    |
 | `--kiosk-keyboard-docked-shadow`         | _(subtle)_                                                | Box shadow for the docked container                         |
@@ -912,11 +913,15 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-dual-direction`        | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`) |
 | `--kiosk-keyboard-dual-icon-size`        | `1em`                                                     | Icon font size in dual mode                                 |
 | `--kiosk-keyboard-dual-label-size`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
-| `--kiosk-keyboard-dual-gap`              | `0.15em`                                                  | Gap between icon and label in dual mode                     |
+| `--kiosk-keyboard-dual-gap`              | `0.3em`                                                   | Gap between icon and label in dual mode                     |
 | `--kiosk-keyboard-fkey-direction`        | `column`                                                  | Flex direction for nav/function keys                        |
 | `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 3em)`                                  | Icon size for nav/function keys (scales with key width)     |
 | `--kiosk-keyboard-fkey-label-size`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`               | Label size for nav/function keys (responsive)               |
 | `--kiosk-keyboard-fkey-gap`              | `0.05em`                                                  | Gap between icon and label for nav/function keys            |
+| `--kiosk-keyboard-cjk-font-family`       | _(not declared)_                                          | Override font stack for CJK glyph labels                    |
+| `--kiosk-keyboard-hangul-font-family`    | _(not declared)_                                          | Override font stack for Hangul glyph labels                 |
+| `--kiosk-keyboard-indic-font-family`     | _(not declared)_                                          | Override font stack for Indic glyph labels                  |
+| `--kiosk-keyboard-arabic-font-family`    | _(not declared)_                                          | Override font stack for Arabic glyph labels                 |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 
@@ -996,15 +1001,15 @@ For troubleshooting, the host element (`<kiosk-keyboard>`) toggles internal clas
 
 #### Responsive Behavior Overview
 
-| Scenario                                                       | Detection                                                                  | Adapts automatically?      | Consumer CSS needed?                 |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------- | ------------------------------------ |
-| **Width** (any container width)                                | CSS `@container` queries at 30rem / 20rem                                  | Yes                        | No                                   |
-| **Height** -- flex/grid parent with fixed height               | Host inherits constraint via `max-height: 100%; min-height: 0`             | Yes                        | No                                   |
-| **Height** -- explicit constraint on host                      | Host `max-height` or `height` limits `clientHeight`                        | Yes                        | No                                   |
-| **Height** -- `height: auto` parent (unconstrained)            | `max-height: 100%` resolves to no constraint                               | Correctly stays full size  | No                                   |
-| **Height** -- deeply nested ancestor constraint (no flex/grid) | Intermediate `height: auto` ancestors break `max-height: 100%` propagation | No                         | `max-height` or `height` on the host |
-| **Docked mode**                                                | Viewport-driven, fixed positioning                                         | Skipped (always full size) | No                                   |
-| **Compact density**                                            | `data-ui5-compact-size` attribute                                          | Yes                        | No                                   |
+| Scenario                                                     | Detection                                                                  | Adapts automatically?      | Consumer CSS needed?                 |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------- | -------------------------- | ------------------------------------ |
+| **Width** (any container width)                              | CSS `@container` queries at 30rem / 20rem                                  | Yes                        | No                                   |
+| **Height** (flex/grid parent with fixed height)              | Host inherits constraint via `max-height: 100%; min-height: 0`             | Yes                        | No                                   |
+| **Height** (explicit constraint on host)                     | Host `max-height` or `height` limits `clientHeight`                        | Yes                        | No                                   |
+| **Height** (`height: auto` parent, unconstrained)            | `max-height: 100%` resolves to no constraint                               | Correctly stays full size  | No                                   |
+| **Height** (deeply nested ancestor constraint, no flex/grid) | Intermediate `height: auto` ancestors break `max-height: 100%` propagation | No                         | `max-height` or `height` on the host |
+| **Docked mode**                                              | Viewport-driven, fixed positioning                                         | Skipped (always full size) | No                                   |
+| **Compact density**                                          | `data-ui5-compact-size` attribute                                          | Yes                        | No                                   |
 
 Height-responsive classes (`cq-short` below 16rem, `cq-tiny` below 12rem) activate when the host element's layout box is smaller than the keyboard's natural content height. Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
 
@@ -1145,7 +1150,6 @@ src/
 │   ├── layout-registry.ts    # Layout storage + locale mapping
 │   └── shift-state.ts        # Shift / Caps Lock state machine
 ├── layouts/                   # Built-in layout definitions
-│   ├── index.ts               # Layout registry
 │   ├── default-layout.ts     # Default layout name constant
 │   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, ja-kana.ts, arabic.ts, ko-hangul.ts, qwerty-es.ts, numeric.ts, special.ts, numpad.ts
 │   ├── fkeys.ts, nav.ts      # Standalone F-key/nav layouts

@@ -375,11 +375,7 @@ ui5-lib-keyboard/
 
 ## Contributing
 
-Contributions are welcome. Whether you file a bug report, suggest a feature, or open a pull request, all input is appreciated.
-
-- **Issues:** Use [GitHub Issues](https://github.com/wridgeu/ui5-lib-keyboard/issues) to report bugs or request features.
-- **Pull Requests:** Fork the repo, create a branch, and open a PR against `main`. Please run `npm run check` before submitting to verify tests, linting, and formatting pass.
-- **Questions:** Open a discussion or issue if something is unclear.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, commit conventions, and PR guidelines.
 
 ## License
 

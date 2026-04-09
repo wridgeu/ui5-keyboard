@@ -15,14 +15,14 @@ Remove the `instances` map from `middleware-registry.ts`. The registry's sole jo
 
 **New API:**
 
-| Function                                | Change                                                     |
-| --------------------------------------- | ---------------------------------------------------------- |
-| `_registerMiddleware(layouts, factory)` | Unchanged -- stores factory                                |
-| `registerMiddleware(layouts, factory)`  | Simplified -- stores factory, no instance cleanup needed   |
-| `getMiddlewareFactory(layout)`          | **New** -- returns `(() => CompositionMiddleware) \| null` |
-| `getMiddlewareForLayout(layout)`        | **Removed**                                                |
-| `deactivateMiddleware(layout)`          | **Removed**                                                |
-| `_resetMiddleware()`                    | Simplified -- clears factories map only                    |
+| Function                                | Change                                                   |
+| --------------------------------------- | -------------------------------------------------------- |
+| `_registerMiddleware(layouts, factory)` | Unchanged (stores factory)                               |
+| `registerMiddleware(layouts, factory)`  | Simplified (stores factory, no instance cleanup needed)  |
+| `getMiddlewareFactory(layout)`          | **New**: returns `(() => CompositionMiddleware) \| null` |
+| `getMiddlewareForLayout(layout)`        | **Removed**                                              |
+| `deactivateMiddleware(layout)`          | **Removed**                                              |
+| `_resetMiddleware()`                    | Simplified (clears factories map only)                   |
 
 ### Component owns its middleware instance
 

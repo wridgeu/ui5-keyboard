@@ -69,7 +69,7 @@ export function createHotkeyManager(): HotkeyManager {
 }
 ```
 
-Also remove the `HotkeyManager` import's dependency on `getInstance` -- the import stays but is now used for construction only.
+Also remove the `HotkeyManager` import's dependency on `getInstance`. The import stays but is now used for construction only.
 
 Note: `resetHotkeyManager` is renamed to `createHotkeyManager` to reflect the new semantics (creating, not resetting a singleton).
 
@@ -167,9 +167,9 @@ HotkeyManager._instance = null;
 
 In the same file, **delete** these three methods and their JSDoc:
 
-1. `enableRouterIntegration(router)` (lines ~478-533) -- the entire method and its JSDoc
-2. `disableRouterIntegration()` (lines ~535-550) -- the entire method and its JSDoc
-3. `hasRouterIntegration()` (lines ~552-558) -- the entire method and its JSDoc
+1. `enableRouterIntegration(router)` (lines ~478-533): the entire method and its JSDoc
+2. `disableRouterIntegration()` (lines ~535-550): the entire method and its JSDoc
+3. `hasRouterIntegration()` (lines ~552-558): the entire method and its JSDoc
 
 Also **delete** the private field (line 165):
 
@@ -188,7 +188,7 @@ if (this._routerCleanup) {
 }
 ```
 
-Also remove the `RouterLike` type re-export if it's exported from this file for the manager methods. Check the import -- `RouterLike` is used by `RegistrationGroup` too, so keep the type definition but verify it's still exported correctly.
+Also remove the `RouterLike` type re-export if it's exported from this file for the manager methods. Check the import: `RouterLike` is used by `RegistrationGroup` too, so keep the type definition but verify it's still exported correctly.
 
 - [ ] **Step 3: Add scope stack guards**
 
@@ -215,7 +215,7 @@ pushScope(scopeId: string): void {
 }
 ```
 
-This requires importing `GLOBAL_SCOPE` -- check if it's already imported (it is, from `"./internal/constants"`).
+This requires importing `GLOBAL_SCOPE`. Check if it's already imported (it is, from `"./internal/constants"`).
 
 - [ ] **Step 4: Remove the class-level JSDoc example that references getInstance**
 
@@ -475,7 +475,7 @@ to use group-level API. Add scope guard tests."
 
 - Modify: `packages/demo-app/webapp/Component.ts`
 
-The controllers already use `getTypedComponent().getHotkeyManager()` -- no controller changes needed. Only the Component needs updating.
+The controllers already use `getTypedComponent().getHotkeyManager()`, so no controller changes are needed. Only the Component needs updating.
 
 - [ ] **Step 1: Update Component.ts**
 
@@ -511,7 +511,7 @@ exit(): void {
 
 Note: `this._hotkeys.destroyAll()` is no longer needed because `manager.destroy()` finalizes all groups (via `group._onManagerDestroy()`). The group's handles become inactive and its router listener is detached. Calling `destroyAll()` before `destroy()` is harmless but redundant.
 
-Also remove the comment block about the singleton surviving FLP cycles -- it no longer applies:
+Also remove the comment block about the singleton surviving FLP cycles (it no longer applies):
 
 ```typescript
 // DELETE these comments (lines 118-121):
@@ -527,7 +527,7 @@ Also remove the comment block about the singleton surviving FLP cycles -- it no 
 cd packages/demo-app && npx tsc --noEmit
 ```
 
-Expected: clean. The controllers don't reference `getInstance()` -- they go through the Component.
+Expected: clean. The controllers don't reference `getInstance()` (they go through the Component).
 
 - [ ] **Step 3: Commit demo app changes**
 
@@ -644,7 +644,7 @@ Add new subsection entries and remove references to removed methods.
 
 - [ ] **Step 6: Update API Stability imports section**
 
-The "API Stability" section (lines 256-275) shows `import type { RouterLike } from "ui5/hotkeys/HotkeyManager"`. Verify this still works -- `RouterLike` is now only used by `RegistrationGroup`, but if it's still exported from `HotkeyManager.ts`, the import path is valid. If it was moved, update the import path.
+The "API Stability" section (lines 256-275) shows `import type { RouterLike } from "ui5/hotkeys/HotkeyManager"`. Verify this still works: `RouterLike` is now only used by `RegistrationGroup`, but if it's still exported from `HotkeyManager.ts`, the import path is valid. If it was moved, update the import path.
 
 - [ ] **Step 7: Scan for any remaining getInstance references**
 

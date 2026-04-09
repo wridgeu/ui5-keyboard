@@ -18,7 +18,7 @@ Two attributes for "which inputs does this keyboard target" is unintuitive. Addi
 
 Unify into a single `controls` attribute on both packages. The name follows the `aria-controls` precedent: singular form, accepts multiple IDs, semantically accurate (the keyboard _controls_ those inputs), and has no native HTML attribute collision.
 
-Hard removal of old APIs -- no deprecation bridge needed (no consumers yet).
+Hard removal of old APIs. No deprecation bridge needed (no consumers yet).
 
 ## Public API
 
@@ -93,7 +93,7 @@ activeControlChange: {
 
 ### Auto-target convenience
 
-When `controls` has exactly one entry and `show()` is called with no active target, the keyboard auto-focuses that input. This triggers the normal focus delegation chain -- no separate code path.
+When `controls` has exactly one entry and `show()` is called with no active target, the keyboard auto-focuses that input. This triggers the normal focus delegation chain, not a separate code path.
 
 ```typescript
 // In show():
@@ -140,7 +140,7 @@ The current `setTargetInput()` logic (highlight delegation, native keyboard supp
 
 ### FocusClaimService
 
-Constructor callback renames only -- no logic changes:
+Constructor callback renames only (no logic changes):
 
 - `getInputIds` becomes `getControls`
 - `getResolvedInputControlIds` becomes `getResolvedControlIds`
@@ -177,11 +177,11 @@ When the web component is used inside UI5, DOM-based resolution still works corr
 
 ### Renamed test suites (logic unchanged)
 
-- `KioskKeyboard-focus.qunit.ts` -- all 11 `inputIds` test cases rename to `controls`; `targetInput` assertions use `getActiveControl()`
-- `KioskKeyboard-autoshow.qunit.ts` -- `inputIds` rebind test renames
-- `focus-claim-service.qunit.ts` -- `inputIds` references rename to `controls`
-- `interop.test.ts` (e2e) -- `inputIds` attribute usage renames
-- `kiosk-keyboard.test.ts` (webc) -- `for` and `inputIds` tests unify into `controls`
+- `KioskKeyboard-focus.qunit.ts`: all 11 `inputIds` test cases rename to `controls`; `targetInput` assertions use `getActiveControl()`
+- `KioskKeyboard-autoshow.qunit.ts`: `inputIds` rebind test renames
+- `focus-claim-service.qunit.ts`: `inputIds` references rename to `controls`
+- `interop.test.ts` (e2e): `inputIds` attribute usage renames
+- `kiosk-keyboard.test.ts` (webc): `for` and `inputIds` tests unify into `controls`
 
 ### New test cases
 

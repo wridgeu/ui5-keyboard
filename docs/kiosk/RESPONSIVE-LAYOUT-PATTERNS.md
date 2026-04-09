@@ -80,7 +80,7 @@ The responsive `min()` caps in the built-in queries preserve any consumer value 
 
 ## Switching Layouts Per Device Size
 
-CSS custom properties handle visual tuning, but some scenarios require structural layout changes -- different keys, different row counts, different key arrangements. The component provides `registerLayout()` and `setLayout()` for this.
+CSS custom properties handle visual tuning, but some scenarios require structural layout changes: different keys, different row counts, different key arrangements. The component provides `registerLayout()` and `setLayout()` for this.
 
 ### Pattern: Register a Compact Variant, Switch at a Breakpoint
 

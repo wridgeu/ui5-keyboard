@@ -9,6 +9,9 @@ const layouts: Map<string, LayoutDefinition> = new Map();
 /** Built-in layout names. Used by unregisterLayout and resetCustomLayouts to protect the built-in set. */
 const BUILTIN_LAYOUTS: Set<string> = new Set();
 
+/** Original built-in definitions, preserved so overrides can be reverted. */
+const BUILTIN_ORIGINALS: Map<string, LayoutDefinition> = new Map();
+
 /**
  * Registers a built-in layout. Idempotent: silently skips if the name
  * is already registered. Used internally by self-registering layout modules.
@@ -18,6 +21,7 @@ export function _registerBuiltInLayout(name: string, def: LayoutDefinition): voi
   if (layouts.has(name)) return;
   layouts.set(name, def);
   BUILTIN_LAYOUTS.add(name);
+  BUILTIN_ORIGINALS.set(name, def);
 }
 
 /** Layouts that serve as secondary views (not base alphabetic layouts). */
@@ -85,16 +89,18 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
 }
 
 /**
- * Removes a previously registered custom layout.
- * Built-in layouts cannot be removed.
+ * Removes a previously registered custom layout. If the name belongs to a
+ * built-in layout that was overridden via {@link registerLayout}, the
+ * original built-in definition is restored.
  * @internal
  */
 export function unregisterLayout(sName: string): void {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return;
 
-  if (BUILTIN_LAYOUTS.has(name)) {
-    console.warn(`[kiosk-keyboard] Cannot remove built-in layout "${name}".`);
+  const original = BUILTIN_ORIGINALS.get(name);
+  if (original) {
+    layouts.set(name, original);
     return;
   }
 
@@ -111,6 +117,10 @@ export function resetCustomLayouts(): void {
     if (!BUILTIN_LAYOUTS.has(layoutName)) {
       layouts.delete(layoutName);
     }
+  }
+  // Restore any overridden built-ins to their original definitions
+  for (const [name, def] of BUILTIN_ORIGINALS) {
+    layouts.set(name, def);
   }
 }
 

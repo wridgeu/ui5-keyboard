@@ -13,8 +13,8 @@ Standalone pages for manual testing, screenshot generation, visual inspection, a
 
 Minimal HTML pages that verify each consumption path works end-to-end. Each page includes programmatic assertions (element registration, shadow DOM, rendered rows) and reports PASS/FAIL visually and in `document.title`.
 
-- `consume-bundle.html`: **standalone bundle** -- loads `dist/kiosk-keyboard.bundle.js` via `<script>` tag. No bundler, no import map, no dev server needed. Open via any static server.
-- `consume-esm.html`: **ESM (regular import)** -- imports `dist/bundle.esm.js` with bare specifiers. Requires Vite to resolve `@ui5/webcomponents-base`. Run via `npm start`.
+- `consume-bundle.html`: **standalone bundle**. Loads `dist/kiosk-keyboard.bundle.js` via `<script>` tag. No bundler, no import map, no dev server needed. Open via any static server.
+- `consume-esm.html`: **ESM (regular import)**. Imports `dist/bundle.esm.js` with bare specifiers. Requires Vite to resolve `@ui5/webcomponents-base`. Run via `npm start`.
 
 ## Running
 

@@ -275,7 +275,7 @@ Remove the entire block from `// Static delegates - i18n registry` through `getI
   }
 ```
 
-- [ ] **Step 4: Simplify init() -- remove stale bundle reload (lines ~872-897)**
+- [ ] **Step 4: Simplify init(), remove stale bundle reload (lines ~872-897)**
 
 Remove the entire block:
 
@@ -977,7 +977,7 @@ static setI18nResolver(fn: I18nResolver | null): void
 // where I18nResolver = (key: string, locale: string, resolvedText: string) => string | undefined
 ```
 
-The signatures are functionally identical (positional args, same types). The third parameter is named `defaultText` in webc and `resolvedText` in UI5 -- both pass the best available text from the base bundle. This naming difference is acceptable since parameter names are not part of the public API contract.
+The signatures are functionally identical (positional args, same types). The third parameter is named `defaultText` in webc and `resolvedText` in UI5; both pass the best available text from the base bundle. This naming difference is acceptable since parameter names are not part of the public API contract.
 
 No code changes needed for the web component.
 

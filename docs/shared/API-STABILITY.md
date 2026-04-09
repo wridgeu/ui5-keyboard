@@ -88,7 +88,7 @@ For `ui5.kiosk`, these two layout row modules are additionally treated as stable
 
 ### `kiosk-keyboard-webc`
 
-Modules under `core/*` (`shift-state`, `dom-utils`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
+Modules under `core/*` (`shift-state`, `dom-utils`, `dom-contract`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
 
 The `layouts/*` directory contains built-in layout definitions. Individual layout files (e.g. `layouts/qwerty`, `layouts/numeric`) are not a stable import surface; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules are additionally treated as stable for composing custom variant layouts:
 

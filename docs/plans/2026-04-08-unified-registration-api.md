@@ -63,7 +63,7 @@ Add after the `hasTarget` field (line 307):
 
 - [ ] **Step 4: Add `timeout` and `onPending` to `UpdatableHotkeyOptions`**
 
-No code change needed -- `UpdatableHotkeyOptions` is defined as `Omit<HotkeyOptions, "scope" | "conflictBehavior">`, so `timeout` and `onPending` are automatically included.
+No code change needed. `UpdatableHotkeyOptions` is defined as `Omit<HotkeyOptions, "scope" | "conflictBehavior">`, so `timeout` and `onPending` are automatically included.
 
 - [ ] **Step 5: Move sequence-only types to internal**
 
@@ -361,7 +361,7 @@ Delete the method at lines 1054-1057. It was only used by RegistrationGroup.
 
 - [ ] **Step 12: Update imports**
 
-Remove `SequenceOptions`, `SequenceRegistrationHandle`, `SequenceRegistrationInfo` from the imports at the top of HotkeyManager.ts. Keep `SequencePendingCallback` if it's referenced (it won't be directly -- it flows through `HotkeyOptions`).
+Remove `SequenceOptions`, `SequenceRegistrationHandle`, `SequenceRegistrationInfo` from the imports at the top of HotkeyManager.ts. Keep `SequencePendingCallback` if it's referenced (it won't be directly; it flows through `HotkeyOptions`).
 
 - [ ] **Step 13: Commit**
 
@@ -448,7 +448,7 @@ Update the example in the class-level JSDoc (lines 31-41) to use the unified `re
 
 Run: `npx tsc --noEmit -p packages/hotkeys/tsconfig.json`
 
-Expected: Pass (source code compiles). Test files will still fail -- that's Task 4.
+Expected: Pass (source code compiles). Test files will still fail; that's Task 4.
 
 - [ ] **Step 9: Commit**
 
@@ -663,7 +663,7 @@ Run:
 grep -r "registerSequence\|getSequenceRegistrations\|setSequencePendingHandler\|findSequenceRegistrations\|SequenceOptions\|SequenceRegistrationHandle\|SequenceRegistrationInfo\|UpdatableSequenceOptions" packages/hotkeys/src/ packages/hotkeys/README.md docs/hotkeys/
 ```
 
-Expected: Zero matches. All old API references are gone from source and docs. (The internal `SequenceManager.registerSequence()` is fine -- it's an internal class.)
+Expected: Zero matches. All old API references are gone from source and docs. (The internal `SequenceManager.registerSequence()` is fine; it's an internal class.)
 
 - [ ] **Step 5: Verify the old sequence API is not exported**
 

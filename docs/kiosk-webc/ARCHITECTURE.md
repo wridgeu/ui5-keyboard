@@ -447,7 +447,7 @@ No JavaScript is involved in width responsiveness. The `min()` capping pattern e
 - `.cq-short` (host height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `.cq-tiny` (host height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
 
-Height classes live on the host element so that CSS rules use `:host(:where(.cq-short))` -- the `:where()` wrapper gives zero specificity for the class argument, keeping the overall rule at `(0,1,0)`. Any consumer selector with at least one class (e.g., `kiosk-keyboard.my-kb`) beats these via the shadow DOM cascade.
+Height classes live on the host element so that CSS rules use `:host(:where(.cq-short))`. The `:where()` wrapper gives zero specificity for the class argument, keeping the overall rule at `(0,1,0)`. Any consumer selector with at least one class (e.g., `kiosk-keyboard.my-kb`) beats these via the shadow DOM cascade.
 
 A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host(:where(.cq-short, .cq-tiny))` applies the most aggressive font-size cap of `0.75rem`.
 

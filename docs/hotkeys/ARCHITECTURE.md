@@ -37,7 +37,7 @@ Some top-level entry points are importable but not part of the semver-stable con
 
 ### Library Initialization
 
-The library uses the modern `Lib.init()` API with `apiVersion: 2`, not the deprecated `sap.ui.core.library.initLibrary()`. It declares a dependency on `sap.ui.core` only. There is no CSS, no i18n, and no controls -- this is a pure logic library.
+The library uses the modern `Lib.init()` API with `apiVersion: 2`, not the deprecated `sap.ui.core.library.initLibrary()`. It declares a dependency on `sap.ui.core` only. There is no CSS, no i18n, and no controls. This is a pure logic library.
 
 ### Class Hierarchy
 
@@ -103,11 +103,11 @@ keydown event (window capture)
 
 Each registration is checked against the following guards before the callback fires:
 
-1. **matchesKeyboardEvent** -- the actual key/modifier comparison (checked first for efficiency)
-2. **enabled** -- must be `true` (or the guard function must return `true`)
-3. **ignoreRepeat** -- skip if `event.repeat` is true and ignoreRepeat is on
-4. **ignoreInputs** -- skip if the target is an input and the option says to suppress
-5. **suppressInPopups** -- skip if a popup (dialog or popover) is open and the option is on
+1. **matchesKeyboardEvent**: the actual key/modifier comparison (checked first for efficiency)
+2. **enabled**: must be `true` (or the guard function must return `true`)
+3. **ignoreRepeat**: skip if `event.repeat` is true and ignoreRepeat is on
+4. **ignoreInputs**: skip if the target is an input and the option says to suppress
+5. **suppressInPopups**: skip if a popup (dialog or popover) is open and the option is on
 
 ### Two-Pass Matching
 

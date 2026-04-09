@@ -1,6 +1,6 @@
 # Feature: Backward Compatibility: Hotkeys Library
 
-> Status: Rejected (2026-03-31) -- the current minUI5Version of 1.144 is intentional; lowering it is not a priority at this time.
+> Status: Rejected (2026-03-31). The current minUI5Version of 1.144 is intentional; lowering it is not a priority at this time.
 
 ## Problem
 

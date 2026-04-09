@@ -2,7 +2,7 @@
 
 **Goal:** Remove the JS-driven width responsive path from both packages, keeping CSS `@container` queries as the sole width-responsive mechanism. Add browser compatibility documentation to both package READMEs.
 
-**Architecture:** Width responsiveness moves from a dual CSS+JS system (CSS `@container` for defaults, JS `ResizeObserver` + classes for custom thresholds) to pure CSS `@container`. Height responsiveness stays JS-driven (no CSS alternative exists for `container-type: inline-size`). The consumer-configurable width threshold CSS variables (`cqNarrowThreshold` / `cqCompactThreshold`) are removed as a feature -- consumers who need custom width breakpoints write their own `@container` rules targeting the keyboard's CSS custom properties.
+**Architecture:** Width responsiveness moves from a dual CSS+JS system (CSS `@container` for defaults, JS `ResizeObserver` + classes for custom thresholds) to pure CSS `@container`. Height responsiveness stays JS-driven (no CSS alternative exists for `container-type: inline-size`). The consumer-configurable width threshold CSS variables (`cqNarrowThreshold` / `cqCompactThreshold`) are removed as a feature. Consumers who need custom width breakpoints write their own `@container` rules targeting the keyboard's CSS custom properties.
 
 **Tech Stack:** CSS (container queries), TypeScript, LESS, QUnit, Web Test Runner, WDIO visual regression
 
@@ -116,7 +116,7 @@ Both packages undergo the same simplification: JS-driven width classes are remov
   - `const remPx = ...` (line 1614, needed by height)
   - The entire height section starting at `// -- Height --`
 
-  Note: the `const cs = getComputedStyle(root)` at line 1617 is used by both width and height. Check if the height section references `cs` (it does not -- height uses `getComputedStyle(this)` via `_getHostContentHeight()` and its own `cs` for threshold resolution). If `cs` is only used by width, remove it too.
+  Note: the `const cs = getComputedStyle(root)` at line 1617 is used by both width and height. Check if the height section references `cs` (it does not; height uses `getComputedStyle(this)` via `_getHostContentHeight()` and its own `cs` for threshold resolution). If `cs` is only used by width, remove it too.
 
 - [ ] **Step 3: Remove width class constants from DOM contract**
 
@@ -198,7 +198,7 @@ Both packages undergo the same simplification: JS-driven width classes are remov
 
 - [ ] **Step 1: Remove width section from `_applyResponsiveSizeClasses()`**
 
-  In the method starting around line 956, remove the width measurement and class toggling (lines 962-970: content-box width calculation, threshold resolution, `isCompact`/`isNarrow`, `classList.toggle` for `rootCqXs`/`rootCqSm`). **Keep** lines 957 (`const remPx`) and 958 (`const cs`) -- both are needed by the height section at lines 995-996.
+  In the method starting around line 956, remove the width measurement and class toggling (lines 962-970: content-box width calculation, threshold resolution, `isCompact`/`isNarrow`, `classList.toggle` for `rootCqXs`/`rootCqSm`). **Keep** lines 957 (`const remPx`) and 958 (`const cs`), both needed by the height section at lines 995-996.
 
 - [ ] **Step 2: Remove width class constants from DOM contract**
 
@@ -495,7 +495,7 @@ Both packages undergo the same simplification: JS-driven width classes are remov
 | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@container` at-rules fail to parse in LESS 1.6.3                                 | Bypassed via `@import (inline)` of a plain `.css` file. Verified: builds successfully, rules appear in compiled `library.css`.                       |
 | `:host()` inside `@container` may not work in some browsers                       | Browser-test during Task 2 Step 2. Fallback: use `data-*` attributes on the root div instead of `:host()` classes.                                   |
-| Removing `DISABLE_CONTAINER_QUERIES` breaks visual fallback tests                 | Task 4 explicitly removes the tests and their baselines -- the fallback path no longer exists in production CSS.                                     |
+| Removing `DISABLE_CONTAINER_QUERIES` breaks visual fallback tests                 | Task 4 explicitly removes the tests and their baselines. The fallback path no longer exists in production CSS.                                       |
 | Removing width threshold CSS vars is a breaking change for consumers              | Document in changelog. Consumers who used the thresholds can migrate to their own `@container` rules (more flexible).                                |
 | QUnit tests for width behavior may not work with `@container` in the test harness | Width visual coverage relies on e2e visual baselines (narrow, compact layouts) which run in real browsers. QUnit tests focus on height-only JS path. |
 | `KioskKeyboard.container-queries.css` not picked up by `ui5 serve` dev server     | Verify during Task 3. The `@import (inline)` in `library.source.less` should be resolved by the dev server's LESS compilation.                       |

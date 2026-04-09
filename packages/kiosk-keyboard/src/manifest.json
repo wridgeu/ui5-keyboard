@@ -40,7 +40,7 @@
       "i18n": {
         "bundleUrl": "i18n/messagebundle.properties",
         "fallbackLocale": "",
-        "supportedLocales": ["", "de"]
+        "supportedLocales": ["", "ar", "de", "ja"]
       },
       "css": true,
       "content": {

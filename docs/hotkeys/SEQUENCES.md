@@ -36,7 +36,7 @@ manager.register(
 );
 ```
 
-`SequenceManager` is an internal class managed by `HotkeyManager`. Access sequence functionality through `HotkeyManager.register()` -- a space-separated hotkey string is automatically detected as a sequence. The `SequenceManager` receives pre-filtered key events from the EventDispatcher pipeline (step 6, after hotkey matching) and reads the active scope from `HotkeyManager` for scope-based filtering.
+`SequenceManager` is an internal class managed by `HotkeyManager`. Access sequence functionality through `HotkeyManager.register()`. A space-separated hotkey string is automatically detected as a sequence. The `SequenceManager` receives pre-filtered key events from the EventDispatcher pipeline (step 6, after hotkey matching) and reads the active scope from `HotkeyManager` for scope-based filtering.
 
 ## Architecture
 

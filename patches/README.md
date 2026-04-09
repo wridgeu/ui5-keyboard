@@ -4,7 +4,7 @@ Local patches applied via [patch-package](https://github.com/ds300/patch-package
 
 ## @ui5/webcomponents-tools+2.20.0
 
-Fixes four bugs in the Custom Elements Manifest (CEM) generation tooling. (Bug 6 was removed -- see below.)
+Fixes four bugs in the Custom Elements Manifest (CEM) generation tooling. (Bug 6 was removed; see below.)
 
 **Note on upstream ownership:** `@ui5/webcomponents-tools` ships a bundled, patched copy of the community `@custom-elements-manifest/analyzer` under `lib/cem/patch/`. Bugs 1, 3, and 4 are in SAP's own `lib/cem/custom-elements-manifest.config.mjs` and can be filed directly against [SAP/ui5-webcomponents](https://github.com/SAP/ui5-webcomponents). Bugs 2 and 5 are in the bundled analyzer copy (`lib/cem/patch/@custom-elements-manifest/analyzer/`) which originates from [open-wc/custom-elements-manifest](https://github.com/open-wc/custom-elements-manifest). SAP can apply these to their bundled copy, but the root fix belongs in the community repo.
 
@@ -151,7 +151,7 @@ The approach follows the modern LESS 4.x parser (PRs #4337, #4340, #4349, #4351)
 
 **Note:** `patch-package` only patches the hoisted `node_modules/less-openui5/`. The UI5 builder resolves a second nested copy at `node_modules/@ui5/cli/node_modules/less-openui5/` that `patch-package` cannot reach. The `postinstall` script runs `patches/apply-nested.mjs` to sync the patched files to the nested copy. `npm dedupe` does not eliminate the duplication.
 
-> **Why only `@container` and `@layer`?** The vendored LESS 1.6.3 has other gaps compared to modern CSS (e.g., `&` is not resolved inside `:not()`, making nested selectors like `&--cq-short:not(&--numpad)` output invalid CSS). Patching the parent-selector resolution would require changes throughout the parser's selector compilation pipeline -- significantly more invasive than adding two case labels to a switch statement. `@container` and `@layer` follow the existing directive pattern exactly, making them safe and minimal patches. For `&`-in-`:not()`, the workaround is writing the full class name instead. The full fix belongs in an upstream LESS version update.
+> **Why only `@container` and `@layer`?** The vendored LESS 1.6.3 has other gaps compared to modern CSS (e.g., `&` is not resolved inside `:not()`, making nested selectors like `&--cq-short:not(&--numpad)` output invalid CSS). Patching the parent-selector resolution would require changes throughout the parser's selector compilation pipeline, significantly more invasive than adding two case labels to a switch statement. `@container` and `@layer` follow the existing directive pattern exactly, making them safe and minimal patches. For `&`-in-`:not()`, the workaround is writing the full class name instead. The full fix belongs in an upstream LESS version update.
 
 ### Upstream
 

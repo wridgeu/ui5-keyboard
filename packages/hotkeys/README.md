@@ -341,20 +341,20 @@ manager.register(
 
 ### Registration Options
 
-| Option             | Type                       | Default        | Description                                                                                      |
-| ------------------ | -------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `enabled`          | `boolean \| () => boolean` | `true`         | Whether the registration is active. Functions are evaluated on every keypress.                   |
-| `preventDefault`   | `boolean`                  | `true`         | Call `event.preventDefault()` on match                                                           |
-| `stopPropagation`  | `boolean`                  | `true`         | Call `event.stopPropagation()` on match                                                          |
-| `ignoreInputs`     | `boolean \| "auto"`        | `"auto"`       | Suppress in text fields. `"auto"` suppresses single keys but allows Ctrl/Meta combos and Escape. |
-| `scope`            | `string`                   | `"__global__"` | Scope this hotkey belongs to. Use `GLOBAL_SCOPE` constant. Must be non-empty if provided.        |
-| `description`      | `string`                   | `""`           | Human-readable description for cheatsheets                                                       |
-| `ignoreRepeat`     | `boolean`                  | `true`         | Ignore held-key repeat events                                                                    |
-| `suppressInPopups` | `boolean`                  | `true`         | Suppress when a UI5 popup (dialog or popover) is open                                            |
-| `conflictBehavior` | `ConflictBehavior`         | `"warn"`       | How to handle duplicate registrations                                                            |
-| `target`           | `HTMLElement`              | `null`         | Bind to a specific element instead of the document                                               |
-| `timeout`          | `number`                   | `1000`         | Sequences only: timeout in ms between keys before the sequence resets                            |
-| `onPending`        | `SequencePendingCallback`  | -              | Sequences only: callback fired after each intermediate key match with progress info              |
+| Option             | Type                                         | Default        | Description                                                                                      |
+| ------------------ | -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| `enabled`          | `boolean \| () => boolean`                   | `true`         | Whether the registration is active. Functions are evaluated on every keypress.                   |
+| `preventDefault`   | `boolean`                                    | `true`         | Call `event.preventDefault()` on match                                                           |
+| `stopPropagation`  | `boolean`                                    | `true`         | Call `event.stopPropagation()` on match                                                          |
+| `ignoreInputs`     | `boolean \| "auto"`                          | `"auto"`       | Suppress in text fields. `"auto"` suppresses single keys but allows Ctrl/Meta combos and Escape. |
+| `scope`            | `string`                                     | `"__global__"` | Scope this hotkey belongs to. Use `GLOBAL_SCOPE` constant. Must be non-empty if provided.        |
+| `description`      | `string`                                     | `""`           | Human-readable description for cheatsheets                                                       |
+| `ignoreRepeat`     | `boolean`                                    | `true`         | Ignore held-key repeat events                                                                    |
+| `suppressInPopups` | `boolean`                                    | `true`         | Suppress when a UI5 popup (dialog or popover) is open                                            |
+| `conflictBehavior` | `ConflictBehavior`                           | `"warn"`       | How to handle duplicate registrations                                                            |
+| `target`           | `Element \| (() => Element \| null) \| null` | `null`         | Bind to a specific element instead of the document                                               |
+| `timeout`          | `number`                                     | `1000`         | Sequences only: timeout in ms between keys before the sequence resets                            |
+| `onPending`        | `SequencePendingCallback`                    | -              | Sequences only: callback fired after each intermediate key match with progress info              |
 
 ### Registration Handle
 
@@ -729,7 +729,7 @@ g2.release(); // dispatch resumes
 
 ## Sequences
 
-Multi-key sequences like Vim-style `G` then `E` for "go to editor". Sequences use the same `register()` API as single hotkeys -- pass a space-separated string instead of a single key:
+Multi-key sequences like Vim-style `G` then `E` for "go to editor". Sequences use the same `register()` API as single hotkeys: pass a space-separated string instead of a single key:
 
 ```ts
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";

@@ -417,13 +417,29 @@ QUnit.test("Removes a custom layout", (assert) => {
   assert.strictEqual(getRegisteredLayout("to-remove"), undefined, "Layout removed");
 });
 
-QUnit.test("Rejects removing a built-in layout", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
+QUnit.test("Restores built-in definition when unregistering an overridden built-in", (assert) => {
+  const originalQwerty = getRegisteredLayout("qwerty");
+  registerLayout("qwerty", makeLayout("override"));
+  assert.deepEqual(getRegisteredLayout("qwerty"), makeLayout("override"), "qwerty is overridden");
 
   unregisterLayout("qwerty");
-  assert.ok(spy.calledOnce, "Warning logged");
-  assert.ok(spy.firstCall.args[0].includes("Cannot remove built-in layout"), "Warning message is clear");
-  assert.ok(getRegisteredLayout("qwerty"), "Built-in layout still exists");
+  assert.deepEqual(getRegisteredLayout("qwerty"), originalQwerty, "Original qwerty restored after unregister");
+});
+
+QUnit.test("Restores built-in after multiple overrides", (assert) => {
+  const originalQwerty = getRegisteredLayout("qwerty");
+  registerLayout("qwerty", makeLayout("v1"));
+  registerLayout("qwerty", makeLayout("v2"));
+  assert.strictEqual(getRegisteredLayout("qwerty")![0][0].value, "v2", "Second override is active");
+
+  unregisterLayout("qwerty");
+  assert.deepEqual(getRegisteredLayout("qwerty"), originalQwerty, "Original restored despite multiple overrides");
+});
+
+QUnit.test("isBuiltInLayout stays true after override and restore", (assert) => {
+  registerLayout("qwerty", makeLayout("temp"));
+  unregisterLayout("qwerty");
+  assert.ok(isBuiltInLayout("qwerty"), "qwerty is still built-in after override+restore cycle");
 });
 
 QUnit.test("No-ops for non-existent layout", (assert) => {
@@ -455,6 +471,15 @@ QUnit.test("Preserves all built-in layouts", (assert) => {
   for (const name of BUILTIN_NAMES) {
     assert.ok(getRegisteredLayout(name), `Built-in layout "${name}" preserved`);
   }
+});
+
+QUnit.test("Restores overridden built-in layouts", (assert) => {
+  const originalQwerty = getRegisteredLayout("qwerty");
+  registerLayout("qwerty", makeLayout("override"));
+  assert.deepEqual(getRegisteredLayout("qwerty"), makeLayout("override"), "qwerty is overridden");
+
+  resetCustomLayouts();
+  assert.deepEqual(getRegisteredLayout("qwerty"), originalQwerty, "Original qwerty restored after reset");
 });
 
 // ──────────────────────────────────────────────────

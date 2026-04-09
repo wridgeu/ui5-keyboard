@@ -37,6 +37,9 @@ const layouts: Map<string, LayoutDefinition> = new Map([
 /** Built-in layout names. Used by isBuiltInLayout and unregisterLayout protection. */
 const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
 
+/** Original built-in definitions, preserved so overrides can be reverted. */
+const BUILTIN_ORIGINALS: ReadonlyMap<string, LayoutDefinition> = new Map(layouts);
+
 const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
   ["de", "qwertz-de"],
   ["ja", "ja-romaji"],
@@ -116,8 +119,9 @@ export function unregisterLayout(sName: string): void {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return;
 
-  if (BUILTIN_LAYOUTS.has(name)) {
-    Log.warning(`Cannot remove built-in layout "${name}".`, undefined, "ui5.kiosk.KioskKeyboard");
+  const original = BUILTIN_ORIGINALS.get(name);
+  if (original) {
+    layouts.set(name, original);
     return;
   }
 
@@ -133,6 +137,10 @@ export function resetCustomLayouts(): void {
     if (!BUILTIN_LAYOUTS.has(layoutName)) {
       layouts.delete(layoutName);
     }
+  }
+  // Restore any overridden built-ins to their original definitions
+  for (const [name, def] of BUILTIN_ORIGINALS) {
+    layouts.set(name, def);
   }
 }
 

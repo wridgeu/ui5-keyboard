@@ -2,7 +2,7 @@
 
 **Goal:** Set up Release Please for independent versioning/publishing of 3 library packages, with a CI pipeline that runs fast checks on PRs and comprehensive validation before releases on main.
 
-**Architecture:** Two GitHub Actions workflows -- `ci.yml` (PR validation + reusable) and `release.yml` (full suite + release-please + per-package OIDC npm publish). Release Please runs in monorepo mode with independent versioning per package. CI is split so PRs only run validation + core tests, while main runs the full matrix (all-device e2e, package smoke) before any release is created.
+**Architecture:** Two GitHub Actions workflows: `ci.yml` (PR validation + reusable) and `release.yml` (full suite + release-please + per-package OIDC npm publish). Release Please runs in monorepo mode with independent versioning per package. CI is split so PRs only run validation + core tests, while main runs the full matrix (all-device e2e, package smoke) before any release is created.
 
 **Tech Stack:** Release Please v4 action, GitHub Actions, OIDC npm provenance, Node 24
 
@@ -65,7 +65,7 @@ The expensive jobs (all-device e2e, smoke) only run on main, not on every PR pus
 Notes:
 
 - `include-component-in-tag: true` ensures tags don't collide (e.g. `ui5-lib-hotkeys-v0.2.0`)
-- No `extra-files` needed -- UI5 manifest.json uses `${version}` placeholder substituted at build time from package.json
+- No `extra-files` needed: UI5 manifest.json uses `${version}` placeholder substituted at build time from package.json
 - Changelog sections match guard-router's config exactly
 - Default behavior: one combined release PR for all packages with pending changes
 
@@ -113,8 +113,8 @@ component-scoped tags."
 
 This workflow runs on PRs and is reusable (called by release.yml on main). It has two jobs:
 
-1. **validate** -- fast static checks (~5 min)
-2. **test** -- unit/integration/component tests + kiosk desktop e2e (~15 min)
+1. **validate**: fast static checks (~5 min)
+2. **test**: unit/integration/component tests + kiosk desktop e2e (~15 min)
 
 - [ ] **Step 1: Create .github/workflows directory**
 

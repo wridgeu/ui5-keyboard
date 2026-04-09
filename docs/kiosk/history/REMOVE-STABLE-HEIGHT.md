@@ -6,16 +6,16 @@
 
 The `stableHeight` property was an opt-in feature that maintained a consistent `minHeight` across layout switches by tracking the maximum rendered height. It existed to work around a `sap.m.Popover` bug (`_applyPosition` coordinate-system mismatch in OpenUI5 1.144.0+) where content height changes during layout switches caused the Popover to close spuriously on scrolled pages.
 
-The feature introduced complexity: a monotonic `_maxHeight` tracker, a `_syncStableHeight` method called from multiple lifecycle hooks, and a `previousMinHeight` save/restore dance in the responsive sizing code to temporarily clear `minHeight` before measuring constraints. It also conflicted with height breakpoints -- when both were active, the `minHeight` could prevent compact CSS from having a visual effect.
+The feature introduced complexity: a monotonic `_maxHeight` tracker, a `_syncStableHeight` method called from multiple lifecycle hooks, and a `previousMinHeight` save/restore dance in the responsive sizing code to temporarily clear `minHeight` before measuring constraints. It also conflicted with height breakpoints. When both were active, the `minHeight` could prevent compact CSS from having a visual effect.
 
 ## Decision
 
 Remove `stableHeight` entirely. Consumers should control keyboard sizing themselves via:
 
-1. **Fixed height on the keyboard element** (e.g. `height: 19rem; overflow: hidden`) -- the keyboard's responsive breakpoints (`cq-short`, `cq-tiny`) adapt automatically
+1. **Fixed height on the keyboard element** (e.g. `height: 19rem; overflow: hidden`): the keyboard's responsive breakpoints (`cq-short`, `cq-tiny`) adapt automatically
 2. **CSS custom properties** (`--ui5KioskKeyboard-keyHeight`, `--ui5KioskKeyboard-keyGap`, etc.) to make the keyboard naturally fit a smaller space
 
-This is a breaking change but there are no consumers yet. The Popover bug is a framework issue, not a keyboard issue -- consumers should set a fixed container size to prevent content resizing.
+This is a breaking change but there are no consumers yet. The Popover bug is a framework issue, not a keyboard issue. Consumers should set a fixed container size to prevent content resizing.
 
 ## Changes
 

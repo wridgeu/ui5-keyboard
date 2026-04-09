@@ -118,10 +118,32 @@ describe("layout-registry", () => {
       expect(getRegisteredLayout("custom")).toBeUndefined();
     });
 
-    it("cannot remove built-in layouts", () => {
-      vi.spyOn(console, "warn").mockImplementation(() => {});
+    it("restores the built-in definition when unregistering an overridden built-in", () => {
+      const originalQwerty = getRegisteredLayout("qwerty");
+      registerLayout("qwerty", CUSTOM_LAYOUT);
+      expect(getRegisteredLayout("qwerty")).toBe(CUSTOM_LAYOUT);
+
       unregisterLayout("qwerty");
-      expect(getRegisteredLayout("qwerty")).toBeDefined();
+      expect(getRegisteredLayout("qwerty")).toBe(originalQwerty);
+    });
+
+    it("restores the built-in after multiple overrides", () => {
+      const originalQwerty = getRegisteredLayout("qwerty");
+      const override1: LayoutDefinition = [[{ value: "x" }]];
+      const override2: LayoutDefinition = [[{ value: "y" }]];
+
+      registerLayout("qwerty", override1);
+      registerLayout("qwerty", override2);
+      expect(getRegisteredLayout("qwerty")).toBe(override2);
+
+      unregisterLayout("qwerty");
+      expect(getRegisteredLayout("qwerty")).toBe(originalQwerty);
+    });
+
+    it("keeps isBuiltInLayout true after override and restore", () => {
+      registerLayout("qwerty", CUSTOM_LAYOUT);
+      unregisterLayout("qwerty");
+      expect(isBuiltInLayout("qwerty")).toBe(true);
     });
   });
 
@@ -137,6 +159,15 @@ describe("layout-registry", () => {
     it("keeps built-in layouts", () => {
       resetCustomLayouts();
       expect(getRegisteredLayout("qwerty")).toBeDefined();
+    });
+
+    it("restores overridden built-in layouts", () => {
+      const originalQwerty = getRegisteredLayout("qwerty");
+      registerLayout("qwerty", CUSTOM_LAYOUT);
+      expect(getRegisteredLayout("qwerty")).toBe(CUSTOM_LAYOUT);
+
+      resetCustomLayouts();
+      expect(getRegisteredLayout("qwerty")).toBe(originalQwerty);
     });
   });
 

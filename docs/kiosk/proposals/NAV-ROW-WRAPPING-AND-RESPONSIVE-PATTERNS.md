@@ -31,8 +31,8 @@ Add a `@container keyboard (max-width: 20rem)` rule that wraps `data-row-kind="n
 
 **CSS `order` assignments** (inside the container query only):
 
-- Keys 6-8 (Left, Down, Right): `order: 1` -- move before PgDn
-- Key 5 (PgDn): `order: 2` -- push to end of row 2
+- Keys 6-8 (Left, Down, Right): `order: 1` (move before PgDn)
+- Key 5 (PgDn): `order: 2` (push to end of row 2)
 
 Keys 1-4 keep natural `order: 0` (default). The `flex-basis` targets 1/4 width minus gaps, using the same calc pattern as the existing fkey wrapping rule.
 
@@ -68,13 +68,13 @@ New file: `docs/kiosk/responsive-layout-patterns.md`
 
 Contents:
 
-1. **Built-in responsive behavior** -- What the component handles automatically: container queries for font/padding, fkey wrapping, nav row wrapping, height classes, dual-key label hiding. Lists the breakpoints and what triggers at each.
+1. **Built-in responsive behavior**: what the component handles automatically (container queries for font/padding, fkey wrapping, nav row wrapping, height classes, dual-key label hiding). Lists the breakpoints and what triggers at each.
 
-2. **Customizing visual appearance per size** -- How consumers override CSS custom properties inside `@container` or `@media` rules. Concrete recipes.
+2. **Customizing visual appearance per size**: how consumers override CSS custom properties inside `@container` or `@media` rules. Concrete recipes.
 
-3. **Switching layouts per device size** -- Pattern for structural adaptation: register a compact layout variant via `registerLayout()`, use ResizeObserver or media query to call `setLayout()` at a breakpoint. Concrete recipe for Japanese kana-compact at phone widths.
+3. **Switching layouts per device size**: pattern for structural adaptation. Register a compact layout variant via `registerLayout()`, use ResizeObserver or media query to call `setLayout()` at a breakpoint. Concrete recipe for Japanese kana-compact at phone widths.
 
-4. **Worked example: nav row wrapping** -- Walk through the CSS `order` + `flex-wrap` technique as a reusable pattern for custom row compositions.
+4. **Worked example: nav row wrapping**: walk through the CSS `order` + `flex-wrap` technique as a reusable pattern for custom row compositions.
 
 ### 3. README cross-link
 

@@ -280,7 +280,7 @@ The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-on
 
 ### F-Key Row Wrap
 
-At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind="fkey"]` rows and splits them into two rows of six via `flex-wrap`. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row. Above 35rem, all 12 keys fit on a single row. Navigation rows (`[data-row-kind="nav"]`) are unaffected and always stay on a single row. The `data-row-kind` attribute is set automatically by `classifyRow()` based on row content.
+At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind="fkey"]` rows and splits them into two rows of six via `flex-wrap`. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row. Above 35rem, all 12 keys fit on a single row. In the UI5 variant, navigation rows (`[data-row-kind="nav"]`) wrap into a 2x4 grid at <=20rem via CSS `order` reordering. In the web component variant, navigation rows do not wrap. The `data-row-kind` attribute is set automatically by `classifyRow()` based on row content.
 
 ## Structural Properties
 

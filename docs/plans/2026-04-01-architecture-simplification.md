@@ -29,35 +29,35 @@
 
 ### Files to CREATE
 
-- `packages/demo-app/webapp/controller/KioskCustomLayouts.controller.ts` -- may need modification to show combined layout composition (check existing)
+- `packages/demo-app/webapp/controller/KioskCustomLayouts.controller.ts`: may need modification to show combined layout composition (check existing)
 
 ### Files to MODIFY
 
-- `packages/kiosk-keyboard-webc/src/KioskKeyboard.ts` -- absorb class body from KioskKeyboardCore.ts
-- `packages/kiosk-keyboard-webc/src/KioskKeyboardTemplate.tsx` -- update import path
-- `packages/kiosk-keyboard-webc/src/bundle.esm.ts` -- update re-export path
-- `packages/kiosk-keyboard-webc/package.json` -- remove `./core` export
-- `packages/kiosk-keyboard-webc/package-scripts.mjs` -- remove fixCEM step
-- `packages/kiosk-keyboard-webc/test/unit/middleware-integration.test.ts` -- update import
-- `packages/kiosk-keyboard-webc/test/unit/entry-points.test.ts` -- remove core entry test
-- `packages/demo-app/package.json` -- remove prestart hook
-- `packages/demo-app/webapp/manifest.json` -- remove bridge route/target
-- `packages/demo-app/webapp/constants.ts` -- remove bridge scope
-- `packages/demo-app/webapp/model/fixtures/state.json` -- remove bridge entry, update tooling entry
-- `packages/demo-app/webapp/view/KioskWebComponentTooling.view.xml` -- rename (sole web component page)
-- `packages/demo-app/webapp/controller/KioskWebComponentTooling.controller.ts` -- rename
-- `packages/demo-app/README.md` -- remove bridge section, add bridge-as-reference docs
-- `packages/kiosk-keyboard-webc/test/pages/README.md` -- remove consume-core reference
-- `packages/kiosk-keyboard-webc/README.md` -- remove core entry docs
-- `docs/web-component-consumption.md` -- update for single entry, keep historical notes
-- `patches/README.md` -- note path-normalization patch may no longer be needed
-- `tools/check-demo-webc-bundle.mjs` -- remove bridge-specific checks
+- `packages/kiosk-keyboard-webc/src/KioskKeyboard.ts`: absorb class body from KioskKeyboardCore.ts
+- `packages/kiosk-keyboard-webc/src/KioskKeyboardTemplate.tsx`: update import path
+- `packages/kiosk-keyboard-webc/src/bundle.esm.ts`: update re-export path
+- `packages/kiosk-keyboard-webc/package.json`: remove `./core` export
+- `packages/kiosk-keyboard-webc/package-scripts.mjs`: remove fixCEM step
+- `packages/kiosk-keyboard-webc/test/unit/middleware-integration.test.ts`: update import
+- `packages/kiosk-keyboard-webc/test/unit/entry-points.test.ts`: remove core entry test
+- `packages/demo-app/package.json`: remove prestart hook
+- `packages/demo-app/webapp/manifest.json`: remove bridge route/target
+- `packages/demo-app/webapp/constants.ts`: remove bridge scope
+- `packages/demo-app/webapp/model/fixtures/state.json`: remove bridge entry, update tooling entry
+- `packages/demo-app/webapp/view/KioskWebComponentTooling.view.xml`: rename (sole web component page)
+- `packages/demo-app/webapp/controller/KioskWebComponentTooling.controller.ts`: rename
+- `packages/demo-app/README.md`: remove bridge section, add bridge-as-reference docs
+- `packages/kiosk-keyboard-webc/test/pages/README.md`: remove consume-core reference
+- `packages/kiosk-keyboard-webc/README.md`: remove core entry docs
+- `docs/web-component-consumption.md`: update for single entry, keep historical notes
+- `patches/README.md`: note path-normalization patch may no longer be needed
+- `tools/check-demo-webc-bundle.mjs`: remove bridge-specific checks
 
 ---
 
 ## Tasks
 
-### Task 1: Flatten the class -- eliminate re-export
+### Task 1: Flatten the class (eliminate re-export)
 
 Move the full class body from `KioskKeyboardCore.ts` into `KioskKeyboard.ts`, keeping layout imports at the top and the class below them.
 
@@ -66,7 +66,7 @@ Move the full class body from `KioskKeyboardCore.ts` into `KioskKeyboard.ts`, ke
 - Delete: `packages/kiosk-keyboard-webc/src/KioskKeyboardCore.ts`
 - Modify: `packages/kiosk-keyboard-webc/src/KioskKeyboard.ts`
 - Modify: `packages/kiosk-keyboard-webc/src/KioskKeyboardTemplate.tsx` (line 1: `import type KioskKeyboard from "./KioskKeyboardCore.js"` -> `"./KioskKeyboard.js"`)
-- Modify: `packages/kiosk-keyboard-webc/src/bundle.esm.ts` (line 20: re-export `KioskKeyboardDomContract` from `"./KioskKeyboard.js"` -- already correct)
+- Modify: `packages/kiosk-keyboard-webc/src/bundle.esm.ts` (line 20: re-export `KioskKeyboardDomContract` from `"./KioskKeyboard.js"`, already correct)
 
 - [ ] **Step 1: Create the merged `KioskKeyboard.ts`**
 
@@ -132,9 +132,9 @@ The CEM now places the custom-element-definition on the main entry natively."
 
 **Files:**
 
-- Modify: `packages/kiosk-keyboard-webc/package.json` -- remove `"./core"` export block
+- Modify: `packages/kiosk-keyboard-webc/package.json`: remove `"./core"` export block
 - Delete: `packages/kiosk-keyboard-webc/fix-cem.mjs`
-- Modify: `packages/kiosk-keyboard-webc/package-scripts.mjs` -- remove `fixCEM` step from `generateAPI`
+- Modify: `packages/kiosk-keyboard-webc/package-scripts.mjs`: remove `fixCEM` step from `generateAPI`
 
 - [ ] **Step 1: Remove `./core` export from package.json**
 
@@ -176,7 +176,7 @@ npm run build:kiosk-webc
 node -e "const d=JSON.parse(require('fs').readFileSync('packages/kiosk-keyboard-webc/dist/custom-elements.json','utf8')); const m=d.modules.find(m=>m.path==='dist/KioskKeyboard.js'); console.log(m.exports.map(e=>e.kind+' '+e.name))"
 ```
 
-Expected: The output includes both `js default` AND `custom-element-definition kiosk-keyboard` on `dist/KioskKeyboard.js` -- no post-processing needed.
+Expected: The output includes both `js default` AND `custom-element-definition kiosk-keyboard` on `dist/KioskKeyboard.js`. No post-processing needed.
 
 - [ ] **Step 5: Commit**
 
@@ -222,7 +222,7 @@ Expected: No results (the imports were already removed from KioskKeyboard.ts in 
 npm run typecheck:kiosk-webc && npm run test:kiosk-webc
 ```
 
-Expected: PASS. Some layout-registry tests may reference these layouts -- check and update if needed.
+Expected: PASS. Some layout-registry tests may reference these layouts; check and update if needed.
 
 - [ ] **Step 4: Commit**
 
@@ -250,10 +250,10 @@ Building blocks remain: fkey-row, nav-row."
 - Delete: `packages/demo-app/webapp/view/KioskWebComponent.view.xml`
 - Delete: `packages/demo-app/.gitignore`
 - Delete: `tools/copy-webc-bundle.mjs`
-- Modify: `packages/demo-app/package.json` -- remove `prestart` script
-- Modify: `packages/demo-app/webapp/manifest.json` -- remove bridge route and target
-- Modify: `packages/demo-app/webapp/constants.ts` -- remove `KioskWebComponent` scope
-- Modify: `packages/demo-app/webapp/model/fixtures/state.json` -- remove bridge entry
+- Modify: `packages/demo-app/package.json`: remove `prestart` script
+- Modify: `packages/demo-app/webapp/manifest.json`: remove bridge route and target
+- Modify: `packages/demo-app/webapp/constants.ts`: remove `KioskWebComponent` scope
+- Modify: `packages/demo-app/webapp/model/fixtures/state.json`: remove bridge entry
 
 - [ ] **Step 1: Delete bridge files**
 
@@ -300,7 +300,7 @@ And rename the remaining tooling entry from `"Web Component (Tooling)"` to `"Web
 
 - [ ] **Step 6: Rename the tooling page to be the sole web component page**
 
-The tooling page is now the only web component demo. Update its view title from `"Kiosk Keyboard -- Tooling Native"` to `"Kiosk Keyboard -- Web Component"` in `KioskWebComponentTooling.view.xml`.
+The tooling page is now the only web component demo. Update its view title from `"Kiosk Keyboard - Tooling Native"` to `"Kiosk Keyboard - Web Component"` in `KioskWebComponentTooling.view.xml`.
 
 - [ ] **Step 7: Run typecheck**
 
@@ -334,8 +334,8 @@ architecture doc for consumers who need it."
 - Delete: `packages/kiosk-keyboard-webc/test/unit/core-entry.test.ts`
 - Delete: `packages/kiosk-keyboard-webc/test/unit/treeshake-verify.test.ts`
 - Delete: `packages/kiosk-keyboard-webc/test/pages/consume-core.html`
-- Modify: `packages/kiosk-keyboard-webc/test/unit/middleware-integration.test.ts` -- update import
-- Modify: `packages/kiosk-keyboard-webc/test/unit/entry-points.test.ts` -- remove core entry tests
+- Modify: `packages/kiosk-keyboard-webc/test/unit/middleware-integration.test.ts`: update import
+- Modify: `packages/kiosk-keyboard-webc/test/unit/entry-points.test.ts`: remove core entry tests
 
 - [ ] **Step 1: Delete core-specific test files**
 
@@ -386,10 +386,10 @@ qwertz-de-fk, qwerty-nav, qwertz-de-nav are no longer built-in."
 
 **Files:**
 
-- Modify: `tools/check-demo-webc-bundle.mjs` -- remove bridge-specific checks
-- Modify: `packages/kiosk-keyboard-webc/test/pages/consume-bundle.html` -- keep as-is (still valid)
-- Modify: `packages/kiosk-keyboard-webc/test/pages/consume-esm.html` -- keep as-is (still valid)
-- Modify: `packages/kiosk-keyboard-webc/test/pages/README.md` -- remove consume-core reference
+- Modify: `tools/check-demo-webc-bundle.mjs`: remove bridge-specific checks
+- Modify: `packages/kiosk-keyboard-webc/test/pages/consume-bundle.html`: keep as-is (still valid)
+- Modify: `packages/kiosk-keyboard-webc/test/pages/consume-esm.html`: keep as-is (still valid)
+- Modify: `packages/kiosk-keyboard-webc/test/pages/README.md`: remove consume-core reference
 
 - [ ] **Step 1: Simplify check-demo-webc-bundle.mjs**
 
@@ -431,8 +431,8 @@ app builds successfully (tooling-native path)."
 
 Major changes:
 
-1. Remove the "Web Component -- Manual Bridge" section from the scenarios list
-2. Rename "Web Component -- Tooling Native" to "Web Component"
+1. Remove the "Web Component (Manual Bridge)" section from the scenarios list
+2. Rename "Web Component (Tooling Native)" to "Web Component"
 3. In the "Web Component Consumption" section:
    - Keep "1. Tooling Native" as the primary path (rename to just "UI5 Consumption")
    - Convert "2. Manual Bridge" from a demo scenario to a **reference section** titled "Alternative: Manual Bridge". Include the `WebComponent.extend()` code from the deleted `KioskKeyboardWebc.ts` as a documentation example. Explain when a consumer would use this (no `ui5-tooling-modules`, explicit control over wrapper metadata). Explain the scoping constraint (must load standalone bundle outside middleware).
@@ -444,12 +444,12 @@ Major changes:
 
 In `docs/web-component-consumption.md`:
 
-1. Update the "Three Consumption Paths" section -- now two paths (UI5 Tooling + Native npm/Browser) with a reference note about manual bridge
+1. Update the "Three Consumption Paths" section: now two paths (UI5 Tooling + Native npm/Browser) with a reference note about manual bridge
 2. Remove the "UI5 Manual Bridge" subsection as a primary path; move it to a "Historical: Manual Bridge" section or fold it into the "Limitations and Workarounds" section as a reference
-3. Update "Lean Consumption" section -- note that the `./core` export was removed; consumers who want lean import can import layouts individually via `kiosk-keyboard-webc/layouts/*`
-4. In "Tag Scoping Prevents Manual Bridge" -- keep as historical documentation
-5. In "CEM Re-Export Handling" -- update to note the re-export was eliminated
-6. Update "Future Considerations" -- remove items that are resolved
+3. Update "Lean Consumption" section: note that the `./core` export was removed; consumers who want lean import can import layouts individually via `kiosk-keyboard-webc/layouts/*`
+4. In "Tag Scoping Prevents Manual Bridge": keep as historical documentation
+5. In "CEM Re-Export Handling": update to note the re-export was eliminated
+6. Update "Future Considerations": remove items that are resolved
 
 - [ ] **Step 3: Update patches/README.md**
 

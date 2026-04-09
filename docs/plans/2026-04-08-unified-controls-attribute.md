@@ -19,7 +19,7 @@
 - Modify: `packages/kiosk-keyboard/src/internal/focus-claim-service.ts`
 - Modify: `packages/kiosk-keyboard/test/qunit/focus-claim-service.qunit.ts`
 
-This is a pure rename with no logic changes -- good first commit to establish the new vocabulary.
+This is a pure rename with no logic changes. Good first commit to establish the new vocabulary.
 
 - [ ] **Step 1: Rename constructor parameters and methods in FocusClaimService**
 
@@ -144,7 +144,7 @@ git commit -m "refactor(kiosk): rename FocusClaimService from inputIds to contro
 
 - Modify: `packages/kiosk-keyboard/src/KioskKeyboard.ts`
 
-This task does the bulk rename in the UI5 control source. No logic changes -- pure vocabulary swap.
+This task does the bulk rename in the UI5 control source. No logic changes, pure vocabulary swap.
 
 - [ ] **Step 1: Rename the property definition**
 
@@ -480,7 +480,7 @@ QUnit.test("show() auto-targets single controls entry", async (assert) => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx turbo run test:qunit --filter=@anthropic/kiosk-keyboard`
-Expected: FAIL -- `getActiveControl()` returns null because `show()` doesn't auto-target yet.
+Expected: FAIL. `getActiveControl()` returns null because `show()` doesn't auto-target yet.
 
 - [ ] **Step 3: Implement auto-target in `show()`**
 
@@ -540,7 +540,7 @@ All existing tests that reference `inputIds`, `targetInput`, `getTargetInput`, `
 Find-and-replace across the file:
 
 - `inputIds` -> `controls` (in method calls: `setInputIds` -> `setControls`, `getInputIds` -> `getControls`)
-- `setTargetInput` -> (remove direct calls -- active target is set via focus delegation in tests)
+- `setTargetInput` -> (remove direct calls; active target is set via focus delegation in tests)
 - `getTargetInput()` -> `_getActiveTargetId()` or replace with `getActiveControl()` assertions where the test checks the control instance
 - `getTargetControl()` -> `getActiveControl()`
 - `"targetInputChange"` -> `"activeControlChange"`
@@ -602,7 +602,7 @@ git commit -m "test(kiosk): rename inputIds to controls in E2E tests"
 
 ---
 
-### Task 7: Refactor web component -- unify `for` + `inputIds` into `controls`
+### Task 7: Refactor web component: unify `for` + `inputIds` into `controls`
 
 **Files:**
 
@@ -999,7 +999,7 @@ Run a grep across the entire repo for any leftover references:
 - `inputIds` (excluding node_modules, dist, .git)
 - `targetInput` (excluding node_modules, dist, .git)
 - `target-input-change` (excluding node_modules, dist, .git)
-- Attribute `for=` in webc context (check carefully -- `for` is used legitimately in HTML `<label>` elements)
+- Attribute `for=` in webc context (check carefully, `for` is used legitimately in HTML `<label>` elements)
 
 Fix any remaining references found.
 
