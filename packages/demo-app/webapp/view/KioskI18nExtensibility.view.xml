@@ -33,42 +33,42 @@
                         <layoutData>
                             <FlexItemData baseSize="11rem" growFactor="0" />
                         </layoutData>
-                        <Label text="Keyboard label" design="Light" />
+                        <Label text="Keyboard label" />
                         <ObjectStatus text="{i18nDemo>/inspector/keyboardLabel}" state="Information" />
                     </VBox>
                     <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
                         <layoutData>
                             <FlexItemData baseSize="11rem" growFactor="0" />
                         </layoutData>
-                        <Label text="Role description" design="Light" />
+                        <Label text="Role description" />
                         <ObjectStatus text="{i18nDemo>/inspector/roleDescription}" state="Information" />
                     </VBox>
                     <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
                         <layoutData>
                             <FlexItemData baseSize="11rem" growFactor="0" />
                         </layoutData>
-                        <Label text="Shift key" design="Light" />
+                        <Label text="Shift key" />
                         <ObjectStatus text="{i18nDemo>/inspector/shiftKey}" state="Information" />
                     </VBox>
                     <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
                         <layoutData>
                             <FlexItemData baseSize="11rem" growFactor="0" />
                         </layoutData>
-                        <Label text="Enter key" design="Light" />
+                        <Label text="Enter key" />
                         <ObjectStatus text="{i18nDemo>/inspector/enterKey}" state="Information" />
                     </VBox>
                     <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
                         <layoutData>
                             <FlexItemData baseSize="11rem" growFactor="0" />
                         </layoutData>
-                        <Label text="Backspace key" design="Light" />
+                        <Label text="Backspace key" />
                         <ObjectStatus text="{i18nDemo>/inspector/backspaceKey}" state="Information" />
                     </VBox>
                     <VBox class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
                         <layoutData>
                             <FlexItemData baseSize="11rem" growFactor="0" />
                         </layoutData>
-                        <Label text="Space key" design="Light" />
+                        <Label text="Space key" />
                         <ObjectStatus text="{i18nDemo>/inspector/spaceKey}" state="Information" />
                     </VBox>
                 </HBox>

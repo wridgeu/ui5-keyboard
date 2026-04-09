@@ -5,6 +5,7 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import { setTheme } from "@ui5/webcomponents-base/dist/config/Theme.js";
 
 // UI5 Web Components used on the demo page
+import "@ui5/webcomponents/dist/Assets.js";
 import "@ui5/webcomponents/dist/Input.js";
 import "@ui5/webcomponents/dist/StepInput.js";
 import "@ui5/webcomponents/dist/Label.js";
