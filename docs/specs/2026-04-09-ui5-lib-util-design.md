@@ -353,16 +353,18 @@ export default class MyDialogController extends Controller {
 
 #### AbstractDialogController
 
-Inheritance-based approach. Uses `DialogControllerExtension` internally -- no duplicated logic.
+Inheritance-based approach. Independent from `DialogControllerExtension` -- these are two
+separate options for consumers, not layered on top of each other. Both provide the same
+convenience methods (`fireDialogEvent`, `fireSaveEvent`, etc.) with their own implementations.
+The underlying logic is thin (event firing via `control.fireEvent()` and ID-scoped lookup
+via `Fragment.byId()`), so there is no meaningful duplication concern.
 
 ```typescript
 import Controller from "sap/ui/core/mvc/Controller";
-import ControllerExtension from "sap/ui/core/mvc/ControllerExtension";
-import DialogControllerExtension from "./DialogControllerExtension";
 
 export default abstract class AbstractDialogController extends Controller {
-  // Internal extension -- consumers get clean this.fireCreateEvent() etc. via delegation
-  private _dialogExt = ControllerExtension.use(DialogControllerExtension);
+  protected ownerComponent!: Component;
+  protected fragmentId!: string;
 
   // Lifecycle hooks with default empty implementations
   public onInit(): void {}
@@ -373,22 +375,31 @@ export default abstract class AbstractDialogController extends Controller {
   // Abstract -- must be implemented by subclasses
   public abstract onData(data: object | Context): void | Promise<void>;
 
-  // Delegated convenience methods
-  protected fireDialogEvent(control: Control, settings: {...}): void {
-    this._dialogExt.fireDialogEvent(control, settings);
+  // Event firing convenience methods (own implementation)
+  protected fireDialogEvent(control: Control, settings: {
+    eventId: string;
+    parameters?: object;
+    allowPreventDefault?: boolean;
+    enableEventBubbling?: boolean;
+  }): void {
+    control.fireEvent(settings.eventId, settings.parameters,
+      settings.allowPreventDefault, settings.enableEventBubbling);
   }
-  protected fireSaveEvent(...) { this._dialogExt.fireSaveEvent(...); }
-  protected fireCreateEvent(...) { this._dialogExt.fireCreateEvent(...); }
-  // ... etc.
+  protected fireSaveEvent(control: Control, source: Context | null, updateFields: object): void { ... }
+  protected fireCreateEvent(control: Control, data: object): void { ... }
+  protected fireCancelEvent(control: Control): void { ... }
+  protected fireDeleteEvent(control: Control, data: Context | null): void { ... }
+  protected fireEditEvent(control: Control, data: Context | null): void { ... }
 
+  // ID-scoped control lookup
   protected fragmentById<T extends Element>(id: string): T {
-    return this._dialogExt.fragmentById<T>(this.fragmentId, id);
+    return Fragment.byId(this.fragmentId, id) as T;
   }
 
   // Component and ResourceBundle access
-  public setOwnerComponent(component: Component): void { ... }
-  public getOwnerComponent(): Component { ... }
-  public setFragmentId(id: string): void { ... }
+  public setOwnerComponent(component: Component): void { this.ownerComponent = component; }
+  public getOwnerComponent(): Component { return this.ownerComponent; }
+  public setFragmentId(id: string): void { this.fragmentId = id; }
   protected async getResourceBundle(): Promise<ResourceBundle> { ... }
 }
 ```
