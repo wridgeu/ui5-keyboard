@@ -10,8 +10,9 @@
 }
 /* Instead of height constraints, shrink keys via CSS custom properties
    so the keyboard naturally fits in less vertical space.
-   A single class is enough -- the library sets defaults at zero specificity
-   via :where(.ui5KioskKeyboard). */
+   A single unlayered class is enough: library styles live inside
+   @layer kiosk-keyboard, so unlayered consumer CSS wins regardless of
+   specificity (CSS Cascade L5 §6.4 Layers). */
 .demoPopoverKbCustomVars {
   --ui5KioskKeyboard-keyHeight: 2.25rem;
   --ui5KioskKeyboard-keyGap: 0.25rem;

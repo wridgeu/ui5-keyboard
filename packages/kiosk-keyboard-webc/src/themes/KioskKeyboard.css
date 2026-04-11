@@ -177,16 +177,16 @@
 
 /* ---- Height-responsive classes (JS-driven via ResizeObserver) ----
    Height classes (.cq-short / .cq-tiny) live on the HOST element.
-   :where() zeroes the class argument specificity so the :host(:where(...))
-   rules stay at (0,1,0). Any outer consumer selector with at least one class
-   (e.g. kiosk-keyboard.my-kb) beats these via the shadow DOM cascade. */
-:host(:where(.cq-short)) {
+   Consumer CSS in the outer document always beats these :host() rules
+   regardless of specificity (CSS Scoping L1 §3.3.1 / CSS Cascade L5 §6.1:
+   "Context" sits above "Specificity" in the cascade sorting order). */
+:host(.cq-short) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
 }
 
-:host(:where(.cq-tiny)) {
+:host(.cq-tiny) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;
@@ -195,7 +195,7 @@
 /* Mixed: narrow width (xs @container) + constrained height (JS class).
    Applies the most aggressive font-size cap when both conditions are met. */
 @container keyboard (max-width: 20rem) {
-  :host(:where(.cq-short, .cq-tiny)) .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
+  :host(.cq-short, .cq-tiny) .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
   }
 }
@@ -452,14 +452,14 @@
 /* Compact density               */
 /* ============================= */
 
-:host(:where([data-ui5-compact-size])) {
+:host([data-ui5-compact-size]) {
   --kiosk-keyboard-padding: 0.5rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-key-height: var(--sapElement_Height, 2.25rem);
   --kiosk-keyboard-key-font-size: var(--sapFontSize, 0.875rem);
 }
 
-:host(:where([data-ui5-compact-size])) .kiosk-keyboard--numpad {
+:host([data-ui5-compact-size]) .kiosk-keyboard--numpad {
   --kiosk-keyboard-numpad-key-min-width: 3rem;
   --kiosk-keyboard-key-height: 2.75rem;
   --kiosk-keyboard-key-font-size: 1.125rem;

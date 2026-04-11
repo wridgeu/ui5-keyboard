@@ -503,7 +503,7 @@ No JavaScript is involved in width responsiveness. The `@container` rules are wr
 - `ui5KioskKeyboard--cq-short` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `ui5KioskKeyboard--cq-tiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
 
-Height classes use `:where()` wrapper selectors for zero specificity (e.g., `:where(.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad))`). Any consumer class selector (e.g., `.myKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }`) wins without needing specificity tricks.
+Height classes use plain selectors (e.g., `.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad)`). All component styles live inside `@layer kiosk-keyboard`, so any unlayered consumer CSS (e.g., `.myKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }`) wins regardless of specificity per [CSS Cascade Level 5 §6.4 Layers](https://www.w3.org/TR/css-cascade-5/#layering).
 
 A combined rule in the container queries CSS applies when both narrow width and constrained height are active, using the most aggressive font-size cap of `0.75rem`.
 
@@ -513,7 +513,7 @@ Docked keyboards and numpad mode skip height class application (docked keyboards
 
 The public sizing variables deliberately separate normal and extra-narrow spacing. `--ui5KioskKeyboard-keyPaddingInline` keeps the default inline inset for regular widths, while `--ui5KioskKeyboard-keyPaddingInlineXs` is applied at the 20rem `@container` breakpoint for non-numpad keys. Its default (`min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)`) trims the stock padding from `0.25rem` to `0.125rem` so wide glyphs like `@`, `%`, and `&` get more horizontal breathing room on phone-sized rows without reducing key height or touch-target size. The `min(...)` form preserves any consumer override that is already smaller.
 
-**Consumer overrides:** All default values use `:where()` for zero specificity. Consumer selectors with at least one class always win. For custom width breakpoints, consumers can write `@container keyboard (max-width: ...)` rules directly since the keyboard's root element sets `container-name: keyboard`.
+**Consumer overrides:** All component styles live inside `@layer kiosk-keyboard`, so any unlayered consumer CSS wins regardless of specificity. For custom width breakpoints, consumers can write `@container keyboard (max-width: ...)` rules directly since the keyboard's root element sets `container-name: keyboard`.
 
 ### Content Density
 

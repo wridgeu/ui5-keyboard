@@ -85,8 +85,14 @@
 /* 3rem (48px) meets Material Design 48dp touch target recommendation */
 @_ui5KioskKeyHeight: 3rem;
 
-/* All component styles live inside @layer so any unlayered consumer CSS
-   automatically wins regardless of selector specificity. */
+/* All component styles live inside @layer kiosk-keyboard.
+ * Do NOT remove this wrapper: the responsive rules on
+ * .ui5KioskKeyboard--cq-(short|tiny):not(.ui5KioskKeyboard--numpad) reach
+ * (0,2,0), and their descendant variants reach (0,3,0). Without the layer,
+ * those would beat a single-class consumer override at cascade step 5
+ * (specificity) before step 6 (source order) runs, silently dropping the
+ * consumer's value. The layer resolves it at step 4: unlayered beats
+ * layered regardless of specificity. */
 @layer kiosk-keyboard {
   /* ============================= */
   /* Keyboard container            */

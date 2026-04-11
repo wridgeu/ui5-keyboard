@@ -100,7 +100,7 @@ The key-height reduction ratios are 75% for short and 58% for tiny, relative to 
 
 ```css
 @container keyboard (max-width: 20rem) {
-  :host(:where(.cq-short, .cq-tiny)) ... .kiosk-key {
+  :host(.cq-short, .cq-tiny) ... .kiosk-key {
     --kiosk-keyboard-key-font-size: min(base, 0.75rem);
   }
 }

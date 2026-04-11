@@ -447,9 +447,9 @@ No JavaScript is involved in width responsiveness. The `min()` capping pattern e
 - `.cq-short` (host height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `.cq-tiny` (host height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
 
-Height classes live on the host element so that CSS rules use `:host(:where(.cq-short))`. The `:where()` wrapper gives zero specificity for the class argument, keeping the overall rule at `(0,1,0)`. Any consumer selector with at least one class (e.g., `kiosk-keyboard.my-kb`) beats these via the shadow DOM cascade.
+Height classes live on the host element so that CSS rules use `:host(.cq-short)`. No specificity-lowering wrapper is needed: per [CSS Scoping Module Level 1 §3.3.1](https://www.w3.org/TR/css-scoping-1/#cascading) and [CSS Cascade Level 5 §6.1](https://www.w3.org/TR/css-cascade-5/#cascade-sort), the cascade "Context" step sits above "Specificity", so normal declarations from the outer document always win over normal `:host()` declarations in the shadow tree regardless of specificity. A consumer writing `kiosk-keyboard { --kiosk-keyboard-key-height: 3rem; }` from outside the shadow root overrides these defaults even without a matching class.
 
-A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host(:where(.cq-short, .cq-tiny))` applies the most aggressive font-size cap of `0.75rem`.
+A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host(.cq-short, .cq-tiny)` applies the most aggressive font-size cap of `0.75rem`.
 
 Height thresholds are configurable via CSS custom properties: `--kiosk-keyboard-cq-short-threshold` (default `16rem`) and `--kiosk-keyboard-cq-tiny-threshold` (default `12rem`).
 
