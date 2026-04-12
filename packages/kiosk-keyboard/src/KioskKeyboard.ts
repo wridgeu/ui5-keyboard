@@ -2,7 +2,6 @@ import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
 import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
-import Device from "sap/ui/Device";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
 import { SECONDARY_LAYOUTS } from "./internal/types";
 import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
@@ -13,7 +12,7 @@ import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
-import { KeyboardType, type KeyboardTypeValue, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, type KeyboardTypeValue, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
   unregisterLayout as registryUnregisterLayout,
@@ -41,6 +40,7 @@ import FocusClaimService from "./internal/focus-claim-service";
 import { ShiftState } from "./internal/shift-state";
 import TargetInputSession from "./internal/target-input-session";
 import KeyGridNavigation from "./internal/key-grid-navigation";
+import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -51,11 +51,6 @@ type InputFocusDelegation = {
 type KeyHighlightDelegation = {
   onkeydown: (event: Event) => void;
   onkeyup: (event: Event) => void;
-};
-
-type InputModeSuppressionState = {
-  originalInputMode: string | null;
-  refCount: number;
 };
 
 /** Who last set keyboardType. "auto:VALUE" = auto-detected for VALUE. */
@@ -126,7 +121,8 @@ export default class KioskKeyboard extends Control {
   private _baseLayout!: string;
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
-  private _suppressedInputId!: string | null;
+  _nativeKbSuppression!: NativeKeyboardSuppression;
+  private _extensions!: { destroy(): void }[];
   private _boundEscapeKeydown!: (e: KeyboardEvent) => void;
   private _focusClaimService!: FocusClaimService;
   private _targetSession!: TargetInputSession;
@@ -426,9 +422,6 @@ export default class KioskKeyboard extends Control {
   /** Internal set used for O(1) native-dispatch allowlist checks. */
   private static readonly _NATIVE_DISPATCHABLE_FKEYS = new Set<string>(NativeDispatchableKeyNames);
 
-  /** Ref-counted inputmode suppressions shared across keyboard instances. */
-  private static readonly _inputModeSuppressions = new Map<string, InputModeSuppressionState>();
-
   /** Global target resolver applied to all instances (lowest priority). */
   private static _globalTargetResolver: TargetResolverFn | null = null;
 
@@ -720,13 +713,14 @@ export default class KioskKeyboard extends Control {
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
     this._keyboardTypeSource = "unset";
-    this._suppressedInputId = null;
+    this._nativeKbSuppression = new NativeKeyboardSuppression(this);
+    this._extensions = [this._nativeKbSuppression];
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._deferredFocusOutCloseId = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
       () => this._resolvedControlIds,
-      () => this._shouldDeferToNative(),
+      () => this._nativeKbSuppression.shouldDeferToNative(),
       (id) => this._isTargetOfOther(id),
     );
     this._targetResolverInstance = null;
@@ -897,7 +891,7 @@ export default class KioskKeyboard extends Control {
     this._teardownControls();
     this._removeHighlightDelegation();
     this._teardownResponsiveSizing();
-    this._restoreNativeKeyboard();
+    for (const ext of this._extensions) ext.destroy();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
@@ -1035,7 +1029,7 @@ export default class KioskKeyboard extends Control {
     // If the keyboard is open, restore the old target's inputmode
     // before switching so it's not left suppressed.
     if (this._open) {
-      this._restoreNativeKeyboard();
+      this._nativeKbSuppression.restore();
     }
 
     this._targetSession.resetForTargetSwitch();
@@ -1096,7 +1090,7 @@ export default class KioskKeyboard extends Control {
 
     // If the keyboard is open, suppress the new target's native keyboard.
     if (this._open) {
-      this._suppressNativeKeyboard();
+      this._nativeKbSuppression.suppress();
     }
 
     // Fire the deferred change event on the OLD target. State is now
@@ -1116,7 +1110,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Returns the ID of the currently active target, or empty string.
    */
-  private _getActiveTargetId(): string {
+  _getActiveTargetId(): string {
     return (this.getAssociation("_activeTarget", null) as string) ?? "";
   }
 
@@ -1257,7 +1251,7 @@ export default class KioskKeyboard extends Control {
    * Returns the effective resolver: instance-level first, then global, then `null`.
    * @private
    */
-  private _getEffectiveResolver(): TargetResolverFn | null {
+  _getEffectiveResolver(): TargetResolverFn | null {
     return this._targetResolverInstance ?? KioskKeyboard._globalTargetResolver;
   }
 
@@ -1296,10 +1290,10 @@ export default class KioskKeyboard extends Control {
   show(): this {
     if (!this.getDocked()) return this;
     if (this._open) return this;
-    if (this._shouldDeferToNative()) return this;
+    if (this._nativeKbSuppression.shouldDeferToNative()) return this;
 
     this._open = true;
-    this._suppressNativeKeyboard();
+    this._nativeKbSuppression.suppress();
     document.addEventListener("keydown", this._boundEscapeKeydown, true);
     const dom = this.getDomRef();
     if (dom) {
@@ -1316,7 +1310,7 @@ export default class KioskKeyboard extends Control {
     if (!this._open) return this;
     this._targetSession.fireChangeIfDirty();
     this._open = false;
-    this._restoreNativeKeyboard();
+    this._nativeKbSuppression.restore();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
     const dom = this.getDomRef();
     if (dom) {
@@ -2139,19 +2133,6 @@ export default class KioskKeyboard extends Control {
   // Private - Mobile detection
   // ──────────────────────────────────────────────
 
-  /**
-   * Returns true when the native keyboard should be used instead of
-   * this control. Checks the `mobileKeyboard` property against
-   * the current device type.
-   */
-  private _shouldDeferToNative(): boolean {
-    const mode = this.getMobileKeyboard();
-    if (mode === MobileKeyboard.Custom) return false;
-    if (mode === MobileKeyboard.Native) return true;
-    // "Auto": kiosk keyboard on desktop, native on mobile
-    return Device.system.phone || (Device.system.tablet && !Device.system.desktop);
-  }
-
   /** Best-effort event target used for synthetic native F-key dispatch. */
   private _resolveNativeFKeyTarget(): EventTarget {
     const target = this._getTargetElement()?.getFocusDomRef();
@@ -2181,88 +2162,5 @@ export default class KioskKeyboard extends Control {
 
   private static _isNativeDispatchableFKey(fkeyName: string): boolean {
     return KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(fkeyName);
-  }
-
-  private _resolveInputDomById(inputId: string): HTMLInputElement | HTMLTextAreaElement | null {
-    const target = Element.getElementById(inputId);
-    if (!target) return null;
-    return resolveWithCustomResolver(target.getFocusDomRef(), this._getEffectiveResolver());
-  }
-
-  /**
-   * Suppresses the native virtual keyboard by setting
-   * `inputmode="none"` on the target input's DOM element.
-   *
-   * Suppression is tracked per target input ID and ref-counted across
-   * all KioskKeyboard instances, so one instance cannot accidentally
-   * restore `inputmode` while another instance still needs suppression.
-   */
-  private _suppressNativeKeyboard(): void {
-    if (this._shouldDeferToNative()) return;
-
-    const inputId = this._getActiveTargetId();
-    if (!inputId) return;
-
-    // Already suppressing this target input
-    if (this._suppressedInputId === inputId) {
-      this._resolveInputDomById(inputId)?.setAttribute("inputmode", "none");
-      return;
-    }
-
-    // Restore previous target (if any) before claiming another one
-    this._restoreNativeKeyboard();
-
-    const dom = this._resolveInputDomById(inputId);
-    if (!dom) return;
-
-    const state = KioskKeyboard._inputModeSuppressions.get(inputId);
-    if (state) {
-      state.refCount += 1;
-    } else {
-      KioskKeyboard._inputModeSuppressions.set(inputId, {
-        originalInputMode: dom.getAttribute("inputmode"),
-        refCount: 1,
-      });
-    }
-
-    dom.setAttribute("inputmode", "none");
-    this._suppressedInputId = inputId;
-  }
-
-  /**
-   * Restores the original `inputmode` on the previously suppressed
-   * input element.
-   */
-  private _restoreNativeKeyboard(): void {
-    const inputId = this._suppressedInputId;
-    if (!inputId) return;
-
-    const state = KioskKeyboard._inputModeSuppressions.get(inputId);
-    if (!state) {
-      this._suppressedInputId = null;
-      return;
-    }
-
-    state.refCount -= 1;
-
-    const dom = this._resolveInputDomById(inputId);
-
-    if (state.refCount > 0) {
-      // Another keyboard instance still claims this input.
-      dom?.setAttribute("inputmode", "none");
-      this._suppressedInputId = null;
-      return;
-    }
-
-    if (dom) {
-      if (state.originalInputMode !== null) {
-        dom.setAttribute("inputmode", state.originalInputMode);
-      } else {
-        dom.removeAttribute("inputmode");
-      }
-    }
-
-    KioskKeyboard._inputModeSuppressions.delete(inputId);
-    this._suppressedInputId = null;
   }
 }
