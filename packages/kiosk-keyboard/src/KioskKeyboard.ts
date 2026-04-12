@@ -35,12 +35,12 @@ import {
   clearI18nResolver as registryClearResolver,
 } from "./internal/i18n-registry";
 import type { I18nResolver } from "./types";
-import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-type";
 import FocusClaimService from "./internal/focus-claim-service";
 import { ShiftState } from "./internal/shift-state";
 import TargetInputSession from "./internal/target-input-session";
 import KeyGridNavigation from "./internal/key-grid-navigation";
 import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
+import AutoShowBehavior from "./internal/auto-show-behavior";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -107,9 +107,6 @@ export default class KioskKeyboard extends Control {
   private _shiftState!: ShiftState;
   private _keyGridNav!: KeyGridNavigation;
   private _open!: boolean;
-  private _boundFocusIn!: (e: FocusEvent) => void;
-  private _boundFocusOut!: (e: FocusEvent) => void;
-  private _autoShowActive!: boolean;
   private _controlsFocusDelegation!: InputFocusDelegation;
   private _registeredControlById!: Map<string, string>;
   private _resolvedControlIds!: Set<string>;
@@ -122,11 +119,11 @@ export default class KioskKeyboard extends Control {
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
   _nativeKbSuppression!: NativeKeyboardSuppression;
-  private _extensions!: { destroy(): void }[];
+  _autoShowBehavior!: AutoShowBehavior;
+  private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
   private _boundEscapeKeydown!: (e: KeyboardEvent) => void;
   private _focusClaimService!: FocusClaimService;
   private _targetSession!: TargetInputSession;
-  private _deferredFocusOutCloseId!: number | null;
   private _rendererApi!: RendererInternalApi | null;
   private _targetResolverInstance!: TargetResolverFn | null;
   /** UI5 ResizeHandler registration ID for root size updates. */
@@ -684,9 +681,6 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav = new KeyGridNavigation(this.getId(), KIOSK_KEYBOARD_DOM);
     this.addDelegate(this._keyGridNav, true);
     this._open = false;
-    this._autoShowActive = false;
-    this._boundFocusIn = this._onDocumentFocusIn.bind(this);
-    this._boundFocusOut = this._onDocumentFocusOut.bind(this);
     this._registeredControlById = new Map();
     this._resolvedControlIds = new Set();
     this._delegatedInstances = new Map();
@@ -714,9 +708,9 @@ export default class KioskKeyboard extends Control {
     this._pressedKeyEl = null;
     this._keyboardTypeSource = "unset";
     this._nativeKbSuppression = new NativeKeyboardSuppression(this);
-    this._extensions = [this._nativeKbSuppression];
+    this._autoShowBehavior = new AutoShowBehavior(this);
+    this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
-    this._deferredFocusOutCloseId = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
       () => this._resolvedControlIds,
@@ -749,13 +743,7 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav.setRootRef(this.getDomRef() as HTMLElement | null);
     this._syncDockedDomState();
 
-    if (this.getDocked()) {
-      // Activate auto-show listeners if the property was set declaratively
-      // (e.g. via XML) before the control was rendered.
-      if (this.getAutoShow() && !this._autoShowActive) {
-        this._enableAutoShow();
-      }
-    }
+    for (const ext of this._extensions) ext.onAfterRendering?.();
 
     // Sync the ResizeHandler registration with the current DOM element,
     // then defer responsive class reapplication to the next animation frame.
@@ -886,8 +874,6 @@ export default class KioskKeyboard extends Control {
       KioskKeyboard._globalTargetResolver = null;
     }
 
-    this._cancelPendingFocusOutClose();
-    this._disableAutoShow();
     this._teardownControls();
     this._removeHighlightDelegation();
     this._teardownResponsiveSizing();
@@ -1015,7 +1001,7 @@ export default class KioskKeyboard extends Control {
    * since the association does not affect the keyboard's visual output.
    * Also moves the physical keyboard highlight delegation to the new target.
    */
-  private _setActiveTarget(target?: string | Control): this {
+  _setActiveTarget(target?: string | Control): this {
     const previousTarget = this._getActiveTargetId();
 
     // Capture pending change on the old target. The event is deferred to
@@ -1114,6 +1100,14 @@ export default class KioskKeyboard extends Control {
     return (this.getAssociation("_activeTarget", null) as string) ?? "";
   }
 
+  _getKeyboardTypeSource(): string {
+    return this._keyboardTypeSource;
+  }
+
+  _setKeyboardTypeSource(source: KeyboardTypeSource): void {
+    this._keyboardTypeSource = source;
+  }
+
   /**
    * Custom setter for controls.
    *
@@ -1134,9 +1128,9 @@ export default class KioskKeyboard extends Control {
   setAutoShow(bAutoShow: boolean): this {
     this.setProperty("autoShow", bAutoShow, true);
     if (bAutoShow) {
-      this._enableAutoShow();
+      this._autoShowBehavior.enable();
     } else {
-      this._disableAutoShow();
+      this._autoShowBehavior.disable();
     }
     return this;
   }
@@ -1267,13 +1261,13 @@ export default class KioskKeyboard extends Control {
       if (this._open) {
         this.close();
       }
-      this._disableAutoShow();
+      this._autoShowBehavior.disable();
     }
 
     if (!wasDocked && bDocked) {
       this._open = false;
       if (this.getAutoShow()) {
-        this._enableAutoShow();
+        this._autoShowBehavior.enable();
       }
     }
 
@@ -1327,28 +1321,6 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Enables auto-show: the keyboard automatically opens when any
-   * `<input>` or `<textarea>` on the page receives focus, setting it
-   * as the target. Closes when focus moves away from all inputs.
-   */
-  private _enableAutoShow(): this {
-    if (this._autoShowActive) return this;
-    this._autoShowActive = true;
-    document.addEventListener("focusin", this._boundFocusIn, true);
-    document.addEventListener("focusout", this._boundFocusOut, true);
-    return this;
-  }
-
-  /** Disables auto-show listeners. */
-  private _disableAutoShow(): this {
-    if (!this._autoShowActive) return this;
-    this._autoShowActive = false;
-    document.removeEventListener("focusin", this._boundFocusIn, true);
-    document.removeEventListener("focusout", this._boundFocusOut, true);
-    return this;
-  }
-
-  /**
    * Document-level Escape handler for docked keyboards. Closes the
    * keyboard when Escape is pressed regardless of focus source.
    * Attached in `show()`, detached in `close()`.
@@ -1380,7 +1352,7 @@ export default class KioskKeyboard extends Control {
   // Private - controls delegation
   // ──────────────────────────────────────────────
 
-  private _setupControls(): void {
+  _setupControls(): void {
     const ids = this.getControls();
     const nextByInputId = new Map<string, string>();
     const nextCountsByControlId = new Map<string, number>();
@@ -1770,7 +1742,7 @@ export default class KioskKeyboard extends Control {
   private _isTargetOfOther(inputId: string): boolean {
     for (const other of KioskKeyboard._instances) {
       if (other === this) continue;
-      if (!other._isAutoShowParticipationActive()) continue;
+      if (!other._autoShowBehavior._isParticipationActive()) continue;
       if (other._getActiveTargetId() === inputId) return true;
       // With controls, the active target is only set on focus. However, the
       // controls list declares ownership: if the input is in another keyboard's
@@ -1789,28 +1761,13 @@ export default class KioskKeyboard extends Control {
     return false;
   }
 
-  /**
-   * Returns true when this instance should participate in auto-show claim checks.
-   *
-   * Hidden/inactive controls must not block other keyboards from claiming inputs.
-   */
-  private _isAutoShowParticipationActive(): boolean {
-    if (!this.getVisible() || !this.getEnabled()) return false;
-
-    const dom = this.getDomRef();
-    if (!(dom instanceof HTMLElement)) return false;
-    if (!document.contains(dom)) return false;
-
-    return dom.getClientRects().length > 0;
-  }
-
   /** Returns true if this keyboard would auto-claim the given DOM element. */
-  private _wouldClaimInput(target: EventTarget | null): boolean {
+  _wouldClaimInput(target: EventTarget | null): boolean {
     return this._focusClaimService.wouldClaimInput(target);
   }
 
   /** Returns the UI5 control this keyboard would auto-claim, or null. */
-  private _resolveClaimableControl(target: EventTarget | null): Control | null {
+  _resolveClaimableControl(target: EventTarget | null): Control | null {
     return this._focusClaimService.resolveClaimableControl(target);
   }
 
@@ -1823,86 +1780,6 @@ export default class KioskKeyboard extends Control {
    */
   private _resolveControlsAncestor(candidate: Control): Control | null {
     return this._focusClaimService.resolveControlsAncestor(candidate);
-  }
-
-  private _onDocumentFocusIn(event: FocusEvent): void {
-    if (!this.getDocked() || !this._isAutoShowParticipationActive()) return;
-
-    if (this.getControls().length > 0) {
-      this._setupControls();
-    }
-
-    const target = event.target as HTMLElement;
-
-    // Ignore focus on the keyboard itself; the rAF callback's own
-    // dom.contains(active) guard will keep the keyboard open.
-    const myDom = this.getDomRef();
-    if (myDom && myDom.contains(target)) return;
-
-    // Only claim textual inputs not deferred to native or owned by another instance
-    const ui5Control = this._resolveClaimableControl(target);
-    if (!ui5Control) return;
-
-    // Focus landed on a claimable input -- cancel any pending close
-    this._cancelPendingFocusOutClose();
-
-    this._setActiveTarget(ui5Control);
-
-    // Auto-detect keyboard type from input metadata.
-    // Skip if re-entrancy (from deferred change handler) superseded this target.
-    if (
-      this.getAutoType() &&
-      this._keyboardTypeSource !== "explicit" &&
-      this._getActiveTargetId() === ui5Control.getId()
-    ) {
-      const detected = detectKbType(ui5Control, this._getEffectiveResolver());
-      const previous = this.getKeyboardType();
-      this._keyboardTypeSource = `auto:${detected}`;
-      this.setProperty("keyboardType", detected);
-      if (detected !== previous) {
-        this.fireEvent("keyboardTypeChange", {
-          keyboardType: detected,
-          previousKeyboardType: previous,
-          autoDetected: true,
-        });
-      }
-    }
-
-    this.show();
-  }
-
-  private _cancelPendingFocusOutClose(): void {
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-      this._deferredFocusOutCloseId = null;
-    }
-  }
-
-  private _onDocumentFocusOut(event: FocusEvent): void {
-    if (!this.getDocked() || !this._open) return;
-
-    const related = event.relatedTarget as HTMLElement | null;
-
-    // Fast path: focus staying on the keyboard itself
-    const myDom = this.getDomRef();
-    if (myDom && related && myDom.contains(related)) return;
-
-    // Fast path: focus moving to an input this keyboard would claim
-    if (this._wouldClaimInput(related)) return;
-
-    // Defer to next frame so activeElement has settled, then re-check.
-    // relatedTarget can be null in some browser/shadow-DOM transitions,
-    // and rAF lets us inspect the true destination in all cases.
-    this._cancelPendingFocusOutClose();
-    this._deferredFocusOutCloseId = requestAnimationFrame(() => {
-      this._deferredFocusOutCloseId = null;
-      if (!this.getDocked() || !this._open) return;
-      const active = document.activeElement as HTMLElement | null;
-      const dom = this.getDomRef();
-      if (dom && active && dom.contains(active)) return;
-      if (this._wouldClaimInput(active)) return;
-      this.close();
-    });
   }
 
   // ──────────────────────────────────────────────

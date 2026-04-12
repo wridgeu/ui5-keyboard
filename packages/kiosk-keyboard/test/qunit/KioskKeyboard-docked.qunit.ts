@@ -419,16 +419,13 @@ QUnit.test("setDocked toggles auto-show listener activation", async (assert) => 
   const kb = new KioskKeyboard({ docked: true, autoShow: true });
   await placeAndWait(kb);
 
-  // @ts-expect-error Accessing private field for auto-show state verification
-  assert.ok(kb._autoShowActive, "autoShow listeners are active while docked");
+  assert.ok(kb._autoShowBehavior.isActive(), "autoShow listeners are active while docked");
 
   kb.setDocked(false);
-  // @ts-expect-error Accessing private field for auto-show state verification
-  assert.notOk(kb._autoShowActive, "autoShow listeners are detached when undocked");
+  assert.notOk(kb._autoShowBehavior.isActive(), "autoShow listeners are detached when undocked");
 
   kb.setDocked(true);
-  // @ts-expect-error Accessing private field for auto-show state verification
-  assert.ok(kb._autoShowActive, "autoShow listeners are re-attached after re-docking");
+  assert.ok(kb._autoShowBehavior.isActive(), "autoShow listeners are re-attached after re-docking");
 
   kb.destroy();
 });
