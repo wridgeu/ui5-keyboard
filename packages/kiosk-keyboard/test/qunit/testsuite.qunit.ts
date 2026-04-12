@@ -55,6 +55,9 @@ sap.ui.define([], () => {
       "focus-claim-service": {
         title: "QUnit tests for ui5.kiosk - focus-claim-service",
       },
+      "dom-resolution": {
+        title: "QUnit tests for ui5.kiosk - DOM resolution (resolveInputOrTextarea)",
+      },
       "layout-registry": {
         title: "QUnit tests for ui5.kiosk - layout-registry",
       },
