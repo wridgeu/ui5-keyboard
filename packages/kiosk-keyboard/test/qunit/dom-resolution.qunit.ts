@@ -1,4 +1,4 @@
-import { resolveInputOrTextarea, resolveWithCustomResolver } from "ui5/kiosk/internal/dom";
+import { resolveInputOrTextarea, resolveWithCustomResolver, type TargetResolverFn } from "ui5/kiosk/internal/dom";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
 import StepInput from "sap/m/StepInput";
@@ -398,9 +398,7 @@ QUnit.test("resolver finds <textarea> inside HTML control content", async (asser
 });
 
 QUnit.test("resolver works when HTML content root has a custom ID", async (assert) => {
-  const ctrl = await renderControl(
-    new HTML({ content: '<div id="custom-html-id"><input type="text" value="custom-id"></div>' }),
-  );
+  await renderControl(new HTML({ content: '<div id="custom-html-id"><input type="text" value="custom-id"></div>' }));
   const dom = document.getElementById("custom-html-id");
   assert.ok(dom, "custom-ID element exists in DOM");
   const resolved = resolveInputOrTextarea(dom);
