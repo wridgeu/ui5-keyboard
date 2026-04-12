@@ -44,9 +44,7 @@ QUnit.test("Home key moves focus to first key in row", async (assert) => {
   lastKeyInRow.setAttribute("tabindex", "0");
   lastKeyInRow.focus();
 
-  const event = new KeyboardEvent("keydown", { key: "Home", bubbles: true });
-  Object.defineProperty(event, "target", { value: lastKeyInRow, writable: false });
-  kb.onkeydown(event);
+  lastKeyInRow.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", keyCode: 36, bubbles: true }));
 
   assert.strictEqual(document.activeElement, firstKeyInRow, "Focus moved to first key in row");
   assert.strictEqual(firstKeyInRow.getAttribute("tabindex"), "0", "First key has tabindex=0");
@@ -67,9 +65,7 @@ QUnit.test("End key moves focus to last key in row", async (assert) => {
   firstKeyInRow.setAttribute("tabindex", "0");
   firstKeyInRow.focus();
 
-  const event = new KeyboardEvent("keydown", { key: "End", bubbles: true });
-  Object.defineProperty(event, "target", { value: firstKeyInRow, writable: false });
-  kb.onkeydown(event);
+  firstKeyInRow.dispatchEvent(new KeyboardEvent("keydown", { key: "End", keyCode: 35, bubbles: true }));
 
   assert.strictEqual(document.activeElement, lastKeyInRow, "Focus moved to last key in row");
   assert.strictEqual(lastKeyInRow.getAttribute("tabindex"), "0", "Last key has tabindex=0");
@@ -95,9 +91,7 @@ QUnit.test("ArrowRight at end of row wraps to next row", async (assert) => {
   lastKeyFirstRow.setAttribute("tabindex", "0");
   lastKeyFirstRow.focus();
 
-  const event = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true });
-  Object.defineProperty(event, "target", { value: lastKeyFirstRow, writable: false });
-  kb.onkeydown(event);
+  lastKeyFirstRow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
 
   assert.strictEqual(document.activeElement, firstKeySecondRow, "Focus wrapped to first key of next row");
 
@@ -117,9 +111,7 @@ QUnit.test("ArrowLeft at start of row wraps to previous row", async (assert) => 
   firstKeySecondRow.setAttribute("tabindex", "0");
   firstKeySecondRow.focus();
 
-  const event = new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true });
-  Object.defineProperty(event, "target", { value: firstKeySecondRow, writable: false });
-  kb.onkeydown(event);
+  firstKeySecondRow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", keyCode: 37, bubbles: true }));
 
   assert.strictEqual(document.activeElement, lastKeyFirstRow, "Focus wrapped to last key of previous row");
 
@@ -141,9 +133,7 @@ QUnit.test("ArrowDown with column overflow clamps to last key", async (assert) =
   lastKeyFirstRow.setAttribute("tabindex", "0");
   lastKeyFirstRow.focus();
 
-  const event = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true });
-  Object.defineProperty(event, "target", { value: lastKeyFirstRow, writable: false });
-  kb.onkeydown(event);
+  lastKeyFirstRow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", keyCode: 40, bubbles: true }));
 
   // Should land on a key in the second row (clamped if column doesn't exist)
   const secondRowKeys = getRowKeys(kb, 1);

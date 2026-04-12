@@ -12,7 +12,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
-import { KEY_ID_SUFFIX_RE, keyElementId, resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
+import { resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
 import { KeyboardType, type KeyboardTypeValue, MobileKeyboard, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
@@ -40,6 +40,7 @@ import { detectKeyboardType as detectKbType } from "./internal/detect-keyboard-t
 import FocusClaimService from "./internal/focus-claim-service";
 import { ShiftState } from "./internal/shift-state";
 import TargetInputSession from "./internal/target-input-session";
+import KeyGridNavigation from "./internal/key-grid-navigation";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -109,7 +110,7 @@ export default class KioskKeyboard extends Control {
 
   // ── Private fields (initialized in init(), not at class level) ──
   private _shiftState!: ShiftState;
-  private _lastFocusedKeyId!: string | null;
+  private _keyGridNav!: KeyGridNavigation;
   private _open!: boolean;
   private _boundFocusIn!: (e: FocusEvent) => void;
   private _boundFocusOut!: (e: FocusEvent) => void;
@@ -687,7 +688,8 @@ export default class KioskKeyboard extends Control {
   init(): void {
     KioskKeyboard._instances.add(this);
     this._shiftState = new ShiftState();
-    this._lastFocusedKeyId = null;
+    this._keyGridNav = new KeyGridNavigation(this.getId(), KIOSK_KEYBOARD_DOM);
+    this.addDelegate(this._keyGridNav, true);
     this._open = false;
     this._autoShowActive = false;
     this._boundFocusIn = this._onDocumentFocusIn.bind(this);
@@ -750,6 +752,7 @@ export default class KioskKeyboard extends Control {
   }
 
   onAfterRendering(): void {
+    this._keyGridNav.setRootRef(this.getDomRef() as HTMLElement | null);
     this._syncDockedDomState();
 
     if (this.getDocked()) {
@@ -896,6 +899,8 @@ export default class KioskKeyboard extends Control {
     this._teardownResponsiveSizing();
     this._restoreNativeKeyboard();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
+    this.removeDelegate(this._keyGridNav);
+    this._keyGridNav.destroy();
   }
 
   // ──────────────────────────────────────────────
@@ -1483,15 +1488,11 @@ export default class KioskKeyboard extends Control {
       return null;
     }
 
-    return (
-      (this._lastFocusedKeyId && document.getElementById(this._lastFocusedKeyId)) ||
-      this.getDomRef()?.querySelector(KIOSK_KEYBOARD_DOM.selectors.key) ||
-      null
-    );
+    return this._keyGridNav.getFocusableDomRef();
   }
 
   getFocusInfo(): { id: string; lastFocusedKeyId: string | null } {
-    return { id: this.getId(), lastFocusedKeyId: this._lastFocusedKeyId };
+    return { id: this.getId(), lastFocusedKeyId: this._keyGridNav.getLastFocusedKeyId() };
   }
 
   applyFocusInfo(oFocusInfo: { id?: string; preventScroll?: boolean; lastFocusedKeyId?: string }): this {
@@ -1746,7 +1747,7 @@ export default class KioskKeyboard extends Control {
     const keyValue = pressed.dataset.key;
     if (!keyValue) return;
 
-    this._lastFocusedKeyId = pressed.id;
+    this._keyGridNav.setLastFocusedKeyId(pressed.id);
     this._handleKeyAction(keyValue, pressed);
   }
 
@@ -1756,51 +1757,14 @@ export default class KioskKeyboard extends Control {
 
   onkeydown(event: KeyboardEvent): void {
     if (!this.getEnabled()) return;
-    // Don't intercept browser shortcuts (Alt+Arrow = history, Meta+Arrow = OS)
-    if (event.altKey || event.metaKey) return;
 
     const target = event.target as HTMLElement;
     if (!target.classList.contains(KIOSK_KEYBOARD_DOM.classes.key)) return;
 
-    switch (event.key) {
-      case "Enter":
-      case " ": {
-        event.preventDefault();
-        const keyValue = target.dataset.key;
-        if (keyValue) this._handleKeyAction(keyValue, target);
-        break;
-      }
-      case "ArrowLeft":
-        event.preventDefault();
-        this._moveFocus(target, 0, -1);
-        break;
-      case "ArrowRight":
-        event.preventDefault();
-        this._moveFocus(target, 0, 1);
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        this._moveFocus(target, -1, 0);
-        break;
-      case "ArrowDown":
-        event.preventDefault();
-        this._moveFocus(target, 1, 0);
-        break;
-      case "Home": {
-        event.preventDefault();
-        const row = target.closest(KIOSK_KEYBOARD_DOM.selectors.row);
-        const first = row?.querySelector(KIOSK_KEYBOARD_DOM.selectors.key) as HTMLElement | null;
-        if (first && first !== target) this._transferFocus(target, first);
-        break;
-      }
-      case "End": {
-        event.preventDefault();
-        const row = target.closest(KIOSK_KEYBOARD_DOM.selectors.row);
-        const keys = row?.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.key);
-        const last = keys?.[keys.length - 1] as HTMLElement | undefined;
-        if (last && last !== target) this._transferFocus(target, last);
-        break;
-      }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      const keyValue = target.dataset.key;
+      if (keyValue) this._handleKeyAction(keyValue, target);
     }
   }
 
@@ -2110,52 +2074,6 @@ export default class KioskKeyboard extends Control {
     const id = this._getActiveTargetId();
     if (!id) return null;
     return Element.getElementById(id) ?? null;
-  }
-
-  private _moveFocus(current: HTMLElement, dRow: number, dCol: number): void {
-    const match = current.id.match(KEY_ID_SUFFIX_RE);
-    if (!match) return;
-
-    const row = Number.parseInt(match[1], 10) + dRow;
-    const col = Number.parseInt(match[2], 10) + dCol;
-    const sId = this.getId();
-
-    // Try exact coordinate first
-    let next: HTMLElement | null = document.getElementById(keyElementId(sId, row, col));
-
-    if (!next) {
-      if (dCol !== 0 && dRow === 0) {
-        // Horizontal wrapping: move to adjacent row
-        const currentRow = current.closest(KIOSK_KEYBOARD_DOM.selectors.row);
-        const adjacentRow = dCol > 0 ? currentRow?.nextElementSibling : currentRow?.previousElementSibling;
-        if (adjacentRow) {
-          const keys = adjacentRow.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.key);
-          if (keys.length > 0) {
-            next = (dCol > 0 ? keys[0] : keys[keys.length - 1]) as HTMLElement;
-          }
-        }
-      } else if (dRow !== 0) {
-        // Vertical fallback: clamp to last key in target row
-        const targetRow = this.getDomRef()?.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.row)[row];
-        if (targetRow) {
-          const keys = targetRow.querySelectorAll(KIOSK_KEYBOARD_DOM.selectors.key);
-          if (keys.length > 0) {
-            next = keys[Math.min(col, keys.length - 1)] as HTMLElement;
-          }
-        }
-      }
-    }
-
-    if (next) {
-      this._transferFocus(current, next);
-    }
-  }
-
-  private _transferFocus(current: HTMLElement, next: HTMLElement): void {
-    current.setAttribute("tabindex", "-1");
-    next.setAttribute("tabindex", "0");
-    next.focus();
-    this._lastFocusedKeyId = next.id;
   }
 
   // ──────────────────────────────────────────────
