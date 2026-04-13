@@ -491,8 +491,12 @@
       }
     }
 
-    /* ---- Variant: Active Shift indicator ---- */
-    &--active {
+    /* ---- Variant: Active Shift indicator ----
+       Scoped as --modifier&--active (specificity 0,2,0) to always
+       beat --modifier:active (0,1,1) regardless of source order.
+       This ensures the toggled-on shift key keeps its emphasized
+       look through all interactive states (hover, press, focus). */
+    &--modifier&--active {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
@@ -506,9 +510,6 @@
         border-color: @sapUiButtonEmphasizedHoverBorderColor;
       }
 
-      /* When an active (toggled-on) shift key is pressed, keep the
-         emphasized look instead of flipping to the modifier :active
-         style (white bg + blue text), which loses contrast. */
       &:active,
       &.ui5KioskKey--pressed {
         background: @sapUiButtonEmphasizedActiveBackground;
