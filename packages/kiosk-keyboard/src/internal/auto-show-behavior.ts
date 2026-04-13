@@ -54,6 +54,7 @@ export default class AutoShowBehavior extends BaseObject {
   disable(): void {
     if (!this._active) return;
     this._active = false;
+    this.cancelPendingClose();
     document.removeEventListener("focusin", this._boundFocusIn, true);
     document.removeEventListener("focusout", this._boundFocusOut, true);
   }
