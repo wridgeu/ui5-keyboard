@@ -2,6 +2,7 @@ import BaseObject from "sap/ui/base/Object";
 import Control from "sap/ui/core/Control";
 import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
 import type { TargetResolverFn } from "./dom";
+import type { KeyboardTypeValue } from "../library";
 
 interface AutoShowBehaviorHost {
   getDocked(): boolean;
@@ -9,13 +10,13 @@ interface AutoShowBehaviorHost {
   getEnabled(): boolean;
   getAutoShow(): boolean;
   getAutoType(): boolean;
-  getKeyboardType(): string;
+  getKeyboardType(): KeyboardTypeValue;
   getControls(): string[];
   getDomRef(): Element | null;
   show(): unknown;
   close(): unknown;
   setProperty(name: string, value: unknown): unknown;
-  fireEvent(name: string, parameters: Record<string, unknown>): boolean | unknown;
+  fireEvent(name: string, parameters: Record<string, unknown>): boolean | this;
 
   _getActiveTargetId(): string;
   _getEffectiveResolver(): TargetResolverFn | null;
@@ -90,16 +91,22 @@ export default class AutoShowBehavior extends BaseObject {
 
     const target = event.target as HTMLElement;
 
+    // Ignore focus on the keyboard itself; the rAF callback's own
+    // dom.contains(active) guard will keep the keyboard open.
     const myDom = this._host.getDomRef();
     if (myDom && myDom.contains(target)) return;
 
+    // Only claim textual inputs not deferred to native or owned by another instance
     const ui5Control = this._host._resolveClaimableControl(target);
     if (!ui5Control) return;
 
+    // Focus landed on a claimable input -- cancel any pending close
     this.cancelPendingClose();
 
     this._host._setActiveTarget(ui5Control);
 
+    // Auto-detect keyboard type from input metadata.
+    // Skip if re-entrancy (from deferred change handler) superseded this target.
     if (
       this._host.getAutoType() &&
       this._host._getKeyboardTypeSource() !== "explicit" &&
@@ -126,11 +133,16 @@ export default class AutoShowBehavior extends BaseObject {
 
     const related = event.relatedTarget as HTMLElement | null;
 
+    // Fast path: focus staying on the keyboard itself
     const myDom = this._host.getDomRef();
     if (myDom && related && myDom.contains(related)) return;
 
+    // Fast path: focus moving to an input this keyboard would claim
     if (this._host._wouldClaimInput(related)) return;
 
+    // Defer to next frame so activeElement has settled, then re-check.
+    // relatedTarget can be null in some browser/shadow-DOM transitions,
+    // and rAF lets us inspect the true destination in all cases.
     this.cancelPendingClose();
     this._deferredCloseId = requestAnimationFrame(() => {
       this._deferredCloseId = null;
