@@ -1,8 +1,10 @@
 <mvc:View
     controllerName="demo.hotkeys.controller.KioskDocked"
     xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core"
     xmlns="sap.m"
-    xmlns:kiosk="ui5.kiosk">
+    xmlns:kiosk="ui5.kiosk"
+    core:require="{ kioskLib: 'ui5/kiosk/library' }">
     <Page titleAlignment="Center" title="Docked Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
         <content>
             <Panel class="sapUiSmallMarginBottom" headerText="Controls">
@@ -81,7 +83,7 @@
                         width="12rem" />
                     <kiosk:KioskKeyboard
                         id="numpadKeyboard"
-                        keyboardType="Numpad"
+                        keyboardType="{= kioskLib.KeyboardType.Numpad }"
                         controls="numpadInput"
                         ariaLabel="Numeric Keypad"
                         class="sapUiSmallMarginTop" />
