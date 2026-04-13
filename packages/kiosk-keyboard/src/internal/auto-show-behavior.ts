@@ -4,7 +4,12 @@ import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
 import type { TargetResolverFn } from "./dom";
 import type { KeyboardType } from "../library";
 
-interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" | "fireEvent" | "setProperty"> {
+interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" | "setProperty"> {
+  fireKeyboardTypeChange(parameters: {
+    keyboardType: KeyboardType;
+    previousKeyboardType: KeyboardType;
+    autoDetected: boolean;
+  }): void;
   getDocked(): boolean;
   getEnabled(): boolean;
   getAutoShow(): boolean;
@@ -113,7 +118,7 @@ export default class AutoShowBehavior extends BaseObject {
       this._host._setKeyboardTypeSource(`auto:${detected}`);
       this._host.setProperty("keyboardType", detected);
       if (detected !== previous) {
-        this._host.fireEvent("keyboardTypeChange", {
+        this._host.fireKeyboardTypeChange({
           keyboardType: detected,
           previousKeyboardType: previous,
           autoDetected: true,
