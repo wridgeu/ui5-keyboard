@@ -12,7 +12,7 @@ import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
-import { KeyboardType, type KeyboardTypeValue, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   registerLayout as registryRegisterLayout,
   unregisterLayout as registryUnregisterLayout,
@@ -1142,7 +1142,7 @@ export default class KioskKeyboard extends Control {
    * which disables auto-type detection. Use {@link #resetKeyboardType}
    * to re-enable auto-type.
    */
-  setKeyboardType(sType: KeyboardTypeValue): this {
+  setKeyboardType(sType: KeyboardType): this {
     const sPrevious = this.getKeyboardType();
     this._keyboardTypeSource = "explicit";
     this.setProperty("keyboardType", sType);

@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { FKeyMode } from "ui5/kiosk/library";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
@@ -272,7 +273,7 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
     layout: "test-qwerty-fk",
     controls: [input.getId()],
   });
-  kb.setFKeyMode("Native");
+  kb.setFKeyMode(FKeyMode.Native);
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -321,7 +322,7 @@ QUnit.test("Native fKeyMode skips native action when keydown is prevented", asyn
     layout: "fkeys",
     controls: [input.getId()],
   });
-  kb.setFKeyMode("Native");
+  kb.setFKeyMode(FKeyMode.Native);
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -366,7 +367,7 @@ QUnit.test("keyPress preventDefault prevents native dispatch and native action",
     layout: "fkeys",
     controls: [input.getId()],
   });
-  kb.setFKeyMode("Native");
+  kb.setFKeyMode(FKeyMode.Native);
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -409,7 +410,7 @@ QUnit.test("Native fKeyMode does not dispatch unsupported custom fkey names", as
     layout: "qwerty",
     controls: [input.getId()],
   });
-  kb.setFKeyMode("Native");
+  kb.setFKeyMode(FKeyMode.Native);
 
   KioskKeyboard.registerLayout("test-custom-native-fkey", [
     [{ value: "{fkey:CustomAction}", label: "Do", type: "modifier" }],

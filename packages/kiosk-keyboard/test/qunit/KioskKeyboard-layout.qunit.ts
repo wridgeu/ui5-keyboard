@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import Localization from "sap/base/i18n/Localization";
@@ -46,7 +47,7 @@ QUnit.test("Default layout renders QWERTY", async (assert) => {
 
 QUnit.test("KeyboardType 'Numpad' renders numpad keys", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
   const rows = getRowElements(kb);
   assert.ok(rows.length <= 5, "Numpad has reasonable row count");
@@ -56,7 +57,7 @@ QUnit.test("KeyboardType 'Numpad' renders numpad keys", async (assert) => {
 
 QUnit.test("KeyboardType 'Numpad' renders numpad layout", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
 
   assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Has numpad CSS class");
@@ -87,7 +88,7 @@ QUnit.test("Layout property switches full keyboard layout", async (assert) => {
 
 QUnit.test("KeyboardType 'Numeric' has numeric CSS class", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setKeyboardType("Numeric");
+  kb.setKeyboardType(KeyboardType.Numeric);
   await placeAndWait(kb);
 
   assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Has numeric CSS class");
@@ -166,7 +167,7 @@ QUnit.test("Layout switch updates rendered keys", async (assert) => {
 
 QUnit.test("Layout switch ignored when keyboardType is Numpad", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
 
   let layoutChanged = false;
@@ -1127,8 +1128,8 @@ QUnit.test("qwerty-es: backspace, enter, shift, space have correct types", async
 });
 
 QUnit.test("Numeric layout keys identical regardless of base layout (qwerty vs qwertz-de)", async (assert) => {
-  const kbQwerty = new KioskKeyboard({ layout: "qwerty", keyboardType: "Numeric" });
-  const kbQwertz = new KioskKeyboard({ layout: "qwertz-de", keyboardType: "Numeric" });
+  const kbQwerty = new KioskKeyboard({ layout: "qwerty", keyboardType: KeyboardType.Numeric });
+  const kbQwertz = new KioskKeyboard({ layout: "qwertz-de", keyboardType: KeyboardType.Numeric });
   await placeAndWait(kbQwerty);
   kbQwertz.placeAt("qunit-fixture");
   await waitForRender();

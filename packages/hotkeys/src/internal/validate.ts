@@ -1,5 +1,5 @@
 import { parseHotkey } from "./parse";
-import type { Platform } from "../types";
+import type { Platform } from "../library";
 
 /**
  * Result of validating a hotkey string.

@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType } from "ui5/kiosk/library";
 import { applyResponsiveHeightClasses, placeAndWait, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
@@ -190,7 +191,7 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cq-tiny applied before keyboardType switch");
 
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
   await waitForRender();
   // Responsive class update is deferred to rAF in onAfterRendering
   await new Promise((resolve) => requestAnimationFrame(resolve));

@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
 import VBox from "sap/m/VBox";
@@ -120,7 +121,7 @@ QUnit.test("ArrowLeft at start of row wraps to previous row", async (assert) => 
 
 QUnit.test("ArrowDown with column overflow clamps to last key", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
 
   // Numpad: rows may have different key counts

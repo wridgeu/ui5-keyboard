@@ -2,7 +2,7 @@ import BaseObject from "sap/ui/base/Object";
 import Element from "sap/ui/core/Element";
 import Device from "sap/ui/Device";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
-import { MobileKeyboard, type MobileKeyboardValue } from "../library";
+import { MobileKeyboard } from "../library";
 
 type InputModeSuppressionState = {
   originalInputMode: string | null;
@@ -10,7 +10,7 @@ type InputModeSuppressionState = {
 };
 
 interface NativeKeyboardSuppressionHost {
-  getMobileKeyboard(): MobileKeyboardValue;
+  getMobileKeyboard(): MobileKeyboard;
   _getActiveTargetId(): string;
   _getEffectiveResolver(): TargetResolverFn | null;
 }

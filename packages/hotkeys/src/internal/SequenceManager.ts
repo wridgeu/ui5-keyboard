@@ -8,7 +8,8 @@ import { createIdGenerator } from "./idgen";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
-import type { HotkeyCallback, Platform } from "../types";
+import type { Platform } from "../library";
+import type { HotkeyCallback } from "../types";
 import type {
   SequenceOptions,
   SequenceRegistration,

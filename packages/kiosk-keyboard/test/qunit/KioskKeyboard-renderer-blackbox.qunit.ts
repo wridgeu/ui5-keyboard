@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import {
   getKeyElement,
@@ -213,7 +214,7 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   assert.ok(keyValues().includes("q"), "Full: has alphabetic keys");
 
   // Switch to Numpad
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
   await waitForRender();
 
   assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Numpad: has numpad class");
@@ -223,7 +224,7 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   assert.ok(numpadKeys.includes("7"), "Numpad: has '7'");
 
   // Switch to Numeric
-  kb.setKeyboardType("Numeric");
+  kb.setKeyboardType(KeyboardType.Numeric);
   await waitForRender();
 
   assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Numeric: no numpad class");
@@ -232,7 +233,7 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   assert.notOk(numericKeys.includes("q"), "Numeric: no alphabetic keys");
 
   // Back to Full
-  kb.setKeyboardType("Full");
+  kb.setKeyboardType(KeyboardType.Full);
   await waitForRender();
 
   assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Full again: no numpad class");

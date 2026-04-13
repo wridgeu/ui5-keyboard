@@ -1,6 +1,6 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
-import { ConflictBehavior, UnhandledReason } from "./library";
+import { ConflictBehavior, Platform, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./internal/SequenceManager";
 import HotkeyRecorder from "./HotkeyRecorder";
@@ -26,7 +26,6 @@ import type {
   HotkeyRegistrationInfo,
   KeyboardDispatchGuard,
   KeyStateTrackerApi,
-  Platform,
   UnhandledContext,
   UnhandledCallback,
   UpdatableHotkeyOptions,

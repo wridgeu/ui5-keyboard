@@ -1,4 +1,4 @@
-import type { Platform } from "../types";
+import type { Platform } from "../library";
 import { detectPlatform as detectPlatformDefault } from "./platform";
 
 type InstanceManagerModule = {

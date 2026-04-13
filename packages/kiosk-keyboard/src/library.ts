@@ -14,56 +14,47 @@ import "sap/m/library"; // resolve dependency before Lib.init()
  * @enum {string}
  * @public
  */
-export const KeyboardLayout = Object.freeze({
+export enum KeyboardLayout {
   /** Standard QWERTY layout. */
-  Qwerty: "qwerty",
-  /** German QWERTZ layout with Umlaute (\u00E4, \u00F6, \u00FC, \u00DF). */
-  QwertzDe: "qwertz-de",
+  Qwerty = "qwerty",
+  /** German QWERTZ layout with Umlaute. */
+  QwertzDe = "qwertz-de",
   /** Numeric layout with number pad and basic operators. */
-  Numeric: "numeric",
+  Numeric = "numeric",
   /** Special characters layout. */
-  Special: "special",
+  Special = "special",
   /** Compact numeric keypad layout. */
-  Numpad: "numpad",
+  Numpad = "numpad",
   /** Function keys F1-F12 standalone layout. */
-  Fkeys: "fkeys",
+  Fkeys = "fkeys",
   /** Navigation keys (arrows, Home/End, Page keys) standalone layout. */
-  Nav: "nav",
+  Nav = "nav",
   /** Japanese Romaji layout (QWERTY base with JIS punctuation). */
-  JaRomaji: "ja-romaji",
+  JaRomaji = "ja-romaji",
   /** Japanese Kana direct-input layout (JIS X 6002). */
-  JaKana: "ja-kana",
+  JaKana = "ja-kana",
   /** Arabic keyboard layout (standard Arabic 101). */
-  Arabic: "arabic",
+  Arabic = "arabic",
   /** Korean Hangul Dubeolsik layout (KS X 5002). */
-  KoHangul: "ko-hangul",
+  KoHangul = "ko-hangul",
   /** Spanish QWERTY layout with accented vowels and inverted punctuation. */
-  QwertyEs: "qwerty-es",
-} as const);
+  QwertyEs = "qwerty-es",
+}
 
 /**
  * Keyboard display type.
  *
- * UI5 enum convention: key === value (PascalCase).
- * This ensures DataType.parseValue() works correctly in XML views.
- *
  * @enum {string}
  * @public
  */
-export const KeyboardType = Object.freeze({
+export enum KeyboardType {
   /** Full alphabetic keyboard with all keys. */
-  Full: "Full",
+  Full = "Full",
   /** Numeric layout with number pad and basic operators. */
-  Numeric: "Numeric",
+  Numeric = "Numeric",
   /** Compact numeric keypad only. */
-  Numpad: "Numpad",
-} as const);
-
-/** Extracts the union of values from a frozen enum-like object. */
-type EnumValue<T extends Record<string, string>> = T[keyof T];
-
-/** Value type derived from {@link KeyboardType}. */
-export type KeyboardTypeValue = EnumValue<typeof KeyboardType>;
+  Numpad = "Numpad",
+}
 
 /**
  * Controls native keyboard behavior on mobile/touch devices.
@@ -71,17 +62,14 @@ export type KeyboardTypeValue = EnumValue<typeof KeyboardType>;
  * @enum {string}
  * @public
  */
-export const MobileKeyboard = Object.freeze({
+export enum MobileKeyboard {
   /** Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. Best for dedicated kiosk terminals without a physical keyboard. */
-  Custom: "Custom",
+  Custom = "Custom",
   /** Always defer to the native keyboard - KioskKeyboard will not open on focus. */
-  Native: "Native",
+  Native = "Native",
   /** Desktop browsers use KioskKeyboard, phones/tablets defer to native. Note: on a regular laptop/desktop with a physical keyboard the virtual keyboard will still appear - use `Native` if that is not desired. */
-  Auto: "Auto",
-} as const);
-
-/** Value type derived from {@link MobileKeyboard}. */
-export type MobileKeyboardValue = EnumValue<typeof MobileKeyboard>;
+  Auto = "Auto",
+}
 
 /**
  * Controls how virtual F-key taps are dispatched.
@@ -89,14 +77,14 @@ export type MobileKeyboardValue = EnumValue<typeof MobileKeyboard>;
  * @enum {string}
  * @public
  */
-export const FKeyMode = Object.freeze({
+export enum FKeyMode {
   /** Virtual mode: fire `keyPress` only (application handles behavior). */
-  Virtual: "Virtual",
+  Virtual = "Virtual",
   /** Native mode: dispatch synthetic `keydown` and run built-in native actions for selected keys. */
-  Native: "Native",
+  Native = "Native",
   /** None: fire `keyPress` only, skip native dispatch and built-in navigation actions. */
-  None: "None",
-} as const);
+  None = "None",
+}
 
 /**
  * Key names used in the `keyPress` event's `key` parameter.

@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import { placeAndWait, waitForRender } from "./test-helpers";
@@ -23,7 +24,7 @@ QUnit.test("setKeyboardType fires keyboardTypeChange event", (assert) => {
     });
   });
 
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
 
   assert.strictEqual(events.length, 1, "Event fired once");
   assert.strictEqual(events[0].keyboardType, "Numpad", "New type is Numpad");
@@ -41,7 +42,7 @@ QUnit.test("setKeyboardType does not fire when type is unchanged", (assert) => {
     fireCount++;
   });
 
-  kb.setKeyboardType("Full");
+  kb.setKeyboardType(KeyboardType.Full);
 
   assert.strictEqual(fireCount, 0, "Event not fired when type is unchanged");
 
@@ -52,7 +53,7 @@ QUnit.test("resetKeyboardType fires keyboardTypeChange when type was different",
   const kb = new KioskKeyboard();
   const events: Array<{ keyboardType: string; previousKeyboardType: string; autoDetected: boolean }> = [];
 
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
 
   kb.attachEvent("keyboardTypeChange", (event: { getParameters: () => Record<string, unknown> }) => {
     const params = event.getParameters();

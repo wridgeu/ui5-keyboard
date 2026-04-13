@@ -11,17 +11,16 @@ import Lib from "sap/ui/core/Lib";
  * @enum {string}
  * @public
  */
-export const ConflictBehavior = Object.freeze({
+export enum ConflictBehavior {
   /** Log a console warning but allow both registrations (default). */
-  Warn: "warn",
+  Warn = "warn",
   /** Throw an error, preventing the new registration. */
-  Error: "error",
+  Error = "error",
   /** Unregister the existing hotkey and register the new one. */
-  Replace: "replace",
+  Replace = "replace",
   /** Allow multiple registrations silently. */
-  Allow: "allow",
-} as const);
-export type ConflictBehavior = (typeof ConflictBehavior)[keyof typeof ConflictBehavior];
+  Allow = "allow",
+}
 
 /**
  * Reason why a key event was not handled by any registration.
@@ -29,23 +28,22 @@ export type ConflictBehavior = (typeof ConflictBehavior)[keyof typeof ConflictBe
  * @enum {string}
  * @public
  */
-export const UnhandledReason = Object.freeze({
+export enum UnhandledReason {
   /** No registration matched the key combination in any scope. */
-  NoMatch: "no_match",
+  NoMatch = "no_match",
   /** A registration matched the key combo but the event target is outside the registration's target element. */
-  TargetMismatch: "target_mismatch",
+  TargetMismatch = "target_mismatch",
   /** A registration matched, but its `enabled` option resolved to `false`. */
-  Disabled: "disabled",
+  Disabled = "disabled",
   /** A registration matched, but was suppressed because the target is an input element. */
-  InputSuppressed: "input_suppressed",
+  InputSuppressed = "input_suppressed",
   /** A registration matched, but was suppressed because a popup (dialog or popover) is open. */
-  PopupSuppressed: "popup_suppressed",
+  PopupSuppressed = "popup_suppressed",
   /** A registration matched, but was skipped because the key is held (`event.repeat`). */
-  RepeatIgnored: "repeat_ignored",
+  RepeatIgnored = "repeat_ignored",
   /** Dispatch was suspended via a guard when the event arrived. */
-  Suspended: "suspended",
-} as const);
-export type UnhandledReason = (typeof UnhandledReason)[keyof typeof UnhandledReason];
+  Suspended = "suspended",
+}
 
 /**
  * Supported platform identifiers for cross-platform modifier resolution.
@@ -53,15 +51,14 @@ export type UnhandledReason = (typeof UnhandledReason)[keyof typeof UnhandledRea
  * @enum {string}
  * @public
  */
-export const Platform = Object.freeze({
+export enum Platform {
   /** macOS - uses Meta (Command) as the primary modifier. */
-  Mac: "mac",
+  Mac = "mac",
   /** Windows - uses Control as the primary modifier. */
-  Windows: "windows",
+  Windows = "windows",
   /** Linux - uses Control as the primary modifier. */
-  Linux: "linux",
-} as const);
-export type Platform = (typeof Platform)[keyof typeof Platform];
+  Linux = "linux",
+}
 
 // Re-export from constants - single source of truth
 export { GLOBAL_SCOPE } from "./internal/constants";
