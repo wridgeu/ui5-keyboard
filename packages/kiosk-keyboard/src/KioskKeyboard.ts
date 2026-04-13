@@ -702,8 +702,8 @@ export default class KioskKeyboard extends Control {
       },
     };
     this._keyHighlightDelegation = {
-      onkeydown: (event: Event) => this._highlightKey((event as KeyboardEvent).key, true),
-      onkeyup: (event: Event) => this._highlightKey((event as KeyboardEvent).key, false),
+      onkeydown: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, true),
+      onkeyup: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, false),
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
@@ -1972,6 +1972,22 @@ export default class KioskKeyboard extends Control {
       KioskKeyboard._KEY_TO_DATA_KEY[key] ??
       (KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(key) ? `{fkey:${key}}` : undefined)
     );
+  }
+
+  /**
+   * Handles a physical keyboard event on the target input.
+   * Syncs shift/capslock state from the physical keyboard and
+   * delegates to visual key highlighting.
+   */
+  private _onPhysicalKey(event: KeyboardEvent, down: boolean): void {
+    this._highlightKey(event.key, down);
+
+    // Sync the virtual shift state from the physical keyboard.
+    const capsLock = typeof event.getModifierState === "function" && event.getModifierState("CapsLock");
+    const changed = this._shiftState.syncFromPhysical(event.shiftKey, capsLock);
+    if (changed) {
+      this.invalidate();
+    }
   }
 
   private _highlightKey(key: string, add: boolean): void {

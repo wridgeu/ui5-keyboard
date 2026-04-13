@@ -74,6 +74,30 @@ export class ShiftState {
     return false;
   }
 
+  /**
+   * Syncs the shift state from a physical keyboard event.
+   * Returns true if the state changed.
+   */
+  syncFromPhysical(shiftHeld: boolean, capsLockOn: boolean): boolean {
+    const prev = this._mode;
+
+    if (capsLockOn) {
+      this._mode = Mode.CapsLock;
+    } else if (shiftHeld) {
+      this._mode = Mode.Shift;
+    } else {
+      this._mode = Mode.Off;
+    }
+
+    // Reset the double-click window so the next virtual toggle()
+    // starts fresh instead of inheriting stale timing.
+    if (prev !== this._mode) {
+      this._lastToggleTime = -Infinity;
+    }
+
+    return prev !== this._mode;
+  }
+
   /** Clears both shift and caps lock. */
   reset(): void {
     this._mode = Mode.Off;
