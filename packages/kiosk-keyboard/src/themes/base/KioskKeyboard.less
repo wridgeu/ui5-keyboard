@@ -530,6 +530,12 @@
       clip-path: inset(50%);
       white-space: nowrap;
     }
+
+    /* Scale the icon up when the label is hidden so the key
+       is not visually empty (especially Shift, Enter, Backspace). */
+    .ui5KioskKey--dual .ui5KioskKey__icon {
+      font-size: var(--ui5KioskKeyboard-keyFontSize);
+    }
   }
 
   /* ============================= */
