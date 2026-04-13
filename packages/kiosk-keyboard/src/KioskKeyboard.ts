@@ -1127,9 +1127,9 @@ export default class KioskKeyboard extends Control {
    * Custom setter for autoShow - activates or deactivates the
    * auto-show document listeners via enableAutoShow/disableAutoShow.
    */
-  setAutoShow(autoShow: boolean): this {
-    this.setProperty("autoShow", autoShow, true);
-    if (autoShow) {
+  setAutoShow(isAutoShow: boolean): this {
+    this.setProperty("autoShow", isAutoShow, true);
+    if (isAutoShow) {
       this._autoShowBehavior.enable();
     } else {
       this._autoShowBehavior.disable();
@@ -1255,25 +1255,25 @@ export default class KioskKeyboard extends Control {
    * Custom setter for docked - manages CSS on the existing DOM
    * rather than re-rendering (which would disrupt transitions).
    */
-  setDocked(docked: boolean): this {
+  setDocked(isDocked: boolean): this {
     const wasDocked = this.getDocked();
-    if (wasDocked === docked) return this;
+    if (wasDocked === isDocked) return this;
 
-    if (wasDocked && !docked) {
+    if (wasDocked && !isDocked) {
       if (this._open) {
         this.close();
       }
       this._autoShowBehavior.disable();
     }
 
-    if (!wasDocked && docked) {
+    if (!wasDocked && isDocked) {
       this._open = false;
       if (this.getAutoShow()) {
         this._autoShowBehavior.enable();
       }
     }
 
-    this.setProperty("docked", docked, true);
+    this.setProperty("docked", isDocked, true);
     const dom = this.getDomRef() as HTMLElement | null;
     this._syncDockedDomState();
     if (dom) {
