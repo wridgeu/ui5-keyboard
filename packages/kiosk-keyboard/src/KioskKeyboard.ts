@@ -1982,9 +1982,11 @@ export default class KioskKeyboard extends Control {
   private _onPhysicalKey(event: KeyboardEvent, down: boolean): void {
     this._highlightKey(event.key, down);
 
-    // Sync the virtual shift state from the physical keyboard.
-    const capsLock = typeof event.getModifierState === "function" && event.getModifierState("CapsLock");
-    const changed = this._shiftState.syncFromPhysical(event.shiftKey, capsLock);
+    // UI5 event delegation wraps the native event; unwrap to access
+    // getModifierState which is not forwarded to the wrapper.
+    const native = (event as KeyboardEvent & { originalEvent?: KeyboardEvent }).originalEvent ?? event;
+    const capsLock = typeof native.getModifierState === "function" && native.getModifierState("CapsLock");
+    const changed = this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
     if (changed) {
       this.invalidate();
     }
