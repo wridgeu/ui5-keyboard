@@ -602,10 +602,10 @@ class KioskKeyboard extends UI5Element {
     if (e instanceof KeyboardEvent) this._onDocumentEscape(e);
   };
   private readonly _boundPhysicalKeyDown = (e: Event) => {
-    if (e instanceof KeyboardEvent) this._highlightKey(e.key, true);
+    if (e instanceof KeyboardEvent) this._onPhysicalKey(e, true);
   };
   private readonly _boundPhysicalKeyUp = (e: Event) => {
-    if (e instanceof KeyboardEvent) this._highlightKey(e.key, false);
+    if (e instanceof KeyboardEvent) this._onPhysicalKey(e, false);
   };
   private readonly _boundPhysicalBlur = () => {
     this._clearHighlight();
@@ -1607,6 +1607,17 @@ class KioskKeyboard extends UI5Element {
       }
     }
     this._suppressedElement = null;
+  }
+
+  // ── Physical keyboard sync ──
+
+  private _onPhysicalKey(event: KeyboardEvent, down: boolean): void {
+    this._highlightKey(event.key, down);
+
+    const changed = this._shiftState.syncFromPhysical(event.shiftKey, event.getModifierState("CapsLock"));
+    if (changed) {
+      this._syncShiftState();
+    }
   }
 
   // ── Physical keyboard highlight ──
