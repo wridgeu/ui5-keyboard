@@ -9,8 +9,10 @@ type InputModeSuppressionState = {
   refCount: number;
 };
 
+type MobileKeyboardValue = (typeof MobileKeyboard)[keyof typeof MobileKeyboard];
+
 interface NativeKeyboardSuppressionHost {
-  getMobileKeyboard(): string;
+  getMobileKeyboard(): MobileKeyboardValue;
   _getActiveTargetId(): string;
   _getEffectiveResolver(): TargetResolverFn | null;
 }
