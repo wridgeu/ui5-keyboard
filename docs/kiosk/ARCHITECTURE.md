@@ -19,6 +19,9 @@ internal/detect-keyboard-type.ts  Auto-type detection helpers
 internal/input-operations.ts      Target input text operations
 internal/target-input-session.ts  Per-target dirty/value/change handling
 internal/focus-claim-service.ts   Auto-show input claim logic
+internal/key-grid-navigation.ts   Keyboard grid navigation delegate (arrow keys, Home/End, row wrapping)
+internal/native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting across instances
+internal/auto-show-behavior.ts    Auto-show focus-in/out listeners, auto-type detection, deferred close
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
@@ -148,11 +151,11 @@ For controller code that needs the control instance (not the ID), use `getActive
 _setActiveTarget(newInput)
   1. captureAndClearDirty()        - snapshot old target's change data, clear dirty flag
   2. _removeHighlightDelegation()  - remove key highlight from old target
-  3. _restoreNativeKeyboard()      - restore old target's inputmode (if keyboard is open)
-  4. resetForTargetSwitch()        - reset cursor state
-  5. setAssociation(newInput)      - update the association
-  6. add highlight delegation      - attach to new target
-  7. _suppressNativeKeyboard()     - suppress new target's inputmode (if keyboard is open)
+  3. _nativeKbSuppression.restore()  - restore old target's inputmode (if keyboard is open)
+  4. resetForTargetSwitch()         - reset cursor state
+  5. setAssociation(newInput)       - update the association
+  6. add highlight delegation       - attach to new target
+  7. _nativeKbSuppression.suppress() - suppress new target's inputmode (if keyboard is open)
   8. fireDeferredChange()          - fire "change" on the OLD target (captured in step 1)
 ```
 
@@ -171,7 +174,7 @@ _setActiveTarget(inputB)        - target was inputA
   7. suppress inputB's inputmode
   8. fire deferred change on inputA
      └─ handler calls inputC.focus()
-        └─ focusin → _onDocumentFocusIn → _setActiveTarget(inputC)
+        └─ focusin → AutoShowBehavior._onDocumentFocusIn → _setActiveTarget(inputC)
              1. capture (nothing - not dirty)
              2. remove inputB's highlight delegation
              3. restore inputB's inputmode
@@ -223,6 +226,8 @@ Caps Lock    Mode.CapsLock true      true
 **Double-click detection**: A second Shift press within 400ms (`ShiftState.DOUBLE_CLICK_MS`) of the first activates Caps Lock. A single press outside that window toggles one-shot Shift. Pressing Shift while Caps Lock is active turns everything off.
 
 **Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and returns `true`, triggering `invalidate()` to update the display. Caps Lock is sticky and does not auto-release.
+
+**Physical keyboard sync**: When a physical keyboard is attached, the virtual keyboard automatically syncs its shift and caps-lock state from physical key events. This works through the existing highlight delegation on the target input: `keydown`/`keyup` events for Shift and CapsLock update the `ShiftState`, and the keyboard re-renders to reflect the current modifier state. No additional listeners are required because the delegation already observes all key events on the target element.
 
 ## Layout System
 
@@ -321,7 +326,7 @@ Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" 
 
 ### Integration Point
 
-In `_onDocumentFocusIn`, after resolving the UI5 control and before `show()`:
+In `AutoShowBehavior._onDocumentFocusIn`, after resolving the UI5 control and before `show()`:
 
 ```ts
 if (this.getAutoType() && this._keyboardTypeSource !== "explicit") {
@@ -331,16 +336,16 @@ if (this.getAutoType() && this._keyboardTypeSource !== "explicit") {
 }
 ```
 
-When the user tabs from a Number input to a Text input, `_onDocumentFocusIn` fires again, detects `"Full"`, and switches back.
+When the user tabs from a Number input to a Text input, `AutoShowBehavior._onDocumentFocusIn` fires again, detects `"Full"`, and switches back.
 
 ## Mobile Keyboard Detection
 
 The `mobileKeyboard` property (enum `ui5.kiosk.MobileKeyboard`) controls whether to suppress the native virtual keyboard or defer to it on mobile/touch devices.
 
-### \_shouldDeferToNative()
+### \_nativeKbSuppression.shouldDeferToNative()
 
 ```ts
-private _shouldDeferToNative(): boolean {
+shouldDeferToNative(): boolean {
   const mode = this.getMobileKeyboard();
   if (mode === "Custom") return false;
   if (mode === "Native") return true;
@@ -355,10 +360,10 @@ private _shouldDeferToNative(): boolean {
 
 ### Native Keyboard Suppression
 
-When the KioskKeyboard shows and `_shouldDeferToNative()` returns `false`, it sets `inputmode="none"` on the target input's DOM element. This is the standard web API for preventing the native virtual keyboard.
+When the KioskKeyboard shows and `_nativeKbSuppression.shouldDeferToNative()` returns `false`, it sets `inputmode="none"` on the target input's DOM element. This is the standard web API for preventing the native virtual keyboard.
 
-- `_suppressNativeKeyboard()`: saves original `inputmode`, sets `"none"`. Called by `show()`.
-- `_restoreNativeKeyboard()`: restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()` and `exit()`.
+- `_nativeKbSuppression.suppress()`: saves original `inputmode`, sets `"none"`. Called by `show()`.
+- `_nativeKbSuppression.restore()`: restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()` and `exit()`.
 
 State is tracked via:
 
@@ -369,10 +374,10 @@ This makes suppression safe for multi-keyboard setups targeting the same input: 
 
 ### Integration Points
 
-1. **`_onDocumentFocusIn`**: Checks `_shouldDeferToNative()` first. If `true`, returns early. The native keyboard handles input.
-2. **`show()`**: Calls `_suppressNativeKeyboard()`.
-3. **`close()`**: Calls `_restoreNativeKeyboard()`.
-4. **`exit()`**: Calls `_restoreNativeKeyboard()` for cleanup.
+1. **`AutoShowBehavior._onDocumentFocusIn`**: Checks `_nativeKbSuppression.shouldDeferToNative()` first. If `true`, returns early. The native keyboard handles input.
+2. **`show()`**: Calls `_nativeKbSuppression.suppress()`.
+3. **`close()`**: Calls `_nativeKbSuppression.restore()`.
+4. **`exit()`**: Calls `_nativeKbSuppression.restore()` for cleanup.
 5. **Focus-out cleanup**: If the keyboard is already open, close/restore still runs when focus leaves even if the control became non-participating (`visible=false` / `enabled=false`) after opening.
 
 ## Docked Mode
@@ -447,7 +452,7 @@ The "would this keyboard claim" check uses `_wouldClaimInput()`, which consults 
 
 ### Cleanup
 
-`disableAutoShow()` removes both listeners. The `exit()` lifecycle hook removes the instance from the static registry, calls `disableAutoShow()`, and restores the native keyboard inputmode, preventing leaks after the control is destroyed.
+`_autoShowBehavior.disable()` removes both listeners. The `exit()` lifecycle hook removes the instance from the static registry, calls `_autoShowBehavior.disable()`, and restores the native keyboard inputmode, preventing leaks after the control is destroyed.
 
 ## Keyboard Navigation
 
@@ -543,10 +548,10 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                          |
 | Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                 |
 | Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                   |
-| `inputmode` restore on target switch    | `_suppressNativeKeyboard()` restores previous before suppressing new             |
-| `inputmode` restore on destroy          | `exit()` calls `_restoreNativeKeyboard()`                                        |
+| `inputmode` restore on target switch    | `_nativeKbSuppression.suppress()` restores previous before suppressing new       |
+| `inputmode` restore on destroy          | `exit()` calls `_nativeKbSuppression.restore()`                                  |
 | Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop             |
-| `show()` without target input           | `_suppressNativeKeyboard()` is a no-op when no target element exists             |
+| `show()` without target input           | `_nativeKbSuppression.suppress()` is a no-op when no target element exists       |
 | Resolver throws                         | `getText` catches, logs warning, returns base bundle text                        |
 | Last `KioskKeyboard` instance destroyed | `exit()` clears the i18n resolver (FLP safety)                                   |
 
@@ -569,6 +574,9 @@ packages/kiosk-keyboard/
       input-operations.ts     Text insertion/backspace/enter ops
       target-input-session.ts Target state + commit handling
       focus-claim-service.ts  Auto-show claim decisions
+      key-grid-navigation.ts  Keyboard grid navigation delegate
+      native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting
+      auto-show-behavior.ts   Auto-show focus-in/out listeners, deferred close
     layouts/
       qwerty.ts               Standard QWERTY layout
       qwertz-de.ts            German QWERTZ layout

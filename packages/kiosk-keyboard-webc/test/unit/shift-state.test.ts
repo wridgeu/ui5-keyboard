@@ -108,4 +108,62 @@ describe("ShiftState", () => {
       expect(state.isCapsLock).toBe(false);
     });
   });
+
+  describe("syncFromPhysical", () => {
+    it("from Off with (false, false) returns false (no change)", () => {
+      expect(state.syncFromPhysical(false, false)).toBe(false);
+      expect(state.isShifted).toBe(false);
+      expect(state.isCapsLock).toBe(false);
+    });
+
+    it("from Off with (true, false) sets Shift", () => {
+      expect(state.syncFromPhysical(true, false)).toBe(true);
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(false);
+    });
+
+    it("from Off with (false, true) sets CapsLock", () => {
+      expect(state.syncFromPhysical(false, true)).toBe(true);
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(true);
+    });
+
+    it("from Shift with (false, false) returns to Off", () => {
+      state.syncFromPhysical(true, false); // move to Shift
+      expect(state.syncFromPhysical(false, false)).toBe(true);
+      expect(state.isShifted).toBe(false);
+      expect(state.isCapsLock).toBe(false);
+    });
+
+    it("from CapsLock with (false, false) returns to Off", () => {
+      state.syncFromPhysical(false, true); // move to CapsLock
+      expect(state.syncFromPhysical(false, false)).toBe(true);
+      expect(state.isShifted).toBe(false);
+      expect(state.isCapsLock).toBe(false);
+    });
+
+    it("CapsLock wins over Shift when both flags set", () => {
+      expect(state.syncFromPhysical(true, true)).toBe(true);
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(true);
+    });
+
+    it("no-op when state unchanged returns false on second call", () => {
+      expect(state.syncFromPhysical(true, false)).toBe(true);
+      expect(state.syncFromPhysical(true, false)).toBe(false);
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(false);
+    });
+
+    it("resets double-click window so next toggle starts fresh Shift", () => {
+      state.toggle(); // shift on
+      expect(state.isShifted).toBe(true);
+
+      state.syncFromPhysical(false, false); // external sync -> off, resets window
+
+      state.toggle(); // should start fresh shift, not caps lock
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(false);
+    });
+  });
 });

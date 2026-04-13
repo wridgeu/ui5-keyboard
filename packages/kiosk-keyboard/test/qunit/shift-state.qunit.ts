@@ -117,3 +117,69 @@ QUnit.test("reset clears caps lock", (assert) => {
   assert.strictEqual(state.isShifted, false, "not shifted");
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
 });
+
+// ── syncFromPhysical ─────────────────────────────────────────────
+
+QUnit.test("syncFromPhysical: from Off with (false, false) returns false (no change)", (assert) => {
+  const state = new ShiftState();
+  assert.strictEqual(state.syncFromPhysical(false, false), false, "no change");
+  assert.strictEqual(state.isShifted, false, "still not shifted");
+  assert.strictEqual(state.isCapsLock, false, "still not caps lock");
+});
+
+QUnit.test("syncFromPhysical: from Off with (true, false) sets Shift", (assert) => {
+  const state = new ShiftState();
+  assert.ok(state.syncFromPhysical(true, false), "state changed");
+  assert.ok(state.isShifted, "shifted");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock");
+});
+
+QUnit.test("syncFromPhysical: from Off with (false, true) sets CapsLock", (assert) => {
+  const state = new ShiftState();
+  assert.ok(state.syncFromPhysical(false, true), "state changed");
+  assert.ok(state.isShifted, "shifted");
+  assert.ok(state.isCapsLock, "caps lock");
+});
+
+QUnit.test("syncFromPhysical: from Shift with (false, false) returns to Off", (assert) => {
+  const state = new ShiftState();
+  state.syncFromPhysical(true, false); // move to Shift
+  assert.ok(state.syncFromPhysical(false, false), "state changed");
+  assert.strictEqual(state.isShifted, false, "not shifted");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock");
+});
+
+QUnit.test("syncFromPhysical: from CapsLock with (false, false) returns to Off", (assert) => {
+  const state = new ShiftState();
+  state.syncFromPhysical(false, true); // move to CapsLock
+  assert.ok(state.syncFromPhysical(false, false), "state changed");
+  assert.strictEqual(state.isShifted, false, "not shifted");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock");
+});
+
+QUnit.test("syncFromPhysical: CapsLock wins over Shift when both flags set", (assert) => {
+  const state = new ShiftState();
+  assert.ok(state.syncFromPhysical(true, true), "state changed");
+  assert.ok(state.isShifted, "shifted");
+  assert.ok(state.isCapsLock, "caps lock -- capsLock wins over shift");
+});
+
+QUnit.test("syncFromPhysical: no-op when state unchanged returns false on second call", (assert) => {
+  const state = new ShiftState();
+  assert.ok(state.syncFromPhysical(true, false), "first call changed state");
+  assert.strictEqual(state.syncFromPhysical(true, false), false, "second call is a no-op");
+  assert.ok(state.isShifted, "still shifted");
+  assert.strictEqual(state.isCapsLock, false, "still not caps lock");
+});
+
+QUnit.test("syncFromPhysical: resets double-click window so next toggle starts fresh Shift", (assert) => {
+  const state = new ShiftState();
+  state.toggle(); // shift on
+  assert.ok(state.isShifted, "shifted after toggle");
+
+  state.syncFromPhysical(false, false); // external sync -> off, resets window
+
+  state.toggle(); // should start fresh shift, not jump to caps lock
+  assert.ok(state.isShifted, "shifted after toggle following sync");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock -- double-click window was reset");
+});
