@@ -505,6 +505,20 @@
         background: @sapUiButtonEmphasizedHoverBackground;
         border-color: @sapUiButtonEmphasizedHoverBorderColor;
       }
+
+      /* When an active (toggled-on) shift key is pressed, keep the
+         emphasized look instead of flipping to the modifier :active
+         style (white bg + blue text), which loses contrast. */
+      &:active,
+      &.ui5KioskKey--pressed {
+        background: @sapUiButtonEmphasizedActiveBackground;
+        color: @sapUiButtonEmphasizedActiveTextColor;
+        border-color: @sapUiButtonEmphasizedActiveBorderColor;
+      }
+
+      &:focus-visible {
+        outline-color: @sapUiContentContrastFocusColor;
+      }
     }
 
     /* ---- Variant: Caps Lock indicator ---- */
