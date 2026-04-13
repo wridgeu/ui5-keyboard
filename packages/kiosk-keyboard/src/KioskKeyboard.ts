@@ -1089,7 +1089,7 @@ export default class KioskKeyboard extends Control {
 
     const newTarget = this._getActiveTargetId();
     if (newTarget !== previousTarget) {
-      this.fireEvent("activeControlChange", { controlId: newTarget });
+      this.fireActiveControlChange({ controlId: newTarget });
     }
 
     return this;
@@ -1147,7 +1147,7 @@ export default class KioskKeyboard extends Control {
     this._keyboardTypeSource = "explicit";
     this.setProperty("keyboardType", sType);
     if (sType !== sPrevious) {
-      this.fireEvent("keyboardTypeChange", {
+      this.fireKeyboardTypeChange({
         keyboardType: sType,
         previousKeyboardType: sPrevious,
         autoDetected: false,
@@ -1173,7 +1173,7 @@ export default class KioskKeyboard extends Control {
     this._keyboardTypeSource = "unset";
     this.setProperty("keyboardType", KeyboardType.Full);
     if (KeyboardType.Full !== sPrevious) {
-      this.fireEvent("keyboardTypeChange", {
+      this.fireKeyboardTypeChange({
         keyboardType: KeyboardType.Full,
         previousKeyboardType: sPrevious,
         autoDetected: false,
@@ -1296,7 +1296,7 @@ export default class KioskKeyboard extends Control {
       dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootClosed);
       this._announceLiveRegion(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
     }
-    this.fireEvent("afterOpen");
+    this.fireAfterOpen();
     return this;
   }
 
@@ -1313,7 +1313,7 @@ export default class KioskKeyboard extends Control {
       dom.classList.add(KIOSK_KEYBOARD_DOM.classes.rootClosed);
       this._announceLiveRegion(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
     }
-    this.fireEvent("afterClose");
+    this.fireAfterClose();
     return this;
   }
 
@@ -1822,14 +1822,14 @@ export default class KioskKeyboard extends Control {
     }
 
     if (keyValue === "{backspace}") {
-      if (this.fireEvent("keyPress", { key: "Backspace", shiftKey: shift }, true)) {
+      if (this.fireKeyPress({ key: "Backspace", shiftKey: shift })) {
         this._targetSession.handleBackspace();
       }
       return;
     }
 
     if (keyValue === "{enter}") {
-      if (this.fireEvent("keyPress", { key: "Enter", shiftKey: shift }, true)) {
+      if (this.fireKeyPress({ key: "Enter", shiftKey: shift })) {
         this._targetSession.handleEnter();
       }
       return;
@@ -1848,7 +1848,7 @@ export default class KioskKeyboard extends Control {
           this.setLayout(name);
           const nextLayout = this.getLayout();
           if (nextLayout !== previousLayout) {
-            this.fireEvent("layoutChange", { layout: nextLayout });
+            this.fireLayoutChange({ layout: nextLayout });
           }
         }
       }
@@ -1860,7 +1860,7 @@ export default class KioskKeyboard extends Control {
 
       // Fire keyPress first so consumers can prevent all downstream action
       // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
-      if (!this.fireEvent("keyPress", { key: fkeyName, shiftKey: shift }, true)) {
+      if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) {
         return;
       }
 
@@ -1909,7 +1909,7 @@ export default class KioskKeyboard extends Control {
       }
     }
 
-    if (this.fireEvent("keyPress", { key: effective, shiftKey: shift }, true)) {
+    if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
       this._targetSession.insertText(effective);
     }
 
