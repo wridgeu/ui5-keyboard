@@ -59,8 +59,11 @@ export const KeyboardType = Object.freeze({
   Numpad: "Numpad",
 } as const);
 
+/** Extracts the union of values from a frozen enum-like object. */
+type EnumValue<T extends Record<string, string>> = T[keyof T];
+
 /** Value type derived from {@link KeyboardType}. */
-export type KeyboardTypeValue = (typeof KeyboardType)[keyof typeof KeyboardType];
+export type KeyboardTypeValue = EnumValue<typeof KeyboardType>;
 
 /**
  * Controls native keyboard behavior on mobile/touch devices.
@@ -76,6 +79,9 @@ export const MobileKeyboard = Object.freeze({
   /** Desktop browsers use KioskKeyboard, phones/tablets defer to native. Note: on a regular laptop/desktop with a physical keyboard the virtual keyboard will still appear - use `Native` if that is not desired. */
   Auto: "Auto",
 } as const);
+
+/** Value type derived from {@link MobileKeyboard}. */
+export type MobileKeyboardValue = EnumValue<typeof MobileKeyboard>;
 
 /**
  * Controls how virtual F-key taps are dispatched.

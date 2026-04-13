@@ -679,6 +679,7 @@ export default class KioskKeyboard extends Control {
     KioskKeyboard._instances.add(this);
     this._shiftState = new ShiftState();
     this._keyGridNav = new KeyGridNavigation(this.getId(), KIOSK_KEYBOARD_DOM);
+    // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
     this._open = false;
     this._registeredControlById = new Map();
@@ -879,6 +880,7 @@ export default class KioskKeyboard extends Control {
     this._teardownResponsiveSizing();
     for (const ext of this._extensions) ext.destroy();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
+    // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
   }
@@ -1723,6 +1725,7 @@ export default class KioskKeyboard extends Control {
 
   onkeydown(event: KeyboardEvent): void {
     if (!this.getEnabled()) return;
+    if (event.altKey || event.metaKey) return;
 
     const target = event.target as HTMLElement;
     if (!target.classList.contains(KIOSK_KEYBOARD_DOM.classes.key)) return;
