@@ -119,7 +119,7 @@ export default class KioskKeyboard extends Control {
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
   private _nativeKbSuppression!: NativeKeyboardSuppression;
-  _autoShowBehavior!: AutoShowBehavior;
+  private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
   private _boundEscapeKeydown!: (e: KeyboardEvent) => void;
   private _focusClaimService!: FocusClaimService;
