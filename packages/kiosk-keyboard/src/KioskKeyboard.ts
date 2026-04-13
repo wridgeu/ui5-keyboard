@@ -1127,9 +1127,9 @@ export default class KioskKeyboard extends Control {
    * Custom setter for autoShow - activates or deactivates the
    * auto-show document listeners via enableAutoShow/disableAutoShow.
    */
-  setAutoShow(bAutoShow: boolean): this {
-    this.setProperty("autoShow", bAutoShow, true);
-    if (bAutoShow) {
+  setAutoShow(autoShow: boolean): this {
+    this.setProperty("autoShow", autoShow, true);
+    if (autoShow) {
       this._autoShowBehavior.enable();
     } else {
       this._autoShowBehavior.disable();
@@ -1142,14 +1142,14 @@ export default class KioskKeyboard extends Control {
    * which disables auto-type detection. Use {@link #resetKeyboardType}
    * to re-enable auto-type.
    */
-  setKeyboardType(sType: KeyboardType): this {
-    const sPrevious = this.getKeyboardType();
+  setKeyboardType(type: KeyboardType): this {
+    const previous = this.getKeyboardType();
     this._keyboardTypeSource = "explicit";
-    this.setProperty("keyboardType", sType);
-    if (sType !== sPrevious) {
+    this.setProperty("keyboardType", type);
+    if (type !== previous) {
       this.fireKeyboardTypeChange({
-        keyboardType: sType,
-        previousKeyboardType: sPrevious,
+        keyboardType: type,
+        previousKeyboardType: previous,
         autoDetected: false,
       });
     }
@@ -1255,25 +1255,25 @@ export default class KioskKeyboard extends Control {
    * Custom setter for docked - manages CSS on the existing DOM
    * rather than re-rendering (which would disrupt transitions).
    */
-  setDocked(bDocked: boolean): this {
+  setDocked(docked: boolean): this {
     const wasDocked = this.getDocked();
-    if (wasDocked === bDocked) return this;
+    if (wasDocked === docked) return this;
 
-    if (wasDocked && !bDocked) {
+    if (wasDocked && !docked) {
       if (this._open) {
         this.close();
       }
       this._autoShowBehavior.disable();
     }
 
-    if (!wasDocked && bDocked) {
+    if (!wasDocked && docked) {
       this._open = false;
       if (this.getAutoShow()) {
         this._autoShowBehavior.enable();
       }
     }
 
-    this.setProperty("docked", bDocked, true);
+    this.setProperty("docked", docked, true);
     const dom = this.getDomRef() as HTMLElement | null;
     this._syncDockedDomState();
     if (dom) {
@@ -1741,11 +1741,24 @@ export default class KioskKeyboard extends Control {
   // Private - Auto-show
   // ──────────────────────────────────────────────
 
+  /**
+   * Whether this instance is visible, enabled, attached to the DOM,
+   * and has a non-zero layout size - i.e. eligible to participate in
+   * multi-instance focus-claim arbitration.
+   */
+  private _isParticipating(): boolean {
+    if (!this.getVisible() || !this.getEnabled()) return false;
+    const dom = this.getDomRef();
+    if (!(dom instanceof HTMLElement)) return false;
+    if (!document.contains(dom)) return false;
+    return dom.getClientRects().length > 0;
+  }
+
   /** Returns true if any other KioskKeyboard instance already targets this input. */
   private _isTargetOfOther(inputId: string): boolean {
     for (const other of KioskKeyboard._instances) {
       if (other === this) continue;
-      if (!other._autoShowBehavior._isParticipationActive()) continue;
+      if (!other._isParticipating()) continue;
       if (other._getActiveTargetId() === inputId) return true;
       // With controls, the active target is only set on focus. However, the
       // controls list declares ownership: if the input is in another keyboard's

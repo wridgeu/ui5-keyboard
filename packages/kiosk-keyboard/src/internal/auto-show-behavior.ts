@@ -76,7 +76,7 @@ export default class AutoShowBehavior extends BaseObject {
     }
   }
 
-  _isParticipationActive(): boolean {
+  private _isParticipationActive(): boolean {
     if (!this._host.getVisible() || !this._host.getEnabled()) return false;
     const dom = this._host.getDomRef();
     if (!(dom instanceof HTMLElement)) return false;

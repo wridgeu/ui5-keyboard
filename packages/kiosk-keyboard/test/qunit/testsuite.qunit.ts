@@ -97,6 +97,9 @@ sap.ui.define([], () => {
       "hangul-compose": {
         title: "QUnit tests for ui5.kiosk - hangul-compose middleware",
       },
+      "native-keyboard-suppression": {
+        title: "QUnit tests for ui5.kiosk - NativeKeyboardSuppression",
+      },
     },
   };
 });
