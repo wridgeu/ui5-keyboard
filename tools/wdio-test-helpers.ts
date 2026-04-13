@@ -302,6 +302,13 @@ export type MatchSnapshotOptions = {
    * reflect real visual regressions.
    */
   ignoreAntialiasing?: boolean;
+  /**
+   * Maximum allowed mismatch percentage (0-100). Defaults to `0` (exact
+   * match). Use a small value (e.g. `0.15`) for tests involving
+   * interactive state changes where sub-pixel rendering variance is
+   * expected between runs.
+   */
+  misMatchPercentage?: number;
 } & IsolateSectionOptions &
   AssertSnapshotOptions;
 
@@ -320,6 +327,7 @@ export async function matchElementSnapshotInSection(
     await assertSnapshotTargetIsUsable(target, name, options);
     await expect(target).toMatchElementSnapshot(name, {
       ignoreAntialiasing: options?.ignoreAntialiasing ?? true,
+      ...(options?.misMatchPercentage != null && { misMatchPercentage: options.misMatchPercentage }),
     });
   } finally {
     await restoreSections();

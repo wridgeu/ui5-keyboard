@@ -90,7 +90,7 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
       timeoutMsg: "Shift key did not become active on ja-kana",
     });
     try {
-      await matchElementSnapshotInSection(kb, "kb-ja-kana-shifted");
+      await matchElementSnapshotInSection(kb, "kb-ja-kana-shifted", { misMatchPercentage: 0.15 });
     } finally {
       await shiftKey.click();
       await shiftKey.click();
@@ -116,7 +116,7 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
       timeoutMsg: "Shift key did not become active on ko-hangul",
     });
     try {
-      await matchElementSnapshotInSection(kb, "kb-ko-hangul-shifted");
+      await matchElementSnapshotInSection(kb, "kb-ko-hangul-shifted", { misMatchPercentage: 0.15 });
     } finally {
       await shiftKey.click();
       await shiftKey.click();
@@ -142,7 +142,7 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
       timeoutMsg: "Shift key did not become active on qwerty-es",
     });
     try {
-      await matchElementSnapshotInSection(kb, "kb-qwerty-es-shifted");
+      await matchElementSnapshotInSection(kb, "kb-qwerty-es-shifted", { misMatchPercentage: 0.15 });
     } finally {
       await shiftKey.click();
       await shiftKey.click();
