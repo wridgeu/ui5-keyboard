@@ -54,10 +54,10 @@ sap.ui.define(
     var textArea = new TextArea("interopTextArea", { width: "320px", rows: 3, value: "" });
     textArea.placeAt("interop-textarea");
 
-    var bridge = new Input("interopBridgeInput", { visible: false, value: "" });
+    var bridge = new Input("interopBridgeInput", { value: "" });
     bridge.placeAt("interop-bridge");
 
-    var shadowBridge = new Input("interopShadowBridgeInput", { visible: false, value: "" });
+    var shadowBridge = new Input("interopShadowBridgeInput", { value: "" });
     shadowBridge.placeAt("interop-shadow-bridge");
 
     var host = document.getElementById("interop-custom-host");
