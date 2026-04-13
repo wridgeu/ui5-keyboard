@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 import CheckBox from "sap/m/CheckBox";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
@@ -239,7 +240,7 @@ QUnit.test("Auto-show skips input targeted by another keyboard", async (assert) 
   input.placeAt("qunit-fixture");
 
   const inlineKb = new KioskKeyboard({
-    keyboardType: "Numpad",
+    keyboardType: KeyboardType.Numpad,
     controls: [input.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
@@ -268,7 +269,7 @@ QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
   freeInput.placeAt("qunit-fixture");
 
   const inlineKb = new KioskKeyboard({
-    keyboardType: "Numpad",
+    keyboardType: KeyboardType.Numpad,
     controls: [claimedInput.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
@@ -297,7 +298,7 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
   input.placeAt("qunit-fixture");
 
   const hiddenKb = new KioskKeyboard({
-    keyboardType: "Numpad",
+    keyboardType: KeyboardType.Numpad,
     controls: [input.getId()],
     visible: false,
   });
@@ -332,7 +333,7 @@ QUnit.test("Open keyboard still closes and restores inputmode after becoming hid
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   kb.placeAt("qunit-fixture");
   await waitForRender();
@@ -374,7 +375,7 @@ QUnit.test("Open keyboard still closes and restores inputmode after becoming dis
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   kb.placeAt("qunit-fixture");
   await waitForRender();
@@ -411,7 +412,7 @@ QUnit.test("Destroying the claiming keyboard frees the input for auto-show", asy
   input.placeAt("qunit-fixture");
 
   const inlineKb = new KioskKeyboard({
-    keyboardType: "Numpad",
+    keyboardType: KeyboardType.Numpad,
     controls: [input.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
@@ -446,7 +447,7 @@ QUnit.test("Re-targeting the claiming keyboard frees the original input", async 
   input2.placeAt("qunit-fixture");
 
   const inlineKb = new KioskKeyboard({
-    keyboardType: "Numpad",
+    keyboardType: KeyboardType.Numpad,
     controls: [input1.getId()],
   });
   inlineKb.placeAt("qunit-fixture");
@@ -484,7 +485,7 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
   claimedInput.placeAt("qunit-fixture");
 
   const inlineKb = new KioskKeyboard({
-    keyboardType: "Numpad",
+    keyboardType: KeyboardType.Numpad,
     controls: [claimedInput.getId()],
   });
   inlineKb.placeAt("qunit-fixture");

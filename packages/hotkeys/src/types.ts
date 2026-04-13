@@ -1,28 +1,9 @@
-import type {
-  ConflictBehavior as LibraryConflictBehavior,
-  Platform as LibraryPlatform,
-  UnhandledReason as LibraryUnhandledReason,
-} from "./library";
+import type { ConflictBehavior, UnhandledReason } from "./library";
 
 /**
  * The four canonical modifier keys as reported by KeyboardEvent properties.
  */
 export type CanonicalModifier = "Control" | "Shift" | "Alt" | "Meta";
-
-/**
- * Supported platform identifiers for cross-platform modifier resolution.
- */
-export type Platform = LibraryPlatform;
-
-/**
- * Strategy for handling conflicting hotkey registrations on the same scope.
- *
- * - `"warn"`: Log a console warning but allow both registrations (default).
- * - `"error"`: Throw an error, preventing the new registration.
- * - `"replace"`: Unregister the existing hotkey and register the new one.
- * - `"allow"`: Allow multiple registrations silently.
- */
-export type ConflictBehavior = LibraryConflictBehavior;
 
 // ──────────────────────────────────────────────
 // Type-safe Hotkey string union with IDE autocomplete
@@ -353,7 +334,6 @@ export interface HotkeyRegistrationInfo {
  * - `"repeat_ignored"`: A registration matched, but was skipped because the key is held (`event.repeat`).
  * - `"suspended"`: Dispatch was suspended via a guard when the event arrived.
  */
-export type UnhandledReason = LibraryUnhandledReason;
 
 /**
  * Context passed to the unhandled key callback.

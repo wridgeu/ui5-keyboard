@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
 import type RenderManager from "sap/ui/core/RenderManager";
@@ -1490,7 +1491,7 @@ QUnit.test("Switching target while open suppresses new target inputmode and rest
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   await placeAndWait(kb);
 
@@ -1531,7 +1532,7 @@ QUnit.test("Switching target while open suppresses new target inputmode and rest
 // ──────────────────────────────────────────────
 
 QUnit.test("Numpad has no shift key rendered", async (assert) => {
-  const kb = new KioskKeyboard({ keyboardType: "Numpad" });
+  const kb = new KioskKeyboard({ keyboardType: KeyboardType.Numpad });
   await placeAndWait(kb);
 
   const shiftKey = getKeyElement(kb, "{shift}");
@@ -1541,7 +1542,7 @@ QUnit.test("Numpad has no shift key rendered", async (assert) => {
 });
 
 QUnit.test("Numeric layout has no shift key rendered", async (assert) => {
-  const kb = new KioskKeyboard({ keyboardType: "Numeric" });
+  const kb = new KioskKeyboard({ keyboardType: KeyboardType.Numeric });
   await placeAndWait(kb);
 
   const shiftKey = getKeyElement(kb, "{shift}");
@@ -1560,7 +1561,7 @@ QUnit.test("Prior shift state does not leak into Numpad rendering", async (asser
   assert.ok(isShiftActive(kb), "Shift is active on full layout");
 
   // Switch to numpad
-  kb.setKeyboardType("Numpad");
+  kb.setKeyboardType(KeyboardType.Numpad);
   await waitForRender();
 
   const shiftKey = getKeyElement(kb, "{shift}");

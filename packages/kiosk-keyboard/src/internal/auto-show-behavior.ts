@@ -2,14 +2,14 @@ import BaseObject from "sap/ui/base/Object";
 import Control from "sap/ui/core/Control";
 import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
 import type { TargetResolverFn } from "./dom";
-import type { KeyboardTypeValue } from "../library";
+import type { KeyboardType } from "../library";
 
 interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" | "fireEvent" | "setProperty"> {
   getDocked(): boolean;
   getEnabled(): boolean;
   getAutoShow(): boolean;
   getAutoType(): boolean;
-  getKeyboardType(): KeyboardTypeValue;
+  getKeyboardType(): KeyboardType;
   getControls(): string[];
   show(): unknown;
   close(): unknown;

@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { MobileKeyboard } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import { getFirstKeyElement, hasKeyboardClass, placeAndWait, waitForRender } from "./test-helpers";
 
@@ -65,7 +66,7 @@ QUnit.test("setDocked(false) closes an open keyboard and restores inputmode", as
 
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb);
@@ -167,7 +168,7 @@ QUnit.test("show()/close() are no-ops when docked is false", async (assert) => {
 
   const kb = new KioskKeyboard({
     docked: false,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb);

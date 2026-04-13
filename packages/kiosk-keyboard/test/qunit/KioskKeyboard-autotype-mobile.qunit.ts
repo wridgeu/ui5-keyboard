@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
 import Device from "sap/ui/Device";
@@ -164,7 +165,7 @@ QUnit.test("Explicit setKeyboardType disables autoType", async (assert) => {
     autoShow: true,
     autoType: true,
   });
-  kb.setKeyboardType("Full");
+  kb.setKeyboardType(KeyboardType.Full);
   await placeAndWait(kb);
 
   assert.ok(kb.isKeyboardTypeExplicit(), "Explicit lock flag is true after setKeyboardType");
@@ -186,7 +187,7 @@ QUnit.test("Constructor keyboardType also disables autoType", async (assert) => 
     docked: true,
     autoShow: true,
     autoType: true,
-    keyboardType: "Full",
+    keyboardType: KeyboardType.Full,
   });
   await placeAndWait(kb);
 
@@ -274,7 +275,7 @@ QUnit.test("resetKeyboardType re-enables autoType after explicit setKeyboardType
     autoShow: true,
     autoType: true,
   });
-  kb.setKeyboardType("Full");
+  kb.setKeyboardType(KeyboardType.Full);
   await placeAndWait(kb);
 
   assert.ok(kb.isKeyboardTypeExplicit(), "Lock flag starts true after explicit set");
@@ -307,7 +308,7 @@ QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType
     docked: true,
     autoShow: true,
     autoType: true,
-    keyboardType: "Full",
+    keyboardType: KeyboardType.Full,
   });
   await placeAndWait(kb);
 
@@ -344,7 +345,7 @@ QUnit.test("mobileKeyboard Custom never defers to native (desktop)", async (asse
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   await placeAndWait(kb);
 
@@ -363,7 +364,7 @@ QUnit.test("show() sets inputmode=none on target input", async (assert) => {
 
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb);
@@ -387,7 +388,7 @@ QUnit.test("exit() restores inputmode if keyboard was open", async (assert) => {
 
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb);
@@ -410,7 +411,7 @@ QUnit.test("Native mode always defers to native keyboard", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Native",
+    mobileKeyboard: MobileKeyboard.Native,
   });
   await placeAndWait(kb);
 
@@ -429,7 +430,7 @@ QUnit.test("Native mode: programmatic show() does not open keyboard", async (ass
 
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Native",
+    mobileKeyboard: MobileKeyboard.Native,
     controls: [input.getId()],
   });
   await placeAndWait(kb);
@@ -449,7 +450,7 @@ QUnit.test("Auto mode still opens on desktop", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Auto",
+    mobileKeyboard: MobileKeyboard.Auto,
   });
   await placeAndWait(kb);
 
@@ -471,7 +472,7 @@ QUnit.test("Auto mode defers on phone", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Auto",
+    mobileKeyboard: MobileKeyboard.Auto,
   });
   await placeAndWait(kb);
 
@@ -493,7 +494,7 @@ QUnit.test("Auto mode defers on tablet (non-desktop)", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Auto",
+    mobileKeyboard: MobileKeyboard.Auto,
   });
   await placeAndWait(kb);
 
@@ -511,7 +512,7 @@ QUnit.test("Auto mode: programmatic show() does not open on phone", async (asser
 
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Auto",
+    mobileKeyboard: MobileKeyboard.Auto,
   });
   await placeAndWait(kb);
 
@@ -528,7 +529,7 @@ QUnit.test("Existing inputmode attribute is preserved and restored", async (asse
 
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb);
@@ -552,14 +553,14 @@ QUnit.test("Shared target suppression is ref-counted across keyboard instances",
 
   const kb1 = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb1);
 
   const kb2 = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb2);
@@ -590,14 +591,14 @@ QUnit.test("Destroying one shared keyboard keeps suppression for survivor", asyn
 
   const kb1 = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb1);
 
   const kb2 = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input.getId()],
   });
   await placeAndWait(kb2);
@@ -622,7 +623,7 @@ QUnit.test("Destroying one shared keyboard keeps suppression for survivor", asyn
 QUnit.test("show() without target input does not throw", async (assert) => {
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   await placeAndWait(kb);
 
@@ -642,7 +643,7 @@ QUnit.test("Switching target while open restores old and suppresses new", async 
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   await placeAndWait(kb);
 
@@ -670,7 +671,7 @@ QUnit.test("Switching target while closed does not suppress inputmode", async (a
 
   const kb = new KioskKeyboard({
     docked: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
     controls: [input1.getId(), input2.getId()],
   });
   await placeAndWait(kb);
@@ -694,7 +695,7 @@ QUnit.test("Removing controls while open restores old inputmode", async (assert)
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   await placeAndWait(kb);
 
@@ -731,7 +732,7 @@ QUnit.test("Rapid target switches while open: each intermediate target is restor
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
-    mobileKeyboard: "Custom",
+    mobileKeyboard: MobileKeyboard.Custom,
   });
   await placeAndWait(kb);
 

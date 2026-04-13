@@ -1,4 +1,5 @@
-import type { ConflictBehavior, HotkeyCallback, ParsedHotkey, SequencePendingCallback } from "../types";
+import type { ConflictBehavior } from "../library";
+import type { HotkeyCallback, ParsedHotkey, SequencePendingCallback } from "../types";
 
 /**
  * Internal representation of a fully resolved hotkey registration.
