@@ -898,14 +898,14 @@ export default class KioskKeyboard extends Control {
    * rather than closing. The escape listener and native keyboard suppression
    * remain attached so that re-enabling works without requiring `show()`.
    */
-  setEnabled(bEnabled: boolean): this {
-    if (!bEnabled) {
+  setEnabled(isEnabled: boolean): this {
+    if (!isEnabled) {
       this._redirectFocusToTargetIfOwned();
     }
     // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
     // and per-key aria-disabled attributes at render time. Uses setProperty
     // directly because Control has no base setEnabled implementation to delegate to.
-    return this.setProperty("enabled", bEnabled) as this;
+    return this.setProperty("enabled", isEnabled) as this;
   }
 
   /**
@@ -916,8 +916,8 @@ export default class KioskKeyboard extends Control {
    * Note: `setVisible(true)` does not re-open a previously closed docked
    * keyboard - call `show()` explicitly after making it visible again.
    */
-  setVisible(bVisible: boolean): this {
-    if (!bVisible) {
+  setVisible(isVisible: boolean): this {
+    if (!isVisible) {
       this._redirectFocusToTargetIfOwned();
       // Close the docked keyboard - a hidden keyboard should not retain
       // open state (escape listener, native keyboard suppression).
@@ -925,7 +925,7 @@ export default class KioskKeyboard extends Control {
         this.close();
       }
     }
-    return super.setVisible(bVisible);
+    return super.setVisible(isVisible);
   }
 
   /**
@@ -1125,7 +1125,7 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Custom setter for autoShow - activates or deactivates the
-   * auto-show document listeners via enableAutoShow/disableAutoShow.
+   * auto-show document listeners on the AutoShowBehavior delegate.
    */
   setAutoShow(isAutoShow: boolean): this {
     this.setProperty("autoShow", isAutoShow, true);

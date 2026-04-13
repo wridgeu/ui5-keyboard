@@ -76,7 +76,8 @@ export default class AutoShowBehavior extends BaseObject {
     }
   }
 
-  private _isParticipationActive(): boolean {
+  /** Whether the host is visible, enabled, attached, and has layout size. */
+  private _isHostParticipating(): boolean {
     if (!this._host.getVisible() || !this._host.getEnabled()) return false;
     const dom = this._host.getDomRef();
     if (!(dom instanceof HTMLElement)) return false;
@@ -85,7 +86,7 @@ export default class AutoShowBehavior extends BaseObject {
   }
 
   private _onDocumentFocusIn(event: FocusEvent): void {
-    if (!this._host.getDocked() || !this._isParticipationActive()) return;
+    if (!this._host.getDocked() || !this._isHostParticipating()) return;
 
     if (this._host.getControls().length > 0) {
       this._host._setupControls();
