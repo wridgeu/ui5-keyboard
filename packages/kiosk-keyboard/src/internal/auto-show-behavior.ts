@@ -4,19 +4,16 @@ import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
 import type { TargetResolverFn } from "./dom";
 import type { KeyboardTypeValue } from "../library";
 
-interface AutoShowBehaviorHost {
+interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" | "fireEvent" | "setProperty"> {
   getDocked(): boolean;
-  getVisible(): boolean;
   getEnabled(): boolean;
   getAutoShow(): boolean;
   getAutoType(): boolean;
   getKeyboardType(): KeyboardTypeValue;
   getControls(): string[];
-  getDomRef(): Element | null;
   show(): unknown;
   close(): unknown;
-  setProperty(name: string, value: unknown): unknown;
-  fireEvent(name: string, parameters: Record<string, unknown>): boolean | this;
+  isOpen(): boolean;
 
   _getActiveTargetId(): string;
   _getEffectiveResolver(): TargetResolverFn | null;
@@ -26,7 +23,6 @@ interface AutoShowBehaviorHost {
   _wouldClaimInput(target: EventTarget | null): boolean;
   _getKeyboardTypeSource(): string;
   _setKeyboardTypeSource(source: string): void;
-  isOpen(): boolean;
 }
 
 export default class AutoShowBehavior extends BaseObject {
