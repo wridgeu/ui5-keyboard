@@ -829,6 +829,83 @@ QUnit.test("Changing target input moves highlight delegation", async (assert) =>
 });
 
 // ──────────────────────────────────────────────
+// Physical keyboard shift/CapsLock sync
+// ──────────────────────────────────────────────
+
+QUnit.test("Physical Shift keydown syncs virtual shift state", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  assert.notOk(isShiftActive(kb), "Shift is not active initially");
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", shiftKey: true, bubbles: true }));
+  await nextUIUpdate();
+
+  assert.ok(isShiftActive(kb), "Virtual shift state synced from physical Shift keydown");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Physical Shift keyup releases virtual shift state", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+
+  // Press Shift down first
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", shiftKey: true, bubbles: true }));
+  await nextUIUpdate();
+  assert.ok(isShiftActive(kb), "Shift is active after keydown");
+
+  // Release Shift
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "Shift", shiftKey: false, bubbles: true }));
+  await nextUIUpdate();
+  assert.notOk(isShiftActive(kb), "Shift released after physical Shift keyup");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Physical key with CapsLock modifier syncs virtual CapsLock state", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  assert.notOk(isCapsLock(kb), "CapsLock is not active initially");
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+
+  // Simulate a keydown with CapsLock active via getModifierState.
+  // Native KeyboardEvent constructor does not support getModifierState
+  // directly, so we create the event and override the method.
+  const event = new KeyboardEvent("keydown", { key: "a", bubbles: true });
+  Object.defineProperty(event, "getModifierState", {
+    value: (modifier: string) => modifier === "CapsLock",
+  });
+  inputDom.dispatchEvent(event);
+  await nextUIUpdate();
+
+  assert.ok(isShiftActive(kb), "Virtual shift state is active (CapsLock implies shifted)");
+  assert.ok(isCapsLock(kb), "Virtual CapsLock state synced from physical keyboard");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
 // Popover integration (consumption scenario)
 // ──────────────────────────────────────────────
 
