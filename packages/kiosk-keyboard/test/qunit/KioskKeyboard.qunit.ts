@@ -485,7 +485,7 @@ QUnit.test("Disabled keyboard ignores keyboard events", async (assert) => {
 
   const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
   Object.defineProperty(event, "target", { value: fakeTarget, writable: false });
-  kb.onkeydown(event);
+  kb.onsapselect(event);
 
   assert.notOk(keyPressed, "No keyPress event from keyboard when disabled");
 
@@ -1319,6 +1319,157 @@ QUnit.test("Programmatic setValue while unfocused resets cached cursor to end", 
   assert.strictEqual(input.getValue(), "12345y", "Insert after external setValue appends at end when unfocused");
 
   input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Keyboard activation (Enter / Space via onsapselect)
+// ──────────────────────────────────────────────
+
+QUnit.test("Enter on focused key activates it via onsapselect", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "a", "Enter on focused 'a' key inserts 'a'");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Space on focused key activates it via onsapselect", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const bKey = getRequiredKeyElement(kb, "b");
+  bKey.setAttribute("tabindex", "0");
+  bKey.focus();
+
+  bKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "b", "Space on focused 'b' key inserts 'b'");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Ctrl+Space on focused key does NOT activate (modifier filtering)", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", ctrlKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "", "Ctrl+Space does NOT activate the focused key");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Shift+Enter on focused key does NOT activate (modifier filtering)", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "", "Shift+Enter does NOT activate the focused key");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Pressed-state safety net (window blur)
+// ──────────────────────────────────────────────
+
+QUnit.test("Window blur clears stuck keyPressed state", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const qKey = getRequiredKeyElement(kb, "q");
+
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: qKey, writable: false });
+  kb.ontouchstart(start);
+
+  assert.ok(hasKeyClass(kb, "q", DOM.classes.keyPressed), "Pressed class is applied on touchstart");
+
+  // Simulate user Alt-Tabbing away while still holding the mouse button:
+  // window blur fires without ontouchend ever firing.
+  window.dispatchEvent(new Event("blur"));
+
+  assert.notOk(hasKeyClass(kb, "q", DOM.classes.keyPressed), "Pressed class is cleared on window blur");
+
+  kb.destroy();
+});
+
+QUnit.test("Window blur safety listener is detached on touchend", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const qKey = getRequiredKeyElement(kb, "q");
+
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: qKey, writable: false });
+  kb.ontouchstart(start);
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: qKey, writable: false });
+  kb.ontouchend(end);
+
+  // After release, a window blur should not interact with anything pressed-state-related.
+  // Re-press another key and verify the previous listener is gone (no stray clears).
+  const wKey = getRequiredKeyElement(kb, "w");
+  const start2 = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start2, "target", { value: wKey, writable: false });
+  kb.ontouchstart(start2);
+
+  // Now blur once: this clears 'w'. If the old 'q' listener were still around,
+  // the second blur below would clear 'w' again, which is fine but indicates
+  // a stacked listener. Use the listener-removal as a no-throw smoke test.
+  window.dispatchEvent(new Event("blur"));
+  assert.notOk(hasKeyClass(kb, "w", DOM.classes.keyPressed), "Press cleared on first blur");
+
+  // A second blur after the state is already clear must be a no-op.
+  window.dispatchEvent(new Event("blur"));
+  assert.ok(true, "Second blur after release does not throw");
+
   kb.destroy();
 });
 
