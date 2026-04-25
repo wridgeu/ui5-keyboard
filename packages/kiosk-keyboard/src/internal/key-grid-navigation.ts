@@ -13,6 +13,8 @@ import type { KioskKeyboardDomContract } from "./dom-contract";
  * Uses direction-specific pseudo-events (onsapdown, onsapright, etc.)
  * rather than onsapnext/onsapprevious, because the keyboard grid
  * needs different behavior for horizontal vs vertical navigation.
+ * onsaphome/onsapend jump within the current row; onsaptop/onsapbottom
+ * (Ctrl+Home / Ctrl+End) jump across the whole grid.
  *
  * The host control must call {@link setRootRef} after each re-render.
  */
@@ -84,6 +86,29 @@ export default class KeyGridNavigation extends EventProvider {
     const row = target.closest(this._dom.selectors.row);
     const keys = row?.querySelectorAll<HTMLElement>(this._dom.selectors.key);
     const last = keys?.[keys.length - 1];
+    if (last && last !== target) this._transferFocus(target, last);
+  }
+
+  onsaptop(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!this._isKey(target)) return;
+    event.preventDefault();
+
+    const firstRow = this._rootRef?.querySelector<HTMLElement>(this._dom.selectors.row);
+    const first = firstRow?.querySelector<HTMLElement>(this._dom.selectors.key);
+    if (first && first !== target) this._transferFocus(target, first);
+  }
+
+  onsapbottom(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!this._isKey(target)) return;
+    event.preventDefault();
+
+    const rows = this._rootRef?.querySelectorAll<HTMLElement>(this._dom.selectors.row);
+    if (!rows || rows.length === 0) return;
+    const lastRow = rows[rows.length - 1];
+    const keys = lastRow.querySelectorAll<HTMLElement>(this._dom.selectors.key);
+    const last = keys[keys.length - 1];
     if (last && last !== target) this._transferFocus(target, last);
   }
 

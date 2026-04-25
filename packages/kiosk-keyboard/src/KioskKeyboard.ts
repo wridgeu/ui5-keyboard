@@ -122,6 +122,7 @@ export default class KioskKeyboard extends Control {
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
   private _boundEscapeKeydown!: (e: KeyboardEvent) => void;
+  private _boundClearPressedOnBlur!: () => void;
   private _focusClaimService!: FocusClaimService;
   private _targetSession!: TargetInputSession;
   private _rendererApi!: RendererInternalApi | null;
@@ -712,6 +713,9 @@ export default class KioskKeyboard extends Control {
     this._autoShowBehavior = new AutoShowBehavior(this);
     this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
+    this._boundClearPressedOnBlur = (): void => {
+      this._clearPressedKeyState();
+    };
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
       () => this._resolvedControlIds,
@@ -1670,6 +1674,7 @@ export default class KioskKeyboard extends Control {
     this._pressedKeyEl = null;
     if (pressed) {
       pressed.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+      window.removeEventListener("blur", this._boundClearPressedOnBlur);
     }
     return pressed;
   }
@@ -1693,6 +1698,10 @@ export default class KioskKeyboard extends Control {
     if (el) {
       this._pressedKeyEl = el;
       el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+      // Safety net: if the window loses focus before touchend/touchcancel
+      // fires (e.g. Alt-Tab during a mousedown, or a modal popup steals
+      // focus), clear the pressed visual state so it does not stick.
+      window.addEventListener("blur", this._boundClearPressedOnBlur);
     }
   }
 
@@ -1723,18 +1732,24 @@ export default class KioskKeyboard extends Control {
     this._clearPressedKeyState();
   }
 
-  onkeydown(event: KeyboardEvent): void {
+  /**
+   * Activate the focused key on Enter or Space without modifiers.
+   *
+   * Uses UI5's `sapselect` pseudo-event, which the framework filters to
+   * Enter/Space with no Ctrl/Alt/Shift/Meta held, so Ctrl+Space and
+   * similar combinations cannot accidentally trigger key activation.
+   */
+  onsapselect(event: Event): void {
     if (!this.getEnabled()) return;
-    if (event.altKey || event.metaKey) return;
 
     const target = event.target as HTMLElement;
     if (!target.classList.contains(KIOSK_KEYBOARD_DOM.classes.key)) return;
 
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      const keyValue = target.dataset.key;
-      if (keyValue) this._handleKeyAction(keyValue, target);
-    }
+    const keyValue = target.dataset.key;
+    if (!keyValue) return;
+
+    event.preventDefault();
+    this._handleKeyAction(keyValue, target);
   }
 
   // ──────────────────────────────────────────────

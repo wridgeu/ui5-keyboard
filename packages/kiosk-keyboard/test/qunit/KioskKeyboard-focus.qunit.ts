@@ -76,6 +76,72 @@ QUnit.test("End key moves focus to last key in row", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
+// Ctrl+Home / Ctrl+End grid-spanning jumps
+// ──────────────────────────────────────────────
+
+QUnit.test("Ctrl+Home jumps focus to first key of first row", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Pick a key in the middle of the grid so the jump is observable.
+  const middleRow = getRowKeys(kb, 2);
+  const startKey = middleRow[Math.min(2, middleRow.length - 1)];
+  startKey.setAttribute("tabindex", "0");
+  startKey.focus();
+
+  const firstRowKeys = getRowKeys(kb, 0);
+  const expectedFirst = firstRowKeys[0];
+
+  startKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", ctrlKey: true, bubbles: true, cancelable: true }));
+
+  assert.strictEqual(document.activeElement, expectedFirst, "Focus moved to first key of first row");
+  assert.strictEqual(expectedFirst.getAttribute("tabindex"), "0", "Target key has tabindex=0");
+  assert.strictEqual(startKey.getAttribute("tabindex"), "-1", "Origin key has tabindex=-1");
+
+  kb.destroy();
+});
+
+QUnit.test("Ctrl+End jumps focus to last key of last row", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const middleRow = getRowKeys(kb, 2);
+  const startKey = middleRow[Math.min(2, middleRow.length - 1)];
+  startKey.setAttribute("tabindex", "0");
+  startKey.focus();
+
+  const dom = kb.getDomRef() as HTMLElement;
+  const allRows = dom.querySelectorAll<HTMLElement>(DOM.selectors.row);
+  const lastRow = allRows[allRows.length - 1];
+  const lastRowKeys = lastRow.querySelectorAll<HTMLElement>(DOM.selectors.key);
+  const expectedLast = lastRowKeys[lastRowKeys.length - 1];
+
+  startKey.dispatchEvent(new KeyboardEvent("keydown", { key: "End", ctrlKey: true, bubbles: true, cancelable: true }));
+
+  assert.strictEqual(document.activeElement, expectedLast, "Focus moved to last key of last row");
+  assert.strictEqual(expectedLast.getAttribute("tabindex"), "0", "Target key has tabindex=0");
+  assert.strictEqual(startKey.getAttribute("tabindex"), "-1", "Origin key has tabindex=-1");
+
+  kb.destroy();
+});
+
+QUnit.test("Ctrl+Home from first key is a no-op", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const firstKey = getFirstKeyElement(kb);
+  firstKey.setAttribute("tabindex", "0");
+  firstKey.focus();
+
+  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", ctrlKey: true, bubbles: true, cancelable: true }));
+
+  assert.strictEqual(document.activeElement, firstKey, "Focus stays on the first key");
+  assert.strictEqual(firstKey.getAttribute("tabindex"), "0", "tabindex unchanged on no-op");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
 // Arrow key wrapping
 // ──────────────────────────────────────────────
 
@@ -156,11 +222,7 @@ QUnit.test("Alt+Arrow keys are not intercepted", async (assert) => {
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
-  const event = new KeyboardEvent("keydown", { key: "ArrowRight", altKey: true, bubbles: true });
-  Object.defineProperty(event, "target", { value: firstKey, writable: false });
-
-  // Should not throw and focus should stay
-  kb.onkeydown(event);
+  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", altKey: true, bubbles: true }));
   assert.strictEqual(document.activeElement, firstKey, "Focus unchanged with Alt+Arrow");
 
   kb.destroy();
@@ -174,10 +236,7 @@ QUnit.test("Meta+Arrow keys are not intercepted", async (assert) => {
   firstKey.setAttribute("tabindex", "0");
   firstKey.focus();
 
-  const event = new KeyboardEvent("keydown", { key: "ArrowRight", metaKey: true, bubbles: true });
-  Object.defineProperty(event, "target", { value: firstKey, writable: false });
-
-  kb.onkeydown(event);
+  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", metaKey: true, bubbles: true }));
   assert.strictEqual(document.activeElement, firstKey, "Focus unchanged with Meta+Arrow");
 
   kb.destroy();
