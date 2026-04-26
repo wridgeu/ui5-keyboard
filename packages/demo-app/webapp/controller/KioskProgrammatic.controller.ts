@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
 import type { LayoutDefinition } from "ui5/kiosk/types";
+import { KeyboardType } from "ui5/kiosk/library";
 import MessageToast from "sap/m/MessageToast";
 import type { Select$ChangeEvent } from "sap/m/Select";
 import Select from "sap/m/Select";
@@ -59,20 +60,20 @@ export default class KioskProgrammatic extends BaseController {
 
   onSetFull(): void {
     const kb = this._getKeyboard();
-    kb.setKeyboardType("Full");
+    kb.setKeyboardType(KeyboardType.Full);
     kb.setLayout(KioskKeyboard.getLocaleLayout());
     this._updateStatus();
   }
 
   onSetNumpad(): void {
     const kb = this._getKeyboard();
-    kb.setKeyboardType("Numpad");
+    kb.setKeyboardType(KeyboardType.Numpad);
     this._updateStatus();
   }
 
   onSetNumeric(): void {
     const kb = this._getKeyboard();
-    kb.setKeyboardType("Numeric");
+    kb.setKeyboardType(KeyboardType.Numeric);
     this._updateStatus();
   }
 

@@ -5,6 +5,7 @@ import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 import type { HotkeyRegistrationHandle } from "ui5/hotkeys/types";
+import { ConflictBehavior } from "ui5/hotkeys/library";
 
 /**
  * Detail view controller - demonstrates same-key-different-scope pattern.
@@ -76,7 +77,7 @@ export default class Detail extends BaseController {
               stateModel.setProperty("/lastAction", `Custom shortcut: ${hotkey}`);
               MessageToast.show(`Custom shortcut fired: ${hotkey}`);
             },
-            { scope: Scope.Detail, description: `Custom: ${hotkey}`, conflictBehavior: "replace" },
+            { scope: Scope.Detail, description: `Custom: ${hotkey}`, conflictBehavior: ConflictBehavior.Replace },
           );
         }
       },

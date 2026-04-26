@@ -1,4 +1,4 @@
-import { UnhandledReason } from "ui5/hotkeys/library";
+import { ConflictBehavior, UnhandledReason } from "ui5/hotkeys/library";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
@@ -31,10 +31,10 @@ QUnit.test("ConflictBehavior.Error: target-bound vs document-bound in same scope
   fixture.appendChild(div);
 
   // Register on document (target: null)
-  manager.register("F3", () => {}, { conflictBehavior: "error" });
+  manager.register("F3", () => {}, { conflictBehavior: ConflictBehavior.Error });
 
   // Register on specific target - different target, same scope: should NOT throw
-  manager.register("F3", () => {}, { target: div, conflictBehavior: "error" });
+  manager.register("F3", () => {}, { target: div, conflictBehavior: ConflictBehavior.Error });
 
   assert.strictEqual(manager.getRegistrations().length, 2, "Both registrations co-exist");
 });
@@ -42,8 +42,8 @@ QUnit.test("ConflictBehavior.Error: target-bound vs document-bound in same scope
 QUnit.test("ConflictBehavior.Error: same hotkey on different scopes does not conflict", (assert) => {
   const manager = createHotkeyManager();
 
-  manager.register("Escape", () => {}, { scope: "editor", conflictBehavior: "error" });
-  manager.register("Escape", () => {}, { scope: "dialog", conflictBehavior: "error" });
+  manager.register("Escape", () => {}, { scope: "editor", conflictBehavior: ConflictBehavior.Error });
+  manager.register("Escape", () => {}, { scope: "dialog", conflictBehavior: ConflictBehavior.Error });
 
   assert.strictEqual(manager.getRegistrations().length, 2, "Both registrations co-exist in different scopes");
 });
@@ -51,10 +51,10 @@ QUnit.test("ConflictBehavior.Error: same hotkey on different scopes does not con
 QUnit.test("ConflictBehavior.Error: document-bound in same scope DOES conflict", (assert) => {
   const manager = createHotkeyManager();
 
-  manager.register("F4", () => {}, { conflictBehavior: "error" });
+  manager.register("F4", () => {}, { conflictBehavior: ConflictBehavior.Error });
 
   assert.throws(
-    () => manager.register("F4", () => {}, { conflictBehavior: "error" }),
+    () => manager.register("F4", () => {}, { conflictBehavior: ConflictBehavior.Error }),
     /already registered/,
     "Second document-bound registration in same scope throws",
   );
@@ -66,10 +66,10 @@ QUnit.test("ConflictBehavior.Error: same target in same scope DOES conflict", (a
   div.tabIndex = 0;
   fixture.appendChild(div);
 
-  manager.register("F5", () => {}, { target: div, conflictBehavior: "error" });
+  manager.register("F5", () => {}, { target: div, conflictBehavior: ConflictBehavior.Error });
 
   assert.throws(
-    () => manager.register("F5", () => {}, { target: div, conflictBehavior: "error" }),
+    () => manager.register("F5", () => {}, { target: div, conflictBehavior: ConflictBehavior.Error }),
     /already registered/,
     "Same hotkey on same target in same scope throws",
   );
@@ -82,7 +82,7 @@ QUnit.test("ConflictBehavior.Error: re-rendered element with same id conflicts v
   original.tabIndex = 0;
   fixture.appendChild(original);
 
-  manager.register("F8", () => {}, { target: original, conflictBehavior: "error" });
+  manager.register("F8", () => {}, { target: original, conflictBehavior: ConflictBehavior.Error });
 
   // Simulate re-render: new DOM node with same id
   const replacement = document.createElement("div");
@@ -91,7 +91,7 @@ QUnit.test("ConflictBehavior.Error: re-rendered element with same id conflicts v
   original.replaceWith(replacement);
 
   assert.throws(
-    () => manager.register("F8", () => {}, { target: replacement, conflictBehavior: "error" }),
+    () => manager.register("F8", () => {}, { target: replacement, conflictBehavior: ConflictBehavior.Error }),
     /already registered/,
     "Detects conflict via targetIdIndex when DOM node is replaced with same id",
   );
@@ -112,7 +112,7 @@ QUnit.test("ConflictBehavior.Replace: re-rendered element with same id replaces 
     () => {
       oldCalled = true;
     },
-    { target: original, conflictBehavior: "replace" },
+    { target: original, conflictBehavior: ConflictBehavior.Replace },
   );
 
   const replacement = document.createElement("div");
@@ -125,7 +125,7 @@ QUnit.test("ConflictBehavior.Replace: re-rendered element with same id replaces 
     () => {
       newCalled = true;
     },
-    { target: replacement, conflictBehavior: "replace" },
+    { target: replacement, conflictBehavior: ConflictBehavior.Replace },
   );
 
   fireKeyOn(replacement, "F8");
@@ -142,10 +142,13 @@ QUnit.test("ConflictBehavior.Error: failed registration does not pollute state",
     () => {
       firstCalled = true;
     },
-    { conflictBehavior: "error" },
+    { conflictBehavior: ConflictBehavior.Error },
   );
 
-  assert.throws(() => manager.register("F6", () => {}, { conflictBehavior: "error" }), /already registered/);
+  assert.throws(
+    () => manager.register("F6", () => {}, { conflictBehavior: ConflictBehavior.Error }),
+    /already registered/,
+  );
 
   // Only the first registration should exist
   assert.strictEqual(manager.getRegistrations().length, 1, "Failed registration not stored");

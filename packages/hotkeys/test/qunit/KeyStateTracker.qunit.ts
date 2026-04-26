@@ -96,7 +96,7 @@ QUnit.test("Blur clears all held keys", (assert) => {
 });
 
 QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
-  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "mac" });
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => Platform.Mac });
   const manager = createHotkeyManager();
   const tracker = manager.getKeyStateTracker();
 
