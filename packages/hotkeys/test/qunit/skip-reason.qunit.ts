@@ -1,5 +1,5 @@
 import { recordSkip, type SkipInfo } from "ui5/hotkeys/internal/skip-reason";
-import { UnhandledReason } from "ui5/hotkeys/library";
+import { ConflictBehavior, Platform, UnhandledReason } from "ui5/hotkeys/library";
 import { parseHotkey } from "ui5/hotkeys/parse";
 
 /** Actual HotkeyRegistration type, extracted from the function signature. */
@@ -11,7 +11,7 @@ function makeRegistration(id: string): Registration {
     active: true,
     hotkey: "Escape",
     normalizedHotkey: "Escape",
-    parsedHotkey: parseHotkey("Escape", "windows"),
+    parsedHotkey: parseHotkey("Escape", Platform.Windows),
     callback: () => {},
     options: {
       enabled: true,
@@ -22,7 +22,7 @@ function makeRegistration(id: string): Registration {
       description: "",
       ignoreRepeat: true,
       suppressInPopups: false,
-      conflictBehavior: "warn",
+      conflictBehavior: ConflictBehavior.Warn,
       target: null,
       targetCallback: null,
     },

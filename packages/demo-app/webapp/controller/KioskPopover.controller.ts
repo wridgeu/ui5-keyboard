@@ -2,6 +2,7 @@ import Popover from "sap/m/Popover";
 import type { Button$PressEvent } from "sap/m/Button";
 import type Input from "sap/m/Input";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { KeyboardType } from "ui5/kiosk/library";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -62,7 +63,7 @@ export default class KioskPopover extends BaseController {
 
     let keyboard = this._keyboards.get(key);
     if (!keyboard) {
-      keyboard = new KioskKeyboard({ keyboardType: "Full", ariaLabel: variant.ariaLabel });
+      keyboard = new KioskKeyboard({ keyboardType: KeyboardType.Full, ariaLabel: variant.ariaLabel });
       if (variant.styleClass) keyboard.addStyleClass(variant.styleClass);
       this._keyboards.set(key, keyboard);
     }

@@ -1,4 +1,4 @@
-import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
+import { ConflictBehavior, GLOBAL_SCOPE, Platform } from "ui5/hotkeys/library";
 import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
@@ -365,7 +365,7 @@ QUnit.test("Conflict behavior: error throws", (assert) => {
   manager.register("Escape", () => {});
 
   assert.throws(
-    () => manager.register("Escape", () => {}, { conflictBehavior: "error" }),
+    () => manager.register("Escape", () => {}, { conflictBehavior: ConflictBehavior.Error }),
     /already registered/,
     "Error thrown on conflict",
   );
@@ -385,7 +385,7 @@ QUnit.test("Conflict behavior: replace removes old registration", (assert) => {
     () => {
       newCalled = true;
     },
-    { conflictBehavior: "replace" },
+    { conflictBehavior: ConflictBehavior.Replace },
   );
 
   fireKey("Escape");
@@ -421,7 +421,7 @@ QUnit.test("Conflict behavior: same key/scope on different targets does not conf
     () => {
       secondCalled = true;
     },
-    { target: secondTarget, conflictBehavior: "error" },
+    { target: secondTarget, conflictBehavior: ConflictBehavior.Error },
   );
 
   firstTarget.dispatchEvent(new KeyboardEvent("keydown", { key: "F7", bubbles: true, cancelable: true }));
@@ -795,7 +795,7 @@ QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => 
   });
 
   // Second registration with "allow" - no warning, no error
-  manager.register("Escape", () => {}, { conflictBehavior: "allow" });
+  manager.register("Escape", () => {}, { conflictBehavior: ConflictBehavior.Allow });
 
   fireKey("Escape");
   assert.ok(firstCalled, "First registration fires (first-match-wins)");
@@ -1349,7 +1349,7 @@ QUnit.test("setOptions: throws on conflictBehavior change", (assert) => {
 
   assert.throws(
     // @ts-expect-error Testing runtime guard for disallowed option
-    () => handle.setOptions({ conflictBehavior: "error" }),
+    () => handle.setOptions({ conflictBehavior: ConflictBehavior.Error }),
     /Cannot change conflictBehavior/,
     "Throws when trying to change conflictBehavior",
   );
@@ -1360,7 +1360,7 @@ QUnit.test("setOptions: throws on conflictBehavior change", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert) => {
-  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => Platform.Windows });
   const manager = createHotkeyManager();
   let called = false;
 
@@ -1392,7 +1392,7 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
 });
 
 QUnit.test("AltGr: AltGraph modifier state suppresses Ctrl+Alt hotkey on Windows", (assert) => {
-  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => Platform.Windows });
   const manager = createHotkeyManager();
   let called = false;
 
@@ -1417,7 +1417,7 @@ QUnit.test("AltGr: AltGraph modifier state suppresses Ctrl+Alt hotkey on Windows
 });
 
 QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
-  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => Platform.Windows });
   const manager = createHotkeyManager();
   let called = false;
 
@@ -1440,7 +1440,7 @@ QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
 });
 
 QUnit.test("AltGr: guard only active on Windows", (assert) => {
-  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "linux" });
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => Platform.Linux });
   const manager = createHotkeyManager();
   let called = false;
 
@@ -1463,7 +1463,7 @@ QUnit.test("AltGr: guard only active on Windows", (assert) => {
 });
 
 QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
-  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => Platform.Windows });
   const manager = createHotkeyManager();
   let called = false;
 
@@ -1477,7 +1477,7 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
 });
 
 QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (assert) => {
-  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => "windows" });
+  restoreRuntimeHooks = setRuntimeHooks({ detectPlatform: () => Platform.Windows });
   const manager = createHotkeyManager();
   let called = false;
 
@@ -1684,7 +1684,7 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
   fixture.appendChild(div2);
 
   // Register F9 on div2 with error conflict behavior
-  manager.register("F9", () => {}, { target: div2, conflictBehavior: "error" });
+  manager.register("F9", () => {}, { target: div2, conflictBehavior: ConflictBehavior.Error });
 
   // Register the same hotkey on div1
   let fired = false;
@@ -1693,7 +1693,7 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
     () => {
       fired = true;
     },
-    { target: div1, conflictBehavior: "error" },
+    { target: div1, conflictBehavior: ConflictBehavior.Error },
   );
 
   // Retarget to div2 - should throw because F9 is already registered on div2
@@ -1737,7 +1737,7 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
     () => {
       swappedCalled = true;
     },
-    { target: div1, conflictBehavior: "replace" },
+    { target: div1, conflictBehavior: ConflictBehavior.Replace },
   );
 
   // Retarget to div2 - should replace the existing registration
@@ -1802,7 +1802,7 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
     () => {
       newCalled = true;
     },
-    { target: div, conflictBehavior: "replace" },
+    { target: div, conflictBehavior: ConflictBehavior.Replace },
   );
 
   // Verify only the new handler fires

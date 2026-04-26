@@ -1,6 +1,6 @@
 import { findMatchInScope } from "ui5/hotkeys/internal/dispatch-core";
 import { parseHotkey } from "ui5/hotkeys/parse";
-import { UnhandledReason, GLOBAL_SCOPE } from "ui5/hotkeys/library";
+import { ConflictBehavior, Platform, UnhandledReason, GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { type SkipInfo } from "ui5/hotkeys/internal/skip-reason";
 
 // ──────────────────────────────────────────────
@@ -24,7 +24,7 @@ function makeRegistration(id: string, hotkey: string, overrides?: RegistrationOv
     active: true,
     hotkey,
     normalizedHotkey: hotkey,
-    parsedHotkey: parseHotkey(hotkey, "windows"),
+    parsedHotkey: parseHotkey(hotkey, Platform.Windows),
     callback: () => {},
     options: {
       enabled: overrides?.enabled ?? true,
@@ -35,7 +35,7 @@ function makeRegistration(id: string, hotkey: string, overrides?: RegistrationOv
       description: "",
       ignoreRepeat: overrides?.ignoreRepeat ?? true,
       suppressInPopups: overrides?.suppressInPopups ?? false,
-      conflictBehavior: "warn",
+      conflictBehavior: ConflictBehavior.Warn,
       target: null,
       targetCallback: null,
     },
