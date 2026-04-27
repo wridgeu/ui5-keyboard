@@ -1316,7 +1316,7 @@ Tap Shift  →  Caps Lock on (sticky)
 Tap Shift  →  Off
 ```
 
-When Shift is active, the renderer shows uppercase labels and the Shift key gets the `ui5KioskKey--active` CSS class.
+When Shift is active, the renderer shows uppercase labels and the Shift key gets the `ui5KioskKey--shiftActive` CSS class.
 
 ---
 
@@ -1381,8 +1381,8 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                                 | Modifier key hover shadow                                    |
 | `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                                   | Numpad container max-width                                   |
 | `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                                    | Numpad key min-width                                         |
-| `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-short`            |
-| `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cq-tiny`             |
+| `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cqShort`             |
+| `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cqTiny`              |
 | `--ui5KioskKeyboard-dualDirection`       | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`)  |
 | `--ui5KioskKeyboard-dualIconSize`        | `1em`                                                     | Icon font size in dual mode                                  |
 | `--ui5KioskKeyboard-dualLabelSize`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)         |
@@ -1462,7 +1462,7 @@ override is preserved. At desktop widths no cap applies and your value
 is used as-is. This approach works for any layout, including custom
 layouts registered via `registerLayout()`.
 
-For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cq-short` and `ui5KioskKeyboard--cq-tiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
+For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cqShort` and `ui5KioskKeyboard--cqTiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
 The height constraint must affect the **control's own rendered element**. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the control's layout box, so the keyboard will be clipped instead of adapting. Apply `max-height` directly to the keyboard's root element (via CSS targeting `.ui5KioskKeyboard`), or use a flex parent that propagates the constraint.
 

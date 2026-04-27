@@ -35,7 +35,7 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
 
   // Initial state
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "false", "Initially aria-pressed=false");
-  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "No active class initially");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "No active class initially");
   assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "No capsLock class initially");
   assert.strictEqual(getLive().textContent, "", "Live region empty initially");
 
@@ -44,7 +44,7 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   await waitForRender();
 
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "true", "After 1st tap: aria-pressed=true");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "After 1st tap: active class present");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "After 1st tap: active class present");
   assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 1st tap: no capsLock class");
   assert.strictEqual(getLive().textContent, "Shift on", "After 1st tap: live region announces Shift on");
 
@@ -53,7 +53,7 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   await waitForRender();
 
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "true", "After 2nd tap: aria-pressed=true");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "After 2nd tap: active class present");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "After 2nd tap: active class present");
   assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 2nd tap: capsLock class present");
   assert.strictEqual(getLive().textContent, "Caps Lock on", "After 2nd tap: live region announces Caps Lock on");
 
@@ -62,7 +62,7 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   await waitForRender();
 
   assert.strictEqual(getShift().getAttribute("aria-pressed"), "false", "After 3rd tap: aria-pressed=false");
-  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "After 3rd tap: no active class");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "After 3rd tap: no active class");
   assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 3rd tap: no capsLock class");
   assert.strictEqual(getLive().textContent, "", "After 3rd tap: live region cleared");
 
@@ -79,7 +79,7 @@ QUnit.test("Shift-active class appears synchronously after tap (before re-render
 
   // Tap shift and check IMMEDIATELY - no waitForRender
   tapKey(kb, "{shift}");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "active class present synchronously after tap");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "active class present synchronously after tap");
 
   await waitForRender(); // let render complete
   kb.destroy();
@@ -100,7 +100,7 @@ QUnit.test("Shift-active class removed synchronously when turning off from caps"
   // Tap 3: off - check IMMEDIATELY (before waitForRender)
   tapKey(kb, "{shift}");
   assert.notOk(
-    hasKeyClass(kb, "{shift}", DOM.classes.keyActive),
+    hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive),
     "active class removed synchronously after tap-off from caps",
   );
   assert.notOk(

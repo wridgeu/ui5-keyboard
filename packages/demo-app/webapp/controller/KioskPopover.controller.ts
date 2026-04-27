@@ -14,10 +14,10 @@ interface PopoverVariant {
 }
 
 const VARIANTS: Record<string, PopoverVariant> = {
-  A: { styleClass: "demoPopoverKbGenerous", ariaLabel: "Virtual Keyboard (generous)", title: "Generous (19 rem)" },
-  B: { styleClass: "demoPopoverKbCompact", ariaLabel: "Virtual Keyboard (compact)", title: "Compact (15 rem)" },
-  C: { styleClass: "demoPopoverKbCustomVars", ariaLabel: "Virtual Keyboard (custom vars)", title: "Custom CSS Vars" },
-  D: { styleClass: "demoPopoverKbBorderless", ariaLabel: "Virtual Keyboard (borderless)", title: "Borderless" },
+  A: { styleClass: "demoPopoverKb--generous", ariaLabel: "Virtual Keyboard (generous)", title: "Generous (19 rem)" },
+  B: { styleClass: "demoPopoverKb--compact", ariaLabel: "Virtual Keyboard (compact)", title: "Compact (15 rem)" },
+  C: { styleClass: "demoPopoverKb--customVars", ariaLabel: "Virtual Keyboard (custom vars)", title: "Custom CSS Vars" },
+  D: { styleClass: "demoPopoverKb--borderless", ariaLabel: "Virtual Keyboard (borderless)", title: "Borderless" },
   E: { ariaLabel: "Virtual Keyboard (automatic)", title: "Automatic (15 rem)", contentHeight: "15rem" },
 };
 

@@ -505,10 +505,10 @@ No JavaScript is involved in width responsiveness. The `@container` rules are wr
 
 **Height responsiveness** uses JS (`sap/ui/core/ResizeHandler`, UI5's centralized resize handling) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 
-- `ui5KioskKeyboard--cq-short` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
-- `ui5KioskKeyboard--cq-tiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
+- `ui5KioskKeyboard--cqShort` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
+- `ui5KioskKeyboard--cqTiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
 
-Height classes use plain selectors (e.g., `.ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad)`). All component styles live inside `@layer kiosk-keyboard`, so any unlayered consumer CSS (e.g., `.myKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }`) wins regardless of specificity per [CSS Cascade Level 5 §6.4 Layers](https://www.w3.org/TR/css-cascade-5/#layering).
+Height classes use plain selectors (e.g., `.ui5KioskKeyboard--cqShort:not(.ui5KioskKeyboard--numpad)`). All component styles live inside `@layer kiosk-keyboard`, so any unlayered consumer CSS (e.g., `.myKeyboard { --ui5KioskKeyboard-keyHeight: 4rem; }`) wins regardless of specificity per [CSS Cascade Level 5 §6.4 Layers](https://www.w3.org/TR/css-cascade-5/#layering).
 
 A combined rule in the container queries CSS applies when both narrow width and constrained height are active, using the most aggressive font-size cap of `0.75rem`.
 
