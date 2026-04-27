@@ -23,12 +23,13 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     /** Height-responsive classes live on the host element (not the inner root)
      *  so that consumer overrides of public CSS custom properties on the host
      *  always win via the CSS cascade (outer context beats shadow at same specificity). */
-    hostCqShort: "cq-short",
-    hostCqTiny: "cq-tiny",
+    hostCqShort: "kiosk-keyboard--cq-short",
+    hostCqTiny: "kiosk-keyboard--cq-tiny",
     row: "kiosk-row",
     key: "kiosk-key",
     keyModifier: "kiosk-key--modifier",
     keyAction: "kiosk-key--action",
+    keyFkey: "kiosk-key--fkey",
     keyShiftActive: "kiosk-key--shift-active",
     keyCapsLock: "kiosk-key--caps-lock",
     keyHighlight: "kiosk-key--highlight",

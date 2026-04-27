@@ -252,7 +252,7 @@ QUnit.test("Shift key renders active class", async (assert) => {
 
   const shiftKey = getKeyElement(kb, "{shift}");
   assert.ok(shiftKey, "Shift key exists");
-  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "Shift not active initially");
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Shift not active initially");
 
   tapKey(kb, "{shift}");
 
@@ -260,7 +260,7 @@ QUnit.test("Shift key renders active class", async (assert) => {
   await waitForRender();
 
   assert.ok(getKeyElement(kb, "{shift}"), "Shift key still exists after re-render");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "Shift key has active class");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Shift key has active class");
 
   kb.destroy();
 });
@@ -1025,7 +1025,7 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
 
   const shiftKey = getRequiredKeyElement(kb, "{shift}");
   assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "Shift key has capsLock CSS class");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "Shift key also has active CSS class");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Shift key also has active CSS class");
 
   // Should render a lock icon (sapUiIcon element)
   const icon = shiftKey.querySelector(".sapUiIcon");
@@ -1083,7 +1083,7 @@ QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (asse
   assert.notOk(isCapsLock(kb), "Caps lock is NOT on");
 
   const shiftKey = getRequiredKeyElement(kb, "{shift}");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyActive), "Has active class");
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Has active class");
   assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "No capsLock class");
 
   // Should render arrow-top icon, not the lock icon used for caps lock

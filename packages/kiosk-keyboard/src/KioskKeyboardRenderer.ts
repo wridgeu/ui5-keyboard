@@ -204,7 +204,7 @@ const KioskKeyboardRenderer = {
 
     // Active shift / caps lock indicator
     if (key.value === "{shift}" && _isShiftActive()) {
-      rm.class(KIOSK_KEYBOARD_DOM.classes.keyActive);
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyShiftActive);
       if (_isCapsLock()) {
         rm.class(KIOSK_KEYBOARD_DOM.classes.keyCapsLock);
       }

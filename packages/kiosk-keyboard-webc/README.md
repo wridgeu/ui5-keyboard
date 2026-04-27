@@ -908,8 +908,8 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                                | Box shadow for modifier keys on hover                       |
 | `--kiosk-keyboard-numpad-max-width`      | `20rem`                                                   | Max width for numpad layout                                 |
 | `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                                    | Minimum key width in numpad layout                          |
-| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                                   | Height threshold for `--cq-short` class                     |
-| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                                   | Height threshold for `--cq-tiny` class                      |
+| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                                   | Height threshold for `kiosk-keyboard--cq-short` class       |
+| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                                   | Height threshold for `kiosk-keyboard--cq-tiny` class        |
 | `--kiosk-keyboard-dual-direction`        | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`) |
 | `--kiosk-keyboard-dual-icon-size`        | `1em`                                                     | Icon font size in dual mode                                 |
 | `--kiosk-keyboard-dual-label-size`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
@@ -989,7 +989,7 @@ preserved. At desktop widths no cap applies and your value is used
 as-is. This approach works for any layout, including custom layouts
 registered via `registerLayout()`.
 
-The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`cq-short`, `cq-tiny`) activate. Override them to tune height breakpoints for your container:
+The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`kiosk-keyboard--cq-short`, `kiosk-keyboard--cq-tiny`) activate. Override them to tune height breakpoints for your container:
 
 ```css
 kiosk-keyboard {
@@ -997,7 +997,7 @@ kiosk-keyboard {
 }
 ```
 
-For troubleshooting, the host element (`<kiosk-keyboard>`) toggles internal classes `cq-short` and `cq-tiny`. They indicate when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
+For troubleshooting, the host element (`<kiosk-keyboard>`) toggles internal classes `kiosk-keyboard--cq-short` and `kiosk-keyboard--cq-tiny`. They indicate when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
 
 #### Responsive Behavior Overview
 
@@ -1011,7 +1011,7 @@ For troubleshooting, the host element (`<kiosk-keyboard>`) toggles internal clas
 | **Docked mode**                                              | Viewport-driven, fixed positioning                                         | Skipped (always full size) | No                                   |
 | **Compact density**                                          | `data-ui5-compact-size` attribute                                          | Yes                        | No                                   |
 
-Height-responsive classes (`cq-short` below 16rem, `cq-tiny` below 12rem) activate when the host element's layout box is smaller than the keyboard's natural content height. Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
+Height-responsive classes (`kiosk-keyboard--cq-short` below 16rem, `kiosk-keyboard--cq-tiny` below 12rem) activate when the host element's layout box is smaller than the keyboard's natural content height. Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
 
 #### Constrained Containers
 

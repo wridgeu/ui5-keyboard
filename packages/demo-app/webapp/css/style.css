@@ -2,10 +2,10 @@
    height breakpoints detect the constraint. Popover intermediate divs
    are height: auto, so the keyboard needs an explicit height here.
    overflow: hidden is already set by the keyboard root by default. */
-.demoPopoverKbGenerous {
+.demoPopoverKb--generous {
   height: 19rem;
 }
-.demoPopoverKbCompact {
+.demoPopoverKb--compact {
   height: 15rem;
 }
 /* Instead of height constraints, shrink keys via CSS custom properties
@@ -13,7 +13,7 @@
    A single unlayered class is enough: library styles live inside
    @layer kiosk-keyboard, so unlayered consumer CSS wins regardless of
    specificity (CSS Cascade L5 §6.4 Layers). */
-.demoPopoverKbCustomVars {
+.demoPopoverKb--customVars {
   --ui5KioskKeyboard-keyHeight: 2.25rem;
   --ui5KioskKeyboard-keyGap: 0.25rem;
   --ui5KioskKeyboard-padding: 0.5rem;
@@ -21,7 +21,7 @@
 
 /* Popover demo: remove the keyboard container border so it blends
    seamlessly with the popover. */
-.demoPopoverKbBorderless {
+.demoPopoverKb--borderless {
   --ui5KioskKeyboard-border: none;
   --ui5KioskKeyboard-borderRadius: 0;
 }

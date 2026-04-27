@@ -29,10 +29,10 @@ This pattern (CSS `order` + `flex-wrap` inside `@container`) is reusable for cus
 
 These are applied programmatically by a `ResizeHandler` when the keyboard's rendered height is externally constrained:
 
-| Class                        | Threshold         | Changes                                              |
-| ---------------------------- | ----------------- | ---------------------------------------------------- |
-| `ui5KioskKeyboard--cq-short` | `<=16rem` (256px) | Key height: 2.25rem, gap: 0.25rem, padding: 0.5rem   |
-| `ui5KioskKeyboard--cq-tiny`  | `<=12rem` (192px) | Key height: 1.75rem, gap: 0.125rem, padding: 0.25rem |
+| Class                       | Threshold         | Changes                                              |
+| --------------------------- | ----------------- | ---------------------------------------------------- |
+| `ui5KioskKeyboard--cqShort` | `<=16rem` (256px) | Key height: 2.25rem, gap: 0.25rem, padding: 0.5rem   |
+| `ui5KioskKeyboard--cqTiny`  | `<=12rem` (192px) | Key height: 1.75rem, gap: 0.125rem, padding: 0.25rem |
 
 Thresholds are configurable via `--ui5KioskKeyboard-cqShortThreshold` and `--ui5KioskKeyboard-cqTinyThreshold`.
 

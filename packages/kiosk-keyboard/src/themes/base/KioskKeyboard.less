@@ -73,8 +73,8 @@
  *                                         rendering and line-box calculation.
  *
  * Responsive thresholds (rem):
- *   --ui5KioskKeyboard-cqShortThreshold    Height for --cq-short class (default: 16rem)
- *   --ui5KioskKeyboard-cqTinyThreshold     Height for --cq-tiny class (default: 12rem)
+ *   --ui5KioskKeyboard-cqShortThreshold    Height for --cqShort class (default: 16rem)
+ *   --ui5KioskKeyboard-cqTinyThreshold     Height for --cqTiny class (default: 12rem)
  *
  * Colors follow SAP theming variables and adapt automatically to
  * sap_horizon, sap_horizon_dark, sap_horizon_hcb, and sap_horizon_hcw.
@@ -87,7 +87,7 @@
 
 /* All component styles live inside @layer kiosk-keyboard.
  * Do NOT remove this wrapper: the responsive rules on
- * .ui5KioskKeyboard--cq-(short|tiny):not(.ui5KioskKeyboard--numpad) reach
+ * .ui5KioskKeyboard--cqShort and .ui5KioskKeyboard--cqTiny:not(.ui5KioskKeyboard--numpad) reach
  * (0,2,0), and their descendant variants reach (0,3,0). Without the layer,
  * those would beat a single-class consumer override at cascade step 5
  * (specificity) before step 6 (source order) runs, silently dropping the
@@ -226,13 +226,13 @@
     }
   }
 
-  .ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) {
+  .ui5KioskKeyboard--cqShort:not(.ui5KioskKeyboard--numpad) {
     --ui5KioskKeyboard-keyHeight: 2.25rem;
     --ui5KioskKeyboard-keyGap: 0.25rem;
     --ui5KioskKeyboard-padding: 0.5rem;
   }
 
-  .ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) {
+  .ui5KioskKeyboard--cqTiny:not(.ui5KioskKeyboard--numpad) {
     --ui5KioskKeyboard-keyHeight: 1.75rem;
     --ui5KioskKeyboard-keyGap: 0.125rem;
     --ui5KioskKeyboard-padding: 0.25rem;
@@ -337,25 +337,25 @@
     }
 
     /* ---- Width classes: proportional flex grow ---- */
-    &--w1-25 {
+    &--w125 {
       flex: 1.25 1 0;
     }
-    &--w1-5 {
+    &--w15 {
       flex: 1.5 1 0;
     }
-    &--w1-75 {
+    &--w175 {
       flex: 1.75 1 0;
     }
     &--w2 {
       flex: 2 1 0;
     }
-    &--w2-25 {
+    &--w225 {
       flex: 2.25 1 0;
     }
-    &--w2-75 {
+    &--w275 {
       flex: 2.75 1 0;
     }
-    &--space {
+    &--wspace {
       flex: 6 1 0;
     }
 
@@ -492,11 +492,11 @@
     }
 
     /* ---- Variant: Active Shift indicator ----
-       Scoped as --modifier&--active (specificity 0,2,0) to always
+       Scoped as --modifier&--shiftActive (specificity 0,2,0) to always
        beat --modifier:active (0,1,1) regardless of source order.
        This ensures the toggled-on shift key keeps its emphasized
        look through all interactive states (hover, press, focus). */
-    &--modifier&--active {
+    &--modifier&--shiftActive {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
@@ -525,7 +525,7 @@
     /* ---- Variant: Caps Lock indicator ---- */
     &--capsLock {
       box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
-      /* Only animate the ring; background/color snap via --active's transition: none.
+      /* Only animate the ring; background/color snap via --shiftActive's transition: none.
          Matches the inherited 0.1s from :hover that applied before this rule existed. */
       transition: box-shadow 0.1s ease;
     }
@@ -574,8 +574,8 @@
   }
 
   @container keyboard (max-width: 20rem) {
-    .ui5KioskKeyboard--cq-short:not(.ui5KioskKeyboard--numpad) .ui5KioskKey,
-    .ui5KioskKeyboard--cq-tiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
+    .ui5KioskKeyboard--cqShort:not(.ui5KioskKeyboard--numpad) .ui5KioskKey,
+    .ui5KioskKeyboard--cqTiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
       --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 0.75rem)";
     }
   }
@@ -597,14 +597,14 @@
        shifting the glyph visually upward.  Use font-defined text metrics
        instead -- these align with the ideographic ascent/descent and
        center CJK characters correctly. */
-    .ui5KioskKey__label--glyph-cjk {
+    .ui5KioskKey__label--glyphCjk {
       text-box-edge: text;
     }
 
     /* Hangul jamo share the CJK vertical em-box characteristics but need a
        separate class for their Korean-first font stack (see below). The
        text-box-edge treatment is identical to CJK. */
-    .ui5KioskKey__label--glyph-hangul {
+    .ui5KioskKey__label--glyphHangul {
       text-box-edge: text;
     }
 
@@ -613,14 +613,14 @@
        that differ from both Latin cap-height and CJK ideographic metrics.
        Use `text` (text-top to text-bottom) to preserve both the headline
        space above and the matra/descender space below. */
-    .ui5KioskKey__label--glyph-indic {
+    .ui5KioskKey__label--glyphIndic {
       text-box-edge: text;
     }
 
     /* Arabic glyphs have extended ascenders, descenders, and diacritical marks
        that differ from Latin cap-height metrics. Use `text` to preserve the
        full vertical extent needed for vowel points and tanwin marks. */
-    .ui5KioskKey__label--glyph-arabic {
+    .ui5KioskKey__label--glyphArabic {
       text-box-edge: text;
     }
   }
@@ -635,7 +635,7 @@
      offset.
      Putting CJK system fonts first for CJK labels ensures the browser uses the
      CJK font's own metrics for both the glyph and the line box. */
-  .ui5KioskKey__label--glyph-cjk {
+  .ui5KioskKey__label--glyphCjk {
     font-family: ~"var(--ui5KioskKeyboard-cjkFontFamily, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans JP', 'Apple SD Gothic Neo', 'Malgun Gothic', 'PingFang SC', 'PingFang TC', 'Microsoft YaHei', system-ui, sans-serif)";
   }
 
@@ -643,7 +643,7 @@
      Same rationale as CJK above, but with Korean system fonts first.
      The CJK font stack prioritizes Japanese fonts (Hiragino, Yu Gothic,
      Meiryo) which produce incorrect metrics when rendering Hangul jamo. */
-  .ui5KioskKey__label--glyph-hangul {
+  .ui5KioskKey__label--glyphHangul {
     font-family: ~"var(--ui5KioskKeyboard-hangulFontFamily, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans CJK KR', 'Noto Sans KR', system-ui, sans-serif)";
   }
 
@@ -652,7 +652,7 @@
      browser falls through to a system font for rendering but still uses 72
      metrics for the line box.  Putting Indic system fonts first ensures
      consistent metrics. */
-  .ui5KioskKey__label--glyph-indic {
+  .ui5KioskKey__label--glyphIndic {
     font-family: ~"var(--ui5KioskKeyboard-indicFontFamily, 'Nirmala UI', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Gujarati', 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Sinhala', 'Kohinoor Devanagari', 'Kohinoor Bangla', 'Kohinoor Gujarati', 'Kohinoor Telugu', 'Tamil Sangam MN', 'Malayalam Sangam MN', 'Kannada Sangam MN', 'Gurmukhi Sangam MN', 'Oriya Sangam MN', 'Sinhala Sangam MN', 'Bangla Sangam MN', system-ui, sans-serif)";
   }
 
@@ -661,7 +661,7 @@
      browser falls through to a system font for rendering but still uses 72
      metrics for the line box.  Putting Arabic system fonts first ensures
      consistent metrics. */
-  .ui5KioskKey__label--glyph-arabic {
+  .ui5KioskKey__label--glyphArabic {
     font-family: ~"var(--ui5KioskKeyboard-arabicFontFamily, 'Segoe UI', 'Geeza Pro', 'Noto Sans Arabic', 'Noto Naskh Arabic', 'Tahoma', 'Arabic Typesetting', system-ui, sans-serif)";
   }
 
@@ -721,7 +721,7 @@
       &:active,
       &.ui5KioskKey--pressed,
       &.ui5KioskKey--highlight,
-      &.ui5KioskKey--active {
+      &.ui5KioskKey--shiftActive {
         border-color: Highlight;
         background: Highlight;
         color: HighlightText;
@@ -754,7 +754,7 @@
     }
 
     .ui5KioskKey--action:hover,
-    .ui5KioskKey--active:hover {
+    .ui5KioskKey--shiftActive:hover {
       background: @sapUiButtonEmphasizedBackground;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
     }

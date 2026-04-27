@@ -16,23 +16,23 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootDocked: "ui5KioskKeyboard--docked",
     rootClosed: "ui5KioskKeyboard--closed",
     rootDisabled: "ui5KioskKeyboard--disabled",
-    rootCqShort: "ui5KioskKeyboard--cq-short",
-    rootCqTiny: "ui5KioskKeyboard--cq-tiny",
+    rootCqShort: "ui5KioskKeyboard--cqShort",
+    rootCqTiny: "ui5KioskKeyboard--cqTiny",
     row: "ui5KioskRow",
     key: "ui5KioskKey",
-    keySpace: "ui5KioskKey--space",
+    keySpace: "ui5KioskKey--wspace",
     keyModifier: "ui5KioskKey--modifier",
     keyAction: "ui5KioskKey--action",
-    keyActive: "ui5KioskKey--active",
+    keyShiftActive: "ui5KioskKey--shiftActive",
     keyCapsLock: "ui5KioskKey--capsLock",
     keyPressed: "ui5KioskKey--pressed",
     keyHighlight: "ui5KioskKey--highlight",
     keyLabel: "ui5KioskKey__label",
     keyLabelGlyph: "ui5KioskKey__label--glyph",
-    keyLabelGlyphCjk: "ui5KioskKey__label--glyph-cjk",
-    keyLabelGlyphHangul: "ui5KioskKey__label--glyph-hangul",
-    keyLabelGlyphIndic: "ui5KioskKey__label--glyph-indic",
-    keyLabelGlyphArabic: "ui5KioskKey__label--glyph-arabic",
+    keyLabelGlyphCjk: "ui5KioskKey__label--glyphCjk",
+    keyLabelGlyphHangul: "ui5KioskKey__label--glyphHangul",
+    keyLabelGlyphIndic: "ui5KioskKey__label--glyphIndic",
+    keyLabelGlyphArabic: "ui5KioskKey__label--glyphArabic",
     keyLabelMulti: "ui5KioskKey__label--multi",
     keyIcon: "ui5KioskKey__icon",
     keyDual: "ui5KioskKey--dual",
@@ -55,7 +55,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     return `ui5KioskKeyboard--${type.toLowerCase()}`;
   },
   keyWidthClass(width: string): string {
-    return width === "space" ? "ui5KioskKey--space" : `ui5KioskKey--w${width.replace(".", "-")}`;
+    return width === "space" ? "ui5KioskKey--wspace" : `ui5KioskKey--w${width.replace(".", "")}`;
   },
 } as const);
 

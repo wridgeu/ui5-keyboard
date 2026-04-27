@@ -1962,7 +1962,7 @@ export default class KioskKeyboard extends Control {
     // optimistic path in sync.
     const isShifted = this._shiftState.isShifted;
     const isCaps = this._shiftState.isCapsLock;
-    el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyActive, isShifted);
+    el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
     el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyCapsLock, isCaps);
 
     this.invalidate();

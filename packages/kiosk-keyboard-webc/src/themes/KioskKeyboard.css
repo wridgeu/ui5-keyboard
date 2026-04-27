@@ -176,17 +176,19 @@
 }
 
 /* ---- Height-responsive classes (JS-driven via ResizeObserver) ----
-   Height classes (.cq-short / .cq-tiny) live on the HOST element.
+   Height classes (.kiosk-keyboard--cq-short / .kiosk-keyboard--cq-tiny) live
+   on the HOST element. Block-prefixed so they remain BEM-conformant (every
+   class belongs to a block) even though the host *is* the block.
    Consumer CSS in the outer document always beats these :host() rules
    regardless of specificity (CSS Scoping L1 §3.3.1 / CSS Cascade L5 §6.1:
    "Context" sits above "Specificity" in the cascade sorting order). */
-:host(.cq-short) {
+:host(.kiosk-keyboard--cq-short) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
 }
 
-:host(.cq-tiny) {
+:host(.kiosk-keyboard--cq-tiny) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;
@@ -195,7 +197,7 @@
 /* Mixed: narrow width (xs @container) + constrained height (JS class).
    Applies the most aggressive font-size cap when both conditions are met. */
 @container keyboard (max-width: 20rem) {
-  :host(.cq-short, .cq-tiny) .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
+  :host(.kiosk-keyboard--cq-short, .kiosk-keyboard--cq-tiny) .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
     --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
   }
 }
@@ -813,23 +815,24 @@
    width using container query units (cqi).  This prevents the "icon
    looks lost" appearance on wide nav-only layouts where each key spans
    ~33% of the keyboard.
-   Scoped to [data-key^="{fkey:"] to avoid affecting Shift/Enter/
-   Backspace which are also dual keys but should keep row layout.
+   Scoped to .kiosk-key--fkey to avoid affecting Shift/Enter/Backspace
+   which are also dual keys but should keep row layout.  The class is
+   set by the template for keys whose value starts with `{fkey:`.
    NOTE: We cannot use a @container query to conditionally apply
    flex-direction on the container element itself -- container queries
    match descendants, not the container.  Since .kiosk-key has
    container-type: inline-size, a @container rule targeting .kiosk-key
    would resolve against the nearest *ancestor* container (the keyboard
    wrapper), not the individual key width. */
-[data-key^="{fkey:"].kiosk-key--dual {
+.kiosk-key--fkey.kiosk-key--dual {
   flex-direction: var(--kiosk-keyboard-fkey-direction);
   gap: var(--kiosk-keyboard-fkey-gap);
 }
 
-[data-key^="{fkey:"].kiosk-key--dual .kiosk-key__label {
+.kiosk-key--fkey.kiosk-key--dual .kiosk-key__label {
   font-size: var(--kiosk-keyboard-fkey-label-size);
 }
 
-[data-key^="{fkey:"] .kiosk-key__icon {
+.kiosk-key--fkey .kiosk-key__icon {
   font-size: var(--kiosk-keyboard-fkey-icon-size);
 }
