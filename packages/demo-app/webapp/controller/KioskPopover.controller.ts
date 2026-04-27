@@ -25,7 +25,7 @@ const VARIANTS: Record<string, PopoverVariant> = {
  * Popover-mounted keyboard demo showing four sizing strategies.
  *
  * A) Generous height (19 rem) -- full-size keys, no breakpoints triggered
- * B) Compact height (15 rem)  -- triggers cq-short, keys shrink to 2.25 rem
+ * B) Compact height (15 rem)  -- triggers cqShort, keys shrink to 2.25 rem
  * C) Custom CSS vars          -- reduce key height so keyboard fits naturally
  * D) Borderless               -- removes container border to blend with popover chrome
  * E) Popover contentHeight    -- demonstrates the limitation: intermediate wrappers break auto-detection

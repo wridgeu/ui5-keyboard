@@ -445,8 +445,7 @@
 /* ---- Variant: Caps Lock indicator ---- */
 .kiosk-key--caps-lock {
   box-shadow: 0 0 0 2px var(--sapButton_Emphasized_Background, #0070f2);
-  /* Only animate the ring; background/color snap via shift-active's transition: none.
-     Matches the inherited 0.1s from :hover that applied before this rule existed. */
+  /* Only animate the ring; background/color snaps instantly via shift-active's transition: none. */
   transition: box-shadow 0.1s ease;
 }
 

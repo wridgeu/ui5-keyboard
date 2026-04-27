@@ -810,7 +810,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Applies height-responsive classes to the keyboard root element.
    *
-   * Toggles `cq-short` / `cq-tiny` classes when the keyboard is externally
+   * Toggles `cqShort` / `cqTiny` classes when the keyboard is externally
    * constrained (host height < natural content height). Skipped for docked and numpad.
    * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
    *

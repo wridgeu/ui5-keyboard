@@ -14,7 +14,7 @@ A coordinate-system mismatch in `sap.m.Popover._applyPosition`. When the keyboar
 
 ## Recommended Workaround
 
-Set a fixed `contentHeight` on the Popover so that layout switches do not change the Popover's outer dimensions. The keyboard's responsive height breakpoints (`cq-short`, `cq-tiny`) adapt the internal layout automatically:
+Set a fixed `contentHeight` on the Popover so that layout switches do not change the Popover's outer dimensions. The keyboard's responsive height breakpoints (`cqShort`, `cqTiny`) adapt the internal layout automatically:
 
 ```xml
 <Popover contentWidth="24rem" contentHeight="18rem">

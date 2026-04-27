@@ -496,11 +496,11 @@ kb.resetLayout(); // back to qwertz-de
 
 The keyboard root element sets `max-height: 100%; min-height: 0; overflow: hidden` by default, so placing it inside a flex or grid parent with a fixed height automatically triggers responsive scaling without any additional CSS.
 
-| Container height | Behavior                                               |
-| ---------------- | ------------------------------------------------------ |
-| Above 16 rem     | Full layout (default key sizes)                        |
-| 12-16 rem        | Compact layout (`cq-short`, reduced key height)        |
-| Below 12 rem     | Minimal layout (`cq-tiny`, further reduced key height) |
+| Container height | Behavior                                              |
+| ---------------- | ----------------------------------------------------- |
+| Above 16 rem     | Full layout (default key sizes)                       |
+| 12-16 rem        | Compact layout (`cqShort`, reduced key height)        |
+| Below 12 rem     | Minimal layout (`cqTiny`, further reduced key height) |
 
 The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-cqShortThreshold`, `--ui5KioskKeyboard-cqTinyThreshold`).
 
