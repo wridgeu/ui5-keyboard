@@ -20,7 +20,7 @@ public events, and input behavior from a consumer perspective.
 1. **Shift cycle render contract**
    - Tap `{shift}` three times and assert rendered key state transitions using:
      - `aria-pressed`
-     - `.ui5KioskKey--active`
+     - `.ui5KioskKey--shiftActive`
      - `.ui5KioskKey--capsLock`
      - live-region text changes
 2. **Shifted labels and aria-labels**

@@ -66,24 +66,24 @@ A standard 5-row QWERTY keyboard at default sizes totals:
 Natural height:           18rem (288px)
 ```
 
-The **16rem** (256px) threshold is the point where the default layout would overflow its container. The `cq-short` values reduce key sizing so the keyboard fits:
+The **16rem** (256px) threshold is the point where the default layout would overflow its container. The Short tier values reduce key sizing so the keyboard fits:
 
 ```
 5 keys:    5 * 2.25rem  = 11.25rem
 4 gaps:    4 * 0.25rem  =  1rem
 2 padding: 2 * 0.5rem   =  1rem
                          --------
-cq-short height:          13.25rem (212px)   fits in 16rem with 2.75rem headroom
+Short tier height:        13.25rem (212px)   fits in 16rem with 2.75rem headroom
 ```
 
-The **12rem** (192px) threshold is where even cq-short values would look cramped. The `cq-tiny` values reduce further:
+The **12rem** (192px) threshold is where even Short tier values would look cramped. The Tiny tier values reduce further:
 
 ```
 5 keys:    5 * 1.75rem  =  8.75rem
 4 gaps:    4 * 0.125rem =  0.5rem
 2 padding: 2 * 0.25rem  =  0.5rem
                          --------
-cq-tiny height:            9.75rem (156px)   fits in 12rem with 2.25rem headroom
+Tiny tier height:          9.75rem (156px)   fits in 12rem with 2.25rem headroom
 ```
 
 ### Summary table
@@ -108,7 +108,7 @@ The key-height reduction ratios are 75% for short and 58% for tiny, relative to 
 
 When the keyboard is both narrow (at or below 320px) and height-constrained, this applies the most aggressive font-size cap at 0.75rem (12px).
 
-This cap primarily affects `cq-short` keyboards. At cq-short, the font-size from the height ratio is `2.25rem * 0.375 = 0.84375rem` (13.5px), which gets capped to 0.75rem (12px). At cq-tiny, the font-size is already `1.75rem * 0.375 = 0.65625rem` (10.5px), which is below the 0.75rem cap, so the rule has no additional effect.
+This cap primarily affects keyboards at the Short tier. At Short, the font-size from the height ratio is `2.25rem * 0.375 = 0.84375rem` (13.5px), which gets capped to 0.75rem (12px). At Tiny, the font-size is already `1.75rem * 0.375 = 0.65625rem` (10.5px), which is below the 0.75rem cap, so the rule has no additional effect.
 
 ## Modifier and Action Key Font-Scale (0.8)
 
@@ -121,11 +121,11 @@ font-size: min(
 
 Modifier keys (Shift, layout switches) and action keys (Enter, Backspace) use a font-size capped at 80% of the character key font-size. This keeps their labels visually subordinate to the character keys.
 
-| Scenario                | modifier-font-size | key-font \* 0.8   | Resolved font     | Cap effect |
-| ----------------------- | ------------------ | ----------------- | ----------------- | ---------- |
-| Default (3rem keys)     | 0.875rem (14px)    | 0.9rem (14.4px)   | 0.875rem (14px)   | No-op      |
-| cq-short (2.25rem keys) | 0.875rem (14px)    | 0.675rem (10.8px) | 0.675rem (10.8px) | Active     |
-| cq-tiny (1.75rem keys)  | 0.875rem (14px)    | 0.525rem (8.4px)  | 0.525rem (8.4px)  | Active     |
+| Scenario             | modifier-font-size | key-font \* 0.8   | Resolved font     | Cap effect |
+| -------------------- | ------------------ | ----------------- | ----------------- | ---------- |
+| Default (3rem keys)  | 0.875rem (14px)    | 0.9rem (14.4px)   | 0.875rem (14px)   | No-op      |
+| Short (2.25rem keys) | 0.875rem (14px)    | 0.675rem (10.8px) | 0.675rem (10.8px) | Active     |
+| Tiny (1.75rem keys)  | 0.875rem (14px)    | 0.525rem (8.4px)  | 0.525rem (8.4px)  | Active     |
 
 At desktop sizes, `modifier-font-size` (0.875rem from `--sapFontSize`) is already smaller than `key-font * 0.8` (0.9rem), so the cap is a no-op. The cap only activates when keys shrink in constrained containers, keeping modifier text proportionally smaller.
 
@@ -170,12 +170,12 @@ Font-size is 1.25rem (20px), slightly larger than the default 1.125rem to emphas
 
 Values come from SAP Fiori design tokens, not arbitrary constants:
 
-| Property   | Value    | Source                                                                             |
-| ---------- | -------- | ---------------------------------------------------------------------------------- |
-| Key height | 2.25rem  | `--sapElement_Height`                                                              |
-| Font-size  | 0.875rem | `--sapFontSize`                                                                    |
-| Padding    | 0.5rem   | Matches cq-short to keep compact density visually consistent with constrained mode |
-| Gap        | 0.25rem  | Matches cq-short                                                                   |
+| Property   | Value    | Source                                                                                   |
+| ---------- | -------- | ---------------------------------------------------------------------------------------- |
+| Key height | 2.25rem  | `--sapElement_Height`                                                                    |
+| Font-size  | 0.875rem | `--sapFontSize`                                                                          |
+| Padding    | 0.5rem   | Matches the Short tier to keep compact density visually consistent with constrained mode |
+| Gap        | 0.25rem  | Matches the Short tier                                                                   |
 
 Compact density also adjusts numpad sizing:
 
@@ -276,7 +276,7 @@ Navigation and function keys (`{fkey:*}`) override the dual-key defaults with a 
 | Label size | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Scales responsively; floor 8px, ceiling 0.7em of parent        |
 | Gap        | `0.05em`                                    | Tight spacing since icon and label have distinct visual weight |
 
-The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `[data-key^="{fkey:"]` elements to avoid affecting Shift/Enter/Backspace.
+The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `.kiosk-key--fkey` (a class set by the renderer when a key's value starts with `{fkey:`) to avoid affecting Shift/Enter/Backspace.
 
 ### F-Key Row Wrap
 
