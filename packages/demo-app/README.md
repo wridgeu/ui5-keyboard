@@ -278,7 +278,7 @@ The component's CSS handles responsive behavior automatically via `@container` q
 
 **Arabic and RTL:** The component detects the `dir` attribute on the host element. Arabic layout keys use an Arabic-first font stack via the `--kiosk-keyboard-arabic-font-family` custom property.
 
-**Height-responsive classes:** The `.cq-short` and `.cq-tiny` classes are driven by a `ResizeObserver` on the host element, not by media queries. They activate when the host's layout box height drops below configurable thresholds (`--kiosk-keyboard-cq-short-threshold` at 16rem, `--kiosk-keyboard-cq-tiny-threshold` at 12rem). These reduce key height, gap, and padding automatically.
+**Height-responsive classes:** The `.kiosk-keyboard--cq-short` and `.kiosk-keyboard--cq-tiny` classes are driven by a `ResizeObserver` on the host element, not by media queries. They activate when the host's layout box height drops below configurable thresholds (`--kiosk-keyboard-cq-short-threshold` at 16rem, `--kiosk-keyboard-cq-tiny-threshold` at 12rem). These reduce key height, gap, and padding automatically.
 
 **CSS custom properties consumers can override:**
 

@@ -525,8 +525,7 @@
     /* ---- Variant: Caps Lock indicator ---- */
     &--capsLock {
       box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
-      /* Only animate the ring; background/color snap via --shiftActive's transition: none.
-         Matches the inherited 0.1s from :hover that applied before this rule existed. */
+      /* Only animate the ring; background/color snaps instantly via --shiftActive's transition: none. */
       transition: box-shadow 0.1s ease;
     }
   }

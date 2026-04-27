@@ -26,7 +26,7 @@
 
             <Panel headerText="B) Compact height (15 rem)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="The keyboard element gets height: 15rem. This triggers the cq-short breakpoint and the keyboard automatically reduces key height to fit." />
+                    <Text text="The keyboard element gets height: 15rem. This triggers the cqShort breakpoint and the keyboard automatically reduces key height to fit." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Full Name" class="sapUiSmallMarginEnd" />
                         <Input id="inputB" placeholder="Jane Doe" width="14rem" />
