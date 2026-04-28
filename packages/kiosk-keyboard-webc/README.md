@@ -455,11 +455,11 @@ interface KeyDefinition {
 
 The `f-key-mode` attribute controls how function key presses are handled:
 
-| Value       | Behavior                                                                                                                                                                                |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input.                                                                                  |
-| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below). |
-| `"None"`    | The F-key row is hidden entirely.                                                                                                                                                       |
+| Value       | Behavior                                                                                                                                                                                                                                                                                                                            |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input. Navigation keys move the caret in the target input (`ArrowLeft`/`ArrowRight`, `ArrowUp`/`ArrowDown`, `Home`, `End`); `PageUp`/`PageDown` have no built-in caret behavior in this mode and are surfaced only via `key-press`. |
+| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                                                                             |
+| `"None"`    | The F-key row is hidden entirely.                                                                                                                                                                                                                                                                                                   |
 
 ### Native mode: synthetic keydown events
 
@@ -476,17 +476,20 @@ All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the ta
 
 ### Handling F-keys in consumer code
 
-For any F-key the app wants to act on, listen to the `key-press` event. The `key` detail contains the `{fkey:*}` action string:
+For any F-key the app wants to act on, listen to the `key-press` event. The `key` detail contains the bare key name (the `{fkey:*}` wrapping is stripped before dispatch, matching the names used by `KeyboardEvent.key`):
 
 ```typescript
 keyboard.addEventListener("key-press", (e) => {
   const { key } = e.detail;
-  if (key === "{fkey:F1}") {
+  if (key === "F1") {
     e.preventDefault(); // optional: suppress default key-press behavior
     showHelpDialog();
   }
 });
 ```
+
+> [!NOTE]
+> Layout-switch keys (`{layout:*}`) fire `key-press` with the wrapped form (`"{layout:numeric}"`, `"{layout:base}"`) so consumers can distinguish the layout-switch action from a literal text key. This is asymmetric with F-keys for historical reasons; consult `e.detail.key` directly.
 
 When `f-key-mode="Native"`, the synthetic `keydown` is dispatched to the target input **before** `key-press` fires. This means any global keyboard shortcut system listening on the document (for example, a hotkeys library) will also see the F-key event, independent of whether the `key-press` handler calls `preventDefault()`.
 
@@ -494,7 +497,7 @@ To suppress the built-in F5 reload or F11 fullscreen actions specifically, call 
 
 ```typescript
 keyboard.addEventListener("key-press", (e) => {
-  if (e.detail.key === "{fkey:F5}") {
+  if (e.detail.key === "F5") {
     e.preventDefault(); // prevent location.reload()
     myApp.refreshData();
   }

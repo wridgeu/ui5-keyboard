@@ -769,6 +769,68 @@ describe("kiosk-keyboard", () => {
         "base layout should track the last primary layout (ja-kana), not the initial layout (ja-romaji)",
       );
     });
+
+    it("fires cancelable key-press for layout-switch keys before the switch", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const layoutKey = queryKey(el, "{layout:numeric}");
+      expect(layoutKey, "layout switch key should exist in qwerty").to.not.be.null;
+
+      const seen: string[] = [];
+      const onKeyPress = (e: Event) => {
+        const detail = (e as CustomEvent<{ key: string }>).detail;
+        seen.push(detail.key);
+      };
+      el.addEventListener("key-press", onKeyPress);
+      let layoutChanges = 0;
+      el.addEventListener("layout-change", () => {
+        layoutChanges++;
+      });
+
+      layoutKey!.click();
+      await nextRender();
+
+      expect(seen).to.deep.equal(["{layout:numeric}"]);
+      expect(layoutChanges, "layout-change should fire when key-press is not prevented").to.equal(1);
+
+      el.removeEventListener("key-press", onKeyPress);
+    });
+
+    it("preventDefault on key-press blocks the layout switch", async () => {
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+        `,
+      );
+      await nextRender();
+
+      const layoutKey = queryKey(el, "{layout:numeric}");
+      expect(layoutKey).to.not.be.null;
+
+      el.addEventListener(
+        "key-press",
+        (e: Event) => {
+          if ((e as CustomEvent<{ key: string }>).detail.key.startsWith("{layout:")) {
+            e.preventDefault();
+          }
+        },
+        { once: true },
+      );
+      let layoutChanges = 0;
+      el.addEventListener("layout-change", () => {
+        layoutChanges++;
+      });
+
+      layoutKey!.click();
+      await nextRender();
+
+      expect(layoutChanges, "layout-change should not fire when key-press is prevented").to.equal(0);
+    });
   });
 
   // ── Docked mode ──
