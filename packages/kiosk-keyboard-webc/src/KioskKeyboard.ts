@@ -603,6 +603,7 @@ class KioskKeyboard extends UI5Element {
    */
   private _announcementQueue: string[] = [];
   private _announcementFlushPending = false;
+  private _announcementTimerId: number | null = null;
   /** Minimum gap between live-region writes so AT clients can pick each one up. */
   private static readonly _ANNOUNCEMENT_INTERVAL_MS = 120;
   private _deferredFocusOutCloseId: number | null = null;
@@ -752,7 +753,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     // Handle open=true set before DOM connection (same pattern as ui5-dialog).
-    // Delegate unconditionally - _performOpen() already resets _open when
+    // Delegate unconditionally - _performOpen() already resets _openValue when
     // !docked or native-deferred, preventing stale open state.
     if (this._openValue) {
       this._performOpen();
@@ -782,6 +783,12 @@ class KioskKeyboard extends UI5Element {
     this._detachEscapeListener();
     this._hostAbort?.abort();
     this._hostAbort = null;
+    if (this._announcementTimerId !== null) {
+      clearTimeout(this._announcementTimerId);
+      this._announcementTimerId = null;
+    }
+    this._announcementQueue.length = 0;
+    this._announcementFlushPending = false;
     // Fire after-close before disconnecting so direct listeners still see it.
     // Cannot use `this.open = false` here - isConnected is already false,
     // so the setter skips side effects. Handle cleanup manually.
@@ -1170,11 +1177,18 @@ class KioskKeyboard extends UI5Element {
 
     this._announcementFlushPending = true;
     const writeNext = (): void => {
+      this._announcementTimerId = null;
+      // Bail out if the host was disconnected while the timer was pending.
+      // onExitDOM clears the queue and flag, so just stop the chain here.
+      if (!this.isConnected) {
+        this._announcementFlushPending = false;
+        return;
+      }
       const next = this._announcementQueue.shift();
       const region = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.liveRegion);
       if (region && next !== undefined) region.textContent = next;
       if (this._announcementQueue.length > 0) {
-        setTimeout(writeNext, KioskKeyboard._ANNOUNCEMENT_INTERVAL_MS);
+        this._announcementTimerId = window.setTimeout(writeNext, KioskKeyboard._ANNOUNCEMENT_INTERVAL_MS);
       } else {
         this._announcementFlushPending = false;
       }
