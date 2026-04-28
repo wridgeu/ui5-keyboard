@@ -10,8 +10,9 @@ KioskKeyboard.ts          Web component class (state, event delegation, target i
                           all built-in layout imports. Re-exports public types.
 KioskKeyboardTemplate.tsx JSX template: Preact-based, UI5 WC jsxRenderer
 Assets.ts                 Registers theme parameter bundles and i18n loaders
-bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all layouts + middleware),
-                          re-exports component class, enums, and public types
+bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all built-in layouts);
+                          re-exports component class, enums, and public types. Middleware
+                          modules are opt-in via `kiosk-keyboard-webc/middleware/*`.
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, FKeyMode,
                           SpecialKeyValue, KeyWidth, KeyType, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
@@ -89,6 +90,7 @@ Events are declared with `@event` from `event-strict.js`:
 @event("after-close", { bubbles: true })
 @event("layout-change", { bubbles: true })
 @event("keyboard-type-change", { bubbles: true })
+@event("active-control-change", { bubbles: true })
 ```
 
 ### TypeScript Configuration
@@ -172,7 +174,7 @@ click / touchend
 
 ### Resolution Chain
 
-The `for` attribute specifies a target element ID. Resolution uses `resolveInputOrTextarea()` which searches:
+The `controls` attribute specifies one or more target element IDs (comma-separated). Resolution uses `resolveInputOrTextarea()` which searches:
 
 1. Direct element: is it an `<input>` or `<textarea>`?
 2. Light DOM: `querySelector("input, textarea")`
@@ -240,7 +242,7 @@ interface KeyDefinition {
   label?: string; // display label
   shiftLabel?: string; // label when shifted
   shiftValue?: string; // value when shifted
-  width?: KeyWidth; // "1.5" | "1.75" | "2" | "2.25" | "space"
+  width?: KeyWidth; // see `KeyWidth` in types.ts
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // SAP icon URI or Unicode character; renders alongside label when both present
 }
@@ -502,7 +504,7 @@ CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration 
 ```json
 {
   ".": "dist/KioskKeyboard.js", // all built-in layouts, no Assets
-  "./bundle": "dist/bundle.esm.js", // self-contained with Assets + all layouts + all middleware
+  "./bundle": "dist/bundle.esm.js", // Assets + all built-in layouts; middleware is opt-in
   "./Assets": "dist/Assets.js", // theme + i18n registration only
   "./layouts/*": "dist/layouts/*.js", // individual self-registering layout modules
   "./middleware/*": "dist/middleware/*.js", // individual self-registering middleware modules

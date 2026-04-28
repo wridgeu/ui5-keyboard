@@ -9,6 +9,7 @@ export type {
   LayoutChangeEventDetail,
   KeyboardTypeChangeEventDetail,
   ActiveControlChangeEventDetail,
+  OpenStateChangeEventDetail,
   KeyDefinition,
   KeyRow,
   LayoutDefinition,

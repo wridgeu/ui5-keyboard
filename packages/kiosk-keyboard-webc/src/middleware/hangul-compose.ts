@@ -191,7 +191,9 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
         return false;
       }
 
-      const code = key.charCodeAt(0);
+      // codePointAt is the modern Unicode-correct primitive. The length === 1
+      // guard above keeps us in the BMP, so the result fits in a UTF-16 unit.
+      const code = key.codePointAt(0)!;
       const lIdx = COMPAT_TO_L.get(code);
       const vIdx = COMPAT_TO_V.get(code);
 

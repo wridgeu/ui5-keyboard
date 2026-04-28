@@ -52,14 +52,14 @@ Stable exports from the bundle entry:
 
 - `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
 - Enum exports: `FKeyMode`, `KeyboardType`, `MobileKeyboard`
-- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
+- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
 
 Static methods on `KioskKeyboard` (layout, locale, and middleware registry):
 
 - `registerLayout` / `unregisterLayout` / `resetCustomLayouts`
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
 - `registerLocaleLayout` / `unregisterLocaleLayout` / `resetLocaleLayouts` / `getLocaleLayout`
-- `registerMiddleware`
+- `registerMiddleware` / `unregisterMiddleware` / `resetMiddleware`
 - `setI18nResolver`
 
 Additional stable runtime hooks on the class:

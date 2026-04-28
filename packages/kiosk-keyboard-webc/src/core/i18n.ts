@@ -65,9 +65,14 @@ export function setI18nResolver(fn: I18nResolver | null): void {
  * 2. UI5 WC i18n bundle (locale-aware, loaded from JSON assets)
  * 3. Default text from i18n-defaults.ts (English fallback)
  */
+type I18nKey = keyof typeof I18N;
+
+function lookupI18nText(key: string): I18nText | undefined {
+  return Object.hasOwn(I18N, key) ? I18N[key as I18nKey] : undefined;
+}
+
 export function getText(key: string, fallback: string): string {
-  // Look up the typed I18nText constant
-  const i18nText = (I18N as Record<string, I18nText | undefined>)[key];
+  const i18nText = lookupI18nText(key);
   const defaultText = i18nText?.defaultText ?? fallback;
 
   // Try the UI5 WC i18n bundle first (locale-aware)
