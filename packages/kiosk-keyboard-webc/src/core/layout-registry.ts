@@ -68,14 +68,14 @@ function resolveLocaleMappedLayout(locale: string): string | null {
  * built-ins. Validates structure before registering.
  * @internal
  */
-export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
-  const name = normalizeLowerString(sName, "layout name");
+export function registerLayout(rawName: string, definition: LayoutDefinition): void {
+  const name = normalizeLowerString(rawName, "layout name");
   if (!name) return;
 
   if (
-    !Array.isArray(oDefinition) ||
-    oDefinition.length === 0 ||
-    !oDefinition.every(
+    !Array.isArray(definition) ||
+    definition.length === 0 ||
+    !definition.every(
       (row) => Array.isArray(row) && row.length > 0 && row.every((key) => typeof key?.value === "string" && key.value),
     )
   ) {
@@ -85,7 +85,7 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
     return;
   }
 
-  layouts.set(name, oDefinition);
+  layouts.set(name, definition);
 }
 
 /**
@@ -94,8 +94,8 @@ export function registerLayout(sName: string, oDefinition: LayoutDefinition): vo
  * original built-in definition is restored.
  * @internal
  */
-export function unregisterLayout(sName: string): void {
-  const name = normalizeLowerString(sName, "layout name");
+export function unregisterLayout(rawName: string): void {
+  const name = normalizeLowerString(rawName, "layout name");
   if (!name) return;
 
   const original = BUILTIN_ORIGINALS.get(name);
@@ -129,8 +129,8 @@ export function resetCustomLayouts(): void {
  * if no such layout is registered.
  * @internal
  */
-export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
-  const name = normalizeLowerString(sName, "layout name");
+export function getRegisteredLayout(rawName: string): LayoutDefinition | undefined {
+  const name = normalizeLowerString(rawName, "layout name");
   if (!name) return undefined;
   return layouts.get(name);
 }
@@ -140,10 +140,10 @@ export function getRegisteredLayout(sName: string): LayoutDefinition | undefined
  * the default layout when the name is not registered.
  * @internal
  */
-export function getLayoutOrDefault(sName: string): LayoutDefinition {
+export function getLayoutOrDefault(rawName: string): LayoutDefinition {
   const fallback = layouts.get(DEFAULT_LAYOUT);
   if (!fallback) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
-  const name = normalizeLowerString(sName, "layout name");
+  const name = normalizeLowerString(rawName, "layout name");
   if (!name) return fallback;
   return layouts.get(name) ?? fallback;
 }
@@ -160,8 +160,8 @@ export function getRegisteredLayoutNames(): string[] {
  * Returns whether the given layout name is a built-in layout.
  * @internal
  */
-export function isBuiltInLayout(sName: string): boolean {
-  const name = normalizeLowerString(sName, "layout name");
+export function isBuiltInLayout(rawName: string): boolean {
+  const name = normalizeLowerString(rawName, "layout name");
   if (!name) return false;
   return BUILTIN_LAYOUTS.has(name);
 }
@@ -170,9 +170,9 @@ export function isBuiltInLayout(sName: string): boolean {
  * Registers a mapping from a BCP-47 language tag (or prefix) to a layout name.
  * @internal
  */
-export function registerLocaleLayout(sLocale: string, sLayout: string): void {
-  const locale = normalizeLowerString(sLocale, "locale map key");
-  const layout = normalizeLowerString(sLayout, "layout map value");
+export function registerLocaleLayout(rawLocale: string, rawLayout: string): void {
+  const locale = normalizeLowerString(rawLocale, "locale map key");
+  const layout = normalizeLowerString(rawLayout, "layout map value");
   if (!locale || !layout) return;
 
   if (!layouts.has(layout)) {
@@ -188,8 +188,8 @@ export function registerLocaleLayout(sLocale: string, sLayout: string): void {
  * Removes a locale -> layout mapping.
  * @internal
  */
-export function unregisterLocaleLayout(sLocale: string): void {
-  const locale = normalizeLowerString(sLocale, "locale map key");
+export function unregisterLocaleLayout(rawLocale: string): void {
+  const locale = normalizeLowerString(rawLocale, "locale map key");
   if (!locale) return;
 
   LOCALE_LAYOUT_MAP.delete(locale);

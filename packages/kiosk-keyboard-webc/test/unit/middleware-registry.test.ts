@@ -4,7 +4,7 @@ import {
   _registerMiddleware,
   registerMiddleware,
   getMiddlewareFactory,
-  _resetMiddleware,
+  resetMiddleware,
 } from "../../src/core/middleware-registry.js";
 
 function mockFactory(): CompositionMiddleware {
@@ -17,7 +17,7 @@ function mockFactory(): CompositionMiddleware {
 
 describe("middleware-registry", () => {
   beforeEach(() => {
-    _resetMiddleware();
+    resetMiddleware();
   });
 
   describe("_registerMiddleware", () => {

@@ -1,7 +1,9 @@
 /** Per-instance composition state. Each middleware holds its own. */
 export interface CompositionState {
   composing: boolean;
+  /** Code-unit offset in the target's value where the preedit text begins. */
   preeditStart: number;
+  /** Number of UTF-16 code units occupied by the current preedit text. */
   preeditLength: number;
 }
 

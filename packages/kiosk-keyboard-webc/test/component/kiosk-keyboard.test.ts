@@ -1840,20 +1840,20 @@ describe("kiosk-keyboard", () => {
       expect(detail.autoDetected).to.be.true;
     });
 
-    it("isOpen() returns current open state", async () => {
+    it("the `open` getter reflects the current open state", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>
         `,
       );
       await nextRender();
-      expect(el.isOpen()).to.be.false;
+      expect(el.open).to.be.false;
 
       el.show();
-      expect(el.isOpen()).to.be.true;
+      expect(el.open).to.be.true;
 
       el.close();
-      expect(el.isOpen()).to.be.false;
+      expect(el.open).to.be.false;
     });
 
     it("isSecondaryLayout() identifies secondary layouts", async () => {
@@ -2142,7 +2142,7 @@ describe("kiosk-keyboard", () => {
       input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await afterOpenEvent;
 
-      expect(kbActive.isOpen()).to.be.true;
+      expect(kbActive.open).to.be.true;
     });
   });
 

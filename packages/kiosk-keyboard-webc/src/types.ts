@@ -250,3 +250,18 @@ export interface ActiveControlChangeEventDetail {
   /** The new active input element, or `null` if cleared. */
   activeElement: HTMLInputElement | HTMLTextAreaElement | null;
 }
+
+/**
+ * Detail payload shared by the `after-open` and `after-close` events.
+ *
+ * @public
+ * @since 0.2.0
+ */
+export interface OpenStateChangeEventDetail {
+  /**
+   * The active target input at the moment of the state change, or `null`.
+   * For `after-close` this reports the input that was active just before
+   * the keyboard closed.
+   */
+  activeElement: HTMLInputElement | HTMLTextAreaElement | null;
+}

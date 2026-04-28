@@ -122,11 +122,9 @@ export function handleNavigation(
       newPos = start !== end ? end : Math.min(len, end + graphemeLengthAfter(dom.value, end));
       break;
     case "Home":
-    case "PageUp":
       newPos = 0;
       break;
     case "End":
-    case "PageDown":
       newPos = len;
       break;
     case "ArrowUp":

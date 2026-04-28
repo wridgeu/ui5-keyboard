@@ -312,14 +312,14 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Events
 
-| Event                   | Detail                                                                          | Description                                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `key-press`             | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys.  |
-| `after-open`            | -                                                                               | Fired when the docked keyboard enters the open state. State-change hook only; not a CSS transition-end event.   |
-| `after-close`           | -                                                                               | Fired when the docked keyboard enters the closed state. State-change hook only; not a CSS transition-end event. |
-| `layout-change`         | `{ layout: string }`                                                            | Fired when layout switches.                                                                                     |
-| `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                               |
-| `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).              |
+| Event                   | Detail                                                                          | Description                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key-press`             | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys.                                                                    |
+| `after-open`            | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the open state. `activeElement` is the input that's now active. State-change hook only; not a CSS transition-end event.                     |
+| `after-close`           | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the closed state. `activeElement` is the input that was active just before closing. State-change hook only; not a CSS transition-end event. |
+| `layout-change`         | `{ layout: string }`                                                            | Fired when layout switches.                                                                                                                                                       |
+| `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                                                                                                 |
+| `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).                                                                                |
 
 ## Methods
 
@@ -328,7 +328,6 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `activeElement` (getter)   | Read-only. Returns the currently active target input element (`HTMLInputElement \| HTMLTextAreaElement \| null`).                                               |
 | `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.           |
 | `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                               |
-| `isOpen()`                 | Returns whether the docked keyboard is open.                                                                                                                    |
 | `setTargetElement(el)`     | Programmatically sets the target input/textarea.                                                                                                                |
 | `setTargetResolver(fn)`    | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                         |
 | `resetKeyboardType()`      | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                            |
@@ -354,6 +353,8 @@ They report the state transition itself, not animation completion.
 | `KioskKeyboard.getLocaleLayout()`                    | Returns the layout for the current browser locale. |
 | `KioskKeyboard.setI18nResolver(fn)`                  | Sets a custom i18n resolver callback.              |
 | `KioskKeyboard.registerMiddleware(layouts, factory)` | Registers composition middleware for layouts.      |
+| `KioskKeyboard.unregisterMiddleware(layout)`         | Removes the middleware registered for a layout.    |
+| `KioskKeyboard.resetMiddleware()`                    | Removes all registered middleware.                 |
 
 > [!NOTE]
 > Following the [UI5 Web Components convention](https://github.com/SAP/ui5-webcomponents), registry operations are static methods on the component class. Import the class and call them directly. In environments without ES module imports (e.g., plain `<script>` tags), the static API is also accessible via `customElements.get('kiosk-keyboard').registerLayout(...)` or `document.querySelector('kiosk-keyboard').constructor.registerLayout(...)`.
@@ -963,8 +964,8 @@ your chosen widths:
 }
 ```
 
-This is more flexible than the previous threshold variables: you can
-set any property at any number of breakpoints.
+Container queries let you set any CSS property at any number of
+breakpoints based on the keyboard's own width.
 
 #### Tuning for Complex-Script Layouts
 

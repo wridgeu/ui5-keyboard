@@ -1,8 +1,13 @@
-/** Keyboard type values that auto-detection can return. "Numeric" is only set programmatically via the keyboardType property. */
-type KeyboardTypeValue = "Full" | "Numpad";
+import { KeyboardType } from "../types.js";
+
+/**
+ * Keyboard type values that auto-detection can return.
+ * `Numeric` is only set programmatically via the `keyboardType` property.
+ */
+type KeyboardTypeValue = Exclude<`${KeyboardType}`, `${typeof KeyboardType.Numeric}`>;
 
 /** Valid values for the `data-keyboard-type` explicit override attribute. */
-const VALID_DATA_OVERRIDES: ReadonlySet<string> = new Set(["Numpad", "Full"]);
+const VALID_DATA_OVERRIDES: ReadonlySet<KeyboardTypeValue> = new Set([KeyboardType.Full, KeyboardType.Numpad]);
 
 /** Numeric input modes that map to Numpad keyboard. */
 const NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "tel"]);
@@ -42,16 +47,18 @@ function closestDataKeyboardType(el: Element): string | null {
 export function detectKeyboardType(dom: HTMLInputElement | HTMLTextAreaElement): KeyboardTypeValue {
   // 1. Explicit override via data attribute (crosses shadow DOM boundaries)
   const explicit = closestDataKeyboardType(dom);
-  if (explicit && VALID_DATA_OVERRIDES.has(explicit)) return explicit as KeyboardTypeValue;
+  if (explicit !== null && (VALID_DATA_OVERRIDES as ReadonlySet<string>).has(explicit)) {
+    return explicit as KeyboardTypeValue;
+  }
 
   // 2. Check inputmode attribute
   const inputmode = dom.getAttribute("inputmode");
-  if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return "Numpad";
+  if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return KeyboardType.Numpad;
 
   // 3. Check HTML type attribute
   if (dom instanceof HTMLInputElement && NUMPAD_HTML_TYPES.has(dom.type)) {
-    return "Numpad";
+    return KeyboardType.Numpad;
   }
 
-  return "Full";
+  return KeyboardType.Full;
 }

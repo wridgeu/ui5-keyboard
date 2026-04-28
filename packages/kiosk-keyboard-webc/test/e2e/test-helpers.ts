@@ -53,7 +53,7 @@ async function readDockedKeyboardState(hostId: string): Promise<DockedKeyboardSt
       classes?: { rootHidden?: string };
     };
 
-    const host = document.getElementById(id) as (HTMLElement & { open?: boolean; isOpen?: () => boolean }) | null;
+    const host = document.getElementById(id) as (HTMLElement & { open?: boolean }) | null;
     if (!host) {
       throw new Error(`Docked keyboard host #${id} not found`);
     }
@@ -68,7 +68,7 @@ async function readDockedKeyboardState(hostId: string): Promise<DockedKeyboardSt
 
     const styles = getComputedStyle(root);
     return {
-      open: typeof host.isOpen === "function" ? host.isOpen() : Boolean(host.open),
+      open: Boolean(host.open),
       hiddenClass: root.classList.contains(hiddenClass),
       visibility: styles.visibility,
       pointerEvents: styles.pointerEvents,
