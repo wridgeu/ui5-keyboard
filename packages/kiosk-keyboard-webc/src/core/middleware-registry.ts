@@ -27,15 +27,6 @@ export function registerMiddleware(layouts: string[], factory: () => Composition
 }
 
 /**
- * Removes the middleware factory registered for the given layout.
- * No-op when no middleware is registered for the layout.
- * @public
- */
-export function unregisterMiddleware(layout: string): void {
-  factories.delete(layout);
-}
-
-/**
  * Returns the middleware factory for the given layout, or null.
  */
 export function getMiddlewareFactory(layout: string): (() => CompositionMiddleware) | null {
@@ -44,9 +35,9 @@ export function getMiddlewareFactory(layout: string): (() => CompositionMiddlewa
 
 /**
  * Removes all registered middleware factories (built-in and custom).
- * Useful for tests and consumer apps that need to reset middleware state.
- * @public
+ * Used by tests to isolate state between cases.
+ * @internal
  */
-export function resetMiddleware(): void {
+export function _resetMiddleware(): void {
   factories.clear();
 }
