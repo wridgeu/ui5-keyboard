@@ -40,7 +40,7 @@ import { ShiftState } from "./internal/shift-state";
 import TargetInputSession from "./internal/target-input-session";
 import KeyGridNavigation from "./internal/key-grid-navigation";
 import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
-import AutoShowBehavior from "./internal/auto-show-behavior";
+import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -52,9 +52,6 @@ type KeyHighlightDelegation = {
   onkeydown: (event: Event) => void;
   onkeyup: (event: Event) => void;
 };
-
-/** Who last set keyboardType. "auto:VALUE" = auto-detected for VALUE. */
-type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
 
 /**
  * Resolves a CSS custom property holding a rem-based threshold to pixels.
@@ -401,7 +398,7 @@ export default class KioskKeyboard extends Control {
   private static readonly _instances = new Set<KioskKeyboard>();
 
   /** Native actions executed in `fKeyMode="Native"` when not prevented. */
-  private static readonly _NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
+  private static readonly _NATIVE_FKEY_ACTIONS: Record<string, (() => void) | undefined> = {
     F5: () => {
       location.reload();
     },
@@ -419,6 +416,21 @@ export default class KioskKeyboard extends Control {
 
   /** Internal set used for O(1) native-dispatch allowlist checks. */
   private static readonly _NATIVE_DISPATCHABLE_FKEYS = new Set<string>(NativeDispatchableKeyNames);
+
+  /**
+   * Maps a `KeyboardEvent.key` value to the matching `KeyboardEvent.code`.
+   *
+   * For the current allowlist (F1-F12, Arrow*, Home, End, PageUp/Down) `code`
+   * equals `key`, so a default-fallback mapping suffices. This indirection
+   * exists so adding entries where they diverge (e.g. `NumpadEnter` has
+   * `key: "Enter"` / `code: "NumpadEnter"`) does not silently produce events
+   * with mismatched physical/logical key names.
+   */
+  private static readonly _KEY_TO_CODE: Readonly<Record<string, string>> = Object.freeze({});
+
+  private static _resolveKeyCode(keyName: string): string {
+    return KioskKeyboard._KEY_TO_CODE[keyName] ?? keyName;
+  }
 
   /** Global target resolver applied to all instances (lowest priority). */
   private static _globalTargetResolver: TargetResolverFn | null = null;
@@ -670,10 +682,10 @@ export default class KioskKeyboard extends Control {
    * therefore also set in `init()`.
    */
   applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
-    if (mSettings && !("layout" in mSettings)) {
-      mSettings.layout = registryGetLocaleLayout();
-    }
-    return super.applySettings(mSettings, oScope);
+    // Spread before super so callers' settings object is never mutated;
+    // any explicit `layout` in `mSettings` overrides the locale default.
+    const merged: Record<string, unknown> = { layout: registryGetLocaleLayout(), ...mSettings };
+    return super.applySettings(merged, oScope);
   }
 
   init(): void {
@@ -1103,10 +1115,13 @@ export default class KioskKeyboard extends Control {
    * Returns the ID of the currently active target, or empty string.
    */
   _getActiveTargetId(): string {
-    return (this.getAssociation("_activeTarget", null) as string) ?? "";
+    // `_activeTarget` is single-cardinality, so getAssociation returns string | null.
+    // The UI5 type stub widens this to string | string[]; narrow defensively.
+    const value = this.getAssociation("_activeTarget", null);
+    return typeof value === "string" ? value : "";
   }
 
-  _getKeyboardTypeSource(): string {
+  _getKeyboardTypeSource(): KeyboardTypeSource {
     return this._keyboardTypeSource;
   }
 
@@ -1380,6 +1395,12 @@ export default class KioskKeyboard extends Control {
       resolvedControlIds.add(controlId);
     }
 
+    // Fast path: if the resolved (inputId → controlId) map and all delegate
+    // instances are unchanged, no DOM reconciliation is needed. This skips
+    // the work on the common focusin firehose where the controls list stays
+    // identical between events.
+    if (this._isResolutionUnchanged(nextByInputId)) return;
+
     // Detach controls no longer referenced or whose instance changed.
     for (const controlId of prevCountsByControlId.keys()) {
       const prev = this._delegatedInstances.get(controlId);
@@ -1418,10 +1439,12 @@ export default class KioskKeyboard extends Control {
 
     // Auto-target when exactly one control is resolved and nothing is active yet
     if (resolvedControlIds.size === 1 && !this._getActiveTargetId()) {
-      const onlyId = resolvedControlIds.values().next().value;
-      const control = Element.getElementById(onlyId);
-      if (control instanceof Control) {
-        this._setActiveTarget(control);
+      const [onlyId] = resolvedControlIds;
+      if (onlyId) {
+        const control = Element.getElementById(onlyId);
+        if (control instanceof Control) {
+          this._setActiveTarget(control);
+        }
       }
     }
   }
@@ -1433,6 +1456,23 @@ export default class KioskKeyboard extends Control {
     this._delegatedInstances.clear();
     this._registeredControlById.clear();
     this._resolvedControlIds.clear();
+  }
+
+  /**
+   * Returns true when {@link _setupControls}'s freshly resolved
+   * (inputId → controlId) map matches the cached one entry-for-entry AND
+   * every cached delegate instance is still the same Control object.
+   *
+   * Used to skip reconciliation on document focusin events where the
+   * controls property and resolved instances have not changed.
+   */
+  private _isResolutionUnchanged(nextByInputId: ReadonlyMap<string, string>): boolean {
+    if (nextByInputId.size !== this._registeredControlById.size) return false;
+    for (const [inputId, controlId] of nextByInputId) {
+      if (this._registeredControlById.get(inputId) !== controlId) return false;
+      if (this._delegatedInstances.get(controlId) !== Element.getElementById(controlId)) return false;
+    }
+    return true;
   }
 
   private _findControlById(targetId: string): Control | null {
@@ -1840,7 +1880,7 @@ export default class KioskKeyboard extends Control {
         const mwTarget = targetEl
           ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
           : null;
-        if (mwTarget && this._middleware.handleKey(keyValue, mwTarget as HTMLInputElement | HTMLTextAreaElement)) {
+        if (mwTarget && this._middleware.handleKey(keyValue, mwTarget)) {
           if (this._shiftState.autoRelease()) {
             this.invalidate();
           }
@@ -2073,7 +2113,7 @@ export default class KioskKeyboard extends Control {
   private _dispatchNativeFKeydown(fkeyName: string, shiftKey: boolean): boolean {
     const nativeEvent = new KeyboardEvent("keydown", {
       key: fkeyName,
-      code: fkeyName,
+      code: KioskKeyboard._resolveKeyCode(fkeyName),
       bubbles: true,
       cancelable: true,
       shiftKey,
