@@ -3,6 +3,7 @@ import Control from "sap/ui/core/Control";
 import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
 import type { TargetResolverFn } from "./dom";
 import type { KeyboardType } from "../library";
+import type { KioskKeyboard$KeyboardTypeChangeEventParameters } from "../KioskKeyboard";
 
 /**
  * Tracks who last set the keyboard type, so auto-detect knows whether it
@@ -15,11 +16,9 @@ import type { KeyboardType } from "../library";
 export type KeyboardTypeSource = "unset" | "explicit" | `auto:${KeyboardType}`;
 
 interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" | "setProperty"> {
-  fireKeyboardTypeChange(parameters: {
-    keyboardType: KeyboardType;
-    previousKeyboardType: KeyboardType;
-    autoDetected: boolean;
-  }): void;
+  // Auto-detect always supplies all three fields, so tighten the generated
+  // (all-optional) shape with Required<> here.
+  fireKeyboardTypeChange(parameters: Required<KioskKeyboard$KeyboardTypeChangeEventParameters>): void;
   getDocked(): boolean;
   getEnabled(): boolean;
   getAutoShow(): boolean;
