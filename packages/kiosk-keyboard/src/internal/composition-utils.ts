@@ -49,6 +49,16 @@ export function updateComposition(
 
 /**
  * Ends the composition session. Dispatches `compositionend` and resets preedit tracking.
+ *
+ * **Caller contract:** the preedit text written via {@link updateComposition}
+ * is committed to the DOM directly and bypasses UI5's `setValue` / `liveChange`
+ * pipeline. Callers MUST sync the UI5 model after `endComposition` returns -
+ * typically by removing the preedit range from the DOM and re-inserting the
+ * committed text through their host's `insertText` (which routes through
+ * `setValue` and fires `liveChange`).
+ *
+ * Skipping this step lets the JS model and the underlying `<input>` value
+ * drift apart silently.
  */
 export function endComposition(state: CompositionState, target: HTMLInputElement | HTMLTextAreaElement): void {
   const committed = target.value.slice(state.preeditStart, state.preeditStart + state.preeditLength);

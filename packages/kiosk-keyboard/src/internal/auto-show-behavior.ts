@@ -4,6 +4,16 @@ import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
 import type { TargetResolverFn } from "./dom";
 import type { KeyboardType } from "../library";
 
+/**
+ * Tracks who last set the keyboard type, so auto-detect knows whether it
+ * is allowed to override the current value.
+ *
+ * - `"unset"`: not yet set
+ * - `"explicit"`: app-level setKeyboardType() / property binding
+ * - `` `auto:${KeyboardType}` ``: previously auto-detected for the named type
+ */
+export type KeyboardTypeSource = "unset" | "explicit" | `auto:${KeyboardType}`;
+
 interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" | "setProperty"> {
   fireKeyboardTypeChange(parameters: {
     keyboardType: KeyboardType;
@@ -26,8 +36,8 @@ interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" 
   _setupControls(): void;
   _resolveClaimableControl(target: EventTarget | null): Control | null;
   _wouldClaimInput(target: EventTarget | null): boolean;
-  _getKeyboardTypeSource(): string;
-  _setKeyboardTypeSource(source: string): void;
+  _getKeyboardTypeSource(): KeyboardTypeSource;
+  _setKeyboardTypeSource(source: KeyboardTypeSource): void;
 }
 
 export default class AutoShowBehavior extends BaseObject {
