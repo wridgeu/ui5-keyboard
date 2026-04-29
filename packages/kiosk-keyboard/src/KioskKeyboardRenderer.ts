@@ -89,22 +89,18 @@ const KioskKeyboardRenderer = {
     });
   },
 
-  resolveFocusTarget(oControl: KioskKeyboard, layout: LayoutDefinition): { row: number; col: number } {
+  resolveFocusTarget(oControl: KioskKeyboard, layout: LayoutDefinition): { row: number; col: number } | null {
+    // No keys to render -> no roving tabindex target.
+    if (!layout[0]?.[0]) return null;
+
     const sLastFocusedId = oControl.getFocusInfo().lastFocusedKeyId;
-    if (!sLastFocusedId) {
-      return { row: 0, col: 0 };
-    }
-
-    const match = sLastFocusedId.match(KEY_ID_SUFFIX_RE);
-    if (!match) {
-      return { row: 0, col: 0 };
-    }
-
-    const row = Number.parseInt(match[1], 10);
-    const col = Number.parseInt(match[2], 10);
-
-    if (layout[row]?.[col]) {
-      return { row, col };
+    if (sLastFocusedId) {
+      const match = sLastFocusedId.match(KEY_ID_SUFFIX_RE);
+      if (match) {
+        const row = Number.parseInt(match[1], 10);
+        const col = Number.parseInt(match[2], 10);
+        if (layout[row]?.[col]) return { row, col };
+      }
     }
 
     return { row: 0, col: 0 };
@@ -138,7 +134,7 @@ const KioskKeyboardRenderer = {
     oControl: KioskKeyboard,
     row: LayoutDefinition[number],
     ri: number,
-    focusTarget: { row: number; col: number },
+    focusTarget: { row: number; col: number } | null,
   ): void {
     rm.openStart("div", `${oControl.getId()}-row-${ri}`);
     rm.class(KIOSK_KEYBOARD_DOM.classes.row);
@@ -166,7 +162,7 @@ const KioskKeyboardRenderer = {
     key: KeyDefinition,
     ri: number,
     ci: number,
-    focusTarget: { row: number; col: number },
+    focusTarget: { row: number; col: number } | null,
   ): void {
     // Resolve icon and label once per key, pass to all sub-hooks
     const { _getKeyLabel } = oControl._getRendererApi();
@@ -228,7 +224,7 @@ const KioskKeyboardRenderer = {
     key: KeyDefinition,
     ri: number,
     ci: number,
-    focusTarget: { row: number; col: number },
+    focusTarget: { row: number; col: number } | null,
     label: string,
   ): void {
     const { _isShiftActive, _isCapsLock, _getKeyAriaLabel } = oControl._getRendererApi();
@@ -243,7 +239,8 @@ const KioskKeyboardRenderer = {
 
     // Roving tabindex: exactly one key gets tabindex="0".
     // Prefer the last focused key (survives re-render); fall back to (0,0).
-    const bIsFocusTarget = ri === focusTarget.row && ci === focusTarget.col;
+    // `focusTarget` is null only when the layout has no keys.
+    const bIsFocusTarget = !!focusTarget && ri === focusTarget.row && ci === focusTarget.col;
     const bEnabled = oControl.getEnabled();
     rm.attr("tabindex", bEnabled && bIsFocusTarget ? "0" : "-1");
 
