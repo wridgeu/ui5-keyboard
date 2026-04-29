@@ -353,8 +353,6 @@ They report the state transition itself, not animation completion.
 | `KioskKeyboard.getLocaleLayout()`                    | Returns the layout for the current browser locale. |
 | `KioskKeyboard.setI18nResolver(fn)`                  | Sets a custom i18n resolver callback.              |
 | `KioskKeyboard.registerMiddleware(layouts, factory)` | Registers composition middleware for layouts.      |
-| `KioskKeyboard.unregisterMiddleware(layout)`         | Removes the middleware registered for a layout.    |
-| `KioskKeyboard.resetMiddleware()`                    | Removes all registered middleware.                 |
 
 > [!NOTE]
 > Following the [UI5 Web Components convention](https://github.com/SAP/ui5-webcomponents), registry operations are static methods on the component class. Import the class and call them directly. In environments without ES module imports (e.g., plain `<script>` tags), the static API is also accessible via `customElements.get('kiosk-keyboard').registerLayout(...)` or `document.querySelector('kiosk-keyboard').constructor.registerLayout(...)`.

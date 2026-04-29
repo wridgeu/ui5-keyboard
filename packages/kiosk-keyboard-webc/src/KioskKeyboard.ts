@@ -31,12 +31,7 @@ import {
   unregisterLocaleLayout,
   resetLocaleLayouts,
 } from "./core/layout-registry.js";
-import {
-  getMiddlewareFactory,
-  registerMiddleware,
-  unregisterMiddleware,
-  resetMiddleware,
-} from "./core/middleware-registry.js";
+import { getMiddlewareFactory, registerMiddleware } from "./core/middleware-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
   KeyboardType,
@@ -431,27 +426,6 @@ class KioskKeyboard extends UI5Element {
    */
   static registerMiddleware(layouts: string[], factory: () => CompositionMiddleware): void {
     registerMiddleware(layouts, factory);
-  }
-
-  /**
-   * Remove the middleware registered for the given layout.
-   * No-op when no middleware is registered for that layout.
-   * @param layout Layout name to remove middleware for.
-   * @public
-   * @since 0.2.0
-   */
-  static unregisterMiddleware(layout: string): void {
-    unregisterMiddleware(layout);
-  }
-
-  /**
-   * Remove all registered middleware (built-in and custom). Useful in tests
-   * and consumer apps that need to reset middleware between scenarios.
-   * @public
-   * @since 0.2.0
-   */
-  static resetMiddleware(): void {
-    resetMiddleware();
   }
 
   // ── Public reactive properties (synced with attributes) ──
