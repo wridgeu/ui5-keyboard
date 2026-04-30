@@ -1,8 +1,6 @@
 import { _registerMiddleware, getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
 
-// --- Helpers ---
-
 function mockFactory(): CompositionMiddleware {
   return {
     handleKey: () => false,
@@ -14,13 +12,10 @@ function mockFactory(): CompositionMiddleware {
 // _registerMiddleware seals on first write per layout, so each test must use
 // a fresh, never-registered layout name. The built-in side-effect imports
 // already claim "ja-kana" and "ko-hangul".
-
 let nextId = 0;
 function freshLayoutName(): string {
   return `test-mw-${++nextId}`;
 }
-
-// --- _registerMiddleware ---
 
 QUnit.module("middleware-registry - _registerMiddleware");
 
@@ -60,8 +55,6 @@ QUnit.test("Is idempotent -- first write wins", (assert) => {
 QUnit.test("Returns null for layouts without middleware", (assert) => {
   assert.strictEqual(getMiddlewareFactory("not-a-real-layout"), null, "No factory for unregistered layout");
 });
-
-// --- getMiddlewareFactory ---
 
 QUnit.module("middleware-registry - getMiddlewareFactory");
 
