@@ -1761,10 +1761,10 @@ class KioskKeyboard extends UI5Element {
 
   // ── Physical keyboard sync ──
 
-  private _onPhysicalKey(event: KeyboardEvent, down: boolean): void {
-    this._highlightKey(event.key, down);
+  private _onPhysicalKey(ev: KeyboardEvent, down: boolean): void {
+    this._highlightKey(ev.key, down);
 
-    const changed = this._shiftState.syncFromPhysical(event.shiftKey, event.getModifierState("CapsLock"));
+    const changed = this._shiftState.syncFromPhysical(ev.shiftKey, ev.getModifierState("CapsLock"));
     if (changed) {
       this._syncShiftState();
     }

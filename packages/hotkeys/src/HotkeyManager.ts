@@ -595,7 +595,7 @@ export default class HotkeyManager extends BaseObject {
     options?: HotkeyOptions,
   ): HotkeyRegistrationHandle {
     // Warn about options that are not applicable to sequences
-    if (options?.target != null) {
+    if (options?.target) {
       Log.warning(
         `Option "target" is ignored for sequence "${hotkey}" - element targeting is not supported for sequences`,
         undefined,

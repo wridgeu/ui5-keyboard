@@ -327,7 +327,7 @@ export async function matchElementSnapshotInSection(
     await assertSnapshotTargetIsUsable(target, name, options);
     await expect(target).toMatchElementSnapshot(name, {
       ignoreAntialiasing: options?.ignoreAntialiasing ?? true,
-      ...(options?.misMatchPercentage != null && { misMatchPercentage: options.misMatchPercentage }),
+      ...(options?.misMatchPercentage !== undefined && { misMatchPercentage: options.misMatchPercentage }),
     });
   } finally {
     await restoreSections();
