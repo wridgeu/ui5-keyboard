@@ -417,21 +417,6 @@ export default class KioskKeyboard extends Control {
   /** Internal set used for O(1) native-dispatch allowlist checks. */
   private static readonly _NATIVE_DISPATCHABLE_FKEYS = new Set<string>(NativeDispatchableKeyNames);
 
-  /**
-   * Maps a `KeyboardEvent.key` value to the matching `KeyboardEvent.code`.
-   *
-   * For the current allowlist (F1-F12, Arrow*, Home, End, PageUp/Down) `code`
-   * equals `key`, so a default-fallback mapping suffices. This indirection
-   * exists so adding entries where they diverge (e.g. `NumpadEnter` has
-   * `key: "Enter"` / `code: "NumpadEnter"`) does not silently produce events
-   * with mismatched physical/logical key names.
-   */
-  private static readonly _KEY_TO_CODE: Readonly<Record<string, string>> = Object.freeze({});
-
-  private static _resolveKeyCode(keyName: string): string {
-    return KioskKeyboard._KEY_TO_CODE[keyName] ?? keyName;
-  }
-
   /** Global target resolver applied to all instances (lowest priority). */
   private static _globalTargetResolver: TargetResolverFn | null = null;
 
@@ -894,6 +879,7 @@ export default class KioskKeyboard extends Control {
     this._teardownControls();
     this._removeHighlightDelegation();
     this._teardownResponsiveSizing();
+    this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
     // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
@@ -1709,6 +1695,11 @@ export default class KioskKeyboard extends Control {
     return keyElement instanceof HTMLElement ? keyElement : null;
   }
 
+  /**
+   * Clears the pressed-key visual state and detaches the window-blur safety
+   * net attached by `ontouchstart`. Safe to call when no key is pressed and
+   * is therefore also invoked from `exit()` to guarantee listener cleanup.
+   */
   private _clearPressedKeyState(): HTMLElement | null {
     const pressed = this._pressedKeyEl;
     this._pressedKeyEl = null;
@@ -2109,11 +2100,19 @@ export default class KioskKeyboard extends Control {
     return document;
   }
 
-  /** Dispatches synthetic `keydown` for an F-key and returns whether it was not canceled. */
+  /**
+   * Dispatches synthetic `keydown` for an F-key and returns whether it was not canceled.
+   *
+   * The current allowlist (F1-F12, Arrow*, Home/End, PageUp/Down) has
+   * `KeyboardEvent.code === KeyboardEvent.key` for every entry, so the same
+   * string is used for both. Extending the allowlist to a key where the two
+   * diverge (e.g. `NumpadEnter` has `key: "Enter"` / `code: "NumpadEnter"`)
+   * requires routing `code` through an explicit lookup at that point.
+   */
   private _dispatchNativeFKeydown(fkeyName: string, shiftKey: boolean): boolean {
     const nativeEvent = new KeyboardEvent("keydown", {
       key: fkeyName,
-      code: KioskKeyboard._resolveKeyCode(fkeyName),
+      code: fkeyName,
       bubbles: true,
       cancelable: true,
       shiftKey,
