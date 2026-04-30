@@ -1,19 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import {
-  registerLayout,
-  resetCustomLayouts,
-  getRegisteredLayout,
-  getLayoutOrDefault,
-  getLocaleLayout,
-  registerLocaleLayout,
-  resetLocaleLayouts,
-} from "../../src/core/layout-registry.js";
-import {
-  _registerMiddleware,
-  registerMiddleware,
-  getMiddlewareFactory,
-  clearCustomMiddleware,
-} from "../../src/core/middleware-registry.js";
+import { describe, it, expect, vi } from "vitest";
+import { getRegisteredLayout, getLayoutOrDefault, getLocaleLayout } from "../../src/core/layout-registry.js";
+import { _registerMiddleware, getMiddlewareFactory } from "../../src/core/middleware-registry.js";
 import type { LayoutDefinition, CompositionMiddleware } from "../../src/types.js";
 
 // Pull in built-in layouts so the registry is populated.
@@ -33,30 +20,31 @@ const noopFactory = (): CompositionMiddleware => ({
   reset: () => {},
 });
 
+// _registerMiddleware seals on first write per layout, so each test must use
+// a fresh, never-registered layout name.
+let nextId = 0;
+function freshLayoutName(): string {
+  return `instance-overrides-mw-${++nextId}`;
+}
+
 describe("instance overrides - layout-registry", () => {
-  beforeEach(() => {
-    resetCustomLayouts();
-    resetLocaleLayouts();
-    clearCustomMiddleware();
+  it("getRegisteredLayout: instance map shadows built-in", () => {
+    // qwerty is a built-in
+    const fromBuiltIn = getRegisteredLayout("qwerty");
+    expect(fromBuiltIn).toBeDefined();
+
+    const instanceMap = new Map([["qwerty", layoutB]]);
+    expect(getRegisteredLayout("qwerty", instanceMap)).toEqual(layoutB);
   });
 
-  it("getRegisteredLayout: instance map shadows global", () => {
-    registerLayout("shared", layoutA);
-    const fromGlobal = getRegisteredLayout("shared");
-    expect(fromGlobal).toEqual(layoutA);
-
-    const instanceMap = new Map([["shared", layoutB]]);
-    const fromInstance = getRegisteredLayout("shared", instanceMap);
-    expect(fromInstance).toEqual(layoutB);
-  });
-
-  it("getRegisteredLayout: instance map falls back to global when name missing", () => {
-    registerLayout("only-global", layoutA);
+  it("getRegisteredLayout: instance map falls back to built-in when name missing", () => {
     const instanceMap = new Map([["unrelated", layoutB]]);
-    expect(getRegisteredLayout("only-global", instanceMap)).toEqual(layoutA);
+    const result = getRegisteredLayout("qwerty", instanceMap);
+    expect(result).toBeDefined();
+    expect(result).not.toEqual(layoutB);
   });
 
-  it("getLayoutOrDefault: instance-only layout resolves without global registration", () => {
+  it("getLayoutOrDefault: instance-only layout resolves without built-in registration", () => {
     const instanceMap = new Map([["instance-only", layoutA]]);
     expect(getLayoutOrDefault("instance-only", instanceMap)).toEqual(layoutA);
     // Without instance map, falls back to qwerty default
@@ -68,14 +56,14 @@ describe("instance overrides - layout-registry", () => {
     expect(getLayoutOrDefault("qwerty", instanceMap)).toEqual(layoutA);
   });
 
-  it("getLocaleLayout: instance locale map shadows global", () => {
+  it("getLocaleLayout: instance locale map shadows built-in", () => {
     const original = navigator.language;
     Object.defineProperty(navigator, "language", { value: "de", configurable: true });
     try {
-      registerLayout("warehouse-pos-de", layoutA);
+      const instanceLayouts = new Map([["warehouse-pos-de", layoutA]]);
       const localeMap = new Map([["de", "warehouse-pos-de"]]);
-      expect(getLocaleLayout(localeMap)).toBe("warehouse-pos-de");
-      // Without override, returns global de mapping
+      expect(getLocaleLayout(localeMap, instanceLayouts)).toBe("warehouse-pos-de");
+      // Without override, returns built-in de mapping
       expect(getLocaleLayout()).toBe("qwertz-de");
     } finally {
       Object.defineProperty(navigator, "language", { value: original, configurable: true });
@@ -94,7 +82,7 @@ describe("instance overrides - layout-registry", () => {
     }
   });
 
-  it("getLocaleLayout: falls back to default when neither instance nor global has the locale", () => {
+  it("getLocaleLayout: falls back to default when neither instance nor built-in has the locale", () => {
     const original = navigator.language;
     Object.defineProperty(navigator, "language", { value: "zz", configurable: true });
     try {
@@ -106,51 +94,33 @@ describe("instance overrides - layout-registry", () => {
 });
 
 describe("instance overrides - middleware-registry", () => {
-  beforeEach(() => {
-    clearCustomMiddleware();
-  });
-
-  it("getMiddlewareFactory: instance map shadows global", () => {
-    const globalFactory = vi.fn(noopFactory);
+  it("getMiddlewareFactory: instance map shadows built-in", () => {
+    const layout = freshLayoutName();
+    const builtInFactory = vi.fn(noopFactory);
     const instanceFactory = vi.fn(noopFactory);
-    registerMiddleware(["pos-layout"], globalFactory);
+    _registerMiddleware([layout], builtInFactory);
 
-    const instanceMap = new Map([["pos-layout", instanceFactory]]);
-    const factory = getMiddlewareFactory("pos-layout", instanceMap);
+    const instanceMap = new Map([[layout, instanceFactory]]);
+    const factory = getMiddlewareFactory(layout, instanceMap);
     factory!();
 
     expect(instanceFactory).toHaveBeenCalled();
-    expect(globalFactory).not.toHaveBeenCalled();
+    expect(builtInFactory).not.toHaveBeenCalled();
   });
 
-  it("getMiddlewareFactory: falls back to global when key missing in instance map", () => {
-    const globalFactory = vi.fn(noopFactory);
-    registerMiddleware(["pos-layout"], globalFactory);
+  it("getMiddlewareFactory: falls back to built-in when key missing in instance map", () => {
+    const layout = freshLayoutName();
+    const builtInFactory = vi.fn(noopFactory);
+    _registerMiddleware([layout], builtInFactory);
 
     const instanceMap = new Map([["other", noopFactory]]);
-    const factory = getMiddlewareFactory("pos-layout", instanceMap);
+    const factory = getMiddlewareFactory(layout, instanceMap);
     factory!();
 
-    expect(globalFactory).toHaveBeenCalled();
+    expect(builtInFactory).toHaveBeenCalled();
   });
 
-  it("clearCustomMiddleware: removes consumer registrations", () => {
-    registerMiddleware(["consumer-layout"], noopFactory);
-    expect(getMiddlewareFactory("consumer-layout")).toBeTypeOf("function");
-
-    clearCustomMiddleware();
-    expect(getMiddlewareFactory("consumer-layout")).toBeNull();
-  });
-
-  it("clearCustomMiddleware: restores overridden built-in to original", () => {
-    const originalKana = noopFactory;
-    _registerMiddleware(["test-builtin"], originalKana);
-    const overrideFactory = vi.fn(noopFactory);
-    registerMiddleware(["test-builtin"], overrideFactory);
-
-    expect(getMiddlewareFactory("test-builtin")).toBe(overrideFactory);
-
-    clearCustomMiddleware();
-    expect(getMiddlewareFactory("test-builtin")).toBe(originalKana);
+  it("getMiddlewareFactory: returns null when neither instance map nor built-in has the layout", () => {
+    expect(getMiddlewareFactory("never-registered-layout")).toBeNull();
   });
 });

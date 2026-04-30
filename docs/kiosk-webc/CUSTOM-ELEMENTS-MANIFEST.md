@@ -186,11 +186,11 @@ Static methods must be declared as actual method declarations, not as field assi
 
 ```ts
 // WRONG: CEM treats as field, adds to HTML attributes list
-static registerLayout = registerLayout;
+static getRegisteredLayout = getRegisteredLayout;
 
 // CORRECT: CEM treats as method
-static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
-  registerLayout(sName, oDefinition);
+static getRegisteredLayout(name: string): LayoutDefinition | undefined {
+  return getRegisteredLayout(name);
 }
 ```
 

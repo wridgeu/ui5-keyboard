@@ -1,13 +1,6 @@
 import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import {
-  registerLayout,
-  resetCustomLayouts,
-  registerLocaleLayout,
-  resetLocaleLayouts,
-} from "../../src/core/layout-registry.js";
-import { clearCustomMiddleware } from "../../src/core/middleware-registry.js";
 import type { LayoutDefinition } from "../../src/types.js";
 
 const DOM = KioskKeyboard.DOM;
@@ -21,16 +14,10 @@ function readDataKeys(el: KioskKeyboard): string[][] {
 }
 
 const layoutA: LayoutDefinition = [[{ value: "ax" }, { value: "bx" }]];
-const layoutB: LayoutDefinition = [[{ value: "global" }]];
+const layoutB: LayoutDefinition = [[{ value: "two" }]];
 
 describe("kiosk-keyboard - instance overrides", () => {
-  afterEach(() => {
-    resetCustomLayouts();
-    resetLocaleLayouts();
-    clearCustomMiddleware();
-  });
-
-  it("renders an instance-only layout that is not in the global registry", async () => {
+  it("renders an instance-only layout that is not in the built-in registry", async () => {
     const el = await fixture<KioskKeyboard>(html`
       <kiosk-keyboard layout="warehouse-pos"></kiosk-keyboard>
     `);
@@ -40,28 +27,51 @@ describe("kiosk-keyboard - instance overrides", () => {
     expect(readDataKeys(el)).to.deep.equal([["ax", "bx"]]);
   });
 
-  it("instance map shadows a global registration of the same name", async () => {
-    registerLayout("shared", layoutB);
-
-    const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="shared"></kiosk-keyboard>
+  it("instance map shadows the built-in qwerty for one element without affecting another", async () => {
+    const elOverride = await fixture<KioskKeyboard>(html`
+      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
     `);
-    el.instanceLayouts = { shared: layoutA };
+    elOverride.instanceLayouts = { qwerty: layoutA };
     await nextRender();
 
-    expect(readDataKeys(el)).to.deep.equal([["ax", "bx"]]);
+    const elDefault = await fixture<KioskKeyboard>(html`
+      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+    `);
+    await nextRender();
+
+    expect(readDataKeys(elOverride)).to.deep.equal([["ax", "bx"]]);
+    // The other element keeps the built-in qwerty -- the override never leaked.
+    expect(readDataKeys(elDefault)).to.not.deep.equal([["ax", "bx"]]);
   });
 
-  it("falls through to the global registry when instance map lacks the active layout", async () => {
-    registerLayout("only-global", layoutB);
-
+  it("falls through to the built-in registry when instance map lacks the active layout", async () => {
     const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="only-global"></kiosk-keyboard>
+      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
     `);
     el.instanceLayouts = { unrelated: layoutA };
     await nextRender();
 
-    expect(readDataKeys(el)).to.deep.equal([["global"]]);
+    // Active layout is qwerty (built-in); the unrelated instance entry is ignored.
+    const rows = readDataKeys(el);
+    expect(rows.length).to.be.greaterThan(0);
+    expect(rows).to.not.deep.equal([["ax", "bx"]]);
+  });
+
+  it("sibling elements with conflicting instance layouts each see their own override", async () => {
+    const elA = await fixture<KioskKeyboard>(html`
+      <kiosk-keyboard layout="shared"></kiosk-keyboard>
+    `);
+    elA.instanceLayouts = { shared: layoutA };
+
+    const elB = await fixture<KioskKeyboard>(html`
+      <kiosk-keyboard layout="shared"></kiosk-keyboard>
+    `);
+    elB.instanceLayouts = { shared: layoutB };
+
+    await nextRender();
+
+    expect(readDataKeys(elA)).to.deep.equal([["ax", "bx"]]);
+    expect(readDataKeys(elB)).to.deep.equal([["two"]]);
   });
 
   it("instance locale map can resolve to an instance-only layout name", async () => {
@@ -80,21 +90,19 @@ describe("kiosk-keyboard - instance overrides", () => {
       } finally {
         el.remove();
       }
-      // Touch suppressed-locale to silence the lint about unused.
-      void registerLocaleLayout;
     } finally {
       Object.defineProperty(navigator, "language", { value: original, configurable: true });
     }
   });
 
-  it("instance overrides do not leak into the global registry", async () => {
+  it("instance overrides do not leak into the built-in registry", async () => {
     const el = await fixture<KioskKeyboard>(html`
       <kiosk-keyboard layout="instance-only"></kiosk-keyboard>
     `);
     el.instanceLayouts = { "instance-only": layoutA };
     await nextRender();
 
-    const globalNames = KioskKeyboard.getRegisteredLayoutNames();
-    expect(globalNames).to.not.include("instance-only");
+    const builtinNames = KioskKeyboard.getRegisteredLayoutNames();
+    expect(builtinNames).to.not.include("instance-only");
   });
 });

@@ -1,15 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
-  registerLayout,
-  unregisterLayout,
-  resetCustomLayouts,
   getRegisteredLayout,
   getLayoutOrDefault,
   getRegisteredLayoutNames,
   isBuiltInLayout,
-  registerLocaleLayout,
-  unregisterLocaleLayout,
-  resetLocaleLayouts,
   getLocaleLayout,
   _registerBuiltInLayout,
 } from "../../src/core/layout-registry.js";
@@ -31,43 +25,32 @@ import "../../src/layouts/qwerty-es.js";
 
 const CUSTOM_LAYOUT: LayoutDefinition = [[{ value: "a" }, { value: "b" }, { value: "c" }]];
 
+const BUILTIN_NAMES = [
+  "qwerty",
+  "qwertz-de",
+  "numeric",
+  "special",
+  "numpad",
+  "fkeys",
+  "nav",
+  "ja-romaji",
+  "ja-kana",
+  "arabic",
+  "ko-hangul",
+  "qwerty-es",
+];
+
+// _registerBuiltInLayout seals on first write per name, so any test that
+// exercises it must use a fresh, never-registered name.
+let nextId = 0;
+function freshLayoutName(): string {
+  return `test-builtin-${++nextId}`;
+}
+
 describe("layout-registry", () => {
-  beforeEach(() => {
-    resetCustomLayouts();
-    resetLocaleLayouts();
-  });
-
   describe("built-in layouts", () => {
-    it("has qwerty as a built-in layout", () => {
-      expect(isBuiltInLayout("qwerty")).toBe(true);
-    });
-
-    it("has numeric as a built-in layout", () => {
-      expect(isBuiltInLayout("numeric")).toBe(true);
-    });
-
-    it("has numpad as a built-in layout", () => {
-      expect(isBuiltInLayout("numpad")).toBe(true);
-    });
-
-    it("has ja-romaji as a built-in layout", () => {
-      expect(isBuiltInLayout("ja-romaji")).toBe(true);
-    });
-
-    it("has ja-kana as a built-in layout", () => {
-      expect(isBuiltInLayout("ja-kana")).toBe(true);
-    });
-
-    it("has arabic as a built-in layout", () => {
-      expect(isBuiltInLayout("arabic")).toBe(true);
-    });
-
-    it("has ko-hangul as a built-in layout", () => {
-      expect(isBuiltInLayout("ko-hangul")).toBe(true);
-    });
-
-    it("has qwerty-es as a built-in layout", () => {
-      expect(isBuiltInLayout("qwerty-es")).toBe(true);
+    it.each(BUILTIN_NAMES)("recognizes %s as a built-in", (name) => {
+      expect(isBuiltInLayout(name)).toBe(true);
     });
 
     it("returns false for unknown layouts", () => {
@@ -76,297 +59,64 @@ describe("layout-registry", () => {
 
     it("getRegisteredLayoutNames includes built-in layouts", () => {
       const names = getRegisteredLayoutNames();
-      expect(names).toContain("qwerty");
-      expect(names).toContain("numeric");
-      expect(names).toContain("numpad");
+      for (const name of BUILTIN_NAMES) {
+        expect(names).toContain(name);
+      }
+    });
+
+    it("does not include instance-only names in getRegisteredLayoutNames", () => {
+      // Instance-only names are scoped per element and never appear globally.
+      expect(getRegisteredLayoutNames()).not.toContain("instance-only");
     });
   });
 
-  describe("registerLayout", () => {
-    it("registers a custom layout", () => {
-      registerLayout("custom", CUSTOM_LAYOUT);
-      expect(getRegisteredLayout("custom")).toBe(CUSTOM_LAYOUT);
+  describe("instance map - shadows built-ins", () => {
+    it("instance map shadows built-in layout of same name", () => {
+      const custom: LayoutDefinition = [[{ value: "instance" }]];
+      const instanceMap = new Map([["qwerty", custom]]);
+      expect(getRegisteredLayout("qwerty", instanceMap)).toBe(custom);
     });
 
-    it("can override built-in layouts", () => {
-      registerLayout("qwerty", CUSTOM_LAYOUT);
-      expect(getRegisteredLayout("qwerty")).toBe(CUSTOM_LAYOUT);
+    it("falls through to built-in when instance map lacks the name", () => {
+      const instanceMap = new Map([["unrelated", CUSTOM_LAYOUT]]);
+      const result = getRegisteredLayout("qwerty", instanceMap);
+      expect(result).toBeDefined();
+      expect(result).not.toBe(CUSTOM_LAYOUT);
     });
 
-    it("rejects empty layout name", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLayout("", CUSTOM_LAYOUT);
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it("rejects invalid layout definition", () => {
-      vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLayout("bad", [] as unknown as LayoutDefinition);
-      expect(getRegisteredLayout("bad")).toBeUndefined();
-    });
-
-    it("normalizes name to lowercase", () => {
-      registerLayout("MyLayout", CUSTOM_LAYOUT);
-      expect(getRegisteredLayout("mylayout")).toBe(CUSTOM_LAYOUT);
-    });
-  });
-
-  describe("unregisterLayout", () => {
-    it("removes a custom layout", () => {
-      registerLayout("custom", CUSTOM_LAYOUT);
-      unregisterLayout("custom");
-      expect(getRegisteredLayout("custom")).toBeUndefined();
-    });
-
-    it("restores the built-in definition when unregistering an overridden built-in", () => {
-      const originalQwerty = getRegisteredLayout("qwerty");
-      registerLayout("qwerty", CUSTOM_LAYOUT);
-      expect(getRegisteredLayout("qwerty")).toBe(CUSTOM_LAYOUT);
-
-      unregisterLayout("qwerty");
-      expect(getRegisteredLayout("qwerty")).toBe(originalQwerty);
-    });
-
-    it("restores the built-in after multiple overrides", () => {
-      const originalQwerty = getRegisteredLayout("qwerty");
-      const override1: LayoutDefinition = [[{ value: "x" }]];
-      const override2: LayoutDefinition = [[{ value: "y" }]];
-
-      registerLayout("qwerty", override1);
-      registerLayout("qwerty", override2);
-      expect(getRegisteredLayout("qwerty")).toBe(override2);
-
-      unregisterLayout("qwerty");
-      expect(getRegisteredLayout("qwerty")).toBe(originalQwerty);
-    });
-
-    it("keeps isBuiltInLayout true after override and restore", () => {
-      registerLayout("qwerty", CUSTOM_LAYOUT);
-      unregisterLayout("qwerty");
-      expect(isBuiltInLayout("qwerty")).toBe(true);
-    });
-  });
-
-  describe("resetCustomLayouts", () => {
-    it("removes all custom layouts", () => {
-      registerLayout("a", CUSTOM_LAYOUT);
-      registerLayout("b", CUSTOM_LAYOUT);
-      resetCustomLayouts();
-      expect(getRegisteredLayout("a")).toBeUndefined();
-      expect(getRegisteredLayout("b")).toBeUndefined();
-    });
-
-    it("keeps built-in layouts", () => {
-      resetCustomLayouts();
-      expect(getRegisteredLayout("qwerty")).toBeDefined();
-    });
-
-    it("restores overridden built-in layouts", () => {
-      const originalQwerty = getRegisteredLayout("qwerty");
-      registerLayout("qwerty", CUSTOM_LAYOUT);
-      expect(getRegisteredLayout("qwerty")).toBe(CUSTOM_LAYOUT);
-
-      resetCustomLayouts();
-      expect(getRegisteredLayout("qwerty")).toBe(originalQwerty);
+    it("accepts __proto__ / prototype / constructor in instance map", () => {
+      for (const name of ["__proto__", "prototype", "constructor"]) {
+        const layout: LayoutDefinition = [[{ value: name }]];
+        const instanceMap = new Map([[name, layout]]);
+        expect(getRegisteredLayout(name, instanceMap)).toBe(layout);
+      }
     });
   });
 
   describe("getLayoutOrDefault", () => {
-    it("returns the named layout when it exists", () => {
-      registerLayout("custom", CUSTOM_LAYOUT);
-      expect(getLayoutOrDefault("custom")).toBe(CUSTOM_LAYOUT);
-    });
-
-    it("returns default layout for unknown name", () => {
-      const layout = getLayoutOrDefault("nonexistent");
+    it("returns the built-in layout when it exists", () => {
+      const layout = getLayoutOrDefault("qwerty");
       expect(layout).toBeDefined();
       expect(layout.length).toBeGreaterThan(0);
     });
-  });
 
-  describe("locale layouts", () => {
-    it("registerLocaleLayout warns for unknown layout but does not throw", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLocaleLayout("fr", "azerty");
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("unknown layout"));
+    it("returns default for unknown name", () => {
+      const fallback = getRegisteredLayout("qwerty");
+      expect(getLayoutOrDefault("unknown-name")).toBe(fallback);
     });
 
-    it("registerLocaleLayout does not warn for known layout", () => {
-      registerLayout("azerty", CUSTOM_LAYOUT);
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLocaleLayout("fr", "azerty");
-      expect(spy).not.toHaveBeenCalled();
+    it("instance map shadows built-in for known name", () => {
+      const custom: LayoutDefinition = [[{ value: "custom" }]];
+      const instanceMap = new Map([["qwerty", custom]]);
+      expect(getLayoutOrDefault("qwerty", instanceMap)).toBe(custom);
     });
 
-    it("unregisterLocaleLayout removes a mapping without error", () => {
-      registerLocaleLayout("fr", "azerty");
-      unregisterLocaleLayout("fr");
-      // Re-registering should warn again (mapping was removed)
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLocaleLayout("fr", "azerty");
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("unknown layout"));
+    it("falls back to instance default when both built-in default and instance entry exist", () => {
+      const customDefault: LayoutDefinition = [[{ value: "custom-default" }]];
+      const instanceMap = new Map([["qwerty", customDefault]]);
+      expect(getLayoutOrDefault("unknown-name", instanceMap)).toBe(customDefault);
     });
 
-    it("resetLocaleLayouts restores defaults and removes custom mappings", () => {
-      registerLocaleLayout("fr", "azerty");
-      resetLocaleLayouts();
-      // After reset, re-registering "fr" should warn again (custom removed)
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLocaleLayout("fr", "azerty");
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it("rejects empty locale string", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLocaleLayout("", "qwerty");
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("non-empty string"));
-    });
-  });
-
-  describe("getLocaleLayout", () => {
-    it("returns default layout when navigator.language is malformed", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("qwerty");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves ja-JP to ja-romaji via built-in locale mapping", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "ja-JP", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("ja-romaji");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves ar to arabic via built-in locale mapping", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "ar", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("arabic");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves ar-SA to arabic via language prefix", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "ar-SA", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("arabic");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves ko to ko-hangul via built-in locale mapping", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "ko", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("ko-hangul");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves ko-KR to ko-hangul via language prefix", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "ko-KR", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("ko-hangul");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves es to qwerty-es via built-in locale mapping", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "es", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("qwerty-es");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves es-ES to qwerty-es via language prefix", () => {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "es-ES", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("qwerty-es");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-
-    it("resolves a registered locale mapping", () => {
-      registerLayout("azerty", CUSTOM_LAYOUT);
-      registerLocaleLayout("fr", "azerty");
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "fr-FR", configurable: true });
-      try {
-        expect(getLocaleLayout()).toBe("azerty");
-      } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
-      }
-    });
-  });
-
-  describe("registerLayout - negative paths", () => {
-    it("rejects non-string name", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLayout(42 as unknown as string, CUSTOM_LAYOUT);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-      expect(getRegisteredLayout("42")).toBeUndefined();
-    });
-
-    it("rejects whitespace-only name", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLayout("   ", CUSTOM_LAYOUT);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("non-empty string"));
-    });
-
-    it("rejects layout with empty row", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLayout("bad-rows", [[]] as unknown as LayoutDefinition);
-      expect(getRegisteredLayout("bad-rows")).toBeUndefined();
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it("rejects layout with key missing value", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLayout("bad-key", [[{ label: "x" }]] as unknown as LayoutDefinition);
-      expect(getRegisteredLayout("bad-key")).toBeUndefined();
-      expect(spy).toHaveBeenCalled();
-    });
-
-    it("rejects non-array layout definition", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLayout("bad-type", "not-an-array" as unknown as LayoutDefinition);
-      expect(getRegisteredLayout("bad-type")).toBeUndefined();
-      expect(spy).toHaveBeenCalled();
-    });
-  });
-
-  describe("unregisterLayout - negative paths", () => {
-    it("rejects non-string name", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      unregisterLayout(null as unknown as string);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-    });
-
-    it("is a no-op for unregistered layout name", () => {
-      // Should not throw
-      unregisterLayout("does-not-exist");
-    });
-  });
-
-  describe("getLayoutOrDefault - negative paths", () => {
     it("returns default for non-string argument", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       const layout = getLayoutOrDefault(undefined as unknown as string);
@@ -382,52 +132,150 @@ describe("layout-registry", () => {
     });
   });
 
+  describe("getLocaleLayout", () => {
+    function withNavigatorLanguage<T>(value: string, fn: () => T): T {
+      const original = navigator.language;
+      Object.defineProperty(navigator, "language", { value, configurable: true });
+      try {
+        return fn();
+      } finally {
+        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      }
+    }
+
+    it("returns default layout when navigator.language is malformed", () => {
+      withNavigatorLanguage("", () => {
+        expect(getLocaleLayout()).toBe("qwerty");
+      });
+    });
+
+    it("resolves ja-JP to ja-romaji via built-in locale mapping", () => {
+      withNavigatorLanguage("ja-JP", () => {
+        expect(getLocaleLayout()).toBe("ja-romaji");
+      });
+    });
+
+    it("resolves ar to arabic via built-in locale mapping", () => {
+      withNavigatorLanguage("ar", () => {
+        expect(getLocaleLayout()).toBe("arabic");
+      });
+    });
+
+    it("resolves ar-SA to arabic via language prefix", () => {
+      withNavigatorLanguage("ar-SA", () => {
+        expect(getLocaleLayout()).toBe("arabic");
+      });
+    });
+
+    it("resolves ko to ko-hangul via built-in locale mapping", () => {
+      withNavigatorLanguage("ko", () => {
+        expect(getLocaleLayout()).toBe("ko-hangul");
+      });
+    });
+
+    it("resolves ko-KR to ko-hangul via language prefix", () => {
+      withNavigatorLanguage("ko-KR", () => {
+        expect(getLocaleLayout()).toBe("ko-hangul");
+      });
+    });
+
+    it("resolves es to qwerty-es via built-in locale mapping", () => {
+      withNavigatorLanguage("es", () => {
+        expect(getLocaleLayout()).toBe("qwerty-es");
+      });
+    });
+
+    it("resolves es-ES to qwerty-es via language prefix", () => {
+      withNavigatorLanguage("es-ES", () => {
+        expect(getLocaleLayout()).toBe("qwerty-es");
+      });
+    });
+
+    it("instance locale map shadows built-in locale map", () => {
+      withNavigatorLanguage("de", () => {
+        const instanceLocale = new Map([["de", "qwerty"]]);
+        expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
+      });
+    });
+
+    it("instance locale map can resolve to instance-only layout", () => {
+      withNavigatorLanguage("xx", () => {
+        const instanceLocale = new Map([["xx", "warehouse"]]);
+        const instanceLayouts = new Map([["warehouse", CUSTOM_LAYOUT]]);
+        expect(getLocaleLayout(instanceLocale, instanceLayouts)).toBe("warehouse");
+      });
+    });
+
+    it("does not resolve mapping when target layout is not registered", () => {
+      withNavigatorLanguage("xx", () => {
+        const instanceLocale = new Map([["xx", "missing-layout"]]);
+        expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
+      });
+    });
+
+    it("exact BCP-47 match takes precedence over language prefix", () => {
+      withNavigatorLanguage("de-CH", () => {
+        const instanceLocale = new Map([
+          ["de", "qwertz-de"],
+          ["de-ch", "qwerty"],
+        ]);
+        expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
+      });
+    });
+  });
+
+  describe("getRegisteredLayout - normalization", () => {
+    it("rejects non-string name and warns", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(getRegisteredLayout(42 as unknown as string)).toBeUndefined();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
+    });
+
+    it("rejects whitespace-only name and warns", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(getRegisteredLayout("   \t  ")).toBeUndefined();
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("non-empty string"));
+    });
+
+    it("trims and lowercases input when matching built-ins", () => {
+      expect(getRegisteredLayout("  QWERTY  ")).toBeDefined();
+    });
+  });
+
   describe("isBuiltInLayout - negative paths", () => {
     it("returns false for non-string argument", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       expect(isBuiltInLayout(123 as unknown as string)).toBe(false);
     });
-  });
 
-  describe("locale layouts - negative paths", () => {
-    it("registerLocaleLayout rejects non-string locale", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLocaleLayout(42 as unknown as string, "qwerty");
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-    });
-
-    it("registerLocaleLayout rejects non-string layout", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      registerLocaleLayout("fr", null as unknown as string);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
-    });
-
-    it("unregisterLocaleLayout rejects non-string locale", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      unregisterLocaleLayout(undefined as unknown as string);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
+    it("returns false for empty string", () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(isBuiltInLayout("")).toBe(false);
     });
   });
 
   describe("_registerBuiltInLayout", () => {
     it("registers a layout and marks it as built-in", () => {
-      _registerBuiltInLayout("test-builtin", CUSTOM_LAYOUT);
-      expect(getRegisteredLayout("test-builtin")).toBe(CUSTOM_LAYOUT);
-      expect(isBuiltInLayout("test-builtin")).toBe(true);
+      const name = freshLayoutName();
+      _registerBuiltInLayout(name, CUSTOM_LAYOUT);
+      expect(getRegisteredLayout(name)).toBe(CUSTOM_LAYOUT);
+      expect(isBuiltInLayout(name)).toBe(true);
     });
 
-    it("is idempotent -- silently skips if name already exists", () => {
+    it("is idempotent -- first write wins", () => {
+      const name = freshLayoutName();
       const first: LayoutDefinition = [[{ value: "x" }]];
       const second: LayoutDefinition = [[{ value: "y" }]];
-      _registerBuiltInLayout("idem-test", first);
-      _registerBuiltInLayout("idem-test", second);
-      expect(getRegisteredLayout("idem-test")).toBe(first);
+      _registerBuiltInLayout(name, first);
+      _registerBuiltInLayout(name, second);
+      expect(getRegisteredLayout(name)).toBe(first);
     });
 
     it("does not warn on duplicate registration", () => {
+      const name = freshLayoutName();
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      _registerBuiltInLayout("no-warn-test", CUSTOM_LAYOUT);
-      _registerBuiltInLayout("no-warn-test", CUSTOM_LAYOUT);
+      _registerBuiltInLayout(name, CUSTOM_LAYOUT);
+      _registerBuiltInLayout(name, CUSTOM_LAYOUT);
       expect(spy).not.toHaveBeenCalled();
     });
   });

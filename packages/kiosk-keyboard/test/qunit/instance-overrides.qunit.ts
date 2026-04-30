@@ -3,7 +3,7 @@ import Input from "sap/m/Input";
 import type { LayoutDefinition, CompositionMiddleware } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
 import type LanguageTag from "sap/base/i18n/LanguageTag";
-import { getMiddlewareFactory, clearCustomMiddleware } from "ui5/kiosk/internal/middleware-registry";
+import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import { placeAndWait, getRenderedLayoutKeys } from "./test-helpers";
 
 // ── Helpers ──
@@ -28,58 +28,49 @@ const sandbox = sinon.createSandbox();
 
 function commonAfterEach(): void {
   sandbox.restore();
-  KioskKeyboard.resetCustomLayouts();
-  KioskKeyboard.resetLocaleLayouts();
-  // Use clearCustomMiddleware (not _resetMiddleware) so built-in
-  // middleware factories survive between tests; the side-effect
-  // imports that originally registered them only run once per page.
-  clearCustomMiddleware();
   const fixture = document.getElementById("qunit-fixture");
   if (fixture) fixture.innerHTML = "";
 }
 
 // ───────────────────────────────────────────────────
-// Tier 1 - layout resolution: instance map shadows global
+// Layout resolution: instance map shadows built-ins, scoped per instance
 // ───────────────────────────────────────────────────
 
 QUnit.module("instance-overrides - layout resolution", { afterEach: commonAfterEach });
 
-QUnit.test("Instance layouts shadow global layouts of the same name", async (assert) => {
-  const globalLayout = [[{ value: "global" }]] as LayoutDefinition;
-  const instanceLayout = [[{ value: "instance" }]] as LayoutDefinition;
-  KioskKeyboard.registerLayout("shared", globalLayout);
+QUnit.test("Instance layouts shadow built-in layouts of the same name", async (assert) => {
+  const customQwerty = [[{ value: "1" }, { value: "2" }]] as LayoutDefinition;
 
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
     controls: [input.getId()],
-    instanceLayouts: { shared: instanceLayout },
-    layout: "shared",
+    instanceLayouts: { qwerty: customQwerty },
+    layout: "qwerty",
   });
   await placeAndWait(kb);
 
-  assert.deepEqual(getRenderedLayoutKeys(kb), [["instance"]], "Instance map wins over global registry");
+  assert.deepEqual(getRenderedLayoutKeys(kb), [["1", "2"]], "Instance map wins over built-in qwerty");
 
   input.destroy();
   kb.destroy();
 });
 
-QUnit.test("Instance layouts that do not match the active name fall through to global", async (assert) => {
-  const globalLayout = [[{ value: "global" }]] as LayoutDefinition;
-  KioskKeyboard.registerLayout("only-global", globalLayout);
-
+QUnit.test("Instance layouts that do not match the active name fall through to built-in", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
     controls: [input.getId()],
     instanceLayouts: { unrelated: makeLayout("x") },
-    layout: "only-global",
+    layout: "qwerty",
   });
   await placeAndWait(kb);
 
-  assert.deepEqual(getRenderedLayoutKeys(kb), [["global"]], "Falls through to global when instance map lacks the name");
+  const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
+  const expected = qwerty.map((row) => row.map((k) => k.value));
+  assert.deepEqual(getRenderedLayoutKeys(kb), expected, "Falls through to built-in qwerty");
 
   input.destroy();
   kb.destroy();
@@ -104,7 +95,7 @@ QUnit.test("Unknown layout falls through to built-in default qwerty", async (ass
   kb.destroy();
 });
 
-QUnit.test("Instance layouts can override built-ins for this control only", async (assert) => {
+QUnit.test("Instance layouts override built-ins for one control without affecting another", async (assert) => {
   const customQwerty = [[{ value: "1" }, { value: "2" }]] as LayoutDefinition;
 
   const input1 = new Input({ value: "" });
@@ -157,22 +148,46 @@ QUnit.test("Ignores non-array layout entries in instanceLayouts", async (assert)
   kb.destroy();
 });
 
+QUnit.test("setInstanceLayouts after construction re-resolves on next render", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()], layout: "qwerty" });
+  await placeAndWait(kb);
+
+  const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
+  const builtIn = qwerty.map((row) => row.map((k) => k.value));
+  assert.deepEqual(getRenderedLayoutKeys(kb), builtIn, "Renders built-in qwerty before override is set");
+
+  kb.setInstanceLayouts({ qwerty: [[{ value: "1" }, { value: "2" }]] });
+  await placeAndWait(kb);
+
+  assert.deepEqual(getRenderedLayoutKeys(kb), [["1", "2"]], "Re-renders with override after setInstanceLayouts");
+
+  kb.setInstanceLayouts(null as unknown as object);
+  await placeAndWait(kb);
+
+  assert.deepEqual(getRenderedLayoutKeys(kb), builtIn, "Falls back to built-in after clearing override");
+
+  input.destroy();
+  kb.destroy();
+});
+
 // ───────────────────────────────────────────────────
-// Tier 1 - locale resolution: instance map shadows global
+// Locale resolution: instance map shadows built-in locale map
 // ───────────────────────────────────────────────────
 
 QUnit.module("instance-overrides - locale resolution", { afterEach: commonAfterEach });
 
-QUnit.test("Instance locale map shadows the global locale map", async (assert) => {
+QUnit.test("Instance locale map shadows the built-in locale map", async (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-
-  KioskKeyboard.registerLayout("warehouse-pos-de", makeLayout("w"));
 
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({
     controls: [input.getId()],
+    instanceLayouts: { "warehouse-pos-de": makeLayout("w") },
     instanceLocaleLayouts: { de: "warehouse-pos-de" },
   });
   await placeAndWait(kb);
@@ -184,7 +199,7 @@ QUnit.test("Instance locale map shadows the global locale map", async (assert) =
   kb.destroy();
 });
 
-QUnit.test("Instance locale map falls back to global when locale not in instance map", async (assert) => {
+QUnit.test("Instance locale map falls back to built-in when locale not in instance map", async (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
 
   const input = new Input({ value: "" });
@@ -196,7 +211,7 @@ QUnit.test("Instance locale map falls back to global when locale not in instance
   });
   await placeAndWait(kb);
 
-  assert.strictEqual(kb.getLayout(), "qwertz-de", "Falls back to global de mapping");
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "Falls back to built-in de mapping");
 
   input.destroy();
   kb.destroy();
@@ -222,132 +237,61 @@ QUnit.test("Instance locale map can resolve to an instance-only layout", async (
   kb.destroy();
 });
 
-// ───────────────────────────────────────────────────
-// Tier 1 - middleware resolution: instance map shadows global
-// ───────────────────────────────────────────────────
-
-QUnit.module("instance-overrides - middleware resolution", { afterEach: commonAfterEach });
-
-QUnit.test("Instance middleware shadows the global middleware factory", (assert) => {
-  let globalCalled = false;
-  let instanceCalled = false;
-  const globalFactory = (): CompositionMiddleware => {
-    globalCalled = true;
-    return noopFactory();
-  };
-  const instanceFactory = (): CompositionMiddleware => {
-    instanceCalled = true;
-    return noopFactory();
-  };
-  KioskKeyboard.registerMiddleware(["pos-layout"], globalFactory);
-
-  const fromGlobal = getMiddlewareFactory("pos-layout");
-  const fromInstance = getMiddlewareFactory("pos-layout", new Map([["pos-layout", instanceFactory]]));
-  fromGlobal!();
-  fromInstance!();
-  assert.ok(globalCalled, "Global factory invoked when no instance map");
-  assert.ok(instanceCalled, "Instance factory invoked when instance map provides it");
-});
-
-QUnit.test("Instance middleware falls back to global when key not in instance map", (assert) => {
-  let globalCalled = false;
-  KioskKeyboard.registerMiddleware(["pos-layout"], () => {
-    globalCalled = true;
-    return noopFactory();
-  });
-
-  const factory = getMiddlewareFactory("pos-layout", new Map([["other", () => noopFactory()]]));
-  factory!();
-  assert.ok(globalCalled, "Falls through to global registration");
-});
-
-// ───────────────────────────────────────────────────
-// Tier 2 - last-instance auto-cleanup
-// ───────────────────────────────────────────────────
-
-QUnit.module("instance-overrides - last-instance auto-cleanup", { afterEach: commonAfterEach });
-
-QUnit.test("Penultimate destroy does not clear globals", async (assert) => {
-  KioskKeyboard.registerLayout("app-a-layout", makeLayout("a"));
-  KioskKeyboard.registerLocaleLayout("zz", "qwerty");
+QUnit.test("Instance locale overrides do not affect a sibling instance", async (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
 
   const input1 = new Input({ value: "" });
   input1.placeAt("qunit-fixture");
   const input2 = new Input({ value: "" });
   input2.placeAt("qunit-fixture");
 
-  const kb1 = new KioskKeyboard({ controls: [input1.getId()] });
-  const kb2 = new KioskKeyboard({ controls: [input2.getId()] });
-  await placeAndWait(kb1);
-  await placeAndWait(kb2);
+  const kbOverride = new KioskKeyboard({
+    controls: [input1.getId()],
+    instanceLayouts: { "warehouse-de": makeLayout("wh") },
+    instanceLocaleLayouts: { de: "warehouse-de" },
+  });
+  const kbDefault = new KioskKeyboard({ controls: [input2.getId()] });
+  await placeAndWait(kbOverride);
+  await placeAndWait(kbDefault);
 
-  kb1.destroy();
+  assert.strictEqual(kbOverride.getLayout(), "warehouse-de", "Override instance uses warehouse-de");
+  assert.strictEqual(kbDefault.getLayout(), "qwertz-de", "Sibling sees built-in de mapping unchanged");
+
   input1.destroy();
-
-  assert.ok(KioskKeyboard.getRegisteredLayout("app-a-layout"), "Custom layout still registered after non-last destroy");
-
-  kb2.destroy();
   input2.destroy();
+  kbOverride.destroy();
+  kbDefault.destroy();
 });
 
-QUnit.test("Last destroy clears custom layouts, locale map, and custom middleware", async (assert) => {
-  KioskKeyboard.registerLayout("app-a-layout", makeLayout("a"));
-  KioskKeyboard.registerLocaleLayout("zz", "qwerty");
-  KioskKeyboard.registerMiddleware(["app-a-layout"], () => noopFactory());
+// ───────────────────────────────────────────────────
+// Middleware resolution: instance map shadows built-in factory
+// ───────────────────────────────────────────────────
 
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
+QUnit.module("instance-overrides - middleware resolution", { afterEach: commonAfterEach });
 
-  kb.destroy();
-  input.destroy();
+QUnit.test("Instance middleware shadows the built-in middleware factory", (assert) => {
+  let instanceCalled = false;
+  const instanceFactory = (): CompositionMiddleware => {
+    instanceCalled = true;
+    return noopFactory();
+  };
 
-  assert.notOk(KioskKeyboard.getRegisteredLayout("app-a-layout"), "Custom layout cleared on last-instance destroy");
-  assert.strictEqual(getMiddlewareFactory("app-a-layout"), null, "Custom middleware factory cleared");
-  // Built-in layouts and built-in middleware are preserved
-  assert.ok(KioskKeyboard.getRegisteredLayout("qwerty"), "Built-in qwerty preserved");
-  assert.ok(getMiddlewareFactory("ja-kana"), "Built-in ja-kana middleware preserved");
+  // ja-kana has a built-in middleware factory; the instance map must take precedence.
+  const factory = getMiddlewareFactory("ja-kana", new Map([["ja-kana", instanceFactory]]));
+  factory!();
+  assert.ok(instanceCalled, "Instance factory invoked when instance map provides it");
 });
 
-QUnit.test("Last destroy restores overridden built-in layout", async (assert) => {
-  const original = KioskKeyboard.getRegisteredLayout("qwerty")!;
-  KioskKeyboard.registerLayout("qwerty", makeLayout("override"));
-
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  kb.destroy();
-  input.destroy();
-
-  assert.deepEqual(
-    KioskKeyboard.getRegisteredLayout("qwerty"),
-    original,
-    "Original built-in qwerty restored on last-instance destroy",
-  );
+QUnit.test("Instance middleware falls back to built-in when key not in instance map", (assert) => {
+  const factory = getMiddlewareFactory("ja-kana", new Map([["other", () => noopFactory()]]));
+  assert.notStrictEqual(factory, null, "Falls through to built-in registration");
 });
 
-QUnit.test("Last destroy restores overridden built-in middleware factory", async (assert) => {
-  const originalFactory = getMiddlewareFactory("ja-kana");
-  KioskKeyboard.registerMiddleware(["ja-kana"], () => noopFactory());
-  assert.notStrictEqual(getMiddlewareFactory("ja-kana"), originalFactory, "Built-in is overridden");
+// ───────────────────────────────────────────────────
+// Instance overrides are scoped per control - never global
+// ───────────────────────────────────────────────────
 
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  kb.destroy();
-  input.destroy();
-
-  assert.strictEqual(
-    getMiddlewareFactory("ja-kana"),
-    originalFactory,
-    "Original built-in ja-kana factory restored on last-instance destroy",
-  );
-});
+QUnit.module("instance-overrides - scoping", { afterEach: commonAfterEach });
 
 QUnit.test("Instance overrides do not pollute the global registry", async (assert) => {
   const input = new Input({ value: "" });
@@ -368,4 +312,35 @@ QUnit.test("Instance overrides do not pollute the global registry", async (asser
 
   input.destroy();
   kb.destroy();
+});
+
+QUnit.test("Destroying one instance does not affect another's overrides", async (assert) => {
+  const input1 = new Input({ value: "" });
+  input1.placeAt("qunit-fixture");
+  const input2 = new Input({ value: "" });
+  input2.placeAt("qunit-fixture");
+
+  const kb1 = new KioskKeyboard({
+    controls: [input1.getId()],
+    instanceLayouts: { shared: makeLayout("one") },
+    layout: "shared",
+  });
+  const kb2 = new KioskKeyboard({
+    controls: [input2.getId()],
+    instanceLayouts: { shared: makeLayout("two") },
+    layout: "shared",
+  });
+  await placeAndWait(kb1);
+  await placeAndWait(kb2);
+
+  assert.deepEqual(getRenderedLayoutKeys(kb1), [["one"]], "kb1 sees its own override");
+  assert.deepEqual(getRenderedLayoutKeys(kb2), [["two"]], "kb2 sees its own override");
+
+  kb1.destroy();
+  input1.destroy();
+
+  assert.deepEqual(getRenderedLayoutKeys(kb2), [["two"]], "kb2 unaffected after kb1 destroyed");
+
+  kb2.destroy();
+  input2.destroy();
 });

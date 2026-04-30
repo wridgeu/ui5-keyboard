@@ -109,14 +109,15 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   onUseQwertyNav(): void {
-    if (!KioskKeyboard.getRegisteredLayout("qwerty-nav")) {
+    const kb = this._getKeyboard();
+    if (!this._hasInstanceLayout(kb, "qwerty-nav")) {
       const base = KioskKeyboard.getRegisteredLayout("qwerty");
       if (!base) {
         MessageToast.show("Base layout qwerty is unavailable");
         return;
       }
       const qwertyNav: LayoutDefinition = [navRow, ...base];
-      KioskKeyboard.registerLayout("qwerty-nav", qwertyNav);
+      this._addInstanceLayout(kb, "qwerty-nav", qwertyNav);
 
       const select = this.byId("layoutSelect") as Select;
       if (!select.getItemByKey("qwerty-nav")) {
@@ -124,7 +125,6 @@ export default class KioskProgrammatic extends BaseController {
       }
     }
 
-    const kb = this._getKeyboard();
     kb.resetKeyboardType();
     kb.setLayout("qwerty-nav");
     this._updateStatus();
@@ -141,7 +141,7 @@ export default class KioskProgrammatic extends BaseController {
         { value: "{enter}", label: "", type: "action" },
       ],
     ];
-    KioskKeyboard.registerLayout("pinpad", pinpad);
+    this._addInstanceLayout(this._getKeyboard(), "pinpad", pinpad);
     MessageToast.show("Pinpad layout registered");
   }
 
@@ -160,7 +160,7 @@ export default class KioskProgrammatic extends BaseController {
     }
 
     const qwertyFkNav: LayoutDefinition = [fkeyRow, navRow, ...base];
-    KioskKeyboard.registerLayout("qwerty-fk-nav-demo", qwertyFkNav);
+    this._addInstanceLayout(this._getKeyboard(), "qwerty-fk-nav-demo", qwertyFkNav);
 
     const select = this.byId("layoutSelect") as Select;
     if (!select.getItemByKey("qwerty-fk-nav-demo")) {
@@ -168,6 +168,16 @@ export default class KioskProgrammatic extends BaseController {
     }
 
     MessageToast.show("qwerty-fk-nav-demo layout registered");
+  }
+
+  private _hasInstanceLayout(kb: KioskKeyboard, name: string): boolean {
+    const map = kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null;
+    return map !== null && Object.prototype.hasOwnProperty.call(map, name);
+  }
+
+  private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutDefinition): void {
+    const current = (kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null) ?? {};
+    kb.setInstanceLayouts({ ...current, [name]: def });
   }
 
   onUseQwertyFkNav(): void {

@@ -1,11 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { LayoutDefinition } from "../../src/types.js";
-import {
-  getRegisteredLayout,
-  getRegisteredLayoutNames,
-  isBuiltInLayout,
-  registerLayout,
-} from "../../src/core/layout-registry.js";
+import { getRegisteredLayout, getRegisteredLayoutNames, isBuiltInLayout } from "../../src/core/layout-registry.js";
 
 // Import all layouts (simulates full entry)
 import "../../src/layouts/qwerty.js";
@@ -63,14 +57,5 @@ describe("entry-points: idempotent registration", () => {
     // so _registerBuiltInLayout may be called multiple times for the same name.
     // Verify this produced no warnings.
     expect(spy).not.toHaveBeenCalled();
-  });
-});
-
-describe("entry-points: registerLayout overrides built-ins", () => {
-  const CUSTOM: LayoutDefinition = [[{ value: "custom-a" }, { value: "custom-b" }]];
-
-  it("registerLayout overrides a built-in layout", () => {
-    registerLayout("qwerty", CUSTOM);
-    expect(getRegisteredLayout("qwerty")).toBe(CUSTOM);
   });
 });

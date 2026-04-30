@@ -22,7 +22,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
 - **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation. Composite variants (e.g., QWERTY + F-key row) are trivial to compose from building block rows.
-- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Use `registerLocaleLayout("ja", "ja-kana")` to switch the Japanese default to kana input.
+- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Set `instanceLocaleLayouts={ ja: "ja-kana" }` on an element to switch the Japanese default to kana input for that instance.
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show**: opens/closes automatically when target inputs receive/lose focus
@@ -31,7 +31,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Grapheme-aware**: correct backspace/navigation for emoji and multi-code-unit characters
 - **Accessible**: ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
 - **i18n**: built-in English/German/Japanese/Arabic, extensible via custom resolver
-- **Custom layouts**: register/unregister layouts at runtime
+- **Custom layouts**: per-instance overrides via `instanceLayouts` / `instanceLocaleLayouts` / `instanceMiddleware` properties
 
 ## Keyboard Overview
 
@@ -235,7 +235,7 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 | **Target inputs** | `controls` property + `setControls()` + `getActiveControl()` | `controls` attribute + `setTargetElement()` + `activeElement` |
 | **Density**       | UI5 content density (`sapUiSizeCompact`)                     | `data-ui5-compact-size` attribute                             |
 
-Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), layout registry API (`registerLayout`, `registerLocaleLayout`), and special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). Custom layouts work identically across both.
+Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), the same per-instance customization properties (`instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`), and the same special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). Custom layouts work identically across both.
 
 Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. Event payloads are structurally identical.
 
@@ -264,38 +264,38 @@ import type {
 
 For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`.
 
-All static methods on `KioskKeyboard` (layout registry, locale mapping, `setI18nResolver`) are part of the stable API surface. Following the UI5 Web Components convention, registry operations are static-only. Import the class and call them directly:
+Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties. The remaining static methods on `KioskKeyboard` are read-only inspectors (`getRegisteredLayout`, `getRegisteredLayoutNames`, `isBuiltInLayout`, `isSecondaryLayout`, `getLocaleLayout`) plus the global `setI18nResolver`. Import the class and call them directly:
 
 ```js
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 
-KioskKeyboard.registerLayout("pin-pad", [...]);
-KioskKeyboard.registerLocaleLayout("de", "qwertz-de");
+const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
+KioskKeyboard.setI18nResolver((key) => undefined);
 ```
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable imports for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable imports for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
 
 ## Attributes / Properties
 
-| Attribute             | Property                | Type                                                  | Default     | Description                                                                                                                              |
-| --------------------- | ----------------------- | ----------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`              | `layout`                | `string`                                              | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                               |
-| `keyboard-type`       | `keyboardType`          | `string`                                              | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                    |
-| `open`                | `open`                  | `boolean`                                             | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                      |
-| `docked`              | `docked`                | `boolean`                                             | `false`     | Fixed-position mode at bottom of viewport.                                                                                               |
-| `auto-show`           | `autoShow`              | `boolean`                                             | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                  |
-| `auto-type`           | `autoType`              | `boolean`                                             | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                           |
-| `disabled`            | `disabled`              | `boolean`                                             | `false`     | Disables all key interaction.                                                                                                            |
-| `controls`            | `controls`              | `string`                                              | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                              |
-| `accessible-name`     | `accessibleName`        | `string`                                              | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                               |
-| `mobile-keyboard`     | `mobileKeyboard`        | `string`                                              | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                          |
-| `f-key-mode`          | `fKeyMode`              | `string`                                              | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                         |
-| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides; shadow the global registry. See [Multi-App / Micro-Frontend Hosting](#multi-app--micro-frontend-hosting). |
-| _(programmatic only)_ | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the global locale map.                                                                    |
-| _(programmatic only)_ | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                      |
+| Attribute             | Property                | Type                                                  | Default     | Description                                                                                                                 |
+| --------------------- | ----------------------- | ----------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `layout`              | `layout`                | `string`                                              | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                  |
+| `keyboard-type`       | `keyboardType`          | `string`                                              | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                       |
+| `open`                | `open`                  | `boolean`                                             | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                         |
+| `docked`              | `docked`                | `boolean`                                             | `false`     | Fixed-position mode at bottom of viewport.                                                                                  |
+| `auto-show`           | `autoShow`              | `boolean`                                             | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                     |
+| `auto-type`           | `autoType`              | `boolean`                                             | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                              |
+| `disabled`            | `disabled`              | `boolean`                                             | `false`     | Disables all key interaction.                                                                                               |
+| `controls`            | `controls`              | `string`                                              | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                 |
+| `accessible-name`     | `accessibleName`        | `string`                                              | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                  |
+| `mobile-keyboard`     | `mobileKeyboard`        | `string`                                              | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                             |
+| `f-key-mode`          | `fKeyMode`              | `string`                                              | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                            |
+| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides; shadow the built-in registry. See [Per-Instance Customization](#per-instance-customization). |
+| _(programmatic only)_ | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the built-in locale map.                                                     |
+| _(programmatic only)_ | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                         |
 
 ### Keyboard type override via `data-keyboard-type`
 
@@ -341,24 +341,16 @@ They report the state transition itself, not animation completion.
 
 ## Static API
 
-| Method                                               | Description                                        |
-| ---------------------------------------------------- | -------------------------------------------------- |
-| `KioskKeyboard.registerLayout(name, definition)`     | Registers a custom layout.                         |
-| `KioskKeyboard.unregisterLayout(name)`               | Removes a custom layout.                           |
-| `KioskKeyboard.resetCustomLayouts()`                 | Removes all custom layouts.                        |
-| `KioskKeyboard.getRegisteredLayout(name)`            | Returns a layout definition by name.               |
-| `KioskKeyboard.getRegisteredLayoutNames()`           | Returns all registered layout names.               |
-| `KioskKeyboard.isBuiltInLayout(name)`                | Checks if a layout is built-in.                    |
-| `KioskKeyboard.isSecondaryLayout(name)`              | Checks if a layout is secondary (non-alphabetic).  |
-| `KioskKeyboard.registerLocaleLayout(locale, layout)` | Maps a BCP-47 locale to a layout name.             |
-| `KioskKeyboard.unregisterLocaleLayout(locale)`       | Removes a locale mapping.                          |
-| `KioskKeyboard.resetLocaleLayouts()`                 | Resets locale mappings to defaults.                |
-| `KioskKeyboard.getLocaleLayout()`                    | Returns the layout for the current browser locale. |
-| `KioskKeyboard.setI18nResolver(fn)`                  | Sets a custom i18n resolver callback.              |
-| `KioskKeyboard.registerMiddleware(layouts, factory)` | Registers composition middleware for layouts.      |
+The static surface is read-only. Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties (see [Per-Instance Customization](#per-instance-customization)).
 
-> [!NOTE]
-> Following the [UI5 Web Components convention](https://github.com/SAP/ui5-webcomponents), registry operations are static methods on the component class. Import the class and call them directly. In environments without ES module imports (e.g., plain `<script>` tags), the static API is also accessible via `customElements.get('kiosk-keyboard').registerLayout(...)` or `document.querySelector('kiosk-keyboard').constructor.registerLayout(...)`.
+| Method                                     | Description                                        |
+| ------------------------------------------ | -------------------------------------------------- |
+| `KioskKeyboard.getRegisteredLayout(name)`  | Returns a built-in layout definition by name.      |
+| `KioskKeyboard.getRegisteredLayoutNames()` | Returns all built-in layout names.                 |
+| `KioskKeyboard.isBuiltInLayout(name)`      | Checks if a layout is built-in.                    |
+| `KioskKeyboard.isSecondaryLayout(name)`    | Checks if a layout is secondary (non-alphabetic).  |
+| `KioskKeyboard.getLocaleLayout()`          | Returns the layout for the current browser locale. |
+| `KioskKeyboard.setI18nResolver(fn)`        | Sets a custom i18n resolver callback.              |
 
 `KioskKeyboard.DOM` is a supported read-only DOM hook contract for tests and DOM assertions. Prefer it over hard-coded shadow selectors. Styling customizations should still use the documented host attributes and public `--kiosk-keyboard-*` CSS custom properties.
 
@@ -398,41 +390,52 @@ trivial compositions - see [Layout Composition](#layout-composition) above.
 
 ## Custom Layouts
 
-```ts
-import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+Custom layouts are scoped to a single `<kiosk-keyboard>` element via the `instanceLayouts` property:
 
-KioskKeyboard.registerLayout("my-layout", [
-  [{ value: "a" }, { value: "b" }, { value: "c" }, { value: "{backspace}", type: "action" }],
-  [
-    { value: " ", width: "space", type: "space" },
-    { value: "{enter}", type: "action" },
+```ts
+import "kiosk-keyboard-webc/bundle";
+
+const el = document.createElement("kiosk-keyboard");
+el.instanceLayouts = {
+  "my-layout": [
+    [{ value: "a" }, { value: "b" }, { value: "c" }, { value: "{backspace}", type: "action" }],
+    [
+      { value: " ", width: "space", type: "space" },
+      { value: "{enter}", type: "action" },
+    ],
   ],
-]);
+};
+el.layout = "my-layout";
+el.setAttribute("controls", "my-input");
+document.body.appendChild(el);
 ```
 
-Or via the custom elements registry (no ES class import needed):
+Or in plain HTML, set the property after the element is defined:
 
 ```html
 <script type="module">
   import "kiosk-keyboard-webc/bundle";
 
   customElements.whenDefined("kiosk-keyboard").then(() => {
-    const KioskKeyboard = customElements.get("kiosk-keyboard");
-    KioskKeyboard.registerLayout("pin-pad", [
-      [{ value: "1" }, { value: "2" }, { value: "3" }],
-      [{ value: "4" }, { value: "5" }, { value: "6" }],
-      [{ value: "7" }, { value: "8" }, { value: "9" }],
-      [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
-    ]);
+    const el = document.querySelector("kiosk-keyboard");
+    el.instanceLayouts = {
+      "pin-pad": [
+        [{ value: "1" }, { value: "2" }, { value: "3" }],
+        [{ value: "4" }, { value: "5" }, { value: "6" }],
+        [{ value: "7" }, { value: "8" }, { value: "9" }],
+        [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
+      ],
+    };
+    el.layout = "pin-pad";
   });
 </script>
 
 <input id="my-input" type="text" />
-<kiosk-keyboard layout="pin-pad" controls="my-input"></kiosk-keyboard>
+<kiosk-keyboard controls="my-input"></kiosk-keyboard>
 ```
 
 > [!NOTE]
-> The layout registry is shared across all `<kiosk-keyboard>` instances on the page. A layout registered on one element is available to all others.
+> `instanceLayouts` accepts a JS object, not a string, so it cannot be set via an HTML attribute. Assign it programmatically before connecting the element (or before the next render cycle). Layouts assigned this way are scoped to the element that owns them.
 
 Each key is a `KeyDefinition`:
 
@@ -450,15 +453,9 @@ interface KeyDefinition {
 }
 ```
 
-## Multi-App / Micro-Frontend Hosting
+## Per-Instance Customization
 
-The static `KioskKeyboard.registerLayout(...)`, `registerLocaleLayout(...)`, and `registerMiddleware(...)` calls mutate **window-global** state that lives for the lifetime of the page. In SAP Fiori Launchpad and other multi-app shells where several apps share one window, registrations made by App A persist after App A is destroyed and bleed into App B. Independently bundled micro-frontends that each import this module share the same singleton.
-
-Two safe patterns:
-
-### 1. Per-instance overrides (recommended)
-
-Every `<kiosk-keyboard>` accepts three programmatic-only properties that take precedence over the global registry: `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware`. Resolution order is **instance map → global registry → built-in**, so an entry on the element shadows any registration of the same name without touching module-level state.
+Every `<kiosk-keyboard>` accepts three programmatic-only properties that override the built-in registry for that element only: `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware`. Resolution order is **instance map → built-in**, so an entry on the element wins without mutating module-level state.
 
 ```ts
 const el = document.createElement("kiosk-keyboard");
@@ -471,24 +468,7 @@ document.body.appendChild(el);
 
 These properties accept JS objects, not strings, so they cannot be set via HTML attributes - assign them programmatically before connecting the element (or before the next render cycle).
 
-This is the only pattern that cannot be polluted by another bundle's prior global registration: the instance owns its overrides, no shared state involved.
-
-### 2. Manual cleanup if you must use the global API
-
-The web component framework has no `destroy` lifecycle hook (`onExitDOM` fires every time the element is detached, including transient detach/reattach during a parent reflow), so the library cannot reliably auto-clear globals when the last element disappears. If your app calls `KioskKeyboard.registerLayout(...)`, `registerLocaleLayout(...)`, or `registerMiddleware(...)`, run the matching cleanup in your app's teardown:
-
-```ts
-// In your app's exit / unmount code
-KioskKeyboard.unregisterLayout("warehouse-pos");
-KioskKeyboard.unregisterLocaleLayout("de");
-// Or the bulk equivalents:
-KioskKeyboard.resetCustomLayouts();
-KioskKeyboard.resetLocaleLayouts();
-```
-
-There is no public API to remove individual middleware factories on the WebC element - prefer the instance API for middleware-heavy use cases.
-
-If you mix this element inside a UI5 host (via `@ui5/wrapper-component`), the UI5 host's `Component.exit()` is the natural place for these cleanup calls.
+No teardown is needed: the overrides live on the element and are released when the host application removes it. The component does not maintain any window-global mutable customization state, so multiple apps sharing the same page (Fiori Launchpad, micro-frontends) cannot pollute each other through the keyboard.
 
 ## Function Keys (F1-F12)
 
@@ -566,8 +546,12 @@ compositions consumers can build:
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
-const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
-KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);
+const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
+
+const el = document.createElement("kiosk-keyboard");
+el.instanceLayouts = { "my-qwerty-fk": [fkeyRow, ...qwerty] };
+el.layout = "my-qwerty-fk";
+document.body.appendChild(el);
 ```
 
 ## Composition Middleware
@@ -592,11 +576,11 @@ Middleware activates automatically when its associated layout is active and deac
 
 ### Custom Middleware
 
-Implement the `CompositionMiddleware` interface and register it:
+Implement the `CompositionMiddleware` interface and supply the factory via the per-instance `instanceMiddleware` property keyed by layout name:
 
 ```ts
 import type { CompositionMiddleware } from "kiosk-keyboard-webc";
-import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import "kiosk-keyboard-webc/bundle";
 
 function createMyMiddleware(): CompositionMiddleware {
   return {
@@ -615,7 +599,10 @@ function createMyMiddleware(): CompositionMiddleware {
   };
 }
 
-KioskKeyboard.registerMiddleware(["my-layout"], createMyMiddleware);
+const el = document.createElement("kiosk-keyboard");
+el.instanceMiddleware = { "my-layout": createMyMiddleware };
+el.layout = "my-layout";
+document.body.appendChild(el);
 ```
 
 The `handleKey` method receives:
@@ -632,7 +619,7 @@ Middleware lifecycle:
 - **Focus change**: `commit()` is called to avoid orphaned preedit text.
 
 > [!NOTE]
-> The middleware registry follows the same pattern as the layout registry. It is shared across all keyboard instances. `registerMiddleware` can override built-in middleware.
+> An entry in `instanceMiddleware` shadows the built-in factory for the same layout (for example, set `{ "ja-kana": myFactory }` to replace the bundled kana-dakuten middleware on that element).
 
 ## Icon + Label Rendering
 
@@ -1032,7 +1019,7 @@ At narrow widths, the responsive container queries cap font size via
 `min()` but cannot raise it above your value, so a smaller override is
 preserved. At desktop widths no cap applies and your value is used
 as-is. This approach works for any layout, including custom layouts
-registered via `registerLayout()`.
+supplied via `instanceLayouts`.
 
 The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`kiosk-keyboard--cq-short`, `kiosk-keyboard--cq-tiny`) activate. Override them to tune height breakpoints for your container:
 

@@ -166,7 +166,7 @@ A **composition middleware** is a self-registering module that intercepts key pr
 
 ### Consumer API
 
-Consumers can register custom middleware via `KioskKeyboard.registerMiddleware(layouts, factory)`. The `CompositionMiddleware` interface requires three methods: `handleKey()`, `commit()`, and `reset()`.
+Consumers supply custom middleware per element via the `instanceMiddleware` property, a `Record<layoutName, () => CompositionMiddleware>`. The `CompositionMiddleware` interface requires three methods: `handleKey()`, `commit()`, and `reset()`. An entry in `instanceMiddleware` shadows the built-in factory for the same layout.
 
 ## Subpath Imports (WebC)
 

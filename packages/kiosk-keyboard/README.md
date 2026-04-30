@@ -33,7 +33,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
   - [Associations](#associations)
   - [Events](#events)
   - [Public Methods](#public-methods)
-  - [Static Methods (Complete)](#static-methods-complete)
+  - [Static Methods](#static-methods)
 - [Layouts](#layouts)
   - [Constrained Containers and Popovers](#constrained-containers-and-popovers)
   - [Custom Layouts](#custom-layouts)
@@ -77,7 +77,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 - Runtime layout switching via `{layout:name}` keys
 - `keyboardType` property for quick switching between Full, Numeric, and Numpad modes
 - Extensible layout definition format (`LayoutDefinition` type)
-- Custom layout registration via `registerLayout()`
+- Custom layouts and locale mappings via the per-instance `instanceLayouts` / `instanceLocaleLayouts` properties
 - Reusable `fkey-row` and `nav-row` modules for composing custom variant layouts
 
 **Docked Mode**
@@ -321,13 +321,9 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 `KioskKeyboard.DOM` is also a supported read-only DOM hook contract for tests and DOM assertions. Prefer it over hard-coded class names or selectors. Styling customizations should still use the public `--ui5KioskKeyboard-*` CSS variables rather than DOM classes.
 
-## FLP Lifecycle (Module Cache)
+## Per-Instance Customization
 
-In SAP Fiori launchpad (single-page shell), modules are cached and reused between app launches. Without isolation, registrations made by App A persist after App A is destroyed and bleed into App B. The library offers two complementary mechanisms:
-
-### Per-instance overrides (recommended)
-
-The `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties take a plain `Record` and shadow the global registry for that control only. Resolution order is **instance map → global registry → built-in**, so an entry on the control wins without mutating module-level state.
+Custom layouts, locale mappings, and composition middleware are configured per control via three properties: `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware`. Each takes a plain `Record` and shadows the built-in registry for that control only. Resolution order is **instance map → built-in**, so an entry on the control wins without touching module-level state.
 
 ```ts
 const kb = new KioskKeyboard({
@@ -338,46 +334,27 @@ const kb = new KioskKeyboard({
 });
 ```
 
-Use this for any registration that's specific to one app (or one screen). It is the only mechanism that cannot be polluted by another app's prior global registration.
-
-### Last-instance auto-cleanup
-
-When the last living `KioskKeyboard` is destroyed, the library auto-clears all consumer registrations:
-
-- Custom layouts (overridden built-ins are restored to original definitions)
-- Locale-to-layout mappings (reset to built-in defaults)
-- Middleware factories (overridden built-ins are restored, custom factories are dropped)
-- Global target resolver and i18n resolver
-
-This protects "App A forgot to clean up" scenarios with no consumer code change. **Caveat:** under FLP `keepAliveMode`, the last-instance condition may not fire for a long time, so the auto-cleanup is a backstop, not a substitute for per-instance overrides.
-
-### Manual cleanup (if you must use the global API)
-
-- Controls inside the normal view/control tree are destroyed by UI5 and clean up automatically.
-- Programmatically created keyboards outside the view tree (for example `placeAt("sap-ui-static")`) must be destroyed explicitly in `Component.destroy()`.
-- For deterministic per-app state without relying on auto-cleanup, call from `Component.destroy()`:
-  - `KioskKeyboard.unregisterLayout(name)` / `KioskKeyboard.unregisterLocaleLayout(locale)` for targeted cleanup, or
-  - `KioskKeyboard.resetCustomLayouts()` / `KioskKeyboard.resetLocaleLayouts()` to reset to built-in defaults.
+The same maps can be set later via `setInstanceLayouts()`, `setInstanceLocaleLayouts()`, and `setInstanceMiddleware()`. No teardown is needed: the overrides live on the control and are released when UI5 destroys it.
 
 ## KioskKeyboard Control
 
 ### Properties
 
-| Property                | Type                                                  | Default     | Description                                                                                                                                         |
-| ----------------------- | ----------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`                | `string`                                              | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.                                                         |
-| `keyboardType`          | `ui5.kiosk.KeyboardType`                              | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                                                                       |
-| `enabled`               | `boolean`                                             | `true`      | Whether the keyboard is interactive.                                                                                                                |
-| `ariaLabel`             | `string`                                              | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.                                                       |
-| `docked`                | `boolean`                                             | `false`     | Anchor to the bottom of the viewport with slide animation.                                                                                          |
-| `autoShow`              | `boolean`                                             | `false`     | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                                                                          |
-| `autoType`              | `boolean`                                             | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                                                                   |
-| `mobileKeyboard`        | `ui5.kiosk.MobileKeyboard`                            | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                             |
-| `fKeyMode`              | `ui5.kiosk.FKeyMode`                                  | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action).         |
-| `controls`              | `string[]`                                            | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                     |
-| `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides. Resolution order is **instance map → global registry → built-in**. See [FLP Lifecycle](#flp-lifecycle-module-cache). |
-| `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the global locale map.                                                                               |
-| `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                                 |
+| Property                | Type                                                  | Default     | Description                                                                                                                                    |
+| ----------------------- | ----------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`                | `string`                                              | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.                                                    |
+| `keyboardType`          | `ui5.kiosk.KeyboardType`                              | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                                                                  |
+| `enabled`               | `boolean`                                             | `true`      | Whether the keyboard is interactive.                                                                                                           |
+| `ariaLabel`             | `string`                                              | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.                                                  |
+| `docked`                | `boolean`                                             | `false`     | Anchor to the bottom of the viewport with slide animation.                                                                                     |
+| `autoShow`              | `boolean`                                             | `false`     | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                                                                     |
+| `autoType`              | `boolean`                                             | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                                                              |
+| `mobileKeyboard`        | `ui5.kiosk.MobileKeyboard`                            | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                        |
+| `fKeyMode`              | `ui5.kiosk.FKeyMode`                                  | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action).    |
+| `controls`              | `string[]`                                            | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                |
+| `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides. Resolution order is **instance map → built-in**. See [Per-Instance Customization](#per-instance-customization). |
+| `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the built-in locale map.                                                                        |
+| `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                            |
 
 ### Associations
 
@@ -429,26 +406,21 @@ For full generated typings (including property/event accessors from UI5 metadata
 
 The generated file above covers UI5 metadata accessors. The convenience/runtime methods listed here (for example `show()`, `close()`, `refreshResponsiveState()`) and the read-only `KioskKeyboard.DOM` hook contract live in [`src/KioskKeyboard.ts`](src/KioskKeyboard.ts).
 
-### Static Methods (Complete)
+### Static Methods
 
-| Method                                 | Returns             | Description                                                                    |
-| -------------------------------------- | ------------------- | ------------------------------------------------------------------------------ |
-| `registerLayout(name, definition)`     | `void`              | Register a custom layout. Can override built-in layouts.                       |
-| `unregisterLayout(name)`               | `void`              | Remove a previously registered custom layout. Built-in layouts are protected.  |
-| `resetCustomLayouts()`                 | `void`              | Remove all custom layouts and keep built-in layouts.                           |
-| `getRegisteredLayout(name)`            | `LayoutDefinition?` | Get the definition for a layout name, or `undefined`.                          |
-| `getRegisteredLayoutNames()`           | `string[]`          | List all registered layout names (built-in + custom).                          |
-| `isBuiltInLayout(name)`                | `boolean`           | Whether the given name is a built-in layout.                                   |
-| `isSecondaryLayout(name)`              | `boolean`           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).     |
-| `getLocaleLayout()`                    | `string`            | Detect the best layout for the current UI5 locale. Falls back to `"qwerty"`.   |
-| `registerLocaleLayout(locale, layout)` | `void`              | Map a BCP-47 tag or prefix (e.g. `"fr"`, `"pt-br"`) to a layout name.          |
-| `unregisterLocaleLayout(locale)`       | `void`              | Remove one locale-to-layout mapping.                                           |
-| `resetLocaleLayouts()`                 | `void`              | Reset locale mappings to built-in defaults.                                    |
-| `getKeyIcon(keyValue)`                 | `string?`           | Default icon URI for a special key value, or `undefined` if none.              |
-| `setI18nResolver(fn)`                  | `void`              | Set a resolver callback for i18n text overrides, or `null` to clear.           |
-| `setGlobalTargetResolver(fn)`          | `void`              | Set a global custom resolver for locating native inputs. Pass `null` to clear. |
-| `getGlobalTargetResolver()`            | `Function \| null`  | Returns the global target resolver, or `null`.                                 |
-| `registerMiddleware(layouts, factory)` | `void`              | Register composition middleware for one or more layout names.                  |
+The static surface is read-only. Customization is per instance via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties (see [Per-Instance Customization](#per-instance-customization)).
+
+| Method                        | Returns             | Description                                                                           |
+| ----------------------------- | ------------------- | ------------------------------------------------------------------------------------- |
+| `getRegisteredLayout(name)`   | `LayoutDefinition?` | Get the definition for a built-in layout name, or `undefined`.                        |
+| `getRegisteredLayoutNames()`  | `string[]`          | List all built-in layout names.                                                       |
+| `isBuiltInLayout(name)`       | `boolean`           | Whether the given name is a built-in layout.                                          |
+| `isSecondaryLayout(name)`     | `boolean`           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).            |
+| `getLocaleLayout()`           | `string`            | Detect the best built-in layout for the current UI5 locale. Falls back to `"qwerty"`. |
+| `getKeyIcon(keyValue)`        | `string?`           | Default icon URI for a special key value, or `undefined` if none.                     |
+| `setI18nResolver(fn)`         | `void`              | Set a resolver callback for i18n text overrides, or `null` to clear.                  |
+| `setGlobalTargetResolver(fn)` | `void`              | Set a global custom resolver for locating native inputs. Pass `null` to clear.        |
+| `getGlobalTargetResolver()`   | `Function \| null`  | Returns the global target resolver, or `null`.                                        |
 
 ### DOM Contract
 
@@ -597,7 +569,7 @@ The UI5 library includes composition middleware that activates automatically whe
 
 ### Custom Middleware
 
-Implement the `CompositionMiddleware` interface and register it via the static API:
+Implement the `CompositionMiddleware` interface and supply the factory via the per-instance `instanceMiddleware` property keyed by layout name:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
@@ -620,7 +592,10 @@ function createMyMiddleware(): CompositionMiddleware {
   };
 }
 
-KioskKeyboard.registerMiddleware(["my-layout"], createMyMiddleware);
+const kb = new KioskKeyboard({
+  instanceMiddleware: { "my-layout": createMyMiddleware },
+  layout: "my-layout",
+});
 ```
 
 The `handleKey` method receives:
@@ -654,12 +629,14 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 
 const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
-KioskKeyboard.registerLayout("qwerty-fk", [fkeyRow, ...qwertyBase]);
+const kb = new KioskKeyboard({
+  instanceLayouts: { "qwerty-fk": [fkeyRow, ...qwertyBase] },
+  layout: "qwerty-fk",
+  controls: ["myInput"],
+});
 ```
 
-```xml
-<kiosk:KioskKeyboard layout="qwerty-fk" controls="myInput" />
-```
+For a declarative XML view, supply the same map through a JSON model and bind `instanceLayouts` to it.
 
 See [Custom F-key variant layouts](#custom-f-key-variant-layouts) for more details.
 
@@ -764,29 +741,28 @@ Import the shared `fkey-row` module to compose custom layouts with an F-key row 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
+import navRow from "ui5/kiosk/layouts/nav-row";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 
 // Define your custom base layout
 const azertyFr: LayoutDefinition = [
   /* ... */
 ];
-KioskKeyboard.registerLayout("azerty-fr", azertyFr);
 
-// Compose a variant with F-keys on top
+// Compose variants with F-keys, nav, or both on top
 const azertyFrFk: LayoutDefinition = [fkeyRow, ...azertyFr];
-KioskKeyboard.registerLayout("azerty-fr-fk", azertyFrFk);
-```
-
-Import the shared `nav-row` module to compose navigation variants, or combine both rows in a single custom variant:
-
-```ts
-import navRow from "ui5/kiosk/layouts/nav-row";
-
 const azertyFrNav: LayoutDefinition = [navRow, ...azertyFr];
-KioskKeyboard.registerLayout("azerty-fr-nav", azertyFrNav);
-
 const azertyFrFkNav: LayoutDefinition = [fkeyRow, navRow, ...azertyFr];
-KioskKeyboard.registerLayout("azerty-fr-fk-nav", azertyFrFkNav);
+
+const kb = new KioskKeyboard({
+  instanceLayouts: {
+    "azerty-fr": azertyFr,
+    "azerty-fr-fk": azertyFrFk,
+    "azerty-fr-nav": azertyFrNav,
+    "azerty-fr-fk-nav": azertyFrFkNav,
+  },
+  layout: "azerty-fr-fk",
+});
 ```
 
 ### Custom F-key actions
@@ -829,14 +805,15 @@ When no explicit `layout` is provided, the keyboard auto-detects the appropriate
 | `ko`     | `ko-hangul` |
 | `es`     | `qwerty-es` |
 
-Additional mappings can be registered at runtime:
+Additional mappings can be supplied per instance via `instanceLocaleLayouts`:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 
-// Register before creating any keyboard instances
-KioskKeyboard.registerLocaleLayout("fr", "azerty-fr");
-KioskKeyboard.registerLocaleLayout("pt-br", "custom-pt-br");
+const kb = new KioskKeyboard({
+  instanceLayouts: { "azerty-fr": azertyFr, "custom-pt-br": customPtBr },
+  instanceLocaleLayouts: { fr: "azerty-fr", "pt-br": "custom-pt-br" },
+});
 ```
 
 An explicit `layout` property always takes priority over locale detection:
@@ -1489,7 +1466,7 @@ class is needed. At narrow widths, the responsive container queries cap
 font size via `min()` but cannot raise it above your value, so a smaller
 override is preserved. At desktop widths no cap applies and your value
 is used as-is. This approach works for any layout, including custom
-layouts registered via `registerLayout()`.
+layouts supplied via `instanceLayouts`.
 
 For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cqShort` and `ui5KioskKeyboard--cqTiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
 
@@ -1654,7 +1631,7 @@ KioskKeyboard.setI18nResolver(null);
 
 **Locale reactivity:** when the UI5 locale changes at runtime (e.g. via `Localization.setLanguage()`), all live `KioskKeyboard` instances re-render and the resolver is called again with the new locale.
 
-**Automatic cleanup:** the library automatically clears the resolver when the last `KioskKeyboard` instance is destroyed. Explicit cleanup via `setI18nResolver(null)` is still recommended for apps that manage keyboard instances outside the normal view tree.
+**Automatic cleanup:** the library automatically clears the resolver when the last live `KioskKeyboard` instance is destroyed. Explicit cleanup via `setI18nResolver(null)` is still recommended for apps that manage keyboard instances outside the normal view tree.
 
 **TypeScript types**: import the resolver type for type-safe usage:
 

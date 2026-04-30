@@ -294,9 +294,7 @@ The returned `LanguageTag` has `.language` (lowercase ISO639, e.g. `"de"`) and `
 
 Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`). Default mappings: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`.
 
-The locale → layout map is extensible via `KioskKeyboard.registerLocaleLayout(locale, layout)`.
-Cleanup is technically optional for most apps because repeated initialization usually reapplies the same mapping without errors or leaks.
-For deterministic app-specific state, mappings can be cleaned up with `KioskKeyboard.unregisterLocaleLayout(locale)` or reset to defaults with `KioskKeyboard.resetLocaleLayouts()`.
+The locale → layout map is extensible per control via the `instanceLocaleLayouts` constructor setting / setter. Resolution checks the instance map first, then the built-in map. No cleanup is needed: the override lives on the control and is released when UI5 destroys it.
 
 ### Impact on \_baseLayout
 

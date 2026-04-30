@@ -20,12 +20,9 @@ const DOM = KioskKeyboard.DOM;
 // Composite layout for tests that need both nav row and base layout rows.
 // Consumers build these inline now that pre-built combined layouts are removed.
 const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
+const qwertyNav: LayoutDefinition = [navRow, ...qwertyBase];
 
 QUnit.module("NavKeys", {
-  beforeEach() {
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.registerLayout("test-qwerty-nav", [navRow, ...qwertyBase]);
-  },
   afterEach() {
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
@@ -136,9 +133,11 @@ QUnit.test("Consumers can compose fkey-row + nav-row + base layout", async (asse
   if (!base) return;
 
   const composite: LayoutDefinition = [fkeyRow, navRow, ...base];
-  KioskKeyboard.registerLayout("qwerty-fk-nav-test", composite);
 
-  const kb = new KioskKeyboard({ layout: "qwerty-fk-nav-test" });
+  const kb = new KioskKeyboard({
+    layout: "qwerty-fk-nav-test",
+    instanceLayouts: { "qwerty-fk-nav-test": composite },
+  });
   await placeAndWait(kb);
 
   const rows = getRowElements(kb);
@@ -237,7 +236,11 @@ QUnit.test("PageUp moves caret to start, PageDown moves to end", async (assert) 
 
 QUnit.test("Physical Arrow key highlights matching virtual nav key", async (assert) => {
   const input = new Input();
-  const kb = new KioskKeyboard({ layout: "test-qwerty-nav", controls: [input.getId()] });
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-nav",
+    controls: [input.getId()],
+    instanceLayouts: { "test-qwerty-nav": qwertyNav },
+  });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 

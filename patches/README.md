@@ -95,7 +95,7 @@ This also affects the upstream UI5 Web Components (e.g., `Dialog.open` shows `"a
 
 When a JSDoc description contains `{@link Target display}`, TypeScript's AST represents the inline tag as a node with `name` (the target reference) and `text` (the display text). The analyzer concatenates both without a separator, producing `Targetdisplay` in the CEM description.
 
-**Example:** `{@link KioskKeyboard.registerLocaleLayout registerLocaleLayout}` becomes `KioskKeyboard.registerLocaleLayoutregisterLocaleLayout` in the CEM output.
+**Example:** `{@link KioskKeyboard.getLocaleLayout getLocaleLayout}` becomes `KioskKeyboard.getLocaleLayoutgetLocaleLayout` in the CEM output.
 
 The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc.js` (class descriptions). Both files use the identical pattern.
 

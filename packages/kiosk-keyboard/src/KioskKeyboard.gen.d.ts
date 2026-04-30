@@ -113,13 +113,12 @@ declare module "./KioskKeyboard" {
 
         /**
          * Per-instance layout overrides. Resolution order is
-        **instance map -> global registry -> built-in**, so an entry
-        here shadows any global registration of the same name for this
-        control without mutating module-level state. Use this in SAP
-        Fiori Launchpad / micro-frontend hosts to keep one app's
-        layouts from leaking into another. Accepts a plain
-        `Record<string, LayoutDefinition>`; the control stores it as
-        a `Map` internally.
+        **instance map -> built-in**, so an entry here shadows the
+        built-in of the same name for this control only. Use this to
+        supply a custom layout, or to override a built-in (e.g. swap
+        the German layout) without affecting other controls. Accepts
+        a plain `Record<string, LayoutDefinition>`; the control stores
+        it as a `Map` internally.
          *
          * @since 0.1.0
          */
@@ -127,21 +126,21 @@ declare module "./KioskKeyboard" {
 
         /**
          * Per-instance locale-to-layout overrides. Resolution order is
-        **instance map -> global locale map -> default locale layouts**.
-        Locale keys follow the same BCP-47 conventions as
-        `registerLocaleLayout`. Accepts a plain `Record<string, string>`;
-        the control stores it as a `Map` internally.
+        **instance map -> built-in locale map -> default layout**.
+        Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
+        layout names. Accepts a plain `Record<string, string>`; the
+        control stores it as a `Map` internally.
          *
          * @since 0.1.0
          */
         instanceLocaleLayouts?: object | PropertyBindingInfo | `{${string}}`;
 
         /**
-         * Per-instance composition middleware overrides. Resolution order
-        is **instance map -> global registry -> built-in**, scoped per
-        layout name. Use this to attach a layout-specific middleware
-        factory (e.g., kana dakuten) without mutating the shared
-        module-level factory map. Accepts a plain
+         * Per-instance composition middleware overrides, keyed by layout
+        name. Resolution order is **instance map -> built-in**. Use
+        this to attach a layout-specific middleware factory for a
+        custom layout, or to swap the built-in middleware for one
+        control only. Accepts a plain
         `Record<string, () => CompositionMiddleware>`; the control
         stores it as a `Map` internally.
          *
@@ -409,13 +408,12 @@ declare module "./KioskKeyboard" {
 
         /**
          * Per-instance layout overrides. Resolution order is
-        **instance map -> global registry -> built-in**, so an entry
-        here shadows any global registration of the same name for this
-        control without mutating module-level state. Use this in SAP
-        Fiori Launchpad / micro-frontend hosts to keep one app's
-        layouts from leaking into another. Accepts a plain
-        `Record<string, LayoutDefinition>`; the control stores it as
-        a `Map` internally.
+        **instance map -> built-in**, so an entry here shadows the
+        built-in of the same name for this control only. Use this to
+        supply a custom layout, or to override a built-in (e.g. swap
+        the German layout) without affecting other controls. Accepts
+        a plain `Record<string, LayoutDefinition>`; the control stores
+        it as a `Map` internally.
          *
          * @since 0.1.0
          */
@@ -423,13 +421,12 @@ declare module "./KioskKeyboard" {
 
         /**
          * Per-instance layout overrides. Resolution order is
-        **instance map -> global registry -> built-in**, so an entry
-        here shadows any global registration of the same name for this
-        control without mutating module-level state. Use this in SAP
-        Fiori Launchpad / micro-frontend hosts to keep one app's
-        layouts from leaking into another. Accepts a plain
-        `Record<string, LayoutDefinition>`; the control stores it as
-        a `Map` internally.
+        **instance map -> built-in**, so an entry here shadows the
+        built-in of the same name for this control only. Use this to
+        supply a custom layout, or to override a built-in (e.g. swap
+        the German layout) without affecting other controls. Accepts
+        a plain `Record<string, LayoutDefinition>`; the control stores
+        it as a `Map` internally.
          *
          * @since 0.1.0
          */
@@ -439,10 +436,10 @@ declare module "./KioskKeyboard" {
 
         /**
          * Per-instance locale-to-layout overrides. Resolution order is
-        **instance map -> global locale map -> default locale layouts**.
-        Locale keys follow the same BCP-47 conventions as
-        `registerLocaleLayout`. Accepts a plain `Record<string, string>`;
-        the control stores it as a `Map` internally.
+        **instance map -> built-in locale map -> default layout**.
+        Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
+        layout names. Accepts a plain `Record<string, string>`; the
+        control stores it as a `Map` internally.
          *
          * @since 0.1.0
          */
@@ -450,10 +447,10 @@ declare module "./KioskKeyboard" {
 
         /**
          * Per-instance locale-to-layout overrides. Resolution order is
-        **instance map -> global locale map -> default locale layouts**.
-        Locale keys follow the same BCP-47 conventions as
-        `registerLocaleLayout`. Accepts a plain `Record<string, string>`;
-        the control stores it as a `Map` internally.
+        **instance map -> built-in locale map -> default layout**.
+        Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
+        layout names. Accepts a plain `Record<string, string>`; the
+        control stores it as a `Map` internally.
          *
          * @since 0.1.0
          */
@@ -462,11 +459,11 @@ declare module "./KioskKeyboard" {
         // property: instanceMiddleware
 
         /**
-         * Per-instance composition middleware overrides. Resolution order
-        is **instance map -> global registry -> built-in**, scoped per
-        layout name. Use this to attach a layout-specific middleware
-        factory (e.g., kana dakuten) without mutating the shared
-        module-level factory map. Accepts a plain
+         * Per-instance composition middleware overrides, keyed by layout
+        name. Resolution order is **instance map -> built-in**. Use
+        this to attach a layout-specific middleware factory for a
+        custom layout, or to swap the built-in middleware for one
+        control only. Accepts a plain
         `Record<string, () => CompositionMiddleware>`; the control
         stores it as a `Map` internally.
          *
@@ -475,11 +472,11 @@ declare module "./KioskKeyboard" {
         getInstanceMiddleware(): object;
 
         /**
-         * Per-instance composition middleware overrides. Resolution order
-        is **instance map -> global registry -> built-in**, scoped per
-        layout name. Use this to attach a layout-specific middleware
-        factory (e.g., kana dakuten) without mutating the shared
-        module-level factory map. Accepts a plain
+         * Per-instance composition middleware overrides, keyed by layout
+        name. Resolution order is **instance map -> built-in**. Use
+        this to attach a layout-specific middleware factory for a
+        custom layout, or to swap the built-in middleware for one
+        control only. Accepts a plain
         `Record<string, () => CompositionMiddleware>`; the control
         stores it as a `Map` internally.
          *

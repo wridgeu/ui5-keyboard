@@ -115,7 +115,6 @@ QUnit.test("regional indicator pair (flag)", (assert) => {
 
 QUnit.module("Grapheme integration", {
   afterEach() {
-    KioskKeyboard.resetCustomLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -126,8 +125,11 @@ QUnit.test("Backspace deletes entire surrogate-pair emoji in one press", async (
   input.placeAt("qunit-fixture");
 
   const emojiLayout: LayoutDefinition = [[{ value: "😀" }, { value: "{backspace}" }]];
-  KioskKeyboard.registerLayout("test-emoji-bs", emojiLayout);
-  const kb = new KioskKeyboard({ layout: "test-emoji-bs", controls: [input.getId()] });
+  const kb = new KioskKeyboard({
+    layout: "test-emoji-bs",
+    controls: [input.getId()],
+    instanceLayouts: { "test-emoji-bs": emojiLayout },
+  });
   await placeAndWait(kb);
 
   input.focus();
@@ -153,8 +155,11 @@ QUnit.test("Backspace deletes ZWJ sequence in one press", async (assert) => {
 
   const emoji = "👨‍👩‍👧";
   const layout: LayoutDefinition = [[{ value: emoji }, { value: "{backspace}" }]];
-  KioskKeyboard.registerLayout("test-zwj-bs", layout);
-  const kb = new KioskKeyboard({ layout: "test-zwj-bs", controls: [input.getId()] });
+  const kb = new KioskKeyboard({
+    layout: "test-zwj-bs",
+    controls: [input.getId()],
+    instanceLayouts: { "test-zwj-bs": layout },
+  });
   await placeAndWait(kb);
 
   input.focus();
@@ -177,8 +182,11 @@ QUnit.test("Backspace after mixed ASCII+emoji only removes last grapheme", async
   input.placeAt("qunit-fixture");
 
   const layout: LayoutDefinition = [[{ value: "a" }, { value: "😀" }, { value: "{backspace}" }]];
-  KioskKeyboard.registerLayout("test-mixed-bs", layout);
-  const kb = new KioskKeyboard({ layout: "test-mixed-bs", controls: [input.getId()] });
+  const kb = new KioskKeyboard({
+    layout: "test-mixed-bs",
+    controls: [input.getId()],
+    instanceLayouts: { "test-mixed-bs": layout },
+  });
   await placeAndWait(kb);
 
   input.focus();
@@ -206,8 +214,11 @@ QUnit.test("ArrowLeft and ArrowRight step over emoji as one unit", async (assert
   input.placeAt("qunit-fixture");
 
   const layout: LayoutDefinition = [[{ value: "{fkey:ArrowLeft}" }, { value: "{fkey:ArrowRight}" }]];
-  KioskKeyboard.registerLayout("test-emoji-nav", layout);
-  const kb = new KioskKeyboard({ layout: "test-emoji-nav", controls: [input.getId()] });
+  const kb = new KioskKeyboard({
+    layout: "test-emoji-nav",
+    controls: [input.getId()],
+    instanceLayouts: { "test-emoji-nav": layout },
+  });
   await placeAndWait(kb);
 
   input.focus();

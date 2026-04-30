@@ -8,7 +8,7 @@
             <HBox class="sapUiSmallMarginBottom" gap="1rem">
                 <Panel headerText="Layout Switcher">
                     <VBox class="sapUiSmallMargin">
-                        <Text text="Four custom LayoutDefinitions are registered via registerLayout(). They demonstrate KeyDefinition options such as width, type, icon, unicode values, label overrides, and dual icon+label rendering." />
+                        <Text text="Four custom LayoutDefinitions are supplied to the keyboard via the instanceLayouts property. They demonstrate KeyDefinition options such as width, type, icon, unicode values, label overrides, and dual icon+label rendering." />
                         <HBox class="sapUiSmallMarginTop">
                             <Button
                                 text="Emoji Picker"

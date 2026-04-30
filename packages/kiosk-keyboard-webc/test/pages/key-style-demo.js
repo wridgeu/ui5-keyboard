@@ -29,7 +29,11 @@ document.querySelectorAll(".theme-controls button").forEach((btn) => {
   });
 });
 
-// Register demo layouts
-KioskKeyboard.registerLayout("demo-default", [[{ value: "F5", label: "F5" }]]);
-
-KioskKeyboard.registerLayout("demo-modifier", [[{ value: "F5", label: "F5", type: "modifier" }]]);
+// Apply demo layouts as per-instance overrides on every kiosk-keyboard on the page.
+const demoLayouts = {
+  "demo-default": [[{ value: "F5", label: "F5" }]],
+  "demo-modifier": [[{ value: "F5", label: "F5", type: "modifier" }]],
+};
+document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
+  kb.instanceLayouts = demoLayouts;
+});

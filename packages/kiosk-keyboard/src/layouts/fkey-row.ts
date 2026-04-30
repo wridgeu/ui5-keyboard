@@ -9,7 +9,7 @@ import type { KeyRow } from "../types";
  * import type { LayoutDefinition } from "ui5/kiosk/types";
  *
  * const azertyFk: LayoutDefinition = [fkeyRow, ...azerty];
- * KioskKeyboard.registerLayout("azerty-fr-fk", azertyFk);
+ * new KioskKeyboard({ layout: "azerty-fr-fk", instanceLayouts: { "azerty-fr-fk": azertyFk } });
  * ```
  *
  * @public

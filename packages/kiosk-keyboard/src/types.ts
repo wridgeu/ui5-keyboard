@@ -246,8 +246,9 @@ export type KeyRow = KeyDefinition[];
 /**
  * Complete layout definition - an ordered array of rows.
  *
- * Each entry is a row of keys rendered top-to-bottom. Use this type
- * with {@link KioskKeyboard.registerLayout} to register custom layouts.
+ * Each entry is a row of keys rendered top-to-bottom. Pass values of this
+ * type through the `instanceLayouts` setting to expose custom layouts to
+ * a single keyboard instance.
  *
  * **Accessibility:** Keys with visible text labels get their accessible name
  * from the visible text. For icon-only keys (where `label` is `""`), the
@@ -273,10 +274,11 @@ export type KeyRow = KeyDefinition[];
  *   ],
  * ];
  *
- * KioskKeyboard.registerLayout("pinpad", pinpad);
+ * new KioskKeyboard({ layout: "pinpad", instanceLayouts: { pinpad } });
  * ```
  *
- * Then in XML: `<kiosk:KioskKeyboard layout="pinpad" />`
+ * Or in XML, after assigning `instanceLayouts` on the controller:
+ * `<kiosk:KioskKeyboard layout="pinpad" instanceLayouts="{/customLayouts}" />`
  *
  * @public
  * @since 0.1.0

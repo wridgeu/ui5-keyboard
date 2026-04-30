@@ -21,19 +21,13 @@ import {
   SECONDARY_LAYOUTS,
   getLayoutOrDefault,
   getLocaleLayout,
-  registerLayout,
-  unregisterLayout,
-  resetCustomLayouts,
   getRegisteredLayout,
   getRegisteredLayoutNames,
   isBuiltInLayout,
-  registerLocaleLayout,
-  unregisterLocaleLayout,
-  resetLocaleLayouts,
   type InstanceLayouts,
   type InstanceLocaleLayouts,
 } from "./core/layout-registry.js";
-import { getMiddlewareFactory, registerMiddleware, type InstanceMiddleware } from "./core/middleware-registry.js";
+import { getMiddlewareFactory, type InstanceMiddleware } from "./core/middleware-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
   KeyboardType,
@@ -263,40 +257,10 @@ class KioskKeyboard extends UI5Element {
     "active-control-change": ActiveControlChangeEventDetail;
   };
 
-  // ── Static registry delegates ──
+  // ── Static read-only registry getters ──
 
   /**
-   * Register a custom keyboard layout.
-   * @param name Layout name.
-   * @param definition Layout definition object.
-   * @public
-   * @since 0.1.0
-   */
-  static registerLayout(name: string, definition: LayoutDefinition): void {
-    registerLayout(name, definition);
-  }
-
-  /**
-   * Remove a previously registered custom layout.
-   * @param name Layout name to remove.
-   * @public
-   * @since 0.1.0
-   */
-  static unregisterLayout(name: string): void {
-    unregisterLayout(name);
-  }
-
-  /**
-   * Remove all custom layouts and keep built-in layouts intact.
-   * @public
-   * @since 0.1.0
-   */
-  static resetCustomLayouts(): void {
-    resetCustomLayouts();
-  }
-
-  /**
-   * Get a registered layout definition by name.
+   * Get a built-in layout definition by name.
    * @param name Layout name.
    * @returns The layout definition, or undefined if not found.
    * @public
@@ -307,7 +271,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Get all registered layout names (built-in and custom).
+   * Get all built-in layout names.
    * @returns Array of layout names.
    * @public
    * @since 0.1.0
@@ -337,36 +301,6 @@ class KioskKeyboard extends UI5Element {
    */
   static isSecondaryLayout(name: string): boolean {
     return SECONDARY_LAYOUTS.has(name);
-  }
-
-  /**
-   * Register a locale-to-layout mapping.
-   * @param locale Locale code (e.g. "de", "fr").
-   * @param layout Layout name to use for this locale.
-   * @public
-   * @since 0.1.0
-   */
-  static registerLocaleLayout(locale: string, layout: string): void {
-    registerLocaleLayout(locale, layout);
-  }
-
-  /**
-   * Remove a locale-to-layout mapping.
-   * @param locale Locale code to remove.
-   * @public
-   * @since 0.1.0
-   */
-  static unregisterLocaleLayout(locale: string): void {
-    unregisterLocaleLayout(locale);
-  }
-
-  /**
-   * Remove all custom locale-to-layout mappings.
-   * @public
-   * @since 0.1.0
-   */
-  static resetLocaleLayouts(): void {
-    resetLocaleLayouts();
   }
 
   /**
@@ -419,24 +353,14 @@ class KioskKeyboard extends UI5Element {
     KioskKeyboard._queueI18nRefresh();
   }
 
-  /**
-   * Register composition middleware for one or more layouts.
-   * @param layouts Layout names the middleware applies to.
-   * @param factory Factory function that creates a fresh middleware instance.
-   * @public
-   * @since 0.1.0
-   */
-  static registerMiddleware(layouts: string[], factory: () => CompositionMiddleware): void {
-    registerMiddleware(layouts, factory);
-  }
-
   // ── Public reactive properties (synced with attributes) ──
 
   /**
    * The active keyboard layout name.
    *
    * When empty, the keyboard resolves the layout from the current locale
-   * (see {@link KioskKeyboard.registerLocaleLayout registerLocaleLayout}).
+   * (see {@link KioskKeyboard.getLocaleLayout getLocaleLayout}). Per-instance
+   * locale overrides can be supplied via the `instanceLocaleLayouts` property.
    *
    * @default ""
    * @public
@@ -541,11 +465,14 @@ class KioskKeyboard extends UI5Element {
   @property()
   fKeyMode: `${FKeyMode}` = "Virtual";
 
+  // ── Public programmatic-only properties (no attribute mirror) ──
+
   /**
-   * Per-instance layout overrides. Resolution order is **instance map ->
-   * global registry -> built-in**. Use this in micro-frontend hosts to
-   * keep one app's layouts from leaking into another via the shared
-   * window-level registry.
+   * Per-instance layout overrides. Resolution order is
+   * **instance map -> built-in**, so an entry here shadows the
+   * built-in of the same name for this element only. Use this to
+   * supply a custom layout, or to override a built-in (e.g. swap
+   * the German layout) without affecting other elements.
    *
    * Programmatic only -- this property accepts a JS object (not a
    * stringifiable attribute), so it cannot be set via HTML markup.
@@ -559,7 +486,9 @@ class KioskKeyboard extends UI5Element {
 
   /**
    * Per-instance locale-to-layout overrides. Resolution order is
-   * **instance map -> global locale map -> default locale layouts**.
+   * **instance map -> built-in locale map -> default layout**. Keys
+   * are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are layout
+   * names.
    *
    * Programmatic only -- accepts a JS object (`Record<string, string>`).
    *
@@ -1086,31 +1015,88 @@ class KioskKeyboard extends UI5Element {
     return getLayoutOrDefault(name, layoutsMap);
   }
 
-  /** Returns a `Map` view of the `instanceLayouts` property, or undefined. */
+  // ── Memoized Map views of the instance-* properties ──
+  //
+  // The render pass and the middleware factory lookup read these on every
+  // invocation, so we rebuild the Map only when the source object identity
+  // changes. Consumers that want a fresh resolution should assign a new
+  // object (the standard React/Lit pattern) rather than mutating in place.
+
+  private _cachedInstanceLayoutsKey: object | null = null;
+  private _cachedInstanceLayoutsMap: InstanceLayouts | undefined = undefined;
+  private _cachedInstanceLocaleKey: object | null = null;
+  private _cachedInstanceLocaleMap: InstanceLocaleLayouts | undefined = undefined;
+  private _cachedInstanceMiddlewareKey: object | null = null;
+  private _cachedInstanceMiddlewareMap: InstanceMiddleware | undefined = undefined;
+
+  /** Returns a memoized `Map` view of the `instanceLayouts` property, or undefined. */
   private _getInstanceLayoutsMap(): InstanceLayouts | undefined {
     const value = this.instanceLayouts;
-    if (!value || typeof value !== "object") return undefined;
-    const entries = Object.entries(value).filter(([, def]) => Array.isArray(def)) as [string, LayoutDefinition][];
-    return entries.length === 0 ? undefined : new Map(entries);
+    if (!value || typeof value !== "object") {
+      this._cachedInstanceLayoutsKey = null;
+      this._cachedInstanceLayoutsMap = undefined;
+      return undefined;
+    }
+    if (this._cachedInstanceLayoutsKey === value) return this._cachedInstanceLayoutsMap;
+    const entries: [string, LayoutDefinition][] = [];
+    for (const [name, def] of Object.entries(value)) {
+      if (KioskKeyboard._isValidLayoutDefinition(def)) {
+        entries.push([name, def]);
+      } else {
+        console.warn(
+          `[kiosk-keyboard] Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
+        );
+      }
+    }
+    this._cachedInstanceLayoutsKey = value;
+    this._cachedInstanceLayoutsMap = entries.length === 0 ? undefined : new Map(entries);
+    return this._cachedInstanceLayoutsMap;
   }
 
-  /** Returns a `Map` view of the `instanceLocaleLayouts` property, or undefined. */
+  private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
+    return (
+      Array.isArray(def) &&
+      def.length > 0 &&
+      def.every(
+        (row) =>
+          Array.isArray(row) &&
+          row.length > 0 &&
+          row.every((key) => key && typeof (key as KeyDefinition).value === "string" && (key as KeyDefinition).value),
+      )
+    );
+  }
+
+  /** Returns a memoized `Map` view of the `instanceLocaleLayouts` property, or undefined. */
   private _getInstanceLocaleLayoutsMap(): InstanceLocaleLayouts | undefined {
     const value = this.instanceLocaleLayouts;
-    if (!value || typeof value !== "object") return undefined;
+    if (!value || typeof value !== "object") {
+      this._cachedInstanceLocaleKey = null;
+      this._cachedInstanceLocaleMap = undefined;
+      return undefined;
+    }
+    if (this._cachedInstanceLocaleKey === value) return this._cachedInstanceLocaleMap;
     const entries = Object.entries(value).filter(([, v]) => typeof v === "string") as [string, string][];
-    return entries.length === 0 ? undefined : new Map(entries);
+    this._cachedInstanceLocaleKey = value;
+    this._cachedInstanceLocaleMap = entries.length === 0 ? undefined : new Map(entries);
+    return this._cachedInstanceLocaleMap;
   }
 
-  /** Returns a `Map` view of the `instanceMiddleware` property, or undefined. */
+  /** Returns a memoized `Map` view of the `instanceMiddleware` property, or undefined. */
   private _getInstanceMiddlewareMap(): InstanceMiddleware | undefined {
     const value = this.instanceMiddleware;
-    if (!value || typeof value !== "object") return undefined;
+    if (!value || typeof value !== "object") {
+      this._cachedInstanceMiddlewareKey = null;
+      this._cachedInstanceMiddlewareMap = undefined;
+      return undefined;
+    }
+    if (this._cachedInstanceMiddlewareKey === value) return this._cachedInstanceMiddlewareMap;
     const entries = Object.entries(value).filter(([, v]) => typeof v === "function") as [
       string,
       () => CompositionMiddleware,
     ][];
-    return entries.length === 0 ? undefined : new Map(entries);
+    this._cachedInstanceMiddlewareKey = value;
+    this._cachedInstanceMiddlewareMap = entries.length === 0 ? undefined : new Map(entries);
+    return this._cachedInstanceMiddlewareMap;
   }
 
   _getKeyLabel(key: KeyDefinition): string {

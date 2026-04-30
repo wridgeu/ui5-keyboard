@@ -1456,19 +1456,21 @@ describe("kiosk-keyboard", () => {
     });
   });
 
-  // ── Static layout registration ──
+  // ── Per-instance layout overrides ──
 
-  describe("static layout registration", () => {
-    it("registerLayout makes layout available for rendering", async () => {
+  describe("per-instance layouts", () => {
+    it("instanceLayouts makes a custom layout available for rendering", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard></kiosk-keyboard>
         `,
       );
-      KioskKeyboard.registerLayout("test-pin", [
-        [{ value: "1" }, { value: "2" }, { value: "3" }],
-        [{ value: "4" }, { value: "5" }, { value: "6" }],
-      ]);
+      el.instanceLayouts = {
+        "test-pin": [
+          [{ value: "1" }, { value: "2" }, { value: "3" }],
+          [{ value: "4" }, { value: "5" }, { value: "6" }],
+        ],
+      };
       el.layout = "test-pin";
       await nextRender();
 
@@ -1477,43 +1479,39 @@ describe("kiosk-keyboard", () => {
       expect(values).to.include("1");
       expect(values).to.include("6");
       expect(values).to.have.lengthOf(6);
-
-      // Clean up
-      KioskKeyboard.unregisterLayout("test-pin");
     });
 
-    it("layout registered via static method is visible to all instances", async () => {
+    it("instanceLayouts on one element does not leak into another", async () => {
       const container = await fixture(html`
         <div>
           <kiosk-keyboard id="kb-a"></kiosk-keyboard>
           <kiosk-keyboard id="kb-b"></kiosk-keyboard>
         </div>
       `);
+      const kbA = container.querySelector<KioskKeyboard>("#kb-a")!;
       const kbB = container.querySelector<KioskKeyboard>("#kb-b")!;
 
-      KioskKeyboard.registerLayout("shared-test", [[{ value: "x" }, { value: "y" }]]);
+      kbA.instanceLayouts = { "shared-test": [[{ value: "x" }, { value: "y" }]] };
+      kbA.layout = "shared-test";
       kbB.layout = "shared-test";
       await nextRender();
 
-      const keys = queryKeys(kbB);
-      const values = Array.from(keys).map((k) => k.dataset.key);
-      expect(values).to.include("x");
-      expect(values).to.include("y");
+      const valuesA = Array.from(queryKeys(kbA)).map((k) => k.dataset.key);
+      expect(valuesA).to.include("x");
+      expect(valuesA).to.include("y");
 
-      // Clean up
-      KioskKeyboard.unregisterLayout("shared-test");
+      // kbB has no instance entry for "shared-test" and no built-in registration
+      // exists, so it falls back to the default layout (more than 2 keys).
+      const keysB = queryKeys(kbB);
+      expect(keysB.length).to.be.greaterThan(2);
     });
 
-    it("unregisterLayout removes layout", async () => {
+    it("falls back to default when an unknown layout is requested without instanceLayouts", async () => {
       const el = await fixture<KioskKeyboard>(
         html`
           <kiosk-keyboard></kiosk-keyboard>
         `,
       );
-      KioskKeyboard.registerLayout("temp-layout", [[{ value: "a" }]]);
-      KioskKeyboard.unregisterLayout("temp-layout");
-
-      // Should fall back to default since temp-layout is gone
       el.layout = "temp-layout";
       await nextRender();
 

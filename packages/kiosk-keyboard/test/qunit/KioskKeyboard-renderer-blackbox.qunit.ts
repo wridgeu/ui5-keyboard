@@ -16,7 +16,6 @@ const DOM = KioskKeyboard.DOM;
 
 QUnit.module("KioskKeyboard renderer black-box", {
   afterEach() {
-    KioskKeyboard.resetCustomLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -150,9 +149,7 @@ QUnit.test("Shifted visible labels update in DOM", async (assert) => {
       { value: "{shift}", label: "", type: "modifier", width: "1.5" },
     ],
   ];
-  KioskKeyboard.registerLayout("bb-shift-test", layout);
-
-  const kb = new KioskKeyboard({ layout: "bb-shift-test" });
+  const kb = new KioskKeyboard({ layout: "bb-shift-test", instanceLayouts: { "bb-shift-test": layout } });
   await placeAndWait(kb);
 
   const getKey = (v: string) => getKeyElement(kb, v)!;
@@ -306,9 +303,7 @@ QUnit.test("Layout switch via {layout:numeric} changes rendered key matrix", asy
 
 QUnit.test("icon omitted, label omitted: renders label from value", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "a" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "a");
@@ -318,14 +313,11 @@ QUnit.test("icon omitted, label omitted: renders label from value", async (asser
   assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("icon omitted, label set: renders custom label only", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", label: "Custom" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -334,14 +326,11 @@ QUnit.test("icon omitted, label set: renders custom label only", async (assert) 
   assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("icon omitted, label empty: renders blank key", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", label: "" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -349,14 +338,11 @@ QUnit.test("icon omitted, label empty: renders blank key", async (assert) => {
   assert.notOk(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "No label element");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("SAP icon set, label omitted: renders both (dual)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "sap-icon://home" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -366,14 +352,11 @@ QUnit.test("SAP icon set, label omitted: renders both (dual)", async (assert) =>
   assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("SAP icon + custom label: renders both (dual)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "sap-icon://home", label: "Go" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -382,14 +365,11 @@ QUnit.test("SAP icon + custom label: renders both (dual)", async (assert) => {
   assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("SAP icon set, label empty: renders icon only", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "sap-icon://home", label: "" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -398,14 +378,11 @@ QUnit.test("SAP icon set, label empty: renders icon only", async (assert) => {
   assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("icon empty, label omitted: renders label only (icon suppressed)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -414,14 +391,11 @@ QUnit.test("icon empty, label omitted: renders label only (icon suppressed)", as
   assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("Unicode icon renders as text span with icon class", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "\u21E7", label: "Shift" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -434,14 +408,11 @@ QUnit.test("Unicode icon renders as text span with icon class", async (assert) =
   assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("emoji icon renders as text span with icon class", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "\uD83D\uDD0D", label: "Search" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -452,14 +423,11 @@ QUnit.test("emoji icon renders as text span with icon class", async (assert) => 
   assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("Shift key renders built-in icon + i18n label (dual)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "{shift}", type: "modifier", width: "2.25" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "{shift}");
@@ -472,14 +440,11 @@ QUnit.test("Shift key renders built-in icon + i18n label (dual)", async (assert)
   assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("Space bar renders visible i18n label, no icon", async (assert) => {
   const layout: LayoutDefinition = [[{ value: " ", type: "space", width: "space" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, " ");
@@ -491,14 +456,11 @@ QUnit.test("Space bar renders visible i18n label, no icon", async (assert) => {
   );
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 QUnit.test("Shift with label='' renders icon only (opt-out)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "{shift}", type: "modifier", width: "2.25", label: "" }]];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-icon-label", layout);
-  kb.setLayout("test-icon-label");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "{shift}");
@@ -508,7 +470,6 @@ QUnit.test("Shift with label='' renders icon only (opt-out)", async (assert) => 
   assert.ok(keyEl.getAttribute("aria-label"), "aria-label present for icon-only key");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-icon-label");
 });
 
 // ──────────────────────────────────────────────
@@ -519,9 +480,7 @@ QUnit.test("capsLockLabel overrides visible label during caps lock", async (asse
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "CL" }],
   ];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-capslock", layout);
-  kb.setLayout("test-capslock");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
   await placeAndWait(kb);
 
   // Activate caps lock (double-tap shift)
@@ -539,16 +498,13 @@ QUnit.test("capsLockLabel overrides visible label during caps lock", async (asse
   assert.notOk(keyEl.getAttribute("aria-label"), "No redundant aria-label when visible capsLockLabel is present");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-capslock");
 });
 
 QUnit.test("capsLockIcon overrides icon during caps lock", async (assert) => {
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "\u21E7" }],
   ];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-capslock", layout);
-  kb.setLayout("test-capslock");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
@@ -562,16 +518,13 @@ QUnit.test("capsLockIcon overrides icon during caps lock", async (assert) => {
   assert.strictEqual(iconEl!.textContent, "\u21E7", "CapsLock icon shows custom Unicode value");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-capslock");
 });
 
 QUnit.test("capsLockIcon: '' suppresses icon during caps lock", async (assert) => {
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "" }],
   ];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-capslock", layout);
-  kb.setLayout("test-capslock");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
@@ -583,16 +536,13 @@ QUnit.test("capsLockIcon: '' suppresses icon during caps lock", async (assert) =
   assert.notOk(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "No icon during caps lock");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-capslock");
 });
 
 QUnit.test("capsLockLabel: '' suppresses label, aria-label says Caps Lock", async (assert) => {
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "" }],
   ];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-capslock", layout);
-  kb.setLayout("test-capslock");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
@@ -605,7 +555,6 @@ QUnit.test("capsLockLabel: '' suppresses label, aria-label says Caps Lock", asyn
   assert.ok(/caps lock/i.test(keyEl.getAttribute("aria-label") ?? ""), "aria-label contains 'Caps Lock'");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-capslock");
 });
 
 // ──────────────────────────────────────────────
@@ -614,41 +563,35 @@ QUnit.test("capsLockLabel: '' suppresses label, aria-label says Caps Lock", asyn
 
 QUnit.test("multi-character label gets title attribute", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", label: "Custom" }]];
-  KioskKeyboard.registerLayout("test-title", layout);
-  const kb = new KioskKeyboard({ layout: "test-title" });
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
   assert.strictEqual(keyEl.getAttribute("title"), "Custom", "title matches full label text");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-title");
 });
 
 QUnit.test("single-glyph label does not get title attribute", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "a" }]];
-  KioskKeyboard.registerLayout("test-title", layout);
-  const kb = new KioskKeyboard({ layout: "test-title" });
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "a");
   assert.notOk(keyEl.getAttribute("title"), "no title on single-glyph key");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-title");
 });
 
 QUnit.test("empty label does not get title attribute", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", label: "" }]];
-  KioskKeyboard.registerLayout("test-title", layout);
-  const kb = new KioskKeyboard({ layout: "test-title" });
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
   assert.notOk(keyEl.getAttribute("title"), "no title on empty-label key");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-title");
 });
 
 QUnit.test("special key with i18n label gets title (e.g. Enter)", async (assert) => {
@@ -666,37 +609,31 @@ QUnit.test("special key with i18n label gets title (e.g. Enter)", async (assert)
 
 QUnit.test("CJK multi-character label gets title", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "{layout:alpha}", label: "\u30ED\u30FC\u30DE\u5B57" }]];
-  KioskKeyboard.registerLayout("test-title", layout);
-  const kb = new KioskKeyboard({ layout: "test-title" });
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "{layout:alpha}");
   assert.strictEqual(keyEl.getAttribute("title"), "\u30ED\u30FC\u30DE\u5B57", "CJK multi-char label gets title");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-title");
 });
 
 QUnit.test("CJK single glyph does not get title", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", label: "\u3042" }]];
-  KioskKeyboard.registerLayout("test-title", layout);
-  const kb = new KioskKeyboard({ layout: "test-title" });
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
   assert.notOk(keyEl.getAttribute("title"), "no title on single CJK glyph");
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-title");
 });
 
 QUnit.test("icon: '' + capsLockIcon shows icon only during caps lock", async (assert) => {
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", icon: "", capsLockIcon: "\u{1F512}" }],
   ];
-  const kb = new KioskKeyboard();
-  KioskKeyboard.registerLayout("test-capslock", layout);
-  kb.setLayout("test-capslock");
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
   await placeAndWait(kb);
 
   // Normal state: no icon (icon: "" suppresses)
@@ -716,5 +653,4 @@ QUnit.test("icon: '' + capsLockIcon shows icon only during caps lock", async (as
   );
 
   kb.destroy();
-  KioskKeyboard.unregisterLayout("test-capslock");
 });

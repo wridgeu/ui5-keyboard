@@ -262,21 +262,24 @@ keyboardType    Resolved layout
 
 ### Layout Composition
 
-Composite layouts are composed at registration time using the shared row modules:
+Composite layouts are composed at consumption time using the shared row modules and supplied to a single element via `instanceLayouts`:
 
 ```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
-import qwerty from "kiosk-keyboard-webc/layouts/qwerty";
 
-KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);
+const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
+
+const el = document.createElement("kiosk-keyboard");
+el.instanceLayouts = { "my-qwerty-fk": [fkeyRow, ...qwerty] };
+el.layout = "my-qwerty-fk";
 ```
 
-### Layout Registration
+### Layout Resolution
 
-- Built-in layouts are stored in a `ReadonlyMap` and cannot be overwritten or removed
-- Custom layouts are validated at registration: must be a non-empty array of non-empty rows where each key has a string `value`
-- Static API: `registerLayout()`, `unregisterLayout()`, `resetCustomLayouts()`
-- Instance API: delegates to the static registry
+- Built-in layouts are stored in a sealed module-level `Map`, populated by side-effect imports of `layouts/*.ts` and never mutated again at runtime
+- Per-element overrides flow through the `instanceLayouts` property (a plain `Record`), validated at assignment: must be a non-empty array of non-empty rows where each key has a string `value`
+- Resolution order: instance map → built-in map → default layout
 
 ### Locale Auto-Selection
 
@@ -286,7 +289,7 @@ When no explicit `layout` is set, `getLocaleLayout()` uses `Intl.Locale(navigato
 2. Language prefix (e.g., `"de"`)
 3. Fallback to `"qwerty"`
 
-Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`. Extensible via `registerLocaleLayout()`.
+Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`. Extensible per element via `instanceLocaleLayouts`.
 
 ## Auto-Type Detection
 

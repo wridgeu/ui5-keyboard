@@ -8,8 +8,6 @@ const DOM = KioskKeyboard.DOM;
 QUnit.module("KioskKeyboard - i18n integration", {
   afterEach() {
     KioskKeyboard.setI18nResolver(null);
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

@@ -141,13 +141,18 @@ architecture simplification (the class was flattened from a re-export pattern
 into a single file, making a separate core entry unnecessary).
 
 Consumers who want selective layout loading can import individual layouts via
-subpath imports:
+subpath imports and pass any custom layouts through the per-element
+`instanceLayouts` property:
 
 ```typescript
 import KioskKeyboard from "kiosk-keyboard-webc";
 import "kiosk-keyboard-webc/layouts/qwerty";
 import "kiosk-keyboard-webc/layouts/numeric";
-KioskKeyboard.registerLayout("my-custom", myDefinition);
+
+const el = document.createElement("kiosk-keyboard");
+el.instanceLayouts = { "my-custom": myDefinition };
+el.layout = "my-custom";
+document.body.appendChild(el);
 ```
 
 Available layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
