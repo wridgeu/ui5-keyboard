@@ -323,13 +323,39 @@ Advanced/internal modules are available but should not be treated as a semver-st
 
 ## FLP Lifecycle (Module Cache)
 
-In SAP Fiori launchpad (single-page shell), modules are cached and reused between app launches. Keep these rules in mind:
+In SAP Fiori launchpad (single-page shell), modules are cached and reused between app launches. Without isolation, registrations made by App A persist after App A is destroyed and bleed into App B. The library offers two complementary mechanisms:
+
+### Per-instance overrides (recommended)
+
+The `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties take a plain `Record` and shadow the global registry for that control only. Resolution order is **instance map → global registry → built-in**, so an entry on the control wins without mutating module-level state.
+
+```ts
+const kb = new KioskKeyboard({
+  instanceLayouts: { "warehouse-pos": myPosLayout },
+  instanceLocaleLayouts: { de: "warehouse-pos-de" },
+  instanceMiddleware: { "ja-kana": kanaDakutenFactory },
+  layout: "warehouse-pos",
+});
+```
+
+Use this for any registration that's specific to one app (or one screen). It is the only mechanism that cannot be polluted by another app's prior global registration.
+
+### Last-instance auto-cleanup
+
+When the last living `KioskKeyboard` is destroyed, the library auto-clears all consumer registrations:
+
+- Custom layouts (overridden built-ins are restored to original definitions)
+- Locale-to-layout mappings (reset to built-in defaults)
+- Middleware factories (overridden built-ins are restored, custom factories are dropped)
+- Global target resolver and i18n resolver
+
+This protects "App A forgot to clean up" scenarios with no consumer code change. **Caveat:** under FLP `keepAliveMode`, the last-instance condition may not fire for a long time, so the auto-cleanup is a backstop, not a substitute for per-instance overrides.
+
+### Manual cleanup (if you must use the global API)
 
 - Controls inside the normal view/control tree are destroyed by UI5 and clean up automatically.
 - Programmatically created keyboards outside the view tree (for example `placeAt("sap-ui-static")`) must be destroyed explicitly in `Component.destroy()`.
-- App-specific layout registrations are module-level state and survive app reopen in FLP.
-- Technical note: cleanup of layout/locale registrations is optional. Re-registering the same custom layout names is blocked, and reapplying locale mappings is typically harmless.
-- For deterministic per-app state (and especially dynamic registration names), cleanup is still recommended in `Component.destroy()` with:
+- For deterministic per-app state without relying on auto-cleanup, call from `Component.destroy()`:
   - `KioskKeyboard.unregisterLayout(name)` / `KioskKeyboard.unregisterLocaleLayout(locale)` for targeted cleanup, or
   - `KioskKeyboard.resetCustomLayouts()` / `KioskKeyboard.resetLocaleLayouts()` to reset to built-in defaults.
 
@@ -337,18 +363,21 @@ In SAP Fiori launchpad (single-page shell), modules are cached and reused betwee
 
 ### Properties
 
-| Property         | Type                       | Default     | Description                                                                                                                                 |
-| ---------------- | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`         | `string`                   | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.                                                 |
-| `keyboardType`   | `ui5.kiosk.KeyboardType`   | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                                                               |
-| `enabled`        | `boolean`                  | `true`      | Whether the keyboard is interactive.                                                                                                        |
-| `ariaLabel`      | `string`                   | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.                                               |
-| `docked`         | `boolean`                  | `false`     | Anchor to the bottom of the viewport with slide animation.                                                                                  |
-| `autoShow`       | `boolean`                  | `false`     | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                                                                  |
-| `autoType`       | `boolean`                  | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                                                           |
-| `mobileKeyboard` | `ui5.kiosk.MobileKeyboard` | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                     |
-| `fKeyMode`       | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action). |
-| `controls`       | `string[]`                 | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                             |
+| Property                | Type                                                  | Default     | Description                                                                                                                                         |
+| ----------------------- | ----------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`                | `string`                                              | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Only for `keyboardType="Full"`.                                                         |
+| `keyboardType`          | `ui5.kiosk.KeyboardType`                              | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                                                                       |
+| `enabled`               | `boolean`                                             | `true`      | Whether the keyboard is interactive.                                                                                                                |
+| `ariaLabel`             | `string`                                              | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.                                                       |
+| `docked`                | `boolean`                                             | `false`     | Anchor to the bottom of the viewport with slide animation.                                                                                          |
+| `autoShow`              | `boolean`                                             | `false`     | Auto-open on input focus, auto-close when focus leaves. Requires `docked`.                                                                          |
+| `autoType`              | `boolean`                                             | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                                                                   |
+| `mobileKeyboard`        | `ui5.kiosk.MobileKeyboard`                            | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                             |
+| `fKeyMode`              | `ui5.kiosk.FKeyMode`                                  | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action).         |
+| `controls`              | `string[]`                                            | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                     |
+| `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides. Resolution order is **instance map → global registry → built-in**. See [FLP Lifecycle](#flp-lifecycle-module-cache). |
+| `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the global locale map.                                                                               |
+| `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                                 |
 
 ### Associations
 

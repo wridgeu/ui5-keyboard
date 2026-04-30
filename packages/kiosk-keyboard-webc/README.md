@@ -280,19 +280,22 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 
 ## Attributes / Properties
 
-| Attribute         | Property         | Type      | Default     | Description                                                                      |
-| ----------------- | ---------------- | --------- | ----------- | -------------------------------------------------------------------------------- |
-| `layout`          | `layout`         | `string`  | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.       |
-| `keyboard-type`   | `keyboardType`   | `string`  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                            |
-| `open`            | `open`           | `boolean` | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.              |
-| `docked`          | `docked`         | `boolean` | `false`     | Fixed-position mode at bottom of viewport.                                       |
-| `auto-show`       | `autoShow`       | `boolean` | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).          |
-| `auto-type`       | `autoType`       | `boolean` | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                   |
-| `disabled`        | `disabled`       | `boolean` | `false`     | Disables all key interaction.                                                    |
-| `controls`        | `controls`       | `string`  | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.      |
-| `accessible-name` | `accessibleName` | `string`  | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".       |
-| `mobile-keyboard` | `mobileKeyboard` | `string`  | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                  |
-| `f-key-mode`      | `fKeyMode`       | `string`  | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`. |
+| Attribute             | Property                | Type                                                  | Default     | Description                                                                                                                              |
+| --------------------- | ----------------------- | ----------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`              | `layout`                | `string`                                              | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                               |
+| `keyboard-type`       | `keyboardType`          | `string`                                              | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                    |
+| `open`                | `open`                  | `boolean`                                             | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                      |
+| `docked`              | `docked`                | `boolean`                                             | `false`     | Fixed-position mode at bottom of viewport.                                                                                               |
+| `auto-show`           | `autoShow`              | `boolean`                                             | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                  |
+| `auto-type`           | `autoType`              | `boolean`                                             | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                           |
+| `disabled`            | `disabled`              | `boolean`                                             | `false`     | Disables all key interaction.                                                                                                            |
+| `controls`            | `controls`              | `string`                                              | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                              |
+| `accessible-name`     | `accessibleName`        | `string`                                              | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                               |
+| `mobile-keyboard`     | `mobileKeyboard`        | `string`                                              | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                          |
+| `f-key-mode`          | `fKeyMode`              | `string`                                              | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                         |
+| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides; shadow the global registry. See [Multi-App / Micro-Frontend Hosting](#multi-app--micro-frontend-hosting). |
+| _(programmatic only)_ | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the global locale map.                                                                    |
+| _(programmatic only)_ | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                      |
 
 ### Keyboard type override via `data-keyboard-type`
 
@@ -446,6 +449,46 @@ interface KeyDefinition {
   icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present
 }
 ```
+
+## Multi-App / Micro-Frontend Hosting
+
+The static `KioskKeyboard.registerLayout(...)`, `registerLocaleLayout(...)`, and `registerMiddleware(...)` calls mutate **window-global** state that lives for the lifetime of the page. In SAP Fiori Launchpad and other multi-app shells where several apps share one window, registrations made by App A persist after App A is destroyed and bleed into App B. Independently bundled micro-frontends that each import this module share the same singleton.
+
+Two safe patterns:
+
+### 1. Per-instance overrides (recommended)
+
+Every `<kiosk-keyboard>` accepts three programmatic-only properties that take precedence over the global registry: `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware`. Resolution order is **instance map → global registry → built-in**, so an entry on the element shadows any registration of the same name without touching module-level state.
+
+```ts
+const el = document.createElement("kiosk-keyboard");
+el.instanceLayouts = { "warehouse-pos": warehousePosLayout };
+el.instanceLocaleLayouts = { de: "warehouse-pos-de" };
+el.instanceMiddleware = { "ja-kana": kanaDakutenFactory };
+el.layout = "warehouse-pos";
+document.body.appendChild(el);
+```
+
+These properties accept JS objects, not strings, so they cannot be set via HTML attributes - assign them programmatically before connecting the element (or before the next render cycle).
+
+This is the only pattern that cannot be polluted by another bundle's prior global registration: the instance owns its overrides, no shared state involved.
+
+### 2. Manual cleanup if you must use the global API
+
+The web component framework has no `destroy` lifecycle hook (`onExitDOM` fires every time the element is detached, including transient detach/reattach during a parent reflow), so the library cannot reliably auto-clear globals when the last element disappears. If your app calls `KioskKeyboard.registerLayout(...)`, `registerLocaleLayout(...)`, or `registerMiddleware(...)`, run the matching cleanup in your app's teardown:
+
+```ts
+// In your app's exit / unmount code
+KioskKeyboard.unregisterLayout("warehouse-pos");
+KioskKeyboard.unregisterLocaleLayout("de");
+// Or the bulk equivalents:
+KioskKeyboard.resetCustomLayouts();
+KioskKeyboard.resetLocaleLayouts();
+```
+
+There is no public API to remove individual middleware factories on the WebC element - prefer the instance API for middleware-heavy use cases.
+
+If you mix this element inside a UI5 host (via `@ui5/wrapper-component`), the UI5 host's `Component.exit()` is the natural place for these cleanup calls.
 
 ## Function Keys (F1-F12)
 

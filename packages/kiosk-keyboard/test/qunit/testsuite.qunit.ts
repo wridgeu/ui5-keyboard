@@ -100,6 +100,9 @@ sap.ui.define([], () => {
       "native-keyboard-suppression": {
         title: "QUnit tests for ui5.kiosk - NativeKeyboardSuppression",
       },
+      "instance-overrides": {
+        title: "QUnit tests for ui5.kiosk - per-instance layout/middleware/locale overrides",
+      },
     },
   };
 });

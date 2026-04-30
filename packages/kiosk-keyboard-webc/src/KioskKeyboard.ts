@@ -30,8 +30,10 @@ import {
   registerLocaleLayout,
   unregisterLocaleLayout,
   resetLocaleLayouts,
+  type InstanceLayouts,
+  type InstanceLocaleLayouts,
 } from "./core/layout-registry.js";
-import { getMiddlewareFactory, registerMiddleware } from "./core/middleware-registry.js";
+import { getMiddlewareFactory, registerMiddleware, type InstanceMiddleware } from "./core/middleware-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import {
   KeyboardType,
@@ -239,7 +241,7 @@ function resolveRemThreshold(
  * in auto-show mode, or `setTargetElement()` is called programmatically).
  * @param {HTMLInputElement | HTMLTextAreaElement | null} activeElement The new active element, or null if cleared.
  * @public
- * @since 0.2.0
+ * @since 0.1.0
  */
 @event("active-control-change", { bubbles: true })
 class KioskKeyboard extends UI5Element {
@@ -503,7 +505,7 @@ class KioskKeyboard extends UI5Element {
    *
    * @default ""
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   @property()
   controls = "";
@@ -538,6 +540,48 @@ class KioskKeyboard extends UI5Element {
    */
   @property()
   fKeyMode: `${FKeyMode}` = "Virtual";
+
+  /**
+   * Per-instance layout overrides. Resolution order is **instance map ->
+   * global registry -> built-in**. Use this in micro-frontend hosts to
+   * keep one app's layouts from leaking into another via the shared
+   * window-level registry.
+   *
+   * Programmatic only -- this property accepts a JS object (not a
+   * stringifiable attribute), so it cannot be set via HTML markup.
+   *
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object, noAttribute: true })
+  instanceLayouts: Record<string, LayoutDefinition> | null = null;
+
+  /**
+   * Per-instance locale-to-layout overrides. Resolution order is
+   * **instance map -> global locale map -> default locale layouts**.
+   *
+   * Programmatic only -- accepts a JS object (`Record<string, string>`).
+   *
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object, noAttribute: true })
+  instanceLocaleLayouts: Record<string, string> | null = null;
+
+  /**
+   * Per-instance composition middleware overrides keyed by layout name.
+   *
+   * Programmatic only -- accepts a JS object whose values are factory
+   * functions returning a `CompositionMiddleware`.
+   *
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object, noAttribute: true })
+  instanceMiddleware: Record<string, () => CompositionMiddleware> | null = null;
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
@@ -713,7 +757,8 @@ class KioskKeyboard extends UI5Element {
     KioskKeyboard._instances.add(this);
 
     if (!this._baseLayout) {
-      this._baseLayout = this.layout || getLocaleLayout();
+      this._baseLayout =
+        this.layout || getLocaleLayout(this._getInstanceLocaleLayoutsMap(), this._getInstanceLayoutsMap());
       if (!this.layout) {
         this._currentLayout = this._baseLayout;
       }
@@ -890,7 +935,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * Returns the currently active target input element, or null if none.
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   get activeElement(): HTMLInputElement | HTMLTextAreaElement | null {
     return this._targetElement;
@@ -1025,15 +1070,47 @@ class KioskKeyboard extends UI5Element {
   // ── Template helpers (used by KioskKeyboardTemplate) ──
 
   _getResolvedLayout(): LayoutDefinition {
+    const layoutsMap = this._getInstanceLayoutsMap();
     // An explicit layout switch (via {layout:...} key) takes precedence,
     // even when keyboardType constrains the default layout.
-    if (this._layoutSource === "user") return getLayoutOrDefault(this._currentLayout);
+    if (this._layoutSource === "user") return getLayoutOrDefault(this._currentLayout, layoutsMap);
 
     const type = this.keyboardType;
-    if (type === KeyboardType.Numpad) return getLayoutOrDefault("numpad");
-    if (type === KeyboardType.Numeric) return getLayoutOrDefault("numeric");
-    const name = this._currentLayout || this._baseLayout || this.layout || getLocaleLayout();
-    return getLayoutOrDefault(name);
+    if (type === KeyboardType.Numpad) return getLayoutOrDefault("numpad", layoutsMap);
+    if (type === KeyboardType.Numeric) return getLayoutOrDefault("numeric", layoutsMap);
+    const name =
+      this._currentLayout ||
+      this._baseLayout ||
+      this.layout ||
+      getLocaleLayout(this._getInstanceLocaleLayoutsMap(), layoutsMap);
+    return getLayoutOrDefault(name, layoutsMap);
+  }
+
+  /** Returns a `Map` view of the `instanceLayouts` property, or undefined. */
+  private _getInstanceLayoutsMap(): InstanceLayouts | undefined {
+    const value = this.instanceLayouts;
+    if (!value || typeof value !== "object") return undefined;
+    const entries = Object.entries(value).filter(([, def]) => Array.isArray(def)) as [string, LayoutDefinition][];
+    return entries.length === 0 ? undefined : new Map(entries);
+  }
+
+  /** Returns a `Map` view of the `instanceLocaleLayouts` property, or undefined. */
+  private _getInstanceLocaleLayoutsMap(): InstanceLocaleLayouts | undefined {
+    const value = this.instanceLocaleLayouts;
+    if (!value || typeof value !== "object") return undefined;
+    const entries = Object.entries(value).filter(([, v]) => typeof v === "string") as [string, string][];
+    return entries.length === 0 ? undefined : new Map(entries);
+  }
+
+  /** Returns a `Map` view of the `instanceMiddleware` property, or undefined. */
+  private _getInstanceMiddlewareMap(): InstanceMiddleware | undefined {
+    const value = this.instanceMiddleware;
+    if (!value || typeof value !== "object") return undefined;
+    const entries = Object.entries(value).filter(([, v]) => typeof v === "function") as [
+      string,
+      () => CompositionMiddleware,
+    ][];
+    return entries.length === 0 ? undefined : new Map(entries);
   }
 
   _getKeyLabel(key: KeyDefinition): string {
@@ -1246,7 +1323,11 @@ class KioskKeyboard extends UI5Element {
 
     // ── Composition middleware ──
     if (!this._middleware) {
-      const factory = getMiddlewareFactory(this._currentLayout || this._baseLayout || this.layout || getLocaleLayout());
+      const layoutsMap = this._getInstanceLayoutsMap();
+      const localeMap = this._getInstanceLocaleLayoutsMap();
+      const layoutName =
+        this._currentLayout || this._baseLayout || this.layout || getLocaleLayout(localeMap, layoutsMap);
+      const factory = getMiddlewareFactory(layoutName, this._getInstanceMiddlewareMap());
       if (factory) this._middleware = factory();
     }
     if (this._middleware && target && this._middleware.handleKey(value, target)) {
@@ -1352,7 +1433,10 @@ class KioskKeyboard extends UI5Element {
     }
     const layoutName = value.slice("{layout:".length, -1);
     if (layoutName === "base") {
-      this._currentLayout = this._baseLayout || this.layout || getLocaleLayout();
+      this._currentLayout =
+        this._baseLayout ||
+        this.layout ||
+        getLocaleLayout(this._getInstanceLocaleLayoutsMap(), this._getInstanceLayoutsMap());
       this._layoutSource = "external";
     } else {
       this._currentLayout = layoutName;

@@ -55,6 +55,12 @@ function isRegisteredLayout(layout: string): boolean {
   return layouts.has(layout);
 }
 
+/** Per-instance layout map (optional) for layered resolution. */
+export type InstanceLayouts = ReadonlyMap<string, LayoutDefinition>;
+
+/** Per-instance locale map (optional) for layered resolution. */
+export type InstanceLocaleLayouts = ReadonlyMap<string, string>;
+
 /**
  * Normalizes an input to a trimmed lowercase string.
  * Returns `undefined` for non-string or empty-after-trim values, logging a warning.
@@ -73,10 +79,19 @@ function normalizeLowerString(value: unknown, argName: string): string | undefin
   return trimmed;
 }
 
-function resolveLocaleMappedLayout(locale: string): string | null {
-  const mappedLayout = LOCALE_LAYOUT_MAP.get(locale);
+function resolveLocaleMappedLayout(
+  locale: string,
+  instanceLocaleLayouts?: InstanceLocaleLayouts,
+  instanceLayouts?: InstanceLayouts,
+): string | null {
+  const mappedLayout = instanceLocaleLayouts?.get(locale) ?? LOCALE_LAYOUT_MAP.get(locale);
   if (!mappedLayout) return null;
-  return isRegisteredLayout(mappedLayout) ? mappedLayout : null;
+  // The mapped layout must resolve to a known layout (instance overrides
+  // count as known) to avoid silently selecting an unregistered name.
+  if (instanceLayouts?.has(mappedLayout) || isRegisteredLayout(mappedLayout)) {
+    return mappedLayout;
+  }
+  return null;
 }
 
 /**
@@ -146,24 +161,26 @@ export function resetCustomLayouts(): void {
 
 /**
  * Returns the layout definition for the given name, or undefined
- * if no such layout is registered.
+ * if no such layout is registered. Instance overrides take precedence.
  */
-export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
+export function getRegisteredLayout(sName: string, instanceLayouts?: InstanceLayouts): LayoutDefinition | undefined {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return undefined;
-  return layouts.get(name);
+  return instanceLayouts?.get(name) ?? layouts.get(name);
 }
 
 /**
  * Returns the layout for the given name, falling back to
  * {@link DEFAULT_LAYOUT} when the name is not registered.
+ *
+ * Resolution order: instance map -> global registry -> default layout.
  */
-export function getLayoutOrDefault(sName: string): LayoutDefinition {
+export function getLayoutOrDefault(sName: string, instanceLayouts?: InstanceLayouts): LayoutDefinition {
   const name = normalizeLowerString(sName, "layout name");
-  const fallback = layouts.get(DEFAULT_LAYOUT);
+  const fallback = instanceLayouts?.get(DEFAULT_LAYOUT) ?? layouts.get(DEFAULT_LAYOUT);
   if (!fallback) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
   if (!name) return fallback;
-  return layouts.get(name) ?? fallback;
+  return instanceLayouts?.get(name) ?? layouts.get(name) ?? fallback;
 }
 
 /** Returns the names of all registered layouts (built-in + custom). */
@@ -229,23 +246,26 @@ export function resetLocaleLayouts(): void {
  * Returns the layout name appropriate for the current UI5 locale.
  *
  * Resolution order:
- * 1. Exact BCP-47 match (e.g. "de-at")
- * 2. Language prefix (e.g. "de")
+ * 1. Exact BCP-47 match (e.g. "de-at"), instance map first then global
+ * 2. Language prefix (e.g. "de"), instance map first then global
  * 3. {@link DEFAULT_LAYOUT} fallback ("qwerty")
  */
-export function getLocaleLayout(): string {
+export function getLocaleLayout(
+  instanceLocaleLayouts?: InstanceLocaleLayouts,
+  instanceLayouts?: InstanceLayouts,
+): string {
   const tag = Localization.getLanguageTag();
   const lang = tag.language.toLowerCase();
   const region = tag.region;
 
   // Exact match: "de-at", "pt-br", etc.
   if (region) {
-    const exact = resolveLocaleMappedLayout(`${lang}-${region.toLowerCase()}`);
+    const exact = resolveLocaleMappedLayout(`${lang}-${region.toLowerCase()}`, instanceLocaleLayouts, instanceLayouts);
     if (exact) return exact;
   }
 
   // Language prefix: "de", "fr", etc.
-  const prefix = resolveLocaleMappedLayout(lang);
+  const prefix = resolveLocaleMappedLayout(lang, instanceLocaleLayouts, instanceLayouts);
   if (prefix) return prefix;
 
   return DEFAULT_LAYOUT;
