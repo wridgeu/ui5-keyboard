@@ -1644,9 +1644,26 @@ export default class KioskKeyboard extends Control {
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
     const kbType = this.getKeyboardType();
-    if (kbType === KeyboardType.Numpad) return registryGetLayoutOrDefault("numpad", this._instanceLayoutsMap);
-    if (kbType === KeyboardType.Numeric) return registryGetLayoutOrDefault("numeric", this._instanceLayoutsMap);
+    if (kbType === KeyboardType.Numpad) {
+      return KioskKeyboard._stripDeadBaseSwitch(registryGetLayoutOrDefault("numpad", this._instanceLayoutsMap));
+    }
+    if (kbType === KeyboardType.Numeric) {
+      return KioskKeyboard._stripDeadBaseSwitch(registryGetLayoutOrDefault("numeric", this._instanceLayoutsMap));
+    }
     return registryGetLayoutOrDefault(this.getLayout(), this._instanceLayoutsMap);
+  }
+
+  // `_handleKeyAction` ignores `{layout:*}` switches when `keyboardType !== Full`,
+  // so the ABC key on the auto-forced numeric/numpad layout would render but do
+  // nothing. Drop it so the rendered surface matches the active behavior.
+  private static _stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
+    let changed = false;
+    const filtered = layout.map((row) => {
+      const next = row.filter((key) => key.value !== "{layout:base}");
+      if (next.length !== row.length) changed = true;
+      return next;
+    });
+    return changed ? filtered.filter((row) => row.length > 0) : layout;
   }
 
   /**

@@ -161,6 +161,17 @@ function resolveRemThreshold(
   return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
 }
 
+/** Drop `{layout:base}` keys from a layout (used when the switch would be a no-op). */
+function stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
+  let changed = false;
+  const filtered = layout.map((row) => {
+    const next = row.filter((key) => key.value !== "{layout:base}");
+    if (next.length !== row.length) changed = true;
+    return next;
+  });
+  return changed ? filtered.filter((row) => row.length > 0) : layout;
+}
+
 /**
  * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
  *
@@ -1005,8 +1016,11 @@ class KioskKeyboard extends UI5Element {
     if (this._layoutSource === "user") return getLayoutOrDefault(this._currentLayout, layoutsMap);
 
     const type = this.keyboardType;
-    if (type === KeyboardType.Numpad) return getLayoutOrDefault("numpad", layoutsMap);
-    if (type === KeyboardType.Numeric) return getLayoutOrDefault("numeric", layoutsMap);
+    // On the auto-forced numpad/numeric layout, `{layout:base}` would resolve
+    // back to the same auto-forced layout (handler sets `_layoutSource = "external"`,
+    // so this branch runs again). Strip it so the rendered surface matches behavior.
+    if (type === KeyboardType.Numpad) return stripDeadBaseSwitch(getLayoutOrDefault("numpad", layoutsMap));
+    if (type === KeyboardType.Numeric) return stripDeadBaseSwitch(getLayoutOrDefault("numeric", layoutsMap));
     const name =
       this._currentLayout ||
       this._baseLayout ||

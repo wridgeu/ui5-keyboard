@@ -831,6 +831,30 @@ describe("kiosk-keyboard", () => {
 
       expect(layoutChanges, "layout-change should not fire when key-press is prevented").to.equal(0);
     });
+
+    it("filters {layout:base} from the auto-forced layout in Numeric mode", async () => {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard>
+      `);
+      await nextRender();
+
+      expect(queryKey(el, "{layout:base}"), "ABC key not rendered on auto-forced numeric layout").to.be.null;
+      expect(queryKey(el, "{layout:special}"), "secondary-layout switch keys remain available").to.not.be.null;
+    });
+
+    it("keeps {layout:base} on a secondary layout in Numeric mode (return path)", async () => {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard>
+      `);
+      await nextRender();
+
+      const specialKey = queryKey(el, "{layout:special}");
+      expect(specialKey, "numeric layout exposes a {layout:special} switch").to.not.be.null;
+      specialKey!.click();
+      await nextRender();
+
+      expect(queryKey(el, "{layout:base}"), "ABC key remains on the secondary 'special' layout").to.not.be.null;
+    });
   });
 
   // ── Docked mode ──

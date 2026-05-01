@@ -95,6 +95,37 @@ QUnit.test("KeyboardType 'Numeric' has numeric CSS class", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("KeyboardType 'Numeric' filters out {layout:base} keys (handler is gated to Full)", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setKeyboardType(KeyboardType.Numeric);
+  await placeAndWait(kb);
+
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.notOk(keys.includes("{layout:base}"), "ABC key not rendered in Numeric mode");
+  assert.ok(keys.includes("0"), "Numeric digit keys still rendered");
+
+  kb.destroy();
+});
+
+QUnit.test("KeyboardType 'Numeric' filter applies to overridden numeric layout too", async (assert) => {
+  const customNumeric: LayoutDefinition = [
+    [{ value: "1" }, { value: "2" }, { value: "3" }],
+    [
+      { value: "{layout:base}", label: "ABC", type: "modifier" },
+      { value: "{enter}", type: "action" },
+    ],
+  ];
+  const kb = new KioskKeyboard({ instanceLayouts: { numeric: customNumeric } });
+  kb.setKeyboardType(KeyboardType.Numeric);
+  await placeAndWait(kb);
+
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.notOk(keys.includes("{layout:base}"), "Custom numeric override has ABC filtered out too");
+  assert.ok(keys.includes("{enter}"), "Other action keys preserved");
+
+  kb.destroy();
+});
+
 QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
