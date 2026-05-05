@@ -313,7 +313,6 @@ npm run test:e2e:all-devices:sequential # Same matrix, but sequential for lower 
 npm run test:kiosk:e2e:flp             # FLP lifecycle e2e tests (SAPUI5 sandbox)
 
 # Contract / tooling smoke checks
-npm run test:tools                      # Regression tests for custom oxlint fixers
 npm run test:packages:smoke             # Build + npm pack dry-run smoke for publishable packages
 npm run test:demo:webc-bundle           # Demo build smoke check for the public WebC bundle path
 

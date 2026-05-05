@@ -267,7 +267,6 @@ Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles
 npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
 npm run test:e2e:all-devices  # All E2E across both packages, all devices (parallel)
 npm run test:e2e:all-devices:sequential # Same device matrix, but sequential for lower local CPU/RAM pressure
-npm run test:tools            # Regression tests for custom oxlint fixers
 npm run test:packages:smoke   # Build + npm pack dry-run smoke for publishable packages
 npm run test:demo:webc-bundle # Demo build smoke check for the public WebC bundle path
 npm run check                 # Full quality gate with smoke checks + sequential multi-device matrix

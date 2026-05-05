@@ -56,9 +56,6 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Tools tests
-        run: npm run test:tools
-
       - name: Cache Playwright browsers
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:

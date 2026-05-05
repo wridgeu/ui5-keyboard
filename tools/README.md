@@ -41,8 +41,6 @@ Inspired by common AI-slop detection patterns from tools like [KarpeSlop](https:
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
-Regression coverage for the auto-fix rules lives in `tools/test/oxlint-custom-rules.test.mjs` and runs via `npm run test:tools`.
-
 ## `eslint-plugin-comment-quality.mjs`
 
 Custom oxlint JS plugin that detects low-quality AI-generated comments. Uses AST correlation (comparing comment text against adjacent code identifiers) rather than broad regex to keep false-positive rates low. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
@@ -60,8 +58,6 @@ Custom oxlint JS plugin that detects low-quality AI-generated comments. Uses AST
 All rules are warn-only (no auto-fix) so the developer decides whether to rewrite or remove the comment. Comments containing keeper directives (`TODO`, `FIXME`, `eslint-disable`, JSDoc tags, etc.) are always skipped.
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
-
-Warn-only comment rules currently piggyback on the same `npm run test:tools` harness only when they need explicit regression coverage; the auto-fix rules are the main priority because they can rewrite staged files during commit.
 
 ## `wdio-server.ts`
 
