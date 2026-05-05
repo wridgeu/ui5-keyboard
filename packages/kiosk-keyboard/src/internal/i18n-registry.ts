@@ -56,13 +56,3 @@ export function setI18nResolver(fn: I18nResolver | null): void {
   }
   resolver = fn;
 }
-
-/** Remove the active i18n resolver. @internal */
-export function clearI18nResolver(): void {
-  resolver = null;
-}
-
-/** Returns true when a resolver is currently set. @internal */
-export function hasResolver(): boolean {
-  return resolver !== null;
-}

@@ -26,10 +26,7 @@ import {
   getMiddlewareFactory as registryGetMiddlewareFactory,
   type InstanceMiddleware,
 } from "./internal/middleware-registry";
-import {
-  setI18nResolver as registrySetResolver,
-  clearI18nResolver as registryClearResolver,
-} from "./internal/i18n-registry";
+import { setI18nResolver as registrySetResolver } from "./internal/i18n-registry";
 import type { I18nResolver } from "./types";
 import FocusClaimService from "./internal/focus-claim-service";
 import { ShiftState } from "./internal/shift-state";
@@ -846,7 +843,7 @@ export default class KioskKeyboard extends Control {
     KioskKeyboard._instances.delete(this);
 
     if (KioskKeyboard._instances.size === 0) {
-      registryClearResolver();
+      registrySetResolver(null);
       KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.clear();
       KioskKeyboard._globalTargetResolver = null;
     }

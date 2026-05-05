@@ -1,6 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
-import { hasResolver } from "ui5/kiosk/internal/i18n-registry";
+import { getText } from "ui5/kiosk/internal/i18n-registry";
 import { getKeyElement, placeAndWait, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
@@ -132,12 +132,12 @@ QUnit.test("Destroying last instance auto-clears resolver", async (assert) => {
   await placeAndWait(kb);
 
   KioskKeyboard.setI18nResolver(() => "Hooked");
-  assert.ok(hasResolver(), "Resolver active before destroy");
+  assert.strictEqual(getText("KEY_SHIFT", "Shift"), "Hooked", "Resolver active before destroy");
 
   input.destroy();
   kb.destroy();
 
-  assert.notOk(hasResolver(), "Resolver auto-cleared after last instance destroyed");
+  assert.strictEqual(getText("KEY_SHIFT", "Shift"), "Shift", "Resolver auto-cleared after last instance destroyed");
 
   // Verify cleared by rendering a fresh keyboard
   const input2 = new Input({ value: "" });
@@ -171,12 +171,16 @@ QUnit.test("Destroying one of two instances does NOT clear resolver", async (ass
   input1.destroy();
   kb1.destroy();
 
-  assert.ok(hasResolver(), "Resolver still active after destroying one of two instances");
+  assert.strictEqual(
+    getText("KEY_SHIFT", "Shift"),
+    "Hooked",
+    "Resolver still active after destroying one of two instances",
+  );
 
   input2.destroy();
   kb2.destroy();
 
-  assert.notOk(hasResolver(), "Resolver cleared after last instance destroyed");
+  assert.strictEqual(getText("KEY_SHIFT", "Shift"), "Shift", "Resolver cleared after last instance destroyed");
 });
 
 QUnit.test("Destroying last instance clears global target resolver", async (assert) => {

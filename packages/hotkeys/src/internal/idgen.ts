@@ -1,19 +1,9 @@
 /**
- * Creates an ID generator backed by a generator function.
- *
- * Each call to `next()` returns a unique string like `"hk_1"`, `"hk_2"`, etc.
+ * Creates an ID generator. Each `next()` returns `"<prefix>1"`, `"<prefix>2"`, etc.
  */
 export function createIdGenerator(prefix: string): { next(): string } {
-  function* ids(): Generator<string, never> {
-    let id = 0;
-    while (true) {
-      yield `${prefix}${++id}`;
-    }
-  }
-
-  const gen = ids();
-
+  let id = 0;
   return {
-    next: () => gen.next().value,
+    next: () => `${prefix}${++id}`,
   };
 }

@@ -1,4 +1,4 @@
-import { getText, setI18nResolver, clearI18nResolver, hasResolver } from "ui5/kiosk/internal/i18n-registry";
+import { getText, setI18nResolver } from "ui5/kiosk/internal/i18n-registry";
 import Lib from "sap/ui/core/Lib";
 import Localization from "sap/base/i18n/Localization";
 import Log from "sap/base/Log";
@@ -17,7 +17,7 @@ function stubBaseBundle(texts: Record<string, string>): void {
 QUnit.module("i18n-registry", {
   afterEach() {
     sandbox.restore();
-    clearI18nResolver();
+    setI18nResolver(null);
   },
 });
 
@@ -81,28 +81,23 @@ QUnit.test("resolver error is logged and base text returned", (assert) => {
 });
 
 QUnit.test("setting resolver to null clears it", (assert) => {
+  stubBaseBundle({ KEY_SHIFT: "Shift" });
   setI18nResolver(() => "override");
-  assert.ok(hasResolver(), "resolver is set");
+  assert.strictEqual(getText("KEY_SHIFT", "Shift"), "override", "Resolver active");
 
   setI18nResolver(null);
-  assert.notOk(hasResolver(), "resolver is cleared");
-
-  stubBaseBundle({ KEY_SHIFT: "Shift" });
   assert.strictEqual(getText("KEY_SHIFT", "Shift"), "Shift", "Base text used after clear");
 });
 
-QUnit.test("clearI18nResolver removes active resolver", (assert) => {
-  setI18nResolver(() => "override");
-  assert.ok(hasResolver());
-
-  clearI18nResolver();
-  assert.notOk(hasResolver());
-});
-
 QUnit.test("non-function argument to setI18nResolver is rejected", (assert) => {
+  const resolver = sandbox.spy(() => "override");
+  setI18nResolver(resolver);
+
   const warnSpy = sandbox.spy(Log, "warning");
   setI18nResolver("not a function" as never);
-  assert.notOk(hasResolver(), "Resolver not set");
+
+  stubBaseBundle({ KEY_SHIFT: "Shift" });
+  assert.strictEqual(getText("KEY_SHIFT", "Shift"), "override", "Previous resolver still active");
   assert.ok(warnSpy.calledOnce, "Warning logged");
 });
 

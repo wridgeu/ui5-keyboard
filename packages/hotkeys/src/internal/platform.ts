@@ -70,11 +70,3 @@ export function resolveModifier(modifier: CanonicalModifier | "Mod", platform?: 
   }
   return modifier;
 }
-
-/**
- * Reset the cached platform. For testing only.
- * @internal
- */
-export function _resetPlatformCache(): void {
-  cachedPlatform = null;
-}

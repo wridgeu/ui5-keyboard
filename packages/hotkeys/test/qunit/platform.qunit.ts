@@ -1,5 +1,4 @@
 import { resolveModifier, detectPlatform } from "ui5/hotkeys/platform";
-import { _resetPlatformCache } from "ui5/hotkeys/internal/platform";
 import { Platform } from "ui5/hotkeys/library";
 
 QUnit.module("platform - resolveModifier");
@@ -38,15 +37,4 @@ QUnit.test("Caching: returns same result on repeated calls", (assert) => {
   const first = detectPlatform();
   const second = detectPlatform();
   assert.strictEqual(first, second, "Cached result returned");
-});
-
-QUnit.test("_resetPlatformCache: after reset, still returns valid platform", (assert) => {
-  const before = detectPlatform();
-  _resetPlatformCache();
-  const after = detectPlatform();
-  assert.ok(
-    [Platform.Mac, Platform.Windows, Platform.Linux].includes(after),
-    `Platform "${after}" is valid after reset`,
-  );
-  assert.strictEqual(before, after, "Same platform detected after cache reset");
 });
