@@ -8,12 +8,14 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const oxlintBin = path.join(repoRoot, "node_modules", "oxlint", "bin", "oxlint");
 
+const FIXTURE_DISABLE_PREFIX = "/* oxlint-disable no-unused-vars */\n";
+
 function runOxlintFix(t, fileName, source) {
   const tempDir = fs.mkdtempSync(path.join(repoRoot, "tools", ".tmp-oxlint-custom-rules-"));
   t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
 
   const filePath = path.join(tempDir, fileName);
-  fs.writeFileSync(filePath, source, "utf8");
+  fs.writeFileSync(filePath, FIXTURE_DISABLE_PREFIX + source, "utf8");
 
   const result = spawnSync(process.execPath, [oxlintBin, "--config", ".oxlintrc.json", "--fix", filePath], {
     cwd: repoRoot,
@@ -29,7 +31,11 @@ function runOxlintFix(t, fileName, source) {
     0,
     `oxlint exited with ${result.status}\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`,
   );
-  return fs.readFileSync(filePath, "utf8");
+  const fixed = fs.readFileSync(filePath, "utf8");
+  if (!fixed.startsWith(FIXTURE_DISABLE_PREFIX)) {
+    throw new Error(`fixture lost its oxlint-disable prefix:\n${fixed}`);
+  }
+  return fixed.slice(FIXTURE_DISABLE_PREFIX.length);
 }
 
 test("no-redundant-boolean-return fixes complex positive branch safely", (t) => {

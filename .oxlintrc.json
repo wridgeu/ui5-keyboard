@@ -82,13 +82,6 @@
       "rules": {
         "test-guardrails/no-hard-wait": "error"
       }
-    },
-    {
-      "files": ["tools/.tmp-oxlint-custom-rules-*/**"],
-      "rules": {
-        "no-unused-vars": "off",
-        "@typescript-eslint/no-unused-vars": "off"
-      }
     }
   ],
   "ignorePatterns": ["dist/", "node_modules/", "**/*.js"]
