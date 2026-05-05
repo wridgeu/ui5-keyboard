@@ -63,14 +63,18 @@ document.getElementById("toggle-docked").addEventListener("click", () => {
   else docked.show();
 });
 
-// Custom layout via static method
+// Custom layout via per-instance override
 const kbCustom = document.getElementById("kb-custom");
-KioskKeyboard.registerLayout("demo-pin", [
-  [{ value: "1" }, { value: "2" }, { value: "3" }],
-  [{ value: "4" }, { value: "5" }, { value: "6" }],
-  [{ value: "7" }, { value: "8" }, { value: "9" }],
-  [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
-]);
+if (kbCustom) {
+  kbCustom.instanceLayouts = {
+    "demo-pin": [
+      [{ value: "1" }, { value: "2" }, { value: "3" }],
+      [{ value: "4" }, { value: "5" }, { value: "6" }],
+      [{ value: "7" }, { value: "8" }, { value: "9" }],
+      [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
+    ],
+  };
+}
 
 // Auto-type toggle
 document.getElementById("auto-type-switch").addEventListener("change", (e) => {

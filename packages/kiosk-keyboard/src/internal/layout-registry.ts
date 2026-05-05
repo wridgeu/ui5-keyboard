@@ -19,7 +19,13 @@ import qwertyEs from "../layouts/qwerty-es";
 import "../middleware/kana-dakuten";
 import "../middleware/hangul-compose";
 
-const layouts: Map<string, LayoutDefinition> = new Map([
+/**
+ * Built-in keyboard layouts shipped with the library. The map is sealed
+ * at module load: there is no public mutation API. Consumers customize
+ * per control via the `instanceLayouts` constructor setting / setter,
+ * which shadows entries here without mutating shared state.
+ */
+const BUILTIN_LAYOUTS: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
   ["qwertz-de", qwertzDe],
   ["numeric", numeric],
@@ -34,13 +40,11 @@ const layouts: Map<string, LayoutDefinition> = new Map([
   ["qwerty-es", qwertyEs],
 ]);
 
-/** Built-in layout names. Used by isBuiltInLayout and unregisterLayout protection. */
-const BUILTIN_LAYOUTS: ReadonlySet<string> = new Set(layouts.keys());
-
-/** Original built-in definitions, preserved so overrides can be reverted. */
-const BUILTIN_ORIGINALS: ReadonlyMap<string, LayoutDefinition> = new Map(layouts);
-
-const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
+/**
+ * Built-in BCP-47 prefix → layout name. Sealed at module load. Per-app
+ * customization is done via the `instanceLocaleLayouts` setting.
+ */
+const BUILTIN_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
   ["de", "qwertz-de"],
   ["ja", "ja-romaji"],
   ["ar", "arabic"],
@@ -48,12 +52,11 @@ const DEFAULT_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
   ["es", "qwerty-es"],
 ]);
 
-/** BCP-47 language prefix -> layout name. Checked after exact match. */
-const LOCALE_LAYOUT_MAP: Map<string, string> = new Map(DEFAULT_LOCALE_LAYOUT_MAP);
+/** Per-instance layout map for layered resolution. */
+export type InstanceLayouts = ReadonlyMap<string, LayoutDefinition>;
 
-function isRegisteredLayout(layout: string): boolean {
-  return layouts.has(layout);
-}
+/** Per-instance locale map for layered resolution. */
+export type InstanceLocaleLayouts = ReadonlyMap<string, string>;
 
 /**
  * Normalizes an input to a trimmed lowercase string.
@@ -64,7 +67,6 @@ function normalizeLowerString(value: unknown, argName: string): string | undefin
     Log.warning(`Invalid ${argName}: expected a string.`, undefined, "ui5.kiosk.KioskKeyboard");
     return undefined;
   }
-
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) {
     Log.warning(`Invalid ${argName}: must be a non-empty string.`, undefined, "ui5.kiosk.KioskKeyboard");
@@ -73,102 +75,51 @@ function normalizeLowerString(value: unknown, argName: string): string | undefin
   return trimmed;
 }
 
-function resolveLocaleMappedLayout(locale: string): string | null {
-  const mappedLayout = LOCALE_LAYOUT_MAP.get(locale);
+function resolveLocaleMappedLayout(
+  locale: string,
+  instanceLocaleLayouts?: InstanceLocaleLayouts,
+  instanceLayouts?: InstanceLayouts,
+): string | null {
+  const mappedLayout = instanceLocaleLayouts?.get(locale) ?? BUILTIN_LOCALE_LAYOUT_MAP.get(locale);
   if (!mappedLayout) return null;
-  return isRegisteredLayout(mappedLayout) ? mappedLayout : null;
-}
-
-/**
- * Registers a custom keyboard layout that can then be used via
- * `setLayout(name)` or declaratively as `layout="name"` in XML views.
- *
- * Can override any layout, including built-ins. Validates structure
- * before registering.
- *
- * @param sName Layout identifier (lowercase, e.g. "azerty-fr")
- * @param oDefinition Array of rows, each containing key definitions
- */
-export function registerLayout(sName: string, oDefinition: LayoutDefinition): void {
-  const name = normalizeLowerString(sName, "layout name");
-  if (!name) return;
-
-  if (
-    !Array.isArray(oDefinition) ||
-    oDefinition.length === 0 ||
-    !oDefinition.every(
-      (row) => Array.isArray(row) && row.length > 0 && row.every((key) => typeof key?.value === "string" && key.value),
-    )
-  ) {
-    Log.warning(
-      `Invalid layout "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
-      undefined,
-      "ui5.kiosk.KioskKeyboard",
-    );
-    return;
+  if (instanceLayouts?.has(mappedLayout) || BUILTIN_LAYOUTS.has(mappedLayout)) {
+    return mappedLayout;
   }
-
-  layouts.set(name, oDefinition);
-}
-
-/**
- * Removes a previously registered custom layout.
- * Built-in layouts cannot be removed.
- */
-export function unregisterLayout(sName: string): void {
-  const name = normalizeLowerString(sName, "layout name");
-  if (!name) return;
-
-  const original = BUILTIN_ORIGINALS.get(name);
-  if (original) {
-    layouts.set(name, original);
-    return;
-  }
-
-  layouts.delete(name);
-}
-
-/**
- * Removes all custom layouts and keeps built-in layouts intact.
- */
-export function resetCustomLayouts(): void {
-  // eslint-disable-next-line unicorn/no-useless-spread -- snapshot keys before deleting during iteration
-  for (const layoutName of [...layouts.keys()]) {
-    if (!BUILTIN_LAYOUTS.has(layoutName)) {
-      layouts.delete(layoutName);
-    }
-  }
-  // Restore any overridden built-ins to their original definitions
-  for (const [name, def] of BUILTIN_ORIGINALS) {
-    layouts.set(name, def);
-  }
+  return null;
 }
 
 /**
  * Returns the layout definition for the given name, or undefined
- * if no such layout is registered.
+ * if no such layout exists. Instance overrides take precedence
+ * over built-ins.
  */
-export function getRegisteredLayout(sName: string): LayoutDefinition | undefined {
+export function getRegisteredLayout(sName: string, instanceLayouts?: InstanceLayouts): LayoutDefinition | undefined {
   const name = normalizeLowerString(sName, "layout name");
   if (!name) return undefined;
-  return layouts.get(name);
+  return instanceLayouts?.get(name) ?? BUILTIN_LAYOUTS.get(name);
 }
 
 /**
  * Returns the layout for the given name, falling back to
  * {@link DEFAULT_LAYOUT} when the name is not registered.
+ *
+ * Resolution order: instance map → built-in registry → default layout.
  */
-export function getLayoutOrDefault(sName: string): LayoutDefinition {
-  const name = normalizeLowerString(sName, "layout name");
-  const fallback = layouts.get(DEFAULT_LAYOUT);
+export function getLayoutOrDefault(sName: string, instanceLayouts?: InstanceLayouts): LayoutDefinition {
+  const fallback = instanceLayouts?.get(DEFAULT_LAYOUT) ?? BUILTIN_LAYOUTS.get(DEFAULT_LAYOUT);
   if (!fallback) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
+  const name = normalizeLowerString(sName, "layout name");
   if (!name) return fallback;
-  return layouts.get(name) ?? fallback;
+  return instanceLayouts?.get(name) ?? BUILTIN_LAYOUTS.get(name) ?? fallback;
 }
 
-/** Returns the names of all registered layouts (built-in + custom). */
+/**
+ * Returns the names of all built-in layouts. Instance-only layouts are
+ * intentionally not included here -- they are scoped to the control that
+ * declared them and are not exposed as a global view.
+ */
 export function getRegisteredLayoutNames(): string[] {
-  return [...layouts.keys()];
+  return [...BUILTIN_LAYOUTS.keys()];
 }
 
 /** Returns whether the given layout name is a built-in layout. */
@@ -179,73 +130,27 @@ export function isBuiltInLayout(sName: string): boolean {
 }
 
 /**
- * Registers a mapping from a BCP-47 language tag (or prefix) to a
- * layout name. When no explicit `layout` is provided, the keyboard
- * uses this map to select a locale-appropriate default.
- *
- * The mapping is stored even if `sLayout` does not refer to a currently
- * registered layout (a warning is logged in that case). This allows
- * locale mappings to be set up before the custom layout is registered
- * via {@link registerLayout}. The mapping takes effect as soon as the
- * target layout exists.
- */
-export function registerLocaleLayout(sLocale: string, sLayout: string): void {
-  const locale = normalizeLowerString(sLocale, "locale map key");
-  const layout = normalizeLowerString(sLayout, "layout map value");
-  if (!locale || !layout) return;
-
-  if (!isRegisteredLayout(layout)) {
-    Log.warning(
-      `Locale "${locale}" maps to unknown layout "${layout}". It will be used once the layout is registered.`,
-      undefined,
-      "ui5.kiosk.KioskKeyboard",
-    );
-  }
-
-  LOCALE_LAYOUT_MAP.set(locale, layout);
-}
-
-/**
- * Removes a locale -> layout mapping.
- */
-export function unregisterLocaleLayout(sLocale: string): void {
-  const locale = normalizeLowerString(sLocale, "locale map key");
-  if (!locale) return;
-
-  LOCALE_LAYOUT_MAP.delete(locale);
-}
-
-/**
- * Resets locale mappings to the built-in defaults.
- */
-export function resetLocaleLayouts(): void {
-  LOCALE_LAYOUT_MAP.clear();
-  for (const [k, v] of DEFAULT_LOCALE_LAYOUT_MAP) {
-    LOCALE_LAYOUT_MAP.set(k, v);
-  }
-}
-
-/**
  * Returns the layout name appropriate for the current UI5 locale.
  *
  * Resolution order:
- * 1. Exact BCP-47 match (e.g. "de-at")
- * 2. Language prefix (e.g. "de")
+ * 1. Exact BCP-47 match (e.g. "de-at"), instance map first then built-in
+ * 2. Language prefix (e.g. "de"), instance map first then built-in
  * 3. {@link DEFAULT_LAYOUT} fallback ("qwerty")
  */
-export function getLocaleLayout(): string {
+export function getLocaleLayout(
+  instanceLocaleLayouts?: InstanceLocaleLayouts,
+  instanceLayouts?: InstanceLayouts,
+): string {
   const tag = Localization.getLanguageTag();
   const lang = tag.language.toLowerCase();
   const region = tag.region;
 
-  // Exact match: "de-at", "pt-br", etc.
   if (region) {
-    const exact = resolveLocaleMappedLayout(`${lang}-${region.toLowerCase()}`);
+    const exact = resolveLocaleMappedLayout(`${lang}-${region.toLowerCase()}`, instanceLocaleLayouts, instanceLayouts);
     if (exact) return exact;
   }
 
-  // Language prefix: "de", "fr", etc.
-  const prefix = resolveLocaleMappedLayout(lang);
+  const prefix = resolveLocaleMappedLayout(lang, instanceLocaleLayouts, instanceLayouts);
   if (prefix) return prefix;
 
   return DEFAULT_LAYOUT;

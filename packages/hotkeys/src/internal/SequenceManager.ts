@@ -258,7 +258,8 @@ export default class SequenceManager extends BaseObject {
       if (!this._isRegistrationEnabled(reg)) continue;
       if (reg.suppressInPopups && popupOpen) continue;
 
-      const nextStep = reg.parsedSteps[match.stepIndex];
+      // match.stepIndex is in [0, parsedSteps.length) by construction.
+      const nextStep = reg.parsedSteps[match.stepIndex]!;
 
       // If focused into an input mid-sequence, drop matches that suppress in inputs
       if (resolveIgnoreInputs(reg.ignoreInputs, nextStep) && isInput) continue;
@@ -304,7 +305,7 @@ export default class SequenceManager extends BaseObject {
       try {
         reg.callback(fullMatch.event, {
           hotkey: reg.sequence.join(" "),
-          parsedHotkey: reg.parsedSteps[reg.parsedSteps.length - 1],
+          parsedHotkey: reg.parsedSteps.at(-1)!,
           scope: reg.scope,
         });
       } catch (error) {
@@ -350,7 +351,8 @@ export default class SequenceManager extends BaseObject {
   }
 
   private _indexRegistration(reg: SequenceRegistration): void {
-    const firstKey = reg.parsedSteps[0].key;
+    // Registrations are guaranteed non-empty: register() rejects empty sequences.
+    const firstKey = reg.parsedSteps[0]!.key;
     let keyMap = this._scopeKeyIndex.get(reg.scope);
     if (!keyMap) {
       keyMap = new Map();
@@ -365,7 +367,8 @@ export default class SequenceManager extends BaseObject {
   }
 
   private _deindexRegistration(reg: SequenceRegistration): void {
-    const firstKey = reg.parsedSteps[0].key;
+    // Registrations are guaranteed non-empty: register() rejects empty sequences.
+    const firstKey = reg.parsedSteps[0]!.key;
     const keyMap = this._scopeKeyIndex.get(reg.scope);
     if (!keyMap) return;
     const regSet = keyMap.get(firstKey);
@@ -394,7 +397,7 @@ export default class SequenceManager extends BaseObject {
       if (!regSet) continue;
 
       for (const reg of regSet) {
-        const firstStep = reg.parsedSteps[0];
+        const firstStep = reg.parsedSteps[0]!;
         if (resolveIgnoreInputs(reg.ignoreInputs, firstStep) && isInput) continue;
 
         if (!this._isRegistrationEnabled(reg)) continue;
@@ -429,7 +432,8 @@ export default class SequenceManager extends BaseObject {
         sequence: [...reg.sequence],
         completedSteps: stepIndex,
         totalSteps: reg.parsedSteps.length,
-        nextKey: reg.sequence[stepIndex],
+        // stepIndex is < sequence.length when this fires (callers gate on mid-sequence progress).
+        nextKey: reg.sequence[stepIndex]!,
       });
     } catch (error) {
       Log.error(

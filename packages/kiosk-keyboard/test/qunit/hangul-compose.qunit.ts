@@ -1,8 +1,6 @@
 import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import "ui5/kiosk/middleware/hangul-compose";
 
-// --- Helpers ---
-
 const sandbox = sinon.createSandbox();
 let input: HTMLInputElement;
 

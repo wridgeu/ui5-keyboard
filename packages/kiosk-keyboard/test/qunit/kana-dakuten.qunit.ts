@@ -1,8 +1,6 @@
 import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import "ui5/kiosk/middleware/kana-dakuten";
 
-// --- Helpers ---
-
 const sandbox = sinon.createSandbox();
 
 function commonAfterEach() {

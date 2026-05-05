@@ -1,13 +1,8 @@
 import {
-  registerLayout,
-  unregisterLayout,
-  resetCustomLayouts,
   getRegisteredLayout,
+  getLayoutOrDefault,
   getRegisteredLayoutNames,
   isBuiltInLayout,
-  registerLocaleLayout,
-  unregisterLocaleLayout,
-  resetLocaleLayouts,
   getLocaleLayout,
 } from "ui5/kiosk/internal/layout-registry";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
@@ -20,7 +15,7 @@ import { placeAndWait, getRenderedLayoutKeys } from "./test-helpers";
 
 // ─── Helpers ─────────────────────────────────────
 
-/** Minimal valid layout definition for registration. */
+/** Minimal valid layout definition for instance overrides. */
 function makeLayout(label = "a"): LayoutDefinition {
   return [[{ value: label }]];
 }
@@ -50,12 +45,10 @@ const sandbox = sinon.createSandbox();
 
 function commonAfterEach() {
   sandbox.restore();
-  resetCustomLayouts();
-  resetLocaleLayouts();
 }
 
 // ──────────────────────────────────────────────────
-// normalizeLowerString edge cases (exercised through public API)
+// normalizeLowerString edge cases (exercised through getRegisteredLayout)
 // ──────────────────────────────────────────────────
 
 QUnit.module("layout-registry - normalizeLowerString", { afterEach: commonAfterEach });
@@ -63,195 +56,71 @@ QUnit.module("layout-registry - normalizeLowerString", { afterEach: commonAfterE
 QUnit.test("Rejects non-string input (number)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  registerLayout(42 as unknown as string, makeLayout());
-  assert.ok(spy.calledOnce, "Warning logged for numeric input");
+  assert.strictEqual(getRegisteredLayout(42 as unknown as string), undefined, "Numeric input rejected");
+  assert.ok(spy.called, "Warning logged for numeric input");
   assert.ok(spy.firstCall.args[0].includes("expected a string"), "Warning message is about string type");
 });
 
 QUnit.test("Rejects non-string input (null)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  registerLayout(null as unknown as string, makeLayout());
-  assert.ok(spy.calledOnce, "Warning logged for null input");
+  assert.strictEqual(getRegisteredLayout(null as unknown as string), undefined, "null input rejected");
+  assert.ok(spy.called, "Warning logged for null input");
 });
 
 QUnit.test("Rejects non-string input (undefined)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  registerLayout(undefined as unknown as string, makeLayout());
-  assert.ok(spy.calledOnce, "Warning logged for undefined input");
+  assert.strictEqual(getRegisteredLayout(undefined as unknown as string), undefined, "undefined input rejected");
+  assert.ok(spy.called, "Warning logged for undefined input");
 });
 
 QUnit.test("Rejects empty string", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  registerLayout("", makeLayout());
-  assert.ok(spy.calledOnce, "Warning logged for empty string");
+  assert.strictEqual(getRegisteredLayout(""), undefined, "Empty string rejected");
+  assert.ok(spy.called, "Warning logged for empty string");
   assert.ok(spy.firstCall.args[0].includes("non-empty string"), "Warning message is about empty string");
 });
 
 QUnit.test("Rejects whitespace-only string", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  registerLayout("   \t  ", makeLayout());
-  assert.ok(spy.calledOnce, "Warning logged for whitespace-only string");
-  assert.ok(spy.firstCall.args[0].includes("non-empty string"), "Warning message is about empty string");
+  assert.strictEqual(getRegisteredLayout("   \t  "), undefined, "Whitespace-only rejected");
+  assert.ok(spy.called, "Warning logged for whitespace-only string");
 });
 
-QUnit.test("Trims and lowercases input", (assert) => {
-  registerLayout("  My-Layout  ", makeLayout("trimmed"));
-  const result = getRegisteredLayout("my-layout");
-  assert.ok(result, "Layout retrieved with normalized name");
-  assert.strictEqual(result![0][0].value, "trimmed", "Correct layout definition stored");
+QUnit.test("Trims and lowercases input when matching built-ins", (assert) => {
+  const result = getRegisteredLayout("  QWERTY  ");
+  assert.ok(result, "Built-in retrieved with normalized name");
 });
 
 // ──────────────────────────────────────────────────
-// Map-based storage - formerly dangerous keys are safe
+// Instance map - shadows built-ins, accepts unsafe keys
 // ──────────────────────────────────────────────────
 
-QUnit.module("layout-registry - formerly reserved keys (Map-safe)", { afterEach: commonAfterEach });
+QUnit.module("layout-registry - instance map", { afterEach: commonAfterEach });
 
-QUnit.test("Accepts __proto__ as custom layout name", (assert) => {
-  const layout = makeLayout("proto");
-  registerLayout("__proto__", layout);
-  assert.deepEqual(getRegisteredLayout("__proto__"), layout, "Layout registered with __proto__ key");
+QUnit.test("Instance map shadows built-in layout of same name", (assert) => {
+  const custom = makeLayout("instance");
+  const instanceMap = new Map([["qwerty", custom]]);
+  const result = getRegisteredLayout("qwerty", instanceMap);
+  assert.deepEqual(result, custom, "Instance entry wins over built-in qwerty");
 });
 
-QUnit.test("Accepts prototype as custom layout name", (assert) => {
-  const layout = makeLayout("proto");
-  registerLayout("prototype", layout);
-  assert.deepEqual(getRegisteredLayout("prototype"), layout, "Layout registered with prototype key");
+QUnit.test("Falls through to built-in when instance map lacks the name", (assert) => {
+  const instanceMap = new Map([["unrelated", makeLayout()]]);
+  const result = getRegisteredLayout("qwerty", instanceMap);
+  assert.ok(result, "Falls back to built-in qwerty");
+  assert.notStrictEqual(result, instanceMap.get("unrelated"), "Result is not the unrelated entry");
 });
 
-QUnit.test("Accepts constructor as custom layout name", (assert) => {
-  const layout = makeLayout("ctor");
-  registerLayout("constructor", layout);
-  assert.deepEqual(getRegisteredLayout("constructor"), layout, "Layout registered with constructor key");
-});
-
-QUnit.test("Accepts __proto__ as locale map key", (assert) => {
-  registerLocaleLayout("__proto__", "qwerty");
-  // No error - Map handles it safely
-  assert.ok(true, "No error for __proto__ locale key");
-});
-
-QUnit.test("Accepts __proto__ as locale map value (warns about unknown layout)", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLocaleLayout("xx", "__proto__");
-  // Warning is about unknown layout, not about forbidden key
-  assert.ok(spy.calledOnce, "Warning logged for unknown layout");
-  assert.ok(spy.firstCall.args[0].includes("unknown layout"), "Warning is about unknown layout, not key safety");
-});
-
-// ──────────────────────────────────────────────────
-// registerLocaleLayout / unregisterLocaleLayout / resetLocaleLayouts
-// ──────────────────────────────────────────────────
-
-QUnit.module("layout-registry - registerLocaleLayout", { afterEach: commonAfterEach });
-
-QUnit.test("Registers a locale mapping to a known layout", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLocaleLayout("fr", "qwerty");
-  assert.notOk(spy.called, "No warning when layout exists");
-});
-
-QUnit.test("Warns but stores mapping when layout is not yet registered", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLocaleLayout("fr", "azerty-fr");
-  assert.ok(spy.calledOnce, "Warning logged for unknown layout");
-  assert.ok(spy.firstCall.args[0].includes("unknown layout"), "Warning message references unknown layout");
-  assert.ok(spy.firstCall.args[0].includes("azerty-fr"), "Warning message includes layout name");
-
-  // Now register the layout - the mapping should resolve
-  registerLayout("azerty-fr", makeLayout());
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
-  assert.strictEqual(getLocaleLayout(), "azerty-fr", "Mapping resolves after layout is registered");
-});
-
-QUnit.test("Normalizes locale key (trim + lowercase)", (assert) => {
-  registerLocaleLayout("  FR  ", "qwerty");
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
-  assert.strictEqual(getLocaleLayout(), "qwerty", "Mapping found with normalized key");
-});
-
-QUnit.test("Overwrites existing locale mapping", (assert) => {
-  registerLocaleLayout("fr", "qwerty");
-  registerLocaleLayout("fr", "qwertz-de");
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
-  assert.strictEqual(getLocaleLayout(), "qwertz-de", "Second registration overwrites first");
-});
-
-QUnit.test("Rejects non-string locale", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLocaleLayout(123 as unknown as string, "qwerty");
-  assert.ok(spy.calledOnce, "Warning logged for non-string locale");
-});
-
-QUnit.test("Rejects non-string layout", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLocaleLayout("fr", null as unknown as string);
-  assert.ok(spy.calledOnce, "Warning logged for non-string layout");
-});
-
-// ──────────────────────────────────────────────────
-
-QUnit.module("layout-registry - unregisterLocaleLayout", { afterEach: commonAfterEach });
-
-QUnit.test("Removes a previously registered locale mapping", (assert) => {
-  registerLocaleLayout("fr", "qwerty");
-  unregisterLocaleLayout("fr");
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
-  assert.strictEqual(getLocaleLayout(), "qwerty", "Falls back to default when mapping removed");
-});
-
-QUnit.test("Removes the built-in de mapping", (assert) => {
-  unregisterLocaleLayout("de");
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  assert.strictEqual(getLocaleLayout(), "qwerty", "Falls back to default after removing built-in mapping");
-});
-
-QUnit.test("No-ops for non-existent locale", (assert) => {
-  unregisterLocaleLayout("zz");
-  assert.ok(true, "No error for non-existent locale");
-});
-
-QUnit.test("No-ops for __proto__ locale (Map-safe)", (assert) => {
-  unregisterLocaleLayout("__proto__");
-  assert.ok(true, "No error for __proto__ locale key");
-});
-
-// ──────────────────────────────────────────────────
-
-QUnit.module("layout-registry - resetLocaleLayouts", { afterEach: commonAfterEach });
-
-QUnit.test("Restores default de mapping after custom mappings added", (assert) => {
-  registerLocaleLayout("fr", "qwerty");
-  registerLocaleLayout("de", "qwerty"); // override built-in
-
-  resetLocaleLayouts();
-
-  const stubDe = sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  assert.strictEqual(getLocaleLayout(), "qwertz-de", "de mapping restored to default");
-
-  stubDe.returns(langTag("fr"));
-  assert.strictEqual(getLocaleLayout(), "qwerty", "fr mapping removed (falls back to default)");
-});
-
-QUnit.test("Idempotent - calling reset twice does not break state", (assert) => {
-  resetLocaleLayouts();
-  resetLocaleLayouts();
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  assert.strictEqual(getLocaleLayout(), "qwertz-de", "de mapping still works after double reset");
+QUnit.test("Accepts __proto__ / prototype / constructor in instance map", (assert) => {
+  for (const name of ["__proto__", "prototype", "constructor"]) {
+    const layout = makeLayout(name);
+    const instanceMap = new Map([[name, layout]]);
+    assert.deepEqual(getRegisteredLayout(name, instanceMap), layout, `Key "${name}" is accepted`);
+  }
 });
 
 // ──────────────────────────────────────────────────
@@ -260,18 +129,9 @@ QUnit.test("Idempotent - calling reset twice does not break state", (assert) => 
 
 QUnit.module("layout-registry - getLocaleLayout resolution", { afterEach: commonAfterEach });
 
-QUnit.test("Exact BCP-47 match takes precedence over language prefix", (assert) => {
-  registerLayout("swiss-de", makeLayout());
-  registerLocaleLayout("de", "qwertz-de");
-  registerLocaleLayout("de-ch", "swiss-de");
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "CH"));
-  assert.strictEqual(getLocaleLayout(), "swiss-de", "Exact de-ch match used over de prefix");
-});
-
-QUnit.test("Falls back to language prefix when no exact match", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "AT"));
-  assert.strictEqual(getLocaleLayout(), "qwertz-de", "Falls back to de prefix mapping");
+QUnit.test("Resolves de to qwertz-de via built-in locale mapping", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
+  assert.strictEqual(getLocaleLayout(), "qwertz-de", "German locale resolves to qwertz-de");
 });
 
 QUnit.test("Resolves ja to ja-romaji via built-in locale mapping", (assert) => {
@@ -299,187 +159,81 @@ QUnit.test("Falls back to DEFAULT_LAYOUT when no mapping matches", (assert) => {
   assert.strictEqual(getLocaleLayout(), "qwerty", "Unmapped language returns qwerty default");
 });
 
-QUnit.test("Falls back to DEFAULT_LAYOUT when no region and no prefix match", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("zh", "TW"));
-  assert.strictEqual(getLocaleLayout(), "qwerty", "Unmapped language+region returns qwerty default");
-});
-
-QUnit.test("Locale with region but only prefix registered uses prefix", (assert) => {
-  registerLayout("azerty-fr", makeLayout());
-  registerLocaleLayout("fr", "azerty-fr");
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr", "CA"));
-  assert.strictEqual(getLocaleLayout(), "azerty-fr", "fr-ca falls back to fr prefix");
-});
-
-QUnit.test("Does not resolve mapping when target layout is not registered", (assert) => {
-  sandbox.spy(Log, "warning"); // suppress warning noise
-  registerLocaleLayout("it", "qwerty-it"); // layout doesn't exist
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("it"));
-  assert.strictEqual(getLocaleLayout(), "qwerty", "Falls back to default when mapped layout is missing");
+QUnit.test("Falls back to language prefix when no exact region match", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "AT"));
+  assert.strictEqual(getLocaleLayout(), "qwertz-de", "de-AT falls back to de prefix");
 });
 
 QUnit.test("Region is lowercased for matching", (assert) => {
-  registerLayout("swiss-de", makeLayout());
-  registerLocaleLayout("de-ch", "swiss-de");
-
+  const instanceLocale = new Map([["de-ch", "swiss-de"]]);
+  const instanceLayouts = new Map([["swiss-de", makeLayout()]]);
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "CH"));
-  assert.strictEqual(
-    getLocaleLayout(),
-    "swiss-de",
-    "Region uppercased by Localization still matches lowercase map key",
-  );
+  assert.strictEqual(getLocaleLayout(instanceLocale, instanceLayouts), "swiss-de", "Lowercase region key matches");
 });
 
 QUnit.test("Skips exact match when region is empty", (assert) => {
-  registerLocaleLayout("de", "qwertz-de");
-
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  assert.strictEqual(getLocaleLayout(), "qwertz-de", "Empty region skips exact match, uses prefix");
+  assert.strictEqual(getLocaleLayout(), "qwertz-de", "Empty region uses prefix");
+});
+
+QUnit.test("Instance locale map shadows built-in locale map", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
+  const instanceLocale = new Map([["de", "qwerty"]]);
+  assert.strictEqual(getLocaleLayout(instanceLocale), "qwerty", "Instance map shadows built-in de mapping");
+});
+
+QUnit.test("Instance locale map can resolve to instance-only layout", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("xx"));
+  const instanceLocale = new Map([["xx", "warehouse"]]);
+  const instanceLayouts = new Map([["warehouse", makeLayout("w")]]);
+  assert.strictEqual(getLocaleLayout(instanceLocale, instanceLayouts), "warehouse", "Resolves to instance-only name");
+});
+
+QUnit.test("Does not resolve mapping when target layout is not registered", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("xx"));
+  const instanceLocale = new Map([["xx", "missing-layout"]]);
+  assert.strictEqual(getLocaleLayout(instanceLocale), "qwerty", "Falls back to default when target missing");
+});
+
+QUnit.test("Exact BCP-47 match takes precedence over language prefix", (assert) => {
+  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "CH"));
+  const instanceLocale = new Map([
+    ["de", "qwertz-de"],
+    ["de-ch", "qwerty"],
+  ]);
+  assert.strictEqual(getLocaleLayout(instanceLocale), "qwerty", "Exact de-ch wins over de prefix");
 });
 
 // ──────────────────────────────────────────────────
-// registerLayout validation
+// getLayoutOrDefault
 // ──────────────────────────────────────────────────
 
-QUnit.module("layout-registry - registerLayout validation", { afterEach: commonAfterEach });
+QUnit.module("layout-registry - getLayoutOrDefault", { afterEach: commonAfterEach });
 
-QUnit.test("registerLayout can override built-in layouts", (assert) => {
-  const custom = makeLayout();
-  registerLayout("qwerty", custom);
-  assert.deepEqual(getRegisteredLayout("qwerty"), custom, "qwerty overridden with custom layout");
+QUnit.test("Returns built-in layout for known name", (assert) => {
+  const result = getLayoutOrDefault("qwerty");
+  assert.ok(result, "Returns layout for qwerty");
 });
 
-QUnit.test("Rejects empty layout definition", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLayout("empty-def", [] as unknown as LayoutDefinition);
-  assert.ok(spy.calledOnce, "Warning logged for empty array");
-  assert.strictEqual(getRegisteredLayout("empty-def"), undefined, "Layout not registered");
+QUnit.test("Falls back to default when name is unknown", (assert) => {
+  const fallback = getRegisteredLayout("qwerty");
+  assert.deepEqual(getLayoutOrDefault("unknown-name"), fallback, "Unknown name returns default qwerty");
 });
 
-QUnit.test("Rejects layout with empty rows", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLayout("empty-row", [[]] as unknown as LayoutDefinition);
-  assert.ok(spy.calledOnce, "Warning logged for empty row");
-  assert.strictEqual(getRegisteredLayout("empty-row"), undefined, "Layout not registered");
+QUnit.test("Instance map shadows built-in for known name", (assert) => {
+  const custom = makeLayout("custom");
+  const instanceMap = new Map([["qwerty", custom]]);
+  assert.deepEqual(getLayoutOrDefault("qwerty", instanceMap), custom, "Instance map wins for known name");
 });
 
-QUnit.test("Rejects layout with keys missing value property", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLayout("no-value", [[{ label: "x" }]] as unknown as LayoutDefinition);
-  assert.ok(spy.calledOnce, "Warning logged for key without value");
-});
-
-QUnit.test("Rejects layout with key having empty value", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLayout("empty-value", [[{ value: "" }]]);
-  assert.ok(spy.calledOnce, "Warning logged for empty value");
-});
-
-QUnit.test("Rejects non-array layout definition", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  registerLayout("not-array", "invalid" as unknown as LayoutDefinition);
-  assert.ok(spy.calledOnce, "Warning logged for non-array definition");
-});
-
-QUnit.test("Registers valid custom layout", (assert) => {
-  const layout = makeLayout("hello");
-  registerLayout("custom-test", layout);
-
-  const result = getRegisteredLayout("custom-test");
-  assert.deepEqual(result, layout, "Layout stored correctly");
-});
-
-QUnit.test("Registered layout appears in getRegisteredLayoutNames()", (assert) => {
-  registerLayout("my-layout", makeLayout());
-
-  const names = getRegisteredLayoutNames();
-  assert.ok(names.includes("my-layout"), "Custom layout name in list");
-});
-
-// ──────────────────────────────────────────────────
-// unregisterLayout
-// ──────────────────────────────────────────────────
-
-QUnit.module("layout-registry - unregisterLayout", { afterEach: commonAfterEach });
-
-QUnit.test("Removes a custom layout", (assert) => {
-  registerLayout("to-remove", makeLayout());
-  assert.ok(getRegisteredLayout("to-remove"), "Layout exists before removal");
-
-  unregisterLayout("to-remove");
-  assert.strictEqual(getRegisteredLayout("to-remove"), undefined, "Layout removed");
-});
-
-QUnit.test("Restores built-in definition when unregistering an overridden built-in", (assert) => {
-  const originalQwerty = getRegisteredLayout("qwerty");
-  registerLayout("qwerty", makeLayout("override"));
-  assert.deepEqual(getRegisteredLayout("qwerty"), makeLayout("override"), "qwerty is overridden");
-
-  unregisterLayout("qwerty");
-  assert.deepEqual(getRegisteredLayout("qwerty"), originalQwerty, "Original qwerty restored after unregister");
-});
-
-QUnit.test("Restores built-in after multiple overrides", (assert) => {
-  const originalQwerty = getRegisteredLayout("qwerty");
-  registerLayout("qwerty", makeLayout("v1"));
-  registerLayout("qwerty", makeLayout("v2"));
-  assert.strictEqual(getRegisteredLayout("qwerty")![0][0].value, "v2", "Second override is active");
-
-  unregisterLayout("qwerty");
-  assert.deepEqual(getRegisteredLayout("qwerty"), originalQwerty, "Original restored despite multiple overrides");
-});
-
-QUnit.test("isBuiltInLayout stays true after override and restore", (assert) => {
-  registerLayout("qwerty", makeLayout("temp"));
-  unregisterLayout("qwerty");
-  assert.ok(isBuiltInLayout("qwerty"), "qwerty is still built-in after override+restore cycle");
-});
-
-QUnit.test("No-ops for non-existent layout", (assert) => {
-  unregisterLayout("nonexistent");
-  assert.ok(true, "No error for non-existent layout");
-});
-
-// ──────────────────────────────────────────────────
-// resetCustomLayouts
-// ──────────────────────────────────────────────────
-
-QUnit.module("layout-registry - resetCustomLayouts", { afterEach: commonAfterEach });
-
-QUnit.test("Removes all custom layouts", (assert) => {
-  registerLayout("custom-a", makeLayout());
-  registerLayout("custom-b", makeLayout());
-
-  resetCustomLayouts();
-
-  assert.strictEqual(getRegisteredLayout("custom-a"), undefined, "custom-a removed");
-  assert.strictEqual(getRegisteredLayout("custom-b"), undefined, "custom-b removed");
-});
-
-QUnit.test("Preserves all built-in layouts", (assert) => {
-  registerLayout("custom-x", makeLayout());
-
-  resetCustomLayouts();
-
-  for (const name of BUILTIN_NAMES) {
-    assert.ok(getRegisteredLayout(name), `Built-in layout "${name}" preserved`);
-  }
-});
-
-QUnit.test("Restores overridden built-in layouts", (assert) => {
-  const originalQwerty = getRegisteredLayout("qwerty");
-  registerLayout("qwerty", makeLayout("override"));
-  assert.deepEqual(getRegisteredLayout("qwerty"), makeLayout("override"), "qwerty is overridden");
-
-  resetCustomLayouts();
-  assert.deepEqual(getRegisteredLayout("qwerty"), originalQwerty, "Original qwerty restored after reset");
+QUnit.test("Falls back to instance default when both built-in default and instance entry exist", (assert) => {
+  const customDefault = makeLayout("custom-default");
+  const instanceMap = new Map([["qwerty", customDefault]]);
+  assert.deepEqual(
+    getLayoutOrDefault("unknown-name", instanceMap),
+    customDefault,
+    "Unknown name falls back to instance default qwerty",
+  );
 });
 
 // ──────────────────────────────────────────────────
@@ -492,11 +246,6 @@ QUnit.test("Returns true for all built-in layouts", (assert) => {
   for (const name of BUILTIN_NAMES) {
     assert.ok(isBuiltInLayout(name), `"${name}" is built-in`);
   }
-});
-
-QUnit.test("Returns false for custom layouts", (assert) => {
-  registerLayout("custom-check", makeLayout());
-  assert.notOk(isBuiltInLayout("custom-check"), "Custom layout is not built-in");
 });
 
 QUnit.test("Returns false for non-existent layouts", (assert) => {
@@ -545,123 +294,44 @@ QUnit.test("getRegisteredLayoutNames includes all built-in layouts", (assert) =>
   }
 });
 
-// ──────────────────────────────────────────────────
-// Round-trip registration
-// ──────────────────────────────────────────────────
-
-QUnit.module("layout-registry - round-trip registration", { afterEach: commonAfterEach });
-
-QUnit.test("Register, retrieve, and verify custom layout", (assert) => {
-  const customLayout: LayoutDefinition = [
-    [{ value: "a" }, { value: "b" }, { value: "c" }],
-    [{ value: "d" }, { value: "e" }, { value: "f" }],
-  ];
-
-  registerLayout("custom-roundtrip", customLayout);
-
-  const retrieved = getRegisteredLayout("custom-roundtrip");
-  assert.deepEqual(retrieved, customLayout, "Retrieved layout matches registered definition");
-  assert.ok(getRegisteredLayoutNames().includes("custom-roundtrip"), "Name appears in layout list");
-  assert.notOk(isBuiltInLayout("custom-roundtrip"), "Custom layout is not built-in");
-});
-
-QUnit.test("Register a copy of a built-in layout under a new name", (assert) => {
-  const qwertyLayout = getRegisteredLayout("qwerty")!;
-  assert.ok(qwertyLayout, "qwerty layout exists");
-
-  // Register it under a new name - simulates consumer cloning a standard layout
-  registerLayout("qwerty-copy", qwertyLayout);
-
-  const retrieved = getRegisteredLayout("qwerty-copy");
-  assert.deepEqual(retrieved, qwertyLayout, "Cloned layout matches original");
-  assert.notOk(isBuiltInLayout("qwerty-copy"), "Copy is not considered built-in");
-});
-
-QUnit.test("Unregister a custom layout and verify it is gone", (assert) => {
-  registerLayout("temp-layout", makeLayout("temp"));
-  assert.ok(getRegisteredLayout("temp-layout"), "Layout exists after registration");
-
-  unregisterLayout("temp-layout");
-  assert.strictEqual(getRegisteredLayout("temp-layout"), undefined, "Layout gone after unregister");
-  assert.notOk(getRegisteredLayoutNames().includes("temp-layout"), "Name removed from layout list");
-});
-
-QUnit.test("Re-register a layout after unregistering it", (assert) => {
-  registerLayout("reuse-name", makeLayout("v1"));
-  unregisterLayout("reuse-name");
-
-  registerLayout("reuse-name", makeLayout("v2"));
-  const retrieved = getRegisteredLayout("reuse-name");
-  assert.ok(retrieved, "Layout re-registered successfully");
-  assert.strictEqual(retrieved![0][0].value, "v2", "New definition is stored, not the old one");
+QUnit.test("getRegisteredLayoutNames does not include instance-only layouts", (assert) => {
+  // The view is intentionally global-only; instance names are scoped per control.
+  const names = getRegisteredLayoutNames();
+  assert.notOk(names.includes("instance-only"), "Instance-only names not in global view");
 });
 
 // ──────────────────────────────────────────────────
-// KioskKeyboard static facade - consumer DX
+// KioskKeyboard static facade - read-only consumer DX
 // ──────────────────────────────────────────────────
 
 QUnit.module("layout-registry - KioskKeyboard facade", {
   afterEach() {
     sandbox.restore();
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
 });
 
-QUnit.test("Static registerLayout / getRegisteredLayout round-trip", (assert) => {
-  const layout = makeLayout("facade");
-  KioskKeyboard.registerLayout("facade-test", layout);
-
-  const retrieved = KioskKeyboard.getRegisteredLayout("facade-test");
-  assert.deepEqual(retrieved, layout, "Facade getRegisteredLayout returns the registered layout");
+QUnit.test("Static getRegisteredLayout returns built-in layouts", (assert) => {
+  assert.ok(KioskKeyboard.getRegisteredLayout("qwerty"), "Built-in qwerty retrievable via facade");
+  assert.strictEqual(KioskKeyboard.getRegisteredLayout("nonexistent"), undefined, "Unknown name returns undefined");
 });
 
-QUnit.test("Static getRegisteredLayoutNames includes custom layout", (assert) => {
-  KioskKeyboard.registerLayout("facade-names", makeLayout());
+QUnit.test("Static getRegisteredLayoutNames includes all built-ins", (assert) => {
   const names = KioskKeyboard.getRegisteredLayoutNames();
-  assert.ok(names.includes("facade-names"), "Custom layout appears in facade names list");
-  assert.ok(names.includes("qwerty"), "Built-in layout still in facade names list");
+  for (const name of BUILTIN_NAMES) {
+    assert.ok(names.includes(name), `Built-in "${name}" in facade names list`);
+  }
 });
 
-QUnit.test("Static unregisterLayout removes custom layout", (assert) => {
-  KioskKeyboard.registerLayout("facade-remove", makeLayout());
-  KioskKeyboard.unregisterLayout("facade-remove");
-  assert.strictEqual(KioskKeyboard.getRegisteredLayout("facade-remove"), undefined, "Layout removed via facade");
-});
-
-QUnit.test("Static resetCustomLayouts preserves built-ins", (assert) => {
-  KioskKeyboard.registerLayout("facade-custom", makeLayout());
-  KioskKeyboard.resetCustomLayouts();
-
-  assert.strictEqual(KioskKeyboard.getRegisteredLayout("facade-custom"), undefined, "Custom layout removed");
-  assert.ok(KioskKeyboard.getRegisteredLayout("qwerty"), "Built-in qwerty preserved");
-});
-
-QUnit.test("Static isBuiltInLayout distinguishes built-in from custom", (assert) => {
-  KioskKeyboard.registerLayout("facade-check", makeLayout());
+QUnit.test("Static isBuiltInLayout distinguishes built-in from non-existent", (assert) => {
   assert.ok(KioskKeyboard.isBuiltInLayout("qwerty"), "qwerty is built-in via facade");
-  assert.notOk(KioskKeyboard.isBuiltInLayout("facade-check"), "Custom layout is not built-in via facade");
+  assert.notOk(KioskKeyboard.isBuiltInLayout("nonexistent"), "Unknown is not built-in via facade");
 });
 
-QUnit.test("Static locale facade round-trip", (assert) => {
-  KioskKeyboard.registerLayout("azerty-fr", makeLayout());
-  KioskKeyboard.registerLocaleLayout("fr", "azerty-fr");
-
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("fr"));
-  assert.strictEqual(KioskKeyboard.getLocaleLayout(), "azerty-fr", "Locale resolves via facade");
-
-  KioskKeyboard.unregisterLocaleLayout("fr");
-  assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "Falls back after unregister via facade");
-});
-
-QUnit.test("Static resetLocaleLayouts restores defaults via facade", (assert) => {
-  KioskKeyboard.registerLocaleLayout("de", "qwerty"); // override built-in
-  KioskKeyboard.resetLocaleLayouts();
-
+QUnit.test("Static getLocaleLayout resolves the current UI5 locale", (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "de mapping restored via facade reset");
+  assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "Locale resolves via facade");
 });
 
 // ──────────────────────────────────────────────────
@@ -671,8 +341,6 @@ QUnit.test("Static resetLocaleLayouts restores defaults via facade", (assert) =>
 QUnit.module("layout-registry - KioskKeyboard layout fallback", {
   afterEach() {
     sandbox.restore();
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -694,44 +362,22 @@ QUnit.test("Unknown layout name falls back to qwerty", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Custom layout renders correctly after registration", async (assert) => {
+QUnit.test("Instance layout renders correctly when configured at construction", async (assert) => {
   const customLayout: LayoutDefinition = [[{ value: "x" }, { value: "y" }, { value: "z" }]];
-  KioskKeyboard.registerLayout("xyz-layout", customLayout);
 
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
-  const kb = new KioskKeyboard({ controls: [input.getId()], layout: "xyz-layout" });
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    instanceLayouts: { "xyz-layout": customLayout },
+    layout: "xyz-layout",
+  });
   await placeAndWait(kb);
 
   const renderedKeys = getRenderedLayoutKeys(kb);
   const expectedKeys = customLayout.map((row) => row.map((k) => k.value));
-  assert.deepEqual(renderedKeys, expectedKeys, "Custom layout is used by control");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Removing current layout makes control fall back to qwerty", async (assert) => {
-  KioskKeyboard.registerLayout("ephemeral", makeLayout("e"));
-
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()], layout: "ephemeral" });
-  await placeAndWait(kb);
-
-  const ephemeralExpected = makeLayout("e").map((row) => row.map((k) => k.value));
-  assert.deepEqual(getRenderedLayoutKeys(kb), ephemeralExpected, "Ephemeral layout is active");
-
-  KioskKeyboard.unregisterLayout("ephemeral");
-  // Force re-render by triggering a layout re-resolve
-  kb.setLayout("ephemeral");
-  await placeAndWait(kb);
-
-  const qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty")!;
-  const qwertyExpected = qwertyLayout.map((row: any) => row.map((k: any) => k.value));
-  assert.deepEqual(getRenderedLayoutKeys(kb), qwertyExpected, "Falls back to qwerty after layout removed");
+  assert.deepEqual(renderedKeys, expectedKeys, "Instance layout is used by control");
 
   input.destroy();
   kb.destroy();

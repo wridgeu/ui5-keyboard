@@ -95,9 +95,16 @@ const indicStressLayout = [
   ],
 ];
 
+// Apply the visual stress layouts as per-instance overrides on every
+// kiosk-keyboard rendered on the page. Pages are mounted before this script
+// runs in the bundle.esm.ts entry, so simply iterate the existing elements.
 customElements.whenDefined("kiosk-keyboard").then(() => {
-  const KK = customElements.get("kiosk-keyboard");
-  KK.registerLayout("glyph-stress", glyphStressLayout);
-  KK.registerLayout("icon-label-variations", iconLabelVariationsLayout);
-  KK.registerLayout("indic-stress", indicStressLayout);
+  const overrides = {
+    "glyph-stress": glyphStressLayout,
+    "icon-label-variations": iconLabelVariationsLayout,
+    "indic-stress": indicStressLayout,
+  };
+  document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
+    kb.instanceLayouts = overrides;
+  });
 });

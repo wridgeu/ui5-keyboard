@@ -101,18 +101,24 @@ const LAYOUT_DESCRIPTIONS: Record<string, string> = {
     "Icon + label rendering modes: SAP icons, Unicode/emoji icons, icon-only, built-in special keys with dual rendering, and capsLock overrides. Double-tap Shift on row 3 to see capsLockLabel/capsLockIcon.",
 };
 
+const CUSTOM_LAYOUTS: Record<string, LayoutDefinition> = {
+  emoji: EMOJI_LAYOUT,
+  "ip-address": IP_ADDRESS_LAYOUT,
+  currency: CURRENCY_LAYOUT,
+  "icon-label": ICON_LABEL_LAYOUT,
+};
+
 /**
- * Custom layouts gallery - four LayoutDefinitions registered via
- * registerLayout(), switchable via buttons.
+ * Custom layouts gallery - four LayoutDefinitions attached to the keyboard
+ * control via the per-instance `instanceLayouts` property, switchable via
+ * buttons.
  *
  * @namespace demo.hotkeys.controller
  */
 export default class KioskCustomLayouts extends BaseController {
   onInit(): void {
-    KioskKeyboard.registerLayout("emoji", EMOJI_LAYOUT);
-    KioskKeyboard.registerLayout("ip-address", IP_ADDRESS_LAYOUT);
-    KioskKeyboard.registerLayout("currency", CURRENCY_LAYOUT);
-    KioskKeyboard.registerLayout("icon-label", ICON_LABEL_LAYOUT);
+    const kb = this.byId("customKeyboard") as KioskKeyboard;
+    kb.setInstanceLayouts(CUSTOM_LAYOUTS);
 
     this._switchLayout("emoji");
   }

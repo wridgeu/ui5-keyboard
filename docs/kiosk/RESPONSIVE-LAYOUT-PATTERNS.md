@@ -80,9 +80,9 @@ The responsive `min()` caps in the built-in queries preserve any consumer value 
 
 ## Switching Layouts Per Device Size
 
-CSS custom properties handle visual tuning, but some scenarios require structural layout changes: different keys, different row counts, different key arrangements. The component provides `registerLayout()` and `setLayout()` for this.
+CSS custom properties handle visual tuning, but some scenarios require structural layout changes: different keys, different row counts, different key arrangements. Supply alternate layouts via the per-instance `instanceLayouts` property and switch with `setLayout()`.
 
-### Pattern: Register a Compact Variant, Switch at a Breakpoint
+### Pattern: Supply a Compact Variant, Switch at a Breakpoint
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
@@ -99,11 +99,11 @@ const kanaCompact: LayoutDefinition = [
   // ...
 ];
 
-// 2. Register it
-KioskKeyboard.registerLayout("ja-kana-compact", kanaCompact);
+// 2. Supply it on the control
+const keyboard = this.byId("myKeyboard") as KioskKeyboard;
+keyboard.setInstanceLayouts({ "ja-kana-compact": kanaCompact });
 
 // 3. Switch based on container/viewport width
-const keyboard = this.byId("myKeyboard") as KioskKeyboard;
 const mq = window.matchMedia("(max-width: 400px)");
 
 function applyLayout(e: MediaQueryList | MediaQueryListEvent) {
@@ -125,8 +125,8 @@ applyLayout(mq);
 | ---------------------------------------- | ---------------------------------------------------------------- |
 | Adjust key size, gap, font, padding      | CSS custom properties in `@container` rules                      |
 | Hide labels, change icon size            | CSS custom properties (`--ui5KioskKeyboard-dualDirection`, etc.) |
-| Change which keys exist                  | `registerLayout()` + `setLayout()`                               |
-| Change row structure (key count per row) | `registerLayout()` + `setLayout()`                               |
+| Change which keys exist                  | `instanceLayouts` + `setLayout()`                                |
+| Change row structure (key count per row) | `instanceLayouts` + `setLayout()`                                |
 | Wrap existing rows at narrow widths      | CSS `flex-wrap` on `data-row-kind` (if applicable)               |
 
 ## Worked Example: Custom Row Wrapping

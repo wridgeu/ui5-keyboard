@@ -10,8 +10,6 @@ import { placeAndWait, waitForRender, tapKey, isShiftActive, isCapsLock } from "
 
 QUnit.module("Negative / Edge-Case - Layout switch + shift", {
   afterEach() {
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -135,8 +133,6 @@ QUnit.test("Target switch resets shift regardless of current layout", async (ass
 
 QUnit.module("Negative / Edge-Case - Target control destroyed", {
   afterEach() {
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -225,8 +221,6 @@ QUnit.test("Switching controls to new control after previous target was destroye
 
 QUnit.module("Negative / Edge-Case - Rapid target switching", {
   afterEach() {
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -348,8 +342,6 @@ QUnit.test("Key taps without target are no-ops", async (assert) => {
 
 QUnit.module("Negative / Edge-Case - Backspace at position 0", {
   afterEach() {
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -449,8 +441,6 @@ QUnit.module("Negative / Edge-Case - i18n API", {
   afterEach() {
     i18nSandbox.restore();
     KioskKeyboard.setI18nResolver(null);
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

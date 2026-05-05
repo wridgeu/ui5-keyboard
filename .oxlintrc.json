@@ -16,8 +16,8 @@
     }
   ],
   "categories": {
-    "correctness": "warn",
-    "suspicious": "warn"
+    "correctness": "error",
+    "suspicious": "error"
   },
   "rules": {
     "eqeqeq": "warn",
@@ -66,7 +66,7 @@
       }
     },
     {
-      "files": ["tools/*.ts", "tools/*.mjs"],
+      "files": ["tools/*.ts", "tools/*.mjs", "patches/*.mjs"],
       "rules": {
         "no-console": "off"
       }
@@ -81,6 +81,13 @@
       "files": ["packages/*/test/e2e/**/*.ts"],
       "rules": {
         "test-guardrails/no-hard-wait": "error"
+      }
+    },
+    {
+      "files": ["tools/.tmp-oxlint-custom-rules-*/**"],
+      "rules": {
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": "off"
       }
     }
   ],

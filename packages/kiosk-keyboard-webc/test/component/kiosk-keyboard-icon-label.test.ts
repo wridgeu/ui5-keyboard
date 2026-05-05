@@ -21,21 +21,17 @@ function queryKeyLabel(keyEl: HTMLElement): HTMLElement | null {
 }
 
 async function createKeyboard(layout: LayoutDefinition): Promise<KioskKeyboard> {
-  KioskKeyboard.registerLayout("test-icon-label", layout);
   const el = await fixture<KioskKeyboard>(
     html`
       <kiosk-keyboard layout="test-icon-label"></kiosk-keyboard>
     `,
   );
+  el.instanceLayouts = { "test-icon-label": layout };
   await nextRender();
   return el;
 }
 
 describe("icon + label rendering", () => {
-  afterEach(() => {
-    KioskKeyboard.unregisterLayout("test-icon-label");
-  });
-
   // -- Permutation matrix --
 
   it("icon omitted, label omitted: renders label from value fallback", async () => {

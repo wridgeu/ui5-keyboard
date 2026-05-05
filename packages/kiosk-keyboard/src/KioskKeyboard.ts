@@ -14,21 +14,17 @@ import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
 import { KeyboardType, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
-  registerLayout as registryRegisterLayout,
-  unregisterLayout as registryUnregisterLayout,
-  resetCustomLayouts as registryResetCustomLayouts,
   getRegisteredLayout as registryGetLayout,
   getLayoutOrDefault as registryGetLayoutOrDefault,
   getRegisteredLayoutNames as registryGetLayoutNames,
   isBuiltInLayout as registryIsBuiltIn,
-  registerLocaleLayout as registryRegisterLocale,
-  unregisterLocaleLayout as registryUnregisterLocale,
-  resetLocaleLayouts as registryResetLocales,
   getLocaleLayout as registryGetLocaleLayout,
+  type InstanceLayouts,
+  type InstanceLocaleLayouts,
 } from "./internal/layout-registry";
 import {
   getMiddlewareFactory as registryGetMiddlewareFactory,
-  registerMiddleware as registryRegisterMiddleware,
+  type InstanceMiddleware,
 } from "./internal/middleware-registry";
 import {
   setI18nResolver as registrySetResolver,
@@ -124,6 +120,12 @@ export default class KioskKeyboard extends Control {
   private _targetSession!: TargetInputSession;
   private _rendererApi!: RendererInternalApi | null;
   private _targetResolverInstance!: TargetResolverFn | null;
+  /** Per-instance layout overrides, derived from the `instanceLayouts` property. */
+  private _instanceLayoutsMap!: InstanceLayouts | undefined;
+  /** Per-instance locale-to-layout overrides, derived from the `instanceLocaleLayouts` property. */
+  private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
+  /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
+  private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
   /** UI5 ResizeHandler registration ID for root size updates. */
   private _responsiveResizeHandlerId!: string | null;
   /** Root DOM element currently observed by the resize handler. */
@@ -141,8 +143,7 @@ export default class KioskKeyboard extends Control {
        * <kiosk:KioskKeyboard layout="qwertz-de" controls="myInput" />
        *
        * @example <caption>TypeScript - custom layout</caption>
-       * KioskKeyboard.registerLayout("azerty-fr", frenchLayout);
-       * new KioskKeyboard({ layout: "azerty-fr" });
+       * new KioskKeyboard({ layout: "azerty-fr", instanceLayouts: { "azerty-fr": frenchLayout } });
        */
       layout: {
         type: "string",
@@ -299,6 +300,52 @@ export default class KioskKeyboard extends Control {
       controls: {
         type: "string[]",
         defaultValue: [],
+        group: "Behavior",
+      },
+      /**
+       * Per-instance layout overrides. Resolution order is
+       * **instance map -> built-in**, so an entry here shadows the
+       * built-in of the same name for this control only. Use this to
+       * supply a custom layout, or to override a built-in (e.g. swap
+       * the German layout) without affecting other controls. Accepts
+       * a plain `Record<string, LayoutDefinition>`; the control stores
+       * it as a `Map` internally.
+       *
+       * @since 0.1.0
+       */
+      instanceLayouts: {
+        type: "object",
+        defaultValue: null,
+        group: "Behavior",
+      },
+      /**
+       * Per-instance locale-to-layout overrides. Resolution order is
+       * **instance map -> built-in locale map -> default layout**.
+       * Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
+       * layout names. Accepts a plain `Record<string, string>`; the
+       * control stores it as a `Map` internally.
+       *
+       * @since 0.1.0
+       */
+      instanceLocaleLayouts: {
+        type: "object",
+        defaultValue: null,
+        group: "Behavior",
+      },
+      /**
+       * Per-instance composition middleware overrides, keyed by layout
+       * name. Resolution order is **instance map -> built-in**. Use
+       * this to attach a layout-specific middleware factory for a
+       * custom layout, or to swap the built-in middleware for one
+       * control only. Accepts a plain
+       * `Record<string, () => CompositionMiddleware>`; the control
+       * stores it as a `Map` internally.
+       *
+       * @since 0.1.0
+       */
+      instanceMiddleware: {
+        type: "object",
+        defaultValue: null,
         group: "Behavior",
       },
     },
@@ -461,68 +508,20 @@ export default class KioskKeyboard extends Control {
   }
 
   // ──────────────────────────────────────────────
-  // Static delegates - layout registry (see internal/layout-registry.ts)
+  // Static delegates - layout registry (read-only views)
+  //
+  // Customization is per-instance: pass `instanceLayouts`,
+  // `instanceLocaleLayouts`, and `instanceMiddleware` to the constructor
+  // (or via the corresponding setters). There is no public mutation API
+  // for the global registry -- built-ins ship sealed.
   // ──────────────────────────────────────────────
 
   /**
-   * Register a custom keyboard layout.
-   *
-   * Registered layouts can be used via `setLayout(name)` or declaratively
-   * with `layout="name"`. Can override built-in layouts.
-   *
-   * @param sName Layout identifier (e.g. "azerty-fr").
-   * @param oDefinition Layout rows and key definitions.
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static registerLayout(sName: string, oDefinition: LayoutDefinition): void {
-    registryRegisterLayout(sName, oDefinition);
-  }
-
-  /**
-   * Register composition middleware for one or more layouts.
-   *
-   * @param aLayouts Layout names the middleware applies to.
-   * @param fnFactory Factory function that creates a fresh middleware instance.
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static registerMiddleware(aLayouts: string[], fnFactory: () => CompositionMiddleware): void {
-    registryRegisterMiddleware(aLayouts, fnFactory);
-  }
-
-  /**
-   * Remove a previously registered custom layout.
-   *
-   * Built-in layouts cannot be removed.
+   * Get a built-in layout definition by name. Returns `undefined` for
+   * names that are not built-in. Instance-only layouts are intentionally
+   * not visible through this static getter.
    *
    * @param sName Layout identifier.
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static unregisterLayout(sName: string): void {
-    registryUnregisterLayout(sName);
-  }
-
-  /**
-   * Remove all custom layouts and keep built-in layouts intact.
-   *
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static resetCustomLayouts(): void {
-    registryResetCustomLayouts();
-  }
-
-  /**
-   * Get a registered layout definition by name.
-   *
-   * @param sName Layout identifier.
-   * @returns The layout definition, or undefined if not found.
    * @public
    * @static
    * @since 0.1.0
@@ -532,7 +531,7 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Get all registered layout names (built-in and custom).
+   * Get the names of all built-in layouts.
    *
    * @public
    * @static
@@ -572,47 +571,9 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Register a locale-to-layout mapping.
-   *
-   * Mapping is used when no explicit `layout` is provided.
-   *
-   * @param sLocale BCP-47 locale key or prefix (e.g. "de", "de-at").
-   * @param sLayout Target layout name.
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static registerLocaleLayout(sLocale: string, sLayout: string): void {
-    registryRegisterLocale(sLocale, sLayout);
-  }
-
-  /**
-   * Remove a locale-to-layout mapping.
-   *
-   * @param sLocale Locale key or prefix.
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static unregisterLocaleLayout(sLocale: string): void {
-    registryUnregisterLocale(sLocale);
-  }
-
-  /**
-   * Reset locale mappings back to built-in defaults.
-   *
-   * @public
-   * @static
-   * @since 0.1.0
-   */
-  static resetLocaleLayouts(): void {
-    registryResetLocales();
-  }
-
-  /**
-   * Resolve the layout name for the current UI5 locale.
-   *
-   * Uses exact locale match, then language-prefix match, then fallback.
+   * Resolve the built-in layout name appropriate for the current UI5
+   * locale. Per-app overrides should be supplied via the
+   * `instanceLocaleLayouts` setting on the control instance.
    *
    * @public
    * @static
@@ -644,7 +605,7 @@ export default class KioskKeyboard extends Control {
    * @param fn  The resolver function, or `null` to clear.
    * @public
    * @static
-   * @since 0.2.0
+   * @since 0.1.0
    */
   static setI18nResolver(fn: I18nResolver | null): void {
     registrySetResolver(fn);
@@ -659,17 +620,32 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Injects the locale-detected layout when constructor settings are
-   * provided but no explicit `layout` is included.
+   * Pre-populates the internal `Map` caches for `instanceLayouts`,
+   * `instanceLocaleLayouts`, and `instanceMiddleware`, then injects the
+   * locale-detected layout (resolved through any instance locale map)
+   * when no explicit `layout` is provided.
+   *
+   * The pre-population happens before `super.applySettings`, so that
+   * `setLayout`'s validation honors instance overrides regardless of
+   * the order in which the framework iterates the settings.
    *
    * Note: When no settings are provided at all (e.g. `new KioskKeyboard()`),
    * ManagedObject does not call `applySettings`. The locale default is
    * therefore also set in `init()`.
    */
   applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
+    // Pre-populate the internal Map caches before super.applySettings
+    // runs so layout validation in setLayout() can honor instance
+    // overrides regardless of property iteration order.
+    this._instanceLayoutsMap = KioskKeyboard._toLayoutMap(mSettings?.instanceLayouts);
+    this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(mSettings?.instanceLocaleLayouts);
+    this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(mSettings?.instanceMiddleware);
     // Spread before super so callers' settings object is never mutated;
     // any explicit `layout` in `mSettings` overrides the locale default.
-    const merged: Record<string, unknown> = { layout: registryGetLocaleLayout(), ...mSettings };
+    const merged: Record<string, unknown> = {
+      layout: registryGetLocaleLayout(this._instanceLocaleLayoutsMap, this._instanceLayoutsMap),
+      ...mSettings,
+    };
     return super.applySettings(merged, oScope);
   }
 
@@ -720,6 +696,9 @@ export default class KioskKeyboard extends Control {
       (id) => this._isTargetOfOther(id),
     );
     this._targetResolverInstance = null;
+    this._instanceLayoutsMap = undefined;
+    this._instanceLocaleLayoutsMap = undefined;
+    this._instanceMiddlewareMap = undefined;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
@@ -866,10 +845,6 @@ export default class KioskKeyboard extends Control {
     }
     KioskKeyboard._instances.delete(this);
 
-    // When the last living instance is destroyed, auto-clear i18n resolver
-    // to prevent cross-app leakage in FLP scenarios.  The resolver may
-    // close over Component/Controller references that would otherwise
-    // never be garbage-collected.
     if (KioskKeyboard._instances.size === 0) {
       registryClearResolver();
       KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.clear();
@@ -969,9 +944,9 @@ export default class KioskKeyboard extends Control {
    */
   setLayout(sLayout: string): this {
     const name = sLayout.toLowerCase();
-    if (!registryGetLayout(name)) {
+    if (!registryGetLayout(name, this._instanceLayoutsMap)) {
       Log.warning(
-        `Layout "${name}" is not registered. Call registerLayout() before setLayout().`,
+        `Layout "${name}" is not registered. Pass it through the instanceLayouts setting before setLayout().`,
         undefined,
         "ui5.kiosk.KioskKeyboard",
       );
@@ -981,6 +956,94 @@ export default class KioskKeyboard extends Control {
       this._baseLayout = name;
     }
     return this.setProperty("layout", name);
+  }
+
+  /**
+   * Custom setter for `instanceLayouts` - keeps the internal `Map`
+   * cache in sync with the property value so callers do not pay the
+   * `Object.entries` cost on every render.
+   */
+  setInstanceLayouts(value: Record<string, LayoutDefinition> | null): this {
+    this._instanceLayoutsMap = KioskKeyboard._toLayoutMap(value);
+    return this.setProperty("instanceLayouts", value) as this;
+  }
+
+  /**
+   * Custom setter for `instanceLocaleLayouts` - keeps the internal
+   * `Map` cache in sync with the property value.
+   */
+  setInstanceLocaleLayouts(value: Record<string, string> | null): this {
+    this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(value);
+    return this.setProperty("instanceLocaleLayouts", value) as this;
+  }
+
+  /**
+   * Custom setter for `instanceMiddleware` - keeps the internal `Map`
+   * cache in sync with the property value.
+   */
+  setInstanceMiddleware(value: Record<string, () => CompositionMiddleware> | null): this {
+    this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(value);
+    if (this._middleware) {
+      this._middleware.reset();
+      this._middleware = null;
+    }
+    return this.setProperty("instanceMiddleware", value) as this;
+  }
+
+  private static _toLayoutMap(value: unknown): InstanceLayouts | undefined {
+    if (!value || typeof value !== "object") return undefined;
+    const entries: [string, LayoutDefinition][] = [];
+    for (const [name, def] of Object.entries(value as Record<string, unknown>)) {
+      if (!KioskKeyboard._isValidLayoutDefinition(def)) {
+        Log.warning(
+          `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
+          undefined,
+          "ui5.kiosk.KioskKeyboard",
+        );
+        continue;
+      }
+      // Lookup paths normalize names via trim+lowercase; mirror that at
+      // storage so mixed-case keys do not silently fall through.
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, def]);
+    }
+    return entries.length === 0 ? undefined : new Map(entries);
+  }
+
+  private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
+    return (
+      Array.isArray(def) &&
+      def.length > 0 &&
+      def.every(
+        (row) =>
+          Array.isArray(row) && row.length > 0 && row.every((key) => typeof key?.value === "string" && key.value),
+      )
+    );
+  }
+
+  private static _toStringMap(value: unknown): InstanceLocaleLayouts | undefined {
+    if (!value || typeof value !== "object") return undefined;
+    const entries: [string, string][] = [];
+    for (const [tag, layout] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof layout !== "string") continue;
+      const key = tag.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, layout.trim().toLowerCase()]);
+    }
+    return entries.length === 0 ? undefined : new Map(entries);
+  }
+
+  private static _toMiddlewareMap(value: unknown): InstanceMiddleware | undefined {
+    if (!value || typeof value !== "object") return undefined;
+    const entries: [string, () => CompositionMiddleware][] = [];
+    for (const [name, factory] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof factory !== "function") continue;
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, factory as () => CompositionMiddleware]);
+    }
+    return entries.length === 0 ? undefined : new Map(entries);
   }
 
   /**
@@ -1595,9 +1658,26 @@ export default class KioskKeyboard extends Control {
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
     const kbType = this.getKeyboardType();
-    if (kbType === KeyboardType.Numpad) return registryGetLayoutOrDefault("numpad");
-    if (kbType === KeyboardType.Numeric) return registryGetLayoutOrDefault("numeric");
-    return registryGetLayoutOrDefault(this.getLayout());
+    if (kbType === KeyboardType.Numpad) {
+      return KioskKeyboard._stripDeadBaseSwitch(registryGetLayoutOrDefault("numpad", this._instanceLayoutsMap));
+    }
+    if (kbType === KeyboardType.Numeric) {
+      return KioskKeyboard._stripDeadBaseSwitch(registryGetLayoutOrDefault("numeric", this._instanceLayoutsMap));
+    }
+    return registryGetLayoutOrDefault(this.getLayout(), this._instanceLayoutsMap);
+  }
+
+  // `_handleKeyAction` ignores `{layout:*}` switches when `keyboardType !== Full`,
+  // so the ABC key on the auto-forced numeric/numpad layout would render but do
+  // nothing. Drop it so the rendered surface matches the active behavior.
+  private static _stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
+    let changed = false;
+    const filtered = layout.map((row) => {
+      const next = row.filter((key) => key.value !== "{layout:base}");
+      if (next.length !== row.length) changed = true;
+      return next;
+    });
+    return changed ? filtered.filter((row) => row.length > 0) : layout;
   }
 
   /**
@@ -1863,7 +1943,7 @@ export default class KioskKeyboard extends Control {
       (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
     ) {
       if (!this._middleware) {
-        const factory = registryGetMiddlewareFactory(this.getLayout());
+        const factory = registryGetMiddlewareFactory(this.getLayout(), this._instanceMiddlewareMap);
         if (factory) this._middleware = factory();
       }
       if (this._middleware) {

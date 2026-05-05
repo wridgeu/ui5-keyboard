@@ -35,8 +35,6 @@ const DOM = KioskKeyboard.DOM;
 
 QUnit.module("KioskKeyboard", {
   afterEach() {
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.resetLocaleLayouts();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -161,8 +159,10 @@ QUnit.test("Disabled state renders correctly", async (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Rendered key shows its label or value", async (assert) => {
-  KioskKeyboard.registerLayout("test-labels", [[{ value: "x" }, { value: "y", label: "Custom" }]]);
-  const kb = new KioskKeyboard({ layout: "test-labels" });
+  const kb = new KioskKeyboard({
+    layout: "test-labels",
+    instanceLayouts: { "test-labels": [[{ value: "x" }, { value: "y", label: "Custom" }]] },
+  });
   await placeAndWait(kb);
 
   assert.strictEqual(getRenderedKeyLabel(kb, "x"), "x", "Key without explicit label shows value");

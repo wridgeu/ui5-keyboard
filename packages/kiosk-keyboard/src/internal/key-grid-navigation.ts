@@ -106,9 +106,9 @@ export default class KeyGridNavigation extends EventProvider {
 
     const rows = this._rootRef?.querySelectorAll<HTMLElement>(this._dom.selectors.row);
     if (!rows || rows.length === 0) return;
-    const lastRow = rows[rows.length - 1];
+    const lastRow = rows[rows.length - 1]!;
     const keys = lastRow.querySelectorAll<HTMLElement>(this._dom.selectors.key);
-    const last = keys[keys.length - 1];
+    const last = keys.length > 0 ? keys[keys.length - 1] : undefined;
     if (last && last !== target) this._transferFocus(target, last);
   }
 
@@ -129,8 +129,8 @@ export default class KeyGridNavigation extends EventProvider {
     const match = current.id.match(KEY_ID_SUFFIX_RE);
     if (!match) return;
 
-    const row = Number.parseInt(match[1], 10) + dRow;
-    const col = Number.parseInt(match[2], 10) + dCol;
+    const row = Number.parseInt(match[1]!, 10) + dRow;
+    const col = Number.parseInt(match[2]!, 10) + dCol;
 
     let next: HTMLElement | null = document.getElementById(keyElementId(this._controlId, row, col));
 
@@ -141,7 +141,7 @@ export default class KeyGridNavigation extends EventProvider {
         if (adjacentRow) {
           const keys = adjacentRow.querySelectorAll<HTMLElement>(this._dom.selectors.key);
           if (keys.length > 0) {
-            next = dCol > 0 ? keys[0] : keys[keys.length - 1];
+            next = (dCol > 0 ? keys[0] : keys[keys.length - 1]) ?? null;
           }
         }
       } else if (dRow !== 0) {
@@ -149,7 +149,7 @@ export default class KeyGridNavigation extends EventProvider {
         if (targetRow) {
           const keys = targetRow.querySelectorAll<HTMLElement>(this._dom.selectors.key);
           if (keys.length > 0) {
-            next = keys[Math.min(col, keys.length - 1)];
+            next = keys[Math.min(col, keys.length - 1)] ?? null;
           }
         }
       }

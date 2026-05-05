@@ -2187,7 +2187,7 @@ QUnit.test("Target callback: hasTarget reports true in registration info", (asse
 
   const regs = manager.getRegistrations();
   assert.strictEqual(regs.length, 1, "One registration exists");
-  assert.ok(regs[0].hasTarget, "hasTarget is true for callback target");
+  assert.ok(regs[0]!.hasTarget, "hasTarget is true for callback target");
 });
 
 QUnit.test("Target callback: coexists with static target and untargeted", (assert) => {

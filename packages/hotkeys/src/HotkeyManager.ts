@@ -427,7 +427,7 @@ export default class HotkeyManager extends BaseObject {
       throw new Error("Cannot pop the global scope");
     }
 
-    const top = this._scopeStack[this._scopeStack.length - 1];
+    const top = this._scopeStack.at(-1)!;
     if (top !== normalized) {
       throw new Error(`Cannot pop scope "${normalized}": current top of stack is "${top}"`);
     }
@@ -595,7 +595,7 @@ export default class HotkeyManager extends BaseObject {
     options?: HotkeyOptions,
   ): HotkeyRegistrationHandle {
     // Warn about options that are not applicable to sequences
-    if (options?.target != null) {
+    if (options?.target) {
       Log.warning(
         `Option "target" is ignored for sequence "${hotkey}" - element targeting is not supported for sequences`,
         undefined,
@@ -1178,7 +1178,7 @@ export default class HotkeyManager extends BaseObject {
     }
 
     const parts = normalizedHotkey.split("+");
-    const key = parts[parts.length - 1];
+    const key = parts.at(-1)!;
     if (!validate.KNOWN_KEYS.has(key)) {
       Log.warning(
         `Hotkey "${normalizedHotkey}" uses unknown key "${key}" - may not match keyboard events correctly`,

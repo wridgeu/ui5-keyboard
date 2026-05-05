@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CompositionMiddleware } from "../../src/types.js";
-import { _registerMiddleware, getMiddlewareFactory } from "../../src/core/middleware-registry.js";
+import {
+  _registerMiddleware,
+  getMiddlewareFactory,
+  type InstanceMiddleware,
+} from "../../src/core/middleware-registry.js";
 import {
   createCompositionState,
   startComposition,
@@ -270,36 +274,31 @@ describe("middleware integration", () => {
     });
   });
 
-  describe("registerMiddleware static method via component class", () => {
-    it("KioskKeyboard exposes registerMiddleware as a static method", async () => {
-      const { default: KioskKeyboard } = await import("../../src/KioskKeyboard.js");
-      expect(typeof KioskKeyboard.registerMiddleware).toBe("function");
-    });
-
-    it("static registerMiddleware delegates to the registry and activates for a layout", async () => {
-      const { default: KioskKeyboard } = await import("../../src/KioskKeyboard.js");
+  describe("instance middleware shadows built-in", () => {
+    it("getMiddlewareFactory with instance map returns the instance factory for a built-in layout", () => {
       const customMw: CompositionMiddleware = {
         handleKey: () => true,
         commit: () => "custom",
         reset: () => {},
       };
-      KioskKeyboard.registerMiddleware(["test-layout"], () => customMw);
-      const factory = getMiddlewareFactory("test-layout");
+      const instanceMap: InstanceMiddleware = new Map([["ja-kana", () => customMw]]);
+      const factory = getMiddlewareFactory("ja-kana", instanceMap);
       expect(factory).not.toBeNull();
       expect(factory!().commit()).toBe("custom");
     });
   });
 
   describe("middleware deactivation on layout switch", () => {
-    it("component calls commit() on its own instance during layout switch", () => {
+    it("commit() is invoked on the resolved middleware instance", () => {
       const commitSpy = vi.fn(() => null);
       const factory = (): CompositionMiddleware => ({
         handleKey: () => false,
         commit: commitSpy,
         reset: () => {},
       });
-      _registerMiddleware(["tracked-layout"], factory);
-      const mw = getMiddlewareFactory("tracked-layout")!();
+      const layout = "switch-tracked-layout";
+      _registerMiddleware([layout], factory);
+      const mw = getMiddlewareFactory(layout)!();
       mw.commit();
       expect(commitSpy).toHaveBeenCalledOnce();
     });
@@ -310,8 +309,9 @@ describe("middleware integration", () => {
         instanceCount++;
         return { handleKey: () => false, commit: () => null, reset: () => {} };
       };
-      _registerMiddleware(["switch-layout"], factory);
-      const f = getMiddlewareFactory("switch-layout")!;
+      const layout = "switch-distinct-layout";
+      _registerMiddleware([layout], factory);
+      const f = getMiddlewareFactory(layout)!;
       const first = f();
       const second = f();
       expect(instanceCount).toBe(2);

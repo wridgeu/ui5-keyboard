@@ -22,7 +22,7 @@ policy for better developer experience (DX).
 
 - `packages/kiosk-keyboard/src/KioskKeyboard.ts`
   - unknown layout name in `setLayout(...)` logs warning and no-ops
-  - unresolved `targetInput` / `inputIds` scenarios log warnings
+  - unresolved `controls` IDs log warnings
   - unsupported native F-key dispatch logs warning
 - `packages/kiosk-keyboard/src/internal/layout-registry.ts`
   - invalid layout names/definitions log warning and no-op

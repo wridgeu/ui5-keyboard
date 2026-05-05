@@ -6,6 +6,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": true,
+    "noUncheckedIndexedAccess": false,
     "types": ["node", "@openui5/types", "@wdio/globals/types", "@wdio/mocha-framework", "@wdio/visual-service"]
   },
   "include": ["./**/*.ts"]

@@ -263,7 +263,9 @@ import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
 const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
-KioskKeyboard.registerLayout("my-qwerty-fk", [fkeyRow, ...qwerty]);
+const el = document.querySelector("kiosk-keyboard");
+el.instanceLayouts = { "my-qwerty-fk": [fkeyRow, ...qwerty] };
+el.layout = "my-qwerty-fk";
 ```
 
 The Custom Layouts demo page (`#/kiosk/custom-layouts`) shows examples of building composite layouts from rows and individual key definitions.

@@ -54,20 +54,16 @@ Stable exports from the bundle entry:
 - Enum exports: `FKeyMode`, `KeyboardType`, `MobileKeyboard`
 - Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
 
-Static methods on `KioskKeyboard` (layout, locale, and middleware registry):
+Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties (and their setters `setInstanceLayouts`, `setInstanceLocaleLayouts`, `setInstanceMiddleware`). The static surface is read-only:
 
-- `registerLayout` / `unregisterLayout` / `resetCustomLayouts`
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
-- `registerLocaleLayout` / `unregisterLocaleLayout` / `resetLocaleLayouts` / `getLocaleLayout`
-- `registerMiddleware` / `unregisterMiddleware` / `resetMiddleware`
+- `getLocaleLayout`
 - `setI18nResolver`
 
 Additional stable runtime hooks on the class:
 
 - Public instance methods documented in the package README (for example `show`, `close`, `refreshResponsiveState`)
 - `KioskKeyboard.DOM` - read-only selector/class contract for tests and DOM assertions
-
-Instance convenience methods that delegate to the same shared registry are also stable (`registerLayout`, `unregisterLayout`, `registerLocaleLayout`, `unregisterLocaleLayout`).
 
 ## Internal Modules
 
@@ -90,7 +86,7 @@ For `ui5.kiosk`, these two layout row modules are additionally treated as stable
 
 Modules under `core/*` (`shift-state`, `dom-utils`, `dom-contract`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
 
-The `layouts/*` directory contains built-in layout definitions. Individual layout files (e.g. `layouts/qwerty`, `layouts/numeric`) are not a stable import surface; layouts are consumed by name through the `layout` attribute or the `registerLayout` API. The two shared row modules are additionally treated as stable for composing custom variant layouts:
+The `layouts/*` directory contains built-in layout definitions. Individual layout files (e.g. `layouts/qwerty`, `layouts/numeric`) are not a stable import surface; layouts are consumed by name through the `layout` attribute or the per-instance `instanceLayouts` property. The two shared row modules are additionally treated as stable for composing custom variant layouts:
 
 - `kiosk-keyboard-webc/layouts/fkey-row`
 - `kiosk-keyboard-webc/layouts/nav-row`

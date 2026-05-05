@@ -1,12 +1,5 @@
-import {
-  _registerMiddleware,
-  registerMiddleware,
-  getMiddlewareFactory,
-  _resetMiddleware,
-} from "ui5/kiosk/internal/middleware-registry";
+import { _registerMiddleware, getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
-
-// --- Helpers ---
 
 function mockFactory(): CompositionMiddleware {
   return {
@@ -16,30 +9,33 @@ function mockFactory(): CompositionMiddleware {
   };
 }
 
-const sandbox = sinon.createSandbox();
-
-function commonAfterEach() {
-  sandbox.restore();
-  _resetMiddleware();
+// _registerMiddleware seals on first write per layout, so each test must use
+// a fresh, never-registered layout name. The built-in side-effect imports
+// already claim "ja-kana" and "ko-hangul".
+let nextId = 0;
+function freshLayoutName(): string {
+  return `test-mw-${++nextId}`;
 }
 
-// --- _registerMiddleware ---
-
-QUnit.module("middleware-registry - _registerMiddleware", { afterEach: commonAfterEach });
+QUnit.module("middleware-registry - _registerMiddleware");
 
 QUnit.test("Registers a factory for a layout", (assert) => {
-  _registerMiddleware(["ja-kana"], mockFactory);
-  const factory = getMiddlewareFactory("ja-kana");
+  const layout = freshLayoutName();
+  _registerMiddleware([layout], mockFactory);
+  const factory = getMiddlewareFactory(layout);
   assert.notStrictEqual(factory, null, "Factory returned for registered layout");
 });
 
 QUnit.test("Registers the same factory for multiple layouts", (assert) => {
-  _registerMiddleware(["ja-kana", "ja-kana-fk"], mockFactory);
-  assert.notStrictEqual(getMiddlewareFactory("ja-kana"), null, "ja-kana has factory");
-  assert.notStrictEqual(getMiddlewareFactory("ja-kana-fk"), null, "ja-kana-fk has factory");
+  const a = freshLayoutName();
+  const b = freshLayoutName();
+  _registerMiddleware([a, b], mockFactory);
+  assert.notStrictEqual(getMiddlewareFactory(a), null, "First layout has factory");
+  assert.notStrictEqual(getMiddlewareFactory(b), null, "Second layout has factory");
 });
 
 QUnit.test("Is idempotent -- first write wins", (assert) => {
+  const layout = freshLayoutName();
   const first = (): CompositionMiddleware => ({
     handleKey: () => true,
     commit: () => "a",
@@ -50,45 +46,29 @@ QUnit.test("Is idempotent -- first write wins", (assert) => {
     commit: () => "b",
     reset: () => {},
   });
-  _registerMiddleware(["ja-kana"], first);
-  _registerMiddleware(["ja-kana"], second);
-  const mw = getMiddlewareFactory("ja-kana")!();
-  assert.strictEqual(mw.handleKey("x", document.createElement("input")), true, "First factory is used, not second");
+  _registerMiddleware([layout], first);
+  _registerMiddleware([layout], second);
+  const mw = getMiddlewareFactory(layout)!();
+  assert.strictEqual(mw.commit(), "a", "First factory is used, not second");
 });
 
 QUnit.test("Returns null for layouts without middleware", (assert) => {
-  assert.strictEqual(getMiddlewareFactory("qwerty"), null, "No factory for unregistered layout");
+  assert.strictEqual(getMiddlewareFactory("not-a-real-layout"), null, "No factory for unregistered layout");
 });
 
-// --- registerMiddleware (public, can override) ---
-
-QUnit.module("middleware-registry - registerMiddleware", { afterEach: commonAfterEach });
-
-QUnit.test("Can override built-in middleware", (assert) => {
-  _registerMiddleware(["ja-kana"], mockFactory);
-  const override = (): CompositionMiddleware => ({
-    handleKey: () => true,
-    commit: () => "override",
-    reset: () => {},
-  });
-  registerMiddleware(["ja-kana"], override);
-  const mw = getMiddlewareFactory("ja-kana")!();
-  assert.strictEqual(mw.commit(), "override", "Public registerMiddleware overwrites built-in factory");
-});
-
-// --- getMiddlewareFactory ---
-
-QUnit.module("middleware-registry - getMiddlewareFactory", { afterEach: commonAfterEach });
+QUnit.module("middleware-registry - getMiddlewareFactory");
 
 QUnit.test("Returns the registered factory function", (assert) => {
-  _registerMiddleware(["ja-kana"], mockFactory);
-  const factory = getMiddlewareFactory("ja-kana");
+  const layout = freshLayoutName();
+  _registerMiddleware([layout], mockFactory);
+  const factory = getMiddlewareFactory(layout);
   assert.strictEqual(typeof factory, "function", "Factory is a function");
 });
 
 QUnit.test("Each factory call creates a fresh instance", (assert) => {
-  _registerMiddleware(["ja-kana"], mockFactory);
-  const factory = getMiddlewareFactory("ja-kana")!;
+  const layout = freshLayoutName();
+  _registerMiddleware([layout], mockFactory);
+  const factory = getMiddlewareFactory(layout)!;
   const a = factory();
   const b = factory();
   assert.notStrictEqual(a, b, "Each call returns a new instance");
@@ -96,4 +76,24 @@ QUnit.test("Each factory call creates a fresh instance", (assert) => {
 
 QUnit.test("Returns null for unregistered layouts", (assert) => {
   assert.strictEqual(getMiddlewareFactory("nonexistent"), null, "No factory for unregistered layout");
+});
+
+QUnit.test("Instance map shadows the built-in factory", (assert) => {
+  const layout = freshLayoutName();
+  _registerMiddleware([layout], mockFactory);
+  const instanceFactory = (): CompositionMiddleware => ({
+    handleKey: () => true,
+    commit: () => "instance",
+    reset: () => {},
+  });
+  const factory = getMiddlewareFactory(layout, new Map([[layout, instanceFactory]]));
+  assert.strictEqual(factory!().commit(), "instance", "Instance map shadows built-in factory");
+});
+
+QUnit.test("Falls through to built-in when instance map lacks the layout", (assert) => {
+  const layout = freshLayoutName();
+  _registerMiddleware([layout], mockFactory);
+  const factory = getMiddlewareFactory(layout, new Map([["other", () => mockFactory()]]));
+  assert.notStrictEqual(factory, null, "Falls through to built-in factory");
+  assert.strictEqual(factory, getMiddlewareFactory(layout), "Returns the exact registered built-in factory");
 });

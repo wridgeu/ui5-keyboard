@@ -32,7 +32,7 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
   if (rawParts.length === 2 && rawParts[0] === "" && rawParts[1] === "") {
     parts = [];
     trailingPlusKey = true;
-  } else if (rawParts.length >= 3 && rawParts[rawParts.length - 1] === "" && rawParts[rawParts.length - 2] === "") {
+  } else if (rawParts.length >= 3 && rawParts.at(-1) === "" && rawParts.at(-2) === "") {
     // Plus key with modifiers: "Ctrl++", "Ctrl+Shift++"
     parts = rawParts.slice(0, -2);
     trailingPlusKey = true;

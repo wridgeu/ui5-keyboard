@@ -10,7 +10,7 @@ sap.ui.define(
     // Row 1: Wide ASCII glyphs (horizontal stress)
     // Row 2: Descenders + diacritics (vertical stress, text-box-trim cap/alphabetic)
     // Row 3: Unicode symbols (grapheme segmentation, font coverage, width)
-    KioskKeyboard.registerLayout("glyph-stress", [
+    var glyphStress = [
       [
         { value: "@" },
         { value: "%" },
@@ -41,7 +41,7 @@ sap.ui.define(
         { value: "§" },
         { value: "¿" },
       ],
-    ]);
+    ];
 
     // 1. Default QWERTY
     new KioskKeyboard().placeAt("kb-qwerty");
@@ -106,11 +106,16 @@ sap.ui.define(
 
     // 14b. QWERTY + Nav Row (combined): tests nav row wrapping at narrow widths
     var qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty");
-    KioskKeyboard.registerLayout("qwerty-nav", [navRow, ...qwertyLayout]);
-    new KioskKeyboard({ layout: "qwerty-nav" }).placeAt("kb-qwerty-nav");
+    new KioskKeyboard({
+      layout: "qwerty-nav",
+      instanceLayouts: { "qwerty-nav": [navRow, ...qwertyLayout] },
+    }).placeAt("kb-qwerty-nav");
 
     // 15. Glyph stress layout
-    new KioskKeyboard({ layout: "glyph-stress" }).placeAt("kb-glyph-stress");
+    new KioskKeyboard({
+      layout: "glyph-stress",
+      instanceLayouts: { "glyph-stress": glyphStress },
+    }).placeAt("kb-glyph-stress");
 
     // 20. Height-constrained container
     new KioskKeyboard().placeAt("kb-height-constrained");
@@ -156,7 +161,7 @@ sap.ui.define(
 
     // 34. Indic glyph stress layout: exercises Indic script detection and
     // font-family / text-box-edge overrides across all 10 supported scripts.
-    KioskKeyboard.registerLayout("indic-stress", [
+    var indicStress = [
       [
         { value: "\u0905" }, // अ Devanagari
         { value: "\u0915" }, // क
@@ -177,8 +182,11 @@ sap.ui.define(
         { value: "\u0D05" }, // അ Malayalam
         { value: "\u0D85" }, // අ Sinhala
       ],
-    ]);
-    new KioskKeyboard({ layout: "indic-stress" }).placeAt("kb-indic-stress");
+    ];
+    new KioskKeyboard({
+      layout: "indic-stress",
+      instanceLayouts: { "indic-stress": indicStress },
+    }).placeAt("kb-indic-stress");
 
     // 35. Spanish (QWERTY-ES)
     new KioskKeyboard({ layout: "qwerty-es" }).placeAt("kb-qwerty-es");

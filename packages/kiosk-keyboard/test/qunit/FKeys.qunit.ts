@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { FKeyMode } from "ui5/kiosk/library";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
+import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
@@ -19,16 +20,13 @@ const DOM = KioskKeyboard.DOM;
 // Composite layout for tests that need both shift and F-key rows.
 // Consumers build these inline now that pre-built combined layouts are removed.
 const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
+const qwertyFk: LayoutDefinition = [fkeyRow, ...qwertyBase];
 
 // ──────────────────────────────────────────────
 // Module
 // ──────────────────────────────────────────────
 
 QUnit.module("FKeys", {
-  beforeEach() {
-    KioskKeyboard.resetCustomLayouts();
-    KioskKeyboard.registerLayout("test-qwerty-fk", [fkeyRow, ...qwertyBase]);
-  },
   afterEach() {
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
@@ -145,7 +143,7 @@ QUnit.test("F-key tap does NOT insert text", async (assert) => {
 });
 
 QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "test-qwerty-fk" });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", instanceLayouts: { "test-qwerty-fk": qwertyFk } });
   await placeAndWait(kb);
 
   // Activate shift
@@ -161,7 +159,7 @@ QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
 });
 
 QUnit.test("F-key tap fires keyPress with shiftKey=true when shift active", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "test-qwerty-fk" });
+  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", instanceLayouts: { "test-qwerty-fk": qwertyFk } });
   await placeAndWait(kb);
 
   let shiftKey = false;
@@ -241,7 +239,11 @@ QUnit.test("ABC button on fkeys layout returns to base layout", async (assert) =
 
 QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   const input = new Input();
-  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", controls: [input.getId()] });
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    controls: [input.getId()],
+    instanceLayouts: { "test-qwerty-fk": qwertyFk },
+  });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
@@ -272,6 +274,7 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
   const kb = new KioskKeyboard({
     layout: "test-qwerty-fk",
     controls: [input.getId()],
+    instanceLayouts: { "test-qwerty-fk": qwertyFk },
   });
   kb.setFKeyMode(FKeyMode.Native);
   input.placeAt("qunit-fixture");
@@ -406,15 +409,13 @@ QUnit.test("keyPress preventDefault prevents native dispatch and native action",
 
 QUnit.test("Native fKeyMode does not dispatch unsupported custom fkey names", async (assert) => {
   const input = new Input();
+  const customLayout: LayoutDefinition = [[{ value: "{fkey:CustomAction}", label: "Do", type: "modifier" }]];
   const kb = new KioskKeyboard({
     layout: "qwerty",
     controls: [input.getId()],
+    instanceLayouts: { "test-custom-native-fkey": customLayout },
   });
   kb.setFKeyMode(FKeyMode.Native);
-
-  KioskKeyboard.registerLayout("test-custom-native-fkey", [
-    [{ value: "{fkey:CustomAction}", label: "Do", type: "modifier" }],
-  ]);
   kb.setLayout("test-custom-native-fkey");
 
   input.placeAt("qunit-fixture");
