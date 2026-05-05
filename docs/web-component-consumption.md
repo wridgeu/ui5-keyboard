@@ -136,9 +136,8 @@ demo-app README.
 ## Lean Consumption (Advanced)
 
 The default entry (`kiosk-keyboard-webc`) includes the component class and all
-built-in layouts. The `./core` named export was removed in the April 2026
-architecture simplification (the class was flattened from a re-export pattern
-into a single file, making a separate core entry unnecessary).
+built-in layouts. There is no separate `./core` export: the class lives in a
+single file, so the default entry already is the lean entry.
 
 Consumers who want selective layout loading can import individual layouts via
 subpath imports and pass any custom layouts through the per-element
