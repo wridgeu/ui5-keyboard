@@ -283,8 +283,13 @@ QUnit.test("Instance middleware shadows the built-in middleware factory", (asser
 });
 
 QUnit.test("Instance middleware falls back to built-in when key not in instance map", (assert) => {
-  const factory = getMiddlewareFactory("ja-kana", new Map([["other", () => noopFactory()]]));
-  assert.notStrictEqual(factory, null, "Falls through to built-in registration");
+  // Compare against the unmapped-instance call so we know we got the SAME factory,
+  // not a phantom non-null. ja-kana has a registered built-in; both lookups must
+  // hit it identically.
+  const builtIn = getMiddlewareFactory("ja-kana");
+  const fallthrough = getMiddlewareFactory("ja-kana", new Map([["other", () => noopFactory()]]));
+  assert.notStrictEqual(fallthrough, null, "Falls through to built-in registration");
+  assert.strictEqual(fallthrough, builtIn, "Returns the exact registered built-in factory");
 });
 
 // ───────────────────────────────────────────────────
@@ -343,4 +348,91 @@ QUnit.test("Destroying one instance does not affect another's overrides", async 
 
   kb2.destroy();
   input2.destroy();
+});
+
+// ───────────────────────────────────────────────────
+// Key normalization: instance map keys are stored lowercase to match
+// the lowercase-normalizing lookup paths.
+// ───────────────────────────────────────────────────
+
+QUnit.module("instance-overrides - key normalization", { afterEach: commonAfterEach });
+
+QUnit.test("Mixed-case instance layout names resolve through lowercase lookup", async (assert) => {
+  const customQwerty = [[{ value: "X" }]] as LayoutDefinition;
+
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    instanceLayouts: { Qwerty: customQwerty },
+    layout: "qwerty",
+  });
+  await placeAndWait(kb);
+
+  assert.deepEqual(getRenderedLayoutKeys(kb), [["X"]], "Mixed-case key 'Qwerty' shadows built-in 'qwerty'");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Mixed-case instance locale tags are stored lowercase to match locale lookup", (assert) => {
+  const kb = new KioskKeyboard({
+    instanceLocaleLayouts: { DE: "Warehouse-DE", "EN-GB": "qwerty" },
+  });
+
+  // The internal Map mirrors the lowercase normalization that the lookup
+  // path applies to BCP-47 tags (`lang.toLowerCase()` + `region.toLowerCase()`).
+  const internals = kb as unknown as { _instanceLocaleLayoutsMap: Map<string, string> };
+  assert.ok(internals._instanceLocaleLayoutsMap.has("de"), "Mixed-case 'DE' stored as 'de'");
+  assert.ok(internals._instanceLocaleLayoutsMap.has("en-gb"), "Mixed-case 'EN-GB' stored as 'en-gb'");
+  assert.strictEqual(internals._instanceLocaleLayoutsMap.get("de"), "warehouse-de", "Layout value lowercased too");
+
+  kb.destroy();
+});
+
+// ───────────────────────────────────────────────────
+// Runtime middleware swap: setting `instanceMiddleware` after the active
+// middleware was lazily cached must reset the cache so the next key press
+// resolves the new factory.
+// ───────────────────────────────────────────────────
+
+QUnit.module("instance-overrides - runtime middleware swap", { afterEach: commonAfterEach });
+
+QUnit.test("setInstanceMiddleware after first key resets the cached middleware", (assert) => {
+  let firstFactoryCalls = 0;
+  const firstFactory = (): CompositionMiddleware => {
+    firstFactoryCalls += 1;
+    return noopFactory();
+  };
+
+  const kb = new KioskKeyboard({
+    instanceMiddleware: { qwerty: firstFactory },
+  });
+
+  // Force the cache to populate the same way `_handleKeyAction` would.
+  const internals = kb as unknown as {
+    _middleware: CompositionMiddleware | null;
+    _instanceMiddlewareMap: Map<string, () => CompositionMiddleware>;
+  };
+  const factory = getMiddlewareFactory("qwerty", internals._instanceMiddlewareMap);
+  internals._middleware = factory!();
+  assert.strictEqual(firstFactoryCalls, 1, "First factory invoked once");
+  assert.notStrictEqual(internals._middleware, null, "Cached middleware populated");
+
+  let secondFactoryCalls = 0;
+  const secondFactory = (): CompositionMiddleware => {
+    secondFactoryCalls += 1;
+    return noopFactory();
+  };
+  kb.setInstanceMiddleware({ qwerty: secondFactory });
+
+  assert.strictEqual(internals._middleware, null, "Cache cleared by setInstanceMiddleware");
+  // Re-resolve the way the control would on the next key press.
+  const factory2 = getMiddlewareFactory("qwerty", internals._instanceMiddlewareMap);
+  factory2!();
+  assert.strictEqual(secondFactoryCalls, 1, "Second factory invoked after swap");
+  assert.strictEqual(firstFactoryCalls, 1, "First factory not re-invoked");
+
+  kb.destroy();
 });

@@ -97,8 +97,8 @@ const KioskKeyboardRenderer = {
     if (sLastFocusedId) {
       const match = sLastFocusedId.match(KEY_ID_SUFFIX_RE);
       if (match) {
-        const row = Number.parseInt(match[1], 10);
-        const col = Number.parseInt(match[2], 10);
+        const row = Number.parseInt(match[1]!, 10);
+        const col = Number.parseInt(match[2]!, 10);
         if (layout[row]?.[col]) return { row, col };
       }
     }

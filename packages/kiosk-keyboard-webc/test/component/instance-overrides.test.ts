@@ -1,7 +1,7 @@
 import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import type { LayoutDefinition } from "../../src/types.js";
+import type { CompositionMiddleware, LayoutDefinition } from "../../src/types.js";
 
 const DOM = KioskKeyboard.DOM;
 const nextRender = renderFinished;
@@ -104,5 +104,42 @@ describe("kiosk-keyboard - instance overrides", () => {
 
     const builtinNames = KioskKeyboard.getRegisteredLayoutNames();
     expect(builtinNames).to.not.include("instance-only");
+  });
+
+  it("mixed-case instance layout names resolve through lowercase lookup", async () => {
+    const el = await fixture<KioskKeyboard>(html`
+      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+    `);
+    // Mixed-case key must shadow the built-in 'qwerty' just as a lowercase
+    // key would, since the lookup path normalizes to lowercase.
+    el.instanceLayouts = { Qwerty: layoutA };
+    await nextRender();
+
+    expect(readDataKeys(el)).to.deep.equal([["ax", "bx"]]);
+  });
+
+  it("reassigning instanceMiddleware after first key clears the cached middleware", async () => {
+    const el = await fixture<KioskKeyboard>(html`
+      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+    `);
+    const noopMw = (): CompositionMiddleware => ({
+      handleKey: () => false,
+      commit: () => null,
+      reset: () => {},
+    });
+    el.instanceMiddleware = { qwerty: noopMw };
+    await nextRender();
+
+    // Simulate the lazy cache that `_onKeyClick` populates on first key press.
+    const internals = el as unknown as { _middleware: CompositionMiddleware | null };
+    internals._middleware = noopMw();
+    expect(internals._middleware).to.not.equal(null);
+
+    // Reassigning the property must reset the cache so the next key press
+    // re-resolves the new factory instead of reusing the stale instance.
+    el.instanceMiddleware = { qwerty: noopMw };
+    await nextRender();
+
+    expect(internals._middleware).to.equal(null);
   });
 });

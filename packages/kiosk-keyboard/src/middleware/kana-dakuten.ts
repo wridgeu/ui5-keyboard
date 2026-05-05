@@ -49,6 +49,7 @@ function createKanaDakutenMiddleware(): CompositionMiddleware {
       if (pos === 0) return false;
 
       const preceding = value[pos - 1];
+      if (!preceding) return false;
       const map = key === DAKUTEN ? DAKUTEN_MAP : HANDAKUTEN_MAP;
       const composed = map.get(preceding);
 

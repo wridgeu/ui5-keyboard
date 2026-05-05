@@ -263,9 +263,9 @@ QUnit.test("onPending fires on mid-sequence progress", (assert) => {
   clock.tick(0);
 
   assert.strictEqual(pendingCalls.length, 1, "Pending callback fired after first key");
-  assert.strictEqual(pendingCalls[0].completedSteps, 1, "1 step completed");
-  assert.strictEqual(pendingCalls[0].totalSteps, 3, "3 total steps");
-  assert.strictEqual(pendingCalls[0].nextKey, "E", "Next key is E");
+  assert.strictEqual(pendingCalls[0]!.completedSteps, 1, "1 step completed");
+  assert.strictEqual(pendingCalls[0]!.totalSteps, 3, "3 total steps");
+  assert.strictEqual(pendingCalls[0]!.nextKey, "E", "Next key is E");
 });
 
 QUnit.test("Pending callback error does not crash", (assert) => {

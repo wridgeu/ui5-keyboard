@@ -21,7 +21,7 @@ QUnit.test("Empty string returns error", (assert) => {
   const result = validateHotkey("", Platform.Windows);
   assert.notOk(result.valid, "Empty string is invalid");
   assert.ok(result.errors.length > 0, "Has errors");
-  assert.ok(result.errors[0].includes("empty"), "Error mentions empty");
+  assert.ok(result.errors[0]!.includes("empty"), "Error mentions empty");
 });
 
 QUnit.test("Modifier-only returns error", (assert) => {

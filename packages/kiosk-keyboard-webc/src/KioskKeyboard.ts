@@ -122,7 +122,15 @@ const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
   },
 };
 
-/** Tracks unsupported fkey names that have already been warned about. */
+/**
+ * Tracks unsupported fkey names that have already been warned about. The set
+ * is module-level by design: a custom element has no FLP-style "last instance
+ * destroyed" hook (`onExitDOM` fires on every detach, including transient
+ * reattach), so per-page deduplication is the correct lifetime. This is
+ * intentionally NOT parity with `kiosk-keyboard`'s static-class equivalent,
+ * which is cleared on last-instance exit because UI5 controls have a
+ * meaningful destroy boundary.
+ */
 const warnedUnsupportedFKeys = new Set<string>();
 
 // ── Internal provenance types ──
@@ -850,6 +858,15 @@ class KioskKeyboard extends UI5Element {
         this._detachEscapeListener();
       }
     }
+    if (name === "instanceMiddleware") {
+      // The active middleware is cached lazily on first key press; without
+      // this reset, a runtime swap of `instanceMiddleware` would be ignored
+      // until the next layout switch.
+      if (this._middleware) {
+        this._middleware.reset();
+        this._middleware = null;
+      }
+    }
   }
 
   // ── Public API ──
@@ -898,7 +915,7 @@ class KioskKeyboard extends UI5Element {
     // Auto-target when there's exactly one control and nothing is focused yet
     const ids = this._controlsList;
     if (ids.length === 1 && !this._targetElement) {
-      const el = document.getElementById(ids[0]);
+      const el = document.getElementById(ids[0]!);
       if (el) {
         const input = this._resolveInputFrom(el);
         if (input) {
@@ -1054,13 +1071,17 @@ class KioskKeyboard extends UI5Element {
     if (this._cachedInstanceLayoutsKey === value) return this._cachedInstanceLayoutsMap;
     const entries: [string, LayoutDefinition][] = [];
     for (const [name, def] of Object.entries(value)) {
-      if (KioskKeyboard._isValidLayoutDefinition(def)) {
-        entries.push([name, def]);
-      } else {
+      if (!KioskKeyboard._isValidLayoutDefinition(def)) {
         console.warn(
           `[kiosk-keyboard] Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
         );
+        continue;
       }
+      // Mirror lookup-side normalization (trim + lowercase) so mixed-case
+      // keys do not silently fall through to the built-in.
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, def]);
     }
     this._cachedInstanceLayoutsKey = value;
     this._cachedInstanceLayoutsMap = entries.length === 0 ? undefined : new Map(entries);
@@ -1089,7 +1110,13 @@ class KioskKeyboard extends UI5Element {
       return undefined;
     }
     if (this._cachedInstanceLocaleKey === value) return this._cachedInstanceLocaleMap;
-    const entries = Object.entries(value).filter(([, v]) => typeof v === "string") as [string, string][];
+    const entries: [string, string][] = [];
+    for (const [tag, layout] of Object.entries(value)) {
+      if (typeof layout !== "string") continue;
+      const key = tag.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, layout.trim().toLowerCase()]);
+    }
     this._cachedInstanceLocaleKey = value;
     this._cachedInstanceLocaleMap = entries.length === 0 ? undefined : new Map(entries);
     return this._cachedInstanceLocaleMap;
@@ -1104,10 +1131,13 @@ class KioskKeyboard extends UI5Element {
       return undefined;
     }
     if (this._cachedInstanceMiddlewareKey === value) return this._cachedInstanceMiddlewareMap;
-    const entries = Object.entries(value).filter(([, v]) => typeof v === "function") as [
-      string,
-      () => CompositionMiddleware,
-    ][];
+    const entries: [string, () => CompositionMiddleware][] = [];
+    for (const [name, factory] of Object.entries(value)) {
+      if (typeof factory !== "function") continue;
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, factory as () => CompositionMiddleware]);
+    }
     this._cachedInstanceMiddlewareKey = value;
     this._cachedInstanceMiddlewareMap = entries.length === 0 ? undefined : new Map(entries);
     return this._cachedInstanceMiddlewareMap;
@@ -1251,8 +1281,8 @@ class KioskKeyboard extends UI5Element {
     if (this._lastFocusedKeyId) {
       const match = this._lastFocusedKeyId.match(KEY_ID_SUFFIX_RE);
       if (match) {
-        const r = Number.parseInt(match[1], 10);
-        const c = Number.parseInt(match[2], 10);
+        const r = Number.parseInt(match[1]!, 10);
+        const c = Number.parseInt(match[2]!, 10);
         if (layout[r]?.[c]) return { row: r, col: c };
       }
     }
@@ -1373,8 +1403,8 @@ class KioskKeyboard extends UI5Element {
     const match = keyEl.id.match(KEY_ID_SUFFIX_RE);
     if (!match) return;
 
-    let row = Number.parseInt(match[1], 10);
-    let col = Number.parseInt(match[2], 10);
+    let row = Number.parseInt(match[1]!, 10);
+    let col = Number.parseInt(match[2]!, 10);
     let moved = false;
 
     switch (e.key) {
@@ -1533,7 +1563,7 @@ class KioskKeyboard extends UI5Element {
     }
     const ids = this._controlsList;
     if (ids.length === 1) {
-      const el = document.getElementById(ids[0]);
+      const el = document.getElementById(ids[0]!);
       if (!el) return null;
       return this._resolveInputFrom(el);
     }
@@ -1665,7 +1695,7 @@ class KioskKeyboard extends UI5Element {
       if (kb._targetElement === inputEl) return true;
       const ids = kb._controlsList;
       if (ids.length === 1) {
-        const el = document.getElementById(ids[0]);
+        const el = document.getElementById(ids[0]!);
         if (!el) continue;
         if (el === inputEl) return true;
         if (el instanceof HTMLElement && kb._resolveInputFrom(el) === inputEl) return true;

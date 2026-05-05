@@ -58,6 +58,7 @@ export default class KioskPopover extends BaseController {
 
   private _openVariant(key: string, event: Button$PressEvent): void {
     const variant = VARIANTS[key];
+    if (!variant) return;
     const button = event.getSource();
     const input = this.byId(button.data("inputId") as string) as Input;
 

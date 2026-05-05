@@ -6,6 +6,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": true,
+    "noUncheckedIndexedAccess": false,
     "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework"]
   },
   "include": ["./**/*.ts"]

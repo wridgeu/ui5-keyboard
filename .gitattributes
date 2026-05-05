@@ -22,6 +22,15 @@
 # Shell scripts and hooks
 .husky/* text eol=lf
 
+# Binary assets - never normalize EOL or attempt text diffing
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
 # GitHub Linguist overrides
 *.html linguist-vendored
 *.less linguist-vendored

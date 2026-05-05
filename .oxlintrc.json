@@ -16,8 +16,8 @@
     }
   ],
   "categories": {
-    "correctness": "warn",
-    "suspicious": "warn"
+    "correctness": "error",
+    "suspicious": "error"
   },
   "rules": {
     "eqeqeq": "warn",
@@ -66,7 +66,7 @@
       }
     },
     {
-      "files": ["tools/*.ts", "tools/*.mjs"],
+      "files": ["tools/*.ts", "tools/*.mjs", "patches/*.mjs"],
       "rules": {
         "no-console": "off"
       }

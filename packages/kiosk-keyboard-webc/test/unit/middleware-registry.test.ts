@@ -85,6 +85,7 @@ describe("middleware-registry", () => {
       _registerMiddleware([layout], mockFactory);
       const factory = getMiddlewareFactory(layout, new Map([["other", () => mockFactory()]]));
       expect(factory).not.toBeNull();
+      expect(factory).toBe(getMiddlewareFactory(layout));
     });
   });
 });

@@ -192,7 +192,7 @@ npm install ui5-lib-kiosk-keyboard
 ```xml
 <mvc:View xmlns:kiosk="ui5.kiosk" xmlns:m="sap.m" xmlns:mvc="sap.ui.core.mvc">
   <m:Input id="myInput" />
-  <kiosk:KioskKeyboard targetInput="myInput" docked="true" autoShow="true" />
+  <kiosk:KioskKeyboard controls="myInput" docked="true" autoShow="true" />
 </mvc:View>
 ```
 
@@ -215,7 +215,7 @@ npm install kiosk-keyboard-webc
 </script>
 
 <input id="my-input" type="text" />
-<kiosk-keyboard layout="qwerty" for="my-input"></kiosk-keyboard>
+<kiosk-keyboard layout="qwerty" controls="my-input"></kiosk-keyboard>
 ```
 
 See the [kiosk-keyboard-webc README](./packages/kiosk-keyboard-webc/README.md) for the detailed consumption modes, UI5 integration notes, API reference, attributes, events, and custom layout examples.
@@ -227,7 +227,7 @@ The two UI5 libraries are independent (neither depends on the other) but they co
 ```xml
 <mvc:View xmlns:kiosk="ui5.kiosk" xmlns:m="sap.m" xmlns:mvc="sap.ui.core.mvc">
   <m:Input id="searchField" placeholder="Search..." />
-  <kiosk:KioskKeyboard docked="true" autoShow="true" targetInput="searchField" />
+  <kiosk:KioskKeyboard docked="true" autoShow="true" controls="searchField" />
 </mvc:View>
 ```
 

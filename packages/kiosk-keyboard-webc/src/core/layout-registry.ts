@@ -22,7 +22,13 @@ export function _registerBuiltInLayout(name: string, def: LayoutDefinition): voi
   BUILTIN_LAYOUTS.add(name);
 }
 
-/** Layouts that serve as secondary views (not base alphabetic layouts). */
+/**
+ * Layouts that serve as secondary views (not base alphabetic layouts).
+ *
+ * Keep in sync with `packages/kiosk-keyboard/src/internal/types.ts`. The kiosk
+ * package re-declares the same set; sharing is intentionally avoided so each
+ * package owns its module graph.
+ */
 export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
 
 /**

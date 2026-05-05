@@ -95,4 +95,5 @@ QUnit.test("Falls through to built-in when instance map lacks the layout", (asse
   _registerMiddleware([layout], mockFactory);
   const factory = getMiddlewareFactory(layout, new Map([["other", () => mockFactory()]]));
   assert.notStrictEqual(factory, null, "Falls through to built-in factory");
+  assert.strictEqual(factory, getMiddlewareFactory(layout), "Returns the exact registered built-in factory");
 });

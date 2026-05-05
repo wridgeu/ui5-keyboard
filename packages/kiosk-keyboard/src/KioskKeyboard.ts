@@ -983,6 +983,10 @@ export default class KioskKeyboard extends Control {
    */
   setInstanceMiddleware(value: Record<string, () => CompositionMiddleware> | null): this {
     this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(value);
+    if (this._middleware) {
+      this._middleware.reset();
+      this._middleware = null;
+    }
     return this.setProperty("instanceMiddleware", value) as this;
   }
 
@@ -990,15 +994,19 @@ export default class KioskKeyboard extends Control {
     if (!value || typeof value !== "object") return undefined;
     const entries: [string, LayoutDefinition][] = [];
     for (const [name, def] of Object.entries(value as Record<string, unknown>)) {
-      if (KioskKeyboard._isValidLayoutDefinition(def)) {
-        entries.push([name, def]);
-      } else {
+      if (!KioskKeyboard._isValidLayoutDefinition(def)) {
         Log.warning(
           `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
           undefined,
           "ui5.kiosk.KioskKeyboard",
         );
+        continue;
       }
+      // Lookup paths normalize names via trim+lowercase; mirror that at
+      // storage so mixed-case keys do not silently fall through.
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, def]);
     }
     return entries.length === 0 ? undefined : new Map(entries);
   }
@@ -1016,19 +1024,25 @@ export default class KioskKeyboard extends Control {
 
   private static _toStringMap(value: unknown): InstanceLocaleLayouts | undefined {
     if (!value || typeof value !== "object") return undefined;
-    const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => typeof v === "string") as [
-      string,
-      string,
-    ][];
+    const entries: [string, string][] = [];
+    for (const [tag, layout] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof layout !== "string") continue;
+      const key = tag.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, layout.trim().toLowerCase()]);
+    }
     return entries.length === 0 ? undefined : new Map(entries);
   }
 
   private static _toMiddlewareMap(value: unknown): InstanceMiddleware | undefined {
     if (!value || typeof value !== "object") return undefined;
-    const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => typeof v === "function") as [
-      string,
-      () => CompositionMiddleware,
-    ][];
+    const entries: [string, () => CompositionMiddleware][] = [];
+    for (const [name, factory] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof factory !== "function") continue;
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, factory as () => CompositionMiddleware]);
+    }
     return entries.length === 0 ? undefined : new Map(entries);
   }
 

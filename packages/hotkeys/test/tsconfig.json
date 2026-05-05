@@ -1,6 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
+    "noUncheckedIndexedAccess": false,
     "types": ["@openui5/types", "@types/qunit", "@types/sinon"]
   },
   "include": ["../src/**/*.ts", "**/*.ts"],
