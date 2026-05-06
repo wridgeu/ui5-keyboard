@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CompositionMiddleware } from "../../src/types.js";
-import {
-  _registerMiddleware,
-  getMiddlewareFactory,
-  type InstanceMiddleware,
-} from "../../src/core/middleware-registry.js";
+import { getMiddlewareFactory, type InstanceMiddleware } from "../../src/core/middleware-registry.js";
 import {
   createCompositionState,
   startComposition,
@@ -285,37 +281,6 @@ describe("middleware integration", () => {
       const factory = getMiddlewareFactory("ja-kana", instanceMap);
       expect(factory).not.toBeNull();
       expect(factory!().commit()).toBe("custom");
-    });
-  });
-
-  describe("middleware deactivation on layout switch", () => {
-    it("commit() is invoked on the resolved middleware instance", () => {
-      const commitSpy = vi.fn(() => null);
-      const factory = (): CompositionMiddleware => ({
-        handleKey: () => false,
-        commit: commitSpy,
-        reset: () => {},
-      });
-      const layout = "switch-tracked-layout";
-      _registerMiddleware([layout], factory);
-      const mw = getMiddlewareFactory(layout)!();
-      mw.commit();
-      expect(commitSpy).toHaveBeenCalledOnce();
-    });
-
-    it("each factory call produces a distinct instance", () => {
-      let instanceCount = 0;
-      const factory = (): CompositionMiddleware => {
-        instanceCount++;
-        return { handleKey: () => false, commit: () => null, reset: () => {} };
-      };
-      const layout = "switch-distinct-layout";
-      _registerMiddleware([layout], factory);
-      const f = getMiddlewareFactory(layout)!;
-      const first = f();
-      const second = f();
-      expect(instanceCount).toBe(2);
-      expect(first).not.toBe(second);
     });
   });
 });

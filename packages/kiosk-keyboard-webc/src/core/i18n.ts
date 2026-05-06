@@ -12,6 +12,7 @@
 import { getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import type I18nBundle from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import type { I18nText } from "@ui5/webcomponents-base/dist/i18nBundle.js";
+import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 
 // Import generated i18n defaults (typed key constants with defaultText fallbacks)
 import * as I18N from "../generated/i18n/i18n-defaults.js";
@@ -34,9 +35,14 @@ function _getLanguage(): string {
 /**
  * Initialize the i18n bundle. Called once during component registration.
  * Uses the UI5 WC framework's async bundle loading.
+ *
+ * The bundle resolves after first render in non-English locales, so any
+ * already-mounted instances have rendered with English defaults. Refresh
+ * them once the locale-specific texts are available.
  */
 export async function initI18n(): Promise<void> {
   _bundle = await getI18nBundle(I18N_NAMESPACE);
+  await reRenderAllUI5Elements({ tag: "kiosk-keyboard" });
 }
 
 /**

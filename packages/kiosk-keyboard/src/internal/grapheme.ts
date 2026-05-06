@@ -61,7 +61,7 @@ export function isSingleGlyph(label: string): boolean {
   return count === 1;
 }
 
-/** CJK: Han, Hiragana, Katakana, Hangul, Bopomofo. Note: includes Hangul -- check isHangulGlyph() first for Korean-specific handling. */
+/** CJK: Han, Hiragana, Katakana, Hangul, Bopomofo. Includes Hangul; call isHangulGlyph() first for Korean-specific handling. */
 const CJK_RE =
   /^[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}\p{Script_Extensions=Bopomofo}]/u;
 

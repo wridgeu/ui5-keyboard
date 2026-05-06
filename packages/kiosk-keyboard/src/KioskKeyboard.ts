@@ -1,5 +1,6 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
+import type { MetadataOptions } from "sap/ui/core/Element";
 import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
@@ -129,7 +130,7 @@ export default class KioskKeyboard extends Control {
   private _responsiveObservedDom!: HTMLElement | null;
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
   private _responsiveSyncFrameId!: number | null;
-  static readonly metadata = {
+  static readonly metadata: MetadataOptions = {
     library: "ui5.kiosk",
     properties: {
       /**
@@ -464,9 +465,7 @@ export default class KioskKeyboard extends Control {
   /** Global target resolver applied to all instances (lowest priority). */
   private static _globalTargetResolver: TargetResolverFn | null = null;
 
-  // ──────────────────────────────────────────────
-  // Static delegates - target resolver
-  // ──────────────────────────────────────────────
+  // ── Static delegates: target resolver ──
 
   /**
    * Sets a global custom resolver used by **all** KioskKeyboard instances
@@ -504,14 +503,11 @@ export default class KioskKeyboard extends Control {
     return KioskKeyboard._globalTargetResolver;
   }
 
-  // ──────────────────────────────────────────────
-  // Static delegates - layout registry (read-only views)
-  //
+  // ── Static delegates: layout registry (read-only views) ──
   // Customization is per-instance: pass `instanceLayouts`,
   // `instanceLocaleLayouts`, and `instanceMiddleware` to the constructor
   // (or via the corresponding setters). There is no public mutation API
-  // for the global registry -- built-ins ship sealed.
-  // ──────────────────────────────────────────────
+  // for the global registry; built-ins ship sealed.
 
   /**
    * Get a built-in layout definition by name. Returns `undefined` for
@@ -626,7 +622,7 @@ export default class KioskKeyboard extends Control {
    * `setLayout`'s validation honors instance overrides regardless of
    * the order in which the framework iterates the settings.
    *
-   * Note: When no settings are provided at all (e.g. `new KioskKeyboard()`),
+   * When no settings are provided at all (e.g. `new KioskKeyboard()`),
    * ManagedObject does not call `applySettings`. The locale default is
    * therefore also set in `init()`.
    */
@@ -859,9 +855,7 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav.destroy();
   }
 
-  // ──────────────────────────────────────────────
-  // Public API - Property overrides
-  // ──────────────────────────────────────────────
+  // ── Public API: property overrides ──
 
   /**
    * Override `setEnabled` to proactively redirect focus to the target input
@@ -887,8 +881,8 @@ export default class KioskKeyboard extends Control {
    * before hiding. Without this, the framework's generic onfocusfail
    * fallback would move focus to an arbitrary sibling.
    *
-   * Note: `setVisible(true)` does not re-open a previously closed docked
-   * keyboard - call `show()` explicitly after making it visible again.
+   * `setVisible(true)` does not re-open a previously closed docked
+   * keyboard; call `show()` explicitly after making it visible again.
    */
   setVisible(isVisible: boolean): this {
     if (!isVisible) {
@@ -907,7 +901,7 @@ export default class KioskKeyboard extends Control {
    * target input. Called before operations that would remove the keyboard
    * from tab order (disable, hide) to avoid unpredictable focus fallback.
    *
-   * Note: Uses `document.activeElement` which does not pierce shadow DOM
+   * Uses `document.activeElement` which does not pierce shadow DOM
    * boundaries. This is fine because UI5 controls do not use shadow DOM.
    */
   private _redirectFocusToTargetIfOwned(): void {
@@ -931,9 +925,7 @@ export default class KioskKeyboard extends Control {
     }
   }
 
-  // ──────────────────────────────────────────────
-  // Public API - Target & Docked Mode
-  // ──────────────────────────────────────────────
+  // ── Public API: target and docked mode ──
 
   /**
    * Custom setter for layout - tracks the base (alphabetic) layout so
@@ -1415,9 +1407,7 @@ export default class KioskKeyboard extends Control {
     }
   }
 
-  // ──────────────────────────────────────────────
-  // Private - controls delegation
-  // ──────────────────────────────────────────────
+  // ── Private: controls delegation ──
 
   _setupControls(): void {
     const ids = this.getControls();
@@ -1537,9 +1527,7 @@ export default class KioskKeyboard extends Control {
     return null;
   }
 
-  // ──────────────────────────────────────────────
-  // Focus Management
-  // ──────────────────────────────────────────────
+  // ── Focus management ──
 
   getFocusDomRef(): globalThis.Element | null {
     if (!this.getEnabled() || this._getResolvedLayout().length === 0) {
@@ -1592,9 +1580,7 @@ export default class KioskKeyboard extends Control {
     }
   }
 
-  // ──────────────────────────────────────────────
-  // Accessibility
-  // ──────────────────────────────────────────────
+  // ── Accessibility ──
 
   getAccessibilityInfo(): {
     role: string;
@@ -1612,9 +1598,7 @@ export default class KioskKeyboard extends Control {
     };
   }
 
-  // ──────────────────────────────────────────────
-  // Internal renderer helpers
-  // ──────────────────────────────────────────────
+  // ── Internal renderer helpers ──
 
   /**
    * Returns the internal renderer API object.
@@ -1762,9 +1746,7 @@ export default class KioskKeyboard extends Control {
     return base;
   }
 
-  // ──────────────────────────────────────────────
-  // UI5 Event Delegation
-  // ──────────────────────────────────────────────
+  // ── UI5 event delegation ──
 
   private _resolveKeyElementFromEventTarget(target: EventTarget | null): HTMLElement | null {
     if (!(target instanceof globalThis.Element)) return null;
@@ -1860,9 +1842,7 @@ export default class KioskKeyboard extends Control {
     this._handleKeyAction(keyValue, target);
   }
 
-  // ──────────────────────────────────────────────
-  // Private - Auto-show
-  // ──────────────────────────────────────────────
+  // ── Private: auto-show ──
 
   /**
    * Whether this instance is visible, enabled, attached to the DOM,
@@ -1921,9 +1901,7 @@ export default class KioskKeyboard extends Control {
     return this._focusClaimService.resolveControlsAncestor(candidate);
   }
 
-  // ──────────────────────────────────────────────
-  // Private - Pointer & Key Actions
-  // ──────────────────────────────────────────────
+  // ── Private: pointer and key actions ──
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
     const shift = this._isShiftActive();
@@ -2064,8 +2042,8 @@ export default class KioskKeyboard extends Control {
     // sap.m.ToggleButton.setPressed(), and this control's own
     // ontouchstart keyPressed class.
     //
-    // Note: this duplicates the class logic in KioskKeyboardRenderer's
-    // addKeyClasses hook.  Custom renderers that override addKeyClasses
+    // This duplicates the class logic in KioskKeyboardRenderer's
+    // addKeyClasses hook. Custom renderers that override addKeyClasses
     // for shift styling must also override _toggleShift to keep the
     // optimistic path in sync.
     const isShifted = this._shiftState.isShifted;
@@ -2086,9 +2064,7 @@ export default class KioskKeyboard extends Control {
     return Element.getElementById(id) ?? null;
   }
 
-  // ──────────────────────────────────────────────
-  // Private - Physical keyboard highlighting
-  // ──────────────────────────────────────────────
+  // ── Private: physical keyboard highlighting ──
 
   /** Maps non-derivable KeyboardEvent.key names to special-key data-key values. */
   private static readonly _KEY_TO_DATA_KEY: Record<string, string> = {
@@ -2152,7 +2128,7 @@ export default class KioskKeyboard extends Control {
 
   /** Updates the ARIA live region text for screen reader announcements. */
   private _announceLiveRegion(text: string): void {
-    const liveRegion = document.getElementById(`${this.getId()}-liveState`);
+    const liveRegion = this.getDomRef("liveState");
     if (liveRegion) liveRegion.textContent = text;
   }
 
@@ -2163,9 +2139,7 @@ export default class KioskKeyboard extends Control {
     this._highlightTargetId = null;
   }
 
-  // ──────────────────────────────────────────────
-  // Private - Mobile detection
-  // ──────────────────────────────────────────────
+  // ── Private: mobile detection ──
 
   /** Best-effort event target used for synthetic native F-key dispatch. */
   private _resolveNativeFKeyTarget(): EventTarget {

@@ -319,4 +319,4 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
   };
 }
 
-_registerMiddleware(["ko-hangul"], createHangulComposeMiddleware);
+_registerMiddleware("ko-hangul", createHangulComposeMiddleware);

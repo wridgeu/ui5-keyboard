@@ -53,10 +53,6 @@ interface ActiveMatch {
  * active scope without a reverse singleton dependency.
  */
 export default class SequenceManager extends BaseObject {
-  static readonly metadata = {
-    library: "ui5.hotkeys",
-  };
-
   private _registrations: Map<string, SequenceRegistration> = new Map();
   private _scopeKeyIndex: Map<string, Map<string, Set<SequenceRegistration>>> = new Map();
   private _activeMatches: ActiveMatch[] = [];

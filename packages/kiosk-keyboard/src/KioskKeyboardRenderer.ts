@@ -25,10 +25,6 @@ import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 const KioskKeyboardRenderer = {
   apiVersion: 4,
 
-  // ──────────────────────────────────────────────
-  // Main entry point
-  // ──────────────────────────────────────────────
-
   render(rm: RenderManager, oControl: KioskKeyboard): void {
     rm.openStart("div", oControl);
     this.addRootClasses(rm, oControl);
@@ -41,9 +37,7 @@ const KioskKeyboardRenderer = {
     rm.close("div");
   },
 
-  // ──────────────────────────────────────────────
-  // Root-level hooks
-  // ──────────────────────────────────────────────
+  // ── Root-level hooks ──
 
   /** CSS classes on the root `<div>`. */
   addRootClasses(rm: RenderManager, oControl: KioskKeyboard): void {
@@ -112,7 +106,6 @@ const KioskKeyboardRenderer = {
     rm.openStart("span", `${oControl.getId()}-liveState`);
     rm.class("sapUiInvisibleText");
     rm.attr("role", "status");
-    rm.attr("aria-live", "polite");
     rm.openEnd();
 
     if (_isCapsLock()) {
@@ -124,9 +117,7 @@ const KioskKeyboardRenderer = {
     rm.close("span");
   },
 
-  // ──────────────────────────────────────────────
-  // Row-level hooks
-  // ──────────────────────────────────────────────
+  // ── Row-level hooks ──
 
   /** Single row wrapper + key iteration. */
   renderRow(
@@ -151,9 +142,7 @@ const KioskKeyboardRenderer = {
     rm.close("div");
   },
 
-  // ──────────────────────────────────────────────
-  // Key-level hooks
-  // ──────────────────────────────────────────────
+  // ── Key-level hooks ──
 
   /** Renders a single key `<div>` with classes, attributes, and content. */
   renderKey(

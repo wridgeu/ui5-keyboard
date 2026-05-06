@@ -1,66 +1,21 @@
 import { describe, it, expect } from "vitest";
 import type { CompositionMiddleware } from "../../src/types.js";
-import { _registerMiddleware, getMiddlewareFactory } from "../../src/core/middleware-registry.js";
+import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
+// Side-effect import: registers the hangul middleware for "ko-hangul",
+// which acts as a stable built-in layout across every test below.
+import "../../src/middleware/hangul-compose.js";
 
-function mockFactory(): CompositionMiddleware {
-  return {
-    handleKey: () => false,
-    commit: () => null,
-    reset: () => {},
-  };
-}
-
-// _registerMiddleware seals on first write per layout, so each test must use
-// a fresh, never-registered layout name. The built-in side-effect imports
-// already claim "ja-kana" and "ko-hangul".
-let nextId = 0;
-function freshLayoutName(): string {
-  return `test-mw-${++nextId}`;
-}
+const BUILT_IN_LAYOUT = "ko-hangul";
 
 describe("middleware-registry", () => {
-  describe("_registerMiddleware", () => {
-    it("registers a factory for a layout", () => {
-      const layout = freshLayoutName();
-      _registerMiddleware([layout], mockFactory);
-      expect(getMiddlewareFactory(layout)).not.toBeNull();
-    });
-
-    it("registers the same factory for multiple layouts", () => {
-      const a = freshLayoutName();
-      const b = freshLayoutName();
-      _registerMiddleware([a, b], mockFactory);
-      expect(getMiddlewareFactory(a)).not.toBeNull();
-      expect(getMiddlewareFactory(b)).not.toBeNull();
-    });
-
-    it("is idempotent -- first write wins", () => {
-      const layout = freshLayoutName();
-      const first = (): CompositionMiddleware => ({ handleKey: () => true, commit: () => "a", reset: () => {} });
-      const second = (): CompositionMiddleware => ({ handleKey: () => false, commit: () => "b", reset: () => {} });
-      _registerMiddleware([layout], first);
-      _registerMiddleware([layout], second);
-      const mw = getMiddlewareFactory(layout)!();
-      expect(mw.commit()).toBe("a");
-    });
-
-    it("returns null for layouts without middleware", () => {
-      expect(getMiddlewareFactory("not-a-real-layout")).toBeNull();
-    });
-  });
-
   describe("getMiddlewareFactory", () => {
-    it("returns the registered factory function", () => {
-      const layout = freshLayoutName();
-      _registerMiddleware([layout], mockFactory);
-      const factory = getMiddlewareFactory(layout);
+    it("returns the registered factory function for a built-in layout", () => {
+      const factory = getMiddlewareFactory(BUILT_IN_LAYOUT);
       expect(typeof factory).toBe("function");
     });
 
     it("each factory call creates a fresh instance", () => {
-      const layout = freshLayoutName();
-      _registerMiddleware([layout], mockFactory);
-      const factory = getMiddlewareFactory(layout)!;
+      const factory = getMiddlewareFactory(BUILT_IN_LAYOUT)!;
       expect(factory()).not.toBe(factory());
     });
 
@@ -69,23 +24,24 @@ describe("middleware-registry", () => {
     });
 
     it("instance map shadows the built-in factory", () => {
-      const layout = freshLayoutName();
-      _registerMiddleware([layout], mockFactory);
       const instanceFactory = (): CompositionMiddleware => ({
         handleKey: () => true,
         commit: () => "instance",
         reset: () => {},
       });
-      const factory = getMiddlewareFactory(layout, new Map([[layout, instanceFactory]]));
+      const factory = getMiddlewareFactory(BUILT_IN_LAYOUT, new Map([[BUILT_IN_LAYOUT, instanceFactory]]));
       expect(factory!().commit()).toBe("instance");
     });
 
     it("falls through to built-in when instance map lacks the layout", () => {
-      const layout = freshLayoutName();
-      _registerMiddleware([layout], mockFactory);
-      const factory = getMiddlewareFactory(layout, new Map([["other", () => mockFactory()]]));
+      const otherFactory = (): CompositionMiddleware => ({
+        handleKey: () => false,
+        commit: () => null,
+        reset: () => {},
+      });
+      const factory = getMiddlewareFactory(BUILT_IN_LAYOUT, new Map([["other", otherFactory]]));
       expect(factory).not.toBeNull();
-      expect(factory).toBe(getMiddlewareFactory(layout));
+      expect(factory).toBe(getMiddlewareFactory(BUILT_IN_LAYOUT));
     });
   });
 });

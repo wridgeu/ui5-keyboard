@@ -57,7 +57,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     focusableKey: '.kiosk-key[tabindex="0"]',
     keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
     keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
-    liveRegion: ".kiosk-keyboard__live-region",
   }),
   /** All CSS part names exposed by the component. */
   parts: _parts,

@@ -66,4 +66,4 @@ function createKanaDakutenMiddleware(): CompositionMiddleware {
   };
 }
 
-_registerMiddleware(["ja-kana"], createKanaDakutenMiddleware);
+_registerMiddleware("ja-kana", createKanaDakutenMiddleware);

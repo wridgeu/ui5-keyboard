@@ -2,10 +2,6 @@ import DataType from "sap/ui/base/DataType";
 import Lib from "sap/ui/core/Lib";
 import "sap/m/library"; // resolve dependency before Lib.init()
 
-// ──────────────────────────────────────────────
-// UI5 Enum Definitions
-// ──────────────────────────────────────────────
-
 /**
  * Built-in keyboard layout identifiers.
  *
@@ -67,7 +63,7 @@ export enum MobileKeyboard {
   Custom = "Custom",
   /** Always defer to the native keyboard - KioskKeyboard will not open on focus. */
   Native = "Native",
-  /** Desktop browsers use KioskKeyboard, phones/tablets defer to native. Note: on a regular laptop/desktop with a physical keyboard the virtual keyboard will still appear - use `Native` if that is not desired. */
+  /** Desktop browsers use KioskKeyboard, phones/tablets defer to native. On a regular laptop/desktop with a physical keyboard the virtual keyboard will still appear; use `Native` if that is not desired. */
   Auto = "Auto",
 }
 
@@ -180,18 +176,10 @@ export const NativeDispatchableKeyNames = Object.freeze([
   KeyName.PageDown,
 ] as const);
 
-// ──────────────────────────────────────────────
-// UI5 Enum Registration
-// ──────────────────────────────────────────────
-
 DataType.registerEnum("ui5.kiosk.KeyboardLayout", KeyboardLayout);
 DataType.registerEnum("ui5.kiosk.KeyboardType", KeyboardType);
 DataType.registerEnum("ui5.kiosk.MobileKeyboard", MobileKeyboard);
 DataType.registerEnum("ui5.kiosk.FKeyMode", FKeyMode);
-
-// ──────────────────────────────────────────────
-// Library Initialization
-// ──────────────────────────────────────────────
 
 const library = Lib.init({
   apiVersion: 2,

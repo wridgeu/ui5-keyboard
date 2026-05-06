@@ -13,16 +13,14 @@ export type InstanceMiddleware = ReadonlyMap<string, () => CompositionMiddleware
 const factories: Map<string, () => CompositionMiddleware> = new Map();
 
 /**
- * Registers a built-in middleware factory for the given layouts.
- * Idempotent: silently skips layouts that already have middleware. Only the
+ * Registers a built-in middleware factory for the given layout.
+ * Idempotent: silently skips a layout that already has middleware. Only the
  * built-in middleware modules call this -- it is not part of the public API.
  * @internal
  */
-export function _registerMiddleware(layouts: string[], factory: () => CompositionMiddleware): void {
-  for (const layout of layouts) {
-    if (factories.has(layout)) continue;
-    factories.set(layout, factory);
-  }
+export function _registerMiddleware(layout: string, factory: () => CompositionMiddleware): void {
+  if (factories.has(layout)) return;
+  factories.set(layout, factory);
 }
 
 /**

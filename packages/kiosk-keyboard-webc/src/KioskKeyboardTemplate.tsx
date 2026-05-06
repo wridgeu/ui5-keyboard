@@ -117,7 +117,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
           })}
         </div>
       ))}
-      <span class={KIOSK_KEYBOARD_DOM.classes.liveRegion} role="status" aria-live="polite">
+      <span class={KIOSK_KEYBOARD_DOM.classes.liveRegion} role="status">
         {this._liveRegionText}
       </span>
     </div>

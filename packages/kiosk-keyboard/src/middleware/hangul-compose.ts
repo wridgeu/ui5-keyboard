@@ -151,8 +151,18 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
 
   function commitPreedit(el: HTMLInputElement | HTMLTextAreaElement): string | null {
     if (!isComposing(compState)) return null;
-    const text = el.value.slice(compState.preeditStart, compState.preeditStart + compState.preeditLength);
+    const start = compState.preeditStart;
+    const text = el.value.slice(start, start + compState.preeditLength);
+    // Splice the preedit out of the raw DOM, end composition, then re-insert
+    // the committed text through insertText so the host's setValue/liveChange
+    // pipeline observes the syllable. The composition-utils contract documents
+    // this requirement; without it the UI5 model and DOM drift apart.
+    el.value = el.value.slice(0, start) + el.value.slice(start + compState.preeditLength);
+    compState.preeditLength = 0;
     endComposition(compState, el);
+    if (text) {
+      insertText(el, text, [start, start]);
+    }
     return text || null;
   }
 
@@ -317,4 +327,4 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
   };
 }
 
-_registerMiddleware(["ko-hangul"], createHangulComposeMiddleware);
+_registerMiddleware("ko-hangul", createHangulComposeMiddleware);

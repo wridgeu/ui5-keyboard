@@ -542,6 +542,9 @@ class KioskKeyboard extends UI5Element {
   @property({ type: Boolean, noAttribute: true })
   _capsLock = false;
 
+  @property({ noAttribute: true })
+  _liveRegionText = "";
+
   // ── Backing field for the `open` getter/setter below.
   //    Direct writes intentionally bypass the setter when the host is being
   //    torn down or when invalidation flow already ran in the same tick. ──
@@ -1149,7 +1152,7 @@ class KioskKeyboard extends UI5Element {
     // Caps Lock state: use capsLockLabel if defined, else i18n fallback
     if (key.value === "{shift}" && this._capsLock) {
       if (key.capsLockLabel !== undefined) return key.capsLockLabel;
-      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+      return getText("KEY_CAPS_LOCK", "Caps Lock");
     }
 
     const shift = this._shifted;
@@ -1176,7 +1179,7 @@ class KioskKeyboard extends UI5Element {
     // CapsLock always overrides the shift key's aria-label so screen
     // readers announce "Caps Lock" rather than "Shift" (matches UI5 renderer).
     if (key.value === "{shift}" && this._capsLock) {
-      return getText("ARIA_CAPS_LOCK", "Caps Lock");
+      return getText("KEY_CAPS_LOCK", "Caps Lock");
     }
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);
@@ -1235,12 +1238,6 @@ class KioskKeyboard extends UI5Element {
     return getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard");
   }
 
-  get _liveRegionText(): string {
-    if (this._capsLock) return getText("ARIA_CAPS_LOCK_ON", "Caps Lock on");
-    if (this._shifted) return getText("ARIA_SHIFT_ON", "Shift on");
-    return "";
-  }
-
   /** Queue text for the live region. Identical consecutive entries are coalesced. */
   private _announce(text: string): void {
     if (!text) return;
@@ -1266,8 +1263,7 @@ class KioskKeyboard extends UI5Element {
         return;
       }
       const next = this._announcementQueue.shift();
-      const region = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.liveRegion);
-      if (region && next !== undefined) region.textContent = next;
+      if (next !== undefined) this._liveRegionText = next;
       if (this._announcementQueue.length > 0) {
         this._announcementTimerId = window.setTimeout(writeNext, KioskKeyboard._ANNOUNCEMENT_INTERVAL_MS);
       } else {
@@ -1542,8 +1538,15 @@ class KioskKeyboard extends UI5Element {
   }
 
   private _syncShiftState(): void {
+    const wasShifted = this._shifted;
+    const wasCapsLock = this._capsLock;
     this._shifted = this._shiftState.isShifted;
     this._capsLock = this._shiftState.isCapsLock;
+    if (!wasCapsLock && this._capsLock) {
+      this._announce(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
+    } else if (!wasShifted && this._shifted && !this._capsLock) {
+      this._announce(getText("ARIA_SHIFT_ON", "Shift on"));
+    }
   }
 
   private _autoReleaseShift(): void {

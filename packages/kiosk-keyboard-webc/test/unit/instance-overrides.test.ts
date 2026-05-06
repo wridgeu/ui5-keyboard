@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { getRegisteredLayout, getLayoutOrDefault, getLocaleLayout } from "../../src/core/layout-registry.js";
-import { _registerMiddleware, getMiddlewareFactory } from "../../src/core/middleware-registry.js";
+import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
 import type { LayoutDefinition, CompositionMiddleware } from "../../src/types.js";
 
 // Pull in built-in layouts so the registry is populated.
@@ -10,22 +10,20 @@ import "../../src/layouts/numeric.js";
 import "../../src/layouts/numpad.js";
 import "../../src/layouts/special.js";
 import "../../src/layouts/ja-kana.js";
+// Side-effect import: registers the hangul middleware for "ko-hangul",
+// which acts as the stable built-in layout for the middleware shadow tests.
+import "../../src/middleware/hangul-compose.js";
+
+const BUILT_IN_MW_LAYOUT = "ko-hangul";
 
 const layoutA: LayoutDefinition = [[{ value: "a" }]];
 const layoutB: LayoutDefinition = [[{ value: "b" }]];
 
-const noopFactory = (): CompositionMiddleware => ({
-  handleKey: () => false,
-  commit: () => null,
+const instanceFactory = (): CompositionMiddleware => ({
+  handleKey: () => true,
+  commit: () => "instance",
   reset: () => {},
 });
-
-// _registerMiddleware seals on first write per layout, so each test must use
-// a fresh, never-registered layout name.
-let nextId = 0;
-function freshLayoutName(): string {
-  return `instance-overrides-mw-${++nextId}`;
-}
 
 describe("instance overrides - layout-registry", () => {
   it("getRegisteredLayout: instance map shadows built-in", () => {
@@ -95,29 +93,16 @@ describe("instance overrides - layout-registry", () => {
 
 describe("instance overrides - middleware-registry", () => {
   it("getMiddlewareFactory: instance map shadows built-in", () => {
-    const layout = freshLayoutName();
-    const builtInFactory = vi.fn(noopFactory);
-    const instanceFactory = vi.fn(noopFactory);
-    _registerMiddleware([layout], builtInFactory);
-
-    const instanceMap = new Map([[layout, instanceFactory]]);
-    const factory = getMiddlewareFactory(layout, instanceMap);
-    factory!();
-
-    expect(instanceFactory).toHaveBeenCalled();
-    expect(builtInFactory).not.toHaveBeenCalled();
+    const instanceMap = new Map([[BUILT_IN_MW_LAYOUT, instanceFactory]]);
+    const factory = getMiddlewareFactory(BUILT_IN_MW_LAYOUT, instanceMap);
+    expect(factory!().commit()).toBe("instance");
   });
 
   it("getMiddlewareFactory: falls back to built-in when key missing in instance map", () => {
-    const layout = freshLayoutName();
-    const builtInFactory = vi.fn(noopFactory);
-    _registerMiddleware([layout], builtInFactory);
-
-    const instanceMap = new Map([["other", noopFactory]]);
-    const factory = getMiddlewareFactory(layout, instanceMap);
-    factory!();
-
-    expect(builtInFactory).toHaveBeenCalled();
+    const instanceMap = new Map([["other", instanceFactory]]);
+    const factory = getMiddlewareFactory(BUILT_IN_MW_LAYOUT, instanceMap);
+    expect(factory).not.toBeNull();
+    expect(factory).toBe(getMiddlewareFactory(BUILT_IN_MW_LAYOUT));
   });
 
   it("getMiddlewareFactory: returns null when neither instance map nor built-in has the layout", () => {

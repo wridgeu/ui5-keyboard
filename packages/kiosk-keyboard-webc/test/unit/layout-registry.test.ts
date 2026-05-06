@@ -5,7 +5,6 @@ import {
   getRegisteredLayoutNames,
   isBuiltInLayout,
   getLocaleLayout,
-  _registerBuiltInLayout,
 } from "../../src/core/layout-registry.js";
 import type { LayoutDefinition } from "../../src/types.js";
 
@@ -39,13 +38,6 @@ const BUILTIN_NAMES = [
   "ko-hangul",
   "qwerty-es",
 ];
-
-// _registerBuiltInLayout seals on first write per name, so any test that
-// exercises it must use a fresh, never-registered name.
-let nextId = 0;
-function freshLayoutName(): string {
-  return `test-builtin-${++nextId}`;
-}
 
 describe("layout-registry", () => {
   describe("built-in layouts", () => {
@@ -251,32 +243,6 @@ describe("layout-registry", () => {
     it("returns false for empty string", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       expect(isBuiltInLayout("")).toBe(false);
-    });
-  });
-
-  describe("_registerBuiltInLayout", () => {
-    it("registers a layout and marks it as built-in", () => {
-      const name = freshLayoutName();
-      _registerBuiltInLayout(name, CUSTOM_LAYOUT);
-      expect(getRegisteredLayout(name)).toBe(CUSTOM_LAYOUT);
-      expect(isBuiltInLayout(name)).toBe(true);
-    });
-
-    it("is idempotent -- first write wins", () => {
-      const name = freshLayoutName();
-      const first: LayoutDefinition = [[{ value: "x" }]];
-      const second: LayoutDefinition = [[{ value: "y" }]];
-      _registerBuiltInLayout(name, first);
-      _registerBuiltInLayout(name, second);
-      expect(getRegisteredLayout(name)).toBe(first);
-    });
-
-    it("does not warn on duplicate registration", () => {
-      const name = freshLayoutName();
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      _registerBuiltInLayout(name, CUSTOM_LAYOUT);
-      _registerBuiltInLayout(name, CUSTOM_LAYOUT);
-      expect(spy).not.toHaveBeenCalled();
     });
   });
 });

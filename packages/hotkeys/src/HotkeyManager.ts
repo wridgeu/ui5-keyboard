@@ -134,10 +134,6 @@ function parseSequenceSteps(hotkey: string): string[] | null {
  * ```
  */
 export default class HotkeyManager extends BaseObject {
-  static readonly metadata = {
-    library: "ui5.hotkeys",
-  };
-
   private _registrations: Map<string, HotkeyRegistration> = new Map();
   private _registrationsByScope: Map<string, ScopeRegistrationBucket> = new Map();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
