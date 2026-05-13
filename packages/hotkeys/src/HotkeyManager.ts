@@ -153,6 +153,11 @@ export default class HotkeyManager extends BaseObject {
   // Focus-tracking logic - extracted to its own class for maintainability.
   private _focusFallback: FocusFallbackTracker;
 
+  // Per-event popup-check memoization. Set at the start of _processHotkeys and
+  // reused by _processSequences in the same dispatch pass to avoid querying
+  // sap.m.InstanceManager twice per keydown.
+  private _currentEventPopupOpen = false;
+
   /**
    * Create a new HotkeyManager instance.
    *
@@ -682,7 +687,7 @@ export default class HotkeyManager extends BaseObject {
       ignoreInputs: s.ignoreInputs,
       ignoreRepeat: true,
       suppressInPopups: s.suppressInPopups,
-      conflictBehavior: "warn" as ConflictBehavior,
+      conflictBehavior: ConflictBehavior.Warn,
       hasTarget: false,
       sequence: s.sequence,
       timeout: s.timeout,
@@ -813,8 +818,9 @@ export default class HotkeyManager extends BaseObject {
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
 
-    // Check popup state (lazy-loaded)
+    // Check popup state (lazy-loaded). Cached for _processSequences in the same dispatch pass.
     const popupOpen = this._checkPopupOpen();
+    this._currentEventPopupOpen = popupOpen;
 
     const skipInfo: SkipInfo | null = this._unhandledCallback !== null ? { reason: UnhandledReason.NoMatch } : null;
 
@@ -844,8 +850,8 @@ export default class HotkeyManager extends BaseObject {
    * Delegates to the lazy SequenceManager.
    */
   private _processSequences(event: KeyboardEvent): boolean {
-    const popupOpen = this._checkPopupOpen();
-    return this._sequenceManager?.processKeyEvent(event, popupOpen) ?? false;
+    // Reuse the popup check from _processHotkeys (same dispatch pass).
+    return this._sequenceManager?.processKeyEvent(event, this._currentEventPopupOpen) ?? false;
   }
 
   /**

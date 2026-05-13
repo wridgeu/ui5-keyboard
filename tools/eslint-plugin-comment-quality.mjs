@@ -1,13 +1,5 @@
-/**
- * Custom oxlint JS plugin that detects low-quality AI-generated comments.
- *
- * Rules use AST correlation (comparing comment text against adjacent code
- * identifiers) rather than broad regex, keeping false-positive rates low.
- * All rules are warn-only (no auto-fix) so the developer decides whether
- * to rewrite the comment or remove it.
- *
- * @see https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
- */
+// oxlint plugin: low-quality AI-generated comments. Warn-only.
+// See https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
 
 // ── Shared helpers ──
 
@@ -36,8 +28,8 @@ function commentText(node) {
 }
 
 /**
- * Collects all Identifier names reachable from a node (shallow, max 1 level
- * of nesting). Used to extract the "vocabulary" of a code statement.
+ * Collects all Identifier names reachable from a node, walking up to depth 3.
+ * Used to extract the "vocabulary" of a code statement.
  */
 function collectIdentifiers(node) {
   const ids = new Set();

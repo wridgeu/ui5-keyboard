@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { runNpm } from "./run-npm.mjs";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(import.meta.dirname, "..");
 
 // Rebuild (tsc + vite bundle)
 runNpm(["run", "clean", "-w", "packages/kiosk-keyboard-webc"], repoRoot);

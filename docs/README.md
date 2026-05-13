@@ -11,7 +11,6 @@ This folder is organized by library area and document lifecycle.
 - [Future Improvements](./FUTURE-IMPROVEMENTS.md)
 - [Glossary](./GLOSSARY.md)
 - [Web Component Consumption](./web-component-consumption.md)
-- [Implementation Plans](./plans/README.md)
 - [Proposals](./proposals/) (cross-cutting, not specific to one package)
 
 ## Lifecycle

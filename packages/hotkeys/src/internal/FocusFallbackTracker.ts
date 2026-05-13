@@ -10,8 +10,7 @@ const LOG_COMPONENT = "ui5.hotkeys.FocusFallbackTracker";
  * below 800ms miss slow rerenders; values above 2000ms risk stale matches
  * after the user has mentally moved on.
  */
-/** @internal - exported for testing only */
-export const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
+const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
 /**
  * Tracks focus/blur state and augments keyboard event paths for
