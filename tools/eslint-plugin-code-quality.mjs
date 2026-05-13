@@ -1,22 +1,6 @@
-/**
- * Custom oxlint JS plugin that catches AI-generated code anti-patterns.
- *
- * Detects common patterns left behind by AI coding assistants:
- * double type assertions, console-only error handling, redundant
- * boolean returns, and em-dashes in string literals.
- *
- * @see https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
- */
+// oxlint plugin: AI-generated code anti-patterns.
+// See https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
 
-/**
- * Detects `x as unknown as T` double type-assertion chains.
- *
- * AI assistants reach for double assertions instead of proper type
- * narrowing (type guards, `in` checks, `.isA()` etc.). This rule
- * flags the pattern so it can be replaced with safe narrowing.
- *
- * Inspired by unguard's no-type-assertion / no-inline-type-assertion.
- */
 const noDoubleTypeAssertion = {
   meta: {
     type: "problem",

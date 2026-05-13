@@ -1,9 +1,12 @@
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import { UnhandledReason } from "ui5/hotkeys/library";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
-import { FOCUS_PATH_FALLBACK_TTL_MS } from "ui5/hotkeys/internal/FocusFallbackTracker";
 import type Log from "sap/base/Log";
 import { createHotkeyManager, destroyHotkeyManager, fireBlur, fireKey, fireKeyOn, fireKeyUp } from "./test-helpers";
+
+// Mirrors the FOCUS_PATH_FALLBACK_TTL_MS constant in src/internal/FocusFallbackTracker.ts.
+// Inlined here so the production module keeps the constant private.
+const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
 let manager: HotkeyManager;
 

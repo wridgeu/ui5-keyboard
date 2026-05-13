@@ -1546,6 +1546,8 @@ class KioskKeyboard extends UI5Element {
       this._announce(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
     } else if (!wasShifted && this._shifted && !this._capsLock) {
       this._announce(getText("ARIA_SHIFT_ON", "Shift on"));
+    } else if (wasShifted && !this._shifted && !this._capsLock) {
+      this._announce(getText("ARIA_SHIFT_OFF", "Shift off"));
     }
   }
 

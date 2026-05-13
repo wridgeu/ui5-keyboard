@@ -1,17 +1,6 @@
-/**
- * Custom oxlint JS plugin that enforces test stability guardrails.
- *
- * Detects flaky hard-wait patterns in test files and guides towards
- * proper condition-based waiting (waitUntil / waitFor*).
- *
- * @see https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
- */
+// oxlint plugin: test stability guardrails (flags flaky hard-wait patterns).
+// See https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
 
-/**
- * Reports `browser.pause()` calls that introduce flaky, time-based waits.
- *
- * Scope: all test files (configured via oxlintrc overrides).
- */
 const noBrowserPause = {
   meta: {
     type: "problem",
