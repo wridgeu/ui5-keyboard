@@ -4,15 +4,15 @@
   "jsPlugins": [
     {
       "name": "test-guardrails",
-      "specifier": "./tools/eslint-plugin-test-guardrails.mjs"
+      "specifier": "./tools/oxlint-plugin-test-guardrails.mjs"
     },
     {
       "name": "code-quality",
-      "specifier": "./tools/eslint-plugin-code-quality.mjs"
+      "specifier": "./tools/oxlint-plugin-code-quality.mjs"
     },
     {
       "name": "comment-quality",
-      "specifier": "./tools/eslint-plugin-comment-quality.mjs"
+      "specifier": "./tools/oxlint-plugin-comment-quality.mjs"
     }
   ],
   "categories": {

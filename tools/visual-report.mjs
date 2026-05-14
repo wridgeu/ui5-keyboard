@@ -23,15 +23,7 @@ import { createRequire } from "node:module";
 import { serveStatic } from "./serve-static.mjs";
 
 const require = createRequire(import.meta.url);
-
-function resolveVisualReporterCli() {
-  try {
-    return require.resolve("wdio-visual-reporter/bin/cli.js", { paths: [import.meta.dirname] });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`Unable to resolve wdio-visual-reporter. Install dependencies first. ${reason}`, { cause: error });
-  }
-}
+const visualReporterCli = require.resolve("wdio-visual-reporter/bin/cli.js", { paths: [import.meta.dirname] });
 
 const screenshotDir = process.argv[2];
 if (!screenshotDir) {
@@ -88,7 +80,7 @@ const reportDir = resolve(absDir, "report");
 console.log(`Generating HTML report in ${reportDir}...`);
 const result = spawnSync(
   process.execPath,
-  [resolveVisualReporterCli(), `--jsonOutput=${outputJson}`, `--reportFolder=${reportDir}`],
+  [visualReporterCli, `--jsonOutput=${outputJson}`, `--reportFolder=${reportDir}`],
   { stdio: "inherit" },
 );
 if (result.status !== 0) {

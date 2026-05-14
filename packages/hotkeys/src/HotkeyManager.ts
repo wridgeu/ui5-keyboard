@@ -153,9 +153,8 @@ export default class HotkeyManager extends BaseObject {
   // Focus-tracking logic - extracted to its own class for maintainability.
   private _focusFallback: FocusFallbackTracker;
 
-  // Per-event popup-check memoization. Set at the start of _processHotkeys and
-  // reused by _processSequences in the same dispatch pass to avoid querying
-  // sap.m.InstanceManager twice per keydown.
+  // Cached once per dispatch so _processSequences reuses _processHotkeys'
+  // sap.m.InstanceManager lookup instead of repeating it.
   private _currentEventPopupOpen = false;
 
   /**
@@ -818,7 +817,7 @@ export default class HotkeyManager extends BaseObject {
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
 
-    // Check popup state (lazy-loaded). Cached for _processSequences in the same dispatch pass.
+    // Check popup state (lazy-loaded)
     const popupOpen = this._checkPopupOpen();
     this._currentEventPopupOpen = popupOpen;
 
@@ -850,7 +849,6 @@ export default class HotkeyManager extends BaseObject {
    * Delegates to the lazy SequenceManager.
    */
   private _processSequences(event: KeyboardEvent): boolean {
-    // Reuse the popup check from _processHotkeys (same dispatch pass).
     return this._sequenceManager?.processKeyEvent(event, this._currentEventPopupOpen) ?? false;
   }
 
