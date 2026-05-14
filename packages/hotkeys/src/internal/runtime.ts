@@ -1,5 +1,5 @@
 import type { Platform } from "../library";
-import { detectPlatform as detectPlatformDefault } from "./platform";
+import { detectPlatform } from "./platform";
 
 type InstanceManagerModule = {
   hasOpenDialog(): boolean;
@@ -13,7 +13,7 @@ export type RuntimeHooks = {
 
 let popupChecker: (() => boolean) | null = null;
 
-function hasOpenPopupDefault(): boolean {
+function hasOpenPopup(): boolean {
   if (!popupChecker) {
     const instanceManager = sap.ui.require("sap/m/InstanceManager") as InstanceManagerModule | undefined;
     if (instanceManager) {
@@ -24,34 +24,10 @@ function hasOpenPopupDefault(): boolean {
   return popupChecker?.() ?? false;
 }
 
-const defaultRuntimeHooks: RuntimeHooks = {
-  detectPlatform: detectPlatformDefault,
-  hasOpenPopup: hasOpenPopupDefault,
-};
-
 export const runtimeHooks: RuntimeHooks = {
-  detectPlatform: defaultRuntimeHooks.detectPlatform,
-  hasOpenPopup: defaultRuntimeHooks.hasOpenPopup,
+  detectPlatform,
+  hasOpenPopup,
 };
-
-export function setRuntimeHooks(overrides: Partial<RuntimeHooks>): () => void {
-  const previous: RuntimeHooks = {
-    detectPlatform: runtimeHooks.detectPlatform,
-    hasOpenPopup: runtimeHooks.hasOpenPopup,
-  };
-
-  if (overrides.detectPlatform) {
-    runtimeHooks.detectPlatform = overrides.detectPlatform;
-  }
-  if (overrides.hasOpenPopup) {
-    runtimeHooks.hasOpenPopup = overrides.hasOpenPopup;
-  }
-
-  return () => {
-    runtimeHooks.detectPlatform = previous.detectPlatform;
-    runtimeHooks.hasOpenPopup = previous.hasOpenPopup;
-  };
-}
 
 export function resetRuntimeCaches(): void {
   popupChecker = null;

@@ -1,19 +1,14 @@
-import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
+import { runtimeHooks } from "ui5/hotkeys/internal/runtime";
 import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
-let restoreRuntimeHooks: (() => void) | null = null;
+const sandbox = sinon.createSandbox();
 
 QUnit.module("Dialog & Fragment Scopes", {
   beforeEach() {
-    restoreRuntimeHooks?.();
-    restoreRuntimeHooks = null;
-
     destroyHotkeyManager();
   },
   afterEach() {
-    restoreRuntimeHooks?.();
-    restoreRuntimeHooks = null;
-
+    sandbox.restore();
     destroyHotkeyManager();
   },
 });
@@ -89,12 +84,11 @@ QUnit.test("suppressInPopups with runtime popup hook", (assert) => {
     { suppressInPopups: true },
   );
 
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+  const popupStub = sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
   fireKey("s", { ctrlKey: true });
   assert.notOk(called, "Ctrl+S suppressed when popup is open");
 
-  restoreRuntimeHooks();
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => false });
+  popupStub.returns(false);
   fireKey("s", { ctrlKey: true });
   assert.ok(called, "Ctrl+S fires when popup is closed");
 });
