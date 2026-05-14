@@ -2,7 +2,7 @@
 
 Shared build and test tooling for the monorepo. These scripts are consumed by package-level configs and root-level npm scripts.
 
-## `eslint-plugin-test-guardrails.mjs`
+## `oxlint-plugin-test-guardrails.mjs`
 
 Custom oxlint JS plugin that enforces test stability guardrails. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
 
@@ -22,7 +22,7 @@ Rule scoping is configured via `overrides` in `.oxlintrc.json`:
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding override entry in `.oxlintrc.json`.
 
-## `eslint-plugin-code-quality.mjs`
+## `oxlint-plugin-code-quality.mjs`
 
 Custom oxlint JS plugin that catches AI-generated code anti-patterns. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
 
@@ -41,7 +41,7 @@ Inspired by common AI-slop detection patterns from tools like [KarpeSlop](https:
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
-## `eslint-plugin-comment-quality.mjs`
+## `oxlint-plugin-comment-quality.mjs`
 
 Custom oxlint JS plugin that detects low-quality AI-generated comments. Uses AST correlation (comparing comment text against adjacent code identifiers) rather than broad regex to keep false-positive rates low. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
 
@@ -315,19 +315,19 @@ Run via `npm run test:packages:smoke`.
 
 ## Consumers
 
-### `eslint-plugin-test-guardrails.mjs`
+### `oxlint-plugin-test-guardrails.mjs`
 
 | Consumer         | Integration                                      |
 | ---------------- | ------------------------------------------------ |
 | `.oxlintrc.json` | `jsPlugins` entry, rule overrides per test scope |
 
-### `eslint-plugin-code-quality.mjs`
+### `oxlint-plugin-code-quality.mjs`
 
 | Consumer         | Integration                                     |
 | ---------------- | ----------------------------------------------- |
 | `.oxlintrc.json` | `jsPlugins` entry, global rules + test override |
 
-### `eslint-plugin-comment-quality.mjs`
+### `oxlint-plugin-comment-quality.mjs`
 
 | Consumer         | Integration                     |
 | ---------------- | ------------------------------- |
