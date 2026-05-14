@@ -1,8 +1,10 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType } from "ui5/kiosk/library";
-import { applyResponsiveHeightClasses, placeAndWait, waitForRender } from "./test-helpers";
+import ResizeHandler from "sap/ui/core/ResizeHandler";
+import { setMeasuredHeight, placeAndWait, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
+const sandbox = sinon.createSandbox();
 
 // ──────────────────────────────────────────────
 // Module
@@ -10,6 +12,7 @@ const DOM = KioskKeyboard.DOM;
 
 QUnit.module("KioskKeyboard responsive sizing", {
   afterEach() {
+    sandbox.restore();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) {
       fixture.classList.remove("sapUiSizeCompact");
@@ -22,16 +25,20 @@ QUnit.module("KioskKeyboard responsive sizing", {
 // Cleanup
 // ──────────────────────────────────────────────
 
-QUnit.test("Cleanup on exit() removes resize observer", async (assert) => {
+QUnit.test("Cleanup on exit() deregisters the ResizeHandler", async (assert) => {
+  const registerSpy = sandbox.spy(ResizeHandler, "register");
+  const deregisterSpy = sandbox.spy(ResizeHandler, "deregister");
+
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
+  const registration = registerSpy.getCalls().find((call) => call.returnValue);
+  assert.ok(registration, "ResizeHandler.register was called during initial render");
+  const handlerId = registration!.returnValue as string;
+
   kb.destroy();
 
-  // @ts-expect-error Accessing private field for cleanup verification
-  assert.strictEqual(kb._responsiveResizeHandlerId, null, "Resize handler deregistered");
-  // @ts-expect-error Accessing private field for cleanup verification
-  assert.strictEqual(kb._responsiveObservedDom, null, "Observed DOM reference cleared");
+  assert.ok(deregisterSpy.calledWith(handlerId), "ResizeHandler.deregister called with the registered id");
 });
 
 // ──────────────────────────────────────────────
@@ -49,7 +56,7 @@ QUnit.test("Boundary: exactly 16rem applies cqShort", async (assert) => {
   dom.style.height = "16rem";
   dom.style.overflow = "hidden";
 
-  applyResponsiveHeightClasses(kb, dom, 16 * remPx);
+  await setMeasuredHeight(kb, dom, 16 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort at exactly 16rem");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at exactly 16rem");
@@ -68,7 +75,7 @@ QUnit.test("Boundary: exactly 12rem applies cqTiny", async (assert) => {
   dom.style.height = "12rem";
   dom.style.overflow = "hidden";
 
-  applyResponsiveHeightClasses(kb, dom, 12 * remPx);
+  await setMeasuredHeight(kb, dom, 12 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny at exactly 12rem");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent at exactly 12rem");
@@ -88,7 +95,7 @@ QUnit.test("Applies cqShort class when externally constrained (height between 12
   dom.style.overflow = "hidden";
 
   // Constrained to 14rem -- within cqShort range (12rem < 14rem <= 16rem)
-  applyResponsiveHeightClasses(kb, dom, 14 * remPx);
+  await setMeasuredHeight(kb, dom, 14 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied at 14rem height");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at 14rem height");
@@ -107,7 +114,7 @@ QUnit.test("Applies cqTiny class when severely constrained (height <= 12rem)", a
   dom.style.height = "12rem";
   dom.style.overflow = "hidden";
 
-  applyResponsiveHeightClasses(kb, dom, 12 * remPx);
+  await setMeasuredHeight(kb, dom, 12 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny applied at 12rem height");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when cqTiny");
@@ -125,7 +132,7 @@ QUnit.test("No height classes when keyboard is not externally constrained", asyn
   dom.style.height = "16rem";
   dom.style.overflow = "hidden";
 
-  applyResponsiveHeightClasses(kb, dom, dom.getBoundingClientRect().height);
+  await setMeasuredHeight(kb, dom, dom.getBoundingClientRect().height);
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when unconstrained");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent when unconstrained");
@@ -144,7 +151,7 @@ QUnit.test("No height classes for docked keyboards", async (assert) => {
   dom.style.height = "12rem";
   dom.style.overflow = "hidden";
 
-  applyResponsiveHeightClasses(kb, dom, 12 * remPx);
+  await setMeasuredHeight(kb, dom, 12 * remPx);
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent for docked");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent for docked");
@@ -162,13 +169,15 @@ QUnit.test("Toggling docked mode clears stale height classes after render cycle"
   dom.style.height = `${10 * remPx}px`;
   dom.style.overflow = "hidden";
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  applyResponsiveHeightClasses(kb, dom, 10 * remPx);
+  await setMeasuredHeight(kb, dom, 10 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny applied before docking");
 
   kb.setDocked(true);
   await waitForRender();
-  // Responsive class update is deferred to rAF to avoid forced reflow
+  // setDocked suppresses invalidation and relies on ResizeHandler for responsive sync;
+  // drive the recompute explicitly so the test does not depend on browser layout timing.
+  kb.refreshResponsiveState();
   await new Promise((resolve) => requestAnimationFrame(resolve));
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort cleared when docked=true");
@@ -187,7 +196,7 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
   dom.style.height = `${10 * remPx}px`;
   dom.style.overflow = "hidden";
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  applyResponsiveHeightClasses(kb, dom, 10 * remPx);
+  await setMeasuredHeight(kb, dom, 10 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny applied before keyboardType switch");
 
@@ -204,7 +213,7 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
   dom.style.height = `${10 * remPx}px`;
   dom.style.overflow = "hidden";
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  applyResponsiveHeightClasses(kb, dom, 10 * remPx);
+  await setMeasuredHeight(kb, dom, 10 * remPx);
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort still absent after manual re-apply");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny still absent after manual re-apply");
@@ -221,7 +230,7 @@ QUnit.test("Intrinsic height changes from CSS vars update height classes without
   dom.style.height = "15rem";
   dom.style.overflow = "hidden";
 
-  applyResponsiveHeightClasses(kb, dom, dom.getBoundingClientRect().height);
+  await setMeasuredHeight(kb, dom, dom.getBoundingClientRect().height);
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "No cqShort before intrinsic growth");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "No cqTiny before intrinsic growth");
 
@@ -246,7 +255,7 @@ QUnit.test("Intrinsic height shrink clears height classes without outer resize",
   dom.style.height = "16rem";
   dom.style.overflow = "hidden";
 
-  applyResponsiveHeightClasses(kb, dom, dom.getBoundingClientRect().height);
+  await setMeasuredHeight(kb, dom, dom.getBoundingClientRect().height);
   assert.ok(
     dom.classList.contains(DOM.classes.rootCqShort),
     "Starts constrained (cqShort) at 4rem keys in 16rem container",
@@ -276,16 +285,16 @@ QUnit.test("Height classes update when constraint changes", async (assert) => {
   (dom as HTMLElement).style.overflow = "hidden";
 
   // Start constrained (tiny)
-  applyResponsiveHeightClasses(kb, dom, 10 * remPx);
+  await setMeasuredHeight(kb, dom, 10 * remPx);
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "Starts as tiny");
 
   // Grow to short
-  applyResponsiveHeightClasses(kb, dom, 15 * remPx);
+  await setMeasuredHeight(kb, dom, 15 * remPx);
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Transitions to short");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny removed");
 
   // Grow to unconstrained
-  applyResponsiveHeightClasses(kb, dom, 400);
+  await setMeasuredHeight(kb, dom, 400);
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort removed at full height");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny removed at full height");
 
@@ -307,12 +316,12 @@ QUnit.test("Custom height threshold: cqShort triggers at overridden short thresh
   dom.style.overflow = "hidden";
 
   // At 17rem height with default 16rem threshold, cqShort should NOT apply.
-  applyResponsiveHeightClasses(kb, dom, 17 * remPx);
+  await setMeasuredHeight(kb, dom, 17 * remPx);
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent at 17rem with default threshold");
 
   // Override short threshold to 18rem. Now 17rem should trigger cqShort.
   dom.style.setProperty("--ui5KioskKeyboard-cqShortThreshold", "18rem");
-  applyResponsiveHeightClasses(kb, dom, 17 * remPx);
+  await setMeasuredHeight(kb, dom, 17 * remPx);
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort present at 17rem with 18rem threshold");
 
   kb.destroy();
@@ -329,13 +338,13 @@ QUnit.test("Custom height threshold: cqTiny triggers at overridden tiny threshol
   dom.style.overflow = "hidden";
 
   // At 13rem height with default 12rem threshold, cqShort expected (not cqTiny).
-  applyResponsiveHeightClasses(kb, dom, 13 * remPx);
+  await setMeasuredHeight(kb, dom, 13 * remPx);
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort present at 13rem with default threshold");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at 13rem with default threshold");
 
   // Override tiny threshold to 14rem. Now 13rem should trigger cqTiny.
   dom.style.setProperty("--ui5KioskKeyboard-cqTinyThreshold", "14rem");
-  applyResponsiveHeightClasses(kb, dom, 13 * remPx);
+  await setMeasuredHeight(kb, dom, 13 * remPx);
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny present at 13rem with 14rem threshold");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when cqTiny applies");
 

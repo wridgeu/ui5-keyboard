@@ -1,20 +1,17 @@
-import { setRuntimeHooks } from "ui5/hotkeys/internal/runtime";
+import { runtimeHooks } from "ui5/hotkeys/internal/runtime";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 let clock: { tick: (ms: number) => number; restore: () => void };
-let restoreRuntimeHooks: (() => void) | null = null;
+const sandbox = sinon.createSandbox();
 
 QUnit.module("SequenceManager (via HotkeyManager)", {
   beforeEach() {
-    restoreRuntimeHooks?.();
-    restoreRuntimeHooks = null;
     destroyHotkeyManager();
     clock = sinon.useFakeTimers();
   },
   afterEach() {
-    restoreRuntimeHooks?.();
-    restoreRuntimeHooks = null;
+    sandbox.restore();
     clock.restore();
     destroyHotkeyManager();
   },
@@ -720,7 +717,7 @@ QUnit.test("suppressInPopups: suppresses sequence when popup is open", (assert) 
     { suppressInPopups: true },
   );
 
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
 
   fireKey("g");
   clock.tick(50);
@@ -741,7 +738,7 @@ QUnit.test("suppressInPopups: sequence fires when popup is closed", (assert) => 
     { suppressInPopups: true },
   );
 
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => false });
+  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(false);
 
   fireKey("g");
   clock.tick(50);
@@ -758,7 +755,7 @@ QUnit.test("suppressInPopups: true (default) suppresses sequence when popup is o
     called = true;
   });
 
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
 
   fireKey("g");
   clock.tick(50);
@@ -779,7 +776,7 @@ QUnit.test("suppressInPopups: false fires sequence even with popup open", (asser
     { suppressInPopups: false },
   );
 
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
 
   fireKey("g");
   clock.tick(50);
@@ -801,7 +798,7 @@ QUnit.test("suppressInPopups: mid-sequence popup opening drops the match", (asse
     { suppressInPopups: true },
   );
 
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => popupOpen });
+  sandbox.stub(runtimeHooks, "hasOpenPopup").callsFake(() => popupOpen);
 
   // First key with popup closed
   fireKey("g");
@@ -826,7 +823,7 @@ QUnit.test("suppressInPopups: setOptions updates suppression", (assert) => {
     { suppressInPopups: true },
   );
 
-  restoreRuntimeHooks = setRuntimeHooks({ hasOpenPopup: () => true });
+  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
 
   fireKey("g");
   clock.tick(50);

@@ -139,21 +139,20 @@ export function getRenderedLayoutKeys(keyboard: KioskKeyboard): string[][] {
   );
 }
 
-/** Call the private _applyResponsiveSizeClasses for unit testing height breakpoints.
- *  Stubs DOM measurement APIs so the method measures the supplied height.
- *  Width breakpoints are now handled purely by CSS @container queries.
+/** Trigger a responsive-class recompute with the supplied measured height.
+ *  Stubs DOM measurement APIs, drives the public `refreshResponsiveState()`
+ *  through its rAF coalescer, then restores the stubs.
+ *  Width breakpoints are handled purely by CSS @container queries.
  *  @param naturalHeight - the keyboard's unconstrained content height (scrollHeight).
  *         When larger than `height`, the keyboard is considered externally constrained. */
-export function applyResponsiveHeightClasses(
+export async function setMeasuredHeight(
   keyboard: KioskKeyboard,
   dom: Element,
   height: number,
   naturalHeight?: number,
-): void {
+): Promise<void> {
   const htmlDom = dom as HTMLElement;
 
-  // Stub scrollHeight to control the natural (unconstrained) content height.
-  // When naturalHeight > height, the method treats the keyboard as constrained.
   const origScrollHeight =
     Object.getOwnPropertyDescriptor(Object.getPrototypeOf(htmlDom), "scrollHeight") ??
     Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
@@ -168,10 +167,9 @@ export function applyResponsiveHeightClasses(
   };
 
   try {
-    // @ts-expect-error Accessing private method for unit testing
-    keyboard._applyResponsiveSizeClasses(htmlDom);
+    keyboard.refreshResponsiveState();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   } finally {
-    // Restore originals
     if (naturalHeight !== undefined && origScrollHeight) {
       Object.defineProperty(htmlDom, "scrollHeight", origScrollHeight);
     }
