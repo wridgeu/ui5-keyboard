@@ -1,4 +1,3 @@
-import url from "node:url";
 import path from "node:path";
 import { createViteServerManager } from "../../../../tools/wdio-server.js";
 import {
@@ -11,7 +10,7 @@ import {
   cleanScreenshots,
 } from "../../../../tools/wdio-device-profiles.js";
 
-const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const __dirname = import.meta.dirname;
 const BASE_PORT = DEVICE_BASE_PORTS["kiosk-keyboard-webc"];
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 

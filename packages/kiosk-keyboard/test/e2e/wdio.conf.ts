@@ -1,4 +1,3 @@
-import url from "node:url";
 import path from "node:path";
 import type { wdi5Config } from "wdio-ui5-service";
 import { createServerManager } from "../../../../tools/wdio-server.js";
@@ -12,7 +11,7 @@ import {
   cleanScreenshots,
 } from "../../../../tools/wdio-device-profiles.js";
 
-const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const __dirname = import.meta.dirname;
 const PORT = 8085;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 

@@ -1,11 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import url from "node:url";
 import { browser, $ } from "@wdio/globals";
 import { VISUAL_PAGE, openVisualPage } from "./test-helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/internal/dom-contract.js";
 
-const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const __dirname = import.meta.dirname;
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const OUTPUT_DIR = path.join(REPO_ROOT, "docs", "kiosk", "images");
 
