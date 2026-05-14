@@ -10,10 +10,8 @@
 
 import { cpSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = resolve(import.meta.dirname, "..");
 const hoisted = join(root, "node_modules", "less-openui5");
 const nested = join(root, "node_modules", "@ui5", "cli", "node_modules", "less-openui5");
 

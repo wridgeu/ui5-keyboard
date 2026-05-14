@@ -10,14 +10,12 @@
 
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const less = require("less-openui5/lib/thirdparty/less/index.js");
 
-const input = readFileSync(join(__dirname, "less-openui5-test.less"), "utf8");
+const input = readFileSync(join(import.meta.dirname, "less-openui5-test.less"), "utf8");
 
 const expected = [
   "@supports (display: flex) and (color: red) {",

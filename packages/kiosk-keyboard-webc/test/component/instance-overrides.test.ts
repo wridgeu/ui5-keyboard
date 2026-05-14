@@ -119,27 +119,47 @@ describe("kiosk-keyboard - instance overrides", () => {
   });
 
   it("reassigning instanceMiddleware after first key clears the cached middleware", async () => {
-    const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-    `);
-    const noopMw = (): CompositionMiddleware => ({
+    const noopMw: CompositionMiddleware = {
       handleKey: () => false,
       commit: () => null,
       reset: () => {},
-    });
-    el.instanceMiddleware = { qwerty: noopMw };
+    };
+
+    let firstFactoryCalls = 0;
+    const firstFactory = (): CompositionMiddleware => {
+      firstFactoryCalls += 1;
+      return noopMw;
+    };
+
+    const el = await fixture<KioskKeyboard>(html`
+      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
+    `);
+    el.instanceMiddleware = { qwerty: firstFactory };
     await nextRender();
 
-    // Simulate the lazy cache that `_onKeyClick` populates on first key press.
-    const internals = el as unknown as { _middleware: CompositionMiddleware | null };
-    internals._middleware = noopMw();
-    expect(internals._middleware).to.not.equal(null);
+    const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+    const bKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("b"))!;
+    const cKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("c"))!;
 
-    // Reassigning the property must reset the cache so the next key press
-    // re-resolves the new factory instead of reusing the stale instance.
-    el.instanceMiddleware = { qwerty: noopMw };
+    // First key click lazy-creates the middleware via the first factory.
+    aKey.click();
+    expect(firstFactoryCalls).to.equal(1);
+
+    // Subsequent clicks reuse the cached middleware.
+    bKey.click();
+    expect(firstFactoryCalls).to.equal(1);
+
+    let secondFactoryCalls = 0;
+    const secondFactory = (): CompositionMiddleware => {
+      secondFactoryCalls += 1;
+      return noopMw;
+    };
+    el.instanceMiddleware = { qwerty: secondFactory };
     await nextRender();
 
-    expect(internals._middleware).to.equal(null);
+    // Next click resolves through the new factory.
+    cKey.click();
+    expect(secondFactoryCalls).to.equal(1);
+    expect(firstFactoryCalls).to.equal(1);
   });
 });

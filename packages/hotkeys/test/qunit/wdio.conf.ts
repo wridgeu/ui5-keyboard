@@ -1,10 +1,9 @@
 import os from "node:os";
-import url from "node:url";
 import path from "node:path";
 import { createServerManager, readQUnitTestIds, generateQUnitSpecs } from "../../../../tools/wdio-server.js";
 import { BASE_CHROME_ARGS, CHROME_VERSION, DESKTOP_WINDOW_SIZE } from "../../../../tools/wdio-device-profiles.js";
 
-const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+const __dirname = import.meta.dirname;
 const PORT = 8081;
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const TESTSUITE_FILE = path.resolve(__dirname, "testsuite.qunit.ts");
