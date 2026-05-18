@@ -7,7 +7,6 @@ import {
   resolveCachedBinaries,
   buildChromedriverOptions,
   ensureBrowsersDownloaded,
-  cleanScreenshots,
 } from "../../../../tools/wdio-device-profiles.js";
 
 const __dirname = import.meta.dirname;
@@ -64,6 +63,7 @@ export const config: WebdriverIO.Config = {
         formatImageName: "{tag}",
         screenshotPath: path.resolve(__dirname, "__screenshots__"),
         autoSaveBaseline: updateVisualBaseline,
+        clearRuntimeFolder: true,
         disableCSSAnimation: true,
         hideScrollBars: true,
         waitForFontsLoaded: true,
@@ -76,7 +76,6 @@ export const config: WebdriverIO.Config = {
 
   onPrepare: async () => {
     await ensureBrowsersDownloaded();
-    cleanScreenshots(path.resolve(__dirname, "__screenshots__"));
     await server.onPrepare();
   },
   onWorkerStart: () => server.ensureRunning(),

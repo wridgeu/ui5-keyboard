@@ -37,9 +37,7 @@ async function openThemePage(): Promise<void> {
 async function switchTheme(theme: string): Promise<void> {
   // __setTheme resolves after the UI5 Web Components theme change event fires.
   // Then verify the CSS custom properties have propagated before updating backgrounds.
-  await browser.executeAsync((t: string, done: () => void) => {
-    window.__setTheme(t).then(done);
-  }, theme);
+  await browser.execute((t: string) => window.__setTheme(t), theme);
 
   await browser.waitUntil(
     async () =>

@@ -10,9 +10,6 @@ export {
   setDocumentDirection,
   injectStyleOverride,
   removeStyleOverride,
-  isolateSection,
-  restoreSections,
-  scrollElementIntoView,
 } from "../../../../tools/wdio-test-helpers.js";
 
 export const VISUAL_PAGE = "/test-resources/ui5/kiosk/e2e/visual/index.html";
