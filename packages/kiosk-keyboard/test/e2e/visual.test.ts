@@ -3,9 +3,6 @@ import type Element from "sap/ui/core/Element";
 import {
   openVisualPage,
   getKeyboard,
-  isolateSection,
-  restoreSections,
-  scrollElementIntoView,
   matchElementSnapshotInSection,
   forceHoverState,
   clearForcedHoverState,
@@ -90,7 +87,7 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
       timeoutMsg: "Shift key did not become active on ja-kana",
     });
     try {
-      await matchElementSnapshotInSection(kb, "kb-ja-kana-shifted", { misMatchPercentage: 0.15 });
+      await matchElementSnapshotInSection(kb, "kb-ja-kana-shifted", { threshold: 0.15 });
     } finally {
       await shiftKey.click();
       await shiftKey.click();
@@ -116,7 +113,7 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
       timeoutMsg: "Shift key did not become active on ko-hangul",
     });
     try {
-      await matchElementSnapshotInSection(kb, "kb-ko-hangul-shifted", { misMatchPercentage: 0.15 });
+      await matchElementSnapshotInSection(kb, "kb-ko-hangul-shifted", { threshold: 0.15 });
     } finally {
       await shiftKey.click();
       await shiftKey.click();
@@ -142,7 +139,7 @@ describe("KioskKeyboard Responsive Visual Regression", () => {
       timeoutMsg: "Shift key did not become active on qwerty-es",
     });
     try {
-      await matchElementSnapshotInSection(kb, "kb-qwerty-es-shifted", { misMatchPercentage: 0.15 });
+      await matchElementSnapshotInSection(kb, "kb-qwerty-es-shifted", { threshold: 0.15 });
     } finally {
       await shiftKey.click();
       await shiftKey.click();
@@ -160,14 +157,11 @@ describe("KioskKeyboard Interactive States", () => {
     if (!supportsHover) return this.skip();
 
     const kb = await getKeyboard("kb-qwerty");
-    await isolateSection(kb);
     try {
-      await scrollElementIntoView(kb);
       await forceHoverState('#kb-qwerty [data-key="f"]');
       await matchElementSnapshotInSection(kb, "kb-key-hovered");
     } finally {
       await clearForcedHoverState('#kb-qwerty [data-key="f"]');
-      await restoreSections();
     }
   });
 
@@ -187,7 +181,6 @@ describe("KioskKeyboard Interactive States", () => {
       },
       await kb,
     );
-    await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
 
     try {
       await matchElementSnapshotInSection(kb, "kb-shift-active");
@@ -210,31 +203,21 @@ describe("KioskKeyboard Interactive States", () => {
   });
 
   it("should match docked mode", async () => {
-    const toggleBtn = await $("#toggle-docked");
-    await isolateSection(toggleBtn);
-    try {
-      await scrollElementIntoView(toggleBtn);
-      // Open docked keyboard via Element.getElementById + show(). DOM click on
-      // the toggle button hangs under Chrome mobile emulation (pointer: coarse).
-      await browser.execute(() => {
-        const kbDom = document.querySelector("#kb-docked .ui5KioskKeyboard");
-        if (!kbDom) return;
-        const Elem: typeof Element | undefined = sap.ui.require("sap/ui/core/Element");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-cast: getElementById returns UI5Element, show() lives on KioskKeyboard
-        (Elem?.getElementById?.(kbDom.id) as any)?.show?.();
-      });
-      const dockedKb = await $("#kb-docked .ui5KioskKeyboard");
-      await dockedKb.waitForDisplayed({ timeout: 5_000 });
-      await browser.waitUntil(
-        async () => !(await dockedKb.getAttribute("class"))?.includes("ui5KioskKeyboard--closed"),
-        { timeout: 3_000, timeoutMsg: "Docked keyboard did not open" },
-      );
-      await browser.execute(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
-      });
-      await matchElementSnapshotInSection(dockedKb, "kb-docked");
-    } finally {
-      await restoreSections();
-    }
+    // Open docked keyboard via Element.getElementById + show(). DOM click on
+    // the toggle button hangs under Chrome mobile emulation (pointer: coarse).
+    await browser.execute(() => {
+      const kbDom = document.querySelector("#kb-docked .ui5KioskKeyboard");
+      if (!kbDom) return;
+      const Elem: typeof Element | undefined = sap.ui.require("sap/ui/core/Element");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- cross-cast: getElementById returns UI5Element, show() lives on KioskKeyboard
+      (Elem?.getElementById?.(kbDom.id) as any)?.show?.();
+    });
+    const dockedKb = await $("#kb-docked .ui5KioskKeyboard");
+    await dockedKb.waitForDisplayed({ timeout: 5_000 });
+    await browser.waitUntil(async () => !(await dockedKb.getAttribute("class"))?.includes("ui5KioskKeyboard--closed"), {
+      timeout: 3_000,
+      timeoutMsg: "Docked keyboard did not open",
+    });
+    await matchElementSnapshotInSection(dockedKb, "kb-docked");
   });
 });

@@ -2,7 +2,6 @@
 
 import os from "node:os";
 import fs from "node:fs";
-import path from "node:path";
 import { computeExecutablePath, Browser, install } from "@puppeteer/browsers";
 
 /**
@@ -174,17 +173,4 @@ export function buildChromeOptions(profile: DeviceProfile, headless: boolean) {
  */
 export function buildChromedriverOptions(): Record<string, string> | undefined {
   return _cachedBinaries.chromedriver ? { binary: _cachedBinaries.chromedriver } : undefined;
-}
-
-/**
- * Remove stale `actual/` and `diff/` screenshots from a previous run.
- * Called in `onPrepare` so each test run starts with a clean slate.
- * Preserves the screenshot root directory itself and any `output.json` /
- * `report/` artifacts (the visual report tool handles those separately).
- */
-export function cleanScreenshots(screenshotPath: string): void {
-  for (const subdir of ["actual", "diff"]) {
-    const dir = path.resolve(screenshotPath, subdir);
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
 }

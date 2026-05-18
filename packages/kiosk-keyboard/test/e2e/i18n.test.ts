@@ -47,12 +47,15 @@ describe("KioskKeyboard i18n e2e", () => {
 
   afterEach(async () => {
     // Reset i18n state between tests to prevent ordering dependencies
-    await browser.executeAsync((done: () => void) => {
-      sap.ui.require(["ui5/kiosk/KioskKeyboard"], (KioskKeyboard: { setI18nResolver: (fn: null) => void }) => {
-        KioskKeyboard.setI18nResolver(null);
-        done();
-      });
-    });
+    await browser.execute(
+      () =>
+        new Promise<void>((resolve) => {
+          sap.ui.require(["ui5/kiosk/KioskKeyboard"], (KioskKeyboard: { setI18nResolver: (fn: null) => void }) => {
+            KioskKeyboard.setI18nResolver(null);
+            resolve();
+          });
+        }),
+    );
   });
 
   describe("1. Baseline (no customization)", () => {

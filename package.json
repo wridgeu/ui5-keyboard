@@ -105,6 +105,7 @@
     "@wdio/mocha-framework": "~9.27.0",
     "@wdio/spec-reporter": "~9.27.0",
     "@wdio/visual-reporter": "~0.4.12",
+    "@wdio/visual-service": "~9.2.0",
     "concurrently": "~9.2.1",
     "husky": "~9.1.7",
     "less-openui5": "~0.11.6",

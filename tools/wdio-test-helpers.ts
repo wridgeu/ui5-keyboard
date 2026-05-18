@@ -232,11 +232,6 @@ export async function assertSnapshotTargetIsUsable(
   }
 }
 
-export async function shouldScrollSnapshotTarget(element: SnapshotElement): Promise<boolean> {
-  const target = await element;
-  return browser.execute((el: HTMLElement) => getComputedStyle(el).position !== "fixed", target);
-}
-
 export type IsolateSectionOptions = {
   /**
    * When true, traverse from the element's shadow root host before
@@ -246,6 +241,17 @@ export type IsolateSectionOptions = {
   traverseShadowHosts?: boolean;
 };
 
+/**
+ * Collapse the visual test page to a single section so that the snapshot
+ * target's bounding rectangle does not depend on adjacent layout.
+ *
+ * Without isolation, removing sibling sections via `display: none` would
+ * still leave the page tall enough that the element's screenshot coordinates
+ * shift by sub-pixel amounts depending on the current scroll position. The
+ * @wdio/visual-service auto-scroll lands the element at the same client
+ * rect, but its sub-pixel offset relative to a tall page differs from a
+ * short page, producing 0.4-1.4% diffs even for unchanged keyboards.
+ */
 export async function isolateSection(element: SnapshotElement, options?: IsolateSectionOptions): Promise<void> {
   const target = await element;
   const traverse = options?.traverseShadowHosts ?? false;
@@ -287,13 +293,6 @@ export async function restoreSections(): Promise<void> {
   });
 }
 
-export async function scrollElementIntoView(element: SnapshotElement): Promise<void> {
-  const target = await element;
-  await browser.execute((el: HTMLElement) => {
-    el.scrollIntoView({ block: "center", inline: "center" });
-  }, target);
-}
-
 export type MatchSnapshotOptions = {
   /**
    * Ignore sub-pixel antialiasing differences between baseline and actual
@@ -306,9 +305,10 @@ export type MatchSnapshotOptions = {
    * Maximum allowed mismatch percentage (0-100). Defaults to `0` (exact
    * match). Use a small value (e.g. `0.15`) for tests involving
    * interactive state changes where sub-pixel rendering variance is
-   * expected between runs.
+   * expected between runs. Forwarded as the positional threshold to
+   * `toMatchElementSnapshot` in v9.
    */
-  misMatchPercentage?: number;
+  threshold?: number;
 } & IsolateSectionOptions &
   AssertSnapshotOptions;
 
@@ -317,17 +317,15 @@ export async function matchElementSnapshotInSection(
   name: string,
   options?: MatchSnapshotOptions,
 ): Promise<void> {
-  const target = await element;
+  const target = (await element) as WebdriverIO.Element;
   await isolateSection(target, options);
   try {
-    if (await shouldScrollSnapshotTarget(target)) {
-      await scrollElementIntoView(target);
-    }
-    await browser.executeAsync((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+    // assertSnapshotTargetIsUsable measures geometry before the @wdio/visual-service
+    // auto-scroll fires inside checkElement; bring the target on-screen first.
+    await target.scrollIntoView({ block: "center", inline: "center" });
     await assertSnapshotTargetIsUsable(target, name, options);
-    await expect(target).toMatchElementSnapshot(name, {
+    await expect(target).toMatchElementSnapshot(name, options?.threshold ?? 0, {
       ignoreAntialiasing: options?.ignoreAntialiasing ?? true,
-      ...(options?.misMatchPercentage !== undefined && { misMatchPercentage: options.misMatchPercentage }),
     });
   } finally {
     await restoreSections();
