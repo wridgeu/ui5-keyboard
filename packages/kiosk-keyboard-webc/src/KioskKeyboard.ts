@@ -1583,8 +1583,7 @@ class KioskKeyboard extends UI5Element {
   /** Cached on first use; reused across opens and observed for hot-pluggable touch input. */
   private static _coarsePointerQuery: MediaQueryList | null = null;
 
-  private static _getCoarsePointerQuery(): MediaQueryList | null {
-    if (typeof window === "undefined") return null;
+  private static _getCoarsePointerQuery(): MediaQueryList {
     KioskKeyboard._coarsePointerQuery ??= window.matchMedia("(pointer: coarse)");
     return KioskKeyboard._coarsePointerQuery;
   }
@@ -1593,7 +1592,7 @@ class KioskKeyboard extends UI5Element {
     const mode = this.mobileKeyboard;
     if (mode === MobileKeyboard.Custom) return false;
     if (mode === MobileKeyboard.Native) return true;
-    return KioskKeyboard._getCoarsePointerQuery()?.matches ?? false;
+    return KioskKeyboard._getCoarsePointerQuery().matches;
   }
 
   // ── Auto-show ──
@@ -1885,7 +1884,6 @@ class KioskKeyboard extends UI5Element {
 
   /** Attaches a ResizeObserver to the host element for responsive class updates. */
   private _setupResizeObserver(): void {
-    if (typeof ResizeObserver === "undefined") return;
     this._resizeObserver = new ResizeObserver(() => {
       this._scheduleResponsiveClassUpdate();
     });

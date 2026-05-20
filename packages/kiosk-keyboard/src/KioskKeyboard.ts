@@ -1396,7 +1396,7 @@ export default class KioskKeyboard extends Control {
     const inputDom =
       resolveWithCustomResolver(focusDomRef, this._getEffectiveResolver()) ??
       (focusDomRef instanceof HTMLElement ? focusDomRef : null);
-    const isOnKeyboard = target ? Boolean(myDom?.contains(target)) : false;
+    const isOnKeyboard = target ? (myDom?.contains(target) ?? false) : false;
 
     event.preventDefault();
     this.close();
