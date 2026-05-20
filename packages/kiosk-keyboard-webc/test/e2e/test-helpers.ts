@@ -1,6 +1,9 @@
 import { browser, $ } from "@wdio/globals";
 import type { SnapshotElement, MatchSnapshotOptions } from "../../../../tools/wdio-test-helpers.js";
-import { matchElementSnapshotInSection as _matchBase } from "../../../../tools/wdio-test-helpers.js";
+import {
+  matchElementSnapshotInSection as _matchBase,
+  getSharedCDPSession,
+} from "../../../../tools/wdio-test-helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 // Re-export shared helpers so consumers import everything from one place
@@ -153,10 +156,7 @@ async function resolveShadowNodeId(cdp: CDPClient, hostId: string, selector: str
  * uses for its "Force element state" feature, which is fully deterministic.
  */
 export async function forceHoverState(hostId: string, selector: string): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = await page.createCDPSession();
-
+  const cdp = await getSharedCDPSession();
   await cdp.send("DOM.enable");
   const nodeId = await resolveShadowNodeId(cdp, hostId, selector);
   await cdp.send("CSS.enable");
@@ -165,10 +165,7 @@ export async function forceHoverState(hostId: string, selector: string): Promise
 
 /** Clear all forced pseudo-states on a shadow DOM element via CDP. */
 export async function clearForcedHoverState(hostId: string, selector: string): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = await page.createCDPSession();
-
+  const cdp = await getSharedCDPSession();
   await cdp.send("DOM.enable");
   const nodeId = await resolveShadowNodeId(cdp, hostId, selector);
   await cdp.send("CSS.enable");

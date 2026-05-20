@@ -12,20 +12,45 @@ import { browser, expect } from "@wdio/globals";
 import type { ChainablePromiseElement } from "webdriverio";
 
 /**
- * Set emulated CSS media features via the Chrome DevTools Protocol.
+ * CDP `Emulation.setEmulatedMedia` and `CSS.forcePseudoState` overrides
+ * are scoped to the CDPSession that set them: each session instantiates
+ * its own inspector agent with its own override map in Blink (see
+ * `inspector_emulation_agent.cc` and `inspector_css_agent.cc`). A "clear"
+ * sent from a fresh session creates a second agent that does not know
+ * about the first agent's overrides, so the originals stay active.
  *
- * Requires a WDIO browser instance with DevTools protocol access
- * (the default when using `chromedriver` or `devtools` automation).
+ * Puppeteer's `page.emulateMediaFeatures()` would solve this for media
+ * features, but its allowlist (`EmulationManager`) only accepts
+ * `prefers-color-scheme`, `prefers-reduced-motion`, and `color-gamut`.
+ * `forced-colors` and other CDP-supported features require raw
+ * `Emulation.setEmulatedMedia`.
+ *
+ * Solution: cache one CDPSession per worker via `getSharedCDPSession()`
+ * and route every set/clear call through it so they all hit the same
+ * agent instance.
  */
-export async function setEmulatedMediaFeatures(features: Array<{ name: string; value: string }>): Promise<void> {
+
+type PuppeteerPage = Awaited<ReturnType<Awaited<ReturnType<typeof browser.getPuppeteer>>["pages"]>>[number];
+export type CDPClient = Awaited<ReturnType<PuppeteerPage["createCDPSession"]>>;
+
+let _sharedCdpSession: CDPClient | null = null;
+
+export async function getSharedCDPSession(): Promise<CDPClient> {
+  if (_sharedCdpSession) return _sharedCdpSession;
   const puppeteer = await browser.getPuppeteer();
-  // Assumes single-tab - safe because WDIO runs one page per browser instance
+  // WDIO runs one page per browser instance.
   const [page] = await puppeteer.pages();
-  const cdp = await page.createCDPSession();
+  _sharedCdpSession = await page.createCDPSession();
+  return _sharedCdpSession;
+}
+
+/** Set emulated CSS media features via the shared CDP session. */
+export async function setEmulatedMediaFeatures(features: Array<{ name: string; value: string }>): Promise<void> {
+  const cdp = await getSharedCDPSession();
   await cdp.send("Emulation.setEmulatedMedia", { features });
 }
 
-/** Clear all emulated CSS media features via CDP. */
+/** Clear all emulated CSS media features via the shared CDP session. */
 export async function clearEmulatedMediaFeatures(): Promise<void> {
   await setEmulatedMediaFeatures([]);
 }

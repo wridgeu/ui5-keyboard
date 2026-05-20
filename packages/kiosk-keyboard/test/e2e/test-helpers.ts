@@ -1,6 +1,9 @@
 import { browser, $ } from "@wdio/globals";
 import type { SnapshotElement, MatchSnapshotOptions } from "../../../../tools/wdio-test-helpers.js";
-import { matchElementSnapshotInSection as _matchBase } from "../../../../tools/wdio-test-helpers.js";
+import {
+  matchElementSnapshotInSection as _matchBase,
+  getSharedCDPSession,
+} from "../../../../tools/wdio-test-helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/internal/dom-contract.js";
 
 // Re-export shared helpers so consumers import everything from one place
@@ -74,10 +77,7 @@ export async function matchElementSnapshotInSection(
  * deterministic hover state testing.
  */
 export async function forceHoverState(selector: string): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = await page.createCDPSession();
-
+  const cdp = await getSharedCDPSession();
   await cdp.send("DOM.enable");
   const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
   const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector });
@@ -88,10 +88,7 @@ export async function forceHoverState(selector: string): Promise<void> {
 
 /** Clear all forced pseudo-states on a DOM element via CDP. */
 export async function clearForcedHoverState(selector: string): Promise<void> {
-  const puppeteer = await browser.getPuppeteer();
-  const [page] = await puppeteer.pages();
-  const cdp = await page.createCDPSession();
-
+  const cdp = await getSharedCDPSession();
   await cdp.send("DOM.enable");
   const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
   const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector });
