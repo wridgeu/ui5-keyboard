@@ -31,15 +31,14 @@ export function detectPlatform(): Platform {
   }
 
   // Legacy API
-  const platform = navigator.platform?.toLowerCase() ?? "";
+  const platform = navigator.platform.toLowerCase();
   if (platform) {
     cachedPlatform = resolvePlatformString(platform);
     return cachedPlatform;
   }
 
   // User-Agent fallback
-  const ua = navigator.userAgent?.toLowerCase() ?? "";
-  cachedPlatform = resolvePlatformString(ua);
+  cachedPlatform = resolvePlatformString(navigator.userAgent.toLowerCase());
   return cachedPlatform;
 }
 
