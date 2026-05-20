@@ -15,16 +15,10 @@ let cachedPlatform: Platform | null = null;
  * 2. `navigator.platform` (legacy, widely supported)
  * 3. `navigator.userAgent` (fallback)
  *
- * Defaults to `"linux"` in SSR/non-browser environments.
  * Result is cached after first call.
  */
 export function detectPlatform(): Platform {
   if (cachedPlatform !== null) {
-    return cachedPlatform;
-  }
-
-  if (typeof navigator === "undefined") {
-    cachedPlatform = Platform.Linux;
     return cachedPlatform;
   }
 
