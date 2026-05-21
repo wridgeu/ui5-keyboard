@@ -22,6 +22,7 @@
   "rules": {
     "eqeqeq": "warn",
     "no-console": "warn",
+    "no-underscore-dangle": "off",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-unsafe-function-type": "error",
     "unicorn/no-null": "off",

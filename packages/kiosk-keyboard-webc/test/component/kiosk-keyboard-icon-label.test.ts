@@ -21,11 +21,7 @@ function queryKeyLabel(keyEl: HTMLElement): HTMLElement | null {
 }
 
 async function createKeyboard(layout: LayoutDefinition): Promise<KioskKeyboard> {
-  const el = await fixture<KioskKeyboard>(
-    html`
-      <kiosk-keyboard layout="test-icon-label"></kiosk-keyboard>
-    `,
-  );
+  const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="test-icon-label"></kiosk-keyboard> `);
   el.instanceLayouts = { "test-icon-label": layout };
   await nextRender();
   return el;

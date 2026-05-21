@@ -18,9 +18,7 @@ const layoutB: LayoutDefinition = [[{ value: "two" }]];
 
 describe("kiosk-keyboard - instance overrides", () => {
   it("renders an instance-only layout that is not in the built-in registry", async () => {
-    const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="warehouse-pos"></kiosk-keyboard>
-    `);
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="warehouse-pos"></kiosk-keyboard> `);
     el.instanceLayouts = { "warehouse-pos": layoutA };
     await nextRender();
 
@@ -28,15 +26,11 @@ describe("kiosk-keyboard - instance overrides", () => {
   });
 
   it("instance map shadows the built-in qwerty for one element without affecting another", async () => {
-    const elOverride = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-    `);
+    const elOverride = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
     elOverride.instanceLayouts = { qwerty: layoutA };
     await nextRender();
 
-    const elDefault = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-    `);
+    const elDefault = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
     await nextRender();
 
     expect(readDataKeys(elOverride)).to.deep.equal([["ax", "bx"]]);
@@ -45,9 +39,7 @@ describe("kiosk-keyboard - instance overrides", () => {
   });
 
   it("falls through to the built-in registry when instance map lacks the active layout", async () => {
-    const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-    `);
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
     el.instanceLayouts = { unrelated: layoutA };
     await nextRender();
 
@@ -58,14 +50,10 @@ describe("kiosk-keyboard - instance overrides", () => {
   });
 
   it("sibling elements with conflicting instance layouts each see their own override", async () => {
-    const elA = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="shared"></kiosk-keyboard>
-    `);
+    const elA = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="shared"></kiosk-keyboard> `);
     elA.instanceLayouts = { shared: layoutA };
 
-    const elB = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="shared"></kiosk-keyboard>
-    `);
+    const elB = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="shared"></kiosk-keyboard> `);
     elB.instanceLayouts = { shared: layoutB };
 
     await nextRender();
@@ -96,9 +84,7 @@ describe("kiosk-keyboard - instance overrides", () => {
   });
 
   it("instance overrides do not leak into the built-in registry", async () => {
-    const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="instance-only"></kiosk-keyboard>
-    `);
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="instance-only"></kiosk-keyboard> `);
     el.instanceLayouts = { "instance-only": layoutA };
     await nextRender();
 
@@ -107,9 +93,7 @@ describe("kiosk-keyboard - instance overrides", () => {
   });
 
   it("mixed-case instance layout names resolve through lowercase lookup", async () => {
-    const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-    `);
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
     // Mixed-case key must shadow the built-in 'qwerty' just as a lowercase
     // key would, since the lookup path normalizes to lowercase.
     el.instanceLayouts = { Qwerty: layoutA };
@@ -131,9 +115,7 @@ describe("kiosk-keyboard - instance overrides", () => {
       return noopMw;
     };
 
-    const el = await fixture<KioskKeyboard>(html`
-      <kiosk-keyboard layout="qwerty"></kiosk-keyboard>
-    `);
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
     el.instanceMiddleware = { qwerty: firstFactory };
     await nextRender();
 
