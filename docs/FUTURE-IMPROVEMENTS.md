@@ -8,7 +8,7 @@ Ideas that are not currently planned but may become relevant as the ecosystem ev
 
 The CSS Inline Layout Module Level 3 spec defines `text-box-edge: ideographic-ink`, which trims to the actual ink bounds of CJK characters. This would improve vertical centering of CJK glyph labels on kiosk keyboard keys.
 
-**Why not now:** No browser supports this value as of April 2026. The spec has open questions around which font in the cascade provides ideographic metrics and how to synthesize ideographic-over/under baselines.
+**Why not now:** No browser ships this value yet. The spec has open questions around which font in the cascade provides ideographic metrics and how to synthesize ideographic-over/under baselines.
 
 **When to revisit:** When Chromium or WebKit ships `ideographic-ink` behind a flag. At that point, a `@supports` guard can be added to both `kiosk-keyboard` (Less) and `kiosk-keyboard-webc` (CSS). Existing visual baselines should be re-verified before adoption.
 
