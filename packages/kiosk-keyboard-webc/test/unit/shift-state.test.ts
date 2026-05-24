@@ -5,7 +5,7 @@ describe("ShiftState", () => {
   let state: ShiftState;
 
   beforeEach(() => {
-    state = new ShiftState();
+    state = new ShiftState(() => {});
   });
 
   it("starts in off state", () => {
