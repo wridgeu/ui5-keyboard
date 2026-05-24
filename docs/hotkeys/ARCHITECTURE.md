@@ -361,30 +361,9 @@ packages/hotkeys/
   test/qunit/
     testsuite.qunit.ts  Test suite runner (UI5 Test Starter)
     *.qunit.ts          One test file per module
-
-packages/demo-app/
-  webapp/
-    Component.ts        Global shortcuts, router integration, lifecycle
-    controller/
-      Main.controller.ts              View-scoped + dialog-scoped shortcuts
-      Detail.controller.ts            Same-hotkey-different-scope demonstration
-      KioskHub.controller.ts          Kiosk demo landing page
-      KioskDocked.controller.ts       Docked keyboard demo
-      KioskProgrammatic.controller.ts Programmatic show/close demo
-      KioskPopover.controller.ts      Popover integration demo
-      KioskControls.controller.ts     Multi-input targeting demo
-      KioskComponent.controller.ts    Component-level persistent keyboard demo
-    view/
-      App.view.xml          Root shell container
-      Main.view.xml         Status panel, shortcut list, input test, dialog test
-      Detail.view.xml       Detail view with scope override
-      KioskHub.view.xml           Kiosk demo navigation hub
-      KioskDocked.view.xml        Docked keyboard showcase
-      KioskProgrammatic.view.xml  Programmatic control showcase
-      KioskPopover.view.xml       Popover integration showcase
-      KioskControls.view.xml      controls showcase
-      KioskComponent.view.xml     Component-level keyboard showcase
 ```
+
+For the consuming demo application's structure, see [`packages/demo-app/README.md`](../../packages/demo-app/README.md).
 
 ## Additional Modules
 

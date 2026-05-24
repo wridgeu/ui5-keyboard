@@ -33,7 +33,7 @@
   "scripts": {
     "clean": "rimraf dist",
     "build": "ui5 build --clean-dest --create-build-manifest",
-    "prepublishOnly": "node -e \"import('node:fs').then(f=>f.copyFileSync('../../LICENSE','./LICENSE'))\" && npm run build",
+    "prepublishOnly": "node ../../tools/copy-license.mjs && npm run build",
     "start": "npm run start:qunit",
     "start:qunit": "ui5 serve --port 8081 -o \"test-resources/sap/ui/qunit/testrunner.html?testpage=%2Ftest-resources%2Fui5%2Fhotkeys%2Fqunit%2Ftestsuite.qunit.html&autostart=true\"",
     "test:qunit": "wdio run test/qunit/wdio.conf.ts",
@@ -45,12 +45,7 @@
     "@openui5/types": "1.147.1",
     "@ui5/cli": "~4.0.51",
     "@ui5/linter": "~1.21.1",
-    "@wdio/cli": "~9.27.0",
-    "@wdio/local-runner": "~9.27.0",
-    "@wdio/mocha-framework": "~9.27.0",
-    "@wdio/spec-reporter": "~9.27.0",
-    "ui5-tooling-transpile": "~3.11.0",
-    "wdio-qunit-service": "~2.0.0"
+    "ui5-tooling-transpile": "~3.11.0"
   },
   "engines": {
     "node": ">=22"
