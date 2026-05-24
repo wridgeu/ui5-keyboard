@@ -16,6 +16,18 @@ builder:
       afterTask: replaceVersion
       configuration:
         addToNamespace: true
+        # The demo consumes a single non-`ui5-`-prefixed web component
+        # (kiosk-keyboard from kiosk-keyboard-webc). ui5-tooling-modules
+        # enables tag scoping by default for non-ui5-* tags, which makes the
+        # `<kiosk-keyboard>` element register under a hashed tag while the
+        # auto-generated UI5 wrapper hard-codes the unscoped tag in its
+        # `metadata.tag`. Disabling scoping is the tool's documented opt-out
+        # for single-WC-package consumers and resolves the mismatch.
+        # See @ui5/webcomponents-base scoping doc:
+        # https://github.com/SAP/ui5-webcomponents/blob/main/docs/2-advanced/06-scoping.md
+        pluginOptions:
+          webcomponents:
+            scoping: false
     - name: ui5-tooling-transpile-task
       afterTask: replaceVersion
       configuration:
@@ -33,6 +45,10 @@ server:
       configuration:
         addToNamespace: true
         useRelativeModulePaths: true
+        # See task configuration above for the rationale.
+        pluginOptions:
+          webcomponents:
+            scoping: false
     - name: ui5-middleware-livereload
       afterMiddleware: compression
       configuration:
