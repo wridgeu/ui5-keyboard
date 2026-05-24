@@ -194,22 +194,65 @@ QUnit.test("Layout switch updates rendered keys", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Layout switch ignored when keyboardType is Numpad", async (assert) => {
+QUnit.test(
+  "User {layout:X} switch fires layoutChange even when keyboardType is Numpad (webc parity)",
+  async (assert) => {
+    // Issue #98: prior behavior gated the whole {layout:*} branch on
+    // keyboardType === Full, silently ignoring layout-switch keys in
+    // Numeric/Numpad mode. After aligning with webc, a user-initiated
+    // switch takes precedence and the resolved layout follows the pick.
+    const kb = new KioskKeyboard();
+    kb.setKeyboardType(KeyboardType.Numpad);
+    await placeAndWait(kb);
+
+    const events: string[] = [];
+    kb.attachEvent("layoutChange", (e: { getParameter(name: string): string }) => {
+      events.push(e.getParameter("layout"));
+    });
+
+    const switchToNumeric = createFakeKeyElement("{layout:numeric}", "fake-numeric");
+    simulateTap(kb, switchToNumeric);
+    await waitForRender();
+
+    assert.deepEqual(events, ["numeric"], "Switch fires layoutChange in Numpad mode");
+    assert.strictEqual(kb.getLayout(), "numeric", "Layout property reflects user pick");
+
+    // Return to base: re-engages the keyboardType constraint, surface goes back to Numpad
+    const backToBase = createFakeKeyElement("{layout:base}", "fake-base");
+    simulateTap(kb, backToBase);
+    await waitForRender();
+
+    const keys = getKeyElements(kb);
+    const numpadKeyValues = Array.from(keys).map((k) => k.dataset.key);
+    assert.ok(
+      numpadKeyValues.includes("1") && !numpadKeyValues.includes("q"),
+      "After {layout:base} the constraint re-engages and the rendered surface is the numpad",
+    );
+
+    kb.destroy();
+  },
+);
+
+QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", async (assert) => {
+  // Companion to the symmetry test above: changing keyboardType (explicit
+  // or auto-detect) must invalidate any prior user layout pick, so the
+  // new constraint context isn't silently overridden by stale state.
   const kb = new KioskKeyboard();
-  kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
 
-  let layoutChanged = false;
-  kb.attachEvent("layoutChange", () => {
-    layoutChanged = true;
-  });
+  simulateTap(kb, createFakeKeyElement("{layout:numeric}", "fake-numeric"));
+  await waitForRender();
+  assert.strictEqual(kb.getLayout(), "numeric", "User switch lands");
 
-  // Create a fake layout switch key and tap it
-  const fakeEl = createFakeKeyElement("{layout:numeric}", "fake-layout");
+  kb.setKeyboardType(KeyboardType.Numpad);
+  await waitForRender();
 
-  simulateTap(kb, fakeEl);
-
-  assert.notOk(layoutChanged, "Layout switch ignored in Numpad mode");
+  const keys = getKeyElements(kb);
+  const keyValues = Array.from(keys).map((k) => k.dataset.key);
+  assert.ok(
+    keyValues.includes("1") && !keyValues.includes("q"),
+    "After setKeyboardType the resolved surface is numpad (user switch cleared)",
+  );
 
   kb.destroy();
 });

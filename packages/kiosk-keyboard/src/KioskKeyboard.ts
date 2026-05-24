@@ -109,6 +109,16 @@ export default class KioskKeyboard extends Control {
   private _baseLayout!: string;
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
+  /**
+   * Whether the active layout was last set by a user-driven `{layout:X}` key tap
+   * (`"user"`) or by a programmatic / auto-detected change (`"external"`).
+   *
+   * User-driven switches override the `keyboardType` constraint so a `{layout:special}`
+   * tap in Numeric/Numpad mode shows the special layout. `{layout:base}`, `setLayout`,
+   * `setKeyboardType`, `resetKeyboardType`, and auto-type detection all reset this
+   * back to `"external"`. Mirrors the webc package's `_layoutSource` semantics.
+   */
+  private _layoutSource: "external" | "user" = "external";
   private _nativeKbSuppression!: NativeKeyboardSuppression;
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
@@ -944,6 +954,8 @@ export default class KioskKeyboard extends Control {
     if (!SECONDARY_LAYOUTS.has(name)) {
       this._baseLayout = name;
     }
+    // Programmatic layout change clears any prior user-driven switch.
+    this._layoutSource = "external";
     return this.setProperty("layout", name);
   }
 
@@ -1165,6 +1177,10 @@ export default class KioskKeyboard extends Control {
 
   _setKeyboardTypeSource(source: KeyboardTypeSource): void {
     this._keyboardTypeSource = source;
+    // A keyboardType change (explicit, reset, or auto-detected) invalidates
+    // any prior user-driven layout switch; the resolved layout must follow
+    // the new constraint context.
+    this._layoutSource = "external";
   }
 
   /**
@@ -1638,6 +1654,14 @@ export default class KioskKeyboard extends Control {
 
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
+    // A user-driven `{layout:X}` switch overrides the keyboardType constraint:
+    // in Numeric/Numpad mode the user can still navigate to special/secondary
+    // layouts they explicitly chose. `{layout:base}` and any setKeyboardType /
+    // setLayout / auto-detect call resets `_layoutSource` back to "external"
+    // and re-engages the constraint below. Matches webc behavior.
+    if (this._layoutSource === "user") {
+      return registryGetLayoutOrDefault(this.getLayout(), this._instanceLayoutsMap);
+    }
     const kbType = this.getKeyboardType();
     if (kbType === KeyboardType.Numpad) {
       return KioskKeyboard._stripDeadBaseSwitch(registryGetLayoutOrDefault("numpad", this._instanceLayoutsMap));
@@ -1648,9 +1672,11 @@ export default class KioskKeyboard extends Control {
     return registryGetLayoutOrDefault(this.getLayout(), this._instanceLayoutsMap);
   }
 
-  // `_handleKeyAction` ignores `{layout:*}` switches when `keyboardType !== Full`,
-  // so the ABC key on the auto-forced numeric/numpad layout would render but do
-  // nothing. Drop it so the rendered surface matches the active behavior.
+  // The auto-forced numeric/numpad surface (keyboardType=Numeric|Numpad with
+  // `_layoutSource === "external"`) is "already at base", so a `{layout:base}` key
+  // there is inert. Strip it so the rendered surface matches the active behavior.
+  // Built-in numeric/numpad layouts don't ship such a key; this only filters
+  // user-supplied `instanceLayouts` overrides that include `{layout:base}`.
   private static _stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
     let changed = false;
     const filtered = layout.map((row) => {
@@ -1950,21 +1976,38 @@ export default class KioskKeyboard extends Control {
     }
 
     if (keyValue.startsWith("{layout:")) {
-      if (this.getKeyboardType() === KeyboardType.Full) {
-        const raw = keyValue.slice("{layout:".length, -1).trim();
-        if (raw) {
-          if (this._middleware) {
-            this._middleware.commit();
-            this._middleware = null;
-          }
-          const name = raw === "base" ? this._baseLayout : raw;
-          const previousLayout = this.getLayout();
-          this.setLayout(name);
-          const nextLayout = this.getLayout();
-          if (nextLayout !== previousLayout) {
-            this.fireLayoutChange({ layout: nextLayout });
-          }
+      const raw = keyValue.slice("{layout:".length, -1).trim();
+      if (!raw) return;
+      if (this._middleware) {
+        this._middleware.commit();
+        this._middleware = null;
+      }
+      const previousLayout = this.getLayout();
+      const name = (raw === "base" ? this._baseLayout : raw).toLowerCase();
+      // Validate against the registry so a bogus override key doesn't poison
+      // the layout property. setLayout would log a warning and bail, but we
+      // need to also manage `_layoutSource` / `_baseLayout` here.
+      if (!registryGetLayout(name, this._instanceLayoutsMap)) {
+        Log.warning(
+          `Layout "${name}" referenced by a {layout:*} key is not registered.`,
+          undefined,
+          "ui5.kiosk.KioskKeyboard",
+        );
+        return;
+      }
+      if (raw === "base") {
+        // Return to the constrained default: re-engage keyboardType filtering.
+        this._layoutSource = "external";
+      } else {
+        // User pick takes precedence over keyboardType (webc parity).
+        this._layoutSource = "user";
+        if (!SECONDARY_LAYOUTS.has(name)) {
+          this._baseLayout = name;
         }
+      }
+      this.setProperty("layout", name);
+      if (name !== previousLayout) {
+        this.fireLayoutChange({ layout: name });
       }
       return;
     }
