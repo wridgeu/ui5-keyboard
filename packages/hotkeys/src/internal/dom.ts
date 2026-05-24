@@ -38,12 +38,13 @@ export function getEventTarget(event: Event): EventTarget | null {
  * - `<input>` with an editable text type (text, password, email, number, etc.)
  *   that is not `readonly`
  * - `<textarea>`
- * - `<select>`
  * - Any element with `contentEditable` active (including inherited)
  *
  * Returns `false` for:
  * - `<input type="button|submit|reset|checkbox|radio|hidden|file|image|range|color">`
  * - `<input readonly>` (text cannot be entered, so hotkeys should fire)
+ * - `<select>` (navigation control; browser handles arrows / type-ahead /
+ *   Enter natively, so app-defined shortcuts can fire alongside)
  * - Non-editable elements
  * - `null` / non-Element targets
  */
@@ -58,8 +59,8 @@ export function isInputElement(target: EventTarget | null): boolean {
     return EDITABLE_INPUT_TYPES.has(type) && !target.readOnly;
   }
 
-  // <textarea> and <select>
-  if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+  // <textarea> accepts freeform text
+  if (target instanceof HTMLTextAreaElement) {
     return true;
   }
 

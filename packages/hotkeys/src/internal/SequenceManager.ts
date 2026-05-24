@@ -1,7 +1,4 @@
-import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
-// Side-effect import: ensures Lib.init() runs even when this module is imported directly
-import "../library";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
 import { createIdGenerator } from "./idgen";
@@ -52,7 +49,7 @@ interface ActiveMatch {
  * Receives a scope provider callback from HotkeyManager to access the
  * active scope without a reverse singleton dependency.
  */
-export default class SequenceManager extends BaseObject {
+export default class SequenceManager {
   private _registrations: Map<string, SequenceRegistration> = new Map();
   private _scopeKeyIndex: Map<string, Map<string, Set<SequenceRegistration>>> = new Map();
   private _activeMatches: ActiveMatch[] = [];
@@ -60,7 +57,6 @@ export default class SequenceManager extends BaseObject {
   private _scopeProvider: () => string;
 
   constructor(scopeProvider: () => string, platform: Platform) {
-    super();
     this._scopeProvider = scopeProvider;
     this._platform = platform;
     Log.info("SequenceManager initialized", undefined, LOG_COMPONENT);
@@ -226,7 +222,6 @@ export default class SequenceManager extends BaseObject {
     this._scopeKeyIndex.clear();
 
     Log.info("SequenceManager destroyed", undefined, LOG_COMPONENT);
-    super.destroy();
   }
 
   /**
