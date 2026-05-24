@@ -1591,8 +1591,8 @@ class KioskKeyboard extends UI5Element {
 
   private _shouldDeferToNative(): boolean {
     const mode = this.mobileKeyboard;
-    if (mode === MobileKeyboard.Custom) return false;
-    if (mode === MobileKeyboard.Native) return true;
+    if (mode === "Custom") return false;
+    if (mode === "Native") return true;
     return KioskKeyboard._getCoarsePointerQuery().matches;
   }
 
