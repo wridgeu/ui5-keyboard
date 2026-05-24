@@ -8,7 +8,7 @@
     "start": "ui5 serve --port 8080 -o index.html",
     "start:flp": "ui5 serve --config ui5-flp.yaml --port 8080 -o test/flp.html",
     "build": "ui5 build --clean-dest",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist .ui5-tooling-modules",
     "typecheck": "tsc --noEmit",
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },

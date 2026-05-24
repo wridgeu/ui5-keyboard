@@ -18,6 +18,10 @@ builder:
       afterTask: replaceVersion
       configuration:
         addToNamespace: true
+        # See packages/demo-app/ui5.yaml for the rationale on scoping: false.
+        pluginOptions:
+          webcomponents:
+            scoping: false
     - name: ui5-tooling-transpile-task
       afterTask: replaceVersion
       configuration:
@@ -35,6 +39,10 @@ server:
       configuration:
         addToNamespace: true
         useRelativeModulePaths: true
+        # See packages/demo-app/ui5.yaml for the rationale on scoping: false.
+        pluginOptions:
+          webcomponents:
+            scoping: false
     - name: preview-middleware
       afterMiddleware: ui5-tooling-transpile-middleware
       configuration:
