@@ -1217,7 +1217,10 @@ export default class KioskKeyboard extends Control {
    */
   setKeyboardType(type: KeyboardType): this {
     const previous = this.getKeyboardType();
-    this._keyboardTypeSource = "explicit";
+    // Route through _setKeyboardTypeSource so the `_layoutSource` reset
+    // (webc parity, see _getResolvedLayout) fires for explicit changes too,
+    // not just for auto-detect.
+    this._setKeyboardTypeSource("explicit");
     this.setProperty("keyboardType", type);
     if (type !== previous) {
       this.fireKeyboardTypeChange({
@@ -1243,7 +1246,8 @@ export default class KioskKeyboard extends Control {
    */
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
-    this._keyboardTypeSource = "unset";
+    // Route through _setKeyboardTypeSource so the `_layoutSource` reset fires.
+    this._setKeyboardTypeSource("unset");
     this.setProperty("keyboardType", KeyboardType.Full);
     if (KeyboardType.Full !== sPrevious) {
       this.fireKeyboardTypeChange({
@@ -2005,6 +2009,11 @@ export default class KioskKeyboard extends Control {
           this._baseLayout = name;
         }
       }
+      // Note: shift/caps-lock state is intentionally preserved across layout
+      // switches here. This diverges from kiosk-keyboard-webc which resets
+      // them; the kiosk control's negative-edge-cases.qunit.ts explicitly
+      // tests the persistence as documented behavior. Cross-package parity on
+      // this point is open (see #98 follow-up discussion).
       this.setProperty("layout", name);
       if (name !== previousLayout) {
         this.fireLayoutChange({ layout: name });
