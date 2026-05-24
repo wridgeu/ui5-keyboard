@@ -1,0 +1,62 @@
+## Architectural conventions
+
+- **TypeScript-only control authoring.** UI5 controls in `packages/kiosk-keyboard` are written in TS with `.gen.d.ts` interfaces produced by `@ui5/ts-interface-generator`. Do not hand-edit `*.gen.d.ts`; run the generator script instead.
+- **UI5 string enums in `library.ts`.** Declare them as `export enum X { Foo = "Foo", ... }` directly in `library.ts` (matches SAP's `ui5-typescript-conversion` skill and the shape `@ui5/ts-interface-generator` emits, which uses named imports from the library module). Register each via `DataType.registerEnum("fully.qualified.Name", X)` and list the qualified names in `Lib.init({ apiVersion: 2, types: [...] })`. With `apiVersion: 2` plus `DataType.registerEnum`, attaching enums to the library namespace via `ObjectPath`/`thisLib.X = X` is unnecessary: XML `core:require="{ alias: 'ns/lib/library' }"` binds the alias to the module's named exports, and UI5's runtime type validation resolves through the `DataType` registry rather than the global namespace (`Lib.init` skips the auto-attachment in v2; see `sap/ui/core/Lib.js`). Compare with string literals (`=== "Foo"`) since TS string enum members are string literals at runtime. Do not split enums into per-file modules and `import X from "./X"`: UI5 treats those as pseudo-modules and resolves them to `undefined`. Numeric enums are different: `DataType.createType` extending `int`, TS `enum`, type-only import.
+
+## UI5 framework notes (project-specific)
+
+- **Modules load once and never unload.** SAPUI5 caches factory results for the page lifetime. In a launchpad, switching apps destroys the component but leaves module-level state intact. A `let cache = null` at factory scope survives across app restarts. Keep state on component-scoped or control-scoped instances, never module closures.
+- **`sap.ui.core.IAsyncContentCreation` on every Component owning views.** Flips `rootView`, router, and nested views to async, and rejects `Component.create` on broken view definitions instead of degrading silently. Caveat: nested components loaded via `ComponentContainer` are still not async by default.
+- **Lifecycle hooks must not return a value.** Since 1.120, returning anything (including a Promise from `async onInit`) logs an error and is scheduled to fail. Keep hooks synchronous; fire-and-forget async work from inside.
+- **Clean up globals in exit.** `EventBus`, `Theming.attachApplied`, `Localization.attachChange` (since 1.118) are page-level. Every `subscribe`/`attach*` needs a matching `unsubscribe`/`detach*` in `exit`/`destroy`, or the callback fires against a torn-down context.
+- **Declarative XML before workarounds.** When a control exposes a property/aggregation/event for the intent, use it rather than controller logic, renderer subclassing, or override CSS. DOM manipulation and override CSS are footguns: lost on re-render, accessibility regressions, theme drift.
+- **Bind, don't manipulate.** Prefer property/expression bindings and formatters over `setVisible`/`setEnabled`/`setText`. With one-way bindings, imperative writes are reverted on the next refresh; with two-way, they silently propagate into the model. Hoist repeated compound expressions into a `viewState` JSON-model flag. Formatters run with undefined inputs (every parameter must tolerate `undefined`/`null`) and are one-way.
+- **Close dialogs via the dialog's close event.** `sap.m.Dialog` also closes via ESC and via the router (`closeOnNavigation`, since 1.72), not only buttons. Hang result propagation and cleanup off the close event.
+- **`sap.ui.define` exports; `sap.ui.require` does not.** Use `define` for any file another module imports; `require` for one-shot deferred imports inside event handlers.
+
+## 1. Before coding
+
+- State assumptions explicitly. If multiple interpretations exist, surface them; don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- Every changed line must trace to the user's request. Don't "improve" adjacent code, comments, or formatting; match existing style even if you'd do it differently.
+- When your changes orphan imports/vars/functions, remove them. Don't delete pre-existing dead code unless asked.
+
+## 2. Sharing has a cost
+
+Before extracting a helper, weigh the shared code against: a new file, a new import edge, a new line in the extraction guide, a new internal API to keep stable.
+
+Hoist when the shared code is non-trivial (several lines, not a regex/ternary), the duplicates risk diverging incorrectly (different test coverage or bug fixes), or a third call site appears. Otherwise duplicate. Never add "keep byte-identical" comments: if the duplication is small enough you considered hoisting and chose not to, no comment is needed.
+
+## 3. Bug fixes ship with regression tests
+
+Write the failing test first. If you can't reproduce the bug in a test, you don't understand it well enough to fix it.
+
+- Helper / pure-logic bugs: unit test in the corresponding `.qunit.ts` (kiosk) or `.test.ts` (webc, vitest).
+- Integration bugs: control-level QUnit test using the internals cast pattern.
+- Untestable bugs (e.g. framework rendering timing): state that explicitly and include manual repro steps.
+
+## 4. No test-only code in production modules
+
+Production modules must not export functions whose only callers are tests (`_resetCache`, `hasResolver`, `_getInternalState`, etc.). It's a code smell: the production code never needs them, and they leak internals into the public surface. Instead:
+
+- Observe behavior through the public API (e.g. assert that `getText()` returns base text after a clear, rather than peeking at a `hasResolver()` flag).
+- Use sinon to stub/spy collaborators at module boundaries.
+- Put genuine test scaffolding in `test/helpers/` and import it only from tests.
+
+If a test seems to require a production-side helper, the test is probably asserting on internal state instead of behavior; rewrite the assertion.
+
+## 5. Code review methodology
+
+- No scoring or confidence ranking. A finding is real or it isn't.
+- Verify each finding against the actual code and CLAUDE.md / UI5 API docs / existing patterns. Discard anything that doesn't survive that check.
+- Report surviving findings in the current conversation. Do not post to GitHub unless explicitly asked.
+
+## 6. UI5 framework lookups
+
+Verify UI5 APIs against the pinned version (see each package's `ui5.yaml` / `package.json`). Many `sap.ui.getCore()` accessors deprecated across 1.118 to 1.120 in favor of `Theming`, `Localization`, `Messaging`, `Element`, `Lib`, etc. Source order:
+
+1. **Local cache** `~/.ui5/framework/packages/@openui5/...`: authoritative for the installed version. Grep here first.
+2. **`SAP/openui5` GitHub**: when the local cache lacks the version. Cite commit-pinned URLs.
+3. **OpenUI5 SDK API reference** and the `ui5-mcp` tool (`get_api_reference`): for high-level contracts and `since` markers.
+
+The numbers are out of sync so you must put some effort into making it correct but you'll get the gist.

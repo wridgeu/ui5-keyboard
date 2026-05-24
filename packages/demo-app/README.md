@@ -45,15 +45,7 @@ This app is a scenario catalog for keyboard-heavy UX in UI5. It shows:
 
 ### Main View (`#/`)
 
-- Global and route-scoped shortcuts (`Mod+S`, `Escape`, `F5`, `Mod+D`)
-- Input suppression behavior (single-key suppression in text fields, combos still active)
-- Dialog scope stacking and cleanup
-- Sequences (`G I`, `G S`) via `HotkeyManager.register("g i", cb)` (space-separated format)
-- Key hold tracking via `KeyStateTracker`
-- Dynamic enabled guard (`Mod+P` tied to toggle state)
-- Conflict strategies demo (`Ctrl+Shift+K` with Warn/Allow/Replace/Error)
-- Target-element scoped hotkey (`Ctrl+Enter` bound to a specific panel)
-- Combined hotkeys + kiosk keyboard on one page (`Ctrl+Shift+M` + `KioskKeyboard`)
+Welcome page with navigation list to every demo scenario. The two truly global shortcuts (`Mod+S`, `Escape`) are registered on the owner Component and are active on every page; everything else lives on dedicated routes below.
 
 ### Detail View (`#/detail`)
 

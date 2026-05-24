@@ -18,10 +18,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true
   },
-  "files": [],
-  "references": [
-    { "path": "packages/hotkeys" },
-    { "path": "packages/kiosk-keyboard" },
-    { "path": "packages/kiosk-keyboard-webc" }
-  ]
+  "files": []
 }

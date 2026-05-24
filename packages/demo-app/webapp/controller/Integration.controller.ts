@@ -47,14 +47,9 @@ export default class Integration extends BaseController {
   }
 
   onKioskKeyPress(event: KioskKeyboard$KeyPressEvent): void {
-    const key = event.getParameter("key") ?? "";
-    const shift = event.getParameter("shiftKey") ?? false;
-    const display = shift ? `${key} (Shift)` : key;
-    const stateModel = this.getStateModel();
     const viewModel = this.getView()!.getModel("integration") as JSONModel;
-
-    viewModel.setProperty("/lastKioskKey", display || "None");
-    stateModel.setProperty("/lastAction", "Kiosk keyPress event");
+    viewModel.setProperty("/lastKioskKey", this.formatKeyPress(event) || "None");
+    this.getStateModel().setProperty("/lastAction", "Kiosk keyPress event");
   }
 
   onExit(): void {
