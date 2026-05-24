@@ -1,50 +1,66 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { Mock } from "vitest";
 import { ShiftState } from "../../src/core/shift-state.js";
 
+// These tests exercise the `onChange` callback contract: every state
+// mutator (toggle / autoRelease / syncFromPhysical / reset) MUST invoke
+// the constructor-supplied callback exactly when the internal mode
+// actually transitions, and MUST NOT invoke it on no-op calls. The
+// callback is how the owner (KioskKeyboard) drives ARIA announcements
+// and mirror-field updates; without these assertions a regression that
+// breaks the callback would let every other test pass silently.
+
 describe("ShiftState", () => {
+  let onChange: Mock<() => void>;
   let state: ShiftState;
 
   beforeEach(() => {
-    state = new ShiftState(() => {});
+    onChange = vi.fn();
+    state = new ShiftState(onChange);
   });
 
-  it("starts in off state", () => {
+  it("starts in off state and does not fire onChange on construction", () => {
     expect(state.isShifted).toBe(false);
     expect(state.isCapsLock).toBe(false);
+    expect(onChange).not.toHaveBeenCalled();
   });
 
-  describe("single click → shift", () => {
-    it("first toggle activates shift", () => {
+  describe("toggle()", () => {
+    it("activates shift on first toggle and fires onChange", () => {
       state.toggle();
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it("single click after timeout turns shift off", () => {
-      state.toggle(); // shift on
-      expect(state.isShifted).toBe(true);
-      // Simulate time passing beyond double-click threshold
+    it("single click after timeout turns shift off and fires onChange a second time", () => {
+      state.toggle(); // shift on (1st onChange)
+      expect(onChange).toHaveBeenCalledTimes(1);
+
       vi.spyOn(performance, "now").mockReturnValue(performance.now() + ShiftState.DOUBLE_CLICK_MS + 100);
-      state.toggle(); // outside double-click window → off
+      state.toggle(); // outside double-click window → off (2nd onChange)
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(2);
     });
   });
 
   describe("double-click → caps lock", () => {
-    it("rapid double-click activates caps lock", () => {
-      state.toggle(); // shift on
-      state.toggle(); // double-click → caps lock
+    it("rapid double-click activates caps lock and fires onChange per transition", () => {
+      state.toggle(); // shift on (1st)
+      state.toggle(); // double-click → caps lock (2nd)
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(true);
+      expect(onChange).toHaveBeenCalledTimes(2);
     });
 
-    it("click while caps-locked turns everything off", () => {
+    it("click while caps-locked turns everything off (3 transitions, 3 callbacks)", () => {
       state.toggle();
       state.toggle(); // caps lock
       state.toggle(); // off
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(3);
     });
 
     it("rapid double-click from Off activates caps lock (shift expired then quick re-click)", () => {
@@ -61,27 +77,35 @@ describe("ShiftState", () => {
       state.toggle(); // quick re-click → caps lock
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(true);
+      expect(onChange).toHaveBeenCalledTimes(3);
       spy.mockRestore();
     });
   });
 
-  describe("autoRelease", () => {
-    it("releases shift and returns true", () => {
-      state.toggle(); // shift on
-      expect(state.autoRelease()).toBe(true);
+  describe("autoRelease()", () => {
+    it("releases shift and fires onChange", () => {
+      state.toggle(); // shift on (1st onChange)
+      onChange.mockClear();
+
+      state.autoRelease();
       expect(state.isShifted).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it("does not release caps lock", () => {
-      state.toggle(); // shift
+    it("is a no-op (no onChange) when caps-locked", () => {
+      state.toggle();
       state.toggle(); // caps
-      expect(state.autoRelease()).toBe(false);
+      onChange.mockClear();
+
+      state.autoRelease();
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(true);
+      expect(onChange).not.toHaveBeenCalled();
     });
 
-    it("returns false when already off", () => {
-      expect(state.autoRelease()).toBe(false);
+    it("is a no-op (no onChange) when already off", () => {
+      state.autoRelease();
+      expect(onChange).not.toHaveBeenCalled();
     });
 
     it("toggle after autoRelease activates shift, not caps lock", () => {
@@ -93,73 +117,92 @@ describe("ShiftState", () => {
     });
   });
 
-  describe("reset", () => {
-    it("clears shift", () => {
+  describe("reset()", () => {
+    it("clears shift and fires onChange", () => {
       state.toggle();
+      onChange.mockClear();
+
       state.reset();
       expect(state.isShifted).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it("clears caps lock", () => {
+    it("clears caps lock and fires onChange", () => {
       state.toggle();
-      state.toggle();
+      state.toggle(); // caps
+      onChange.mockClear();
+
       state.reset();
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("is a no-op (no onChange) when already off", () => {
+      state.reset();
+      expect(onChange).not.toHaveBeenCalled();
     });
   });
 
-  describe("syncFromPhysical", () => {
-    it("from Off with (false, false) returns false (no change)", () => {
-      expect(state.syncFromPhysical(false, false)).toBe(false);
+  describe("syncFromPhysical()", () => {
+    it("(false, false) from Off does not fire onChange", () => {
+      state.syncFromPhysical(false, false);
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).not.toHaveBeenCalled();
     });
 
-    it("from Off with (true, false) sets Shift", () => {
-      expect(state.syncFromPhysical(true, false)).toBe(true);
+    it("(true, false) from Off sets Shift and fires onChange", () => {
+      state.syncFromPhysical(true, false);
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it("from Off with (false, true) sets CapsLock", () => {
-      expect(state.syncFromPhysical(false, true)).toBe(true);
+    it("(false, true) from Off sets CapsLock and fires onChange", () => {
+      state.syncFromPhysical(false, true);
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(true);
+      expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it("from Shift with (false, false) returns to Off", () => {
-      state.syncFromPhysical(true, false); // move to Shift
-      expect(state.syncFromPhysical(false, false)).toBe(true);
+    it("(false, false) from Shift returns to Off (transition fires onChange)", () => {
+      state.syncFromPhysical(true, false); // 1st
+      state.syncFromPhysical(false, false); // 2nd
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(2);
     });
 
-    it("from CapsLock with (false, false) returns to Off", () => {
-      state.syncFromPhysical(false, true); // move to CapsLock
-      expect(state.syncFromPhysical(false, false)).toBe(true);
+    it("(false, false) from CapsLock returns to Off (transition fires onChange)", () => {
+      state.syncFromPhysical(false, true); // 1st
+      state.syncFromPhysical(false, false); // 2nd
       expect(state.isShifted).toBe(false);
       expect(state.isCapsLock).toBe(false);
+      expect(onChange).toHaveBeenCalledTimes(2);
     });
 
     it("CapsLock wins over Shift when both flags set", () => {
-      expect(state.syncFromPhysical(true, true)).toBe(true);
+      state.syncFromPhysical(true, true);
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(true);
+      expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it("no-op when state unchanged returns false on second call", () => {
-      expect(state.syncFromPhysical(true, false)).toBe(true);
-      expect(state.syncFromPhysical(true, false)).toBe(false);
+    it("does not fire onChange when called repeatedly with the same state", () => {
+      state.syncFromPhysical(true, false);
+      onChange.mockClear();
+
+      state.syncFromPhysical(true, false);
       expect(state.isShifted).toBe(true);
-      expect(state.isCapsLock).toBe(false);
+      expect(onChange).not.toHaveBeenCalled();
     });
 
     it("resets double-click window so next toggle starts fresh Shift", () => {
       state.toggle(); // shift on
       expect(state.isShifted).toBe(true);
 
-      state.syncFromPhysical(false, false); // external sync -> off, resets window
+      state.syncFromPhysical(false, false); // external sync → off, resets window
 
       state.toggle(); // should start fresh shift, not caps lock
       expect(state.isShifted).toBe(true);

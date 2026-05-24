@@ -15,6 +15,13 @@ QUnit.module("Negative / Edge-Case - Layout switch + shift", {
   },
 });
 
+// NOTE: kiosk-keyboard intentionally preserves shift/caps-lock state across
+// layout switches; kiosk-keyboard-webc does the opposite (resets on switch).
+// The divergence is conscious as of the #98 work -- the kiosk control treats
+// the shift state machine as orthogonal to layout context, while webc treats a
+// layout switch as a new typing context. If a future change unifies these,
+// these two tests need to be updated together with the webc package's
+// "clears caps lock when user switches layout via {layout:X} key" test.
 QUnit.test("Shift persists across layout switch", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");

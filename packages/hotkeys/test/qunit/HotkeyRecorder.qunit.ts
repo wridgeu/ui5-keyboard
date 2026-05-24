@@ -51,13 +51,15 @@ QUnit.test("Records simple key", (assert) => {
   fireKey("F5");
 });
 
-QUnit.test("Records modifier combo", (assert) => {
+QUnit.test("Records modifier combo in canonical form", (assert) => {
+  // Previously this asserted `hotkey.includes("Control")` and `hotkey.includes("S")`
+  // which both passed for any string containing those characters (e.g. "Control+Shift+S"
+  // would have slipped through). Assert the exact canonical form instead.
   const done = assert.async();
 
   const recorder = createRecorder({
     onRecord: (hotkey) => {
-      assert.ok(hotkey.includes("Control"), "Hotkey includes Control modifier");
-      assert.ok(hotkey.includes("S"), "Hotkey includes S key");
+      assert.strictEqual(hotkey, "Control+S", "Recorded canonical Ctrl+S without spurious modifiers");
       done();
     },
   });
@@ -372,9 +374,10 @@ QUnit.test("Destroy-while-recording marks recorder as destroyed", (assert) => {
   assert.notOk(recorder.isRecording, "isRecording is false after manager destroy");
   assert.ok(recorder.isDestroyed, "isDestroyed is true after manager destroy");
 
-  // stop() should not throw on destroyed recorder
+  // stop() on a destroyed recorder must be idempotent: no throw, no state flip.
   recorder.stop();
-  assert.ok(true, "stop() on destroyed recorder does not throw");
+  assert.notOk(recorder.isRecording, "stop() on destroyed recorder leaves isRecording false");
+  assert.ok(recorder.isDestroyed, "stop() on destroyed recorder leaves isDestroyed true");
 });
 
 QUnit.test("Key state tracks during recording", (assert) => {
