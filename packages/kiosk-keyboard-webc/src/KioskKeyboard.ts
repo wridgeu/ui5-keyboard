@@ -552,7 +552,7 @@ class KioskKeyboard extends UI5Element {
 
   // ── Non-reactive internal state ──
 
-  private _shiftState = new ShiftState();
+  private _shiftState = new ShiftState(() => this._syncShiftState());
   private _middleware: CompositionMiddleware | null = null;
   private _baseLayout = "";
   private _keyboardTypeSource: KeyboardTypeSource = "unset";
@@ -806,7 +806,6 @@ class KioskKeyboard extends UI5Element {
       }
       this._currentLayout = this.layout;
       this._shiftState.reset();
-      this._syncShiftState();
     }
     if (name === "keyboardType") {
       if (!VALID_KEYBOARD_TYPES.has(this.keyboardType)) {
@@ -815,7 +814,7 @@ class KioskKeyboard extends UI5Element {
         );
         // Use _setKeyboardTypeInternal so the re-entrant onInvalidation
         // sees an "auto:" source and does not lock out future auto-detection.
-        this._setKeyboardTypeInternal(KeyboardType.Full);
+        this._setKeyboardTypeInternal("Full");
         return;
       }
       const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
@@ -823,11 +822,10 @@ class KioskKeyboard extends UI5Element {
       // Reset user layout switch and shift state - a keyboardType change implies a new layout context
       this._layoutSource = "external";
       this._shiftState.reset();
-      this._syncShiftState();
       const previousKeyboardType =
         typeof changeInfo.oldValue === "string" && VALID_KEYBOARD_TYPES.has(changeInfo.oldValue)
           ? (changeInfo.oldValue as `${KeyboardType}`)
-          : KeyboardType.Full;
+          : "Full";
       this.fireDecoratorEvent("keyboard-type-change", {
         keyboardType: this.keyboardType,
         previousKeyboardType,
@@ -838,14 +836,14 @@ class KioskKeyboard extends UI5Element {
       console.warn(
         `[kiosk-keyboard] Invalid fKeyMode "${this.fKeyMode}". Valid values: ${[...VALID_FKEY_MODES].join(", ")}.`,
       );
-      this.fKeyMode = FKeyMode.Virtual;
+      this.fKeyMode = "Virtual";
       return;
     }
     if (name === "mobileKeyboard" && !VALID_MOBILE_KEYBOARDS.has(this.mobileKeyboard)) {
       console.warn(
         `[kiosk-keyboard] Invalid mobileKeyboard "${this.mobileKeyboard}". Valid values: ${[...VALID_MOBILE_KEYBOARDS].join(", ")}.`,
       );
-      this.mobileKeyboard = MobileKeyboard.Auto;
+      this.mobileKeyboard = "Auto";
       return;
     }
     if (name === "docked" || name === "autoShow") {
@@ -957,7 +955,6 @@ class KioskKeyboard extends UI5Element {
 
     // Reset shift/caps state for the new input context
     this._shiftState.reset();
-    this._syncShiftState();
 
     this._targetElement = el;
     this._targetSource = "explicit";
@@ -997,7 +994,7 @@ class KioskKeyboard extends UI5Element {
    */
   resetKeyboardType(): void {
     this._keyboardTypeSource = "unset";
-    this._setKeyboardTypeInternal(KeyboardType.Full);
+    this._setKeyboardTypeInternal("Full");
   }
 
   /**
@@ -1039,8 +1036,8 @@ class KioskKeyboard extends UI5Element {
     // On the auto-forced numpad/numeric layout, `{layout:base}` would resolve
     // back to the same auto-forced layout (handler sets `_layoutSource = "external"`,
     // so this branch runs again). Strip it so the rendered surface matches behavior.
-    if (type === KeyboardType.Numpad) return stripDeadBaseSwitch(getLayoutOrDefault("numpad", layoutsMap));
-    if (type === KeyboardType.Numeric) return stripDeadBaseSwitch(getLayoutOrDefault("numeric", layoutsMap));
+    if (type === "Numpad") return stripDeadBaseSwitch(getLayoutOrDefault("numpad", layoutsMap));
+    if (type === "Numeric") return stripDeadBaseSwitch(getLayoutOrDefault("numeric", layoutsMap));
     const name =
       this._currentLayout ||
       this._baseLayout ||
@@ -1332,8 +1329,6 @@ class KioskKeyboard extends UI5Element {
       const isCaps = this._shiftState.isCapsLock;
       keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
       keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyCapsLock, isCaps);
-
-      this._syncShiftState();
       return;
     }
 
@@ -1471,6 +1466,10 @@ class KioskKeyboard extends UI5Element {
         this._baseLayout = layoutName;
       }
     }
+    // Reset shift/caps-lock on layout switch, matching the programmatic
+    // `layout` property setter path (onInvalidation, name === "layout").
+    // Caps-lock that was meaningful in QWERTY has no meaning in numpad/special.
+    this._shiftState.reset();
     this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
   }
 
@@ -1484,11 +1483,11 @@ class KioskKeyboard extends UI5Element {
 
   private _handleFKey(fkeyName: string, shiftKey: boolean): void {
     const mode = this.fKeyMode;
-    if (mode === FKeyMode.None) return;
+    if (mode === "None") return;
 
     let nativeAllowed = true;
 
-    if (mode === FKeyMode.Native) {
+    if (mode === "Native") {
       if (NATIVE_DISPATCHABLE_KEYS.has(fkeyName)) {
         nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
         if (nativeAllowed) {
@@ -1552,9 +1551,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   private _autoReleaseShift(): void {
-    if (this._shiftState.autoRelease()) {
-      this._syncShiftState();
-    }
+    this._shiftState.autoRelease();
   }
 
   private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {
@@ -1580,7 +1577,11 @@ class KioskKeyboard extends UI5Element {
     return resolveWithCustomResolver(el, this._targetResolver);
   }
 
-  /** Cached on first use; reused across opens and observed for hot-pluggable touch input. */
+  /**
+   * Cached `MediaQueryList` reused across all instances; `.matches` is a
+   * live getter that re-evaluates per read, so hot-plugged pointers are
+   * always reflected without an explicit `change` listener.
+   */
   private static _coarsePointerQuery: MediaQueryList | null = null;
 
   private static _getCoarsePointerQuery(): MediaQueryList {
@@ -1812,10 +1813,7 @@ class KioskKeyboard extends UI5Element {
   private _onPhysicalKey(ev: KeyboardEvent, down: boolean): void {
     this._highlightKey(ev.key, down);
 
-    const changed = this._shiftState.syncFromPhysical(ev.shiftKey, ev.getModifierState("CapsLock"));
-    if (changed) {
-      this._syncShiftState();
-    }
+    this._shiftState.syncFromPhysical(ev.shiftKey, ev.getModifierState("CapsLock"));
   }
 
   // ── Physical keyboard highlight ──
@@ -1961,7 +1959,7 @@ class KioskKeyboard extends UI5Element {
 
     // Skip for docked keyboards (viewport-driven, not container-constrained)
     // and numpad (already compact, shouldn't shrink further).
-    if (this.docked || this.keyboardType === KeyboardType.Numpad) {
+    if (this.docked || this.keyboardType === "Numpad") {
       return;
     }
 

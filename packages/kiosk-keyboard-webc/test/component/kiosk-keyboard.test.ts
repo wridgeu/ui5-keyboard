@@ -627,6 +627,40 @@ describe("kiosk-keyboard", () => {
       expect(detail.layout).to.equal("numeric");
     });
 
+    it("clears caps lock when user switches layout via {layout:X} key", async () => {
+      // Regression: caps-lock used to persist across user-initiated layout
+      // switches because _handleLayoutSwitch did not reset shift state.
+      // Caps-lock that was meaningful in QWERTY has no meaning in numeric.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      // Double-click shift to engage caps lock
+      queryKey(el, "{shift}")!.click();
+      await nextRender();
+      queryKey(el, "{shift}")!.click();
+      await nextRender();
+      expect(
+        queryKey(el, "{shift}")!.classList.contains(DOM.classes.keyCapsLock),
+        "caps lock should be on before switching layout",
+      ).to.be.true;
+
+      // Switch layout via {layout:numeric} key
+      const layoutChange = oneEvent(el, "layout-change");
+      queryKey(el, "{layout:numeric}")!.click();
+      await layoutChange;
+      await nextRender();
+
+      // Return to qwerty via {layout:base} and verify shift state is clean
+      const layoutChangeBack = oneEvent(el, "layout-change");
+      queryKey(el, "{layout:base}")!.click();
+      await layoutChangeBack;
+      await nextRender();
+
+      const shift = queryKey(el, "{shift}")!;
+      expect(shift.getAttribute("aria-pressed"), "shift should be released after layout switch").to.equal("false");
+      expect(shift.classList.contains(DOM.classes.keyCapsLock), "caps lock class should be cleared").to.be.false;
+    });
+
     it("tracks base layout through primary layout toggle and secondary roundtrip", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="ja-romaji"></kiosk-keyboard> `);
       await nextRender();

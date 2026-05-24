@@ -4,6 +4,12 @@
  * Single click: off -> shift (auto-releases after one key).
  * Double-click (within threshold): activates caps lock.
  * Click while caps-locked: off.
+ *
+ * Every mutator (toggle, autoRelease, syncFromPhysical, reset) fires the
+ * `onChange` callback supplied to the constructor whenever the mode
+ * actually transitions. The owner uses this to mirror state to instance
+ * fields and announce ARIA transitions, without having to pair each
+ * mutation call with a manual sync.
  */
 
 const enum Mode {
@@ -15,9 +21,14 @@ const enum Mode {
 export class ShiftState {
   private _mode: Mode = Mode.Off;
   private _lastToggleTime = -Infinity;
+  private readonly _onChange: () => void;
 
   /** Milliseconds within which a second click counts as double-click. */
   static readonly DOUBLE_CLICK_MS = 400;
+
+  constructor(onChange: () => void) {
+    this._onChange = onChange;
+  }
 
   get isShifted(): boolean {
     return this._mode !== Mode.Off;
@@ -39,6 +50,7 @@ export class ShiftState {
    * - Otherwise -> activate one-shot shift.
    */
   toggle(): void {
+    const prev = this._mode;
     const now = performance.now();
     const withinWindow = now - this._lastToggleTime < ShiftState.DOUBLE_CLICK_MS;
 
@@ -57,6 +69,7 @@ export class ShiftState {
     }
 
     this._lastToggleTime = now;
+    if (prev !== this._mode) this._onChange();
   }
 
   /**
@@ -69,6 +82,7 @@ export class ShiftState {
       // Close the double-click window so the next toggle() starts a
       // fresh cycle instead of incorrectly jumping to CapsLock.
       this._lastToggleTime = -Infinity;
+      this._onChange();
       return true;
     }
     return false;
@@ -91,14 +105,17 @@ export class ShiftState {
 
     if (prev !== this._mode) {
       this._lastToggleTime = -Infinity;
+      this._onChange();
+      return true;
     }
-
-    return prev !== this._mode;
+    return false;
   }
 
   /** Clears both shift and caps lock. */
   reset(): void {
+    const prev = this._mode;
     this._mode = Mode.Off;
     this._lastToggleTime = -Infinity;
+    if (prev !== Mode.Off) this._onChange();
   }
 }

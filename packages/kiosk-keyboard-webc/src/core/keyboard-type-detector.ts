@@ -1,13 +1,13 @@
-import { KeyboardType } from "../types.js";
+import type { KeyboardType } from "../types.js";
 
 /**
  * Keyboard type values that auto-detection can return.
  * `Numeric` is only set programmatically via the `keyboardType` property.
  */
-type KeyboardTypeValue = Exclude<`${KeyboardType}`, `${typeof KeyboardType.Numeric}`>;
+type KeyboardTypeValue = Exclude<`${KeyboardType}`, "Numeric">;
 
 /** Valid values for the `data-keyboard-type` explicit override attribute. */
-const VALID_DATA_OVERRIDES: ReadonlySet<KeyboardTypeValue> = new Set([KeyboardType.Full, KeyboardType.Numpad]);
+const VALID_DATA_OVERRIDES: ReadonlySet<KeyboardTypeValue> = new Set(["Full", "Numpad"]);
 
 /** Numeric input modes that map to Numpad keyboard. */
 const NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "tel"]);
@@ -53,12 +53,12 @@ export function detectKeyboardType(dom: HTMLInputElement | HTMLTextAreaElement):
 
   // 2. Check inputmode attribute
   const inputmode = dom.getAttribute("inputmode");
-  if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return KeyboardType.Numpad;
+  if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return "Numpad";
 
   // 3. Check HTML type attribute
   if (dom instanceof HTMLInputElement && NUMPAD_HTML_TYPES.has(dom.type)) {
-    return KeyboardType.Numpad;
+    return "Numpad";
   }
 
-  return KeyboardType.Full;
+  return "Full";
 }
