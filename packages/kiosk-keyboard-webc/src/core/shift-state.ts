@@ -72,27 +72,19 @@ export class ShiftState {
     if (prev !== this._mode) this._onChange();
   }
 
-  /**
-   * Auto-releases shift (but not caps lock) after a key press.
-   * Returns `true` if shift was released.
-   */
-  autoRelease(): boolean {
+  /** Auto-releases shift (but not caps lock) after a key press. */
+  autoRelease(): void {
     if (this._mode === Mode.Shift) {
       this._mode = Mode.Off;
       // Close the double-click window so the next toggle() starts a
       // fresh cycle instead of incorrectly jumping to CapsLock.
       this._lastToggleTime = -Infinity;
       this._onChange();
-      return true;
     }
-    return false;
   }
 
-  /**
-   * Syncs the shift state from a physical keyboard event.
-   * Returns true if the state changed.
-   */
-  syncFromPhysical(shiftHeld: boolean, capsLockOn: boolean): boolean {
+  /** Syncs the shift state from a physical keyboard event. */
+  syncFromPhysical(shiftHeld: boolean, capsLockOn: boolean): void {
     const prev = this._mode;
 
     if (capsLockOn) {
@@ -106,9 +98,7 @@ export class ShiftState {
     if (prev !== this._mode) {
       this._lastToggleTime = -Infinity;
       this._onChange();
-      return true;
     }
-    return false;
   }
 
   /** Clears both shift and caps lock. */

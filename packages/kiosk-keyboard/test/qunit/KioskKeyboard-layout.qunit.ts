@@ -44,12 +44,17 @@ QUnit.test("Default layout renders QWERTY", async (assert) => {
 });
 
 QUnit.test("KeyboardType 'Numpad' renders numpad keys", async (assert) => {
+  // The first-key check is the real distinguisher (numpad row 0 is "7" while
+  // QWERTY row 0 is "1"). The previous `rows.length <= 5` assertion was a
+  // no-op because both layouts happen to render exactly 5 rows. The
+  // strict-equal on row count still catches a future regression that adds or
+  // drops a row from the numpad layout definition.
   const kb = new KioskKeyboard();
   kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
   const rows = getRowElements(kb);
-  assert.ok(rows.length <= 5, "Numpad has reasonable row count");
-  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad starts with 7");
+  assert.strictEqual(rows.length, 5, "Numpad has 5 rows");
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad row 0 starts with 7 (distinguishes from QWERTY)");
   kb.destroy();
 });
 

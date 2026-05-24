@@ -88,10 +88,14 @@ QUnit.test("destroy() invalidates all guards", (assert) => {
   assert.notOk(guard1.isActive, "Guard1 invalidated");
   assert.notOk(guard2.isActive, "Guard2 invalidated");
 
-  // release on invalidated guard should not throw
+  // release() on already-invalidated guards must be idempotent. assert.ok(true)
+  // was previously masking any future regression that flipped them back to
+  // active or threw. Manager is already destroyed here so we can only observe
+  // the guards themselves, not the manager's suspend state.
   guard1.release();
   guard2.release();
-  assert.ok(true, "release() on invalidated guards does not throw");
+  assert.notOk(guard1.isActive, "release() leaves invalidated guard inactive");
+  assert.notOk(guard2.isActive, "release() leaves invalidated guard inactive");
 });
 
 QUnit.test("suspendDispatch on destroyed manager throws", (assert) => {

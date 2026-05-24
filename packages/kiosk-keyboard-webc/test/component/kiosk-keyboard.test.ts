@@ -1396,11 +1396,35 @@ describe("kiosk-keyboard", () => {
       expect(backspace.querySelector(`.${DOM.classes.keyLabel}`)).to.not.be.null;
     });
 
-    it("has a live region for announcements", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+    it("has a live region outside the aria-hidden root so docked-but-hidden announcements aren't suppressed by AT", async () => {
+      // Regression: the live region used to be a child of `<div role="group" aria-hidden=...>`.
+      // When the docked keyboard was hidden, `aria-hidden="true"` on the parent suppressed
+      // the region from the accessibility tree even though a caps-lock or shift announcement
+      // had just been queued. Moving the region to a sibling of the root group (via a JSX
+      // fragment) restores the announcement path. This test fails if the structural change
+      // is reverted, even though the element would still exist somewhere in the shadow DOM.
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>`);
       await nextRender();
-      const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]');
-      expect(region).to.not.be.null;
+      const shadow = el.shadowRoot!;
+      const region = shadow.querySelector('[role="status"][aria-live="polite"]');
+      const rootGroup = shadow.querySelector('[role="group"]');
+      expect(region, "live region present").to.not.be.null;
+      expect(rootGroup, "root group present").to.not.be.null;
+      expect(rootGroup!.contains(region), "live region must NOT be a descendant of the aria-hidden root group").to.be
+        .false;
+    });
+
+    it("live region content updates announce shift-on", async () => {
+      // The structural-position test above proves the region escapes the aria-hidden root.
+      // This one proves it actually receives announcement text, so a regression that silently
+      // breaks the announcement pipeline (e.g. _liveRegionText never set) is caught.
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+      queryKey(el, "{shift}")!.click();
+      // The component throttles announcements; wait long enough for at least one to land.
+      await new Promise((r) => setTimeout(r, 60));
+      const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]') as HTMLElement;
+      expect(region.textContent ?? "", "shift-on announcement appears in live region").to.match(/shift|on/i);
     });
 
     it("exactly one key has tabindex=0 (roving tabindex)", async () => {
@@ -1419,11 +1443,14 @@ describe("kiosk-keyboard", () => {
       expect(group.getAttribute("aria-roledescription")!.length).to.be.greaterThan(0);
     });
 
-    it("shift key has aria-pressed attribute", async () => {
+    it("shift key has aria-pressed=false initially (presence + correct default value)", async () => {
+      // Previous version only checked `hasAttribute("aria-pressed")` which passes whether
+      // the value is "true" or "false". A regression that defaulted shift to engaged would
+      // have slipped through. Assert the value too.
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
       const shift = queryKey(el, "{shift}")!;
-      expect(shift.hasAttribute("aria-pressed")).to.be.true;
+      expect(shift.getAttribute("aria-pressed")).to.equal("false");
     });
 
     it("disabled keys have aria-disabled", async () => {
