@@ -1300,7 +1300,6 @@ class KioskKeyboard extends UI5Element {
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
       if (!allowed) return;
       this._handleLayoutSwitch(value);
-      this._autoReleaseShift();
       return;
     }
 
@@ -1453,6 +1452,10 @@ class KioskKeyboard extends UI5Element {
       this._middleware = null;
     }
     const layoutName = value.slice("{layout:".length, -1);
+    if (layoutName !== "base" && !getRegisteredLayout(layoutName, this._getInstanceLayoutsMap())) {
+      console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
+      return;
+    }
     if (layoutName === "base") {
       this._currentLayout =
         this._baseLayout ||

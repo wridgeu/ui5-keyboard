@@ -752,6 +752,30 @@ describe("kiosk-keyboard", () => {
       expect(layoutChanges, "layout-change should not fire when key-press is prevented").to.equal(0);
     });
 
+    it("ignores {layout:*} for unregistered layout names", async () => {
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+
+      const initialLayout = el.layout;
+      let layoutChanges = 0;
+      el.addEventListener("layout-change", () => {
+        layoutChanges++;
+      });
+
+      // Inject a synthetic key element with an unregistered layout name
+      // into the keyboard root so the click handler's closest() finds it.
+      const fakeKey = document.createElement("div");
+      fakeKey.setAttribute("role", "button");
+      fakeKey.dataset.key = "{layout:not-registered}";
+      rootDiv(el).appendChild(fakeKey);
+      fakeKey.click();
+      await nextRender();
+
+      expect(layoutChanges, "no layout-change for unregistered layout").to.equal(0);
+      expect(el.layout, "layout property unchanged").to.equal(initialLayout);
+      fakeKey.remove();
+    });
+
     it("filters {layout:base} from the auto-forced layout in Numeric mode", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
       await nextRender();
