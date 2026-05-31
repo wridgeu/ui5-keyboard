@@ -36,13 +36,9 @@ const PACKAGES = [
       "phone-md": ["visual-container.test.ts"], // 390px
     },
   },
-  {
-    name: "kiosk-keyboard-webc",
-    testDir: "packages/kiosk-keyboard-webc/test/e2e",
-    baselineDir: "packages/kiosk-keyboard-webc/test/e2e/__baselines__",
-    profiles: ["phone-sm", "phone-md", "phone-lg", "tablet"],
-    profileExclusions: {},
-  },
+  // kiosk-keyboard-webc uses Playwright for e2e/visual: missing baselines surface
+  // as test failures on run (toHaveScreenshot), so no separate existence check is
+  // needed here. Only the wdio-based kiosk-keyboard package is validated.
 ];
 
 // ── Extract snapshot tags from test files ──

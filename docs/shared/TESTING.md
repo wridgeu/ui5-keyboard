@@ -9,7 +9,8 @@ Developer reference for the test infrastructure across all packages. For consume
 | **Unit**         | QUnit (via wdio-qunit-service)     | `kiosk-keyboard`, `hotkeys` | UI5 control logic in real browser                                   |
 | **Unit**         | Vitest (jsdom)                     | `kiosk-keyboard-webc`       | Pure logic (layout registry, grapheme, shift-state, etc.)           |
 | **Component**    | Web Test Runner + Playwright       | `kiosk-keyboard-webc`       | DOM integration, events, attributes, accessibility                  |
-| **E2E / Visual** | WebdriverIO + @wdio/visual-service | both kiosk packages         | Visual regression, focus flows, auto-type, RTL, accessibility media |
+| **E2E / Visual** | WebdriverIO + @wdio/visual-service | `kiosk-keyboard`            | Visual regression, focus flows, auto-type, RTL, accessibility media |
+| **E2E / Visual** | Playwright (`toHaveScreenshot`)    | `kiosk-keyboard-webc`       | Visual regression, RTL, accessibility media, docked behavior        |
 
 ## Component Tests (`kiosk-keyboard-webc`)
 

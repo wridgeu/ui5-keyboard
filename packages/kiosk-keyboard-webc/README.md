@@ -1124,7 +1124,7 @@ npm test
 # Component tests (Web Test Runner, Playwright)
 npm run test:component
 
-# E2E tests (WebdriverIO), desktop
+# E2E tests (Playwright), desktop
 npm run test:e2e
 
 # E2E tests, responsive device matrix
