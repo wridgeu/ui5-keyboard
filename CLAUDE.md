@@ -60,3 +60,12 @@ Verify UI5 APIs against the pinned version (see each package's `ui5.yaml` / `pac
 3. **OpenUI5 SDK API reference** and the `ui5-mcp` tool (`get_api_reference`): for high-level contracts and `since` markers.
 
 The numbers are out of sync so you must put some effort into making it correct but you'll get the gist.
+
+## 7. Adversarial test validation
+
+A green suite can lie: a test asserts nothing, the runner reports success while executing zero tests, or a tolerance / skip hides the regression. Before trusting a suite, especially after a test-infrastructure change, prove it fails on real breakage instead of only watching it pass.
+
+- Write the false-positive hypotheses down first (how could a green run be lying?) in a dated `docs/specs/*-adversarial-hypotheses.md`.
+- Clear each hypothesis only after you have SEEN the suite go red for it, then revert: flip one assertion (is it live?), corrupt one committed baseline (does the visual test compare?), inject one failing assertion (does the exit code propagate?), point the runner at a bogus path (does it pass empty?).
+- Code review and agent audits are corroboration, not proof. Confirm empirically.
+- Watch for: vacuous assertions, skips that fire on all targets, snapshot tolerances large enough to mask a one-element change, and runners that pass while running zero tests.
