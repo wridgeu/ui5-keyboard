@@ -557,6 +557,9 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 
 ```
 packages/kiosk-keyboard/
+  playwright.config.ts        Playwright config: e2e + visual, desktop + device projects
+  playwright.flp.config.ts    Playwright config for the FLP lifecycle suite
+  playwright.docs.config.ts   Playwright config for README screenshot generation
   src/
     KioskKeyboard.ts          UI5 Control with state, event handling,
                                locale detection, auto-type, mobile suppression
@@ -623,17 +626,20 @@ packages/kiosk-keyboard/
     testsuite.qunit.ts                   Test suite runner
     test-helpers.ts                      Shared test utilities
   test/e2e/
-    wdio.conf.ts               WebdriverIO configuration
-    wdio-flp.conf.ts           WebdriverIO config for FLP tests
-    wdio-device.conf.ts        WebdriverIO config for device emulation tests
-    visual.test.ts             Visual regression tests
-    inputmode.test.ts          E2E tests for inputmode suppression
-    focus.test.ts              Focus/auto-show behavior
-    autotype.test.ts           Auto-type keyboard switching
-    interop.test.ts            StepInput + UI5 Web Components interop
-    i18n.test.ts               i18n extensibility e2e tests
-    flp-lifecycle.test.ts      FLP lifecycle i18n auto-reset tests
-    accessibility-media.test.ts  Accessibility and media-query tests
-    rtl.test.ts                RTL layout tests
-    readme-screenshots.test.ts   Screenshot generation for README
+    helpers.ts                 Minimal shared Playwright helpers (openPage, keyboardRoot, ...)
+    inputmode.spec.ts          E2E tests for inputmode suppression
+    focus.spec.ts              Focus/auto-show behavior
+    autotype.spec.ts           Auto-type keyboard switching
+    interop.spec.ts            StepInput + UI5 Web Components interop
+    i18n.spec.ts               i18n extensibility e2e tests
+    flp-lifecycle.spec.ts      FLP lifecycle i18n auto-reset tests
+    visual.spec.ts             Core visual regression (toHaveScreenshot)
+    visual-container.spec.ts   Container-query layout snapshots
+    visual-container-responsive.spec.ts  Responsive container-query snapshots
+    visual-enhancements.spec.ts  Progressive-enhancement fallback snapshots
+    visual-themes.spec.ts      Per-theme snapshots
+    accessibility-media.spec.ts  Accessibility and media-query (forced-colors, reduced-motion) snapshots
+    rtl.spec.ts                RTL layout snapshots
+    readme-screenshots.spec.ts   Screenshot generation for README
+    __baselines__/             Committed snapshot baselines, per Playwright project
 ```

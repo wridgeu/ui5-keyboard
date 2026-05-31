@@ -6,7 +6,7 @@ Standalone pages for manual testing, screenshot generation, visual inspection, a
 
 - `index.html`: main standalone demo with native inputs, UI5 Web Components inputs, docked mode, and event logging
 - `key-style-demo.html`: key type comparison page used for README screenshots
-- `visual.html`: visual regression matrix used by WebdriverIO
+- `visual.html`: visual regression matrix used by the Playwright visual suite
 - `visual-themes.html`: focused theme preview page for theme-specific visual checks
 
 ## Consumption Smoke Tests
