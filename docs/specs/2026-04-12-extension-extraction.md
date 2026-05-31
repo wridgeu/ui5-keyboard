@@ -1,6 +1,6 @@
 # KioskKeyboard Internal Extension Extraction
 
-**Issue:** [#71](https://github.com/wridgeu/ui5-lib-keyboard/issues/71)
+**Issue:** [#71](https://github.com/wridgeu/ui5-keyboard/issues/71)
 **Date:** 2026-04-12
 
 ## Context

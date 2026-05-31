@@ -1,6 +1,6 @@
 # Glossary
 
-Technical concepts used across the `ui5-lib-keyboard` libraries.
+Technical concepts used across the `ui5-keyboard` libraries.
 
 ## IME (Input Method Editor)
 

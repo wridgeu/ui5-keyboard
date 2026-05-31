@@ -1,6 +1,6 @@
 # CJK Glyph Centering
 
-> Status: **Partially Implemented** | Tracks: [#46](https://github.com/wridgeu/ui5-lib-keyboard/issues/46)
+> Status: **Partially Implemented** | Tracks: [#46](https://github.com/wridgeu/ui5-keyboard/issues/46)
 
 ## Problem
 
@@ -16,7 +16,7 @@ CJK glyphs (hiragana, katakana, Hangul, kanji) can appear visually offset within
 ## What Remains
 
 1. **Horizontal centering**: blocked on a custom font with optically centered CJK glyphs (see [CUSTOM-FONT-FACE.md](./CUSTOM-FONT-FACE.md))
-2. **`ideographic-ink`**: when browsers ship `text-box-edge: ideographic-ink`, adopt it with tested baselines (tracked in [#52](https://github.com/wridgeu/ui5-lib-keyboard/issues/52))
+2. **`ideographic-ink`**: when browsers ship `text-box-edge: ideographic-ink`, adopt it with tested baselines (tracked in [#52](https://github.com/wridgeu/ui5-keyboard/issues/52))
    - [csswg-drafts #10928](https://github.com/w3c/csswg-drafts/issues/10928): ideographic font cascade question
    - [csswg-drafts #10850](https://github.com/w3c/csswg-drafts/issues/10850): synthesizing ideographic baselines
    - [Chromium #365423076](https://issues.chromium.org/issues/365423076): implement `ideographic-ink`

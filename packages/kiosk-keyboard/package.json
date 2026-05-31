@@ -11,13 +11,13 @@
     "ui5",
     "virtual-keyboard"
   ],
-  "homepage": "https://github.com/wridgeu/ui5-lib-keyboard/tree/main/packages/kiosk-keyboard",
-  "bugs": "https://github.com/wridgeu/ui5-lib-keyboard/issues",
+  "homepage": "https://github.com/wridgeu/ui5-keyboard/tree/main/packages/kiosk-keyboard",
+  "bugs": "https://github.com/wridgeu/ui5-keyboard/issues",
   "license": "MIT",
   "author": "Marco Beier",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wridgeu/ui5-lib-keyboard.git",
+    "url": "https://github.com/wridgeu/ui5-keyboard.git",
     "directory": "packages/kiosk-keyboard"
   },
   "files": [

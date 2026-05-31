@@ -1,14 +1,14 @@
 {
-  "name": "ui5-lib-keyboard",
+  "name": "ui5-keyboard",
   "private": true,
-  "description": "UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications",
-  "homepage": "https://github.com/wridgeu/ui5-lib-keyboard",
-  "bugs": "https://github.com/wridgeu/ui5-lib-keyboard/issues",
+  "description": "Keyboard mono-repo for the web: declarative hotkeys and an on-screen virtual keyboard, as SAPUI5/OpenUI5 libraries and a framework-agnostic Web Component",
+  "homepage": "https://github.com/wridgeu/ui5-keyboard",
+  "bugs": "https://github.com/wridgeu/ui5-keyboard/issues",
   "license": "MIT",
   "author": "Marco Beier",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wridgeu/ui5-lib-keyboard.git"
+    "url": "https://github.com/wridgeu/ui5-keyboard.git"
   },
   "workspaces": [
     "packages/*"
