@@ -41,7 +41,7 @@
     "start:qunit": "ui5 serve --port 8082 -o \"test-resources/sap/ui/qunit/testrunner.html?testpage=%2Ftest-resources%2Fui5%2Fkiosk%2Fqunit%2Ftestsuite.qunit.html&autostart=true\"",
     "start:visual": "ui5 serve --port 8082 -o test-resources/ui5/kiosk/e2e/visual/index.html",
     "test": "npm run test:qunit && npm run test:e2e",
-    "test:qunit": "wdio run test/qunit/wdio.conf.ts",
+    "test:qunit": "start-server-and-test \"ui5 serve --port 8082\" http://localhost:8082/test-resources/ui5/kiosk/qunit/testsuite.qunit.html \"ui5-test-runner --url http://localhost:8082/test-resources/ui5/kiosk/qunit/testsuite.qunit.html --report-dir report --browser $/playwright.js\"",
     "test:e2e": "wdio run test/e2e/wdio.conf.ts",
     "test:e2e:open": "wdio run test/e2e/wdio.conf.ts -- --headed",
     "test:e2e:update": "wdio run test/e2e/wdio.conf.ts -- --update-visual-baseline",
