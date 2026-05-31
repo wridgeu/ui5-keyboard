@@ -1,8 +1,10 @@
-<h1 align="center">ui5-lib-keyboard</h1>
+<h1 align="center">ui5-keyboard (kiosk, hotkey)</h1>
 
 <p align="center">
-UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications.
+A keyboard mono-repo for the web: declarative <strong>hotkeys</strong> and an on-screen <strong>virtual keyboard</strong>, shipped both as SAPUI5/OpenUI5 TypeScript libraries and as a framework-agnostic Web Component.
 </p>
+
+This repository bundles two complementary capabilities — keyboard shortcut management and a touch-friendly virtual keyboard — packaged for different runtimes. It is an npm-workspaces mono-repo: two UI5-native libraries, a standalone Web Component variant of the virtual keyboard, and a demo app that exercises all of them. Pick the package that matches your stack; each is independently consumable and versioned.
 
 > [!CAUTION]
 > Large parts of this project were _vibe coded_. I built it with heavy AI assistance while recovering from wrist surgery, one hand and speech-to-text only. If you find rough edges, that is probably why.
@@ -346,7 +348,7 @@ npm run typecheck          # Typecheck all workspaces (incl. e2e tests)
 ## Project Structure
 
 ```
-ui5-lib-keyboard/
+ui5-keyboard/
 ├── packages/
 │   ├── hotkeys/               # ui5-lib-hotkeys (ui5.hotkeys namespace)
 │   ├── kiosk-keyboard/        # ui5-lib-kiosk-keyboard (ui5.kiosk namespace)

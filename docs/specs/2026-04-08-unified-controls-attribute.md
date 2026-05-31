@@ -1,6 +1,6 @@
 # Unified `controls` Attribute
 
-**Issue:** [#78](https://github.com/wridgeu/ui5-lib-keyboard/issues/78)
+**Issue:** [#78](https://github.com/wridgeu/ui5-keyboard/issues/78)
 **Date:** 2026-04-08
 **Status:** Approved
 **Breaking:** Yes (no consumers yet)

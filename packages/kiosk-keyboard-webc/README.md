@@ -8,7 +8,7 @@
 
 <h1 align="center">kiosk-keyboard-webc</h1>
 
-> Part of the [ui5-lib-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md).
+> Part of the [ui5-keyboard](../../README.md) monorepo. See also: [ui5-lib-hotkeys](../hotkeys/README.md) and [ui5-lib-kiosk-keyboard](../kiosk-keyboard/README.md).
 
 Native web component variant of the kiosk on-screen keyboard, built on the [UI5 Web Components](https://ui5.github.io/webcomponents/) framework (`@ui5/webcomponents-base`).
 
