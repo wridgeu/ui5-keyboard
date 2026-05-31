@@ -68,7 +68,8 @@ test.describe("Ignored inputs", () => {
     test(`does not open the keyboard for ${label}`, async ({ page }) => {
       await blurAndWaitForClose(page);
       await page.locator(selector).focus();
-      // Give any (incorrect) open a chance, then assert it stayed closed.
+      // Negative assertion: give any (incorrect) open a chance, then assert it stayed closed.
+      // oxlint-disable-next-line test-guardrails/no-hard-wait -- no event signals the absence of an open
       await page.waitForTimeout(400);
       await expect(keyboardRoot(page, "kb")).toHaveClass(CLOSED);
     });

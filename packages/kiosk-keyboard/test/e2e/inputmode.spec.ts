@@ -18,6 +18,8 @@ test("Custom: suppresses inputmode and opens the keyboard", async ({ page }) => 
 
 test("Native: keeps inputmode and does not open the keyboard", async ({ page }) => {
   await page.locator("#input-native input").click();
+  // Negative assertion: give any (incorrect) open a chance, then assert it stayed closed.
+  // oxlint-disable-next-line test-guardrails/no-hard-wait -- no event signals the absence of an open
   await page.waitForTimeout(400);
   await expect(keyboardRoot(page, "kb-native")).toHaveClass(CLOSED);
   await expect(page.locator("#input-native input")).not.toHaveAttribute("inputmode", "none");
