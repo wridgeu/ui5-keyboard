@@ -1421,12 +1421,10 @@ describe("kiosk-keyboard", () => {
     });
 
     it("has a live region outside the aria-hidden root so docked-but-hidden announcements aren't suppressed by AT", async () => {
-      // Regression: the live region used to be a child of `<div role="group" aria-hidden=...>`.
-      // When the docked keyboard was hidden, `aria-hidden="true"` on the parent suppressed
-      // the region from the accessibility tree even though a caps-lock or shift announcement
-      // had just been queued. Moving the region to a sibling of the root group (via a JSX
-      // fragment) restores the announcement path. This test fails if the structural change
-      // is reverted, even though the element would still exist somewhere in the shadow DOM.
+      // The live region must be a sibling of the aria-hidden root group, not a
+      // descendant: when the docked keyboard is hidden, `aria-hidden="true"` on
+      // the root would otherwise drop a queued caps-lock/shift announcement from
+      // the accessibility tree. A JSX fragment keeps it outside the root.
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>`);
       await nextRender();
       const shadow = el.shadowRoot!;
@@ -1439,9 +1437,9 @@ describe("kiosk-keyboard", () => {
     });
 
     it("live region content updates announce shift-on", async () => {
-      // The structural-position test above proves the region escapes the aria-hidden root.
-      // This one proves it actually receives announcement text, so a regression that silently
-      // breaks the announcement pipeline (e.g. _liveRegionText never set) is caught.
+      // The structural test above proves the region escapes the aria-hidden
+      // root; this proves it actually receives announcement text, catching a
+      // broken announcement pipeline (e.g. _liveRegionText never set).
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
       await nextRender();
       queryKey(el, "{shift}")!.click();
@@ -1468,9 +1466,8 @@ describe("kiosk-keyboard", () => {
     });
 
     it("shift key has aria-pressed=false initially (presence + correct default value)", async () => {
-      // Previous version only checked `hasAttribute("aria-pressed")` which passes whether
-      // the value is "true" or "false". A regression that defaulted shift to engaged would
-      // have slipped through. Assert the value too.
+      // Assert the value, not just presence: a bare hasAttribute check passes
+      // whether shift defaults to "true" or "false".
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
       const shift = queryKey(el, "{shift}")!;

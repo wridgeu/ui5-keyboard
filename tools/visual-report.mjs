@@ -23,7 +23,7 @@ import { createRequire } from "node:module";
 import { serveStatic } from "./serve-static.mjs";
 
 const require = createRequire(import.meta.url);
-const visualReporterCli = require.resolve("wdio-visual-reporter/bin/cli.js", { paths: [import.meta.dirname] });
+const visualReporterCli = require.resolve("@wdio/visual-reporter/dist/cli.js", { paths: [import.meta.dirname] });
 
 const screenshotDir = process.argv[2];
 if (!screenshotDir) {

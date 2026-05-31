@@ -94,7 +94,7 @@ dialogGuard.release();
 
 ### What happens during suspension
 
-While suspended, the EventDispatcher pipeline skips hotkey matching, sequence matching, and unhandled emission (steps 5–7). Instead, it emits an unhandled event with reason `Suspended`. Key state tracking (step 1) still runs, so `getHeldKeys()` remains accurate.
+While suspended, the EventDispatcher pipeline skips hotkey matching, sequence matching, and unhandled emission (steps 5-7). Instead, it emits an unhandled event with reason `Suspended`. Key state tracking (step 1) still runs, so `getHeldKeys()` remains accurate.
 
 ## Scope (Hotkey Scope Stack)
 

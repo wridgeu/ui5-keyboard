@@ -1468,7 +1468,7 @@ QUnit.test("Window blur safety listener is detached on touchend", async (assert)
 
   // A second blur after the state is already clear must be a no-op.
   window.dispatchEvent(new Event("blur"));
-  assert.ok(true, "Second blur after release does not throw");
+  assert.notOk(hasKeyClass(kb, "w", DOM.classes.keyPressed), "State stays clear after a second blur");
 
   kb.destroy();
 });
@@ -1549,7 +1549,6 @@ QUnit.test("Touch handlers ignore non-element event targets", async (assert) => 
   kb.ontouchend(end);
 
   assert.notOk(keyPressed, "No keyPress for non-element touch targets");
-  assert.ok(true, "Touch handlers do not throw for non-element targets");
 
   kb.destroy();
 });

@@ -88,6 +88,10 @@ docs/                    # Architecture and design documents
 
 See the [Docs Index](./docs/README.md) for architecture deep-dives and design rationale.
 
+### Dependency Layout
+
+Shared test/build tooling (the `@wdio/*` family, `webdriverio`, `wdio-qunit-service`, `typescript`, `rimraf`, and the patched `@ui5/webcomponents-tools` / `less-openui5` toolchain) is declared **once at the repository root** and resolved by every workspace via npm hoisting, which keeps a single source of truth for versions. Each package declares only the tooling unique to it (e.g. `wdio-ui5-service` for the kiosk FLP e2e, `vite`/`vitest` for the web component). Because of this, always run `npm install` at the root after switching to a branch that changes dependencies; a workspace's own `node_modules` is not self-contained.
+
 ## Build Pipelines
 
 The three library packages have different build pipelines because they target different runtimes.

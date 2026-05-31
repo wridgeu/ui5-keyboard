@@ -43,8 +43,10 @@ export function getEventTarget(event: Event): EventTarget | null {
  * Returns `false` for:
  * - `<input type="button|submit|reset|checkbox|radio|hidden|file|image|range|color">`
  * - `<input readonly>` (text cannot be entered, so hotkeys should fire)
- * - `<select>` (navigation control; browser handles arrows / type-ahead /
- *   Enter natively, so app-defined shortcuts can fire alongside)
+ * - `<select>` (a navigation control, not a text field: arrow/Enter/Escape and
+ *   type-ahead are handled natively. Trade-off: a single-key shortcut bound to a
+ *   letter now fires while a `<select>` is focused and can pre-empt that native
+ *   type-ahead. This is intentional; `<select>` is treated as non-editable.)
  * - Non-editable elements
  * - `null` / non-Element targets
  */

@@ -15,86 +15,60 @@ QUnit.module("Negative / Edge-Case - Layout switch + shift", {
   },
 });
 
-// NOTE: kiosk-keyboard intentionally preserves shift/caps-lock state across
-// layout switches; kiosk-keyboard-webc does the opposite (resets on switch).
-// The divergence is conscious as of the #98 work -- the kiosk control treats
-// the shift state machine as orthogonal to layout context, while webc treats a
-// layout switch as a new typing context. If a future change unifies these,
-// these two tests need to be updated together with the webc package's
-// "clears caps lock when user switches layout via {layout:X} key" test.
-QUnit.test("Shift persists across layout switch", async (assert) => {
+// kiosk-keyboard resets shift/caps-lock on a user {layout:*} switch, matching
+// kiosk-keyboard-webc (cross-package parity, #98). A layout switch begins a new
+// typing context: caps-lock that was meaningful on QWERTY has no meaning on a
+// numeric/special layout, so it must not carry over. The mirror webc test is
+// "clears caps lock when user switches layout via {layout:X} key".
+// (Auto-release of one-shot shift after typing is covered separately in
+// KioskKeyboard.qunit.ts and KioskKeyboard-renderer-blackbox.qunit.ts.)
+QUnit.test("Shift resets on layout switch", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
-  // Activate shift
   tapKey(kb, "{shift}");
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active after tap");
 
-  // Switch to numeric layout (no shift key to observe) and back to base
+  // Switching layout clears shift immediately.
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
+  assert.notOk(isShiftActive(kb), "Shift cleared by the layout switch");
+
+  // Still cleared after returning to the base layout.
   tapKey(kb, "{layout:base}");
   await waitForRender();
-
-  // Shift must still be active after the round-trip
-  assert.ok(isShiftActive(kb), "Shift remains active after layout round-trip");
+  assert.notOk(isShiftActive(kb), "Shift stays cleared after the round-trip");
 
   input.destroy();
   kb.destroy();
 });
 
-QUnit.test("Caps lock persists across layout switch", async (assert) => {
+QUnit.test("Caps lock resets on layout switch", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
-  // Activate caps lock (shift twice)
+  // Activate caps lock (shift twice).
   tapKey(kb, "{shift}");
   tapKey(kb, "{shift}");
   await waitForRender();
   assert.ok(isCapsLock(kb), "Caps lock is active");
 
-  // Switch to numeric layout (no shift key to observe) and back to base
+  // Switching layout clears caps lock immediately.
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
+  assert.notOk(isCapsLock(kb), "Caps lock cleared by the layout switch");
+
+  // Still cleared after returning to the base layout.
   tapKey(kb, "{layout:base}");
   await waitForRender();
-
-  // Caps lock must still be active after the round-trip
-  assert.ok(isCapsLock(kb), "Caps lock remains active after layout round-trip");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Shift auto-releases after typing in switched layout", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  input.focus();
-
-  // Activate shift, then switch to numeric
-  tapKey(kb, "{shift}");
-  tapKey(kb, "{layout:numeric}");
-  await waitForRender();
-
-  // Type a character in the numeric layout -- shift should auto-release
-  tapKey(kb, "1");
-  await waitForRender();
-
-  // Switch back to base layout to verify shift was released
-  tapKey(kb, "{layout:base}");
-  await waitForRender();
-  assert.notOk(isShiftActive(kb), "Shift auto-released after character typed in switched layout");
+  assert.notOk(isCapsLock(kb), "Caps lock stays cleared after the round-trip");
 
   input.destroy();
   kb.destroy();

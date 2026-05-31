@@ -99,7 +99,7 @@ keydown event (window capture)
 
 ### Suspend Guard
 
-`manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5–7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted; all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`.
+`manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5-7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted; all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`.
 
 Each registration is checked against the following guards before the callback fires:
 
@@ -324,7 +324,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 | Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched` |
 | Nested target-scoped same key                  | Innermost target in composedPath() wins                        |
 | Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                        |
-| Dispatch suspended via guard                   | Steps 5–7 skipped, UnhandledReason.Suspended reported          |
+| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported          |
 | Closed shadow root targets                     | composedPath() stops at boundary, no match                     |
 | Detached targets                               | Not in composedPath(), inactive until reattached               |
 | Empty composedPath()                           | Fallback to `[event.target, document, window]`                 |

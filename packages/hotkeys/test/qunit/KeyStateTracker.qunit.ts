@@ -155,7 +155,6 @@ QUnit.test("Change callback errors are isolated", (assert) => {
     throw new Error("intentional callback failure");
   });
 
-  assert.ok(true, "Setup complete");
   fireKey("a");
 
   tracker.setChangeCallback(() => {
