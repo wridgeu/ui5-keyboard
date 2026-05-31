@@ -1,4 +1,4 @@
-<h1 align="center">ui5-keyboard</h1>
+<h1 align="center">ui5-keyboard (kiosk, hotkey)</h1>
 
 <p align="center">
 A keyboard mono-repo for the web: declarative <strong>hotkeys</strong> and an on-screen <strong>virtual keyboard</strong>, shipped both as SAPUI5/OpenUI5 TypeScript libraries and as a framework-agnostic Web Component.
