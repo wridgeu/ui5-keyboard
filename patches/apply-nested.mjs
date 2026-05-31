@@ -36,7 +36,7 @@ if (existsSync(packagesDir)) {
 let synced = 0;
 for (const nodeModules of nodeModulesDirs) {
   const target = join(nodeModules, "@ui5", "cli", "node_modules", "less-openui5");
-  if (target === source || !existsSync(target)) {
+  if (!existsSync(target)) {
     continue;
   }
   let copiedAny = false;

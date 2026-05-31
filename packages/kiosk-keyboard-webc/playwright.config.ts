@@ -14,10 +14,12 @@ import path from "node:path";
  * `npx playwright install chromium` (CI uses `--with-deps`). Browsers are not
  * downloaded by `npm install`.
  *
- * Visual baselines live under test/e2e/__screenshots__/<project>/ and are
- * platform-specific (font and anti-aliasing rendering differs across OSes), so
- * the authoritative baselines are the ones generated in CI. Regenerate with
- * `npm run test:e2e:update` (desktop) or the per-device update scripts.
+ * Visual baselines live under test/e2e/__baselines__/<project>/, compared
+ * against the pinned bundled chromium. They carry no platform suffix, so a
+ * baseline is only valid for the OS it was generated on (font / anti-aliasing
+ * rendering differs across platforms) -- regenerate on whatever platform runs
+ * the comparison. Update with `npm run test:e2e:update` (desktop) or the
+ * per-device update scripts. (These specs are not yet gated in CI.)
  */
 
 const PORT = 8086;

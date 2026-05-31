@@ -14,7 +14,9 @@ import path from "node:path";
  *
  * Browser provisioning: `npx playwright install chromium` (`--with-deps` in CI).
  * Visual baselines under test/e2e/__baselines__/<project>/ are committed and
- * platform-specific (CI-authoritative), as documented for the web component.
+ * carry no platform suffix, so a baseline is only valid for the OS it was
+ * generated on; regenerate on whatever platform runs the comparison. (These
+ * specs are not yet gated in CI.)
  */
 
 const PORT = 8085;
