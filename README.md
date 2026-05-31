@@ -1,4 +1,4 @@
-<h1 align="center">ui5-kiosk-keyboard</h1>
+<h1 align="center">ui5-keyboard (kiosk, hotkey)</h1>
 
 <p align="center">
 UI5 TypeScript libraries for keyboard interaction in SAPUI5/OpenUI5 applications.
