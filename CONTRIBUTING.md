@@ -73,6 +73,35 @@ npm run typecheck     # TypeScript across all workspaces
 npm test              # Core test suite (QUnit + Vitest + Web Test Runner)
 ```
 
+## End-to-end & visual tests
+
+The UI5 QUnit suites run via `ui5-test-runner` (Playwright backend); the e2e and visual-regression suites run on `@playwright/test`. Browsers are not installed by `npm install` — run `npx playwright install chromium` once first. See [docs/shared/TESTING.md](./docs/shared/TESTING.md) for the full reference.
+
+```bash
+# Run the e2e/visual suite for a package (desktop project)
+npm run test:kiosk:e2e
+npm run test:kiosk-webc:e2e
+
+# Run the full device matrix (desktop + phone-sm/md/lg + tablet)
+npm run test:e2e:all-devices               # both packages, concurrent
+npm run test:e2e:all-devices:sequential    # lower local CPU/RAM pressure
+
+# Debug interactively in the Playwright UI
+npm run test:kiosk:e2e:open
+npm run test:kiosk-webc:e2e:open
+
+# Run a single spec or a single test by title (invoke the workspace script
+# directly so the args forward to playwright)
+npm run test:e2e -w packages/kiosk-keyboard -- focus.spec.ts
+npm run test:e2e -w packages/kiosk-keyboard -- -g "stays open"
+
+# Inspect the last run (baseline / actual / diff for failed snapshots)
+npm run report:visual:kiosk
+npm run report:visual:webc
+```
+
+Visual baselines live under each package's `test/e2e/__baselines__/<project>/` and are committed. When a visual change is intentional, regenerate the affected baselines with the `*:update` scripts (e.g. `npm run test:kiosk:e2e:update`, or `npm run test:e2e:update:all` for every package + device), then review the diff before committing. Baselines carry no platform suffix and are compared against the Chromium bundled with `@playwright/test` (pinned at the repo root): a baseline is only valid for the OS it was generated on, so regenerate on whatever platform runs the comparison.
+
 ## Project Structure
 
 ```
