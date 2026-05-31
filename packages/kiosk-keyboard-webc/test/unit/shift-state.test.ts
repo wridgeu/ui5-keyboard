@@ -2,13 +2,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Mock } from "vitest";
 import { ShiftState } from "../../src/core/shift-state.js";
 
-// These tests exercise the `onChange` callback contract: every state
-// mutator (toggle / autoRelease / syncFromPhysical / reset) MUST invoke
-// the constructor-supplied callback exactly when the internal mode
-// actually transitions, and MUST NOT invoke it on no-op calls. The
-// callback is how the owner (KioskKeyboard) drives ARIA announcements
-// and mirror-field updates; without these assertions a regression that
-// breaks the callback would let every other test pass silently.
+// Exercises the `onChange` contract: every mutator (toggle / autoRelease /
+// syncFromPhysical / reset) must invoke the constructor callback exactly on a
+// real mode transition, and never on a no-op. The owner (KioskKeyboard) uses
+// it to drive ARIA announcements and mirror-field updates.
 
 describe("ShiftState", () => {
   let onChange: Mock<() => void>;

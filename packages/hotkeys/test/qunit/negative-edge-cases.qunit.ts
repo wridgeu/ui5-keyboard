@@ -561,10 +561,8 @@ QUnit.test("cancel() on destroyed recorder does not throw", (assert) => {
   recorder.start();
   recorder.destroy();
 
-  // cancel() after destroy must be idempotent: no throw, recorder stays destroyed
-  // and stopped. assert.ok(true) was previously masking any future regression
-  // where destroy() left the recorder in a half-destroyed state and cancel()
-  // could flip it back.
+  // cancel() after destroy must be idempotent: no throw, recorder stays
+  // destroyed and stopped.
   recorder.cancel();
   assert.ok(recorder.isDestroyed, "cancel() on destroyed recorder leaves isDestroyed true");
   assert.notOk(recorder.isRecording, "cancel() on destroyed recorder leaves isRecording false");

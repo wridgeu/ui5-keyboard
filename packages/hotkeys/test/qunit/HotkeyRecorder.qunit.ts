@@ -52,9 +52,8 @@ QUnit.test("Records simple key", (assert) => {
 });
 
 QUnit.test("Records modifier combo in canonical form", (assert) => {
-  // Previously this asserted `hotkey.includes("Control")` and `hotkey.includes("S")`
-  // which both passed for any string containing those characters (e.g. "Control+Shift+S"
-  // would have slipped through). Assert the exact canonical form instead.
+  // Assert the exact canonical form: a substring check would also pass for
+  // e.g. "Control+Shift+S".
   const done = assert.async();
 
   const recorder = createRecorder({

@@ -68,14 +68,12 @@
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },
   "devDependencies": {
-    "@openui5/types": "1.147.1",
-    "@ui5/cli": "~4.0.51",
+    "@openui5/types": "1.148.0",
+    "@ui5/cli": "~4.0.55",
     "@ui5/linter": "~1.21.1",
-    "@ui5/ts-interface-generator": "~0.10.5",
-    "@wdio/globals": "~9.27.0",
-    "ui5-tooling-transpile": "~3.11.0",
-    "wdio-ui5-service": "~3.0.0",
-    "webdriverio": "~9.27.0"
+    "@ui5/ts-interface-generator": "~0.11.1",
+    "ui5-tooling-transpile": "~3.11.1",
+    "wdio-ui5-service": "~3.0.8"
   },
   "engines": {
     "node": ">=22"

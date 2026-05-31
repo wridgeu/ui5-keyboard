@@ -100,7 +100,7 @@ QUnit.test("KeyboardType 'Numeric' has numeric CSS class", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("KeyboardType 'Numeric' filters out {layout:base} keys (handler is gated to Full)", async (assert) => {
+QUnit.test("KeyboardType 'Numeric' filters out the {layout:base} key from the rendered surface", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setKeyboardType(KeyboardType.Numeric);
   await placeAndWait(kb);
@@ -246,12 +246,10 @@ QUnit.test(
 
 QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", async (assert) => {
   // Companion to the symmetry test above: changing keyboardType (explicit
-  // or auto-detect) must invalidate any prior user layout pick, so the
-  // new constraint context isn't silently overridden by stale state.
-  // The earlier round of this test used "includes('1') && !includes('q')"
-  // which passes for BOTH numpad ('7','8','9','4','5','6','1',...) and
-  // numeric ('1','2','3','4','5',...). The check below uses the first-key
-  // distinguisher (numpad row 0 starts at "7", numeric row 0 starts at "1").
+  // or auto-detect) must invalidate any prior user layout pick, so the new
+  // constraint context isn't silently overridden by stale state.
+  // Distinguish numpad from numeric by the first key (numpad row 0 starts at
+  // "7", numeric at "1") -- an `includes('1')` check would match both.
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -272,19 +270,15 @@ QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", as
   kb.destroy();
 });
 
-QUnit.test("Programmatic resetKeyboardType clears the user-driven layout-source flag", async (assert) => {
-  // The fix routes both setKeyboardType and resetKeyboardType through
-  // _setKeyboardTypeSource so _layoutSource is reset on either call. We
-  // can't peek at _layoutSource directly (CLAUDE.md §4), so we observe it
-  // by triggering a subsequent setKeyboardType(Numpad) afterwards: if the
-  // reset didn't fire, the surface would stay numeric instead of switching
-  // to numpad.
-  //
-  // Note: kiosk's `layout` property mutates on user click (unlike webc which
-  // keeps a separate _currentLayout). So after a user {layout:numeric} tap,
-  // getLayout() returns "numeric" and stays that way through resetKeyboardType.
-  // The visible behavior the fix corrects is the CONSTRAINT re-engaging on the
-  // next type change, not the layout property reverting.
+QUnit.test("resetKeyboardType round-trip lets the next keyboardType re-engage its constraint", async (assert) => {
+  // End-to-end guard for the user-override → reset → re-constrain flow. A user
+  // {layout:numeric} tap sets _layoutSource="user"; both setKeyboardType and
+  // resetKeyboardType route through _setKeyboardTypeSource, which restores
+  // _layoutSource="external". _layoutSource is private (CLAUDE.md §4), and when
+  // keyboardType is Full the resolved surface ignores it, so resetKeyboardType's
+  // reset has no surface-visible effect on its own; this test verifies the
+  // end-to-end result that a later keyboardType change is not shadowed by the
+  // stale "user" override.
   const kb = new KioskKeyboard();
   kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
@@ -295,19 +289,16 @@ QUnit.test("Programmatic resetKeyboardType clears the user-driven layout-source 
 
   kb.resetKeyboardType();
   await waitForRender();
-  // After reset: type back to Full, _layoutSource cleared (the fix). Layout
-  // property is still "numeric" from the user tap, so surface is numeric.
+  // Type returns to Full; the `layout` property stays "numeric" (kiosk mutates
+  // it on a user tap, unlike webc's separate _currentLayout), so the Full
+  // surface is numeric here regardless of _layoutSource.
   assert.strictEqual(kb.getKeyboardType(), KeyboardType.Full, "Type reset to Full");
 
-  // The observable proof of the _layoutSource reset: a subsequent type change
-  // engages the new constraint instead of being shadowed by the stale "user" flag.
+  // A subsequent keyboardType engages its constraint cleanly: the numpad surface
+  // (row 0 starts at "7") is not shadowed by the earlier user override.
   kb.setKeyboardType(KeyboardType.Numpad);
   await waitForRender();
-  assert.strictEqual(
-    getRowKeyValues(kb, 0)[0],
-    "7",
-    "Constraint engages after the second setKeyboardType (numpad row 0 starts at '7'); proves _layoutSource was cleared by resetKeyboardType",
-  );
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad constraint re-engages after the reset round-trip");
 
   kb.destroy();
 });

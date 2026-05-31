@@ -31,7 +31,9 @@ export default defineConfig({
     emptyOutDir: false,
     rolldownOptions: {
       output: {
-        inlineDynamicImports: true,
+        // Single self-contained bundle (replaces the deprecated
+        // inlineDynamicImports: true under Vite 8 / Rolldown).
+        codeSplitting: false,
       },
     },
   },

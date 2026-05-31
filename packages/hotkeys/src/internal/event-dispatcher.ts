@@ -147,7 +147,7 @@ export default class EventDispatcher {
   /**
    * Suspend hotkey/sequence dispatch. Returns an RAII guard handle.
    *
-   * While any guard is active, steps 5–7 of the pipeline are skipped
+   * While any guard is active, steps 5-7 of the pipeline are skipped
    * and unhandled fires with `Suspended` reason.
    *
    * @param reason - Debug-only metadata (no runtime behavior change).
@@ -316,13 +316,6 @@ export default class EventDispatcher {
 
   private _onKeyUp(event: KeyboardEvent): void {
     this._keyStateTracker.processKeyUp(event);
-    // Defensive: clear right-Alt tracking on Alt release so the AltGr
-    // heuristic (`_lastAltLocation === 2`) can't outlive the physical key.
-    // The next non-Alt keydown would also reset it, so this is hygiene
-    // for the no-other-event-in-between window.
-    if (event.key === "Alt") {
-      this._lastAltLocation = 0;
-    }
   }
 
   private _onBlur(): void {

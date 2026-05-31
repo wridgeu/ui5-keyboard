@@ -138,16 +138,19 @@ function isBooleanLiteral(node) {
   return node?.type === "Literal" && typeof node.value === "boolean";
 }
 
-// Em-dash character built at runtime so the rule source does not contain it.
+// Em-dash (U+2014) and en-dash (U+2013) built at runtime so the rule source
+// does not contain them.
 const EM_DASH = String.fromCodePoint(0x2014);
-const EM_DASH_RE = new RegExp(EM_DASH, "g");
+const EN_DASH = String.fromCodePoint(0x2013);
+const FANCY_DASH_RE = new RegExp(`[${EM_DASH}${EN_DASH}]`, "g");
+const hasFancyDash = (text) => text.includes(EM_DASH) || text.includes(EN_DASH);
 
 /**
- * Detects em-dashes (U+2014) in strings and/or comments.
+ * Detects em-dashes (U+2014) and en-dashes (U+2013) in strings and/or comments.
  *
- * Em-dashes are a strong signal of AI-generated text that was pasted
- * without review. Configurable via `checkStrings` and `checkComments`
- * options (both default to true).
+ * Both are a strong signal of AI-generated text that was pasted without review.
+ * Configurable via `checkStrings` and `checkComments` options (both default to
+ * true).
  *
  * Auto-fix: replaces with `-` in strings, `--` in comments.
  */
@@ -156,11 +159,11 @@ const noEmDash = {
     type: "suggestion",
     fixable: "code",
     docs: {
-      description: "Disallow em-dashes (U+2014) in strings and comments",
+      description: "Disallow em-dashes (U+2014) and en-dashes (U+2013) in strings and comments",
     },
     messages: {
-      emDashInString: "String contains an em-dash (U+2014). Use a regular dash (-) instead.",
-      emDashInComment: "Comment contains an em-dash (U+2014). Use -- instead.",
+      emDashInString: "String contains an em-dash or en-dash. Use a regular dash (-) instead.",
+      emDashInComment: "Comment contains an em-dash or en-dash. Use -- instead.",
     },
     schema: [
       {
@@ -182,24 +185,24 @@ const noEmDash = {
 
     if (checkStrings) {
       visitors.Literal = function (node) {
-        if (typeof node.value === "string" && node.value.includes(EM_DASH)) {
+        if (typeof node.value === "string" && hasFancyDash(node.value)) {
           context.report({
             node,
             messageId: "emDashInString",
             fix(fixer) {
-              return fixer.replaceText(node, context.sourceCode.getText(node).replace(EM_DASH_RE, "-"));
+              return fixer.replaceText(node, context.sourceCode.getText(node).replace(FANCY_DASH_RE, "-"));
             },
           });
         }
       };
       visitors.TemplateLiteral = function (node) {
         for (const quasi of node.quasis) {
-          if (quasi.value.raw.includes(EM_DASH)) {
+          if (hasFancyDash(quasi.value.raw)) {
             context.report({
               node,
               messageId: "emDashInString",
               fix(fixer) {
-                return fixer.replaceText(node, context.sourceCode.getText(node).replace(EM_DASH_RE, "-"));
+                return fixer.replaceText(node, context.sourceCode.getText(node).replace(FANCY_DASH_RE, "-"));
               },
             });
             break;
@@ -211,14 +214,14 @@ const noEmDash = {
     if (checkComments) {
       visitors.Program = function () {
         for (const comment of context.sourceCode.getAllComments()) {
-          if (!comment.value.includes(EM_DASH)) continue;
+          if (!hasFancyDash(comment.value)) continue;
           context.report({
             node: comment,
             messageId: "emDashInComment",
             fix(fixer) {
               // Replace only the content between delimiters to preserve
               // the original prefix (/** for JSDoc vs /* for block).
-              const fixed = comment.value.replace(EM_DASH_RE, "--");
+              const fixed = comment.value.replace(FANCY_DASH_RE, "--");
               if (comment.type === "Line") {
                 return fixer.replaceTextRange([comment.range[0] + 2, comment.range[1]], fixed);
               }

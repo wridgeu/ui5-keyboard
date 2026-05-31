@@ -1679,8 +1679,9 @@ export default class KioskKeyboard extends Control {
   // The auto-forced numeric/numpad surface (keyboardType=Numeric|Numpad with
   // `_layoutSource === "external"`) is "already at base", so a `{layout:base}` key
   // there is inert. Strip it so the rendered surface matches the active behavior.
-  // Built-in numeric/numpad layouts don't ship such a key; this only filters
-  // user-supplied `instanceLayouts` overrides that include `{layout:base}`.
+  // The built-in `numeric` layout ships a `{layout:base}` "ABC" key via
+  // `symbolBottomRow`, so this strips a built-in key (plus any user-supplied
+  // `instanceLayouts` override that adds one), not just overrides.
   private static _stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
     let changed = false;
     const filtered = layout.map((row) => {
@@ -2009,11 +2010,11 @@ export default class KioskKeyboard extends Control {
           this._baseLayout = name;
         }
       }
-      // Note: shift/caps-lock state is intentionally preserved across layout
-      // switches here. This diverges from kiosk-keyboard-webc which resets
-      // them; the kiosk control's negative-edge-cases.qunit.ts explicitly
-      // tests the persistence as documented behavior. Cross-package parity on
-      // this point is open (see #98 follow-up discussion).
+      // Reset shift/caps-lock on a layout switch, matching kiosk-keyboard-webc
+      // (cross-package parity). Caps-lock that was meaningful on a QWERTY layout
+      // carries no meaning on a numeric/special layout, so it should not persist
+      // across the switch.
+      this._shiftState.reset();
       this.setProperty("layout", name);
       if (name !== previousLayout) {
         this.fireLayoutChange({ layout: name });
