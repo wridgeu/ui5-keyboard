@@ -6,9 +6,9 @@ import { openPage, keyboardRoot, key, CLOSED_CLASS } from "./helpers.js";
 
 const CLOSED = new RegExp(CLOSED_CLASS);
 // Interactive/shifted states render with minor sub-pixel variance under device
-// emulation (DSF 3). A small pixel tolerance lets them stabilize, mirroring the
-// mismatch threshold the previous wdio-visual-service setup allowed.
-const SOFT = { maxDiffPixelRatio: 0.01 };
+// emulation. A small pixel tolerance lets them stabilize while staying tight
+// enough to still catch a real one-key change.
+const SOFT = { maxDiffPixelRatio: 0.003 };
 
 test.beforeEach(async ({ page }) => {
   await openPage(page);
