@@ -24,10 +24,10 @@ async function openInteropPage(page: Page): Promise<void> {
       const w = window as InteropWindow;
       return Boolean(
         w.interopHarnessReady &&
-        w.interopHarness?.focusControlById &&
-        w.interopHarness?.getKeyboardTargetId &&
-        w.interopHarness?.focusCustomElement &&
-        w.interopHarness?.focusShadowCustomElement,
+        typeof w.interopHarness?.focusControlById === "function" &&
+        typeof w.interopHarness?.getKeyboardTargetId === "function" &&
+        typeof w.interopHarness?.focusCustomElement === "function" &&
+        typeof w.interopHarness?.focusShadowCustomElement === "function",
       );
     },
     { timeout: 10_000 },

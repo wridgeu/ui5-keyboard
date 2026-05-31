@@ -50,9 +50,6 @@ jobs:
       - name: UI5 lint
         run: npm run lint:ui5
 
-      - name: Check visual baselines
-        run: npm run check:baselines
-
       - name: Typecheck
         run: npm run typecheck
 

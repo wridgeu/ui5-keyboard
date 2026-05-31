@@ -71,8 +71,7 @@
     "@ui5/cli": "~4.0.55",
     "@ui5/linter": "~1.21.1",
     "@ui5/ts-interface-generator": "~0.11.1",
-    "ui5-tooling-transpile": "~3.11.1",
-    "wdio-ui5-service": "~3.0.8"
+    "ui5-tooling-transpile": "~3.11.1"
   },
   "engines": {
     "node": ">=22"
