@@ -1,6 +1,6 @@
 # Middleware Instance Isolation
 
-**Issue:** [#76](https://github.com/wridgeu/ui5-lib-keyboard/issues/76)
+**Issue:** [#76](https://github.com/wridgeu/ui5-keyboard/issues/76)
 **Date:** 2026-04-08
 
 ## Problem

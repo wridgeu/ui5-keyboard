@@ -4,7 +4,7 @@ Ideas that are not currently planned but may become relevant as the ecosystem ev
 
 ## CSS `text-box-edge: ideographic-ink` for CJK Centering
 
-> [#52](https://github.com/wridgeu/ui5-lib-keyboard/issues/52)
+> [#52](https://github.com/wridgeu/ui5-keyboard/issues/52)
 
 The CSS Inline Layout Module Level 3 spec defines `text-box-edge: ideographic-ink`, which trims to the actual ink bounds of CJK characters. This would improve vertical centering of CJK glyph labels on kiosk keyboard keys.
 
@@ -16,7 +16,7 @@ The CSS Inline Layout Module Level 3 spec defines `text-box-edge: ideographic-in
 
 ## Shared Internal Package for Cross-Package Utilities
 
-> [#28](https://github.com/wridgeu/ui5-lib-keyboard/issues/28)
+> [#28](https://github.com/wridgeu/ui5-keyboard/issues/28)
 
 Several source files are duplicated between `kiosk-keyboard` and `kiosk-keyboard-webc` (shift state machine, grapheme utilities, input operations, layout types). A `packages/kiosk-shared` internal package could deduplicate them.
 
@@ -26,7 +26,7 @@ Several source files are duplicated between `kiosk-keyboard` and `kiosk-keyboard
 
 ## Value Property with Two-Way Binding Support
 
-> [#65](https://github.com/wridgeu/ui5-lib-keyboard/issues/65)
+> [#65](https://github.com/wridgeu/ui5-keyboard/issues/65)
 
 The kiosk keyboard currently operates imperatively by reaching into a target input via `setValue()` + `fireEvent("liveChange")`. A `value` property on the keyboard itself could enable standalone/headless usage (PIN entry, search terminals) or a read-only mirror for observing typing activity.
 

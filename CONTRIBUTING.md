@@ -5,8 +5,8 @@ Contributions are welcome. Whether you file a bug report, suggest a feature, or 
 ## Getting Started
 
 ```bash
-git clone https://github.com/wridgeu/ui5-lib-keyboard.git
-cd ui5-lib-keyboard
+git clone https://github.com/wridgeu/ui5-keyboard.git
+cd ui5-keyboard
 npm install        # Installs all workspaces + applies dependency patches
 npm run build      # Builds library dist/ artifacts
 ```
@@ -15,7 +15,7 @@ Requires **Node >= 22**. CI runs on Node 24.
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/wridgeu/ui5-lib-keyboard/issues) to report bugs or request features. When filing a bug, include:
+Use [GitHub Issues](https://github.com/wridgeu/ui5-keyboard/issues) to report bugs or request features. When filing a bug, include:
 
 - Steps to reproduce
 - Expected vs actual behavior
@@ -233,7 +233,7 @@ The standalone bundle (`kiosk-keyboard.bundle.js`) includes everything and is no
 
 ## Questions
 
-Open a [discussion or issue](https://github.com/wridgeu/ui5-lib-keyboard/issues) if something is unclear.
+Open a [discussion or issue](https://github.com/wridgeu/ui5-keyboard/issues) if something is unclear.
 
 ## License
 
