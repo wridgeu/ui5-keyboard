@@ -8,6 +8,11 @@ __screenshots__/
 .generated-specs/
 **/src/generated/
 
+# Playwright runtime output (baselines live in __baselines__ and are committed)
+test-results/
+playwright-report/
+.last-run.json
+
 # IDE
 .idea/
 *.swp
