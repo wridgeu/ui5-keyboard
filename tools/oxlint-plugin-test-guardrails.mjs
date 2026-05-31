@@ -5,10 +5,11 @@ const noBrowserPause = {
   meta: {
     type: "problem",
     docs: {
-      description: "Disallow browser.pause() in tests - use waitUntil/waitFor* instead",
+      description: "Disallow page.pause() / browser.pause() in tests - use web-first assertions instead",
     },
     messages: {
-      noBrowserPause: "Use waitUntil/waitFor* conditions instead of browser.pause().",
+      noBrowserPause:
+        "Remove the debug pause ({{ object }}.pause()); rely on web-first assertions (expect().toHaveClass etc.) instead.",
     },
     schema: [],
   },
@@ -19,11 +20,11 @@ const noBrowserPause = {
         if (
           callee.type === "MemberExpression" &&
           callee.object.type === "Identifier" &&
-          callee.object.name === "browser" &&
+          (callee.object.name === "page" || callee.object.name === "browser") &&
           callee.property.type === "Identifier" &&
           callee.property.name === "pause"
         ) {
-          context.report({ node, messageId: "noBrowserPause" });
+          context.report({ node, messageId: "noBrowserPause", data: { object: callee.object.name } });
         }
       },
     };
@@ -47,10 +48,16 @@ function extractSingleCallFromBody(body) {
 }
 
 /**
- * Reports `await new Promise(resolve => setTimeout(resolve, N))` where N > 0.
+ * Reports fixed-duration sleeps in e2e tests:
+ *
+ * - `await new Promise(resolve => setTimeout(resolve, N))` where N > 0
+ * - `page.waitForTimeout(N)` (Playwright) where N > 0
  *
  * Intentionally allows `setTimeout(resolve, 0)` since that's a microtask flush
- * pattern, not a hard wait.
+ * pattern, not a hard wait. A genuinely necessary settle window (e.g. asserting
+ * that an action did NOT trigger a state change) can opt out with an
+ * `// oxlint-disable-next-line test-guardrails/no-hard-wait` directive and a
+ * rationale.
  *
  * Scope: e2e test files only (configured via oxlintrc overrides).
  */
@@ -58,15 +65,33 @@ const noHardWait = {
   meta: {
     type: "problem",
     docs: {
-      description: "Disallow await setTimeout sleeps in e2e tests - use waitUntil/waitFor* instead",
+      description:
+        "Disallow fixed sleeps (setTimeout / page.waitForTimeout) in e2e tests - use web-first assertions instead",
     },
     messages: {
-      noHardWait: "Use waitUntil/waitFor* conditions instead of fixed setTimeout sleeps in e2e tests.",
+      noHardWait:
+        "Use web-first assertions (expect().toHaveClass etc.) instead of a fixed {{ source }} sleep in e2e tests.",
     },
     schema: [],
   },
   create(context) {
     return {
+      // page.waitForTimeout(N) where N > 0
+      CallExpression(node) {
+        const { callee } = node;
+        if (
+          callee.type !== "MemberExpression" ||
+          callee.property.type !== "Identifier" ||
+          callee.property.name !== "waitForTimeout"
+        ) {
+          return;
+        }
+        const delay = node.arguments?.[0];
+        if (delay?.type === "Literal" && typeof delay.value === "number" && delay.value > 0) {
+          context.report({ node, messageId: "noHardWait", data: { source: "page.waitForTimeout" } });
+        }
+      },
+      // await new Promise(resolve => setTimeout(resolve, N)) where N > 0
       AwaitExpression(node) {
         const inner = node.argument;
         if (inner?.type !== "NewExpression") return;
@@ -86,7 +111,7 @@ const noHardWait = {
 
         const delay = callExpr.arguments[1];
         if (delay.type === "Literal" && typeof delay.value === "number" && delay.value > 0) {
-          context.report({ node, messageId: "noHardWait" });
+          context.report({ node, messageId: "noHardWait", data: { source: "setTimeout" } });
         }
       },
     };

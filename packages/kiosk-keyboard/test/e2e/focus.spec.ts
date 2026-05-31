@@ -23,7 +23,8 @@ test("stays open when focus moves from one input to another", async ({ page }) =
   await expectOpen(page);
 
   await page.locator("#input-b input").click();
-  // Give any (incorrect) close a chance to happen, then assert it stayed open.
+  // Negative assertion: give any (incorrect) close a chance to happen, then assert it stayed open.
+  // oxlint-disable-next-line test-guardrails/no-hard-wait -- no event signals the absence of a close
   await page.waitForTimeout(300);
   await expectOpen(page);
 });
