@@ -49,135 +49,101 @@ wrapper.remove(); // ← fixtureCleanup will fail
 
 ## Visual Regression Tests
 
-Visual tests use `@wdio/visual-service` with pinned Chrome-for-Testing (`CHROME_VERSION` in `tools/wdio-device-profiles.ts`). Baselines are tied to this exact Chrome version. Changing it requires regenerating ALL baselines across both packages.
+Visual tests use Playwright's built-in `toHaveScreenshot()` assertion. Baselines are tied to the Chromium build bundled with `@playwright/test` (pinned at the repo root); bumping that version can shift rendering, so regenerate ALL baselines across both packages when it changes.
 
 ### How it works
 
-The visual regression pipeline has three stages:
+The pipeline is whatever Playwright does for `expect(locator).toHaveScreenshot()`:
 
-1. **Capture**: `@wdio/visual-service` takes a viewport screenshot via Chrome DevTools Protocol and crops it to the target element's bounding rectangle.
-2. **Compare**: The cropped screenshot is compared pixel-by-pixel against a stored baseline image in `__baselines__/`.
-3. **Report**: Comparison results are written to `output.json` files in `__screenshots__/`. The `test:e2e:report` script merges these into an interactive HTML report.
+1. **Capture**: Playwright scrolls the target locator into view and screenshots **the element**, not the viewport. Element screenshots are captured in full even when the element is larger than the viewport, so there is no viewport-clipping problem and **no section isolation is needed** (this was the main complication under the old WebdriverIO setup).
+2. **Compare**: The capture is compared against the committed baseline under `test/e2e/__baselines__/<project>/`. On mismatch the test fails and Playwright writes `actual`, `expected`, and `diff` PNGs into `test-results/`.
+3. **Report**: `playwright show-report` opens the HTML report with the three images side by side for every failed snapshot.
 
-The critical limitation of stage 1: **the crop is bounded by the viewport**. If any part of the target element extends outside the viewport, that portion is silently clipped from the screenshot. This is why section isolation exists (see below).
-
-### Section isolation (required for multi-keyboard test pages)
-
-Visual test pages contain many keyboard sections stacked vertically. Without intervention, `scrollIntoView` may not position tall elements fully inside the viewport, causing the WDIO visual service to clip the screenshot at the viewport edge. The result is a baseline with a cropped keyboard that silently passes future comparisons (because it compares against the equally-cropped baseline).
-
-Both packages use `isolateSection()` to prevent this. Before each snapshot, all `.section` wrappers except the active one are hidden via `display: none`. This collapses the page so the target element sits near the top and fits comfortably in any viewport size. Sections are restored in a `finally` block after the snapshot.
+Snapshot stability options are set globally in each `playwright.config.ts`:
 
 ```ts
-// Both packages expose the same pattern via matchElementSnapshotInSection:
-export async function matchElementSnapshotInSection(
-  element: SnapshotElement,
-  name: string,
-  options?: { ignoreAntialiasing?: boolean },
-): Promise<void> {
-  const target = await element;
-  await isolateSection(target); // hide other sections
-  try {
-    // scroll, wait for paint, assert geometry, take snapshot
-    await expect(target).toMatchElementSnapshot(name, options);
-  } finally {
-    await restoreSections(); // always restore
-  }
-}
+expect: { toHaveScreenshot: { animations: "disabled", caret: "hide" } }
 ```
-
-The WebC variant traverses through the shadow host to reach light-DOM `.section` ancestors (shadow DOM elements cannot use `closest()` across shadow boundaries).
-
-**If you add a new visual test file or test page, always use `matchElementSnapshotInSection` for element snapshots. Direct calls to `toMatchElementSnapshot` without section isolation will produce cropped baselines on small viewports.**
 
 ### Config files
 
-Each package has up to three wdio configs:
+Each package drives Playwright from configs at its **package root** (not inside `test/e2e/`):
 
-| Config                | Purpose                                                                 | Server               |
-| --------------------- | ----------------------------------------------------------------------- | -------------------- |
-| `wdio.conf.ts`        | Desktop (1440x900)                                                      | UI5 serve / Vite     |
-| `wdio-device.conf.ts` | Responsive device matrix (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) | Same, different port |
-| `wdio-flp.conf.ts`    | FLP sandbox (kiosk only)                                                | UI5 serve            |
+| Config                      | Package | Purpose                                                                  |
+| --------------------------- | ------- | ------------------------------------------------------------------------ |
+| `playwright.config.ts`      | both    | e2e + visual; `desktop` project plus the `phone-*`/`tablet` matrix       |
+| `playwright.flp.config.ts`  | kiosk   | FLP sandbox lifecycle suite (separate `ui5 serve --config ui5-flp.yaml`) |
+| `playwright.docs.config.ts` | kiosk   | On-demand README screenshot generation (`readme-screenshots.spec.ts`)    |
 
-Desktop configs run all `**/*.test.ts` files. Device configs run the responsive visual matrix: `visual.test.ts`, `visual-container.test.ts`, `visual-container-responsive.test.ts` (kiosk only), `visual-enhancements.test.ts`, `visual-themes.test.ts`, `rtl.test.ts`, and `accessibility-media.test.ts`. Container tests use fixed-width fixtures (400-600px) that cannot fit on viewports narrower than the fixture, so `visual-container.test.ts` is excluded from device profiles with `width < 400` at config level. The `visual-container-responsive.test.ts` file uses viewport-width fixtures and runs on all profiles.
+Within `playwright.config.ts`, projects share a single `webServer` and differ only by emulated device:
 
-Baselines are stored in per-profile subfolders:
+- The **`desktop`** project (1440×900) runs every spec except the ones that belong to the dedicated configs (`flp-lifecycle`, `readme-screenshots` are ignored; the webc `desktop` project ignores `component.spec.ts`, which runs under Web Test Runner).
+- The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and are gated by a `VISUAL_SPECS` `testMatch` so they run only the visual specs — the behavioral specs (autotype, focus, i18n, inputmode, interop) are desktop-only.
+
+Because element screenshots capture overflow, the fixed-width container fixtures no longer need per-viewport gating: they run on every profile and are captured in full.
+
+Baselines are committed, one directory per Playwright project (via `snapshotPathTemplate: "{testDir}/__baselines__/{projectName}/{arg}{ext}"`):
 
 ```
-__baselines__/              desktop baselines (1440x900, DPR 1)
-__baselines__/phone-sm/     320x568, DPR 2
-__baselines__/phone-md/     390x844, DPR 3
-__baselines__/phone-lg/     430x932, DPR 3
+__baselines__/desktop/      1440x900, DPR 1
+__baselines__/phone-sm/     320x568,  DPR 2
+__baselines__/phone-md/     390x844,  DPR 3
+__baselines__/phone-lg/     430x932,  DPR 3
 __baselines__/tablet/       768x1024, DPR 2
 ```
 
 ### Running visual tests
 
 ```bash
-# Run tests (headless, compare against baselines)
-npm run test:e2e -w packages/kiosk-keyboard-webc           # desktop only
-npm run test:e2e:phone-md -w packages/kiosk-keyboard-webc  # single device
-npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc  # all profiles in parallel
+# Headless, compare against baselines
+npm run test:e2e -w packages/kiosk-keyboard-webc              # desktop only
+npm run test:e2e:phone-md -w packages/kiosk-keyboard-webc     # single device project
+npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc  # all projects in parallel
 
-# Run tests with browser visible (for debugging)
-npm run test:e2e:open -w packages/kiosk-keyboard-webc      # desktop, headed
+# Headed / interactive (debugging)
+npm run test:e2e:open -w packages/kiosk-keyboard-webc         # Playwright UI mode
 
-# Run ALL e2e across both packages, all devices
-npm run test:e2e:all-devices                               # parallel
-npm run test:e2e:all-devices:sequential                    # sequential (lower CPU)
+# All e2e across both packages, all devices
+npm run test:e2e:all-devices                                  # parallel
+npm run test:e2e:all-devices:sequential                       # sequential (lower CPU)
 ```
 
 ### Inspecting visual diffs locally
 
-When a visual test fails, the WDIO visual service writes diff images to `__screenshots__/`. To inspect these as an interactive HTML report:
+When a visual test fails, Playwright writes `actual` / `expected` / `diff` PNGs into `test-results/`. Open them as an HTML report:
 
 ```bash
-# 1. Run the tests (they will fail if baselines don't match)
+# 1. Run the tests (they fail if baselines don't match)
 npm run test:e2e -w packages/kiosk-keyboard-webc
 
-# 2. Generate and open the HTML report in your browser
+# 2. Open the Playwright HTML report
 npm run test:e2e:report -w packages/kiosk-keyboard-webc
 ```
 
-The report shows baseline, actual, and diff images side-by-side for every comparison. For device profiles, the report automatically merges results from all `__screenshots__/phone-sm/`, `phone-md/`, etc. subfolders.
-
-Root-level shortcuts are also available:
+Root-level shortcuts wrap the same `playwright show-report`:
 
 ```bash
 npm run report:visual:kiosk   # kiosk-keyboard package
 npm run report:visual:webc    # kiosk-keyboard-webc package
 ```
 
-The report is generated by `tools/visual-report.mjs`, which runs `wdio-visual-reporter` and serves the output locally.
-
-#### Browsing baselines
-
-To browse baseline images without running tests:
-
-```bash
-npm run browse:baselines:kiosk   # kiosk-keyboard package
-npm run browse:baselines:webc    # kiosk-keyboard-webc package
-```
-
-This opens a gallery grouped by snapshot tag with columns for each device profile. Actual/diff screenshots from the last test run are included behind a toggle button. If no test run has been executed yet, the toggle is still available but screenshot cells will be empty.
-
 ### Updating baselines
 
-When a visual change is intentional (new feature, style update, Chrome version bump), regenerate the affected baselines:
+When a visual change is intentional (new feature, style update, Chromium bump), regenerate the affected baselines with `--update-snapshots` (wrapped by the `*:update` scripts):
 
 ```bash
 # All devices + desktop for a single package
 npm run test:kiosk:e2e:update:all-devices
 npm run test:kiosk-webc:e2e:update:all-devices
 
-# All baselines across both packages (nuclear option for Chrome bumps / theme changes)
+# All baselines across both packages (nuclear option for Chromium bumps / theme changes)
 npm run test:e2e:update:all
 
 # Desktop only
 npm run test:kiosk:e2e:update
 npm run test:kiosk-webc:e2e:update
 
-# Individual device profiles (from package directory or via -w)
+# Individual device projects (from package directory or via -w)
 npm run test:e2e:phone-sm:update -w packages/kiosk-keyboard-webc
 npm run test:e2e:phone-md:update -w packages/kiosk-keyboard-webc
 npm run test:e2e:phone-lg:update -w packages/kiosk-keyboard-webc
@@ -187,79 +153,69 @@ npm run test:e2e:tablet:update -w packages/kiosk-keyboard-webc
 
 **After updating, always:**
 
-1. Run `npm run check:baselines` to verify every snapshot tag has a baseline for desktop and all device profiles. This catches cases where a new test was added but baselines were only generated for a subset of profiles. Run with `--fix` to see the commands needed to generate any missing ones.
-2. Run `git diff --stat` to verify only expected baselines changed.
-3. Spot-check the updated images (open them directly or use the report).
-4. Commit ALL related changes together: new baselines, deleted old baselines, and any code changes. Leaving orphaned baseline files in the repository causes confusion.
+1. Run `git diff --stat` to verify only expected baselines changed. Playwright names a baseline `<arg>-<project>-<platform>.png` and only writes the projects you actually ran, so a partial update is visible in the diff.
+2. Spot-check the updated images (open them directly or via the report).
+3. Commit ALL related changes together: new baselines, deleted old baselines, and any code changes. Leaving orphaned baseline files in the repository causes confusion.
 
 ### Mismatch threshold
 
-The default threshold is **0%** (pixel-perfect). This is appropriate because:
-
-- Chrome version is pinned, so rendering is deterministic
-- `disableCSSAnimation`, `hideScrollBars`, `waitForFontsLoaded` eliminate common jitter sources
-
-If sub-pixel anti-aliasing causes rare false positives (e.g. 0.003% on device emulation), the matcher supports a per-assertion tolerance:
+The default is pixel-perfect. Determinism comes from the pinned bundled Chromium plus `animations: "disabled"` and `caret: "hide"`. Where sub-pixel anti-aliasing makes an interactive snapshot jitter (e.g. shifted/active key states under device emulation), a per-assertion tolerance is applied instead of relaxing the global bar:
 
 ```ts
-await expect(kb).toMatchElementSnapshot("kb-numpad", { ignoreAntialiasing: true });
+const SOFT = { maxDiffPixelRatio: 0.003 };
+await expect(keyboardRoot(page, "kb-shift")).toHaveScreenshot("kb-shift-active.png", SOFT);
 ```
 
-Use this sparingly on specific assertions that are known to jitter, rather than raising the global bar.
+A few snapshots are too unstable under phone emulation to be meaningful (e.g. the docked render and the Spanish shifted layout) and are skipped on the phone projects via `test.skip(...)` with a reason, rather than carried as flaky baselines. Hover snapshots `test.skip` on profiles without `(hover: hover)`.
 
 ### Generated assets for webc E2E
 
-The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild.
+The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild — but they do need generated theme and i18n output. Every `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` runs `npm run generate` inline before invoking `playwright test`, including headed and device-project variants.
 
-What the webc E2E scripts do need is generated theme and i18n output. Every current `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` runs `npm run generate` inline before starting WebdriverIO, including headed and device-profile variants.
-
-The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2E scripts also avoid a separate prebuild step.
+The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2E scripts avoid a separate prebuild step entirely.
 
 ### Test helpers
 
-Each package has a `test/e2e/test-helpers.ts` that re-exports shared CDP helpers from `tools/wdio-test-helpers.ts` and adds package-specific utilities:
+Each package keeps its own minimal `test/e2e/helpers.ts` — there is no shared cross-package helper module; native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). The helpers that remain are thin:
 
-| Helper                            | Package | Purpose                                                       |
-| --------------------------------- | ------- | ------------------------------------------------------------- |
-| `openVisualPage()`                | both    | Navigate to visual test page, wait for all keyboards rendered |
-| `getKeyboardRoot(id)`             | webc    | Get shadow DOM root via deep selector (`>>>.kiosk-keyboard`)  |
-| `getKeyboard(id)`                 | kiosk   | Get `.ui5KioskKeyboard` inside container                      |
-| `matchElementSnapshotInSection()` | both    | Isolate section, scroll, assert geometry, take snapshot       |
-| `isolateSection()`                | both    | Hide all `.section` wrappers except the target's              |
-| `restoreSections()`               | both    | Restore hidden sections                                       |
-| `forceHoverState()`               | both    | Force `:hover` via CDP (deterministic hover testing)          |
-| `clearForcedHoverState()`         | both    | Clear forced pseudo-states                                    |
+| Helper                                                                      | Package | Purpose                                                                                                                 |
+| --------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `openPage(page, path?)`                                                     | both    | Navigate to a test page and wait for the keyboard root to attach                                                        |
+| `keyboardRoot(page, id)`                                                    | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                                |
+| `key(page, id, dataKey)`                                                    | both    | `Locator` for a specific key                                                                                            |
+| `setDocumentDirection(page, dir)`                                           | both    | Set `dir`/`lang` for RTL snapshots                                                                                      |
+| `waitForKeys` / `waitForDocked*`                                            | webc    | Await shadow-DOM render / docked open/closed/shown states                                                               |
+| `injectShadowStyleOverride` / `remove…`                                     | webc    | Inject a `<style>` into the shadow root to force enhancement-fallback paths                                             |
+| `CLOSED_CLASS`, `VISUAL_PAGE`, `DISABLE_TEXT_BOX_TRIM`, `DISABLE_COLOR_MIX` | varies  | Shared constants (the kiosk closed-state class, the visual page URL, CSS opt-outs for progressive-enhancement features) |
 
-`openVisualPage()` waits for every keyboard on the page to have at least one rendered key. This prevents snapshots of partially-loaded keyboards (e.g. custom layouts registered via `whenDefined`).
+Media features are emulated with Playwright's native `page.emulateMedia({ forcedColors, reducedMotion })` rather than a custom CDP helper.
 
 ### Device emulation
 
-Device tests use Chrome's `mobileEmulation` to set viewport, device pixel ratio, and touch mode. CSS media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly because the browser genuinely believes it's on a touch device.
-
-Port allocation is managed by `DEVICE_BASE_PORTS` in `tools/wdio-device-profiles.ts`. Each device profile adds a `portOffset` to the base port so all profiles can run concurrently without collisions.
+Device coverage is expressed as Playwright **projects** (see Config files above) that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`. Media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly because `hasTouch`/`isMobile` make the emulated browser report as a touch device. All projects share their package's single `webServer`, so — unlike the old WebdriverIO matrix — there are no per-device ports to allocate.
 
 ### Troubleshooting
 
-**Cropped/clipped baseline images**: The element was not fully inside the viewport when the screenshot was taken. Ensure the test uses `matchElementSnapshotInSection()` (not a bare `toMatchElementSnapshot`) and that the test page wraps each keyboard in a `.section` div.
+**Snapshot diff you didn't expect**: Open `npm run test:e2e:report` and compare the `actual`/`expected`/`diff` triplet. If the change is intentional, regenerate with the matching `*:update` script; if it's jitter on a known-unstable interactive snapshot, apply the `SOFT` per-assertion tolerance rather than relaxing the global threshold.
 
-**"no such node" / stale element errors on device profiles**: Chrome's WebDriver BiDi protocol can intermittently lose element references during heavy DOM manipulation in mobile emulation mode. Device configs use `specFileRetries: 1` to automatically retry the failing spec file once, which handles the vast majority of these transient errors. If the error is consistent across retries, check that the element is re-queried after any page navigation.
+**Snapshot missing for a project**: Playwright fails a snapshot assertion if no baseline exists for the current project. Run the project's `*:update` script (or `test:e2e:update:all`) to generate it, then commit the new `__baselines__/<project>/` files.
 
-**Baseline diffs after Chrome version bump**: Expected. Regenerate ALL baselines across both packages and all device profiles. Review the diffs visually before committing.
+**Baseline diffs after a Chromium bump**: Expected. Regenerate ALL baselines across both packages and all device projects, and review the diffs visually before committing.
 
 **Port conflicts**: Check the port map below. Kill stale processes on the conflicting port, or use `npm run test:e2e:all-devices:sequential` to avoid concurrent port pressure.
 
 ## Port Map
 
-| Port      | Usage                                                                |
-| --------- | -------------------------------------------------------------------- |
-| 8081      | Hotkeys QUnit                                                        |
-| 8082      | Kiosk keyboard QUnit runner                                          |
-| 8083      | Kiosk FLP e2e                                                        |
-| 8084      | Kiosk webc manual dev server (`npm run start:kiosk-webc`)            |
-| 8085      | Kiosk keyboard E2E desktop + visual page                             |
-| 8086      | Kiosk webc (Vite: E2E desktop)                                       |
-| 8092-8095 | Kiosk device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) |
-| 8087-8090 | Webc device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`)  |
+The UI5 QUnit suites are served by `ui5 serve` (via each package's `test:qunit` script, orchestrated by `start-server-and-test` and harvested by `ui5-test-runner`); the e2e/visual suites are served by each Playwright config's `webServer`. The device matrix shares its package's server — there are no per-device ports.
+
+| Port | Usage                                                     |
+| ---- | --------------------------------------------------------- |
+| 8081 | Hotkeys QUnit                                             |
+| 8082 | Kiosk keyboard QUnit                                      |
+| 8083 | Kiosk FLP e2e (`playwright.flp.config.ts`)                |
+| 8084 | Kiosk webc manual dev server (`npm run start:kiosk-webc`) |
+| 8085 | Kiosk keyboard e2e / visual / docs (all projects)         |
+| 8086 | Kiosk webc e2e / visual (Vite, all projects)              |
 
 ## Running all tests
 

@@ -525,13 +525,13 @@ Consumers who want selective layout loading can import the main entry (which inc
 | --------- | ---------------------------- | ------------ | ----------------------------------------------------------------- |
 | Unit      | Vitest + jsdom               | Node         | Pure logic (state machines, registries, text ops, grapheme utils) |
 | Component | Web Test Runner + Playwright | Real browser | Shadow DOM rendering, events, accessibility, keyboard navigation  |
-| E2E       | WebdriverIO + Chrome         | Real browser | Full-page integration, visual regression                          |
+| E2E       | Playwright + Chromium        | Real browser | Full-page integration, visual regression                          |
 
 ### Test Infrastructure
 
 - Component tests use `@open-wc/testing` (`fixture`, `html`, `expect`, `oneEvent`, `waitUntil`) and `renderFinished()` from the UI5 WC framework for render cycle synchronization
-- E2E visual tests use `@wdio/visual-service` with desktop baselines in `test/e2e/__baselines__/` and responsive device baselines in `test/e2e/__baselines__/<profile>/`
-- Device-emulation E2E tests run via `wdio-device.conf.ts`, using Chrome's device emulation to validate touch and viewport behavior across form factors
+- E2E visual tests use Playwright's built-in `toHaveScreenshot()` assertion, with committed baselines under `test/e2e/__baselines__/<project>/` (one directory per Playwright project: `desktop`, `phone-sm`, `phone-md`, `phone-lg`, `tablet`)
+- Device-emulation E2E runs as additional Playwright projects in `playwright.config.ts` that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch` to validate touch and viewport behavior across form factors — all sharing the single Vite `webServer`
 - A standalone test page at `test/pages/index.html` serves as both manual testing playground and E2E test target
 
 ## Differences from the UI5 Control Variant (`kiosk-keyboard`)
