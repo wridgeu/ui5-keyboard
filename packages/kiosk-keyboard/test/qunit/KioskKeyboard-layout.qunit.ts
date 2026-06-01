@@ -11,6 +11,7 @@ import {
   getRowElements,
   getRowKeyValues,
   hasKeyboardClass,
+  isShiftActive,
   placeAndWait,
   simulateTap,
   tapKey,
@@ -243,6 +244,31 @@ QUnit.test(
     kb.destroy();
   },
 );
+
+QUnit.test("Same-name {layout:X} switch repaints cleared shift state (no-op property write)", async (assert) => {
+  // Regression: a {layout:X} key that resolves to the already-active layout
+  // makes setProperty("layout", X) a no-op, so UI5 skips the re-render. The
+  // shift/caps reset that accompanies every layout switch must still reach
+  // the DOM, not leave stale shift-active styling behind.
+  const selfLayout: LayoutDefinition = [[{ value: "{shift}" }, { value: "a" }, { value: "{layout:self}" }]];
+  const kb = new KioskKeyboard({ instanceLayouts: { self: selfLayout }, layout: "self" });
+  await placeAndWait(kb);
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "shift is active after tapping {shift}");
+
+  tapKey(kb, "{layout:self}");
+  await waitForRender();
+
+  assert.strictEqual(kb.getLayout(), "self", "layout property is unchanged (self-referential switch)");
+  assert.notOk(
+    isShiftActive(kb),
+    "the cleared shift state is reflected in the DOM even though the layout property did not change",
+  );
+
+  kb.destroy();
+});
 
 QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", async (assert) => {
   // Companion to the symmetry test above: changing keyboardType (explicit
