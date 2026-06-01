@@ -60,6 +60,7 @@
     "test:kiosk-webc:e2e:tablet": "npm run test:e2e:tablet -w packages/kiosk-keyboard-webc",
     "test:demo:webc-bundle": "node tools/check-demo-webc-bundle.mjs",
     "test:packages:smoke": "node tools/check-package-smoke.mjs",
+    "test:e2e:ci": "npm run test:e2e:ci -w packages/kiosk-keyboard && npm run test:e2e:ci -w packages/kiosk-keyboard-webc",
     "test:e2e:all-devices": "concurrently --kill-others-on-fail -n kb,webc \"npm run test:e2e:all-devices -w packages/kiosk-keyboard\" \"npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc\"",
     "test:e2e:all-devices:sequential": "npm run test:e2e:all-devices:sequential -w packages/kiosk-keyboard && npm run test:e2e:all-devices:sequential -w packages/kiosk-keyboard-webc",
     "test:e2e:update:all": "npm run test:e2e:update:all-devices -w packages/kiosk-keyboard && npm run test:e2e:update:all-devices -w packages/kiosk-keyboard-webc",
