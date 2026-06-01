@@ -1713,7 +1713,7 @@ npm install
 # Build
 npm run build
 
-# QUnit tests (ui5-test-runner, Playwright backend)
+# QUnit tests (ui5-test-runner, puppeteer backend)
 npm run test:qunit
 
 # E2E tests (Playwright), desktop
