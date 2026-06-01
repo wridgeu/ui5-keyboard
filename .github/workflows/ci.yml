@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # Run on every PR regardless of base branch, so stacked PRs (e.g. against an
+  # in-flight branch, not just main) are gated too.
   pull_request:
-    branches: [main]
   workflow_call:
   workflow_dispatch:
 
@@ -65,3 +66,10 @@ jobs:
 
       - name: Tests
         run: npm run test:qunit && npm run test:kiosk-webc && npm run test:kiosk-webc:component
+
+      # Behavioral e2e assertions are platform-independent; visual snapshots are
+      # not (baselines carry no platform suffix), so they are ignored here. This
+      # gates focus/auto-type/inputmode/i18n/interop behavior and runs the visual
+      # specs as render smoke tests without pixel-comparing OS-specific baselines.
+      - name: End-to-end (behavioral; visual snapshots ignored)
+        run: npm run test:e2e:ci

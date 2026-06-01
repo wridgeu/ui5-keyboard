@@ -43,6 +43,7 @@
     "test": "npm run test:qunit && npm run test:e2e",
     "test:qunit": "start-server-and-test \"ui5 serve --port 8082\" http://localhost:8082/test-resources/ui5/kiosk/qunit/testsuite.qunit.html \"ui5-test-runner --url http://localhost:8082/test-resources/ui5/kiosk/qunit/testsuite.qunit.html --report-dir report --browser $/playwright.js\"",
     "test:e2e": "playwright test --project=desktop",
+    "test:e2e:ci": "playwright test --project=desktop --ignore-snapshots",
     "test:e2e:open": "playwright test --project=desktop --ui",
     "test:e2e:update": "playwright test --project=desktop --update-snapshots",
     "test:e2e:flp": "playwright test --config playwright.flp.config.ts",
