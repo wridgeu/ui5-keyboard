@@ -268,19 +268,17 @@ npm run build               # Build library dist/ artifacts (required before sta
 
 ### Port Map (Test Servers)
 
-Test runners (WDIO) start their own servers on fixed ports. These are not started manually but are useful to know when debugging port conflicts:
+The test runners start their own servers on fixed ports. These are not started manually but are useful to know when debugging port conflicts. The UI5 QUnit suites are served by `ui5 serve` (orchestrated by `start-server-and-test` and harvested by `ui5-test-runner`); the e2e/visual suites are served by each Playwright config's `webServer`:
 
-| Port        | Purpose                                          | Config                                                      |
-| ----------- | ------------------------------------------------ | ----------------------------------------------------------- |
-| 8081        | Hotkeys QUnit (WDIO)                             | `packages/hotkeys/test/qunit/wdio.conf.ts`                  |
-| 8082        | Kiosk QUnit (WDIO)                               | `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           |
-| 8083        | Kiosk FLP e2e                                    | `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         |
-| 8085        | Kiosk desktop e2e                                | `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             |
-| 8086        | Kiosk webc desktop e2e                           | `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        |
-| 8087 - 8090 | Kiosk webc multi-device e2e (base 8086 + offset) | `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` |
-| 8092 - 8095 | Kiosk multi-device e2e (base 8091 + offset)      | `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      |
+| Port | Purpose                   | Served / configured by                                                          |
+| ---- | ------------------------- | ------------------------------------------------------------------------------- |
+| 8081 | Hotkeys QUnit             | `ui5 serve` via `packages/hotkeys` `test:qunit` script (ui5-test-runner)        |
+| 8082 | Kiosk QUnit               | `ui5 serve` via `packages/kiosk-keyboard` `test:qunit` script (ui5-test-runner) |
+| 8083 | Kiosk FLP e2e             | `packages/kiosk-keyboard/playwright.flp.config.ts` `webServer` (FLP sandbox)    |
+| 8085 | Kiosk e2e / visual / docs | `packages/kiosk-keyboard/playwright.config.ts` (+ `playwright.docs.config.ts`)  |
+| 8086 | Kiosk webc e2e / visual   | `packages/kiosk-keyboard-webc/playwright.config.ts` `webServer` (Vite)          |
 
-Device port offsets: phone-sm +1, phone-md +2, phone-lg +3, tablet +4 (defined in `tools/wdio-device-profiles.ts`).
+Unlike the previous WebdriverIO setup, the Playwright device matrix does not use per-device ports: every project (`desktop`, `phone-sm`, `phone-md`, `phone-lg`, `tablet`) runs against the single shared `webServer` for its package, varying only the emulated viewport and device scale factor.
 
 ### Build
 
@@ -306,7 +304,7 @@ npm run test:kiosk                     # Kiosk QUnit + desktop e2e tests
 npm run test:kiosk:e2e                 # Kiosk desktop e2e only (no QUnit)
 npm run test:kiosk-webc                # Kiosk webc unit tests (Vitest)
 npm run test:kiosk-webc:component      # Kiosk webc integration tests (Web Test Runner)
-npm run test:kiosk-webc:e2e            # Kiosk webc e2e tests (WebdriverIO)
+npm run test:kiosk-webc:e2e            # Kiosk webc e2e tests (Playwright)
 npm run test:qunit                     # All QUnit tests only (hotkeys + kiosk)
 
 # Multi-device e2e

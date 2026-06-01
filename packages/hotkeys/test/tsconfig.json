@@ -4,6 +4,5 @@
     "noUncheckedIndexedAccess": false,
     "types": ["@openui5/types", "@types/qunit", "@types/sinon"]
   },
-  "include": ["../src/**/*.ts", "**/*.ts"],
-  "exclude": ["qunit/wdio.conf.ts"]
+  "include": ["../src/**/*.ts", "**/*.ts"]
 }

@@ -8,12 +8,15 @@ Custom oxlint JS plugin that enforces test stability guardrails. Loaded via the 
 
 **Rules:**
 
-| Rule                               | Scope          | Description                                                      |
-| ---------------------------------- | -------------- | ---------------------------------------------------------------- |
-| `test-guardrails/no-browser-pause` | All test files | Flags `browser.pause()` calls; use `browser.waitUntil()` instead |
-| `test-guardrails/no-hard-wait`     | E2E tests only | Flags `await new Promise(r => setTimeout(r, N))` where N > 0     |
+| Rule                               | Scope          | Description                                                                                              |
+| ---------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
+| `test-guardrails/no-browser-pause` | All test files | Flags `page.pause()` / `browser.pause()` debug pauses; rely on web-first assertions instead              |
+| `test-guardrails/no-hard-wait`     | E2E tests only | Flags fixed sleeps — `page.waitForTimeout(N)` and `await new Promise(r => setTimeout(r, N))` where N > 0 |
 
-`setTimeout(resolve, 0)` (microtask flush) is intentionally allowed.
+`setTimeout(resolve, 0)` (microtask flush) is intentionally allowed. A genuinely
+necessary settle window — e.g. a negative assertion that an action did _not_ change
+state, where no event signals the absence of the change — can opt out with an inline
+`// oxlint-disable-next-line test-guardrails/no-hard-wait` directive plus a rationale.
 
 Rule scoping is configured via `overrides` in `.oxlintrc.json`:
 
@@ -59,210 +62,6 @@ All rules are warn-only (no auto-fix) so the developer decides whether to rewrit
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
-## `wdio-server.ts`
-
-Shared utilities for WebdriverIO test configurations across packages.
-
-### `createServerManager(port, packageRoot, configFile?, startupTimeout?, readinessPath?)`
-
-Creates wdio lifecycle hooks (`onPrepare` / `onComplete`) that auto-start a UI5 dev server if the target port is not already in use, and tear it down on completion. `readinessPath` lets callers verify a package-specific URL instead of accepting any HTTP response on the port.
-
-**Usage with wdio hooks (current):**
-
-```ts
-const server = createServerManager(
-  8082,
-  PACKAGE_ROOT,
-  undefined,
-  60_000,
-  "/test-resources/ui5/kiosk/qunit/testsuite.qunit.html",
-);
-
-export const config: WebdriverIO.Config = {
-  onPrepare: () => server.onPrepare(),
-  onComplete: () => server.onComplete(),
-};
-```
-
-**Usage with `await using` (standalone scripts):**
-
-The returned object implements `Symbol.asyncDispose`, so it can be used with explicit resource management for automatic cleanup:
-
-```ts
-await using server = createServerManager(8082, PACKAGE_ROOT);
-await server.onPrepare();
-// server is automatically stopped when the scope exits
-```
-
-### `createViteServerManager(port, packageRoot, startupTimeout?, readinessPath?)`
-
-Creates wdio lifecycle hooks that start a Vite dev server for packages that use Vite for bundling (e.g. kiosk-keyboard-webc). Unlike a plain static file server, Vite resolves bare module specifiers so test pages with ES module imports work without an import map. `readinessPath` lets callers reject unrelated HTTP servers already bound to the same port.
-
-```ts
-const server = createViteServerManager(8084, PACKAGE_ROOT, 60_000, "/test/pages/index.html");
-
-export const config: WebdriverIO.Config = {
-  onPrepare: () => server.onPrepare(),
-  onComplete: () => server.onComplete(),
-};
-```
-
-### `readQUnitTestIds(testsuitePath)`
-
-Extracts test IDs from a `testsuite.qunit.ts` file using TypeScript AST parsing. Returns keys from the `tests` object in declaration order.
-
-### `generateQUnitSpecs(testIds, outputDir, urlFn)`
-
-Generates one `.spec.js` file per QUnit test ID so WebdriverIO can distribute them across parallel browser instances via `maxInstances`.
-
-## `wdio-test-helpers.ts`
-
-Shared CDP (Chrome DevTools Protocol) helpers for e2e tests. Both packages re-export these from their own `test-helpers.ts` so test files import from a single place.
-
-### `setEmulatedMediaFeatures(features)`
-
-Emulates CSS media features via `Emulation.setEmulatedMedia`. Used to test `forced-colors`, `prefers-reduced-motion`, etc.
-
-```ts
-await setEmulatedMediaFeatures([{ name: "forced-colors", value: "active" }]);
-```
-
-### `clearEmulatedMediaFeatures()`
-
-Clears all previously emulated media features.
-
-### `injectStyleOverride(css, id?)`
-
-Injects or updates a `<style>` element in the page under test. Used by visual
-regression tests to force fallback rendering paths when progressive enhancement
-features such as container queries or text-box-trim would otherwise be active.
-
-```ts
-await injectStyleOverride(".example { color: red; }");
-```
-
-### `removeStyleOverride(id?)`
-
-Removes a previously injected style override by element ID.
-
-```ts
-await removeStyleOverride();
-```
-
-### `setDocumentDirection(dir)`
-
-Sets `dir` and `lang` attributes on the document root and waits for a layout reflow. Used by RTL visual regression tests.
-
-```ts
-await setDocumentDirection("rtl");
-```
-
-## `wdio-device-profiles.ts`
-
-Shared device profiles, pinned Chrome version, and Chrome option builder for e2e testing.
-
-### `CHROME_VERSION`
-
-Pinned Chrome version used by all WDIO configs. WDIO 9 auto-downloads this exact Chrome-for-Testing build so that visual regression baselines are reproducible across machines. When updating, regenerate all visual baselines and verify the diffs visually.
-
-### `DEVICE_BASE_PORTS`
-
-Central registry of base ports for device-emulation test servers, keyed by package directory name. Each device profile adds its `portOffset` to the base port so profiles can run in parallel. When adding a new package or device profile, update this map to keep ranges non-overlapping.
-
-### `deviceProfiles`
-
-Record of named device profiles (`phone-sm`, `phone-md`, `phone-lg`, `tablet`) with viewport dimensions, device scale factor, and touch mode.
-
-### `buildChromeOptions(profile, headless)`
-
-Builds `goog:chromeOptions` for a given profile using Chrome `mobileEmulation` so that CSS media queries like `(hover: none)` and `(pointer: coarse)` evaluate correctly.
-
-## `visual-report.mjs`
-
-Generates a local HTML report from WDIO visual regression output and serves it.
-
-### Usage
-
-```bash
-node tools/visual-report.mjs <screenshotDir>
-```
-
-Example:
-
-```bash
-node tools/visual-report.mjs packages/kiosk-keyboard/test/e2e/__screenshots__
-```
-
-What it does:
-
-- finds `output.json` in the target screenshots folder and one level of device subfolders
-- merges multiple JSON outputs into `output-combined.json` when needed
-- runs `wdio-visual-reporter` to generate the HTML report
-- serves the generated report locally
-
-## `visual-browse.mjs`
-
-Opens a local gallery of visual regression baseline images, grouped by snapshot tag with columns per device profile (desktop, phone-sm, phone-md, phone-lg, tablet).
-
-### Usage
-
-```bash
-node tools/visual-browse.mjs <baselinesDir> [--include-screenshots <screenshotsDir>]
-```
-
-Example:
-
-```bash
-node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__
-```
-
-With actual/diff screenshots from the last test run:
-
-```bash
-node tools/visual-browse.mjs packages/kiosk-keyboard/test/e2e/__baselines__ \
-  --include-screenshots packages/kiosk-keyboard/test/e2e/__screenshots__
-```
-
-Package-level:
-
-```bash
-npm run test:e2e:browse -w packages/kiosk-keyboard
-npm run test:e2e:browse -w packages/kiosk-keyboard-webc
-```
-
-Root-level:
-
-```bash
-npm run browse:baselines:kiosk
-npm run browse:baselines:webc
-```
-
-All scripts include screenshots by default. The actual/diff columns are hidden behind a toggle in the gallery. If no screenshots exist yet (tests haven't been run), the toggle is still available but cells will be empty.
-
-### Dependencies on test infrastructure
-
-`visual-browse.mjs` and `serve-static.mjs` depend on the directory layout produced by `@wdio/visual-service`. If the testing infrastructure changes, these assumptions may need updating:
-
-- **Baseline directory:** `__baselines__/` with device profiles as subdirectories (`phone-sm/`, `phone-md/`, `phone-lg/`, `tablet/`). Desktop baselines are files directly in the root. If new device profiles are added, they are picked up automatically (any subdirectory is treated as a profile).
-- **Screenshot directory:** `__screenshots__/` with `actual/` and `diff/` subdirectories. Device profiles mirror the baseline structure with `<profile>/actual/` and `<profile>/diff/`.
-- **Image format:** PNG files named `<tag>.png` where `<tag>` matches the snapshot tag used in tests.
-- **If `@wdio/visual-service` changes its output structure**, update the route mapping in `visual-browse.mjs` (the `routes` object near the bottom of the file) and possibly `visual-report.mjs`.
-
-## `check-visual-baselines.mjs`
-
-Validates that every visual snapshot tag referenced in test files has a corresponding baseline image for desktop and every device profile. Prevents regressions where a test is added but device-profile baselines are missing.
-
-### Usage
-
-```bash
-node tools/check-visual-baselines.mjs [--fix]
-```
-
-- Without `--fix`: reports missing baselines and exits non-zero if any are found.
-- With `--fix`: lists the commands to run to generate the missing baselines.
-
-Run via `npm run check:baselines`.
-
 ## `run-npm.mjs`
 
 Utility module for running npm commands synchronously from within Node scripts.
@@ -275,22 +74,6 @@ Spawns `npm` with the given arguments in the specified working directory. Forwar
 import { runNpm } from "./run-npm.mjs";
 runNpm(["run", "build"], "packages/hotkeys");
 ```
-
-## `serve-static.mjs`
-
-Lightweight HTTP file server module used by `visual-browse.mjs` and `visual-report.mjs`.
-
-### `serveStatic(root, opts?)`
-
-Serves a directory over HTTP and optionally opens the browser. Supports route prefix mapping, custom request handlers, and a fallback path for SPA-style routing. Includes path traversal protection.
-
-| Option     | Type                       | Default | Description                                            |
-| ---------- | -------------------------- | ------- | ------------------------------------------------------ |
-| `port`     | `number`                   | `0`     | Port to listen on (`0` = OS-assigned)                  |
-| `open`     | `boolean`                  | `true`  | Open browser automatically                             |
-| `fallback` | `string`                   | -       | Path (relative to root) to serve for unknown routes    |
-| `routes`   | `Record<string, string>`   | -       | URL prefix to filesystem directory mapping             |
-| `handlers` | `Record<string, Function>` | -       | URL path to handler function mapping (dynamic content) |
 
 ## `check-demo-webc-bundle.mjs`
 
@@ -332,60 +115,6 @@ Run via `npm run test:packages:smoke`.
 | Consumer         | Integration                     |
 | ---------------- | ------------------------------- |
 | `.oxlintrc.json` | `jsPlugins` entry, global rules |
-
-### `wdio-server.ts`
-
-| Consumer                                                    | Imports                                                         | Port            |
-| ----------------------------------------------------------- | --------------------------------------------------------------- | --------------- |
-| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `createServerManager`, `readQUnitTestIds`                       | 8081            |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `createServerManager`, `readQUnitTestIds`, `generateQUnitSpecs` | 8082            |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `createServerManager`                                           | 8085            |
-| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `createServerManager`                                           | 8091 + offset\* |
-| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `createServerManager`                                           | 8083            |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `createViteServerManager`                                       | 8086            |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `createViteServerManager`                                       | 8086 + offset\* |
-
-\*Device configs use `BASE_PORT + profile.portOffset` to avoid port collisions across device profiles (`phone-sm`: +1, `phone-md`: +2, `phone-lg`: +3, `tablet`: +4). For `kiosk-keyboard`, that maps to ports `8092-8095`.
-
-### `wdio-test-helpers.ts`
-
-| Consumer                                                | Imports (re-exported via package `test-helpers.ts`)                                                                            |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `packages/kiosk-keyboard/test/e2e/test-helpers.ts`      | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `injectStyleOverride`, `removeStyleOverride`, `setDocumentDirection` |
-| `packages/kiosk-keyboard-webc/test/e2e/test-helpers.ts` | `setEmulatedMediaFeatures`, `clearEmulatedMediaFeatures`, `injectStyleOverride`, `removeStyleOverride`, `setDocumentDirection` |
-
-### `wdio-device-profiles.ts`
-
-| Consumer                                                    | Imports                                                                       |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `packages/hotkeys/test/qunit/wdio.conf.ts`                  | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
-| `packages/kiosk-keyboard/test/qunit/wdio.conf.ts`           | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
-| `packages/kiosk-keyboard/test/e2e/wdio.conf.ts`             | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
-| `packages/kiosk-keyboard/test/e2e/wdio-device.conf.ts`      | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION`, `DEVICE_BASE_PORTS` |
-| `packages/kiosk-keyboard/test/e2e/wdio-flp.conf.ts`         | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio.conf.ts`        | `CHROME_VERSION`, `DESKTOP_WINDOW_SIZE`                                       |
-| `packages/kiosk-keyboard-webc/test/e2e/wdio-device.conf.ts` | `buildChromeOptions`, `deviceProfiles`, `CHROME_VERSION`, `DEVICE_BASE_PORTS` |
-
-### `visual-report.mjs`
-
-| Consumer                                    | Integration                                 |
-| ------------------------------------------- | ------------------------------------------- |
-| `package.json`                              | `report:visual:kiosk`, `report:visual:webc` |
-| `packages/kiosk-keyboard/package.json`      | `test:e2e:report`                           |
-| `packages/kiosk-keyboard-webc/package.json` | `test:e2e:report`                           |
-
-### `check-visual-baselines.mjs`
-
-| Consumer       | Integration       |
-| -------------- | ----------------- |
-| `package.json` | `check:baselines` |
-
-### `serve-static.mjs`
-
-| Consumer            | Integration                      |
-| ------------------- | -------------------------------- |
-| `visual-browse.mjs` | HTTP server for baseline gallery |
-| `visual-report.mjs` | HTTP server for visual report    |
 
 ### `run-npm.mjs`
 

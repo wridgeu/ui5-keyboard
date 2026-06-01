@@ -36,7 +36,7 @@
     "prepublishOnly": "node ../../tools/copy-license.mjs && npm run build",
     "start": "npm run start:qunit",
     "start:qunit": "ui5 serve --port 8081 -o \"test-resources/sap/ui/qunit/testrunner.html?testpage=%2Ftest-resources%2Fui5%2Fhotkeys%2Fqunit%2Ftestsuite.qunit.html&autostart=true\"",
-    "test:qunit": "wdio run test/qunit/wdio.conf.ts",
+    "test:qunit": "start-server-and-test \"ui5 serve --port 8081\" http://localhost:8081/test-resources/ui5/hotkeys/qunit/testsuite.qunit.html \"ui5-test-runner --url http://localhost:8081/test-resources/ui5/hotkeys/qunit/testsuite.qunit.html --report-dir report --browser $/puppeteer.js\"",
     "test": "npm run test:qunit",
     "typecheck": "tsc --noEmit",
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"

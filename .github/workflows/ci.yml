@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # Run on every PR regardless of base branch, so stacked PRs (e.g. against an
+  # in-flight branch, not just main) are gated too.
   pull_request:
-    branches: [main]
   workflow_call:
   workflow_dispatch:
 
@@ -50,9 +51,6 @@ jobs:
       - name: UI5 lint
         run: npm run lint:ui5
 
-      - name: Check visual baselines
-        run: npm run check:baselines
-
       - name: Typecheck
         run: npm run typecheck
 
@@ -63,8 +61,18 @@ jobs:
           key: playwright-chromium-${{ hashFiles('package-lock.json') }}
           restore-keys: playwright-chromium-
 
+      # Installs the OS libraries chromium needs (shared by Playwright's and the
+      # puppeteer backend's chromium) plus Playwright's chromium for the e2e
+      # suites. The puppeteer backend's chromium is fetched by npm ci above.
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: Tests
         run: npm run test:qunit && npm run test:kiosk-webc && npm run test:kiosk-webc:component
+
+      # Behavioral e2e assertions are platform-independent; visual snapshots are
+      # not (baselines carry no platform suffix), so they are ignored here. This
+      # gates focus/auto-type/inputmode/i18n/interop behavior and runs the visual
+      # specs as render smoke tests without pixel-comparing OS-specific baselines.
+      - name: End-to-end (behavioral; visual snapshots ignored)
+        run: npm run test:e2e:ci

@@ -1713,10 +1713,10 @@ npm install
 # Build
 npm run build
 
-# QUnit tests (WebdriverIO + qunit-service)
+# QUnit tests (ui5-test-runner, puppeteer backend)
 npm run test:qunit
 
-# E2E tests (WebdriverIO), desktop
+# E2E tests (Playwright), desktop
 npm run test:e2e
 
 # E2E tests, responsive device matrix
@@ -1744,12 +1744,12 @@ npm run test:e2e:tablet:update
 # Alias: phone:update -> phone-md:update
 npm run test:e2e:phone:update
 
-# Visual diff report
+# Open the Playwright HTML report (includes visual diffs for failed snapshots)
 npm run test:e2e:report
 
-# NOTE: Visual baselines are tied to the pinned Chrome-for-Testing version
-# in tools/wdio-device-profiles.ts (CHROME_VERSION). Changing that version
-# requires regenerating ALL visual baselines across all packages.
+# NOTE: Visual baselines are tied to the Chromium build bundled with
+# @playwright/test (pinned at the repo root). Bumping that version can shift
+# rendering; regenerate ALL visual baselines across all packages when it changes.
 
 # Type check
 npm run typecheck
