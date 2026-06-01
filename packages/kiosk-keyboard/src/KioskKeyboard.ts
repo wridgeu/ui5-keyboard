@@ -951,12 +951,27 @@ export default class KioskKeyboard extends Control {
       );
       return this;
     }
+    // Programmatic layout change clears any prior user-driven switch.
+    this._applyLayout(name, "external");
+    return this;
+  }
+
+  /**
+   * Shared core for the public `setLayout` and the `{layout:*}` key handler:
+   * track the base (alphabetic) layout, record who drove the switch, and write
+   * the `layout` property. Callers validate `name` against the registry first
+   * (each with its own warning). Returns whether the property value actually
+   * changed, so the key handler can distinguish an effective switch from a
+   * no-op (where UI5 skips the re-render).
+   */
+  private _applyLayout(name: string, source: "external" | "user"): boolean {
     if (!SECONDARY_LAYOUTS.has(name)) {
       this._baseLayout = name;
     }
-    // Programmatic layout change clears any prior user-driven switch.
-    this._layoutSource = "external";
-    return this.setProperty("layout", name);
+    this._layoutSource = source;
+    const changed = name !== this.getLayout();
+    this.setProperty("layout", name);
+    return changed;
   }
 
   /**
@@ -1987,7 +2002,6 @@ export default class KioskKeyboard extends Control {
         this._middleware.commit();
         this._middleware = null;
       }
-      const previousLayout = this.getLayout();
       const name = (raw === "base" ? this._baseLayout : raw).toLowerCase();
       // Validate against the registry so a bogus override key doesn't poison
       // the layout property. setLayout would log a warning and bail, but we
@@ -2000,24 +2014,23 @@ export default class KioskKeyboard extends Control {
         );
         return;
       }
-      if (raw === "base") {
-        // Return to the constrained default: re-engage keyboardType filtering.
-        this._layoutSource = "external";
-      } else {
-        // User pick takes precedence over keyboardType (webc parity).
-        this._layoutSource = "user";
-        if (!SECONDARY_LAYOUTS.has(name)) {
-          this._baseLayout = name;
-        }
-      }
+      // `{layout:base}` returns to the constrained default (re-engage
+      // keyboardType filtering); any other pick is user-driven and overrides
+      // the keyboardType constraint (webc parity).
+      const source = raw === "base" ? "external" : "user";
       // Reset shift/caps-lock on a layout switch, matching kiosk-keyboard-webc
       // (cross-package parity). Caps-lock that was meaningful on a QWERTY layout
       // carries no meaning on a numeric/special layout, so it should not persist
       // across the switch.
+      const shiftWasActive = this._isShiftActive();
       this._shiftState.reset();
-      this.setProperty("layout", name);
-      if (name !== previousLayout) {
+      // When the pick resolves to the already-active layout, the property write
+      // is a no-op and UI5 skips the re-render, so invalidate explicitly to
+      // repaint the cleared shift/caps state.
+      if (this._applyLayout(name, source)) {
         this.fireLayoutChange({ layout: name });
+      } else if (shiftWasActive) {
+        this.invalidate();
       }
       return;
     }
