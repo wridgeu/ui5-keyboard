@@ -1,39 +1,51 @@
 import { ShiftState } from "ui5/kiosk/internal/shift-state";
 
-QUnit.module("ShiftState");
+// Exercises the `onChange` contract: every mutator (toggle / autoRelease /
+// syncFromPhysical / reset) invokes the constructor callback exactly on a real
+// mode transition, and never on a no-op. The owner (KioskKeyboard) wires it to
+// `invalidate()` so it never has to pair a mutation with a manual repaint.
 
-QUnit.test("starts in off state", (assert) => {
-  const state = new ShiftState();
-  assert.strictEqual(state.isShifted, false, "not shifted");
-  assert.strictEqual(state.isCapsLock, false, "not caps lock");
+let onChange: sinon.SinonSpy;
+let state: ShiftState;
+
+QUnit.module("ShiftState", {
+  beforeEach() {
+    onChange = sinon.spy();
+    state = new ShiftState(onChange);
+  },
 });
 
-QUnit.test("first toggle activates temporary shift", (assert) => {
-  const state = new ShiftState();
+QUnit.test("starts in off state and does not fire onChange on construction", (assert) => {
+  assert.strictEqual(state.isShifted, false, "not shifted");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock");
+  assert.ok(onChange.notCalled, "onChange not fired on construction");
+});
+
+QUnit.test("first toggle activates temporary shift and fires onChange", (assert) => {
   state.toggle();
   assert.ok(state.isShifted, "shifted after single click");
   assert.strictEqual(state.isCapsLock, false, "not caps lock after single click");
+  assert.strictEqual(onChange.callCount, 1, "onChange fired once");
 });
 
-QUnit.test("rapid double-click activates caps lock", (assert) => {
-  const state = new ShiftState();
+QUnit.test("rapid double-click activates caps lock and fires onChange per transition", (assert) => {
   state.toggle();
   state.toggle(); // immediate second click
   assert.ok(state.isShifted, "shifted");
   assert.ok(state.isCapsLock, "caps lock active");
+  assert.strictEqual(onChange.callCount, 2, "onChange fired per transition");
 });
 
-QUnit.test("click while caps-locked turns everything off", (assert) => {
-  const state = new ShiftState();
+QUnit.test("click while caps-locked turns everything off (3 transitions)", (assert) => {
   state.toggle();
   state.toggle(); // caps lock
   state.toggle(); // off
   assert.strictEqual(state.isShifted, false, "not shifted");
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
+  assert.strictEqual(onChange.callCount, 3, "onChange fired per transition");
 });
 
 QUnit.test("second click after timeout turns shift off, not caps lock", (assert) => {
-  const state = new ShiftState();
   const stub = sinon.stub(performance, "now");
   try {
     stub.returns(1000);
@@ -45,13 +57,13 @@ QUnit.test("second click after timeout turns shift off, not caps lock", (assert)
 
     assert.strictEqual(state.isShifted, false, "not shifted -- second slow click turns off");
     assert.strictEqual(state.isCapsLock, false, "not caps lock -- outside double-click window");
+    assert.strictEqual(onChange.callCount, 2, "onChange fired for both transitions");
   } finally {
     stub.restore();
   }
 });
 
 QUnit.test("rapid double-click from Off activates caps lock (shift expired then quick re-click)", (assert) => {
-  const state = new ShiftState();
   const stub = sinon.stub(performance, "now");
   try {
     stub.returns(1000);
@@ -72,24 +84,25 @@ QUnit.test("rapid double-click from Off activates caps lock (shift expired then 
   }
 });
 
-QUnit.test("autoRelease releases shift and returns true", (assert) => {
-  const state = new ShiftState();
+QUnit.test("autoRelease releases shift and fires onChange", (assert) => {
   state.toggle();
-  assert.ok(state.autoRelease(), "released");
+  onChange.resetHistory();
+  state.autoRelease();
   assert.strictEqual(state.isShifted, false, "no longer shifted");
+  assert.strictEqual(onChange.callCount, 1, "onChange fired");
 });
 
-QUnit.test("autoRelease does not release caps lock", (assert) => {
-  const state = new ShiftState();
+QUnit.test("autoRelease is a no-op (no onChange) when caps-locked", (assert) => {
   state.toggle();
   state.toggle(); // caps lock
-  assert.strictEqual(state.autoRelease(), false, "not released");
+  onChange.resetHistory();
+  state.autoRelease();
   assert.ok(state.isShifted, "still shifted");
   assert.ok(state.isCapsLock, "still caps lock");
+  assert.ok(onChange.notCalled, "onChange not fired");
 });
 
 QUnit.test("toggle after autoRelease activates shift, not caps lock", (assert) => {
-  const state = new ShiftState();
   state.toggle(); // shift on
   state.autoRelease(); // off (typed a character)
   state.toggle(); // should be shift, not caps lock
@@ -97,83 +110,90 @@ QUnit.test("toggle after autoRelease activates shift, not caps lock", (assert) =
   assert.strictEqual(state.isCapsLock, false, "not caps lock -- autoRelease closed the double-click window");
 });
 
-QUnit.test("autoRelease returns false when already off", (assert) => {
-  const state = new ShiftState();
-  assert.strictEqual(state.autoRelease(), false, "nothing to release");
+QUnit.test("autoRelease is a no-op (no onChange) when already off", (assert) => {
+  state.autoRelease();
+  assert.ok(onChange.notCalled, "nothing to release");
 });
 
-QUnit.test("reset clears shift", (assert) => {
-  const state = new ShiftState();
+QUnit.test("reset clears shift and fires onChange", (assert) => {
   state.toggle();
+  onChange.resetHistory();
   state.reset();
   assert.strictEqual(state.isShifted, false, "cleared");
+  assert.strictEqual(onChange.callCount, 1, "onChange fired");
 });
 
-QUnit.test("reset clears caps lock", (assert) => {
-  const state = new ShiftState();
+QUnit.test("reset clears caps lock and fires onChange", (assert) => {
   state.toggle();
   state.toggle(); // caps lock
+  onChange.resetHistory();
   state.reset();
   assert.strictEqual(state.isShifted, false, "not shifted");
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
+  assert.strictEqual(onChange.callCount, 1, "onChange fired");
+});
+
+QUnit.test("reset is a no-op (no onChange) when already off", (assert) => {
+  state.reset();
+  assert.ok(onChange.notCalled, "onChange not fired");
 });
 
 // ── syncFromPhysical ─────────────────────────────────────────────
 
-QUnit.test("syncFromPhysical: from Off with (false, false) returns false (no change)", (assert) => {
-  const state = new ShiftState();
-  assert.strictEqual(state.syncFromPhysical(false, false), false, "no change");
+QUnit.test("syncFromPhysical: (false, false) from Off does not fire onChange", (assert) => {
+  state.syncFromPhysical(false, false);
   assert.strictEqual(state.isShifted, false, "still not shifted");
   assert.strictEqual(state.isCapsLock, false, "still not caps lock");
+  assert.ok(onChange.notCalled, "onChange not fired");
 });
 
-QUnit.test("syncFromPhysical: from Off with (true, false) sets Shift", (assert) => {
-  const state = new ShiftState();
-  assert.ok(state.syncFromPhysical(true, false), "state changed");
+QUnit.test("syncFromPhysical: (true, false) from Off sets Shift and fires onChange", (assert) => {
+  state.syncFromPhysical(true, false);
   assert.ok(state.isShifted, "shifted");
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
+  assert.strictEqual(onChange.callCount, 1, "onChange fired");
 });
 
-QUnit.test("syncFromPhysical: from Off with (false, true) sets CapsLock", (assert) => {
-  const state = new ShiftState();
-  assert.ok(state.syncFromPhysical(false, true), "state changed");
+QUnit.test("syncFromPhysical: (false, true) from Off sets CapsLock and fires onChange", (assert) => {
+  state.syncFromPhysical(false, true);
   assert.ok(state.isShifted, "shifted");
   assert.ok(state.isCapsLock, "caps lock");
+  assert.strictEqual(onChange.callCount, 1, "onChange fired");
 });
 
-QUnit.test("syncFromPhysical: from Shift with (false, false) returns to Off", (assert) => {
-  const state = new ShiftState();
-  state.syncFromPhysical(true, false); // move to Shift
-  assert.ok(state.syncFromPhysical(false, false), "state changed");
+QUnit.test("syncFromPhysical: (false, false) from Shift returns to Off (fires onChange)", (assert) => {
+  state.syncFromPhysical(true, false);
+  state.syncFromPhysical(false, false);
   assert.strictEqual(state.isShifted, false, "not shifted");
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
+  assert.strictEqual(onChange.callCount, 2, "onChange fired per transition");
 });
 
-QUnit.test("syncFromPhysical: from CapsLock with (false, false) returns to Off", (assert) => {
-  const state = new ShiftState();
-  state.syncFromPhysical(false, true); // move to CapsLock
-  assert.ok(state.syncFromPhysical(false, false), "state changed");
+QUnit.test("syncFromPhysical: (false, false) from CapsLock returns to Off (fires onChange)", (assert) => {
+  state.syncFromPhysical(false, true);
+  state.syncFromPhysical(false, false);
   assert.strictEqual(state.isShifted, false, "not shifted");
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
+  assert.strictEqual(onChange.callCount, 2, "onChange fired per transition");
 });
 
 QUnit.test("syncFromPhysical: CapsLock wins over Shift when both flags set", (assert) => {
-  const state = new ShiftState();
-  assert.ok(state.syncFromPhysical(true, true), "state changed");
+  state.syncFromPhysical(true, true);
   assert.ok(state.isShifted, "shifted");
   assert.ok(state.isCapsLock, "caps lock -- capsLock wins over shift");
+  assert.strictEqual(onChange.callCount, 1, "onChange fired");
 });
 
-QUnit.test("syncFromPhysical: no-op when state unchanged returns false on second call", (assert) => {
-  const state = new ShiftState();
-  assert.ok(state.syncFromPhysical(true, false), "first call changed state");
-  assert.strictEqual(state.syncFromPhysical(true, false), false, "second call is a no-op");
+QUnit.test("syncFromPhysical: no onChange when called repeatedly with the same state", (assert) => {
+  state.syncFromPhysical(true, false);
+  onChange.resetHistory();
+  state.syncFromPhysical(true, false);
   assert.ok(state.isShifted, "still shifted");
   assert.strictEqual(state.isCapsLock, false, "still not caps lock");
+  assert.ok(onChange.notCalled, "second call is a no-op");
 });
 
 QUnit.test("syncFromPhysical: resets double-click window so next toggle starts fresh Shift", (assert) => {
-  const state = new ShiftState();
   state.toggle(); // shift on
   assert.ok(state.isShifted, "shifted after toggle");
 

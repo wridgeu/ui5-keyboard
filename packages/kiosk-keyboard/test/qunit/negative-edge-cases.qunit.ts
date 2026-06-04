@@ -74,6 +74,31 @@ QUnit.test("Caps lock resets on layout switch", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Caps lock resets on programmatic setLayout", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  // Activate caps lock (shift twice).
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isCapsLock(kb), "Caps lock is active");
+
+  // A programmatic switch must clear caps lock the same way a {layout:X} key
+  // tap does. Observe after returning to the base layout, since the numeric
+  // layout has no shift key to read the caps-lock state from.
+  kb.setLayout("numeric");
+  kb.resetLayout();
+  await waitForRender();
+  assert.notOk(isCapsLock(kb), "Caps lock cleared by setLayout");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Target switch resets shift regardless of current layout", async (assert) => {
   const input1 = new Input({ value: "" });
   const input2 = new Input({ value: "" });
