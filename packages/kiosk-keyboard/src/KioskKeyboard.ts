@@ -654,7 +654,7 @@ export default class KioskKeyboard extends Control {
 
   init(): void {
     KioskKeyboard._instances.add(this);
-    this._shiftState = new ShiftState();
+    this._shiftState = new ShiftState(() => this.invalidate());
     this._keyGridNav = new KeyGridNavigation(this.getId(), KIOSK_KEYBOARD_DOM);
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
@@ -969,6 +969,10 @@ export default class KioskKeyboard extends Control {
       this._baseLayout = name;
     }
     this._layoutSource = source;
+    // A layout switch starts a new typing context, so shift/caps-lock that was
+    // meaningful on the previous layout must not carry over (webc parity). The
+    // ShiftState onChange callback repaints even when the layout is unchanged.
+    this._shiftState.reset();
     const changed = name !== this.getLayout();
     this.setProperty("layout", name);
     return changed;
@@ -1103,11 +1107,8 @@ export default class KioskKeyboard extends Control {
 
     this._targetSession.resetForTargetSwitch();
 
-    // Reset shift/caps state for the new input context
-    if (this._shiftState.isShifted) {
-      this._shiftState.reset();
-      this.invalidate();
-    }
+    // Reset shift/caps state for the new input context.
+    this._shiftState.reset();
 
     this.setAssociation("_activeTarget", target ?? "", true);
 
@@ -1973,9 +1974,7 @@ export default class KioskKeyboard extends Control {
           ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
           : null;
         if (mwTarget && this._middleware.handleKey(keyValue, mwTarget)) {
-          if (this._shiftState.autoRelease()) {
-            this.invalidate();
-          }
+          this._shiftState.autoRelease();
           return;
         }
       }
@@ -2018,19 +2017,8 @@ export default class KioskKeyboard extends Control {
       // keyboardType filtering); any other pick is user-driven and overrides
       // the keyboardType constraint (webc parity).
       const source = raw === "base" ? "external" : "user";
-      // Reset shift/caps-lock on a layout switch, matching kiosk-keyboard-webc
-      // (cross-package parity). Caps-lock that was meaningful on a QWERTY layout
-      // carries no meaning on a numeric/special layout, so it should not persist
-      // across the switch.
-      const shiftWasActive = this._isShiftActive();
-      this._shiftState.reset();
-      // When the pick resolves to the already-active layout, the property write
-      // is a no-op and UI5 skips the re-render, so invalidate explicitly to
-      // repaint the cleared shift/caps state.
       if (this._applyLayout(name, source)) {
         this.fireLayoutChange({ layout: name });
-      } else if (shiftWasActive) {
-        this.invalidate();
       }
       return;
     }
@@ -2094,9 +2082,7 @@ export default class KioskKeyboard extends Control {
     }
 
     // Auto-release shift (not caps lock)
-    if (this._shiftState.autoRelease()) {
-      this.invalidate();
-    }
+    this._shiftState.autoRelease();
   }
 
   private _toggleShift(el: HTMLElement): void {
@@ -2116,8 +2102,6 @@ export default class KioskKeyboard extends Control {
     const isCaps = this._shiftState.isCapsLock;
     el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
     el.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyCapsLock, isCaps);
-
-    this.invalidate();
   }
 
   /**
@@ -2164,10 +2148,7 @@ export default class KioskKeyboard extends Control {
     // getModifierState which is not forwarded to the wrapper.
     const native = (event as KeyboardEvent & { originalEvent?: KeyboardEvent }).originalEvent ?? event;
     const capsLock = typeof native.getModifierState === "function" && native.getModifierState("CapsLock");
-    const changed = this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
-    if (changed) {
-      this.invalidate();
-    }
+    this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
   }
 
   private _highlightKey(key: string, add: boolean): void {
