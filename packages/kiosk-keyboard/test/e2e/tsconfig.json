@@ -13,6 +13,7 @@
     "./**/*.ts",
     "../../playwright.config.ts",
     "../../playwright.flp.config.ts",
-    "../../playwright.docs.config.ts"
+    "../../playwright.docs.config.ts",
+    "../../playwright.shared.ts"
   ]
 }

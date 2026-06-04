@@ -1,5 +1,6 @@
 import { defineConfig } from "@playwright/test";
 import path from "node:path";
+import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright.shared.js";
 
 /**
  * Separate Playwright config for the FLP (Fiori launchpad) lifecycle e2e. It
@@ -13,7 +14,6 @@ import path from "node:path";
 
 const PORT = 8083;
 const __dirname = import.meta.dirname;
-const chromiumArgs = ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"];
 
 export default defineConfig({
   testDir: "./test/e2e",
@@ -26,18 +26,18 @@ export default defineConfig({
 
   use: {
     baseURL: `http://localhost:${PORT}`,
-    viewport: { width: 1440, height: 900 },
-    launchOptions: { args: chromiumArgs },
+    viewport: DESKTOP_VIEWPORT,
+    launchOptions: { args: CHROMIUM_ARGS },
     trace: "on-first-retry",
   },
 
   projects: [{ name: "flp", use: { browserName: "chromium" } }],
 
-  webServer: {
-    command: `ui5 serve --config ui5-flp.yaml --port ${PORT}`,
+  webServer: ui5ServeWebServer({
+    port: PORT,
     cwd: path.resolve(__dirname, "../demo-app"),
-    url: `http://localhost:${PORT}/test/flp.html`,
-    reuseExistingServer: !process.env.CI,
+    urlPath: "/test/flp.html",
+    command: `ui5 serve --config ui5-flp.yaml --port ${PORT}`,
     timeout: 180_000,
-  },
+  }),
 });

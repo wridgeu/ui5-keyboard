@@ -19,7 +19,8 @@ import path from "node:path";
  * baseline is only valid for the OS it was generated on (font / anti-aliasing
  * rendering differs across platforms) -- regenerate on whatever platform runs
  * the comparison. Update with `npm run test:e2e:update` (desktop) or the
- * per-device update scripts. (These specs are not yet gated in CI.)
+ * per-device update scripts. The desktop project runs in CI via test:e2e:ci as
+ * render smoke tests; pixel comparison is not gated (snapshots ignored).
  */
 
 const PORT = 8086;
