@@ -1,12 +1,13 @@
 import { defineConfig } from "@playwright/test";
 import path from "node:path";
+import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright.shared.js";
 
 /**
  * Playwright e2e + visual regression config for the kiosk-keyboard UI5 control.
  *
- * Replaces the WebdriverIO + @wdio/visual-service setup. The UI5 control renders
- * into light DOM, so locators target it directly (no shadow piercing). Pages are
- * served by `ui5 serve` (the UI5 Tooling middleware transpiles the TS test code).
+ * The UI5 control renders into light DOM, so locators target it directly (no
+ * shadow piercing). Pages are served by `ui5 serve` (the UI5 Tooling middleware
+ * transpiles the TS test code).
  *
  * The behavioral specs (autotype, focus, i18n, inputmode, interop) are
  * desktop-only; the visual specs run on the desktop + device matrix. The FLP
@@ -15,13 +16,12 @@ import path from "node:path";
  * Browser provisioning: `npx playwright install chromium` (`--with-deps` in CI).
  * Visual baselines under test/e2e/__baselines__/<project>/ are committed and
  * carry no platform suffix, so a baseline is only valid for the OS it was
- * generated on; regenerate on whatever platform runs the comparison. (These
- * specs are not yet gated in CI.)
+ * generated on. The desktop project runs in CI via test:e2e:ci as render smoke
+ * tests; pixel comparison is not gated (snapshots ignored).
  */
 
 const PORT = 8085;
 const __dirname = import.meta.dirname;
-const chromiumArgs = ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"];
 
 const deviceProfiles = [
   { name: "phone-sm", viewport: { width: 320, height: 568 }, deviceScaleFactor: 2 },
@@ -50,7 +50,7 @@ export default defineConfig({
 
   use: {
     baseURL: `http://localhost:${PORT}`,
-    launchOptions: { args: chromiumArgs },
+    launchOptions: { args: CHROMIUM_ARGS },
     trace: "on-first-retry",
   },
 
@@ -60,7 +60,7 @@ export default defineConfig({
       // FLP runs under playwright.flp.config.ts; readme-screenshots is generated
       // on demand via test:e2e:docs, not part of the regression run.
       testIgnore: /(flp-lifecycle|readme-screenshots)\.spec\.ts$/,
-      use: { viewport: { width: 1440, height: 900 } },
+      use: { viewport: DESKTOP_VIEWPORT },
     },
     ...deviceProfiles.map((d) => ({
       name: d.name,
@@ -74,11 +74,9 @@ export default defineConfig({
     })),
   ],
 
-  webServer: {
-    command: `ui5 serve --port ${PORT}`,
+  webServer: ui5ServeWebServer({
+    port: PORT,
     cwd: path.resolve(__dirname),
-    url: `http://localhost:${PORT}/test-resources/ui5/kiosk/e2e/visual/index.html`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+    urlPath: "/test-resources/ui5/kiosk/e2e/visual/index.html",
+  }),
 });

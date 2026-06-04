@@ -1,5 +1,6 @@
 import { defineConfig } from "@playwright/test";
 import path from "node:path";
+import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright.shared.js";
 
 /**
  * Config for generating the README theme screenshots (docs/kiosk/images) on
@@ -9,7 +10,6 @@ import path from "node:path";
 
 const PORT = 8085;
 const __dirname = import.meta.dirname;
-const chromiumArgs = ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"];
 
 export default defineConfig({
   testDir: "./test/e2e",
@@ -18,15 +18,13 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: `http://localhost:${PORT}`,
-    viewport: { width: 1440, height: 900 },
-    launchOptions: { args: chromiumArgs },
+    viewport: DESKTOP_VIEWPORT,
+    launchOptions: { args: CHROMIUM_ARGS },
   },
   projects: [{ name: "desktop", use: { browserName: "chromium" } }],
-  webServer: {
-    command: `ui5 serve --port ${PORT}`,
+  webServer: ui5ServeWebServer({
+    port: PORT,
     cwd: path.resolve(__dirname),
-    url: `http://localhost:${PORT}/test-resources/ui5/kiosk/e2e/visual/index.html`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+    urlPath: "/test-resources/ui5/kiosk/e2e/visual/index.html",
+  }),
 });
