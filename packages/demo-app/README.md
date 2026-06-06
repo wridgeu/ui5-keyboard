@@ -212,7 +212,7 @@ const KioskKeyboardBridge = WebComponent.extend("my.app.control.KioskKeyboard", 
       afterOpen: {},
       afterClose: {},
     },
-    methods: ["show", "close", "isOpen", "setTargetElement", "resetKeyboardType"],
+    methods: ["show", "close", "setTargetElement", "resetKeyboardType"],
   },
 });
 

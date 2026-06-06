@@ -96,6 +96,10 @@ Packaging smoke check for the publishable packages.
 
 Run via `npm run test:packages:smoke`.
 
+## `copy-license.mjs`
+
+Copies the monorepo's root `LICENSE` into the current working directory (the package being published) so `npm publish` includes it in the tarball. Each publishable package calls it from its `prepublishOnly` script (`node ../../tools/copy-license.mjs`).
+
 ## Consumers
 
 ### `oxlint-plugin-test-guardrails.mjs`

@@ -23,10 +23,10 @@ What this does:
 
 ## Why Pointer Events Are Disabled During Capture
 
-The screenshot test temporarily sets `pointer-events: none` on `.ui5KioskKeyboard` roots before taking element screenshots.
+The screenshot test temporarily sets `pointer-events: none` on the keyboard roots (`DOM.selectors.root`) before taking element screenshots.
 
-Reason: WebDriver element screenshots can place a virtual pointer on a descendant key, which may trigger `:hover` and produce non-deterministic colors (most noticeable in high-contrast themes). Disabling pointer events during capture avoids this hover artifact.
+Reason: Playwright element screenshots can place a virtual pointer on a descendant key, which may trigger `:hover` and produce non-deterministic colors (most noticeable in high-contrast themes). Disabling pointer events during capture avoids this hover artifact.
 
 Implementation is in:
 
-- `packages/kiosk-keyboard/test/e2e/readme-screenshots.test.ts`
+- `packages/kiosk-keyboard/test/e2e/readme-screenshots.spec.ts`

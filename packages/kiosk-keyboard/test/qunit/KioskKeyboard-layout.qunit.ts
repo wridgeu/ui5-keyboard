@@ -270,6 +270,24 @@ QUnit.test("Same-name {layout:X} switch repaints cleared shift state (no-op prop
   kb.destroy();
 });
 
+QUnit.test("No-op {layout:X} tap keeps the keyboardType constraint (source not flipped to user)", async (assert) => {
+  // A {layout:X} key naming the already-active layout is a no-op property write;
+  // it must not mark the layout user-driven, which would override the keyboardType
+  // constraint on the next render with no layoutChange event.
+  const kb = new KioskKeyboard({ keyboardType: KeyboardType.Numpad });
+  await placeAndWait(kb);
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad constraint forces the numpad surface (row 0 '7')");
+
+  // Tap a layout key that names the already-active layout property value.
+  simulateTap(kb, createFakeKeyElement(`{layout:${kb.getLayout()}}`, "fake-noop"));
+  // The flip is latent (the no-op write schedules no render); force the next one.
+  kb.invalidate();
+  await waitForRender();
+
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "No-op tap leaves the numpad constraint engaged");
+  kb.destroy();
+});
+
 QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", async (assert) => {
   // Companion to the symmetry test above: changing keyboardType (explicit
   // or auto-detect) must invalidate any prior user layout pick, so the new

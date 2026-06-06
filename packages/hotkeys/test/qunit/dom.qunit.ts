@@ -69,11 +69,11 @@ QUnit.test("Returns true for textarea", (assert) => {
   assert.ok(isInputElement(el));
 });
 
-QUnit.test("Returns false for select (navigation control, not text input)", (assert) => {
-  // <select> doesn't accept freeform text; the browser handles arrows / type-ahead /
-  // Enter natively. App-defined single-key shortcuts should fire alongside.
+QUnit.test("Returns true for select (native type-ahead must not be pre-empted)", (assert) => {
+  // <select> has built-in single-key type-ahead; suppressing letter shortcuts here
+  // keeps the browser's option matching working, matching Mousetrap / hotkeys-js.
   const el = createElement("select");
-  assert.notOk(isInputElement(el));
+  assert.ok(isInputElement(el));
 });
 
 QUnit.test("Returns true for contentEditable element", (assert) => {

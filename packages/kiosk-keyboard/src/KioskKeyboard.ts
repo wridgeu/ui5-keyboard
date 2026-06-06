@@ -951,7 +951,7 @@ export default class KioskKeyboard extends Control {
       );
       return this;
     }
-    // Programmatic layout change clears any prior user-driven switch.
+    // Programmatic change is external-sourced and re-engages keyboardType constraints.
     this._applyLayout(name, "external");
     return this;
   }
@@ -959,21 +959,22 @@ export default class KioskKeyboard extends Control {
   /**
    * Shared core for the public `setLayout` and the `{layout:*}` key handler:
    * track the base (alphabetic) layout, record who drove the switch, and write
-   * the `layout` property. Callers validate `name` against the registry first
-   * (each with its own warning). Returns whether the property value actually
-   * changed, so the key handler can distinguish an effective switch from a
-   * no-op (where UI5 skips the re-render).
+   * the `layout` property. Callers validate `name` against the registry first.
+   * Returns whether the property value actually changed.
+   *
+   * Selecting a layout always resets the typing context (shift/caps-lock), even a
+   * re-selection of the active layout. The `source` only changes on a real switch
+   * so a no-op re-selection can't silently flip the constraint-override.
    */
   private _applyLayout(name: string, source: "external" | "user"): boolean {
     if (!SECONDARY_LAYOUTS.has(name)) {
       this._baseLayout = name;
     }
-    this._layoutSource = source;
-    // A layout switch starts a new typing context, so shift/caps-lock that was
-    // meaningful on the previous layout must not carry over (webc parity). The
-    // ShiftState onChange callback repaints even when the layout is unchanged.
-    this._shiftState.reset();
     const changed = name !== this.getLayout();
+    if (changed) {
+      this._layoutSource = source;
+    }
+    this._shiftState.reset();
     this.setProperty("layout", name);
     return changed;
   }
@@ -1113,6 +1114,15 @@ export default class KioskKeyboard extends Control {
     this.setAssociation("_activeTarget", target ?? "", true);
 
     const newId = this._getActiveTargetId();
+
+    // A real target switch is a new editing context: drop a user-driven
+    // `{layout:X}` override so the new target re-resolves under its keyboardType.
+    // A same-input refocus (caret reposition) keeps it.
+    if (newId !== previousTarget && this._layoutSource === "user") {
+      this._layoutSource = "external";
+      this.invalidate();
+    }
+
     if (newId && this._isTargetOfOther(newId)) {
       Log.warning(
         `KioskKeyboard: active target "${newId}" is already targeted by another KioskKeyboard instance`,

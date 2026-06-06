@@ -988,7 +988,7 @@ Platform.Linux; // "linux"
 GLOBAL_SCOPE; // "__global__"
 ```
 
-All enum objects are frozen with `Object.freeze()`.
+The enums are TypeScript string enums registered with UI5 via `DataType.registerEnum`, so their members compare as plain string literals at runtime.
 
 ### ConflictBehavior Examples
 

@@ -126,9 +126,15 @@ export default class AutoShowBehavior extends BaseObject {
     ) {
       const detected = detectKbType(ui5Control, this._host._getEffectiveResolver());
       const previous = this._host.getKeyboardType();
-      this._host._setKeyboardTypeSource(`auto:${detected}`);
-      this._host.setProperty("keyboardType", detected);
+      // Only (re)apply detection when the type actually changes. Re-running on
+      // every focusin (e.g. refocusing the same input to reposition the caret)
+      // would call _setKeyboardTypeSource, which resets the user-driven
+      // {layout:*} override (_layoutSource -> "external") and reverts a layout the
+      // user explicitly chose. Mirrors the webc focusin guard
+      // (`if (detected !== this.keyboardType)`).
       if (detected !== previous) {
+        this._host._setKeyboardTypeSource(`auto:${detected}`);
+        this._host.setProperty("keyboardType", detected);
         this._host.fireKeyboardTypeChange({
           keyboardType: detected,
           previousKeyboardType: previous,

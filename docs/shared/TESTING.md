@@ -77,8 +77,8 @@ Each package drives Playwright from configs at its **package root** (not inside 
 
 Within `playwright.config.ts`, projects share a single `webServer` and differ only by emulated device:
 
-- The **`desktop`** project (1440×900) runs every spec except the ones that belong to the dedicated configs (`flp-lifecycle`, `readme-screenshots` are ignored; the webc `desktop` project ignores `component.spec.ts`, which runs under Web Test Runner).
-- The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and are gated by a `VISUAL_SPECS` `testMatch` so they run only the visual specs — the behavioral specs (autotype, focus, i18n, inputmode, interop) are desktop-only.
+- The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
+- The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs — the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
 Because element screenshots capture overflow, the fixed-width container fixtures no longer need per-viewport gating: they run on every profile and are captured in full.
 
@@ -170,7 +170,7 @@ A few snapshots are too unstable under phone emulation to be meaningful (e.g. th
 
 ### Generated assets for webc E2E
 
-The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild — but they do need generated theme and i18n output. Every `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` runs `npm run generate` inline before invoking `playwright test`, including headed and device-project variants.
+The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild — but they do need generated theme and i18n output. Every `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` that invokes `playwright test` runs `npm run generate` inline first, including headed and device-project variants (`test:e2e:report`, which only opens the HTML report, does not).
 
 The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2E scripts avoid a separate prebuild step entirely.
 

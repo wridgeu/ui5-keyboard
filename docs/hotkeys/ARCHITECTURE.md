@@ -193,7 +193,7 @@ All modifier names are normalized to their canonical form:
 | ------------------------ | ----------------------------------------- |
 | `Ctrl`, `Control`        | `Control`                                 |
 | `Cmd`, `Command`, `Meta` | `Meta`                                    |
-| `Opt`, `Option`          | `Alt`                                     |
+| `Option`, `option`       | `Alt`                                     |
 | `Mod`                    | `Meta` on mac, `Control` on windows/linux |
 
 ### Key Normalization
