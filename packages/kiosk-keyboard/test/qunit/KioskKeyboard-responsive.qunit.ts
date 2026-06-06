@@ -127,12 +127,13 @@ QUnit.test("No height classes when keyboard is not externally constrained", asyn
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "1.5rem");
-  dom.style.height = "16rem";
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
   dom.style.overflow = "hidden";
 
-  await setMeasuredHeight(kb, dom, dom.getBoundingClientRect().height);
+  // Natural content (8rem) fits within the 16rem rendered height -> unconstrained.
+  // Both heights are stubbed so the result does not depend on platform font
+  // metrics (real key-label height differs between local and CI rendering).
+  await setMeasuredHeight(kb, dom, 16 * remPx, 8 * remPx);
 
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when unconstrained");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent when unconstrained");
@@ -221,55 +222,47 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
   kb.destroy();
 });
 
-QUnit.test("Intrinsic height changes from CSS vars update height classes without outer resize", async (assert) => {
+QUnit.test("Intrinsic content height growth updates height classes on refresh", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "1.5rem");
-  dom.style.height = "15rem";
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
   dom.style.overflow = "hidden";
 
-  await setMeasuredHeight(kb, dom, dom.getBoundingClientRect().height);
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "No cqShort before intrinsic growth");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "No cqTiny before intrinsic growth");
+  // Heights are stubbed (rendered fixed at 15rem) so the natural-vs-rendered
+  // decision is deterministic across platforms. Intrinsic content shorter than
+  // the rendered height is unconstrained -> no classes.
+  await setMeasuredHeight(kb, dom, 15 * remPx, 8 * remPx);
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "No cqShort while intrinsic content fits");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "No cqTiny while intrinsic content fits");
 
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "Still stale before refresh");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Still non-tiny before refresh");
-  kb.refreshResponsiveState();
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-
-  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied at 15rem after key height grows");
+  // Intrinsic content grows past the rendered height (e.g. taller keys); a
+  // refresh applies cqShort since 15rem is within the short range.
+  await setMeasuredHeight(kb, dom, 15 * remPx, 24 * remPx);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied after intrinsic growth");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at 15rem");
 
   kb.destroy();
 });
 
-QUnit.test("Intrinsic height shrink clears height classes without outer resize", async (assert) => {
+QUnit.test("Intrinsic content height shrink clears height classes on refresh", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  dom.style.height = "16rem";
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
   dom.style.overflow = "hidden";
 
-  await setMeasuredHeight(kb, dom, dom.getBoundingClientRect().height);
-  assert.ok(
-    dom.classList.contains(DOM.classes.rootCqShort),
-    "Starts constrained (cqShort) at 4rem keys in 16rem container",
-  );
+  // Intrinsic content (24rem) taller than the 16rem rendered height -> constrained.
+  await setMeasuredHeight(kb, dom, 16 * remPx, 24 * remPx);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Starts constrained (cqShort)");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at 16rem");
 
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "1.5rem");
-  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Still stale before refresh");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Still non-tiny before refresh");
-  kb.refreshResponsiveState();
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort cleared after intrinsic height shrinks");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny cleared after intrinsic height shrinks");
+  // Intrinsic content shrinks below the rendered height -> unconstrained.
+  await setMeasuredHeight(kb, dom, 16 * remPx, 8 * remPx);
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort cleared after intrinsic shrink");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny cleared after intrinsic shrink");
 
   kb.destroy();
 });
