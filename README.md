@@ -259,7 +259,7 @@ npm run build               # Build library dist/ artifacts (required before sta
 
 | Command                      | Description                                   | Port |
 | ---------------------------- | --------------------------------------------- | ---- |
-| `npm start`                  | Demo app (alias for `start:demo`)             | 8080 |
+| `npm start`                  | Build the web component, then serve the demo  | 8080 |
 | `npm run start:flp`          | Demo app in FLP sandbox (SAPUI5 + ushell)     | 8080 |
 | `npm run start:hotkeys`      | Hotkeys QUnit test runner                     | 8081 |
 | `npm run start:kiosk`        | Kiosk keyboard QUnit test runner              | 8082 |

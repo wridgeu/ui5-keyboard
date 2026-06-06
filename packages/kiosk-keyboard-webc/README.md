@@ -231,7 +231,7 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
 | **Framework**     | SAPUI5 / OpenUI5 only                                        | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge) |
 | **Theming**       | LESS variables (`@sapUiButton*`)                             | CSS custom properties + SAP theme token fallbacks             |
-| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback            | Built-in EN/DE + `setI18nResolver()` callback                 |
+| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback            | Built-in EN/DE/JA/AR + `setI18nResolver()` callback           |
 | **Target inputs** | `controls` property + `setControls()` + `getActiveControl()` | `controls` attribute + `setTargetElement()` + `activeElement` |
 | **Density**       | UI5 content density (`sapUiSizeCompact`)                     | `data-ui5-compact-size` attribute                             |
 
@@ -529,12 +529,12 @@ keyboard.addEventListener("key-press", (e) => {
 
 The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for middleware, the CDN bundle, and asset registration:
 
-| Import                                  | Description                       |
-| --------------------------------------- | --------------------------------- |
-| `kiosk-keyboard-webc`                   | Full entry (all built-in layouts) |
-| `kiosk-keyboard-webc/middleware/<name>` | Composition middleware            |
-| `kiosk-keyboard-webc/bundle`            | Single-file bundle (CDN/scripts)  |
-| `kiosk-keyboard-webc/Assets`            | Theme + i18n registration         |
+| Import                                  | Description                                                                                                                  |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `kiosk-keyboard-webc`                   | Full entry (all built-in layouts)                                                                                            |
+| `kiosk-keyboard-webc/middleware/<name>` | Composition middleware                                                                                                       |
+| `kiosk-keyboard-webc/bundle`            | Convenience entry: element + Assets (needs a bundler/import map; for a plain `<script>` use `dist/kiosk-keyboard.bundle.js`) |
+| `kiosk-keyboard-webc/Assets`            | Theme + i18n registration                                                                                                    |
 
 ### Layout Composition
 
@@ -844,7 +844,7 @@ KioskKeyboard.setI18nResolver((key, locale) => {
 **Adding built-in translations (library contributors):** To add a new locale to the library itself, create a properties file in `src/i18n/` following the naming convention `messagebundle_<locale>.properties` (e.g. `messagebundle_fr.properties`). The UI5 Web Components build pipeline picks it up automatically.
 
 > [!NOTE]
-> Both the UI5 native control and the web component use the same `setI18nResolver()` callback pattern for i18n customization. The resolver receives the key, current locale, and base text, and returns a string override or `undefined` to keep the default. The UI5 control additionally resolves base text from a UI5 ResourceBundle, while the web component uses built-in EN/DE strings.
+> Both the UI5 native control and the web component use the same `setI18nResolver()` callback pattern for i18n customization. The resolver receives the key, current locale, and base text, and returns a string override or `undefined` to keep the default. The UI5 control additionally resolves base text from a UI5 ResourceBundle, while the web component uses built-in EN/DE/JA/AR strings.
 
 ## CSS Parts
 

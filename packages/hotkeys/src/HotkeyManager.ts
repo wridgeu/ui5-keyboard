@@ -1213,14 +1213,25 @@ export default class HotkeyManager extends BaseObject {
   ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
 
+    // Callback (lazy) targets resolve to an element only at dispatch time, so two
+    // callback-target hotkeys cannot be compared by element here. Matching them by
+    // hotkey alone produced false conflicts - a blocking throw (Error) or a silent
+    // removal (Replace) of a registration that may target a different element. Skip
+    // conflict handling for them; genuine overlaps are resolved at dispatch time.
+    if (targetCallback) {
+      Log.debug(
+        `Conflict check skipped for callback-target hotkey "${normalizedHotkey}" in scope "${scope}" ` +
+          `(callback targets are resolved at dispatch time).`,
+        undefined,
+        LOG_COMPONENT,
+      );
+      return;
+    }
+
     // Use scope-bucket lookup instead of iterating all registrations
     const bucket = this._registrationsByScope.get(scope);
     if (!bucket) return;
-    const ids = targetCallback
-      ? bucket.callbackTargetIds
-      : target === null
-        ? bucket.untargetedIds
-        : this._getTargetRegistrationIds(bucket, target);
+    const ids = target === null ? bucket.untargetedIds : this._getTargetRegistrationIds(bucket, target);
     if (!ids || ids.size === 0) return;
 
     // Find conflicts by matching normalizedHotkey within the bucket

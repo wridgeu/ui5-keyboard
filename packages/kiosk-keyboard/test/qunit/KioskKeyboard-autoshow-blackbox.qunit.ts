@@ -239,3 +239,51 @@ QUnit.test(
     kb.destroy();
   },
 );
+
+// ──────────────────────────────────────────────
+// 6. Composition middleware is committed on target switch
+// ──────────────────────────────────────────────
+
+QUnit.test(
+  "Composition middleware commits to the old target on target switch (no leak into the new target)",
+  async (assert) => {
+    const inputA = new Input({ value: "" });
+    const inputB = new Input({ value: "" });
+    inputA.placeAt("qunit-fixture");
+    inputB.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({ docked: true, autoShow: true, layout: "ko-hangul" });
+    await placeAndWait(kb);
+
+    const domA = inputA.getFocusDomRef() as HTMLInputElement;
+    const domB = inputB.getFocusDomRef() as HTMLInputElement;
+
+    // Focus inputA → keyboard targets it and opens
+    domA.focus();
+    await nextUIUpdate();
+    assert.strictEqual(kb.getActiveControl()?.getId(), inputA.getId(), "Target is inputA after focus");
+
+    // Compose a partial syllable in inputA: ㅎ + ㅏ → 하 (still composing)
+    tapKey(kb, "ㅎ"); // ㅎ
+    tapKey(kb, "ㅏ"); // ㅏ
+    assert.strictEqual(domA.value, "하", "inputA shows composing 하 (preedit live)");
+
+    // Switch target to inputB mid-composition
+    domB.focus();
+    await nextUIUpdate();
+    assert.strictEqual(kb.getActiveControl()?.getId(), inputB.getId(), "Target switched to inputB");
+
+    // The in-progress syllable must be committed to inputA, not abandoned
+    assert.strictEqual(domA.value, "하", "inputA keeps the committed 하 after the target switch");
+
+    // The next keypress starts a FRESH composition on inputB; inputA's state
+    // must not leak (the bug produced 한 in inputB and corrupted offsets).
+    tapKey(kb, "ㄴ"); // ㄴ
+    assert.strictEqual(domB.value, "ᄂ", "inputB starts fresh with ㄴ (leading jamo), no leak from inputA");
+    assert.strictEqual(domA.value, "하", "inputA is unchanged by typing into inputB");
+
+    inputA.destroy();
+    inputB.destroy();
+    kb.destroy();
+  },
+);

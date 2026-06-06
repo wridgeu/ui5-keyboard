@@ -75,6 +75,32 @@ QUnit.test("ConflictBehavior.Error: same target in same scope DOES conflict", (a
   );
 });
 
+QUnit.test("ConflictBehavior.Error: callback targets with same hotkey do not throw (resolved lazily)", (assert) => {
+  const manager = createHotkeyManager();
+  const a = document.createElement("div");
+  const b = document.createElement("div");
+
+  manager.register("F9", () => {}, { target: () => a, conflictBehavior: ConflictBehavior.Error });
+  // A second callback target may resolve to a different element. The conflict
+  // cannot be proven at registration time, so registration must NOT throw.
+  manager.register("F9", () => {}, { target: () => b, conflictBehavior: ConflictBehavior.Error });
+
+  assert.strictEqual(manager.getRegistrations().length, 2, "Both callback-target registrations co-exist");
+});
+
+QUnit.test("ConflictBehavior.Replace: callback targets with same hotkey are not silently removed", (assert) => {
+  const manager = createHotkeyManager();
+  const a = document.createElement("div");
+  const b = document.createElement("div");
+
+  manager.register("F10", () => {}, { target: () => a, conflictBehavior: ConflictBehavior.Replace });
+  // Replace must not drop the first registration: the callbacks may resolve to
+  // different elements, so the "conflict" is unprovable at registration time.
+  manager.register("F10", () => {}, { target: () => b, conflictBehavior: ConflictBehavior.Replace });
+
+  assert.strictEqual(manager.getRegistrations().length, 2, "Distinct callback-target registration is preserved");
+});
+
 QUnit.test("ConflictBehavior.Error: re-rendered element with same id conflicts via id-index", (assert) => {
   const manager = createHotkeyManager();
   const original = document.createElement("div");

@@ -54,6 +54,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Verifies the load-bearing less-openui5 parser patch still produces the
+      # @container/@layer at-rules the kiosk theme build depends on (the patch is
+      # applied by postinstall during `npm ci` above).
+      - name: Patch regression tests
+        run: npm run test:patches
+
       - name: Cache Playwright browsers
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:

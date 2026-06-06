@@ -23,6 +23,15 @@ describe("middleware-registry", () => {
       expect(getMiddlewareFactory("nonexistent")).toBeNull();
     });
 
+    it("resolves the layout name case- and whitespace-insensitively (matches the layout registry)", () => {
+      // The `layout` attribute is normalized to lowercase when resolving the
+      // rendered layout, so the middleware lookup must normalize identically -
+      // otherwise `<kiosk-keyboard layout="Ko-Hangul">` renders Hangul but never
+      // engages composition.
+      expect(typeof getMiddlewareFactory("Ko-Hangul")).toBe("function");
+      expect(typeof getMiddlewareFactory("  KO-HANGUL  ")).toBe("function");
+    });
+
     it("instance map shadows the built-in factory", () => {
       const instanceFactory = (): CompositionMiddleware => ({
         handleKey: () => true,

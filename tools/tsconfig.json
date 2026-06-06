@@ -9,8 +9,16 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
+    "allowJs": true,
+    "checkJs": true,
+    // The oxlint plugins visit untyped ESLint AST nodes and import the untyped
+    // `eslint` module; their visitor params are legitimately `any`. Relax
+    // noImplicitAny so the check still catches real errors (typos, undefined
+    // symbols, wrong arity/types against the typed Node APIs) without demanding
+    // full AST annotations.
+    "noImplicitAny": false,
     "noEmit": true
   },
-  "include": ["./*.ts"],
+  "include": ["./*.mjs", "../patches/*.mjs"],
   "exclude": ["../node_modules"]
 }
