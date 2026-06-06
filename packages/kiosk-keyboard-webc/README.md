@@ -77,15 +77,11 @@ Install from npm:
 npm install kiosk-keyboard-webc
 ```
 
-### Peer Dependencies
+### Framework dependencies
 
-This package declares the UI5 Web Components framework as **peer dependencies**. Your application must install them alongside this package:
+This package depends on the UI5 Web Components framework (`@ui5/webcomponents`, `@ui5/webcomponents-base`, `@ui5/webcomponents-icons`, `@ui5/webcomponents-theming`) as regular `dependencies`, so they are installed automatically with `kiosk-keyboard-webc` — no separate install step is required.
 
-```bash
-npm install @ui5/webcomponents @ui5/webcomponents-base @ui5/webcomponents-icons @ui5/webcomponents-theming
-```
-
-If your app already uses UI5 Web Components (e.g., `@ui5/webcomponents` buttons, inputs, etc.), these are already installed and no extra action is needed. The peer dependency ensures a single shared instance of the framework registries (custom elements, themes, i18n), avoiding duplicate registration errors.
+If your app also uses UI5 Web Components directly (e.g., `@ui5/webcomponents` buttons, inputs), make sure your bundler dedupes a single instance of `@ui5/webcomponents-base` so the framework registries (custom elements, themes, i18n) are shared and duplicate-registration errors are avoided. This package's Vite build already dedupes `@ui5/webcomponents-base`.
 
 ### Tree-Shaking
 
@@ -273,7 +269,7 @@ const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
 KioskKeyboard.setI18nResolver((key) => undefined);
 ```
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable imports for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
@@ -527,7 +523,7 @@ keyboard.addEventListener("key-press", (e) => {
 
 ## Subpath Imports
 
-The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for middleware, the CDN bundle, and asset registration:
+The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for middleware, the convenience bundle entry, and asset registration:
 
 | Import                                  | Description                                                                                                                  |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |

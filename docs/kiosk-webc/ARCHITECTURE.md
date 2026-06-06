@@ -498,7 +498,7 @@ npm run generateAPI  →  CEM generation + validation (also included in npm run 
 
 `npm run build` executes the full pipeline in order: `build:dev`, `build:bundle`, then `generateAPI`.
 
-The bundle step uses Vite in library mode with `inlineDynamicImports: true` to produce a single self-contained file that inlines all UI5 WC framework dependencies.
+The bundle step uses Vite (Rolldown) in library mode with `output.codeSplitting: false` (the Vite 8 / Rolldown replacement for the deprecated `inlineDynamicImports: true`) to produce a single self-contained file that inlines all UI5 WC framework dependencies.
 
 CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration files (VS Code, JetBrains), and validates the public API documentation. Running it directly is still useful when iterating only on API docs or manifest output. See [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md) for details.
 
