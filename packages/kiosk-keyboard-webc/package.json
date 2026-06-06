@@ -99,12 +99,14 @@
     "typecheck:e2e": "tsc -p test/e2e/tsconfig.json --noEmit",
     "generateAPI": "ui5nps generateAPI"
   },
-  "devDependencies": {
-    "@open-wc/testing": "~4.0.0",
+  "dependencies": {
     "@ui5/webcomponents": "~2.22.0",
     "@ui5/webcomponents-base": "~2.22.0",
     "@ui5/webcomponents-icons": "~2.22.0",
-    "@ui5/webcomponents-theming": "~2.22.0",
+    "@ui5/webcomponents-theming": "~2.22.0"
+  },
+  "devDependencies": {
+    "@open-wc/testing": "~4.0.0",
     "@ui5/webcomponents-tools": "2.22.0",
     "@vitest/coverage-v8": "~4.1.7",
     "@web/dev-server-esbuild": "~1.0.5",
@@ -113,12 +115,6 @@
     "jsdom": "~29.1.1",
     "vite": "~8.0.14",
     "vitest": "~4.1.7"
-  },
-  "peerDependencies": {
-    "@ui5/webcomponents": "~2.21.0",
-    "@ui5/webcomponents-base": "~2.21.0",
-    "@ui5/webcomponents-icons": "~2.21.0",
-    "@ui5/webcomponents-theming": "~2.21.0"
   },
   "engines": {
     "node": ">=22"

@@ -26,10 +26,16 @@ export function _registerMiddleware(layout: string, factory: () => CompositionMi
 /**
  * Returns the middleware factory for the given layout, or null.
  * Instance overrides take precedence over built-ins.
+ *
+ * The layout name is normalized (trim + lowercase) to match the layout
+ * registry's contract, so a mixed-case `layout` attribute (e.g. "Ko-Hangul")
+ * renders and composes consistently. Built-in and instance factories are both
+ * registered under lowercase keys.
  */
 export function getMiddlewareFactory(
   layout: string,
   instanceFactories?: InstanceMiddleware,
 ): (() => CompositionMiddleware) | null {
-  return instanceFactories?.get(layout) ?? factories.get(layout) ?? null;
+  const name = layout.trim().toLowerCase();
+  return instanceFactories?.get(name) ?? factories.get(name) ?? null;
 }

@@ -340,7 +340,7 @@ class KioskKeyboard extends UI5Element {
    *
    * - `key` -- the i18n key (e.g. `"KEY_SHIFT"`, `"ARIA_KEYBOARD_OPENED"`)
    * - `locale` -- the current browser locale language subtag (e.g. `"en"`, `"de"`, `"fr"`)
-   * - `defaultText` -- the text resolved from the built-in bundle (English or German)
+   * - `defaultText` -- the text resolved from the built-in locale bundle
    *
    * Return a `string` to override that text, or `undefined` to keep the default.
    *
@@ -350,7 +350,8 @@ class KioskKeyboard extends UI5Element {
    * If the resolver throws, the error is logged and the default text is used.
    * Pass `null` to clear a previously set resolver.
    *
-   * @example
+   * Example (the `@example` tag is intentionally avoided -- it is rejected by
+   * the CEM dev-mode validation; see docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md):
    * ```ts
    * // Add French translations
    * KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
@@ -1458,16 +1459,20 @@ class KioskKeyboard extends UI5Element {
     if (changed) {
       this._currentLayout = currentLayout;
       this._layoutSource = source;
+      // A real layout switch ends any in-progress composition: commit the
+      // preedit to the target and drop the middleware so the next key resolves
+      // the new layout's middleware. Covers both a programmatic `layout` change
+      // and the {layout:*} key path.
+      if (this._middleware) {
+        this._middleware.commit();
+        this._middleware = null;
+      }
     }
     this._shiftState.reset();
     return changed;
   }
 
   private _handleLayoutSwitch(value: string): void {
-    if (this._middleware) {
-      this._middleware.commit();
-      this._middleware = null;
-    }
     // Lowercase to match the case-insensitive registry, so a mixed-case name
     // can't be recorded as a (corrupt) base layout.
     const layoutName = value.slice("{layout:".length, -1).trim().toLowerCase();

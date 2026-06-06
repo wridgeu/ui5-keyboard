@@ -77,15 +77,11 @@ Install from npm:
 npm install kiosk-keyboard-webc
 ```
 
-### Peer Dependencies
+### Framework dependencies
 
-This package declares the UI5 Web Components framework as **peer dependencies**. Your application must install them alongside this package:
+This package depends on the UI5 Web Components framework (`@ui5/webcomponents`, `@ui5/webcomponents-base`, `@ui5/webcomponents-icons`, `@ui5/webcomponents-theming`) as regular `dependencies`, so they are installed automatically with `kiosk-keyboard-webc` — no separate install step is required.
 
-```bash
-npm install @ui5/webcomponents @ui5/webcomponents-base @ui5/webcomponents-icons @ui5/webcomponents-theming
-```
-
-If your app already uses UI5 Web Components (e.g., `@ui5/webcomponents` buttons, inputs, etc.), these are already installed and no extra action is needed. The peer dependency ensures a single shared instance of the framework registries (custom elements, themes, i18n), avoiding duplicate registration errors.
+If your app also uses UI5 Web Components directly (e.g., `@ui5/webcomponents` buttons, inputs), make sure your bundler dedupes a single instance of `@ui5/webcomponents-base` so the framework registries (custom elements, themes, i18n) are shared and duplicate-registration errors are avoided. This package's Vite build already dedupes `@ui5/webcomponents-base`.
 
 ### Tree-Shaking
 
@@ -231,7 +227,7 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
 | **Framework**     | SAPUI5 / OpenUI5 only                                        | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge) |
 | **Theming**       | LESS variables (`@sapUiButton*`)                             | CSS custom properties + SAP theme token fallbacks             |
-| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback            | Built-in EN/DE + `setI18nResolver()` callback                 |
+| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback            | Built-in EN/DE/JA/AR + `setI18nResolver()` callback           |
 | **Target inputs** | `controls` property + `setControls()` + `getActiveControl()` | `controls` attribute + `setTargetElement()` + `activeElement` |
 | **Density**       | UI5 content density (`sapUiSizeCompact`)                     | `data-ui5-compact-size` attribute                             |
 
@@ -273,7 +269,7 @@ const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
 KioskKeyboard.setI18nResolver((key) => undefined);
 ```
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable imports for composing custom variant layouts. These rows omit `type` (defaulting to regular keys with visible borders); set `type: "modifier"` on individual keys to get the transparent Lite button style instead.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The two shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
@@ -527,14 +523,14 @@ keyboard.addEventListener("key-press", (e) => {
 
 ## Subpath Imports
 
-The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for middleware, the CDN bundle, and asset registration:
+The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for middleware, the convenience bundle entry, and asset registration:
 
-| Import                                  | Description                       |
-| --------------------------------------- | --------------------------------- |
-| `kiosk-keyboard-webc`                   | Full entry (all built-in layouts) |
-| `kiosk-keyboard-webc/middleware/<name>` | Composition middleware            |
-| `kiosk-keyboard-webc/bundle`            | Single-file bundle (CDN/scripts)  |
-| `kiosk-keyboard-webc/Assets`            | Theme + i18n registration         |
+| Import                                  | Description                                                                                                                  |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `kiosk-keyboard-webc`                   | Full entry (all built-in layouts)                                                                                            |
+| `kiosk-keyboard-webc/middleware/<name>` | Composition middleware                                                                                                       |
+| `kiosk-keyboard-webc/bundle`            | Convenience entry: element + Assets (needs a bundler/import map; for a plain `<script>` use `dist/kiosk-keyboard.bundle.js`) |
+| `kiosk-keyboard-webc/Assets`            | Theme + i18n registration                                                                                                    |
 
 ### Layout Composition
 
@@ -844,7 +840,7 @@ KioskKeyboard.setI18nResolver((key, locale) => {
 **Adding built-in translations (library contributors):** To add a new locale to the library itself, create a properties file in `src/i18n/` following the naming convention `messagebundle_<locale>.properties` (e.g. `messagebundle_fr.properties`). The UI5 Web Components build pipeline picks it up automatically.
 
 > [!NOTE]
-> Both the UI5 native control and the web component use the same `setI18nResolver()` callback pattern for i18n customization. The resolver receives the key, current locale, and base text, and returns a string override or `undefined` to keep the default. The UI5 control additionally resolves base text from a UI5 ResourceBundle, while the web component uses built-in EN/DE strings.
+> Both the UI5 native control and the web component use the same `setI18nResolver()` callback pattern for i18n customization. The resolver receives the key, current locale, and base text, and returns a string override or `undefined` to keep the default. The UI5 control additionally resolves base text from a UI5 ResourceBundle, while the web component uses built-in EN/DE/JA/AR strings.
 
 ## CSS Parts
 

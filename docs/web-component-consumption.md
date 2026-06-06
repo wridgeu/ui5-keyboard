@@ -178,16 +178,17 @@ forward slashes.
 
 **Root cause:** The `@ui5/webcomponents` team builds on Linux CI and has never
 encountered this. The fix would be `path.posix.join()` or a post-normalization
-in the analyzer. No upstream fix exists as of `@ui5/webcomponents-tools@2.19.2`.
+in the analyzer. No upstream fix exists as of `@ui5/webcomponents-tools@2.22.0`.
 
-**Fix:** A `patch-package` patch on `@ui5/webcomponents-tools` replaces
+**Fix:** Originally a `patch-package` patch on `@ui5/webcomponents-tools` replaced
 `path.join()` / `path.dirname()` with `path.posix.join()` / `path.posix.dirname()`
-in `lib/cem/utils.mjs`. This produces forward slashes on all platforms. The input
-is a CEM module path (not a filesystem path), so `path.posix` is semantically
-correct. See `patches/README.md` Bug 6 for the full rationale and evidence from
-`ui5-tooling-modules` source code.
+in `lib/cem/utils.mjs`. That patch (Bug 6) has since been **removed**: flattening
+the component into a single module eliminated the cross-module type references that
+triggered `getTypeReferenceModulePath`, so the path-normalization issue no longer
+affects this project. See `patches/README.md` Bug 6 for the full history.
 
-**Status:** Fixed via patch. Remove when the upstream adopts `path.posix`.
+**Status:** No longer applicable to this project (the trigger was removed). The
+upstream bug still exists for components with cross-module type references on Windows.
 
 ### Exports Map Double-Dist Resolution
 

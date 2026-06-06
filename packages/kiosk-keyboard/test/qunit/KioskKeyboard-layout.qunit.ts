@@ -1174,3 +1174,39 @@ QUnit.test("Numeric layout keys identical regardless of base layout (qwerty vs q
   kbQwerty.destroy();
   kbQwertz.destroy();
 });
+
+// ──────────────────────────────────────────────
+// Composition middleware lifecycle across layout switches
+// ──────────────────────────────────────────────
+
+QUnit.test("Programmatic setLayout commits in-progress composition (no leak across layout switch)", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true, layout: "ko-hangul" });
+  await placeAndWait(kb);
+
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.focus();
+  await nextUIUpdate();
+
+  // Compose a partial syllable: ㅎ + ㅏ → 하 (still composing)
+  tapKey(kb, "ㅎ");
+  tapKey(kb, "ㅏ");
+  assert.strictEqual(dom.value, "하", "Composing 하 in ko-hangul");
+
+  // A programmatic layout switch must commit the preedit and drop the middleware.
+  kb.setLayout("qwerty");
+  await waitForRender();
+  assert.strictEqual(dom.value, "하", "하 is committed to the input on programmatic setLayout");
+
+  // Returning to ko-hangul, the next jamo starts a FRESH syllable - the old
+  // composition state must not leak (the bug combined it into 한).
+  kb.setLayout("ko-hangul");
+  await waitForRender();
+  tapKey(kb, "ㄴ");
+  assert.strictEqual(dom.value, "하ᄂ", "Fresh composition after switch: 하 then leading ㄴ, not 한");
+
+  input.destroy();
+  kb.destroy();
+});

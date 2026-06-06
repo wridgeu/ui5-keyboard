@@ -12,8 +12,8 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
-const require = createRequire(import.meta.url);
-const less = require("less-openui5/lib/thirdparty/less/index.js");
+const nodeRequire = createRequire(import.meta.url);
+const less = nodeRequire("less-openui5/lib/thirdparty/less/index.js");
 
 const input = readFileSync(join(import.meta.dirname, "less-openui5-test.less"), "utf8");
 
@@ -44,7 +44,7 @@ parser.parse(input, (err, tree) => {
   try {
     css = tree.toCSS({});
   } catch (e) {
-    console.error("CSS GENERATION ERROR:", e.message);
+    console.error("CSS GENERATION ERROR:", e instanceof Error ? e.message : String(e));
     process.exit(1);
   }
 

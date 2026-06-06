@@ -161,7 +161,7 @@ A **composition middleware** is a self-registering module that intercepts key pr
 
 ### Current implementations
 
-- **Kana dakuten** (`middleware/kana-dakuten.ts`): Composes hiragana base characters with dakuten/handakuten marks for the `ja-kana` layout. Table lookup of ~50 mappings.
+- **Kana dakuten** (`middleware/kana-dakuten.ts`): Composes hiragana base characters with dakuten/handakuten marks for the `ja-kana` layout. Table lookup of ~26 mappings.
 - **Hangul compose** (`middleware/hangul-compose.ts`): Composes Korean jamo (consonants and vowels) into Hangul syllable blocks for the `ko-hangul` layout. Implements the Unicode Hangul Syllable Composition Algorithm.
 
 ### Consumer API

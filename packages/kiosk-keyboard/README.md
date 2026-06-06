@@ -609,7 +609,8 @@ When `handleKey` returns `true`, the keyboard skips default handling. The middle
 
 Middleware lifecycle:
 
-- **Layout switch**: `commit()` is called, instance discarded. A fresh instance is created when the layout activates again.
+- **Layout switch**: `commit()` is called, instance discarded. A fresh instance is created when the layout activates again. Covers both the `{layout:*}` key and a programmatic `setLayout()`.
+- **Target switch**: `commit()` is called and the instance is discarded, so an in-progress syllable is flushed to the old input and the new target starts a fresh composition.
 - **Component destroyed**: `reset()` is called. In-progress composition is discarded, not flushed.
 
 ---
@@ -1174,7 +1175,7 @@ Navigation and function keys (`{fkey:*}`) default to column layout with scaled i
 
 ### Responsive behavior
 
-At narrow key widths (below `5rem` per key), dual keys automatically hide the text label using the sr-only pattern (`clip-path: inset(50%)`). The icon remains visible, and the label stays in the accessibility tree as the key's accessible name.
+At narrow key widths (at or below `7rem` per key), dual keys automatically hide the text label using the sr-only pattern (`clip-path: inset(50%)`). The icon remains visible, and the label stays in the accessibility tree as the key's accessible name.
 
 This behavior is driven by a CSS `@container` query on individual keys (`container-type: inline-size`). It applies only to dual keys (those with both icon and label).
 

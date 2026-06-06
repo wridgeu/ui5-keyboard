@@ -60,6 +60,7 @@
     "test:kiosk-webc:e2e:tablet": "npm run test:e2e:tablet -w packages/kiosk-keyboard-webc",
     "test:demo:webc-bundle": "node tools/check-demo-webc-bundle.mjs",
     "test:packages:smoke": "node tools/check-package-smoke.mjs",
+    "test:patches": "node patches/less-openui5-test.mjs",
     "test:e2e:ci": "npm run test:e2e:ci -w packages/kiosk-keyboard && npm run test:e2e:ci -w packages/kiosk-keyboard-webc",
     "test:e2e:all-devices": "concurrently --kill-others-on-fail -n kb,webc \"npm run test:e2e:all-devices -w packages/kiosk-keyboard\" \"npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc\"",
     "test:e2e:all-devices:sequential": "npm run test:e2e:all-devices:sequential -w packages/kiosk-keyboard && npm run test:e2e:all-devices:sequential -w packages/kiosk-keyboard-webc",
@@ -81,8 +82,8 @@
     "typecheck:tools": "tsc -p tools/tsconfig.json --noEmit",
     "report:visual:kiosk": "npm run test:e2e:report -w packages/kiosk-keyboard",
     "report:visual:webc": "npm run test:e2e:report -w packages/kiosk-keyboard-webc",
-    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices:sequential",
-    "check:parallel": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices",
+    "check": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:patches && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices:sequential",
+    "check:parallel": "npm run fmt:check && npm run lint && npm run lint:ui5 && npm run typecheck && npm run test:patches && npm test && npm run test:packages:smoke && npm run test:demo:webc-bundle && npm run test:e2e:all-devices",
     "postinstall": "patch-package && node patches/apply-nested.mjs",
     "prepare": "husky",
     "commitlint": "commitlint --edit"

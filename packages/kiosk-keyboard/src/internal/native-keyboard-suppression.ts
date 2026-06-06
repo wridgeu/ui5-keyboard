@@ -25,6 +25,15 @@ export default class NativeKeyboardSuppression extends BaseObject {
     this._host = host;
   }
 
+  /**
+   * Clears the page-level suppression bookkeeping. Called from
+   * `KioskKeyboard.exit()` on last-instance teardown so an orphaned entry (an
+   * input destroyed while suppressed) cannot survive for the page lifetime.
+   */
+  static _clearAll(): void {
+    NativeKeyboardSuppression._suppressions.clear();
+  }
+
   shouldDeferToNative(): boolean {
     const mode = this._host.getMobileKeyboard();
     if (mode === MobileKeyboard.Custom) return false;

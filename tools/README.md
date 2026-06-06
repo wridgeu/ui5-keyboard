@@ -77,12 +77,13 @@ runNpm(["run", "build"], "packages/hotkeys");
 
 ## `check-demo-webc-bundle.mjs`
 
-Build-time smoke check that keeps the documented UI5 bridge path honest.
+Build-time smoke check for the web component build outputs.
 
-- Verifies the demo still imports `kiosk-keyboard-webc/bundle`
-- Rebuilds `packages/kiosk-keyboard-webc` and resolves that public entry from `packages/demo-app`
-- Rebuilds `packages/demo-app`
-- Fails if the documented public bundle path stops being buildable in the demo
+- Rebuilds `packages/kiosk-keyboard-webc` and asserts the standalone bundle (`dist/kiosk-keyboard.bundle.js`) exists
+- Rebuilds `packages/demo-app`, exercising the `ui5-tooling-modules` `<kiosk-keyboard>` consumption path at build time
+
+This is a build smoke test, not a runtime check: it confirms both packages build, but
+does not load the demo. The runtime consumption is covered by the e2e suites.
 
 Run via `npm run test:demo:webc-bundle`.
 

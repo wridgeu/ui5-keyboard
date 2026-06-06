@@ -847,8 +847,9 @@ export default class KioskKeyboard extends Control {
       this._middleware = null;
     }
     KioskKeyboard._instances.delete(this);
+    const wasLastInstance = KioskKeyboard._instances.size === 0;
 
-    if (KioskKeyboard._instances.size === 0) {
+    if (wasLastInstance) {
       registrySetResolver(null);
       KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.clear();
       KioskKeyboard._globalTargetResolver = null;
@@ -863,6 +864,14 @@ export default class KioskKeyboard extends Control {
     // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
+
+    // After this instance restored its own inputmode suppression (in
+    // _teardownControls above), clear any page-level bookkeeping that outlived
+    // all instances - defensive against an orphaned entry from an input
+    // destroyed mid-suppression.
+    if (wasLastInstance) {
+      NativeKeyboardSuppression._clearAll();
+    }
   }
 
   // ── Public API: property overrides ──
@@ -973,6 +982,14 @@ export default class KioskKeyboard extends Control {
     const changed = name !== this.getLayout();
     if (changed) {
       this._layoutSource = source;
+      // A real layout switch ends any in-progress composition: commit the
+      // preedit to the target and drop the middleware so the next key resolves
+      // the new layout's middleware. Covers both programmatic setLayout() and
+      // the {layout:*} key path.
+      if (this._middleware) {
+        this._middleware.commit();
+        this._middleware = null;
+      }
     }
     this._shiftState.reset();
     this.setProperty("layout", name);
@@ -1114,6 +1131,17 @@ export default class KioskKeyboard extends Control {
     this.setAssociation("_activeTarget", target ?? "", true);
 
     const newId = this._getActiveTargetId();
+
+    // A real target switch ends any in-progress composition: commit the preedit
+    // to the old target and drop the middleware so the new target starts a fresh
+    // composition. Without this, the cached middleware (which holds the old
+    // target and its preedit offsets) leaks the old syllable into the new input.
+    // Mirrors the `{layout:}` key path and the web component's focusin handling.
+    // A same-input refocus (caret reposition) keeps the composition going.
+    if (newId !== previousTarget && this._middleware) {
+      this._middleware.commit();
+      this._middleware = null;
+    }
 
     // A real target switch is a new editing context: drop a user-driven
     // `{layout:X}` override so the new target re-resolves under its keyboardType.
@@ -2007,10 +2035,6 @@ export default class KioskKeyboard extends Control {
     if (keyValue.startsWith("{layout:")) {
       const raw = keyValue.slice("{layout:".length, -1).trim();
       if (!raw) return;
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
       const name = (raw === "base" ? this._baseLayout : raw).toLowerCase();
       // Validate against the registry so a bogus override key doesn't poison
       // the layout property. setLayout would log a warning and bail, but we
