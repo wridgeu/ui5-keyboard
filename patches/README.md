@@ -2,11 +2,11 @@
 
 Local patches applied via [patch-package](https://github.com/ds300/patch-package) to fix upstream issues in dependencies. These are applied automatically on `npm install` via the `postinstall` script.
 
-## @ui5/webcomponents-tools+2.21.1
+## @ui5/webcomponents-tools+2.22.0
 
 Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling. (Bug 6 was removed earlier; see below.)
 
-**Verified May 2026 against 2.21.1:** the patch still applies cleanly to the pristine `2.21.1` package as published on npm; none of the five bugs were fixed upstream between 2.20.0 and 2.21.1. The patch filename was bumped from `2.20.0` to `2.21.1` to match the new pinned version.
+**Pinned at 2.22.0:** the patch applies cleanly to the pristine `2.22.0` package as published on npm (patch-package requires the filename version to match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.22.0` bumps. The patch filename tracks the pinned version.
 
 **Note on upstream ownership:** `@ui5/webcomponents-tools` ships a bundled, patched copy of the community `@custom-elements-manifest/analyzer` under `lib/cem/patch/`. Bugs 1, 3, and 4 are in SAP's own `lib/cem/custom-elements-manifest.config.mjs` and can be filed directly against [UI5/webcomponents](https://github.com/UI5/webcomponents) (the SAP-owned org renamed to `UI5` in early 2026). Bugs 2 and 5 are in the bundled analyzer copy (`lib/cem/patch/@custom-elements-manifest/analyzer/`) which originates from [open-wc/custom-elements-manifest](https://github.com/open-wc/custom-elements-manifest). SAP can apply these to their bundled copy, but the root fix belongs in the community repo.
 
@@ -127,7 +127,7 @@ The fix was to use `path.posix.join()` and `path.posix.dirname()` instead of the
 
 Repository: https://github.com/UI5/webcomponents (was `SAP/ui5-webcomponents` before the early-2026 org rename).
 
-These patches should be removed once the upstream issues are resolved. As of `@ui5/webcomponents-tools@2.21.1` (May 2026 verification) all five bugs are still present upstream.
+These patches should be removed once the upstream issues are resolved. As of `@ui5/webcomponents-tools@2.22.0` all five bugs are still present upstream.
 
 ## less-openui5+0.11.6
 

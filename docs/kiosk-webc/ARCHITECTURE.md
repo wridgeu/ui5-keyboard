@@ -158,7 +158,7 @@ click / touchend
   |     {shift}         -> toggle shift state machine, fire key-press
   |     {backspace}     -> fire key-press, handle backspace on target
   |     {enter}         -> fire key-press, insert newline (textarea) / fire change (input)
-  |     {layout:name}   -> switch layout, fire layout-change
+  |     {layout:name}   -> switch layout, fire layout-change (only if it changed)
   |     {fkey:name}     -> handle function/navigation key
   |     (character)     -> resolve shift value, fire key-press, insert text
   |
@@ -550,17 +550,17 @@ Consumers who want selective layout loading can import the main entry (which inc
 
 ## Edge Cases
 
-| Edge Case                            | Handling                                                                                    |
-| ------------------------------------ | ------------------------------------------------------------------------------------------- |
-| Focus steal on key tap               | `touchstart` and `mousedown` `preventDefault()` keeps focus on input                        |
-| Finger drift on touch                | `touchend` uses `elementFromPoint()` at lift-off coordinates                                |
-| Docked close during key click        | Deferred focusout close via `requestAnimationFrame`, cancelled if focus returns to keyboard |
-| Input inside shadow DOM              | `resolveInputOrTextarea()` recurses up to 3 shadow DOM levels                               |
-| Multiple keyboard instances          | Static `_instances` set, `_isTargetOfOther()` isolation, ref-counted inputmode              |
-| Custom resolver crash                | try/catch with fallback to built-in resolver                                                |
-| Layout switch in Numpad/Numeric mode | `{layout:*}` keys switch to the named layout and change keyboardType to Full                |
-| UI5-prefixed DOM IDs                 | `_matchesControls()` strips `*--` prefix pattern                                            |
-| Shift auto-release vs Caps Lock      | Only one-shot shift auto-releases, caps lock is sticky                                      |
-| i18n bundle not loaded yet           | English defaults used until async bundle resolves                                           |
-| Physical keyboard highlight on blur  | `blur` listener clears all highlights                                                       |
-| Long grapheme clusters (emoji)       | `Intl.Segmenter` with 40-code-unit tail window                                              |
+| Edge Case                            | Handling                                                                                                                    |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Focus steal on key tap               | `touchstart` and `mousedown` `preventDefault()` keeps focus on input                                                        |
+| Finger drift on touch                | `touchend` uses `elementFromPoint()` at lift-off coordinates                                                                |
+| Docked close during key click        | Deferred focusout close via `requestAnimationFrame`, cancelled if focus returns to keyboard                                 |
+| Input inside shadow DOM              | `resolveInputOrTextarea()` recurses up to 3 shadow DOM levels                                                               |
+| Multiple keyboard instances          | Static `_instances` set, `_isTargetOfOther()` isolation, ref-counted inputmode                                              |
+| Custom resolver crash                | try/catch with fallback to built-in resolver                                                                                |
+| Layout switch in Numpad/Numeric mode | `{layout:*}` sets `_layoutSource="user"` so the named layout renders despite the constraint; keyboardType is left unchanged |
+| UI5-prefixed DOM IDs                 | `_matchesControls()` strips `*--` prefix pattern                                                                            |
+| Shift auto-release vs Caps Lock      | Only one-shot shift auto-releases, caps lock is sticky                                                                      |
+| i18n bundle not loaded yet           | English defaults used until async bundle resolves                                                                           |
+| Physical keyboard highlight on blur  | `blur` listener clears all highlights                                                                                       |
+| Long grapheme clusters (emoji)       | `Intl.Segmenter` with 40-code-unit tail window                                                                              |

@@ -30,9 +30,14 @@ const deviceProfiles = [
   { name: "tablet", viewport: { width: 768, height: 1024 }, deviceScaleFactor: 2 },
 ];
 
-// Device matrix runs only the visual specs (the behavioral specs are desktop-only).
-const VISUAL_SPECS =
-  /(visual|visual-container|visual-container-responsive|visual-enhancements|visual-themes|rtl|accessibility-media)\.spec\.ts$/;
+// Behavioral specs need a desktop interaction context (real focus, typing) and
+// run desktop-only; flp-lifecycle / readme-screenshots run under their own
+// configs. Everything else is a visual spec and runs on the device matrix too.
+// A denylist (not an allowlist) keeps the matrix self-maintaining: a new visual
+// spec joins it automatically, while a forgotten new behavioral spec fails
+// loudly on mobile instead of being silently skipped.
+const DESKTOP_ONLY_SPECS = /(autotype|focus|i18n|inputmode|interop)\.spec\.ts$/;
+const SEPARATE_CONFIG_SPECS = /(flp-lifecycle|readme-screenshots)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: "./test/e2e",
@@ -59,12 +64,12 @@ export default defineConfig({
       name: "desktop",
       // FLP runs under playwright.flp.config.ts; readme-screenshots is generated
       // on demand via test:e2e:docs, not part of the regression run.
-      testIgnore: /(flp-lifecycle|readme-screenshots)\.spec\.ts$/,
+      testIgnore: SEPARATE_CONFIG_SPECS,
       use: { viewport: DESKTOP_VIEWPORT },
     },
     ...deviceProfiles.map((d) => ({
       name: d.name,
-      testMatch: VISUAL_SPECS,
+      testIgnore: [DESKTOP_ONLY_SPECS, SEPARATE_CONFIG_SPECS],
       use: {
         viewport: d.viewport,
         deviceScaleFactor: d.deviceScaleFactor,

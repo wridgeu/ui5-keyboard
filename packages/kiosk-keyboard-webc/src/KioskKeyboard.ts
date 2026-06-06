@@ -799,13 +799,8 @@ class KioskKeyboard extends UI5Element {
     const { name } = changeInfo;
 
     if (name === "layout") {
-      // A programmatic layout change overrides any user-driven layout switch
-      this._layoutSource = "external";
-      if (!SECONDARY_LAYOUTS.has(this.layout)) {
-        this._baseLayout = this.layout;
-      }
-      this._currentLayout = this.layout;
-      this._shiftState.reset();
+      // A programmatic layout change is external-sourced and re-engages constraints.
+      this._applyLayout(this.layout, "external");
     }
     if (name === "keyboardType") {
       if (!VALID_KEYBOARD_TYPES.has(this.keyboardType)) {
@@ -1446,34 +1441,52 @@ class KioskKeyboard extends UI5Element {
 
   // ── Layout switch / F-key handling ──
 
+  /**
+   * Apply a resolved layout as the active surface: track the base (alphabetic)
+   * layout, record who drove the switch, and reset the typing context. Shared by
+   * the `layout` property path and the `{layout:*}` key handler.
+   *
+   * Selecting a layout always resets shift/caps-lock, even a re-selection of the
+   * active layout. The `source` only changes on a real switch so a no-op can't
+   * silently flip the constraint-override. Returns whether the layout changed.
+   */
+  private _applyLayout(currentLayout: string, source: "external" | "user"): boolean {
+    if (!SECONDARY_LAYOUTS.has(currentLayout)) {
+      this._baseLayout = currentLayout;
+    }
+    const changed = currentLayout !== this._currentLayout;
+    if (changed) {
+      this._currentLayout = currentLayout;
+      this._layoutSource = source;
+    }
+    this._shiftState.reset();
+    return changed;
+  }
+
   private _handleLayoutSwitch(value: string): void {
     if (this._middleware) {
       this._middleware.commit();
       this._middleware = null;
     }
-    const layoutName = value.slice("{layout:".length, -1);
+    // Lowercase to match the case-insensitive registry, so a mixed-case name
+    // can't be recorded as a (corrupt) base layout.
+    const layoutName = value.slice("{layout:".length, -1).trim().toLowerCase();
     if (layoutName !== "base" && !getRegisteredLayout(layoutName, this._getInstanceLayoutsMap())) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
     }
-    if (layoutName === "base") {
-      this._currentLayout =
-        this._baseLayout ||
-        this.layout ||
-        getLocaleLayout(this._getInstanceLocaleLayoutsMap(), this._getInstanceLayoutsMap());
-      this._layoutSource = "external";
-    } else {
-      this._currentLayout = layoutName;
-      this._layoutSource = "user";
-      if (!SECONDARY_LAYOUTS.has(layoutName)) {
-        this._baseLayout = layoutName;
-      }
+    const changed =
+      layoutName === "base"
+        ? this._applyLayout(
+            this._baseLayout ||
+              this.layout ||
+              getLocaleLayout(this._getInstanceLocaleLayoutsMap(), this._getInstanceLayoutsMap()),
+            "external",
+          )
+        : this._applyLayout(layoutName, "user");
+    if (changed) {
+      this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
     }
-    // Reset shift/caps-lock on layout switch, matching the programmatic
-    // `layout` property setter path (onInvalidation, name === "layout").
-    // Caps-lock that was meaningful in QWERTY has no meaning in numpad/special.
-    this._shiftState.reset();
-    this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
   }
 
   private _handleFKeyPress(value: string, shifted: boolean): void {

@@ -38,15 +38,14 @@ export function getEventTarget(event: Event): EventTarget | null {
  * - `<input>` with an editable text type (text, password, email, number, etc.)
  *   that is not `readonly`
  * - `<textarea>`
+ * - `<select>` (a form control with native single-key type-ahead; suppressing
+ *   shortcuts here keeps the browser's built-in option matching working, matching
+ *   how global-hotkey libraries such as Mousetrap and hotkeys-js treat form fields)
  * - Any element with `contentEditable` active (including inherited)
  *
  * Returns `false` for:
  * - `<input type="button|submit|reset|checkbox|radio|hidden|file|image|range|color">`
  * - `<input readonly>` (text cannot be entered, so hotkeys should fire)
- * - `<select>` (a navigation control, not a text field: arrow/Enter/Escape and
- *   type-ahead are handled natively. Trade-off: a single-key shortcut bound to a
- *   letter now fires while a `<select>` is focused and can pre-empt that native
- *   type-ahead. This is intentional; `<select>` is treated as non-editable.)
  * - Non-editable elements
  * - `null` / non-Element targets
  */
@@ -63,6 +62,12 @@ export function isInputElement(target: EventTarget | null): boolean {
 
   // <textarea> accepts freeform text
   if (target instanceof HTMLTextAreaElement) {
+    return true;
+  }
+
+  // <select> has native single-key type-ahead; a letter shortcut must not
+  // pre-empt the browser matching an option that starts with that letter.
+  if (target instanceof HTMLSelectElement) {
     return true;
   }
 

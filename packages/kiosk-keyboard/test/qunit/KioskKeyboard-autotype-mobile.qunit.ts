@@ -4,7 +4,14 @@ import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
 import Device from "sap/ui/Device";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { getKeyElements, placeAndWait, waitForRender } from "./test-helpers";
+import {
+  createFakeKeyElement,
+  getKeyElements,
+  getRowKeyValues,
+  placeAndWait,
+  simulateTap,
+  waitForRender,
+} from "./test-helpers";
 
 // Device.system is writable at runtime; the readonly modifier only exists in the .d.ts.
 const deviceSystem = Device.system as Record<string, boolean>;
@@ -329,6 +336,90 @@ QUnit.test("resetKeyboardType re-enables autoType after constructor keyboardType
 
   numInput.destroy();
   textInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoType refocus on the same input preserves a user {layout:*} override", async (assert) => {
+  // Regression (#102 review): re-focusing the already-active auto-detected input
+  // must NOT re-run auto-detection in a way that wipes a user-driven {layout:*}
+  // switch. Before the fix, focusin called _setKeyboardTypeSource on every focus,
+  // which reset _layoutSource to "external" and reverted the user's surface.
+  const numInput = new Input({ type: "Number" });
+  numInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true, autoType: true });
+  await placeAndWait(kb);
+
+  const inputDom = numInput.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  await waitForRender();
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for Number input");
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad surface before the user switch (row 0 starts at '7')");
+
+  // User taps a {layout:numeric} key (e.g. from an instanceLayouts override): a
+  // user-driven switch that overrides the auto-detected keyboardType constraint.
+  simulateTap(kb, createFakeKeyElement("{layout:numeric}", "fake-numeric"));
+  await waitForRender();
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "1", "User switch to numeric lands (row 0 starts at '1')");
+
+  // Refocus the SAME input (blur then focus) -- a caret reposition, not a new
+  // editing context. The user's override must survive.
+  inputDom.blur();
+  inputDom.focus();
+  await waitForRender();
+
+  // The corrupted state is latent: the focusin re-detects the SAME type, so the
+  // keyboardType setProperty is a no-op and nothing re-renders immediately. Force
+  // the next render (as any subsequent keystroke / interaction would) to surface
+  // whether the override was silently dropped.
+  kb.invalidate();
+  await waitForRender();
+
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "keyboardType is unchanged by the refocus");
+  assert.strictEqual(
+    getRowKeyValues(kb, 0)[0],
+    "1",
+    "User {layout:numeric} override survives refocusing the same input and the next re-render (row 0 still '1')",
+  );
+
+  numInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoType switch to a different same-type input drops a user {layout:*} override", async (assert) => {
+  // Regression (#102 review): companion to the same-input refocus case above.
+  // Switching to a DIFFERENT input is a new editing context and must drop the
+  // override. Both inputs auto-detect to Numpad, so focusin skips re-detection
+  // and only the _setActiveTarget target-switch reset can clear it.
+  const numA = new Input({ type: "Number" });
+  const numB = new Input({ type: "Number" });
+  numA.placeAt("qunit-fixture");
+  numB.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true, autoType: true });
+  await placeAndWait(kb);
+
+  (numA.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Number input A auto-detects Numpad");
+
+  simulateTap(kb, createFakeKeyElement("{layout:numeric}", "fake-numeric"));
+  await waitForRender();
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "1", "User switch to numeric lands (row 0 starts at '1')");
+
+  // Switch to the other Number input: same detected type (Numpad), new context.
+  (numB.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "keyboardType stays Numpad across same-type switch");
+  assert.strictEqual(
+    getRowKeyValues(kb, 0)[0],
+    "7",
+    "Switching to a different input drops the user override and re-engages the numpad constraint (row 0 '7')",
+  );
+
+  numA.destroy();
+  numB.destroy();
   kb.destroy();
 });
 

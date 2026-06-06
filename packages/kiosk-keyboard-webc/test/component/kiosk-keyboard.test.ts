@@ -776,6 +776,29 @@ describe("kiosk-keyboard", () => {
       fakeKey.remove();
     });
 
+    it("normalizes mixed-case {layout:*} names without corrupting base tracking", async () => {
+      // The registry is case-insensitive, so "{layout:NUMERIC}" must resolve to
+      // the lowercase "numeric" (a secondary layout) rather than being recorded
+      // as a base layout. A later {layout:base} must still return to qwerty.
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+
+      const fakeKey = document.createElement("div");
+      fakeKey.setAttribute("role", "button");
+      fakeKey.dataset.key = "{layout:NUMERIC}";
+      rootDiv(el).appendChild(fakeKey);
+
+      const layoutChange = oneEvent(el, "layout-change");
+      fakeKey.click();
+      expect((await layoutChange).detail.layout, "mixed-case name normalized to lowercase").to.equal("numeric");
+      fakeKey.remove();
+      await nextRender();
+
+      const layoutChangeBack = oneEvent(el, "layout-change");
+      queryKey(el, "{layout:base}")!.click();
+      expect((await layoutChangeBack).detail.layout, "base returns to qwerty (base not corrupted)").to.equal("qwerty");
+    });
+
     it("filters {layout:base} from the auto-forced layout in Numeric mode", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
       await nextRender();
@@ -794,6 +817,54 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       expect(queryKey(el, "{layout:base}"), "ABC key remains on the secondary 'special' layout").to.not.be.null;
+    });
+
+    it("preserves a user {layout:*} override when the same auto-detected input is refocused", async () => {
+      // Cross-package parity with kiosk-keyboard (#102 review): re-focusing the
+      // already-active auto-detected input is a caret reposition, not a new
+      // editing context, so the user's {layout:*} override must survive. webc's
+      // focusin guard (`if (detected !== this.keyboardType)`) already prevents the
+      // redundant re-detect that would reset `_layoutSource`; this locks it in.
+      const container = await fixture(html`
+        <div>
+          <input id="num-refocus" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="num-refocus"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#num-refocus")!;
+      const el = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      // Auto-detect Numpad for the number input. The auto-forced numpad surface
+      // strips the {layout:base} (ABC) key, so its absence marks "on numpad".
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(el.keyboardType).to.equal("Numpad");
+      expect(queryKey(el, "{layout:base}"), "auto-forced numpad strips the ABC key").to.be.null;
+
+      // User taps a {layout:special} key: a user-driven switch that overrides the
+      // keyboardType constraint. The special layout DOES render an ABC key.
+      const fakeKey = document.createElement("div");
+      fakeKey.setAttribute("role", "button");
+      fakeKey.dataset.key = "{layout:special}";
+      rootDiv(el).appendChild(fakeKey);
+      const switched = oneEvent(el, "layout-change");
+      fakeKey.click();
+      await switched;
+      fakeKey.remove();
+      await nextRender();
+      expect(queryKey(el, "{layout:base}"), "special layout is shown after the user override").to.not.be.null;
+
+      // Refocus the SAME input -- the override must NOT be reverted.
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+
+      expect(el.keyboardType, "keyboardType unchanged by refocus").to.equal("Numpad");
+      expect(queryKey(el, "{layout:base}"), "user {layout:special} override survives refocusing the same input").to.not
+        .be.null;
     });
   });
 

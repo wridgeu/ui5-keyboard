@@ -785,9 +785,10 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 | `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key                                 |
 | `KEY_BACKSPACE`                  | Backspace               | Label for the Backspace key (visible text; aria-label when label is suppressed) |
 | `KEY_SPACE`                      | Space                   | Label for the Space key (visible text; aria-label when label is suppressed)     |
-| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active                         |
+| `KEY_CAPS_LOCK`                  | Caps Lock               | Visible Shift-key label and its `aria-label` when Caps Lock is active           |
 | `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                                                   |
 | `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                                                   |
+| `ARIA_SHIFT_OFF`                 | Shift off               | ARIA live region announcement                                                   |
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`                                       |
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`                                      |
 
@@ -806,9 +807,10 @@ KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
     KEY_ENTER: "Entree",
     KEY_BACKSPACE: "Retour",
     KEY_SPACE: "Espace",
-    ARIA_CAPS_LOCK: "Verrouillage majuscules",
+    KEY_CAPS_LOCK: "Verrouillage majuscules",
     ARIA_CAPS_LOCK_ON: "Verrouillage majuscules active",
     ARIA_SHIFT_ON: "Majuscules activees",
+    ARIA_SHIFT_OFF: "Majuscules desactivees",
     ARIA_KEYBOARD_OPENED: "Clavier virtuel ouvert",
     ARIA_KEYBOARD_CLOSED: "Clavier virtuel ferme",
   };

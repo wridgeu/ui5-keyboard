@@ -70,7 +70,7 @@ npm run fmt           # Format all files (oxfmt)
 npm run lint          # Lint all packages (oxlint)
 npm run lint:ui5      # UI5-specific linting
 npm run typecheck     # TypeScript across all workspaces
-npm test              # Core test suite (QUnit + Vitest + Web Test Runner)
+npm test              # Core test suite (QUnit + kiosk desktop e2e + Vitest + Web Test Runner)
 ```
 
 ## End-to-end & visual tests

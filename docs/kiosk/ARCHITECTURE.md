@@ -67,13 +67,13 @@ The `sap.m` dependency is required because the control uses `sap.ui.core.Element
 - Lifecycle hooks (`init`, `onAfterRendering`, `exit`)
 - UI5 event delegation (`ontouchstart`, `ontouchend`, `onkeydown`)
 
-Because `Control` extends `ManagedObject`, the class field initializer trap applies. All private fields use `declare` and are initialized in `init()`:
+Because `Control` extends `ManagedObject`, the class field initializer trap applies. Private fields are declared with definite assignment (`!`) and initialized in `init()`:
 
 ```ts
-declare private _shiftState: ShiftState;
-// ... initialized in init()
+private _shiftState!: ShiftState;
+// ... initialized in init(); the callback repaints on every shift/caps transition
 init(): void {
-  this._shiftState = new ShiftState();
+  this._shiftState = new ShiftState(() => this.invalidate());
 }
 ```
 
@@ -117,7 +117,7 @@ ontouchend
   |     {shift}         -> toggle shift state, invalidate
   |     {backspace}     -> fire keyPress, handle backspace on target
   |     {enter}         -> fire keyPress, insert newline (TextArea only)
-  |     {layout:name}   -> switch layout (Full mode only), fire layoutChange
+  |     {layout:name}   -> switch layout (any keyboardType), fire layoutChange
   |     (character)     -> resolve shift value, fire keyPress, insert text
   |
   +-- Auto-release shift (if shift active and not caps lock)
@@ -244,28 +244,29 @@ Each key defines its value, optional display label, optional shift variant, widt
 
 ### Layout Resolution
 
-The `getResolvedLayout()` method resolves the active layout based on `keyboardType`:
+`_getResolvedLayout()` resolves the active surface from `keyboardType` and the layout source:
 
 ```
-keyboardType    Resolved layout
-────────────    ───────────────
-"Numpad"        layouts.numpad     (always)
-"Numeric"       layouts.numeric    (always)
-"Full"          layouts[layout]    (property-driven, default: qwerty)
+_layoutSource   keyboardType    Resolved layout
+─────────────   ────────────    ───────────────
+"user"          (any)           layouts[layout]   (user pick overrides the constraint)
+"external"      "Numpad"        layouts.numpad    (dead {layout:base} key stripped)
+"external"      "Numeric"       layouts.numeric   (dead {layout:base} key stripped)
+"external"      "Full"          layouts[layout]   (property-driven, default: qwerty)
 ```
 
-This allows `keyboardType` to act as a quick override without changing the `layout` property.
+`keyboardType` acts as a constraint when the source is `"external"`; a user-driven pick overrides it.
 
 ### Layout Switching
 
 Layout switch keys use a special value format: `{layout:name}`. When tapped:
 
-1. The `name` is extracted from the value string.
-2. `setLayout(name)` is called on the control.
-3. A `layoutChange` event is fired.
-4. The control re-renders with the new layout.
+1. The `name` is extracted (lowercased) from the value string and validated against the registry.
+2. `_applyLayout(name, source)` records the base layout, the switch source (`{layout:base}` → `"external"`, any other pick → `"user"`), resets the typing context (shift/caps-lock), and writes the `layout` property.
+3. A `layoutChange` event fires when the layout actually changes.
+4. The control re-renders with the resolved layout.
 
-Layout switching is only effective in `Full` mode. In `Numeric` or `Numpad` mode, layout switch keys are silently ignored.
+Layout switching works in every `keyboardType`: a user pick overrides the Numpad/Numeric constraint until `{layout:base}`, `setLayout`, a `keyboardType` change, or an input-target switch re-engages it.
 
 ## Locale-Based Default Layout
 
@@ -277,14 +278,21 @@ The UI5 ManagedObject constructor flow is: `init()` → `applySettings(mSettings
 
 ```ts
 applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
-  if (mSettings && !("layout" in mSettings)) {
-    mSettings.layout = KioskKeyboard.getLocaleLayout();
-  }
-  return super.applySettings(mSettings, oScope);
+  // Pre-populate the instance Map caches, then default `layout` to the locale
+  // layout. The spread is placed after `layout` so an explicit caller value wins,
+  // and never mutates the caller's settings object.
+  this._instanceLayoutsMap = KioskKeyboard._toLayoutMap(mSettings?.instanceLayouts);
+  this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(mSettings?.instanceLocaleLayouts);
+  this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(mSettings?.instanceMiddleware);
+  const merged = {
+    layout: registryGetLocaleLayout(this._instanceLocaleLayoutsMap, this._instanceLayoutsMap),
+    ...mSettings,
+  };
+  return super.applySettings(merged, oScope);
 }
 ```
 
-This is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected as if the developer had written `layout="qwertz-de"`. An explicit `layout="qwerty"` takes priority because the key is already present in `mSettings`.
+This is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected as if the developer had written `layout="qwertz-de"`. An explicit `layout="qwerty"` takes priority because the spread overwrites the default.
 
 ### Locale Resolution
 
@@ -524,34 +532,34 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 
 ## Edge Cases
 
-| Edge Case                               | How It Is Handled                                                                |
-| --------------------------------------- | -------------------------------------------------------------------------------- |
-| Focus steal on key tap                  | `ontouchstart` `preventDefault()` keeps focus on input                           |
-| Target input not yet focused            | `_getTargetDomRef()` places cursor at end via `setSelectionRange()` (no focus)   |
-| Auto-show flicker on focus transitions  | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null     |
-| Focus on keyboard during auto-show      | `relatedTarget` checked against keyboard DOM via `contains()`                    |
-| Auto-show vs input owned by other kbd   | `_wouldClaimInput()` checks `_isTargetOfOther()`                                 |
-| Focus moves to claimed input while open | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                |
-| Layout switch in non-Full mode          | Silently ignored (no event, no state change)                                     |
-| Shift auto-release vs Caps Lock         | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`       |
-| `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references                                  |
-| No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings                                   |
-| `_setActiveTarget` re-render            | `setAssociation(name, value, true)` suppresses invalidation                      |
-| `_setActiveTarget` re-entrancy          | Change event deferred to after state transitions via `captureAndClearDirty()`    |
-| Docked show/close during render         | `onAfterRendering` syncs CSS with `_open` state                                  |
-| Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode  |
-| `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                      |
-| `controls` with `autoShow`              | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()` |
-| `controls` aggregation churn            | `_setupControls()` rebinds delegates by control ID on each auto-show `focusin`   |
-| Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                          |
-| Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                 |
-| Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                   |
-| `inputmode` restore on target switch    | `_nativeKbSuppression.suppress()` restores previous before suppressing new       |
-| `inputmode` restore on destroy          | `exit()` calls `_nativeKbSuppression.restore()`                                  |
-| Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop             |
-| `show()` without target input           | `_nativeKbSuppression.suppress()` is a no-op when no target element exists       |
-| Resolver throws                         | `getText` catches, logs warning, returns base bundle text                        |
-| Last `KioskKeyboard` instance destroyed | `exit()` clears the i18n resolver (FLP safety)                                   |
+| Edge Case                               | How It Is Handled                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Focus steal on key tap                  | `ontouchstart` `preventDefault()` keeps focus on input                                     |
+| Target input not yet focused            | `_getTargetDomRef()` places cursor at end via `setSelectionRange()` (no focus)             |
+| Auto-show flicker on focus transitions  | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null               |
+| Focus on keyboard during auto-show      | `relatedTarget` checked against keyboard DOM via `contains()`                              |
+| Auto-show vs input owned by other kbd   | `_wouldClaimInput()` checks `_isTargetOfOther()`                                           |
+| Focus moves to claimed input while open | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                          |
+| Layout switch in non-Full mode          | User pick overrides the constraint (`_layoutSource="user"`); `{layout:base}` re-engages it |
+| Shift auto-release vs Caps Lock         | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`                 |
+| `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references                                            |
+| No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings                                             |
+| `_setActiveTarget` re-render            | `setAssociation(name, value, true)` suppresses invalidation                                |
+| `_setActiveTarget` re-entrancy          | Change event deferred to after state transitions via `captureAndClearDirty()`              |
+| Docked show/close during render         | `onAfterRendering` syncs CSS with `_open` state                                            |
+| Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode            |
+| `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                                |
+| `controls` with `autoShow`              | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`           |
+| `controls` aggregation churn            | `_setupControls()` rebinds delegates by control ID on each auto-show `focusin`             |
+| Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                                    |
+| Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                           |
+| Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                             |
+| `inputmode` restore on target switch    | `_nativeKbSuppression.suppress()` restores previous before suppressing new                 |
+| `inputmode` restore on destroy          | `exit()` calls `_nativeKbSuppression.restore()`                                            |
+| Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop                       |
+| `show()` without target input           | `_nativeKbSuppression.suppress()` is a no-op when no target element exists                 |
+| Resolver throws                         | `getText` catches, logs warning, returns base bundle text                                  |
+| Last `KioskKeyboard` instance destroyed | `exit()` clears the i18n resolver (FLP safety)                                             |
 
 ## Project Layout
 
