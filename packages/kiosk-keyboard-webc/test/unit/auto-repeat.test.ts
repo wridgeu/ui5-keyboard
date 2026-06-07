@@ -63,7 +63,10 @@ describe("AutoRepeater", () => {
 
     // 3 ticks: two return true, the third returns false and halts the loop.
     expect(onRepeat).toHaveBeenCalledTimes(3);
-    expect(repeater.active).toBe(false);
+
+    // The loop has stopped: advancing further fires nothing more.
+    vi.advanceTimersByTime(5000);
+    expect(onRepeat).toHaveBeenCalledTimes(3);
   });
 
   it("stop() cancels a pending repeat", () => {
@@ -71,12 +74,12 @@ describe("AutoRepeater", () => {
     const repeater = new AutoRepeater(onRepeat, T);
 
     repeater.start();
-    expect(repeater.active).toBe(true);
     repeater.stop();
     vi.advanceTimersByTime(T.initialDelayMs + 5000);
 
+    // start() scheduled the first repeat (proven by the initial-delay test);
+    // stop() cancels it, so even past the delay nothing fires.
     expect(onRepeat).not.toHaveBeenCalled();
-    expect(repeater.active).toBe(false);
   });
 
   it("start() restarts the delay from scratch (resets acceleration)", () => {

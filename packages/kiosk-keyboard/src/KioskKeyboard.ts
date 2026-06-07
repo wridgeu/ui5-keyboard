@@ -35,7 +35,7 @@ import TargetInputSession from "./internal/target-input-session";
 import KeyGridNavigation from "./internal/key-grid-navigation";
 import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
-import { AutoRepeater } from "./internal/auto-repeat";
+import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -107,14 +107,8 @@ export default class KioskKeyboard extends Control {
   private _keyHighlightDelegation!: KeyHighlightDelegation;
   private _highlightTargetId!: string | null;
   private _pressedKeyEl!: HTMLElement | null;
-  /** Drives press-and-hold continuous delete on the Backspace key. */
-  private _backspaceRepeater!: AutoRepeater;
-  /**
-   * Whether the current Backspace hold already auto-repeated at least one
-   * delete. When set, the release (`ontouchend`) suppresses its trailing
-   * single delete so a held key does not delete one extra character on lift.
-   */
-  private _backspaceDidRepeat!: boolean;
+  /** Owns press-and-hold continuous delete on the Backspace key. */
+  private _backspaceRepeat!: BackspaceRepeatBehavior;
   private _baseLayout!: string;
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
@@ -693,9 +687,7 @@ export default class KioskKeyboard extends Control {
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
-    this._backspaceDidRepeat = false;
-    this._backspaceRepeater = new AutoRepeater(() => {
-      this._backspaceDidRepeat = true;
+    this._backspaceRepeat = new BackspaceRepeatBehavior(() => {
       if (this._tryCompositionMiddleware("{backspace}")) return true;
       return this._performBackspaceDelete();
     });
@@ -1860,7 +1852,7 @@ export default class KioskKeyboard extends Control {
    * is therefore also invoked from `exit()` to guarantee listener cleanup.
    */
   private _clearPressedKeyState(): HTMLElement | null {
-    this._backspaceRepeater.stop();
+    this._backspaceRepeat.stop();
     const pressed = this._pressedKeyEl;
     this._pressedKeyEl = null;
     if (pressed) {
@@ -1893,13 +1885,9 @@ export default class KioskKeyboard extends Control {
       // fires (e.g. Alt-Tab during a mousedown, or a modal popup steals
       // focus), clear the pressed visual state so it does not stick.
       window.addEventListener("blur", this._boundClearPressedOnBlur);
-      // Press-and-hold Backspace deletes continuously. The first repeat fires
-      // after the initial delay; the trailing release delete is suppressed in
-      // ontouchend once a repeat occurred (see _backspaceDidRepeat).
-      if (this.getEnabled() && el.dataset.key === "{backspace}") {
-        this._backspaceDidRepeat = false;
-        this._backspaceRepeater.start();
-      }
+      // Press-and-hold Backspace deletes continuously; the behavior arms the
+      // repeat and later tells ontouchend to suppress its trailing delete.
+      this._backspaceRepeat.onPress(el, this.getEnabled());
     }
   }
 
@@ -1926,7 +1914,7 @@ export default class KioskKeyboard extends Control {
 
     // A held Backspace already deleted via auto-repeat; skip the release delete
     // so lifting off does not remove one extra character.
-    if (keyValue === "{backspace}" && this._backspaceDidRepeat) return;
+    if (this._backspaceRepeat.shouldSuppressRelease(keyValue)) return;
 
     this._handleKeyAction(keyValue, pressed);
   }

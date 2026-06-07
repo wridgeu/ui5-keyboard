@@ -32,7 +32,7 @@ import {
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory, type InstanceMiddleware } from "./core/middleware-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
-import { AutoRepeater } from "./core/auto-repeat.js";
+import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import {
   KeyboardType,
   MobileKeyboard,
@@ -640,30 +640,8 @@ class KioskKeyboard extends UI5Element {
   };
 
   // ── Backspace press-and-hold auto-repeat ──
-  /**
-   * Set once a held Backspace has auto-repeated. The trailing `click` fired on
-   * release (real mouse click, or the synthesized click `_boundTouchEnd`
-   * dispatches) is then swallowed so lifting off does not delete one extra
-   * character. Reset on the next Backspace press and on the consuming click.
-   */
-  private _suppressNextBackspaceClick = false;
-  /** The Backspace key element a repeat is currently bound to (for leave detection). */
-  private _backspaceRepeatKeyEl: HTMLElement | null = null;
-  private readonly _backspaceRepeater = new AutoRepeater(() => {
-    this._suppressNextBackspaceClick = true;
-    return this._performBackspaceRepeatDelete();
-  });
-  private readonly _boundPointerDown = (e: Event) => {
-    if (e instanceof PointerEvent) this._onBackspacePointerDown(e);
-  };
-  private readonly _boundPointerUp = () => this._stopBackspaceRepeat();
-  private readonly _boundBackspacePointerOut = (e: Event) => {
-    // Sliding the pointer off the Backspace key (pointer-leave) stops the
-    // repeat. Ignore moves between the key and its own children (icon span).
-    const keyEl = this._backspaceRepeatKeyEl;
-    const related = (e as PointerEvent).relatedTarget as Node | null;
-    if (keyEl && !keyEl.contains(related)) this._stopBackspaceRepeat();
-  };
+  /** Owns the pointer gesture, repeat timer, and trailing-click suppression. */
+  private readonly _backspaceRepeat = new BackspaceRepeatController(this, () => this._performBackspaceRepeatDelete());
 
   // ── Pre-bound template handlers (avoids per-render allocation) ──
   readonly _boundOnKeyClick = this._onKeyClick.bind(this);
@@ -754,12 +732,8 @@ class KioskKeyboard extends UI5Element {
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false, signal });
     this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd, { signal });
 
-    // Backspace press-and-hold auto-repeat. pointerdown (mouse, touch, pen)
-    // starts the repeat; a release anywhere stops it. Listening on document so
-    // a pointerup outside the key still ends the hold.
-    this.shadowRoot!.addEventListener("pointerdown", this._boundPointerDown, { signal });
-    document.addEventListener("pointerup", this._boundPointerUp, { signal });
-    document.addEventListener("pointercancel", this._boundPointerUp, { signal });
+    // Backspace press-and-hold auto-repeat (pointer gesture + trailing-click suppression).
+    this._backspaceRepeat.attach(signal);
 
     this._setupResizeObserver();
   }
@@ -775,7 +749,7 @@ class KioskKeyboard extends UI5Element {
     this._teardownResizeObserver();
     this._restoreInputMode();
     this._detachEscapeListener();
-    this._stopBackspaceRepeat();
+    this._backspaceRepeat.stop();
     this._hostAbort?.abort();
     this._hostAbort = null;
     if (this._announcementTimerId !== null) {
@@ -1316,10 +1290,7 @@ class KioskKeyboard extends UI5Element {
 
     // A held Backspace already deleted via auto-repeat; swallow the trailing
     // release click so lifting off does not delete one extra character.
-    if (value === "{backspace}" && this._suppressNextBackspaceClick) {
-      this._suppressNextBackspaceClick = false;
-      return;
-    }
+    if (this._backspaceRepeat.consumeClick(value)) return;
 
     if (value.startsWith("{layout:")) {
       // Fire cancelable key-press first so consumers can veto a layout switch
@@ -1426,7 +1397,12 @@ class KioskKeyboard extends UI5Element {
    * cursor at start), which stops the repeat.
    */
   private _performBackspaceRepeatDelete(): boolean {
-    const allowed = this.fireDecoratorEvent("key-press", { key: "{backspace}", shiftKey: this._shifted });
+    // char is undefined for action keys, matching the single-tap {backspace} branch.
+    const allowed = this.fireDecoratorEvent("key-press", {
+      key: "{backspace}",
+      shiftKey: this._shifted,
+      char: undefined,
+    });
     if (!allowed) return true; // consumer vetoed this tick; keep the gesture alive
     const target = this._resolveTarget();
     const middleware = this._ensureMiddleware();
@@ -1438,30 +1414,6 @@ class KioskKeyboard extends UI5Element {
     const pos = handleBackspace(target);
     this._autoReleaseShift();
     return pos !== null;
-  }
-
-  private _onBackspacePointerDown(e: PointerEvent): void {
-    if (this.disabled) return;
-    if (e.button > 0) return; // primary press only (0 for touch/pen/left mouse)
-    const keyEl = (e.target as HTMLElement).closest?.<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
-    if (!keyEl || keyEl.dataset.key !== "{backspace}") return;
-    this._startBackspaceRepeat(keyEl);
-  }
-
-  private _startBackspaceRepeat(keyEl: HTMLElement): void {
-    this._stopBackspaceRepeat();
-    this._suppressNextBackspaceClick = false;
-    this._backspaceRepeatKeyEl = keyEl;
-    keyEl.addEventListener("pointerout", this._boundBackspacePointerOut);
-    this._backspaceRepeater.start();
-  }
-
-  private _stopBackspaceRepeat(): void {
-    this._backspaceRepeater.stop();
-    if (this._backspaceRepeatKeyEl) {
-      this._backspaceRepeatKeyEl.removeEventListener("pointerout", this._boundBackspacePointerOut);
-      this._backspaceRepeatKeyEl = null;
-    }
   }
 
   private _onKeyMouseDown(e: Event): void {

@@ -207,11 +207,11 @@ After modifying the DOM value, the keyboard calls the UI5 control's `setValue()`
 
 ### Backspace Press-and-Hold Auto-Repeat
 
-Holding the Backspace key deletes continuously, the way phone keyboards do. `ontouchstart` (which fires for both mouse and touch via UI5's `EventSimulation`) arms an `AutoRepeater` (`internal/auto-repeat.ts`); `ontouchend`/`ontouchcancel`/window-blur (all routed through `_clearPressedKeyState`) disarm it.
+Holding the Backspace key deletes continuously, the way phone keyboards do. The gesture lives in a `BackspaceRepeatBehavior` delegate (`internal/backspace-repeat-behavior.ts`, owning an `AutoRepeater`), alongside the other behavior delegates. `ontouchstart` (which fires for both mouse and touch via UI5's `EventSimulation`) arms it via `onPress`; `ontouchend`/`ontouchcancel`/window-blur (all routed through `_clearPressedKeyState`) call `stop`.
 
-The repeater fires the first delete after an initial hold delay, then accelerates the cadence toward a floor. Each tick runs the **same** path as a single tap (`_tryCompositionMiddleware` + `_performBackspaceDelete`), so composition middleware, the cancelable `keyPress` event, and grapheme-aware deletion all apply per repeat. It stops on its own once `TargetInputSession.handleBackspace()` reports nothing was removed (empty input / cursor at start / read-only target).
+The repeater fires the first delete after an initial hold delay, then accelerates the cadence toward a floor. Each tick runs the **same** path as a single tap (`_tryCompositionMiddleware` + `_performBackspaceDelete`, passed in as the behavior's tick callback), so composition middleware, the cancelable `keyPress` event, and grapheme-aware deletion all apply per repeat. It stops on its own once `TargetInputSession.handleBackspace()` reports nothing was removed (empty input / cursor at start / read-only target).
 
-Because the existing single delete fires on release (`ontouchend`), a held key would otherwise delete one extra character on lift-off. `_backspaceDidRepeat` records that a repeat occurred so `ontouchend` suppresses its trailing delete. A quick tap (released before the initial delay) never repeats, so it deletes exactly once on release as before.
+Because the existing single delete fires on release (`ontouchend`), a held key would otherwise delete one extra character on lift-off. The behavior records that a repeat occurred, and `ontouchend` consults `shouldSuppressRelease` to skip its trailing delete. A quick tap (released before the initial delay) never repeats, so it deletes exactly once on release as before.
 
 The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard-webc` package rather than shared — the two packages deliberately do not share code — and the two copies must be kept in sync by hand.
 

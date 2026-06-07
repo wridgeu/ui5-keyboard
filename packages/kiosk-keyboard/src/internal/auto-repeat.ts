@@ -47,11 +47,6 @@ export class AutoRepeater {
     this._interval = _timing.startIntervalMs;
   }
 
-  /** Whether a repeat is currently scheduled. */
-  get active(): boolean {
-    return this._timer !== null;
-  }
-
   /** (Re)start the hold: schedule the first repeat after the initial delay. */
   start(): void {
     this.stop();

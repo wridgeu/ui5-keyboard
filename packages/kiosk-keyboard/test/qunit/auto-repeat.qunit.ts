@@ -74,7 +74,9 @@ QUnit.test("stops when the callback returns false", (assert) => {
   clock.tick(T.initialDelayMs + 5000);
 
   assert.strictEqual(calls, 3, "halts on the tick that returns false");
-  assert.notOk(repeater.active, "no longer active after stopping");
+
+  clock.tick(5000);
+  assert.strictEqual(calls, 3, "no further ticks fire once the loop has stopped");
 });
 
 QUnit.test("stop() cancels a pending repeat", (assert) => {
@@ -85,10 +87,10 @@ QUnit.test("stop() cancels a pending repeat", (assert) => {
   }, T);
 
   repeater.start();
-  assert.ok(repeater.active, "active after start");
   repeater.stop();
   clock.tick(T.initialDelayMs + 5000);
 
+  // start() scheduled the first repeat (proven by the initial-delay test);
+  // stop() cancels it, so even past the delay nothing fires.
   assert.strictEqual(calls, 0, "no repeats fire after stop()");
-  assert.notOk(repeater.active, "inactive after stop()");
 });
