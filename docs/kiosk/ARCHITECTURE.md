@@ -205,6 +205,16 @@ The keyboard operates on the target's inner DOM element (`getFocusDomRef()`) for
 
 After modifying the DOM value, the keyboard calls the UI5 control's `setValue()` and `fireLiveChange()` for proper data binding integration. These are invoked via duck-typing (`Record<string, unknown>`) to avoid a hard dependency on specific control types.
 
+### Backspace Press-and-Hold Auto-Repeat
+
+Holding the Backspace key deletes continuously, the way phone keyboards do. The gesture lives in a `BackspaceRepeatBehavior` delegate (`internal/backspace-repeat-behavior.ts`, owning an `AutoRepeater`), alongside the other behavior delegates. `ontouchstart` (which fires for both mouse and touch via UI5's `EventSimulation`) arms it via `onPress`; `ontouchend`/`ontouchcancel`/window-blur (all routed through `_clearPressedKeyState`) call `stop`.
+
+The repeater fires the first delete after an initial hold delay, then accelerates the cadence toward a floor. Each tick runs the **same** path as a single tap (`_tryCompositionMiddleware` + `_performBackspaceDelete`, passed in as the behavior's tick callback), so composition middleware, the cancelable `keyPress` event, and grapheme-aware deletion all apply per repeat. It stops on its own once `TargetInputSession.handleBackspace()` reports nothing was removed (empty input / cursor at start / read-only target).
+
+Because the existing single delete fires on release (`ontouchend`), a held key would otherwise delete one extra character on lift-off. The behavior records that a repeat occurred, and `ontouchend` consults `shouldSuppressRelease` to skip its trailing delete. A quick tap (released before the initial delay) never repeats, so it deletes exactly once on release as before.
+
+The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard-webc` package rather than shared — the two packages deliberately do not share code — and the two copies must be kept in sync by hand.
+
 ### Cursor Initialization
 
 When the target input hasn't been focused yet (e.g. set programmatically via `setTargetInput`), `selectionStart` defaults to 0. On first access per target, `_getTargetDomRef()` calls `setSelectionRange()` to position the cursor at the end of the value, but only when the input is **not** already the active element, so a user-placed cursor is never overwritten.

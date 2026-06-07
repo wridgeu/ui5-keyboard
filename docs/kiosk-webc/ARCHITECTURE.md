@@ -166,6 +166,16 @@ click / touchend
   +-- Announce key via ARIA live region
 ```
 
+### Backspace Press-and-Hold Auto-Repeat
+
+Holding the Backspace key deletes continuously, the way phone keyboards do. The gesture lives in a `BackspaceRepeatController` (`core/backspace-repeat-controller.ts`, owning an `AutoRepeater`), which the control wires via `attach(signal)` in `onEnterDOM` and tears down via `stop()` in `onExitDOM`. A `pointerdown` listener on the shadow root arms the repeat when the pressed key is `{backspace}`; a `pointerup`/`pointercancel` on the document, or a `pointerleave` on the key, disarms it. This is in addition to the normal `click` path, which still handles single taps (including programmatic `.click()`).
+
+The repeater fires the first delete after an initial hold delay, then accelerates the cadence toward a floor. Each tick runs the control's `_performBackspaceRepeatDelete` (passed in as the controller's tick callback), which mirrors the `{backspace}` branch of `_onKeyClick`: it fires the cancelable `key-press`, runs composition middleware (via the shared `_ensureMiddleware`), then deletes one grapheme. It stops on its own once `handleBackspace()` reports nothing was removed (empty input / cursor at start / read-only target).
+
+A held key would otherwise also fire the trailing release `click` (real for mouse, synthesized by `_boundTouchEnd` for touch), deleting one extra character on lift-off. The controller sets a one-shot suppression flag once a repeat occurs and swallows that one click via `consumeClick` (called from `_onKeyClick`). The flag resets on the next Backspace `pointerdown` and clears on pointer-leave, so a fresh tap — or a later keyboard-/programmatically-activated Backspace click — deletes normally.
+
+The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard` package rather than shared — the two packages deliberately do not share code — and the two copies must be kept in sync by hand.
+
 ### Focus Steal Prevention
 
 `touchstart` and `mousedown` call `preventDefault()` when a key element is pressed. This prevents the browser from transferring focus away from the target input, which is critical for maintaining cursor position. The `onMouseDown` handler in JSX and the native `touchstart` listener both implement this.

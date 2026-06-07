@@ -35,6 +35,7 @@ import TargetInputSession from "./internal/target-input-session";
 import KeyGridNavigation from "./internal/key-grid-navigation";
 import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
+import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -106,6 +107,8 @@ export default class KioskKeyboard extends Control {
   private _keyHighlightDelegation!: KeyHighlightDelegation;
   private _highlightTargetId!: string | null;
   private _pressedKeyEl!: HTMLElement | null;
+  /** Owns press-and-hold continuous delete on the Backspace key. */
+  private _backspaceRepeat!: BackspaceRepeatBehavior;
   private _baseLayout!: string;
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
@@ -684,6 +687,10 @@ export default class KioskKeyboard extends Control {
     };
     this._highlightTargetId = null;
     this._pressedKeyEl = null;
+    this._backspaceRepeat = new BackspaceRepeatBehavior(() => {
+      if (this._tryCompositionMiddleware("{backspace}")) return true;
+      return this._performBackspaceDelete();
+    });
     this._keyboardTypeSource = "unset";
     this._nativeKbSuppression = new NativeKeyboardSuppression(this);
     this._autoShowBehavior = new AutoShowBehavior(this);
@@ -1845,6 +1852,7 @@ export default class KioskKeyboard extends Control {
    * is therefore also invoked from `exit()` to guarantee listener cleanup.
    */
   private _clearPressedKeyState(): HTMLElement | null {
+    this._backspaceRepeat.stop();
     const pressed = this._pressedKeyEl;
     this._pressedKeyEl = null;
     if (pressed) {
@@ -1877,6 +1885,9 @@ export default class KioskKeyboard extends Control {
       // fires (e.g. Alt-Tab during a mousedown, or a modal popup steals
       // focus), clear the pressed visual state so it does not stick.
       window.addEventListener("blur", this._boundClearPressedOnBlur);
+      // Press-and-hold Backspace deletes continuously; the behavior arms the
+      // repeat and later tells ontouchend to suppress its trailing delete.
+      this._backspaceRepeat.onPress(el, this.getEnabled());
     }
   }
 
@@ -1900,6 +1911,11 @@ export default class KioskKeyboard extends Control {
     if (!keyValue) return;
 
     this._keyGridNav.setLastFocusedKeyId(pressed.id);
+
+    // A held Backspace already deleted via auto-repeat; skip the release delete
+    // so lifting off does not remove one extra character.
+    if (this._backspaceRepeat.shouldSuppressRelease(keyValue)) return;
+
     this._handleKeyAction(keyValue, pressed);
   }
 
@@ -1988,6 +2004,56 @@ export default class KioskKeyboard extends Control {
 
   // ── Private: pointer and key actions ──
 
+  /**
+   * Whether a key can affect a composition buffer (CJK/dead-key) and must be
+   * routed through middleware before default handling: {backspace}, {enter},
+   * and regular character keys, but not layout/fkey switches.
+   */
+  private _keyAffectsComposition(keyValue: string): boolean {
+    return (
+      keyValue === "{backspace}" ||
+      keyValue === "{enter}" ||
+      (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
+    );
+  }
+
+  /**
+   * Runs composition middleware (CJK/dead-key buffers) for keys that affect a
+   * composition (see `_keyAffectsComposition`). Returns `true` when the
+   * middleware consumed the key (caller should stop), mirroring the inline
+   * guard the single-tap path used before auto-repeat shared it. Lazily
+   * instantiates the middleware.
+   */
+  private _tryCompositionMiddleware(keyValue: string): boolean {
+    if (!this._keyAffectsComposition(keyValue)) return false;
+    if (!this._middleware) {
+      const factory = registryGetMiddlewareFactory(this.getLayout(), this._instanceMiddlewareMap);
+      if (factory) this._middleware = factory();
+    }
+    if (this._middleware) {
+      const targetEl = this._getTargetElement();
+      const mwTarget = targetEl
+        ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
+        : null;
+      if (mwTarget && this._middleware.handleKey(keyValue, mwTarget)) {
+        this._shiftState.autoRelease();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Fires the cancelable `keyPress` event and, unless vetoed, deletes one
+   * grapheme from the target. Shared by the single Backspace tap and the
+   * auto-repeat tick. Returns `false` only when the key fired but nothing was
+   * deleted (empty input / cursor at start), which the repeater uses to stop.
+   */
+  private _performBackspaceDelete(): boolean {
+    if (!this.fireKeyPress({ key: "Backspace", shiftKey: this._isShiftActive() })) return true; // consumer vetoed this tick; keep the gesture alive
+    return this._targetSession.handleBackspace();
+  }
+
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
     const shift = this._isShiftActive();
 
@@ -1996,32 +2062,11 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
-    // ── Composition middleware (must see {backspace}/{enter} before default handling) ──
-    if (
-      keyValue === "{backspace}" ||
-      keyValue === "{enter}" ||
-      (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
-    ) {
-      if (!this._middleware) {
-        const factory = registryGetMiddlewareFactory(this.getLayout(), this._instanceMiddlewareMap);
-        if (factory) this._middleware = factory();
-      }
-      if (this._middleware) {
-        const targetEl = this._getTargetElement();
-        const mwTarget = targetEl
-          ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
-          : null;
-        if (mwTarget && this._middleware.handleKey(keyValue, mwTarget)) {
-          this._shiftState.autoRelease();
-          return;
-        }
-      }
-    }
+    // Composition middleware must see {backspace}/{enter} before default handling.
+    if (this._tryCompositionMiddleware(keyValue)) return;
 
     if (keyValue === "{backspace}") {
-      if (this.fireKeyPress({ key: "Backspace", shiftKey: shift })) {
-        this._targetSession.handleBackspace();
-      }
+      this._performBackspaceDelete();
       return;
     }
 
