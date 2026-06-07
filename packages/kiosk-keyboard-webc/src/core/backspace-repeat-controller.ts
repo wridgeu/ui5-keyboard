@@ -41,15 +41,13 @@ export class BackspaceRepeatController {
     if (e instanceof PointerEvent) this._start(e);
   };
   private readonly _onPointerUp = (): void => this.stop();
-  private readonly _onPointerOut = (e: Event): void => {
-    // Sliding the pointer off the key (pointer-leave) ends the gesture off-key,
-    // so no trailing on-key click follows: stop and drop the suppression.
-    // Ignore moves between the key and its own children (icon span).
-    const related = (e as PointerEvent).relatedTarget as Node | null;
-    if (this._keyEl && !this._keyEl.contains(related)) {
-      this._suppressNextClick = false;
-      this.stop();
-    }
+  private readonly _onPointerLeave = (): void => {
+    // Sliding the pointer off the key ends the gesture off-key, so no trailing
+    // on-key click follows: stop and drop the suppression. `pointerleave` (not
+    // `pointerout`) does not fire when the pointer moves onto the key's own
+    // children (icon span), so no relatedTarget filtering is needed.
+    this._suppressNextClick = false;
+    this.stop();
   };
 
   /**
@@ -82,7 +80,7 @@ export class BackspaceRepeatController {
   stop(): void {
     this._repeater.stop();
     if (this._keyEl) {
-      this._keyEl.removeEventListener("pointerout", this._onPointerOut);
+      this._keyEl.removeEventListener("pointerleave", this._onPointerLeave);
       this._keyEl = null;
     }
   }
@@ -107,7 +105,7 @@ export class BackspaceRepeatController {
     this.stop();
     this._suppressNextClick = false;
     this._keyEl = keyEl;
-    keyEl.addEventListener("pointerout", this._onPointerOut);
+    keyEl.addEventListener("pointerleave", this._onPointerLeave);
     this._repeater.start();
   }
 }

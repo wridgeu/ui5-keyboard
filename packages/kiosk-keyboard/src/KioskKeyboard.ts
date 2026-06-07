@@ -2005,22 +2005,27 @@ export default class KioskKeyboard extends Control {
   // ── Private: pointer and key actions ──
 
   /**
-   * Runs composition middleware (CJK/dead-key buffers) for keys that can
-   * affect a composition - {backspace}, {enter}, and regular characters, but
-   * not layout/fkey switches. Returns `true` when the middleware consumed the
-   * key (caller should stop), mirroring the inline guard the single-tap path
-   * used before auto-repeat shared it. Lazily instantiates the middleware.
+   * Whether a key can affect a composition buffer (CJK/dead-key) and must be
+   * routed through middleware before default handling: {backspace}, {enter},
+   * and regular character keys, but not layout/fkey switches.
+   */
+  private _keyAffectsComposition(keyValue: string): boolean {
+    return (
+      keyValue === "{backspace}" ||
+      keyValue === "{enter}" ||
+      (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
+    );
+  }
+
+  /**
+   * Runs composition middleware (CJK/dead-key buffers) for keys that affect a
+   * composition (see `_keyAffectsComposition`). Returns `true` when the
+   * middleware consumed the key (caller should stop), mirroring the inline
+   * guard the single-tap path used before auto-repeat shared it. Lazily
+   * instantiates the middleware.
    */
   private _tryCompositionMiddleware(keyValue: string): boolean {
-    if (
-      !(
-        keyValue === "{backspace}" ||
-        keyValue === "{enter}" ||
-        (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
-      )
-    ) {
-      return false;
-    }
+    if (!this._keyAffectsComposition(keyValue)) return false;
     if (!this._middleware) {
       const factory = registryGetMiddlewareFactory(this.getLayout(), this._instanceMiddlewareMap);
       if (factory) this._middleware = factory();
@@ -2045,7 +2050,7 @@ export default class KioskKeyboard extends Control {
    * deleted (empty input / cursor at start), which the repeater uses to stop.
    */
   private _performBackspaceDelete(): boolean {
-    if (!this.fireKeyPress({ key: "Backspace", shiftKey: this._isShiftActive() })) return true;
+    if (!this.fireKeyPress({ key: "Backspace", shiftKey: this._isShiftActive() })) return true; // consumer vetoed this tick; keep the gesture alive
     return this._targetSession.handleBackspace();
   }
 
