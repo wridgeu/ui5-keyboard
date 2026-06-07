@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI5 Keyboard Libraries — Fiori Launchpad</title>
+
+    <!--
+      Static Fiori Launchpad (ushell) sandbox for GitHub Pages.
+
+      Unlike the dev-time `npm run start:flp` flow (which lets
+      @sap-ux/preview-middleware generate the sandbox and tiles on the fly),
+      this page is fully static so it can be hosted from a plain file server.
+
+      Runtime note: the FLP/ushell sandbox is NOT part of OpenUI5 — it only
+      ships with SAPUI5. We therefore bootstrap core + ushell from the SAPUI5
+      CDN (ui5.sap.com), which is a 1.144.0 superset of the OpenUI5 the app was
+      built against; the app/library code is unaffected. The app's own
+      Component-preload and the custom libraries (ui5.hotkeys / ui5.kiosk) are
+      served from this artifact via the resourceroots below.
+    -->
+    <script type="text/javascript">
+      window["sap-ushell-config"] = {
+        defaultRenderer: "fiori2",
+        renderers: {
+          fiori2: {
+            componentData: {
+              config: {
+                search: "hidden",
+                enableSearch: false,
+              },
+            },
+          },
+        },
+        applications: {
+          // The UI5 demo application (loaded as a SAPUI5 component from this
+          // artifact root, next to flp.html).
+          "DemoApp-display": {
+            title: "UI5 Keyboard Libraries Demo",
+            description: "UI5 controls: hotkeys + kiosk keyboard",
+            additionalInformation: "SAPUI5.Component=demo.hotkeys",
+            applicationType: "SAPUI5",
+            url: "./",
+            navigationMode: "embedded",
+          },
+          // The "raw" web components demo — a framework-less standalone page
+          // (no UI5 runtime), opened inside the shell via a URL app.
+          "WebComponents-display": {
+            title: "Raw Web Components Demo",
+            description: "Framework-less kiosk-keyboard custom element",
+            applicationType: "URL",
+            url: "./webc-demo/index.html",
+            navigationMode: "embedded",
+          },
+        },
+      };
+    </script>
+
+    <!-- ushell sandbox bootstrap (SAPUI5 CDN; not available in OpenUI5). -->
+    <script
+      id="sap-ushell-bootstrap"
+      src="https://ui5.sap.com/1.144.0/test-resources/sap/ushell/bootstrap/sandbox.js"
+    ></script>
+
+    <!--
+      UI5 core bootstrap. `data-sap-ui-frame-options="allow"` is a NON-SECURE
+      setting acceptable only for this demo/sandbox use case. Resource roots map
+      the app + custom libraries to paths inside this artifact; SAP libraries
+      load from the CDN base derived from the bootstrap src.
+    -->
+    <script
+      id="sap-ui-bootstrap"
+      src="https://ui5.sap.com/1.144.0/resources/sap-ui-core.js"
+      data-sap-ui-libs="sap.m,sap.ushell,sap.ui.core,sap.ui.layout"
+      data-sap-ui-async="true"
+      data-sap-ui-preload="async"
+      data-sap-ui-theme="sap_horizon"
+      data-sap-ui-compat-version="edge"
+      data-sap-ui-frame-options="allow"
+      data-sap-ui-resource-roots='{ "demo.hotkeys": "./", "ui5.hotkeys": "./resources/ui5/hotkeys", "ui5.kiosk": "./resources/ui5/kiosk" }'
+    ></script>
+
+    <script type="text/javascript">
+      // Core.ready() (since 1.118) replaces the deprecated
+      // sap.ui.getCore().attachInit. The ushell sandbox creates the Container
+      // during core init, so it is available by the time core is ready.
+      sap.ui.require(["sap/ushell/Container", "sap/ui/core/Core"], function (Container, Core) {
+        Core.ready()
+          .then(function () {
+            return Container.createRenderer(undefined, true);
+          })
+          .then(function (renderer) {
+            renderer.placeAt("content");
+          });
+      });
+    </script>
+  </head>
+  <body class="sapUiBody" id="content"></body>
+</html>

@@ -1,0 +1,116 @@
+name: Deploy Pages
+
+# Builds the static Fiori Launchpad (FLP) demo plus the framework-less web
+# components demo page and publishes them to GitHub Pages. The FLP sandbox is
+# served statically (no preview-middleware): see packages/demo-app/webapp/flp.html.
+#
+# Prerequisite: repo Settings -> Pages -> Source must be set to "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+# Allow only one concurrent deployment; do not cancel an in-progress deploy so a
+# running publish always finishes.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          # Match CI: Node 24 (>= 24.14) for the npm min-release-age cooldown
+          # and the engines npm floor. Do not drop below Node 24.
+          node-version: 24
+          cache: npm
+
+      - name: Cache UI5 framework resources
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: ~/.ui5
+          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
+          restore-keys: ui5-
+
+      - run: npm ci
+
+      # build:all = libraries (hotkeys -> kiosk -> kiosk-webc) then the demo app.
+      # The demo's ui5-tooling-modules bundling of kiosk-keyboard-webc resolves
+      # against its freshly built dist/.
+      - name: Build libraries and demo app
+        run: npm run build:all
+
+      - name: Build raw web components demo page
+        run: npm run build:demo-page -w packages/kiosk-keyboard-webc
+
+      - name: Assemble _site
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site
+
+          # Demo app build output at the artifact root (Component-preload.js,
+          # manifest.json, flp.html, css/, gen/, webc/ wrappers, ...).
+          cp -r packages/demo-app/dist/. _site/
+
+          # Custom UI5 libraries are separate packages and are NOT part of the
+          # demo dist; the FLP resourceroots map them to these relative paths.
+          mkdir -p _site/resources/ui5
+          cp -r packages/hotkeys/dist/resources/ui5/hotkeys _site/resources/ui5/hotkeys
+          cp -r packages/kiosk-keyboard/dist/resources/ui5/kiosk _site/resources/ui5/kiosk
+
+          # Framework-less standalone web components demo, opened by the FLP
+          # "Raw Web Components Demo" URL tile (./webc-demo/index.html). Kept in
+          # its own folder, separate from the demo app's internal ./webc/
+          # wrapper modules.
+          mkdir -p _site/webc-demo
+          cp -r packages/kiosk-keyboard-webc/demo-dist/. _site/webc-demo/
+
+          # The demo app's own index.html bootstraps from a relative resources/
+          # path that does not exist on static hosting; replace it with a
+          # redirect to the FLP entry point.
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8" />
+              <meta http-equiv="refresh" content="0; url=./flp.html" />
+              <title>UI5 Keyboard Libraries — Fiori Launchpad</title>
+            </head>
+            <body>
+              <a href="./flp.html">Open the Fiori Launchpad</a>
+            </body>
+          </html>
+          HTML
+
+      - name: Setup Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

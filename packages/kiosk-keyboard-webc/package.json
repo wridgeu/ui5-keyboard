@@ -65,6 +65,7 @@
     "build:dev": "npm run generate && tsc --build --force",
     "build": "npm run build:dev && npm run build:bundle && npm run generateAPI",
     "build:bundle": "vite build",
+    "build:demo-page": "npm run generate && vite build --config vite.demo.config.ts",
     "prestart": "npm run generate",
     "start": "vite --port 8084 --open /test/pages/index.html",
     "prestart:key-style-demo": "npm run generate",

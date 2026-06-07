@@ -1,5 +1,6 @@
 node_modules/
 dist/
+demo-dist/
 .ui5/
 .ui5-tooling-modules/
 *.tsbuildinfo
@@ -41,3 +42,6 @@ packages/**/.claude/
 
 # Review notes
 review.md
+
+# Assembled GitHub Pages site (built by deploy-pages workflow / local verify)
+_site/
