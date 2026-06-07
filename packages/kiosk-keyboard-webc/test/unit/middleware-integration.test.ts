@@ -7,8 +7,6 @@ import {
   endComposition,
   isComposing,
 } from "../../src/core/composition-utils.js";
-import "../../src/middleware/hangul-compose.js";
-import "../../src/middleware/kana-dakuten.js";
 
 describe("middleware integration", () => {
   describe("hangul backspace decomposition end-to-end", () => {

@@ -8,20 +8,6 @@ import {
 } from "../../src/core/layout-registry.js";
 import type { LayoutDefinition } from "../../src/types.js";
 
-// Import all layouts to trigger self-registration (like the full entry would)
-import "../../src/layouts/qwerty.js";
-import "../../src/layouts/qwertz-de.js";
-import "../../src/layouts/numeric.js";
-import "../../src/layouts/special.js";
-import "../../src/layouts/numpad.js";
-import "../../src/layouts/fkeys.js";
-import "../../src/layouts/nav.js";
-import "../../src/layouts/ja-romaji.js";
-import "../../src/layouts/ja-kana.js";
-import "../../src/layouts/arabic.js";
-import "../../src/layouts/ko-hangul.js";
-import "../../src/layouts/qwerty-es.js";
-
 const CUSTOM_LAYOUT: LayoutDefinition = [[{ value: "a" }, { value: "b" }, { value: "c" }]];
 
 const BUILTIN_NAMES = [

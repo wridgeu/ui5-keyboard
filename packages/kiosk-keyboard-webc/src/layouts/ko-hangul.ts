@@ -1,5 +1,4 @@
 import type { LayoutDefinition } from "../types.js";
-import { _registerBuiltInLayout } from "../core/layout-registry.js";
 
 /**
  * Korean Dubeolsik (2-set, KS X 5002) keyboard layout.
@@ -77,7 +76,5 @@ const koHangul: LayoutDefinition = [
     { value: "{layout:fkeys}", label: "Fn", width: "1.5", type: "modifier" },
   ],
 ];
-
-_registerBuiltInLayout("ko-hangul", koHangul);
 
 export default koHangul;

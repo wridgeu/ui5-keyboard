@@ -1,26 +1,40 @@
 import type { LayoutDefinition } from "../types.js";
 import DEFAULT_LAYOUT from "../layouts/default-layout.js";
+import qwerty from "../layouts/qwerty.js";
+import qwertzDe from "../layouts/qwertz-de.js";
+import numeric from "../layouts/numeric.js";
+import special from "../layouts/special.js";
+import numpad from "../layouts/numpad.js";
+import fkeys from "../layouts/fkeys.js";
+import nav from "../layouts/nav.js";
+import jaRomaji from "../layouts/ja-romaji.js";
+import jaKana from "../layouts/ja-kana.js";
+import arabic from "../layouts/arabic.js";
+import koHangul from "../layouts/ko-hangul.js";
+import qwertyEs from "../layouts/qwerty-es.js";
 
 // Module-level singleton - shared across all component instances (and across
-// micro-frontends if they import the same module). Sealed at module load by
-// the side-effect `_registerBuiltInLayout` calls in `layouts/*.ts`. There is
-// no public mutation API: per-app customization is done via the
-// `instanceLayouts` / `instanceLocaleLayouts` properties on the element.
-const layouts: Map<string, LayoutDefinition> = new Map();
-
-/** Built-in layout names. Populated by `_registerBuiltInLayout`. */
-const BUILTIN_LAYOUTS: Set<string> = new Set();
-
-/**
- * Registers a built-in layout. Idempotent: silently skips if the name
- * is already registered. Used internally by self-registering layout modules.
- * @internal
- */
-export function _registerBuiltInLayout(name: string, def: LayoutDefinition): void {
-  if (layouts.has(name)) return;
-  layouts.set(name, def);
-  BUILTIN_LAYOUTS.add(name);
-}
+// micro-frontends if they import the same module). Built eagerly from direct
+// data imports and sealed at module load: every layout is genuinely referenced
+// here, so a bundler cannot drop the definitions. (A prior side-effect-import +
+// `_registerBuiltInLayout` self-registration scheme was silently tree-shaken
+// out of the production bundle -- see issue #108.) There is no public mutation
+// API: per-app customization is done via the `instanceLayouts` /
+// `instanceLocaleLayouts` properties on the element.
+const layouts: ReadonlyMap<string, LayoutDefinition> = new Map([
+  ["qwerty", qwerty],
+  ["qwertz-de", qwertzDe],
+  ["numeric", numeric],
+  ["special", special],
+  ["numpad", numpad],
+  ["fkeys", fkeys],
+  ["nav", nav],
+  ["ja-romaji", jaRomaji],
+  ["ja-kana", jaKana],
+  ["arabic", arabic],
+  ["ko-hangul", koHangul],
+  ["qwerty-es", qwertyEs],
+]);
 
 /**
  * Layouts that serve as secondary views (not base alphabetic layouts).
@@ -124,7 +138,7 @@ export function getRegisteredLayoutNames(): string[] {
 export function isBuiltInLayout(rawName: string): boolean {
   const name = normalizeLowerString(rawName, "layout name");
   if (!name) return false;
-  return BUILTIN_LAYOUTS.has(name);
+  return layouts.has(name);
 }
 
 /**

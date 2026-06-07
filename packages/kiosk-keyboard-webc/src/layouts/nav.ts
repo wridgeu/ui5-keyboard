@@ -1,5 +1,4 @@
 import type { LayoutDefinition } from "../types.js";
-import { _registerBuiltInLayout } from "../core/layout-registry.js";
 import navRow from "./nav-row.js";
 
 const nav: LayoutDefinition = [
@@ -21,7 +20,5 @@ const nav: LayoutDefinition = [
     { value: "{layout:fkeys}", label: "Fn", width: "1.5", type: "modifier" },
   ],
 ];
-
-_registerBuiltInLayout("nav", nav);
 
 export default nav;

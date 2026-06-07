@@ -1,9 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { CompositionMiddleware } from "../../src/types.js";
 import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
-// Side-effect import: registers the hangul middleware for "ko-hangul",
-// which acts as a stable built-in layout across every test below.
-import "../../src/middleware/hangul-compose.js";
 
 const BUILT_IN_LAYOUT = "ko-hangul";
 

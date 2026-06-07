@@ -22,23 +22,5 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "demo-dist"),
     emptyOutDir: true,
-    // The component registers its built-in layouts via side-effect-only
-    // imports (e.g. `import "./layouts/qwerty.js"` in KioskKeyboard.ts; each
-    // layout module self-registers into the shared registry). This build
-    // consumes the package from `src/`, which the package.json `sideEffects`
-    // allowlist does not cover (it lists only `./dist/...`), so the bundler
-    // classifies those `src/layouts/*` modules as side-effect-free and drops
-    // them -- every keyboard then throws "Built-in default layout 'qwerty' is
-    // missing" and renders an empty shadow root.
-    //
-    // `treeshake: false` is the documented Rollup/Rolldown switch to disable
-    // tree-shaking ("produces bigger bundles"). Note `{ moduleSideEffects:
-    // true }` does NOT fix this: the boolean form defers to the package.json
-    // `sideEffects` allowlist, so the src layouts stay excluded. The ~15 KB
-    // size cost is irrelevant for a demo that already bundles all layouts/i18n.
-    // (Dev `npm start` is unaffected -- Vite's dev server does not tree-shake.)
-    rollupOptions: {
-      treeshake: false,
-    },
   },
 });

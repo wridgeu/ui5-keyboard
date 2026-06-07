@@ -1,5 +1,4 @@
 import type { CompositionMiddleware } from "../types.js";
-import { _registerMiddleware } from "../core/middleware-registry.js";
 import { insertText } from "../core/input-operations.js";
 import { graphemeLengthBefore } from "../core/grapheme.js";
 
@@ -40,7 +39,7 @@ const HANDAKUTEN_MAP: ReadonlyMap<string, string> = new Map([
   ["\u307B", "\u307D"], // ほ → ぽ
 ]);
 
-function createKanaDakutenMiddleware(): CompositionMiddleware {
+export function createKanaDakutenMiddleware(): CompositionMiddleware {
   return {
     handleKey(key: string, target: HTMLInputElement | HTMLTextAreaElement): boolean {
       if (key !== DAKUTEN && key !== HANDAKUTEN) return false;
@@ -70,5 +69,3 @@ function createKanaDakutenMiddleware(): CompositionMiddleware {
     reset(): void {},
   };
 }
-
-_registerMiddleware("ja-kana", createKanaDakutenMiddleware);

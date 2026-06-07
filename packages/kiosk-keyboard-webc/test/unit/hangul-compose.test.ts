@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
-import "../../src/middleware/hangul-compose.js";
 
 describe("hangul-compose middleware", () => {
   let input: HTMLInputElement;
@@ -15,7 +14,7 @@ describe("hangul-compose middleware", () => {
     return getMiddlewareFactory("ko-hangul")!();
   }
 
-  it("registers itself for ko-hangul layout", () => {
+  it("is registered as a built-in for ko-hangul layout", () => {
     expect(getMiddlewareFactory("ko-hangul")).not.toBeNull();
   });
 

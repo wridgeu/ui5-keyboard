@@ -1,4 +1,6 @@
 import type { CompositionMiddleware } from "../types.js";
+import { createKanaDakutenMiddleware } from "../middleware/kana-dakuten.js";
+import { createHangulComposeMiddleware } from "../middleware/hangul-compose.js";
 
 /** Per-instance middleware factory map (optional) for layered resolution. */
 export type InstanceMiddleware = ReadonlyMap<string, () => CompositionMiddleware>;
@@ -6,22 +8,18 @@ export type InstanceMiddleware = ReadonlyMap<string, () => CompositionMiddleware
 /**
  * Built-in composition middleware factories keyed by layout name.
  *
- * Sealed after the side-effect imports of the built-in middleware modules
- * run during module load. There is no public mutation API: per-app
- * middleware is supplied via the `instanceMiddleware` property on the element.
+ * Built eagerly from direct factory imports and sealed at module load: each
+ * factory is genuinely referenced here, so a bundler cannot drop it. (A prior
+ * side-effect-import + `_registerMiddleware` self-registration scheme was never
+ * wired into production at all -- only tests imported the modules -- so built-in
+ * composition silently failed to register; see issue #108.) There is no public
+ * mutation API: per-app middleware is supplied via the `instanceMiddleware`
+ * property on the element.
  */
-const factories: Map<string, () => CompositionMiddleware> = new Map();
-
-/**
- * Registers a built-in middleware factory for the given layout.
- * Idempotent: silently skips a layout that already has middleware. Only the
- * built-in middleware modules call this -- it is not part of the public API.
- * @internal
- */
-export function _registerMiddleware(layout: string, factory: () => CompositionMiddleware): void {
-  if (factories.has(layout)) return;
-  factories.set(layout, factory);
-}
+const factories: ReadonlyMap<string, () => CompositionMiddleware> = new Map([
+  ["ja-kana", createKanaDakutenMiddleware],
+  ["ko-hangul", createHangulComposeMiddleware],
+]);
 
 /**
  * Returns the middleware factory for the given layout, or null.

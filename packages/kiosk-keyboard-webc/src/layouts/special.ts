@@ -1,5 +1,4 @@
 import type { LayoutDefinition } from "../types.js";
-import { _registerBuiltInLayout } from "../core/layout-registry.js";
 import { punctuationRow, symbolBottomRow } from "./symbol-common.js";
 
 const special: LayoutDefinition = [
@@ -34,7 +33,5 @@ const special: LayoutDefinition = [
   // Row 4: bottom
   symbolBottomRow,
 ];
-
-_registerBuiltInLayout("special", special);
 
 export default special;

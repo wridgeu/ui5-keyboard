@@ -85,9 +85,9 @@ If your app also uses UI5 Web Components directly (e.g., `@ui5/webcomponents` bu
 
 ### Tree-Shaking
 
-The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Layouts, middleware, theme/i18n asset registration, and the convenience bundle entry are marked as side-effectful because they self-register on import.
+The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Only the genuinely side-effectful modules are listed: theme/i18n asset registration (`Assets`, `generated/**`) and the convenience bundle entry (`bundle.esm`).
 
-> **Note:** All built-in layouts are statically imported by the main `KioskKeyboard` entry point, so they are always included in the bundle. Middleware modules (`kiosk-keyboard-webc/middleware/*`) are opt-in and only included when explicitly imported by the consumer.
+> **Note:** All built-in layouts and their composition middleware (kana, Hangul) are pure data/factory modules that the registries (`core/layout-registry`, `core/middleware-registry`) statically import and reference. They are therefore always included in the bundle through normal tree-shaking — no `sideEffects` marker is required, and a prior side-effect-import registration scheme that the production bundle silently dropped is avoided (see issue #108).
 
 In this monorepo, install all workspace dependencies once at the repository root:
 

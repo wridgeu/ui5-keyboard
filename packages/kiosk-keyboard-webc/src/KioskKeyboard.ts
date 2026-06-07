@@ -1,9 +1,12 @@
-// Main entry point -- imports all built-in layouts (triggering self-registration)
-// and defines the component class.
+// Main entry point -- defines the component class.
 //
-// The layout imports MUST be in this file (not only in bundle.esm.ts) because
-// ui5-tooling-modules resolves the main entry from the CEM and the auto-generated
-// wrapper needs layouts included in the Rollup module graph.
+// The built-in layouts and composition middleware are pulled into the module
+// graph as genuine value imports by their registries (core/layout-registry.js
+// and core/middleware-registry.js, which build their maps from direct imports).
+// They are therefore bundled wherever this entry is -- including the
+// ui5-tooling-modules wrapper that resolves the main entry from the CEM -- and
+// cannot be dropped by tree-shaking (the previous side-effect-only imports were;
+// see issue #108).
 
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
@@ -48,20 +51,6 @@ import { KIOSK_KEYBOARD_DOM } from "./core/dom-contract.js";
 import styles from "./generated/themes/KioskKeyboard.css.js";
 
 export type { KioskKeyboardDomContract } from "./core/dom-contract.js";
-
-// ── Built-in layout side-effect imports (self-register on load) ──
-import "./layouts/qwerty.js";
-import "./layouts/qwertz-de.js";
-import "./layouts/numeric.js";
-import "./layouts/special.js";
-import "./layouts/numpad.js";
-import "./layouts/fkeys.js";
-import "./layouts/nav.js";
-import "./layouts/ja-romaji.js";
-import "./layouts/ja-kana.js";
-import "./layouts/arabic.js";
-import "./layouts/ko-hangul.js";
-import "./layouts/qwerty-es.js";
 
 // ── Register ui5-icon + needed icons so they resolve inside shadow DOM ──
 import "@ui5/webcomponents/dist/Icon.js";

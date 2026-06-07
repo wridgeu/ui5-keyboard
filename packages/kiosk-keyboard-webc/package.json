@@ -29,9 +29,7 @@
   "sideEffects": [
     "./dist/bundle.esm.js",
     "./dist/Assets.js",
-    "./dist/generated/**",
-    "./dist/layouts/**",
-    "./dist/middleware/**"
+    "./dist/generated/**"
   ],
   "main": "dist/KioskKeyboard.js",
   "types": "dist/KioskKeyboard.d.ts",
@@ -73,6 +71,7 @@
     "prepublishOnly": "node ../../tools/copy-license.mjs && npm run build",
     "pretypecheck": "npm run generate",
     "typecheck": "tsc --noEmit --composite false",
+    "pretest": "npm run generate",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:component": "npm run generate && web-test-runner",

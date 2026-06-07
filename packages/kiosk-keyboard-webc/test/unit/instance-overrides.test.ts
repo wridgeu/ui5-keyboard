@@ -3,17 +3,6 @@ import { getRegisteredLayout, getLayoutOrDefault, getLocaleLayout } from "../../
 import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
 import type { LayoutDefinition, CompositionMiddleware } from "../../src/types.js";
 
-// Pull in built-in layouts so the registry is populated.
-import "../../src/layouts/qwerty.js";
-import "../../src/layouts/qwertz-de.js";
-import "../../src/layouts/numeric.js";
-import "../../src/layouts/numpad.js";
-import "../../src/layouts/special.js";
-import "../../src/layouts/ja-kana.js";
-// Side-effect import: registers the hangul middleware for "ko-hangul",
-// which acts as the stable built-in layout for the middleware shadow tests.
-import "../../src/middleware/hangul-compose.js";
-
 const BUILT_IN_MW_LAYOUT = "ko-hangul";
 
 const layoutA: LayoutDefinition = [[{ value: "a" }]];

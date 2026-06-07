@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
-import "../../src/middleware/kana-dakuten.js";
 
 describe("kana-dakuten middleware", () => {
   let input: HTMLInputElement;
@@ -11,7 +10,7 @@ describe("kana-dakuten middleware", () => {
     input.setSelectionRange(0, 0);
   });
 
-  it("registers itself for ja-kana layout", () => {
+  it("is registered as a built-in for ja-kana layout", () => {
     expect(getMiddlewareFactory("ja-kana")).not.toBeNull();
   });
 
