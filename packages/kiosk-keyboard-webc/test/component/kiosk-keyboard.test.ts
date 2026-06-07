@@ -427,6 +427,112 @@ describe("kiosk-keyboard", () => {
     });
   });
 
+  // ── Backspace press-and-hold auto-repeat ──
+
+  describe("backspace auto-repeat", () => {
+    const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+    function pressBackspace(bksp: HTMLElement): void {
+      bksp.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true, button: 0, pointerId: 1 }));
+    }
+    function releasePointer(): void {
+      document.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1 }));
+    }
+
+    async function setup(value: string): Promise<{ input: HTMLInputElement; kb: KioskKeyboard; bksp: HTMLElement }> {
+      const container = await fixture(html`
+        <div>
+          <input id="ar-target" type="text" value="${value}" />
+          <kiosk-keyboard layout="qwerty" controls="ar-target"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#ar-target")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      const bksp = queryKey(kb, "{backspace}")!;
+      return { input, kb, bksp };
+    }
+
+    // The repeat curve starts at 450ms then accelerates; a ~900ms hold should
+    // delete several characters. Using a generous string keeps the assertion
+    // about "more than one" robust against CI timing jitter.
+    it("deletes multiple characters while held, and stops on release", async () => {
+      const { input, bksp } = await setup("abcdefghijklmnop");
+
+      pressBackspace(bksp);
+      await delay(900);
+      releasePointer();
+
+      const afterHold = input.value.length;
+      expect(afterHold, "a held Backspace deletes more than one character").to.be.lessThan(15);
+
+      // Releasing stops the repeat: the value is stable afterwards.
+      await delay(300);
+      expect(input.value.length, "no further deletion after release").to.equal(afterHold);
+    });
+
+    it("suppresses the trailing release click after a repeat (no over-delete)", async () => {
+      const { input, bksp } = await setup("abcdefghij");
+
+      pressBackspace(bksp);
+      await delay(700);
+      releasePointer();
+      const afterHold = input.value.length;
+
+      // The release click (here simulated explicitly) must be swallowed.
+      bksp.click();
+      expect(input.value.length, "trailing click does not delete an extra character").to.equal(afterHold);
+
+      // A fresh tap deletes normally again (suppression was one-shot).
+      bksp.click();
+      expect(input.value.length).to.equal(afterHold - 1);
+    });
+
+    it("is a no-op while held over a read-only input", async () => {
+      const { input, bksp } = await setup("abcdef");
+      input.readOnly = true;
+
+      pressBackspace(bksp);
+      await delay(800);
+      releasePointer();
+
+      expect(input.value, "read-only input is untouched").to.equal("abcdef");
+    });
+
+    it("is a no-op while held over an empty input", async () => {
+      const { input, bksp } = await setup("");
+
+      pressBackspace(bksp);
+      await delay(800);
+      releasePointer();
+
+      expect(input.value).to.equal("");
+    });
+
+    it("does not start auto-repeat when the keyboard is disabled", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="ar-target-d" type="text" value="abcdef" />
+          <kiosk-keyboard layout="qwerty" controls="ar-target-d" disabled></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#ar-target-d")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+      input.focus();
+      input.setSelectionRange(6, 6);
+
+      const bksp = queryKey(kb, "{backspace}")!;
+      pressBackspace(bksp);
+      await delay(800);
+      releasePointer();
+
+      expect(input.value, "disabled keyboard ignores the hold").to.equal("abcdef");
+    });
+  });
+
   // ── Shift / Caps ──
 
   describe("shift and caps lock", () => {

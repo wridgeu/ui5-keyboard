@@ -38,16 +38,18 @@ export default class TargetInputSession {
     this._targetDirty = true;
   }
 
-  handleBackspace(): void {
+  /** Deletes one grapheme (or the selection). Returns whether anything was removed. */
+  handleBackspace(): boolean {
     const dom = this._getTargetDomRef();
-    if (!dom) return;
+    if (!dom) return false;
 
     const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined, this._customResolver);
-    if (!pos) return;
+    if (!pos) return false;
 
     this._cursorPos = pos;
     this._lastKnownValue = dom.value;
     this._targetDirty = true;
+    return true;
   }
 
   handleEnter(): void {
