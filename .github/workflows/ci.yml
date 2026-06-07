@@ -26,6 +26,9 @@ jobs:
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
+          # Node 24 (>= 24.14) bundles npm >= 11.11, which enforces the
+          # min-release-age supply-chain cooldown (root .npmrc) and meets the
+          # engines npm floor. Do not drop below Node 24.
           node-version: 24
           cache: npm
 
@@ -40,7 +43,10 @@ jobs:
 
       - name: Commitlint
         if: github.event_name == 'pull_request'
-        run: npx commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}" --verbose
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
 
       - name: Check formatting
         run: npm run fmt:check
