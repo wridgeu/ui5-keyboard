@@ -1364,6 +1364,19 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
+    // Unrecognized `{...}` token: not one of the built-in special keys above.
+    // key-press already fired; do NOT insert the literal braces - that was a
+    // silent footgun (a mistyped `{bcksp}`, or a custom `{paste}` key with no
+    // handler, used to type the text "{bcksp}" into the field). Length > 2
+    // keeps a lone "{"/"}" literal.
+    if (value.length > 2 && value.startsWith("{") && value.endsWith("}")) {
+      console.warn(
+        `[kiosk-keyboard] Unrecognized key token "${value}": not a built-in special key. Ignoring (no text inserted).`,
+      );
+      this._autoReleaseShift();
+      return;
+    }
+
     // Regular character key - dispatches "input" event (not "change", which
     // fires on blur, matching native keyboard behavior).
     if (target) {
