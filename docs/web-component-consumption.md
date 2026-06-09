@@ -159,6 +159,38 @@ Available layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
 `kiosk-keyboard-webc/layouts/fkey-row` and `kiosk-keyboard-webc/layouts/nav-row`
 are stable imports for composing custom variant layouts.
 
+## Custom Action Keys
+
+A layout key whose value is `{action:name}` (optionally `{action:name:param}`)
+runs a custom handler instead of inserting text. Register handlers per element
+via the `instanceActions` property; `defineActions` types the handler's
+`ActionContext` argument:
+
+```typescript
+import KioskKeyboard from "kiosk-keyboard-webc";
+import { defineActions } from "kiosk-keyboard-webc"; // re-exported from the entry
+
+const el = document.createElement("kiosk-keyboard");
+el.instanceLayouts = {
+  pad: [[{ value: "{action:paste}", label: "", icon: "sap-icon://paste" }, { value: "1" }]],
+};
+el.instanceActions = defineActions({
+  paste: {
+    ariaLabel: "Paste from clipboard",
+    handler: (ctx) => void navigator.clipboard.readText().then((t) => ctx.insertText(t)),
+  },
+});
+el.layout = "pad";
+document.body.appendChild(el);
+```
+
+The handler receives a curated `ActionContext` (`insertText`, `deleteBackward`,
+`isShifted`, `isCapsLock`, `targetElement`, `switchLayout`, `switchToBase`).
+Listen for the cancelable `key-press` event to veto an action before its handler
+runs. Actions are per-element only - there is no global registry, so handlers are
+released when the element is removed. An unregistered `{action:*}` (or any other
+unrecognized `{token}`) is a no-op with a console warning, never typed literally.
+
 ## Limitations and Workarounds
 
 ### Windows Backslashes in CEM Type References

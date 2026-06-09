@@ -147,6 +147,17 @@ declare module "./KioskKeyboard" {
          * @since 0.1.0
          */
         instanceMiddleware?: (object | null) | PropertyBindingInfo | `{${string}}`;
+
+        /**
+         * Per-instance custom action map for `{action:<name>}` keys, keyed by
+        action name. Scoped to this control only - there is no global
+        registry, so handlers are released when UI5 destroys the control.
+        Accepts a plain `Record<string, ActionDefinition>`; the control
+        stores it as a `Map` internally.
+         *
+         * @since 0.2.0
+         */
+        instanceActions?: (object | null) | PropertyBindingInfo | `{${string}}`;
         _activeTarget?: Control | string;
         ariaLabelledBy?: Control | string | (Control | string)[];
         ariaDescribedBy?: Control | string | (Control | string)[];
@@ -643,6 +654,40 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
         setInstanceMiddleware(instanceMiddleware: object | null): this;
+
+        // property: instanceActions
+
+        /**
+         * Gets current value of property "instanceActions".
+         *
+         * Per-instance custom action map for `{action:<name>}` keys, keyed by
+        action name. Scoped to this control only - there is no global
+        registry, so handlers are released when UI5 destroys the control.
+        Accepts a plain `Record<string, ActionDefinition>`; the control
+        stores it as a `Map` internally.
+         *
+         * @since 0.2.0
+         *
+         * @returns Value of property "instanceActions"
+         */
+        getInstanceActions(): object | null;
+
+        /**
+         * Sets a new value for property "instanceActions".
+         *
+         * Per-instance custom action map for `{action:<name>}` keys, keyed by
+        action name. Scoped to this control only - there is no global
+        registry, so handlers are released when UI5 destroys the control.
+        Accepts a plain `Record<string, ActionDefinition>`; the control
+        stores it as a `Map` internally.
+         *
+         * @since 0.2.0
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * @param instanceActions New value for property "instanceActions"
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        setInstanceActions(instanceActions: object | null): this;
 
         // association: _activeTarget
 

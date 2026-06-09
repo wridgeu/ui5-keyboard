@@ -31,6 +31,7 @@ import {
   type InstanceLocaleLayouts,
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory, type InstanceMiddleware } from "./core/middleware-registry.js";
+import { getRegisteredAction, type InstanceActions } from "./core/action-registry.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import {
@@ -38,6 +39,8 @@ import {
   MobileKeyboard,
   FKeyMode,
   type CompositionMiddleware,
+  type ActionContext,
+  type ActionDefinition,
   type LayoutDefinition,
   type KeyDefinition,
   type KeyPressEventDetail,
@@ -521,6 +524,19 @@ class KioskKeyboard extends UI5Element {
    */
   @property({ type: Object, noAttribute: true })
   instanceMiddleware: Record<string, () => CompositionMiddleware> | null = null;
+
+  /**
+   * Per-instance custom action map for `{action:<name>}` keys, keyed by
+   * action name. Programmatic only -- accepts a JS object whose values are
+   * {@link ActionDefinition}s. Scoped to this element; there is no global
+   * registry, so handlers are released with the element.
+   *
+   * @default null
+   * @public
+   * @since 0.2.0
+   */
+  @property({ type: Object, noAttribute: true })
+  instanceActions: Record<string, ActionDefinition> | null = null;
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
@@ -1053,6 +1069,8 @@ class KioskKeyboard extends UI5Element {
   private _cachedInstanceLocaleMap: InstanceLocaleLayouts | undefined = undefined;
   private _cachedInstanceMiddlewareKey: object | null = null;
   private _cachedInstanceMiddlewareMap: InstanceMiddleware | undefined = undefined;
+  private _cachedInstanceActionsKey: object | null = null;
+  private _cachedInstanceActionsMap: InstanceActions | undefined = undefined;
 
   /** Returns a memoized `Map` view of the `instanceLayouts` property, or undefined. */
   private _getInstanceLayoutsMap(): InstanceLayouts | undefined {
@@ -1137,6 +1155,30 @@ class KioskKeyboard extends UI5Element {
     return this._cachedInstanceMiddlewareMap;
   }
 
+  /** Returns a memoized `Map` view of the `instanceActions` property, or undefined. */
+  private _getInstanceActionsMap(): InstanceActions | undefined {
+    const value = this.instanceActions;
+    if (!value || typeof value !== "object") {
+      this._cachedInstanceActionsKey = null;
+      this._cachedInstanceActionsMap = undefined;
+      return undefined;
+    }
+    if (this._cachedInstanceActionsKey === value) return this._cachedInstanceActionsMap;
+    const entries: [string, ActionDefinition][] = [];
+    for (const [name, def] of Object.entries(value)) {
+      if (!def || typeof (def as ActionDefinition).handler !== "function") {
+        console.warn(`[kiosk-keyboard] Invalid instanceActions entry "${name}": must have a "handler" function.`);
+        continue;
+      }
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, def as ActionDefinition]);
+    }
+    this._cachedInstanceActionsKey = value;
+    this._cachedInstanceActionsMap = entries.length === 0 ? undefined : new Map(entries);
+    return this._cachedInstanceActionsMap;
+  }
+
   _getKeyLabel(key: KeyDefinition): string {
     if (key.label === "") return "";
 
@@ -1174,7 +1216,22 @@ class KioskKeyboard extends UI5Element {
     }
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);
-    return this._getKeyLabel(key) || key.value;
+
+    const display = this._getKeyLabel(key);
+    if (display) return display;
+
+    // Icon-only `{action:*}` key (label suppressed): use the action's
+    // ariaLabel, else the bare action name, so the accessible name is never
+    // the raw "{action:...}" token.
+    if (key.value.startsWith("{action:")) {
+      const raw = key.value.slice("{action:".length, -1);
+      const sep = raw.indexOf(":");
+      const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
+      const action = getRegisteredAction(name, this._getInstanceActionsMap());
+      return action?.ariaLabel || name || key.value;
+    }
+
+    return key.value;
   }
 
   /**
@@ -1303,6 +1360,11 @@ class KioskKeyboard extends UI5Element {
 
     if (value.startsWith("{fkey:")) {
       this._handleFKeyPress(value, shifted);
+      return;
+    }
+
+    if (value.startsWith("{action:")) {
+      this._handleActionKey(value, shifted);
       return;
     }
 
@@ -1558,6 +1620,76 @@ class KioskKeyboard extends UI5Element {
     if (!allowed) return;
     this._handleFKey(fkeyName, shifted);
     this._autoReleaseShift();
+  }
+
+  /**
+   * Resolves and runs a `{action:<name>}` / `{action:<name>:<param>}` key.
+   *
+   * Validates first (mirroring `{layout:*}`): an unregistered name is warned
+   * and ignored, never inserted as literal text and without firing key-press.
+   * For a registered action, fires the cancelable key-press, then invokes the
+   * handler with a curated {@link ActionContext}. Handler exceptions are
+   * caught and logged so consumer code cannot break dispatch.
+   */
+  private _handleActionKey(value: string, shifted: boolean): void {
+    const raw = value.slice("{action:".length, -1);
+    const sep = raw.indexOf(":");
+    const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
+    const param = sep === -1 ? undefined : raw.slice(sep + 1);
+    if (!name) return;
+
+    const action = getRegisteredAction(name, this._getInstanceActionsMap());
+    if (!action) {
+      console.warn(
+        `[kiosk-keyboard] Action "${name}" referenced by an {action:*} key is not registered. Pass it through the instanceActions property.`,
+      );
+      return;
+    }
+
+    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
+    if (!allowed) return;
+
+    try {
+      action.handler(this._createActionContext(), param);
+    } catch (e) {
+      this._logContainedActionError(name, e);
+    }
+
+    this._autoReleaseShift();
+  }
+
+  /**
+   * Logs a contained action-handler exception. Kept out of the catch block so
+   * the containment reads as deliberate handling (log + swallow so a consumer
+   * throw cannot break key dispatch), not an accidentally swallowed error.
+   */
+  private _logContainedActionError(name: string, error: unknown): void {
+    console.error(`[kiosk-keyboard] Action "${name}" handler threw and was contained.`, error);
+  }
+
+  /**
+   * Builds the curated {@link ActionContext} handed to action handlers. Each
+   * member routes through the same internals the built-in keys use; read-only
+   * state is snapshotted at invocation while insertText/deleteBackward act on
+   * the live target.
+   */
+  private _createActionContext(): ActionContext {
+    const target = this._resolveTarget();
+    return {
+      insertText: (text: string): void => {
+        const t = this._resolveTarget();
+        if (t) insertText(t, text);
+      },
+      deleteBackward: (): boolean => {
+        const t = this._resolveTarget();
+        return t ? handleBackspace(t) !== null : false;
+      },
+      isShifted: this._shifted,
+      isCapsLock: this._capsLock,
+      targetElement: target,
+      switchLayout: (name: string): void => this._handleLayoutSwitch(`{layout:${name}}`),
+      switchToBase: (): void => this._handleLayoutSwitch("{layout:base}"),
+    };
   }
 
   private _handleFKey(fkeyName: string, shiftKey: boolean): void {
@@ -2071,4 +2203,5 @@ KioskKeyboard.define();
 
 export default KioskKeyboard;
 
-export type { CompositionMiddleware } from "./types.js";
+export type { CompositionMiddleware, ActionContext, ActionDefinition } from "./types.js";
+export { defineActions } from "./types.js";
