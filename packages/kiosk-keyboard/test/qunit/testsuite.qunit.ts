@@ -109,6 +109,9 @@ sap.ui.define([], () => {
       "instance-overrides": {
         title: "QUnit tests for ui5.kiosk - per-instance layout/middleware/locale overrides",
       },
+      "unknown-token": {
+        title: "QUnit tests for ui5.kiosk - unrecognized {token} keys are no-ops",
+      },
     },
   };
 });
