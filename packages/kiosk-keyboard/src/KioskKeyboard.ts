@@ -5,7 +5,7 @@ import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
 import { SECONDARY_LAYOUTS } from "./internal/types";
-import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
+import type { LayoutDefinition, KeyDefinition, CompositionMiddleware, ActionContext, ActionDefinition } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
@@ -27,6 +27,7 @@ import {
   getMiddlewareFactory as registryGetMiddlewareFactory,
   type InstanceMiddleware,
 } from "./internal/middleware-registry";
+import { getRegisteredAction as registryGetAction, type InstanceActions } from "./internal/action-registry";
 import { setI18nResolver as registrySetResolver } from "./internal/i18n-registry";
 import type { I18nResolver } from "./types";
 import FocusClaimService from "./internal/focus-claim-service";
@@ -137,6 +138,8 @@ export default class KioskKeyboard extends Control {
   private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
   /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
+  /** Per-instance custom action map, derived from the `instanceActions` property. */
+  private _instanceActionsMap!: InstanceActions | undefined;
   /** UI5 ResizeHandler registration ID for root size updates. */
   private _responsiveResizeHandlerId!: string | null;
   /** Root DOM element currently observed by the resize handler. */
@@ -355,6 +358,20 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       instanceMiddleware: {
+        type: "object",
+        defaultValue: null,
+        group: "Behavior",
+      },
+      /**
+       * Per-instance custom action map for `{action:<name>}` keys, keyed by
+       * action name. Scoped to this control only - there is no global
+       * registry, so handlers are released when UI5 destroys the control.
+       * Accepts a plain `Record<string, ActionDefinition>`; the control
+       * stores it as a `Map` internally.
+       *
+       * @since 0.2.0
+       */
+      instanceActions: {
         type: "object",
         defaultValue: null,
         group: "Behavior",
@@ -646,6 +663,7 @@ export default class KioskKeyboard extends Control {
     this._instanceLayoutsMap = KioskKeyboard._toLayoutMap(mSettings?.instanceLayouts);
     this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(mSettings?.instanceLocaleLayouts);
     this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(mSettings?.instanceMiddleware);
+    this._instanceActionsMap = KioskKeyboard._toActionMap(mSettings?.instanceActions);
     // Spread before super so callers' settings object is never mutated;
     // any explicit `layout` in `mSettings` overrides the locale default.
     const merged: Record<string, unknown> = {
@@ -709,6 +727,7 @@ export default class KioskKeyboard extends Control {
     this._instanceLayoutsMap = undefined;
     this._instanceLocaleLayoutsMap = undefined;
     this._instanceMiddlewareMap = undefined;
+    this._instanceActionsMap = undefined;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
@@ -1035,6 +1054,16 @@ export default class KioskKeyboard extends Control {
     return this.setProperty("instanceMiddleware", value) as this;
   }
 
+  /**
+   * Custom setter for `instanceActions` - keeps the internal `Map` cache in
+   * sync with the property value. No re-render: actions affect dispatch, not
+   * the rendered key grid (the layout already carries each key's label/icon).
+   */
+  setInstanceActions(value: Record<string, ActionDefinition> | null): this {
+    this._instanceActionsMap = KioskKeyboard._toActionMap(value);
+    return this.setProperty("instanceActions", value, true) as this;
+  }
+
   private static _toLayoutMap(value: unknown): InstanceLayouts | undefined {
     if (!value || typeof value !== "object") return undefined;
     const entries: [string, LayoutDefinition][] = [];
@@ -1087,6 +1116,25 @@ export default class KioskKeyboard extends Control {
       const key = name.trim().toLowerCase();
       if (!key) continue;
       entries.push([key, factory as () => CompositionMiddleware]);
+    }
+    return entries.length === 0 ? undefined : new Map(entries);
+  }
+
+  private static _toActionMap(value: unknown): InstanceActions | undefined {
+    if (!value || typeof value !== "object") return undefined;
+    const entries: [string, ActionDefinition][] = [];
+    for (const [name, def] of Object.entries(value as Record<string, unknown>)) {
+      if (!def || typeof (def as ActionDefinition).handler !== "function") {
+        Log.warning(
+          `Invalid instanceActions entry "${name}": must be an object with a "handler" function.`,
+          undefined,
+          "ui5.kiosk.KioskKeyboard",
+        );
+        continue;
+      }
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, def as ActionDefinition]);
     }
     return entries.length === 0 ? undefined : new Map(entries);
   }
@@ -1804,7 +1852,20 @@ export default class KioskKeyboard extends Control {
     }
 
     const display = this._getKeyLabel(key);
-    return display || key.value;
+    if (display) return display;
+
+    // Icon-only `{action:*}` key (label suppressed): use the action's
+    // ariaLabel, else the bare action name, so the accessible name is never
+    // the raw "{action:...}" token.
+    if (key.value.startsWith("{action:")) {
+      const raw = key.value.slice("{action:".length, -1);
+      const sep = raw.indexOf(":");
+      const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
+      const action = registryGetAction(name, this._instanceActionsMap);
+      return action?.ariaLabel || name || key.value;
+    }
+
+    return key.value;
   }
 
   /** The display label for a key. Empty string when label is suppressed (icon-only opt-out). */
@@ -2145,6 +2206,11 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
+    if (keyValue.startsWith("{action:")) {
+      this._handleActionKey(keyValue, shift);
+      return;
+    }
+
     // Unrecognized `{...}`-shaped value: not one of the built-in special keys
     // above. Fire keyPress so a consumer can still observe/handle it, but do
     // NOT insert the literal braces - that was a silent footgun (a mistyped
@@ -2180,6 +2246,102 @@ export default class KioskKeyboard extends Control {
 
     // Auto-release shift (not caps lock)
     this._shiftState.autoRelease();
+  }
+
+  /**
+   * Resolves and runs a `{action:<name>}` / `{action:<name>:<param>}` key.
+   *
+   * Validates first (mirroring the `{layout:*}` path): an unregistered name
+   * is warned and ignored, never inserted as literal text and without firing
+   * keyPress. For a registered action, fires the cancelable keyPress, then
+   * invokes the handler with a curated {@link ActionContext}. Handler
+   * exceptions are caught and logged so consumer code cannot break dispatch.
+   */
+  private _handleActionKey(keyValue: string, shift: boolean): void {
+    const raw = keyValue.slice("{action:".length, -1);
+    const sep = raw.indexOf(":");
+    const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
+    const param = sep === -1 ? undefined : raw.slice(sep + 1);
+    if (!name) return;
+
+    const action = registryGetAction(name, this._instanceActionsMap);
+    if (!action) {
+      Log.warning(
+        `Action "${name}" referenced by an {action:*} key is not registered. Pass it through the instanceActions setting.`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+      return;
+    }
+
+    if (!this.fireKeyPress({ key: keyValue, shiftKey: shift })) return;
+
+    try {
+      action.handler(this._createActionContext(), param);
+    } catch (e) {
+      Log.error(
+        `Action "${name}" handler threw and was contained.`,
+        e instanceof Error ? (e.stack ?? e.message) : String(e),
+        "ui5.kiosk.KioskKeyboard",
+      );
+    }
+
+    this._shiftState.autoRelease();
+  }
+
+  /**
+   * Builds the curated {@link ActionContext} handed to action handlers. Each
+   * member routes through the same internals the built-in keys use, so custom
+   * actions get identical cursor tracking and layout/shift semantics without
+   * touching the control directly.
+   */
+  private _createActionContext(): ActionContext {
+    const element = this._getTargetElement();
+    const targetElement = element
+      ? resolveWithCustomResolver(element.getFocusDomRef(), this._getEffectiveResolver())
+      : null;
+
+    // Methods route to the live internals (arrow functions capture `this`,
+    // matching the renderer-internal-api pattern). The read-only state is
+    // snapshotted at invocation: the handler runs synchronously next, and a
+    // snapshot is more predictable than a getter that could observe state the
+    // handler itself mutated (e.g. after calling switchLayout, which resets
+    // shift). insertText/deleteBackward still operate on the live target.
+    return {
+      insertText: (text: string): void => this._targetSession.insertText(text),
+      deleteBackward: (): boolean => this._targetSession.handleBackspace(),
+      isShifted: this._isShiftActive(),
+      isCapsLock: this._isCapsLock(),
+      targetElement,
+      switchLayout: (name: string): void => this._switchLayoutFromAction(name, false),
+      switchToBase: (): void => this._switchLayoutFromAction("", true),
+    };
+  }
+
+  /**
+   * Layout switch requested from an action handler. Mirrors the `{layout:*}`
+   * key path: validates against the registry, applies, and fires layoutChange
+   * on a real change. A named switch is user-driven (overrides keyboardType);
+   * `toBase` resolves the tracked base layout as an external-sourced switch.
+   *
+   * NOTE (spike): this duplicates the validate/apply/fire logic in the
+   * `{layout:*}` branch of `_handleKeyAction`. A follow-up could hoist a
+   * shared `_performLayoutSwitch` used by both; left separate here to avoid
+   * touching the hot key-dispatch path during the spike.
+   */
+  private _switchLayoutFromAction(name: string, toBase: boolean): void {
+    const resolved = (toBase ? this._baseLayout : name).trim().toLowerCase();
+    if (!registryGetLayout(resolved, this._instanceLayoutsMap)) {
+      Log.warning(
+        `Layout "${resolved}" requested by an action is not registered.`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+      return;
+    }
+    if (this._applyLayout(resolved, toBase ? "external" : "user")) {
+      this.fireLayoutChange({ layout: resolved });
+    }
   }
 
   private _toggleShift(el: HTMLElement): void {

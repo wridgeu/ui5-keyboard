@@ -278,6 +278,21 @@ Layout switch keys use a special value format: `{layout:name}`. When tapped:
 
 Layout switching works in every `keyboardType`: a user pick overrides the Numpad/Numeric constraint until `{layout:base}`, `setLayout`, a `keyboardType` change, or an input-target switch re-engages it.
 
+### Registered Actions
+
+Custom action keys use the value format `{action:name}` or `{action:name:param}`. They are resolved against a per-instance map supplied via the `instanceActions` setting (a `Record<string, ActionDefinition>`); there is **no** global registry, mirroring `instanceLayouts` / `instanceMiddleware`, so handlers are released when UI5 destroys the control.
+
+When an `{action:*}` key is tapped, `_handleActionKey`:
+
+1. Parses `name` (and optional `param`, which is everything after the second colon, so it may contain further colons).
+2. Looks the name up in the instance map. An unregistered name logs a warning and is a no-op (no `keyPress`, no insertion) - validated first, like the `{layout:*}` path.
+3. Fires the cancelable `keyPress` (with the full `{action:name}` token as `key`); `preventDefault()` skips the handler.
+4. Invokes `handler(context, param)` inside a `try/catch` so a throwing handler is logged and contained, never breaking dispatch.
+
+The handler receives a curated `ActionContext` (`insertText`, `deleteBackward`, `isShifted`, `isCapsLock`, `targetElement`, `switchLayout`, `switchToBase`) that routes through the same internals the built-in keys use. Read-only state is snapshotted at invocation; `insertText` / `deleteBackward` act on the live target. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch - actions are an additive branch, not a rewrite.
+
+Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`) as usual. For an icon-only action key (`label: ""`), the accessible name falls back to `ActionDefinition.ariaLabel`, then the bare action name - never the raw `{action:...}` token. Use `defineActions({ ... })` to get the `ActionContext` typed on inline handlers (the `object`-typed setter otherwise erases it).
+
 ## Locale-Based Default Layout
 
 When no explicit `layout` is provided in the constructor settings, the keyboard auto-detects the appropriate layout from the UI5 locale.

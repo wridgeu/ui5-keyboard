@@ -112,6 +112,9 @@ sap.ui.define([], () => {
       "unknown-token": {
         title: "QUnit tests for ui5.kiosk - unrecognized {token} keys are no-ops",
       },
+      "instance-actions": {
+        title: "QUnit tests for ui5.kiosk - per-instance registered actions ({action:*})",
+      },
     },
   };
 });

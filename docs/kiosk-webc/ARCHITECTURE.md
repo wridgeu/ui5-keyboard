@@ -160,11 +160,17 @@ click / touchend
   |     {enter}         -> fire key-press, insert newline (textarea) / fire change (input)
   |     {layout:name}   -> switch layout, fire layout-change (only if it changed)
   |     {fkey:name}     -> handle function/navigation key
+  |     {action:name}   -> resolve registered action, fire key-press, run handler(context, param)
+  |     {token}         -> unrecognized: fire key-press, warn, no-op (no literal insertion)
   |     (character)     -> resolve shift value, fire key-press, insert text
   |
   +-- Auto-release shift (if one-shot, not caps lock)
   +-- Announce key via ARIA live region
 ```
+
+### Registered Actions
+
+Custom action keys (`{action:name}` / `{action:name:param}`) resolve against the per-instance `instanceActions` property (a `Record<string, ActionDefinition>`); there is no global registry, matching `instanceMiddleware`. `_handleActionKey` parses the name/param, validates against the map (unregistered names warn and no-op), fires the cancelable `key-press`, then runs `handler(context, param)` inside a `try/catch` that contains and logs a throwing handler. The curated `ActionContext` (`insertText`, `deleteBackward`, `isShifted`, `isCapsLock`, `targetElement`, `switchLayout`, `switchToBase`) routes through the same internals as the built-in keys, which stay on the hardcoded switch. Visible label/icon come from the `KeyDefinition`; an icon-only action key's accessible name falls back to `ActionDefinition.ariaLabel`, then the bare action name. This mirrors the UI5 control's `instanceActions` 1:1.
 
 ### Backspace Press-and-Hold Auto-Repeat
 
