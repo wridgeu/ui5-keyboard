@@ -1329,9 +1329,14 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Resolve the character that would be inserted (undefined for action keys)
+    // An unrecognized `{...}` token (length > 2 so a lone "{"/"}" stays literal)
+    // is not a built-in special key and inserts nothing - see the guard below.
+    const isUnknownToken = value.length > 2 && value.startsWith("{") && value.endsWith("}");
+
+    // Resolve the character that would be inserted; `undefined` for keys that
+    // insert nothing (action keys and unrecognized tokens).
     const isAction = value === "{backspace}" || value === "{enter}";
-    const char = isAction ? undefined : shifted ? (shiftValue ?? value.toUpperCase()) : value;
+    const char = isAction || isUnknownToken ? undefined : shifted ? (shiftValue ?? value.toUpperCase()) : value;
 
     // All other keys fire key-press with the current shift state
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
@@ -1365,11 +1370,11 @@ class KioskKeyboard extends UI5Element {
     }
 
     // Unrecognized `{...}` token: not one of the built-in special keys above.
-    // key-press already fired; do NOT insert the literal braces - that was a
-    // silent footgun (a mistyped `{bcksp}`, or a custom `{paste}` key with no
-    // handler, used to type the text "{bcksp}" into the field). Length > 2
-    // keeps a lone "{"/"}" literal.
-    if (value.length > 2 && value.startsWith("{") && value.endsWith("}")) {
+    // key-press already fired (with char: undefined); do NOT insert the literal
+    // braces - that was a silent footgun (a mistyped `{bcksp}`, or a custom
+    // `{paste}` key with no handler, used to type the text "{bcksp}" into the
+    // field).
+    if (isUnknownToken) {
       console.warn(
         `[kiosk-keyboard] Unrecognized key token "${value}": not a built-in special key. Ignoring (no text inserted).`,
       );
