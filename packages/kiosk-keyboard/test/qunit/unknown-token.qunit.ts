@@ -36,6 +36,10 @@ QUnit.test("Unrecognized {token} is a no-op and warns, never typed as literal te
   tapKey(kb, "{bcksp}");
   assert.strictEqual(input.getValue(), "", "Unknown brace token inserts nothing");
   assert.ok(warnSpy.called, "Unknown brace token logged a warning");
+  assert.ok(
+    warnSpy.getCalls().some((c) => String(c.args[0]).includes("{bcksp}")),
+    "Warning names the offending token",
+  );
 
   input.destroy();
   kb.destroy();
@@ -51,6 +55,23 @@ QUnit.test("keyPress still fires for an unrecognized token (consumers can handle
   tapKey(kb, "{custom}");
   assert.strictEqual(pressed, "{custom}", "keyPress fired with the full token as key");
   assert.strictEqual(input.getValue(), "", "Still nothing inserted");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("A handled token (keyPress preventDefault) inserts nothing and is not warned", async (assert) => {
+  const warnSpy = sandbox.spy(Log, "warning");
+  // A consumer that handles a custom token via keyPress + preventDefault owns
+  // the behavior, so the keyboard must stay silent (no "unrecognized" warning).
+  const { kb, input } = await setup([[{ value: "{paste}", label: "p" }]]);
+  kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {
+    event.preventDefault();
+  });
+
+  tapKey(kb, "{paste}");
+  assert.strictEqual(input.getValue(), "", "Handled token inserts nothing");
+  assert.notOk(warnSpy.called, "A handled token is not warned");
 
   input.destroy();
   kb.destroy();
