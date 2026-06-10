@@ -35,10 +35,9 @@ QUnit.test("Unrecognized {token} is a no-op and warns, never typed as literal te
 
   tapKey(kb, "{bcksp}");
   assert.strictEqual(input.getValue(), "", "Unknown brace token inserts nothing");
-  assert.ok(warnSpy.called, "Unknown brace token logged a warning");
   assert.ok(
     warnSpy.getCalls().some((c) => String(c.args[0]).includes("{bcksp}")),
-    "Warning names the offending token",
+    "Unknown brace token warns and names the offending token",
   );
 
   input.destroy();
@@ -60,17 +59,18 @@ QUnit.test("keyPress still fires for an unrecognized token (consumers can handle
   kb.destroy();
 });
 
-QUnit.test("A handled token (keyPress preventDefault) inserts nothing and is not warned", async (assert) => {
+QUnit.test("A handled token (keyPress preventDefault) is not warned", async (assert) => {
   const warnSpy = sandbox.spy(Log, "warning");
   // A consumer that handles a custom token via keyPress + preventDefault owns
   // the behavior, so the keyboard must stay silent (no "unrecognized" warning).
+  // (Insertion is suppressed for any unknown token regardless, so the only
+  // assertion that distinguishes the vetoed path is the absence of a warning.)
   const { kb, input } = await setup([[{ value: "{paste}", label: "p" }]]);
   kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {
     event.preventDefault();
   });
 
   tapKey(kb, "{paste}");
-  assert.strictEqual(input.getValue(), "", "Handled token inserts nothing");
   assert.notOk(warnSpy.called, "A handled token is not warned");
 
   input.destroy();
@@ -78,7 +78,8 @@ QUnit.test("A handled token (keyPress preventDefault) inserts nothing and is not
 });
 
 QUnit.test("A lone brace character is still inserted as a literal", async (assert) => {
-  // Length-2 guard: "{" and "}" are real characters a user may want to type.
+  // A lone "{" or "}" only matches one end of the token shape, so it stays a
+  // normal insertable character.
   const { kb, input } = await setup([[{ value: "{" }, { value: "}" }]]);
 
   tapKey(kb, "{");

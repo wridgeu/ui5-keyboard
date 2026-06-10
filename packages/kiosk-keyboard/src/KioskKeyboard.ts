@@ -2145,12 +2145,13 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
-    // Unrecognized `{...}` token: not one of the built-in special keys above.
-    // Fire keyPress so a consumer can still observe/handle it, but do NOT
-    // insert the literal braces - that was a silent footgun (a mistyped
+    // Unrecognized `{...}`-shaped value: not one of the built-in special keys
+    // above. Fire keyPress so a consumer can still observe/handle it, but do
+    // NOT insert the literal braces - that was a silent footgun (a mistyped
     // `{bcksp}`, or a custom `{paste}` key with no handler, used to type the
-    // text "{bcksp}" into the field). Length > 2 keeps a lone "{"/"}" literal.
-    if (keyValue.length > 2 && keyValue.startsWith("{") && keyValue.endsWith("}")) {
+    // text "{bcksp}" into the field). A lone "{"/"}" only matches one end, so
+    // it stays a literal character.
+    if (keyValue.startsWith("{") && keyValue.endsWith("}")) {
       if (this.fireKeyPress({ key: keyValue, shiftKey: shift })) {
         Log.warning(
           `Unrecognized key token "${keyValue}": not a built-in special key. Ignoring (no text inserted).`,
