@@ -43,6 +43,23 @@ describe("kiosk-keyboard - unrecognized {token} keys", () => {
     }
   });
 
+  it("inserts nothing and does not warn when a consumer prevents key-press", async () => {
+    const warnings: string[] = [];
+    const orig = console.warn;
+    console.warn = (msg?: unknown) => warnings.push(String(msg));
+    try {
+      // A consumer that handles a custom token via key-press + preventDefault
+      // owns the behavior, so the keyboard must stay silent (no warning).
+      const { kb, input } = await setup([[{ value: "{paste}", label: "p" }]]);
+      kb.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
+      queryKey(kb, "{paste}").click();
+      expect(input.value).to.equal("");
+      expect(warnings.some((w) => w.includes("{paste}"))).to.equal(false);
+    } finally {
+      console.warn = orig;
+    }
+  });
+
   it("still inserts a lone brace character", async () => {
     const { kb, input } = await setup([[{ value: "{" }, { value: "}" }]]);
     queryKey(kb, "{").click();
