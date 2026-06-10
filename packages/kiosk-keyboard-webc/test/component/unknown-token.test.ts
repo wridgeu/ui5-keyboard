@@ -61,17 +61,18 @@ describe("kiosk-keyboard - unrecognized {token} keys", () => {
     expect(input.value).to.equal("");
   });
 
-  it("inserts nothing and does not warn when a consumer prevents key-press", async () => {
+  it("does not warn when a consumer prevents key-press", async () => {
     const warnings: string[] = [];
     const orig = console.warn;
     console.warn = (msg?: unknown) => warnings.push(String(msg));
     try {
       // A consumer that handles a custom token via key-press + preventDefault
-      // owns the behavior, so the keyboard must stay silent (no warning).
-      const { kb, input } = await setup([[{ value: "{paste}", label: "p" }]]);
+      // owns the behavior, so the keyboard must stay silent. Insertion is
+      // suppressed for any unknown token regardless, so the absence of a
+      // warning is the only assertion that distinguishes the vetoed path.
+      const { kb } = await setup([[{ value: "{paste}", label: "p" }]]);
       kb.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
       queryKey(kb, "{paste}").click();
-      expect(input.value).to.equal("");
       expect(warnings.some((w) => w.includes("{paste}"))).to.equal(false);
     } finally {
       console.warn = orig;

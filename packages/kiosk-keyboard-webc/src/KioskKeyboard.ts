@@ -1329,9 +1329,10 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // An unrecognized `{...}` token (length > 2 so a lone "{"/"}" stays literal)
-    // is not a built-in special key and inserts nothing - see the guard below.
-    const isUnknownToken = value.length > 2 && value.startsWith("{") && value.endsWith("}");
+    // An unrecognized `{...}`-shaped value (opens and closes with braces) is not
+    // a built-in special key and inserts nothing - see the guard below. A lone
+    // "{"/"}" only matches one end, so it stays a literal character.
+    const isUnknownToken = value.startsWith("{") && value.endsWith("}");
 
     // Resolve the character that would be inserted; `undefined` for keys that
     // insert nothing (action keys and unrecognized tokens).
