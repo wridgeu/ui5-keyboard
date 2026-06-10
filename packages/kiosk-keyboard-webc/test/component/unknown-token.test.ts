@@ -43,6 +43,24 @@ describe("kiosk-keyboard - unrecognized {token} keys", () => {
     }
   });
 
+  it("fires key-press with char: undefined for an unknown token (char must not lie)", async () => {
+    const { kb, input } = await setup([[{ value: "{bcksp}", label: "x" }]]);
+    let detail: { key: string; char?: string } | undefined;
+    kb.addEventListener(
+      "key-press",
+      (e: Event) => {
+        detail = (e as CustomEvent<{ key: string; char?: string }>).detail;
+      },
+      { once: true },
+    );
+    queryKey(kb, "{bcksp}").click();
+    // `char` is documented as the character that gets inserted; for an unknown
+    // token nothing is inserted, so it must be undefined, not the literal token.
+    expect(detail?.key).to.equal("{bcksp}");
+    expect(detail?.char).to.equal(undefined);
+    expect(input.value).to.equal("");
+  });
+
   it("inserts nothing and does not warn when a consumer prevents key-press", async () => {
     const warnings: string[] = [];
     const orig = console.warn;
