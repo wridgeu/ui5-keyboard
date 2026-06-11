@@ -278,20 +278,19 @@ Layout switch keys use a special value format: `{layout:name}`. When tapped:
 
 Layout switching works in every `keyboardType`: a user pick overrides the Numpad/Numeric constraint until `{layout:base}`, `setLayout`, a `keyboardType` change, or an input-target switch re-engages it.
 
-### Registered Actions
+### Custom Keys
 
-Custom action keys use the value format `{action:name}` or `{action:name:param}`. They are resolved against a per-instance map supplied via the `instanceActions` setting (a `Record<string, ActionDefinition>`); there is **no** global registry, mirroring `instanceLayouts` / `instanceMiddleware`, so handlers are released when UI5 destroys the control.
+There is no action registry. A layout key with a custom token (e.g. `{paste}`) is dispatched on the same path as any unrecognized `{...}` token: `_handleKeyAction` fires the cancelable `keyPress` (with the token as `key`, no literal insertion), and the consumer owns the behavior from a `keyPress` listener. The key inserts nothing by default; `preventDefault()` is how a consumer signals it has handled the token (a non-prevented unrecognized token just warns and no-ops).
 
-When an `{action:*}` key is tapped, `_handleActionKey`:
+To edit the target from a handler, the control exposes public methods that route through the same `TargetInputSession` the built-in keys use:
 
-1. Parses `name` (and optional `param`, which is everything after the second colon, so it may contain further colons).
-2. Looks the name up in the instance map. An unregistered name logs a warning and is a no-op (no `keyPress`, no insertion) - validated first, like the `{layout:*}` path.
-3. Fires the cancelable `keyPress` (with the full `{action:name}` token as `key`); `preventDefault()` skips the handler.
-4. Invokes `handler(context, param)` inside a `try/catch` so a throwing handler is logged and contained, never breaking dispatch.
+- `insertText(text: string): void` - insert at the caret (cursor-tracked, fires `liveChange`).
+- `deleteBackward(): boolean` - delete one grapheme before the caret.
+- `getActiveTargetElement(): HTMLInputElement | HTMLTextAreaElement | null` - the resolved native target.
 
-The handler receives a curated `ActionContext` (`insertText`, `deleteBackward`, `isShifted`, `isCapsLock`, `targetElement`, `switchLayout`, `switchToBase`) that routes through the same internals the built-in keys use. Read-only state is snapshotted at invocation; `insertText` / `deleteBackward` act on the live target. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch - actions are an additive branch, not a rewrite.
+All three are no-ops / return `null` when there is no active target, and none of them fire `keyPress` (they are called _by_ a handler). Layout switching uses the existing `setLayout`.
 
-Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`) as usual. For an icon-only action key (`label: ""`), the accessible name falls back to `ActionDefinition.ariaLabel`, then the bare action name - never the raw `{action:...}` token. Use `defineActions({ ... })` to get the `ActionContext` typed on inline handlers (the `object`-typed setter otherwise erases it).
+Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`). The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key (`label: ""`) with no source, so a custom key never announces the raw `{...}` token. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch.
 
 ## Locale-Based Default Layout
 
