@@ -173,8 +173,6 @@ export default class KeyStateTracker {
   private _clearNonModifierKeys(): boolean {
     let changed = false;
 
-    // Direct iteration with delete is safe per ES6 spec (visited entries
-    // that are removed do not cause re-visit; unvisited removals are skipped).
     for (const held of this._heldKeys) {
       if (MODIFIER_KEYS.has(held)) continue;
       changed = this._clearHeldKeyCompletely(held) || changed;

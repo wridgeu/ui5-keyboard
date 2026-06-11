@@ -2,6 +2,7 @@ import Log from "sap/base/Log";
 import { Platform, UnhandledReason } from "../library";
 import { MODIFIER_KEYS } from "./constants";
 import { INTERNAL_TOKEN } from "./internal-token";
+import type { SkipInfo } from "./skip-reason";
 import KeyStateTracker from "../KeyStateTracker";
 import type { KeyboardDispatchGuard } from "../types";
 import type HotkeyRecorder from "../HotkeyRecorder";
@@ -21,16 +22,29 @@ export interface KeyEventInterceptor {
 }
 
 /**
- * Result of processHotkeys - carries both the consumed flag and the
- * event context that emitUnhandled needs. Eliminates the need for
- * temporal coupling via a shared mutable field.
+ * Event context produced by processHotkeys and forwarded to processSequences
+ * and emitUnhandled through the dispatcher pipeline return value - no mutable
+ * shared state.
  * @internal
  */
-export interface HotkeyDispatchResult<TContext = unknown> {
+export interface EventContext {
+  activeScope: string;
+  isInput: boolean;
+  popupOpen: boolean;
+  skipInfo: SkipInfo | null;
+}
+
+/**
+ * Result of processHotkeys - carries both the consumed flag and the
+ * event context that the later pipeline steps need. Eliminates the need
+ * for temporal coupling via a shared mutable field.
+ * @internal
+ */
+export interface HotkeyDispatchResult {
   /** Whether the event was consumed by a hotkey registration. */
   consumed: boolean;
-  /** Context from the hotkey pass, forwarded to emitUnhandled. */
-  eventContext: TContext;
+  /** Context from the hotkey pass, forwarded to processSequences and emitUnhandled. */
+  eventContext: EventContext;
 }
 
 /**
@@ -38,18 +52,19 @@ export interface HotkeyDispatchResult<TContext = unknown> {
  * to receive dispatched events from the pipeline.
  * @internal
  */
-export interface HotkeyDispatchHandler<TContext = unknown> {
+export interface HotkeyDispatchHandler {
   /** Hotkey dispatch - receives pre-filtered, non-suspended keydowns. */
-  processHotkeys(event: KeyboardEvent): HotkeyDispatchResult<TContext>;
+  processHotkeys(event: KeyboardEvent): HotkeyDispatchResult;
   /** Sequence dispatch - same contract. Returns true if consumed (full match OR partial advance). */
-  processSequences(event: KeyboardEvent): boolean;
+  processSequences(event: KeyboardEvent, eventContext: EventContext): boolean;
   /**
    * Unhandled emission - called when the event was not consumed.
    * `forcedReason` is set by the dispatcher when the event was blocked before reaching
-   * the matching pipeline (e.g., `Suspended`). When null, uses `eventContext` from
-   * processHotkeys to determine the most specific reason.
+   * the matching pipeline (e.g., `Suspended`); `eventContext` is null in that case.
+   * When null, uses `eventContext` from processHotkeys to determine the most
+   * specific reason.
    */
-  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext: TContext): void;
+  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext: EventContext | null): void;
 }
 
 /**
@@ -281,7 +296,7 @@ export default class EventDispatcher {
     // Step 2: Interceptor (modal capture)
     // Interceptor handles its own DOM event manipulation (preventDefault, etc.)
     // Wrapped in try-catch so a throwing onRecord/onCancel callback does not
-    // kill the pipeline - matches the isolation pattern used by _executeMatch.
+    // kill the pipeline.
     if (this._interceptor) {
       try {
         if (this._interceptor.onKeyDown(event)) return;
@@ -305,8 +320,8 @@ export default class EventDispatcher {
     // Step 5: Hotkey dispatch
     const hotkeyResult = this._handler.processHotkeys(event);
 
-    // Step 6: Sequence dispatch
-    const sequenceConsumed = this._handler.processSequences(event);
+    // Step 6: Sequence dispatch - reuses the popup state from step 5
+    const sequenceConsumed = this._handler.processSequences(event, hotkeyResult.eventContext);
 
     // Step 7: Unhandled emission - passes eventContext from step 5 explicitly
     if (!hotkeyResult.consumed && !sequenceConsumed) {

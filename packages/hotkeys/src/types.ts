@@ -98,7 +98,9 @@ export type Hotkey =
   | Key
   | `${Modifier}+${Key}`
   | `${Modifier}+${Modifier}+${Key}`
-  | `${Modifier}+${Modifier}+${Modifier}+${Key}`
+  // The three-modifier tier leaves the key part open: enumerating keys here
+  // would push the union near TypeScript's template-literal expansion cap.
+  | `${Modifier}+${Modifier}+${Modifier}+${string}`
   | (string & {}); // eslint-disable-line @typescript-eslint/ban-types -- intentional escape hatch
 
 /**
@@ -322,18 +324,6 @@ export interface HotkeyRegistrationInfo {
 // ──────────────────────────────────────────────
 // Unhandled key callback
 // ──────────────────────────────────────────────
-
-/**
- * Reason why a key event was not handled by any registration.
- *
- * - `"no_match"`: No registration matched the key combination in any scope.
- * - `"target_mismatch"`: A registration matched the key combo but the event target is outside the registration's target element.
- * - `"disabled"`: A registration matched, but its `enabled` option resolved to `false`.
- * - `"input_suppressed"`: A registration matched, but was suppressed because the target is an input element.
- * - `"popup_suppressed"`: A registration matched, but was suppressed because a popup (dialog or popover) is open.
- * - `"repeat_ignored"`: A registration matched, but was skipped because the key is held (`event.repeat`).
- * - `"suspended"`: Dispatch was suspended via a guard when the event arrived.
- */
 
 /**
  * Context passed to the unhandled key callback.

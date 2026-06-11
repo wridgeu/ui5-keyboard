@@ -28,7 +28,3 @@ export const runtimeHooks: RuntimeHooks = {
   detectPlatform,
   hasOpenPopup,
 };
-
-export function resetRuntimeCaches(): void {
-  popupChecker = null;
-}
