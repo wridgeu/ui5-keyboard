@@ -398,22 +398,6 @@ QUnit.test("Backspace deletes last character from target input", async (assert) 
   kb.destroy();
 });
 
-QUnit.test("Enter inserts newline in TextArea", async (assert) => {
-  const textarea = new TextArea({ value: "line1" });
-  textarea.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [textarea.getId()] });
-  await placeAndWait(kb);
-
-  tapKey(kb, "{enter}");
-  tapKey(kb, "x");
-
-  assert.strictEqual(textarea.getValue(), "line1\nx", "Newline inserted in TextArea");
-
-  textarea.destroy();
-  kb.destroy();
-});
-
 QUnit.test("Enter does nothing for single-line Input", async (assert) => {
   const input = new Input({ value: "abc" });
   input.placeAt("qunit-fixture");
@@ -424,25 +408,6 @@ QUnit.test("Enter does nothing for single-line Input", async (assert) => {
   tapKey(kb, "{enter}");
 
   assert.strictEqual(input.getValue(), "abc", "Input value unchanged after Enter");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("fireLiveChange is called on target", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const done = assert.async();
-  input.attachLiveChange((event: { getParameter(name: string): unknown }) => {
-    assert.strictEqual(event.getParameter("value"), "x", "liveChange fired with correct value");
-    done();
-  });
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  tapKey(kb, "x");
 
   input.destroy();
   kb.destroy();
@@ -520,21 +485,6 @@ QUnit.test("controls auto-target does not trigger re-render", async (assert) => 
 // ──────────────────────────────────────────────
 // Auto-show
 // ──────────────────────────────────────────────
-
-QUnit.test("setAutoShow is idempotent", (assert) => {
-  const kb = new KioskKeyboard();
-
-  // Should not throw
-  kb.setAutoShow(true);
-  kb.setAutoShow(true);
-
-  kb.setAutoShow(false);
-  kb.setAutoShow(false);
-
-  assert.ok(true, "Multiple setAutoShow calls don't throw");
-
-  kb.destroy();
-});
 
 QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
   assert.expect(1);

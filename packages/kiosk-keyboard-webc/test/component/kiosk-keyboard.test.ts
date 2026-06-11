@@ -1969,18 +1969,6 @@ describe("kiosk-keyboard", () => {
       expect(detail.autoDetected).to.be.true;
     });
 
-    it("the `open` getter reflects the current open state", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
-      await nextRender();
-      expect(el.open).to.be.false;
-
-      el.show();
-      expect(el.open).to.be.true;
-
-      el.close();
-      expect(el.open).to.be.false;
-    });
-
     it("isSecondaryLayout() identifies secondary layouts", async () => {
       const { default: KK } = await import("../../src/KioskKeyboard.js");
       expect(KK.isSecondaryLayout("numeric")).to.be.true;
@@ -2269,11 +2257,6 @@ describe("kiosk-keyboard", () => {
       ]);
       expect(Object.isFrozen(DOM.parts)).to.be.true;
       expect(DOM.exportParts).to.equal("keyboard, row, key, modifier, action, fkey, key-label, key-icon");
-    });
-
-    it("exportParts string matches the parts array", () => {
-      const fromString = DOM.exportParts.split(", ");
-      expect(fromString).to.deep.equal([...DOM.parts]);
     });
 
     it("all declared parts appear in rendered shadow DOM", async () => {

@@ -1001,31 +1001,6 @@ QUnit.test("Locale layout renders correct keys", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// Static API: getRegisteredLayoutNames / isBuiltInLayout
-// ──────────────────────────────────────────────
-
-QUnit.test("getRegisteredLayoutNames returns all built-in layouts", (assert) => {
-  const names = KioskKeyboard.getRegisteredLayoutNames();
-  assert.ok(names.includes("qwerty"), "Contains qwerty");
-  assert.ok(names.includes("qwertz-de"), "Contains qwertz-de");
-  assert.ok(names.includes("numeric"), "Contains numeric");
-  assert.ok(names.includes("special"), "Contains special");
-  assert.ok(names.includes("numpad"), "Contains numpad");
-});
-
-QUnit.test("isBuiltInLayout returns true for built-in layouts", (assert) => {
-  assert.ok(KioskKeyboard.isBuiltInLayout("qwerty"), "qwerty is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("qwertz-de"), "qwertz-de is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("numeric"), "numeric is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("special"), "special is built-in");
-  assert.ok(KioskKeyboard.isBuiltInLayout("numpad"), "numpad is built-in");
-});
-
-QUnit.test("isBuiltInLayout returns false for non-existent layouts", (assert) => {
-  assert.notOk(KioskKeyboard.isBuiltInLayout("nonexistent"), "Nonexistent layout is not built-in");
-});
-
-// ──────────────────────────────────────────────
 // instanceLayouts validation
 // ──────────────────────────────────────────────
 

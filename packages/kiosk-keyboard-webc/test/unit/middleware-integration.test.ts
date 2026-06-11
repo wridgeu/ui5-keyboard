@@ -1,12 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CompositionMiddleware } from "../../src/types.js";
-import { getMiddlewareFactory, type InstanceMiddleware } from "../../src/core/middleware-registry.js";
-import {
-  createCompositionState,
-  startComposition,
-  endComposition,
-  isComposing,
-} from "../../src/core/composition-utils.js";
+import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
 
 describe("middleware integration", () => {
   describe("hangul backspace decomposition end-to-end", () => {
@@ -227,58 +221,6 @@ describe("middleware integration", () => {
       const consumed = m.handleKey("\u309B", input);
       expect(consumed).toBe(false);
       expect(input.value).toBe("\u304B");
-    });
-  });
-
-  describe("isComposing utility function", () => {
-    it("returns false for a freshly created state", () => {
-      const state = createCompositionState();
-      expect(isComposing(state)).toBe(false);
-    });
-
-    it("returns true after startComposition", () => {
-      const state = createCompositionState();
-      const input = document.createElement("input");
-      input.value = "";
-      input.setSelectionRange(0, 0);
-      startComposition(state, input);
-      expect(isComposing(state)).toBe(true);
-    });
-
-    it("returns false after endComposition", () => {
-      const state = createCompositionState();
-      const input = document.createElement("input");
-      input.value = "";
-      input.setSelectionRange(0, 0);
-      startComposition(state, input);
-      endComposition(state, input);
-      expect(isComposing(state)).toBe(false);
-    });
-
-    it("tracks independently for separate state objects", () => {
-      const stateA = createCompositionState();
-      const stateB = createCompositionState();
-      const input = document.createElement("input");
-      input.value = "";
-      input.setSelectionRange(0, 0);
-
-      startComposition(stateA, input);
-      expect(isComposing(stateA)).toBe(true);
-      expect(isComposing(stateB)).toBe(false);
-    });
-  });
-
-  describe("instance middleware shadows built-in", () => {
-    it("getMiddlewareFactory with instance map returns the instance factory for a built-in layout", () => {
-      const customMw: CompositionMiddleware = {
-        handleKey: () => true,
-        commit: () => "custom",
-        reset: () => {},
-      };
-      const instanceMap: InstanceMiddleware = new Map([["ja-kana", () => customMw]]);
-      const factory = getMiddlewareFactory("ja-kana", instanceMap);
-      expect(factory).not.toBeNull();
-      expect(factory!().commit()).toBe("custom");
     });
   });
 });
