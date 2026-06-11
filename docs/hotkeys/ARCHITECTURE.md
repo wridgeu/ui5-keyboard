@@ -27,6 +27,7 @@ internal/internal-token.ts   Runtime instantiation guard for internal classes
 internal/scope.ts            Scope string resolution and validation
 internal/skip-reason.ts      Internal dispatch skip-reason types
 internal/idgen.ts            Internal registration ID generator
+internal/registration-index.ts Scope/target registration index (id-based)
 ```
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`). Their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
@@ -129,6 +130,15 @@ Target-scoped registrations use `event.composedPath()` for membership checks ins
 For nested targets with the same key, only the **innermost** matching target fires.
 
 Registrations within each scope are matched in FIFO order (first registered, first matched).
+
+### Element-Id Fallback for Rerendered Targets
+
+Target-scoped registrations are indexed twice (see `internal/registration-index.ts`): by element object identity and, when the element has an `id`, by that id. UI5 rerenders replace DOM nodes instead of mutating them, so a registration bound to the old node would otherwise go dead after the first rerender. During matching, both indexes are consulted for each `composedPath()` node and their hits are merged: when a node in the path carries the same `id` as a registered (possibly stale, detached) target, the registrations indexed under that id still fire.
+
+Limitations:
+
+- The index key is the element's `id` at registration time. If the `id` attribute is mutated afterwards, the entry under the old id is orphaned and persists until `unregister()` removes the registration.
+- Elements without an `id` are matched by object identity only and do not survive node replacement.
 
 ## Scope Stack
 
@@ -309,26 +319,26 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 
 ## Edge Cases
 
-| Edge Case                                      | How It Is Handled                                              |
-| ---------------------------------------------- | -------------------------------------------------------------- |
-| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                       |
-| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                        |
-| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`             |
-| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                     |
-| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                  |
-| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target                      |
-| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute            |
-| Scope priority                                 | Two-pass matching: active scope first, then global             |
-| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`           |
-| sap.m not loaded                               | Lazy-load InstanceManager, only cache positive result          |
-| Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched` |
-| Nested target-scoped same key                  | Innermost target in composedPath() wins                        |
-| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                        |
-| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported          |
-| Closed shadow root targets                     | composedPath() stops at boundary, no match                     |
-| Detached targets                               | Not in composedPath(), inactive until reattached               |
-| Empty composedPath()                           | Fallback to `[event.target, document, window]`                 |
-| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)                 |
+| Edge Case                                      | How It Is Handled                                                |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                         |
+| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                          |
+| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`               |
+| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                       |
+| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                    |
+| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target                        |
+| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute              |
+| Scope priority                                 | Two-pass matching: active scope first, then global               |
+| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`             |
+| sap.m not loaded                               | Lazy-load InstanceManager, only cache positive result            |
+| Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched`   |
+| Nested target-scoped same key                  | Innermost target in composedPath() wins                          |
+| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                          |
+| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported            |
+| Closed shadow root targets                     | composedPath() stops at boundary, no match                       |
+| Detached targets                               | No identity match; a same-id node in the path matches (id index) |
+| Empty composedPath()                           | Fallback to `[event.target, document, window]`                   |
+| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)                   |
 
 ## Project Layout
 
@@ -357,6 +367,7 @@ packages/hotkeys/
       scope.ts             Scope string resolution and validation
       skip-reason.ts       Internal skip-reason models
       idgen.ts             Internal ID generator
+      registration-index.ts Scope/target registration index
     manifest.json       Library manifest (v2.0.0)
   test/qunit/
     testsuite.qunit.ts  Test suite runner (UI5 Test Starter)

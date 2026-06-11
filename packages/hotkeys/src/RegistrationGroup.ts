@@ -47,8 +47,8 @@ export default class RegistrationGroup {
   /**
    * Register a hotkey and track its handle in this group.
    *
-   * The returned handle behaves like a normal manager handle. Calling
-   * `unregister()` on it also removes it from this group's internal tracking.
+   * The returned handle is the manager's handle. Handles whose registrations
+   * are unregistered individually are pruned lazily from the group's tracking.
    *
    * @param hotkey - Hotkey string (e.g. "Mod+S", "Escape").
    * @param callback - Callback invoked when the hotkey matches.
@@ -58,37 +58,9 @@ export default class RegistrationGroup {
    */
   register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle {
     if (this._destroyed) throw new Error("Cannot register on a destroyed RegistrationGroup");
-    const innerHandle = this._manager.register(hotkey, callback, options);
-    const wrappedHandle: HotkeyRegistrationHandle = {
-      get id() {
-        return innerHandle.id;
-      },
-      get isActive() {
-        return innerHandle.isActive;
-      },
-      get hotkey() {
-        return innerHandle.hotkey;
-      },
-      get scope() {
-        return innerHandle.scope;
-      },
-      get description() {
-        return innerHandle.description;
-      },
-      get sequence() {
-        return innerHandle.sequence;
-      },
-      unregister: () => {
-        innerHandle.unregister();
-        this._handles.delete(wrappedHandle);
-      },
-      setOptions: (newOptions) => {
-        innerHandle.setOptions(newOptions);
-      },
-    };
-
-    this._handles.add(wrappedHandle);
-    return wrappedHandle;
+    const handle = this._manager.register(hotkey, callback, options);
+    this._handles.add(handle);
+    return handle;
   }
 
   /**
@@ -164,6 +136,7 @@ export default class RegistrationGroup {
 
   /** Number of active registrations (hotkeys + sequences) in this group. */
   get size(): number {
+    this._pruneInactive();
     return this._handles.size;
   }
 
@@ -171,12 +144,20 @@ export default class RegistrationGroup {
    * Get the group's currently active registrations (hotkeys and sequences).
    */
   getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
+    this._pruneInactive();
     if (this._handles.size === 0) return [];
     const ids = new Set<string>();
     for (const handle of this._handles) {
       ids.add(handle.id);
     }
     return this._manager.getRegistrations().filter((info) => ids.has(info.id));
+  }
+
+  /** Drop handles whose registrations were unregistered individually. */
+  private _pruneInactive(): void {
+    for (const handle of this._handles) {
+      if (!handle.isActive) this._handles.delete(handle);
+    }
   }
 
   private _dispose(): void {

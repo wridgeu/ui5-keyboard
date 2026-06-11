@@ -6,15 +6,17 @@ import SequenceManager from "./internal/SequenceManager";
 import HotkeyRecorder from "./HotkeyRecorder";
 import type { HotkeyRecorderOptions } from "./HotkeyRecorder";
 import EventDispatcher from "./internal/event-dispatcher";
-import type { HotkeyDispatchHandler, HotkeyDispatchResult } from "./internal/event-dispatcher";
+import type { EventContext, HotkeyDispatchHandler, HotkeyDispatchResult } from "./internal/event-dispatcher";
 import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { GLOBAL_SCOPE } from "./internal/constants";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { parseHotkey } from "./internal/parse";
+import RegistrationIndex from "./internal/registration-index";
 import { resolveRequiredScope, resolveScopeOrGlobal } from "./internal/scope";
-import { resetRuntimeCaches, runtimeHooks } from "./internal/runtime";
+import { runtimeHooks } from "./internal/runtime";
+import { validateHotkey } from "./internal/validate";
 import { findMatchInScope } from "./internal/dispatch-core";
 import { matchesKeyboardEvent } from "./internal/match";
 import { recordSkip, type SkipInfo } from "./internal/skip-reason";
@@ -32,38 +34,9 @@ import type {
 } from "./types";
 import type { HotkeyRegistration, ResolvedHotkeyOptions, SequenceOptions } from "./internal/types";
 
-type ValidateModule = typeof import("./validate");
-
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 const idGen = createIdGenerator("hk_");
-
-interface ScopeRegistrationBucket {
-  untargetedIds: Set<string>;
-  targets: Map<EventTarget, Set<string>>;
-  /**
-   * Secondary index: element id → registration ids. Enables O(1) fallback
-   * when DOM nodes are replaced during rerendering.
-   *
-   * **Limitation:** If an element's `id` attribute is mutated after
-   * registration, the entry keyed under the old id becomes orphaned and
-   * persists until the registration is removed via `unregister()`.
-   */
-  targetIdIndex: Map<string, Set<string>>;
-  /** Registrations with callback-based targets, resolved lazily at dispatch time. */
-  callbackTargetIds: Set<string>;
-}
-
-/**
- * Event context produced by _processHotkeys and forwarded to _emitUnhandled
- * through the dispatcher pipeline return value - no mutable shared state.
- */
-interface EventContext {
-  activeScope: string;
-  isInput: boolean;
-  popupOpen: boolean;
-  skipInfo: SkipInfo | null;
-}
 
 /**
  * Resolve the target option into static element + callback fields.
@@ -135,7 +108,7 @@ function parseSequenceSteps(hotkey: string): string[] | null {
  */
 export default class HotkeyManager extends BaseObject {
   private _registrations: Map<string, HotkeyRegistration> = new Map();
-  private _registrationsByScope: Map<string, ScopeRegistrationBucket> = new Map();
+  private _registrationIndex: RegistrationIndex = new RegistrationIndex((id) => this._registrations.get(id));
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
   private _groups: Set<RegistrationGroup> = new Set();
@@ -153,10 +126,6 @@ export default class HotkeyManager extends BaseObject {
   // Focus-tracking logic - extracted to its own class for maintainability.
   private _focusFallback: FocusFallbackTracker;
 
-  // Cached once per dispatch so _processSequences reuses _processHotkeys'
-  // sap.m.InstanceManager lookup instead of repeating it.
-  private _currentEventPopupOpen = false;
-
   /**
    * Create a new HotkeyManager instance.
    *
@@ -168,9 +137,9 @@ export default class HotkeyManager extends BaseObject {
     super();
     this._platform = runtimeHooks.detectPlatform();
 
-    const handler: HotkeyDispatchHandler<EventContext | null> = {
+    const handler: HotkeyDispatchHandler = {
       processHotkeys: (e) => this._processHotkeys(e),
-      processSequences: (e) => this._processSequences(e),
+      processSequences: (e, ctx) => this._processSequences(e, ctx),
       emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
@@ -235,7 +204,7 @@ export default class HotkeyManager extends BaseObject {
     };
 
     this._registrations.set(id, registration);
-    this._indexRegistration(registration);
+    this._registrationIndex.index(registration);
 
     Log.debug(
       `Registered hotkey "${normalizedHotkey}" (id: ${id}, scope: ${resolved.scope})`,
@@ -266,7 +235,7 @@ export default class HotkeyManager extends BaseObject {
         if (!registration.active) return;
         registration.active = false;
 
-        this._deindexRegistration(registration);
+        this._registrationIndex.deindex(registration);
 
         this._registrations.delete(id);
         Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
@@ -296,13 +265,12 @@ export default class HotkeyManager extends BaseObject {
                 opts.conflictBehavior,
               );
             }
-            this._deindexRegistration(registration);
+            this._registrationIndex.deindex(registration);
             opts.target = nextTarget;
             opts.targetCallback = nextCallback;
-            this._indexRegistration(registration);
+            this._registrationIndex.index(registration);
           }
         }
-        // Type-safe field merge - no casts, compiler catches typos
         if (newOptions.enabled !== undefined) opts.enabled = newOptions.enabled;
         if (newOptions.preventDefault !== undefined) opts.preventDefault = newOptions.preventDefault;
         if (newOptions.stopPropagation !== undefined) opts.stopPropagation = newOptions.stopPropagation;
@@ -497,15 +465,14 @@ export default class HotkeyManager extends BaseObject {
    */
   getRegistrationsForScope(scopeId: string): ReadonlyArray<HotkeyRegistrationInfo> {
     const normalizedScope = resolveScopeOrGlobal(scopeId);
-    const bucket = this._registrationsByScope.get(normalizedScope);
+    const bucket = this._registrationIndex.getBucket(normalizedScope);
     if (!bucket) return [];
 
+    // The three bucket sections are disjoint: the index files each id under
+    // exactly one of them, and target swaps deindex before reindexing.
     const result: HotkeyRegistrationInfo[] = [];
-    const seen = new Set<string>();
     const addFromIds = (ids: Iterable<string>) => {
       for (const id of ids) {
-        if (seen.has(id)) continue;
-        seen.add(id);
         const reg = this._registrations.get(id);
         if (reg) result.push(this._toRegistrationInfo(reg));
       }
@@ -788,9 +755,8 @@ export default class HotkeyManager extends BaseObject {
     }
 
     this._registrations.clear();
-    this._registrationsByScope.clear();
+    this._registrationIndex.clear();
     this._scopeStack = [GLOBAL_SCOPE];
-    resetRuntimeCaches();
     this._unhandledCallback = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
@@ -809,9 +775,10 @@ export default class HotkeyManager extends BaseObject {
    *   Pass 1: target-scoped registrations via composedPath() (active scope → global)
    *   Pass 2: untargeted registrations (active scope → global)
    *
-   * Returns a result with the consumed flag and event context for _emitUnhandled.
+   * Returns a result with the consumed flag and event context for the later
+   * pipeline steps (_processSequences, _emitUnhandled).
    */
-  private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult<EventContext | null> {
+  private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult {
     const eventPath = this._getEventPath(event);
     const activeScope = this.getActiveScope();
     const target = getEventTarget(event);
@@ -819,9 +786,9 @@ export default class HotkeyManager extends BaseObject {
 
     // Check popup state (lazy-loaded)
     const popupOpen = this._checkPopupOpen();
-    this._currentEventPopupOpen = popupOpen;
 
     const skipInfo: SkipInfo | null = this._unhandledCallback !== null ? { reason: UnhandledReason.NoMatch } : null;
+    const eventContext: EventContext = { activeScope, isInput, popupOpen, skipInfo };
 
     // Pass 1: target-scoped registrations - innermost match wins.
     const targetMatch = this._matchTargetRegistrations(event, eventPath, activeScope, isInput, popupOpen, skipInfo);
@@ -835,21 +802,20 @@ export default class HotkeyManager extends BaseObject {
       const untargetedMatch = this._matchUntargetedRegistrations(event, activeScope, isInput, popupOpen, skipInfo);
       if (untargetedMatch) {
         this._executeMatch(event, untargetedMatch);
-        return { consumed: true, eventContext: null };
+        return { consumed: true, eventContext };
       }
     }
 
-    if (targetMatch) return { consumed: true, eventContext: null };
-
-    return { consumed: false, eventContext: { activeScope, isInput, popupOpen, skipInfo } };
+    return { consumed: targetMatch !== null, eventContext };
   }
 
   /**
    * Process sequences for a pre-filtered, non-suspended keydown event.
-   * Delegates to the lazy SequenceManager.
+   * Delegates to the lazy SequenceManager, reusing the popup state from
+   * _processHotkeys via the dispatcher pipeline.
    */
-  private _processSequences(event: KeyboardEvent): boolean {
-    return this._sequenceManager?.processKeyEvent(event, this._currentEventPopupOpen) ?? false;
+  private _processSequences(event: KeyboardEvent, eventContext: EventContext): boolean {
+    return this._sequenceManager?.processKeyEvent(event, eventContext.popupOpen) ?? false;
   }
 
   /**
@@ -880,25 +846,16 @@ export default class HotkeyManager extends BaseObject {
       const target = getEventTarget(event);
       isInput = isInputElement(target);
       popupOpen = this._checkPopupOpen();
-    } else if (hotkeyContext) {
-      // Use context forwarded from _processHotkeys
-      activeScope = hotkeyContext.activeScope;
-      isInput = hotkeyContext.isInput;
-      popupOpen = hotkeyContext.popupOpen;
-      const skipInfo = hotkeyContext.skipInfo;
+    } else {
+      // Use context forwarded from _processHotkeys - the dispatcher always
+      // provides it when no forced reason is set.
+      const context = hotkeyContext!;
+      activeScope = context.activeScope;
+      isInput = context.isInput;
+      popupOpen = context.popupOpen;
+      const skipInfo = context.skipInfo;
       reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
       skippedRegistration = skipInfo && skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined;
-    } else {
-      Log.warning(
-        "_emitUnhandled called without forcedReason or hotkeyContext - this should not happen",
-        undefined,
-        LOG_COMPONENT,
-      );
-      reason = UnhandledReason.NoMatch;
-      activeScope = this.getActiveScope();
-      const target = getEventTarget(event);
-      isInput = isInputElement(target);
-      popupOpen = this._checkPopupOpen();
     }
 
     const context: UnhandledContext = {
@@ -927,7 +884,7 @@ export default class HotkeyManager extends BaseObject {
   private _getEventPath(event: KeyboardEvent): EventTarget[] {
     const path = event.composedPath?.();
     const resolvedPath =
-      Array.isArray(path) && path.length > 0
+      path && path.length > 0
         ? [...path]
         : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
 
@@ -979,7 +936,7 @@ export default class HotkeyManager extends BaseObject {
     // Active scope first
     const activeScopeMatch = findMatchInScope({
       ...matchOpts,
-      registrations: this._getScopeRegistrations(activeScope, null),
+      registrations: this._registrationIndex.getScopeRegistrations(activeScope, null),
       skipInfo,
     });
     if (activeScopeMatch) return activeScopeMatch;
@@ -988,7 +945,7 @@ export default class HotkeyManager extends BaseObject {
     if (activeScope !== GLOBAL_SCOPE) {
       return findMatchInScope({
         ...matchOpts,
-        registrations: this._getScopeRegistrations(GLOBAL_SCOPE, null),
+        registrations: this._registrationIndex.getScopeRegistrations(GLOBAL_SCOPE, null),
         skipInfo,
       });
     }
@@ -1016,16 +973,16 @@ export default class HotkeyManager extends BaseObject {
     const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
 
     for (const scope of scopesToCheck) {
-      const bucket = this._registrationsByScope.get(scope);
+      const bucket = this._registrationIndex.getBucket(scope);
       if (!bucket || bucket.targets.size === 0) continue;
 
       // Iterate composedPath from index 0 (innermost) outward
       for (const node of eventPath) {
-        const ids = this._getTargetRegistrationIds(bucket, node);
+        const ids = this._registrationIndex.getTargetRegistrationIds(bucket, node);
         if (!ids || ids.size === 0) continue;
 
         // Attempt matching against registrations bound to this target
-        const registrations = this._getRegistrationsFromIds(ids);
+        const registrations = this._registrationIndex.getRegistrationsFromIds(ids);
         const matched = findMatchInScope({
           event,
           isInput,
@@ -1044,7 +1001,7 @@ export default class HotkeyManager extends BaseObject {
 
     // Pass 1b: callback-target registrations - resolve lazily and check path.
     for (const scope of scopesToCheck) {
-      const bucket = this._registrationsByScope.get(scope);
+      const bucket = this._registrationIndex.getBucket(scope);
       if (!bucket || bucket.callbackTargetIds.size === 0) continue;
 
       for (const id of bucket.callbackTargetIds) {
@@ -1086,7 +1043,7 @@ export default class HotkeyManager extends BaseObject {
     // registrations whose key combo matches but target is not in the path.
     if (skipInfo) {
       for (const scope of scopesToCheck) {
-        const bucket = this._registrationsByScope.get(scope);
+        const bucket = this._registrationIndex.getBucket(scope);
         if (!bucket) continue;
 
         for (const [targetNode, ids] of bucket.targets) {
@@ -1106,85 +1063,14 @@ export default class HotkeyManager extends BaseObject {
     return null;
   }
 
-  /**
-   * Look up registrations by their IDs.
-   */
-  private _getRegistrationsFromIds(ids: Set<string>): ReadonlyArray<HotkeyRegistration> {
-    const registrations: HotkeyRegistration[] = [];
-    for (const id of ids) {
-      const reg = this._registrations.get(id);
-      if (reg) registrations.push(reg);
-    }
-    return registrations;
-  }
-
-  /**
-   * Resolve registration IDs for a composedPath node.
-   *
-   * Merges object-identity hits with id-based index hits so that both
-   * fresh and stale DOM references for the same element id contribute
-   * registrations. This handles partial rerenders where the new DOM
-   * node already has its own registrations while the old (stale) node's
-   * registrations are still indexed by id.
-   */
-  private _getTargetRegistrationIds(bucket: ScopeRegistrationBucket, node: EventTarget): Set<string> | null {
-    const direct = bucket.targets.get(node);
-    const hasElementId = node instanceof Element && !!node.id;
-    const indexed = hasElementId ? bucket.targetIdIndex.get(node.id) : undefined;
-
-    if (!direct?.size && !indexed?.size) {
-      return null;
-    }
-    if (direct?.size && !indexed?.size) {
-      return direct;
-    }
-    if (!direct?.size && indexed?.size) {
-      return indexed;
-    }
-
-    // Both sources have entries - merge and dedupe
-    const merged = new Set(direct!);
-    for (const id of indexed!) {
-      merged.add(id);
-    }
-    return merged;
-  }
-
-  /** Lazy import to avoid circular deps at module level. */
-  private _getValidateModule(): ValidateModule | undefined {
-    return sap.ui.require("ui5/hotkeys/validate") as ValidateModule | undefined;
-  }
-
   // ──────────────────────────────────────────────
   // Private: Validation warnings
   // ──────────────────────────────────────────────
 
   private _logValidationWarnings(normalizedHotkey: string): void {
-    const validate = this._getValidateModule();
-    if (!validate) return;
-
-    const browserConflict = validate.BROWSER_SHORTCUTS.get(normalizedHotkey);
-    if (browserConflict) {
-      Log.warning(
-        `Hotkey "${normalizedHotkey}" conflicts with browser shortcut: ${browserConflict}`,
-        undefined,
-        LOG_COMPONENT,
-      );
-    }
-
-    const sapConflict = validate.SAP_SHORTCUTS.get(normalizedHotkey);
-    if (sapConflict) {
-      Log.warning(`Hotkey "${normalizedHotkey}" conflicts with SAP shortcut: ${sapConflict}`, undefined, LOG_COMPONENT);
-    }
-
-    const parts = normalizedHotkey.split("+");
-    const key = parts.at(-1)!;
-    if (!validate.KNOWN_KEYS.has(key)) {
-      Log.warning(
-        `Hotkey "${normalizedHotkey}" uses unknown key "${key}" - may not match keyboard events correctly`,
-        undefined,
-        LOG_COMPONENT,
-      );
+    const { warnings } = validateHotkey(normalizedHotkey, this._platform);
+    for (const warning of warnings) {
+      Log.warning(`Hotkey "${normalizedHotkey}": ${warning}`, undefined, LOG_COMPONENT);
     }
   }
 
@@ -1229,9 +1115,10 @@ export default class HotkeyManager extends BaseObject {
     }
 
     // Use scope-bucket lookup instead of iterating all registrations
-    const bucket = this._registrationsByScope.get(scope);
+    const bucket = this._registrationIndex.getBucket(scope);
     if (!bucket) return;
-    const ids = target === null ? bucket.untargetedIds : this._getTargetRegistrationIds(bucket, target);
+    const ids =
+      target === null ? bucket.untargetedIds : this._registrationIndex.getTargetRegistrationIds(bucket, target);
     if (!ids || ids.size === 0) return;
 
     // Find conflicts by matching normalizedHotkey within the bucket
@@ -1247,7 +1134,7 @@ export default class HotkeyManager extends BaseObject {
         }
       }
       for (const reg of conflicts) {
-        this._deindexRegistration(reg);
+        this._registrationIndex.deindex(reg);
         reg.active = false;
         this._registrations.delete(reg.id);
         Log.debug(
@@ -1284,108 +1171,5 @@ export default class HotkeyManager extends BaseObject {
       undefined,
       LOG_COMPONENT,
     );
-  }
-
-  private _getScopeBucket(scope: string): ScopeRegistrationBucket {
-    let bucket = this._registrationsByScope.get(scope);
-    if (!bucket) {
-      bucket = {
-        untargetedIds: new Set<string>(),
-        targets: new Map<EventTarget, Set<string>>(),
-        targetIdIndex: new Map<string, Set<string>>(),
-        callbackTargetIds: new Set<string>(),
-      };
-      this._registrationsByScope.set(scope, bucket);
-    }
-    return bucket;
-  }
-
-  private _indexRegistration(registration: HotkeyRegistration): void {
-    const bucket = this._getScopeBucket(registration.options.scope);
-    const opts = registration.options;
-
-    if (opts.targetCallback) {
-      bucket.callbackTargetIds.add(registration.id);
-      return;
-    }
-
-    if (opts.target) {
-      let ids = bucket.targets.get(opts.target);
-      if (!ids) {
-        ids = new Set<string>();
-        bucket.targets.set(opts.target, ids);
-      }
-      ids.add(registration.id);
-
-      // Maintain secondary index by element id for stale-reference fallback
-      if (opts.target instanceof Element && opts.target.id) {
-        let idxIds = bucket.targetIdIndex.get(opts.target.id);
-        if (!idxIds) {
-          idxIds = new Set<string>();
-          bucket.targetIdIndex.set(opts.target.id, idxIds);
-        }
-        idxIds.add(registration.id);
-      }
-      return;
-    }
-
-    bucket.untargetedIds.add(registration.id);
-  }
-
-  private _deindexRegistration(registration: HotkeyRegistration): void {
-    const scope = registration.options.scope;
-    const bucket = this._registrationsByScope.get(scope);
-    if (!bucket) return;
-
-    const opts = registration.options;
-
-    if (opts.targetCallback) {
-      bucket.callbackTargetIds.delete(registration.id);
-    } else if (opts.target) {
-      const ids = bucket.targets.get(opts.target);
-      if (ids) {
-        ids.delete(registration.id);
-        if (ids.size === 0) {
-          bucket.targets.delete(opts.target);
-        }
-      }
-
-      // Remove from secondary index.
-      // Note: uses the element's *current* id - if the id was mutated after
-      // registration, the entry keyed under the old id becomes orphaned.
-      // See the JSDoc on ScopeBucket.targetIdIndex for details.
-      if (opts.target instanceof Element && opts.target.id) {
-        const idxIds = bucket.targetIdIndex.get(opts.target.id);
-        if (idxIds) {
-          idxIds.delete(registration.id);
-          if (idxIds.size === 0) {
-            bucket.targetIdIndex.delete(opts.target.id);
-          }
-        }
-      }
-    } else {
-      bucket.untargetedIds.delete(registration.id);
-    }
-
-    if (bucket.untargetedIds.size === 0 && bucket.targets.size === 0 && bucket.callbackTargetIds.size === 0) {
-      this._registrationsByScope.delete(scope);
-    }
-  }
-
-  private _getScopeRegistrations(scope: string, targetElement: EventTarget | null): ReadonlyArray<HotkeyRegistration> {
-    const bucket = this._registrationsByScope.get(scope);
-    if (!bucket) return [];
-
-    const ids = targetElement === null ? bucket.untargetedIds : bucket.targets.get(targetElement);
-    if (!ids || ids.size === 0) return [];
-
-    const registrations: HotkeyRegistration[] = [];
-    for (const id of ids) {
-      const registration = this._registrations.get(id);
-      if (registration) {
-        registrations.push(registration);
-      }
-    }
-    return registrations;
   }
 }

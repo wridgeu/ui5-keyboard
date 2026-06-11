@@ -160,14 +160,13 @@ export default class SequenceManager {
         }
         const reg = this._registrations.get(id);
         if (!reg) return;
-        // Type-safe field merge - no casts, compiler catches typos
         if (newOptions.enabled !== undefined) reg.enabled = newOptions.enabled;
         if (newOptions.description !== undefined) reg.description = newOptions.description;
         if (newOptions.timeout !== undefined) reg.timeout = assertValidTimeout(newOptions.timeout);
         if (newOptions.ignoreInputs !== undefined) reg.ignoreInputs = newOptions.ignoreInputs;
         if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
         if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
-        if (newOptions.onPending !== undefined) reg.onPending = newOptions.onPending ?? null;
+        if (newOptions.onPending !== undefined) reg.onPending = newOptions.onPending;
         if (newOptions.suppressInPopups !== undefined) reg.suppressInPopups = newOptions.suppressInPopups;
       },
     };

@@ -1,5 +1,6 @@
 import { ConflictBehavior, GLOBAL_SCOPE, Platform } from "ui5/hotkeys/library";
 import { runtimeHooks } from "ui5/hotkeys/internal/runtime";
+import type Log from "sap/base/Log";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
@@ -794,6 +795,36 @@ QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => 
   fireKey("Escape");
   assert.ok(firstCalled, "First registration fires (first-match-wins)");
   assert.strictEqual(manager.getRegistrations().length, 2, "Both registrations exist");
+});
+
+// ──────────────────────────────────────────────
+// Validation warnings during register()
+// ──────────────────────────────────────────────
+
+QUnit.test("register logs a warning for browser-conflicting hotkeys", (assert) => {
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warningSpy = sandbox.spy(LogModule, "warning");
+  const manager = createHotkeyManager();
+
+  manager.register("Ctrl+T", () => {});
+
+  assert.ok(
+    warningSpy.getCalls().some((call) => String(call.args[0]).includes("browser shortcut")),
+    "Browser-conflict warning logged during register()",
+  );
+});
+
+QUnit.test("register('Ctrl++') logs no unknown-key warning", (assert) => {
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warningSpy = sandbox.spy(LogModule, "warning");
+  const manager = createHotkeyManager();
+
+  manager.register("Ctrl++", () => {});
+
+  assert.notOk(
+    warningSpy.getCalls().some((call) => /unknown key/i.test(String(call.args[0]))),
+    "No unknown-key warning for the literal + key",
+  );
 });
 
 // ──────────────────────────────────────────────
