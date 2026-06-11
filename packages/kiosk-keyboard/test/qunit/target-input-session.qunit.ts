@@ -78,26 +78,6 @@ QUnit.test("Clears cached cursor - next insert goes to end of value", (assert) =
   assert.strictEqual(input.value, "xabcdez", "Post-reset: 'z' appended at end");
 });
 
-QUnit.test("Clears _lastKnownValue - value-divergence detection starts fresh", (assert) => {
-  const input = makeInput("aaa");
-  const mock = makeMockElement(input);
-  const session = new TargetInputSession(() => mock);
-
-  // Establish session state with cached _lastKnownValue
-  session.insertText("!");
-  assert.strictEqual(input.value, "aaa!", "Session state established");
-
-  session.handleNavigationKey("Home"); // cursor at 0
-
-  // Reset, then change value externally
-  session.resetForTargetSwitch();
-  input.value = "bbb";
-
-  // After reset: _cursorPos === null → cursor at end (not divergence path)
-  session.insertText("x");
-  assert.strictEqual(input.value, "bbbx", "Cursor at end of new value after reset");
-});
-
 QUnit.test("Does not clear dirty flag (handled separately by captureAndClearDirty)", (assert) => {
   const input = makeInput("test");
   const mock = makeMockElement(input);

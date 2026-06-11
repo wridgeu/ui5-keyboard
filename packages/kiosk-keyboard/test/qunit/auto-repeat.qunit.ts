@@ -45,11 +45,23 @@ QUnit.test("accelerates: successive intervals shrink toward the floor", (assert)
     return true;
   }, T);
 
+  const holdMs = 2000;
   repeater.start();
-  clock.tick(T.initialDelayMs + 2000);
+  clock.tick(T.initialDelayMs + holdMs);
   repeater.stop();
 
-  assert.ok(fireTimes.length > 5, "many repeats over the hold window");
+  // Every gap stays within [minIntervalMs, startIntervalMs], so over the hold
+  // window the repeat count is bounded on both sides. The tight lower bound
+  // catches an acceleration regression (e.g. firing 6 times) that the prior
+  // `> 5` waved through.
+  assert.ok(
+    fireTimes.length >= Math.floor(holdMs / T.startIntervalMs),
+    `at least ${Math.floor(holdMs / T.startIntervalMs)} repeats over the hold window (got ${fireTimes.length})`,
+  );
+  assert.ok(
+    fireTimes.length <= Math.ceil(holdMs / T.minIntervalMs) + 1,
+    "no more repeats than the minimum-interval cadence allows",
+  );
 
   const gaps = fireTimes.slice(1).map((time, i) => time - fireTimes[i]!);
   let monotonic = true;

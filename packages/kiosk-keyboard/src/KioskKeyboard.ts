@@ -1431,13 +1431,6 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Whether keyboardType has been explicitly set and auto-type is locked.
-   */
-  isKeyboardTypeExplicit(): boolean {
-    return this._keyboardTypeSource === "explicit";
-  }
-
-  /**
    * Sets a custom resolver for this keyboard instance that locates the
    * native `<input>` or `<textarea>` inside a host element.
    *
