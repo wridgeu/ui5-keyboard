@@ -2220,7 +2220,7 @@ export default class KioskKeyboard extends Control {
    *
    * @param text The text to insert.
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   insertText(text: string): void {
     this._targetSession.insertText(text);
@@ -2236,7 +2236,7 @@ export default class KioskKeyboard extends Control {
    * Does not fire `keyPress` itself.
    *
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   deleteBackward(): boolean {
     return this._targetSession.handleBackspace();
@@ -2251,7 +2251,7 @@ export default class KioskKeyboard extends Control {
    * handler that owns a custom key and needs the live caret/selection.
    *
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   getActiveTargetElement(): HTMLInputElement | HTMLTextAreaElement | null {
     const element = this._getTargetElement();

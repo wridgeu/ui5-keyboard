@@ -324,7 +324,7 @@ export type LayoutDefinition = KeyRow[];
  * ```
  *
  * @public
- * @since 0.2.0
+ * @since 0.1.0
  */
 export type I18nResolver = (key: string, locale: string, resolvedText: string) => string | undefined;
 
