@@ -1,10 +1,10 @@
 import type RenderManager from "sap/ui/core/RenderManager";
 import IconPool from "sap/ui/core/IconPool";
-import Log from "sap/base/Log";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, classifyRow, keyElementId } from "./internal/dom";
+import { SPECIAL_KEY_ICONS, getKeyIcon, validateKeyIcon } from "./internal/key-icons";
 import { KeyboardType } from "./library";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./internal/grapheme";
 
@@ -268,30 +268,20 @@ const KioskKeyboardRenderer = {
 
     // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
     if (key.value === "{shift}" && _isCapsLock()) {
-      const Ctor = oControl.constructor as typeof KioskKeyboard;
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {
         if (!clIcon) return ""; // capsLockIcon: "" suppresses icon
-        // Validate SAP icon URIs
-        if (IconPool.isIconURI(clIcon) && !IconPool.getIconInfo(clIcon)) {
-          Log.warning(`KioskKeyboard: capsLockIcon "${clIcon}" not found, skipping`, undefined, "KioskKeyboard");
-          return "";
-        }
-        return clIcon;
+        // Validate SAP icon URIs; skip invalid ones (warns once)
+        return validateKeyIcon(clIcon, "capsLockIcon");
       }
-      return Ctor.SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
+      return SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
     }
 
     if (key.icon === "") return ""; // suppress default-state icon
 
-    const Ctor = oControl.constructor as typeof KioskKeyboard;
-    const icon = key.icon || Ctor.getKeyIcon(key.value) || "";
-    // Validate SAP icon URIs exist in the registry; skip invalid ones
-    if (icon && IconPool.isIconURI(icon) && !IconPool.getIconInfo(icon)) {
-      Log.warning(`KioskKeyboard: icon "${icon}" not found, skipping`, undefined, "KioskKeyboard");
-      return "";
-    }
-    return icon;
+    const icon = key.icon || getKeyIcon(key.value) || "";
+    // Validate SAP icon URIs exist in the registry; skip invalid ones (warns once)
+    return validateKeyIcon(icon, "icon");
   },
 
   /** Render the icon element inside a key. Overridable by subclasses. */

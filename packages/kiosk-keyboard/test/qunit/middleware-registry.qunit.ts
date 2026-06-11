@@ -1,8 +1,5 @@
 import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
-// Side-effect import: registers the hangul middleware for "ko-hangul",
-// which acts as a stable built-in layout across every test below.
-import "ui5/kiosk/middleware/hangul-compose";
 
 const BUILT_IN_LAYOUT = "ko-hangul";
 
@@ -22,6 +19,15 @@ QUnit.test("Each factory call creates a fresh instance", (assert) => {
 
 QUnit.test("Returns null for unregistered layouts", (assert) => {
   assert.strictEqual(getMiddlewareFactory("nonexistent"), null, "No factory for unregistered layout");
+});
+
+QUnit.test("Lookup normalizes the layout name (trim + lowercase)", (assert) => {
+  assert.strictEqual(
+    getMiddlewareFactory("Ko-Hangul "),
+    getMiddlewareFactory(BUILT_IN_LAYOUT),
+    "Trailing space + mixed case resolves to the same built-in factory",
+  );
+  assert.notStrictEqual(getMiddlewareFactory(" KO-HANGUL"), null, "Leading space + uppercase still resolves");
 });
 
 QUnit.test("Instance map shadows the built-in factory", (assert) => {

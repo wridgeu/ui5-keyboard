@@ -1,4 +1,6 @@
 import type { CompositionMiddleware } from "../types";
+import { createKanaDakutenMiddleware } from "../middleware/kana-dakuten";
+import { createHangulComposeMiddleware } from "../middleware/hangul-compose";
 
 /** Per-instance middleware factory map for layered resolution. */
 export type InstanceMiddleware = ReadonlyMap<string, () => CompositionMiddleware>;
@@ -6,31 +8,31 @@ export type InstanceMiddleware = ReadonlyMap<string, () => CompositionMiddleware
 /**
  * Built-in composition middleware factories keyed by layout name.
  *
- * Sealed after the side-effect imports of `../middleware/kana-dakuten` and
- * `../middleware/hangul-compose` run during module load. There is no public
- * mutation API: per-app middleware is supplied via the `instanceMiddleware`
- * setting on the control / element.
+ * Built eagerly from direct factory imports and sealed at module load: each
+ * factory is genuinely referenced here, so a bundler cannot drop it. (The
+ * prior side-effect-import self-registration scheme is the pattern that
+ * broke in the webc sibling; see issue #108.) There is no public mutation
+ * API: per-app middleware is supplied via the `instanceMiddleware` setting
+ * on the control.
  */
-const BUILTIN_FACTORIES: Map<string, () => CompositionMiddleware> = new Map();
-
-/**
- * Registers a built-in middleware factory for the given layout. Idempotent:
- * silently skips a layout that already has middleware. Only the built-in
- * middleware modules call this -- it is not part of the public API.
- * @internal
- */
-export function _registerMiddleware(layout: string, factory: () => CompositionMiddleware): void {
-  if (BUILTIN_FACTORIES.has(layout)) return;
-  BUILTIN_FACTORIES.set(layout, factory);
-}
+const BUILTIN_FACTORIES: ReadonlyMap<string, () => CompositionMiddleware> = new Map([
+  ["ja-kana", createKanaDakutenMiddleware],
+  ["ko-hangul", createHangulComposeMiddleware],
+]);
 
 /**
  * Returns the middleware factory for the given layout, or null.
  * Instance overrides take precedence over built-ins.
+ *
+ * The layout name is normalized (trim + lowercase) to match the layout
+ * registry's contract, so a non-normalized `layout` value (e.g. "Ko-Hangul ")
+ * renders and composes consistently. Built-in and instance factories are both
+ * registered under lowercase keys.
  */
 export function getMiddlewareFactory(
   layout: string,
   instanceFactories?: InstanceMiddleware,
 ): (() => CompositionMiddleware) | null {
-  return instanceFactories?.get(layout) ?? BUILTIN_FACTORIES.get(layout) ?? null;
+  const name = layout.trim().toLowerCase();
+  return instanceFactories?.get(name) ?? BUILTIN_FACTORIES.get(name) ?? null;
 }

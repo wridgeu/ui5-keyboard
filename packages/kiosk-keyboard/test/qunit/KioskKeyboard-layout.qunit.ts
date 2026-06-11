@@ -347,6 +347,27 @@ QUnit.test("resetKeyboardType round-trip lets the next keyboardType re-engage it
   kb.destroy();
 });
 
+QUnit.test("Programmatic setLayout fires layoutChange when the layout actually changes", async (assert) => {
+  // The layoutChange JSDoc documents firing for programmatic setLayout() too,
+  // not only {layout:*} keys.
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const events: string[] = [];
+  kb.attachEvent("layoutChange", (e: { getParameter(name: string): string }) => {
+    events.push(e.getParameter("layout"));
+  });
+
+  kb.setLayout("numeric");
+  assert.deepEqual(events, ["numeric"], "layoutChange fired for the programmatic switch");
+
+  kb.setLayout("numeric");
+  kb.setLayout("not-registered");
+  assert.deepEqual(events, ["numeric"], "No event for a same-layout or unregistered setLayout call");
+
+  kb.destroy();
+});
+
 QUnit.test("Layout switch does not fire layoutChange for invalid or unchanged layout", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
@@ -1178,6 +1199,30 @@ QUnit.test("Numeric layout keys identical regardless of base layout (qwerty vs q
 // ──────────────────────────────────────────────
 // Composition middleware lifecycle across layout switches
 // ──────────────────────────────────────────────
+
+QUnit.test("setLayout with a non-normalized name keeps composition middleware active", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.focus();
+  await nextUIUpdate();
+
+  // Trailing space + mixed case: renders fine via the normalizing layout
+  // registry, but must not silently disable the hangul composition middleware.
+  kb.setLayout("Ko-Hangul ");
+  await waitForRender();
+
+  tapKey(kb, "ㅎ"); // ㅎ
+  tapKey(kb, "ㅏ"); // ㅏ
+  assert.strictEqual(dom.value, "하", "Jamo taps compose a syllable despite the non-normalized layout name");
+
+  input.destroy();
+  kb.destroy();
+});
 
 QUnit.test("Programmatic setLayout commits in-progress composition (no leak across layout switch)", async (assert) => {
   const input = new Input({ value: "" });

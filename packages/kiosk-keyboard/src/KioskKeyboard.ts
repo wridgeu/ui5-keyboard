@@ -27,7 +27,16 @@ import {
   getMiddlewareFactory as registryGetMiddlewareFactory,
   type InstanceMiddleware,
 } from "./internal/middleware-registry";
-import { getRegisteredAction as registryGetAction, type InstanceActions } from "./internal/action-registry";
+import {
+  getRegisteredAction as registryGetAction,
+  parseActionToken,
+  type InstanceActions,
+} from "./internal/action-registry";
+import {
+  SPECIAL_KEY_ICONS as DEFAULT_SPECIAL_KEY_ICONS,
+  getKeyIcon as iconsGetKeyIcon,
+  clearIconWarnings as iconsClearWarnings,
+} from "./internal/key-icons";
 import { setI18nResolver as registrySetResolver } from "./internal/i18n-registry";
 import type { I18nResolver } from "./types";
 import FocusClaimService from "./internal/focus-claim-service";
@@ -878,6 +887,7 @@ export default class KioskKeyboard extends Control {
     if (wasLastInstance) {
       registrySetResolver(null);
       KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.clear();
+      iconsClearWarnings();
       KioskKeyboard._globalTargetResolver = null;
     }
 
@@ -975,26 +985,46 @@ export default class KioskKeyboard extends Control {
   /**
    * Custom setter for layout - tracks the base (alphabetic) layout so
    * that `{layout:base}` in numeric/special layouts can return to it.
+   * Fires `layoutChange` when the layout actually changes.
    */
   setLayout(sLayout: string): this {
-    const name = sLayout.toLowerCase();
-    if (!registryGetLayout(name, this._instanceLayoutsMap)) {
-      Log.warning(
-        `Layout "${name}" is not registered. Pass it through the instanceLayouts setting before setLayout().`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-      return this;
-    }
     // Programmatic change is external-sourced and re-engages keyboardType constraints.
-    this._applyLayout(name, "external");
+    this._performLayoutSwitch(sLayout, "external", "passed to setLayout()");
     return this;
   }
 
   /**
-   * Shared core for the public `setLayout` and the `{layout:*}` key handler:
-   * track the base (alphabetic) layout, record who drove the switch, and write
-   * the `layout` property. Callers validate `name` against the registry first.
+   * Single layout-switch core shared by the public `setLayout`, the
+   * `{layout:*}` key branch of `_handleKeyAction`, and the action context's
+   * `switchLayout` / `switchToBase`: normalize (trim + lowercase) -> validate
+   * against the registry (warn and bail when unregistered) -> apply ->
+   * fire `layoutChange` on a real change. Returns whether the layout changed.
+   *
+   * @param rawName Requested layout name; normalized here.
+   * @param source  Who drove the switch (see {@link _applyLayout}).
+   * @param origin  Requester description used in the unregistered warning.
+   */
+  private _performLayoutSwitch(rawName: string, source: "external" | "user", origin: string): boolean {
+    const name = rawName.trim().toLowerCase();
+    if (!registryGetLayout(name, this._instanceLayoutsMap)) {
+      Log.warning(
+        `Layout "${name}" ${origin} is not registered. Pass it through the instanceLayouts setting.`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+      return false;
+    }
+    const changed = this._applyLayout(name, source);
+    if (changed) {
+      this.fireLayoutChange({ layout: name });
+    }
+    return changed;
+  }
+
+  /**
+   * State-application step of {@link _performLayoutSwitch}: track the base
+   * (alphabetic) layout, record who drove the switch, and write the `layout`
+   * property. The caller validates `name` against the registry first.
    * Returns whether the property value actually changed.
    *
    * Selecting a layout always resets the typing context (shift/caps-lock), even a
@@ -1056,12 +1086,13 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Custom setter for `instanceActions` - keeps the internal `Map` cache in
-   * sync with the property value. No re-render: actions affect dispatch, not
-   * the rendered key grid (the layout already carries each key's label/icon).
+   * sync with the property value, then re-renders: an icon-only `{action:*}`
+   * key derives its accessible name from the resolved action's `ariaLabel`, so
+   * swapping actions after render must reach the rendered DOM.
    */
   setInstanceActions(value: Record<string, ActionDefinition> | null): this {
     this._instanceActionsMap = KioskKeyboard._toActionMap(value);
-    return this.setProperty("instanceActions", value, true) as this;
+    return this.setProperty("instanceActions", value) as this;
   }
 
   private static _toLayoutMap(value: unknown): InstanceLayouts | undefined {
@@ -1180,12 +1211,16 @@ export default class KioskKeyboard extends Control {
 
     this._targetSession.resetForTargetSwitch();
 
-    // Reset shift/caps state for the new input context.
-    this._shiftState.reset();
-
     this.setAssociation("_activeTarget", target ?? "", true);
 
     const newId = this._getActiveTargetId();
+
+    // A real target switch starts a fresh input context: reset shift/caps.
+    // A same-input refocus (caret reposition) preserves the armed shift,
+    // mirroring the composition and layout-override handling below.
+    if (newId !== previousTarget) {
+      this._shiftState.reset();
+    }
 
     // A real target switch ends any in-progress composition: commit the preedit
     // to the old target and drop the middleware so the new target starts a fresh
@@ -1262,9 +1297,13 @@ export default class KioskKeyboard extends Control {
     // and its result becomes the final state.
     fireDeferredChange?.();
 
-    const newTarget = this._getActiveTargetId();
-    if (newTarget !== previousTarget) {
-      this.fireActiveControlChange({ controlId: newTarget });
+    // If the deferred change handler re-entered _setActiveTarget (e.g. by
+    // focusing another input), that inner call already announced the final
+    // target. Announce only when the association still holds the value THIS
+    // call set, so the outer call does not fire a duplicate.
+    const finalTarget = this._getActiveTargetId();
+    if (finalTarget === newId && newId !== previousTarget) {
+      this.fireActiveControlChange({ controlId: newId });
     }
 
     return this;
@@ -1813,12 +1852,7 @@ export default class KioskKeyboard extends Control {
   }
 
   /** Default icons for special keys - used when the key has no explicit icon. */
-  static readonly SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
-    "{backspace}": "sap-icon://arrow-left",
-    "{shift}": "sap-icon://arrow-top",
-    "{shift:capsLock}": "sap-icon://locked",
-    "{enter}": "sap-icon://accept",
-  };
+  static readonly SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = DEFAULT_SPECIAL_KEY_ICONS;
 
   /**
    * Returns the default icon URI for a special key value, or undefined
@@ -1830,7 +1864,7 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   static getKeyIcon(sKeyValue: string): string | undefined {
-    return KioskKeyboard.SPECIAL_KEY_ICONS[sKeyValue];
+    return iconsGetKeyIcon(sKeyValue);
   }
 
   /** Map from special key value to [i18nKey, fallback]. */
@@ -1857,12 +1891,10 @@ export default class KioskKeyboard extends Control {
     // Icon-only `{action:*}` key (label suppressed): use the action's
     // ariaLabel, else the bare action name, so the accessible name is never
     // the raw "{action:...}" token.
-    if (key.value.startsWith("{action:")) {
-      const raw = key.value.slice("{action:".length, -1);
-      const sep = raw.indexOf(":");
-      const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
-      const action = registryGetAction(name, this._instanceActionsMap);
-      return action?.ariaLabel || name || key.value;
+    const parsed = parseActionToken(key.value);
+    if (parsed) {
+      const action = registryGetAction(parsed.name, this._instanceActionsMap);
+      return action?.ariaLabel || parsed.name || key.value;
     }
 
     return key.value;
@@ -2141,25 +2173,12 @@ export default class KioskKeyboard extends Control {
     if (keyValue.startsWith("{layout:")) {
       const raw = keyValue.slice("{layout:".length, -1).trim();
       if (!raw) return;
-      const name = (raw === "base" ? this._baseLayout : raw).toLowerCase();
-      // Validate against the registry so a bogus override key doesn't poison
-      // the layout property. setLayout would log a warning and bail, but we
-      // need to also manage `_layoutSource` / `_baseLayout` here.
-      if (!registryGetLayout(name, this._instanceLayoutsMap)) {
-        Log.warning(
-          `Layout "${name}" referenced by a {layout:*} key is not registered.`,
-          undefined,
-          "ui5.kiosk.KioskKeyboard",
-        );
-        return;
-      }
       // `{layout:base}` returns to the constrained default (re-engage
       // keyboardType filtering); any other pick is user-driven and overrides
       // the keyboardType constraint (webc parity).
+      const name = raw === "base" ? this._baseLayout : raw;
       const source = raw === "base" ? "external" : "user";
-      if (this._applyLayout(name, source)) {
-        this.fireLayoutChange({ layout: name });
-      }
+      this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
       return;
     }
 
@@ -2251,18 +2270,30 @@ export default class KioskKeyboard extends Control {
   /**
    * Resolves and runs a `{action:<name>}` / `{action:<name>:<param>}` key.
    *
-   * Validates first (mirroring the `{layout:*}` path): an unregistered name
-   * is warned and ignored, never inserted as literal text and without firing
-   * keyPress. For a registered action, fires the cancelable keyPress, then
-   * invokes the handler with a curated {@link ActionContext}. Handler
-   * exceptions are caught and logged so consumer code cannot break dispatch.
+   * Fires the cancelable keyPress first (mirroring `{fkey:*}` and the
+   * unrecognized-token path), so a consumer can observe or veto any {action:*}
+   * press, including an empty or unregistered name; a veto suppresses all
+   * further handling, including the warnings. When not vetoed, an empty or
+   * unregistered name is warned and ignored, never inserted as literal text.
+   * A registered action's handler runs with a curated {@link ActionContext};
+   * handler exceptions are caught and logged so consumer code cannot break
+   * dispatch.
    */
   private _handleActionKey(keyValue: string, shift: boolean): void {
-    const raw = keyValue.slice("{action:".length, -1);
-    const sep = raw.indexOf(":");
-    const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
-    const param = sep === -1 ? undefined : raw.slice(sep + 1);
-    if (!name) return;
+    const parsed = parseActionToken(keyValue);
+    if (!parsed) return;
+    const { name, param } = parsed;
+
+    if (!this.fireKeyPress({ key: keyValue, shiftKey: shift })) return;
+
+    if (!name) {
+      Log.warning(
+        `Empty action name in "${keyValue}". Expected {action:<name>} or {action:<name>:<param>}.`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+      return;
+    }
 
     const action = registryGetAction(name, this._instanceActionsMap);
     if (!action) {
@@ -2273,8 +2304,6 @@ export default class KioskKeyboard extends Control {
       );
       return;
     }
-
-    if (!this.fireKeyPress({ key: keyValue, shiftKey: shift })) return;
 
     try {
       action.handler(this._createActionContext(), param);
@@ -2319,29 +2348,13 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Layout switch requested from an action handler. Mirrors the `{layout:*}`
-   * key path: validates against the registry, applies, and fires layoutChange
-   * on a real change. A named switch is user-driven (overrides keyboardType);
-   * `toBase` resolves the tracked base layout as an external-sourced switch.
-   *
-   * NOTE (spike): this duplicates the validate/apply/fire logic in the
-   * `{layout:*}` branch of `_handleKeyAction`. A follow-up could hoist a
-   * shared `_performLayoutSwitch` used by both; left separate here to avoid
-   * touching the hot key-dispatch path during the spike.
+   * Layout switch requested from an action handler. Runs the shared
+   * `_performLayoutSwitch` core. A named switch is user-driven (overrides
+   * keyboardType); `toBase` resolves the tracked base layout as an
+   * external-sourced switch.
    */
   private _switchLayoutFromAction(name: string, toBase: boolean): void {
-    const resolved = (toBase ? this._baseLayout : name).trim().toLowerCase();
-    if (!registryGetLayout(resolved, this._instanceLayoutsMap)) {
-      Log.warning(
-        `Layout "${resolved}" requested by an action is not registered.`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-      return;
-    }
-    if (this._applyLayout(resolved, toBase ? "external" : "user")) {
-      this.fireLayoutChange({ layout: resolved });
-    }
+    this._performLayoutSwitch(toBase ? this._baseLayout : name, toBase ? "external" : "user", "requested by an action");
   }
 
   private _toggleShift(el: HTMLElement): void {
