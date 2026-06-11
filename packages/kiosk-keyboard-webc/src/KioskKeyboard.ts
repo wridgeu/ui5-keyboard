@@ -29,7 +29,6 @@ import {
   isBuiltInLayout,
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
-import { getRegisteredAction, parseActionToken } from "./core/action-registry.js";
 import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
@@ -38,8 +37,6 @@ import {
   MobileKeyboard,
   FKeyMode,
   type CompositionMiddleware,
-  type ActionContext,
-  type ActionDefinition,
   type LayoutDefinition,
   type KeyDefinition,
   type KeyPressEventDetail,
@@ -523,19 +520,6 @@ class KioskKeyboard extends UI5Element {
    */
   @property({ type: Object, noAttribute: true })
   instanceMiddleware: Record<string, () => CompositionMiddleware> | null = null;
-
-  /**
-   * Per-instance custom action map for `{action:<name>}` keys, keyed by
-   * action name. Programmatic only -- accepts a JS object whose values are
-   * {@link ActionDefinition}s. Scoped to this element; there is no global
-   * registry, so handlers are released with the element.
-   *
-   * @default null
-   * @public
-   * @since 0.2.0
-   */
-  @property({ type: Object, noAttribute: true })
-  instanceActions: Record<string, ActionDefinition> | null = null;
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
@@ -1105,14 +1089,6 @@ class KioskKeyboard extends UI5Element {
     typeof factory === "function" ? (factory as () => CompositionMiddleware) : undefined,
   );
 
-  private readonly _actionsView = new MemoMapView<ActionDefinition>((name, def) => {
-    if (!def || typeof (def as ActionDefinition).handler !== "function") {
-      console.warn(`[kiosk-keyboard] Invalid instanceActions entry "${name}": must have a "handler" function.`);
-      return undefined;
-    }
-    return def as ActionDefinition;
-  });
-
   private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
     return (
       Array.isArray(def) &&
@@ -1155,25 +1131,38 @@ class KioskKeyboard extends UI5Element {
     return base;
   }
 
+  /**
+   * Accessible label for a key - always non-empty.
+   *
+   * Resolution order: per-key `ariaLabel` -> visible label (`_getKeyLabel`,
+   * which also covers the Caps Lock override for the shift key) -> built-in
+   * i18n entry. For an icon-only key (`label: ""`) with none of these, a
+   * dev-time warning is logged and the raw `value` is used as a last resort,
+   * so a custom icon-only token never silently announces with no accessible
+   * name.
+   */
   _getKeyAriaLabel(key: KeyDefinition): string {
     // CapsLock always overrides the shift key's aria-label so screen
     // readers announce "Caps Lock" rather than "Shift" (matches UI5 renderer).
     if (key.value === "{shift}" && this._capsLock) {
       return getText("KEY_CAPS_LOCK", "Caps Lock");
     }
-    const i18nKey = SPECIAL_KEY_LABELS[key.value];
-    if (i18nKey) return getText(i18nKey, key.value);
+
+    if (key.ariaLabel) return key.ariaLabel;
 
     const display = this._getKeyLabel(key);
     if (display) return display;
 
-    // Icon-only `{action:*}` key (label suppressed): use the action's
-    // ariaLabel, else the bare action name, so the accessible name is never
-    // the raw "{action:...}" token.
-    const parsed = parseActionToken(key.value);
-    if (parsed) {
-      const action = getRegisteredAction(parsed.name, this._actionsView.get(this.instanceActions));
-      return action?.ariaLabel || parsed.name || key.value;
+    const i18nKey = SPECIAL_KEY_LABELS[key.value];
+    if (i18nKey) return getText(i18nKey, key.value);
+
+    // Icon-only key (label suppressed) with no ariaLabel and no i18n entry:
+    // warn so the consumer adds a localizable accessible name, and fall back
+    // to the raw value rather than announcing nothing.
+    if (key.label === "") {
+      console.warn(
+        `[kiosk-keyboard] Icon-only key "${key.value}" has no accessible name; set ariaLabel on the KeyDefinition.`,
+      );
     }
 
     return key.value;
@@ -1305,11 +1294,6 @@ class KioskKeyboard extends UI5Element {
 
     if (value.startsWith("{fkey:")) {
       this._handleFKeyPress(value, shifted);
-      return;
-    }
-
-    if (value.startsWith("{action:")) {
-      this._handleActionKey(value, shifted);
       return;
     }
 
@@ -1579,80 +1563,53 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Resolves and runs a `{action:<name>}` / `{action:<name>:<param>}` key.
+   * Inserts text at the caret of the active target, replacing any selection,
+   * tracking the cursor exactly like a character key (dispatches `input`).
    *
-   * Fires the cancelable key-press first (mirroring `{layout:*}`), so a
-   * consumer can observe or veto any {action:*} press; a veto suppresses all
-   * further handling, including the warnings. When not vetoed, an empty or
-   * unregistered name is warned and ignored, never inserted as literal text.
-   * A registered action's handler runs with a curated {@link ActionContext};
-   * handler exceptions are caught and logged so consumer code cannot break
-   * dispatch.
+   * Designed to be called from a `key-press` handler that owns a custom
+   * `{...}` key (e.g. a clipboard-paste key). A safe no-op when there is no
+   * active resolved target. Does not fire `key-press` itself.
+   *
+   * @param text The text to insert.
+   * @public
+   * @since 0.2.0
    */
-  private _handleActionKey(value: string, shifted: boolean): void {
-    const parsed = parseActionToken(value);
-    if (!parsed) return;
-    const { name, param } = parsed;
-
-    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
-    if (!allowed) return;
-
-    if (!name) {
-      console.warn(
-        `[kiosk-keyboard] Empty action name in "${value}". Expected {action:<name>} or {action:<name>:<param>}.`,
-      );
-      return;
-    }
-
-    const action = getRegisteredAction(name, this._actionsView.get(this.instanceActions));
-    if (!action) {
-      console.warn(
-        `[kiosk-keyboard] Action "${name}" referenced by an {action:*} key is not registered. Pass it through the instanceActions property.`,
-      );
-      return;
-    }
-
-    try {
-      action.handler(this._createActionContext(), param);
-    } catch (e) {
-      this._logContainedActionError(name, e);
-    }
-
-    this._autoReleaseShift();
-  }
-
-  /**
-   * Logs a contained action-handler exception. Kept out of the catch block so
-   * the containment reads as deliberate handling (log + swallow so a consumer
-   * throw cannot break key dispatch), not an accidentally swallowed error.
-   */
-  private _logContainedActionError(name: string, error: unknown): void {
-    console.error(`[kiosk-keyboard] Action "${name}" handler threw and was contained.`, error);
-  }
-
-  /**
-   * Builds the curated {@link ActionContext} handed to action handlers. Each
-   * member routes through the same internals the built-in keys use; read-only
-   * state is snapshotted at invocation while insertText/deleteBackward act on
-   * the live target.
-   */
-  private _createActionContext(): ActionContext {
+  insertText(text: string): void {
     const target = this._resolveTarget();
-    return {
-      insertText: (text: string): void => {
-        const t = this._resolveTarget();
-        if (t) insertText(t, text);
-      },
-      deleteBackward: (): boolean => {
-        const t = this._resolveTarget();
-        return t ? handleBackspace(t) !== null : false;
-      },
-      isShifted: this._shifted,
-      isCapsLock: this._capsLock,
-      targetElement: target,
-      switchLayout: (name: string): void => this._handleLayoutSwitch(`{layout:${name}}`),
-      switchToBase: (): void => this._handleLayoutSwitch("{layout:base}"),
-    };
+    if (target) insertText(target, text);
+  }
+
+  /**
+   * Deletes one grapheme before the caret of the active target (or the active
+   * selection), exactly like the `{backspace}` key. Returns `true` when
+   * something was removed, `false` otherwise (empty input, caret at start,
+   * read-only/disabled target, or no active target).
+   *
+   * Designed to be called from a `key-press` handler that owns a custom key.
+   * Does not fire `key-press` itself.
+   *
+   * @public
+   * @since 0.2.0
+   */
+  deleteBackward(): boolean {
+    const target = this._resolveTarget();
+    return target ? handleBackspace(target) !== null : false;
+  }
+
+  /**
+   * Returns the resolved native `<input>`/`<textarea>` of the active target,
+   * or `null` when there is no active target or it has no textual DOM ref.
+   *
+   * Resolves through any custom target resolver, mirroring how the built-in
+   * keys locate the element they type into (delegates to the same internal
+   * resolution as {@link activeElement}). Useful from a `key-press` handler
+   * that owns a custom key and needs the live caret/selection.
+   *
+   * @public
+   * @since 0.2.0
+   */
+  getActiveTargetElement(): HTMLInputElement | HTMLTextAreaElement | null {
+    return this._resolveTarget();
   }
 
   private _handleFKey(fkeyName: string, shiftKey: boolean): void {
@@ -2166,5 +2123,4 @@ KioskKeyboard.define();
 
 export default KioskKeyboard;
 
-export type { CompositionMiddleware, ActionContext, ActionDefinition } from "./types.js";
-export { defineActions } from "./types.js";
+export type { CompositionMiddleware } from "./types.js";

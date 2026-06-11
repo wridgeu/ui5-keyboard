@@ -3,7 +3,7 @@
 import "./Assets.js";
 
 export { default as KioskKeyboard } from "./KioskKeyboard.js";
-export { FKeyMode, KeyboardType, MobileKeyboard, defineActions } from "./types.js";
+export { FKeyMode, KeyboardType, MobileKeyboard } from "./types.js";
 export type {
   KeyPressEventDetail,
   LayoutChangeEventDetail,
@@ -17,7 +17,5 @@ export type {
   KeyType,
   SpecialKeyValue,
   CompositionMiddleware,
-  ActionContext,
-  ActionDefinition,
 } from "./types.js";
 export type { KioskKeyboardDomContract } from "./KioskKeyboard.js";
