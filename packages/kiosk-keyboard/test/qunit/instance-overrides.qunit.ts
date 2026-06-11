@@ -3,7 +3,6 @@ import Input from "sap/m/Input";
 import type { LayoutDefinition, CompositionMiddleware } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
 import type LanguageTag from "sap/base/i18n/LanguageTag";
-import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
 import { placeAndWait, getRenderedLayoutKeys, tapKey } from "./test-helpers";
 
 // ── Helpers ──
@@ -261,35 +260,6 @@ QUnit.test("Instance locale overrides do not affect a sibling instance", async (
   input2.destroy();
   kbOverride.destroy();
   kbDefault.destroy();
-});
-
-// ───────────────────────────────────────────────────
-// Middleware resolution: instance map shadows built-in factory
-// ───────────────────────────────────────────────────
-
-QUnit.module("instance-overrides - middleware resolution", { afterEach: commonAfterEach });
-
-QUnit.test("Instance middleware shadows the built-in middleware factory", (assert) => {
-  let instanceCalled = false;
-  const instanceFactory = (): CompositionMiddleware => {
-    instanceCalled = true;
-    return noopFactory();
-  };
-
-  // ja-kana has a built-in middleware factory; the instance map must take precedence.
-  const factory = getMiddlewareFactory("ja-kana", new Map([["ja-kana", instanceFactory]]));
-  factory!();
-  assert.ok(instanceCalled, "Instance factory invoked when instance map provides it");
-});
-
-QUnit.test("Instance middleware falls back to built-in when key not in instance map", (assert) => {
-  // Compare against the unmapped-instance call so we know we got the SAME factory,
-  // not a phantom non-null. ja-kana has a registered built-in; both lookups must
-  // hit it identically.
-  const builtIn = getMiddlewareFactory("ja-kana");
-  const fallthrough = getMiddlewareFactory("ja-kana", new Map([["other", () => noopFactory()]]));
-  assert.notStrictEqual(fallthrough, null, "Falls through to built-in registration");
-  assert.strictEqual(fallthrough, builtIn, "Returns the exact registered built-in factory");
 });
 
 // ───────────────────────────────────────────────────

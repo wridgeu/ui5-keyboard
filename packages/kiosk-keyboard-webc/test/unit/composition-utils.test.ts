@@ -5,6 +5,7 @@ import {
   startComposition,
   updateComposition,
   endComposition,
+  isComposing,
 } from "../../src/core/composition-utils.js";
 
 describe("composition-utils", () => {
@@ -63,6 +64,30 @@ describe("composition-utils", () => {
       startComposition(state, input);
       updateComposition(state, input, "\u305F"); // た
       expect(input.value).toBe("hello\u304B\u305F");
+    });
+  });
+
+  describe("isComposing", () => {
+    it("returns false for a freshly created state", () => {
+      expect(isComposing(state)).toBe(false);
+    });
+
+    it("returns true after startComposition", () => {
+      startComposition(state, input);
+      expect(isComposing(state)).toBe(true);
+    });
+
+    it("returns false after endComposition", () => {
+      startComposition(state, input);
+      endComposition(state, input);
+      expect(isComposing(state)).toBe(false);
+    });
+
+    it("tracks independently for separate state objects", () => {
+      const otherState = createCompositionState();
+      startComposition(state, input);
+      expect(isComposing(state)).toBe(true);
+      expect(isComposing(otherState)).toBe(false);
     });
   });
 });

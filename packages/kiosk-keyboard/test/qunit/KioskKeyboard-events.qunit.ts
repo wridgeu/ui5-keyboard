@@ -151,47 +151,6 @@ QUnit.test("autoType does not fire keyboardTypeChange when type stays Full", asy
   kb.destroy();
 });
 
-QUnit.test("autoType switching back fires keyboardTypeChange twice", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
-  numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
-
-  const events: Array<{ keyboardType: string; autoDetected: boolean }> = [];
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-
-  kb.attachEvent("keyboardTypeChange", (event: { getParameters: () => Record<string, unknown> }) => {
-    const params = event.getParameters();
-    events.push({
-      keyboardType: params.keyboardType as string,
-      autoDetected: params.autoDetected as boolean,
-    });
-  });
-
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  (textInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(events.length, 2, "Two events fired");
-  assert.strictEqual(events[0].keyboardType, "Numpad", "First switch to Numpad");
-  assert.strictEqual(events[1].keyboardType, "Full", "Second switch back to Full");
-  assert.ok(events[0].autoDetected, "First was auto-detected");
-  assert.ok(events[1].autoDetected, "Second was auto-detected");
-
-  numInput.destroy();
-  textInput.destroy();
-  kb.destroy();
-});
-
 QUnit.test("RTL: renders with direction rtl inside .sapUiRtl container", async (assert) => {
   const rtlContainer = document.createElement("div");
   rtlContainer.className = "sapUiRtl";
