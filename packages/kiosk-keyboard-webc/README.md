@@ -322,15 +322,18 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Methods
 
-| Method                     | Description                                                                                                                                                     |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `activeElement` (getter)   | Read-only. Returns the currently active target input element (`HTMLInputElement \| HTMLTextAreaElement \| null`).                                               |
-| `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.           |
-| `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                               |
-| `setTargetElement(el)`     | Programmatically sets the target input/textarea.                                                                                                                |
-| `setTargetResolver(fn)`    | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                         |
-| `resetKeyboardType()`      | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                            |
-| `refreshResponsiveState()` | Recomputes responsive height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing. |
+| Method                     | Description                                                                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `activeElement` (getter)   | Read-only. Returns the currently active target input element (`HTMLInputElement \| HTMLTextAreaElement \| null`).                                                                      |
+| `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.                                  |
+| `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                                                      |
+| `setTargetElement(el)`     | Programmatically sets the target input/textarea.                                                                                                                                       |
+| `setTargetResolver(fn)`    | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                                                |
+| `resetKeyboardType()`      | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                                                   |
+| `refreshResponsiveState()` | Recomputes responsive height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing.                        |
+| `insertText(text)`         | Inserts text at the caret of the active target (cursor-tracked, fires `liveChange`). No-op with no active target. Call from a `key-press` handler to implement a custom `{token}` key. |
+| `deleteBackward()`         | Deletes one grapheme before the caret of the active target. Returns whether anything was removed; no-op with no active target.                                                         |
+| `getActiveTargetElement()` | Returns the resolved native input/textarea of the active target, or `null`. Method form of the `activeElement` getter, for parity with the UI5 control.                                |
 
 `after-open` and `after-close` fire synchronously when the `open` state flips.
 They report the state transition itself, not animation completion.

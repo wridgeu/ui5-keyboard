@@ -159,37 +159,36 @@ Available layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
 `kiosk-keyboard-webc/layouts/fkey-row` and `kiosk-keyboard-webc/layouts/nav-row`
 are stable imports for composing custom variant layouts.
 
-## Custom Action Keys
+## Custom Keys
 
-A layout key whose value is `{action:name}` (optionally `{action:name:param}`)
-runs a custom handler instead of inserting text. Register handlers per element
-via the `instanceActions` property; `defineActions` types the handler's
-`ActionContext` argument:
+A layout key with a custom token (e.g. `{paste}`) does not insert text on its
+own. It fires the cancelable `key-press` event; handle that and use the element's
+input methods to edit the target:
 
 ```typescript
 import KioskKeyboard from "kiosk-keyboard-webc";
-import { defineActions } from "kiosk-keyboard-webc"; // re-exported from the entry
 
 const el = document.createElement("kiosk-keyboard");
 el.instanceLayouts = {
-  pad: [[{ value: "{action:paste}", label: "", icon: "sap-icon://paste" }, { value: "1" }]],
+  pad: [[{ value: "{paste}", label: "", icon: "sap-icon://paste", ariaLabel: "Paste from clipboard" }, { value: "1" }]],
 };
-el.instanceActions = defineActions({
-  paste: {
-    ariaLabel: "Paste from clipboard",
-    handler: (ctx) => void navigator.clipboard.readText().then((t) => ctx.insertText(t)),
-  },
+el.addEventListener("key-press", (e) => {
+  if (e.detail.key === "{paste}") {
+    e.preventDefault(); // claim this key
+    navigator.clipboard.readText().then((t) => el.insertText(t));
+  }
 });
 el.layout = "pad";
 document.body.appendChild(el);
 ```
 
-The handler receives a curated `ActionContext` (`insertText`, `deleteBackward`,
-`isShifted`, `isCapsLock`, `targetElement`, `switchLayout`, `switchToBase`).
-Listen for the cancelable `key-press` event to veto an action before its handler
-runs. Actions are per-element only - there is no global registry, so handlers are
-released when the element is removed. An unregistered `{action:*}` (or any other
-unrecognized `{token}`) is a no-op with a console warning, never typed literally.
+The element exposes `insertText(text)`, `deleteBackward()`, and
+`getActiveTargetElement()` - all no-ops when there is no active target - so a
+`key-press` handler can edit the real target with cursor tracking. Set
+`KeyDefinition.ariaLabel` for the accessible name of an icon-only key. Any
+unrecognized `{token}` fires `key-press` and is otherwise a no-op (never typed
+literally); `preventDefault()` is how you take it over. There is no action
+registry: behavior lives in your event handler, the layout stays plain data.
 
 ## Limitations and Workarounds
 
