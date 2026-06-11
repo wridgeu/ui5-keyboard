@@ -1445,6 +1445,12 @@ QUnit.test("Window blur safety listener is detached on touchend", async (assert)
 
   const qKey = getRequiredKeyElement(kb, "q");
 
+  // Spy the window listener seam so detachment is asserted directly, not via a
+  // no-throw smoke test (a stacked/leaked listener clears already-clear state
+  // and is otherwise unobservable).
+  const addSpy = sinon.spy(window, "addEventListener");
+  const removeSpy = sinon.spy(window, "removeEventListener");
+
   const start = new Event("touchstart", { bubbles: true });
   Object.defineProperty(start, "target", { value: qKey, writable: false });
   kb.ontouchstart(start);
@@ -1453,22 +1459,13 @@ QUnit.test("Window blur safety listener is detached on touchend", async (assert)
   Object.defineProperty(end, "target", { value: qKey, writable: false });
   kb.ontouchend(end);
 
-  // After release, a window blur should not interact with anything pressed-state-related.
-  // Re-press another key and verify the previous listener is gone (no stray clears).
-  const wKey = getRequiredKeyElement(kb, "w");
-  const start2 = new Event("touchstart", { bubbles: true });
-  Object.defineProperty(start2, "target", { value: wKey, writable: false });
-  kb.ontouchstart(start2);
+  const addedBlurHandler = addSpy.getCalls().find((c) => c.args[0] === "blur")?.args[1];
+  const detached = removeSpy.getCalls().some((c) => c.args[0] === "blur" && c.args[1] === addedBlurHandler);
+  addSpy.restore();
+  removeSpy.restore();
 
-  // Now blur once: this clears 'w'. If the old 'q' listener were still around,
-  // the second blur below would clear 'w' again, which is fine but indicates
-  // a stacked listener. Use the listener-removal as a no-throw smoke test.
-  window.dispatchEvent(new Event("blur"));
-  assert.notOk(hasKeyClass(kb, "w", DOM.classes.keyPressed), "Press cleared on first blur");
-
-  // A second blur after the state is already clear must be a no-op.
-  window.dispatchEvent(new Event("blur"));
-  assert.notOk(hasKeyClass(kb, "w", DOM.classes.keyPressed), "State stays clear after a second blur");
+  assert.ok(addedBlurHandler, "touchstart attaches a window blur safety listener");
+  assert.ok(detached, "touchend detaches the same blur listener (no stacking across taps)");
 
   kb.destroy();
 });

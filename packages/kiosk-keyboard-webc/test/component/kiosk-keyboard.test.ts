@@ -1,6 +1,7 @@
 import { fixture, html, expect, oneEvent, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
+import numericLayout from "../../src/layouts/numeric.js";
 import { queryKey } from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
 
@@ -36,18 +37,19 @@ describe("kiosk-keyboard", () => {
   // ── Render ──
 
   describe("rendering", () => {
-    it("creates shadow DOM with keys", async () => {
+    it("creates shadow DOM with the layout's keys", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
-      const keys = queryKeys(el);
-      expect(keys.length).to.be.greaterThan(0);
+      // A known qwerty key must be present, not merely "something rendered".
+      expect(queryKey(el, "q"), "qwerty layout renders its 'q' key").to.not.be.null;
     });
 
-    it("renders rows matching layout definition", async () => {
+    it("renders one .kiosk-row per row in the layout definition", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="numeric"></kiosk-keyboard> `);
       await nextRender();
       const rows = queryRows(el);
-      expect(rows.length).to.be.greaterThan(0);
+      // Exact structural match against the definition, not just "> 0".
+      expect(rows.length, "one rendered row per numeric layout row").to.equal(numericLayout.length);
     });
 
     it("renders disabled state with disabled class", async () => {

@@ -378,33 +378,24 @@ QUnit.test("Backspace at position 0 is a silent no-op", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Backspace at position 0 with non-empty value does not truncate", async (assert) => {
+QUnit.test("Backspace with the caret at position 0 of a non-empty value is a no-op", async (assert) => {
   const input = new Input({ value: "hello" });
   input.placeAt("qunit-fixture");
 
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
 
+  // Caret at the very start of non-empty content (distinct from the empty-buffer
+  // no-op above): there is nothing before the caret to delete.
   input.focus();
-  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(5, 5);
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(0, 0);
 
-  // Simulate cursor at position 0: delete all then retype to set cursor at start
-  // Type into the input so the session tracks cursor, then delete all characters
-  // to get cursor at position 0
   tapKey(kb, "{backspace}");
-  tapKey(kb, "{backspace}");
-  tapKey(kb, "{backspace}");
-  tapKey(kb, "{backspace}");
-  tapKey(kb, "{backspace}");
-  assert.strictEqual(input.getValue(), "", "All characters deleted");
+  assert.strictEqual(input.getValue(), "hello", "Backspace at caret 0 leaves the non-empty value intact");
 
-  // One more backspace at position 0
-  tapKey(kb, "{backspace}");
-  assert.strictEqual(input.getValue(), "", "Backspace at pos 0 does nothing");
-
-  // Keyboard still works - type a new character
+  // The caret stayed at 0, so the next character inserts at the start.
   tapKey(kb, "x");
-  assert.strictEqual(input.getValue(), "x", "Typing still works after backspace at pos 0");
+  assert.strictEqual(input.getValue(), "xhello", "Typing after the no-op backspace inserts at the caret");
 
   input.destroy();
   kb.destroy();

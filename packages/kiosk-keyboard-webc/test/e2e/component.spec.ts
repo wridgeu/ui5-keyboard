@@ -186,9 +186,11 @@ test.describe("row classification (data-row-kind)", () => {
         r.getAttribute("data-row-kind"),
       ),
     );
-    expect(kinds[0]).toBe("fkey");
-    expect(kinds[1]).toBe("fkey");
-    expect(kinds[2]).toBeNull();
+    // The two F-key rows are classified; the remaining control row is not.
+    // Assert by predicate, not a fixed row index, so a layout reorder surfaces
+    // as a classification regression rather than a positional break.
+    expect(kinds.filter((k) => k === "fkey").length).toBe(2);
+    expect(kinds.filter((k) => k === null).length).toBeGreaterThan(0);
   });
 
   test("marks nav rows as nav", async ({ page }) => {
