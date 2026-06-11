@@ -593,15 +593,10 @@ QUnit.test("Destroy marks tracked recorders as destroyed", (assert) => {
 
   assert.ok(recorder.isDestroyed, "Recorder is destroyed after manager destroy");
   assert.notOk(recorder.isRecording, "Recorder is not recording after manager destroy");
-});
 
-QUnit.test("Recorder stop after manager destroy - no throw", (assert) => {
-  const recorder = manager.createRecorder({ onRecord: () => {} });
-  recorder.start();
-  manager.destroy();
-
+  // stop() on a recorder whose manager was destroyed must be a safe no-op.
   recorder.stop();
-  assert.ok(true, "stop() on recorder after manager destroy does not throw");
+  assert.notOk(recorder.isRecording, "stop() after manager destroy stays safe");
 });
 
 // ──────────────────────────────────────────────
@@ -898,22 +893,20 @@ QUnit.test("stopPropagation: false allows both window capture and document liste
   document.removeEventListener("keydown", docListener, true);
 });
 
-QUnit.test("Window capture listener fires even with stopPropagation: true", (assert) => {
+QUnit.test("stopPropagation does not block sibling window-capture listeners", (assert) => {
   let windowCaptureCount = 0;
   const winListener = () => {
     windowCaptureCount++;
   };
-  // Add our listener AFTER the dispatcher's (same target, same phase - insertion order)
+  // Sibling listener on the same target/phase as the dispatcher, added after it.
   window.addEventListener("keydown", winListener, true);
 
   manager.register("F5", () => {}); // default stopPropagation: true
 
   fireKey("F5");
-  // stopPropagation prevents child targets (document) but not same-target listeners
-  // However, since our listener was added AFTER the dispatcher's, it depends on
-  // whether stopPropagation was called. With window capture, stopPropagation
-  // prevents propagation to children but other same-target capture listeners still fire.
-  assert.strictEqual(windowCaptureCount, 1, "Window capture listener fires (same target as dispatcher)");
+  // stopPropagation() blocks descendant targets, not other capture listeners on
+  // the same target, so this sibling still fires.
+  assert.strictEqual(windowCaptureCount, 1, "Sibling window-capture listener still fires");
 
   window.removeEventListener("keydown", winListener, true);
 });
@@ -940,15 +933,13 @@ QUnit.test("Target-scoped: target = document degrades to untargeted registration
 // onDetached idempotent
 // ──────────────────────────────────────────────
 
-QUnit.test("onDetached is idempotent on already-stopped recorder", (assert) => {
+QUnit.test("A recorder can start after a previous recorder stopped", (assert) => {
   const recorder = manager.createRecorder({ onRecord: () => {} });
   recorder.start();
   recorder.stop();
   assert.notOk(recorder.isRecording, "Recorder stopped");
 
-  // Simulate a second onDetached call (e.g., from destroy) - should not throw
-  // We test this by starting another recorder (which would call onDetached on
-  // the previous interceptor if it were still set - but it isn't because stop() cleared it)
+  // stop() cleared the interceptor, so a fresh recorder starts cleanly.
   const recorder2 = manager.createRecorder({ onRecord: () => {} });
   recorder2.start();
   assert.ok(recorder2.isRecording, "Second recorder started without error");

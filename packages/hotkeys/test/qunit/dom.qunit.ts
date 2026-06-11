@@ -58,8 +58,8 @@ QUnit.test("Returns false for readonly input with no explicit type", (assert) =>
   assert.notOk(isInputElement(el), "readonly default-type input is not editable");
 });
 
-QUnit.test("Returns true for non-editable-type input even when readonly", (assert) => {
-  // readonly has no effect on button inputs, but verify we still return false
+QUnit.test("Returns false for non-editable-type input even when readonly", (assert) => {
+  // readonly has no effect on button inputs; isInputElement still returns false
   const el = createElement("input", { type: "button", readonly: "" });
   assert.notOk(isInputElement(el), "button input stays false regardless of readonly");
 });

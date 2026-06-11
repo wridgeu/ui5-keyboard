@@ -638,14 +638,6 @@ QUnit.test("instanceLayouts accepts formerly forbidden map keys (Map-safe)", asy
 // Locale-based default layout
 // ──────────────────────────────────────────────
 
-QUnit.test("getLocaleLayout returns layout based on UI5 locale", (assert) => {
-  // The actual result depends on the test runner's language setting,
-  // but the method should always return a string
-  const layout = KioskKeyboard.getLocaleLayout();
-  assert.strictEqual(typeof layout, "string", "getLocaleLayout returns a string");
-  assert.ok(layout.length > 0, "Layout name is non-empty");
-});
-
 QUnit.test("getLocaleLayout returns qwertz-de for German locale", (assert) => {
   const currentLang = Localization.getLanguage();
   try {
