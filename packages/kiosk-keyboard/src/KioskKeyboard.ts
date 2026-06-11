@@ -971,11 +971,11 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Single layout-switch core shared by the public `setLayout`, the
-   * `{layout:*}` key branch of `_handleKeyAction`, and the action context's
-   * `switchLayout` / `switchToBase`: normalize (trim + lowercase) -> validate
-   * against the registry (warn and bail when unregistered) -> apply ->
-   * fire `layoutChange` on a real change. Returns whether the layout changed.
+   * Single layout-switch core shared by the public `setLayout` and the
+   * `{layout:*}` key branch of `_handleKeyAction`: normalize (trim + lowercase)
+   * -> validate against the registry (warn and bail when unregistered) ->
+   * apply -> fire `layoutChange` on a real change. Returns whether the layout
+   * changed.
    *
    * @param rawName Requested layout name; normalized here.
    * @param source  Who drove the switch (see {@link _applyLayout}).
