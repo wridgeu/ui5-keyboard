@@ -1,5 +1,4 @@
 import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
-import "ui5/kiosk/middleware/kana-dakuten";
 
 const sandbox = sinon.createSandbox();
 
@@ -11,7 +10,7 @@ function commonAfterEach() {
 
 QUnit.module("kana-dakuten middleware", { afterEach: commonAfterEach });
 
-QUnit.test("Registers itself for ja-kana layout", (assert) => {
+QUnit.test("Built-in factory registered for ja-kana layout", (assert) => {
   assert.notStrictEqual(getMiddlewareFactory("ja-kana"), null, "Factory registered for ja-kana");
 });
 

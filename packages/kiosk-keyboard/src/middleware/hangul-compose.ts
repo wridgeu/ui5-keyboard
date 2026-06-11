@@ -8,7 +8,6 @@ import {
   isComposing,
 } from "../internal/composition-utils";
 import { insertText } from "../internal/input-operations";
-import { _registerMiddleware } from "../internal/middleware-registry";
 
 const S_BASE = 0xac00;
 const V_COUNT = 21;
@@ -133,7 +132,7 @@ function composeSyllable(l: number, v: number, t = 0): string {
  */
 type Phase = "empty" | "L" | "LV" | "LVT";
 
-function createHangulComposeMiddleware(): CompositionMiddleware {
+export function createHangulComposeMiddleware(): CompositionMiddleware {
   const compState: CompositionState = createCompositionState();
   let phase: Phase = "empty";
   let curL = 0;
@@ -326,5 +325,3 @@ function createHangulComposeMiddleware(): CompositionMiddleware {
     },
   };
 }
-
-_registerMiddleware("ko-hangul", createHangulComposeMiddleware);

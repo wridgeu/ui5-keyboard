@@ -3,7 +3,7 @@ import Input from "sap/m/Input";
 import Log from "sap/base/Log";
 import type { LayoutDefinition, ActionContext, ActionDefinition } from "ui5/kiosk/types";
 import { defineActions } from "ui5/kiosk/types";
-import { placeAndWait, tapKey, getRequiredKeyElement } from "./test-helpers";
+import { placeAndWait, tapKey, getRequiredKeyElement, waitForRender } from "./test-helpers";
 
 // ── Helpers ──
 
@@ -142,6 +142,43 @@ QUnit.test("keyPress fires for an action key and preventDefault skips the handle
   assert.strictEqual(pressedKey, "{action:paste}", "keyPress fired with the full action token as key");
   assert.notOk(handlerRan, "preventDefault skipped the action handler");
   assert.strictEqual(input.getValue(), "", "Nothing inserted when vetoed");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Unregistered {action:*} fires a cancelable keyPress; veto suppresses the warning", async (assert) => {
+  const warnSpy = sandbox.spy(Log, "warning");
+  const { kb, input } = await setup(layoutOf("{action:missing}"));
+
+  let pressedKey: string | null = null;
+  kb.attachKeyPress((e) => {
+    pressedKey = e.getParameter("key") ?? "";
+    e.preventDefault();
+  });
+
+  // Mirrors {fkey:*} and the unrecognized-token path: the cancelable keyPress
+  // fires BEFORE validation, so a consumer can observe or veto any {action:*}
+  // press; a veto suppresses the unregistered-action warning.
+  tapKey(kb, "{action:missing}");
+  assert.strictEqual(pressedKey, "{action:missing}", "keyPress fired for the unregistered action token");
+  assert.notOk(warnSpy.called, "veto suppresses the unregistered-action warning");
+  assert.strictEqual(input.getValue(), "", "Nothing inserted for an unregistered action");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Empty action name ({action:}) is warned and ignored", async (assert) => {
+  const warnSpy = sandbox.spy(Log, "warning");
+  const { kb, input } = await setup(layoutOf("{action:}"));
+
+  tapKey(kb, "{action:}");
+  assert.ok(
+    warnSpy.getCalls().some((c) => String(c.args[0]).includes("{action:}")),
+    "Empty action name logs a warning",
+  );
+  assert.strictEqual(input.getValue(), "", "Empty action name inserts nothing");
 
   input.destroy();
   kb.destroy();
@@ -292,3 +329,33 @@ QUnit.test(
     assert.notStrictEqual(aria, "{action:paste}", "Accessible name is never the raw {action:*} token");
   },
 );
+
+QUnit.test("setInstanceActions re-renders so an updated ariaLabel reaches the DOM", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    instanceLayouts: { spike: [[{ value: "{action:paste}", label: "", icon: "sap-icon://paste" }]] },
+    instanceActions: defineActions({ paste: { handler: () => {}, ariaLabel: "Old label" } }),
+    layout: "spike",
+  });
+  await placeAndWait(kb);
+
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "{action:paste}").getAttribute("aria-label"),
+    "Old label",
+    "Initial ariaLabel rendered",
+  );
+
+  kb.setInstanceActions({ paste: { handler: () => {}, ariaLabel: "New label" } });
+  await waitForRender();
+
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "{action:paste}").getAttribute("aria-label"),
+    "New label",
+    "Updated ariaLabel reaches the rendered DOM after setInstanceActions",
+  );
+
+  input.destroy();
+  kb.destroy();
+});

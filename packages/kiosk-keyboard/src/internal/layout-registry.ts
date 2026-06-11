@@ -15,10 +15,6 @@ import arabic from "../layouts/arabic";
 import koHangul from "../layouts/ko-hangul";
 import qwertyEs from "../layouts/qwerty-es";
 
-// ── Middleware self-registration (side-effect imports) ──
-import "../middleware/kana-dakuten";
-import "../middleware/hangul-compose";
-
 /**
  * Built-in keyboard layouts shipped with the library. The map is sealed
  * at module load: there is no public mutation API. Consumers customize

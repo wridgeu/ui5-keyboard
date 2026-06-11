@@ -1,5 +1,4 @@
 import { getMiddlewareFactory } from "ui5/kiosk/internal/middleware-registry";
-import "ui5/kiosk/middleware/hangul-compose";
 
 const sandbox = sinon.createSandbox();
 let input: HTMLInputElement;
@@ -23,7 +22,7 @@ QUnit.module("hangul-compose middleware", {
   afterEach: commonAfterEach,
 });
 
-QUnit.test("Registers itself for ko-hangul layout", (assert) => {
+QUnit.test("Built-in factory registered for ko-hangul layout", (assert) => {
   assert.notStrictEqual(getMiddlewareFactory("ko-hangul"), null, "Factory registered for ko-hangul");
 });
 

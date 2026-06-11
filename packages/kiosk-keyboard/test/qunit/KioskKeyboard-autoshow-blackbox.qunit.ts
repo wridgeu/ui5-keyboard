@@ -1,7 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { hasKeyboardClass, placeAndWait, tapKey, waitForRender } from "./test-helpers";
+import { hasKeyboardClass, isShiftActive, placeAndWait, tapKey, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -187,6 +187,75 @@ QUnit.test(
     kb.destroy();
   },
 );
+
+QUnit.test("Re-entrant target switch fires activeControlChange once for the final target", async (assert) => {
+  const inputA = new Input({ value: "" });
+  const inputB = new Input({ value: "" });
+  const inputC = new Input({ value: "" });
+  inputA.placeAt("qunit-fixture");
+  inputB.placeAt("qunit-fixture");
+  inputC.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  (inputA.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.strictEqual(kb.getActiveControl()?.getId(), inputA.getId(), "Target is inputA after focus");
+
+  // Type a character to mark the session dirty (needed for change event)
+  tapKey(kb, "x");
+
+  // Change handler on A synchronously focuses inputC (re-entrant switch)
+  inputA.attachChange(() => {
+    (inputC.getFocusDomRef() as HTMLElement).focus();
+  });
+
+  const events: string[] = [];
+  kb.attachEvent("activeControlChange", (e: { getParameter(name: string): string }) => {
+    events.push(e.getParameter("controlId"));
+  });
+
+  // Outer switch A→B; its deferred change handler re-enters with B→C. The
+  // inner call announces C; the outer call must not announce it again.
+  (inputB.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
+  assert.deepEqual(events, [inputC.getId()], "Exactly one activeControlChange, carrying the final target");
+
+  inputA.destroy();
+  inputB.destroy();
+  inputC.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Armed shift survives a same-input refocus (caret reposition)", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  const dom = input.getFocusDomRef() as HTMLElement;
+  dom.focus();
+  await nextUIUpdate();
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Shift armed after tapping {shift}");
+
+  // Same-input refocus: blur and immediately refocus, so the focusin path
+  // runs _setActiveTarget with an unchanged target.
+  dom.blur();
+  dom.focus();
+  await waitForRender();
+
+  assert.strictEqual(kb.getActiveControl()?.getId(), input.getId(), "Target unchanged after refocus");
+  assert.ok(isShiftActive(kb), "Shift is still armed after refocusing the same input");
+
+  input.destroy();
+  kb.destroy();
+});
 
 // ──────────────────────────────────────────────
 // 5. Re-entrant _setActiveTarget preserves auto-type from inner call

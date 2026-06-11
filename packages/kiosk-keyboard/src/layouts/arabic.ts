@@ -78,7 +78,7 @@ const arabic: LayoutDefinition = [
       type: "modifier",
     },
     { value: "\u060C", shiftValue: "\u061B" },
-    { value: " ", label: "Space", width: "space", type: "space" },
+    { value: " ", width: "space", type: "space" },
     { value: ".", shiftValue: "\u061F" },
     {
       value: "{layout:fkeys}",

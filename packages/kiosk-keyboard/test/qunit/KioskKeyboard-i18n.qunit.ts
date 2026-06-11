@@ -1,7 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import { getText } from "ui5/kiosk/internal/i18n-registry";
-import { getKeyElement, placeAndWait, waitForRender } from "./test-helpers";
+import { getKeyElement, getRenderedKeyLabel, placeAndWait, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -95,6 +95,23 @@ QUnit.test("Resolver can override special key labels", async (assert) => {
   );
 
   input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Space key resolves KEY_SPACE through i18n in arabic and ja-romaji layouts", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "arabic" });
+  await placeAndWait(kb);
+
+  // Force a "translated" locale: the shipped de bundle has KEY_SPACE=Leertaste.
+  KioskKeyboard.setI18nResolver((key) => (key === "KEY_SPACE" ? "Leertaste" : undefined));
+  await waitForRender();
+
+  assert.strictEqual(getRenderedKeyLabel(kb, " "), "Leertaste", "Arabic space key label resolves through i18n");
+
+  kb.setLayout("ja-romaji");
+  await waitForRender();
+  assert.strictEqual(getRenderedKeyLabel(kb, " "), "Leertaste", "ja-romaji space key label resolves through i18n");
+
   kb.destroy();
 });
 
