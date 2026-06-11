@@ -66,6 +66,8 @@ Adding a new rule: export a new rule object from the plugin and add a correspond
 
 Utility module for running npm commands synchronously from within Node scripts.
 
+Requires `npm_execpath` (set by npm for every script it runs): consumers must be invoked via an npm script (e.g. `npm run test:packages:smoke`), not with `node` directly. Without it the module fails fast with a clear message; the old direct `npm.cmd` spawn fallback throws EINVAL on Windows since Node 18.20 (CVE-2024-27980 hardening).
+
 ### `runNpm(args, cwd)`
 
 Spawns `npm` with the given arguments in the specified working directory. Forwards stdout/stderr and exits the process on failure. Returns the captured stdout string.
@@ -96,6 +98,32 @@ Packaging smoke check for the publishable packages.
 - Verifies contract-critical files are actually present in the tarball (for example UI5 build manifests and the WebC bundle outputs)
 
 Run via `npm run test:packages:smoke`.
+
+### Native alternatives considered (2026-06-11)
+
+- `check-package-smoke.mjs`: [publint](https://publint.dev/) validates `package.json` (`exports`, `files`, module formats) against the published file list, but does not rebuild the packages or assert that specific build artifacts (UI5 `build-manifest.json`, the WebC bundle) land in the tarball, which is what this script gates. [@arethetypeswrong/cli](https://github.com/arethetypeswrong/arethetypeswrong.github.io) checks type resolution only. Neither replaces the script; kept.
+- `check-demo-webc-bundle.mjs`: a cross-package build smoke test (webc build output consumed by the demo-app's `ui5-tooling-modules` path). No maintained generic tool covers this; kept.
+
+## `check-twin-drift.mjs`
+
+Drift check for the deliberately hand-duplicated kiosk twin modules
+(`packages/kiosk-keyboard/src` vs `packages/kiosk-keyboard-webc/src`).
+
+- Compares an explicit manifest of 21 pairs (all 16 `layouts/*` files plus the
+  `grapheme`, `auto-repeat`, `shift-state`, `action-registry`, and
+  `composition-utils` core helpers) after normalization: comments stripped
+  (string-aware), relative `.js` import suffixes removed, whitespace collapsed
+  outside string literals, logging idioms (`Log.warning` vs `console.warn`)
+  equated.
+- Fails with a unified-diff-style report naming the drifted pair; a missing
+  file or a shrunken manifest is a hard failure, never a silent skip.
+- Intentionally divergent or framework-adapted modules (e.g.
+  `middleware/kana-dakuten.ts`) are listed as unchecked at the top of the
+  script, each with a reason.
+
+Adversarial validation record: `docs/specs/2026-06-11-twin-drift-check-adversarial-hypotheses.md`.
+
+Run via `npm run test:twin-drift` (also part of `check`, `check:parallel`, and CI).
 
 ## `copy-license.mjs`
 

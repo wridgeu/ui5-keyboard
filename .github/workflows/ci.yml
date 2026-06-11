@@ -24,22 +24,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          # Node 24 (>= 24.14) bundles npm >= 11.11, which enforces the
-          # min-release-age supply-chain cooldown (root .npmrc) and meets the
-          # engines npm floor. Do not drop below Node 24.
-          node-version: 24
-          cache: npm
-
-      - name: Cache UI5 framework resources
+      # Restored before `npm ci` (in the setup action) because puppeteer's
+      # postinstall downloads its Chrome (~170 MB) into ~/.cache/puppeteer.
+      - name: Cache puppeteer Chrome
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
-          path: ~/.ui5
-          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-
+          path: ~/.cache/puppeteer
+          key: puppeteer-chrome-${{ hashFiles('package-lock.json') }}
+          restore-keys: puppeteer-chrome-
 
-      - run: npm ci
+      - uses: ./.github/actions/setup
 
       - name: Commitlint
         if: github.event_name == 'pull_request'
@@ -52,7 +46,7 @@ jobs:
         run: npm run fmt:check
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint:ci
 
       - name: UI5 lint
         run: npm run lint:ui5
@@ -65,6 +59,12 @@ jobs:
       # applied by postinstall during `npm ci` above).
       - name: Patch regression tests
         run: npm run test:patches
+
+      # Compares the deliberately hand-duplicated kiosk <-> kiosk-webc twin
+      # modules (layouts + core helpers) after normalization; see
+      # tools/check-twin-drift.mjs for the pair manifest.
+      - name: Twin-drift check
+        run: npm run test:twin-drift
 
       - name: Cache Playwright browsers
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
@@ -86,5 +86,7 @@ jobs:
       # not (baselines carry no platform suffix), so they are ignored here. This
       # gates focus/auto-type/inputmode/i18n/interop behavior and runs the visual
       # specs as render smoke tests without pixel-comparing OS-specific baselines.
+      # Trade-off: only the desktop project runs in CI; the phone/tablet device
+      # projects are never exercised here and rely on the local all-devices runs.
       - name: End-to-end (behavioral; visual snapshots ignored)
         run: npm run test:e2e:ci
