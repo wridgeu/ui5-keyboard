@@ -620,7 +620,7 @@ QUnit.test("applyFocusInfo falls back to first key when saved key is gone", asyn
   kb.destroy();
 });
 
-QUnit.test("Renderer falls back to first key when saved focus id is stale", async (assert) => {
+QUnit.test("Layout switch leaves exactly one keyboard-focusable key", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
