@@ -1,7 +1,7 @@
 import { fixture, html } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import type { ActionDefinition, LayoutDefinition } from "../../src/types.js";
+import type { LayoutDefinition } from "../../src/types.js";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -19,12 +19,10 @@ export function requireKey(el: KioskKeyboard, value: string): HTMLElement {
 
 /**
  * Renders a keyboard with a per-instance layout (registered as "spike") and
- * a sibling input wired as the target via setTargetElement. Optional
- * instanceActions are applied before the render settles.
+ * a sibling input wired as the target via setTargetElement.
  */
 export async function setupWithLayout(
   layout: LayoutDefinition,
-  actions?: Record<string, ActionDefinition>,
 ): Promise<{ kb: KioskKeyboard; input: HTMLInputElement }> {
   const container = await fixture(html`
     <div>
@@ -35,7 +33,6 @@ export async function setupWithLayout(
   const input = container.querySelector<HTMLInputElement>("#helper-target")!;
   const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
   kb.instanceLayouts = { spike: layout };
-  kb.instanceActions = actions ?? null;
   kb.setTargetElement(input);
   await renderFinished();
   return { kb, input };

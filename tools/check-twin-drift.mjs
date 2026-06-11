@@ -57,7 +57,7 @@ const LAYOUTS = [
   "symbol-common",
 ];
 
-const CORE_MODULES = ["grapheme", "auto-repeat", "shift-state", "action-registry", "composition-utils"];
+const CORE_MODULES = ["grapheme", "auto-repeat", "shift-state", "composition-utils"];
 
 const PAIRS = [
   ...LAYOUTS.map((name) => ({
@@ -74,7 +74,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 21;
+const EXPECTED_PAIR_COUNT = 20;
 
 /**
  * Strips line and block comments and collapses whitespace runs to a single

@@ -38,23 +38,17 @@ export type KeyType = "default" | "modifier" | "action" | "space";
  * | `{layout:<name>}`      | Switches to the named layout (e.g. `numeric`)  |
  * | `{layout:base}`        | Returns to the base (alphabetic) layout        |
  * | `{fkey:<name>}`        | Fires keyPress with key name, no text insertion |
- * | `{action:<name>}`      | Runs a registered {@link ActionDefinition}      |
- * | `{action:<name>:<p>}`  | Runs a registered action with the param `<p>`   |
  *
  * Any other string is treated as a literal character to insert. An
- * unrecognized `{...}` token (one not matching the cases above and with no
- * registered action) is a no-op, not literal text.
+ * unrecognized `{...}` token (one not matching the cases above) fires a
+ * cancelable `keyPress` and is otherwise a no-op, not literal text. A consumer
+ * can own such a token by listening for `keyPress`, calling `preventDefault()`,
+ * and driving the input via `insertText` / `deleteBackward`.
  *
  * @public
  * @since 0.1.0
  */
-export type SpecialKeyValue =
-  | "{backspace}"
-  | "{enter}"
-  | "{shift}"
-  | `{layout:${string}}`
-  | `{fkey:${string}}`
-  | `{action:${string}}`;
+export type SpecialKeyValue = "{backspace}" | "{enter}" | "{shift}" | `{layout:${string}}` | `{fkey:${string}}`;
 
 /**
  * Describes a single key on the keyboard.
@@ -239,6 +233,18 @@ export interface KeyDefinition {
    * @example "\u23CE"
    */
   icon?: string;
+
+  /**
+   * Per-key accessible name, used as the `aria-label` when the key has no
+   * visible text label (an icon-only key, `label: ""`).
+   *
+   * Resolution order for the accessible name is `ariaLabel` -> visible
+   * `label` -> the built-in i18n bundle (built-in tokens only). Set this for
+   * icon-only custom keys (e.g. a `{paste}` key): without it, an icon-only
+   * custom token has no i18n entry and would announce its raw value, and the
+   * keyboard logs a dev-time warning. Localizable by the consumer.
+   */
+  ariaLabel?: string;
 }
 
 /**
@@ -340,110 +346,4 @@ export interface CompositionMiddleware {
 
   /** Clear all composition state without committing. */
   reset(): void;
-}
-
-// ── Registered action types (issue #74 spike) ──────
-
-/**
- * Curated context handed to a registered action handler. Exposes only the
- * operations a custom action needs, each routed through the keyboard's own
- * cursor-managed input session and state. Handlers never reach into the
- * control instance directly, so this surface is the entire stable contract.
- *
- * @public
- * @since 0.2.0
- */
-export interface ActionContext {
-  /**
-   * Insert text at the caret (or over the active selection) of the current
-   * target, tracking the cursor the same way a character key does.
-   */
-  insertText(text: string): void;
-
-  /**
-   * Delete one grapheme before the caret, or the active selection.
-   * Returns `true` when something was removed, `false` otherwise
-   * (empty input, caret at start, or read-only/disabled target).
-   */
-  deleteBackward(): boolean;
-
-  /** Whether one-shot Shift was active when the action was invoked (snapshot). */
-  readonly isShifted: boolean;
-
-  /** Whether Caps Lock was active when the action was invoked (snapshot). */
-  readonly isCapsLock: boolean;
-
-  /**
-   * The resolved native `<input>`/`<textarea>` of the active target when the
-   * action was invoked, or `null` when there is no target or it has no
-   * textual DOM ref. `insertText`/`deleteBackward` always act on the live
-   * target regardless of this snapshot.
-   */
-  readonly targetElement: HTMLInputElement | HTMLTextAreaElement | null;
-
-  /**
-   * Switch to the named layout. User-driven, so it overrides the
-   * `keyboardType` constraint exactly like a `{layout:<name>}` key.
-   * Unregistered names are ignored (logged), never thrown.
-   */
-  switchLayout(name: string): void;
-
-  /** Return to the tracked base (alphabetic) layout, like `{layout:base}`. */
-  switchToBase(): void;
-}
-
-/**
- * Behavior for a custom action key, referenced from a layout via
- * `{action:<name>}` (optionally `{action:<name>:<param>}`). Supplied
- * per-instance through the `instanceActions` setting; there is no global
- * registry (handlers die with the control, matching `instanceMiddleware`).
- *
- * @public
- * @since 0.2.0
- */
-export interface ActionDefinition {
-  /**
-   * Invoked when the `{action:<name>}` key is activated and the cancelable
-   * `keyPress` event was not prevented. `param` is the portion after the
-   * second colon in `{action:<name>:<param>}`, or `undefined`.
-   *
-   * Exceptions thrown here are caught and logged; they never break dispatch
-   * or leave the keyboard in an inconsistent state.
-   */
-  handler(context: ActionContext, param?: string): void;
-
-  /**
-   * Accessible name for the key when it has no visible text label (i.e. an
-   * icon-only `{action:*}` key, `label: ""`). Without it, the accessible
-   * name falls back to the bare action name (e.g. `"paste"`), so set this
-   * for a polished, localized screen-reader label.
-   *
-   * The visible label and icon come from the layout `KeyDefinition`
-   * (`label` / `icon`) as usual - this only affects the accessible name.
-   */
-  ariaLabel?: string;
-}
-
-/**
- * Identity helper that returns its argument unchanged, constrained to
- * `Record<string, ActionDefinition>` so inline handlers get the
- * {@link ActionContext} parameter typed without an explicit annotation.
- *
- * UI5 declares the `instanceActions` property as `object`, which erases the
- * handler types at the setter / constructor boundary; wrapping the map in
- * `defineActions({ ... })` restores inference.
- *
- * @example
- * ```ts
- * const actions = defineActions({
- *   paste: { handler: (ctx) => void navigator.clipboard.readText().then(ctx.insertText) },
- * });
- * new KioskKeyboard({ instanceActions: actions });
- * ```
- *
- * @public
- * @since 0.2.0
- */
-export function defineActions<T extends Record<string, ActionDefinition>>(actions: T): T {
-  return actions;
 }
