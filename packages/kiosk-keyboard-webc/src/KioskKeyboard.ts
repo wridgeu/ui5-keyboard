@@ -27,11 +27,10 @@ import {
   getRegisteredLayout,
   getRegisteredLayoutNames,
   isBuiltInLayout,
-  type InstanceLayouts,
-  type InstanceLocaleLayouts,
 } from "./core/layout-registry.js";
-import { getMiddlewareFactory, type InstanceMiddleware } from "./core/middleware-registry.js";
-import { getRegisteredAction, type InstanceActions } from "./core/action-registry.js";
+import { getMiddlewareFactory } from "./core/middleware-registry.js";
+import { getRegisteredAction, parseActionToken } from "./core/action-registry.js";
+import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import {
@@ -720,7 +719,11 @@ class KioskKeyboard extends UI5Element {
 
     if (!this._baseLayout) {
       this._baseLayout =
-        this.layout || getLocaleLayout(this._getInstanceLocaleLayoutsMap(), this._getInstanceLayoutsMap());
+        this.layout ||
+        getLocaleLayout(
+          this._localeLayoutsView.get(this.instanceLocaleLayouts),
+          this._layoutsView.get(this.instanceLayouts),
+        );
       if (!this.layout) {
         this._currentLayout = this._baseLayout;
       }
@@ -832,6 +835,13 @@ class KioskKeyboard extends UI5Element {
       // Reset user layout switch and shift state - a keyboardType change implies a new layout context
       this._layoutSource = "external";
       this._shiftState.reset();
+      // The surface swap ends any in-progress composition: commit the preedit
+      // and drop the middleware so the next key resolves against the new
+      // effective layout (mirrors _applyLayout).
+      if (this._middleware) {
+        this._middleware.commit();
+        this._middleware = null;
+      }
       const previousKeyboardType =
         typeof changeInfo.oldValue === "string" && VALID_KEYBOARD_TYPES.has(changeInfo.oldValue)
           ? (changeInfo.oldValue as `${KeyboardType}`)
@@ -923,17 +933,14 @@ class KioskKeyboard extends UI5Element {
       this._openValue = false;
       return;
     }
-    // Auto-target when there's exactly one control and nothing is focused yet
-    const ids = this._controlsList;
-    if (ids.length === 1 && !this._targetElement) {
-      const el = document.getElementById(ids[0]!);
-      if (el) {
-        const input = this._resolveInputFrom(el);
-        if (input) {
-          input.focus();
-          this._targetElement = input;
-          this._targetSource = "explicit";
-        }
+    // Auto-target when nothing is targeted yet: _resolveTarget falls back to
+    // the single-entry `controls` lookup.
+    if (!this._targetElement) {
+      const input = this._resolveTarget();
+      if (input) {
+        input.focus();
+        this._targetElement = input;
+        this._targetSource = "explicit";
       }
     }
     this._suppressInputMode();
@@ -1036,69 +1043,75 @@ class KioskKeyboard extends UI5Element {
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
 
-  _getResolvedLayout(): LayoutDefinition {
-    const layoutsMap = this._getInstanceLayoutsMap();
-    // An explicit layout switch (via {layout:...} key) takes precedence,
-    // even when keyboardType constrains the default layout.
-    if (this._layoutSource === "user") return getLayoutOrDefault(this._currentLayout, layoutsMap);
-
+  /**
+   * The effective layout name for the current state: an explicit user switch
+   * (via a {layout:...} key) takes precedence, then the keyboardType
+   * constraint (Numpad/Numeric force their layout), then the
+   * current/base/property/locale fallback chain. Rendering
+   * (_getResolvedLayout) and composition-middleware resolution
+   * (_ensureMiddleware) must agree on this name so the rendered surface and
+   * the active middleware never diverge.
+   */
+  private _resolvedLayoutName(): string {
+    if (this._layoutSource === "user") return this._currentLayout;
     const type = this.keyboardType;
-    // On the auto-forced numpad/numeric layout, `{layout:base}` would resolve
-    // back to the same auto-forced layout (handler sets `_layoutSource = "external"`,
-    // so this branch runs again). Strip it so the rendered surface matches behavior.
-    if (type === "Numpad") return stripDeadBaseSwitch(getLayoutOrDefault("numpad", layoutsMap));
-    if (type === "Numeric") return stripDeadBaseSwitch(getLayoutOrDefault("numeric", layoutsMap));
-    const name =
+    if (type === "Numpad") return "numpad";
+    if (type === "Numeric") return "numeric";
+    return (
       this._currentLayout ||
       this._baseLayout ||
       this.layout ||
-      getLocaleLayout(this._getInstanceLocaleLayoutsMap(), layoutsMap);
-    return getLayoutOrDefault(name, layoutsMap);
+      getLocaleLayout(
+        this._localeLayoutsView.get(this.instanceLocaleLayouts),
+        this._layoutsView.get(this.instanceLayouts),
+      )
+    );
+  }
+
+  _getResolvedLayout(): LayoutDefinition {
+    const layoutsMap = this._layoutsView.get(this.instanceLayouts);
+    const resolved = getLayoutOrDefault(this._resolvedLayoutName(), layoutsMap);
+    // On the auto-forced numpad/numeric layout, `{layout:base}` would resolve
+    // back to the same auto-forced layout (handler sets `_layoutSource = "external"`,
+    // so the constraint re-applies). Strip it so the rendered surface matches behavior.
+    const autoForced =
+      this._layoutSource !== "user" && (this.keyboardType === "Numpad" || this.keyboardType === "Numeric");
+    return autoForced ? stripDeadBaseSwitch(resolved) : resolved;
   }
 
   // ── Memoized Map views of the instance-* properties ──
   //
   // The render pass and the middleware factory lookup read these on every
-  // invocation, so we rebuild the Map only when the source object identity
-  // changes. Consumers that want a fresh resolution should assign a new
-  // object (the standard React/Lit pattern) rather than mutating in place.
+  // invocation, so each MemoMapView rebuilds its Map only when the source
+  // object identity changes. Consumers that want a fresh resolution should
+  // assign a new object (the standard React/Lit pattern) rather than
+  // mutating in place. Validators warn on (and skip) invalid entries.
 
-  private _cachedInstanceLayoutsKey: object | null = null;
-  private _cachedInstanceLayoutsMap: InstanceLayouts | undefined = undefined;
-  private _cachedInstanceLocaleKey: object | null = null;
-  private _cachedInstanceLocaleMap: InstanceLocaleLayouts | undefined = undefined;
-  private _cachedInstanceMiddlewareKey: object | null = null;
-  private _cachedInstanceMiddlewareMap: InstanceMiddleware | undefined = undefined;
-  private _cachedInstanceActionsKey: object | null = null;
-  private _cachedInstanceActionsMap: InstanceActions | undefined = undefined;
-
-  /** Returns a memoized `Map` view of the `instanceLayouts` property, or undefined. */
-  private _getInstanceLayoutsMap(): InstanceLayouts | undefined {
-    const value = this.instanceLayouts;
-    if (!value || typeof value !== "object") {
-      this._cachedInstanceLayoutsKey = null;
-      this._cachedInstanceLayoutsMap = undefined;
+  private readonly _layoutsView = new MemoMapView<LayoutDefinition>((name, def) => {
+    if (!KioskKeyboard._isValidLayoutDefinition(def)) {
+      console.warn(
+        `[kiosk-keyboard] Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
+      );
       return undefined;
     }
-    if (this._cachedInstanceLayoutsKey === value) return this._cachedInstanceLayoutsMap;
-    const entries: [string, LayoutDefinition][] = [];
-    for (const [name, def] of Object.entries(value)) {
-      if (!KioskKeyboard._isValidLayoutDefinition(def)) {
-        console.warn(
-          `[kiosk-keyboard] Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
-        );
-        continue;
-      }
-      // Mirror lookup-side normalization (trim + lowercase) so mixed-case
-      // keys do not silently fall through to the built-in.
-      const key = name.trim().toLowerCase();
-      if (!key) continue;
-      entries.push([key, def]);
+    return def;
+  });
+
+  private readonly _localeLayoutsView = new MemoMapView<string>((_name, layout) =>
+    typeof layout === "string" ? layout.trim().toLowerCase() : undefined,
+  );
+
+  private readonly _middlewareView = new MemoMapView<() => CompositionMiddleware>((_name, factory) =>
+    typeof factory === "function" ? (factory as () => CompositionMiddleware) : undefined,
+  );
+
+  private readonly _actionsView = new MemoMapView<ActionDefinition>((name, def) => {
+    if (!def || typeof (def as ActionDefinition).handler !== "function") {
+      console.warn(`[kiosk-keyboard] Invalid instanceActions entry "${name}": must have a "handler" function.`);
+      return undefined;
     }
-    this._cachedInstanceLayoutsKey = value;
-    this._cachedInstanceLayoutsMap = entries.length === 0 ? undefined : new Map(entries);
-    return this._cachedInstanceLayoutsMap;
-  }
+    return def as ActionDefinition;
+  });
 
   private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
     return (
@@ -1111,72 +1124,6 @@ class KioskKeyboard extends UI5Element {
           row.every((key) => key && typeof (key as KeyDefinition).value === "string" && (key as KeyDefinition).value),
       )
     );
-  }
-
-  /** Returns a memoized `Map` view of the `instanceLocaleLayouts` property, or undefined. */
-  private _getInstanceLocaleLayoutsMap(): InstanceLocaleLayouts | undefined {
-    const value = this.instanceLocaleLayouts;
-    if (!value || typeof value !== "object") {
-      this._cachedInstanceLocaleKey = null;
-      this._cachedInstanceLocaleMap = undefined;
-      return undefined;
-    }
-    if (this._cachedInstanceLocaleKey === value) return this._cachedInstanceLocaleMap;
-    const entries: [string, string][] = [];
-    for (const [tag, layout] of Object.entries(value)) {
-      if (typeof layout !== "string") continue;
-      const key = tag.trim().toLowerCase();
-      if (!key) continue;
-      entries.push([key, layout.trim().toLowerCase()]);
-    }
-    this._cachedInstanceLocaleKey = value;
-    this._cachedInstanceLocaleMap = entries.length === 0 ? undefined : new Map(entries);
-    return this._cachedInstanceLocaleMap;
-  }
-
-  /** Returns a memoized `Map` view of the `instanceMiddleware` property, or undefined. */
-  private _getInstanceMiddlewareMap(): InstanceMiddleware | undefined {
-    const value = this.instanceMiddleware;
-    if (!value || typeof value !== "object") {
-      this._cachedInstanceMiddlewareKey = null;
-      this._cachedInstanceMiddlewareMap = undefined;
-      return undefined;
-    }
-    if (this._cachedInstanceMiddlewareKey === value) return this._cachedInstanceMiddlewareMap;
-    const entries: [string, () => CompositionMiddleware][] = [];
-    for (const [name, factory] of Object.entries(value)) {
-      if (typeof factory !== "function") continue;
-      const key = name.trim().toLowerCase();
-      if (!key) continue;
-      entries.push([key, factory as () => CompositionMiddleware]);
-    }
-    this._cachedInstanceMiddlewareKey = value;
-    this._cachedInstanceMiddlewareMap = entries.length === 0 ? undefined : new Map(entries);
-    return this._cachedInstanceMiddlewareMap;
-  }
-
-  /** Returns a memoized `Map` view of the `instanceActions` property, or undefined. */
-  private _getInstanceActionsMap(): InstanceActions | undefined {
-    const value = this.instanceActions;
-    if (!value || typeof value !== "object") {
-      this._cachedInstanceActionsKey = null;
-      this._cachedInstanceActionsMap = undefined;
-      return undefined;
-    }
-    if (this._cachedInstanceActionsKey === value) return this._cachedInstanceActionsMap;
-    const entries: [string, ActionDefinition][] = [];
-    for (const [name, def] of Object.entries(value)) {
-      if (!def || typeof (def as ActionDefinition).handler !== "function") {
-        console.warn(`[kiosk-keyboard] Invalid instanceActions entry "${name}": must have a "handler" function.`);
-        continue;
-      }
-      const key = name.trim().toLowerCase();
-      if (!key) continue;
-      entries.push([key, def as ActionDefinition]);
-    }
-    this._cachedInstanceActionsKey = value;
-    this._cachedInstanceActionsMap = entries.length === 0 ? undefined : new Map(entries);
-    return this._cachedInstanceActionsMap;
   }
 
   _getKeyLabel(key: KeyDefinition): string {
@@ -1223,12 +1170,10 @@ class KioskKeyboard extends UI5Element {
     // Icon-only `{action:*}` key (label suppressed): use the action's
     // ariaLabel, else the bare action name, so the accessible name is never
     // the raw "{action:...}" token.
-    if (key.value.startsWith("{action:")) {
-      const raw = key.value.slice("{action:".length, -1);
-      const sep = raw.indexOf(":");
-      const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
-      const action = getRegisteredAction(name, this._getInstanceActionsMap());
-      return action?.ariaLabel || name || key.value;
+    const parsed = parseActionToken(key.value);
+    if (parsed) {
+      const action = getRegisteredAction(parsed.name, this._actionsView.get(this.instanceActions));
+      return action?.ariaLabel || parsed.name || key.value;
     }
 
     return key.value;
@@ -1460,11 +1405,10 @@ class KioskKeyboard extends UI5Element {
    */
   private _ensureMiddleware(): CompositionMiddleware | null {
     if (!this._middleware) {
-      const layoutsMap = this._getInstanceLayoutsMap();
-      const localeMap = this._getInstanceLocaleLayoutsMap();
-      const layoutName =
-        this._currentLayout || this._baseLayout || this.layout || getLocaleLayout(localeMap, layoutsMap);
-      const factory = getMiddlewareFactory(layoutName, this._getInstanceMiddlewareMap());
+      const factory = getMiddlewareFactory(
+        this._resolvedLayoutName(),
+        this._middlewareView.get(this.instanceMiddleware),
+      );
       if (factory) this._middleware = factory();
     }
     return this._middleware;
@@ -1533,15 +1477,24 @@ class KioskKeyboard extends UI5Element {
         moved = true;
         break;
       case "Home":
+        // Ctrl+Home jumps to the first key of the whole grid; plain Home
+        // stays within the current row.
+        if (e.ctrlKey) row = 0;
         col = 0;
         moved = true;
         break;
       case "End":
+        // Ctrl+End jumps to the last key of the whole grid; plain End
+        // stays within the current row.
+        if (e.ctrlKey) row = layout.length - 1;
         col = (layout[row]?.length ?? 1) - 1;
         moved = true;
         break;
       case "Enter":
       case " ":
+        // Activate only without modifiers: Ctrl+Enter, Alt+Space and similar
+        // combinations are browser/OS shortcuts, not key activations.
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
         keyEl.click();
         e.preventDefault();
         return;
@@ -1596,7 +1549,7 @@ class KioskKeyboard extends UI5Element {
     // Lowercase to match the case-insensitive registry, so a mixed-case name
     // can't be recorded as a (corrupt) base layout.
     const layoutName = value.slice("{layout:".length, -1).trim().toLowerCase();
-    if (layoutName !== "base" && !getRegisteredLayout(layoutName, this._getInstanceLayoutsMap())) {
+    if (layoutName !== "base" && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
     }
@@ -1605,7 +1558,10 @@ class KioskKeyboard extends UI5Element {
         ? this._applyLayout(
             this._baseLayout ||
               this.layout ||
-              getLocaleLayout(this._getInstanceLocaleLayoutsMap(), this._getInstanceLayoutsMap()),
+              getLocaleLayout(
+                this._localeLayoutsView.get(this.instanceLocaleLayouts),
+                this._layoutsView.get(this.instanceLayouts),
+              ),
             "external",
           )
         : this._applyLayout(layoutName, "user");
@@ -1625,29 +1581,36 @@ class KioskKeyboard extends UI5Element {
   /**
    * Resolves and runs a `{action:<name>}` / `{action:<name>:<param>}` key.
    *
-   * Validates first (mirroring `{layout:*}`): an unregistered name is warned
-   * and ignored, never inserted as literal text and without firing key-press.
-   * For a registered action, fires the cancelable key-press, then invokes the
-   * handler with a curated {@link ActionContext}. Handler exceptions are
-   * caught and logged so consumer code cannot break dispatch.
+   * Fires the cancelable key-press first (mirroring `{layout:*}`), so a
+   * consumer can observe or veto any {action:*} press; a veto suppresses all
+   * further handling, including the warnings. When not vetoed, an empty or
+   * unregistered name is warned and ignored, never inserted as literal text.
+   * A registered action's handler runs with a curated {@link ActionContext};
+   * handler exceptions are caught and logged so consumer code cannot break
+   * dispatch.
    */
   private _handleActionKey(value: string, shifted: boolean): void {
-    const raw = value.slice("{action:".length, -1);
-    const sep = raw.indexOf(":");
-    const name = (sep === -1 ? raw : raw.slice(0, sep)).trim();
-    const param = sep === -1 ? undefined : raw.slice(sep + 1);
-    if (!name) return;
+    const parsed = parseActionToken(value);
+    if (!parsed) return;
+    const { name, param } = parsed;
 
-    const action = getRegisteredAction(name, this._getInstanceActionsMap());
+    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
+    if (!allowed) return;
+
+    if (!name) {
+      console.warn(
+        `[kiosk-keyboard] Empty action name in "${value}". Expected {action:<name>} or {action:<name>:<param>}.`,
+      );
+      return;
+    }
+
+    const action = getRegisteredAction(name, this._actionsView.get(this.instanceActions));
     if (!action) {
       console.warn(
         `[kiosk-keyboard] Action "${name}" referenced by an {action:*} key is not registered. Pass it through the instanceActions property.`,
       );
       return;
     }
-
-    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
-    if (!allowed) return;
 
     try {
       action.handler(this._createActionContext(), param);
