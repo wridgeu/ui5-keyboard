@@ -31,19 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Cache UI5 framework resources
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ~/.ui5
-          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-
-
-      - run: npm ci
+      - uses: ./.github/actions/setup
 
       - name: Package smoke tests
         run: npm run test:packages:smoke
@@ -80,20 +68,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: npm
           registry-url: https://registry.npmjs.org
-
-      - name: Cache UI5 framework resources
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ~/.ui5
-          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-
-
-      - run: npm ci
 
       # prepublishOnly copies LICENSE and builds; OIDC auth via id-token: write
       - run: npm publish -w packages/hotkeys --provenance --access public
@@ -111,20 +88,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: npm
           registry-url: https://registry.npmjs.org
-
-      - name: Cache UI5 framework resources
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ~/.ui5
-          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-
-
-      - run: npm ci
 
       - run: npm publish -w packages/kiosk-keyboard --provenance --access public
         env:
@@ -141,20 +107,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: npm
           registry-url: https://registry.npmjs.org
-
-      - name: Cache UI5 framework resources
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ~/.ui5
-          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-
-
-      - run: npm ci
 
       - run: npm publish -w packages/kiosk-keyboard-webc --provenance --access public
         env:

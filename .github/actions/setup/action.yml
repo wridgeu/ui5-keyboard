@@ -1,0 +1,32 @@
+name: Setup Node and install
+description: >
+  Shared job setup: Node 24 with npm cache, UI5 framework resources cache, and
+  npm ci (which applies the postinstall patches). Checkout stays in each job:
+  a local composite action only resolves after the repository is checked out.
+
+inputs:
+  registry-url:
+    description: npm registry URL (set in publish jobs to enable auth); empty skips registry configuration
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      with:
+        # Node 24 (>= 24.14) bundles npm >= 11.11, which enforces the
+        # min-release-age supply-chain cooldown (root .npmrc) and meets the
+        # engines npm floor. Do not drop below Node 24.
+        node-version: 24
+        cache: npm
+        registry-url: ${{ inputs.registry-url }}
+
+    - name: Cache UI5 framework resources
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: ~/.ui5
+        key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
+        restore-keys: ui5-
+
+    - run: npm ci
+      shell: bash
