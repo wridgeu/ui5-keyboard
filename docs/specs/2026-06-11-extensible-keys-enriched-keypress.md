@@ -66,10 +66,33 @@ contract** rather than adding an action subsystem:
    - a resolved-target accessor (the active native `<input>`/`<textarea>` or null).
      Layout switching is already public (`setLayout` / the tracked base layout).
 3. Labeling stays declarative on the `KeyDefinition` (`label` / `icon`), analogous
-   to simple-keyboard's `display`. The **accessible name** for custom keys resolves
-   through the existing i18n resolver, and an icon-only custom key with no
-   resolvable accessible name emits a dev-time warning (carries forward the a11y
-   fix the action design lacked).
+   to simple-keyboard's `display`. For the **accessible name**, add an optional
+   `KeyDefinition.ariaLabel`. Resolution order: `ariaLabel` -> visible `label` ->
+   the i18n bundle (built-in tokens only) -> a **dev-time warning** for an
+   icon-only key (`label: ""`) with no other source. This is the per-key
+   accessible-name hook (the action design only had it via
+   `ActionDefinition.ariaLabel`); putting it on `KeyDefinition` keeps presentation
+   in the layout, is localizable by the consumer, and benefits every icon-only
+   key, not just custom ones. NOTE: relying on the i18n resolver alone does **not**
+   cover custom tokens (the resolver is keyed for built-ins), so without
+   `KeyDefinition.ariaLabel` an icon-only `{custom}` key would announce the raw
+   token -- the exact defect this pivot must avoid.
+
+### Trade-offs accepted (vs. the action subsystem)
+
+- **No typed per-key handler.** Consumers branch on the token string in one
+  `keyPress` handler (the simple-keyboard model). This is a deliberate DX
+  trade for a much smaller, more conventional surface; `defineActions` and its
+  `object`-erasure workaround go away with it.
+- **Consumers own handler errors.** A throwing `keyPress` listener propagates
+  like any UI5/DOM event listener; the keyboard does **not** wrap consumer
+  listeners (the action path's try/catch containment is dropped as non-idiomatic
+  for events). Document this; revisit only if it proves fragile in practice.
+- **`insertText` / `deleteBackward` act on the _current_ target at call time.**
+  An async handler (e.g. `await navigator.clipboard.readText()`) writes whatever
+  target is active when it resolves; if focus moved, it misfires. Inherent to
+  live-target insertion (the action design had the same). Both methods are no-ops
+  when there is no active resolved target.
 
 ### UI5 idiom
 
@@ -142,9 +165,10 @@ enriched-keyPress story, but that is out of scope here.)
 - Prove `insertText`/`deleteBackward` write the **real** target at the caret and
   fire `liveChange` (not the keyboard's own buffer), with a test that goes red if
   routed through anything other than `TargetInputSession`.
-- Prove the custom-key accessible name resolves through i18n and that an
-  icon-only custom key with no resolvable name produces the dev warning (test must
-  fail if the warning is suppressed).
+- Prove the custom-key accessible name resolves via `KeyDefinition.ariaLabel`
+  (then visible label, then i18n for built-ins) and that an icon-only custom key
+  with no source produces the dev warning (test must fail if the warning is
+  suppressed). This is the regression guard for the action design's a11y defect.
 
 ## Open questions
 
@@ -152,5 +176,8 @@ enriched-keyPress story, but that is out of scope here.)
    vs. `type` / `backspace`. Lean: keep `insertText` / `deleteBackward`.
 2. Should the web component also expose the writers on `event.detail` for
    convenience, or methods-only for strict twin symmetry?
-3. Accessible-name source of truth for custom keys: layout `KeyDefinition.label`
-   (+ i18n) only, or also an optional per-key aria override.
+3. ~~Accessible-name source of truth for custom keys.~~ **Resolved:** add optional
+   `KeyDefinition.ariaLabel` (fallback: visible label -> i18n for built-ins ->
+   dev warning). See Decision point 3.
+4. Should the keyboard ever wrap `keyPress` listeners in try/catch? Default: no
+   (consumers own their errors); revisit only if fragility shows up.
