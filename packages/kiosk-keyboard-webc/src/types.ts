@@ -260,7 +260,7 @@ export interface KeyboardTypeChangeEventDetail {
  * Detail payload for the `active-control-change` event.
  *
  * @public
- * @since 0.2.0
+ * @since 0.1.0
  */
 export interface ActiveControlChangeEventDetail {
   /** The new active input element, or `null` if cleared. */
@@ -271,7 +271,7 @@ export interface ActiveControlChangeEventDetail {
  * Detail payload shared by the `after-open` and `after-close` events.
  *
  * @public
- * @since 0.2.0
+ * @since 0.1.0
  */
 export interface OpenStateChangeEventDetail {
   /**

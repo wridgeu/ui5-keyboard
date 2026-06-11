@@ -1572,7 +1572,7 @@ class KioskKeyboard extends UI5Element {
    *
    * @param text The text to insert.
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   insertText(text: string): void {
     const target = this._resolveTarget();
@@ -1589,7 +1589,7 @@ class KioskKeyboard extends UI5Element {
    * Does not fire `key-press` itself.
    *
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   deleteBackward(): boolean {
     const target = this._resolveTarget();
@@ -1606,7 +1606,7 @@ class KioskKeyboard extends UI5Element {
    * that owns a custom key and needs the live caret/selection.
    *
    * @public
-   * @since 0.2.0
+   * @since 0.1.0
    */
   getActiveTargetElement(): HTMLInputElement | HTMLTextAreaElement | null {
     return this._resolveTarget();
