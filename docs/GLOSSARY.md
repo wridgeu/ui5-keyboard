@@ -150,11 +150,11 @@ Events identified as AltGr are silently dropped in the pre-filter step, preventi
 
 ## Composition Middleware
 
-A **composition middleware** is a self-registering module that intercepts key presses for a specific layout and transforms them before they reach the target input. This enables script-specific input processing without modifying the core keyboard component.
+A **composition middleware** is a module that intercepts key presses for a specific layout and transforms them before they reach the target input. This enables script-specific input processing without modifying the core keyboard component.
 
 ### How it works
 
-1. A middleware module calls `_registerMiddleware(["layout-name"], factoryFn)` on import.
+1. Built-in middleware factories are registered by direct import into a sealed module-level map, keyed by layout name (no self-registration; see #108). Per-app middleware is supplied via the `instanceMiddleware` property.
 2. When the associated layout becomes active, the keyboard lazily instantiates the middleware via the factory function.
 3. On each key press, the middleware's `handleKey()` method is called first. It can consume the key (returning `true`), compose multiple keys into a single output character, or pass through to default handling (returning `false`).
 4. When the layout is deactivated, `reset()` is called to clear any pending composition state.
@@ -178,22 +178,20 @@ The `kiosk-keyboard-webc` package exposes subpath imports for different consumpt
 | ---------------------------------- | ------------------------------------------------------------------- |
 | `kiosk-keyboard-webc`              | Component with all built-in layouts                                 |
 | `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
-| `kiosk-keyboard-webc/layouts/*`    | Individual self-registering layout modules                          |
-| `kiosk-keyboard-webc/middleware/*` | Individual self-registering middleware modules                      |
+| `kiosk-keyboard-webc/layouts/*`    | Individual layout-definition modules (data for custom composition)  |
+| `kiosk-keyboard-webc/middleware/*` | Individual middleware-factory modules (data for custom composition) |
 | `kiosk-keyboard-webc/Assets`       | Theme and i18n registration                                         |
 
 ### Usage
 
-To include only QWERTY and the kana dakuten middleware:
+All built-in layouts and middleware ship with the component, so the common case is just:
 
 ```ts
 import "kiosk-keyboard-webc/Assets";
 import KioskKeyboard from "kiosk-keyboard-webc";
-import "kiosk-keyboard-webc/layouts/qwerty";
-import "kiosk-keyboard-webc/middleware/kana-dakuten";
 ```
 
-Layouts and middleware self-register on import via internal `_registerBuiltInLayout()` and `_registerMiddleware()` calls.
+The `layouts/*` and `middleware/*` subpaths are for composing **custom** keys: import a layout definition or middleware factory as data and pass it per-element via `instanceLayouts` / `instanceMiddleware`. There is no self-registration step (built-ins are bundled via direct imports; see #108).
 
 ## composedPath()
 

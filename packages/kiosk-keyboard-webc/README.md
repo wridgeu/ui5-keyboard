@@ -223,13 +223,13 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 
 ### Choosing between the UI5 control and the web component
 
-| Criterion         | `ui5-lib-kiosk-keyboard` (UI5 control)                       | `kiosk-keyboard-webc` (web component)                         |
-| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
-| **Framework**     | SAPUI5 / OpenUI5 only                                        | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge) |
-| **Theming**       | LESS variables (`@sapUiButton*`)                             | CSS custom properties + SAP theme token fallbacks             |
-| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback            | Built-in EN/DE/JA/AR + `setI18nResolver()` callback           |
-| **Target inputs** | `controls` property + `setControls()` + `getActiveControl()` | `controls` attribute + `setTargetElement()` + `activeElement` |
-| **Density**       | UI5 content density (`sapUiSizeCompact`)                     | `data-ui5-compact-size` attribute                             |
+| Criterion         | `ui5-lib-kiosk-keyboard` (UI5 control)                       | `kiosk-keyboard-webc` (web component)                                    |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| **Framework**     | SAPUI5 / OpenUI5 only                                        | Any (plain HTML, React, Vue, Angular, UI5 via wrapper/bridge)            |
+| **Theming**       | LESS variables (`@sapUiButton*`)                             | CSS custom properties + SAP theme token fallbacks                        |
+| **i18n**          | UI5 ResourceBundle + `setI18nResolver()` callback            | Built-in EN/DE/JA/AR + `setI18nResolver()` callback                      |
+| **Target inputs** | `controls` property + `setControls()` + `getActiveControl()` | `controls` attribute + `setTargetElement()` + `getActiveTargetElement()` |
+| **Density**       | UI5 content density (`sapUiSizeCompact`)                     | `data-ui5-compact-size` attribute                                        |
 
 Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), the same per-instance customization properties (`instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`), and the same special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). Custom layouts work identically across both.
 
@@ -324,7 +324,6 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 | Method                     | Description                                                                                                                                                                            |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `activeElement` (getter)   | Read-only. Returns the currently active target input element (`HTMLInputElement \| HTMLTextAreaElement \| null`).                                                                      |
 | `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.                                  |
 | `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                                                      |
 | `setTargetElement(el)`     | Programmatically sets the target input/textarea.                                                                                                                                       |
@@ -333,7 +332,7 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `refreshResponsiveState()` | Recomputes responsive height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing.                        |
 | `insertText(text)`         | Inserts text at the caret of the active target (cursor-tracked, fires `liveChange`). No-op with no active target. Call from a `key-press` handler to implement a custom `{token}` key. |
 | `deleteBackward()`         | Deletes one grapheme before the caret of the active target. Returns whether anything was removed; no-op with no active target.                                                         |
-| `getActiveTargetElement()` | Returns the resolved native input/textarea of the active target, or `null`. Method form of the `activeElement` getter, for parity with the UI5 control.                                |
+| `getActiveTargetElement()` | Returns the resolved native input/textarea of the active target, or `null` (re-resolves each call). Mirrors the UI5 control's method of the same name.                                 |
 
 `after-open` and `after-close` fire synchronously when the `open` state flips.
 They report the state transition itself, not animation completion.

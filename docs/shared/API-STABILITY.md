@@ -43,10 +43,10 @@ The stable consumer surface consists of the package entry points and the `<kiosk
 - `kiosk-keyboard-webc/bundle` - ESM entry point that registers the custom element, all built-in layouts, and middleware; re-exports the class and public types
 - `kiosk-keyboard-webc` - bare component class with all built-in layouts; prefer the bundle entry for most use cases
 - `kiosk-keyboard-webc/Assets` - supported companion entry for theme and i18n registration when consuming the bare class
-- `kiosk-keyboard-webc/layouts/*` - individual layout modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); each self-registers on import
+- `kiosk-keyboard-webc/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass via `instanceLayouts` (built-ins are already bundled)
 - `kiosk-keyboard-webc/layouts/fkey-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/layouts/nav-row` - stable shared row for custom layout composition
-- `kiosk-keyboard-webc/middleware/*` - individual middleware modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); each self-registers on import
+- `kiosk-keyboard-webc/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
 
 Stable exports from the bundle entry:
 

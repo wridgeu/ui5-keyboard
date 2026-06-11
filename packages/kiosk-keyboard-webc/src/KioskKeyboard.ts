@@ -894,15 +894,6 @@ class KioskKeyboard extends UI5Element {
     this.open = false;
   }
 
-  /**
-   * Returns the currently active target input element, or null if none.
-   * @public
-   * @since 0.1.0
-   */
-  get activeElement(): HTMLInputElement | HTMLTextAreaElement | null {
-    return this._targetElement;
-  }
-
   /** Executes the open side effects. Called from the `open` setter. */
   private _performOpen(): void {
     if (!this.docked) {
@@ -1601,9 +1592,9 @@ class KioskKeyboard extends UI5Element {
    * or `null` when there is no active target or it has no textual DOM ref.
    *
    * Resolves through any custom target resolver, mirroring how the built-in
-   * keys locate the element they type into (delegates to the same internal
-   * resolution as {@link activeElement}). Useful from a `key-press` handler
-   * that owns a custom key and needs the live caret/selection.
+   * keys locate the element they type into; re-resolves on each call, so it
+   * survives a disconnected target. Useful from a `key-press` handler that owns
+   * a custom key and needs the live caret/selection.
    *
    * @public
    * @since 0.1.0

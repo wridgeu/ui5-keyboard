@@ -292,7 +292,7 @@ el.layout = "my-qwerty-fk";
 
 ### Layout Resolution
 
-- Built-in layouts are stored in a sealed module-level `Map`, populated by side-effect imports of `layouts/*.ts` and never mutated again at runtime
+- Built-in layouts are stored in a sealed module-level `Map`, populated by direct data imports of `layouts/*.ts` and never mutated again at runtime (the prior side-effect self-registration scheme was tree-shaken out; see #108)
 - Per-element overrides flow through the `instanceLayouts` property (a plain `Record`), validated at assignment: must be a non-empty array of non-empty rows where each key has a string `value`
 - Resolution order: instance map → built-in map → default layout
 
@@ -522,15 +522,15 @@ CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration 
 ```json
 {
   ".": "dist/KioskKeyboard.js", // all built-in layouts, no Assets
-  "./bundle": "dist/bundle.esm.js", // Assets + all built-in layouts; middleware is opt-in
+  "./bundle": "dist/bundle.esm.js", // Assets + all built-in layouts and middleware
   "./Assets": "dist/Assets.js", // theme + i18n registration only
-  "./layouts/*": "dist/layouts/*.js", // individual self-registering layout modules
-  "./middleware/*": "dist/middleware/*.js", // individual self-registering middleware modules
+  "./layouts/*": "dist/layouts/*.js", // layout-definition modules for custom composition
+  "./middleware/*": "dist/middleware/*.js", // middleware-factory modules for custom composition
   "./dist/*": "dist/*" // catch-all
 }
 ```
 
-Consumers who want selective layout loading can import the main entry (which includes the component class) and then add individual layouts via `./layouts/*` and middleware via `./middleware/*`. Each layout and middleware module self-registers on import via internal `_registerBuiltInLayout()` / `_registerMiddleware()` calls.
+All built-in layouts and middleware are bundled with the component (direct imports into sealed module-level maps; there is no self-registration and no opt-in import step). The `./layouts/*` and `./middleware/*` subpaths exist to import layout definitions / middleware factories as **data** for composing custom layouts and middleware, which are supplied per-element via the `instanceLayouts` / `instanceMiddleware` properties.
 
 ## Testing Strategy
 
