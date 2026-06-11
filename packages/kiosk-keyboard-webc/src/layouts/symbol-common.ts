@@ -16,6 +16,6 @@ export function punctuationRow(layoutSwitch: string, switchLabel: string): KeyRo
 /** Bottom row shared by the numeric and special symbol layouts. */
 export const symbolBottomRow: KeyRow = [
   { value: "{layout:base}", label: "ABC", width: "1.5", type: "modifier" },
-  { value: " ", label: "Space", width: "space", type: "space" },
+  { value: " ", width: "space", type: "space" },
   { value: "{enter}", width: "1.5", type: "action" },
 ];

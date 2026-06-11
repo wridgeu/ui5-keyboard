@@ -1,6 +1,8 @@
 import { fixture, html, expect, oneEvent, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
+import { queryKey } from "../helpers/fixtures.js";
+import { captureConsole } from "../helpers/console.js";
 
 /** Wait for UI5Element async render cycle. */
 const nextRender = renderFinished;
@@ -8,10 +10,6 @@ const DOM = KioskKeyboard.DOM;
 
 function queryKeys(el: KioskKeyboard): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[role="button"]');
-}
-
-function queryKey(el: KioskKeyboard, dataKey: string): HTMLElement | null {
-  return el.shadowRoot!.querySelector(DOM.selectors.keyByValue(dataKey));
 }
 
 function rootDiv(el: KioskKeyboard): HTMLElement {
@@ -362,18 +360,17 @@ describe("kiosk-keyboard", () => {
       const input = container.querySelector<HTMLInputElement>("input")!;
       await nextRender();
 
-      // Suppress the expected console.warn from resolveWithCustomResolver.
-      const originalWarn = console.warn;
-      console.warn = () => {};
       kb.setTargetResolver(() => {
         throw new Error("resolver bug");
       });
 
       try {
-        queryKey(kb, "x")!.click();
+        // Silence the expected console.warn from resolveWithCustomResolver.
+        await captureConsole("warn", () => {
+          queryKey(kb, "x")!.click();
+        });
         expect(input.value, "built-in resolver should find the nested input after resolver threw").to.equal("x");
       } finally {
-        console.warn = originalWarn;
         kb.setTargetResolver(null);
       }
     });
@@ -1299,6 +1296,24 @@ describe("kiosk-keyboard", () => {
       }
     });
 
+    it("resolves the numeric layout space key label through i18n (regression: hardcoded 'Space')", async () => {
+      const { default: KK } = await import("../../src/KioskKeyboard.js");
+      KK.setI18nResolver((key: string) => (key === "KEY_SPACE" ? "Espace" : undefined));
+
+      try {
+        const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="numeric"></kiosk-keyboard> `);
+        await nextRender();
+        const space = queryKey(el, " ")!;
+        expect(space, "numeric layout has a space key").to.not.be.null;
+        const labelEl = space.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`);
+        expect(labelEl!.textContent, "space label must resolve through i18n, not a hardcoded literal").to.equal(
+          "Espace",
+        );
+      } finally {
+        KK.setI18nResolver(null);
+      }
+    });
+
     it("rerenders mounted instances when the resolver changes", async () => {
       const { default: KK } = await import("../../src/KioskKeyboard.js");
 
@@ -1701,6 +1716,45 @@ describe("kiosk-keyboard", () => {
 
       const nextFocused = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
       expect(nextFocused).to.not.equal(firstKey);
+    });
+
+    it("does not activate a key on Enter/Space with a modifier held", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const firstKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
+      firstKey.focus();
+
+      let fired = 0;
+      el.addEventListener("key-press", () => {
+        fired++;
+      });
+
+      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
+      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", altKey: true, bubbles: true }));
+      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", metaKey: true, bubbles: true }));
+      expect(fired, "modified Enter/Space must not activate the key").to.equal(0);
+
+      // Sanity: an unmodified Enter still activates.
+      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(fired, "plain Enter activates the key").to.equal(1);
+    });
+
+    it("Ctrl+End jumps focus to the last key of the last row, Ctrl+Home back to the first", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const rows = queryRows(el);
+      const firstKey = rows[0]!.querySelector<HTMLElement>(DOM.selectors.key)!;
+      const lastRowKeys = rows[rows.length - 1]!.querySelectorAll<HTMLElement>(DOM.selectors.key);
+      const lastKey = lastRowKeys[lastRowKeys.length - 1]!;
+
+      firstKey.focus();
+      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "End", ctrlKey: true, bubbles: true }));
+      expect(el.shadowRoot!.activeElement, "Ctrl+End focuses the last key of the last row").to.equal(lastKey);
+      expect(lastKey.getAttribute("tabindex"), "roving tabindex follows the jump").to.equal("0");
+
+      lastKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", ctrlKey: true, bubbles: true }));
+      expect(el.shadowRoot!.activeElement, "Ctrl+Home focuses the first key of the first row").to.equal(firstKey);
+      expect(firstKey.getAttribute("tabindex")).to.equal("0");
     });
   });
 

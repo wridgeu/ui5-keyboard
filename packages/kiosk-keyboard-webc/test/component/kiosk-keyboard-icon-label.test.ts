@@ -2,15 +2,10 @@ import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
+import { requireKey as queryKey } from "../helpers/fixtures.js";
 
 const nextRender = renderFinished;
 const DOM = KioskKeyboard.DOM;
-
-function queryKey(el: KioskKeyboard, dataKey: string): HTMLElement {
-  const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue(dataKey));
-  if (!key) throw new Error(`Key "${dataKey}" not found`);
-  return key;
-}
 
 function queryKeyIcon(keyEl: HTMLElement): Element | null {
   return keyEl.querySelector(`.${DOM.classes.keyIcon}`);
