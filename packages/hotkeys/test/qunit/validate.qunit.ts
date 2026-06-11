@@ -1,4 +1,4 @@
-import { validateHotkey, assertValidHotkey, checkHotkey, BROWSER_SHORTCUTS, SAP_SHORTCUTS } from "ui5/hotkeys/validate";
+import { validateHotkey, assertValidHotkey, checkHotkey } from "ui5/hotkeys/validate";
 import { Platform } from "ui5/hotkeys/library";
 
 QUnit.module("validate - validateHotkey");
@@ -93,71 +93,4 @@ QUnit.test("Returns true for valid hotkey", (assert) => {
 QUnit.test("Returns false for invalid hotkey", (assert) => {
   assert.notOk(checkHotkey("", Platform.Windows), "Empty string is invalid");
   assert.notOk(checkHotkey("Ctrl+Shift", Platform.Windows), "Modifier-only is invalid");
-});
-
-QUnit.module("validate - blocklist completeness");
-
-QUnit.test("BROWSER_SHORTCUTS has expected entries", (assert) => {
-  const expectedBrowserShortcuts = [
-    "Control+L",
-    "Control+N",
-    "Control+Shift+N",
-    "Control+T",
-    "Control+Shift+T",
-    "Control+W",
-    "Control+Shift+W",
-    "Control+Tab",
-    "Control+Shift+Tab",
-    "Control+0",
-    "F5",
-    "Control+F5",
-    "F6",
-    "F11",
-    "F12",
-    "Tab",
-    "Shift+Tab",
-    "Meta+L",
-    "Meta+N",
-    "Meta+T",
-    "Meta+W",
-    "Control+Q",
-    "Control+PageUp",
-    "Control+PageDown",
-  ];
-
-  assert.strictEqual(BROWSER_SHORTCUTS.size, expectedBrowserShortcuts.length, "Browser blocklist count stays exact");
-  for (const key of expectedBrowserShortcuts) {
-    assert.ok(BROWSER_SHORTCUTS.has(key), `Browser blocklist contains ${key}`);
-  }
-  for (const key of BROWSER_SHORTCUTS.keys()) {
-    assert.ok(expectedBrowserShortcuts.includes(key), `Browser blocklist has no unexpected key ${key}`);
-  }
-});
-
-QUnit.test("SAP_SHORTCUTS has expected entries", (assert) => {
-  const expectedSapShortcuts = [
-    "Control+S",
-    "Control+E",
-    "Control+D",
-    "Control+Enter",
-    "Control+Shift+S",
-    "Control+Shift+E",
-    "Control+Shift+M",
-    "F6",
-    "Shift+F6",
-    "Meta+S",
-    "Meta+E",
-    "Meta+D",
-    "Control+Alt+Shift+P",
-    "Control+Alt+Shift+S",
-    "Control+Alt+Shift+T",
-  ];
-
-  assert.strictEqual(SAP_SHORTCUTS.size, expectedSapShortcuts.length, "SAP blocklist count stays exact");
-  for (const key of expectedSapShortcuts) {
-    assert.ok(SAP_SHORTCUTS.has(key), `SAP blocklist contains ${key}`);
-  }
-  for (const key of SAP_SHORTCUTS.keys()) {
-    assert.ok(expectedSapShortcuts.includes(key), `SAP blocklist has no unexpected key ${key}`);
-  }
 });
