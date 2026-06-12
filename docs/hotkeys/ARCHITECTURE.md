@@ -28,6 +28,8 @@ internal/scope.ts            Scope string resolution and validation
 internal/skip-reason.ts      Internal dispatch skip-reason types
 internal/idgen.ts            Internal registration ID generator
 internal/registration-index.ts Scope/target registration index (id-based)
+internal/runtime.ts          Lazy popup-open check (sap/m/InstanceManager) + platform hooks
+internal/FocusFallbackTracker.ts Document focus listeners + focus-path fallback for rerenders
 ```
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`). Their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
@@ -66,7 +68,7 @@ window.addEventListener("blur", handler); // bubble phase
 
 Using `window` capture ensures the library sees events before any `document` or element-level listeners. This is critical for `preventDefault()`, `stopPropagation()`, and the interceptor mechanism (used by `HotkeyRecorder`).
 
-> **Focus listeners live on HotkeyManager, not EventDispatcher.** The `focusin`/`focusout` listeners are attached to `document` in the capture phase and are owned by `HotkeyManager`. This is intentional: focus state is consumed exclusively by HotkeyManager's target-scoped matching logic (the focus-path fallback), so it stays co-located with the consumer rather than being routed through the dispatch pipeline.
+> **Focus listeners live on the HotkeyManager side, not EventDispatcher.** The `focusin`/`focusout` listeners are attached to `document` in the capture phase and owned by `FocusFallbackTracker`, a helper that `HotkeyManager` instantiates and holds. This is intentional: focus state is consumed exclusively by HotkeyManager's target-scoped matching logic (the focus-path fallback), so it stays co-located with the consumer rather than being routed through the dispatch pipeline.
 
 ### Dispatch Pipeline
 
@@ -368,7 +370,9 @@ packages/hotkeys/
       skip-reason.ts       Internal skip-reason models
       idgen.ts             Internal ID generator
       registration-index.ts Scope/target registration index
-    manifest.json       Library manifest (v2.0.0)
+      runtime.ts           Lazy popup-open check + platform hooks
+      FocusFallbackTracker.ts Document focus listeners + focus-path fallback
+    manifest.json       Library manifest (descriptor schema v2.0.0)
   test/qunit/
     testsuite.qunit.ts  Test suite runner (UI5 Test Starter)
     *.qunit.ts          One test file per module

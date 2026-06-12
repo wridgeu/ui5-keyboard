@@ -252,13 +252,11 @@ The `package.json` declares which modules have side effects:
 "sideEffects": [
   "./dist/bundle.esm.js",
   "./dist/Assets.js",
-  "./dist/generated/**",
-  "./dist/layouts/**",
-  "./dist/middleware/**"
+  "./dist/generated/**"
 ]
 ```
 
-These modules execute code at import time (registering layouts, middleware, theme loaders, i18n loaders, or custom elements). Bundlers preserve them even when no explicit export is consumed.
+These modules execute code at import time (theme/i18n asset registration and the convenience bundle entry). Bundlers preserve them even when no explicit export is consumed. Layouts and middleware are pure data/factory modules and are intentionally not listed (see issue #108).
 
 All other modules (core utilities, types, the main `KioskKeyboard.js`) are tree-shakeable. A bundler that imports only specific layouts or only the component class can eliminate the rest.
 

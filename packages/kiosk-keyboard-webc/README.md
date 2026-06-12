@@ -525,14 +525,16 @@ keyboard.addEventListener("key-press", (e) => {
 
 ## Subpath Imports
 
-The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for middleware, the convenience bundle entry, and asset registration:
+The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The package also exposes subpath imports for layout definitions, middleware, the convenience bundle entry, asset registration, and the custom-elements manifest:
 
 | Import                                  | Description                                                                                                                  |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `kiosk-keyboard-webc`                   | Full entry (all built-in layouts)                                                                                            |
+| `kiosk-keyboard-webc/layouts/<name>`    | Built-in layout definitions (data for custom composition)                                                                    |
 | `kiosk-keyboard-webc/middleware/<name>` | Composition middleware                                                                                                       |
 | `kiosk-keyboard-webc/bundle`            | Convenience entry: element + Assets (needs a bundler/import map; for a plain `<script>` use `dist/kiosk-keyboard.bundle.js`) |
 | `kiosk-keyboard-webc/Assets`            | Theme + i18n registration                                                                                                    |
+| `kiosk-keyboard-webc/customElements`    | Custom Elements Manifest (`custom-elements.json`) for IDE/tooling                                                            |
 
 ### Layout Composition
 
