@@ -213,7 +213,7 @@ The repeater fires the first delete after an initial hold delay, then accelerate
 
 Because the existing single delete fires on release (`ontouchend`), a held key would otherwise delete one extra character on lift-off. The behavior records that a repeat occurred, and `ontouchend` consults `shouldSuppressRelease` to skip its trailing delete. A quick tap (released before the initial delay) never repeats, so it deletes exactly once on release as before.
 
-The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard-webc` package rather than shared — the two packages deliberately do not share code — and the two copies must be kept in sync by hand.
+The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard-webc` package rather than shared (the two packages deliberately do not share code), so the two copies must be kept in sync by hand.
 
 ### Cursor Initialization
 

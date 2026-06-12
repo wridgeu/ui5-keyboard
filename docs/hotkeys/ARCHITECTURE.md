@@ -177,7 +177,7 @@ Router integration is **purely additive**. The `HotkeyManager` works without any
 
 This removes the need for manual `pushScope`/`popScope` calls in route-based applications. Each route name becomes a scope ID, and controllers register their hotkeys with `scope: "routeName"`.
 
-Applications that do not use routing (reuse components, embedded components, non-routed UIs) simply use `pushScope()`/`popScope()` directly, or register everything on the global scope.
+Applications that do not use routing (reuse components, embedded components, non-routed UIs) use `pushScope()`/`popScope()` directly, or register everything on the global scope.
 
 Router integration lives on `RegistrationGroup`, not on `HotkeyManager`. This ties the router listener to the group's lifecycle: `destroyAll()` automatically detaches it. Since `HotkeyManager.destroy()` finalizes all groups, router cleanup is guaranteed on either path. Calling `enableRouterIntegration()` again on the same group silently replaces the previous router listener.
 

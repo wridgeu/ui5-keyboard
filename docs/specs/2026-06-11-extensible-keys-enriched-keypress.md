@@ -38,8 +38,8 @@ The dominant OSS on-screen keyboard, **simple-keyboard**, is explicitly
 in the `onKeyPress` callback, and the instance exposes an input/caret API
 (`getInput`/`setInput`/`setCaretPosition`/`getButtonElement`). Named-handler
 **registries** are the standard at _application command-bus_ altitude (VS Code
-`registerCommand` + keybindings by id, CodeMirror `commands`) — shared,
-palette-discoverable, rebindable — which is a different product than a reusable
+`registerCommand` + keybindings by id, CodeMirror `commands`): shared,
+palette-discoverable, and rebindable, which is a different product than a reusable
 input widget and is the global model already rejected here.
 
 For a reusable keyboard **component**, the callback + token + label-map + input-API
@@ -60,9 +60,9 @@ contract** rather than adding an action subsystem:
    calls `preventDefault()` to own it.
 2. Add a **small public input API** on the keyboard that the handler calls, routed
    through the existing `TargetInputSession`:
-   - `insertText(text: string): void` — insert at the caret of the active target
+   - `insertText(text: string): void`: insert at the caret of the active target
      (cursor-tracked, fires `liveChange`).
-   - `deleteBackward(): boolean` — delete one grapheme before the caret.
+   - `deleteBackward(): boolean`: delete one grapheme before the caret.
    - a resolved-target accessor (the active native `<input>`/`<textarea>` or null).
      Layout switching is already public (`setLayout` / the tracked base layout).
 3. Labeling stays declarative on the `KeyDefinition` (`label` / `icon`), analogous
@@ -98,7 +98,7 @@ contract** rather than adding an action subsystem:
 
 UI5 events carry **data**, not functions, so the writers are exposed as **control
 methods** (called from inside the handler), not as function-valued event
-parameters — matching simple-keyboard's instance-method model. The web component
+parameters, matching simple-keyboard's instance-method model. The web component
 mirrors the same methods on the element for twin symmetry (it may additionally
 surface them on the event `detail`; decided at implementation).
 
@@ -128,7 +128,7 @@ el.addEventListener("key-press", (e) => {
 ## Removed by this pivot
 
 The action subsystem is deleted from **both** packages (it never shipped to
-consumers — `@since 0.2.0`, no in-repo usage — so removal is non-breaking):
+consumers (`@since 0.2.0`, no in-repo usage), so removal is non-breaking):
 
 - `instanceActions` property + custom setter + `_toActionMap` / `_actionsView`.
 - `ActionContext`, `ActionDefinition`, `defineActions` (types + bundle exports).
@@ -151,7 +151,7 @@ enriched-keyPress story, but that is out of scope here.)
   net is closer to "the keyboard fires events and exposes input methods".
 - **Single dispatch story** for custom keys (the event), no dual model; the
   hardcoded built-in switch is untouched and #74 is re-scoped to match (this spec
-  does **not** claim to unify built-ins into a registry — that goal is dropped as
+  does **not** claim to unify built-ins into a registry; that goal is dropped as
   not worth the coupling).
 - **Twin parity**: the new input methods are added to both controls; remove the
   `action-registry` twin pair from the drift manifest.

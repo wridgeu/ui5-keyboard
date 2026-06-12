@@ -75,7 +75,7 @@ npm test              # Core test suite (QUnit + kiosk desktop e2e + Vitest + We
 
 ## End-to-end & visual tests
 
-The UI5 QUnit suites run via `ui5-test-runner` (puppeteer backend; its chromium is fetched by `npm install`). The e2e and visual-regression suites run on `@playwright/test` — those browsers are not installed by `npm install`, so run `npx playwright install chromium` once first. See [docs/shared/TESTING.md](./docs/shared/TESTING.md) for the full reference.
+The UI5 QUnit suites run via `ui5-test-runner` (puppeteer backend; its chromium is fetched by `npm install`). The e2e and visual-regression suites run on `@playwright/test`. Those browsers are not installed by `npm install`, so run `npx playwright install chromium` once first. See [docs/shared/TESTING.md](./docs/shared/TESTING.md) for the full reference.
 
 ```bash
 # Run the e2e/visual suite for a package (desktop project)
@@ -119,7 +119,7 @@ See the [Docs Index](./docs/README.md) for architecture deep-dives and design ra
 
 ### Dependency Layout
 
-Shared test/build tooling (`typescript`, `rimraf`, `@playwright/test`, `ui5-test-runner` + `puppeteer` + `start-server-and-test` for the UI5 QUnit suites, and the patched `@ui5/webcomponents-tools` / `less-openui5` toolchain) is declared **once at the repository root** and resolved by every workspace via npm hoisting, which keeps a single source of truth for versions. Each package declares only the tooling unique to it (e.g. `vite` / `vitest` and `@web/test-runner` for the web component). The e2e/visual suites use `@playwright/test` directly; the UI5 QUnit suites are harvested by `ui5-test-runner` using its puppeteer backend (chromium only — its bundled chromium is fetched on `npm install`, and unlike the playwright backend it does not try to install firefox/webkit, which hangs on CI). Because of this, always run `npm install` at the root after switching to a branch that changes dependencies; a workspace's own `node_modules` is not self-contained.
+Shared test/build tooling (`typescript`, `rimraf`, `@playwright/test`, `ui5-test-runner` + `puppeteer` + `start-server-and-test` for the UI5 QUnit suites, and the patched `@ui5/webcomponents-tools` / `less-openui5` toolchain) is declared **once at the repository root** and resolved by every workspace via npm hoisting, which keeps a single source of truth for versions. Each package declares only the tooling unique to it (e.g. `vite` / `vitest` and `@web/test-runner` for the web component). The e2e/visual suites use `@playwright/test` directly; the UI5 QUnit suites are harvested by `ui5-test-runner` using its puppeteer backend (chromium only: its bundled chromium is fetched on `npm install`, and unlike the playwright backend it does not try to install firefox/webkit, which hangs on CI). Because of this, always run `npm install` at the root after switching to a branch that changes dependencies; a workspace's own `node_modules` is not self-contained.
 
 ## Build Pipelines
 

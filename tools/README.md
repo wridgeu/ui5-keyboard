@@ -8,14 +8,14 @@ Custom oxlint JS plugin that enforces test stability guardrails. Loaded via the 
 
 **Rules:**
 
-| Rule                               | Scope          | Description                                                                                              |
-| ---------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
-| `test-guardrails/no-browser-pause` | All test files | Flags `page.pause()` / `browser.pause()` debug pauses; rely on web-first assertions instead              |
-| `test-guardrails/no-hard-wait`     | E2E tests only | Flags fixed sleeps — `page.waitForTimeout(N)` and `await new Promise(r => setTimeout(r, N))` where N > 0 |
+| Rule                               | Scope          | Description                                                                                             |
+| ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------- |
+| `test-guardrails/no-browser-pause` | All test files | Flags `page.pause()` / `browser.pause()` debug pauses; rely on web-first assertions instead             |
+| `test-guardrails/no-hard-wait`     | E2E tests only | Flags fixed sleeps: `page.waitForTimeout(N)` and `await new Promise(r => setTimeout(r, N))` where N > 0 |
 
 `setTimeout(resolve, 0)` (microtask flush) is intentionally allowed. A genuinely
-necessary settle window — e.g. a negative assertion that an action did _not_ change
-state, where no event signals the absence of the change — can opt out with an inline
+necessary settle window (e.g. a negative assertion that an action did _not_ change
+state, where no event signals the absence of the change) can opt out with an inline
 `// oxlint-disable-next-line test-guardrails/no-hard-wait` directive plus a rationale.
 
 Rule scoping is configured via `overrides` in `.oxlintrc.json`:
