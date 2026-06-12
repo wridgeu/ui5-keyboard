@@ -945,9 +945,8 @@ class KioskKeyboard extends UI5Element {
       this._restoreInputMode();
     }
 
-    // A real target switch starts a fresh input context: reset shift/caps. A
-    // same-input re-set (caret reposition) preserves the armed shift, mirroring
-    // the UI5 twin's _setActiveTarget guard.
+    // Reset shift/caps only on a real switch; a same-input re-set is a caret
+    // reposition that keeps the armed shift (parity with the UI5 twin).
     if (el !== previous) {
       this._shiftState.reset();
     }
@@ -1759,10 +1758,7 @@ class KioskKeyboard extends UI5Element {
 
     const targetChanged = this._targetElement !== inputEl;
     if (targetChanged) {
-      // A real target switch starts a fresh input context: reset shift/caps and
-      // end any in-progress composition (commit + drop), mirroring the UI5
-      // twin's _setActiveTarget. A same-input refocus is a caret reposition and
-      // preserves both.
+      // Real switch: fresh context, so reset shift and end any composition.
       this._shiftState.reset();
       if (this._middleware) {
         this._middleware.commit();

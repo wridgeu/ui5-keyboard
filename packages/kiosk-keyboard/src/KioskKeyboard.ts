@@ -1276,9 +1276,8 @@ export default class KioskKeyboard extends Control {
     // any prior user-driven layout switch; the resolved layout must follow
     // the new constraint context.
     this._layoutSource = "external";
-    // The surface swap ends any in-progress composition: commit the preedit and
-    // drop the middleware so the next key resolves against the new effective
-    // layout (mirrors _applyLayout and the webc keyboardType handler).
+    // End any in-progress composition so the next key resolves against the new
+    // effective layout (mirrors _applyLayout).
     if (this._middleware) {
       this._middleware.commit();
       this._middleware = null;
