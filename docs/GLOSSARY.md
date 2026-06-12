@@ -125,7 +125,7 @@ When `enableRouterIntegration(router)` is active, route changes automatically re
 
 **Suppression** refers to conditions that prevent a matched hotkey from firing, even though the key combination and scope both match.
 
-- **Input suppression** (`ignoreInputs`): Single-key hotkeys are suppressed when focus is in an editable field — text `<input>`, `<textarea>`, `contentEditable`, or `<select>` (which has native single-key type-ahead). Ctrl/Meta combos and Escape are not suppressed. Controlled by the `ignoreInputs` option (`"auto"` by default).
+- **Input suppression** (`ignoreInputs`): Single-key hotkeys are suppressed when focus is in an editable field: a text `<input>`, `<textarea>`, `contentEditable`, or `<select>` (which has native single-key type-ahead). Ctrl/Meta combos and Escape are not suppressed. Controlled by the `ignoreInputs` option (`"auto"` by default).
 - **Popup suppression** (`suppressInPopups`): Hotkeys are suppressed when a UI5 popup (dialog or popover) is open. On by default.
 - **Repeat suppression** (`ignoreRepeat`): Held-key repeat events are ignored. On by default.
 

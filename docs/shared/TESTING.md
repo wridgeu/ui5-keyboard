@@ -78,7 +78,7 @@ Each package drives Playwright from configs at its **package root** (not inside 
 Within `playwright.config.ts`, projects share a single `webServer` and differ only by emulated device:
 
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
-- The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs — the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
+- The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
 Because element screenshots capture overflow, the fixed-width container fixtures no longer need per-viewport gating: they run on every profile and are captured in full.
 
@@ -170,13 +170,13 @@ A few snapshots are too unstable under phone emulation to be meaningful (e.g. th
 
 ### Generated assets for webc E2E
 
-The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild — but they do need generated theme and i18n output. Every `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` that invokes `playwright test` runs `npm run generate` inline first, including headed and device-project variants (`test:e2e:report`, which only opens the HTML report, does not).
+The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild, but they do need generated theme and i18n output. Every `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` that invokes `playwright test` runs `npm run generate` inline first, including headed and device-project variants (`test:e2e:report`, which only opens the HTML report, does not).
 
 The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2E scripts avoid a separate prebuild step entirely.
 
 ### Test helpers
 
-Each package keeps its own minimal `test/e2e/helpers.ts` — there is no shared cross-package helper module; native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). The helpers that remain are thin:
+Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cross-package helper module, and native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). The helpers that remain are thin:
 
 | Helper                                                                      | Package | Purpose                                                                                                                 |
 | --------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -192,7 +192,7 @@ Media features are emulated with Playwright's native `page.emulateMedia({ forced
 
 ### Device emulation
 
-Device coverage is expressed as Playwright **projects** (see Config files above) that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`. Media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly because `hasTouch`/`isMobile` make the emulated browser report as a touch device. All projects share their package's single `webServer`, so — unlike the old WebdriverIO matrix — there are no per-device ports to allocate.
+Device coverage is expressed as Playwright **projects** (see Config files above) that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`. Media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly because `hasTouch`/`isMobile` make the emulated browser report as a touch device. All projects share their package's single `webServer`, so there are no per-device ports to allocate (unlike the old WebdriverIO matrix).
 
 ### Troubleshooting
 
@@ -206,7 +206,7 @@ Device coverage is expressed as Playwright **projects** (see Config files above)
 
 ## Port Map
 
-The UI5 QUnit suites are served by `ui5 serve` (via each package's `test:qunit` script, orchestrated by `start-server-and-test` and harvested by `ui5-test-runner`); the e2e/visual suites are served by each Playwright config's `webServer`. The device matrix shares its package's server — there are no per-device ports.
+The UI5 QUnit suites are served by `ui5 serve` (via each package's `test:qunit` script, orchestrated by `start-server-and-test` and harvested by `ui5-test-runner`); the e2e/visual suites are served by each Playwright config's `webServer`. The device matrix shares its package's server, so there are no per-device ports.
 
 | Port | Usage                                                     |
 | ---- | --------------------------------------------------------- |

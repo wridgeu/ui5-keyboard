@@ -1,6 +1,6 @@
 # UI5 Event Handling Deep Dive
 
-Comprehensive reference for UI5 keyboard events, touch event simulation, pseudo events, and how our `ui5.hotkeys` / `ui5.kiosk` libraries interact with them.
+Reference for UI5 keyboard events, touch event simulation, pseudo events, and how the `ui5.hotkeys` / `ui5.kiosk` libraries interact with them.
 
 > **Research date:** February 2026, based on OpenUI5 1.144.0 source code and official documentation.
 

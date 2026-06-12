@@ -177,9 +177,9 @@ Holding the Backspace key deletes continuously, the way phone keyboards do. The 
 
 The repeater fires the first delete after an initial hold delay, then accelerates the cadence toward a floor. Each tick runs the control's `_performBackspaceRepeatDelete` (passed in as the controller's tick callback), which mirrors the `{backspace}` branch of `_onKeyClick`: it fires the cancelable `key-press`, runs composition middleware (via the shared `_ensureMiddleware`), then deletes one grapheme. It stops on its own once `handleBackspace()` reports nothing was removed (empty input / cursor at start / read-only target).
 
-A held key would otherwise also fire the trailing release `click` (real for mouse, synthesized by `_boundTouchEnd` for touch), deleting one extra character on lift-off. The controller sets a one-shot suppression flag once a repeat occurs and swallows that one click via `consumeClick` (called from `_onKeyClick`). The flag resets on the next Backspace `pointerdown` and clears on pointer-leave, so a fresh tap — or a later keyboard-/programmatically-activated Backspace click — deletes normally.
+A held key would otherwise also fire the trailing release `click` (real for mouse, synthesized by `_boundTouchEnd` for touch), deleting one extra character on lift-off. The controller sets a one-shot suppression flag once a repeat occurs and swallows that one click via `consumeClick` (called from `_onKeyClick`). The flag resets on the next Backspace `pointerdown` and clears on pointer-leave, so a fresh tap, or a later keyboard- or programmatically-activated Backspace click, deletes normally.
 
-The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard` package rather than shared — the two packages deliberately do not share code — and the two copies must be kept in sync by hand.
+The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard` package rather than shared (the two packages deliberately do not share code), so the two copies must be kept in sync by hand.
 
 ### Focus Steal Prevention
 
@@ -546,7 +546,7 @@ All built-in layouts and middleware are bundled with the component (direct impor
 
 - Component tests use `@open-wc/testing` (`fixture`, `html`, `expect`, `oneEvent`, `waitUntil`) and `renderFinished()` from the UI5 WC framework for render cycle synchronization
 - E2E visual tests use Playwright's built-in `toHaveScreenshot()` assertion, with committed baselines under `test/e2e/__baselines__/<project>/` (one directory per Playwright project: `desktop`, `phone-sm`, `phone-md`, `phone-lg`, `tablet`)
-- Device-emulation E2E runs as additional Playwright projects in `playwright.config.ts` that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch` to validate touch and viewport behavior across form factors — all sharing the single Vite `webServer`
+- Device-emulation E2E runs as additional Playwright projects in `playwright.config.ts` that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch` to validate touch and viewport behavior across form factors, all sharing the single Vite `webServer`
 - A standalone test page at `test/pages/index.html` serves as both manual testing playground and E2E test target
 
 ## Differences from the UI5 Control Variant (`kiosk-keyboard`)

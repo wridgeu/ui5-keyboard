@@ -40,21 +40,21 @@ suites are still fail-closed (not trusting the first pass's record), and closed 
 empirical gap on the runners that pass empty.
 
 - **H1 re-CONFIRMED.** Flipped `dom.qunit.ts` "input with no type" to `assert.ok(!isInputElement(el))`; `npm run test:hotkeys:qunit` exited 1 (ui5-test-runner exitCode -1 -> start-server-and-test execa reject -> `npm error code 1`). Reverted.
-- **H3 re-CONFIRMED.** Set `inputmode.spec.ts` first test to expect `"ADVERSARIAL_FAIL_H3"`; `playwright test --project=desktop --ignore-snapshots inputmode.spec.ts` exited 1 (1 failed / 3 passed — 4 tests genuinely ran, so the webServer started and the suite is non-empty). Reverted.
-- **H2 (zero tests) empirically CLOSED for Playwright.** `playwright test --project=desktop <nonexistent>.spec.ts` exits 1 with "No tests found"; `passWithNoTests` is set nowhere in either config. The headline runner cannot pass empty. (ui5-test-runner side remains as audited: it fail-closes on a missing target — a direct bogus-URL run also exited non-zero.)
+- **H3 re-CONFIRMED.** Set `inputmode.spec.ts` first test to expect `"ADVERSARIAL_FAIL_H3"`; `playwright test --project=desktop --ignore-snapshots inputmode.spec.ts` exited 1 (1 failed / 3 passed: 4 tests genuinely ran, so the webServer started and the suite is non-empty). Reverted.
+- **H2 (zero tests) empirically CLOSED for Playwright.** `playwright test --project=desktop <nonexistent>.spec.ts` exits 1 with "No tests found"; `passWithNoTests` is set nowhere in either config. The headline runner cannot pass empty. (ui5-test-runner side remains as audited: it fail-closes on a missing target; a direct bogus-URL run also exited non-zero.)
 - **H4 re-CONFIRMED.** Clean single-test run `visual.spec.ts -g 'kb-qwerty$'` passed on this platform (Windows baselines), then overwriting `desktop/kb-qwerty.png` with the numpad image made it exit 1 (ratio 0.14 differing pixels). Comparison is live. Restored.
 - **H5 (SOFT tolerance) cleared analytically.** `kb-qwerty` is 320x331 (~105.9k px); `maxDiffPixelRatio: 0.003` ~= 318 px of slack. A single key cell is ~30x30 (~900 px) and the H4 layout swap differed by 59,564 px, so a real one-key/one-glyph change comfortably exceeds the tolerance.
 - **Findings-applied verified present:** `kb-qwerty-reduced-motion` baseline is gone (replaced by an explanatory comment in `accessibility-media.spec.ts`); `SOFT = { maxDiffPixelRatio: 0.003 }` in `visual.spec.ts`.
 
-### Incidental observation (not a test-integrity issue) — gen.d.ts regeneration on serve
+### Incidental observation (not a test-integrity issue): gen.d.ts regeneration on serve
 
 Running the kiosk Playwright e2e suite reproducibly rewrites
 `packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts`, stripping ~444 lines of
 getter/setter JSDoc and leaving a dirty tree (observed after every kiosk e2e run;
 the hotkeys QUnit run does not touch it). The kiosk `test:e2e` script does not run
-`generate` — the rewrite comes from the `ui5 serve` webServer. The committed file is
+`generate`; the rewrite comes from the `ui5 serve` webServer. The committed file is
 exactly what `npm run generate` (kiosk-pinned `@ui5/ts-interface-generator@0.11.1`,
-the version `pretypecheck`/CI uses) produces — confirmed by a 0-diff regen — so CI
+the version `pretypecheck`/CI uses) produces, confirmed by a 0-diff regen, so CI
 stays green and the artifact is correct. But two generator versions coexist (root
 `0.10.5`, kiosk-local `0.11.1`), and a commit made after a local serve/e2e run would
 strip the JSDoc. Worth the author confirming the serve path doesn't invoke a
