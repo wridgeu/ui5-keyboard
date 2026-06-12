@@ -273,7 +273,7 @@ import { ConflictBehavior, GLOBAL_SCOPE, UnhandledReason } from "ui5/hotkeys/lib
 import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 ```
 
-`HotkeyRecorder` and `KeyStateTracker` classes are exported for type declarations (e.g., `const tracker: KeyStateTracker = manager.getKeyStateTracker()`), but their constructors are internal: use `manager.createRecorder()` and `manager.getKeyStateTracker()` respectively.
+`HotkeyRecorder` is exported as a type and returned by `manager.createRecorder()`; its constructor is internal. `manager.getKeyStateTracker()` returns a `KeyStateTrackerApi` (the read-only tracker interface in `ui5/hotkeys/types`); the backing `KeyStateTracker` class is constructed internally.
 
 Advanced modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. Non-stable top-level paths currently include re-export entry points (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`).
 
@@ -780,9 +780,9 @@ manager.register(
 Track which keys are currently held down (useful for "hold Shift to multi-select" patterns):
 
 ```ts
-import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import type { KeyStateTrackerApi } from "ui5/hotkeys/types";
 
-const tracker = manager.getKeyStateTracker();
+const tracker: KeyStateTrackerApi = manager.getKeyStateTracker();
 
 // Check if a key is held
 if (tracker.isKeyHeld("Shift")) {

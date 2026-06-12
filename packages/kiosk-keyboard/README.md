@@ -1032,17 +1032,7 @@ When `autoType="true"` (requires `autoShow="true"`), the keyboard inspects the f
 
 When the user tabs from a numeric input to a text input, the keyboard switches back to Full automatically.
 
-**Explicit override:** Setting `keyboardType` explicitly (via XML, constructor, or `setKeyboardType()`) disables auto-type detection. The keyboard respects the explicit type and never overrides it.
-
-You can query this lock state directly:
-
-```ts
-kb.setKeyboardType("Full");
-kb.isKeyboardTypeExplicit(); // true
-
-kb.resetKeyboardType();
-kb.isKeyboardTypeExplicit(); // false
-```
+**Explicit override:** Setting `keyboardType` explicitly (via XML, constructor, or `setKeyboardType()`) disables auto-type detection. The keyboard respects the explicit type and never overrides it. Call `resetKeyboardType()` to re-enable auto-type. The `keyboardTypeChange` event reports whether a change was auto-detected via its `autoDetected` parameter.
 
 ---
 

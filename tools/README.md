@@ -31,12 +31,12 @@ Custom oxlint JS plugin that catches AI-generated code anti-patterns. Loaded via
 
 **Rules:**
 
-| Rule                                       | Severity | Description                                                             |
-| ------------------------------------------ | -------- | ----------------------------------------------------------------------- |
-| `code-quality/no-double-type-assertion`    | error    | Flags `x as unknown as T` chains; use type guards or `in` checks        |
-| `code-quality/no-console-only-catch`       | warn     | Flags catch blocks with only a console call (error swallowed)           |
-| `code-quality/no-redundant-boolean-return` | warn     | Flags `if (x) return true; else return false;` (simplify to `return x`) |
-| `code-quality/no-em-dash`                  | warn     | Flags em-dashes (U+2014) in strings and comments (AI text marker)       |
+| Rule                                       | Severity | Description                                                                              |
+| ------------------------------------------ | -------- | ---------------------------------------------------------------------------------------- |
+| `code-quality/no-double-type-assertion`    | error    | Flags `x as unknown as T` chains; use type guards or `in` checks                         |
+| `code-quality/no-console-only-catch`       | warn     | Flags catch blocks with only a console call (error swallowed)                            |
+| `code-quality/no-redundant-boolean-return` | warn     | Flags `if (x) return true; else return false;` (simplify to `return x`)                  |
+| `code-quality/no-em-dash`                  | warn     | Flags em-dashes (U+2014) and en-dashes (U+2013) in strings and comments (AI text marker) |
 
 `no-double-type-assertion` is disabled in test files (`*.test.ts`, `*.spec.ts`, `*.qunit.ts`) since test mocks legitimately use double assertions to pass invalid types.
 

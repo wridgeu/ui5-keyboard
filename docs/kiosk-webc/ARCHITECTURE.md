@@ -526,6 +526,7 @@ CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration 
   "./Assets": "dist/Assets.js", // theme + i18n registration only
   "./layouts/*": "dist/layouts/*.js", // layout-definition modules for custom composition
   "./middleware/*": "dist/middleware/*.js", // middleware-factory modules for custom composition
+  "./customElements": "dist/custom-elements.json", // CEM for IDE/tooling integration
   "./dist/*": "dist/*" // catch-all
 }
 ```

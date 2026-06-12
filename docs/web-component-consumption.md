@@ -68,7 +68,8 @@ The build produces two kinds of output:
 | Standalone bundle (`dist/kiosk-keyboard.bundle.js`) | Vite  | Self-contained bundle for `<script>` tags          |
 
 Vite's `emptyOutDir: false` ensures the tsc output is not wiped. The Vite build
-has `inlineDynamicImports: true` so the bundle is a single file.
+sets `codeSplitting: false` so the bundle is a single file (this replaces the
+deprecated `inlineDynamicImports: true` under Vite 8 / Rolldown).
 
 ## Package Structure Alignment with `@ui5/webcomponents`
 
