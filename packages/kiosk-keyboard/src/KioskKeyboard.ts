@@ -1276,6 +1276,13 @@ export default class KioskKeyboard extends Control {
     // any prior user-driven layout switch; the resolved layout must follow
     // the new constraint context.
     this._layoutSource = "external";
+    // The surface swap ends any in-progress composition: commit the preedit and
+    // drop the middleware so the next key resolves against the new effective
+    // layout (mirrors _applyLayout and the webc keyboardType handler).
+    if (this._middleware) {
+      this._middleware.commit();
+      this._middleware = null;
+    }
   }
 
   /**
@@ -1744,24 +1751,34 @@ export default class KioskKeyboard extends Control {
     return this._shiftState.isCapsLock;
   }
 
+  /**
+   * The effective layout NAME for the current state, shared by the renderer
+   * (`_getResolvedLayout`) and the composition-middleware lookup
+   * (`_tryCompositionMiddleware`) so the rendered surface and the active
+   * middleware never resolve to different layouts. A user-driven `{layout:X}`
+   * switch wins (it overrides the keyboardType constraint), then the
+   * keyboardType constraint (Numpad/Numeric force their layout), then the
+   * `layout` property. Mirrors the webc twin's `_resolvedLayoutName`.
+   */
+  private _resolvedLayoutName(): string {
+    if (this._layoutSource === "user") return this.getLayout();
+    const kbType = this.getKeyboardType();
+    if (kbType === KeyboardType.Numpad) return "numpad";
+    if (kbType === KeyboardType.Numeric) return "numeric";
+    return this.getLayout();
+  }
+
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
-    // A user-driven `{layout:X}` switch overrides the keyboardType constraint:
-    // in Numeric/Numpad mode the user can still navigate to special/secondary
-    // layouts they explicitly chose. `{layout:base}` and any setKeyboardType /
-    // setLayout / auto-detect call resets `_layoutSource` back to "external"
-    // and re-engages the constraint below. Matches webc behavior.
-    if (this._layoutSource === "user") {
-      return registryGetLayoutOrDefault(this.getLayout(), this._instanceLayoutsMap);
-    }
+    const resolved = registryGetLayoutOrDefault(this._resolvedLayoutName(), this._instanceLayoutsMap);
+    // On the auto-forced numpad/numeric surface (the keyboardType constraint,
+    // not a user switch), a `{layout:base}` key would resolve back to the same
+    // forced layout, so strip it so the rendered surface matches the active
+    // behavior. Matches webc behavior.
     const kbType = this.getKeyboardType();
-    if (kbType === KeyboardType.Numpad) {
-      return KioskKeyboard._stripDeadBaseSwitch(registryGetLayoutOrDefault("numpad", this._instanceLayoutsMap));
-    }
-    if (kbType === KeyboardType.Numeric) {
-      return KioskKeyboard._stripDeadBaseSwitch(registryGetLayoutOrDefault("numeric", this._instanceLayoutsMap));
-    }
-    return registryGetLayoutOrDefault(this.getLayout(), this._instanceLayoutsMap);
+    const autoForced =
+      this._layoutSource !== "user" && (kbType === KeyboardType.Numpad || kbType === KeyboardType.Numeric);
+    return autoForced ? KioskKeyboard._stripDeadBaseSwitch(resolved) : resolved;
   }
 
   // The auto-forced numeric/numpad surface (keyboardType=Numeric|Numpad with
@@ -2068,7 +2085,7 @@ export default class KioskKeyboard extends Control {
   private _tryCompositionMiddleware(keyValue: string): boolean {
     if (!this._keyAffectsComposition(keyValue)) return false;
     if (!this._middleware) {
-      const factory = registryGetMiddlewareFactory(this.getLayout(), this._instanceMiddlewareMap);
+      const factory = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._instanceMiddlewareMap);
       if (factory) this._middleware = factory();
     }
     if (this._middleware) {

@@ -115,6 +115,9 @@ sap.ui.define([], () => {
       "custom-keys": {
         title: "QUnit tests for ui5.kiosk - custom keys via enriched keyPress + input API",
       },
+      "keyboard-type-middleware": {
+        title: "QUnit tests for ui5.kiosk - keyboardType vs composition middleware",
+      },
     },
   };
 });
