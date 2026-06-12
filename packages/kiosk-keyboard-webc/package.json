@@ -54,6 +54,7 @@
       "types": "./dist/middleware/*.d.ts",
       "default": "./dist/middleware/*.js"
     },
+    "./customElements": "./dist/custom-elements.json",
     "./dist/*": "./dist/*",
     "./*": "./dist/*"
   },
