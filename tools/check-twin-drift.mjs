@@ -13,6 +13,10 @@
  *
  * Deliberately UNCHECKED twin modules (framework-adapted or intentionally
  * divergent; compared by humans, not by this script):
+ * - KioskKeyboard.ts: the main class is a UI5 Control (metadata, renderer,
+ *   lifecycle hooks) in kiosk and a decorator-based web component in webc; the
+ *   two are structurally non-comparable. This is the widest unchecked surface,
+ *   so shared logic in the main class must be hand-synced across the twins.
  * - middleware/kana-dakuten.ts: known semantic divergence between the twins.
  * - middleware/hangul-compose.ts: framework-adapted wiring differs.
  * - internal/layout-registry.ts <-> core/layout-registry.ts: registry is
