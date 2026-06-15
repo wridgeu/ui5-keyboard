@@ -936,7 +936,7 @@ export default class HotkeyManager extends BaseObject {
     // Active scope first
     const activeScopeMatch = findMatchInScope({
       ...matchOpts,
-      registrations: this._registrationIndex.getScopeRegistrations(activeScope, null),
+      registrations: this._registrationIndex.getUntargetedRegistrations(activeScope),
       skipInfo,
     });
     if (activeScopeMatch) return activeScopeMatch;
@@ -945,7 +945,7 @@ export default class HotkeyManager extends BaseObject {
     if (activeScope !== GLOBAL_SCOPE) {
       return findMatchInScope({
         ...matchOpts,
-        registrations: this._registrationIndex.getScopeRegistrations(GLOBAL_SCOPE, null),
+        registrations: this._registrationIndex.getUntargetedRegistrations(GLOBAL_SCOPE),
         skipInfo,
       });
     }

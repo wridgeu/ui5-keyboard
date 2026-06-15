@@ -142,14 +142,10 @@ export default class RegistrationIndex {
   }
 
   /**
-   * Resolve the registrations of a scope for a given target
-   * (`null` selects the untargeted bucket section).
+   * Resolve the untargeted registrations of a scope.
    */
-  getScopeRegistrations(scope: string, targetElement: EventTarget | null): ReadonlyArray<HotkeyRegistration> {
-    const bucket = this._byScope.get(scope);
-    if (!bucket) return [];
-
-    const ids = targetElement === null ? bucket.untargetedIds : bucket.targets.get(targetElement);
+  getUntargetedRegistrations(scope: string): ReadonlyArray<HotkeyRegistration> {
+    const ids = this._byScope.get(scope)?.untargetedIds;
     if (!ids || ids.size === 0) return [];
 
     return this.getRegistrationsFromIds(ids);
