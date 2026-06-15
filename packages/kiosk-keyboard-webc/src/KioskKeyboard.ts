@@ -33,6 +33,7 @@ import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
+import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
 import {
   KeyboardType,
   MobileKeyboard,
@@ -561,12 +562,12 @@ class KioskKeyboard extends UI5Element {
   /** Minimum gap between live-region writes so AT clients can pick each one up. */
   private static readonly _ANNOUNCEMENT_INTERVAL_MS = 120;
   private _deferredFocusOutCloseId: number | null = null;
+
   // ── Inputmode suppression (ref-counted, shared across instances) ──
-  private static readonly _inputModeSuppressions = new WeakMap<
-    HTMLElement,
-    { original: string | null; refCount: number }
-  >();
-  private _suppressedElement: HTMLElement | null = null;
+  /** Owns the `inputmode="none"` swap and its cross-instance refcount. */
+  private readonly _inputModeSuppression = new NativeInputModeSuppression({
+    resolveTarget: () => this._resolveTarget(),
+  });
 
   // ── Multi-keyboard instance isolation ──
   private static readonly _instances = new Set<KioskKeyboard>();
@@ -743,7 +744,7 @@ class KioskKeyboard extends UI5Element {
     this._teardownAutoShow();
     this._teardownPhysicalKeyHighlight();
     this._responsiveSizing.teardown();
-    this._restoreInputMode();
+    this._inputModeSuppression.restore();
     this._detachEscapeListener();
     this._backspaceRepeat.stop();
     this._hostAbort?.abort();
@@ -905,7 +906,7 @@ class KioskKeyboard extends UI5Element {
         this._targetSource = "explicit";
       }
     }
-    this._suppressInputMode();
+    this._inputModeSuppression.suppress();
     this._announce(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
     this.fireDecoratorEvent("after-open", { activeElement: this._targetElement });
   }
@@ -913,7 +914,7 @@ class KioskKeyboard extends UI5Element {
   /** Executes the close side effects. Called from the `open` setter. */
   private _performClose(): void {
     const activeElement = this._targetElement;
-    this._restoreInputMode();
+    this._inputModeSuppression.restore();
     this._announce(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
     this.fireDecoratorEvent("after-close", { activeElement });
   }
@@ -929,7 +930,7 @@ class KioskKeyboard extends UI5Element {
 
     // Restore the old target's inputmode before switching so it's not left suppressed.
     if (this._openValue) {
-      this._restoreInputMode();
+      this._inputModeSuppression.restore();
     }
 
     // Reset shift/caps only on a real switch; a same-input re-set is a caret
@@ -942,7 +943,7 @@ class KioskKeyboard extends UI5Element {
     this._targetSource = "explicit";
 
     if (this._openValue) {
-      this._suppressInputMode();
+      this._inputModeSuppression.suppress();
     }
     // Always sync highlight: cleans up listeners on the old target even
     // when the keyboard is closed, preventing a listener leak.
@@ -1773,8 +1774,8 @@ class KioskKeyboard extends UI5Element {
       this.show();
       this._syncPhysicalKeyHighlight();
     } else if (targetChanged) {
-      this._restoreInputMode();
-      this._suppressInputMode();
+      this._inputModeSuppression.restore();
+      this._inputModeSuppression.suppress();
       this._syncPhysicalKeyHighlight();
     }
 
@@ -1884,44 +1885,6 @@ class KioskKeyboard extends UI5Element {
     if (e.key === "Escape" && this._openValue) {
       this.close();
     }
-  }
-
-  // ── Inputmode suppression ──
-
-  private _suppressInputMode(): void {
-    const target = this._resolveTarget();
-    if (!target) return;
-
-    const existing = KioskKeyboard._inputModeSuppressions.get(target);
-    if (existing) {
-      existing.refCount++;
-    } else {
-      KioskKeyboard._inputModeSuppressions.set(target, {
-        original: target.getAttribute("inputmode"),
-        refCount: 1,
-      });
-    }
-    target.setAttribute("inputmode", "none");
-    this._suppressedElement = target;
-  }
-
-  private _restoreInputMode(): void {
-    const el = this._suppressedElement;
-    if (!el) return;
-
-    const state = KioskKeyboard._inputModeSuppressions.get(el);
-    if (state) {
-      state.refCount--;
-      if (state.refCount <= 0) {
-        if (state.original !== null) {
-          el.setAttribute("inputmode", state.original);
-        } else {
-          el.removeAttribute("inputmode");
-        }
-        KioskKeyboard._inputModeSuppressions.delete(el);
-      }
-    }
-    this._suppressedElement = null;
   }
 
   // ── Physical keyboard sync ──
