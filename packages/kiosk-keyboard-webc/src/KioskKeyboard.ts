@@ -34,6 +34,7 @@ import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
+import { AnnouncementQueue } from "./core/announcement-queue.js";
 import {
   KeyboardType,
   MobileKeyboard,
@@ -549,18 +550,13 @@ class KioskKeyboard extends UI5Element {
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
   private _layoutSource: LayoutSource = "external";
-  /**
-   * Pending live-region announcements. A queue (rather than a single slot)
-   * is necessary because two state changes in the same render cycle (e.g.
-   * open + shift toggle) must each be announced; assistive tech can elide
-   * an announcement if a single live region is rewritten too quickly, so
-   * the queue is also drained one entry per microtask delay below.
-   */
-  private _announcementQueue: string[] = [];
-  private _announcementFlushPending = false;
-  private _announcementTimerId: number | null = null;
-  /** Minimum gap between live-region writes so AT clients can pick each one up. */
-  private static readonly _ANNOUNCEMENT_INTERVAL_MS = 120;
+  /** Owns the ARIA live-region announcement queue and its drain timer. */
+  private readonly _announcements = new AnnouncementQueue({
+    isConnected: () => this.isConnected,
+    setLiveRegionText: (text) => {
+      this._liveRegionText = text;
+    },
+  });
   private _deferredFocusOutCloseId: number | null = null;
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
@@ -749,12 +745,7 @@ class KioskKeyboard extends UI5Element {
     this._backspaceRepeat.stop();
     this._hostAbort?.abort();
     this._hostAbort = null;
-    if (this._announcementTimerId !== null) {
-      clearTimeout(this._announcementTimerId);
-      this._announcementTimerId = null;
-    }
-    this._announcementQueue.length = 0;
-    this._announcementFlushPending = false;
+    this._announcements.teardown();
     // Fire after-close before disconnecting so direct listeners still see it.
     // Cannot use `this.open = false` here - isConnected is already false,
     // so the setter skips side effects. Handle cleanup manually.
@@ -779,7 +770,7 @@ class KioskKeyboard extends UI5Element {
   onAfterRendering(): void {
     // Announce pending live region text (from show/close/shift). Queue is
     // drained sequentially with a small gap so AT clients pick up each entry.
-    this._flushAnnouncementQueue();
+    this._announcements.flush();
 
     // Sync observer targets so newly rendered root elements are observed.
     // Responsive height classes live on the host element (not in shadow DOM),
@@ -907,7 +898,7 @@ class KioskKeyboard extends UI5Element {
       }
     }
     this._inputModeSuppression.suppress();
-    this._announce(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
+    this._announcements.announce(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
     this.fireDecoratorEvent("after-open", { activeElement: this._targetElement });
   }
 
@@ -915,7 +906,7 @@ class KioskKeyboard extends UI5Element {
   private _performClose(): void {
     const activeElement = this._targetElement;
     this._inputModeSuppression.restore();
-    this._announce(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
+    this._announcements.announce(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
     this.fireDecoratorEvent("after-close", { activeElement });
   }
 
@@ -1200,41 +1191,6 @@ class KioskKeyboard extends UI5Element {
 
   get _roleDescription(): string {
     return getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard");
-  }
-
-  /** Queue text for the live region. Identical consecutive entries are coalesced. */
-  private _announce(text: string): void {
-    if (!text) return;
-    if (this._announcementQueue.at(-1) === text) return;
-    this._announcementQueue.push(text);
-  }
-
-  /**
-   * Drains the announcement queue with a fixed inter-message delay so AT
-   * clients don't elide rapid consecutive writes to the same live region.
-   */
-  private _flushAnnouncementQueue(): void {
-    if (this._announcementFlushPending) return;
-    if (this._announcementQueue.length === 0) return;
-
-    this._announcementFlushPending = true;
-    const writeNext = (): void => {
-      this._announcementTimerId = null;
-      // Bail out if the host was disconnected while the timer was pending.
-      // onExitDOM clears the queue and flag, so just stop the chain here.
-      if (!this.isConnected) {
-        this._announcementFlushPending = false;
-        return;
-      }
-      const next = this._announcementQueue.shift();
-      if (next !== undefined) this._liveRegionText = next;
-      if (this._announcementQueue.length > 0) {
-        this._announcementTimerId = window.setTimeout(writeNext, KioskKeyboard._ANNOUNCEMENT_INTERVAL_MS);
-      } else {
-        this._announcementFlushPending = false;
-      }
-    };
-    writeNext();
   }
 
   _getFocusPosition(layout: LayoutDefinition): { row: number; col: number } {
@@ -1655,11 +1611,11 @@ class KioskKeyboard extends UI5Element {
     this._shifted = this._shiftState.isShifted;
     this._capsLock = this._shiftState.isCapsLock;
     if (!wasCapsLock && this._capsLock) {
-      this._announce(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
+      this._announcements.announce(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
     } else if (!wasShifted && this._shifted && !this._capsLock) {
-      this._announce(getText("ARIA_SHIFT_ON", "Shift on"));
+      this._announcements.announce(getText("ARIA_SHIFT_ON", "Shift on"));
     } else if (wasShifted && !this._shifted && !this._capsLock) {
-      this._announce(getText("ARIA_SHIFT_OFF", "Shift off"));
+      this._announcements.announce(getText("ARIA_SHIFT_OFF", "Shift off"));
     }
   }
 
