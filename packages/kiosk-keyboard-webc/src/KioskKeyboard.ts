@@ -35,6 +35,7 @@ import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
+import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import {
   KeyboardType,
   MobileKeyboard,
@@ -585,25 +586,28 @@ class KioskKeyboard extends UI5Element {
   private _hostAbort: AbortController | null = null;
   private _autoShowAbort: AbortController | null = null;
   private _escapeAbort: AbortController | null = null;
-  private _physicalKeyAbort: AbortController | null = null;
 
   // ── Physical keyboard highlight ──
-  private _highlightTarget: HTMLElement | null = null;
+  /** Owns the physical-key highlight listeners and physical-modifier shift sync. */
+  private readonly _physicalKeyHighlight = new PhysicalKeyHighlightController(
+    {
+      getShadowRoot: () => this.shadowRoot,
+      resolveTarget: () => this._resolveTarget(),
+      setHighlightedKey: (value) => {
+        this._highlightedKey = value;
+      },
+      syncShiftFromPhysical: (shiftKey, capsLock) => {
+        this._shiftState.syncFromPhysical(shiftKey, capsLock);
+      },
+    },
+    NATIVE_DISPATCHABLE_KEYS,
+  );
 
   // ── Bound listeners (document-level) ──
   private readonly _boundFocusIn = this._onDocumentFocusIn.bind(this);
   private readonly _boundFocusOut = this._onDocumentFocusOut.bind(this);
   private readonly _boundEscape = (e: Event) => {
     if (e instanceof KeyboardEvent) this._onDocumentEscape(e);
-  };
-  private readonly _boundPhysicalKeyDown = (e: Event) => {
-    if (e instanceof KeyboardEvent) this._onPhysicalKey(e, true);
-  };
-  private readonly _boundPhysicalKeyUp = (e: Event) => {
-    if (e instanceof KeyboardEvent) this._onPhysicalKey(e, false);
-  };
-  private readonly _boundPhysicalBlur = () => {
-    this._clearHighlight();
   };
   private readonly _boundTouchStart = (e: Event) => {
     const target = (e.target as HTMLElement).closest?.(KIOSK_KEYBOARD_DOM.selectors.key);
@@ -704,7 +708,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     this._syncAutoShow();
-    this._syncPhysicalKeyHighlight();
+    this._physicalKeyHighlight.sync();
 
     if (this.docked) {
       this._attachEscapeListener();
@@ -738,7 +742,7 @@ class KioskKeyboard extends UI5Element {
     }
     KioskKeyboard._instances.delete(this);
     this._teardownAutoShow();
-    this._teardownPhysicalKeyHighlight();
+    this._physicalKeyHighlight.teardown();
     this._responsiveSizing.teardown();
     this._inputModeSuppression.restore();
     this._detachEscapeListener();
@@ -938,7 +942,7 @@ class KioskKeyboard extends UI5Element {
     }
     // Always sync highlight: cleans up listeners on the old target even
     // when the keyboard is closed, preventing a listener leak.
-    this._syncPhysicalKeyHighlight();
+    this._physicalKeyHighlight.sync();
 
     if (el !== previous) {
       this.fireDecoratorEvent("active-control-change", { activeElement: el });
@@ -1246,7 +1250,8 @@ class KioskKeyboard extends UI5Element {
       // Optimistic DOM update: apply shift-active / caps-lock classes
       // immediately for instant visual feedback, before the rAF-deferred
       // Preact re-render cycle.  The template class binding maintains the
-      // state across subsequent re-renders (same pattern as _highlightKey).
+      // state across subsequent re-renders (same pattern as the physical-key
+      // highlight controller's _highlightKey).
       // Preact will redundantly setAttribute("class", ...) on the next
       // render because its VDOM-to-VDOM diff always detects a change
       // (class objects are freshly created each render, never === equal).
@@ -1728,11 +1733,11 @@ class KioskKeyboard extends UI5Element {
 
     if (!this._openValue) {
       this.show();
-      this._syncPhysicalKeyHighlight();
+      this._physicalKeyHighlight.sync();
     } else if (targetChanged) {
       this._inputModeSuppression.restore();
       this._inputModeSuppression.suppress();
-      this._syncPhysicalKeyHighlight();
+      this._physicalKeyHighlight.sync();
     }
 
     if (targetChanged) {
@@ -1841,76 +1846,6 @@ class KioskKeyboard extends UI5Element {
     if (e.key === "Escape" && this._openValue) {
       this.close();
     }
-  }
-
-  // ── Physical keyboard sync ──
-
-  private _onPhysicalKey(ev: KeyboardEvent, down: boolean): void {
-    this._highlightKey(ev.key, down);
-
-    this._shiftState.syncFromPhysical(ev.shiftKey, ev.getModifierState("CapsLock"));
-  }
-
-  // ── Physical keyboard highlight ──
-
-  /** Maps a physical KeyboardEvent.key to the data-key value used in the layout. */
-  private _physicalKeyToDataKey(physicalKey: string): string {
-    const lower = physicalKey.toLowerCase();
-    if (lower === "backspace") return "{backspace}";
-    if (lower === "enter") return "{enter}";
-    if (lower === "shift") return "{shift}";
-    if (NATIVE_DISPATCHABLE_KEYS.has(physicalKey)) return `{fkey:${physicalKey}}`;
-    return lower;
-  }
-
-  private _highlightKey(physicalKey: string, pressed: boolean): void {
-    const shadow = this.shadowRoot!;
-    const dataKey = this._physicalKeyToDataKey(physicalKey);
-
-    // Immediate DOM manipulation for instant visual feedback
-    if (pressed) {
-      const selector = `${KIOSK_KEYBOARD_DOM.selectors.keyByValue(dataKey)}, ${KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(physicalKey)}`;
-      const el = shadow.querySelector<HTMLElement>(selector);
-      if (el) el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyHighlight);
-    } else {
-      this._clearHighlight();
-    }
-
-    // Track state so it persists across re-renders (lowercased for template comparison)
-    this._highlightedKey = pressed ? dataKey.toLowerCase() : null;
-  }
-
-  private _clearHighlight(): void {
-    this.shadowRoot!.querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`).forEach((el) =>
-      el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight),
-    );
-    this._highlightedKey = null;
-  }
-
-  private _syncPhysicalKeyHighlight(): void {
-    const target = this._resolveTarget();
-
-    // Skip if target unchanged and still connected to DOM
-    if (target === this._highlightTarget && (!target || target.isConnected)) return;
-
-    this._physicalKeyAbort?.abort();
-    this._physicalKeyAbort = null;
-    this._highlightTarget = target;
-
-    if (target) {
-      this._physicalKeyAbort = new AbortController();
-      const { signal } = this._physicalKeyAbort;
-      target.addEventListener("keydown", this._boundPhysicalKeyDown, { signal });
-      target.addEventListener("keyup", this._boundPhysicalKeyUp, { signal });
-      target.addEventListener("blur", this._boundPhysicalBlur, { signal });
-    }
-  }
-
-  private _teardownPhysicalKeyHighlight(): void {
-    this._physicalKeyAbort?.abort();
-    this._physicalKeyAbort = null;
-    this._highlightTarget = null;
-    this._clearHighlight();
   }
 }
 
