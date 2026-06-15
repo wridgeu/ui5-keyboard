@@ -11,7 +11,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
-import { resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
+import { resolveWithCustomResolver, isParticipating, type TargetResolverFn } from "./internal/dom";
 import { KeyboardType, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
@@ -910,18 +910,27 @@ export default class KioskKeyboard extends Control {
     const changed = name !== this.getLayout();
     if (changed) {
       this._layoutSource = source;
-      // A real layout switch ends any in-progress composition: commit the
-      // preedit to the target and drop the middleware so the next key resolves
-      // the new layout's middleware. Covers both programmatic setLayout() and
-      // the {layout:*} key path.
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
+      // A real layout switch ends any in-progress composition so the next key
+      // resolves the new layout's middleware. Covers both programmatic
+      // setLayout() and the {layout:*} key path.
+      this._endComposition();
     }
     this._shiftState.reset();
     this.setProperty("layout", name);
     return changed;
+  }
+
+  /**
+   * Commits any in-progress composition to the target and drops the middleware,
+   * so the next key starts a fresh composition. A no-op when no composition is
+   * active. Called on every real editing-context switch (layout, target, or
+   * keyboardType change).
+   */
+  private _endComposition(): void {
+    if (this._middleware) {
+      this._middleware.commit();
+      this._middleware = null;
+    }
   }
 
   /**
@@ -1064,15 +1073,13 @@ export default class KioskKeyboard extends Control {
       this._shiftState.reset();
     }
 
-    // A real target switch ends any in-progress composition: commit the preedit
-    // to the old target and drop the middleware so the new target starts a fresh
-    // composition. Without this, the cached middleware (which holds the old
+    // A real target switch ends any in-progress composition so the new target
+    // starts fresh. Without this, the cached middleware (which holds the old
     // target and its preedit offsets) leaks the old syllable into the new input.
     // Mirrors the `{layout:}` key path and the web component's focusin handling.
     // A same-input refocus (caret reposition) keeps the composition going.
-    if (newId !== previousTarget && this._middleware) {
-      this._middleware.commit();
-      this._middleware = null;
+    if (newId !== previousTarget) {
+      this._endComposition();
     }
 
     // A real target switch is a new editing context: drop a user-driven
@@ -1173,10 +1180,7 @@ export default class KioskKeyboard extends Control {
     this._layoutSource = "external";
     // End any in-progress composition so the next key resolves against the new
     // effective layout (mirrors _applyLayout).
-    if (this._middleware) {
-      this._middleware.commit();
-      this._middleware = null;
-    }
+    this._endComposition();
   }
 
   /**
@@ -1897,24 +1901,11 @@ export default class KioskKeyboard extends Control {
 
   // ── Private: auto-show ──
 
-  /**
-   * Whether this instance is visible, enabled, attached to the DOM,
-   * and has a non-zero layout size - i.e. eligible to participate in
-   * multi-instance focus-claim arbitration.
-   */
-  private _isParticipating(): boolean {
-    if (!this.getVisible() || !this.getEnabled()) return false;
-    const dom = this.getDomRef();
-    if (!(dom instanceof HTMLElement)) return false;
-    if (!document.contains(dom)) return false;
-    return dom.getClientRects().length > 0;
-  }
-
   /** Returns true if any other KioskKeyboard instance already targets this input. */
   private _isTargetOfOther(inputId: string): boolean {
     for (const other of KioskKeyboard._instances) {
       if (other === this) continue;
-      if (!other._isParticipating()) continue;
+      if (!isParticipating(other)) continue;
       if (other._getActiveTargetId() === inputId) return true;
       // With controls, the active target is only set on focus. However, the
       // controls list declares ownership: if the input is in another keyboard's

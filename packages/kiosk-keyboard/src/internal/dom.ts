@@ -53,6 +53,27 @@ export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTex
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 
+/** Minimal control surface needed to decide DOM-level participation. */
+export interface ParticipationHost {
+  getVisible(): boolean;
+  getEnabled(): boolean;
+  getDomRef(): Element | null;
+}
+
+/**
+ * Whether a keyboard instance is an eligible participant in DOM-level
+ * arbitration: visible, enabled, rendered, attached to the document, and laid
+ * out (has client rects). Shared by the control's multi-instance arbitration
+ * and the auto-show behavior so the two cannot drift apart.
+ */
+export function isParticipating(host: ParticipationHost): boolean {
+  if (!host.getVisible() || !host.getEnabled()) return false;
+  const dom = host.getDomRef();
+  if (!(dom instanceof HTMLElement)) return false;
+  if (!document.contains(dom)) return false;
+  return dom.getClientRects().length > 0;
+}
+
 /** Callback type for custom target resolution. */
 export type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
 

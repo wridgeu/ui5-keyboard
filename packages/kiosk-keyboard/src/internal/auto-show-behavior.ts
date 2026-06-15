@@ -1,7 +1,7 @@
 import BaseObject from "sap/ui/base/Object";
 import Control from "sap/ui/core/Control";
 import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
-import type { TargetResolverFn } from "./dom";
+import { isParticipating, type TargetResolverFn } from "./dom";
 import type { KeyboardType } from "../library";
 import type { KioskKeyboard$KeyboardTypeChangeEventParameters } from "../KioskKeyboard";
 
@@ -85,17 +85,8 @@ export default class AutoShowBehavior extends BaseObject {
     }
   }
 
-  /** Whether the host is visible, enabled, attached, and has layout size. */
-  private _isHostParticipating(): boolean {
-    if (!this._host.getVisible() || !this._host.getEnabled()) return false;
-    const dom = this._host.getDomRef();
-    if (!(dom instanceof HTMLElement)) return false;
-    if (!document.contains(dom)) return false;
-    return dom.getClientRects().length > 0;
-  }
-
   private _onDocumentFocusIn(event: FocusEvent): void {
-    if (!this._host.getDocked() || !this._isHostParticipating()) return;
+    if (!this._host.getDocked() || !isParticipating(this._host)) return;
 
     if (this._host.getControls().length > 0) {
       this._host._setupControls();
