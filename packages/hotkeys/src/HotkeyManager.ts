@@ -14,12 +14,12 @@ import { getEventTarget, isInputElement } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
 import { parseHotkey } from "./internal/parse";
 import RegistrationIndex from "./internal/registration-index";
+import ConflictResolver from "./internal/conflict-resolver";
+import HotkeyMatcher from "./internal/hotkey-matcher";
 import { resolveRequiredScope, resolveScopeOrGlobal } from "./internal/scope";
 import { runtimeHooks } from "./internal/runtime";
 import { validateHotkey } from "./internal/validate";
-import { findMatchInScope } from "./internal/dispatch-core";
-import { matchesKeyboardEvent } from "./internal/match";
-import { recordSkip, type SkipInfo } from "./internal/skip-reason";
+import type { SkipInfo } from "./internal/skip-reason";
 import type {
   Hotkey,
   HotkeyCallback,
@@ -126,6 +126,10 @@ export default class HotkeyManager extends BaseObject {
   // Focus-tracking logic - extracted to its own class for maintainability.
   private _focusFallback: FocusFallbackTracker;
 
+  // Conflict resolution and the keydown matching engine (extracted from this class).
+  private _conflictResolver: ConflictResolver;
+  private _matcher: HotkeyMatcher;
+
   /**
    * Create a new HotkeyManager instance.
    *
@@ -144,6 +148,10 @@ export default class HotkeyManager extends BaseObject {
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
     this._focusFallback = new FocusFallbackTracker();
+    this._conflictResolver = new ConflictResolver(this._registrationIndex, this._registrations);
+    this._matcher = new HotkeyMatcher(this._registrationIndex, this._focusFallback, this._registrations, (reg) =>
+      this._toRegistrationInfo(reg),
+    );
 
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
   }
@@ -183,7 +191,7 @@ export default class HotkeyManager extends BaseObject {
     const id = idGen.next();
 
     // Conflict detection within the same scope
-    this._handleConflict(
+    this._conflictResolver.resolve(
       normalizedHotkey,
       resolved.scope,
       resolved.target,
@@ -257,7 +265,7 @@ export default class HotkeyManager extends BaseObject {
           const changed = opts.target !== nextTarget || opts.targetCallback !== nextCallback;
           if (changed) {
             if (nextTarget || nextCallback) {
-              this._handleConflict(
+              this._conflictResolver.resolve(
                 registration.normalizedHotkey,
                 opts.scope,
                 nextTarget,
@@ -779,7 +787,6 @@ export default class HotkeyManager extends BaseObject {
    * pipeline steps (_processSequences, _emitUnhandled).
    */
   private _processHotkeys(event: KeyboardEvent): HotkeyDispatchResult {
-    const eventPath = this._getEventPath(event);
     const activeScope = this.getActiveScope();
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
@@ -791,7 +798,7 @@ export default class HotkeyManager extends BaseObject {
     const eventContext: EventContext = { activeScope, isInput, popupOpen, skipInfo };
 
     // Pass 1: target-scoped registrations - innermost match wins.
-    const targetMatch = this._matchTargetRegistrations(event, eventPath, activeScope, isInput, popupOpen, skipInfo);
+    const targetMatch = this._matcher.matchTargeted(event, activeScope, isInput, popupOpen, skipInfo);
 
     if (targetMatch) {
       this._executeMatch(event, targetMatch);
@@ -799,7 +806,7 @@ export default class HotkeyManager extends BaseObject {
 
     // Pass 2: untargeted registrations (only if no target match stopped propagation)
     if (!targetMatch || !targetMatch.options.stopPropagation) {
-      const untargetedMatch = this._matchUntargetedRegistrations(event, activeScope, isInput, popupOpen, skipInfo);
+      const untargetedMatch = this._matcher.matchUntargeted(event, activeScope, isInput, popupOpen, skipInfo);
       if (untargetedMatch) {
         this._executeMatch(event, untargetedMatch);
         return { consumed: true, eventContext };
@@ -875,23 +882,8 @@ export default class HotkeyManager extends BaseObject {
   }
 
   // ──────────────────────────────────────────────
-  // Private: Match helpers
+  // Private: Match execution
   // ──────────────────────────────────────────────
-
-  /**
-   * Get the event's composed path with a defensive fallback.
-   */
-  private _getEventPath(event: KeyboardEvent): EventTarget[] {
-    const path = event.composedPath?.();
-    const resolvedPath =
-      path && path.length > 0
-        ? [...path]
-        : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
-
-    this._focusFallback.augmentPath(event, resolvedPath);
-
-    return resolvedPath;
-  }
 
   /**
    * Execute a matched registration: preventDefault, stopPropagation, callback.
@@ -915,154 +907,6 @@ export default class HotkeyManager extends BaseObject {
     }
   }
 
-  /**
-   * Match untargeted registrations (two-pass: active scope → global).
-   */
-  private _matchUntargetedRegistrations(
-    event: KeyboardEvent,
-    activeScope: string,
-    isInput: boolean,
-    popupOpen: boolean,
-    skipInfo: SkipInfo | null,
-  ): HotkeyRegistration | null {
-    const matchOpts = {
-      event,
-      isInput,
-      popupOpen,
-      toRegistrationInfo: (reg: HotkeyRegistration) => this._toRegistrationInfo(reg),
-      logComponent: LOG_COMPONENT,
-    };
-
-    // Active scope first
-    const activeScopeMatch = findMatchInScope({
-      ...matchOpts,
-      registrations: this._registrationIndex.getUntargetedRegistrations(activeScope),
-      skipInfo,
-    });
-    if (activeScopeMatch) return activeScopeMatch;
-
-    // Global scope fallback
-    if (activeScope !== GLOBAL_SCOPE) {
-      return findMatchInScope({
-        ...matchOpts,
-        registrations: this._registrationIndex.getUntargetedRegistrations(GLOBAL_SCOPE),
-        skipInfo,
-      });
-    }
-
-    return null;
-  }
-
-  /**
-   * Match target-scoped registrations via composedPath(), innermost-first.
-   *
-   * Scope-first ordering: active scope targets checked before global scope targets.
-   * The innermost matching target wins - once a match is found, return immediately.
-   *
-   * Returns the single matched registration, or null.
-   */
-  private _matchTargetRegistrations(
-    event: KeyboardEvent,
-    eventPath: EventTarget[],
-    activeScope: string,
-    isInput: boolean,
-    popupOpen: boolean,
-    skipInfo: SkipInfo | null,
-  ): HotkeyRegistration | null {
-    const pathSet = new Set(eventPath);
-    const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
-
-    for (const scope of scopesToCheck) {
-      const bucket = this._registrationIndex.getBucket(scope);
-      if (!bucket || bucket.targets.size === 0) continue;
-
-      // Iterate composedPath from index 0 (innermost) outward
-      for (const node of eventPath) {
-        const ids = this._registrationIndex.getTargetRegistrationIds(bucket, node);
-        if (!ids || ids.size === 0) continue;
-
-        // Attempt matching against registrations bound to this target
-        const registrations = this._registrationIndex.getRegistrationsFromIds(ids);
-        const matched = findMatchInScope({
-          event,
-          isInput,
-          popupOpen,
-          registrations,
-          skipInfo,
-          toRegistrationInfo: (reg) => this._toRegistrationInfo(reg),
-          logComponent: LOG_COMPONENT,
-        });
-
-        if (matched) {
-          return matched;
-        }
-      }
-    }
-
-    // Pass 1b: callback-target registrations - resolve lazily and check path.
-    for (const scope of scopesToCheck) {
-      const bucket = this._registrationIndex.getBucket(scope);
-      if (!bucket || bucket.callbackTargetIds.size === 0) continue;
-
-      for (const id of bucket.callbackTargetIds) {
-        const reg = this._registrations.get(id);
-        if (!reg) continue;
-
-        let resolved: Element | null;
-        try {
-          resolved = reg.options.targetCallback!();
-        } catch (error) {
-          Log.warning(`target callback threw for "${reg.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
-          continue;
-        }
-
-        if (!resolved || !pathSet.has(resolved)) {
-          if (resolved && skipInfo) {
-            // Target resolved but not in path
-            if (matchesKeyboardEvent(event, reg.parsedHotkey)) {
-              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, (r) => this._toRegistrationInfo(r));
-            }
-          }
-          continue;
-        }
-
-        const matched = findMatchInScope({
-          event,
-          isInput,
-          popupOpen,
-          registrations: [reg],
-          skipInfo,
-          toRegistrationInfo: (r) => this._toRegistrationInfo(r),
-          logComponent: LOG_COMPONENT,
-        });
-        if (matched) return matched;
-      }
-    }
-
-    // Skip-reason pass for off-path targets: record TargetMismatch for
-    // registrations whose key combo matches but target is not in the path.
-    if (skipInfo) {
-      for (const scope of scopesToCheck) {
-        const bucket = this._registrationIndex.getBucket(scope);
-        if (!bucket) continue;
-
-        for (const [targetNode, ids] of bucket.targets) {
-          if (pathSet.has(targetNode)) continue; // Already checked in main pass
-          if (targetNode instanceof Element && !targetNode.isConnected) continue; // Skip detached DOM refs
-
-          for (const id of ids) {
-            const reg = this._registrations.get(id);
-            if (reg && matchesKeyboardEvent(event, reg.parsedHotkey)) {
-              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, (r) => this._toRegistrationInfo(r));
-            }
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
   // ──────────────────────────────────────────────
   // Private: Validation warnings
   // ──────────────────────────────────────────────
@@ -1084,92 +928,5 @@ export default class HotkeyManager extends BaseObject {
    */
   private _checkPopupOpen(): boolean {
     return runtimeHooks.hasOpenPopup();
-  }
-
-  // ──────────────────────────────────────────────
-  // Private: Conflict handling
-  // ──────────────────────────────────────────────
-
-  private _handleConflict(
-    normalizedHotkey: string,
-    scope: string,
-    target: Element | null,
-    targetCallback: (() => Element | null) | null,
-    conflictBehavior: ConflictBehavior,
-  ): void {
-    if (conflictBehavior === ConflictBehavior.Allow) return;
-
-    // Callback (lazy) targets resolve to an element only at dispatch time, so two
-    // callback-target hotkeys cannot be compared by element here. Matching them by
-    // hotkey alone produced false conflicts - a blocking throw (Error) or a silent
-    // removal (Replace) of a registration that may target a different element. Skip
-    // conflict handling for them; genuine overlaps are resolved at dispatch time.
-    if (targetCallback) {
-      Log.debug(
-        `Conflict check skipped for callback-target hotkey "${normalizedHotkey}" in scope "${scope}" ` +
-          `(callback targets are resolved at dispatch time).`,
-        undefined,
-        LOG_COMPONENT,
-      );
-      return;
-    }
-
-    // Use scope-bucket lookup instead of iterating all registrations
-    const bucket = this._registrationIndex.getBucket(scope);
-    if (!bucket) return;
-    const ids =
-      target === null ? bucket.untargetedIds : this._registrationIndex.getTargetRegistrationIds(bucket, target);
-    if (!ids || ids.size === 0) return;
-
-    // Find conflicts by matching normalizedHotkey within the bucket
-    const isConflicting = (reg: HotkeyRegistration): boolean => reg.normalizedHotkey === normalizedHotkey;
-
-    if (conflictBehavior === ConflictBehavior.Replace) {
-      // Collect ALL matches so we remove every conflicting registration
-      const conflicts: HotkeyRegistration[] = [];
-      for (const id of ids) {
-        const reg = this._registrations.get(id);
-        if (reg && isConflicting(reg)) {
-          conflicts.push(reg);
-        }
-      }
-      for (const reg of conflicts) {
-        this._registrationIndex.deindex(reg);
-        reg.active = false;
-        this._registrations.delete(reg.id);
-        Log.debug(
-          `Replaced existing hotkey "${normalizedHotkey}" (id: ${reg.id}) in scope "${scope}"`,
-          undefined,
-          LOG_COMPONENT,
-        );
-      }
-      return;
-    }
-
-    // For "warn" and "error", first match is sufficient
-    let conflicting: HotkeyRegistration | null = null;
-    for (const id of ids) {
-      const reg = this._registrations.get(id);
-      if (reg && isConflicting(reg)) {
-        conflicting = reg;
-        break;
-      }
-    }
-
-    if (!conflicting) return;
-
-    if (conflictBehavior === ConflictBehavior.Error) {
-      throw new Error(
-        `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}).`,
-      );
-    }
-
-    // "warn"
-    Log.warning(
-      `Hotkey "${normalizedHotkey}" is already registered in scope "${scope}" (id: ${conflicting.id}). ` +
-        `Existing registration keeps priority unless conflictBehavior is "replace".`,
-      undefined,
-      LOG_COMPONENT,
-    );
   }
 }
