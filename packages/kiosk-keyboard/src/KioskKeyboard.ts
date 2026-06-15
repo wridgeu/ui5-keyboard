@@ -4,7 +4,7 @@ import type { MetadataOptions } from "sap/ui/core/Element";
 import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 import { SECONDARY_LAYOUTS } from "./internal/types";
-import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
+import type { LayoutDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
@@ -41,16 +41,13 @@ import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
 import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
 import ResponsiveSizingController from "./internal/responsive-sizing-controller";
+import { getKeyLabel, getKeyAriaLabel } from "./internal/key-labels";
+import PhysicalKeyHighlight from "./internal/physical-key-highlight";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
 type InputFocusDelegation = {
   onfocusin: () => void;
-};
-
-type KeyHighlightDelegation = {
-  onkeydown: (event: Event) => void;
-  onkeyup: (event: Event) => void;
 };
 
 /**
@@ -97,8 +94,7 @@ export default class KioskKeyboard extends Control {
   private _resolvedControlIds!: Set<string>;
 
   private _delegatedInstances!: Map<string, Control>;
-  private _keyHighlightDelegation!: KeyHighlightDelegation;
-  private _highlightTargetId!: string | null;
+  private _physicalKeyHighlight!: PhysicalKeyHighlight;
   private _pressedKeyEl!: HTMLElement | null;
   /** Owns press-and-hold continuous delete on the Backspace key. */
   private _backspaceRepeat!: BackspaceRepeatBehavior;
@@ -670,11 +666,7 @@ export default class KioskKeyboard extends Control {
         }
       },
     };
-    this._keyHighlightDelegation = {
-      onkeydown: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, true),
-      onkeyup: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, false),
-    };
-    this._highlightTargetId = null;
+    this._physicalKeyHighlight = new PhysicalKeyHighlight(this, this._shiftState);
     this._pressedKeyEl = null;
     this._backspaceRepeat = new BackspaceRepeatBehavior(() => {
       if (this._tryCompositionMiddleware("{backspace}")) return true;
@@ -764,7 +756,7 @@ export default class KioskKeyboard extends Control {
     }
 
     this._teardownControls();
-    this._removeHighlightDelegation();
+    this._physicalKeyHighlight.detach();
     this._responsiveSizing.destroy();
     this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
@@ -1052,7 +1044,7 @@ export default class KioskKeyboard extends Control {
     const fireDeferredChange = this._targetSession.captureAndClearDirty();
 
     // Remove highlight delegation from previous target
-    this._removeHighlightDelegation();
+    this._physicalKeyHighlight.detach();
 
     // If the keyboard is open, restore the old target's inputmode
     // before switching so it's not left suppressed.
@@ -1102,8 +1094,7 @@ export default class KioskKeyboard extends Control {
     if (newId) {
       const next = Element.getElementById(newId);
       if (next) {
-        next.addEventDelegate(this._keyHighlightDelegation);
-        this._highlightTargetId = newId;
+        this._physicalKeyHighlight.attach(next, newId);
 
         // Dev-time check: warn if the control won't work as a target
         const focusRef = next.getFocusDomRef?.();
@@ -1632,8 +1623,8 @@ export default class KioskKeyboard extends Control {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
         _getResolvedLayout: () => this._getResolvedLayout(),
-        _getKeyLabel: (key) => this._getKeyLabel(key),
-        _getKeyAriaLabel: (key) => this._getKeyAriaLabel(key),
+        _getKeyLabel: (key) => getKeyLabel(key, this._isShiftActive(), this._isCapsLock()),
+        _getKeyAriaLabel: (key) => getKeyAriaLabel(key, this._isShiftActive(), this._isCapsLock()),
       };
     }
     return this._rendererApi;
@@ -1720,78 +1711,6 @@ export default class KioskKeyboard extends Control {
    */
   static getKeyIcon(sKeyValue: string): string | undefined {
     return iconsGetKeyIcon(sKeyValue);
-  }
-
-  /** Map from special key value to [i18nKey, fallback]. */
-  private static readonly _SPECIAL_KEY_I18N: Record<string, [string, string]> = {
-    "{backspace}": ["KEY_BACKSPACE", "Backspace"],
-    "{enter}": ["KEY_ENTER", "Enter"],
-    "{shift}": ["KEY_SHIFT", "Shift"],
-    " ": ["KEY_SPACE", "Space"],
-  };
-
-  /**
-   * Accessible label for a key - always non-empty.
-   * Used as aria-label when no visible text is present.
-   *
-   * Resolution order: per-key `ariaLabel` -> visible label (`_getKeyLabel`) ->
-   * built-in i18n entry. For an icon-only key (`label: ""`) with none of these,
-   * a dev-time warning is logged and the raw `value` is used as a last resort,
-   * so a custom icon-only token never silently announces itself with no
-   * accessible name.
-   */
-  private _getKeyAriaLabel(key: KeyDefinition): string {
-    if (key.ariaLabel) return key.ariaLabel;
-
-    const display = this._getKeyLabel(key);
-    if (display) return display;
-
-    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    if (entry) return getText(entry[0], entry[1]);
-
-    // Icon-only key (label suppressed) with no ariaLabel and no i18n entry:
-    // warn so the consumer adds a localizable accessible name, and fall back
-    // to the raw value rather than announcing nothing.
-    if (key.label === "") {
-      Log.warning(
-        `Icon-only key "${key.value}" has no accessible name; set ariaLabel on the KeyDefinition.`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-    }
-
-    return key.value;
-  }
-
-  /** The display label for a key. Empty string when label is suppressed (icon-only opt-out). */
-  private _getKeyLabel(key: KeyDefinition): string {
-    if (key.label === "") return "";
-
-    // Caps Lock state: use capsLockLabel if defined, else i18n fallback
-    if (key.value === "{shift}" && this._isCapsLock()) {
-      if (key.capsLockLabel !== undefined) return key.capsLockLabel;
-      return getText("ARIA_CAPS_LOCK", "Caps Lock");
-    }
-
-    const shift = this._isShiftActive();
-    if (shift && key.shiftLabel) return key.shiftLabel;
-
-    // Explicit label takes priority over i18n
-    if (key.label !== undefined) {
-      return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
-    }
-
-    // No explicit label: i18n for special keys, value for regular keys
-    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    if (entry) return getText(entry[0], entry[1]);
-
-    const base = key.value;
-    if (!base) return "";
-    if (shift) {
-      if (key.shiftValue) return key.shiftValue;
-      if (key.value.length === 1 && key.value.trim()) return base.toUpperCase();
-    }
-    return base;
   }
 
   // ── UI5 event delegation ──
@@ -2041,37 +1960,7 @@ export default class KioskKeyboard extends Control {
         return;
       }
 
-      const fKeyMode = this.getFKeyMode();
-
-      if (fKeyMode === FKeyMode.None) {
-        return;
-      }
-
-      let nativeAllowed = true;
-
-      if (fKeyMode === FKeyMode.Native) {
-        if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
-          nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shift);
-          if (nativeAllowed) {
-            KioskKeyboard._executeNativeFKeyAction(fkeyName);
-          }
-        } else {
-          nativeAllowed = false;
-          if (!KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.has(fkeyName)) {
-            KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.add(fkeyName);
-            Log.warning(
-              `Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
-                "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
-              undefined,
-              "ui5.kiosk.KioskKeyboard",
-            );
-          }
-        }
-      }
-
-      if (nativeAllowed) {
-        this._targetSession.handleNavigationKey(fkeyName);
-      }
+      this._handleFKey(fkeyName, shift);
       return;
     }
 
@@ -2191,77 +2080,52 @@ export default class KioskKeyboard extends Control {
 
   // ── Private: physical keyboard highlighting ──
 
-  /** Maps non-derivable KeyboardEvent.key names to special-key data-key values. */
-  private static readonly _KEY_TO_DATA_KEY: Record<string, string> = {
-    Shift: "{shift}",
-    Backspace: "{backspace}",
-    Enter: "{enter}",
-    Delete: "{backspace}", // virtual keyboard has no separate Delete - highlight Backspace
-  };
-
-  /**
-   * Resolves a KeyboardEvent.key name to its data-key attribute value.
-   * Native-dispatchable keys (F1-F12, arrows, Home/End/PgUp/PgDn) are
-   * derived dynamically from the `_NATIVE_DISPATCHABLE_FKEYS` set.
-   */
-  private static _resolveDataKey(key: string): string | undefined {
-    return (
-      KioskKeyboard._KEY_TO_DATA_KEY[key] ??
-      (KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(key) ? `{fkey:${key}}` : undefined)
-    );
-  }
-
-  /**
-   * Handles a physical keyboard event on the target input.
-   * Syncs shift/capslock state from the physical keyboard and
-   * delegates to visual key highlighting.
-   */
-  private _onPhysicalKey(event: KeyboardEvent, down: boolean): void {
-    this._highlightKey(event.key, down);
-
-    // UI5 event delegation wraps the native event; unwrap to access
-    // getModifierState which is not forwarded to the wrapper.
-    const native = (event as KeyboardEvent & { originalEvent?: KeyboardEvent }).originalEvent ?? event;
-    const capsLock = typeof native.getModifierState === "function" && native.getModifierState("CapsLock");
-    this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
-  }
-
-  private _highlightKey(key: string, add: boolean): void {
-    const dom = this.getDomRef();
-    if (!dom) return;
-
-    if (!add) {
-      // Clear all highlights on any keyup. When Shift releases before the
-      // character key, keyup reports the unshifted value (e.g. "2" not "@"),
-      // so a targeted removal would miss the shifted key's highlight.
-      dom
-        .querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`)
-        .forEach((el) => el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight));
-      return;
-    }
-
-    const mapped = KioskKeyboard._resolveDataKey(key);
-    const el =
-      dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(mapped ?? key)) ??
-      (key.length === 1 ? dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(key.toLowerCase())) : null) ??
-      dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(key));
-    el?.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyHighlight, add);
-  }
-
   /** Updates the ARIA live region text for screen reader announcements. */
   private _announceLiveRegion(text: string): void {
     const liveRegion = this.getDomRef("liveState");
     if (liveRegion) liveRegion.textContent = text;
   }
 
-  private _removeHighlightDelegation(): void {
-    if (!this._highlightTargetId) return;
-    const prev = Element.getElementById(this._highlightTargetId);
-    if (prev) prev.removeEventDelegate(this._keyHighlightDelegation);
-    this._highlightTargetId = null;
-  }
-
   // ── Private: mobile detection ──
+
+  /**
+   * Dispatches an F-key according to `fKeyMode` (mirrors the web component's
+   * `_handleFKey`). Assumes the cancelable keyPress has already fired and was
+   * not prevented.
+   */
+  private _handleFKey(fkeyName: string, shiftKey: boolean): void {
+    const fKeyMode = this.getFKeyMode();
+
+    if (fKeyMode === FKeyMode.None) {
+      return;
+    }
+
+    let nativeAllowed = true;
+
+    if (fKeyMode === FKeyMode.Native) {
+      if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
+        nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
+        if (nativeAllowed) {
+          KioskKeyboard._executeNativeFKeyAction(fkeyName);
+        }
+      } else {
+        nativeAllowed = false;
+        if (!KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.has(fkeyName)) {
+          KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.add(fkeyName);
+          Log.warning(
+            `Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
+              "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
+            undefined,
+            "ui5.kiosk.KioskKeyboard",
+          );
+        }
+      }
+    }
+
+    if (nativeAllowed) {
+      this._targetSession.handleNavigationKey(fkeyName);
+    }
+  }
 
   /** Best-effort event target used for synthetic native F-key dispatch. */
   private _resolveNativeFKeyTarget(): EventTarget {
