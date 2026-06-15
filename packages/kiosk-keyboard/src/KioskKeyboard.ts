@@ -3,7 +3,6 @@ import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
-import ResizeHandler from "sap/ui/core/ResizeHandler";
 import { SECONDARY_LAYOUTS } from "./internal/types";
 import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
@@ -41,6 +40,7 @@ import KeyGridNavigation from "./internal/key-grid-navigation";
 import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
 import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
+import ResponsiveSizingController from "./internal/responsive-sizing-controller";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -52,18 +52,6 @@ type KeyHighlightDelegation = {
   onkeydown: (event: Event) => void;
   onkeyup: (event: Event) => void;
 };
-
-/**
- * Resolves a CSS custom property holding a rem-based threshold to pixels.
- * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem * remPx`
- * when the property is unset or unparseable.
- */
-function resolveRemThreshold(styles: CSSStyleDeclaration, prop: string, fallbackRem: number, remPx: number): number {
-  const raw = styles.getPropertyValue(prop).trim();
-  if (!raw) return fallbackRem * remPx;
-  const value = Number.parseFloat(raw);
-  return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
-}
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
@@ -142,12 +130,8 @@ export default class KioskKeyboard extends Control {
   private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
   /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
-  /** UI5 ResizeHandler registration ID for root size updates. */
-  private _responsiveResizeHandlerId!: string | null;
-  /** Root DOM element currently observed by the resize handler. */
-  private _responsiveObservedDom!: HTMLElement | null;
-  /** rAF handle used to coalesce responsive class updates from multiple observers. */
-  private _responsiveSyncFrameId!: number | null;
+  /** Owns the ResizeHandler-driven height-responsive class application. */
+  private _responsiveSizing!: ResponsiveSizingController;
   static readonly metadata: MetadataOptions = {
     library: "ui5.kiosk",
     properties: {
@@ -717,9 +701,7 @@ export default class KioskKeyboard extends Control {
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
-    this._responsiveResizeHandlerId = null;
-    this._responsiveObservedDom = null;
-    this._responsiveSyncFrameId = null;
+    this._responsiveSizing = new ResponsiveSizingController(this);
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -749,98 +731,11 @@ export default class KioskKeyboard extends Control {
     // already uses rAF for resize-triggered updates.
     const dom = this.getDomRef() as HTMLElement | null;
     if (dom) {
-      this._syncResponsiveSizing(dom);
-      this._scheduleResponsiveSizingSync();
+      this._responsiveSizing.syncObserver(dom);
+      this._responsiveSizing.scheduleClassUpdate();
     }
 
     this._setupControls();
-  }
-
-  /** Ensures a ResizeHandler is attached to the current DOM element. */
-  private _syncResponsiveSizing(dom: HTMLElement | null): void {
-    if (!dom) {
-      this._teardownResponsiveSizing();
-      return;
-    }
-
-    if (this._responsiveObservedDom !== dom) {
-      this._teardownResponsiveSizing();
-      this._responsiveObservedDom = dom;
-      this._responsiveResizeHandlerId = ResizeHandler.register(dom, () => {
-        this._scheduleResponsiveSizingSync();
-      });
-    }
-  }
-
-  /** Deregisters the UI5 ResizeHandler and clears the observed DOM reference. */
-  private _teardownResponsiveSizing(): void {
-    if (this._responsiveSyncFrameId !== null) {
-      cancelAnimationFrame(this._responsiveSyncFrameId);
-      this._responsiveSyncFrameId = null;
-    }
-    if (this._responsiveResizeHandlerId) {
-      ResizeHandler.deregister(this._responsiveResizeHandlerId);
-      this._responsiveResizeHandlerId = null;
-    }
-    this._responsiveObservedDom = null;
-  }
-
-  /** Coalesces responsive class updates triggered by root/content resize observers. */
-  private _scheduleResponsiveSizingSync(): void {
-    if (this._responsiveSyncFrameId !== null) return;
-
-    this._responsiveSyncFrameId = requestAnimationFrame(() => {
-      this._responsiveSyncFrameId = null;
-      const dom = this.getDomRef() as HTMLElement | null;
-      if (dom) {
-        this._applyResponsiveSizeClasses(dom);
-      }
-    });
-  }
-
-  /**
-   * Applies height-responsive classes to the keyboard root element.
-   *
-   * Toggles `cqShort` / `cqTiny` classes when the keyboard is externally
-   * constrained (host height < natural content height). Skipped for docked and numpad.
-   * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
-   *
-   * Width breakpoints are handled purely by CSS `@container` queries (see
-   * KioskKeyboard.container-queries.css), so no JS width measurement is needed.
-   */
-  private _applyResponsiveSizeClasses(dom: HTMLElement): void {
-    const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-    const cs = window.getComputedStyle(dom);
-
-    // Height classes -- detect external height constraints by comparing the
-    // keyboard's natural (unconstrained) content height against its rendered
-    // height. Skip for docked keyboards (viewport-driven) and numpad.
-    dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
-
-    const docked = this.getDocked();
-    const isNumpad = this.getKeyboardType() === KeyboardType.Numpad;
-    if (docked || isNumpad) {
-      return;
-    }
-
-    // scrollHeight reports the full content height even under overflow: hidden.
-    // If the element ever uses overflow: clip, scrollHeight may equal
-    // clientHeight in some browsers, breaking constrained detection.
-    const naturalHeight = dom.scrollHeight;
-    const renderedHeight = dom.getBoundingClientRect().height;
-
-    // Only apply when externally constrained (natural content > rendered).
-    // The +1px tolerance avoids oscillation from sub-pixel rounding.
-    if (naturalHeight <= renderedHeight + 1) {
-      return;
-    }
-
-    const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
-    const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
-    const isShort = renderedHeight <= shortThresh;
-    const isTiny = renderedHeight <= tinyThresh;
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */
@@ -870,7 +765,7 @@ export default class KioskKeyboard extends Control {
 
     this._teardownControls();
     this._removeHighlightDelegation();
-    this._teardownResponsiveSizing();
+    this._responsiveSizing.destroy();
     this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
@@ -1378,8 +1273,8 @@ export default class KioskKeyboard extends Control {
     const dom = this.getDomRef() as HTMLElement | null;
     if (!dom) return this;
 
-    this._syncResponsiveSizing(dom);
-    this._scheduleResponsiveSizingSync();
+    this._responsiveSizing.syncObserver(dom);
+    this._responsiveSizing.scheduleClassUpdate();
     return this;
   }
 
@@ -1448,7 +1343,7 @@ export default class KioskKeyboard extends Control {
     const dom = this.getDomRef() as HTMLElement | null;
     this._syncDockedDomState();
     if (dom) {
-      this._syncResponsiveSizing(dom);
+      this._responsiveSizing.syncObserver(dom);
     }
     return this;
   }
