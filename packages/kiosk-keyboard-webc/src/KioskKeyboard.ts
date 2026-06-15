@@ -19,7 +19,6 @@ import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
 import { ShiftState } from "./core/shift-state.js";
 import { resolveWithCustomResolver, keyElementId, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
 import { insertText, handleBackspace, handleNavigation } from "./core/input-operations.js";
-import { detectKeyboardType } from "./core/keyboard-type-detector.js";
 import {
   SECONDARY_LAYOUTS,
   getLayoutOrDefault,
@@ -36,6 +35,7 @@ import { ResponsiveSizingController } from "./core/responsive-sizing-controller.
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
+import { AutoShowController } from "./core/auto-show-controller.js";
 import {
   KeyboardType,
   MobileKeyboard,
@@ -558,7 +558,6 @@ class KioskKeyboard extends UI5Element {
       this._liveRegionText = text;
     },
   });
-  private _deferredFocusOutCloseId: number | null = null;
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   /** Owns the `inputmode="none"` swap and its cross-instance refcount. */
@@ -584,8 +583,48 @@ class KioskKeyboard extends UI5Element {
 
   // ── Listener controllers (one per feature; presence == attached) ──
   private _hostAbort: AbortController | null = null;
-  private _autoShowAbort: AbortController | null = null;
   private _escapeAbort: AbortController | null = null;
+
+  // ── Auto-show (document focusin/focusout) ──
+  /** Owns the focus listeners, deferred close, and cross-instance claim checks. */
+  private readonly _autoShow = new AutoShowController({
+    isDisabled: () => this.disabled,
+    isDocked: () => this.docked,
+    isAutoShow: () => this.autoShow,
+    isAutoType: () => this.autoType,
+    isConnected: () => this.isConnected,
+    isVisiblyOpen: () => this.open,
+    getKeyboardType: () => this.keyboardType,
+    getShadowRoot: () => this.shadowRoot,
+    contains: (node) => this.contains(node),
+    getClientRects: () => this.getClientRects(),
+    getTargetElement: () => this._targetElement,
+    getTargetSource: () => this._targetSource,
+    getControlsList: () => this._controlsList,
+    getKeyboardTypeSource: () => this._keyboardTypeSource,
+    resolveInputFrom: (el) => this._resolveInputFrom(el),
+    setKeyboardTypeInternal: (value) => this._setKeyboardTypeInternal(value),
+    setTarget: (el, source) => {
+      this._targetElement = el;
+      this._targetSource = source;
+    },
+    resetTargetContext: () => {
+      this._shiftState.reset();
+      if (this._middleware) {
+        this._middleware.commit();
+        this._middleware = null;
+      }
+    },
+    show: () => this.show(),
+    close: () => this.close(),
+    isOpen: () => this._openValue,
+    restoreInputMode: () => this._inputModeSuppression.restore(),
+    suppressInputMode: () => this._inputModeSuppression.suppress(),
+    syncPhysicalKeyHighlight: () => this._physicalKeyHighlight.sync(),
+    fireActiveControlChange: (el) => {
+      this.fireDecoratorEvent("active-control-change", { activeElement: el });
+    },
+  });
 
   // ── Physical keyboard highlight ──
   /** Owns the physical-key highlight listeners and physical-modifier shift sync. */
@@ -604,8 +643,6 @@ class KioskKeyboard extends UI5Element {
   );
 
   // ── Bound listeners (document-level) ──
-  private readonly _boundFocusIn = this._onDocumentFocusIn.bind(this);
-  private readonly _boundFocusOut = this._onDocumentFocusOut.bind(this);
   private readonly _boundEscape = (e: Event) => {
     if (e instanceof KeyboardEvent) this._onDocumentEscape(e);
   };
@@ -694,6 +731,7 @@ class KioskKeyboard extends UI5Element {
 
   onEnterDOM(): void {
     KioskKeyboard._instances.add(this);
+    this._autoShow.register();
 
     if (!this._baseLayout) {
       this._baseLayout =
@@ -707,7 +745,7 @@ class KioskKeyboard extends UI5Element {
       }
     }
 
-    this._syncAutoShow();
+    this._autoShow.sync();
     this._physicalKeyHighlight.sync();
 
     if (this.docked) {
@@ -741,7 +779,7 @@ class KioskKeyboard extends UI5Element {
       this._middleware = null;
     }
     KioskKeyboard._instances.delete(this);
-    this._teardownAutoShow();
+    this._autoShow.teardown();
     this._physicalKeyHighlight.teardown();
     this._responsiveSizing.teardown();
     this._inputModeSuppression.restore();
@@ -763,10 +801,7 @@ class KioskKeyboard extends UI5Element {
     this._targetSource = "explicit";
     this._targetResolver = null;
 
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-      this._deferredFocusOutCloseId = null;
-    }
+    this._autoShow.unregister();
 
     this._lastFocusedKeyId = null;
   }
@@ -834,7 +869,7 @@ class KioskKeyboard extends UI5Element {
       return;
     }
     if (name === "docked" || name === "autoShow") {
-      this._syncAutoShow();
+      this._autoShow.sync();
     }
     if (name === "docked") {
       if (this.docked) {
@@ -1668,164 +1703,6 @@ class KioskKeyboard extends UI5Element {
     if (mode === "Custom") return false;
     if (mode === "Native") return true;
     return KioskKeyboard._getCoarsePointerQuery().matches;
-  }
-
-  // ── Auto-show ──
-
-  private _syncAutoShow(): void {
-    if (this.autoShow && this.docked) {
-      if (this._autoShowAbort) return;
-      this._autoShowAbort = new AbortController();
-      const { signal } = this._autoShowAbort;
-      document.addEventListener("focusin", this._boundFocusIn, { capture: true, signal });
-      document.addEventListener("focusout", this._boundFocusOut, { capture: true, signal });
-    } else {
-      this._teardownAutoShow();
-    }
-  }
-
-  private _teardownAutoShow(): void {
-    this._autoShowAbort?.abort();
-    this._autoShowAbort = null;
-  }
-
-  private _onDocumentFocusIn(e: FocusEvent): void {
-    if (this.disabled || !this.docked || !this.autoShow) return;
-
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (this.shadowRoot!.contains(target) || this.contains(target)) return;
-
-    const inputEl = this._resolveInputFrom(target);
-    if (!inputEl) return;
-    if (this._isTargetOfOther(inputEl)) return;
-
-    const ids = this._controlsList;
-    if (ids.length > 0) {
-      if (!this._matchesControls(target, ids)) return;
-    }
-
-    const targetChanged = this._targetElement !== inputEl;
-    if (targetChanged) {
-      // Real switch: fresh context, so reset shift and end any composition.
-      this._shiftState.reset();
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    }
-    this._targetElement = inputEl;
-    this._targetSource = "autoShow";
-
-    // Detect keyboard type before open - this may trigger onInvalidation for
-    // keyboardType, but the target is already set so subsequent logic is safe.
-    if (this.autoType && this._keyboardTypeSource !== "explicit") {
-      const detected = detectKeyboardType(inputEl);
-      if (detected !== this.keyboardType) {
-        this._setKeyboardTypeInternal(detected);
-      }
-    }
-
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-      this._deferredFocusOutCloseId = null;
-    }
-
-    if (!this._openValue) {
-      this.show();
-      this._physicalKeyHighlight.sync();
-    } else if (targetChanged) {
-      this._inputModeSuppression.restore();
-      this._inputModeSuppression.suppress();
-      this._physicalKeyHighlight.sync();
-    }
-
-    if (targetChanged) {
-      this.fireDecoratorEvent("active-control-change", { activeElement: inputEl });
-    }
-  }
-
-  private _onDocumentFocusOut(_e: FocusEvent): void {
-    if (!this.autoShow) return;
-
-    if (this._deferredFocusOutCloseId !== null) {
-      cancelAnimationFrame(this._deferredFocusOutCloseId);
-    }
-
-    this._deferredFocusOutCloseId = requestAnimationFrame(() => {
-      this._deferredFocusOutCloseId = null;
-      if (!this.isConnected) return;
-      const active = document.activeElement;
-
-      if (active && (this.shadowRoot!.contains(active) || this.contains(active))) return;
-      if (active instanceof HTMLElement && this._resolveInputFrom(active)) {
-        const ids = this._controlsList;
-        if (ids.length === 0 || this._matchesControls(active, ids)) return;
-      }
-
-      if (this._openValue) this.close();
-      if (this._targetSource === "autoShow") {
-        this._targetElement = null;
-        this._targetSource = "explicit";
-      }
-    });
-  }
-
-  private _isTargetOfOther(inputEl: HTMLElement): boolean {
-    for (const kb of KioskKeyboard._instances) {
-      if (kb === this) continue;
-      if (!kb._isAutoShowParticipationActive()) continue;
-      if (kb._targetElement === inputEl) return true;
-      const ids = kb._controlsList;
-      if (ids.length === 1) {
-        const el = document.getElementById(ids[0]!);
-        if (!el) continue;
-        if (el === inputEl) return true;
-        if (el instanceof HTMLElement && kb._resolveInputFrom(el) === inputEl) return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Returns true when this instance should participate in auto-show claim checks.
-   * Hidden, disabled, or disconnected keyboards must not block other keyboards
-   * from claiming inputs.
-   */
-  private _isAutoShowParticipationActive(): boolean {
-    if (this.disabled) return false;
-    if (!this.isConnected) return false;
-    // A docked keyboard that is closed hides via an inner shadow-DOM class
-    // (visibility:hidden + transform), but the host element still reports
-    // client rects. Exclude it explicitly so it does not block other keyboards.
-    if (this.docked && !this.open) return false;
-    return this.getClientRects().length > 0;
-  }
-
-  /**
-   * Checks whether the focused element (or a close ancestor) matches one
-   * of the configured controls.
-   *
-   * Supports:
-   * - Exact DOM id match (plain HTML)
-   * - UI5-style prefixed IDs: walks up the DOM and strips the view prefix
-   *   (`*--`) from each ancestor's id, matching the unprefixed control id
-   *   (e.g. `"container-app---view--myInput"` matches `"myInput"`)
-   */
-  private _matchesControls(el: HTMLElement, ids: string[]): boolean {
-    let current: HTMLElement | null = el;
-    // Walk up at most 5 levels: input → inner wrapper → control root (+ margin for deeper UI5 nesting)
-    for (let i = 0; i < 5 && current; i++) {
-      const domId = current.id;
-      if (domId) {
-        if (ids.includes(domId)) return true;
-        // Strip UI5 view prefix: everything up to and including the last "--"
-        const sepIdx = domId.lastIndexOf("--");
-        if (sepIdx !== -1 && ids.includes(domId.slice(sepIdx + 2))) return true;
-      }
-      current = current.parentElement;
-    }
-    return false;
   }
 
   private _attachEscapeListener(): void {
