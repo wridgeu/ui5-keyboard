@@ -1,8 +1,3 @@
-/** The slice of the host the controller resolves its target through. */
-export interface NativeInputModeSuppressionHost {
-  resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null;
-}
-
 /**
  * Owns the ref-counted native-keyboard suppression for the web component:
  * setting `inputmode="none"` on the resolved target while the virtual keyboard
@@ -22,11 +17,11 @@ export class NativeInputModeSuppression {
   private static readonly _suppressions = new WeakMap<HTMLElement, { original: string | null; refCount: number }>();
   private _suppressedElement: HTMLElement | null = null;
 
-  /** @param _host Live access to the resolved native input/textarea. */
-  constructor(private readonly _host: NativeInputModeSuppressionHost) {}
+  /** @param _resolveTarget Live access to the resolved native input/textarea. */
+  constructor(private readonly _resolveTarget: () => HTMLInputElement | HTMLTextAreaElement | null) {}
 
   suppress(): void {
-    const target = this._host.resolveTarget();
+    const target = this._resolveTarget();
     if (!target) return;
 
     const existing = NativeInputModeSuppression._suppressions.get(target);

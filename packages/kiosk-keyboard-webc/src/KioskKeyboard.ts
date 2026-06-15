@@ -562,9 +562,7 @@ class KioskKeyboard extends UI5Element {
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   /** Owns the `inputmode="none"` swap and its cross-instance refcount. */
-  private readonly _inputModeSuppression = new NativeInputModeSuppression({
-    resolveTarget: () => this._resolveTarget(),
-  });
+  private readonly _inputModeSuppression = new NativeInputModeSuppression(() => this._resolveTarget());
 
   // ── Multi-keyboard instance isolation ──
   private static readonly _instances = new Set<KioskKeyboard>();
@@ -588,17 +586,7 @@ class KioskKeyboard extends UI5Element {
 
   // ── Auto-show (document focusin/focusout) ──
   /** Owns the focus listeners, deferred close, and cross-instance claim checks. */
-  private readonly _autoShow = new AutoShowController({
-    isDisabled: () => this.disabled,
-    isDocked: () => this.docked,
-    isAutoShow: () => this.autoShow,
-    isAutoType: () => this.autoType,
-    isConnected: () => this.isConnected,
-    isVisiblyOpen: () => this.open,
-    getKeyboardType: () => this.keyboardType,
-    getShadowRoot: () => this.shadowRoot,
-    contains: (node) => this.contains(node),
-    getClientRects: () => this.getClientRects(),
+  private readonly _autoShow = new AutoShowController(this, {
     getTargetElement: () => this._targetElement,
     getTargetSource: () => this._targetSource,
     getControlsList: () => this._controlsList,

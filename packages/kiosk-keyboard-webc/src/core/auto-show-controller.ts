@@ -8,34 +8,34 @@ type TargetSource = "autoShow" | "explicit";
 type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
 
 /**
- * The slice of the host the auto-show controller reads and acts on.
- *
- * Live state is read through accessor methods (never snapshotted) because the
- * focus handlers run long after the controller is constructed; actions delegate
- * back to the host so the cancelable events, composition reset, inputmode
- * suppression, and physical-key highlight all stay on the control.
+ * The host keyboard element. Live element/property state (visibility, the
+ * docked/autoShow/autoType flags, keyboard type, shadow root, containment) is
+ * read directly off it, with no accessor wrappers - matching the sibling
+ * `ResponsiveSizingController` host pattern.
  */
-export interface AutoShowControllerHost {
-  // ── Live state (methods so the host can satisfy them with arrows) ──
-  isDisabled(): boolean;
-  isDocked(): boolean;
-  isAutoShow(): boolean;
-  isAutoType(): boolean;
-  isConnected(): boolean;
+export type AutoShowHost = HTMLElement & {
+  readonly disabled: boolean;
+  readonly docked: boolean;
+  readonly autoShow: boolean;
+  readonly autoType: boolean;
   /** Public `open` getter; a closed docked keyboard does not block peers. */
-  isVisiblyOpen(): boolean;
-  getKeyboardType(): `${KeyboardType}`;
-  getShadowRoot(): ShadowRoot | null;
-  /** Light-DOM containment check (`host.contains`). */
-  contains(node: Node | null): boolean;
-  getClientRects(): DOMRectList;
+  readonly open: boolean;
+  readonly keyboardType: `${KeyboardType}`;
+};
+
+/**
+ * Bridge to the host's private state and behaviors that have no 1:1 element
+ * equivalent: reading the active target / controls / keyboard-type provenance,
+ * and the actions that delegate back to the control so the cancelable events,
+ * composition reset, inputmode suppression, and physical-key highlight all stay
+ * on it.
+ */
+export interface AutoShowBridge {
   getTargetElement(): HTMLInputElement | HTMLTextAreaElement | null;
   getTargetSource(): TargetSource;
   getControlsList(): string[];
   getKeyboardTypeSource(): KeyboardTypeSource;
   resolveInputFrom(el: HTMLElement): HTMLInputElement | HTMLTextAreaElement | null;
-
-  // ── Actions ──
   setKeyboardTypeInternal(value: `${KeyboardType}`): void;
   setTarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void;
   /** Resets shift and commits/drops the middleware for a fresh target context. */
@@ -71,7 +71,10 @@ export class AutoShowController {
   private readonly _onFocusIn = this._onDocumentFocusIn.bind(this);
   private readonly _onFocusOut = this._onDocumentFocusOut.bind(this);
 
-  constructor(private readonly _host: AutoShowControllerHost) {}
+  constructor(
+    private readonly _host: AutoShowHost,
+    private readonly _bridge: AutoShowBridge,
+  ) {}
 
   /** Join the cross-instance claim registry (call from the host's connect). */
   register(): void {
@@ -89,7 +92,7 @@ export class AutoShowController {
 
   /** Bind or unbind the document focus listeners to match docked + autoShow. */
   sync(): void {
-    if (this._host.isAutoShow() && this._host.isDocked()) {
+    if (this._host.autoShow && this._host.docked) {
       if (this._abort) return;
       this._abort = new AbortController();
       const { signal } = this._abort;
@@ -106,34 +109,34 @@ export class AutoShowController {
   }
 
   private _onDocumentFocusIn(e: FocusEvent): void {
-    if (this._host.isDisabled() || !this._host.isDocked() || !this._host.isAutoShow()) return;
+    if (this._host.disabled || !this._host.docked || !this._host.autoShow) return;
 
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
-    if (this._host.getShadowRoot()!.contains(target) || this._host.contains(target)) return;
+    if (this._host.shadowRoot!.contains(target) || this._host.contains(target)) return;
 
-    const inputEl = this._host.resolveInputFrom(target);
+    const inputEl = this._bridge.resolveInputFrom(target);
     if (!inputEl) return;
     if (this._isTargetOfOther(inputEl)) return;
 
-    const ids = this._host.getControlsList();
+    const ids = this._bridge.getControlsList();
     if (ids.length > 0) {
       if (!this._matchesControls(target, ids)) return;
     }
 
-    const targetChanged = this._host.getTargetElement() !== inputEl;
+    const targetChanged = this._bridge.getTargetElement() !== inputEl;
     if (targetChanged) {
       // Real switch: fresh context, so reset shift and end any composition.
-      this._host.resetTargetContext();
+      this._bridge.resetTargetContext();
     }
-    this._host.setTarget(inputEl, "autoShow");
+    this._bridge.setTarget(inputEl, "autoShow");
 
     // Detect keyboard type before open - this may trigger onInvalidation for
     // keyboardType, but the target is already set so subsequent logic is safe.
-    if (this._host.isAutoType() && this._host.getKeyboardTypeSource() !== "explicit") {
+    if (this._host.autoType && this._bridge.getKeyboardTypeSource() !== "explicit") {
       const detected = detectKeyboardType(inputEl);
-      if (detected !== this._host.getKeyboardType()) {
-        this._host.setKeyboardTypeInternal(detected);
+      if (detected !== this._host.keyboardType) {
+        this._bridge.setKeyboardTypeInternal(detected);
       }
     }
 
@@ -142,22 +145,22 @@ export class AutoShowController {
       this._deferredCloseId = null;
     }
 
-    if (!this._host.isOpen()) {
-      this._host.show();
-      this._host.syncPhysicalKeyHighlight();
+    if (!this._bridge.isOpen()) {
+      this._bridge.show();
+      this._bridge.syncPhysicalKeyHighlight();
     } else if (targetChanged) {
-      this._host.restoreInputMode();
-      this._host.suppressInputMode();
-      this._host.syncPhysicalKeyHighlight();
+      this._bridge.restoreInputMode();
+      this._bridge.suppressInputMode();
+      this._bridge.syncPhysicalKeyHighlight();
     }
 
     if (targetChanged) {
-      this._host.fireActiveControlChange(inputEl);
+      this._bridge.fireActiveControlChange(inputEl);
     }
   }
 
   private _onDocumentFocusOut(_e: FocusEvent): void {
-    if (!this._host.isAutoShow()) return;
+    if (!this._host.autoShow) return;
 
     if (this._deferredCloseId !== null) {
       cancelAnimationFrame(this._deferredCloseId);
@@ -165,18 +168,18 @@ export class AutoShowController {
 
     this._deferredCloseId = requestAnimationFrame(() => {
       this._deferredCloseId = null;
-      if (!this._host.isConnected()) return;
+      if (!this._host.isConnected) return;
       const active = document.activeElement;
 
-      if (active && (this._host.getShadowRoot()!.contains(active) || this._host.contains(active))) return;
-      if (active instanceof HTMLElement && this._host.resolveInputFrom(active)) {
-        const ids = this._host.getControlsList();
+      if (active && (this._host.shadowRoot!.contains(active) || this._host.contains(active))) return;
+      if (active instanceof HTMLElement && this._bridge.resolveInputFrom(active)) {
+        const ids = this._bridge.getControlsList();
         if (ids.length === 0 || this._matchesControls(active, ids)) return;
       }
 
-      if (this._host.isOpen()) this._host.close();
-      if (this._host.getTargetSource() === "autoShow") {
-        this._host.setTarget(null, "explicit");
+      if (this._bridge.isOpen()) this._bridge.close();
+      if (this._bridge.getTargetSource() === "autoShow") {
+        this._bridge.setTarget(null, "explicit");
       }
     });
   }
@@ -185,13 +188,13 @@ export class AutoShowController {
     for (const peer of AutoShowController._participants) {
       if (peer === this) continue;
       if (!peer._isAutoShowParticipationActive()) continue;
-      if (peer._host.getTargetElement() === inputEl) return true;
-      const ids = peer._host.getControlsList();
+      if (peer._bridge.getTargetElement() === inputEl) return true;
+      const ids = peer._bridge.getControlsList();
       if (ids.length === 1) {
         const el = document.getElementById(ids[0]!);
         if (!el) continue;
         if (el === inputEl) return true;
-        if (el instanceof HTMLElement && peer._host.resolveInputFrom(el) === inputEl) return true;
+        if (el instanceof HTMLElement && peer._bridge.resolveInputFrom(el) === inputEl) return true;
       }
     }
     return false;
@@ -203,12 +206,12 @@ export class AutoShowController {
    * from claiming inputs.
    */
   private _isAutoShowParticipationActive(): boolean {
-    if (this._host.isDisabled()) return false;
-    if (!this._host.isConnected()) return false;
+    if (this._host.disabled) return false;
+    if (!this._host.isConnected) return false;
     // A docked keyboard that is closed hides via an inner shadow-DOM class
     // (visibility:hidden + transform), but the host element still reports
     // client rects. Exclude it explicitly so it does not block other keyboards.
-    if (this._host.isDocked() && !this._host.isVisiblyOpen()) return false;
+    if (this._host.docked && !this._host.open) return false;
     return this._host.getClientRects().length > 0;
   }
 
