@@ -33,6 +33,7 @@ import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
+import { classifyKeyToken } from "./core/key-token.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
@@ -1260,7 +1261,10 @@ class KioskKeyboard extends UI5Element {
     // release click so lifting off does not delete one extra character.
     if (this._backspaceRepeat.consumeClick(value)) return;
 
-    if (value.startsWith("{layout:")) {
+    const kind = classifyKeyToken(value);
+
+    // Layout, F-key, and Shift each fire their own key-press and return early.
+    if (kind === "layout") {
       // Fire cancelable key-press first so consumers can veto a layout switch
       // the same way they can veto any other key.
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
@@ -1269,14 +1273,14 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (value.startsWith("{fkey:")) {
+    if (kind === "fkey") {
       this._handleFKeyPress(value, shifted);
       return;
     }
 
-    // Shift is handled separately: shiftKey reports the *resulting* state
-    // (what shift will become after toggle), not the pre-toggle state.
-    if (value === "{shift}") {
+    if (kind === "shift") {
+      // Shift is handled separately: shiftKey reports the *resulting* state
+      // (what shift will become after toggle), not the pre-toggle state.
       const nextShifted = !this._capsLock;
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: nextShifted });
       if (!allowed) return;
@@ -1298,17 +1302,12 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // An unrecognized `{...}`-shaped value (opens and closes with braces) is not
-    // a built-in special key and inserts nothing - see the guard below. A lone
-    // "{"/"}" only matches one end, so it stays a literal character.
-    const isUnknownToken = value.startsWith("{") && value.endsWith("}");
+    // Backspace, Enter, an unrecognized `{...}` token, and characters share one
+    // key-press + composition pass. `char` is the text that would be inserted;
+    // `undefined` for keys that insert nothing (actions and unknown tokens). A
+    // lone "{"/"}" matches only one end, so it stays a literal character.
+    const char = kind === "char" ? (shifted ? (shiftValue ?? value.toUpperCase()) : value) : undefined;
 
-    // Resolve the character that would be inserted; `undefined` for keys that
-    // insert nothing (action keys and unrecognized tokens).
-    const isAction = value === "{backspace}" || value === "{enter}";
-    const char = isAction || isUnknownToken ? undefined : shifted ? (shiftValue ?? value.toUpperCase()) : value;
-
-    // All other keys fire key-press with the current shift state
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;
 
@@ -1321,13 +1320,13 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (value === "{backspace}") {
+    if (kind === "backspace") {
       if (target) handleBackspace(target);
       this._autoReleaseShift();
       return;
     }
 
-    if (value === "{enter}") {
+    if (kind === "enter") {
       if (target) {
         if (target instanceof HTMLTextAreaElement) {
           insertText(target, "\n");
@@ -1339,12 +1338,10 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Unrecognized `{...}` token: not one of the built-in special keys above.
-    // key-press already fired (with char: undefined); do NOT insert the literal
-    // braces - that was a silent footgun (a mistyped `{bcksp}`, or a custom
-    // `{paste}` key with no handler, used to type the text "{bcksp}" into the
-    // field).
-    if (isUnknownToken) {
+    if (kind === "unknown") {
+      // key-press already fired (with char: undefined); do NOT insert the
+      // literal braces - that was a silent footgun (a mistyped `{bcksp}`, or a
+      // custom `{paste}` key with no handler, typed the text "{bcksp}").
       console.warn(
         `[kiosk-keyboard] Unrecognized key token "${value}": not a built-in special key. Ignoring (no text inserted).`,
       );

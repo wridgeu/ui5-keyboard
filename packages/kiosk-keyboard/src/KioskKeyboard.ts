@@ -43,6 +43,7 @@ import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
 import ResponsiveSizingController from "./internal/responsive-sizing-controller";
 import { getKeyLabel, getKeyAriaLabel } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
+import { classifyKeyToken } from "./internal/key-token";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -1918,87 +1919,88 @@ export default class KioskKeyboard extends Control {
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
     const shift = this._isShiftActive();
+    const kind = classifyKeyToken(keyValue);
 
-    if (keyValue === "{shift}") {
+    // Shift toggles before composition: the middleware would otherwise treat
+    // it as a composition-affecting key.
+    if (kind === "shift") {
       this._toggleShift(el);
       return;
     }
 
-    // Composition middleware must see {backspace}/{enter} before default handling.
+    // Composition middleware must see {backspace}/{enter}/chars/unknown tokens
+    // (but not layout/fkey) before default handling.
     if (this._tryCompositionMiddleware(keyValue)) return;
 
-    if (keyValue === "{backspace}") {
-      this._performBackspaceDelete();
-      return;
-    }
+    switch (kind) {
+      case "backspace":
+        this._performBackspaceDelete();
+        return;
 
-    if (keyValue === "{enter}") {
-      if (this.fireKeyPress({ key: "Enter", shiftKey: shift })) {
-        this._targetSession.handleEnter();
-      }
-      return;
-    }
+      case "enter":
+        if (this.fireKeyPress({ key: "Enter", shiftKey: shift })) {
+          this._targetSession.handleEnter();
+        }
+        return;
 
-    if (keyValue.startsWith("{layout:")) {
-      const raw = keyValue.slice("{layout:".length, -1).trim();
-      if (!raw) return;
-      // `{layout:base}` returns to the constrained default (re-engage
-      // keyboardType filtering); any other pick is user-driven and overrides
-      // the keyboardType constraint (webc parity).
-      const name = raw === "base" ? this._baseLayout : raw;
-      const source = raw === "base" ? "external" : "user";
-      this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
-      return;
-    }
-
-    if (keyValue.startsWith("{fkey:")) {
-      const fkeyName = keyValue.slice("{fkey:".length, -1);
-
-      // Fire keyPress first so consumers can prevent all downstream action
-      // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
-      if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) {
+      case "layout": {
+        const raw = keyValue.slice("{layout:".length, -1).trim();
+        if (!raw) return;
+        // `{layout:base}` returns to the constrained default (re-engage
+        // keyboardType filtering); any other pick is user-driven and overrides
+        // the keyboardType constraint (webc parity).
+        const name = raw === "base" ? this._baseLayout : raw;
+        const source = raw === "base" ? "external" : "user";
+        this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
         return;
       }
 
-      this._handleFKey(fkeyName, shift);
-      return;
-    }
-
-    // Unrecognized `{...}`-shaped value: not one of the built-in special keys
-    // above. Fire keyPress so a consumer can still observe/handle it, but do
-    // NOT insert the literal braces - that was a silent footgun (a mistyped
-    // `{bcksp}`, or a custom `{paste}` key with no handler, used to type the
-    // text "{bcksp}" into the field). A lone "{"/"}" only matches one end, so
-    // it stays a literal character.
-    if (keyValue.startsWith("{") && keyValue.endsWith("}")) {
-      if (this.fireKeyPress({ key: keyValue, shiftKey: shift })) {
-        Log.warning(
-          `Unrecognized key token "${keyValue}": not a built-in special key. Ignoring (no text inserted).`,
-          undefined,
-          "ui5.kiosk.KioskKeyboard",
-        );
+      case "fkey": {
+        const fkeyName = keyValue.slice("{fkey:".length, -1);
+        // Fire keyPress first so consumers can prevent all downstream action
+        // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
+        if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) return;
+        this._handleFKey(fkeyName, shift);
+        return;
       }
-      this._shiftState.autoRelease();
-      return;
-    }
 
-    // Regular character - resolve shift value
-    let effective = keyValue;
-    if (shift) {
-      const shiftValue = el.dataset.shiftValue;
-      if (shiftValue) {
-        effective = shiftValue;
-      } else if (keyValue.length === 1) {
-        effective = keyValue.toUpperCase();
+      case "unknown":
+        // Unrecognized `{...}`-shaped value: not one of the built-in special
+        // keys above. Fire keyPress so a consumer can still observe/handle it,
+        // but do NOT insert the literal braces - that was a silent footgun (a
+        // mistyped `{bcksp}`, or a custom `{paste}` key with no handler, typed
+        // the text "{bcksp}" into the field).
+        if (this.fireKeyPress({ key: keyValue, shiftKey: shift })) {
+          Log.warning(
+            `Unrecognized key token "${keyValue}": not a built-in special key. Ignoring (no text inserted).`,
+            undefined,
+            "ui5.kiosk.KioskKeyboard",
+          );
+        }
+        this._shiftState.autoRelease();
+        return;
+
+      case "char": {
+        // Regular character - resolve shift value
+        let effective = keyValue;
+        if (shift) {
+          const shiftValue = el.dataset.shiftValue;
+          if (shiftValue) {
+            effective = shiftValue;
+          } else if (keyValue.length === 1) {
+            effective = keyValue.toUpperCase();
+          }
+        }
+
+        if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
+          this._targetSession.insertText(effective);
+        }
+
+        // Auto-release shift (not caps lock)
+        this._shiftState.autoRelease();
+        return;
       }
     }
-
-    if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
-      this._targetSession.insertText(effective);
-    }
-
-    // Auto-release shift (not caps lock)
-    this._shiftState.autoRelease();
   }
 
   /**
