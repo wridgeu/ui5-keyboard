@@ -20,13 +20,7 @@ export class AnnouncementQueue {
   /** Minimum gap between live-region writes so AT clients can pick each one up. */
   private static readonly _INTERVAL_MS = 120;
 
-  /**
-   * Pending live-region announcements. A queue (rather than a single slot)
-   * is necessary because two state changes in the same render cycle (e.g.
-   * open + shift toggle) must each be announced; assistive tech can elide
-   * an announcement if a single live region is rewritten too quickly, so
-   * the queue is also drained one entry per microtask delay below.
-   */
+  /** Pending live-region announcements (see class doc for why a queue). */
   private readonly _queue: string[] = [];
   private _flushPending = false;
   private _timerId: number | null = null;
