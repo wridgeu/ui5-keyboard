@@ -74,6 +74,17 @@ const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(Keyboard
 const VALID_FKEY_MODES: ReadonlySet<string> = new Set(Object.values(FKeyMode));
 const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(Object.values(MobileKeyboard));
 
+/**
+ * Warns about an out-of-range enum property value. Returns `true` when the
+ * value is invalid (and a warning was emitted) so the caller can coerce it to
+ * its default; `false` when the value is valid.
+ */
+function isInvalidEnumValue(propName: string, value: string, validValues: ReadonlySet<string>): boolean {
+  if (validValues.has(value)) return false;
+  console.warn(`[kiosk-keyboard] Invalid ${propName} "${value}". Valid values: ${[...validValues].join(", ")}.`);
+  return true;
+}
+
 // ── Native-dispatchable key allowlist ──
 const NATIVE_DISPATCHABLE_KEYS = new Set([
   "F1",
@@ -787,10 +798,7 @@ class KioskKeyboard extends UI5Element {
       this._applyLayout(this.layout, "external");
     }
     if (name === "keyboardType") {
-      if (!VALID_KEYBOARD_TYPES.has(this.keyboardType)) {
-        console.warn(
-          `[kiosk-keyboard] Invalid keyboardType "${this.keyboardType}". Valid values: ${[...VALID_KEYBOARD_TYPES].join(", ")}.`,
-        );
+      if (isInvalidEnumValue("keyboardType", this.keyboardType, VALID_KEYBOARD_TYPES)) {
         // Use _setKeyboardTypeInternal so the re-entrant onInvalidation
         // sees an "auto:" source and does not lock out future auto-detection.
         this._setKeyboardTypeInternal("Full");
@@ -818,17 +826,14 @@ class KioskKeyboard extends UI5Element {
         autoDetected,
       });
     }
-    if (name === "fKeyMode" && !VALID_FKEY_MODES.has(this.fKeyMode)) {
-      console.warn(
-        `[kiosk-keyboard] Invalid fKeyMode "${this.fKeyMode}". Valid values: ${[...VALID_FKEY_MODES].join(", ")}.`,
-      );
+    if (name === "fKeyMode" && isInvalidEnumValue("fKeyMode", this.fKeyMode, VALID_FKEY_MODES)) {
       this.fKeyMode = "Virtual";
       return;
     }
-    if (name === "mobileKeyboard" && !VALID_MOBILE_KEYBOARDS.has(this.mobileKeyboard)) {
-      console.warn(
-        `[kiosk-keyboard] Invalid mobileKeyboard "${this.mobileKeyboard}". Valid values: ${[...VALID_MOBILE_KEYBOARDS].join(", ")}.`,
-      );
+    if (
+      name === "mobileKeyboard" &&
+      isInvalidEnumValue("mobileKeyboard", this.mobileKeyboard, VALID_MOBILE_KEYBOARDS)
+    ) {
       this.mobileKeyboard = "Auto";
       return;
     }
