@@ -97,10 +97,9 @@ const EXPECTED_PAIR_COUNT = 21;
 function stripCommentsAndCollapseWhitespace(src) {
   let out = "";
   let i = 0;
-  // Each quote type ('...', "...", `...`) is a verbatim string span. Template
-  // `${}` interpolations are not parsed as code; their contents pass through
-  // verbatim. That stays faithful for comparison (both twins parse identically)
-  // and no checked module nests code in a template literal.
+  // All three quote types ('...', "...", `...`) are verbatim string spans;
+  // template `${}` interpolations are not parsed as code (no checked module
+  // nests code in a template, and verbatim contents still compare faithfully).
   /** @type {Array<"code" | "single" | "double" | "template">} */
   const stack = ["code"];
   let pendingSpace = false;
@@ -117,8 +116,8 @@ function stripCommentsAndCollapseWhitespace(src) {
 
   while (i < src.length) {
     const mode = stack[stack.length - 1];
-    // The base "code" frame is never popped, so the stack is never empty;
-    // the guard only narrows the type for noUncheckedIndexedAccess.
+    // The base "code" entry is never popped, so the stack is never empty;
+    // the `if (!mode)` guard only narrows the type for noUncheckedIndexedAccess.
     if (!mode) break;
     const c = src[i];
     const next = src[i + 1];
