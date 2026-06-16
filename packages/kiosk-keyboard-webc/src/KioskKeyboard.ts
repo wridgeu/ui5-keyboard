@@ -433,7 +433,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * Comma-separated list of target input element IDs. The keyboard targets
    * these elements via focus delegation. When a single ID is provided,
-   * it acts as the direct target (equivalent to the old `for` attribute).
+   * it acts as the direct target.
    *
    * @default ""
    * @public
