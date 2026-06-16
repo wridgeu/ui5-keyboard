@@ -8,8 +8,8 @@ const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 /**
  * Resolves registration conflicts (same normalized hotkey, same scope, same
- * target) according to the requested {@link ConflictBehavior}. Extracted from
- * HotkeyManager; operates on the shared registration index and registration map.
+ * target) according to the requested {@link ConflictBehavior}. Operates on the
+ * shared registration index and registration map.
  */
 export default class ConflictResolver {
   constructor(

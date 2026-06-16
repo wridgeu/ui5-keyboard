@@ -32,8 +32,7 @@ interface PhysicalKeyHighlightHost {
  * key on keydown/keyup and syncs shift/caps from the hardware keyboard.
  *
  * Owns the delegate object and the current target id so the control's
- * `_setActiveTarget`/`exit` only `attach`/`detach`, keeping the highlight
- * lifecycle out of the god-class.
+ * `_setActiveTarget`/`exit` only `attach`/`detach`.
  */
 export default class PhysicalKeyHighlight {
   private readonly _delegation: { onkeydown: (event: Event) => void; onkeyup: (event: Event) => void };

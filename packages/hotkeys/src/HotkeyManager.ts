@@ -123,10 +123,8 @@ export default class HotkeyManager extends BaseObject {
   // Lazily created SequenceManager (created on first sequence registration via register())
   private _sequenceManager: SequenceManager | null = null;
 
-  // Focus-tracking logic - extracted to its own class for maintainability.
   private _focusFallback: FocusFallbackTracker;
 
-  // Conflict resolution and the keydown matching engine (extracted from this class).
   private _conflictResolver: ConflictResolver;
   private _matcher: HotkeyMatcher;
 

@@ -13,10 +13,10 @@ import type { HotkeyRegistrationInfo } from "../types";
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 /**
- * The keydown matching engine extracted from HotkeyManager. Finds the single
- * winning registration for an event (target-scoped innermost-first, then
- * untargeted), records skip reasons for the unhandled-callback, and leaves
- * execution (preventDefault/stopPropagation/callback) to the manager.
+ * The keydown matching engine. Finds the single winning registration for an
+ * event (target-scoped innermost-first, then untargeted), records skip reasons
+ * for the unhandled-callback, and leaves execution
+ * (preventDefault/stopPropagation/callback) to the manager.
  *
  * Reads the shared registration index and map; resolves the event path through
  * the focus-fallback tracker; maps registrations to public info via the
