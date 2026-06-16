@@ -97,10 +97,12 @@ const EXPECTED_PAIR_COUNT = 21;
 function stripCommentsAndCollapseWhitespace(src) {
   let out = "";
   let i = 0;
-  // Mode stack handles template-literal `${}` nesting: "code" frames pushed
-  // from a template pop back to "template" on their closing brace.
-  /** @type {Array<{ mode: "code" | "single" | "double" | "template", braceDepth: number, fromTemplate: boolean }>} */
-  const stack = [{ mode: "code", braceDepth: 0, fromTemplate: false }];
+  // Each quote type ('...', "...", `...`) is a verbatim string span. Template
+  // `${}` interpolations are not parsed as code; their contents pass through
+  // verbatim. That stays faithful for comparison (both twins parse identically)
+  // and no checked module nests code in a template literal.
+  /** @type {Array<"code" | "single" | "double" | "template">} */
+  const stack = ["code"];
   let pendingSpace = false;
 
   const emit = (chunk) => {
@@ -114,14 +116,14 @@ function stripCommentsAndCollapseWhitespace(src) {
   };
 
   while (i < src.length) {
-    const frame = stack[stack.length - 1];
-    // The base "code" frame (fromTemplate:false) is never popped, so the stack
-    // is never empty; the guard only narrows the type for noUncheckedIndexedAccess.
-    if (!frame) break;
+    const mode = stack[stack.length - 1];
+    // The base "code" frame is never popped, so the stack is never empty;
+    // the guard only narrows the type for noUncheckedIndexedAccess.
+    if (!mode) break;
     const c = src[i];
     const next = src[i + 1];
 
-    if (frame.mode === "code") {
+    if (mode === "code") {
       if (c === "/" && next === "/") {
         // Line comment: skip to (not past) the newline.
         while (i < src.length && src[i] !== "\n") i++;
@@ -137,30 +139,8 @@ function stripCommentsAndCollapseWhitespace(src) {
         i += 2;
         continue;
       }
-      if (c === "'" || c === '"') {
-        stack.push({ mode: c === "'" ? "single" : "double", braceDepth: 0, fromTemplate: false });
-        emit(c);
-        i++;
-        continue;
-      }
-      if (c === "`") {
-        stack.push({ mode: "template", braceDepth: 0, fromTemplate: false });
-        emit(c);
-        i++;
-        continue;
-      }
-      if (c === "{") {
-        frame.braceDepth++;
-        emit(c);
-        i++;
-        continue;
-      }
-      if (c === "}") {
-        if (frame.braceDepth === 0 && frame.fromTemplate) {
-          stack.pop(); // back into the surrounding template literal
-        } else {
-          frame.braceDepth--;
-        }
+      if (c === "'" || c === '"' || c === "`") {
+        stack.push(c === "'" ? "single" : c === '"' ? "double" : "template");
         emit(c);
         i++;
         continue;
@@ -187,17 +167,8 @@ function stripCommentsAndCollapseWhitespace(src) {
       i += 2;
       continue;
     }
-    if (frame.mode === "single" && c === "'") {
+    if ((mode === "single" && c === "'") || (mode === "double" && c === '"') || (mode === "template" && c === "`")) {
       stack.pop();
-    } else if (frame.mode === "double" && c === '"') {
-      stack.pop();
-    } else if (frame.mode === "template" && c === "`") {
-      stack.pop();
-    } else if (frame.mode === "template" && c === "$" && next === "{") {
-      stack.push({ mode: "code", braceDepth: 0, fromTemplate: true });
-      emit("${");
-      i += 2;
-      continue;
     }
     emit(c);
     i++;
