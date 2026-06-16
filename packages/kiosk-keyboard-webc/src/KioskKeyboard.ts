@@ -606,7 +606,6 @@ class KioskKeyboard extends UI5Element {
     },
     show: () => this.show(),
     close: () => this.close(),
-    isOpen: () => this._openValue,
     restoreInputMode: () => this._inputModeSuppression.restore(),
     suppressInputMode: () => this._inputModeSuppression.suppress(),
     syncPhysicalKeyHighlight: () => this._physicalKeyHighlight.sync(),

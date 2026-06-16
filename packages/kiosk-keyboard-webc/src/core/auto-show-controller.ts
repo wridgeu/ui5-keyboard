@@ -42,7 +42,6 @@ export interface AutoShowBridge {
   resetTargetContext(): void;
   show(): void;
   close(): void;
-  isOpen(): boolean;
   restoreInputMode(): void;
   suppressInputMode(): void;
   syncPhysicalKeyHighlight(): void;
@@ -145,7 +144,7 @@ export class AutoShowController {
       this._deferredCloseId = null;
     }
 
-    if (!this._bridge.isOpen()) {
+    if (!this._host.open) {
       this._bridge.show();
       this._bridge.syncPhysicalKeyHighlight();
     } else if (targetChanged) {
@@ -177,7 +176,7 @@ export class AutoShowController {
         if (ids.length === 0 || this._matchesControls(active, ids)) return;
       }
 
-      if (this._bridge.isOpen()) this._bridge.close();
+      if (this._host.open) this._bridge.close();
       if (this._bridge.getTargetSource() === "autoShow") {
         this._bridge.setTarget(null, "explicit");
       }
