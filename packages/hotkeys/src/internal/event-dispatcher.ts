@@ -339,7 +339,7 @@ export default class EventDispatcher {
   }
 
   // ──────────────────────────────────────────────
-  // Private: Pre-filter (moved from HotkeyManager)
+  // Private: Pre-filter
   // ──────────────────────────────────────────────
 
   /**
