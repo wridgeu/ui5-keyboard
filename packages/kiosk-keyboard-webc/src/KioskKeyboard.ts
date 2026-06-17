@@ -1336,12 +1336,20 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Regular character key - dispatches "input" event (not "change", which
-    // fires on blur, matching native keyboard behavior).
-    if (target) {
-      insertText(target, char!);
+    if (kind === "char") {
+      // Regular character key - dispatches "input" event (not "change", which
+      // fires on blur, matching native keyboard behavior).
+      if (target) {
+        insertText(target, char!);
+      }
+      this._autoReleaseShift();
+      return;
     }
-    this._autoReleaseShift();
+
+    // Exhaustiveness: every KeyTokenKind is handled above. A new kind added to
+    // classifyKeyToken fails to compile here.
+    const _exhaustive: never = kind;
+    return _exhaustive;
   }
 
   /**

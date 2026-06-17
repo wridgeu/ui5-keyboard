@@ -66,7 +66,7 @@ export default class HotkeyMatcher {
           popupOpen,
           registrations,
           skipInfo,
-          toRegistrationInfo: (reg) => this._toRegistrationInfo(reg),
+          toRegistrationInfo: this._toRegistrationInfo,
           logComponent: LOG_COMPONENT,
         });
 
@@ -97,7 +97,7 @@ export default class HotkeyMatcher {
           if (resolved && skipInfo) {
             // Target resolved but not in path
             if (matchesKeyboardEvent(event, reg.parsedHotkey)) {
-              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, (r) => this._toRegistrationInfo(r));
+              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
             }
           }
           continue;
@@ -109,7 +109,7 @@ export default class HotkeyMatcher {
           popupOpen,
           registrations: [reg],
           skipInfo,
-          toRegistrationInfo: (r) => this._toRegistrationInfo(r),
+          toRegistrationInfo: this._toRegistrationInfo,
           logComponent: LOG_COMPONENT,
         });
         if (matched) return matched;
@@ -130,7 +130,7 @@ export default class HotkeyMatcher {
           for (const id of ids) {
             const reg = this._registrations.get(id);
             if (reg && matchesKeyboardEvent(event, reg.parsedHotkey)) {
-              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, (r) => this._toRegistrationInfo(r));
+              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
             }
           }
         }
@@ -154,7 +154,7 @@ export default class HotkeyMatcher {
       event,
       isInput,
       popupOpen,
-      toRegistrationInfo: (reg: HotkeyRegistration) => this._toRegistrationInfo(reg),
+      toRegistrationInfo: this._toRegistrationInfo,
       logComponent: LOG_COMPONENT,
     };
 

@@ -1603,6 +1603,12 @@ export default class KioskKeyboard extends Control {
     };
   }
 
+  /** Updates the ARIA live region text for screen reader announcements. */
+  private _announceLiveRegion(text: string): void {
+    const liveRegion = this.getDomRef("liveState");
+    if (liveRegion) liveRegion.textContent = text;
+  }
+
   // ── Internal renderer helpers ──
 
   /**
@@ -2000,6 +2006,13 @@ export default class KioskKeyboard extends Control {
         this._shiftState.autoRelease();
         return;
       }
+
+      default: {
+        // Exhaustiveness: every KeyTokenKind is handled above ({shift} returns
+        // earlier). A new kind added to classifyKeyToken fails to compile here.
+        const _exhaustive: never = kind;
+        return _exhaustive;
+      }
     }
   }
 
@@ -2080,15 +2093,7 @@ export default class KioskKeyboard extends Control {
     return Element.getElementById(id) ?? null;
   }
 
-  // ── Private: physical keyboard highlighting ──
-
-  /** Updates the ARIA live region text for screen reader announcements. */
-  private _announceLiveRegion(text: string): void {
-    const liveRegion = this.getDomRef("liveState");
-    if (liveRegion) liveRegion.textContent = text;
-  }
-
-  // ── Private: mobile detection ──
+  // ── Private: F-key dispatch ──
 
   /**
    * Dispatches an F-key according to `fKeyMode` (mirrors the web component's
