@@ -53,3 +53,11 @@ for (const pkg of packages) {
   assertFilesPresent(pkg.name, packMetadata.files, pkg.requiredFiles);
   process.stdout.write(`Verified dry-run package contents for ${pkg.name}.\n`);
 }
+
+// The demo app consumes the freshly built web component via the
+// ui5-tooling-modules <kiosk-keyboard> path; building it here exercises that
+// consumption path at build time (runtime is covered by the e2e suites). The
+// webc bundle was just rebuilt and packed in the loop above, so the demo
+// builds against current output.
+runNpm(["run", "build", "-w", "packages/demo-app"], repoRoot);
+process.stdout.write("Verified: demo app builds against the web component bundle.\n");

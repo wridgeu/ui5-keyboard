@@ -77,18 +77,6 @@ import { runNpm } from "./run-npm.mjs";
 runNpm(["run", "build"], "packages/hotkeys");
 ```
 
-## `check-demo-webc-bundle.mjs`
-
-Build-time smoke check for the web component build outputs.
-
-- Rebuilds `packages/kiosk-keyboard-webc` and asserts the standalone bundle (`dist/kiosk-keyboard.bundle.js`) exists
-- Rebuilds `packages/demo-app`, exercising the `ui5-tooling-modules` `<kiosk-keyboard>` consumption path at build time
-
-This is a build smoke test, not a runtime check: it confirms both packages build, but
-does not load the demo. The runtime consumption is covered by the e2e suites.
-
-Run via `npm run test:demo:webc-bundle`.
-
 ## `check-package-smoke.mjs`
 
 Packaging smoke check for the publishable packages.
@@ -96,13 +84,14 @@ Packaging smoke check for the publishable packages.
 - Rebuilds `packages/hotkeys`, `packages/kiosk-keyboard`, and `packages/kiosk-keyboard-webc`
 - Runs `npm pack --dry-run --json` in each package
 - Verifies contract-critical files are actually present in the tarball (for example UI5 build manifests and the WebC bundle outputs)
+- Builds `packages/demo-app` against the freshly built web component, exercising the `ui5-tooling-modules` `<kiosk-keyboard>` consumption path at build time (runtime consumption is covered by the e2e suites)
 
 Run via `npm run test:packages:smoke`.
 
 ### Native alternatives considered (2026-06-11)
 
 - `check-package-smoke.mjs`: [publint](https://publint.dev/) validates `package.json` (`exports`, `files`, module formats) against the published file list, but does not rebuild the packages or assert that specific build artifacts (UI5 `build-manifest.json`, the WebC bundle) land in the tarball, which is what this script gates. [@arethetypeswrong/cli](https://github.com/arethetypeswrong/arethetypeswrong.github.io) checks type resolution only. Neither replaces the script; kept.
-- `check-demo-webc-bundle.mjs`: a cross-package build smoke test (webc build output consumed by the demo-app's `ui5-tooling-modules` path). No maintained generic tool covers this; kept.
+- Demo WebC consumption: building `packages/demo-app` against the webc output exercises the `ui5-tooling-modules` path. No maintained generic tool covers this, so it is folded into this script (it was previously a separate `check-demo-webc-bundle.mjs`).
 
 ## `check-twin-drift.mjs`
 
@@ -151,10 +140,9 @@ Copies the monorepo's root `LICENSE` into the current working directory (the pac
 
 ### `run-npm.mjs`
 
-| Consumer                     | Integration                           |
-| ---------------------------- | ------------------------------------- |
-| `check-demo-webc-bundle.mjs` | Runs npm build commands synchronously |
-| `check-package-smoke.mjs`    | Runs npm pack commands synchronously  |
+| Consumer                  | Integration                                |
+| ------------------------- | ------------------------------------------ |
+| `check-package-smoke.mjs` | Runs npm build/pack commands synchronously |
 
 ## `tsconfig.json`
 
