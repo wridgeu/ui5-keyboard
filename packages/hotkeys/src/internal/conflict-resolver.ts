@@ -14,7 +14,7 @@ const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 export default class ConflictResolver {
   constructor(
     private readonly _index: RegistrationIndex,
-    private readonly _registrations: Map<string, HotkeyRegistration>,
+    private readonly _remove: (reg: HotkeyRegistration) => void,
   ) {}
 
   /**
@@ -58,15 +58,13 @@ export default class ConflictResolver {
       // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
       for (const id of ids) {
-        const reg = this._registrations.get(id);
+        const reg = this._index.getRegistration(id);
         if (reg && isConflicting(reg)) {
           conflicts.push(reg);
         }
       }
       for (const reg of conflicts) {
-        this._index.deindex(reg);
-        reg.active = false;
-        this._registrations.delete(reg.id);
+        this._remove(reg);
         Log.debug(
           `Replaced existing hotkey "${normalizedHotkey}" (id: ${reg.id}) in scope "${scope}"`,
           undefined,
@@ -79,7 +77,7 @@ export default class ConflictResolver {
     // For "warn" and "error", first match is sufficient
     let conflicting: HotkeyRegistration | null = null;
     for (const id of ids) {
-      const reg = this._registrations.get(id);
+      const reg = this._index.getRegistration(id);
       if (reg && isConflicting(reg)) {
         conflicting = reg;
         break;

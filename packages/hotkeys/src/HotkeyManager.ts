@@ -146,8 +146,8 @@ export default class HotkeyManager extends BaseObject {
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
     this._focusFallback = new FocusFallbackTracker();
-    this._conflictResolver = new ConflictResolver(this._registrationIndex, this._registrations);
-    this._matcher = new HotkeyMatcher(this._registrationIndex, this._focusFallback, this._registrations, (reg) =>
+    this._conflictResolver = new ConflictResolver(this._registrationIndex, (reg) => this._removeRegistration(reg));
+    this._matcher = new HotkeyMatcher(this._registrationIndex, this._focusFallback, (reg) =>
       this._toRegistrationInfo(reg),
     );
 
@@ -161,6 +161,21 @@ export default class HotkeyManager extends BaseObject {
     if (this._destroyed) {
       throw new Error(`Cannot call ${method}() on a destroyed HotkeyManager`);
     }
+  }
+
+  /**
+   * Canonical registration removal: mark inactive, then drop from the scope
+   * index and the id map. Returns `false` (a no-op) when the registration is
+   * already inactive. The single removal path shared by `unregister()` and the
+   * conflict resolver's "replace" policy, so the multi-store update cannot
+   * desync.
+   */
+  private _removeRegistration(registration: HotkeyRegistration): boolean {
+    if (!registration.active) return false;
+    registration.active = false;
+    this._registrationIndex.deindex(registration);
+    this._registrations.delete(registration.id);
+    return true;
   }
 
   // ──────────────────────────────────────────────
@@ -238,13 +253,9 @@ export default class HotkeyManager extends BaseObject {
         return null;
       },
       unregister: () => {
-        if (!registration.active) return;
-        registration.active = false;
-
-        this._registrationIndex.deindex(registration);
-
-        this._registrations.delete(id);
-        Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
+        if (this._removeRegistration(registration)) {
+          Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
+        }
       },
       setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
         if (!registration.active) {

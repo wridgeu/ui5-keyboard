@@ -26,7 +26,6 @@ export default class HotkeyMatcher {
   constructor(
     private readonly _index: RegistrationIndex,
     private readonly _focusFallback: FocusFallbackTracker,
-    private readonly _registrations: Map<string, HotkeyRegistration>,
     private readonly _toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo,
   ) {}
 
@@ -82,7 +81,7 @@ export default class HotkeyMatcher {
       if (!bucket || bucket.callbackTargetIds.size === 0) continue;
 
       for (const id of bucket.callbackTargetIds) {
-        const reg = this._registrations.get(id);
+        const reg = this._index.getRegistration(id);
         if (!reg) continue;
 
         let resolved: Element | null;
@@ -128,7 +127,7 @@ export default class HotkeyMatcher {
           if (targetNode instanceof Element && !targetNode.isConnected) continue; // Skip detached DOM refs
 
           for (const id of ids) {
-            const reg = this._registrations.get(id);
+            const reg = this._index.getRegistration(id);
             if (reg && matchesKeyboardEvent(event, reg.parsedHotkey)) {
               recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
             }

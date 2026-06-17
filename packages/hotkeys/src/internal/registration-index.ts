@@ -152,12 +152,19 @@ export default class RegistrationIndex {
   }
 
   /**
+   * Look up a single registration by its id.
+   */
+  getRegistration(id: string): HotkeyRegistration | undefined {
+    return this._lookup(id);
+  }
+
+  /**
    * Look up registrations by their IDs.
    */
   getRegistrationsFromIds(ids: Set<string>): ReadonlyArray<HotkeyRegistration> {
     const registrations: HotkeyRegistration[] = [];
     for (const id of ids) {
-      const registration = this._lookup(id);
+      const registration = this.getRegistration(id);
       if (registration) registrations.push(registration);
     }
     return registrations;
