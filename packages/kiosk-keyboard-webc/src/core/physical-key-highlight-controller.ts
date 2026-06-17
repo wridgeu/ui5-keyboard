@@ -66,13 +66,12 @@ export class PhysicalKeyHighlightController {
   }
 
   private _highlightKey(physicalKey: string, pressed: boolean): void {
-    const shadow = this._host.getShadowRoot()!;
     const dataKey = this._physicalKeyToDataKey(physicalKey);
 
     // Immediate DOM manipulation for instant visual feedback
     if (pressed) {
       const selector = `${KIOSK_KEYBOARD_DOM.selectors.keyByValue(dataKey)}, ${KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(physicalKey)}`;
-      const el = shadow.querySelector<HTMLElement>(selector);
+      const el = this._host.getShadowRoot()?.querySelector<HTMLElement>(selector);
       if (el) el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyHighlight);
     } else {
       this.clearHighlight();
@@ -84,8 +83,8 @@ export class PhysicalKeyHighlightController {
 
   clearHighlight(): void {
     this._host
-      .getShadowRoot()!
-      .querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`)
+      .getShadowRoot()
+      ?.querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`)
       .forEach((el) => el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight));
     this._host.setHighlightedKey(null);
   }

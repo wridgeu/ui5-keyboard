@@ -112,7 +112,7 @@ export class AutoShowController {
 
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
-    if (this._host.shadowRoot!.contains(target) || this._host.contains(target)) return;
+    if (this._host.shadowRoot?.contains(target) || this._host.contains(target)) return;
 
     const inputEl = this._bridge.resolveInputFrom(target);
     if (!inputEl) return;
@@ -170,7 +170,7 @@ export class AutoShowController {
       if (!this._host.isConnected) return;
       const active = document.activeElement;
 
-      if (active && (this._host.shadowRoot!.contains(active) || this._host.contains(active))) return;
+      if (active && (this._host.shadowRoot?.contains(active) || this._host.contains(active))) return;
       if (active instanceof HTMLElement && this._bridge.resolveInputFrom(active)) {
         const ids = this._bridge.getControlsList();
         if (ids.length === 0 || this._matchesControls(active, ids)) return;

@@ -1697,6 +1697,58 @@ QUnit.test("Target element: setOptions swaps target", (assert) => {
   assert.ok(called, "Hotkey fires on new target after setOptions");
 });
 
+QUnit.test("Target element: id mutation + target swap does not orphan the secondary index", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  // A second targeted registration keeps the scope bucket alive after the swap
+  // below: deindexing the last target tears the bucket down (and would wipe any
+  // orphan with it), so the bucket must survive for an orphaned entry to be
+  // observable at all.
+  const keeper = document.createElement("div");
+  keeper.tabIndex = 0;
+  fixture.appendChild(keeper);
+  manager.register("F9", () => {}, { target: keeper });
+
+  // Registered while the element's id is "shared".
+  const original = document.createElement("div");
+  original.id = "shared";
+  original.tabIndex = 0;
+  fixture.appendChild(original);
+
+  const swapTarget = document.createElement("div");
+  swapTarget.tabIndex = 0;
+  fixture.appendChild(swapTarget);
+
+  const handle = manager.register(
+    "F8",
+    () => {
+      called = true;
+    },
+    { target: original },
+  );
+
+  // Consumer mutates the element id, then swaps the hotkey to another element.
+  // Deindex must drop the secondary-index entry keyed under the *original* id
+  // ("shared"), not the element's mutated current id.
+  original.id = "changed";
+  handle.setOptions({ target: swapTarget });
+
+  // A fresh element later reuses the original id. The swapped-away hotkey must
+  // NOT match events on it - it would, if the "shared" entry were orphaned.
+  const reusedId = document.createElement("div");
+  reusedId.id = "shared";
+  reusedId.tabIndex = 0;
+  fixture.appendChild(reusedId);
+
+  reusedId.dispatchEvent(new KeyboardEvent("keydown", { key: "F8", bubbles: true, cancelable: true }));
+  assert.notOk(called, "Hotkey does not fire on a new element reusing the old id (no orphaned secondary-index entry)");
+
+  // Sanity: it still fires on the actual swapped target.
+  swapTarget.dispatchEvent(new KeyboardEvent("keydown", { key: "F8", bubbles: true, cancelable: true }));
+  assert.ok(called, "Hotkey fires on the swapped target");
+});
+
 QUnit.test("Target element: setOptions target swap triggers conflict detection (error)", (assert) => {
   const manager = createHotkeyManager();
 
