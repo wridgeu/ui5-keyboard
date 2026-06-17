@@ -8,19 +8,11 @@ export interface ScopeRegistrationBucket {
   targets: Map<EventTarget, Set<string>>;
   /**
    * Secondary index: element id → registration ids. Enables O(1) fallback
-   * when DOM nodes are replaced during rerendering. The id key each
-   * registration was indexed under is recorded in `targetIdKeyByRegId`, so
-   * deindex removes the original entry even if the element's `id` is mutated
-   * after registration.
+   * when DOM nodes are replaced during rerendering. Deindex locates a
+   * registration by value (it appears under at most one id key), so a
+   * post-registration `id` mutation cannot orphan its entry.
    */
   targetIdIndex: Map<string, Set<string>>;
-  /**
-   * Reverse map (registration id → the element id it was indexed under) that
-   * keeps the secondary index symmetric: deindex always removes the entry
-   * under the id used at index time, never the element's (possibly mutated)
-   * current id.
-   */
-  targetIdKeyByRegId: Map<string, string>;
   /** Registrations with callback-based targets, resolved lazily at dispatch time. */
   callbackTargetIds: Set<string>;
 }
@@ -79,9 +71,6 @@ export default class RegistrationIndex {
           bucket.targetIdIndex.set(opts.target.id, idxIds);
         }
         idxIds.add(registration.id);
-        // Record the id key used, so deindex removes this exact entry even if
-        // the element's id is later mutated.
-        bucket.targetIdKeyByRegId.set(registration.id, opts.target.id);
       }
       return;
     }
@@ -110,18 +99,15 @@ export default class RegistrationIndex {
         }
       }
 
-      // Remove from the secondary index using the id key recorded at index
-      // time, so a post-registration id mutation cannot orphan the entry.
-      const indexedKey = bucket.targetIdKeyByRegId.get(registration.id);
-      if (indexedKey !== undefined) {
-        const idxIds = bucket.targetIdIndex.get(indexedKey);
-        if (idxIds) {
-          idxIds.delete(registration.id);
-          if (idxIds.size === 0) {
-            bucket.targetIdIndex.delete(indexedKey);
-          }
+      // Remove from the secondary index by locating the registration by value:
+      // the element's id may have changed since index() recorded it, and a
+      // registration appears under at most one id key. deindex is not a hot
+      // path, so the small scan beats maintaining a reverse map.
+      for (const [idKey, idxIds] of bucket.targetIdIndex) {
+        if (idxIds.delete(registration.id)) {
+          if (idxIds.size === 0) bucket.targetIdIndex.delete(idKey);
+          break;
         }
-        bucket.targetIdKeyByRegId.delete(registration.id);
       }
     } else {
       bucket.untargetedIds.delete(registration.id);
@@ -193,7 +179,6 @@ export default class RegistrationIndex {
         untargetedIds: new Set<string>(),
         targets: new Map<EventTarget, Set<string>>(),
         targetIdIndex: new Map<string, Set<string>>(),
-        targetIdKeyByRegId: new Map<string, string>(),
         callbackTargetIds: new Set<string>(),
       };
       this._byScope.set(scope, bucket);
