@@ -65,3 +65,27 @@ empirically against the updated script:
 
 The four originally-known drifts (three space-label twins + `special.ts`) are
 now all reconciled, so the baseline run is green ("All twin pairs are in sync").
+
+## Re-validation after the comment-stripper simplified (2026-06-16, follow-up)
+
+`key-token` was added to `CORE_MODULES`, so the manifest is back to 21 pairs
+(16 layouts + 5 core modules). Separately, the comment-stripper lexer was
+simplified: the template-literal `${}` mode-stack (`braceDepth` / `fromTemplate`)
+was dropped because no checked module nests code in a template literal, so
+backtick is now just a third verbatim string delimiter alongside `'` and `"`.
+Normalized output is byte-identical for all 21 pairs, so the guard's behavior on
+real inputs is unchanged. Because this touched the comment-stripper (the part
+H2/H4/H4b exercise), those hypotheses plus H6 were re-confirmed empirically:
+
+- **H2 re-confirmed.** `return "layout"` -> `return "LAYOUT2"` in kiosk
+  `internal/key-token.ts` only -> exit 1, diff names the changed line; clean
+  (exit 0) after revert.
+- **H4 re-confirmed.** Appended `... = "see // not a comment" + "1"` to kiosk
+  `internal/key-token.ts` and the same line with `+ "2"` to the webc twin ->
+  exit 1, diff shows both full lines including the code after the `//`. The
+  stripper is still string-aware after dropping the mode-stack.
+- **H4b re-confirmed (control).** The same probe line byte-identical in both
+  twins -> green for the `key-token.ts` pair, no spurious red, no parser desync.
+- **H6 re-confirmed.** Each red exited 1; the synced tree exits 0.
+
+All reverts left `git status` clean.

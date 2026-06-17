@@ -3,16 +3,15 @@ import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
-import ResizeHandler from "sap/ui/core/ResizeHandler";
 import { SECONDARY_LAYOUTS } from "./internal/types";
-import type { LayoutDefinition, KeyDefinition, CompositionMiddleware } from "./types";
+import type { LayoutDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
-import { resolveWithCustomResolver, type TargetResolverFn } from "./internal/dom";
+import { resolveWithCustomResolver, isParticipating, type TargetResolverFn } from "./internal/dom";
 import { KeyboardType, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
@@ -41,29 +40,16 @@ import KeyGridNavigation from "./internal/key-grid-navigation";
 import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
 import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
+import ResponsiveSizingController from "./internal/responsive-sizing-controller";
+import { getKeyLabel, getKeyAriaLabel } from "./internal/key-labels";
+import PhysicalKeyHighlight from "./internal/physical-key-highlight";
+import { classifyKeyToken } from "./internal/key-token";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
 type InputFocusDelegation = {
   onfocusin: () => void;
 };
-
-type KeyHighlightDelegation = {
-  onkeydown: (event: Event) => void;
-  onkeyup: (event: Event) => void;
-};
-
-/**
- * Resolves a CSS custom property holding a rem-based threshold to pixels.
- * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem * remPx`
- * when the property is unset or unparseable.
- */
-function resolveRemThreshold(styles: CSSStyleDeclaration, prop: string, fallbackRem: number, remPx: number): number {
-  const raw = styles.getPropertyValue(prop).trim();
-  if (!raw) return fallbackRem * remPx;
-  const value = Number.parseFloat(raw);
-  return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
-}
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
@@ -109,8 +95,7 @@ export default class KioskKeyboard extends Control {
   private _resolvedControlIds!: Set<string>;
 
   private _delegatedInstances!: Map<string, Control>;
-  private _keyHighlightDelegation!: KeyHighlightDelegation;
-  private _highlightTargetId!: string | null;
+  private _physicalKeyHighlight!: PhysicalKeyHighlight;
   private _pressedKeyEl!: HTMLElement | null;
   /** Owns press-and-hold continuous delete on the Backspace key. */
   private _backspaceRepeat!: BackspaceRepeatBehavior;
@@ -142,12 +127,8 @@ export default class KioskKeyboard extends Control {
   private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
   /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
-  /** UI5 ResizeHandler registration ID for root size updates. */
-  private _responsiveResizeHandlerId!: string | null;
-  /** Root DOM element currently observed by the resize handler. */
-  private _responsiveObservedDom!: HTMLElement | null;
-  /** rAF handle used to coalesce responsive class updates from multiple observers. */
-  private _responsiveSyncFrameId!: number | null;
+  /** Owns the ResizeHandler-driven height-responsive class application. */
+  private _responsiveSizing!: ResponsiveSizingController;
   static readonly metadata: MetadataOptions = {
     library: "ui5.kiosk",
     properties: {
@@ -686,11 +667,7 @@ export default class KioskKeyboard extends Control {
         }
       },
     };
-    this._keyHighlightDelegation = {
-      onkeydown: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, true),
-      onkeyup: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, false),
-    };
-    this._highlightTargetId = null;
+    this._physicalKeyHighlight = new PhysicalKeyHighlight(this, this._shiftState);
     this._pressedKeyEl = null;
     this._backspaceRepeat = new BackspaceRepeatBehavior(() => {
       if (this._tryCompositionMiddleware("{backspace}")) return true;
@@ -717,9 +694,7 @@ export default class KioskKeyboard extends Control {
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
-    this._responsiveResizeHandlerId = null;
-    this._responsiveObservedDom = null;
-    this._responsiveSyncFrameId = null;
+    this._responsiveSizing = new ResponsiveSizingController(this);
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -749,98 +724,11 @@ export default class KioskKeyboard extends Control {
     // already uses rAF for resize-triggered updates.
     const dom = this.getDomRef() as HTMLElement | null;
     if (dom) {
-      this._syncResponsiveSizing(dom);
-      this._scheduleResponsiveSizingSync();
+      this._responsiveSizing.syncObserver(dom);
+      this._responsiveSizing.scheduleClassUpdate();
     }
 
     this._setupControls();
-  }
-
-  /** Ensures a ResizeHandler is attached to the current DOM element. */
-  private _syncResponsiveSizing(dom: HTMLElement | null): void {
-    if (!dom) {
-      this._teardownResponsiveSizing();
-      return;
-    }
-
-    if (this._responsiveObservedDom !== dom) {
-      this._teardownResponsiveSizing();
-      this._responsiveObservedDom = dom;
-      this._responsiveResizeHandlerId = ResizeHandler.register(dom, () => {
-        this._scheduleResponsiveSizingSync();
-      });
-    }
-  }
-
-  /** Deregisters the UI5 ResizeHandler and clears the observed DOM reference. */
-  private _teardownResponsiveSizing(): void {
-    if (this._responsiveSyncFrameId !== null) {
-      cancelAnimationFrame(this._responsiveSyncFrameId);
-      this._responsiveSyncFrameId = null;
-    }
-    if (this._responsiveResizeHandlerId) {
-      ResizeHandler.deregister(this._responsiveResizeHandlerId);
-      this._responsiveResizeHandlerId = null;
-    }
-    this._responsiveObservedDom = null;
-  }
-
-  /** Coalesces responsive class updates triggered by root/content resize observers. */
-  private _scheduleResponsiveSizingSync(): void {
-    if (this._responsiveSyncFrameId !== null) return;
-
-    this._responsiveSyncFrameId = requestAnimationFrame(() => {
-      this._responsiveSyncFrameId = null;
-      const dom = this.getDomRef() as HTMLElement | null;
-      if (dom) {
-        this._applyResponsiveSizeClasses(dom);
-      }
-    });
-  }
-
-  /**
-   * Applies height-responsive classes to the keyboard root element.
-   *
-   * Toggles `cqShort` / `cqTiny` classes when the keyboard is externally
-   * constrained (host height < natural content height). Skipped for docked and numpad.
-   * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
-   *
-   * Width breakpoints are handled purely by CSS `@container` queries (see
-   * KioskKeyboard.container-queries.css), so no JS width measurement is needed.
-   */
-  private _applyResponsiveSizeClasses(dom: HTMLElement): void {
-    const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-    const cs = window.getComputedStyle(dom);
-
-    // Height classes -- detect external height constraints by comparing the
-    // keyboard's natural (unconstrained) content height against its rendered
-    // height. Skip for docked keyboards (viewport-driven) and numpad.
-    dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
-
-    const docked = this.getDocked();
-    const isNumpad = this.getKeyboardType() === KeyboardType.Numpad;
-    if (docked || isNumpad) {
-      return;
-    }
-
-    // scrollHeight reports the full content height even under overflow: hidden.
-    // If the element ever uses overflow: clip, scrollHeight may equal
-    // clientHeight in some browsers, breaking constrained detection.
-    const naturalHeight = dom.scrollHeight;
-    const renderedHeight = dom.getBoundingClientRect().height;
-
-    // Only apply when externally constrained (natural content > rendered).
-    // The +1px tolerance avoids oscillation from sub-pixel rounding.
-    if (naturalHeight <= renderedHeight + 1) {
-      return;
-    }
-
-    const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
-    const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
-    const isShort = renderedHeight <= shortThresh;
-    const isTiny = renderedHeight <= tinyThresh;
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */
@@ -869,8 +757,8 @@ export default class KioskKeyboard extends Control {
     }
 
     this._teardownControls();
-    this._removeHighlightDelegation();
-    this._teardownResponsiveSizing();
+    this._physicalKeyHighlight.detach();
+    this._responsiveSizing.destroy();
     this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
@@ -1015,18 +903,27 @@ export default class KioskKeyboard extends Control {
     const changed = name !== this.getLayout();
     if (changed) {
       this._layoutSource = source;
-      // A real layout switch ends any in-progress composition: commit the
-      // preedit to the target and drop the middleware so the next key resolves
-      // the new layout's middleware. Covers both programmatic setLayout() and
-      // the {layout:*} key path.
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
+      // A real layout switch ends any in-progress composition so the next key
+      // resolves the new layout's middleware. Covers both programmatic
+      // setLayout() and the {layout:*} key path.
+      this._endComposition();
     }
     this._shiftState.reset();
     this.setProperty("layout", name);
     return changed;
+  }
+
+  /**
+   * Commits any in-progress composition to the target and drops the middleware,
+   * so the next key starts a fresh composition. A no-op when no composition is
+   * active. Called on every real editing-context switch (layout, target, or
+   * keyboardType change).
+   */
+  private _endComposition(): void {
+    if (this._middleware) {
+      this._middleware.commit();
+      this._middleware = null;
+    }
   }
 
   /**
@@ -1148,7 +1045,7 @@ export default class KioskKeyboard extends Control {
     const fireDeferredChange = this._targetSession.captureAndClearDirty();
 
     // Remove highlight delegation from previous target
-    this._removeHighlightDelegation();
+    this._physicalKeyHighlight.detach();
 
     // If the keyboard is open, restore the old target's inputmode
     // before switching so it's not left suppressed.
@@ -1169,15 +1066,13 @@ export default class KioskKeyboard extends Control {
       this._shiftState.reset();
     }
 
-    // A real target switch ends any in-progress composition: commit the preedit
-    // to the old target and drop the middleware so the new target starts a fresh
-    // composition. Without this, the cached middleware (which holds the old
+    // A real target switch ends any in-progress composition so the new target
+    // starts fresh. Without this, the cached middleware (which holds the old
     // target and its preedit offsets) leaks the old syllable into the new input.
     // Mirrors the `{layout:}` key path and the web component's focusin handling.
     // A same-input refocus (caret reposition) keeps the composition going.
-    if (newId !== previousTarget && this._middleware) {
-      this._middleware.commit();
-      this._middleware = null;
+    if (newId !== previousTarget) {
+      this._endComposition();
     }
 
     // A real target switch is a new editing context: drop a user-driven
@@ -1200,8 +1095,7 @@ export default class KioskKeyboard extends Control {
     if (newId) {
       const next = Element.getElementById(newId);
       if (next) {
-        next.addEventDelegate(this._keyHighlightDelegation);
-        this._highlightTargetId = newId;
+        this._physicalKeyHighlight.attach(next, newId);
 
         // Dev-time check: warn if the control won't work as a target
         const focusRef = next.getFocusDomRef?.();
@@ -1278,10 +1172,7 @@ export default class KioskKeyboard extends Control {
     this._layoutSource = "external";
     // End any in-progress composition so the next key resolves against the new
     // effective layout (mirrors _applyLayout).
-    if (this._middleware) {
-      this._middleware.commit();
-      this._middleware = null;
-    }
+    this._endComposition();
   }
 
   /**
@@ -1378,8 +1269,8 @@ export default class KioskKeyboard extends Control {
     const dom = this.getDomRef() as HTMLElement | null;
     if (!dom) return this;
 
-    this._syncResponsiveSizing(dom);
-    this._scheduleResponsiveSizingSync();
+    this._responsiveSizing.syncObserver(dom);
+    this._responsiveSizing.scheduleClassUpdate();
     return this;
   }
 
@@ -1448,7 +1339,7 @@ export default class KioskKeyboard extends Control {
     const dom = this.getDomRef() as HTMLElement | null;
     this._syncDockedDomState();
     if (dom) {
-      this._syncResponsiveSizing(dom);
+      this._responsiveSizing.syncObserver(dom);
     }
     return this;
   }
@@ -1712,6 +1603,12 @@ export default class KioskKeyboard extends Control {
     };
   }
 
+  /** Updates the ARIA live region text for screen reader announcements. */
+  private _announceLiveRegion(text: string): void {
+    const liveRegion = this.getDomRef("liveState");
+    if (liveRegion) liveRegion.textContent = text;
+  }
+
   // ── Internal renderer helpers ──
 
   /**
@@ -1733,8 +1630,8 @@ export default class KioskKeyboard extends Control {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
         _getResolvedLayout: () => this._getResolvedLayout(),
-        _getKeyLabel: (key) => this._getKeyLabel(key),
-        _getKeyAriaLabel: (key) => this._getKeyAriaLabel(key),
+        _getKeyLabel: (key) => getKeyLabel(key, this._isShiftActive(), this._isCapsLock()),
+        _getKeyAriaLabel: (key) => getKeyAriaLabel(key, this._isShiftActive(), this._isCapsLock()),
       };
     }
     return this._rendererApi;
@@ -1821,78 +1718,6 @@ export default class KioskKeyboard extends Control {
    */
   static getKeyIcon(sKeyValue: string): string | undefined {
     return iconsGetKeyIcon(sKeyValue);
-  }
-
-  /** Map from special key value to [i18nKey, fallback]. */
-  private static readonly _SPECIAL_KEY_I18N: Record<string, [string, string]> = {
-    "{backspace}": ["KEY_BACKSPACE", "Backspace"],
-    "{enter}": ["KEY_ENTER", "Enter"],
-    "{shift}": ["KEY_SHIFT", "Shift"],
-    " ": ["KEY_SPACE", "Space"],
-  };
-
-  /**
-   * Accessible label for a key - always non-empty.
-   * Used as aria-label when no visible text is present.
-   *
-   * Resolution order: per-key `ariaLabel` -> visible label (`_getKeyLabel`) ->
-   * built-in i18n entry. For an icon-only key (`label: ""`) with none of these,
-   * a dev-time warning is logged and the raw `value` is used as a last resort,
-   * so a custom icon-only token never silently announces itself with no
-   * accessible name.
-   */
-  private _getKeyAriaLabel(key: KeyDefinition): string {
-    if (key.ariaLabel) return key.ariaLabel;
-
-    const display = this._getKeyLabel(key);
-    if (display) return display;
-
-    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    if (entry) return getText(entry[0], entry[1]);
-
-    // Icon-only key (label suppressed) with no ariaLabel and no i18n entry:
-    // warn so the consumer adds a localizable accessible name, and fall back
-    // to the raw value rather than announcing nothing.
-    if (key.label === "") {
-      Log.warning(
-        `Icon-only key "${key.value}" has no accessible name; set ariaLabel on the KeyDefinition.`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-    }
-
-    return key.value;
-  }
-
-  /** The display label for a key. Empty string when label is suppressed (icon-only opt-out). */
-  private _getKeyLabel(key: KeyDefinition): string {
-    if (key.label === "") return "";
-
-    // Caps Lock state: use capsLockLabel if defined, else i18n fallback
-    if (key.value === "{shift}" && this._isCapsLock()) {
-      if (key.capsLockLabel !== undefined) return key.capsLockLabel;
-      return getText("ARIA_CAPS_LOCK", "Caps Lock");
-    }
-
-    const shift = this._isShiftActive();
-    if (shift && key.shiftLabel) return key.shiftLabel;
-
-    // Explicit label takes priority over i18n
-    if (key.label !== undefined) {
-      return shift && key.value.length === 1 && key.value.trim() ? key.label.toUpperCase() : key.label;
-    }
-
-    // No explicit label: i18n for special keys, value for regular keys
-    const entry = KioskKeyboard._SPECIAL_KEY_I18N[key.value];
-    if (entry) return getText(entry[0], entry[1]);
-
-    const base = key.value;
-    if (!base) return "";
-    if (shift) {
-      if (key.shiftValue) return key.shiftValue;
-      if (key.value.length === 1 && key.value.trim()) return base.toUpperCase();
-    }
-    return base;
   }
 
   // ── UI5 event delegation ──
@@ -2002,24 +1827,11 @@ export default class KioskKeyboard extends Control {
 
   // ── Private: auto-show ──
 
-  /**
-   * Whether this instance is visible, enabled, attached to the DOM,
-   * and has a non-zero layout size - i.e. eligible to participate in
-   * multi-instance focus-claim arbitration.
-   */
-  private _isParticipating(): boolean {
-    if (!this.getVisible() || !this.getEnabled()) return false;
-    const dom = this.getDomRef();
-    if (!(dom instanceof HTMLElement)) return false;
-    if (!document.contains(dom)) return false;
-    return dom.getClientRects().length > 0;
-  }
-
   /** Returns true if any other KioskKeyboard instance already targets this input. */
   private _isTargetOfOther(inputId: string): boolean {
     for (const other of KioskKeyboard._instances) {
       if (other === this) continue;
-      if (!other._isParticipating()) continue;
+      if (!isParticipating(other)) continue;
       if (other._getActiveTargetId() === inputId) return true;
       // With controls, the active target is only set on focus. However, the
       // controls list declares ownership: if the input is in another keyboard's
@@ -2113,117 +1925,95 @@ export default class KioskKeyboard extends Control {
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
     const shift = this._isShiftActive();
+    const kind = classifyKeyToken(keyValue);
 
-    if (keyValue === "{shift}") {
+    // Shift toggles before composition: the middleware would otherwise treat
+    // it as a composition-affecting key.
+    if (kind === "shift") {
       this._toggleShift(el);
       return;
     }
 
-    // Composition middleware must see {backspace}/{enter} before default handling.
+    // Composition middleware must see {backspace}/{enter}/chars/unknown tokens
+    // (but not layout/fkey) before default handling.
     if (this._tryCompositionMiddleware(keyValue)) return;
 
-    if (keyValue === "{backspace}") {
-      this._performBackspaceDelete();
-      return;
-    }
+    switch (kind) {
+      case "backspace":
+        this._performBackspaceDelete();
+        return;
 
-    if (keyValue === "{enter}") {
-      if (this.fireKeyPress({ key: "Enter", shiftKey: shift })) {
-        this._targetSession.handleEnter();
-      }
-      return;
-    }
+      case "enter":
+        if (this.fireKeyPress({ key: "Enter", shiftKey: shift })) {
+          this._targetSession.handleEnter();
+        }
+        return;
 
-    if (keyValue.startsWith("{layout:")) {
-      const raw = keyValue.slice("{layout:".length, -1).trim();
-      if (!raw) return;
-      // `{layout:base}` returns to the constrained default (re-engage
-      // keyboardType filtering); any other pick is user-driven and overrides
-      // the keyboardType constraint (webc parity).
-      const name = raw === "base" ? this._baseLayout : raw;
-      const source = raw === "base" ? "external" : "user";
-      this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
-      return;
-    }
-
-    if (keyValue.startsWith("{fkey:")) {
-      const fkeyName = keyValue.slice("{fkey:".length, -1);
-
-      // Fire keyPress first so consumers can prevent all downstream action
-      // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
-      if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) {
+      case "layout": {
+        const raw = keyValue.slice("{layout:".length, -1).trim();
+        if (!raw) return;
+        // `{layout:base}` returns to the constrained default (re-engage
+        // keyboardType filtering); any other pick is user-driven and overrides
+        // the keyboardType constraint (webc parity).
+        const name = raw === "base" ? this._baseLayout : raw;
+        const source = raw === "base" ? "external" : "user";
+        this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
         return;
       }
 
-      const fKeyMode = this.getFKeyMode();
-
-      if (fKeyMode === FKeyMode.None) {
+      case "fkey": {
+        const fkeyName = keyValue.slice("{fkey:".length, -1);
+        // Fire keyPress first so consumers can prevent all downstream action
+        // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
+        if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) return;
+        this._handleFKey(fkeyName, shift);
         return;
       }
 
-      let nativeAllowed = true;
+      case "unknown":
+        // Unrecognized `{...}`-shaped value: not one of the built-in special
+        // keys above. Fire keyPress so a consumer can still observe/handle it,
+        // but do NOT insert the literal braces - that was a silent footgun (a
+        // mistyped `{bcksp}`, or a custom `{paste}` key with no handler, typed
+        // the text "{bcksp}" into the field).
+        if (this.fireKeyPress({ key: keyValue, shiftKey: shift })) {
+          Log.warning(
+            `Unrecognized key token "${keyValue}": not a built-in special key. Ignoring (no text inserted).`,
+            undefined,
+            "ui5.kiosk.KioskKeyboard",
+          );
+        }
+        this._shiftState.autoRelease();
+        return;
 
-      if (fKeyMode === FKeyMode.Native) {
-        if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
-          nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shift);
-          if (nativeAllowed) {
-            KioskKeyboard._executeNativeFKeyAction(fkeyName);
-          }
-        } else {
-          nativeAllowed = false;
-          if (!KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.has(fkeyName)) {
-            KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.add(fkeyName);
-            Log.warning(
-              `Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
-                "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
-              undefined,
-              "ui5.kiosk.KioskKeyboard",
-            );
+      case "char": {
+        // Regular character - resolve shift value
+        let effective = keyValue;
+        if (shift) {
+          const shiftValue = el.dataset.shiftValue;
+          if (shiftValue) {
+            effective = shiftValue;
+          } else if (keyValue.length === 1) {
+            effective = keyValue.toUpperCase();
           }
         }
+
+        if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
+          this._targetSession.insertText(effective);
+        }
+
+        // Auto-release shift (not caps lock)
+        this._shiftState.autoRelease();
+        return;
       }
 
-      if (nativeAllowed) {
-        this._targetSession.handleNavigationKey(fkeyName);
-      }
-      return;
-    }
-
-    // Unrecognized `{...}`-shaped value: not one of the built-in special keys
-    // above. Fire keyPress so a consumer can still observe/handle it, but do
-    // NOT insert the literal braces - that was a silent footgun (a mistyped
-    // `{bcksp}`, or a custom `{paste}` key with no handler, used to type the
-    // text "{bcksp}" into the field). A lone "{"/"}" only matches one end, so
-    // it stays a literal character.
-    if (keyValue.startsWith("{") && keyValue.endsWith("}")) {
-      if (this.fireKeyPress({ key: keyValue, shiftKey: shift })) {
-        Log.warning(
-          `Unrecognized key token "${keyValue}": not a built-in special key. Ignoring (no text inserted).`,
-          undefined,
-          "ui5.kiosk.KioskKeyboard",
-        );
-      }
-      this._shiftState.autoRelease();
-      return;
-    }
-
-    // Regular character - resolve shift value
-    let effective = keyValue;
-    if (shift) {
-      const shiftValue = el.dataset.shiftValue;
-      if (shiftValue) {
-        effective = shiftValue;
-      } else if (keyValue.length === 1) {
-        effective = keyValue.toUpperCase();
+      default: {
+        // Exhaustiveness: every KeyTokenKind is handled above ({shift} returns
+        // earlier). A new kind added to classifyKeyToken fails to compile here.
+        const _exhaustive: never = kind;
+        return _exhaustive;
       }
     }
-
-    if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
-      this._targetSession.insertText(effective);
-    }
-
-    // Auto-release shift (not caps lock)
-    this._shiftState.autoRelease();
   }
 
   /**
@@ -2303,79 +2093,46 @@ export default class KioskKeyboard extends Control {
     return Element.getElementById(id) ?? null;
   }
 
-  // ── Private: physical keyboard highlighting ──
-
-  /** Maps non-derivable KeyboardEvent.key names to special-key data-key values. */
-  private static readonly _KEY_TO_DATA_KEY: Record<string, string> = {
-    Shift: "{shift}",
-    Backspace: "{backspace}",
-    Enter: "{enter}",
-    Delete: "{backspace}", // virtual keyboard has no separate Delete - highlight Backspace
-  };
+  // ── Private: F-key dispatch ──
 
   /**
-   * Resolves a KeyboardEvent.key name to its data-key attribute value.
-   * Native-dispatchable keys (F1-F12, arrows, Home/End/PgUp/PgDn) are
-   * derived dynamically from the `_NATIVE_DISPATCHABLE_FKEYS` set.
+   * Dispatches an F-key according to `fKeyMode` (mirrors the web component's
+   * `_handleFKey`). Assumes the cancelable keyPress has already fired and was
+   * not prevented.
    */
-  private static _resolveDataKey(key: string): string | undefined {
-    return (
-      KioskKeyboard._KEY_TO_DATA_KEY[key] ??
-      (KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(key) ? `{fkey:${key}}` : undefined)
-    );
-  }
+  private _handleFKey(fkeyName: string, shiftKey: boolean): void {
+    const fKeyMode = this.getFKeyMode();
 
-  /**
-   * Handles a physical keyboard event on the target input.
-   * Syncs shift/capslock state from the physical keyboard and
-   * delegates to visual key highlighting.
-   */
-  private _onPhysicalKey(event: KeyboardEvent, down: boolean): void {
-    this._highlightKey(event.key, down);
-
-    // UI5 event delegation wraps the native event; unwrap to access
-    // getModifierState which is not forwarded to the wrapper.
-    const native = (event as KeyboardEvent & { originalEvent?: KeyboardEvent }).originalEvent ?? event;
-    const capsLock = typeof native.getModifierState === "function" && native.getModifierState("CapsLock");
-    this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
-  }
-
-  private _highlightKey(key: string, add: boolean): void {
-    const dom = this.getDomRef();
-    if (!dom) return;
-
-    if (!add) {
-      // Clear all highlights on any keyup. When Shift releases before the
-      // character key, keyup reports the unshifted value (e.g. "2" not "@"),
-      // so a targeted removal would miss the shifted key's highlight.
-      dom
-        .querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`)
-        .forEach((el) => el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight));
+    if (fKeyMode === FKeyMode.None) {
       return;
     }
 
-    const mapped = KioskKeyboard._resolveDataKey(key);
-    const el =
-      dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(mapped ?? key)) ??
-      (key.length === 1 ? dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(key.toLowerCase())) : null) ??
-      dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(key));
-    el?.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyHighlight, add);
-  }
+    let nativeAllowed = true;
 
-  /** Updates the ARIA live region text for screen reader announcements. */
-  private _announceLiveRegion(text: string): void {
-    const liveRegion = this.getDomRef("liveState");
-    if (liveRegion) liveRegion.textContent = text;
-  }
+    if (fKeyMode === FKeyMode.Native) {
+      if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
+        nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
+        if (nativeAllowed) {
+          KioskKeyboard._executeNativeFKeyAction(fkeyName);
+        }
+      } else {
+        nativeAllowed = false;
+        if (!KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.has(fkeyName)) {
+          KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.add(fkeyName);
+          Log.warning(
+            `Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
+              "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
+            undefined,
+            "ui5.kiosk.KioskKeyboard",
+          );
+        }
+      }
+    }
 
-  private _removeHighlightDelegation(): void {
-    if (!this._highlightTargetId) return;
-    const prev = Element.getElementById(this._highlightTargetId);
-    if (prev) prev.removeEventDelegate(this._keyHighlightDelegation);
-    this._highlightTargetId = null;
+    if (nativeAllowed) {
+      this._targetSession.handleNavigationKey(fkeyName);
+    }
   }
-
-  // ── Private: mobile detection ──
 
   /** Best-effort event target used for synthetic native F-key dispatch. */
   private _resolveNativeFKeyTarget(): EventTarget {
