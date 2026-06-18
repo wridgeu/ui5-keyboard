@@ -223,8 +223,7 @@ The UI5 QUnit suites are served by `ui5 serve` (via each package's `test:qunit` 
 npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
 npm run test:e2e:all-devices  # All E2E across both packages, all devices (parallel)
 npm run test:e2e:all-devices:sequential # Same device matrix, but sequential for lower local CPU/RAM pressure
-npm run test:packages:smoke   # Build + npm pack dry-run smoke for publishable packages
-npm run test:demo:webc-bundle # Demo build smoke check for the public WebC bundle path
+npm run test:packages:smoke   # Build + npm pack dry-run smoke for publishable packages, plus the demo WebC consumption build
 npm run check                 # Full quality gate with smoke checks + sequential multi-device matrix
 npm run check:parallel        # Same gate, but with the concurrent multi-device matrix
 ```

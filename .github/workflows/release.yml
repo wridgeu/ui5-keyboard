@@ -36,9 +36,6 @@ jobs:
       - name: Package smoke tests
         run: npm run test:packages:smoke
 
-      - name: Demo web component bundle check
-        run: npm run test:demo:webc-bundle
-
   release-please:
     needs: [ci, smoke]
     runs-on: ubuntu-latest
