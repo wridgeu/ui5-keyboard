@@ -18,14 +18,24 @@ types.ts                  KeyDefinition, KeyRow, LayoutDefinition, FKeyMode,
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
 core/
   dom-utils.ts            Key element IDs, input/textarea resolver (shadow DOM aware)
+  dom-contract.ts         Zero-dependency single source of truth for CSS classes, data attributes, selectors, part names
   shift-state.ts          Shift/Caps Lock state machine
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
+  key-token.ts            Classifies a key's data-key value into its token kind (shift/backspace/enter/layout/fkey/unknown/char)
   layout-registry.ts      Layout registration/reset + locale-based layout resolution
   input-operations.ts     Target input text operations (insert, backspace, navigation)
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
   i18n.ts                 i18n resolution: UI5 WC bundle + custom resolver
   middleware-registry.ts  Middleware factory registration, lazy instantiation, deactivation
   composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)
+  memo-map-view.ts        MemoMapView: memoized Map view over a per-instance Record, rebuilt only on source-object identity change
+  auto-repeat.ts          AutoRepeater press-and-hold scheduler + BACKSPACE_AUTO_REPEAT timing curve (accelerating cadence)
+  backspace-repeat-controller.ts  BackspaceRepeatController: owns press-and-hold Backspace pointer wiring, repeat timer, trailing-click suppression
+  announcement-queue.ts   AnnouncementQueue: drains ARIA live-region announcements one entry per fixed interval
+  auto-show-controller.ts AutoShowController: focusin/focusout-driven auto open/close with multi-instance isolation
+  native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
+  physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
+  responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host classes (cq-short/cq-tiny)
 middleware/
   kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
   hangul-compose.ts       Korean Hangul jamo composition middleware (ko-hangul layout)
@@ -552,17 +562,18 @@ All built-in layouts and middleware are bundled with the component (direct impor
 
 ## Differences from the UI5 Control Variant (`kiosk-keyboard`)
 
-| Aspect            | UI5 Control (`kiosk-keyboard`)                             | Web Component (`kiosk-keyboard-webc`)                  |
-| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------ |
-| Base class        | `sap/ui/core/Control`                                      | `UI5Element` (extends `HTMLElement`)                   |
-| Rendering         | `apiVersion: 4` renderer object                            | JSX template with `jsxRenderer`                        |
-| Shadow DOM        | No (UI5 light DOM)                                         | Yes (native shadow DOM)                                |
-| Styling           | LESS with `@sapUi*` parameters                             | CSS with `--sap*` custom properties                    |
-| Target resolution | UI5 association + `Element.closestTo()`                    | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware) |
-| Data binding      | UI5 `setValue()` / `fireLiveChange()`                      | Native `InputEvent` dispatch                           |
-| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook | UI5 WC `i18nBundle` + custom resolver                  |
-| Tag               | `<kiosk:KioskKeyboard />` (XML)                            | `<kiosk-keyboard>` (HTML)                              |
-| Distribution      | UI5 library (preload)                                      | ESM with subpath imports                               |
+| Aspect            | UI5 Control (`kiosk-keyboard`)                                       | Web Component (`kiosk-keyboard-webc`)                  |
+| ----------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| Base class        | `sap/ui/core/Control`                                                | `UI5Element` (extends `HTMLElement`)                   |
+| Rendering         | `apiVersion: 4` renderer object                                      | JSX template with `jsxRenderer`                        |
+| Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                |
+| Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                    |
+| Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware) |
+| Data binding      | UI5 `setValue()` / `fireLiveChange()`                                | Native `InputEvent` dispatch                           |
+| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                  |
+| Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Inline in `KioskKeyboard._onKeyDown`                   |
+| Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                              |
+| Distribution      | UI5 library (preload)                                                | ESM with subpath imports                               |
 
 ## Edge Cases
 

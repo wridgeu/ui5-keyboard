@@ -84,7 +84,7 @@ export interface KeyDefinition {
   /**
    * Label to show on the `{shift}` key when Caps Lock is active.
    * Overrides {@link label} when Caps Lock is active.
-   * Defaults to the i18n text for `ARIA_CAPS_LOCK` ("Caps Lock").
+   * Defaults to the i18n text for `KEY_CAPS_LOCK` ("Caps Lock").
    * Only meaningful on keys with `value: "{shift}"`.
    */
   capsLockLabel?: string;

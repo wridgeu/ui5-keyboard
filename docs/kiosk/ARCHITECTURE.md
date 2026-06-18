@@ -12,8 +12,10 @@ library.ts                UI5 Lib.init(), enum registration
                           (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
                           plus key-name constants (`KeyName`)
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, I18nResolver
+internal/types.ts         Internal contracts: TargetElement, SECONDARY_LAYOUTS set
 internal/layout-registry.ts  Layout registration/reset + locale-based layout resolution
 internal/dom.ts           Key element IDs, input guards, input/textarea resolver
+internal/dom-contract.ts  Zero-dep source of truth for CSS classes, data attributes, selectors
 internal/i18n-registry.ts i18n resolution: base bundle + optional I18nResolver callback
 internal/detect-keyboard-type.ts  Auto-type detection helpers
 internal/input-operations.ts      Target input text operations
@@ -22,6 +24,21 @@ internal/focus-claim-service.ts   Auto-show input claim logic
 internal/key-grid-navigation.ts   Keyboard grid navigation delegate (arrow keys, Home/End, row wrapping)
 internal/native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting across instances
 internal/auto-show-behavior.ts    Auto-show focus-in/out listeners, auto-type detection, deferred close
+internal/responsive-sizing-controller.ts  ResponsiveSizingController: ResizeHandler-driven cqShort/cqTiny height classes
+internal/physical-key-highlight.ts  PhysicalKeyHighlight: mirrors the hardware keyboard onto on-screen keys, syncs shift/caps
+internal/backspace-repeat-behavior.ts  BackspaceRepeatBehavior: press-and-hold Backspace auto-repeat lifecycle
+internal/auto-repeat.ts   Press-and-hold auto-repeat scheduler with accelerating cadence
+internal/shift-state.ts   Shift / Caps Lock state machine (single click, double-click caps, auto-release)
+internal/key-token.ts     Classifies a key's data-key value into its token kind (shift/backspace/enter/layout/fkey/char)
+internal/key-labels.ts    Resolves a key's display label for the current shift/caps state
+internal/key-icons.ts     Default special-key icons + icon URI validation
+internal/grapheme.ts      Grapheme-aware cursor utilities via Intl.Segmenter
+internal/composition-utils.ts  Composition-session helpers (preedit start/update/end) shared by middleware
+internal/middleware-registry.ts  Built-in composition-middleware factories keyed by layout + instance overrides
+internal/renderer-internal-api.ts  RendererInternalApi bridge type for renderer/test access to control helpers
+middleware/
+  hangul-compose.ts       Korean Hangul L/V/T syllable composition middleware
+  kana-dakuten.ts         Japanese kana dakuten/handakuten voicing middleware
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
@@ -601,7 +618,9 @@ packages/kiosk-keyboard/
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition, I18nResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
+      types.ts                Internal contracts (TargetElement, SECONDARY_LAYOUTS)
       dom.ts                  DOM/key ID utilities + input resolver
+      dom-contract.ts         Zero-dep CSS class / data attribute / selector contract
       i18n-registry.ts        i18n resolution: base bundle + optional I18nResolver callback
       detect-keyboard-type.ts Auto-type detection
       input-operations.ts     Text insertion/backspace/enter ops
@@ -610,6 +629,21 @@ packages/kiosk-keyboard/
       key-grid-navigation.ts  Keyboard grid navigation delegate
       native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting
       auto-show-behavior.ts   Auto-show focus-in/out listeners, deferred close
+      responsive-sizing-controller.ts  ResponsiveSizingController (cqShort/cqTiny height classes)
+      physical-key-highlight.ts  PhysicalKeyHighlight (hardware keyboard mirror)
+      backspace-repeat-behavior.ts  BackspaceRepeatBehavior (press-and-hold delete)
+      auto-repeat.ts          Accelerating press-and-hold repeat scheduler
+      shift-state.ts          Shift / Caps Lock state machine
+      key-token.ts            data-key value classifier (token kind)
+      key-labels.ts           Key display label resolver (shift/caps aware)
+      key-icons.ts            Default special-key icons + URI validation
+      grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
+      composition-utils.ts    Composition preedit start/update/end helpers
+      middleware-registry.ts  Built-in composition-middleware factories + instance overrides
+      renderer-internal-api.ts  RendererInternalApi bridge type
+    middleware/
+      hangul-compose.ts       Korean Hangul L/V/T composition middleware
+      kana-dakuten.ts         Japanese kana dakuten/handakuten middleware
     layouts/
       qwerty.ts               Standard QWERTY layout
       qwertz-de.ts            German QWERTZ layout
