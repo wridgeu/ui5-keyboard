@@ -35,7 +35,6 @@
     "code-quality/no-console-only-catch": "warn",
     "code-quality/no-redundant-boolean-return": "warn",
     "code-quality/no-em-dash": "warn",
-    "comment-quality/no-obvious-comment": "warn",
     "comment-quality/no-narrator-comment": "warn",
     "comment-quality/no-section-divider": "warn",
     "comment-quality/no-placeholder-comment": "warn",

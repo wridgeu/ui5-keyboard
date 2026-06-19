@@ -46,13 +46,12 @@ Adding a new rule: export a new rule object from the plugin and add a correspond
 
 ## `oxlint-plugin-comment-quality.mjs`
 
-Custom oxlint JS plugin that detects low-quality AI-generated comments. Uses AST correlation (comparing comment text against adjacent code identifiers) rather than broad regex to keep false-positive rates low. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
+Custom oxlint JS plugin that detects low-quality AI-generated comments via focused regex patterns over comment text. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
 
 **Rules:**
 
 | Rule                                     | Severity | Description                                                          |
 | ---------------------------------------- | -------- | -------------------------------------------------------------------- |
-| `comment-quality/no-obvious-comment`     | warn     | Flags comments that just restate adjacent code identifiers           |
 | `comment-quality/no-narrator-comment`    | warn     | Flags "This function/method handles..." preamble comments            |
 | `comment-quality/no-section-divider`     | warn     | Flags decorative `// --- Helpers ---` banner comments                |
 | `comment-quality/no-placeholder-comment` | warn     | Flags "Replace this with your actual implementation" stub comments   |
