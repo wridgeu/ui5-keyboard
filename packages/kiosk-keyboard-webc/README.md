@@ -322,17 +322,17 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Methods
 
-| Method                     | Description                                                                                                                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.                                  |
-| `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                                                      |
-| `setTargetElement(el)`     | Programmatically sets the target input/textarea.                                                                                                                                       |
-| `setTargetResolver(fn)`    | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                                                |
-| `resetKeyboardType()`      | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                                                   |
-| `refreshResponsiveState()` | Recomputes responsive height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing.                        |
-| `insertText(text)`         | Inserts text at the caret of the active target (cursor-tracked, fires `liveChange`). No-op with no active target. Call from a `key-press` handler to implement a custom `{token}` key. |
-| `deleteBackward()`         | Deletes one grapheme before the caret of the active target. Returns whether anything was removed; no-op with no active target.                                                         |
-| `getActiveTargetElement()` | Returns the resolved native input/textarea of the active target, or `null` (re-resolves each call). Mirrors the UI5 control's method of the same name.                                 |
+| Method                     | Description                                                                                                                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `show()`                   | Opens the docked keyboard (sets `open = true`) when the current `mobileKeyboard` mode allows custom rendering. Logs a warning if `docked` is `false`.                                                 |
+| `close()`                  | Closes the docked keyboard (sets `open = false`).                                                                                                                                                     |
+| `setTargetElement(el)`     | Programmatically sets the target input/textarea.                                                                                                                                                      |
+| `setTargetResolver(fn)`    | Sets a custom resolver to locate the native input/textarea inside a host element. Pass `null` to clear.                                                                                               |
+| `resetKeyboardType()`      | Resets keyboard type to `"Full"` and re-enables auto-type detection.                                                                                                                                  |
+| `refreshResponsiveState()` | Recomputes responsive height classes after runtime styling changes that do not emit a reliable resize signal. Usually not needed for normal container resizing.                                       |
+| `insertText(text)`         | Inserts text at the caret of the active target (cursor-tracked, dispatches a native `input` event). No-op with no active target. Call from a `key-press` handler to implement a custom `{token}` key. |
+| `deleteBackward()`         | Deletes one grapheme before the caret of the active target. Returns whether anything was removed; no-op with no active target.                                                                        |
+| `getActiveTargetElement()` | Returns the resolved native input/textarea of the active target, or `null` (re-resolves each call). Mirrors the UI5 control's method of the same name.                                                |
 
 `after-open` and `after-close` fire synchronously when the `open` state flips.
 They report the state transition itself, not animation completion.
@@ -448,6 +448,7 @@ interface KeyDefinition {
   width?: KeyWidth; // "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space"
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present
+  ariaLabel?: string; // Accessible name when the key has no visible label (icon-only); resolution: ariaLabel -> label -> built-in i18n. Set this for icon-only custom keys ({paste} etc.)
 }
 ```
 
@@ -474,11 +475,11 @@ No teardown is needed: the overrides live on the element and are released when t
 
 The `f-key-mode` attribute controls how function key presses are handled:
 
-| Value       | Behavior                                                                                                                                                                                                                                                                                                                            |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input. Navigation keys move the caret in the target input (`ArrowLeft`/`ArrowRight`, `ArrowUp`/`ArrowDown`, `Home`, `End`); `PageUp`/`PageDown` have no built-in caret behavior in this mode and are surfaced only via `key-press`. |
-| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                                                                             |
-| `"None"`    | The F-key row is hidden entirely.                                                                                                                                                                                                                                                                                                   |
+| Value       | Behavior                                                                                                                                                                                                                                                                |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input. Navigation keys move the caret in the target input (`ArrowLeft`/`ArrowRight`, `ArrowUp`/`ArrowDown`, `Home`/`PageUp` to the start, `End`/`PageDown` to the end). |
+| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                 |
+| `"None"`    | The F-key row is hidden entirely.                                                                                                                                                                                                                                       |
 
 ### Native mode: synthetic keydown events
 

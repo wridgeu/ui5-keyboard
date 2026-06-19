@@ -9,7 +9,7 @@ The following proposals were fully implemented and their documentation removed (
 
 - **Japanese and Arabic Layouts** (ja-romaji, ja-kana, arabic): implemented in both packages
 - **Icon + Text Keys** (dual icon/label on modifier and action keys): implemented via `--kiosk-keyboard-dual-*` CSS variables
-- **Composition Middleware** (script-specific input processing): implemented as middleware registry with kana dakuten and hangul compose
+- **Composition Middleware** (script-specific input processing): implemented as a per-component middleware factory registry with kana dakuten and hangul compose
 
 The following proposals were superseded or rejected:
 

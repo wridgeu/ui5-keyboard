@@ -607,7 +607,7 @@ The `handleKey` method receives:
 - `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
 - `target`: the DOM input element the keyboard is typing into
 
-When `handleKey` returns `true`, the keyboard skips default handling. The middleware is responsible for modifying the target's value (use `insertText` from `ui5/kiosk/internal/input-operations` to properly update the UI5 control's model binding).
+When `handleKey` returns `true`, the keyboard skips default handling. The middleware is responsible for modifying the target's value. Use the control's public `keyboard.insertText(text)` and `keyboard.deleteBackward()` methods to do so: they update the caret/selection and fire UI5 `liveChange` so the control's model binding stays in sync. (Do not reach into `ui5/kiosk/internal/*`, which is unstable, see [API stability](#api-stability).)
 
 Middleware lifecycle:
 
@@ -647,7 +647,7 @@ See [Custom F-key variant layouts](#custom-f-key-variant-layouts) for more detai
 
 ### Approach 3: Standalone fkeys layout
 
-Use the `fkeys` layout directly for an F-key-only keyboard (F1-F12 + Enter):
+Use the `fkeys` layout directly for an F-key keyboard. F1-F12 fill the first two rows; the bottom row carries an **ABC** key (returns to the base layout), a **Nav** key (switches to the navigation layout), and **Enter**:
 
 ```xml
 <kiosk:KioskKeyboard layout="fkeys" controls="myInput" />

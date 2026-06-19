@@ -437,6 +437,21 @@ registrationsForThisController.forEach((entry) => {
 });
 ```
 
+Each entry returned by `getRegistrations()`, `getRegistrationsForScope()`, and `findRegistrations()` is a readonly `HotkeyRegistrationInfo`:
+
+| Field                                                                   | Notes                                                              |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `id`, `hotkey`, `normalizedHotkey`, `scope`, `description`              | Identity and registration metadata                                 |
+| `enabled`                                                               | Resolved to the current value (the `enabled` closure is evaluated) |
+| `preventDefault`, `stopPropagation`, `ignoreRepeat`, `suppressInPopups` | Resolved dispatch flags                                            |
+| `ignoreInputs`                                                          | `boolean \| "auto"`                                                |
+| `conflictBehavior`                                                      | `ConflictBehavior`                                                 |
+| `hasTarget`                                                             | Whether a target is bound (flag only, not the DOM reference)       |
+| `sequence`                                                              | The sequence steps (`string[]`), or `null` for single-key hotkeys  |
+| `timeout`                                                               | Sequence step timeout in ms, or `null` for single-key hotkeys      |
+
+Use `sequence !== null` (or `timeout !== null`) to tell sequence registrations apart from single-key hotkeys.
+
 #### Groups and Lifecycle
 
 Each lifecycle owner should create exactly one group and destroy it in its corresponding teardown hook. Do not reuse groups across instances.
@@ -717,7 +732,8 @@ const guard = manager.suspendDispatch("onboarding-overlay");
 // Browser defaults are NOT suppressed (no preventDefault).
 // Unhandled callback fires with reason "suspended".
 
-// Release the guard to resume dispatch
+// Inspect or release the guard
+guard.isActive; // true while held, false once released
 guard.release(); // idempotent - safe to call multiple times
 
 // Nested guards: all must be released before dispatch resumes
@@ -874,21 +890,23 @@ const normalized = assertValidHotkey("Mod+S"); // returns "Control+S" (on Window
 assertValidHotkey(""); // throws Error
 ```
 
-**Browser blocklist** (~25 entries): Ctrl+L, Ctrl+N, Ctrl+T, Ctrl+W, F5, F11, F12, Tab, etc.
+**Browser blocklist** (24 entries): Ctrl+L, Ctrl+N, Ctrl+T, Ctrl+W, F5, F11, F12, Tab, etc.
 
 **SAP blocklist** (~16 entries): Ctrl+S (Save), Ctrl+E (Edit), Ctrl+D (Delete), F6, etc.
 
 > [!TIP]
 > Validation warnings are also automatically logged when calling `manager.register()`.
 
-**Common errors from invalid hotkey strings:**
+**Common validation messages for invalid hotkey strings** (the strings returned in `validateHotkey().errors`):
 
-| Input          | Error                                                             |
+| Input          | `validateHotkey().errors`                                         |
 | -------------- | ----------------------------------------------------------------- |
 | `""`           | `Hotkey string must not be empty`                                 |
 | `"Ctrl"`       | `Invalid hotkey "Ctrl": no non-modifier key found`                |
 | `"Ctrl+Shift"` | `Invalid hotkey "Ctrl+Shift": no non-modifier key found`          |
 | `"Ctrl+S+X"`   | `Invalid hotkey "Ctrl+S+X": unexpected segment "X" after key "S"` |
+
+`assertValidHotkey` throws `Invalid hotkey "<input>": <errors joined by "; ">`; e.g. `assertValidHotkey("")` throws `Invalid hotkey "": Hotkey string must not be empty`.
 
 Unknown key names (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw; they are allowed for forward compatibility.
 
@@ -929,6 +947,7 @@ formatForDisplay("Mod+Shift+S", Platform.Mac); // "⇧⌘S"
 
 // Windows/Linux: uses text labels with "+"
 formatForDisplay("Mod+Shift+S", Platform.Windows); // "Ctrl+Shift+S"
+formatForDisplay("Meta+K", Platform.Windows); // "Win+K" (Meta renders as "Win" on Windows/Linux)
 ```
 
 ### Event Matching

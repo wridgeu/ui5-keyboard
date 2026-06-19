@@ -1,6 +1,6 @@
 # CSS Sizing Reference
 
-This document explains the rationale behind every sizing constant in the keyboard CSS. Both packages (WebC and UI5) use the same values, differing only in naming conventions (`--kiosk-keyboard-*` vs `--ui5KioskKeyboard-*`).
+This document explains the rationale behind every sizing constant in the keyboard CSS. Both packages (WebC and UI5) use the same values but different variable names. WebC uses kebab-case with a `--kiosk-keyboard-*` prefix (e.g. `--kiosk-keyboard-key-height`); UI5 uses a `--ui5KioskKeyboard-*` prefix with the per-word segments folded to camelCase (e.g. `--ui5KioskKeyboard-keyHeight`). The variable reference below lists the WebC (kebab) names; swapping only the prefix is not enough to get the UI5 name, the segment casing changes too.
 
 All rem-to-pixel conversions in this document assume the browser default of 16px per rem.
 

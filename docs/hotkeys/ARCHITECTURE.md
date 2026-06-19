@@ -28,6 +28,8 @@ internal/scope.ts            Scope string resolution and validation
 internal/skip-reason.ts      Internal dispatch skip-reason types
 internal/idgen.ts            Internal registration ID generator
 internal/registration-index.ts Scope/target registration index (id-based)
+internal/hotkey-matcher.ts   Two-pass matching: targeted (innermost via composedPath) then untargeted
+internal/conflict-resolver.ts Duplicate-registration conflict detection/resolution during register()
 internal/runtime.ts          Lazy popup-open check (sap/m/InstanceManager) + platform hooks
 internal/FocusFallbackTracker.ts Document focus listeners + focus-path fallback for rerenders
 ```
@@ -89,9 +91,9 @@ keydown event (window capture)
   ├─ Step 4: Suspend guard check
   │           If any guard active → emit unhandled(Suspended), stop
   │
-  ├─ Step 5: Hotkey dispatch (HotkeyManager._processHotkeys)
-  │           Pass 1: target-scoped via composedPath() (active scope → global)
-  │           Pass 2: untargeted registrations (active scope → global)
+  ├─ Step 5: Hotkey dispatch (HotkeyManager._processHotkeys → HotkeyMatcher)
+  │           Pass 1: matcher.matchTargeted() via composedPath() (active scope → global)
+  │           Pass 2: matcher.matchUntargeted() (active scope → global)
   │
   ├─ Step 6: Sequence dispatch (SequenceManager.processKeyEvent)
   │           Returns true if full match OR partial advance
@@ -114,7 +116,7 @@ Each registration is checked against the following guards before the callback fi
 
 ### Two-Pass Matching
 
-The two-pass approach is the core of the scope system. Target-scoped registrations are checked first:
+The matching algorithm lives in `HotkeyMatcher` (`internal/hotkey-matcher.ts`); `HotkeyManager._processHotkeys` only orchestrates, calling `matchTargeted()` then `matchUntargeted()`. The two-pass approach is the core of the scope system. Target-scoped registrations are checked first:
 
 1. All target-scoped registrations whose target appears in the event's `composedPath()` are checked, innermost first (active scope → global scope).
 2. If no target match stopped propagation, all untargeted registrations are checked (active scope → global scope).
@@ -370,6 +372,8 @@ packages/hotkeys/
       skip-reason.ts       Internal skip-reason models
       idgen.ts             Internal ID generator
       registration-index.ts Scope/target registration index
+      hotkey-matcher.ts    Two-pass targeted/untargeted matching
+      conflict-resolver.ts Duplicate-registration conflict detection/resolution
       runtime.ts           Lazy popup-open check + platform hooks
       FocusFallbackTracker.ts Document focus listeners + focus-path fallback
     manifest.json       Library manifest (descriptor schema v2.0.0)

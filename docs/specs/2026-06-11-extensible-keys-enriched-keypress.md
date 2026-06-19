@@ -2,7 +2,7 @@
 
 **Issue:** [#74](https://github.com/wridgeu/ui5-keyboard/issues/74)
 **Date:** 2026-06-11
-**Status:** Proposed (supersedes the per-instance action subsystem spiked in PR #111)
+**Status:** Implemented (supersedes the per-instance action subsystem spiked in PR #111)
 
 ## Context
 

@@ -14,3 +14,4 @@ They are kept as historical context and are not the primary source of truth for 
 - [Remove stableHeight Property](./REMOVE-STABLE-HEIGHT.md)
 - [Web Component Package](./WEBCOMPONENT-PACKAGE.md)
 - [Nav Row Wrapping & Responsive Layout Patterns](./NAV-ROW-WRAPPING-AND-RESPONSIVE-PATTERNS.md)
+- [Backward Compatibility](./BACKWARD-COMPATIBILITY.md) (rejected)
