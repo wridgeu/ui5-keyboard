@@ -1,7 +1,7 @@
 import { ConflictBehavior, GLOBAL_SCOPE, Platform } from "ui5/hotkeys/library";
-import { runtimeHooks } from "ui5/hotkeys/internal/runtime";
 import type Log from "sap/base/Log";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
+import { stubPopupOpen } from "./popup-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
 const sandbox = sinon.createSandbox();
@@ -557,7 +557,7 @@ QUnit.test("suppressInPopups: suppresses when popup is open", (assert) => {
     { suppressInPopups: true },
   );
 
-  const popupStub = sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
+  const popupStub = stubPopupOpen(sandbox, true);
 
   fireKey("F5");
   assert.notOk(called, "F5 suppressed when popup is open");
@@ -576,7 +576,7 @@ QUnit.test("suppressInPopups: true (default) suppresses when popup is open", (as
     called = true;
   });
 
-  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
+  stubPopupOpen(sandbox, true);
 
   fireKey("F5");
   assert.notOk(called, "F5 suppressed with popup open (default suppressInPopups: true)");
@@ -594,7 +594,7 @@ QUnit.test("suppressInPopups: false fires even with popup open", (assert) => {
     { suppressInPopups: false },
   );
 
-  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
+  stubPopupOpen(sandbox, true);
 
   fireKey("F5");
   assert.ok(called, "F5 fires with popup open when suppressInPopups is false");
@@ -951,7 +951,7 @@ QUnit.test("Unhandled: fires with popup_suppressed when popup open", (assert) =>
     { suppressInPopups: true },
   );
 
-  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
+  stubPopupOpen(sandbox, true);
 
   manager.setUnhandledHandler((c) => {
     ctx = c;
@@ -1338,7 +1338,7 @@ QUnit.test("setOptions: update suppressInPopups", (assert) => {
     { suppressInPopups: true },
   );
 
-  sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
+  stubPopupOpen(sandbox, true);
 
   fireKey("F5");
   assert.strictEqual(count, 0, "F5 suppressed with popup open");
@@ -1385,8 +1385,7 @@ QUnit.test("setOptions: throws on conflictBehavior change", (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert) => {
-  sandbox.stub(runtimeHooks, "detectPlatform").returns(Platform.Windows);
-  const manager = createHotkeyManager();
+  const manager = createHotkeyManager(Platform.Windows);
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1417,8 +1416,7 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
 });
 
 QUnit.test("AltGr: AltGraph modifier state suppresses Ctrl+Alt hotkey on Windows", (assert) => {
-  sandbox.stub(runtimeHooks, "detectPlatform").returns(Platform.Windows);
-  const manager = createHotkeyManager();
+  const manager = createHotkeyManager(Platform.Windows);
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1442,8 +1440,7 @@ QUnit.test("AltGr: AltGraph modifier state suppresses Ctrl+Alt hotkey on Windows
 });
 
 QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
-  sandbox.stub(runtimeHooks, "detectPlatform").returns(Platform.Windows);
-  const manager = createHotkeyManager();
+  const manager = createHotkeyManager(Platform.Windows);
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1465,8 +1462,7 @@ QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
 });
 
 QUnit.test("AltGr: guard only active on Windows", (assert) => {
-  sandbox.stub(runtimeHooks, "detectPlatform").returns(Platform.Linux);
-  const manager = createHotkeyManager();
+  const manager = createHotkeyManager(Platform.Linux);
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1488,8 +1484,7 @@ QUnit.test("AltGr: guard only active on Windows", (assert) => {
 });
 
 QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
-  sandbox.stub(runtimeHooks, "detectPlatform").returns(Platform.Windows);
-  const manager = createHotkeyManager();
+  const manager = createHotkeyManager(Platform.Windows);
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {
@@ -1502,8 +1497,7 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
 });
 
 QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (assert) => {
-  sandbox.stub(runtimeHooks, "detectPlatform").returns(Platform.Windows);
-  const manager = createHotkeyManager();
+  const manager = createHotkeyManager(Platform.Windows);
   let called = false;
 
   manager.register("Ctrl+Alt+E", () => {

@@ -33,8 +33,8 @@ QUnit.test("Returns a valid platform", (assert) => {
   assert.ok([Platform.Mac, Platform.Windows, Platform.Linux].includes(platform), `Platform "${platform}" is valid`);
 });
 
-QUnit.test("Caching: returns same result on repeated calls", (assert) => {
+QUnit.test("Returns the same result on repeated calls", (assert) => {
   const first = detectPlatform();
   const second = detectPlatform();
-  assert.strictEqual(first, second, "Cached result returned");
+  assert.strictEqual(first, second, "Detection is deterministic");
 });

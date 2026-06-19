@@ -18,7 +18,8 @@ import ConflictResolver from "./internal/conflict-resolver";
 import HotkeyMatcher from "./internal/hotkey-matcher";
 import { resolveEnabled } from "./internal/resolve-enabled";
 import { resolveRequiredScope, resolveScopeOrGlobal } from "./internal/scope";
-import { runtimeHooks } from "./internal/runtime";
+import { detectPlatform } from "./internal/platform";
+import { hasOpenPopup } from "./internal/runtime";
 import { validateHotkey } from "./internal/validate";
 import type { SkipInfo } from "./internal/skip-reason";
 import type {
@@ -171,10 +172,13 @@ export default class HotkeyManager extends BaseObject {
    * Typically created once in `Component.init()` and destroyed in
    * `Component.exit()`. Controllers access it via
    * `getOwnerComponent().getHotkeyManager()`.
+   *
+   * @param platform - Platform driving `Mod` resolution and platform-specific
+   *   dispatch quirks. Defaults to auto-detection from the browser.
    */
-  constructor() {
+  constructor(platform: Platform = detectPlatform()) {
     super();
-    this._platform = runtimeHooks.detectPlatform();
+    this._platform = platform;
 
     const handler: HotkeyDispatchHandler = {
       processHotkeys: (e) => this._processHotkeys(e),
@@ -813,7 +817,7 @@ export default class HotkeyManager extends BaseObject {
     const isInput = isInputElement(target);
 
     // Check popup state (lazy-loaded)
-    const popupOpen = this._checkPopupOpen();
+    const popupOpen = hasOpenPopup();
 
     const skipInfo: SkipInfo | null = this._unhandledCallback !== null ? { reason: UnhandledReason.NoMatch } : null;
     const eventContext: EventContext = { activeScope, isInput, popupOpen, skipInfo };
@@ -873,7 +877,7 @@ export default class HotkeyManager extends BaseObject {
       activeScope = this.getActiveScope();
       const target = getEventTarget(event);
       isInput = isInputElement(target);
-      popupOpen = this._checkPopupOpen();
+      popupOpen = hasOpenPopup();
     } else {
       // Use context forwarded from _processHotkeys - the dispatcher always
       // provides it when no forced reason is set.
@@ -937,17 +941,5 @@ export default class HotkeyManager extends BaseObject {
     for (const warning of warnings) {
       Log.warning(`Hotkey "${normalizedHotkey}": ${warning}`, undefined, LOG_COMPONENT);
     }
-  }
-
-  // ──────────────────────────────────────────────
-  // Private: Popup check (dialogs + popovers)
-  // ──────────────────────────────────────────────
-
-  /**
-   * Lazy-load `sap.m.InstanceManager` to avoid a hard dependency on `sap.m`.
-   * Returns whether any UI5 popup (dialog or popover) is currently open.
-   */
-  private _checkPopupOpen(): boolean {
-    return runtimeHooks.hasOpenPopup();
   }
 }

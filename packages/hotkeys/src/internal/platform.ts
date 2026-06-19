@@ -5,8 +5,6 @@ interface NavigatorUAData {
   platform: string;
 }
 
-let cachedPlatform: Platform | null = null;
-
 /**
  * Detect the current platform.
  *
@@ -14,32 +12,22 @@ let cachedPlatform: Platform | null = null;
  * 1. `navigator.userAgentData.platform` (modern Chromium API)
  * 2. `navigator.platform` (legacy, widely supported)
  * 3. `navigator.userAgent` (fallback)
- *
- * Result is cached after first call.
  */
 export function detectPlatform(): Platform {
-  if (cachedPlatform !== null) {
-    return cachedPlatform;
-  }
-
   // Modern API (Chromium-based browsers)
   const uaData = (navigator as Navigator & { userAgentData?: NavigatorUAData }).userAgentData;
   if (uaData?.platform) {
-    const uaPlatform = uaData.platform.toLowerCase();
-    cachedPlatform = resolvePlatformString(uaPlatform);
-    return cachedPlatform;
+    return resolvePlatformString(uaData.platform.toLowerCase());
   }
 
   // Legacy API
   const platform = navigator.platform.toLowerCase();
   if (platform) {
-    cachedPlatform = resolvePlatformString(platform);
-    return cachedPlatform;
+    return resolvePlatformString(platform);
   }
 
   // User-Agent fallback
-  cachedPlatform = resolvePlatformString(navigator.userAgent.toLowerCase());
-  return cachedPlatform;
+  return resolvePlatformString(navigator.userAgent.toLowerCase());
 }
 
 function resolvePlatformString(value: string): Platform {

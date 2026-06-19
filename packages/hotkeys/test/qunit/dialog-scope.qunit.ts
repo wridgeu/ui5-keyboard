@@ -1,5 +1,6 @@
-import { runtimeHooks } from "ui5/hotkeys/internal/runtime";
+import { hasOpenPopup } from "ui5/hotkeys/internal/runtime";
 import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
+import { stubPopupOpen } from "./popup-helpers";
 
 const sandbox = sinon.createSandbox();
 
@@ -84,7 +85,7 @@ QUnit.test("suppressInPopups with runtime popup hook", (assert) => {
     { suppressInPopups: true },
   );
 
-  const popupStub = sandbox.stub(runtimeHooks, "hasOpenPopup").returns(true);
+  const popupStub = stubPopupOpen(sandbox, true);
   fireKey("s", { ctrlKey: true });
   assert.notOk(called, "Ctrl+S suppressed when popup is open");
 
@@ -170,4 +171,10 @@ QUnit.test("Fragment popup lifecycle: push, register, fire, unregister, pop", (a
   fragmentCalled = false;
   fireKey("Enter");
   assert.notOk(fragmentCalled, "Fragment Enter does not fire after cleanup");
+});
+
+QUnit.test("hasOpenPopup reports false when no UI5 popup is open", (assert) => {
+  // Exercises the real probe (not the InstanceManager stub other tests install):
+  // it reads sap.m.InstanceManager on each call and reports false when nothing is open.
+  assert.notOk(hasOpenPopup(), "No dialog or popover open");
 });

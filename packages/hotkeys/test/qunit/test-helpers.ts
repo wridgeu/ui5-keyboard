@@ -3,6 +3,7 @@
  */
 
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
+import type { Platform } from "ui5/hotkeys/library";
 
 function buildKeyEvent(type: "keydown" | "keyup", key: string, options?: Partial<KeyboardEvent>): KeyboardEvent {
   const event = new KeyboardEvent(type, {
@@ -75,11 +76,11 @@ export function destroyHotkeyManager(): void {
 }
 
 /**
- * Create a fresh HotkeyManager for testing.
+ * Create a fresh HotkeyManager for testing, optionally pinning the platform.
  * Destroys the previous tracked instance first.
  */
-export function createHotkeyManager(): HotkeyManager {
+export function createHotkeyManager(platform?: Platform): HotkeyManager {
   destroyHotkeyManager();
-  _testManager = new HotkeyManager();
+  _testManager = new HotkeyManager(platform);
   return _testManager;
 }
