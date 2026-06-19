@@ -7,9 +7,10 @@
  * (web component) intentionally do not share code; a set of modules is
  * duplicated by hand and must stay logically identical. Hand-syncing has
  * already missed one-sided fixes, so this check compares each twin pair after
- * normalizing away the differences that are legitimate (comments, `.js` ESM
- * import suffixes, whitespace, logging idioms) and fails with a unified diff
- * when anything else drifts.
+ * normalizing away the differences that are legitimate (comments, blank lines,
+ * `.js` ESM import suffixes, logging idioms) and fails with a unified diff when
+ * anything else drifts. Intra-line spacing is left to oxfmt (run before this
+ * check in the same pipeline), so the normalizer does not re-collapse it.
  *
  * Deliberately UNCHECKED twin modules (framework-adapted or intentionally
  * divergent; compared by humans, not by this script):
@@ -48,7 +49,9 @@
  * - types.ts: kiosk carries UI5-only types (control settings, renderer API).
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -95,58 +98,42 @@ const PAIRS = [
 const EXPECTED_PAIR_COUNT = 21;
 
 /**
- * Strips line and block comments and collapses whitespace runs to a single
- * space, but ONLY outside string literals: a `//` or extra spaces inside a
- * string are real data (layout key values are strings) and must survive.
- * Newlines outside strings are preserved so the diff stays line-oriented.
+ * Removes line and block comments, but ONLY outside string literals: a `//` or
+ * `/*` inside a string is real data (layout key values are strings like "/" or
+ * "*") and must survive verbatim. Newlines are preserved so the comparison
+ * stays line-oriented; intra-line spacing is left to oxfmt and `normalize()`
+ * trims each line, so no whitespace collapsing happens here.
  *
  * Limitation: regex literals are not modeled (none exist in the checked
- * modules); a `/"/` regex would desync quote tracking. Because both twins are
- * parsed identically, a desync affects both sides the same way and still
- * yields a faithful comparison.
+ * modules). Both twins are parsed identically, so any quote-tracking desync
+ * affects both sides the same way and still yields a faithful comparison.
  *
  * @param {string} src TypeScript source text
- * @returns {string} normalized source
+ * @returns {string} source with comments stripped
  */
-function stripCommentsAndCollapseWhitespace(src) {
+function stripComments(src) {
   let out = "";
   let i = 0;
-  // All three quote types ('...', "...", `...`) are verbatim string spans;
-  // template `${}` interpolations are not parsed as code (no checked module
-  // nests code in a template, and verbatim contents still compare faithfully).
+  // Each quote char opens a verbatim span closed by the same char; template
+  // `${}` interpolations are not parsed as code (no checked module nests code
+  // in a template, and verbatim contents still compare faithfully).
   /** @type {Array<"code" | "single" | "double" | "template">} */
   const stack = ["code"];
-  let pendingSpace = false;
-
-  const emit = (chunk) => {
-    if (pendingSpace) {
-      if (out.length > 0 && !out.endsWith("\n") && chunk !== "\n") {
-        out += " ";
-      }
-      pendingSpace = false;
-    }
-    out += chunk;
-  };
 
   while (i < src.length) {
     const mode = stack[stack.length - 1];
-    // The base "code" entry is never popped, so the stack is never empty;
-    // the `if (!mode)` guard only narrows the type for noUncheckedIndexedAccess.
-    if (!mode) break;
-    const c = src[i];
-    const next = src[i + 1];
+    const c = src[i] ?? "";
+    const next = src[i + 1] ?? "";
 
     if (mode === "code") {
       if (c === "/" && next === "/") {
-        // Line comment: skip to (not past) the newline.
-        while (i < src.length && src[i] !== "\n") i++;
+        while (i < src.length && src[i] !== "\n") i++; // skip to (not past) the newline
         continue;
       }
       if (c === "/" && next === "*") {
-        // Block comment: skip, preserving contained newlines for line structure.
         i += 2;
         while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) {
-          if (src[i] === "\n") emit("\n");
+          if (src[i] === "\n") out += "\n"; // preserve contained newlines for line structure
           i++;
         }
         i += 2;
@@ -154,36 +141,22 @@ function stripCommentsAndCollapseWhitespace(src) {
       }
       if (c === "'" || c === '"' || c === "`") {
         stack.push(c === "'" ? "single" : c === '"' ? "double" : "template");
-        emit(c);
-        i++;
-        continue;
       }
-      if (c === "\n") {
-        pendingSpace = false;
-        emit("\n");
-        i++;
-        continue;
-      }
-      if (c === " " || c === "\t" || c === "\r") {
-        pendingSpace = true;
-        i++;
-        continue;
-      }
-      emit(c);
+      out += c;
       i++;
       continue;
     }
 
-    // Inside a string or template literal: verbatim, honoring escapes.
+    // Inside a string or template literal: copy verbatim, honoring escapes.
     if (c === "\\") {
-      emit(c + (next ?? ""));
+      out += c + next;
       i += 2;
       continue;
     }
     if ((mode === "single" && c === "'") || (mode === "double" && c === '"') || (mode === "template" && c === "`")) {
       stack.pop();
     }
-    emit(c);
+    out += c;
     i++;
   }
 
@@ -201,10 +174,8 @@ const RELATIVE_JS_SUFFIX = /((?:from|import)\s*\(?\s*["'])(\.{1,2}\/[^"']*)\.js(
  * @returns {string[]} normalized, non-empty lines
  */
 function normalize(filePath) {
-  const raw = readFileSync(filePath, "utf8");
-  const stripped = stripCommentsAndCollapseWhitespace(raw);
   const lines = [];
-  for (let line of stripped.split("\n")) {
+  for (let line of stripComments(readFileSync(filePath, "utf8")).split("\n")) {
     line = line.trim();
     if (!line) continue;
     if (LOG_IMPORT.test(line)) continue; // kiosk-only logger import
@@ -220,79 +191,45 @@ function normalize(filePath) {
 }
 
 /**
- * Longest-common-subsequence diff over normalized lines, rendered in a
- * unified-diff style (files here are a few hundred lines; O(n*m) is fine).
+ * Renders a unified diff of two normalized line lists for human consumption,
+ * delegated to `git diff --no-index` (git is always available here, so there
+ * is no hand-rolled diff to maintain). The drift decision is made by the caller
+ * via line equality; this is best-effort output only and always returns a
+ * non-empty string so a git hiccup can never read as "in sync". Reported line
+ * numbers are positions in the normalized form, not the source.
  *
- * @param {string[]} a kiosk lines
- * @param {string[]} b webc lines
- * @returns {string[]} diff lines (empty when identical)
+ * @param {string[]} kioskLines
+ * @param {string[]} webcLines
+ * @returns {string} diff hunks (or a git-failure notice)
  */
-function unifiedDiff(a, b) {
-  const n = a.length;
-  const m = b.length;
-  // lcs[i][j] = length of the longest common subsequence of a[i:] and b[j:].
-  // Cells default to 0, which is also the base case, so out-of-range reads
-  // coalesce to the correct value (`?? 0`) under noUncheckedIndexedAccess.
-  /** @type {number[][]} */
-  const lcs = Array.from({ length: n + 1 }, () => Array.from({ length: m + 1 }, () => 0));
-  for (let i = n - 1; i >= 0; i--) {
-    const row = lcs[i] ?? [];
-    const below = lcs[i + 1] ?? [];
-    for (let j = m - 1; j >= 0; j--) {
-      row[j] = a[i] === b[j] ? (below[j + 1] ?? 0) + 1 : Math.max(below[j] ?? 0, row[j + 1] ?? 0);
-    }
+function renderDiff(kioskLines, webcLines) {
+  const dir = mkdtempSync(path.join(tmpdir(), "twin-drift-"));
+  try {
+    const kioskTmp = path.join(dir, "kiosk");
+    const webcTmp = path.join(dir, "webc");
+    writeFileSync(kioskTmp, `${kioskLines.join("\n")}\n`);
+    writeFileSync(webcTmp, `${webcLines.join("\n")}\n`);
+    // `git diff --no-index` exits 1 when the files differ, so the diff arrives
+    // on the thrown error's stdout. stderr is piped (not inherited) so git's
+    // cosmetic LF/CRLF working-copy warnings for these temp files stay out of
+    // our output.
+    execFileSync("git", ["diff", "--no-index", "--no-color", "--", kioskTmp, webcTmp], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return "(identical after normalization)"; // unreachable: caller only renders real drift
+  } catch (err) {
+    const e = /** @type {{ stdout?: string; message?: string }} */ (err);
+    // Drop git's temp-path file headers; keep the @@ hunks and +/- lines.
+    const hunks = (e.stdout ?? "")
+      .split("\n")
+      .filter((line) => !/^(?:diff --git |index |--- |\+\+\+ )/.test(line))
+      .join("\n")
+      .trim();
+    return hunks || `(git diff failed: ${e.message || "unknown error"})`;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
-  /** @type {Array<{ tag: " " | "-" | "+", text: string, ai: number, bi: number }>} */
-  const ops = [];
-  let i = 0;
-  let j = 0;
-  while (i < n && j < m) {
-    const ai = a[i] ?? "";
-    const bj = b[j] ?? "";
-    if (ai === bj) {
-      ops.push({ tag: " ", text: ai, ai: i, bi: j });
-      i++;
-      j++;
-    } else if ((lcs[i + 1]?.[j] ?? 0) >= (lcs[i]?.[j + 1] ?? 0)) {
-      ops.push({ tag: "-", text: ai, ai: i, bi: j });
-      i++;
-    } else {
-      ops.push({ tag: "+", text: bj, ai: i, bi: j });
-      j++;
-    }
-  }
-  while (i < n) {
-    ops.push({ tag: "-", text: a[i] ?? "", ai: i, bi: j });
-    i++;
-  }
-  while (j < m) {
-    ops.push({ tag: "+", text: b[j] ?? "", ai: i, bi: j });
-    j++;
-  }
-
-  const CONTEXT = 2;
-  const keep = ops.map(() => false);
-  for (let k = 0; k < ops.length; k++) {
-    if (ops[k]?.tag === " ") continue;
-    for (let c = Math.max(0, k - CONTEXT); c <= Math.min(ops.length - 1, k + CONTEXT); c++) {
-      keep[c] = true;
-    }
-  }
-  const lines = [];
-  let inHunk = false;
-  for (let k = 0; k < ops.length; k++) {
-    const op = ops[k];
-    if (!op || !keep[k]) {
-      inHunk = false;
-      continue;
-    }
-    if (!inHunk) {
-      lines.push(`@@ kiosk line ~${op.ai + 1}, webc line ~${op.bi + 1} (normalized) @@`);
-      inHunk = true;
-    }
-    lines.push(`${op.tag} ${op.text}`);
-  }
-  return ops.some((op) => op.tag !== " ") ? lines : [];
 }
 
 if (PAIRS.length !== EXPECTED_PAIR_COUNT) {
@@ -310,13 +247,14 @@ for (const pair of PAIRS) {
       process.exit(1);
     }
   }
-  const diff = unifiedDiff(normalize(pair.kiosk), normalize(pair.webc));
-  if (diff.length > 0) {
+  const kioskLines = normalize(pair.kiosk);
+  const webcLines = normalize(pair.webc);
+  if (kioskLines.join("\n") !== webcLines.join("\n")) {
     drifted++;
-    console.error(`\nTwin drift in '${pair.label}':`);
+    console.error(`\nTwin drift in '${pair.label}' (normalized):`);
     console.error(`--- ${path.relative(repoRoot, pair.kiosk)}`);
     console.error(`+++ ${path.relative(repoRoot, pair.webc)}`);
-    for (const line of diff) console.error(line);
+    console.error(renderDiff(kioskLines, webcLines));
   }
 }
 
