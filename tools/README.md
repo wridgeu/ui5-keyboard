@@ -46,7 +46,7 @@ Adding a new rule: export a new rule object from the plugin and add a correspond
 
 ## `oxlint-plugin-comment-quality.mjs`
 
-Custom oxlint JS plugin that detects low-quality AI-generated comments via focused regex patterns against keeper-filtered comment text. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
+Custom oxlint JS plugin that detects low-quality AI-generated comments via focused regex patterns over comment text. Loaded via the `jsPlugins` field in `.oxlintrc.json` and runs as part of `npm run lint`.
 
 **Rules:**
 
