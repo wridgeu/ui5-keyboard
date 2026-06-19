@@ -1,6 +1,5 @@
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import { Platform } from "ui5/hotkeys/library";
-import { runtimeHooks } from "ui5/hotkeys/internal/runtime";
 import { createHotkeyManager, destroyHotkeyManager, fireBlur, fireKey, fireKeyUp } from "./test-helpers";
 
 const sandbox = sinon.createSandbox();
@@ -91,8 +90,7 @@ QUnit.test("Blur clears all held keys", (assert) => {
 });
 
 QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
-  sandbox.stub(runtimeHooks, "detectPlatform").returns(Platform.Mac);
-  const manager = createHotkeyManager();
+  const manager = createHotkeyManager(Platform.Mac);
   const tracker = manager.getKeyStateTracker();
 
   fireKey("Meta", { metaKey: true });

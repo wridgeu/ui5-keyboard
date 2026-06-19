@@ -7,6 +7,11 @@ framework:
   version: "1.144.0"
   libraries:
     - name: sap.ui.core
+    # Development-only: HotkeyManager optionally integrates with sap.m.InstanceManager
+    # for popup-aware suppression (probed lazily, never a runtime dependency). Declared
+    # here so the QUnit suite can load and stub the real collaborator.
+    - name: sap.m
+      development: true
 builder:
   resources:
     excludes:
