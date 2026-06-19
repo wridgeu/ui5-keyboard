@@ -665,6 +665,40 @@ QUnit.test("scope introspection normalizes whitespace consistently", (assert) =>
   );
 });
 
+QUnit.test("findRegistrations filters registrations by predicate", (assert) => {
+  const manager = createHotkeyManager();
+
+  manager.register("Escape", () => {});
+  manager.register("Ctrl+S", () => {});
+
+  const matches = manager.findRegistrations((r) => r.normalizedHotkey === "Control+S");
+  assert.strictEqual(matches.length, 1, "One registration matches the predicate");
+  assert.strictEqual(matches[0].hotkey, "Ctrl+S", "Matched the expected registration");
+});
+
+QUnit.test("findRegistrations returns an empty array when nothing matches", (assert) => {
+  const manager = createHotkeyManager();
+
+  manager.register("Escape", () => {});
+
+  assert.deepEqual(
+    manager.findRegistrations((r) => r.hotkey === "F5"),
+    [],
+    "No matches yields an empty array",
+  );
+});
+
+QUnit.test("findRegistrations can filter sequences", (assert) => {
+  const manager = createHotkeyManager();
+
+  manager.register("Escape", () => {});
+  manager.register("G I", () => {});
+
+  const sequences = manager.findRegistrations((r) => r.sequence !== null);
+  assert.strictEqual(sequences.length, 1, "One sequence registration matches");
+  assert.deepEqual(sequences[0].sequence, ["G", "I"], "Sequence steps are exposed to the predicate");
+});
+
 // ──────────────────────────────────────────────
 // Lifecycle
 // ──────────────────────────────────────────────
