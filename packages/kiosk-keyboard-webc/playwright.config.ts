@@ -4,11 +4,9 @@ import path from "node:path";
 /**
  * Playwright e2e + visual regression config for kiosk-keyboard-webc.
  *
- * Replaces the previous WebdriverIO + @wdio/visual-service setup. Playwright
- * covers the same ground natively: device emulation via projects, shadow-DOM
- * piercing locators, `emulateMedia` (including forced-colors), and
- * `toHaveScreenshot` visual comparison, so the hand-rolled wdio server,
- * device-profile, and visual-baseline tooling are no longer needed here.
+ * Covers device emulation via projects, shadow-DOM piercing locators,
+ * `emulateMedia` (including forced-colors), and `toHaveScreenshot` visual
+ * comparison.
  *
  * Browser provisioning follows Playwright's recommended flow: run
  * `npx playwright install chromium` (CI uses `--with-deps`). Browsers are not

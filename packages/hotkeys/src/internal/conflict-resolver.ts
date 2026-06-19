@@ -3,7 +3,7 @@ import { ConflictBehavior } from "../library";
 import type RegistrationIndex from "./registration-index";
 import type { HotkeyRegistration, ResolvedTarget } from "./types";
 
-// Kept as the HotkeyManager component so existing log output is unchanged.
+// Internal collaborators log under the public HotkeyManager component.
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 /**

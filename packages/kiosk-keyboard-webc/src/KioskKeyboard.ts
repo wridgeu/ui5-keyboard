@@ -5,8 +5,7 @@
 // and core/middleware-registry.js, which build their maps from direct imports).
 // They are therefore bundled wherever this entry is -- including the
 // ui5-tooling-modules wrapper that resolves the main entry from the CEM -- and
-// cannot be dropped by tree-shaking (the previous side-effect-only imports were;
-// see issue #108).
+// cannot be dropped by tree-shaking. Side-effect-only imports would be.
 
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
