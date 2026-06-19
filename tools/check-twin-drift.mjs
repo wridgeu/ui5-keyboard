@@ -8,9 +8,9 @@
  * duplicated by hand and must stay logically identical. Hand-syncing has
  * already missed one-sided fixes, so this check compares each twin pair after
  * normalizing away the differences that are legitimate (comments, blank lines,
- * `.js` ESM import suffixes, logging idioms) and fails with a unified diff when
- * anything else drifts. Intra-line spacing is left to oxfmt (run before this
- * check in the same pipeline), so the normalizer does not re-collapse it.
+ * `.js` ESM import suffixes, logging idioms) and fails with the first drifting
+ * line when anything else drifts. Intra-line spacing is left to oxfmt (run
+ * before this check in the same pipeline), so the normalizer does not collapse it.
  *
  * Deliberately UNCHECKED twin modules (framework-adapted or intentionally
  * divergent; compared by humans, not by this script):
@@ -49,9 +49,7 @@
  * - types.ts: kiosk carries UI5-only types (control settings, renderer API).
  */
 
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -190,48 +188,6 @@ function normalize(filePath) {
   return lines;
 }
 
-/**
- * Renders a unified diff of two normalized line lists for human consumption,
- * delegated to `git diff --no-index` (git is always available here, so there
- * is no hand-rolled diff to maintain). The drift decision is made by the caller
- * via line equality; this is best-effort output only and always returns a
- * non-empty string so a git hiccup can never read as "in sync". Reported line
- * numbers are positions in the normalized form, not the source.
- *
- * @param {string[]} kioskLines
- * @param {string[]} webcLines
- * @returns {string} diff hunks (or a git-failure notice)
- */
-function renderDiff(kioskLines, webcLines) {
-  const dir = mkdtempSync(path.join(tmpdir(), "twin-drift-"));
-  try {
-    const kioskTmp = path.join(dir, "kiosk");
-    const webcTmp = path.join(dir, "webc");
-    writeFileSync(kioskTmp, `${kioskLines.join("\n")}\n`);
-    writeFileSync(webcTmp, `${webcLines.join("\n")}\n`);
-    // `git diff --no-index` exits 1 when the files differ, so the diff arrives
-    // on the thrown error's stdout. stderr is piped (not inherited) so git's
-    // cosmetic LF/CRLF working-copy warnings for these temp files stay out of
-    // our output.
-    execFileSync("git", ["diff", "--no-index", "--no-color", "--", kioskTmp, webcTmp], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    return "(identical after normalization)"; // unreachable: caller only renders real drift
-  } catch (err) {
-    const e = /** @type {{ stdout?: string; message?: string }} */ (err);
-    // Drop git's temp-path file headers; keep the @@ hunks and +/- lines.
-    const hunks = (e.stdout ?? "")
-      .split("\n")
-      .filter((line) => !/^(?:diff --git |index |--- |\+\+\+ )/.test(line))
-      .join("\n")
-      .trim();
-    return hunks || `(git diff failed: ${e.message || "unknown error"})`;
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-
 if (PAIRS.length !== EXPECTED_PAIR_COUNT) {
   console.error(`Pair manifest has ${PAIRS.length} entries, expected ${EXPECTED_PAIR_COUNT}. Update both together.`);
   process.exit(1);
@@ -249,13 +205,19 @@ for (const pair of PAIRS) {
   }
   const kioskLines = normalize(pair.kiosk);
   const webcLines = normalize(pair.webc);
-  if (kioskLines.join("\n") !== webcLines.join("\n")) {
-    drifted++;
-    console.error(`\nTwin drift in '${pair.label}' (normalized):`);
-    console.error(`--- ${path.relative(repoRoot, pair.kiosk)}`);
-    console.error(`+++ ${path.relative(repoRoot, pair.webc)}`);
-    console.error(renderDiff(kioskLines, webcLines));
-  }
+  if (kioskLines.join("\n") === webcLines.join("\n")) continue;
+
+  drifted++;
+  // Report the first divergence. Line numbers are positions in the normalized
+  // form, not the source; open both files in a diff tool for the full delta.
+  const max = Math.max(kioskLines.length, webcLines.length);
+  let at = 0;
+  while (at < max && kioskLines[at] === webcLines[at]) at++;
+  console.error(`\nTwin drift in '${pair.label}' (first diff at normalized line ~${at + 1}):`);
+  console.error(`--- ${path.relative(repoRoot, pair.kiosk)}`);
+  console.error(`+++ ${path.relative(repoRoot, pair.webc)}`);
+  console.error(`- ${kioskLines[at] ?? "<end of file>"}`);
+  console.error(`+ ${webcLines[at] ?? "<end of file>"}`);
 }
 
 if (drifted > 0) {
