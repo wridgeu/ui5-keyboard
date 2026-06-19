@@ -15,8 +15,14 @@
  * divergent; compared by humans, not by this script):
  * - KioskKeyboard.ts: the main class is a UI5 Control (metadata, renderer,
  *   lifecycle hooks) in kiosk and a decorator-based web component in webc; the
- *   two are structurally non-comparable. This is the widest unchecked surface,
- *   so shared logic in the main class must be hand-synced across the twins.
+ *   two are structurally non-comparable. This is the widest unchecked surface:
+ *   shared logic here is hand-synced across the twins until the orchestrators
+ *   are decomposed into controller twin-pairs that this script can diff (the
+ *   path to real coverage, tracked in #121).
+ * - internal/key-grid-navigation.ts: kiosk extracted arrow-key grid navigation
+ *   to its own module (attached via addDelegate); webc keeps the same logic
+ *   inline in KioskKeyboard.ts `_onKeyDown`, so there is no webc twin file to
+ *   diff. Closing this asymmetry is part of #121.
  * - middleware/kana-dakuten.ts: known semantic divergence between the twins.
  * - middleware/hangul-compose.ts: framework-adapted wiring differs.
  * - internal/layout-registry.ts <-> core/layout-registry.ts: registry is
@@ -31,6 +37,14 @@
  *   core/i18n.ts, internal/detect-keyboard-type.ts <->
  *   core/keyboard-type-detector.ts, internal/backspace-repeat-behavior.ts <->
  *   core/backspace-repeat-controller.ts: framework adapters, different APIs.
+ * - Framework-adapted controllers, same responsibility but kiosk extends
+ *   sap/ui/base/Object behind a UI5 getter-based host while webc reads a plain
+ *   element / shadow-root host:
+ *   internal/responsive-sizing-controller.ts <-> core/responsive-sizing-controller.ts,
+ *   internal/physical-key-highlight.ts <-> core/physical-key-highlight-controller.ts,
+ *   internal/auto-show-behavior.ts <-> core/auto-show-controller.ts,
+ *   internal/native-keyboard-suppression.ts <-> core/native-inputmode-suppression.ts
+ *   (the last keys its refcount map by control id in kiosk, by element in webc).
  * - types.ts: kiosk carries UI5-only types (control settings, renderer API).
  */
 
