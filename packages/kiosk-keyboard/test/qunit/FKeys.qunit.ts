@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import FKeyController from "ui5/kiosk/internal/fkey-controller";
 import { FKeyMode } from "ui5/kiosk/library";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import type { LayoutDefinition } from "ui5/kiosk/types";
@@ -294,7 +295,7 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
     pressedKey = e.getParameter("key");
   });
 
-  const statics = KioskKeyboard as unknown as {
+  const statics = FKeyController as unknown as {
     _executeNativeFKeyAction: (fkeyName: string) => void;
   };
   const originalAction = statics._executeNativeFKeyAction;
@@ -342,7 +343,7 @@ QUnit.test("Native fKeyMode skips native action when keydown is prevented", asyn
     pressedKey = e.getParameter("key");
   });
 
-  const statics = KioskKeyboard as unknown as {
+  const statics = FKeyController as unknown as {
     _executeNativeFKeyAction: (fkeyName: string) => void;
   };
   const originalAction = statics._executeNativeFKeyAction;
@@ -385,7 +386,7 @@ QUnit.test("keyPress preventDefault prevents native dispatch and native action",
     e.preventDefault();
   });
 
-  const statics = KioskKeyboard as unknown as {
+  const statics = FKeyController as unknown as {
     _executeNativeFKeyAction: (fkeyName: string) => void;
   };
   const originalAction = statics._executeNativeFKeyAction;

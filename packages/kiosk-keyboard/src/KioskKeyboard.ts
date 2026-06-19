@@ -1,8 +1,6 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
-import type ManagedObject from "sap/ui/base/ManagedObject";
-import View from "sap/ui/core/mvc/View";
 import { SECONDARY_LAYOUTS } from "./internal/types";
 import type { LayoutDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
@@ -12,7 +10,7 @@ import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, isParticipating, type TargetResolverFn } from "./internal/dom";
-import { KeyboardType, FKeyMode, NativeDispatchableKeyNames } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
   getLayoutOrDefault as registryGetLayoutOrDefault,
@@ -41,15 +39,13 @@ import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
 import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
 import ResponsiveSizingController from "./internal/responsive-sizing-controller";
+import FKeyController from "./internal/fkey-controller";
+import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
 import { classifyKeyToken } from "./internal/key-token";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
-
-type InputFocusDelegation = {
-  onfocusin: () => void;
-};
 
 /**
  * On-screen virtual keyboard control for kiosk and touch applications.
@@ -90,11 +86,8 @@ export default class KioskKeyboard extends Control {
   private _shiftState!: ShiftState;
   private _keyGridNav!: KeyGridNavigation;
   private _open!: boolean;
-  private _controlsFocusDelegation!: InputFocusDelegation;
-  private _registeredControlById!: Map<string, string>;
-  private _resolvedControlIds!: Set<string>;
-
-  private _delegatedInstances!: Map<string, Control>;
+  /** Owns `controls` focus delegation and active-target reconciliation. */
+  private _controlsDelegation!: ControlsDelegationController;
   private _physicalKeyHighlight!: PhysicalKeyHighlight;
   private _pressedKeyEl!: HTMLElement | null;
   /** Owns press-and-hold continuous delete on the Backspace key. */
@@ -129,6 +122,8 @@ export default class KioskKeyboard extends Control {
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
   /** Owns the ResizeHandler-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
+  /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
+  private _fKeyController!: FKeyController;
   static readonly metadata: MetadataOptions = {
     library: "ui5.kiosk",
     properties: {
@@ -441,26 +436,6 @@ export default class KioskKeyboard extends Control {
   /** All living KioskKeyboard instances - used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
-  /** Native actions executed in `fKeyMode="Native"` when not prevented. */
-  private static readonly _NATIVE_FKEY_ACTIONS: Record<string, (() => void) | undefined> = {
-    F5: () => {
-      location.reload();
-    },
-    F11: () => {
-      if (document.fullscreenElement) {
-        void document.exitFullscreen?.().catch(() => undefined);
-      } else {
-        void document.documentElement.requestFullscreen?.().catch(() => undefined);
-      }
-    },
-  };
-
-  /** Tracks unsupported native F-key names already warned about. */
-  private static readonly _WARNED_UNSUPPORTED_NATIVE_FKEYS = new Set<string>();
-
-  /** Internal set used for O(1) native-dispatch allowlist checks. */
-  private static readonly _NATIVE_DISPATCHABLE_FKEYS = new Set<string>(NativeDispatchableKeyNames);
-
   /** Global target resolver applied to all instances (lowest priority). */
   private static _globalTargetResolver: TargetResolverFn | null = null;
 
@@ -648,25 +623,22 @@ export default class KioskKeyboard extends Control {
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
     this._open = false;
-    this._registeredControlById = new Map();
-    this._resolvedControlIds = new Set();
-    this._delegatedInstances = new Map();
-    this._controlsFocusDelegation = {
-      onfocusin: () => {
-        if (!this.getEnabled()) return;
-        const active = Element.getActiveElement();
-        if (!(active instanceof Control)) return;
-        // For composite controls (e.g. StepInput), the active element is the
-        // inner Input, but controls references the outer wrapper. Resolve the
-        // registered ancestor so _setActiveTarget gets the right control.
-        const ancestor = this._resolveControlsAncestor(active);
-        this._setActiveTarget(ancestor ?? active);
-        // When docked with autoShow, show the keyboard for controls targets
-        if (this.getDocked() && this.getAutoShow() && !this._open) {
-          this.show();
-        }
+    this._controlsDelegation = new ControlsDelegationController({
+      getControls: () => this.getControls(),
+      getParent: () => this.getParent(),
+      getEnabled: () => this.getEnabled(),
+      getDocked: () => this.getDocked(),
+      getAutoShow: () => this.getAutoShow(),
+      isOpen: () => this._open,
+      show: () => {
+        this.show();
       },
-    };
+      getActiveTargetId: () => this._getActiveTargetId(),
+      setActiveTarget: (target) => {
+        this._setActiveTarget(target);
+      },
+      resolveControlsAncestor: (candidate) => this._focusClaimService.resolveControlsAncestor(candidate),
+    });
     this._physicalKeyHighlight = new PhysicalKeyHighlight(this, this._shiftState);
     this._pressedKeyEl = null;
     this._backspaceRepeat = new BackspaceRepeatBehavior(() => {
@@ -683,7 +655,7 @@ export default class KioskKeyboard extends Control {
     };
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
-      () => this._resolvedControlIds,
+      () => this._controlsDelegation.getResolvedControlIds(),
       () => this._nativeKbSuppression.shouldDeferToNative(),
       (id) => this._isTargetOfOther(id),
     );
@@ -695,6 +667,12 @@ export default class KioskKeyboard extends Control {
     this._middleware = null;
     this._rendererApi = null;
     this._responsiveSizing = new ResponsiveSizingController(this);
+    this._fKeyController = new FKeyController({
+      getFKeyMode: () => this.getFKeyMode(),
+      getTargetFocusDomRef: () => this._getTargetElement()?.getFocusDomRef() ?? null,
+      getEffectiveResolver: () => this._getEffectiveResolver(),
+      handleNavigationKey: (fkeyName) => this._targetSession.handleNavigationKey(fkeyName),
+    });
 
     // Detect locale-appropriate default layout. This covers the case
     // where no settings are passed (applySettings is not called by
@@ -728,7 +706,7 @@ export default class KioskKeyboard extends Control {
       this._responsiveSizing.scheduleClassUpdate();
     }
 
-    this._setupControls();
+    this._controlsDelegation.sync();
   }
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */
@@ -751,12 +729,12 @@ export default class KioskKeyboard extends Control {
 
     if (wasLastInstance) {
       registrySetResolver(null);
-      KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.clear();
+      FKeyController.clearWarnings();
       iconsClearWarnings();
       KioskKeyboard._globalTargetResolver = null;
     }
 
-    this._teardownControls();
+    this._controlsDelegation.teardown();
     this._physicalKeyHighlight.detach();
     this._responsiveSizing.destroy();
     this._clearPressedKeyState();
@@ -766,10 +744,10 @@ export default class KioskKeyboard extends Control {
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
 
-    // After this instance restored its own inputmode suppression (in
-    // _teardownControls above), clear any page-level bookkeeping that outlived
-    // all instances - defensive against an orphaned entry from an input
-    // destroyed mid-suppression.
+    // After this instance restored its own inputmode suppression (via the
+    // extension teardown above, where NativeKeyboardSuppression.destroy runs),
+    // clear any page-level bookkeeping that outlived all instances - defensive
+    // against an orphaned entry from an input destroyed mid-suppression.
     if (wasLastInstance) {
       NativeKeyboardSuppression._clearAll();
     }
@@ -1185,8 +1163,13 @@ export default class KioskKeyboard extends Control {
    */
   setControls(controls: string[]): this {
     this.setProperty("controls", controls, true);
-    this._setupControls();
+    this._controlsDelegation.sync();
     return this;
+  }
+
+  /** Re-resolves the `controls` list against live instances (used by auto-show on focusin). */
+  _syncControls(): void {
+    this._controlsDelegation.sync();
   }
 
   /**
@@ -1411,126 +1394,6 @@ export default class KioskKeyboard extends Control {
     if (isOnKeyboard && inputDom) {
       inputDom.focus();
     }
-  }
-
-  // ── Private: controls delegation ──
-
-  _setupControls(): void {
-    const ids = this.getControls();
-    const nextByInputId = new Map<string, string>();
-    const nextCountsByControlId = new Map<string, number>();
-    const prevCountsByControlId = new Map<string, number>();
-    const resolvedControlIds = new Set<string>();
-
-    for (const controlId of this._registeredControlById.values()) {
-      prevCountsByControlId.set(controlId, (prevCountsByControlId.get(controlId) ?? 0) + 1);
-    }
-
-    // Resolve current IDs to canonical control IDs.
-    for (const inputId of ids) {
-      const control = this._findControlById(inputId);
-      if (!control) continue;
-
-      const controlId = control.getId();
-      nextByInputId.set(inputId, controlId);
-      nextCountsByControlId.set(controlId, (nextCountsByControlId.get(controlId) ?? 0) + 1);
-      resolvedControlIds.add(controlId);
-    }
-
-    // Fast path: if the resolved (inputId → controlId) map and all delegate
-    // instances are unchanged, no DOM reconciliation is needed. This skips
-    // the work on the common focusin firehose where the controls list stays
-    // identical between events.
-    if (this._isResolutionUnchanged(nextByInputId)) return;
-
-    // Detach controls no longer referenced or whose instance changed.
-    for (const controlId of prevCountsByControlId.keys()) {
-      const prev = this._delegatedInstances.get(controlId);
-      if (!prev) continue;
-      // Keep delegate if same controlId in next AND same Control instance
-      if (nextCountsByControlId.has(controlId) && Element.getElementById(controlId) === prev) continue;
-      prev.removeEventDelegate(this._controlsFocusDelegation);
-    }
-
-    // Attach controls newly referenced or whose instance changed.
-    for (const controlId of nextCountsByControlId.keys()) {
-      const control = Element.getElementById(controlId);
-      if (!(control instanceof Control)) continue;
-      // Skip if same controlId in prev AND same Control instance
-      if (prevCountsByControlId.has(controlId) && this._delegatedInstances.get(controlId) === control) continue;
-      control.addEventDelegate(this._controlsFocusDelegation);
-    }
-
-    // Rebuild instance tracking
-    this._delegatedInstances = new Map();
-    for (const controlId of nextCountsByControlId.keys()) {
-      const control = Element.getElementById(controlId);
-      if (control instanceof Control) {
-        this._delegatedInstances.set(controlId, control);
-      }
-    }
-
-    this._registeredControlById = nextByInputId;
-    this._resolvedControlIds = resolvedControlIds;
-
-    // Clear active target if it's no longer among the resolved controls
-    const currentTargetId = this._getActiveTargetId();
-    if (currentTargetId && resolvedControlIds.size > 0 && !resolvedControlIds.has(currentTargetId)) {
-      this._setActiveTarget("");
-    }
-
-    // Auto-target when exactly one control is resolved and nothing is active yet
-    if (resolvedControlIds.size === 1 && !this._getActiveTargetId()) {
-      const [onlyId] = resolvedControlIds;
-      if (onlyId) {
-        const control = Element.getElementById(onlyId);
-        if (control instanceof Control) {
-          this._setActiveTarget(control);
-        }
-      }
-    }
-  }
-
-  private _teardownControls(): void {
-    for (const instance of this._delegatedInstances.values()) {
-      instance.removeEventDelegate(this._controlsFocusDelegation);
-    }
-    this._delegatedInstances.clear();
-    this._registeredControlById.clear();
-    this._resolvedControlIds.clear();
-  }
-
-  /**
-   * Returns true when {@link _setupControls}'s freshly resolved
-   * (inputId → controlId) map matches the cached one entry-for-entry AND
-   * every cached delegate instance is still the same Control object.
-   *
-   * Used to skip reconciliation on document focusin events where the
-   * controls property and resolved instances have not changed.
-   */
-  private _isResolutionUnchanged(nextByInputId: ReadonlyMap<string, string>): boolean {
-    if (nextByInputId.size !== this._registeredControlById.size) return false;
-    for (const [inputId, controlId] of nextByInputId) {
-      if (this._registeredControlById.get(inputId) !== controlId) return false;
-      if (this._delegatedInstances.get(controlId) !== Element.getElementById(controlId)) return false;
-    }
-    return true;
-  }
-
-  private _findControlById(targetId: string): Control | null {
-    // Try view-local first (standard UI5 pattern - matches controller.byId())
-    for (let parent: ManagedObject | null = this.getParent(); parent; parent = parent.getParent()) {
-      if (parent instanceof View) {
-        const found = parent.byId(targetId);
-        if (found instanceof Control) return found;
-      }
-    }
-
-    // Fall back to global registry
-    const global = Element.getElementById(targetId);
-    if (global instanceof Control) return global;
-
-    return null;
   }
 
   // ── Focus management ──
@@ -1838,12 +1701,13 @@ export default class KioskKeyboard extends Control {
       // controls list declares ownership: if the input is in another keyboard's
       // controls AND that keyboard has not been manually re-targeted to a
       // different input, the input is still claimed.
-      if (other._resolvedControlIds.has(inputId)) {
+      const otherResolved = other._controlsDelegation.getResolvedControlIds();
+      if (otherResolved.has(inputId)) {
         const otherActive = other._getActiveTargetId();
         // Claimed if: no active target yet (pre-focus), or the active target
         // IS this input, or the active target is also in controls (meaning the
         // keyboard hasn't been manually re-targeted outside its controls list).
-        if (!otherActive || otherActive === inputId || other._resolvedControlIds.has(otherActive)) {
+        if (!otherActive || otherActive === inputId || otherResolved.has(otherActive)) {
           return true;
         }
       }
@@ -1859,17 +1723,6 @@ export default class KioskKeyboard extends Control {
   /** Returns the UI5 control this keyboard would auto-claim, or null. */
   _resolveClaimableControl(target: EventTarget | null): Control | null {
     return this._focusClaimService.resolveClaimableControl(target);
-  }
-
-  /**
-   * Walks the UI5 parent chain of `candidate` and returns the first control
-   * whose ID matches a resolved controls entry, or null. This handles
-   * composite controls (e.g. StepInput wrapping an inner Input) where
-   * `Element.closestTo()` returns the inner control but controls references
-   * the outer wrapper.
-   */
-  private _resolveControlsAncestor(candidate: Control): Control | null {
-    return this._focusClaimService.resolveControlsAncestor(candidate);
   }
 
   // ── Private: pointer and key actions ──
@@ -1967,7 +1820,7 @@ export default class KioskKeyboard extends Control {
         // Fire keyPress first so consumers can prevent all downstream action
         // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
         if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) return;
-        this._handleFKey(fkeyName, shift);
+        this._fKeyController.handle(fkeyName, shift);
         return;
       }
 
@@ -2092,85 +1945,5 @@ export default class KioskKeyboard extends Control {
     const id = this._getActiveTargetId();
     if (!id) return null;
     return Element.getElementById(id) ?? null;
-  }
-
-  // ── Private: F-key dispatch ──
-
-  /**
-   * Dispatches an F-key according to `fKeyMode` (mirrors the web component's
-   * `_handleFKey`). Assumes the cancelable keyPress has already fired and was
-   * not prevented.
-   */
-  private _handleFKey(fkeyName: string, shiftKey: boolean): void {
-    const fKeyMode = this.getFKeyMode();
-
-    if (fKeyMode === FKeyMode.None) {
-      return;
-    }
-
-    let nativeAllowed = true;
-
-    if (fKeyMode === FKeyMode.Native) {
-      if (KioskKeyboard._isNativeDispatchableFKey(fkeyName)) {
-        nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
-        if (nativeAllowed) {
-          KioskKeyboard._executeNativeFKeyAction(fkeyName);
-        }
-      } else {
-        nativeAllowed = false;
-        if (!KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.has(fkeyName)) {
-          KioskKeyboard._WARNED_UNSUPPORTED_NATIVE_FKEYS.add(fkeyName);
-          Log.warning(
-            `Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
-              "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
-            undefined,
-            "ui5.kiosk.KioskKeyboard",
-          );
-        }
-      }
-    }
-
-    if (nativeAllowed) {
-      this._targetSession.handleNavigationKey(fkeyName);
-    }
-  }
-
-  /** Best-effort event target used for synthetic native F-key dispatch. */
-  private _resolveNativeFKeyTarget(): EventTarget {
-    const target = this._getTargetElement()?.getFocusDomRef();
-    const textual = resolveWithCustomResolver(target, this._getEffectiveResolver());
-    if (textual) return textual;
-    if (target instanceof HTMLElement) return target;
-    if (document.activeElement instanceof HTMLElement) return document.activeElement;
-    return document;
-  }
-
-  /**
-   * Dispatches synthetic `keydown` for an F-key and returns whether it was not canceled.
-   *
-   * The current allowlist (F1-F12, Arrow*, Home/End, PageUp/Down) has
-   * `KeyboardEvent.code === KeyboardEvent.key` for every entry, so the same
-   * string is used for both. Extending the allowlist to a key where the two
-   * diverge (e.g. `NumpadEnter` has `key: "Enter"` / `code: "NumpadEnter"`)
-   * requires routing `code` through an explicit lookup at that point.
-   */
-  private _dispatchNativeFKeydown(fkeyName: string, shiftKey: boolean): boolean {
-    const nativeEvent = new KeyboardEvent("keydown", {
-      key: fkeyName,
-      code: fkeyName,
-      bubbles: true,
-      cancelable: true,
-      shiftKey,
-    });
-
-    return this._resolveNativeFKeyTarget().dispatchEvent(nativeEvent);
-  }
-
-  private static _executeNativeFKeyAction(fkeyName: string): void {
-    KioskKeyboard._NATIVE_FKEY_ACTIONS[fkeyName]?.();
-  }
-
-  private static _isNativeDispatchableFKey(fkeyName: string): boolean {
-    return KioskKeyboard._NATIVE_DISPATCHABLE_FKEYS.has(fkeyName);
   }
 }

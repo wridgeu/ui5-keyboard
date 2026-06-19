@@ -17,9 +17,10 @@
  * - KioskKeyboard.ts: the main class is a UI5 Control (metadata, renderer,
  *   lifecycle hooks) in kiosk and a decorator-based web component in webc; the
  *   two are structurally non-comparable. This is the widest unchecked surface:
- *   shared logic here is hand-synced across the twins until the orchestrators
- *   are decomposed into controller twin-pairs that this script can diff (the
- *   path to real coverage, tracked in #121).
+ *   shared logic here is hand-synced across the twins. #121 decomposed the
+ *   self-contained responsibilities (F-key dispatch plus the kiosk-only controls
+ *   delegation) into the framework-adapted controller files listed below,
+ *   shrinking this surface; arrow-key grid navigation follows separately.
  * - internal/key-grid-navigation.ts: kiosk extracted arrow-key grid navigation
  *   to its own module (attached via addDelegate); webc keeps the same logic
  *   inline in KioskKeyboard.ts `_onKeyDown`, so there is no webc twin file to
@@ -45,7 +46,13 @@
  *   internal/physical-key-highlight.ts <-> core/physical-key-highlight-controller.ts,
  *   internal/auto-show-behavior.ts <-> core/auto-show-controller.ts,
  *   internal/native-keyboard-suppression.ts <-> core/native-inputmode-suppression.ts
- *   (the last keys its refcount map by control id in kiosk, by element in webc).
+ *   (the last keys its refcount map by control id in kiosk, by element in webc),
+ *   internal/fkey-controller.ts <-> core/fkey-controller.ts (kiosk reads the
+ *   FKeyMode enum and dispatches via a UI5 target session; webc compares mode
+ *   string literals and writes the resolved DOM input directly).
+ * - internal/controls-delegation-controller.ts: kiosk-only. The `controls`
+ *   focus-delegation/auto-target reconciliation has no webc counterpart; webc
+ *   resolves its single `controls` id lazily in AutoShowController instead.
  * - types.ts: kiosk carries UI5-only types (control settings, renderer API).
  */
 
