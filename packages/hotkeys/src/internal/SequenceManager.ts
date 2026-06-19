@@ -29,13 +29,11 @@ function assertValidTimeout(timeout: number): number {
 }
 
 /**
- * Defaults for the options that `setOptions` can update field-by-field. Its
- * keys are the single source of truth for that set: `registerSequence` seeds a
- * registration from it and `applyUpdatableOptions` copies updates from it.
- * `scope` is immutable after registration and `timeout` needs validation, so
- * both live outside this set. The `Omit` annotation makes a new
- * `SequenceRegistration` field a type error here until a default is added,
- * keeping the set in sync with the registration shape.
+ * Defaults for the options `setOptions` can update in place; the keys are the
+ * single definition of that set. `scope` is immutable and `timeout` needs
+ * validation, so both sit outside it. The `Omit` type makes a new
+ * `SequenceRegistration` field a compile error here until a default is
+ * supplied, so the set cannot drift from the registration shape.
  */
 const UPDATABLE_OPTION_DEFAULTS: Omit<
   SequenceRegistration,

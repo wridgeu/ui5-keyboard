@@ -62,13 +62,11 @@ function sameTarget(a: ResolvedTarget, b: ResolvedTarget): boolean {
 }
 
 /**
- * Defaults for the options that `setOptions` can update field-by-field. Its
- * keys are the single source of truth for that set: `resolveOptions` seeds a
- * registration from it and `applyUpdatableOptions` copies updates from it.
- * `scope`/`conflictBehavior` are immutable after registration and `target`
- * needs re-indexing, so all three live outside this set. The `Omit` annotation
- * makes a new `ResolvedHotkeyOptions` field a type error here until a default
- * is added, keeping the set in sync with the option shape.
+ * Defaults for the options `setOptions` can update in place; the keys are the
+ * single definition of that set. `scope`/`conflictBehavior` are immutable and
+ * `target` needs re-indexing, so they sit outside it. The `Omit` type makes a
+ * new `ResolvedHotkeyOptions` field a compile error here until a default is
+ * supplied, so the set cannot drift from the option shape.
  */
 const UPDATABLE_OPTION_DEFAULTS: Omit<ResolvedHotkeyOptions, "scope" | "conflictBehavior" | "target"> = {
   enabled: true,
