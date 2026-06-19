@@ -21,6 +21,7 @@
 - State assumptions explicitly. If multiple interpretations exist, surface them; don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
 - Every changed line must trace to the user's request. Don't "improve" adjacent code, comments, or formatting; match existing style even if you'd do it differently.
+- Comments and doc-blocks describe the current contract, not the edit that produced it. No refactor narration ("now a discriminated union", "collapsed from two fields", "renamed from X", "moved here for clarity"), no before/after history, no justifying the diff in prose. That belongs in the commit message or PR. A reader a year out wants what the code does, not how it got there.
 - When your changes orphan imports/vars/functions, remove them. Don't delete pre-existing dead code unless asked.
 
 ## 2. Sharing has a cost
