@@ -16,6 +16,7 @@ import { parseHotkey } from "./internal/parse";
 import RegistrationIndex from "./internal/registration-index";
 import ConflictResolver from "./internal/conflict-resolver";
 import HotkeyMatcher from "./internal/hotkey-matcher";
+import { resolveEnabled } from "./internal/resolve-enabled";
 import { resolveRequiredScope, resolveScopeOrGlobal } from "./internal/scope";
 import { runtimeHooks } from "./internal/runtime";
 import { validateHotkey } from "./internal/validate";
@@ -542,17 +543,7 @@ export default class HotkeyManager extends BaseObject {
    */
   private _toRegistrationInfo(reg: HotkeyRegistration): HotkeyRegistrationInfo {
     const opts = reg.options;
-    let enabled: boolean;
-    try {
-      enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
-    } catch (error) {
-      Log.warning(
-        `enabled() threw for "${reg.normalizedHotkey}"`,
-        error instanceof Error ? error : String(error),
-        LOG_COMPONENT,
-      );
-      enabled = false;
-    }
+    const enabled = resolveEnabled(opts.enabled, `"${reg.normalizedHotkey}"`, LOG_COMPONENT);
     return {
       id: reg.id,
       hotkey: reg.hotkey,

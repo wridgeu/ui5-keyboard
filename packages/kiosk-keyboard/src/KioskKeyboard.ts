@@ -1058,11 +1058,12 @@ export default class KioskKeyboard extends Control {
     this.setAssociation("_activeTarget", target ?? "", true);
 
     const newId = this._getActiveTargetId();
+    const isRealSwitch = newId !== previousTarget;
 
     // A real target switch starts a fresh input context: reset shift/caps.
     // A same-input refocus (caret reposition) preserves the armed shift,
     // mirroring the composition and layout-override handling below.
-    if (newId !== previousTarget) {
+    if (isRealSwitch) {
       this._shiftState.reset();
     }
 
@@ -1071,14 +1072,14 @@ export default class KioskKeyboard extends Control {
     // target and its preedit offsets) leaks the old syllable into the new input.
     // Mirrors the `{layout:}` key path and the web component's focusin handling.
     // A same-input refocus (caret reposition) keeps the composition going.
-    if (newId !== previousTarget) {
+    if (isRealSwitch) {
       this._endComposition();
     }
 
     // A real target switch is a new editing context: drop a user-driven
     // `{layout:X}` override so the new target re-resolves under its keyboardType.
     // A same-input refocus (caret reposition) keeps it.
-    if (newId !== previousTarget && this._layoutSource === "user") {
+    if (isRealSwitch && this._layoutSource === "user") {
       this._layoutSource = "external";
       this.invalidate();
     }
@@ -1143,7 +1144,7 @@ export default class KioskKeyboard extends Control {
     // target. Announce only when the association still holds the value THIS
     // call set, so the outer call does not fire a duplicate.
     const finalTarget = this._getActiveTargetId();
-    if (finalTarget === newId && newId !== previousTarget) {
+    if (finalTarget === newId && isRealSwitch) {
       this.fireActiveControlChange({ controlId: newId });
     }
 

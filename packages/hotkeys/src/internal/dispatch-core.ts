@@ -1,7 +1,7 @@
-import Log from "sap/base/Log";
 import { UnhandledReason } from "../library";
 import { matchesKeyboardEvent } from "./match";
 import { resolveIgnoreInputs } from "./dom";
+import { resolveEnabled } from "./resolve-enabled";
 import type { HotkeyRegistrationInfo } from "../types";
 import type { HotkeyRegistration } from "./types";
 import { recordSkip, type SkipInfo } from "./skip-reason";
@@ -27,17 +27,7 @@ export function findMatchInScope(options: FindMatchOptions): HotkeyRegistration 
 
     if (!matchesKeyboardEvent(event, registration.parsedHotkey)) continue;
 
-    let enabled: boolean;
-    try {
-      enabled = typeof opts.enabled === "function" ? opts.enabled() : opts.enabled;
-    } catch (error) {
-      Log.warning(
-        `Error evaluating enabled() for "${registration.normalizedHotkey}": ${error}`,
-        undefined,
-        logComponent,
-      );
-      enabled = false;
-    }
+    const enabled = resolveEnabled(opts.enabled, `"${registration.normalizedHotkey}"`, logComponent);
     if (!enabled) {
       recordSkip(skipInfo, UnhandledReason.Disabled, registration, toRegistrationInfo);
       continue;

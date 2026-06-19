@@ -722,12 +722,7 @@ class KioskKeyboard extends UI5Element {
     this._autoShow.register();
 
     if (!this._baseLayout) {
-      this._baseLayout =
-        this.layout ||
-        getLocaleLayout(
-          this._localeLayoutsView.get(this.instanceLocaleLayouts),
-          this._layoutsView.get(this.instanceLayouts),
-        );
+      this._baseLayout = this.layout || this._localeLayout();
       if (!this.layout) {
         this._currentLayout = this._baseLayout;
       }
@@ -1036,20 +1031,20 @@ class KioskKeyboard extends UI5Element {
    * (_ensureMiddleware) must agree on this name so the rendered surface and
    * the active middleware never diverge.
    */
+  /** Locale-derived default layout name, honoring the per-instance locale and layout overrides. */
+  private _localeLayout(): string {
+    return getLocaleLayout(
+      this._localeLayoutsView.get(this.instanceLocaleLayouts),
+      this._layoutsView.get(this.instanceLayouts),
+    );
+  }
+
   private _resolvedLayoutName(): string {
     if (this._layoutSource === "user") return this._currentLayout;
     const type = this.keyboardType;
     if (type === "Numpad") return "numpad";
     if (type === "Numeric") return "numeric";
-    return (
-      this._currentLayout ||
-      this._baseLayout ||
-      this.layout ||
-      getLocaleLayout(
-        this._localeLayoutsView.get(this.instanceLocaleLayouts),
-        this._layoutsView.get(this.instanceLayouts),
-      )
-    );
+    return this._currentLayout || this._baseLayout || this.layout || this._localeLayout();
   }
 
   _getResolvedLayout(): LayoutDefinition {
@@ -1509,15 +1504,7 @@ class KioskKeyboard extends UI5Element {
     }
     const changed =
       layoutName === "base"
-        ? this._applyLayout(
-            this._baseLayout ||
-              this.layout ||
-              getLocaleLayout(
-                this._localeLayoutsView.get(this.instanceLocaleLayouts),
-                this._layoutsView.get(this.instanceLayouts),
-              ),
-            "external",
-          )
+        ? this._applyLayout(this._baseLayout || this.layout || this._localeLayout(), "external")
         : this._applyLayout(layoutName, "user");
     if (changed) {
       this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
