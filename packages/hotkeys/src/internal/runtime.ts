@@ -11,17 +11,9 @@ export type RuntimeHooks = {
   hasOpenPopup: () => boolean;
 };
 
-let popupChecker: (() => boolean) | null = null;
-
 function hasOpenPopup(): boolean {
-  if (!popupChecker) {
-    const instanceManager = sap.ui.require("sap/m/InstanceManager") as InstanceManagerModule | undefined;
-    if (instanceManager) {
-      popupChecker = () => instanceManager.hasOpenDialog() || instanceManager.hasOpenPopover();
-    }
-  }
-
-  return popupChecker?.() ?? false;
+  const instanceManager = sap.ui.require("sap/m/InstanceManager") as InstanceManagerModule | undefined;
+  return instanceManager ? instanceManager.hasOpenDialog() || instanceManager.hasOpenPopover() : false;
 }
 
 export const runtimeHooks: RuntimeHooks = {

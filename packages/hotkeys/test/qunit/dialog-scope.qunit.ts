@@ -171,3 +171,9 @@ QUnit.test("Fragment popup lifecycle: push, register, fire, unregister, pop", (a
   fireKey("Enter");
   assert.notOk(fragmentCalled, "Fragment Enter does not fire after cleanup");
 });
+
+QUnit.test("hasOpenPopup reports false when no UI5 popup is open", (assert) => {
+  // Exercises the real runtime hook (not the stub other tests install): it probes
+  // sap.m.InstanceManager on each call and reports false when nothing is open.
+  assert.notOk(runtimeHooks.hasOpenPopup(), "No dialog or popover open");
+});
