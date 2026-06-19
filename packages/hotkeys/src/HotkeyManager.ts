@@ -33,23 +33,32 @@ import type {
   UnhandledCallback,
   UpdatableHotkeyOptions,
 } from "./types";
-import type { HotkeyRegistration, ResolvedHotkeyOptions, SequenceOptions } from "./internal/types";
+import type { HotkeyRegistration, ResolvedHotkeyOptions, ResolvedTarget, SequenceOptions } from "./internal/types";
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 const idGen = createIdGenerator("hk_");
 
 /**
- * Resolve the target option into static element + callback fields.
- * Functions are stored as callbacks for lazy dispatch-time resolution.
+ * Resolve the public target option into the internal discriminated union.
+ * Functions become `callback` targets for lazy dispatch-time resolution.
  */
-function resolveTarget(target: Element | (() => Element | null) | null | undefined): {
-  element: Element | null;
-  callback: (() => Element | null) | null;
-} {
-  if (target == null) return { element: null, callback: null }; // eslint-disable-line eqeqeq -- intentional nullish check
-  if (typeof target === "function") return { element: null, callback: target };
-  return { element: target, callback: null };
+function resolveTarget(target: Element | (() => Element | null) | null | undefined): ResolvedTarget {
+  if (target == null) return null; // eslint-disable-line eqeqeq -- intentional nullish check
+  if (typeof target === "function") return { kind: "callback", fn: target };
+  return { kind: "element", el: target };
+}
+
+/**
+ * Reference-equal target bindings: same element, same callback, or both unset.
+ * Used to skip the deindex/reindex + conflict re-check when a `setOptions`
+ * target swap resolves to the binding already in effect.
+ */
+function sameTarget(a: ResolvedTarget, b: ResolvedTarget): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.kind === "element" && b.kind === "element") return a.el === b.el;
+  if (a.kind === "callback" && b.kind === "callback") return a.fn === b.fn;
+  return false;
 }
 
 /**
@@ -57,7 +66,6 @@ function resolveTarget(target: Element | (() => Element | null) | null | undefin
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
   const scope = resolveScopeOrGlobal(options?.scope);
-  const { element, callback } = resolveTarget(options?.target);
 
   return {
     enabled: options?.enabled ?? true,
@@ -69,8 +77,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
     ignoreRepeat: options?.ignoreRepeat ?? true,
     suppressInPopups: options?.suppressInPopups ?? true,
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
-    target: element,
-    targetCallback: callback,
+    target: resolveTarget(options?.target),
   };
 }
 
@@ -205,13 +212,7 @@ export default class HotkeyManager extends BaseObject {
     const id = idGen.next();
 
     // Conflict detection within the same scope
-    this._conflictResolver.resolve(
-      normalizedHotkey,
-      resolved.scope,
-      resolved.target,
-      resolved.targetCallback,
-      resolved.conflictBehavior,
-    );
+    this._conflictResolver.resolve(normalizedHotkey, resolved.scope, resolved.target, resolved.conflictBehavior);
 
     this._logValidationWarnings(normalizedHotkey);
 
@@ -271,21 +272,18 @@ export default class HotkeyManager extends BaseObject {
         const opts = registration.options;
         // Special case: target swap requires normalization + re-indexing + conflict management
         if (newOptions.target !== undefined) {
-          const { element: nextTarget, callback: nextCallback } = resolveTarget(newOptions.target);
-          const changed = opts.target !== nextTarget || opts.targetCallback !== nextCallback;
-          if (changed) {
-            if (nextTarget || nextCallback) {
+          const nextTarget = resolveTarget(newOptions.target);
+          if (!sameTarget(opts.target, nextTarget)) {
+            if (nextTarget) {
               this._conflictResolver.resolve(
                 registration.normalizedHotkey,
                 opts.scope,
                 nextTarget,
-                nextCallback,
                 opts.conflictBehavior,
               );
             }
             this._registrationIndex.deindex(registration);
             opts.target = nextTarget;
-            opts.targetCallback = nextCallback;
             this._registrationIndex.index(registration);
           }
         }
@@ -557,7 +555,7 @@ export default class HotkeyManager extends BaseObject {
       ignoreRepeat: opts.ignoreRepeat,
       suppressInPopups: opts.suppressInPopups,
       conflictBehavior: opts.conflictBehavior,
-      hasTarget: opts.target !== null || opts.targetCallback !== null,
+      hasTarget: opts.target !== null,
       sequence: null,
       timeout: null,
     };

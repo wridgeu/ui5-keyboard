@@ -48,34 +48,35 @@ export default class RegistrationIndex {
    */
   index(registration: HotkeyRegistration): void {
     const bucket = this._getScopeBucket(registration.options.scope);
-    const opts = registration.options;
+    const target = registration.options.target;
 
-    if (opts.targetCallback) {
+    if (target === null) {
+      bucket.untargetedIds.add(registration.id);
+      return;
+    }
+
+    if (target.kind === "callback") {
       bucket.callbackTargetIds.add(registration.id);
       return;
     }
 
-    if (opts.target) {
-      let ids = bucket.targets.get(opts.target);
-      if (!ids) {
-        ids = new Set<string>();
-        bucket.targets.set(opts.target, ids);
-      }
-      ids.add(registration.id);
-
-      // Maintain secondary index by element id for stale-reference fallback
-      if (opts.target instanceof Element && opts.target.id) {
-        let idxIds = bucket.targetIdIndex.get(opts.target.id);
-        if (!idxIds) {
-          idxIds = new Set<string>();
-          bucket.targetIdIndex.set(opts.target.id, idxIds);
-        }
-        idxIds.add(registration.id);
-      }
-      return;
+    const el = target.el;
+    let ids = bucket.targets.get(el);
+    if (!ids) {
+      ids = new Set<string>();
+      bucket.targets.set(el, ids);
     }
+    ids.add(registration.id);
 
-    bucket.untargetedIds.add(registration.id);
+    // Maintain secondary index by element id for stale-reference fallback
+    if (el.id) {
+      let idxIds = bucket.targetIdIndex.get(el.id);
+      if (!idxIds) {
+        idxIds = new Set<string>();
+        bucket.targetIdIndex.set(el.id, idxIds);
+      }
+      idxIds.add(registration.id);
+    }
   }
 
   /**
@@ -86,16 +87,18 @@ export default class RegistrationIndex {
     const bucket = this._byScope.get(scope);
     if (!bucket) return;
 
-    const opts = registration.options;
+    const target = registration.options.target;
 
-    if (opts.targetCallback) {
+    if (target === null) {
+      bucket.untargetedIds.delete(registration.id);
+    } else if (target.kind === "callback") {
       bucket.callbackTargetIds.delete(registration.id);
-    } else if (opts.target) {
-      const ids = bucket.targets.get(opts.target);
+    } else {
+      const ids = bucket.targets.get(target.el);
       if (ids) {
         ids.delete(registration.id);
         if (ids.size === 0) {
-          bucket.targets.delete(opts.target);
+          bucket.targets.delete(target.el);
         }
       }
 
@@ -109,8 +112,6 @@ export default class RegistrationIndex {
           break;
         }
       }
-    } else {
-      bucket.untargetedIds.delete(registration.id);
     }
 
     if (bucket.untargetedIds.size === 0 && bucket.targets.size === 0 && bucket.callbackTargetIds.size === 0) {

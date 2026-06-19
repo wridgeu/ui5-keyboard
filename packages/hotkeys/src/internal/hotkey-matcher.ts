@@ -9,7 +9,7 @@ import type FocusFallbackTracker from "./FocusFallbackTracker";
 import type { HotkeyRegistration } from "./types";
 import type { HotkeyRegistrationInfo } from "../types";
 
-// Kept as the HotkeyManager component so existing log output is unchanged.
+// Internal collaborators log under the public HotkeyManager component.
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
 /**
@@ -84,9 +84,13 @@ export default class HotkeyMatcher {
         const reg = this._index.getRegistration(id);
         if (!reg) continue;
 
+        // callbackTargetIds only ever holds callback-target registrations.
+        const target = reg.options.target;
+        if (target?.kind !== "callback") continue;
+
         let resolved: Element | null;
         try {
-          resolved = reg.options.targetCallback!();
+          resolved = target.fn();
         } catch (error) {
           Log.warning(`target callback threw for "${reg.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
           continue;

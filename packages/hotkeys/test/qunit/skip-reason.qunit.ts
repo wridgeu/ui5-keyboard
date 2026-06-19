@@ -24,7 +24,6 @@ function makeRegistration(id: string): Registration {
       suppressInPopups: false,
       conflictBehavior: ConflictBehavior.Warn,
       target: null,
-      targetCallback: null,
     },
   };
 }
