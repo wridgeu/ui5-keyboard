@@ -29,6 +29,47 @@ function assertValidTimeout(timeout: number): number {
 }
 
 /**
+ * Defaults for the options that `setOptions` can update field-by-field. Its
+ * keys are the single source of truth for that set: `registerSequence` seeds a
+ * registration from it and `applyUpdatableOptions` copies updates from it.
+ * `scope` is immutable after registration and `timeout` needs validation, so
+ * both live outside this set. The `Omit` annotation makes a new
+ * `SequenceRegistration` field a type error here until a default is added,
+ * keeping the set in sync with the registration shape.
+ */
+const UPDATABLE_OPTION_DEFAULTS: Omit<
+  SequenceRegistration,
+  "id" | "active" | "sequence" | "parsedSteps" | "callback" | "scope" | "timeout"
+> = {
+  description: "",
+  enabled: true,
+  ignoreInputs: "auto",
+  preventDefault: true,
+  stopPropagation: true,
+  onPending: null,
+  suppressInPopups: true,
+};
+
+type UpdatableOptionKey = keyof typeof UPDATABLE_OPTION_DEFAULTS;
+
+const UPDATABLE_OPTION_KEYS = Object.keys(UPDATABLE_OPTION_DEFAULTS) as UpdatableOptionKey[];
+
+/**
+ * Copy every defined updatable option from `source` onto `target`, leaving
+ * keys the caller did not set untouched. Drives both `registerSequence`
+ * (override defaults) and `setOptions` (live update). `timeout` is validated
+ * separately by the callers.
+ */
+function applyUpdatableOptions(target: SequenceRegistration, source: Partial<UpdatableSequenceOptions>): void {
+  for (const key of UPDATABLE_OPTION_KEYS) {
+    const value = source[key];
+    if (value !== undefined) {
+      (target as Record<UpdatableOptionKey, unknown>)[key] = value;
+    }
+  }
+}
+
+/**
  * Tracks in-progress match state for a registration.
  */
 interface ActiveMatch {
@@ -101,16 +142,11 @@ export default class SequenceManager {
       sequence: sequenceCopy,
       parsedSteps,
       callback,
-      description: options?.description ?? "",
       timeout,
       scope,
-      enabled: options?.enabled ?? true,
-      ignoreInputs: options?.ignoreInputs ?? "auto",
-      preventDefault: options?.preventDefault ?? true,
-      stopPropagation: options?.stopPropagation ?? true,
-      onPending: options?.onPending ?? null,
-      suppressInPopups: options?.suppressInPopups ?? true,
+      ...UPDATABLE_OPTION_DEFAULTS,
     };
+    if (options) applyUpdatableOptions(registration, options);
 
     this._registrations.set(id, registration);
     this._indexRegistration(registration);
@@ -161,14 +197,8 @@ export default class SequenceManager {
         }
         const reg = this._registrations.get(id);
         if (!reg) return;
-        if (newOptions.enabled !== undefined) reg.enabled = newOptions.enabled;
-        if (newOptions.description !== undefined) reg.description = newOptions.description;
         if (newOptions.timeout !== undefined) reg.timeout = assertValidTimeout(newOptions.timeout);
-        if (newOptions.ignoreInputs !== undefined) reg.ignoreInputs = newOptions.ignoreInputs;
-        if (newOptions.preventDefault !== undefined) reg.preventDefault = newOptions.preventDefault;
-        if (newOptions.stopPropagation !== undefined) reg.stopPropagation = newOptions.stopPropagation;
-        if (newOptions.onPending !== undefined) reg.onPending = newOptions.onPending;
-        if (newOptions.suppressInPopups !== undefined) reg.suppressInPopups = newOptions.suppressInPopups;
+        applyUpdatableOptions(reg, newOptions);
       },
     };
   }

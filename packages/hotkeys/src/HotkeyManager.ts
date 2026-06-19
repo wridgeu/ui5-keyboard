@@ -62,23 +62,54 @@ function sameTarget(a: ResolvedTarget, b: ResolvedTarget): boolean {
 }
 
 /**
+ * Defaults for the options that `setOptions` can update field-by-field. Its
+ * keys are the single source of truth for that set: `resolveOptions` seeds a
+ * registration from it and `applyUpdatableOptions` copies updates from it.
+ * `scope`/`conflictBehavior` are immutable after registration and `target`
+ * needs re-indexing, so all three live outside this set. The `Omit` annotation
+ * makes a new `ResolvedHotkeyOptions` field a type error here until a default
+ * is added, keeping the set in sync with the option shape.
+ */
+const UPDATABLE_OPTION_DEFAULTS: Omit<ResolvedHotkeyOptions, "scope" | "conflictBehavior" | "target"> = {
+  enabled: true,
+  preventDefault: true,
+  stopPropagation: true,
+  ignoreInputs: "auto",
+  description: "",
+  ignoreRepeat: true,
+  suppressInPopups: true,
+};
+
+type UpdatableOptionKey = keyof typeof UPDATABLE_OPTION_DEFAULTS;
+
+const UPDATABLE_OPTION_KEYS = Object.keys(UPDATABLE_OPTION_DEFAULTS) as UpdatableOptionKey[];
+
+/**
+ * Copy every defined updatable option from `source` onto `target`, leaving
+ * keys the caller did not set untouched. Drives both `resolveOptions`
+ * (override defaults) and `setOptions` (live update).
+ */
+function applyUpdatableOptions(target: ResolvedHotkeyOptions, source: Partial<UpdatableHotkeyOptions>): void {
+  for (const key of UPDATABLE_OPTION_KEYS) {
+    const value = source[key];
+    if (value !== undefined) {
+      (target as Record<UpdatableOptionKey, unknown>)[key] = value;
+    }
+  }
+}
+
+/**
  * Merge user-provided options with defaults.
  */
 function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
-  const scope = resolveScopeOrGlobal(options?.scope);
-
-  return {
-    enabled: options?.enabled ?? true,
-    preventDefault: options?.preventDefault ?? true,
-    stopPropagation: options?.stopPropagation ?? true,
-    ignoreInputs: options?.ignoreInputs ?? "auto",
-    scope,
-    description: options?.description ?? "",
-    ignoreRepeat: options?.ignoreRepeat ?? true,
-    suppressInPopups: options?.suppressInPopups ?? true,
+  const resolved: ResolvedHotkeyOptions = {
+    ...UPDATABLE_OPTION_DEFAULTS,
+    scope: resolveScopeOrGlobal(options?.scope),
     conflictBehavior: options?.conflictBehavior ?? ConflictBehavior.Warn,
     target: resolveTarget(options?.target),
   };
+  if (options) applyUpdatableOptions(resolved, options);
+  return resolved;
 }
 
 /**
@@ -287,13 +318,7 @@ export default class HotkeyManager extends BaseObject {
             this._registrationIndex.index(registration);
           }
         }
-        if (newOptions.enabled !== undefined) opts.enabled = newOptions.enabled;
-        if (newOptions.preventDefault !== undefined) opts.preventDefault = newOptions.preventDefault;
-        if (newOptions.stopPropagation !== undefined) opts.stopPropagation = newOptions.stopPropagation;
-        if (newOptions.ignoreInputs !== undefined) opts.ignoreInputs = newOptions.ignoreInputs;
-        if (newOptions.ignoreRepeat !== undefined) opts.ignoreRepeat = newOptions.ignoreRepeat;
-        if (newOptions.suppressInPopups !== undefined) opts.suppressInPopups = newOptions.suppressInPopups;
-        if (newOptions.description !== undefined) opts.description = newOptions.description;
+        applyUpdatableOptions(opts, newOptions);
       },
     };
 

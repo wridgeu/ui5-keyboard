@@ -610,6 +610,79 @@ QUnit.test("setOptions: timeout validation rejects invalid values", (assert) => 
   assert.throws(() => handle.setOptions({ timeout: 0 }), /Invalid sequence timeout/, "Timeout 0 is rejected");
 });
 
+QUnit.test("setOptions: update preventDefault", (assert) => {
+  const manager = createHotkeyManager();
+  const handle = manager.register("G E", () => {});
+
+  handle.setOptions({ preventDefault: false });
+
+  fireKey("g");
+  clock.tick(50);
+  const event = fireKey("e");
+  assert.notOk(event.defaultPrevented, "Default not prevented on final key after setOptions");
+});
+
+QUnit.test("setOptions: update stopPropagation", (assert) => {
+  const manager = createHotkeyManager();
+  let finalKeyPropagated = false;
+
+  // Gate on the final key: intermediate keys never call stopPropagation, so
+  // tracking any keydown would be satisfied by the "g" event regardless.
+  const listener = (e: KeyboardEvent) => {
+    if (e.key === "e") finalKeyPropagated = true;
+  };
+  document.addEventListener("keydown", listener);
+
+  const handle = manager.register("G E", () => {});
+  handle.setOptions({ stopPropagation: false });
+
+  fireKey("g");
+  clock.tick(50);
+  fireKey("e");
+
+  assert.ok(finalKeyPropagated, "Final key propagates after setOptions({ stopPropagation: false })");
+  document.removeEventListener("keydown", listener);
+});
+
+QUnit.test("setOptions: update ignoreInputs", (assert) => {
+  const manager = createHotkeyManager();
+  let called = false;
+
+  const handle = manager.register("G E", () => {
+    called = true;
+  });
+
+  const input = document.createElement("input");
+  input.type = "text";
+  fixture.appendChild(input);
+
+  handle.setOptions({ ignoreInputs: false });
+
+  fireKeyOn(input, "g");
+  clock.tick(50);
+  fireKeyOn(input, "e");
+  assert.ok(called, "Plain-key sequence fires in input after setOptions({ ignoreInputs: false })");
+});
+
+QUnit.test("setOptions: update onPending", (assert) => {
+  const manager = createHotkeyManager();
+  const pendingCalls: { completedSteps: number; nextKey: string }[] = [];
+
+  const handle = manager.register("G E X", () => {});
+  handle.setOptions({
+    onPending: (info) => {
+      pendingCalls.push({ completedSteps: info.completedSteps, nextKey: info.nextKey });
+    },
+  });
+
+  fireKey("g");
+  clock.tick(0);
+
+  assert.strictEqual(pendingCalls.length, 1, "Pending callback fires after setOptions installs it");
+  assert.strictEqual(pendingCalls[0]!.completedSteps, 1, "1 step completed");
+  assert.strictEqual(pendingCalls[0]!.nextKey, "E", "Next key is E");
+});
+
 // ──────────────────────────────────────────────
 // ignoreInputs: "auto" (default)
 // ──────────────────────────────────────────────
