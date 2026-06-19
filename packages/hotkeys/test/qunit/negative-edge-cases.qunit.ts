@@ -1,5 +1,6 @@
 import { ConflictBehavior, UnhandledReason } from "ui5/hotkeys/library";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
+import type Log from "sap/base/Log";
 
 const fixture = document.getElementById("qunit-fixture")!;
 
@@ -878,6 +879,39 @@ QUnit.test("enabled() function throwing on hotkey - other hotkeys still fire", (
 
   fireKey("F2");
   assert.ok(safeFired, "Other hotkey fires after enabled() threw on a different registration");
+});
+
+QUnit.test("enabled() throwing - hotkey is disabled and the throw is logged at warning (not error) level", (assert) => {
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warnSpy = sinon.spy(LogModule, "warning");
+  const errorSpy = sinon.spy(LogModule, "error");
+
+  try {
+    const manager = createHotkeyManager();
+    let fired = false;
+    manager.register(
+      "F8",
+      () => {
+        fired = true;
+      },
+      {
+        enabled: () => {
+          throw new Error("Intentional enabled() error");
+        },
+      },
+    );
+
+    fireKey("F8");
+
+    assert.notOk(fired, "throwing enabled() treats the hotkey as disabled (callback does not fire)");
+    const enabledWarnings = warnSpy.getCalls().filter((c) => String(c.args[0]).includes("enabled() threw"));
+    assert.ok(enabledWarnings.length >= 1, "the enabled() throw is logged at warning level");
+    const enabledErrors = errorSpy.getCalls().filter((c) => String(c.args[0]).includes("enabled()"));
+    assert.strictEqual(enabledErrors.length, 0, "the enabled() throw is not logged at error level");
+  } finally {
+    warnSpy.restore();
+    errorSpy.restore();
+  }
 });
 
 // ══════════════════════════════════════════════

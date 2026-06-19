@@ -5,6 +5,7 @@ import { createIdGenerator } from "./idgen";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
+import { resolveEnabled } from "./resolve-enabled";
 import type { Platform } from "../library";
 import type { HotkeyCallback } from "../types";
 import type {
@@ -184,23 +185,12 @@ export default class SequenceManager {
    * Convert an internal registration to the public flat info shape.
    */
   private _toRegistrationInfo(reg: SequenceRegistration): SequenceRegistrationInfo {
-    let enabled: boolean;
-    try {
-      enabled = typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
-    } catch (error) {
-      Log.warning(
-        `Error evaluating enabled() for sequence [${reg.sequence.join(", ")}]: ${error}`,
-        undefined,
-        LOG_COMPONENT,
-      );
-      enabled = false;
-    }
     return {
       id: reg.id,
       sequence: [...reg.sequence],
       scope: reg.scope,
       description: reg.description,
-      enabled,
+      enabled: this._isRegistrationEnabled(reg),
       timeout: reg.timeout,
       ignoreInputs: reg.ignoreInputs,
       preventDefault: reg.preventDefault,
@@ -328,16 +318,7 @@ export default class SequenceManager {
   }
 
   private _isRegistrationEnabled(reg: SequenceRegistration): boolean {
-    try {
-      return typeof reg.enabled === "function" ? reg.enabled() : reg.enabled;
-    } catch (error) {
-      Log.error(
-        `enabled() threw for sequence [${reg.sequence.join(", ")}]`,
-        error instanceof Error ? error : String(error),
-        LOG_COMPONENT,
-      );
-      return false;
-    }
+    return resolveEnabled(reg.enabled, `[${reg.sequence.join(", ")}]`, LOG_COMPONENT);
   }
 
   private _indexRegistration(reg: SequenceRegistration): void {
