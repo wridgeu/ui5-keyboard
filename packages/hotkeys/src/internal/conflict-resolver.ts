@@ -1,7 +1,7 @@
 import Log from "sap/base/Log";
 import { ConflictBehavior } from "../library";
 import type RegistrationIndex from "./registration-index";
-import type { HotkeyRegistration } from "./types";
+import type { HotkeyRegistration, ResolvedTarget } from "./types";
 
 // Kept as the HotkeyManager component so existing log output is unchanged.
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
@@ -21,13 +21,7 @@ export default class ConflictResolver {
    * Handle a conflict for a newly-registering hotkey: remove existing matches
    * (Replace), throw (Error), warn (Warn), or do nothing (Allow).
    */
-  resolve(
-    normalizedHotkey: string,
-    scope: string,
-    target: Element | null,
-    targetCallback: (() => Element | null) | null,
-    conflictBehavior: ConflictBehavior,
-  ): void {
+  resolve(normalizedHotkey: string, scope: string, target: ResolvedTarget, conflictBehavior: ConflictBehavior): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
 
     // Callback (lazy) targets resolve to an element only at dispatch time, so two
@@ -35,7 +29,7 @@ export default class ConflictResolver {
     // hotkey alone produced false conflicts - a blocking throw (Error) or a silent
     // removal (Replace) of a registration that may target a different element. Skip
     // conflict handling for them; genuine overlaps are resolved at dispatch time.
-    if (targetCallback) {
+    if (target?.kind === "callback") {
       Log.debug(
         `Conflict check skipped for callback-target hotkey "${normalizedHotkey}" in scope "${scope}" ` +
           `(callback targets are resolved at dispatch time).`,
@@ -48,7 +42,7 @@ export default class ConflictResolver {
     // Use scope-bucket lookup instead of iterating all registrations
     const bucket = this._index.getBucket(scope);
     if (!bucket) return;
-    const ids = target === null ? bucket.untargetedIds : this._index.getTargetRegistrationIds(bucket, target);
+    const ids = target === null ? bucket.untargetedIds : this._index.getTargetRegistrationIds(bucket, target.el);
     if (!ids || ids.size === 0) return;
 
     // Find conflicts by matching normalizedHotkey within the bucket

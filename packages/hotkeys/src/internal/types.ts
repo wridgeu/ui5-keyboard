@@ -23,6 +23,13 @@ export interface HotkeyRegistration {
 }
 
 /**
+ * Resolved target binding for a hotkey registration: untargeted (`null`),
+ * a static element, or a callback resolved lazily at dispatch time.
+ * @internal
+ */
+export type ResolvedTarget = { kind: "element"; el: Element } | { kind: "callback"; fn: () => Element | null } | null;
+
+/**
  * Hotkey options with all defaults resolved - no optional fields.
  * @internal
  */
@@ -36,8 +43,7 @@ export interface ResolvedHotkeyOptions {
   ignoreRepeat: boolean;
   suppressInPopups: boolean;
   conflictBehavior: ConflictBehavior;
-  target: Element | null;
-  targetCallback: (() => Element | null) | null;
+  target: ResolvedTarget;
 }
 
 /**
