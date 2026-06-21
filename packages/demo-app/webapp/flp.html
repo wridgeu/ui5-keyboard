@@ -13,11 +13,12 @@
       this page is fully static so it can be hosted from a plain file server.
 
       Runtime note: the FLP/ushell sandbox is NOT part of OpenUI5 — it only
-      ships with SAPUI5. We therefore bootstrap core + ushell from the SAPUI5
-      CDN (ui5.sap.com), which is a 1.144.0 superset of the OpenUI5 the app was
-      built against; the app/library code is unaffected. The app's own
+      ships with SAPUI5. The Pages build therefore uses the SAPUI5 framework
+      (ui5-pages.yaml) and `ui5 build --all` to bundle core + ushell into this
+      artifact (trimmed by tools/trim-pages-dist.mjs), so the page loads
+      everything from relative paths with NO external CDN. The app's own
       Component-preload and the custom libraries (ui5.hotkeys / ui5.kiosk) are
-      served from this artifact via the resourceroots below.
+      served from the same artifact via the resourceroots below.
     -->
     <script type="text/javascript">
       window["sap-ushell-config"] = {
@@ -56,21 +57,18 @@
       };
     </script>
 
-    <!-- ushell sandbox bootstrap (SAPUI5 CDN; not available in OpenUI5). -->
-    <script
-      id="sap-ushell-bootstrap"
-      src="https://ui5.sap.com/1.144.0/test-resources/sap/ushell/bootstrap/sandbox.js"
-    ></script>
+    <!-- ushell sandbox bootstrap (self-hosted from this artifact). -->
+    <script id="sap-ushell-bootstrap" src="test-resources/sap/ushell/bootstrap/sandbox.js"></script>
 
     <!--
       UI5 core bootstrap. `data-sap-ui-frame-options="allow"` is a NON-SECURE
       setting acceptable only for this demo/sandbox use case. Resource roots map
-      the app + custom libraries to paths inside this artifact; SAP libraries
-      load from the CDN base derived from the bootstrap src.
+      the app + custom libraries to paths inside this artifact; the SAPUI5
+      runtime is self-hosted under resources/ (no external CDN).
     -->
     <script
       id="sap-ui-bootstrap"
-      src="https://ui5.sap.com/1.144.0/resources/sap-ui-core.js"
+      src="resources/sap-ui-core.js"
       data-sap-ui-libs="sap.m,sap.ushell,sap.ui.core,sap.ui.layout"
       data-sap-ui-async="true"
       data-sap-ui-preload="async"

@@ -33,6 +33,7 @@
                             <items>
                                 <SegmentedButtonItem key="Virtual" text="Virtual" />
                                 <SegmentedButtonItem key="Native" text="Native" />
+                                <SegmentedButtonItem key="None" text="None" />
                             </items>
                         </SegmentedButton>
                     </HBox>
@@ -75,7 +76,8 @@
 
             <Panel class="sapUiSmallMarginBottom" headerText="Inline Numpad">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="A compact numeric keypad rendered inline (not docked)." />
+                    <core:InvisibleText id="numpadLabel" text="Inline numeric keypad" />
+                    <Text id="numpadHint" text="A compact numeric keypad rendered inline (not docked)." />
                     <Input
                         id="numpadInput"
                         placeholder="Numeric input..."
@@ -85,7 +87,8 @@
                         id="numpadKeyboard"
                         keyboardType="{= kioskLib.KeyboardType.Numpad }"
                         controls="numpadInput"
-                        ariaLabel="Numeric Keypad"
+                        ariaLabelledBy="numpadLabel"
+                        ariaDescribedBy="numpadHint"
                         class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>

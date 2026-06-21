@@ -18,6 +18,9 @@ export default {
     const filtered = exclude(files);
     if (!filtered.length) return [];
     const quoted = filtered.map((f) => `"${f}"`).join(" ");
-    return `oxlint --fix ${quoted}`;
+    // oxlint ignores all .js (TS-authored project), so a staged .js file selects
+    // no lintable files; --no-error-on-unmatched-pattern keeps that from failing
+    // the hook (mirrors the oxfmt invocation above).
+    return `oxlint --fix --no-error-on-unmatched-pattern ${quoted}`;
   },
 };
