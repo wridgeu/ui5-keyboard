@@ -17,7 +17,7 @@ import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
 
 import { ShiftState } from "./core/shift-state.js";
 import { resolveWithCustomResolver, keyElementId, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
-import { insertText, handleBackspace, handleNavigation } from "./core/input-operations.js";
+import { insertText, handleBackspace } from "./core/input-operations.js";
 import {
   SECONDARY_LAYOUTS,
   getLayoutOrDefault,
@@ -36,6 +36,7 @@ import { classifyKeyToken } from "./core/key-token.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
+import { FKeyController, NATIVE_DISPATCHABLE_KEYS } from "./core/fkey-controller.js";
 import {
   KeyboardType,
   MobileKeyboard,
@@ -87,55 +88,6 @@ function isInvalidEnumValue(propName: string, value: string, validValues: Readon
   console.warn(`[kiosk-keyboard] Invalid ${propName} "${value}". Valid values: ${[...validValues].join(", ")}.`);
   return true;
 }
-
-// ── Native-dispatchable key allowlist ──
-const NATIVE_DISPATCHABLE_KEYS = new Set([
-  "F1",
-  "F2",
-  "F3",
-  "F4",
-  "F5",
-  "F6",
-  "F7",
-  "F8",
-  "F9",
-  "F10",
-  "F11",
-  "F12",
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "Home",
-  "End",
-  "PageUp",
-  "PageDown",
-]);
-
-/** Built-in native actions executed in fKeyMode="Native" when not prevented. */
-const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
-  F5: () => {
-    location.reload();
-  },
-  F11: () => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen?.().catch(() => undefined);
-    } else {
-      void document.documentElement.requestFullscreen?.().catch(() => undefined);
-    }
-  },
-};
-
-/**
- * Tracks unsupported fkey names that have already been warned about. The set
- * is module-level by design: a custom element has no FLP-style "last instance
- * destroyed" hook (`onExitDOM` fires on every detach, including transient
- * reattach), so per-page deduplication is the correct lifetime. This is
- * intentionally NOT parity with `kiosk-keyboard`'s static-class equivalent,
- * which is cleared on last-instance exit because UI5 controls have a
- * meaningful destroy boundary.
- */
-const warnedUnsupportedFKeys = new Set<string>();
 
 // ── Internal provenance types ──
 
@@ -659,6 +611,13 @@ class KioskKeyboard extends UI5Element {
   // ── Responsive sizing (ResizeObserver-driven height classes) ──
   /** Owns the ResizeObserver and height-responsive class application. */
   private readonly _responsiveSizing = new ResponsiveSizingController(this);
+
+  // ── F-key dispatch ──
+  /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
+  private readonly _fKeyController = new FKeyController({
+    getFKeyMode: () => this.fKeyMode,
+    resolveTarget: () => this._resolveTarget(),
+  });
 
   // ── Pre-bound template handlers (avoids per-render allocation) ──
   readonly _boundOnKeyClick = this._onKeyClick.bind(this);
@@ -1514,7 +1473,7 @@ class KioskKeyboard extends UI5Element {
     const fkeyName = value.slice("{fkey:".length, -1);
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
     if (!allowed) return;
-    this._handleFKey(fkeyName, shifted);
+    this._fKeyController.handle(fkeyName, shifted);
     this._autoReleaseShift();
   }
 
@@ -1566,52 +1525,6 @@ class KioskKeyboard extends UI5Element {
    */
   getActiveTargetElement(): HTMLInputElement | HTMLTextAreaElement | null {
     return this._resolveTarget();
-  }
-
-  private _handleFKey(fkeyName: string, shiftKey: boolean): void {
-    const mode = this.fKeyMode;
-    if (mode === "None") return;
-
-    let nativeAllowed = true;
-
-    if (mode === "Native") {
-      if (NATIVE_DISPATCHABLE_KEYS.has(fkeyName)) {
-        nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
-        if (nativeAllowed) {
-          NATIVE_FKEY_ACTIONS[fkeyName]?.();
-        }
-      } else {
-        nativeAllowed = false;
-        if (!warnedUnsupportedFKeys.has(fkeyName)) {
-          warnedUnsupportedFKeys.add(fkeyName);
-          console.warn(
-            `[kiosk-keyboard] Ignored native dispatch for unsupported fkey "${fkeyName}". ` +
-              "Only standard function/navigation keys are dispatched in fKeyMode=Native.",
-          );
-        }
-      }
-    }
-
-    // Move cursor in target input for navigation keys (when not suppressed)
-    if (nativeAllowed) {
-      const target = this._resolveTarget();
-      if (target) {
-        handleNavigation(target, fkeyName);
-      }
-    }
-  }
-
-  private _dispatchNativeFKeydown(fkeyName: string, shiftKey: boolean): boolean {
-    const target = this._resolveTarget() ?? document.activeElement;
-    if (!target) return true;
-    const nativeEvent = new KeyboardEvent("keydown", {
-      key: fkeyName,
-      code: fkeyName,
-      bubbles: true,
-      cancelable: true,
-      shiftKey,
-    });
-    return target.dispatchEvent(nativeEvent);
   }
 
   // ── Internal helpers ──

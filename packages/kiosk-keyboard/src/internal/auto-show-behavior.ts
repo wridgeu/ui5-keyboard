@@ -32,7 +32,7 @@ interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" 
   _getActiveTargetId(): string;
   _getEffectiveResolver(): TargetResolverFn | null;
   _setActiveTarget(target?: string | Control): unknown;
-  _setupControls(): void;
+  _syncControls(): void;
   _resolveClaimableControl(target: EventTarget | null): Control | null;
   _wouldClaimInput(target: EventTarget | null): boolean;
   _getKeyboardTypeSource(): KeyboardTypeSource;
@@ -89,7 +89,7 @@ export default class AutoShowBehavior extends BaseObject {
     if (!this._host.getDocked() || !isParticipating(this._host)) return;
 
     if (this._host.getControls().length > 0) {
-      this._host._setupControls();
+      this._host._syncControls();
     }
 
     const target = event.target as HTMLElement;
