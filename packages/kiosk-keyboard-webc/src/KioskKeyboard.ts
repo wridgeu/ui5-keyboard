@@ -109,6 +109,9 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
   " ": "KEY_SPACE",
 };
 
+/** Key values already warned about for a missing accessible name, so re-renders do not repeat the warning. */
+const warnedMissingLabels = new Set<string>();
+
 /** Drop `{layout:base}` keys from a layout (used when the switch would be a no-op). */
 function stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
   let changed = false;
@@ -1119,8 +1122,10 @@ class KioskKeyboard extends UI5Element {
 
     // Icon-only key (label suppressed) with no ariaLabel and no i18n entry:
     // warn so the consumer adds a localizable accessible name, and fall back
-    // to the raw value rather than announcing nothing.
-    if (key.label === "") {
+    // to the raw value rather than announcing nothing. Warn once per key value
+    // (this runs on every re-render).
+    if (key.label === "" && !warnedMissingLabels.has(key.value)) {
+      warnedMissingLabels.add(key.value);
       console.warn(
         `[kiosk-keyboard] Icon-only key "${key.value}" has no accessible name; set ariaLabel on the KeyDefinition.`,
       );
