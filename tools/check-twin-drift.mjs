@@ -46,10 +46,12 @@
  *   internal/fkey-controller.ts <-> core/fkey-controller.ts (kiosk reads the
  *   FKeyMode enum and dispatches via a UI5 target session; webc compares mode
  *   string literals and writes the resolved DOM input directly),
- *   internal/key-grid-navigation.ts <-> core/key-grid-navigation.ts (kiosk is a
- *   UI5 addDelegate receiving pseudo-events with cross-row wrapping; webc reads
- *   raw keydown with within-row wrapping). Both grid navigators are
- *   framework-adapted and intentionally NOT byte-identical.
+ *   internal/key-grid-navigation.ts <-> core/key-grid-navigation.ts (both
+ *   implement the same WAI-ARIA APG layout-grid arrow model -- column-clamped
+ *   vertical moves that stop at the top/bottom edge, row-boundary continuation
+ *   that stops at the grid ends -- but kiosk is a UI5 addDelegate driven by
+ *   pseudo-events and DOM traversal while webc reads raw keydown against the
+ *   resolved layout, so the two are behavior-aligned but not byte-identical).
  * - internal/controls-delegation-controller.ts: kiosk-only. The `controls`
  *   focus-delegation/auto-target reconciliation has no webc counterpart; webc
  *   resolves its single `controls` id lazily in AutoShowController instead.

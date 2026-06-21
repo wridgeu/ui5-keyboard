@@ -630,9 +630,7 @@ class KioskKeyboard extends UI5Element {
   // ── Pre-bound template handlers (avoids per-render allocation) ──
   readonly _boundOnKeyClick = this._onKeyClick.bind(this);
   readonly _boundOnKeyMouseDown = this._onKeyMouseDown.bind(this);
-  readonly _boundOnKeyDown = (e: KeyboardEvent): void => {
-    this._keyGridNav.onKeyDown(e);
-  };
+  readonly _boundOnKeyDown = this._keyGridNav.onKeyDown.bind(this._keyGridNav);
 
   /**
    * Whether the docked keyboard panel is currently visible.
