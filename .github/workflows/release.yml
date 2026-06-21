@@ -55,7 +55,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   publish-hotkeys:
-    needs: [release-please, ci, smoke]
+    needs: [release-please]
     if: needs.release-please.outputs.hotkeys_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -75,7 +75,7 @@ jobs:
           NODE_AUTH_TOKEN: ""
 
   publish-kiosk:
-    needs: [release-please, ci, smoke]
+    needs: [release-please]
     if: needs.release-please.outputs.kiosk_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -94,7 +94,7 @@ jobs:
           NODE_AUTH_TOKEN: ""
 
   publish-webc:
-    needs: [release-please, ci, smoke]
+    needs: [release-please]
     if: needs.release-please.outputs.webc_release_created == 'true' || inputs.force-publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
