@@ -16,6 +16,7 @@ import type { LayoutDefinition } from "../types";
  *
  * @see {@link https://en.wikipedia.org/wiki/QWERTY#Spanish | Spanish QWERTY layout}
  * @public
+ * @since 0.1.0
  */
 const qwertyEs: LayoutDefinition = [
   // Row 1: number row

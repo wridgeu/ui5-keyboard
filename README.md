@@ -278,7 +278,7 @@ The test runners start their own servers on fixed ports. These are not started m
 | 8085 | Kiosk e2e / visual / docs | `packages/kiosk-keyboard/playwright.config.ts` (+ `playwright.docs.config.ts`)  |
 | 8086 | Kiosk webc e2e / visual   | `packages/kiosk-keyboard-webc/playwright.config.ts` `webServer` (Vite)          |
 
-Unlike the previous WebdriverIO setup, the Playwright device matrix does not use per-device ports: every project (`desktop`, `phone-sm`, `phone-md`, `phone-lg`, `tablet`) runs against the single shared `webServer` for its package, varying only the emulated viewport and device scale factor.
+The Playwright device matrix does not use per-device ports: every project (`desktop`, `phone-sm`, `phone-md`, `phone-lg`, `tablet`) runs against the single shared `webServer` for its package, varying only the emulated viewport and device scale factor.
 
 ### Build
 

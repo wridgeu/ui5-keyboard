@@ -427,7 +427,7 @@ Provides arrow key, Home/End, PageUp/PageDown navigation for list-like controls 
 
 ### Relevance to KioskKeyboard
 
-KioskKeyboard implements its own arrow key navigation (`_moveFocus()`) rather than using ItemNavigation because the keyboard layout (rows of varying widths) doesn't fit ItemNavigation's linear or fixed-grid model.
+KioskKeyboard implements its own arrow key navigation (a dedicated `KeyGridNavigation` delegate) rather than using ItemNavigation because the keyboard layout (rows of varying widths) doesn't fit ItemNavigation's linear or fixed-grid model.
 
 ## 11. Hybrid Device Handling (Mouse + Touch)
 

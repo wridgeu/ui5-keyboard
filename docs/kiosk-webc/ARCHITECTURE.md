@@ -562,18 +562,18 @@ All built-in layouts and middleware are bundled with the component (direct impor
 
 ## Differences from the UI5 Control Variant (`kiosk-keyboard`)
 
-| Aspect            | UI5 Control (`kiosk-keyboard`)                                       | Web Component (`kiosk-keyboard-webc`)                  |
-| ----------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| Base class        | `sap/ui/core/Control`                                                | `UI5Element` (extends `HTMLElement`)                   |
-| Rendering         | `apiVersion: 4` renderer object                                      | JSX template with `jsxRenderer`                        |
-| Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                |
-| Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                    |
-| Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware) |
-| Data binding      | UI5 `setValue()` / `fireLiveChange()`                                | Native `InputEvent` dispatch                           |
-| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                  |
-| Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Inline in `KioskKeyboard._onKeyDown`                   |
-| Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                              |
-| Distribution      | UI5 library (preload)                                                | ESM with subpath imports                               |
+| Aspect            | UI5 Control (`kiosk-keyboard`)                                       | Web Component (`kiosk-keyboard-webc`)                            |
+| ----------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Base class        | `sap/ui/core/Control`                                                | `UI5Element` (extends `HTMLElement`)                             |
+| Rendering         | `apiVersion: 4` renderer object                                      | JSX template with `jsxRenderer`                                  |
+| Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                          |
+| Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                              |
+| Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware)           |
+| Data binding      | UI5 `setValue()` / `fireLiveChange()`                                | Native `InputEvent` dispatch                                     |
+| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                            |
+| Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Extracted to `core/key-grid-navigation.ts` (`KeyGridNavigation`) |
+| Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                                        |
+| Distribution      | UI5 library (preload)                                                | ESM with subpath imports                                         |
 
 ## Edge Cases
 

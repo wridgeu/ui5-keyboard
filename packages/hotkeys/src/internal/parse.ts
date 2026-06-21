@@ -16,6 +16,7 @@ import type { CanonicalModifier, ParsedHotkey } from "../types";
  * @param platform - Override platform for Mod resolution. Defaults to detected platform.
  * @returns The parsed hotkey representation.
  * @throws Error if the hotkey string is empty or contains no non-modifier key.
+ * @since 0.1.0
  */
 export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
   if (!hotkey?.trim()) {
@@ -90,6 +91,8 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
  * @example
  * normalizeHotkey("cmd+shift+s") // => "Shift+Meta+S" (on Mac)
  * normalizeHotkey("Mod+S")       // => "Control+S" (on Windows/Linux)
+ *
+ * @since 0.1.0
  */
 export function normalizeHotkey(hotkey: string, platform?: Platform): string {
   const parsed = parseHotkey(hotkey, platform);
@@ -105,6 +108,7 @@ export function normalizeHotkey(hotkey: string, platform?: Platform): string {
  *
  * @param event - The keyboard event to convert.
  * @returns The hotkey string, or `null` for modifier-only events.
+ * @since 0.1.0
  */
 export function keyboardEventToHotkey(event: KeyboardEvent): string | null {
   const key = event.key;
@@ -139,6 +143,7 @@ export function keyboardEventToHotkey(event: KeyboardEvent): string | null {
  * @param hotkey - The hotkey string to convert (e.g., "Control+Shift+S").
  * @param platform - Override platform detection.
  * @returns The hotkey with Mod substitution where applicable.
+ * @since 0.1.0
  */
 export function convertToModFormat(hotkey: string, platform?: Platform): string {
   const p = platform ?? detectPlatform();

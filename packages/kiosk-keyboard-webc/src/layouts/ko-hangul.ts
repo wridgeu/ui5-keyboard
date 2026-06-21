@@ -12,6 +12,7 @@ import type { LayoutDefinition } from "../types.js";
  *
  * @see {@link https://en.wikipedia.org/wiki/Keyboard_layout#Dubeolsik | Dubeolsik layout}
  * @public
+ * @since 0.1.0
  */
 const koHangul: LayoutDefinition = [
   // Row 1: number row

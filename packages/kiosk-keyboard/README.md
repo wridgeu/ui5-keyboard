@@ -72,7 +72,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virt
 **Layouts**
 
 - Built-in layouts: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, numeric, special characters, numpad, function keys, navigation keys
-- Variant layouts: QWERTY-FK/QWERTZ-DE-FK and QWERTY-NAV/QWERTZ-DE-NAV
+- Composable variant layouts (e.g. QWERTY-FK, QWERTZ-DE-NAV) built from the shared `fkey-row` / `nav-row` modules
 - Locale-based default layout (auto-detects from UI5 language setting)
 - Runtime layout switching via `{layout:name}` keys
 - `keyboardType` property for quick switching between Full, Numeric, and Numpad modes
@@ -894,7 +894,7 @@ The `focusin` handler checks whether the focused DOM element is a **text-entry**
 | `<select>`                                                       | No        | Not a text input element                              |
 | Custom element / Shadow DOM inner `<input>`                      | Depends   | See Web Components notes below                        |
 
-> For host controls/wrappers, typing and auto-type now resolve inner native `<input>/<textarea>` from either light DOM or Shadow DOM when available via `getFocusDomRef()`. Auto-show claiming still depends on the focused event target and UI5 control resolution.
+> For host controls/wrappers, typing and auto-type resolve inner native `<input>/<textarea>` from either light DOM or Shadow DOM when available via `getFocusDomRef()`. Auto-show claiming still depends on the focused event target and UI5 control resolution.
 
 In docked mode, pressing physical Escape closes the keyboard regardless of
 where focus currently is. Inner-input resolution from `getFocusDomRef()` is
@@ -1433,7 +1433,7 @@ directly to define custom breakpoints:
 }
 ```
 
-This is more flexible than the previous threshold variables: you can
+This is more flexible than the threshold variables: you can
 set any property at any number of breakpoints.
 
 For a complete guide covering all built-in breakpoints, row wrapping behavior, and patterns for switching entire layouts per device size, see the [Responsive Layout Patterns](../../docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md) guide.

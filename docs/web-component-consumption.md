@@ -68,8 +68,9 @@ The build produces two kinds of output:
 | Standalone bundle (`dist/kiosk-keyboard.bundle.js`) | Vite  | Self-contained bundle for `<script>` tags          |
 
 Vite's `emptyOutDir: false` ensures the tsc output is not wiped. The Vite build
-sets `codeSplitting: false` so the bundle is a single file (this replaces the
-deprecated `inlineDynamicImports: true` under Vite 8 / Rolldown).
+sets `codeSplitting: false` so the bundle is a single file (under Vite 8 /
+Rolldown this is the supported single-file setting; `inlineDynamicImports: true`
+is deprecated).
 
 ## Package Structure Alignment with `@ui5/webcomponents`
 
@@ -130,8 +131,7 @@ not tied to the tag name.
 
 The demo app's web component tooling page shows the actual registered tag name
 at runtime. You will see the scoped tag with its hash (which changes on every
-build). The manual bridge demo was removed in the April 2026 architecture
-simplification; the bridge pattern is documented as a reference in the
+build). The manual bridge pattern is documented as a reference in the
 demo-app README.
 
 ## Lean Consumption (Advanced)
@@ -212,15 +212,13 @@ forward slashes.
 encountered this. The fix would be `path.posix.join()` or a post-normalization
 in the analyzer. No upstream fix exists as of `@ui5/webcomponents-tools@2.22.0`.
 
-**Fix:** Originally a `patch-package` patch on `@ui5/webcomponents-tools` replaced
-`path.join()` / `path.dirname()` with `path.posix.join()` / `path.posix.dirname()`
-in `lib/cem/utils.mjs`. That patch (Bug 6) has since been **removed**: flattening
-the component into a single module eliminated the cross-module type references that
-triggered `getTypeReferenceModulePath`, so the path-normalization issue no longer
-affects this project. See `patches/README.md` Bug 6 for the full history.
+**Fix:** This package bundles the component as a single module, so the CEM analyzer
+never emits cross-module type-reference paths and `getTypeReferenceModulePath` is
+never exercised. The backslash issue therefore does not arise here, and no
+path-normalization patch is required.
 
-**Status:** No longer applicable to this project (the trigger was removed). The
-upstream bug still exists for components with cross-module type references on Windows.
+**Status:** Not applicable to this package's single-module output. The upstream bug
+still exists for components with cross-module type references on Windows.
 
 ### Exports Map Double-Dist Resolution
 
@@ -261,56 +259,12 @@ dev server always scopes to match production behavior.
 `webapp/` files at the root path without middleware interception. The standalone
 bundle registers the canonical (unscoped) tag.
 
-**Note (April 2026):** The manual bridge demo page was removed in the
-architecture simplification. The bridge pattern is documented as a reference in
-the demo-app README, including a minimal `WebComponent.extend()` code example.
-Consumers who need the bridge pattern can implement it from that reference
-without a dedicated demo page.
+**Note:** The manual bridge pattern is documented as a reference in the demo-app
+README, including a minimal `WebComponent.extend()` code example. Consumers who
+need the bridge pattern can implement it from that reference.
 
 **Status:** This is inherent to how scoping works and is not a bug - scoping is
 designed for multi-version isolation.
-
-### CEM Re-Export Handling
-
-**Historical context:** When the component class lived in `KioskKeyboardCore.ts`
-and was re-exported from `KioskKeyboard.ts`, the CEM analyzer needed to follow
-the re-export chain to attribute the class declaration to the correct module.
-
-**Investigation result (pre-April 2026):** The CEM analyzer correctly followed
-`export { default } from "./KioskKeyboardCore.js"` and attributed the class
-declaration to the re-exporting module (`dist/KioskKeyboard.js`). The
-`custom-element-definition` export also appeared in the correct module. A
-CEM post-processing step that was initially added to propagate the CE def
-export was found to be unnecessary and was removed.
-
-**Known quirk:** The CEM analyzer wrapped re-export `declaration.module` paths
-in extra quotes: `"\"./KioskKeyboardCore.js\""` instead of
-`"./KioskKeyboardCore.js"`. This was a cosmetic bug in the analyzer but did not
-affect the middleware's class lookup because the CE def export was correctly
-attributed.
-
-**Resolution (April 2026):** The re-export pattern was eliminated entirely.
-The class now lives directly in `KioskKeyboard.ts` with no re-export from a
-separate core file. This removes the cross-module reference chain that the CEM
-analyzer had to follow and makes the extra-quotes quirk moot.
-
-**Status:** Resolved. The re-export investigation is preserved here for context
-in case similar patterns are introduced in the future.
-
-### Named `./core` Export (Removed)
-
-The `"./core"` named export formerly pointed to `dist/KioskKeyboardCore.js`,
-providing a lean entry point without layout side-effect imports. Investigation
-had confirmed:
-
-1. The CEM analyzer correctly followed re-exports and attributed the class to the
-   re-exporting module (`KioskKeyboard.js`), not the declaring module.
-2. The middleware never processed the `./core` export because it only resolves the
-   main entry from the CEM's `custom-element-definition` export.
-
-**Resolution (April 2026):** The `./core` export was removed when the class was
-flattened into a single file. Consumers who want selective layout loading can
-import individual layouts via `kiosk-keyboard-webc/layouts/*` subpath imports.
 
 ### Middleware Always Intercepts `webComponentsPackage` Imports
 
@@ -362,19 +316,12 @@ matches the ecosystem convention.
 
 ## Future Considerations
 
-1. **Upstream CEM analyzer fix for Windows paths:** If `@ui5/webcomponents-tools`
-   switches from `path.join()` to `path.posix.join()` in the type reference code
-   path, the `@ui5/webcomponents-tools` patch in `patches/` can be removed. Note:
-   the April 2026 class flattening eliminated the cross-module type references
-   that were the primary trigger for this issue. The patch may no longer be needed;
-   verify by temporarily removing it and rebuilding on Windows.
-
-2. **Middleware per-package scoping control:** If `ui5-tooling-modules` adds
+1. **Middleware per-package scoping control:** If `ui5-tooling-modules` adds
    per-package scoping config (e.g., `pluginOptions.webcomponents.scopeExclude`),
    consumers using the manual bridge pattern could use a simple `import` instead
    of the standalone bundle workaround.
 
-3. **CEM support for optional imports:** If the CEM spec adds a concept of
+2. **CEM support for optional imports:** If the CEM spec adds a concept of
    optional or pluggable dependencies, the middleware could distinguish between
    required and optional side-effect imports. This would enable proper lean
    consumption through the tooling path.

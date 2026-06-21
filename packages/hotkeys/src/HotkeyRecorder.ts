@@ -6,6 +6,8 @@ import type { KeyEventInterceptor } from "./internal/event-dispatcher";
 
 /**
  * Options for the HotkeyRecorder.
+ *
+ * @since 0.1.0
  */
 export interface HotkeyRecorderOptions {
   /** Called when a hotkey is successfully recorded. Empty string means "cleared" (Backspace/Delete). */
@@ -31,6 +33,8 @@ export interface HotkeyRecorderOptions {
  * - Escape → cancels recording
  * - Backspace/Delete (no modifiers) → records empty string (clear)
  * - Modifier-only presses → ignored (waits for action key)
+ *
+ * @since 0.1.0
  */
 export default class HotkeyRecorder implements KeyEventInterceptor {
   private _options: HotkeyRecorderOptions;
@@ -51,6 +55,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
 
   /**
    * Start recording. Sets this recorder as the EventDispatcher's interceptor.
+   *
+   * @since 0.1.0
    */
   start(): void {
     if (this._destroyed || this._recording) return;
@@ -60,6 +66,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
 
   /**
    * Stop recording silently (no callbacks).
+   *
+   * @since 0.1.0
    */
   stop(): void {
     if (!this._recording) return;
@@ -70,6 +78,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
   /**
    * Cancel recording - calls onCancel if provided.
    * No-op if the recorder has been destroyed.
+   *
+   * @since 0.1.0
    */
   cancel(): void {
     if (this._destroyed) return;
@@ -79,6 +89,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
 
   /**
    * Whether the recorder is currently listening for input.
+   *
+   * @since 0.1.0
    */
   get isRecording(): boolean {
     return this._recording;
@@ -86,6 +98,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
 
   /**
    * Whether the recorder has been destroyed.
+   *
+   * @since 0.1.0
    */
   get isDestroyed(): boolean {
     return this._destroyed;
@@ -93,6 +107,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
 
   /**
    * Destroy the recorder. Stops recording and prevents restart.
+   *
+   * @since 0.1.0
    */
   destroy(): void {
     if (this._destroyed) return;
@@ -108,6 +124,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
   /**
    * Intercept a keydown event during recording.
    * Returns true to consume the event and block further dispatch.
+   *
+   * @since 0.1.0
    */
   onKeyDown(event: KeyboardEvent): boolean {
     if (!this._recording) return false;
@@ -148,6 +166,8 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
   /**
    * Called by the dispatcher when this interceptor is replaced or the dispatcher is destroyed.
    * Idempotent.
+   *
+   * @since 0.1.0
    */
   onDetached(): void {
     this._recording = false;

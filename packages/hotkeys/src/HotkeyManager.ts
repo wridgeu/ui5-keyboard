@@ -143,6 +143,8 @@ function parseSequenceSteps(hotkey: string): string[] | null {
  *   scope: "editor",
  * });
  * ```
+ *
+ * @since 0.1.0
  */
 export default class HotkeyManager extends BaseObject {
   private _registrations: Map<string, HotkeyRegistration> = new Map();
@@ -175,6 +177,7 @@ export default class HotkeyManager extends BaseObject {
    *
    * @param platform - Platform driving `Mod` resolution and platform-specific
    *   dispatch quirks. Defaults to auto-detection from the browser.
+   * @since 0.1.0
    */
   constructor(platform: Platform = detectPlatform()) {
     super();
@@ -230,6 +233,7 @@ export default class HotkeyManager extends BaseObject {
    * @param callback - Function to invoke when the hotkey matches.
    * @param options - Optional configuration.
    * @returns A handle for managing the registration lifecycle.
+   * @since 0.1.0
    */
   register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle {
     this._assertAlive("register");
@@ -332,6 +336,8 @@ export default class HotkeyManager extends BaseObject {
    *
    * All registrations made through the group can be cleaned up with a single
    * `destroyAll()` call - ideal for controller `onExit()` cleanup.
+   *
+   * @since 0.1.0
    */
   createGroup(): RegistrationGroup {
     this._assertAlive("createGroup");
@@ -353,6 +359,7 @@ export default class HotkeyManager extends BaseObject {
    * Key state tracking continues normally. Browser defaults are NOT suppressed.
    *
    * @param reason - Optional debug metadata.
+   * @since 0.1.0
    */
   suspendDispatch(reason?: string): KeyboardDispatchGuard {
     this._assertAlive("suspendDispatch");
@@ -361,6 +368,8 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Whether dispatch is currently suspended (any guard active).
+   *
+   * @since 0.1.0
    */
   isDispatchSuspended(): boolean {
     return this._dispatcher.isDispatchSuspended();
@@ -374,6 +383,7 @@ export default class HotkeyManager extends BaseObject {
    * Create a HotkeyRecorder. Keeps EventDispatcher internal.
    *
    * @param options - Recorder callbacks (onRecord, onCancel).
+   * @since 0.1.0
    */
   createRecorder(options: HotkeyRecorderOptions): HotkeyRecorder {
     this._assertAlive("createRecorder");
@@ -393,6 +403,8 @@ export default class HotkeyManager extends BaseObject {
    * created and destroyed automatically. Returns the consumer-facing
    * `KeyStateTrackerApi` interface; internal lifecycle methods
    * (`processKeyDown`, `destroy`, etc.) are not exposed.
+   *
+   * @since 0.1.0
    */
   getKeyStateTracker(): KeyStateTrackerApi {
     return this._dispatcher.keyStateTracker;
@@ -405,6 +417,8 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Push a new scope onto the stack. Hotkeys registered in this scope
    * become active, while non-global hotkeys in other scopes are paused.
+   *
+   * @since 0.1.0
    */
   pushScope(scopeId: string): void {
     this._assertAlive("pushScope");
@@ -430,6 +444,7 @@ export default class HotkeyManager extends BaseObject {
    *   (prevents mismatched push/pop pairs).
    * @throws Error if the stack would be emptied (global scope cannot be popped)
    *   or if the scopeId does not match the top.
+   * @since 0.1.0
    */
   popScope(scopeId: string): void {
     this._assertAlive("popScope");
@@ -449,6 +464,8 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Get the currently active scope (top of stack).
+   *
+   * @since 0.1.0
    */
   getActiveScope(): string {
     return this._scopeStack.at(-1) ?? GLOBAL_SCOPE;
@@ -468,6 +485,8 @@ export default class HotkeyManager extends BaseObject {
    * manager.pushScope("dialog");
    * manager.getScopeStack(); // ["__global__", "editor", "dialog"]
    * ```
+   *
+   * @since 0.1.0
    */
   getScopeStack(): readonly string[] {
     return [...this._scopeStack];
@@ -478,6 +497,8 @@ export default class HotkeyManager extends BaseObject {
    *
    * Useful for centralized cleanup on route changes, FLP cross-navigation,
    * or any scenario where stale scopes need to be cleared.
+   *
+   * @since 0.1.0
    */
   resetToGlobalScope(): void {
     this._assertAlive("resetToGlobalScope");
@@ -495,6 +516,8 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Get all active registrations. Returns a new array (safe to iterate).
    * Info objects are flat snapshots - no closures or DOM references leak.
+   *
+   * @since 0.1.0
    */
   getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
     const hotkeys = Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
@@ -505,6 +528,8 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Get registrations filtered by scope.
+   *
+   * @since 0.1.0
    */
   getRegistrationsForScope(scopeId: string): ReadonlyArray<HotkeyRegistrationInfo> {
     const normalizedScope = resolveScopeOrGlobal(scopeId);
@@ -551,6 +576,8 @@ export default class HotkeyManager extends BaseObject {
    * // Check if F5 is registered in any scope
    * const hasF5 = manager.findRegistrations(r => r.hotkey === "F5").length > 0;
    * ```
+   *
+   * @since 0.1.0
    */
   findRegistrations(predicate: (info: HotkeyRegistrationInfo) => boolean): ReadonlyArray<HotkeyRegistrationInfo> {
     return this.getRegistrations().filter(predicate);
@@ -558,6 +585,8 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Get the detected platform.
+   *
+   * @since 0.1.0
    */
   getPlatform(): Platform {
     return this._platform;
@@ -724,6 +753,8 @@ export default class HotkeyManager extends BaseObject {
    *   }
    * });
    * ```
+   *
+   * @since 0.1.0
    */
   setUnhandledHandler(callback: UnhandledCallback | null): void {
     this._assertAlive("setUnhandledHandler");
@@ -740,6 +771,8 @@ export default class HotkeyManager extends BaseObject {
    * `document`, `window`, `<html>`, `<body>`, and elements with
    * `data-sap-ui-area` are detected automatically. Use this method
    * to register additional custom IDs (e.g. `"content"`).
+   *
+   * @since 0.1.0
    */
   addGenericRootId(id: string): void {
     this._assertAlive("addGenericRootId");
@@ -748,6 +781,8 @@ export default class HotkeyManager extends BaseObject {
 
   /**
    * Remove a previously registered generic root ID.
+   *
+   * @since 0.1.0
    */
   removeGenericRootId(id: string): void {
     this._assertAlive("removeGenericRootId");
@@ -764,6 +799,8 @@ export default class HotkeyManager extends BaseObject {
    *
    * Call from `Component.exit()` to ensure proper cleanup.
    * After destruction, all methods throw via `_assertAlive`.
+   *
+   * @since 0.1.0
    */
   destroy(): void {
     this._destroyed = true;

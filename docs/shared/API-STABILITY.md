@@ -54,7 +54,7 @@ Stable exports from the bundle entry:
 - Enum exports: `FKeyMode`, `KeyboardType`, `MobileKeyboard`
 - Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
 
-Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties (and their setters `setInstanceLayouts`, `setInstanceLocaleLayouts`, `setInstanceMiddleware`). The static surface is read-only:
+Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties, assigned directly on the element. The static surface is read-only:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
 - `getLocaleLayout`

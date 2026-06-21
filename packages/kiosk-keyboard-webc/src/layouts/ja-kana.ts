@@ -12,6 +12,7 @@ import type { LayoutDefinition } from "../types.js";
  *
  * @see {@link https://github.com/microsoft/Windows-driver-samples/blob/main/input/layout/fe_kbds/jpn/106/kbd106.c | Microsoft kbd106.c}
  * @public
+ * @since 0.1.0
  */
 const jaKana: LayoutDefinition = [
   // Row 1: number row -- kana base, small kana / を on shift

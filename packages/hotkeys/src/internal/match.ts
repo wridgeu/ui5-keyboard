@@ -49,6 +49,8 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
  *    returns a special character (e.g., macOS Option+D produces "\u2202"), and for
  *    digit keys (Digit0-Digit9) when Shift changes the key (e.g., Shift+4
  *    produces "$").
+ *
+ * @since 0.1.0
  */
 export function matchesKeyboardEvent(event: KeyboardEvent, parsed: ParsedHotkey): boolean {
   // Exact modifier match - no extra modifiers allowed

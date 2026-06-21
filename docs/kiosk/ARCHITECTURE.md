@@ -210,7 +210,7 @@ Final state: target = inputC, delegation on inputC, suppression on inputC ✓
 
 The key insight: all state transitions (steps 2-7) complete **before** the change event fires (step 8). So when the inner call starts, it sees fully settled state and can cleanly transition from inputB to inputC. The outer call has no more state work after step 8.
 
-**Why the change event must be deferred**: if it fired eagerly at step 1 (the original design), the inner call would set up inputC, then the outer call would resume at step 2 and tear down inputC's delegation, restore inputC's suppression, and overwrite the association to inputB.
+**Why the change event must be deferred**: if it fired eagerly at step 1, the inner call would set up inputC, then the outer call would resume at step 2 and tear down inputC's delegation, restore inputC's suppression, and overwrite the association to inputB.
 
 ### Value Manipulation
 

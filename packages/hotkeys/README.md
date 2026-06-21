@@ -662,7 +662,7 @@ manager.resetToGlobalScope();
 
 ### Router Integration
 
-Router integration is now configured on a `RegistrationGroup` rather than on the manager directly. See [Router Integration (Group-Level)](#router-integration-group-level) for the setup pattern and examples.
+Router integration is configured on a `RegistrationGroup` rather than on the manager directly. See [Router Integration (Group-Level)](#router-integration-group-level) for the setup pattern and examples.
 
 > [!IMPORTANT]
 > Dialog scopes still require manual `pushScope`/`popScope` since they are not route-based. See the [Popup Overlay Pattern](#popup-overlay-pattern) for an example.

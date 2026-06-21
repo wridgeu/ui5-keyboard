@@ -16,6 +16,8 @@ declare module "./KioskKeyboard" {
         /**
          * Active layout name. Only effective when keyboardType is "Full".
         Auto-detected from the UI5 locale when omitted.
+         *
+         * @since 0.1.0
          */
         layout?: string | PropertyBindingInfo;
 
@@ -27,18 +29,24 @@ declare module "./KioskKeyboard" {
         Setting this property (via setter, constructor, or XML attribute)
         disables auto-type detection permanently.
         Call `resetKeyboardType()` to re-enable it.
+         *
+         * @since 0.1.0
          */
         keyboardType?: KeyboardType | PropertyBindingInfo | `{${string}}`;
 
         /**
          * Whether the keyboard is interactive. When `false`, all keys are
         visually dimmed and pointer events are disabled.
+         *
+         * @since 0.1.0
          */
         enabled?: boolean | PropertyBindingInfo | `{${string}}`;
 
         /**
          * Accessible label for the keyboard group. Defaults to
         "Virtual Keyboard" from the resource bundle when left empty.
+         *
+         * @since 0.1.0
          */
         ariaLabel?: string | PropertyBindingInfo;
 
@@ -47,6 +55,8 @@ declare module "./KioskKeyboard" {
         and slides in/out. Use `show()` / `close()` to control
         visibility manually, or set `autoShow` to `true` for automatic
         focus-based behavior.
+         *
+         * @since 0.1.0
          */
         docked?: boolean | PropertyBindingInfo | `{${string}}`;
 
@@ -54,6 +64,8 @@ declare module "./KioskKeyboard" {
          * When `true`, the docked keyboard automatically opens when any
         `<input>` or `<textarea>` receives focus, and closes when
         focus leaves. Requires `docked="true"`.
+         *
+         * @since 0.1.0
          */
         autoShow?: boolean | PropertyBindingInfo | `{${string}}`;
 
@@ -66,6 +78,8 @@ declare module "./KioskKeyboard" {
         setter, constructor, or XML attribute), because that locks the
         keyboard type. Call `resetKeyboardType()` to clear the lock
         and re-enable auto-type detection.
+         *
+         * @since 0.1.0
          */
         autoType?: boolean | PropertyBindingInfo | `{${string}}`;
 
@@ -83,6 +97,8 @@ declare module "./KioskKeyboard" {
           **dedicated kiosk terminals** without a physical keyboard.
         - `"Native"` - always defers to the native keyboard; the
           KioskKeyboard will not open on focus.
+         *
+         * @since 0.1.0
          */
         mobileKeyboard?: MobileKeyboard | PropertyBindingInfo | `{${string}}`;
 
@@ -97,6 +113,8 @@ declare module "./KioskKeyboard" {
           selected keys (`F5`, `F11`).
         - `"None"`: fire `keyPress` only, skip native dispatch and
           built-in navigation actions entirely.
+         *
+         * @since 0.1.0
          */
         fKeyMode?: FKeyMode | PropertyBindingInfo | `{${string}}`;
 
@@ -108,6 +126,8 @@ declare module "./KioskKeyboard" {
         IDs are resolved against the parent View first (view-local IDs),
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
+         *
+         * @since 0.1.0
          */
         controls?: string[] | PropertyBindingInfo | `{${string}}`;
 
@@ -154,34 +174,46 @@ declare module "./KioskKeyboard" {
         /**
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+         *
+         * @since 0.1.0
          */
         keyPress?: (event: KioskKeyboard$KeyPressEvent) => void;
 
         /**
          * Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
+         *
+         * @since 0.1.0
          */
         layoutChange?: (event: KioskKeyboard$LayoutChangeEvent) => void;
 
         /**
          * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
+         *
+         * @since 0.1.0
          */
         keyboardTypeChange?: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void;
 
         /**
          * Fired when the active target control changes (focus switches to a
         different input in auto-show mode, or programmatically).
+         *
+         * @since 0.1.0
          */
         activeControlChange?: (event: KioskKeyboard$ActiveControlChangeEvent) => void;
 
         /**
          * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
+         *
+         * @since 0.1.0
          */
         afterOpen?: (event: KioskKeyboard$AfterOpenEvent) => void;
 
         /**
          * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+         *
+         * @since 0.1.0
          */
         afterClose?: (event: KioskKeyboard$AfterCloseEvent) => void;
     }
@@ -196,6 +228,7 @@ declare module "./KioskKeyboard" {
          * Active layout name. Only effective when keyboardType is "Full".
         Auto-detected from the UI5 locale when omitted.
          *
+         * @since 0.1.0
          * Default value is: "qwerty"
          * @returns Value of property "layout"
          */
@@ -207,6 +240,7 @@ declare module "./KioskKeyboard" {
          * Active layout name. Only effective when keyboardType is "Full".
         Auto-detected from the UI5 locale when omitted.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: "qwerty"
@@ -228,6 +262,7 @@ declare module "./KioskKeyboard" {
         disables auto-type detection permanently.
         Call `resetKeyboardType()` to re-enable it.
          *
+         * @since 0.1.0
          * Default value is: "Full"
          * @returns Value of property "keyboardType"
          */
@@ -244,6 +279,7 @@ declare module "./KioskKeyboard" {
         disables auto-type detection permanently.
         Call `resetKeyboardType()` to re-enable it.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: "Full"
@@ -260,6 +296,7 @@ declare module "./KioskKeyboard" {
          * Whether the keyboard is interactive. When `false`, all keys are
         visually dimmed and pointer events are disabled.
          *
+         * @since 0.1.0
          * Default value is: true
          * @returns Value of property "enabled"
          */
@@ -271,6 +308,7 @@ declare module "./KioskKeyboard" {
          * Whether the keyboard is interactive. When `false`, all keys are
         visually dimmed and pointer events are disabled.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: true
@@ -287,6 +325,7 @@ declare module "./KioskKeyboard" {
          * Accessible label for the keyboard group. Defaults to
         "Virtual Keyboard" from the resource bundle when left empty.
          *
+         * @since 0.1.0
          * Default value is: ""
          * @returns Value of property "ariaLabel"
          */
@@ -298,6 +337,7 @@ declare module "./KioskKeyboard" {
          * Accessible label for the keyboard group. Defaults to
         "Virtual Keyboard" from the resource bundle when left empty.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: ""
@@ -316,6 +356,7 @@ declare module "./KioskKeyboard" {
         visibility manually, or set `autoShow` to `true` for automatic
         focus-based behavior.
          *
+         * @since 0.1.0
          * Default value is: false
          * @returns Value of property "docked"
          */
@@ -329,6 +370,7 @@ declare module "./KioskKeyboard" {
         visibility manually, or set `autoShow` to `true` for automatic
         focus-based behavior.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: false
@@ -346,6 +388,7 @@ declare module "./KioskKeyboard" {
         `<input>` or `<textarea>` receives focus, and closes when
         focus leaves. Requires `docked="true"`.
          *
+         * @since 0.1.0
          * Default value is: false
          * @returns Value of property "autoShow"
          */
@@ -358,6 +401,7 @@ declare module "./KioskKeyboard" {
         `<input>` or `<textarea>` receives focus, and closes when
         focus leaves. Requires `docked="true"`.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: false
@@ -380,6 +424,7 @@ declare module "./KioskKeyboard" {
         keyboard type. Call `resetKeyboardType()` to clear the lock
         and re-enable auto-type detection.
          *
+         * @since 0.1.0
          * Default value is: false
          * @returns Value of property "autoType"
          */
@@ -397,6 +442,7 @@ declare module "./KioskKeyboard" {
         keyboard type. Call `resetKeyboardType()` to clear the lock
         and re-enable auto-type detection.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: false
@@ -424,6 +470,7 @@ declare module "./KioskKeyboard" {
         - `"Native"` - always defers to the native keyboard; the
           KioskKeyboard will not open on focus.
          *
+         * @since 0.1.0
          * Default value is: "Auto"
          * @returns Value of property "mobileKeyboard"
          */
@@ -446,6 +493,7 @@ declare module "./KioskKeyboard" {
         - `"Native"` - always defers to the native keyboard; the
           KioskKeyboard will not open on focus.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: "Auto"
@@ -470,6 +518,7 @@ declare module "./KioskKeyboard" {
         - `"None"`: fire `keyPress` only, skip native dispatch and
           built-in navigation actions entirely.
          *
+         * @since 0.1.0
          * Default value is: "Virtual"
          * @returns Value of property "fKeyMode"
          */
@@ -489,6 +538,7 @@ declare module "./KioskKeyboard" {
         - `"None"`: fire `keyPress` only, skip native dispatch and
           built-in navigation actions entirely.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: "Virtual"
@@ -510,6 +560,7 @@ declare module "./KioskKeyboard" {
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
          *
+         * @since 0.1.0
          * Default value is: []
          * @returns Value of property "controls"
          */
@@ -526,6 +577,7 @@ declare module "./KioskKeyboard" {
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
          *
+         * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
          * Default value is: []
@@ -727,6 +779,7 @@ declare module "./KioskKeyboard" {
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -743,6 +796,7 @@ declare module "./KioskKeyboard" {
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -760,11 +814,13 @@ declare module "./KioskKeyboard" {
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
          *
+         * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
          *
          * @param fn The function to be called, when the event occurs
          * @param listener Context object on which the given function had to be called
          * @returns Reference to "this" in order to allow method chaining
+         * @since 0.1.0
          */
         detachKeyPress(fn: (event: KioskKeyboard$KeyPressEvent) => void, listener?: object): this;
 
@@ -773,6 +829,8 @@ declare module "./KioskKeyboard" {
          *
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+         *
+         * @since 0.1.0
          *
          * Listeners may prevent the default action of this event by calling the "preventDefault" method on the event object.
          * The return value of this method indicates whether the default action should be executed.
@@ -795,6 +853,7 @@ declare module "./KioskKeyboard" {
          * Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -811,6 +870,7 @@ declare module "./KioskKeyboard" {
          * Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -828,11 +888,13 @@ declare module "./KioskKeyboard" {
          * Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
          *
+         * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
          *
          * @param fn The function to be called, when the event occurs
          * @param listener Context object on which the given function had to be called
          * @returns Reference to "this" in order to allow method chaining
+         * @since 0.1.0
          */
         detachLayoutChange(fn: (event: KioskKeyboard$LayoutChangeEvent) => void, listener?: object): this;
 
@@ -841,6 +903,8 @@ declare module "./KioskKeyboard" {
          *
          * Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
+         *
+         * @since 0.1.0
          *
          * @param parameters Parameters to pass along with the event
          * @param [mParameters.layout] Fired when the active layout changes (via a `{layout:name}` key
@@ -858,6 +922,7 @@ declare module "./KioskKeyboard" {
          * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -874,6 +939,7 @@ declare module "./KioskKeyboard" {
          * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -891,11 +957,13 @@ declare module "./KioskKeyboard" {
          * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
          *
+         * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
          *
          * @param fn The function to be called, when the event occurs
          * @param listener Context object on which the given function had to be called
          * @returns Reference to "this" in order to allow method chaining
+         * @since 0.1.0
          */
         detachKeyboardTypeChange(fn: (event: KioskKeyboard$KeyboardTypeChangeEvent) => void, listener?: object): this;
 
@@ -904,6 +972,8 @@ declare module "./KioskKeyboard" {
          *
          * Fired when the keyboard type changes - by auto-type detection,
         explicit `setKeyboardType()`, or `resetKeyboardType()`.
+         *
+         * @since 0.1.0
          *
          * @param parameters Parameters to pass along with the event
          * @param [mParameters.keyboardType] Fired when the keyboard type changes - by auto-type detection,
@@ -925,6 +995,7 @@ declare module "./KioskKeyboard" {
          * Fired when the active target control changes (focus switches to a
         different input in auto-show mode, or programmatically).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -941,6 +1012,7 @@ declare module "./KioskKeyboard" {
          * Fired when the active target control changes (focus switches to a
         different input in auto-show mode, or programmatically).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -958,11 +1030,13 @@ declare module "./KioskKeyboard" {
          * Fired when the active target control changes (focus switches to a
         different input in auto-show mode, or programmatically).
          *
+         * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
          *
          * @param fn The function to be called, when the event occurs
          * @param listener Context object on which the given function had to be called
          * @returns Reference to "this" in order to allow method chaining
+         * @since 0.1.0
          */
         detachActiveControlChange(fn: (event: KioskKeyboard$ActiveControlChangeEvent) => void, listener?: object): this;
 
@@ -971,6 +1045,8 @@ declare module "./KioskKeyboard" {
          *
          * Fired when the active target control changes (focus switches to a
         different input in auto-show mode, or programmatically).
+         *
+         * @since 0.1.0
          *
          * @param parameters Parameters to pass along with the event
          * @param [mParameters.controlId] Fired when the active target control changes (focus switches to a
@@ -987,6 +1063,7 @@ declare module "./KioskKeyboard" {
          *
          * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -1002,6 +1079,7 @@ declare module "./KioskKeyboard" {
          *
          * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -1018,11 +1096,13 @@ declare module "./KioskKeyboard" {
          *
          * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
          *
+         * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
          *
          * @param fn The function to be called, when the event occurs
          * @param listener Context object on which the given function had to be called
          * @returns Reference to "this" in order to allow method chaining
+         * @since 0.1.0
          */
         detachAfterOpen(fn: (event: KioskKeyboard$AfterOpenEvent) => void, listener?: object): this;
 
@@ -1030,6 +1110,8 @@ declare module "./KioskKeyboard" {
          * Fires event "afterOpen" to attached listeners.
          *
          * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
+         *
+         * @since 0.1.0
          *
          * @param parameters Parameters to pass along with the event
          * @returns Reference to "this" in order to allow method chaining
@@ -1043,6 +1125,7 @@ declare module "./KioskKeyboard" {
          *
          * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -1058,6 +1141,7 @@ declare module "./KioskKeyboard" {
          *
          * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          *
+         * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
          * otherwise it will be bound to this "KioskKeyboard" itself.
          *
@@ -1074,11 +1158,13 @@ declare module "./KioskKeyboard" {
          *
          * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
          *
+         * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
          *
          * @param fn The function to be called, when the event occurs
          * @param listener Context object on which the given function had to be called
          * @returns Reference to "this" in order to allow method chaining
+         * @since 0.1.0
          */
         detachAfterClose(fn: (event: KioskKeyboard$AfterCloseEvent) => void, listener?: object): this;
 
@@ -1086,6 +1172,8 @@ declare module "./KioskKeyboard" {
          * Fires event "afterClose" to attached listeners.
          *
          * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+         *
+         * @since 0.1.0
          *
          * @param parameters Parameters to pass along with the event
          * @returns Reference to "this" in order to allow method chaining
@@ -1097,6 +1185,8 @@ declare module "./KioskKeyboard" {
      * Interface describing the parameters of KioskKeyboard's 'keyPress' event.
      * Fired when a virtual key is pressed. Call `preventDefault()` to
     skip the default input action (text insertion, backspace, etc.).
+     *
+     * @since 0.1.0
      */
     export interface KioskKeyboard$KeyPressEventParameters {
         key?: string;
@@ -1107,6 +1197,8 @@ declare module "./KioskKeyboard" {
      * Interface describing the parameters of KioskKeyboard's 'layoutChange' event.
      * Fired when the active layout changes (via a `{layout:name}` key
     or programmatic `setLayout()` call).
+     *
+     * @since 0.1.0
      */
     export interface KioskKeyboard$LayoutChangeEventParameters {
         layout?: string;
@@ -1116,6 +1208,8 @@ declare module "./KioskKeyboard" {
      * Interface describing the parameters of KioskKeyboard's 'keyboardTypeChange' event.
      * Fired when the keyboard type changes - by auto-type detection,
     explicit `setKeyboardType()`, or `resetKeyboardType()`.
+     *
+     * @since 0.1.0
      */
     export interface KioskKeyboard$KeyboardTypeChangeEventParameters {
         keyboardType?: KeyboardType;
@@ -1127,6 +1221,8 @@ declare module "./KioskKeyboard" {
      * Interface describing the parameters of KioskKeyboard's 'activeControlChange' event.
      * Fired when the active target control changes (focus switches to a
     different input in auto-show mode, or programmatically).
+     *
+     * @since 0.1.0
      */
     export interface KioskKeyboard$ActiveControlChangeEventParameters {
         controlId?: string;
@@ -1135,6 +1231,8 @@ declare module "./KioskKeyboard" {
     /**
      * Interface describing the parameters of KioskKeyboard's 'afterOpen' event.
      * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
+     *
+     * @since 0.1.0
      */
     // eslint-disable-next-line
     export interface KioskKeyboard$AfterOpenEventParameters {
@@ -1143,6 +1241,8 @@ declare module "./KioskKeyboard" {
     /**
      * Interface describing the parameters of KioskKeyboard's 'afterClose' event.
      * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+     *
+     * @since 0.1.0
      */
     // eslint-disable-next-line
     export interface KioskKeyboard$AfterCloseEventParameters {
@@ -1152,6 +1252,8 @@ declare module "./KioskKeyboard" {
      * Type describing the KioskKeyboard's 'keyPress' event.
      * Fired when a virtual key is pressed. Call `preventDefault()` to
     skip the default input action (text insertion, backspace, etc.).
+     *
+     * @since 0.1.0
      */
     export type KioskKeyboard$KeyPressEvent = Event<KioskKeyboard$KeyPressEventParameters>;
 
@@ -1159,6 +1261,8 @@ declare module "./KioskKeyboard" {
      * Type describing the KioskKeyboard's 'layoutChange' event.
      * Fired when the active layout changes (via a `{layout:name}` key
     or programmatic `setLayout()` call).
+     *
+     * @since 0.1.0
      */
     export type KioskKeyboard$LayoutChangeEvent = Event<KioskKeyboard$LayoutChangeEventParameters>;
 
@@ -1166,6 +1270,8 @@ declare module "./KioskKeyboard" {
      * Type describing the KioskKeyboard's 'keyboardTypeChange' event.
      * Fired when the keyboard type changes - by auto-type detection,
     explicit `setKeyboardType()`, or `resetKeyboardType()`.
+     *
+     * @since 0.1.0
      */
     export type KioskKeyboard$KeyboardTypeChangeEvent = Event<KioskKeyboard$KeyboardTypeChangeEventParameters>;
 
@@ -1173,18 +1279,24 @@ declare module "./KioskKeyboard" {
      * Type describing the KioskKeyboard's 'activeControlChange' event.
      * Fired when the active target control changes (focus switches to a
     different input in auto-show mode, or programmatically).
+     *
+     * @since 0.1.0
      */
     export type KioskKeyboard$ActiveControlChangeEvent = Event<KioskKeyboard$ActiveControlChangeEventParameters>;
 
     /**
      * Type describing the KioskKeyboard's 'afterOpen' event.
      * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
+     *
+     * @since 0.1.0
      */
     export type KioskKeyboard$AfterOpenEvent = Event<KioskKeyboard$AfterOpenEventParameters>;
 
     /**
      * Type describing the KioskKeyboard's 'afterClose' event.
      * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+     *
+     * @since 0.1.0
      */
     export type KioskKeyboard$AfterCloseEvent = Event<KioskKeyboard$AfterCloseEventParameters>;
 }

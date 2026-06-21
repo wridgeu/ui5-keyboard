@@ -15,6 +15,7 @@ import { detectPlatform } from "./platform";
  * @param hotkey - The hotkey string to format (e.g., "Mod+Shift+S").
  * @param platform - Override platform detection.
  * @returns The formatted display string.
+ * @since 0.1.0
  */
 export function formatForDisplay(hotkey: string, platform?: Platform): string {
   const p = platform ?? detectPlatform();

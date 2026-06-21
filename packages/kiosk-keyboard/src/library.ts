@@ -9,6 +9,7 @@ import "sap/m/library"; // resolve dependency before Lib.init()
  *
  * @enum {string}
  * @public
+ * @since 0.1.0
  */
 export enum KeyboardLayout {
   /** Standard QWERTY layout. */
@@ -42,6 +43,7 @@ export enum KeyboardLayout {
  *
  * @enum {string}
  * @public
+ * @since 0.1.0
  */
 export enum KeyboardType {
   /** Full alphabetic keyboard with all keys. */
@@ -57,6 +59,7 @@ export enum KeyboardType {
  *
  * @enum {string}
  * @public
+ * @since 0.1.0
  */
 export enum MobileKeyboard {
   /** Always use KioskKeyboard, suppress native keyboard via `inputmode="none"`. Best for dedicated kiosk terminals without a physical keyboard. */
@@ -72,6 +75,7 @@ export enum MobileKeyboard {
  *
  * @enum {string}
  * @public
+ * @since 0.1.0
  */
 export enum FKeyMode {
   /** Virtual mode: fire `keyPress` only (application handles behavior). */
@@ -103,6 +107,7 @@ export enum FKeyMode {
  * });
  *
  * @public
+ * @since 0.1.0
  */
 export const KeyName = Object.freeze({
   // Action keys
@@ -152,6 +157,7 @@ export const KeyName = Object.freeze({
  * excluded from native dispatch and native action execution.
  *
  * @public
+ * @since 0.1.0
  */
 export const NativeDispatchableKeyNames = Object.freeze([
   KeyName.F1,

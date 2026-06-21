@@ -12,6 +12,8 @@ interface NavigatorUAData {
  * 1. `navigator.userAgentData.platform` (modern Chromium API)
  * 2. `navigator.platform` (legacy, widely supported)
  * 3. `navigator.userAgent` (fallback)
+ *
+ * @since 0.1.0
  */
 export function detectPlatform(): Platform {
   // Modern API (Chromium-based browsers)
@@ -43,6 +45,8 @@ function resolvePlatformString(value: string): Platform {
  * - Windows/Linux: `"Mod"` -> `"Control"` (Ctrl key)
  *
  * Non-Mod modifiers are returned unchanged.
+ *
+ * @since 0.1.0
  */
 export function resolveModifier(modifier: CanonicalModifier | "Mod", platform?: Platform): CanonicalModifier {
   if (modifier === "Mod") {

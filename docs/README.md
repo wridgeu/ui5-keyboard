@@ -12,11 +12,13 @@ This folder is organized by library area and document lifecycle.
 - [Glossary](./GLOSSARY.md)
 - [Web Component Consumption](./web-component-consumption.md)
 - [Proposals](./proposals/) (cross-cutting, not specific to one package)
+- [Specs](./specs/README.md) (dated design and validation records)
 
 ## Lifecycle
 
 - `Current` docs describe the active architecture and consumer guidance.
 - `proposals/` docs describe planned work; they can become stale if plans change.
+- `specs/` docs are dated design specifications and adversarial-validation records.
 - `history/` docs are implementation-era notes kept for context and traceability.
 
 ### Proposal Status Convention

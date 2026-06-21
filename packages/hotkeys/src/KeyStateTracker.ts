@@ -18,6 +18,7 @@ const LOG_COMPONENT = "ui5.hotkeys.KeyStateTracker";
  *
  * @public - exported for type usage. Obtain an instance via
  * `HotkeyManager.getKeyStateTracker()`.
+ * @since 0.1.0
  */
 export default class KeyStateTracker {
   private _heldKeys: Set<string> = new Set();
@@ -41,6 +42,8 @@ export default class KeyStateTracker {
    *
    * Returns a new array on each call, so callers can safely iterate and cache
    * it without mutating the internal tracker state.
+   *
+   * @since 0.1.0
    */
   getHeldKeys(): readonly string[] {
     return Array.from(this._heldKeys);
@@ -50,6 +53,7 @@ export default class KeyStateTracker {
    * Check whether a specific key is currently held.
    *
    * @param key - KeyboardEvent.key name to check (e.g. "Control", "a").
+   * @since 0.1.0
    */
   isKeyHeld(key: string): boolean {
     return this._heldKeys.has(key);
@@ -59,6 +63,8 @@ export default class KeyStateTracker {
    * Set a callback that fires whenever the held keys change.
    *
    * Pass `null` to remove a previously registered callback.
+   *
+   * @since 0.1.0
    */
   setChangeCallback(callback: ((keys: readonly string[]) => void) | null): void {
     this._changeCallback = callback;

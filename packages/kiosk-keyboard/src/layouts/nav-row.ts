@@ -11,6 +11,7 @@ import type { KeyRow } from "../types";
  * Import this to compose custom variant layouts.
  *
  * @public
+ * @since 0.1.0
  */
 const navRow: KeyRow = [
   { value: "{fkey:Home}", icon: "\u21F1", label: "Home", type: "modifier" },

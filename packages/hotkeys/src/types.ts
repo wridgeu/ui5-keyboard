@@ -2,6 +2,8 @@ import type { ConflictBehavior, UnhandledReason } from "./library";
 
 /**
  * The four canonical modifier keys as reported by KeyboardEvent properties.
+ *
+ * @since 0.1.0
  */
 export type CanonicalModifier = "Control" | "Shift" | "Alt" | "Meta";
 
@@ -93,6 +95,8 @@ type Modifier = "Ctrl" | "Control" | "Shift" | "Alt" | "Meta" | "Mod" | "Cmd" | 
  *
  * The `(string & {})` escape hatch ensures all existing `string` callers
  * still compile, while IDEs suggest known key/modifier combinations.
+ *
+ * @since 0.1.0
  */
 export type Hotkey =
   | Key
@@ -105,6 +109,8 @@ export type Hotkey =
 
 /**
  * Result of parsing a hotkey string into its constituent parts.
+ *
+ * @since 0.1.0
  */
 export interface ParsedHotkey {
   /** The non-modifier key (e.g., "S", "Escape", "F5"). */
@@ -123,6 +129,8 @@ export interface ParsedHotkey {
 
 /**
  * Details passed to a hotkey callback alongside the keyboard event.
+ *
+ * @since 0.1.0
  */
 export interface HotkeyCallbackDetails {
   /** The original hotkey string as registered. */
@@ -135,11 +143,15 @@ export interface HotkeyCallbackDetails {
 
 /**
  * Signature for hotkey callback functions.
+ *
+ * @since 0.1.0
  */
 export type HotkeyCallback = (event: KeyboardEvent, details: HotkeyCallbackDetails) => void;
 
 /**
  * Options for registering a hotkey.
+ *
+ * @since 0.1.0
  */
 export interface HotkeyOptions {
   /**
@@ -254,11 +266,15 @@ export interface HotkeyOptions {
 /**
  * Options that can be updated on a live registration via `setOptions()`.
  * Excludes `scope` and `conflictBehavior`, which require unregister + re-register.
+ *
+ * @since 0.1.0
  */
 export type UpdatableHotkeyOptions = Omit<HotkeyOptions, "scope" | "conflictBehavior">;
 
 /**
  * Callback for mid-sequence progress.
+ *
+ * @since 0.1.0
  */
 export type SequencePendingCallback = (info: {
   sequence: string[];
@@ -269,6 +285,8 @@ export type SequencePendingCallback = (info: {
 
 /**
  * Handle returned by `HotkeyManager.register()` for managing a registration's lifecycle.
+ *
+ * @since 0.1.0
  */
 export interface HotkeyRegistrationHandle {
   /** Unique identifier for this registration. */
@@ -298,6 +316,8 @@ export interface HotkeyRegistrationHandle {
 /**
  * Public view of a hotkey registration for introspection (e.g., cheat sheets).
  * Flat, serializable shape - no closures, no DOM references.
+ *
+ * @since 0.1.0
  */
 export interface HotkeyRegistrationInfo {
   readonly id: string;
@@ -327,6 +347,8 @@ export interface HotkeyRegistrationInfo {
 
 /**
  * Context passed to the unhandled key callback.
+ *
+ * @since 0.1.0
  */
 export interface UnhandledContext {
   /** The keyboard event that was not handled. */
@@ -353,6 +375,8 @@ export interface UnhandledContext {
  * Only fires for events that *could have been* a hotkey (not IME composition
  * or pure modifier presses). Useful for "button not used" feedback or
  * debugging why a shortcut didn't fire.
+ *
+ * @since 0.1.0
  */
 export type UnhandledCallback = (context: UnhandledContext) => void;
 
@@ -367,6 +391,8 @@ export type UnhandledCallback = (context: UnhandledContext) => void;
  * methods (`processKeyDown`, `processKeyUp`, `processBlur`, `destroy`)
  * that are `@internal` - this interface hides them so that callers of
  * `HotkeyManager.getKeyStateTracker()` cannot break dispatcher-owned state.
+ *
+ * @since 0.1.0
  */
 export interface KeyStateTrackerApi {
   /** Get a snapshot of currently held keys. */
@@ -386,6 +412,8 @@ export interface KeyStateTrackerApi {
  *
  * While active, all hotkey and sequence callbacks are blocked.
  * Call `release()` to resume dispatch. Release is idempotent.
+ *
+ * @since 0.1.0
  */
 export interface KeyboardDispatchGuard {
   /** Release this guard. Idempotent - double-release does not throw. */

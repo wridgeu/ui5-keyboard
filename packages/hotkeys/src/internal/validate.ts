@@ -6,6 +6,8 @@ import type { Platform } from "../library";
  *
  * Discriminated union: when `valid` is `true`, `normalizedHotkey` is guaranteed
  * to be a string. When `valid` is `false`, `normalizedHotkey` is `undefined`.
+ *
+ * @since 0.1.0
  */
 export type HotkeyValidationResult =
   | { valid: true; warnings: string[]; errors: string[]; normalizedHotkey: string }
@@ -15,6 +17,8 @@ export type HotkeyValidationResult =
  * Browser shortcuts that cannot be reliably overridden.
  * Source: UI5 ShortcutHelper + common browser behavior.
  * Key = normalized hotkey, Value = description of the browser action.
+ *
+ * @since 0.1.0
  */
 export const BROWSER_SHORTCUTS: ReadonlyMap<string, string> = new Map([
   ["Control+L", "Focus address bar"],
@@ -47,6 +51,8 @@ export const BROWSER_SHORTCUTS: ReadonlyMap<string, string> = new Map([
 /**
  * SAP Fiori / FLP shortcuts that may conflict with application hotkeys.
  * Key = normalized hotkey, Value = description of the SAP action.
+ *
+ * @since 0.1.0
  */
 export const SAP_SHORTCUTS: ReadonlyMap<string, string> = new Map([
   ["Control+S", "Save (Fiori)"],
@@ -69,6 +75,8 @@ export const SAP_SHORTCUTS: ReadonlyMap<string, string> = new Map([
 
 /**
  * Set of known key names that are valid targets for hotkeys.
+ *
+ * @since 0.1.0
  */
 export const KNOWN_KEYS: ReadonlySet<string> = new Set([
   // Letters
@@ -121,6 +129,7 @@ export const KNOWN_KEYS: ReadonlySet<string> = new Set([
  * @param hotkey - The hotkey string to validate (e.g., "Ctrl+S", "F5").
  * @param platform - Override platform for Mod resolution.
  * @returns Validation result with errors, warnings, and normalized form.
+ * @since 0.1.0
  */
 export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValidationResult {
   const errors: string[] = [];
@@ -165,6 +174,7 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
  * @param platform - Override platform for Mod resolution.
  * @returns The normalized hotkey string.
  * @throws Error if the hotkey is structurally invalid.
+ * @since 0.1.0
  */
 export function assertValidHotkey(hotkey: string, platform?: Platform): string {
   const result = validateHotkey(hotkey, platform);
@@ -180,6 +190,7 @@ export function assertValidHotkey(hotkey: string, platform?: Platform): string {
  * @param hotkey - The hotkey string to check.
  * @param platform - Override platform for Mod resolution.
  * @returns `true` if the hotkey is structurally valid.
+ * @since 0.1.0
  */
 export function checkHotkey(hotkey: string, platform?: Platform): boolean {
   return validateHotkey(hotkey, platform).valid;

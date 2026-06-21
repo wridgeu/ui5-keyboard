@@ -10,6 +10,7 @@ import Lib from "sap/ui/core/Lib";
  *
  * @enum {string}
  * @public
+ * @since 0.1.0
  */
 export enum ConflictBehavior {
   /** Log a console warning but allow both registrations (default). */
@@ -27,6 +28,7 @@ export enum ConflictBehavior {
  *
  * @enum {string}
  * @public
+ * @since 0.1.0
  */
 export enum UnhandledReason {
   /** No registration matched the key combination in any scope. */
@@ -50,6 +52,7 @@ export enum UnhandledReason {
  *
  * @enum {string}
  * @public
+ * @since 0.1.0
  */
 export enum Platform {
   /** macOS - uses Meta (Command) as the primary modifier. */

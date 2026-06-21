@@ -31,6 +31,8 @@ import type { Hotkey, HotkeyCallback, HotkeyOptions, HotkeyRegistrationInfo, Hot
  *   this._hotkeys.destroyAll();
  * }
  * ```
+ *
+ * @since 0.1.0
  */
 export default class RegistrationGroup {
   private _manager: HotkeyManager;
@@ -55,6 +57,7 @@ export default class RegistrationGroup {
    * @param options - Optional registration options.
    * @returns A lifecycle handle for the new registration.
    * @throws Error if this group has already been destroyed.
+   * @since 0.1.0
    */
   register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle {
     if (this._destroyed) throw new Error("Cannot register on a destroyed RegistrationGroup");
@@ -73,6 +76,7 @@ export default class RegistrationGroup {
    * Calling this again silently replaces the previous router.
    *
    * @param router - A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched`.
+   * @since 0.1.0
    */
   enableRouterIntegration(router: Router): void {
     if (this._destroyed) throw new Error("Cannot enableRouterIntegration on a destroyed RegistrationGroup");
@@ -98,7 +102,11 @@ export default class RegistrationGroup {
     Log.info("Router integration enabled (via group)", undefined, "ui5.hotkeys.RegistrationGroup");
   }
 
-  /** Unregister all tracked handles and detach router integration. Safe to call multiple times. */
+  /**
+   * Unregister all tracked handles and detach router integration. Safe to call multiple times.
+   *
+   * @since 0.1.0
+   */
   destroyAll(): void {
     if (this._destroyed) return;
 
@@ -129,12 +137,20 @@ export default class RegistrationGroup {
     this._dispose();
   }
 
-  /** Whether destroyAll() has been called. */
+  /**
+   * Whether destroyAll() has been called.
+   *
+   * @since 0.1.0
+   */
   get isDestroyed(): boolean {
     return this._destroyed;
   }
 
-  /** Number of active registrations (hotkeys + sequences) in this group. */
+  /**
+   * Number of active registrations (hotkeys + sequences) in this group.
+   *
+   * @since 0.1.0
+   */
   get size(): number {
     this._pruneInactive();
     return this._handles.size;
@@ -142,6 +158,8 @@ export default class RegistrationGroup {
 
   /**
    * Get the group's currently active registrations (hotkeys and sequences).
+   *
+   * @since 0.1.0
    */
   getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
     this._pruneInactive();

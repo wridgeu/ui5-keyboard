@@ -136,6 +136,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>TypeScript - custom layout</caption>
        * new KioskKeyboard({ layout: "azerty-fr", instanceLayouts: { "azerty-fr": frenchLayout } });
+       *
+       * @since 0.1.0
        */
       layout: {
         type: "string",
@@ -153,6 +155,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>XML view - fixed numpad</caption>
        * <kiosk:KioskKeyboard keyboardType="Numpad" controls="pinInput" />
+       *
+       * @since 0.1.0
        */
       keyboardType: {
         type: "ui5.kiosk.KeyboardType",
@@ -165,6 +169,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>XML view - bind to model</caption>
        * <kiosk:KioskKeyboard enabled="{/keyboardEnabled}" controls="myInput" />
+       *
+       * @since 0.1.0
        */
       enabled: {
         type: "boolean",
@@ -177,6 +183,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>XML view</caption>
        * <kiosk:KioskKeyboard ariaLabel="PIN entry keyboard" controls="pinInput" />
+       *
+       * @since 0.1.0
        */
       ariaLabel: {
         type: "string",
@@ -192,6 +200,8 @@ export default class KioskKeyboard extends Control {
        * @example <caption>XML view - docked with programmatic control</caption>
        * <kiosk:KioskKeyboard id="kb" docked="true" />
        * <!-- Controller: this.byId("kb").show(); -->
+       *
+       * @since 0.1.0
        */
       docked: {
         type: "boolean",
@@ -205,6 +215,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>XML view</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" />
+       *
+       * @since 0.1.0
        */
       autoShow: {
         type: "boolean",
@@ -223,6 +235,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>XML view - full auto kiosk setup</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" />
+       *
+       * @since 0.1.0
        */
       autoType: {
         type: "boolean",
@@ -249,6 +263,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>XML view - always defer to native keyboard</caption>
        * <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Native" />
+       *
+       * @since 0.1.0
        */
       mobileKeyboard: {
         type: "ui5.kiosk.MobileKeyboard",
@@ -266,6 +282,8 @@ export default class KioskKeyboard extends Control {
        *   selected keys (`F5`, `F11`).
        * - `"None"`: fire `keyPress` only, skip native dispatch and
        *   built-in navigation actions entirely.
+       *
+       * @since 0.1.0
        */
       fKeyMode: {
         type: "ui5.kiosk.FKeyMode",
@@ -288,6 +306,8 @@ export default class KioskKeyboard extends Control {
        *
        * @example <caption>TypeScript</caption>
        * new KioskKeyboard({ controls: ["name", "email"] });
+       *
+       * @since 0.1.0
        */
       controls: {
         type: "string[]",
@@ -368,6 +388,8 @@ export default class KioskKeyboard extends Control {
        *     submitForm();
        *   }
        * });
+       *
+       * @since 0.1.0
        */
       keyPress: {
         allowPreventDefault: true,
@@ -386,6 +408,8 @@ export default class KioskKeyboard extends Control {
        * keyboard.attachLayoutChange((event) => {
        *   console.log("Switched to:", event.getParameter("layout"));
        * });
+       *
+       * @since 0.1.0
        */
       layoutChange: {
         parameters: {
@@ -403,6 +427,8 @@ export default class KioskKeyboard extends Control {
        *   const auto = event.getParameter("autoDetected");
        *   console.log(`Type: ${type}, auto: ${auto}`);
        * });
+       *
+       * @since 0.1.0
        */
       keyboardTypeChange: {
         parameters: {
@@ -417,6 +443,8 @@ export default class KioskKeyboard extends Control {
       /**
        * Fired when the active target control changes (focus switches to a
        * different input in auto-show mode, or programmatically).
+       *
+       * @since 0.1.0
        */
       activeControlChange: {
         parameters: {
@@ -424,9 +452,17 @@ export default class KioskKeyboard extends Control {
           controlId: { type: "string" },
         },
       },
-      /** Fired when `show()` opens the docked keyboard (not tied to CSS transition end). */
+      /**
+       * Fired when `show()` opens the docked keyboard (not tied to CSS transition end).
+       *
+       * @since 0.1.0
+       */
       afterOpen: {},
-      /** Fired when `close()` closes the docked keyboard (not tied to CSS transition end). */
+      /**
+       * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+       *
+       * @since 0.1.0
+       */
       afterClose: {},
     },
   };
@@ -829,6 +865,9 @@ export default class KioskKeyboard extends Control {
    * Custom setter for layout - tracks the base (alphabetic) layout so
    * that `{layout:base}` in numeric/special layouts can return to it.
    * Fires `layoutChange` when the layout actually changes.
+   *
+   * @public
+   * @since 0.1.0
    */
   setLayout(sLayout: string): this {
     // Programmatic change is external-sourced and re-engages keyboardType constraints.
@@ -997,6 +1036,9 @@ export default class KioskKeyboard extends Control {
    *
    * This is the layout used when `{layout:base}` is triggered from secondary
    * layouts such as `numeric`, `special`, `fkeys`, or `nav`.
+   *
+   * @public
+   * @since 0.1.0
    */
   getBaseLayout(): string {
     return this._baseLayout;
@@ -1004,6 +1046,9 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Restores the active layout to the tracked base layout.
+   *
+   * @public
+   * @since 0.1.0
    */
   resetLayout(): this {
     return this.setLayout(this._baseLayout);
@@ -1160,6 +1205,9 @@ export default class KioskKeyboard extends Control {
    * Reconciles focus delegates against currently resolved control instances
    * without forcing a re-render, because controls does not affect renderer
    * output directly.
+   *
+   * @public
+   * @since 0.1.0
    */
   setControls(controls: string[]): this {
     this.setProperty("controls", controls, true);
@@ -1175,6 +1223,9 @@ export default class KioskKeyboard extends Control {
   /**
    * Custom setter for autoShow - activates or deactivates the
    * auto-show document listeners on the AutoShowBehavior delegate.
+   *
+   * @public
+   * @since 0.1.0
    */
   setAutoShow(isAutoShow: boolean): this {
     this.setProperty("autoShow", isAutoShow, true);
@@ -1190,6 +1241,9 @@ export default class KioskKeyboard extends Control {
    * Custom setter for keyboardType - marks the type as explicitly set,
    * which disables auto-type detection. Use {@link #resetKeyboardType}
    * to re-enable auto-type.
+   *
+   * @public
+   * @since 0.1.0
    */
   setKeyboardType(type: KeyboardType): this {
     const previous = this.getKeyboardType();
@@ -1328,7 +1382,12 @@ export default class KioskKeyboard extends Control {
     return this;
   }
 
-  /** Opens the keyboard (docked mode). Slides it into view. */
+  /**
+   * Opens the keyboard (docked mode). Slides it into view.
+   *
+   * @public
+   * @since 0.1.0
+   */
   show(): this {
     if (!this.getDocked()) return this;
     if (this._open) return this;
@@ -1346,7 +1405,12 @@ export default class KioskKeyboard extends Control {
     return this;
   }
 
-  /** Closes the keyboard (docked mode). Slides it out of view. */
+  /**
+   * Closes the keyboard (docked mode). Slides it out of view.
+   *
+   * @public
+   * @since 0.1.0
+   */
   close(): this {
     if (!this.getDocked()) return this;
     if (!this._open) return this;
@@ -1363,7 +1427,12 @@ export default class KioskKeyboard extends Control {
     return this;
   }
 
-  /** Whether the docked keyboard is currently open. */
+  /**
+   * Whether the docked keyboard is currently open.
+   *
+   * @public
+   * @since 0.1.0
+   */
   isOpen(): boolean {
     return this._open;
   }
@@ -1562,6 +1631,9 @@ export default class KioskKeyboard extends Control {
    *
    * This is a typed convenience over `_getActiveTargetId()` when controller
    * code needs the control object rather than the association ID string.
+   *
+   * @public
+   * @since 0.1.0
    */
   getActiveControl<T extends Control = Control>(): T | null {
     const target = this._getTargetElement();
