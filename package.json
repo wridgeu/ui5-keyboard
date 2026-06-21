@@ -21,6 +21,8 @@
     "build:kiosk-webc": "npm run build -w packages/kiosk-keyboard-webc",
     "build:demo": "npm run build -w packages/demo-app",
     "build:all": "npm run build && npm run build:demo",
+    "build:demo:pages": "npm run build:pages -w packages/demo-app && node tools/trim-pages-dist.mjs",
+    "build:pages": "npm run build && npm run build:demo:pages",
     "clean": "npm run clean --workspaces --if-present",
     "clean:hotkeys": "npm run clean -w packages/hotkeys",
     "clean:kiosk": "npm run clean -w packages/kiosk-keyboard",

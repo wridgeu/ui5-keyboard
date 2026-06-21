@@ -4,6 +4,11 @@ name: Deploy Pages
 # components demo page and publishes them to GitHub Pages. The FLP sandbox is
 # served statically (no preview-middleware): see packages/demo-app/webapp/flp.html.
 #
+# The demo is fully self-hosted with NO external CDN: `build:pages` builds the
+# demo with the SAPUI5 framework (ui5-pages.yaml) via `ui5 build --all`, bundling
+# the UI5 runtime + ushell shell into the artifact, then trims it down with
+# tools/trim-pages-dist.mjs (~560 MB -> ~150 MB).
+#
 # Prerequisite: repo Settings -> Pages -> Source must be set to "GitHub Actions".
 
 on:
@@ -24,7 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 20
+    # Self-hosting SAPUI5 downloads + builds its ushell dependency closure on a
+    # cold ~/.ui5 cache, which is heavier than the OpenUI5 build.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -44,11 +51,13 @@ jobs:
 
       - run: npm ci
 
-      # build:all = libraries (hotkeys -> kiosk -> kiosk-webc) then the demo app.
-      # The demo's ui5-tooling-modules bundling of kiosk-keyboard-webc resolves
-      # against its freshly built dist/.
-      - name: Build libraries and demo app
-        run: npm run build:all
+      # build:pages = libraries (hotkeys -> kiosk -> kiosk-webc) then the demo
+      # app via the SAPUI5 self-hosting config (ui5 build --all bundles the UI5
+      # runtime + ushell + the custom libs into dist/), then trimmed down by
+      # tools/trim-pages-dist.mjs. The demo's ui5-tooling-modules bundling of
+      # kiosk-keyboard-webc resolves against its freshly built dist/.
+      - name: Build libraries and self-hosted demo app
+        run: npm run build:pages
 
       - name: Build raw web components demo page
         run: npm run build:demo-page -w packages/kiosk-keyboard-webc
@@ -59,15 +68,12 @@ jobs:
           rm -rf _site
           mkdir -p _site
 
-          # Demo app build output at the artifact root (Component-preload.js,
-          # manifest.json, flp.html, css/, gen/, webc/ wrappers, ...).
+          # Self-hosted demo app build output at the artifact root: flp.html,
+          # index.html, Component-preload.js, manifest.json, and the bundled UI5
+          # runtime + ushell + custom libraries under resources/ (from `ui5 build
+          # --all`, trimmed). No separate custom-lib copy needed - `--all` already
+          # placed ui5.hotkeys / ui5.kiosk under resources/ui5/.
           cp -r packages/demo-app/dist/. _site/
-
-          # Custom UI5 libraries are separate packages and are NOT part of the
-          # demo dist; the FLP resourceroots map them to these relative paths.
-          mkdir -p _site/resources/ui5
-          cp -r packages/hotkeys/dist/resources/ui5/hotkeys _site/resources/ui5/hotkeys
-          cp -r packages/kiosk-keyboard/dist/resources/ui5/kiosk _site/resources/ui5/kiosk
 
           # Framework-less standalone web components demo, opened by the FLP
           # "Raw Web Components Demo" URL tile (./webc-demo/index.html). Kept in
