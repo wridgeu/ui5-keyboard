@@ -52,6 +52,10 @@ document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
   kb.addEventListener("keyboard-type-change", (e) => {
     appendLog(name, `keyboard-type-change type="${e.detail.keyboardType}"`);
   });
+  kb.addEventListener("active-control-change", (e) => {
+    const el = e.detail.activeElement;
+    appendLog(name, `active-control-change target="${el ? el.id || el.tagName.toLowerCase() : "none"}"`);
+  });
   kb.addEventListener("after-open", () => appendLog(name, "after-open"));
   kb.addEventListener("after-close", () => appendLog(name, "after-close"));
 });
@@ -84,6 +88,77 @@ document.getElementById("auto-type-switch").addEventListener("change", (e) => {
   if (!enabled) kb.resetKeyboardType();
   appendLog("kb-docked", `autoType ${enabled ? "enabled" : "disabled"}`);
 });
+
+// ── Advanced per-instance overrides ──
+
+// 1) setTargetResolver: route a focusable host element to a separate input.
+const kbResolver = document.getElementById("kb-resolver");
+if (kbResolver) {
+  kbResolver.setTargetResolver((el) => {
+    const id = el.getAttribute?.("data-target");
+    return id ? document.getElementById(id) : null;
+  });
+}
+
+// 2) instanceMiddleware: emoticon composition on a custom per-instance layout.
+// Mirrors the built-in middleware contract: consume the closing key and replace
+// the already-typed opening char with the composed emoji.
+function createEmoticonMiddleware() {
+  const MAP = new Map([
+    [":)", "🙂"],
+    [":(", "🙁"],
+    [":D", "😄"],
+    [";)", "😉"],
+  ]);
+  let prev = "";
+  return {
+    handleKey(key, target) {
+      const combo = prev + key;
+      prev = key;
+      const emoji = MAP.get(combo);
+      if (!emoji) return false;
+      const value = target.value;
+      const pos = target.selectionStart ?? value.length;
+      if (pos === 0 || value.slice(pos - 1, pos) !== combo[0]) return false;
+      target.value = value.slice(0, pos - 1) + emoji + value.slice(pos);
+      const caret = pos - 1 + emoji.length;
+      target.setSelectionRange(caret, caret);
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      prev = "";
+      return true;
+    },
+    commit() {
+      return null;
+    },
+    reset() {
+      prev = "";
+    },
+  };
+}
+const kbEmoji = document.getElementById("kb-emoji");
+if (kbEmoji) {
+  kbEmoji.instanceLayouts = {
+    "emoji-compose": [
+      [{ value: ":" }, { value: ")" }, { value: "(" }],
+      [{ value: "D" }, { value: ";" }, { value: "{backspace}", type: "action" }],
+    ],
+  };
+  kbEmoji.instanceMiddleware = { "emoji-compose": () => createEmoticonMiddleware() };
+}
+
+// 3) instanceLocaleLayouts: override the browser-locale default layout. The
+// keyboard has no `layout` attribute, so it resolves its default from the
+// locale map (matched by lang-region then lang prefix, lowercase).
+const kbLocale = document.getElementById("kb-locale");
+if (kbLocale) {
+  const full = (navigator.language || "en").toLowerCase();
+  const lang = full.split("-")[0];
+  kbLocale.instanceLocaleLayouts = { [full]: "qwertz-de", [lang]: "qwertz-de", de: "qwertz-de", es: "qwerty-es" };
+  const localeStatus = document.getElementById("locale-status");
+  if (localeStatus) {
+    localeStatus.textContent = `navigator.language = "${navigator.language}" → default layout "qwertz-de" (note the ß / ä / ö keys).`;
+  }
+}
 
 // ── i18n Resolver demo ──
 const i18nTranslations = {
