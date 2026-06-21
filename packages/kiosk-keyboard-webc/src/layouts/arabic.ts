@@ -1,5 +1,11 @@
 import type { LayoutDefinition } from "../types.js";
 
+/**
+ * Arabic keyboard layout (standard Arabic 101).
+ *
+ * @public
+ * @since 0.1.0
+ */
 const arabic: LayoutDefinition = [
   // Row 1: Western Arabic numerals (default), Arabic-Indic on shift
   [

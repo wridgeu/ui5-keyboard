@@ -155,8 +155,9 @@ el.layout = "my-custom";
 document.body.appendChild(el);
 ```
 
-Available layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
-`numeric`, `arabic`, `ja-kana`, `ko-hangul`). The shared building-block rows
+Stable layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
+`numeric`, `arabic`, `ja-kana`, `ko-hangul`) - import a built-in to use as a base
+or to pass via `instanceLayouts`. The shared building-block rows
 `kiosk-keyboard-webc/layouts/fkey-row` and `kiosk-keyboard-webc/layouts/nav-row`
 are stable imports for composing custom variant layouts.
 

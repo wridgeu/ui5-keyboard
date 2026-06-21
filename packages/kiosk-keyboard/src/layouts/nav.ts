@@ -1,6 +1,12 @@
 import type { LayoutDefinition } from "../types";
 import navRow from "./nav-row";
 
+/**
+ * Standalone navigation layout (arrows, Home/End, Page Up/Down).
+ *
+ * @public
+ * @since 0.1.0
+ */
 const nav: LayoutDefinition = [
   // Row 1: Home / Up / End
   navRow.slice(0, 3),

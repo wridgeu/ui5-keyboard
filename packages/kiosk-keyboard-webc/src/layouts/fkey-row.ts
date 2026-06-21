@@ -5,6 +5,9 @@ import type { KeyRow } from "../types.js";
  * Keys render as modifier keys (subdued background).
  *
  * Import this to compose custom variant layouts.
+ *
+ * @public
+ * @since 0.1.0
  */
 const fkeyRow: KeyRow = [
   { value: "{fkey:F1}", label: "F1", type: "modifier" },

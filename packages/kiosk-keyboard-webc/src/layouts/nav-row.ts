@@ -9,6 +9,9 @@ import type { KeyRow } from "../types.js";
  * icon visible and distinct. Keys render as modifier keys (subdued background).
  *
  * Import this to compose custom variant layouts.
+ *
+ * @public
+ * @since 0.1.0
  */
 const navRow: KeyRow = [
   { value: "{fkey:Home}", icon: "\u21F1", label: "Home", type: "modifier" },

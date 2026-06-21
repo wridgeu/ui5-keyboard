@@ -1,5 +1,11 @@
 import type { LayoutDefinition } from "../types";
 
+/**
+ * German QWERTZ layout with Umlaute (ä, ö, ü, ß).
+ *
+ * @public
+ * @since 0.1.0
+ */
 const qwertzDe: LayoutDefinition = [
   // Row 1: number row (German shift symbols)
   [

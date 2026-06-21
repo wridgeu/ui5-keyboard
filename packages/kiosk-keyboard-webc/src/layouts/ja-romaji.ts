@@ -1,5 +1,11 @@
 import type { LayoutDefinition } from "../types.js";
 
+/**
+ * Japanese Romaji layout (QWERTY base with JIS punctuation).
+ *
+ * @public
+ * @since 0.1.0
+ */
 const jaRomaji: LayoutDefinition = [
   // Row 1: number row (JIS shifted symbols)
   [

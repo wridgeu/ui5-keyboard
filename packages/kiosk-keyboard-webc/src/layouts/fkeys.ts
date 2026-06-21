@@ -1,6 +1,12 @@
 import type { LayoutDefinition } from "../types.js";
 import fkeyRow from "./fkey-row.js";
 
+/**
+ * Standalone function-key layout (F1--F12).
+ *
+ * @public
+ * @since 0.1.0
+ */
 const fkeys: LayoutDefinition = [
   // Row 1: F1-F6
   fkeyRow.slice(0, 6),

@@ -1,6 +1,12 @@
 import type { LayoutDefinition } from "../types";
 import { punctuationRow, symbolBottomRow } from "./symbol-common";
 
+/**
+ * Numeric layout with a number pad and basic operators.
+ *
+ * @public
+ * @since 0.1.0
+ */
 const numeric: LayoutDefinition = [
   // Row 1
   [

@@ -1,6 +1,12 @@
 import type { LayoutDefinition } from "../types.js";
 import { punctuationRow, symbolBottomRow } from "./symbol-common.js";
 
+/**
+ * Special characters and symbols layout.
+ *
+ * @public
+ * @since 0.1.0
+ */
 const special: LayoutDefinition = [
   // Row 1
   [

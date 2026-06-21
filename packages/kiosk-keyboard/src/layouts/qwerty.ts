@@ -1,5 +1,11 @@
 import type { LayoutDefinition } from "../types";
 
+/**
+ * Standard QWERTY layout with number row and shift symbols.
+ *
+ * @public
+ * @since 0.1.0
+ */
 const qwerty: LayoutDefinition = [
   // Row 1: number row
   [
