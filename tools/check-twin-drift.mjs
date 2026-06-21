@@ -18,13 +18,9 @@
  *   lifecycle hooks) in kiosk and a decorator-based web component in webc; the
  *   two are structurally non-comparable. This is the widest unchecked surface:
  *   shared logic here is hand-synced across the twins. #121 decomposed the
- *   self-contained responsibilities (F-key dispatch plus the kiosk-only controls
- *   delegation) into the framework-adapted controller files listed below,
- *   shrinking this surface; arrow-key grid navigation follows separately.
- * - internal/key-grid-navigation.ts: kiosk extracted arrow-key grid navigation
- *   to its own module (attached via addDelegate); webc keeps the same logic
- *   inline in KioskKeyboard.ts `_onKeyDown`, so there is no webc twin file to
- *   diff. Closing this asymmetry is part of #121.
+ *   self-contained responsibilities (F-key dispatch, arrow-key grid navigation,
+ *   plus the kiosk-only controls delegation) into the framework-adapted
+ *   controller files listed below, shrinking this surface.
  * - middleware/kana-dakuten.ts: known semantic divergence between the twins.
  * - middleware/hangul-compose.ts: framework-adapted wiring differs.
  * - internal/layout-registry.ts <-> core/layout-registry.ts: registry is
@@ -49,7 +45,13 @@
  *   (the last keys its refcount map by control id in kiosk, by element in webc),
  *   internal/fkey-controller.ts <-> core/fkey-controller.ts (kiosk reads the
  *   FKeyMode enum and dispatches via a UI5 target session; webc compares mode
- *   string literals and writes the resolved DOM input directly).
+ *   string literals and writes the resolved DOM input directly),
+ *   internal/key-grid-navigation.ts <-> core/key-grid-navigation.ts (both
+ *   implement the same WAI-ARIA APG layout-grid arrow model -- column-clamped
+ *   vertical moves that stop at the top/bottom edge, row-boundary continuation
+ *   that stops at the grid ends -- but kiosk is a UI5 addDelegate driven by
+ *   pseudo-events and DOM traversal while webc reads raw keydown against the
+ *   resolved layout, so the two are behavior-aligned but not byte-identical).
  * - internal/controls-delegation-controller.ts: kiosk-only. The `controls`
  *   focus-delegation/auto-target reconciliation has no webc counterpart; webc
  *   resolves its single `controls` id lazily in AutoShowController instead.

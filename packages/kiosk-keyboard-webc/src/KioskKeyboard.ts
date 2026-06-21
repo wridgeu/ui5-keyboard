@@ -16,7 +16,7 @@ import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
 
 import { ShiftState } from "./core/shift-state.js";
-import { resolveWithCustomResolver, keyElementId, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
+import { resolveWithCustomResolver, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
 import { insertText, handleBackspace } from "./core/input-operations.js";
 import {
   SECONDARY_LAYOUTS,
@@ -37,6 +37,7 @@ import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
 import { FKeyController, NATIVE_DISPATCHABLE_KEYS } from "./core/fkey-controller.js";
+import { KeyGridNavigation } from "./core/key-grid-navigation.js";
 import {
   KeyboardType,
   MobileKeyboard,
@@ -499,7 +500,6 @@ class KioskKeyboard extends UI5Element {
   private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
   private _targetSource: TargetSource = "explicit";
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
-  private _lastFocusedKeyId: string | null = null;
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
   private _layoutSource: LayoutSource = "external";
@@ -619,10 +619,18 @@ class KioskKeyboard extends UI5Element {
     resolveTarget: () => this._resolveTarget(),
   });
 
+  // ── Arrow-key grid navigation ──
+  /** Owns roving-tabindex grid navigation and the last-focused-key tracking. */
+  private readonly _keyGridNav = new KeyGridNavigation({
+    getResolvedLayout: () => this._getResolvedLayout(),
+    getShadowRoot: () => this.shadowRoot,
+    getComponentId: () => this._componentId,
+  });
+
   // ── Pre-bound template handlers (avoids per-render allocation) ──
   readonly _boundOnKeyClick = this._onKeyClick.bind(this);
   readonly _boundOnKeyMouseDown = this._onKeyMouseDown.bind(this);
-  readonly _boundOnKeyDown = this._onKeyDown.bind(this);
+  readonly _boundOnKeyDown = this._keyGridNav.onKeyDown.bind(this._keyGridNav);
 
   /**
    * Whether the docked keyboard panel is currently visible.
@@ -744,7 +752,7 @@ class KioskKeyboard extends UI5Element {
 
     this._autoShow.unregister();
 
-    this._lastFocusedKeyId = null;
+    this._keyGridNav.setLastFocusedKeyId(null);
   }
 
   onAfterRendering(): void {
@@ -1174,8 +1182,9 @@ class KioskKeyboard extends UI5Element {
   }
 
   _getFocusPosition(layout: LayoutDefinition): { row: number; col: number } {
-    if (this._lastFocusedKeyId) {
-      const match = this._lastFocusedKeyId.match(KEY_ID_SUFFIX_RE);
+    const lastFocusedKeyId = this._keyGridNav.getLastFocusedKeyId();
+    if (lastFocusedKeyId) {
+      const match = lastFocusedKeyId.match(KEY_ID_SUFFIX_RE);
       if (match) {
         const r = Number.parseInt(match[1]!, 10);
         const c = Number.parseInt(match[2]!, 10);
@@ -1350,74 +1359,6 @@ class KioskKeyboard extends UI5Element {
 
   private _onKeyMouseDown(e: Event): void {
     e.preventDefault();
-  }
-
-  private _onKeyDown(e: KeyboardEvent): void {
-    const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
-    if (!keyEl) return;
-
-    const layout = this._getResolvedLayout();
-    const match = keyEl.id.match(KEY_ID_SUFFIX_RE);
-    if (!match) return;
-
-    let row = Number.parseInt(match[1]!, 10);
-    let col = Number.parseInt(match[2]!, 10);
-    let moved = false;
-
-    switch (e.key) {
-      case "ArrowRight":
-        col = col + 1 < (layout[row]?.length ?? 0) ? col + 1 : 0;
-        moved = true;
-        break;
-      case "ArrowLeft":
-        col = col - 1 >= 0 ? col - 1 : (layout[row]?.length ?? 1) - 1;
-        moved = true;
-        break;
-      case "ArrowDown":
-        row = row + 1 < layout.length ? row + 1 : 0;
-        col = Math.min(col, (layout[row]?.length ?? 1) - 1);
-        moved = true;
-        break;
-      case "ArrowUp":
-        row = row - 1 >= 0 ? row - 1 : layout.length - 1;
-        col = Math.min(col, (layout[row]?.length ?? 1) - 1);
-        moved = true;
-        break;
-      case "Home":
-        // Ctrl+Home jumps to the first key of the whole grid; plain Home
-        // stays within the current row.
-        if (e.ctrlKey) row = 0;
-        col = 0;
-        moved = true;
-        break;
-      case "End":
-        // Ctrl+End jumps to the last key of the whole grid; plain End
-        // stays within the current row.
-        if (e.ctrlKey) row = layout.length - 1;
-        col = (layout[row]?.length ?? 1) - 1;
-        moved = true;
-        break;
-      case "Enter":
-      case " ":
-        // Activate only without modifiers: Ctrl+Enter, Alt+Space and similar
-        // combinations are browser/OS shortcuts, not key activations.
-        if (e.ctrlKey || e.altKey || e.metaKey) return;
-        keyEl.click();
-        e.preventDefault();
-        return;
-    }
-
-    if (moved) {
-      e.preventDefault();
-      const id = keyElementId(this._componentId, row, col);
-      const nextEl = this.shadowRoot!.getElementById(id);
-      if (nextEl) {
-        keyEl.setAttribute("tabindex", "-1");
-        nextEl.setAttribute("tabindex", "0");
-        nextEl.focus();
-        this._lastFocusedKeyId = id;
-      }
-    }
   }
 
   // ── Layout switch / F-key handling ──

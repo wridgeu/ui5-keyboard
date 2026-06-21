@@ -1,0 +1,138 @@
+import { KEY_ID_SUFFIX_RE, keyElementId } from "./dom-utils.js";
+import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
+import type { LayoutDefinition } from "../types.js";
+
+/**
+ * Bridge to the host keyboard's rendered grid: the resolved layout (to compute
+ * row/column bounds and clamp targets), its shadow root (where keys live), and
+ * its component id (to build key element ids).
+ */
+export interface KeyGridNavigationHost {
+  getResolvedLayout(): LayoutDefinition;
+  getShadowRoot(): ShadowRoot | null;
+  getComponentId(): string;
+}
+
+/**
+ * Keyboard grid navigation for the web component (mirrors the UI5 control's
+ * `KeyGridNavigation`, which attaches via `addDelegate`). Follows the WAI-ARIA
+ * APG layout-grid arrow model: Up/Down move within the column and clamp onto a
+ * narrower row, stopping at the top/bottom edge; Left/Right move within the row
+ * and continue onto the adjacent row at a row boundary, stopping at the first/
+ * last key of the whole grid. Home/End move within the current row (Ctrl+Home/
+ * End jump across the whole grid); Enter/Space activate. Focus never wraps
+ * around grid edges. Handled navigation keys are always prevented (so holding an
+ * arrow at an edge does not scroll the page), even when focus does not move.
+ *
+ * A hand-rolled roving tabindex rather than `@ui5/webcomponents-base`'s
+ * `ItemNavigation`: that delegate models a uniform matrix sized by a single
+ * `rowSize`, so it cannot express this keyboard's variable-width rows. The UI5
+ * twin follows the `ItemNavigation` pattern by hand for the same reason.
+ *
+ * Navigation is driven by the resolved layout (logical rows/columns), not the
+ * rendered geometry, so responsive reflow of the key faces does not affect it.
+ *
+ * Tracks the last focused key id so the roving tabindex can be restored after a
+ * re-render; the host reads it through {@link getLastFocusedKeyId} and clears it
+ * on disconnect via {@link setLastFocusedKeyId}.
+ */
+export class KeyGridNavigation {
+  private _lastFocusedKeyId: string | null = null;
+
+  constructor(private readonly _host: KeyGridNavigationHost) {}
+
+  getLastFocusedKeyId(): string | null {
+    return this._lastFocusedKeyId;
+  }
+
+  setLastFocusedKeyId(id: string | null): void {
+    this._lastFocusedKeyId = id;
+  }
+
+  onKeyDown(e: KeyboardEvent): void {
+    const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
+    if (!keyEl) return;
+
+    const layout = this._host.getResolvedLayout();
+    const match = keyEl.id.match(KEY_ID_SUFFIX_RE);
+    if (!match) return;
+
+    const fromRow = Number.parseInt(match[1]!, 10);
+    const fromCol = Number.parseInt(match[2]!, 10);
+    let row = fromRow;
+    let col = fromCol;
+
+    switch (e.key) {
+      case "ArrowRight":
+        if (col + 1 < (layout[row]?.length ?? 0)) {
+          col += 1;
+        } else if (row + 1 < layout.length) {
+          // End of the row: continue onto the first key of the next row.
+          row += 1;
+          col = 0;
+        }
+        // Last key of the grid: stay put.
+        break;
+      case "ArrowLeft":
+        if (col - 1 >= 0) {
+          col -= 1;
+        } else if (row - 1 >= 0) {
+          // Start of the row: continue onto the last key of the previous row.
+          row -= 1;
+          col = (layout[row]?.length ?? 1) - 1;
+        }
+        // First key of the grid: stay put.
+        break;
+      case "ArrowDown":
+        // Clamp the column onto a narrower row; stop at the bottom edge.
+        if (row + 1 < layout.length) {
+          row += 1;
+          col = Math.min(col, (layout[row]?.length ?? 1) - 1);
+        }
+        break;
+      case "ArrowUp":
+        // Clamp the column onto a narrower row; stop at the top edge.
+        if (row - 1 >= 0) {
+          row -= 1;
+          col = Math.min(col, (layout[row]?.length ?? 1) - 1);
+        }
+        break;
+      case "Home":
+        // Ctrl+Home jumps to the first key of the whole grid; plain Home
+        // stays within the current row.
+        if (e.ctrlKey) row = 0;
+        col = 0;
+        break;
+      case "End":
+        // Ctrl+End jumps to the last key of the whole grid; plain End
+        // stays within the current row.
+        if (e.ctrlKey) row = layout.length - 1;
+        col = (layout[row]?.length ?? 1) - 1;
+        break;
+      case "Enter":
+      case " ":
+        // Activate only without modifiers: Ctrl+Enter, Alt+Space and similar
+        // combinations are browser/OS shortcuts, not key activations.
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
+        keyEl.click();
+        e.preventDefault();
+        return;
+      default:
+        return;
+    }
+
+    // A handled navigation key: always prevent the default (e.g. page scroll),
+    // even at an edge where focus does not move.
+    e.preventDefault();
+    if (row === fromRow && col === fromCol) return;
+
+    const id = keyElementId(this._host.getComponentId(), row, col);
+    const nextEl = this._host.getShadowRoot()?.getElementById(id) ?? null;
+    if (nextEl) {
+      keyEl.setAttribute("tabindex", "-1");
+      nextEl.setAttribute("tabindex", "0");
+      nextEl.focus();
+      this._lastFocusedKeyId = id;
+    }
+  }
+}
