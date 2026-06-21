@@ -38,6 +38,12 @@ describe("detectKeyboardType", () => {
     expect(detectKeyboardType(el)).toBe("Numpad");
   });
 
+  it("matches inputmode case-insensitively (inputmode=Numeric)", () => {
+    const el = document.createElement("input");
+    el.setAttribute("inputmode", "Numeric");
+    expect(detectKeyboardType(el)).toBe("Numpad");
+  });
+
   it("returns Full for textarea", () => {
     const el = document.createElement("textarea");
     expect(detectKeyboardType(el)).toBe("Full");

@@ -51,9 +51,10 @@ export function detectKeyboardType(dom: HTMLInputElement | HTMLTextAreaElement):
     return explicit as KeyboardTypeValue;
   }
 
-  // 2. Check inputmode attribute
+  // 2. Check inputmode attribute. `inputmode` is an enumerated HTML
+  //    attribute matched case-insensitively, so normalize before lookup.
   const inputmode = dom.getAttribute("inputmode");
-  if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return "Numpad";
+  if (inputmode && NUMPAD_INPUT_MODES.has(inputmode.toLowerCase())) return "Numpad";
 
   // 3. Check HTML type attribute
   if (dom instanceof HTMLInputElement && NUMPAD_HTML_TYPES.has(dom.type)) {
