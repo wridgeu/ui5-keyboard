@@ -11,8 +11,10 @@ KioskKeyboard.ts          Web component class (state, event delegation, target i
 KioskKeyboardTemplate.tsx JSX template: Preact-based, UI5 WC jsxRenderer
 Assets.ts                 Registers theme parameter bundles and i18n loaders
 bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all built-in layouts);
-                          re-exports component class, enums, and public types. Middleware
-                          modules are opt-in via `kiosk-keyboard-webc/middleware/*`.
+                          re-exports component class, enums, and public types. Built-in
+                          middleware (kana/hangul) is bundled and auto-activates by layout
+                          name; `kiosk-keyboard-webc/middleware/*` only exposes the factories
+                          as data for custom `instanceMiddleware`.
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, FKeyMode,
                           SpecialKeyValue, KeyWidth, KeyType, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
@@ -228,7 +230,7 @@ The resolver is wrapped in try/catch for crash safety. If it returns `null`, the
 When the keyboard opens, it sets `inputmode="none"` on the target input to prevent the native virtual keyboard from appearing. This is ref-counted and shared across instances via a static `Map`:
 
 - Each `show()` increments the ref count for the target input
-- Each `close()` / `exit()` decrements it
+- Each `close()` / `onExitDOM()` decrements it
 - The original `inputmode` is restored only when the last claimant releases
 
 This makes suppression safe for multi-keyboard setups targeting the same input.
@@ -517,7 +519,7 @@ Four Horizon variant bundles exist (required by the UI5 WC build tooling) but ar
 ```
 npm run generate     →  ui5nps generate (theme CSS modules, i18n JSON, i18n-defaults.ts)
 tsc                  →  TypeScript compilation (src/ → dist/)
-npm run build:bundle →  vite build (dist/bundle.esm.js → dist/kiosk-keyboard.bundle.js)
+npm run build:bundle →  vite build (src/bundle.esm.ts → dist/kiosk-keyboard.bundle.js)
 npm run generateAPI  →  CEM generation + validation (also included in npm run build)
 ```
 

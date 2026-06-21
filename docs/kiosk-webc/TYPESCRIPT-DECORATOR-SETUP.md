@@ -43,12 +43,12 @@ Used when a property change has **side effects** (e.g., opening/closing the keyb
 
 ```typescript
 // Plain backing field (NOT decorated - no reactivity of its own)
-_open = false;
+private _openValue = false;
 
 @property({ type: Boolean })
 set open(value: boolean) {
-  if (this._open === value) return;
-  this._open = value;
+  if (this._openValue === value) return;
+  this._openValue = value;
   if (!this.isConnected) return; // deferred to onEnterDOM
   if (value) {
     this._performOpen();
@@ -58,14 +58,14 @@ set open(value: boolean) {
 }
 
 get open(): boolean {
-  return this._open;
+  return this._openValue;
 }
 ```
 
 Key points:
 
 - The `@property()` decorator goes on the **setter** (not the getter).
-- The backing field (`_open`) is a plain class field that holds the actual state.
+- The backing field (`_openValue`) is a plain class field that holds the actual state.
 - The setter guards against no-ops (`=== value`) and handles pre-connection state (`!this.isConnected`).
 - Side effects (event dispatch, inputmode suppression) live in dedicated methods called from the setter.
 - `onEnterDOM` checks the backing field and runs side effects for values set before DOM connection.
@@ -78,12 +78,16 @@ Events are declared with the `event-strict` decorator and typed via `eventDetail
 ```typescript
 @event("key-press", { bubbles: true, cancelable: true })
 @event("after-open", { bubbles: true })
-export default class KioskKeyboard extends UI5Element {
+class KioskKeyboard extends UI5Element {
   eventDetails!: {
     "key-press": KeyPressEventDetail;
-    "after-open": void;
+    "after-open": OpenStateChangeEventDetail;
   };
 }
+
+// CEM generation requires a separate default export, not `export default class`
+// (see CUSTOM-ELEMENTS-MANIFEST.md).
+export default KioskKeyboard;
 ```
 
 The `!:` (definite assignment assertion) is the canonical pattern used by all official UI5 Web Components (see [Button.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Button.ts), [Popup.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Popup.ts), [Input.ts](https://github.com/SAP/ui5-webcomponents/blob/main/packages/main/src/Input.ts)). Do **not** use `declare eventDetails:`. `declare` emits no runtime field and may interact differently with the framework's type checking.

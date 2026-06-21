@@ -15,7 +15,7 @@
             <List
                 headerText="Choose a Demo Area"
                 items="{state>/mainDemoEntries}"
-                itemPress=".onMainEntryPress">
+                itemPress=".onListEntryNavigate">
                 <StandardListItem
                     title="{state>title}"
                     description="{state>description}"

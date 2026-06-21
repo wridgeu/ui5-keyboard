@@ -20,9 +20,9 @@ The CSS Inline Layout Module Level 3 spec defines `text-box-edge: ideographic-in
 
 Several source files are duplicated between `kiosk-keyboard` and `kiosk-keyboard-webc` (shift state machine, grapheme utilities, input operations, layout types). A `packages/kiosk-shared` internal package could deduplicate them.
 
-**Why not now:** The duplication is manageable and the two packages have started diverging in subtle ways. Premature extraction risks creating a shared package that satisfies neither consumer well. The cost of syncing changes across two files is lower than the cost of maintaining a shared abstraction boundary.
+**Why not now:** The duplication is manageable and the two packages have started diverging in subtle ways. Premature extraction risks creating a shared package that satisfies neither consumer well. The cost of syncing changes across two files is lower than the cost of maintaining a shared abstraction boundary. This was formally evaluated and **declined in [#105](https://github.com/wridgeu/ui5-keyboard/issues/105) (2026-06-10)** — the dominant constraint is that `kiosk-keyboard` ships UI5 AMD resolved by namespace and cannot carry a runtime npm dependency, so any shared core would have to be vendored/inlined into both build pipelines rather than depended upon. Instead of extraction, a `tools/check-twin-drift.mjs` guardrail diffs the parallel leaf files in CI.
 
-**When to revisit:** When a bug fix or feature change needs to be applied identically to both packages more than a few times in a release cycle, the maintenance cost starts outweighing the abstraction cost.
+**When to revisit:** When a bug fix or feature change needs to be applied identically to both packages more than a few times in a release cycle, the maintenance cost starts outweighing the abstraction cost. Per #105, prefer strengthening the divergence guardrail over extraction.
 
 ## Value Property with Two-Way Binding Support
 

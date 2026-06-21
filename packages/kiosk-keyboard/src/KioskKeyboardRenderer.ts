@@ -66,7 +66,11 @@ const KioskKeyboardRenderer = {
       label: oControl.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
       roledescription: getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
     });
-    const targetId = oControl.getActiveControl()?.getId();
+    // Single source of truth with the imperative path in `_setActiveTarget`,
+    // which also writes `aria-controls` from `_getActiveTargetId()`. Using the
+    // raw association id keeps the rendered and post-render values in sync even
+    // when the target is a plain DOM element rather than a resolvable Control.
+    const targetId = oControl._getActiveTargetId();
     if (targetId) {
       rm.attr("aria-controls", targetId);
     }

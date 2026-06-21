@@ -1017,12 +1017,22 @@ class KioskKeyboard extends UI5Element {
     );
   }
 
+  /**
+   * The layout name forced by a non-user `keyboardType` of `Numpad`/`Numeric`,
+   * or `null` when no such constraint applies (user pick, or a free type).
+   */
+  private _autoForcedLayoutName(): "numpad" | "numeric" | null {
+    if (this._layoutSource === "user") return null;
+    if (this.keyboardType === "Numpad") return "numpad";
+    if (this.keyboardType === "Numeric") return "numeric";
+    return null;
+  }
+
   private _resolvedLayoutName(): string {
     if (this._layoutSource === "user") return this._currentLayout;
-    const type = this.keyboardType;
-    if (type === "Numpad") return "numpad";
-    if (type === "Numeric") return "numeric";
-    return this._currentLayout || this._baseLayout || this.layout || this._localeLayout();
+    return (
+      this._autoForcedLayoutName() ?? (this._currentLayout || this._baseLayout || this.layout || this._localeLayout())
+    );
   }
 
   _getResolvedLayout(): LayoutDefinition {
@@ -1031,9 +1041,7 @@ class KioskKeyboard extends UI5Element {
     // On the auto-forced numpad/numeric layout, `{layout:base}` would resolve
     // back to the same auto-forced layout (handler sets `_layoutSource = "external"`,
     // so the constraint re-applies). Strip it so the rendered surface matches behavior.
-    const autoForced =
-      this._layoutSource !== "user" && (this.keyboardType === "Numpad" || this.keyboardType === "Numeric");
-    return autoForced ? stripDeadBaseSwitch(resolved) : resolved;
+    return this._autoForcedLayoutName() !== null ? stripDeadBaseSwitch(resolved) : resolved;
   }
 
   // ── Memoized Map views of the instance-* properties ──
@@ -1148,20 +1156,25 @@ class KioskKeyboard extends UI5Element {
    * Returns null if no icon should render.
    */
   _resolveKeyIcon(key: KeyDefinition): { value: string; sap: boolean } | null {
+    const parseSapIcon = (raw: string, where: string): { value: string; sap: boolean } | null => {
+      if (raw.startsWith(SAP_ICON_PREFIX)) {
+        const name = raw.slice(SAP_ICON_PREFIX.length);
+        if (!name) {
+          console.warn(`KioskKeyboard: empty SAP icon URI for ${where}, skipping icon`);
+          return null;
+        }
+        return { value: name, sap: true };
+      }
+      // Unicode / emoji
+      return { value: raw, sap: false };
+    };
+
     // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
     if (key.value === "{shift}" && this._capsLock) {
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {
         if (!clIcon) return null; // capsLockIcon: "" suppresses icon
-        if (clIcon.startsWith(SAP_ICON_PREFIX)) {
-          const name = clIcon.slice(SAP_ICON_PREFIX.length);
-          if (!name) {
-            console.warn(`KioskKeyboard: empty SAP icon URI for capsLockIcon on key "${key.value}", skipping icon`);
-            return null;
-          }
-          return { value: name, sap: true };
-        }
-        return { value: clIcon, sap: false };
+        return parseSapIcon(clIcon, `capsLockIcon on key "${key.value}"`);
       }
       const builtIn = ICON_MAP["{shift:capsLock}"];
       return builtIn ? { value: builtIn, sap: true } : null;
@@ -1171,16 +1184,7 @@ class KioskKeyboard extends UI5Element {
 
     const customIcon = key.icon;
     if (customIcon) {
-      if (customIcon.startsWith(SAP_ICON_PREFIX)) {
-        const name = customIcon.slice(SAP_ICON_PREFIX.length);
-        if (!name) {
-          console.warn(`KioskKeyboard: empty SAP icon URI for key "${key.value}", skipping icon`);
-          return null;
-        }
-        return { value: name, sap: true };
-      }
-      // Unicode / emoji
-      return { value: customIcon, sap: false };
+      return parseSapIcon(customIcon, `key "${key.value}"`);
     }
 
     const builtIn = ICON_MAP[key.value];

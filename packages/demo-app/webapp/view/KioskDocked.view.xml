@@ -29,7 +29,7 @@
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="F-Key Mode:" class="sapUiSmallMarginEnd" />
-                        <SegmentedButton selectedKey="{docked>/kioskFKeyMode}" selectionChange=".onFKeyModeChange">
+                        <SegmentedButton selectedKey="{docked>/kioskFKeyMode}">
                             <items>
                                 <SegmentedButtonItem key="Virtual" text="Virtual" />
                                 <SegmentedButtonItem key="Native" text="Native" />

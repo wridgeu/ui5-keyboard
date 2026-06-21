@@ -168,8 +168,9 @@ Each `@event` decorator needs a JSDoc comment immediately before it with `@publi
 ```ts
 /**
  * Fired when a key is pressed on the virtual keyboard.
- * @param {string} key - The key value.
- * @param {string} type - The key type.
+ * @param {string} key - The key value (character, `{shift}`, `{backspace}`, etc.)
+ * @param {boolean} shiftKey - Whether Shift is active.
+ * @param {string} [char] - The resolved character (after shift). `undefined` for action keys.
  * @public
  * @since 0.1.0
  */

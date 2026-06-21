@@ -107,15 +107,7 @@
       "route": "kioskScriptInput"
     }
   ],
-  "platform": "",
-  "saveLabel": "",
-  "escapeLabel": "",
-  "f5Label": "",
-  "navLabel": "",
   "sequenceStatus": "",
-  "heldKeys": "None",
-  "canSave": true,
-  "printLabel": "",
   "conflictStatus": "",
   "conflictState": "Information",
   "targetStatus": "",
@@ -123,7 +115,6 @@
   "comboStatus": "",
   "recordedShortcut": "",
   "isRecording": false,
-  "physicalLastKey": "None",
   "kioskLastKey": "None",
   "kioskLayout": "qwerty",
   "kioskEnabled": true,

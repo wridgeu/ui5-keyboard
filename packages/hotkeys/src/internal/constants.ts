@@ -38,8 +38,6 @@ export const MODIFIER_ALIASES: Readonly<Record<string, CanonicalModifier | "Mod"
   cmd: "Meta",
   Mod: "Mod",
   mod: "Mod",
-  CommandOrControl: "Mod",
-  CmdOrCtrl: "Mod",
 };
 
 /**
