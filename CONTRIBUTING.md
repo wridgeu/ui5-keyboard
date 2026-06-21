@@ -11,7 +11,7 @@ npm install        # Installs all workspaces + applies dependency patches
 npm run build      # Builds library dist/ artifacts
 ```
 
-Requires **Node >= 22**. CI runs on Node 24.
+Requires **Node >= 24**. CI runs on Node 24.
 
 ## Reporting Issues
 
