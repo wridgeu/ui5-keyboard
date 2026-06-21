@@ -68,13 +68,6 @@ export default class KioskDocked extends BaseController {
     kb.setLayout(layout);
   }
 
-  onFKeyModeChange(event: SegmentedButton$SelectionChangeEvent): void {
-    const key = event.getParameter("item")!.getKey();
-    const kb = this.byId("dockedKeyboard") as KioskKeyboard;
-    kb.setFKeyMode(key as FKeyMode);
-    this._getViewModel().setProperty("/kioskFKeyMode", key);
-  }
-
   onNavBack(): void {
     this._setKeyboardRouteActive(false);
     this.getTypedComponent().getRouter().navTo(Scope.KioskHub);

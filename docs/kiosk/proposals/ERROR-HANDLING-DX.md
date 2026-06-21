@@ -26,7 +26,6 @@ policy for better developer experience (DX).
   - unsupported native F-key dispatch logs warning
 - `packages/kiosk-keyboard/src/internal/layout-registry.ts`
   - invalid layout names/definitions log warning and no-op
-  - attempts to overwrite/remove built-ins log warning and no-op
   - invalid locale mapping and unknown mapped layout log warning
 
 ### 3) Silent fallback / defensive catch

@@ -7,7 +7,7 @@
             <List
                 headerText="Choose a Scenario"
                 items="{state>/hotkeysDemoEntries}"
-                itemPress=".onScenarioPress">
+                itemPress=".onListEntryNavigate">
                 <StandardListItem
                     title="{state>title}"
                     description="{state>description}"

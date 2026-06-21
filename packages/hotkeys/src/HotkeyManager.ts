@@ -34,7 +34,13 @@ import type {
   UnhandledCallback,
   UpdatableHotkeyOptions,
 } from "./types";
-import type { HotkeyRegistration, ResolvedHotkeyOptions, ResolvedTarget, SequenceOptions } from "./internal/types";
+import type {
+  HotkeyRegistration,
+  ResolvedHotkeyOptions,
+  ResolvedTarget,
+  SequenceOptions,
+  SequenceRegistrationInfo,
+} from "./internal/types";
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
@@ -60,6 +66,20 @@ function sameTarget(a: ResolvedTarget, b: ResolvedTarget): boolean {
   if (a.kind === "element" && b.kind === "element") return a.el === b.el;
   if (a.kind === "callback" && b.kind === "callback") return a.fn === b.fn;
   return false;
+}
+
+/**
+ * `scope` and `conflictBehavior` are fixed at registration time. Reject any
+ * `setOptions` call that tries to change them. Shared by the hotkey and
+ * sequence registration handles.
+ */
+function assertImmutableSetOptions(newOptions: Partial<UpdatableHotkeyOptions>): void {
+  if ("scope" in newOptions) {
+    throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
+  }
+  if ("conflictBehavior" in newOptions) {
+    throw new Error("Cannot change conflictBehavior via setOptions - unregister and re-register instead");
+  }
 }
 
 /**
@@ -300,12 +320,7 @@ export default class HotkeyManager extends BaseObject {
         if (!registration.active) {
           throw new Error(`Cannot setOptions on unregistered handle (id: ${id})`);
         }
-        if ("scope" in newOptions) {
-          throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
-        }
-        if ("conflictBehavior" in newOptions) {
-          throw new Error("Cannot change conflictBehavior via setOptions - unregister and re-register instead");
-        }
+        assertImmutableSetOptions(newOptions);
         const opts = registration.options;
         // Special case: target swap requires normalization + re-indexing + conflict management
         if (newOptions.target !== undefined) {
@@ -669,12 +684,7 @@ export default class HotkeyManager extends BaseObject {
         innerHandle.unregister();
       },
       setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
-        if ("scope" in newOptions) {
-          throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
-        }
-        if ("conflictBehavior" in newOptions) {
-          throw new Error("Cannot change conflictBehavior via setOptions - unregister and re-register instead");
-        }
+        assertImmutableSetOptions(newOptions);
         innerHandle.setOptions({
           description: newOptions.description,
           timeout: newOptions.timeout,
@@ -691,18 +701,7 @@ export default class HotkeyManager extends BaseObject {
     return handle;
   }
 
-  private _sequenceRegToInfo(s: {
-    id: string;
-    sequence: readonly string[];
-    scope: string;
-    description: string;
-    enabled: boolean;
-    timeout: number;
-    ignoreInputs: boolean | "auto";
-    preventDefault: boolean;
-    stopPropagation: boolean;
-    suppressInPopups: boolean;
-  }): HotkeyRegistrationInfo {
+  private _sequenceRegToInfo(s: SequenceRegistrationInfo): HotkeyRegistrationInfo {
     return {
       id: s.id,
       hotkey: s.sequence.join(" "),

@@ -23,6 +23,7 @@
 - [i18n Extensibility](./history/I18N-EXTENSIBILITY.md)
 - [i18n Extensibility Implementation Plan](./history/I18N-EXTENSIBILITY-IMPL-PLAN.md)
 - [Native F-Key Mode](./history/NATIVE-FKEY-MODE.md)
+- [Nav Row Wrapping & Responsive Layout Patterns](./history/NAV-ROW-WRAPPING-AND-RESPONSIVE-PATTERNS.md)
 - [Remove stableHeight Property](./history/REMOVE-STABLE-HEIGHT.md)
 - [Web Component Package](./history/WEBCOMPONENT-PACKAGE.md)
 

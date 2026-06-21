@@ -1,5 +1,6 @@
 import Controller from "sap/ui/core/mvc/Controller";
 import JSONModel from "sap/ui/model/json/JSONModel";
+import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 import type Component from "../Component";
 
@@ -25,5 +26,13 @@ export default class BaseController extends Controller {
     const key = event.getParameter("key") ?? "";
     const shift = event.getParameter("shiftKey") ?? false;
     return shift ? `${key} (Shift)` : key;
+  }
+
+  /** Navigate to the route held in the pressed list item's `state` binding context. */
+  onListEntryNavigate(event: ListBase$ItemPressEvent): void {
+    const item = event.getParameter("listItem");
+    const route = item?.getBindingContext("state")?.getProperty("route") as string | undefined;
+    if (!route) return;
+    this.getTypedComponent().getRouter().navTo(route);
   }
 }

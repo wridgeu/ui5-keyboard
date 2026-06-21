@@ -479,7 +479,7 @@ The `f-key-mode` attribute controls how function key presses are handled:
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input. Navigation keys move the caret in the target input (`ArrowLeft`/`ArrowRight`, `ArrowUp`/`ArrowDown`, `Home`/`PageUp` to the start, `End`/`PageDown` to the end). |
 | `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                 |
-| `"None"`    | The F-key row is hidden entirely.                                                                                                                                                                                                                                       |
+| `"None"`    | F-key and navigation presses are ignored (silent no-op); the row is still rendered.                                                                                                                                                                                     |
 
 ### Native mode: synthetic keydown events
 
@@ -559,14 +559,9 @@ document.body.appendChild(el);
 
 Some scripts require processing between key press and text insertion. For example, Japanese Kana needs dakuten/handakuten composition (ka + dakuten = ga), and Korean Hangul needs jamo-to-syllable composition (individual consonants and vowels combine into syllable blocks).
 
-Composition middleware modules handle this automatically. Import the middleware for the layouts you use:
+Composition middleware handles this automatically. The built-in kana and Hangul middleware are **bundled with the component** — no import or configuration is needed. Each activates automatically when its associated layout (`ja-kana` / `ko-hangul`) is active and deactivates (committing any in-progress composition) on layout switch.
 
-```ts
-import "kiosk-keyboard-webc/middleware/kana-dakuten"; // Japanese kana composition
-import "kiosk-keyboard-webc/middleware/hangul-compose"; // Korean Hangul jamo composition
-```
-
-Middleware activates automatically when its associated layout is active and deactivates (committing any in-progress composition) on layout switch. No properties or configuration needed.
+The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factories as data**, so you can reuse or override a built-in on a specific element via the [`instanceMiddleware`](#per-instance-customization) property — importing them has no side effect on the bundled defaults.
 
 ### Built-in Middleware
 

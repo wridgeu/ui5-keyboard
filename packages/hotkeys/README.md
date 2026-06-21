@@ -892,7 +892,7 @@ assertValidHotkey(""); // throws Error
 
 **Browser blocklist** (24 entries): Ctrl+L, Ctrl+N, Ctrl+T, Ctrl+W, F5, F11, F12, Tab, etc.
 
-**SAP blocklist** (~16 entries): Ctrl+S (Save), Ctrl+E (Edit), Ctrl+D (Delete), F6, etc.
+**SAP blocklist** (15 entries): Ctrl+S (Save), Ctrl+E (Edit), Ctrl+D (Delete), F6, etc.
 
 > [!TIP]
 > Validation warnings are also automatically logged when calling `manager.register()`.

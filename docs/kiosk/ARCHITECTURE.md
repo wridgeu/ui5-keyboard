@@ -82,7 +82,7 @@ The `sap.m` dependency is required because the control uses `sap.ui.core.Element
 - ManagedObject metadata (properties, associations, events)
 - Renderer integration
 - Lifecycle hooks (`init`, `onAfterRendering`, `exit`)
-- UI5 event delegation (`ontouchstart`, `ontouchend`, `onkeydown`)
+- UI5 event delegation (`ontouchstart`, `ontouchend`, `ontouchcancel`, `onsapselect`)
 
 Because `Control` extends `ManagedObject`, the class field initializer trap applies. Private fields are declared with definite assignment (`!`) and initialized in `init()`:
 
@@ -110,11 +110,11 @@ This design was chosen for:
 
 - **Performance**: No control overhead for 30-50 individual keys
 - **Simplicity**: One renderer, one invalidation cycle
-- **Event delegation**: Single `ontap`/`onkeydown` handler on the control root
+- **Event delegation**: A single set of `ontouchstart`/`ontouchend`/`onsapselect` handlers on the control root
 
 ### Event Delegation
 
-UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontap` and `onkeydown` methods on `KioskKeyboard` receive all events from child elements.
+UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontouchstart`/`ontouchend` (pointer) and `onsapselect` (keyboard Enter/Space on a focused key) methods on `KioskKeyboard` receive all events from child elements.
 
 The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) instead of `ontap`, because `preventDefault()` on the underlying touch/mouse event is needed to prevent focus steal (see below).
 
@@ -167,11 +167,11 @@ For controller code that needs the control instance (not the ID), use `getActive
 ```
 _setActiveTarget(newInput)
   1. captureAndClearDirty()        - snapshot old target's change data, clear dirty flag
-  2. _removeHighlightDelegation()  - remove key highlight from old target
+  2. _physicalKeyHighlight.detach() - remove key highlight from old target
   3. _nativeKbSuppression.restore()  - restore old target's inputmode (if keyboard is open)
   4. resetForTargetSwitch()         - reset cursor state
   5. setAssociation(newInput)       - update the association
-  6. add highlight delegation       - attach to new target
+  6. _physicalKeyHighlight.attach() - attach to new target
   7. _nativeKbSuppression.suppress() - suppress new target's inputmode (if keyboard is open)
   8. fireDeferredChange()          - fire "change" on the OLD target (captured in step 1)
 ```
@@ -234,9 +234,9 @@ The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in th
 
 ### Cursor Initialization
 
-When the target input hasn't been focused yet (e.g. set programmatically via `setTargetInput`), `selectionStart` defaults to 0. On first access per target, `_getTargetDomRef()` calls `setSelectionRange()` to position the cursor at the end of the value, but only when the input is **not** already the active element, so a user-placed cursor is never overwritten.
+When the target input hasn't been focused yet (e.g. set programmatically via `_setActiveTarget()`), `selectionStart` defaults to 0. `TargetInputSession` owns the cursor state: on first access per target its `_getTargetDomRef()` places the cursor at the end of the value, but only when the input is **not** already the active element, so a user-placed cursor is never overwritten.
 
-Critically, this does **not** call `dom.focus()`. This avoids stealing focus from surrounding containers (e.g. a `sap.m.Popover` that contains the keyboard while the target input is outside). Selection state persists on unfocused inputs in all modern browsers per the HTML Living Standard. A `_cursorInitialized` flag (reset on `setTargetInput()`) ensures this runs once per target.
+Critically, this does **not** call `dom.focus()`. This avoids stealing focus from surrounding containers (e.g. a `sap.m.Popover` that contains the keyboard while the target input is outside). Selection state persists on unfocused inputs in all modern browsers per the HTML Living Standard. `resetForTargetSwitch()` nulls the cached cursor position on every target change, so the end-of-value placement runs once per target.
 
 ## Shift & Caps Lock
 
@@ -479,7 +479,7 @@ focusin event
   |                   show()
 ```
 
-The instance isolation and `controls` filter checks run inside `_resolveClaimableControl()`. When `controls` is set, only inputs in that list pass the filter, and focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally. During each auto-show `focusin`, `_setupControls()` reconciles delegates by resolved control IDs so aggregation-bound input recreation (destroy/create churn) is picked up immediately.
+The instance isolation and `controls` filter checks run inside `_resolveClaimableControl()`. When `controls` is set, only inputs in that list pass the filter, and focusing any other input is ignored. When focus moves from an unclaimed input to a claimed input, `_resolveClaimableControl()` returns null and the keyboard closes normally. During each auto-show `focusin`, `_syncControls()` reconciles delegates by resolved control IDs so aggregation-bound input recreation (destroy/create churn) is picked up immediately.
 
 ### Focus-Out Logic
 
@@ -591,7 +591,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode            |
 | `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                                |
 | `controls` with `autoShow`              | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`           |
-| `controls` aggregation churn            | `_setupControls()` rebinds delegates by control ID on each auto-show `focusin`             |
+| `controls` aggregation churn            | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`              |
 | Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                                    |
 | Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                           |
 | Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                             |

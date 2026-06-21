@@ -1,4 +1,3 @@
-import type { ListBase$ItemPressEvent } from "sap/m/ListBase";
 import BaseController from "./BaseController";
 
 /**
@@ -6,11 +5,4 @@ import BaseController from "./BaseController";
  *
  * @namespace demo.hotkeys.controller
  */
-export default class Main extends BaseController {
-  onMainEntryPress(event: ListBase$ItemPressEvent): void {
-    const item = event.getParameter("listItem");
-    const route = item?.getBindingContext("state")?.getProperty("route") as string | undefined;
-    if (!route) return;
-    this.getTypedComponent().getRouter().navTo(route);
-  }
-}
+export default class Main extends BaseController {}
