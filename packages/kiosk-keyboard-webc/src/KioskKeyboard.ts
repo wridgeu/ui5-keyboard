@@ -109,7 +109,16 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
   " ": "KEY_SPACE",
 };
 
-/** Key values already warned about for a missing accessible name, so re-renders do not repeat the warning. */
+/**
+ * Key values already warned about for a missing accessible name, so re-renders
+ * do not repeat the warning. Module-level by design, matching the sibling
+ * `core/fkey-controller.ts` `warnedUnsupportedFKeys`: a custom element has no
+ * FLP-style "last instance destroyed" hook (`onExitDOM` fires on every detach,
+ * including transient reattach), so per-page deduplication is the correct
+ * lifetime. Intentionally NOT cleared on disconnect, unlike `kiosk-keyboard`'s
+ * `clearLabelWarnings`, which the UI5 control clears on last-instance exit
+ * because UI5 controls have a meaningful destroy boundary.
+ */
 const warnedMissingLabels = new Set<string>();
 
 /** Drop `{layout:base}` keys from a layout (used when the switch would be a no-op). */

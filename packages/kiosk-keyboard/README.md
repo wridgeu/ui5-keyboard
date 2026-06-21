@@ -1026,7 +1026,7 @@ When `autoType="true"` (requires `autoShow="true"`), the keyboard inspects the f
 
 1. UI5 control `getType()`: `"Number"` or `"Tel"` → Numpad
 2. UI5 control name: `sap.m.StepInput` → Numpad
-3. DOM `inputmode` attribute: `"numeric"`, `"decimal"`, or `"tel"` → Numpad
+3. DOM `inputmode` attribute: `"numeric"`, `"decimal"`, or `"tel"` (case-insensitive) → Numpad
 4. HTML `type` attribute: `"number"` or `"tel"` → Numpad
 5. Fallback → Full
 

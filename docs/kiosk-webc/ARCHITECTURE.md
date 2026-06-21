@@ -321,7 +321,7 @@ Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko →
 When `autoType` is enabled and the keyboard auto-shows for a focused input, `detectKeyboardType()` inspects:
 
 1. `data-keyboard-type` attribute on element or ancestor (crosses shadow DOM boundaries)
-2. `inputmode` attribute: `"numeric"`, `"decimal"`, `"tel"` → `"Numpad"`
+2. `inputmode` attribute: `"numeric"`, `"decimal"`, `"tel"` → `"Numpad"` (matched case-insensitively)
 3. HTML `type`: `"number"`, `"tel"` → `"Numpad"`
 4. Default: `"Full"`
 
