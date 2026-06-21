@@ -359,7 +359,7 @@ When `autoType="true"` and the keyboard auto-shows for a focused input, it inspe
 
 1. **UI5 `getType()`** on the control → `"Number"` or `"Tel"` → `"Numpad"`
 2. **Control name** → `"sap.m.StepInput"` → `"Numpad"`
-3. **DOM `inputmode` attribute** → `"numeric"` / `"decimal"` / `"tel"` → `"Numpad"`
+3. **DOM `inputmode` attribute** → `"numeric"` / `"decimal"` / `"tel"` → `"Numpad"` (matched case-insensitively, per the HTML enumerated-attribute rules)
 4. **HTML `type` attribute** → `"number"` / `"tel"` → `"Numpad"`
 5. **Fallback** → `"Full"`
 

@@ -1,5 +1,6 @@
 import type { CompositionMiddleware } from "../types";
 import { insertText } from "../internal/input-operations";
+import { graphemeLengthBefore } from "../internal/grapheme";
 
 const DAKUTEN = "\u309B"; // ゛
 const HANDAKUTEN = "\u309C"; // ゜
@@ -47,14 +48,19 @@ export function createKanaDakutenMiddleware(): CompositionMiddleware {
       const pos = target.selectionStart ?? value.length;
       if (pos === 0) return false;
 
-      const preceding = value[pos - 1];
-      if (!preceding) return false;
+      // Use the shared grapheme helper so this stays consistent with the rest
+      // of the codebase (input-operations, the webc twin) even though current
+      // targets are BMP.
+      const glyphLen = graphemeLengthBefore(value, pos);
+      if (glyphLen === 0) return false;
+
+      const preceding = value.slice(pos - glyphLen, pos);
       const map = key === DAKUTEN ? DAKUTEN_MAP : HANDAKUTEN_MAP;
       const composed = map.get(preceding);
 
       if (!composed) return false;
 
-      return insertText(target, composed, [pos - 1, pos]) !== null;
+      return insertText(target, composed, [pos - glyphLen, pos]) !== null;
     },
 
     commit(): string | null {

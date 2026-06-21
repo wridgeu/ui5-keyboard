@@ -70,6 +70,9 @@ sap.ui.define([], () => {
       "i18n-registry": {
         title: "QUnit tests for ui5.kiosk - i18n-registry",
       },
+      "key-labels": {
+        title: "QUnit tests for ui5.kiosk - key-labels",
+      },
       "KioskKeyboard-layout": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Layout Management",
       },

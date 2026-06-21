@@ -64,8 +64,10 @@ export function getKeyAriaLabel(key: KeyDefinition, shift: boolean, caps: boolea
 
   // Icon-only key (label suppressed) with no ariaLabel and no i18n entry:
   // warn so the consumer adds a localizable accessible name, and fall back
-  // to the raw value rather than announcing nothing.
-  if (key.label === "") {
+  // to the raw value rather than announcing nothing. Warn once per key value
+  // (the renderer would otherwise repeat the warning on every re-render).
+  if (key.label === "" && !warnedMissingLabels.has(key.value)) {
+    warnedMissingLabels.add(key.value);
     Log.warning(
       `Icon-only key "${key.value}" has no accessible name; set ariaLabel on the KeyDefinition.`,
       undefined,
@@ -74,4 +76,16 @@ export function getKeyAriaLabel(key: KeyDefinition, shift: boolean, caps: boolea
   }
 
   return key.value;
+}
+
+/** Key values already warned about, so re-renders do not repeat the warning. */
+const warnedMissingLabels = new Set<string>();
+
+/**
+ * Clears the warned-once cache. Called when the last KioskKeyboard instance
+ * is destroyed so module-level state does not survive across app restarts
+ * (mirrors `clearIconWarnings`).
+ */
+export function clearLabelWarnings(): void {
+  warnedMissingLabels.clear();
 }

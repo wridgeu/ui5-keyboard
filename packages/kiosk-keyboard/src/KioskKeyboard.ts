@@ -41,7 +41,7 @@ import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
 import ResponsiveSizingController from "./internal/responsive-sizing-controller";
 import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
-import { getKeyLabel, getKeyAriaLabel } from "./internal/key-labels";
+import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
 import { classifyKeyToken } from "./internal/key-token";
 
@@ -767,6 +767,7 @@ export default class KioskKeyboard extends Control {
       registrySetResolver(null);
       FKeyController.clearWarnings();
       iconsClearWarnings();
+      clearLabelWarnings();
       KioskKeyboard._globalTargetResolver = null;
     }
 

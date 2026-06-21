@@ -39,11 +39,12 @@ export function detectKeyboardType(control: Control, customResolver?: TargetReso
     }
   }
 
-  // 3. DOM inputmode attribute
+  // 3. DOM inputmode attribute. `inputmode` is an enumerated HTML
+  //    attribute matched case-insensitively, so normalize before lookup.
   const dom = resolveWithCustomResolver(control.getFocusDomRef(), customResolver ?? null);
   if (dom) {
     const inputmode = dom.getAttribute("inputmode");
-    if (inputmode && NUMPAD_INPUT_MODES.has(inputmode)) return KeyboardType.Numpad;
+    if (inputmode && NUMPAD_INPUT_MODES.has(inputmode.toLowerCase())) return KeyboardType.Numpad;
 
     // 4. HTML type attribute
     if (dom instanceof HTMLInputElement && NUMPAD_HTML_TYPES.has(dom.type)) {

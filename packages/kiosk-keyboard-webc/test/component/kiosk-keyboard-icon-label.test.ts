@@ -3,6 +3,7 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
 import { requireKey as queryKey } from "../helpers/fixtures.js";
+import { captureConsole } from "../helpers/console.js";
 
 const nextRender = renderFinished;
 const DOM = KioskKeyboard.DOM;
@@ -170,6 +171,26 @@ describe("icon + label rendering", () => {
     const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", label: "" }]]);
     const keyEl = queryKey(el, "{shift}");
     expect(keyEl.getAttribute("aria-label")).to.be.a("string").and.not.be.empty;
+  });
+
+  it("warns once per icon-only key with no accessible name, not on every re-render", async () => {
+    // Unique value so the module-level warn-once cache for this key starts
+    // empty regardless of other tests in this file.
+    const noNameValue = "webc-warn-once-probe";
+    const messages = await captureConsole("warn", async () => {
+      const el = await createKeyboard([
+        [
+          { value: "{shift}", type: "modifier", width: "2.25" },
+          { value: noNameValue, icon: "sap-icon://home", label: "" },
+        ],
+      ]);
+      // Toggle shift to force a full re-render of the keyboard, which
+      // recomputes the icon-only key's aria-label a second time.
+      queryKey(el, "{shift}").click();
+      await nextRender();
+    });
+    const probeWarnings = messages.filter((m) => m.includes(noNameValue));
+    expect(probeWarnings.length).to.equal(1);
   });
 
   it("dual icon+label key has no redundant aria-label", async () => {

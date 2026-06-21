@@ -93,6 +93,29 @@ QUnit.test("autoType detects Tel input and switches to Numpad", async (assert) =
   kb.destroy();
 });
 
+QUnit.test("autoType matches a mixed-case inputmode attribute (inputmode=Numeric)", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+  });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  // inputmode is an enumerated HTML attribute matched case-insensitively.
+  inputDom.setAttribute("inputmode", "Numeric");
+  inputDom.focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for inputmode=Numeric");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("autoType detects StepInput and switches to Numpad", async (assert) => {
   const stepInput = new StepInput();
   stepInput.placeAt("qunit-fixture");
