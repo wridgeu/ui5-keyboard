@@ -228,4 +228,4 @@ npm run check                 # Full quality gate with smoke checks + sequential
 npm run check:parallel        # Same gate, but with the concurrent multi-device matrix
 ```
 
-`npm run check` remains exhaustive, but it now uses the sequential device matrix to reduce peak machine load and port/contention flake. Use `npm run check:parallel` or `npm run test:e2e:all-devices` when you explicitly want the higher-pressure concurrent sweep.
+`npm run check` is exhaustive and uses the sequential device matrix to reduce peak machine load and port/contention flake. Use `npm run check:parallel` or `npm run test:e2e:all-devices` when you explicitly want the higher-pressure concurrent sweep.
