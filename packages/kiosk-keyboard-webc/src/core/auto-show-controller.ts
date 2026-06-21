@@ -102,9 +102,14 @@ export class AutoShowController {
     }
   }
 
+  /** Unbind the focus listeners and drop any pending deferred close. */
   teardown(): void {
     this._abort?.abort();
     this._abort = null;
+    if (this._deferredCloseId !== null) {
+      cancelAnimationFrame(this._deferredCloseId);
+      this._deferredCloseId = null;
+    }
   }
 
   private _onDocumentFocusIn(e: FocusEvent): void {
