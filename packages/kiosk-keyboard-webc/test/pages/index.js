@@ -151,9 +151,8 @@ if (kbEmoji) {
 // locale map (matched by lang-region then lang prefix, lowercase).
 const kbLocale = document.getElementById("kb-locale");
 if (kbLocale) {
-  const full = (navigator.language || "en").toLowerCase();
-  const lang = full.split("-")[0];
-  kbLocale.instanceLocaleLayouts = { [full]: "qwertz-de", [lang]: "qwertz-de", de: "qwertz-de", es: "qwerty-es" };
+  const lang = (navigator.language || "en").toLowerCase().split("-")[0];
+  kbLocale.instanceLocaleLayouts = { [lang]: "qwertz-de" };
   const localeStatus = document.getElementById("locale-status");
   if (localeStatus) {
     localeStatus.textContent = `navigator.language = "${navigator.language}" → default layout "qwertz-de" (note the ß / ä / ö keys).`;

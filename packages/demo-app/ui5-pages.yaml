@@ -28,6 +28,7 @@ builder:
       afterTask: replaceVersion
       configuration:
         addToNamespace: true
+        # See packages/demo-app/ui5.yaml for the rationale on scoping: false.
         pluginOptions:
           webcomponents:
             scoping: false
