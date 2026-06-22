@@ -27,6 +27,8 @@ core/
   layout-registry.ts      Layout registration/reset + locale-based layout resolution
   input-operations.ts     Target input text operations (insert, backspace, navigation)
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
+  fkey-controller.ts      FKeyController: F-key dispatch (Virtual fires key-press + caret nav; Native synthesizes keydown)
+  key-grid-navigation.ts  KeyGridNavigation: arrow-key/Home/End grid navigation across rendered keys (WAI-ARIA grid)
   i18n.ts                 i18n resolution: UI5 WC bundle + custom resolver
   middleware-registry.ts  Middleware factory registration, lazy instantiation, deactivation
   composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)

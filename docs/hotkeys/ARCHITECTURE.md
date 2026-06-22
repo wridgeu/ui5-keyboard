@@ -30,7 +30,7 @@ internal/idgen.ts            Internal registration ID generator
 internal/registration-index.ts Scope/target registration index (id-based)
 internal/hotkey-matcher.ts   Two-pass matching: targeted (innermost via composedPath) then untargeted
 internal/conflict-resolver.ts Duplicate-registration conflict detection/resolution during register()
-internal/runtime.ts          Lazy popup-open check (sap/m/InstanceManager) + platform hooks
+internal/runtime.ts          Lazy popup-open check (sap/m/InstanceManager)
 internal/FocusFallbackTracker.ts Document focus listeners + focus-path fallback for rerenders
 ```
 
@@ -268,14 +268,13 @@ When `ignoreInputs` is set to `"auto"` (the default), the library resolves the e
 
 When `suppressInPopups: true` is set on a registration, the library checks whether a UI5 popup (dialog or popover) is currently open before firing the callback.
 
-The check uses `sap.m.InstanceManager.hasOpenDialog()` and `sap.m.InstanceManager.hasOpenPopover()`, but `sap.m` may not be loaded in all applications. The library handles this with a lazy-loading pattern:
+The check uses `sap.m.InstanceManager.hasOpenDialog()` and `sap.m.InstanceManager.hasOpenPopover()`, but `sap.m` may not be loaded in all applications. The library probes the module lazily:
 
-1. On the first keypress that needs the popup check, attempt to load `sap/m/InstanceManager` via `sap.ui.require`.
-2. If the module is available, cache the check function.
-3. If it is not available (sap.m not loaded), return `false` (no popup open).
-4. Only cache positive results. A negative result (module not found) is not cached, because `sap.m` might be loaded later as the application bootstraps additional libraries.
+1. On each keypress that needs the popup check, resolve `sap/m/InstanceManager` via the synchronous `sap.ui.require(name)` lookup (returns the already-loaded module, or `undefined`; never triggers a fetch).
+2. If the module is available, return whether any dialog or popover is open.
+3. If it is not available (`sap.m` not loaded), return `false` (no popup open).
 
-This avoids a hard dependency on `sap.m` while still supporting popup detection when the module is available.
+The probe runs on every call rather than being cached, so a `sap.m` that loads later (as the application bootstraps additional libraries) is picked up immediately. This avoids a hard dependency on `sap.m` while still supporting popup detection when the module is available.
 
 ## Dialog Escape Interop
 
@@ -323,26 +322,26 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 
 ## Edge Cases
 
-| Edge Case                                      | How It Is Handled                                                |
-| ---------------------------------------------- | ---------------------------------------------------------------- |
-| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                         |
-| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                          |
-| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`               |
-| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                       |
-| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                    |
-| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target                        |
-| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute              |
-| Scope priority                                 | Two-pass matching: active scope first, then global               |
-| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`             |
-| sap.m not loaded                               | Lazy-load InstanceManager, only cache positive result            |
-| Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched`   |
-| Nested target-scoped same key                  | Innermost target in composedPath() wins                          |
-| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                          |
-| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported            |
-| Closed shadow root targets                     | composedPath() stops at boundary, no match                       |
-| Detached targets                               | No identity match; a same-id node in the path matches (id index) |
-| Empty composedPath()                           | Fallback to `[event.target, document, window]`                   |
-| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)                   |
+| Edge Case                                      | How It Is Handled                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                                  |
+| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                                   |
+| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`                        |
+| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                                |
+| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                             |
+| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target                                 |
+| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute                       |
+| Scope priority                                 | Two-pass matching: active scope first, then global                        |
+| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`                      |
+| sap.m not loaded                               | Probe `InstanceManager` via `sap.ui.require` each call; `false` if absent |
+| Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched`            |
+| Nested target-scoped same key                  | Innermost target in composedPath() wins                                   |
+| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                                   |
+| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported                     |
+| Closed shadow root targets                     | composedPath() stops at boundary, no match                                |
+| Detached targets                               | No identity match; a same-id node in the path matches (id index)          |
+| Empty composedPath()                           | Fallback to `[event.target, document, window]`                            |
+| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)                            |
 
 ## Project Layout
 
@@ -374,7 +373,7 @@ packages/hotkeys/
       registration-index.ts Scope/target registration index
       hotkey-matcher.ts    Two-pass targeted/untargeted matching
       conflict-resolver.ts Duplicate-registration conflict detection/resolution
-      runtime.ts           Lazy popup-open check + platform hooks
+      runtime.ts           Lazy popup-open check
       FocusFallbackTracker.ts Document focus listeners + focus-path fallback
     manifest.json       Library manifest (descriptor schema v2.0.0)
   test/qunit/
