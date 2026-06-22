@@ -154,7 +154,7 @@ At 320px, 6 tool keys in a row are cramped.
 
 ### The Solution
 
-Since all keys in `toolRow` use `{fkey:...}` values, `classifyRow()` marks the row as `data-row-kind="fkey"`. The built-in fkey wrapping rule at `<=35rem` already handles this: the 6 keys wrap to 2x3.
+Since all keys in `toolRow` use `{fkey:...}` values, `classifyRow()` marks the row as `data-row-kind="fkey"`. The built-in fkey wrapping rule at `<=35rem` sizes each key to 1/6 width (it is designed to split the 12-key F-row into 2x6), so a 6-key row lays out 1x6 on a single line. To get a 2x3 wrap for a 6-key row, add the custom CSS rule below (1/3 width).
 
 If the row contains a mix of key types (not all fkeys or all nav keys), `classifyRow()` returns `undefined` and no `data-row-kind` is set. In that case, add a custom CSS rule targeting the row by position or a custom `data-*` attribute:
 

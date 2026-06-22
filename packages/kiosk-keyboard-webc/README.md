@@ -189,7 +189,7 @@ Then use the component directly in XML views:
 </mvc:View>
 ```
 
-In workspace development, run `npm run generate` in the webc package first so that `dist/custom-elements.json` exists. The `generate` script produces the CEM alongside CSS and i18n assets.
+In workspace development, run `npm run build` (or at least `npm run generateAPI`) in the webc package first so that `dist/custom-elements.json` exists. The CEM is produced by `generateAPI`; `npm run generate` only emits the CSS and i18n assets, not the manifest.
 
 The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
 

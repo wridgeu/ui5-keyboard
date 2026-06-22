@@ -22,8 +22,10 @@ internal/input-operations.ts      Target input text operations
 internal/target-input-session.ts  Per-target dirty/value/change handling
 internal/focus-claim-service.ts   Auto-show input claim logic
 internal/key-grid-navigation.ts   Keyboard grid navigation delegate (arrow keys, Home/End, row wrapping)
+internal/fkey-controller.ts       FKeyController: F-key dispatch (Virtual fires keyPress + caret nav; Native synthesizes keydown)
 internal/native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting across instances
 internal/auto-show-behavior.ts    Auto-show focus-in/out listeners, auto-type detection, deferred close
+internal/controls-delegation-controller.ts  ControlsDelegationController: reconciles the controls-aggregation focus delegates by resolved id
 internal/responsive-sizing-controller.ts  ResponsiveSizingController: ResizeHandler-driven cqShort/cqTiny height classes
 internal/physical-key-highlight.ts  PhysicalKeyHighlight: mirrors the hardware keyboard onto on-screen keys, syncs shift/caps
 internal/backspace-repeat-behavior.ts  BackspaceRepeatBehavior: press-and-hold Backspace auto-repeat lifecycle
@@ -252,7 +254,7 @@ Caps Lock    Mode.CapsLock true      true
 
 **Double-click detection**: A second Shift press within 400ms (`ShiftState.DOUBLE_CLICK_MS`) of the first activates Caps Lock. A single press outside that window toggles one-shot Shift. Pressing Shift while Caps Lock is active turns everything off.
 
-**Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and returns `true`, triggering `invalidate()` to update the display. Caps Lock is sticky and does not auto-release.
+**Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `invalidate()`) to update the display. Caps Lock is sticky and does not auto-release.
 
 **Physical keyboard sync**: When a physical keyboard is attached, the virtual keyboard automatically syncs its shift and caps-lock state from physical key events. This works through the existing highlight delegation on the target input: `keydown`/`keyup` events for Shift and CapsLock update the `ShiftState`, and the keyboard re-renders to reflect the current modifier state. No additional listeners are required because the delegation already observes all key events on the target element.
 
@@ -355,7 +357,7 @@ When `autoType="true"` and the keyboard auto-shows for a focused input, it inspe
 
 ### Detection Logic
 
-`_detectKeyboardType(control)` checks in order:
+`detectKeyboardType(control)` (in `internal/detect-keyboard-type.ts`) checks in order:
 
 1. **UI5 `getType()`** on the control → `"Number"` or `"Tel"` → `"Numpad"`
 2. **Control name** → `"sap.m.StepInput"` → `"Numpad"`
@@ -627,8 +629,10 @@ packages/kiosk-keyboard/
       target-input-session.ts Target state + commit handling
       focus-claim-service.ts  Auto-show claim decisions
       key-grid-navigation.ts  Keyboard grid navigation delegate
+      fkey-controller.ts      FKeyController (Virtual/Native F-key dispatch + caret nav)
       native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting
       auto-show-behavior.ts   Auto-show focus-in/out listeners, deferred close
+      controls-delegation-controller.ts  ControlsDelegationController (controls-aggregation delegate reconciliation)
       responsive-sizing-controller.ts  ResponsiveSizingController (cqShort/cqTiny height classes)
       physical-key-highlight.ts  PhysicalKeyHighlight (hardware keyboard mirror)
       backspace-repeat-behavior.ts  BackspaceRepeatBehavior (press-and-hold delete)
