@@ -327,6 +327,48 @@ QUnit.test("aria-controls updates when active target changes via focus", async (
   kb.destroy();
 });
 
+QUnit.test("aria-controls survives re-render for a non-Control target", async (assert) => {
+  // A target whose id does not resolve to a UI5 Control (a plain DOM input, or
+  // an association left transiently dangling by aggregation churn) makes
+  // getActiveControl() return null while _getActiveTargetId() still holds the id.
+  // The renderer must emit the raw association id so it does not diverge from the
+  // aria-controls that _setActiveTarget writes imperatively.
+  const domInput = document.createElement("input");
+  domInput.id = "plain-dom-target";
+  document.getElementById("qunit-fixture")!.appendChild(domInput);
+
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const internals = kb as unknown as {
+    _setActiveTarget: (target?: string) => void;
+    _getActiveTargetId: () => string;
+  };
+  internals._setActiveTarget("plain-dom-target");
+  await nextUIUpdate();
+
+  // Precondition: the target is a non-Control DOM element.
+  assert.strictEqual(kb.getActiveControl(), null, "target does not resolve to a Control");
+  assert.strictEqual(internals._getActiveTargetId(), "plain-dom-target", "association holds the raw id");
+  assert.strictEqual(
+    kb.getDomRef()!.getAttribute("aria-controls"),
+    "plain-dom-target",
+    "imperative path set aria-controls to the raw id",
+  );
+
+  // Force a full re-render: the renderer, not the imperative path, now owns aria-controls.
+  kb.invalidate();
+  await nextUIUpdate();
+
+  assert.strictEqual(
+    kb.getDomRef()!.getAttribute("aria-controls"),
+    "plain-dom-target",
+    "aria-controls retained after re-render (renderer reads _getActiveTargetId, not getActiveControl)",
+  );
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Static API: getKeyIcon
 // ──────────────────────────────────────────────
