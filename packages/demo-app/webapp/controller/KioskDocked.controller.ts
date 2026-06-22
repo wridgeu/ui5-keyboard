@@ -2,7 +2,7 @@ import Item from "sap/ui/core/Item";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
-import { FKeyMode, MobileKeyboard } from "ui5/kiosk/library";
+import { MobileKeyboard } from "ui5/kiosk/library";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type Select from "sap/m/Select";
 import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
@@ -90,7 +90,6 @@ export default class KioskDocked extends BaseController {
     keyboard.close();
     keyboard.setAutoShow(false);
     keyboard.setLayout("qwerty");
-    keyboard.setFKeyMode(FKeyMode.Virtual);
     keyboard.setMobileKeyboard(MobileKeyboard.Custom);
 
     const viewModel = this._getViewModel();
