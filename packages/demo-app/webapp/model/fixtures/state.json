@@ -110,17 +110,10 @@
   "sequenceStatus": "",
   "conflictStatus": "",
   "conflictState": "Information",
-  "targetStatus": "",
   "comboText": "",
   "comboStatus": "",
   "recordedShortcut": "",
   "isRecording": false,
   "kioskLastKey": "None",
-  "kioskLayout": "qwerty",
-  "kioskEnabled": true,
-  "kioskMobileKeyboard": "Custom",
-  "kioskIsOpen": false,
-  "kioskKeyboardType": "Full",
-  "kioskCurrentTarget": "None",
-  "kioskAutoType": false
+  "kioskIsOpen": false
 }

@@ -11,6 +11,7 @@ import "demo/hotkeys/webc/register";
 export default class Component extends UIComponent {
   public static metadata = {
     manifest: "json",
+    interfaces: ["sap.ui.core.IAsyncContentCreation"],
   };
 
   private _hotkeyManager!: HotkeyManager;
