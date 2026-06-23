@@ -43,7 +43,7 @@ export default class Integration extends BaseController {
   }
 
   onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.Main);
+    this.getRouter().navTo(Scope.Main);
   }
 
   onKioskKeyPress(event: KioskKeyboard$KeyPressEvent): void {

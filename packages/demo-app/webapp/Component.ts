@@ -91,6 +91,8 @@ export default class Component extends UIComponent {
   }
 
   exit(): void {
+    // The router (and the routeMatched listener attached in init) is destroyed
+    // by UIComponent before exit() runs, so no manual detach is needed here.
     this._hotkeyManager.destroy();
   }
 }

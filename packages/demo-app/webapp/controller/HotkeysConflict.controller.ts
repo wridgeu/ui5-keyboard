@@ -26,7 +26,7 @@ export default class HotkeysConflict extends BaseController {
   }
 
   onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
+    this.getRouter().navTo(Scope.HotkeysHub);
   }
 
   onConflictWarn(): void {

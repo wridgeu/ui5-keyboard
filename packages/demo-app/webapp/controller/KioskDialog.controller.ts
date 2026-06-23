@@ -131,7 +131,7 @@ export default class KioskDialog extends BaseController {
 
   onNavBack(): void {
     this._closeDialogs();
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   onExit(): void {

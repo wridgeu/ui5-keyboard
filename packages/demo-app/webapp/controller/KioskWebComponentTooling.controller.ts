@@ -27,16 +27,16 @@ export default class KioskWebComponentTooling extends BaseController {
       KioskWebComponentTooling._MODEL_NAME,
     );
 
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().detachRouteMatched(this._onRouteMatched, this);
   }
 
   onNavBack(): void {
     this._setKeyboardRouteActive(false);
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   onKeyPress(event: Event<{ key: string; shiftKey: boolean; char?: string }>): void {

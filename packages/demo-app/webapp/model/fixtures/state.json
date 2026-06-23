@@ -78,7 +78,7 @@
     },
     {
       "title": "Custom Layouts Gallery",
-      "description": "Emoji picker, IP address pad, currency pad - custom LayoutDefinitions",
+      "description": "Emoji picker, IP address pad, currency pad, icon+label - custom LayoutDefinitions",
       "route": "kioskCustomLayouts"
     },
     {

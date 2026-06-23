@@ -43,7 +43,7 @@ export default class HotkeysSequences extends BaseController {
   }
 
   onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
+    this.getRouter().navTo(Scope.HotkeysHub);
   }
 
   onExit(): void {

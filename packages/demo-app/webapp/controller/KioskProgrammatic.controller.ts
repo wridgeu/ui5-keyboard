@@ -40,11 +40,11 @@ export default class KioskProgrammatic extends BaseController {
     }
     select.setSelectedKey("qwerty");
 
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().detachRouteMatched(this._onRouteMatched, this);
     this._setRouteActive(false);
   }
 
@@ -205,7 +205,7 @@ export default class KioskProgrammatic extends BaseController {
 
   onNavBack(): void {
     this._setRouteActive(false);
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
