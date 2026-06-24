@@ -1000,15 +1000,6 @@ class KioskKeyboard extends UI5Element {
 
   // ── Template helpers (used by KioskKeyboardTemplate) ──
 
-  /**
-   * The effective layout name for the current state: an explicit user switch
-   * (via a {layout:...} key) takes precedence, then the keyboardType
-   * constraint (Numpad/Numeric force their layout), then the
-   * current/base/property/locale fallback chain. Rendering
-   * (_getResolvedLayout) and composition-middleware resolution
-   * (_ensureMiddleware) must agree on this name so the rendered surface and
-   * the active middleware never diverge.
-   */
   /** Locale-derived default layout name, honoring the per-instance locale and layout overrides. */
   private _localeLayout(): string {
     return getLocaleLayout(
@@ -1028,6 +1019,15 @@ class KioskKeyboard extends UI5Element {
     return null;
   }
 
+  /**
+   * The effective layout name for the current state: an explicit user switch
+   * (via a {layout:...} key) takes precedence, then the keyboardType
+   * constraint (Numpad/Numeric force their layout), then the
+   * current/base/property/locale fallback chain. Rendering
+   * (_getResolvedLayout) and composition-middleware resolution
+   * (_ensureMiddleware) must agree on this name so the rendered surface and
+   * the active middleware never diverge.
+   */
   private _resolvedLayoutName(): string {
     if (this._layoutSource === "user") return this._currentLayout;
     return (
@@ -1160,7 +1160,7 @@ class KioskKeyboard extends UI5Element {
       if (raw.startsWith(SAP_ICON_PREFIX)) {
         const name = raw.slice(SAP_ICON_PREFIX.length);
         if (!name) {
-          console.warn(`KioskKeyboard: empty SAP icon URI for ${where}, skipping icon`);
+          console.warn(`[kiosk-keyboard] empty SAP icon URI for ${where}, skipping icon`);
           return null;
         }
         return { value: name, sap: true };

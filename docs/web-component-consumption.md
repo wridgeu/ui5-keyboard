@@ -38,8 +38,8 @@ wrapper at dev/build time.
    the class via an alias created from `declaration.module` in the CEM exports.
 4. A Rollup pipeline bundles the component + dependencies into AMD modules.
 5. A UI5 wrapper is generated from the CEM metadata (properties, events, slots).
-6. Tag scoping is applied (e.g., `kiosk-keyboard` becomes `kiosk-keyboard-<hash>`)
-   to prevent collisions between different versions.
+6. Tag scoping is applied by default (e.g., `kiosk-keyboard` becomes
+   `kiosk-keyboard-<hash>`) to prevent collisions between different versions.
 
 **Requirements:**
 
@@ -130,9 +130,9 @@ same layout registry because it is a module-level singleton. Layout data is
 not tied to the tag name.
 
 The demo app's web component tooling page shows the actual registered tag name
-at runtime. You will see the scoped tag with its hash (which changes on every
-build). The manual bridge pattern is documented as a reference in the
-demo-app README.
+at runtime. Because this demo disables scoping (a single web-component package),
+you will see the canonical unscoped tag `<kiosk-keyboard>`. The manual bridge
+pattern is documented as a reference in the demo-app README.
 
 ## Lean Consumption (Advanced)
 
@@ -236,36 +236,40 @@ If the CEM says `module: "dist/KioskKeyboard.js"`, the constructed path is
 this resolves through `"./*": "./dist/*"`, producing `dist/dist/KioskKeyboard.js`.
 
 **Root cause:** The exports map lacked the identity mapping that `@ui5/webcomponents`
-has. This was the primary cause of the middleware "hang" the colleague reported --
-the middleware couldn't resolve the component module path.
+has. Without it the middleware could not resolve the component module path, which
+manifested as a dev-server "hang".
 
 **Fix:** Added `"./dist/*": "./dist/*"` before `"./*": "./dist/*"`.
 
 **Status:** Fixed permanently.
 
-### Tag Scoping Prevents Manual Bridge
+### Tag Scoping vs. a Canonical-Tag Bridge
 
-**Problem:** The `ui5-tooling-modules` middleware applies tag scoping to all
-`webComponentsPackage` imports. The scoped tag (e.g., `kiosk-keyboard-e24fedd4`)
-is different from the canonical tag (`kiosk-keyboard`). A hand-written
-`WebComponent.extend()` bridge uses the canonical tag, which is never registered.
+**Problem:** By default the `ui5-tooling-modules` middleware applies tag scoping
+to `webComponentsPackage` imports. The scoped tag (e.g., `kiosk-keyboard-e24fedd4`)
+differs from the canonical tag (`kiosk-keyboard`), so a hand-written
+`WebComponent.extend()` bridge pinned to the canonical tag finds nothing registered.
 
-**Root cause:** Scoping is always enabled in the middleware's dev server
-(`ui5 serve`). The `pluginOptions.webcomponents.scoping` config only applies
-to the build task (`ui5 build`), not the middleware. This is by design - the
-dev server always scopes to match production behavior.
+**Root cause:** Scoping is enabled by default for non-`ui5-`-prefixed web
+components, in both the build task and the dev-server middleware. The
+`pluginOptions.webcomponents.scoping: false` config disables it in either place
+(set it on the middleware config to affect `ui5 serve`, on the task config to
+affect `ui5 build`). A canonical-tag bridge only works when the unscoped tag is
+actually registered.
 
-**Workaround:** Load the standalone bundle from a path outside `/resources/`
-(e.g., `webapp/lib/kiosk-keyboard.bundle.js`). The UI5 dev server serves
-`webapp/` files at the root path without middleware interception. The standalone
-bundle registers the canonical (unscoped) tag.
+**Resolution:** Two options.
+
+- **Disable scoping** (`pluginOptions.webcomponents.scoping: false`) for a
+  single-web-component consumer - what this demo does, on both the task and the
+  middleware. The middleware then registers the canonical `<kiosk-keyboard>`, the
+  auto-generated wrapper resolves it, and no manual bridge is needed.
+- **Keep scoping on** and load the standalone bundle from a path outside
+  `/resources/` (e.g., `webapp/lib/kiosk-keyboard.bundle.js`); the UI5 dev server
+  serves `webapp/` files at the root without middleware interception, and the
+  bundle registers the canonical unscoped tag for the bridge to find.
 
 **Note:** The manual bridge pattern is documented as a reference in the demo-app
-README, including a minimal `WebComponent.extend()` code example. Consumers who
-need the bridge pattern can implement it from that reference.
-
-**Status:** This is inherent to how scoping works and is not a bug - scoping is
-designed for multi-version isolation.
+README, including a minimal `WebComponent.extend()` code example.
 
 ### Middleware Always Intercepts `webComponentsPackage` Imports
 
@@ -281,7 +285,8 @@ check it.
 
 **Consequence:** A manual bridge in the same app must load the web component
 outside the module system (via `<script>` tag) to avoid middleware interception.
-This is the approach used in the demo app.
+This demo does not hit this case: it uses the tooling-native path with scoping
+disabled, so it needs neither a manual bridge nor a standalone bundle.
 
 **Alternatives considered:**
 
@@ -292,8 +297,9 @@ This is the approach used in the demo app.
 - Separate `ui5.yaml` configs: possible but adds complexity
 - Removing `customElements` from `package.json`: breaks the tooling-native path
 
-**Status:** No upstream solution. The demo works around it by serving the
-standalone bundle from `webapp/lib/`.
+**Status:** No upstream solution for the coexistence case. This demo sidesteps
+it by consuming a single web-component package with scoping disabled
+(tooling-native only, no manual bridge).
 
 ## Web Component Design Principle
 

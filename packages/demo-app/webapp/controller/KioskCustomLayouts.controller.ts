@@ -144,7 +144,7 @@ export default class KioskCustomLayouts extends BaseController {
   }
 
   onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   private _switchLayout(name: string): void {

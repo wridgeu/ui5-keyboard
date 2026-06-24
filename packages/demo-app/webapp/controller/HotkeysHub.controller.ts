@@ -8,6 +8,6 @@ import BaseController from "./BaseController";
  */
 export default class HotkeysHub extends BaseController {
   onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.Main);
+    this.getRouter().navTo(Scope.Main);
   }
 }

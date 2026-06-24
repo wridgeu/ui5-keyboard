@@ -46,11 +46,11 @@ export default class KioskInputIds extends BaseController {
       this._updateTargetStatus();
     });
 
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().detachRouteMatched(this._onRouteMatched, this);
     this._setRouteActive(false);
   }
 
@@ -74,7 +74,7 @@ export default class KioskInputIds extends BaseController {
 
   onNavBack(): void {
     this._setRouteActive(false);
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {

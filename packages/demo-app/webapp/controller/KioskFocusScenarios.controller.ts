@@ -40,11 +40,11 @@ export default class KioskFocusScenarios extends BaseController {
     };
     this.byId("scenarioArea")!.addEventDelegate(this._focusDelegate);
 
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().detachRouteMatched(this._onRouteMatched, this);
     this.byId("scenarioArea")?.removeEventDelegate(this._focusDelegate);
     this._setKeyboardRouteActive(false);
 
@@ -117,7 +117,7 @@ export default class KioskFocusScenarios extends BaseController {
 
   onNavBack(): void {
     this._setKeyboardRouteActive(false);
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   // DOM focus delegate

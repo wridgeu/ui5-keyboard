@@ -78,7 +78,7 @@
     },
     {
       "title": "Custom Layouts Gallery",
-      "description": "Emoji picker, IP address pad, currency pad - custom LayoutDefinitions",
+      "description": "Emoji picker, IP address pad, currency pad, icon+label - custom LayoutDefinitions",
       "route": "kioskCustomLayouts"
     },
     {
@@ -110,17 +110,10 @@
   "sequenceStatus": "",
   "conflictStatus": "",
   "conflictState": "Information",
-  "targetStatus": "",
   "comboText": "",
   "comboStatus": "",
   "recordedShortcut": "",
   "isRecording": false,
   "kioskLastKey": "None",
-  "kioskLayout": "qwerty",
-  "kioskEnabled": true,
-  "kioskMobileKeyboard": "Custom",
-  "kioskIsOpen": false,
-  "kioskKeyboardType": "Full",
-  "kioskCurrentTarget": "None",
-  "kioskAutoType": false
+  "kioskIsOpen": false
 }

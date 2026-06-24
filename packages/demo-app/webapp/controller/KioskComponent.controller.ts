@@ -34,11 +34,11 @@ export default class KioskComponent extends BaseController {
       KioskComponent._keyboard.placeAt("sap-ui-static");
     }
 
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().detachRouteMatched(this._onRouteMatched, this);
 
     if (this._returnNavTimer) {
       clearTimeout(this._returnNavTimer);
@@ -70,7 +70,7 @@ export default class KioskComponent extends BaseController {
   }
 
   onNavigateAway(): void {
-    const router = this.getTypedComponent().getRouter();
+    const router = this.getRouter();
     router.navTo(Scope.KioskHub);
     if (this._returnNavTimer) {
       clearTimeout(this._returnNavTimer);
@@ -89,7 +89,7 @@ export default class KioskComponent extends BaseController {
 
     // Close keyboard when leaving this demo
     KioskComponent._keyboard?.close();
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {

@@ -179,7 +179,7 @@ The recommended path for UI5 apps. The `ui5-tooling-modules` middleware reads th
 </mvc:View>
 ```
 
-The middleware applies **tag scoping** (e.g., `kiosk-keyboard` becomes `kiosk-keyboard-e24fedd4`) to prevent collisions when multiple web component packages or versions coexist. The scoped tag is transparent to the app developer - the middleware-generated wrapper handles it internally.
+The middleware enables **tag scoping** by default (hashing `kiosk-keyboard` to `kiosk-keyboard-<hash>`) to prevent collisions when multiple web component packages or versions coexist. This demo disables scoping via `pluginOptions.webcomponents.scoping: false` in `ui5.yaml` (on both the build task and the dev-server middleware): it consumes a single web-component package, and the auto-generated wrapper hard-codes the unscoped tag in its `metadata.tag`, so scoping would register the element under a hashed tag the wrapper never looks up. With scoping off, the element registers as the canonical `<kiosk-keyboard>` - the tag the tooling page reads and displays at runtime.
 
 **Requirements:**
 
@@ -221,9 +221,9 @@ export default KioskKeyboardBridge;
 
 **When to use this:** The manual bridge is useful when `ui5-tooling-modules` is not available, or when you need explicit control over the wrapper metadata (property types, event parameters, exposed methods).
 
-**Scoping constraint:** The bridge specifies `tag: "kiosk-keyboard"` (the canonical, unscoped name). The `ui5-tooling-modules` middleware registers only the scoped tag (`kiosk-keyboard-<hash>`), which the bridge cannot discover. You must load the standalone bundle (`dist/kiosk-keyboard.bundle.js`) as a `<script type="module">` tag from a path outside the middleware's `/resources/` scope so that the unscoped tag is registered in the browser's `customElements` registry. An ES module import like `import "kiosk-keyboard-webc/bundle"` will not work when the middleware is active, because it intercepts all imports from packages with a `customElements` field.
+**Scoping constraint:** The bridge specifies `tag: "kiosk-keyboard"` (the canonical, unscoped name). With scoping enabled (the middleware default), `ui5-tooling-modules` registers only the scoped tag (`kiosk-keyboard-<hash>`), which the bridge cannot discover; you must then load the standalone bundle (`dist/kiosk-keyboard.bundle.js`) as a `<script type="module">` tag from a path outside the middleware's `/resources/` scope so that the unscoped tag is registered in the browser's `customElements` registry. An ES module import like `import "kiosk-keyboard-webc/bundle"` will not work when the middleware is active, because it intercepts all imports from packages with a `customElements` field. (Disabling scoping, as this demo does, avoids the mismatch for the tooling-native path entirely.)
 
-**Coexistence:** The tooling-native scoped tag and the bridge's unscoped tag are separate entries in the `customElements` registry and coexist without conflict. Both share the same layout registry (singleton module state).
+**Coexistence:** With scoping enabled, the tooling-native scoped tag and the bridge's unscoped tag are separate entries in the `customElements` registry and coexist without conflict. Both share the same layout registry (singleton module state).
 
 ### 2. Native npm/Browser Consumption (no UI5)
 
@@ -236,15 +236,15 @@ Smoke test pages in the webc package: `test/pages/consume-bundle.html` and `test
 
 ### Key Technical Details
 
-| Aspect                         | Tooling Native                   | Manual Bridge (reference, no demo page) | Native npm                         |
-| ------------------------------ | -------------------------------- | --------------------------------------- | ---------------------------------- |
-| Wrapper                        | Auto-generated from CEM          | Hand-written `WebComponent.extend()`    | None (raw custom element)          |
-| Tag name                       | Scoped (`kiosk-keyboard-<hash>`) | Unscoped (`kiosk-keyboard`)             | Unscoped                           |
-| Element registration           | Middleware Rollup pipeline       | standalone bundle `<script>` tag        | ESM import or standalone bundle    |
-| Layouts included               | Yes (main entry imports all)     | Yes (standalone bundle includes all)    | CDN: all; ESM: via `bundle.esm.js` |
-| UI5 data binding               | Yes                              | Yes                                     | N/A                                |
-| Requires `ui5-tooling-modules` | Yes                              | No                                      | No                                 |
-| Requires built `dist/`         | Yes                              | Yes (standalone bundle)                 | Yes                                |
+| Aspect                         | Tooling Native                                        | Manual Bridge (reference, no demo page) | Native npm                         |
+| ------------------------------ | ----------------------------------------------------- | --------------------------------------- | ---------------------------------- |
+| Wrapper                        | Auto-generated from CEM                               | Hand-written `WebComponent.extend()`    | None (raw custom element)          |
+| Tag name                       | Scoped by default (demo opts out -> `kiosk-keyboard`) | Unscoped (`kiosk-keyboard`)             | Unscoped                           |
+| Element registration           | Middleware Rollup pipeline                            | standalone bundle `<script>` tag        | ESM import or standalone bundle    |
+| Layouts included               | Yes (main entry imports all)                          | Yes (standalone bundle includes all)    | CDN: all; ESM: via `bundle.esm.js` |
+| UI5 data binding               | Yes                                                   | Yes                                     | N/A                                |
+| Requires `ui5-tooling-modules` | Yes                                                   | No                                      | No                                 |
+| Requires built `dist/`         | Yes                                                   | Yes (standalone bundle)                 | Yes                                |
 
 ## Layout Composition
 
@@ -321,4 +321,4 @@ See the [webc package README](../kiosk-keyboard-webc/README.md#public-css-custom
 - `#/kiosk/focus-scenarios` focus transition and deferred close demo
 - `#/kiosk/i18n-extensibility` i18n extension demo
 - `#/kiosk/script-input` script input and composition middleware demo
-- `#/kiosk/web-component-tooling` web component demo (auto-generated wrapper via CEM, scoped tag)
+- `#/kiosk/web-component-tooling` web component demo (auto-generated wrapper via CEM; scoping disabled, registers the unscoped tag)

@@ -43,7 +43,7 @@ export default class HotkeysTargetBubble extends BaseController {
     this.byId("bubbleInput")!.addEventDelegate(this._renderDelegate);
     // Uses attachRouteMatched (not attachPatternMatched) because autoFocus
     // must be restored when navigating to any other route, not just this one.
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onClearLog(): void {
@@ -51,13 +51,13 @@ export default class HotkeysTargetBubble extends BaseController {
   }
 
   onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.HotkeysHub);
+    this.getRouter().navTo(Scope.HotkeysHub);
   }
 
   onExit(): void {
     this.byId("outerTargetBox")?.removeEventDelegate(this._renderDelegate);
     this.byId("bubbleInput")?.removeEventDelegate(this._renderDelegate);
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().detachRouteMatched(this._onRouteMatched, this);
     this._setAppAutoFocus(true);
     this._destroyHandles();
   }

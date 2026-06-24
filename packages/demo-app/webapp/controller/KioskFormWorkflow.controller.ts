@@ -25,11 +25,11 @@ export default class KioskFormWorkflow extends BaseController {
     stateModel.setProperty("/formKeyboardType", "Full");
     stateModel.setProperty("/formLastKey", "None");
 
-    this.getTypedComponent().getRouter().attachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    this.getTypedComponent().getRouter().detachRouteMatched(this._onRouteMatched, this);
+    this.getRouter().detachRouteMatched(this._onRouteMatched, this);
 
     this._setKeyboardRouteActive(false);
   }
@@ -74,7 +74,7 @@ export default class KioskFormWorkflow extends BaseController {
 
   onNavBack(): void {
     this._setKeyboardRouteActive(false);
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {

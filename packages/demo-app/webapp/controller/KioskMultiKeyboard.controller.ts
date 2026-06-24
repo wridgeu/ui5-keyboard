@@ -80,7 +80,7 @@ export default class KioskMultiKeyboard extends BaseController {
 
   onNavBack(): void {
     this._closeSharedKeyboards();
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   onExit(): void {

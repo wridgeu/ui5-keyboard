@@ -11,6 +11,7 @@ import "demo/hotkeys/webc/register";
 export default class Component extends UIComponent {
   public static metadata = {
     manifest: "json",
+    interfaces: ["sap.ui.core.IAsyncContentCreation"],
   };
 
   private _hotkeyManager!: HotkeyManager;
@@ -90,6 +91,8 @@ export default class Component extends UIComponent {
   }
 
   exit(): void {
+    // The router (and the routeMatched listener attached in init) is destroyed
+    // by UIComponent before exit() runs, so no manual detach is needed here.
     this._hotkeyManager.destroy();
   }
 }

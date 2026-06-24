@@ -483,7 +483,7 @@ export default class HotkeyManager extends BaseObject {
    * @since 0.1.0
    */
   getActiveScope(): string {
-    return this._scopeStack.at(-1) ?? GLOBAL_SCOPE;
+    return this._scopeStack.at(-1)!;
   }
 
   /**
@@ -554,10 +554,9 @@ export default class HotkeyManager extends BaseObject {
     // The three bucket sections are disjoint: the index files each id under
     // exactly one of them, and target swaps deindex before reindexing.
     const result: HotkeyRegistrationInfo[] = [];
-    const addFromIds = (ids: Iterable<string>) => {
-      for (const id of ids) {
-        const reg = this._registrations.get(id);
-        if (reg) result.push(this._toRegistrationInfo(reg));
+    const addFromIds = (ids: Set<string>) => {
+      for (const reg of this._registrationIndex.getRegistrationsFromIds(ids)) {
+        result.push(this._toRegistrationInfo(reg));
       }
     };
 

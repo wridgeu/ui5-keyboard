@@ -9,6 +9,6 @@ import BaseController from "./BaseController";
  */
 export default class KioskScriptInput extends BaseController {
   onNavBack(): void {
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 }

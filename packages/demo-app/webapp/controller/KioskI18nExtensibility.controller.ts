@@ -74,13 +74,13 @@ export default class KioskI18nExtensibility extends BaseController {
     };
     (this.byId("i18nKeyboard") as KioskKeyboard).addEventDelegate(this._inspectorDelegate, this);
 
-    const router = this.getTypedComponent().getRouter();
+    const router = this.getRouter();
     router.getRoute(Scope.KioskI18nExtensibility)?.attachPatternMatched(this._onPatternMatched, this);
     router.attachRouteMatched(this._onRouteMatched, this);
   }
 
   onExit(): void {
-    const router = this.getTypedComponent().getRouter();
+    const router = this.getRouter();
     router.getRoute(Scope.KioskI18nExtensibility)?.detachPatternMatched(this._onPatternMatched, this);
     router.detachRouteMatched(this._onRouteMatched, this);
     if (this._inspectorDelegate) {
@@ -112,7 +112,7 @@ export default class KioskI18nExtensibility extends BaseController {
 
   onNavBack(): void {
     this._resetI18n();
-    this.getTypedComponent().getRouter().navTo(Scope.KioskHub);
+    this.getRouter().navTo(Scope.KioskHub);
   }
 
   // -- i18n mode helpers --
