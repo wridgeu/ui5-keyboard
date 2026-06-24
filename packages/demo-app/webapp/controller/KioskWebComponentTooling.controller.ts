@@ -1,5 +1,4 @@
 import JSONModel from "sap/ui/model/json/JSONModel";
-import type Element from "sap/ui/core/Element";
 import type Event from "sap/ui/base/Event";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import { Scope } from "../constants";
@@ -28,6 +27,18 @@ export default class KioskWebComponentTooling extends BaseController {
     );
 
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
+  }
+
+  /**
+   * Show the registered custom-element tag from the rendered DOM in the status
+   * panel. Reading the tag needs the element in the document, so it happens here
+   * rather than on routeMatched (which fires before the first render).
+   */
+  onAfterRendering(): void {
+    const domRef = this.byId("toolingKeyboard")?.getDomRef();
+    if (domRef) {
+      this._getViewModel().setProperty("/registeredTag", `<${domRef.tagName.toLowerCase()}>`);
+    }
   }
 
   onExit(): void {
@@ -61,7 +72,6 @@ export default class KioskWebComponentTooling extends BaseController {
 
     if (active) {
       control.setProperty("autoShow", true);
-      this._readRegisteredTag(control);
       return;
     }
 
@@ -73,17 +83,6 @@ export default class KioskWebComponentTooling extends BaseController {
     const viewModel = this._getViewModel();
     viewModel.setProperty("/lastKey", "None");
     viewModel.setProperty("/layout", "qwerty");
-  }
-
-  private _readRegisteredTag(control: Element): void {
-    const update = () => {
-      const domRef = control.getDomRef();
-      if (domRef) {
-        this._getViewModel().setProperty("/registeredTag", `<${domRef.tagName.toLowerCase()}>`);
-      }
-    };
-    if (!control.getDomRef()) setTimeout(update, 0);
-    else update();
   }
 
   private _getViewModel(): JSONModel {
