@@ -58,7 +58,7 @@
  * - types.ts: kiosk carries UI5-only types (control settings, renderer API).
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -86,6 +86,22 @@ const LAYOUTS = [
 ];
 
 const CORE_MODULES = ["grapheme", "auto-repeat", "shift-state", "composition-utils", "key-token"];
+
+// Same-named kiosk internal/ <-> webc core/ helpers that are deliberately NOT
+// byte-compared (framework-adapted; see the header comment). Together with
+// CORE_MODULES these account for every module that exists under the same name
+// in both directories; the completeness guard fails on any same-named pair not
+// listed in either set, so a newly hand-duplicated module cannot silently skip
+// the drift check.
+const UNCHECKED_CORE_TWINS = [
+  "dom-contract",
+  "fkey-controller",
+  "input-operations",
+  "key-grid-navigation",
+  "layout-registry",
+  "middleware-registry",
+  "responsive-sizing-controller",
+];
 
 const PAIRS = [
   ...LAYOUTS.map((name) => ({
@@ -201,6 +217,45 @@ if (PAIRS.length !== EXPECTED_PAIR_COUNT) {
   console.error(`Pair manifest has ${PAIRS.length} entries, expected ${EXPECTED_PAIR_COUNT}. Update both together.`);
   process.exit(1);
 }
+
+/**
+ * Fails if a twin module exists in both packages but is not accounted for in
+ * the manifest, so a newly hand-duplicated file cannot silently skip the drift
+ * check (the EXPECTED_PAIR_COUNT guard only catches the manifest shrinking, not
+ * a new pair being forgotten).
+ *
+ * @param {string} label  directory pair description for the error message
+ * @param {string[]} present  basenames present in both packages
+ * @param {string[]} registered  basenames accounted for (checked + unchecked)
+ */
+function reconcile(label, present, registered) {
+  const known = new Set(registered);
+  const unregistered = present.filter((name) => !known.has(name));
+  if (unregistered.length > 0) {
+    console.error(
+      `Unregistered twin module(s) in ${label}: ${unregistered.join(", ")}. Add each to the manifest in tools/check-twin-drift.mjs (as a checked pair) or to the unchecked list with a reason.`,
+    );
+    process.exit(1);
+  }
+}
+
+const tsBasenames = (dir) =>
+  readdirSync(dir)
+    .filter((f) => f.endsWith(".ts"))
+    .map((f) => f.slice(0, -3));
+
+// layouts/ is a flat byte-checked tier: every .ts in either package must be a
+// registered pair.
+reconcile("layouts/", tsBasenames(path.join(kioskRoot, "src", "layouts")), LAYOUTS);
+reconcile("layouts/", tsBasenames(path.join(webcRoot, "src", "layouts")), LAYOUTS);
+
+// A module present under the SAME name in both kiosk internal/ and webc core/
+// must be either byte-checked (CORE_MODULES) or explicitly unchecked
+// (UNCHECKED_CORE_TWINS). Differently-named framework adapters are out of scope:
+// their divergence is intentional and their names are distinct by design.
+const webcCore = new Set(tsBasenames(path.join(webcRoot, "src", "core")));
+const sharedCoreNames = tsBasenames(path.join(kioskRoot, "src", "internal")).filter((name) => webcCore.has(name));
+reconcile("internal/ <-> core/", sharedCoreNames, [...CORE_MODULES, ...UNCHECKED_CORE_TWINS]);
 
 console.log(`Comparing ${PAIRS.length} twin pairs (kiosk-keyboard <-> kiosk-keyboard-webc)...`);
 
