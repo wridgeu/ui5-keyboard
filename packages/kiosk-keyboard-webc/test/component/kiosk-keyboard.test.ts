@@ -723,7 +723,7 @@ describe("kiosk-keyboard", () => {
       let gcsCount = 0;
       window.getComputedStyle = function (...args: Parameters<typeof origGCS>) {
         gcsCount++;
-        return origGCS.apply(this, args);
+        return origGCS.apply(window, args);
       } as typeof origGCS;
 
       try {
