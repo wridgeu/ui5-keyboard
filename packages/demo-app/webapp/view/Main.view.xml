@@ -6,9 +6,10 @@
         <content>
             <Panel headerText="Welcome" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="Explore two keyboard-focused libraries for UI5 applications:" />
+                    <Text text="Explore the keyboard-focused libraries for UI5 applications and the web:" />
                     <Text text="- ui5.hotkeys: scoped hotkey management, sequences, target-scoped matching" />
                     <Text text="- ui5.kiosk: virtual keyboard flows for touch and kiosk environments" />
+                    <Text text="- kiosk-keyboard-webc: the kiosk keyboard as a framework-agnostic Web Component" />
                 </VBox>
             </Panel>
 
