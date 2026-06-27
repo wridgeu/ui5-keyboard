@@ -117,6 +117,16 @@ Run via `npm run test:twin-drift` (also part of `check`, `check:parallel`, and C
 
 Copies the monorepo's root `LICENSE` into the current working directory (the package being published) so `npm publish` includes it in the tarball. Each publishable package calls it from its `prepublishOnly` script (`node ../../tools/copy-license.mjs`).
 
+## `trim-pages-dist.mjs`
+
+Prunes the self-hosted GitHub Pages demo dist (`packages/demo-app/dist`) after a `ui5 build --all` with the SAPUI5 framework (`ui5-pages.yaml`). `--all` bundles the entire `sap.ushell` dependency closure (~560 MB); this trims it to the subset the keyboard launchpad actually loads (~150 MB) via three production trims:
+
+- **Minified-only**: drop `*-dbg.js` debug duplicates, `*.js.map` source maps, and `*.less` sources (the compiled `library.css` is shipped).
+- **Single theme**: keep `sap_horizon` (plus the required `base`); drop the unused `sap_hcb` / `sap_horizon_dark` / `_hcb` / `_hcw` variants.
+- **Library tree-shaking**: keep only the libraries the FLP + demo load at runtime; drop the specialist `sap.ui.*` sublibraries `sap.ushell` declares but a keyboard launchpad never loads (3D viewport, charts, rich-text, cards, ...).
+
+Run via `npm run build:pages` (through `build:demo:pages`) and the `deploy-pages` workflow. The KEEP/DROP lists are pinned to SAPUI5 1.144.0; revisit them on a framework bump.
+
 ## Consumers
 
 ### `oxlint-plugin-test-guardrails.mjs`

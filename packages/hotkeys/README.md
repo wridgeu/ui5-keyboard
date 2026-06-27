@@ -1012,9 +1012,10 @@ The enums are TypeScript string enums registered with UI5 via `DataType.register
 ### ConflictBehavior Examples
 
 ```ts
-// Default: warn and allow both (duplicate hotkeys fire in registration order)
+// Default: warn but keep both registered. Only the first (in registration
+// order) fires; the duplicate is shadowed unless the first is removed or disabled.
 manager.register("Mod+S", saveHandler);
-manager.register("Mod+S", otherHandler); // logs warning, both remain active
+manager.register("Mod+S", otherHandler); // logs warning, saveHandler keeps priority
 
 // Strict: throw on conflict (prevents accidental duplicates)
 manager.register("Mod+S", saveHandler, { conflictBehavior: ConflictBehavior.Error });
@@ -1029,7 +1030,7 @@ manager.register("Mod+S", betterSaveHandler, { conflictBehavior: ConflictBehavio
 // Allow: silently allow duplicates (no warning logged)
 manager.register("Mod+S", handlerA, { conflictBehavior: ConflictBehavior.Allow });
 manager.register("Mod+S", handlerB, { conflictBehavior: ConflictBehavior.Allow });
-// Both active, no console output
+// Both stay registered, no console output; only handlerA fires (first wins)
 ```
 
 ## Type-safe Hotkey Strings

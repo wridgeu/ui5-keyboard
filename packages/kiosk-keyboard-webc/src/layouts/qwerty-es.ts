@@ -7,12 +7,13 @@ import type { LayoutDefinition } from "../types.js";
  * - Dedicated ñ key on the home row (after L)
  * - Accented vowels (á, é, í, ó, ú) on the shift layer of their base vowels
  * - Inverted punctuation ¿ and ¡ accessible from the bottom row
- * - Standard Caps Lock still provides uppercase letters
  *
  * The shift layer trades uppercase for accented vowels, following the
  * convention of mobile Spanish keyboards where accented characters are
- * more frequently needed than uppercase in running text. Uppercase is
- * available via Caps Lock.
+ * more frequently needed than uppercase in running text. Shift and Caps
+ * Lock share that layer, so on the vowel keys the accented form replaces
+ * the uppercase letter; uppercase stays available on the consonant keys,
+ * which carry no shift value.
  *
  * @see {@link https://en.wikipedia.org/wiki/QWERTY#Spanish | Spanish QWERTY layout}
  * @public
