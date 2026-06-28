@@ -14,6 +14,21 @@ name: Deploy Pages
 on:
   push:
     branches: [main]
+    # Only rebuild/redeploy when something that feeds the build changes: the
+    # library + demo sources (packages), the trim/build helpers (tools), the
+    # postinstall patches (the less-openui5 theme patch is load-bearing), the
+    # dependency manifests, and this workflow. Doc-only, lint/format-config, and
+    # other-workflow changes skip the ~30 min self-hosted SAPUI5 rebuild and
+    # leave the previously deployed site in place. A new top-level build-input
+    # directory must be added here or its pushes won't trigger a deploy; use the
+    # workflow_dispatch trigger below to force a deploy in that case.
+    paths:
+      - "packages/**"
+      - "tools/**"
+      - "patches/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
 permissions: {}
