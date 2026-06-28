@@ -30,6 +30,7 @@ internal/idgen.ts            Internal registration ID generator
 internal/registration-index.ts Scope/target registration index (id-based)
 internal/hotkey-matcher.ts   Two-pass matching: targeted (innermost via composedPath) then untargeted
 internal/conflict-resolver.ts Duplicate-registration conflict detection/resolution during register()
+internal/resolve-enabled.ts  Resolves the `enabled` option (boolean or predicate) to a concrete boolean
 internal/runtime.ts          Lazy popup-open check (sap/m/InstanceManager)
 internal/FocusFallbackTracker.ts Document focus listeners + focus-path fallback for rerenders
 ```
@@ -262,7 +263,7 @@ It returns `false` for button-like input types (button, submit, reset, checkbox,
 When `ignoreInputs` is set to `"auto"` (the default), the library resolves the effective value per registration:
 
 - **Ctrl/Meta combos and Escape:** `ignoreInputs` resolves to `false` (shortcut fires even in inputs). Rationale: Ctrl+S for save should work everywhere, and Escape is universally expected to dismiss/cancel.
-- **Single keys and Alt-only combos:** `ignoreInputs` resolves to `true` (shortcut is suppressed in inputs). Rationale: pressing "G" in a text field should type "G", not trigger a shortcut.
+- **Single keys and Alt/Shift-only combos:** `ignoreInputs` resolves to `true` (shortcut is suppressed in inputs). Rationale: pressing "G" in a text field should type "G", not trigger a shortcut.
 
 ## Popup Suppression
 
@@ -373,6 +374,7 @@ packages/hotkeys/
       registration-index.ts Scope/target registration index
       hotkey-matcher.ts    Two-pass targeted/untargeted matching
       conflict-resolver.ts Duplicate-registration conflict detection/resolution
+      resolve-enabled.ts   Resolves the enabled option (boolean or predicate)
       runtime.ts           Lazy popup-open check
       FocusFallbackTracker.ts Document focus listeners + focus-path fallback
     manifest.json       Library manifest (descriptor schema v2.0.0)

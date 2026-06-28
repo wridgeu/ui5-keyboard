@@ -1,4 +1,7 @@
-# Deep Dive: `as const` / UI5 Transpile Crash in `layouts/index.ts`
+# Deep Dive: `as const` / UI5 Transpile Crash in the Layout Aggregation Module
+
+> [!NOTE]
+> Historical post-mortem. The aggregation module that triggered this crash no longer exists in this form: built-in layouts are now aggregated in `internal/layout-registry.ts` as a plain `new Map([...])`, which structurally cannot hit the `Object.assign(Object.create(null))` export-collapse path described below, and there is no longer a `layouts/index.ts`. The analysis is retained for the underlying `babel-plugin-transform-modules-ui5` edge case, which still applies to any module combining a default export and a named export whose default value is built from `Object.assign(Object.create(null), { ... })`.
 
 ## Executive Summary
 
@@ -275,11 +278,11 @@ Expected result:
 
 ## Chosen Fix
 
-Keep `layouts/index.ts` as default-export-only and move the named constant to its own module:
+At the time, the fix kept the aggregation module default-export-only and moved the named constant to its own module:
 
 - `packages/kiosk-keyboard/src/layouts/default-layout.ts`
 
-Consumers import the constant from that file, while `layouts/index.ts` keeps the null-prototype map behavior.
+Consumers import the constant from that file. (The layout aggregation has since moved into `internal/layout-registry.ts` and is built with `new Map([...])`, so the null-prototype map and the `layouts/index.ts` module no longer exist.)
 
 ## Other Valid Fix Options
 

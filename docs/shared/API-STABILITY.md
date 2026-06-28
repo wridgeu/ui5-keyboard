@@ -30,6 +30,16 @@ Use these imports for application code:
 - `ui5/kiosk/library`
 - `ui5/kiosk/types`
 - type-only helper export `KioskKeyboardDomContract` from `ui5/kiosk/KioskKeyboard`
+- `ui5/kiosk/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass via `instanceLayouts` (built-ins are already bundled)
+- `ui5/kiosk/layouts/fkey-row` - stable shared row for custom layout composition
+- `ui5/kiosk/layouts/nav-row` - stable shared row for custom layout composition
+- `ui5/kiosk/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
+
+Customization is per control via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties, assigned directly on the control. The static surface is read-only:
+
+- `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
+- `getLocaleLayout`
+- `setI18nResolver`
 
 Stable runtime hooks on the `KioskKeyboard` class include:
 
