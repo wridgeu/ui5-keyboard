@@ -18,6 +18,10 @@ This repository bundles two complementary capabilities (keyboard shortcut manage
 | [`kiosk-keyboard-webc`](./packages/kiosk-keyboard-webc) | Native web component variant of the kiosk keyboard: framework-agnostic, built on UI5 Web Components               |
 | [`demo-hotkeys-app`](./packages/demo-app)               | Demo application showcasing all libraries                                                                         |
 
+## Live Demo
+
+The [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml) workflow publishes a self-hosted demo to GitHub Pages at **https://wridgeu.github.io/ui5-keyboard/** on every push to `main`. It serves a static Fiori Launchpad with two tiles: the SAPUI5 demo app (the `ui5.hotkeys` + `ui5.kiosk` controls) and the framework-less "Raw Web Components Demo". The site is fully self-hosted (the SAPUI5 runtime is bundled into the artifact, no external CDN). The workflow provisions GitHub Pages on its first run, so no manual repository setup is required.
+
 ## Kiosk Keyboard Theme Preview
 
 Full-size inline keyboard:
