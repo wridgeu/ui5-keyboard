@@ -14,13 +14,9 @@ name: Deploy Pages
 on:
   push:
     branches: [main]
-    # Deploy by default, but skip the ~30 min self-hosted SAPUI5 rebuild for
-    # pushes whose files provably do not change the built artifact: test suites
-    # (siblings of each package's src/), markdown incl. READMEs and the
-    # release-please CHANGELOGs, the spec docs, and the other CI workflows /
-    # composite actions (this one does not use them). GitHub skips the run only
-    # when *every* changed file matches, so a commit mixing code with tests or
-    # docs still deploys; workflow_dispatch always forces a deploy.
+    # Skip the rebuild for pushes that can't change the built site (tests, docs,
+    # other workflows). Skipped only when every changed file matches; use
+    # workflow_dispatch to force a deploy.
     paths-ignore:
       - "**/test/**"
       - "**/*.md"
