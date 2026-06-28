@@ -60,21 +60,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          # Match CI: Node 24 (>= 24.14) for the npm min-release-age cooldown
-          # and the engines npm floor. Do not drop below Node 24.
-          node-version: 24
-          cache: npm
-
-      - name: Cache UI5 framework resources
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ~/.ui5
-          key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
-          restore-keys: ui5-
-
-      - run: npm ci
+      # Node 24 + npm cache, the ~/.ui5 framework cache, and npm ci (with the
+      # postinstall patches) are all provided by the shared composite action.
+      - uses: ./.github/actions/setup
 
       # build:pages = libraries (hotkeys -> kiosk -> kiosk-webc) then the demo
       # app via the SAPUI5 self-hosting config (ui5 build --all bundles the UI5
