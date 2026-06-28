@@ -183,7 +183,7 @@ export interface HotkeyOptions {
    *
    * - `true`: Always suppress in inputs.
    * - `false`: Never suppress in inputs.
-   * - `"auto"`: Suppress for single keys and Alt-only combos; allow for Ctrl/Meta combos and Escape.
+   * - `"auto"`: Suppress unless the combo uses Ctrl/Meta or the key is Escape (single keys and Shift/Alt-only combos are suppressed).
    *
    * @default "auto"
    */
