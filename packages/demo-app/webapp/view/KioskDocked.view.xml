@@ -15,7 +15,7 @@
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Mobile Keyboard:" class="sapUiSmallMarginEnd" />
-                        <SegmentedButton selectedKey="{docked>/kioskMobileKeyboard}" selectionChange=".onMobileKeyboardChange">
+                        <SegmentedButton selectedKey="{docked>/kioskMobileKeyboard}">
                             <items>
                                 <SegmentedButtonItem key="Custom" text="Custom" />
                                 <SegmentedButtonItem key="Native" text="Native" />
@@ -117,6 +117,7 @@
                 autoType="true"
                 controls="nameInput,emailInput,ageInput,phoneInput,notesInput"
                 enabled="{docked>/kioskEnabled}"
+                mobileKeyboard="{docked>/kioskMobileKeyboard}"
                 fKeyMode="{docked>/kioskFKeyMode}"
                 keyPress=".onKeyPress"
                 layoutChange=".onDockedLayoutChange" />

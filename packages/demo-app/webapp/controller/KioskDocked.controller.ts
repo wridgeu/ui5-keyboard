@@ -2,16 +2,14 @@ import Item from "sap/ui/core/Item";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
-import { MobileKeyboard } from "ui5/kiosk/library";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type Select from "sap/m/Select";
-import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Enhanced docked keyboard demo - ports the original Kiosk view and adds
- * a controls panel for enabled, mobileKeyboard, and layout switching.
+ * Docked keyboard demo with a controls panel for enabled, mobileKeyboard, and
+ * layout switching.
  *
  * @namespace demo.hotkeys.controller
  */
@@ -55,12 +53,6 @@ export default class KioskDocked extends BaseController {
     this._getViewModel().setProperty("/kioskLayout", layout);
   }
 
-  onMobileKeyboardChange(event: SegmentedButton$SelectionChangeEvent): void {
-    const key = event.getParameter("item")!.getKey();
-    const kb = this.byId("dockedKeyboard") as KioskKeyboard;
-    kb.setMobileKeyboard(key as MobileKeyboard);
-  }
-
   onLayoutChange(): void {
     const select = this.byId("layoutSelect") as Select;
     const layout = select.getSelectedKey();
@@ -90,7 +82,6 @@ export default class KioskDocked extends BaseController {
     keyboard.close();
     keyboard.setAutoShow(false);
     keyboard.setLayout("qwerty");
-    keyboard.setMobileKeyboard(MobileKeyboard.Custom);
 
     const viewModel = this._getViewModel();
     viewModel.setProperty("/kioskEnabled", true);

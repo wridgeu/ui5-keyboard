@@ -37,7 +37,7 @@ describe("graphemeLengthBefore", () => {
 
   it("handles long grapheme cluster (subdivision flag tag sequence)", () => {
     // 🏴󠁧󠁢󠁥󠁮󠁧󠁿 = black flag + tag_g + tag_b + tag_e + tag_n + tag_g + cancel_tag
-    // This is 28 UTF-16 code units - exceeds the old 20 code-unit window.
+    // This is 28 UTF-16 code units.
     const flag = "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}";
     const str = `a${flag}b`;
     const offset = 1 + flag.length; // position after the flag
@@ -212,7 +212,7 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\u31BF")).toBe(true); // Bopomofo Extended end
   });
 
-  // --- positive: Script_Extensions coverage beyond the old manual ranges ---
+  // --- positive: Script_Extensions coverage ---
   it("returns true for Kangxi Radicals", () => {
     expect(isCJKGlyph("\u2F00")).toBe(true); // ⼀ (radical one)
     expect(isCJKGlyph("\u2FD5")).toBe(true); // ⿕ (radical flute)

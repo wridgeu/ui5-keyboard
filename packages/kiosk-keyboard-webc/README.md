@@ -697,7 +697,7 @@ kiosk-keyboard {
 
 ### Responsive behavior
 
-At narrow key widths (below `5rem` per key), dual keys automatically hide the text label using the sr-only pattern. The icon remains visible, and the label stays in the accessibility tree as the key's accessible name. This prevents text truncation ("H...", "P...") while keeping keys distinguishable by their icons.
+At narrow key widths (at or below `7rem` per key), dual keys automatically hide the text label using the sr-only pattern. The icon remains visible, and the label stays in the accessibility tree as the key's accessible name. This prevents text truncation ("H...", "P...") while keeping keys distinguishable by their icons.
 
 This behavior is driven by a CSS `@container` query on individual keys (`container-type: inline-size`). It applies only to dual keys (those with both icon and label).
 

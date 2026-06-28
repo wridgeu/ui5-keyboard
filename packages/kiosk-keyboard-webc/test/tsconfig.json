@@ -1,0 +1,19 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": false,
+    "strictPropertyInitialization": false,
+    "useDefineForClassFields": false,
+    "experimentalDecorators": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@ui5/webcomponents-base",
+    "types": ["node", "mocha"]
+  },
+  "include": ["../src/**/*.ts", "../src/**/*.tsx", "**/*.ts", "**/*.tsx"],
+  "exclude": ["e2e/**/*.ts"]
+}

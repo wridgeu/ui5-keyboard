@@ -14,6 +14,16 @@ name: Deploy Pages
 on:
   push:
     branches: [main]
+    # Skip the rebuild for pushes that can't change the built site (tests, docs,
+    # other workflows). Skipped only when every changed file matches; use
+    # workflow_dispatch to force a deploy.
+    paths-ignore:
+      - "**/test/**"
+      - "**/*.md"
+      - "docs/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release.yml"
+      - ".github/actions/**"
   workflow_dispatch:
 
 permissions: {}

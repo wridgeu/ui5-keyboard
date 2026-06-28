@@ -672,29 +672,9 @@ packages/kiosk-keyboard/
     manifest.json             Library manifest (v2.0.0)
     .library                  UI5 library metadata
   test/qunit/
-    KioskKeyboard.qunit.ts               Core control tests (init, properties, typing)
-    KioskKeyboard-a11y.qunit.ts          Accessibility (ARIA, roving tabindex)
-    KioskKeyboard-docked.qunit.ts        Docked mode tests
-    KioskKeyboard-events.qunit.ts        Event delegation tests
-    KioskKeyboard-focus.qunit.ts         Focus management tests
-    KioskKeyboard-i18n.qunit.ts          i18n extension API integration tests
-    KioskKeyboard-layout.qunit.ts        Layout switching tests
-    KioskKeyboard-autoshow.qunit.ts      Auto-show unit tests
-    KioskKeyboard-autoshow-blackbox.qunit.ts  Auto-show black-box tests
-    KioskKeyboard-autotype-mobile.qunit.ts    Auto-type / mobile tests
-    KioskKeyboard-input-blackbox.qunit.ts     Input operation black-box tests
-    KioskKeyboard-renderer-blackbox.qunit.ts  Renderer black-box tests
-    i18n-registry.qunit.ts               i18n registry unit tests
-    layout-registry.qunit.ts             Layout registry unit tests
-    focus-claim-service.qunit.ts         Focus claim service tests
-    input-operations.qunit.ts            Input operations tests
-    target-input-session.qunit.ts        Target input session tests
-    negative-edge-cases.qunit.ts         Negative / edge-case tests
-    FKeys.qunit.ts                       Function key tests
-    NavKeys.qunit.ts                     Navigation key tests
-    Grapheme.qunit.ts                    Grapheme-aware editing tests
     testsuite.qunit.ts                   Test suite runner
     test-helpers.ts                      Shared test utilities
+    *.qunit.ts                           One suite per module / feature
   test/e2e/
     helpers.ts                 Minimal shared Playwright helpers (openPage, keyboardRoot, ...)
     inputmode.spec.ts          E2E tests for inputmode suppression

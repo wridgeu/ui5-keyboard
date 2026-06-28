@@ -5,9 +5,9 @@
  * Compiles the test LESS file and verifies expected at-rules appear
  * in the output. Run after `npm install` to confirm the patch is applied.
  *
- * Runs against the hoisted copy (patched by patch-package) and, when present,
- * one nested copy under an `@ui5/cli` install (synced by apply-nested.mjs),
- * so a broken nested sync fails this test instead of failing a theme build.
+ * Runs against the hoisted copy (patched by patch-package) and every nested
+ * copy under an `@ui5/cli` install (synced by apply-nested.mjs), so a broken
+ * nested sync fails this test instead of failing a theme build.
  *
  * Usage: node patches/less-openui5-test.mjs
  */
@@ -37,12 +37,13 @@ const expected = [
 ];
 
 /**
- * Finds one nested less-openui5 copy under an `@ui5/cli` install (the root
- * node_modules or any workspace's), mirroring apply-nested.mjs's search.
+ * Finds every nested less-openui5 copy under an `@ui5/cli` install (the root
+ * node_modules or any workspace's), mirroring apply-nested.mjs's search so the
+ * suite covers each copy apply-nested.mjs syncs.
  *
- * @returns {string | null} absolute path to the nested LESS entry point
+ * @returns {string[]} absolute paths to the nested LESS entry points
  */
-function findNestedLess() {
+function findNestedLessEntries() {
   const nodeModulesDirs = [join(repoRoot, "node_modules")];
   const packagesDir = join(repoRoot, "packages");
   if (existsSync(packagesDir)) {
@@ -50,6 +51,7 @@ function findNestedLess() {
       nodeModulesDirs.push(join(packagesDir, pkg, "node_modules"));
     }
   }
+  const entries = [];
   for (const nodeModules of nodeModulesDirs) {
     const entry = join(
       nodeModules,
@@ -63,10 +65,10 @@ function findNestedLess() {
       "index.js",
     );
     if (existsSync(entry)) {
-      return entry;
+      entries.push(entry);
     }
   }
-  return null;
+  return entries;
 }
 
 /**
@@ -118,9 +120,11 @@ function runSuite(label, less) {
 
 await runSuite("hoisted node_modules/less-openui5", nodeRequire("less-openui5/lib/thirdparty/less/index.js"));
 
-const nestedEntry = findNestedLess();
-if (nestedEntry) {
-  await runSuite(`nested ${relative(repoRoot, nestedEntry)}`, nodeRequire(nestedEntry));
+const nestedEntries = findNestedLessEntries();
+if (nestedEntries.length > 0) {
+  for (const nestedEntry of nestedEntries) {
+    await runSuite(`nested ${relative(repoRoot, nestedEntry)}`, nodeRequire(nestedEntry));
+  }
 } else {
   console.log("No nested @ui5/cli less-openui5 copy found; skipped the nested check.");
 }

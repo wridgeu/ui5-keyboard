@@ -723,7 +723,7 @@ describe("kiosk-keyboard", () => {
       let gcsCount = 0;
       window.getComputedStyle = function (...args: Parameters<typeof origGCS>) {
         gcsCount++;
-        return origGCS.apply(this, args);
+        return origGCS.apply(window, args);
       } as typeof origGCS;
 
       try {
@@ -1665,6 +1665,27 @@ describe("kiosk-keyboard", () => {
       await new Promise((r) => setTimeout(r, 60));
       const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]') as HTMLElement;
       expect(region.textContent ?? "", "shift-on announcement appears in live region").to.match(/shift|on/i);
+    });
+
+    it("releasing Caps Lock does not announce shift-off", async () => {
+      // ShiftState.isShifted is true in CapsLock mode, so a CapsLock -> Off
+      // transition also reads as a shift release. The shift-off announcement is
+      // reserved for a genuine Shift -> Off; releasing Caps Lock (a key labelled
+      // "Caps Lock") must not claim shift was released.
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+      const shift = () => queryKey(el, "{shift}")!;
+      // Two clicks within the double-click window engage Caps Lock...
+      shift().click();
+      shift().click();
+      await nextRender();
+      // ...then a single click turns Caps Lock back off.
+      shift().click();
+      // Let the throttled announcement queue fully drain (120ms per entry).
+      await new Promise((r) => setTimeout(r, 400));
+      const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]') as HTMLElement;
+      expect(region.textContent ?? "", "Caps Lock must have engaged").to.match(/caps/i);
+      expect(region.textContent ?? "", "Caps Lock release must not announce shift-off").to.not.match(/shift\s*off/i);
     });
 
     it("exactly one key has tabindex=0 (roving tabindex)", async () => {
