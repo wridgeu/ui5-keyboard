@@ -18,7 +18,7 @@ export default class Component extends UIComponent {
   private _hotkeys!: RegistrationGroup;
   private _routeMatchedHandler!: () => void;
 
-  init(): void {
+  override init(): void {
     super.init();
 
     this._hotkeyManager = new HotkeyManager();
@@ -90,7 +90,7 @@ export default class Component extends UIComponent {
     return this._hotkeyManager;
   }
 
-  exit(): void {
+  override exit(): void {
     // The router (and the routeMatched listener attached in init) is destroyed
     // by UIComponent before exit() runs, so no manual detach is needed here.
     this._hotkeyManager.destroy();

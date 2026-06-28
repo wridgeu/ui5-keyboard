@@ -22,7 +22,7 @@ import BaseController from "./BaseController";
 export default class KioskProgrammatic extends BaseController {
   private static readonly _MODEL_NAME = "programmatic";
 
-  onInit(): void {
+  override onInit(): void {
     this.getView()!.setModel(
       new JSONModel({
         kioskIsOpen: false,
@@ -43,7 +43,7 @@ export default class KioskProgrammatic extends BaseController {
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this.getRouter().detachRouteMatched(this._onRouteMatched, this);
     this._setRouteActive(false);
   }

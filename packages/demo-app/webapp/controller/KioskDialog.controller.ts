@@ -19,7 +19,7 @@ export default class KioskDialog extends BaseController {
   private _dialogA: Dialog | null = null;
   private _dialogB: Dialog | null = null;
 
-  onInit(): void {
+  override onInit(): void {
     const stateModel = this.getStateModel();
     stateModel.setProperty("/dialogDockedOpen", false);
     stateModel.setProperty("/dialogLastKey", "None");
@@ -134,7 +134,7 @@ export default class KioskDialog extends BaseController {
     this.getRouter().navTo(Scope.KioskHub);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this._closeDialogs();
   }
 

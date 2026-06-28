@@ -17,7 +17,7 @@ import BaseController from "./BaseController";
 export default class KioskFormWorkflow extends BaseController {
   private static readonly _FIELD_IDS = ["nameInput", "emailInput", "phoneInput", "guestsInput", "notesInput"];
 
-  onInit(): void {
+  override onInit(): void {
     const stateModel = this.getStateModel();
     stateModel.setProperty("/formProgress", 0);
     stateModel.setProperty("/formProgressText", "0 / 5 fields");
@@ -28,7 +28,7 @@ export default class KioskFormWorkflow extends BaseController {
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this.getRouter().detachRouteMatched(this._onRouteMatched, this);
 
     this._setKeyboardRouteActive(false);

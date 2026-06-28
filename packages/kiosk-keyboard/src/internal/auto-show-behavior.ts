@@ -164,7 +164,7 @@ export default class AutoShowBehavior extends BaseObject {
     });
   }
 
-  destroy(): void {
+  override destroy(): void {
     this.cancelPendingClose();
     this.disable();
     super.destroy();

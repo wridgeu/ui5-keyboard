@@ -90,7 +90,7 @@ export default class KioskPopover extends BaseController {
     this.getRouter().navTo(Scope.KioskHub);
   }
 
-  onExit(): void {
+  override onExit(): void {
     for (const popover of this._popovers.values()) {
       popover.destroy();
     }

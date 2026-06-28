@@ -30,7 +30,7 @@ export default class KioskFocusScenarios extends BaseController {
   private _focusDelegate!: { onfocusin: (event: Event) => void; onfocusout: (event: Event) => void };
   private _deferredTimer: ReturnType<typeof setTimeout> | null = null;
 
-  onInit(): void {
+  override onInit(): void {
     this._logModel = new JSONModel({ entries: [] as LogEntry[] });
     this.getView()!.setModel(this._logModel, "log");
 
@@ -43,7 +43,7 @@ export default class KioskFocusScenarios extends BaseController {
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this.getRouter().detachRouteMatched(this._onRouteMatched, this);
     this.byId("scenarioArea")?.removeEventDelegate(this._focusDelegate);
     this._setKeyboardRouteActive(false);

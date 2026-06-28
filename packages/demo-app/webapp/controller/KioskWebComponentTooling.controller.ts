@@ -16,7 +16,7 @@ import BaseController from "./BaseController";
 export default class KioskWebComponentTooling extends BaseController {
   private static readonly _MODEL_NAME = "webc";
 
-  onInit(): void {
+  override onInit(): void {
     this.getView()!.setModel(
       new JSONModel({
         lastKey: "None",
@@ -34,14 +34,14 @@ export default class KioskWebComponentTooling extends BaseController {
    * panel. Reading the tag needs the element in the document, so it happens here
    * rather than on routeMatched (which fires before the first render).
    */
-  onAfterRendering(): void {
+  override onAfterRendering(): void {
     const domRef = this.byId("toolingKeyboard")?.getDomRef();
     if (domRef) {
       this._getViewModel().setProperty("/registeredTag", `<${domRef.tagName.toLowerCase()}>`);
     }
   }
 
-  onExit(): void {
+  override onExit(): void {
     this.getRouter().detachRouteMatched(this._onRouteMatched, this);
   }
 

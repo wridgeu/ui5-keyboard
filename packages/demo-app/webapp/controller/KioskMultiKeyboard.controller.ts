@@ -13,7 +13,7 @@ import BaseController from "./BaseController";
 export default class KioskMultiKeyboard extends BaseController {
   private _sharedScenarioInitialized: boolean = false;
 
-  onInit(): void {
+  override onInit(): void {
     const stateModel = this.getStateModel();
     stateModel.setProperty("/multiSearchLastKey", "None");
     stateModel.setProperty("/multiQuantityLastKey", "None");
@@ -26,7 +26,7 @@ export default class KioskMultiKeyboard extends BaseController {
     stateModel.setProperty("/sharedLastAction", "Last action: none");
   }
 
-  onAfterRendering(): void {
+  override onAfterRendering(): void {
     if (!this._sharedScenarioInitialized) {
       this._sharedScenarioInitialized = true;
       this.onResetSharedScenario();
@@ -83,7 +83,7 @@ export default class KioskMultiKeyboard extends BaseController {
     this.getRouter().navTo(Scope.KioskHub);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this._closeSharedKeyboards();
   }
 

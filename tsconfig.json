@@ -4,6 +4,8 @@
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "strict": true,
+    "isolatedModules": true,
+    "noImplicitOverride": true,
     "skipLibCheck": true,
     "allowUmdGlobalAccess": true,
     "esModuleInterop": true,

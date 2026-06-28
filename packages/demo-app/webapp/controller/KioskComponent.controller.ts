@@ -16,7 +16,7 @@ export default class KioskComponent extends BaseController {
   private static _keyboard: KioskKeyboard | null = null;
   private _returnNavTimer: ReturnType<typeof setTimeout> | null = null;
 
-  onInit(): void {
+  override onInit(): void {
     const stateModel = this.getStateModel();
 
     // Lazily create the keyboard once - it lives in sap-ui-static
@@ -37,7 +37,7 @@ export default class KioskComponent extends BaseController {
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this.getRouter().detachRouteMatched(this._onRouteMatched, this);
 
     if (this._returnNavTimer) {

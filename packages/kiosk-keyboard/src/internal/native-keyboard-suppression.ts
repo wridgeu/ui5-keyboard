@@ -109,7 +109,7 @@ export default class NativeKeyboardSuppression extends BaseObject {
     return resolveWithCustomResolver(target.getFocusDomRef(), this._host._getEffectiveResolver());
   }
 
-  destroy(): void {
+  override destroy(): void {
     this.restore();
     super.destroy();
   }
