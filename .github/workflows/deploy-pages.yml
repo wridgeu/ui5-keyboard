@@ -9,7 +9,9 @@ name: Deploy Pages
 # the UI5 runtime + ushell shell into the artifact, then trims it down with
 # tools/trim-pages-dist.mjs (~560 MB -> ~150 MB).
 #
-# Prerequisite: repo Settings -> Pages -> Source must be set to "GitHub Actions".
+# The build job's Setup Pages step provisions the Pages site on first run
+# (configure-pages enablement: true, source "GitHub Actions"), so no manual repo
+# Settings step is required; this also lets a fresh fork deploy with no setup.
 
 on:
   push:
@@ -18,7 +20,14 @@ on:
     # other workflows). Skipped only when every changed file matches; use
     # workflow_dispatch to force a deploy.
     paths-ignore:
-      - "**/test/**"
+      # Ignore the non-deployed test suites only. kiosk-keyboard-webc/test/pages
+      # is the source of the deployed "Raw Web Components Demo" and is
+      # deliberately NOT ignored, so edits there still trigger a deploy.
+      - "**/test/qunit/**"
+      - "**/test/e2e/**"
+      - "**/test/component/**"
+      - "**/test/unit/**"
+      - "**/test/helpers/**"
       - "**/*.md"
       - "docs/**"
       - ".github/workflows/ci.yml"
@@ -39,6 +48,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # configure-pages calls the Pages REST API (GET, and createPagesSite when
+      # enablement is true), which requires the pages/id-token grants on this job.
+      pages: write
+      id-token: write
     # Self-hosting SAPUI5 downloads + builds its ushell dependency closure on a
     # cold ~/.ui5 cache, which is heavier than the OpenUI5 build.
     timeout-minutes: 30
@@ -92,9 +105,9 @@ jobs:
           mkdir -p _site/webc-demo
           cp -r packages/kiosk-keyboard-webc/demo-dist/. _site/webc-demo/
 
-          # The demo app's own index.html bootstraps from a relative resources/
-          # path that does not exist on static hosting; replace it with a
-          # redirect to the FLP entry point.
+          # The demo app's own index.html loads the component standalone, without
+          # the Fiori Launchpad shell; replace it with a redirect so the FLP is
+          # the site entry point.
           cat > _site/index.html <<'HTML'
           <!doctype html>
           <html lang="en">
@@ -111,6 +124,10 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          # Provision the Pages site (source "GitHub Actions") if it does not
+          # exist yet, instead of failing with "Get Pages site failed".
+          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
@@ -120,6 +137,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write
