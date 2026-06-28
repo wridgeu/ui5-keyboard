@@ -122,6 +122,8 @@ Before choosing a mode, declare the library in your app `manifest.json`:
 }
 ```
 
+Ensure your app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.120**, the implementation floor noted above.
+
 ### 1. Installed package + UI5 Tooling (default)
 
 Recommended for published/runtime usage.

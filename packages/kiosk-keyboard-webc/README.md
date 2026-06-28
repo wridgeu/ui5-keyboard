@@ -123,6 +123,9 @@ Recommended for plain HTML, React, Vue, Angular, and most non-UI5 apps.
 > [!NOTE]
 > The examples below use bare package specifiers (`kiosk-keyboard-webc/…`), which require a bundler (Vite, webpack, etc.) or an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap). For plain `<script>` usage without a build step, replace the specifier with the resolved path to `dist/kiosk-keyboard.bundle.js` (for example `./node_modules/kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js`).
 
+> [!NOTE]
+> The element is **client-only**: importing the bundle runs `customElements.define()` and registers the SAP font at module load, which throws during server-side rendering (Next.js, Nuxt, Analog). In an SSR framework, import it on the client only - e.g. Next.js `dynamic(() => import("kiosk-keyboard-webc/bundle"), { ssr: false })`, or import inside `useEffect` / `onMounted`.
+
 ```html
 <script type="module">
   import "kiosk-keyboard-webc/bundle";

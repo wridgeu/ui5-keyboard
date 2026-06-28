@@ -160,6 +160,8 @@ Before choosing a mode, declare the library dependency in your app `manifest.jso
 }
 ```
 
+Ensure your app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.120**, the implementation floor noted above.
+
 ### 1. Installed package + UI5 Tooling (default)
 
 Recommended for published/runtime usage.
@@ -1633,10 +1635,6 @@ KioskKeyboard.setI18nResolver(null);
 ```ts
 import type { I18nResolver } from "ui5/kiosk/types";
 ```
-
-| Method                      | Description                                                    |
-| --------------------------- | -------------------------------------------------------------- |
-| `setI18nResolver(fn): void` | Set a resolver callback for text overrides, or `null` to clear |
 
 ---
 

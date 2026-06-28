@@ -92,6 +92,8 @@ If you deploy the built app to a plain static server while bootstrapping UI5 fro
 ></script>
 ```
 
+Under a strict Content-Security-Policy (common in kiosk deployments), allowlist the chosen UI5 origin in `script-src` - self-hosting the copied `resources/` avoids the cross-origin allowance. The libraries themselves add no CSP requirements (no `eval`, inline script, or remote connections).
+
 #### 2. Source package + UI5 Tooling transpilation
 
 Recommended for monorepos and local development when you want to work against the library source instead of the prebuilt distributable.
@@ -158,6 +160,8 @@ In all 3 modes, keep the custom library declarations in your app `manifest.json`
   }
 }
 ```
+
+Ensure the consuming app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.120** - the implementation floor for both libraries (they use `DataType.registerEnum()` / `Localization.getLanguageTag()`, available from 1.120).
 
 `ui5.hotkeys` is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
 
