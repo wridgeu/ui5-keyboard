@@ -8,8 +8,8 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Enhanced docked keyboard demo - ports the original Kiosk view and adds
- * a controls panel for enabled, mobileKeyboard, and layout switching.
+ * Docked keyboard demo with a controls panel for enabled, mobileKeyboard, and
+ * layout switching.
  *
  * @namespace demo.hotkeys.controller
  */

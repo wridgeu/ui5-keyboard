@@ -257,7 +257,7 @@ QUnit.test("Special keys render correct labels", async (assert) => {
     "Backspace visible label",
   );
 
-  // Enter, Shift, Space now have visible text labels (WCAG 2.5.3)
+  // Enter, Shift, Space have visible text labels (WCAG 2.5.3)
   const enter = getKeyElement(kb, "{enter}");
   assert.ok(enter, "Enter key rendered");
   assert.strictEqual(enter!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Enter", "Enter visible label");

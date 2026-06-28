@@ -18,7 +18,6 @@ import {
 const DOM = KioskKeyboard.DOM;
 
 // Composite layout for tests that need both nav row and base layout rows.
-// Consumers build these inline now that pre-built combined layouts are removed.
 const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
 const qwertyNav: LayoutDefinition = [navRow, ...qwertyBase];
 

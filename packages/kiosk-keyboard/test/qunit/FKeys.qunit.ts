@@ -19,7 +19,6 @@ import {
 const DOM = KioskKeyboard.DOM;
 
 // Composite layout for tests that need both shift and F-key rows.
-// Consumers build these inline now that pre-built combined layouts are removed.
 const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
 const qwertyFk: LayoutDefinition = [fkeyRow, ...qwertyBase];
 

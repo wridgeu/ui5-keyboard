@@ -4,7 +4,7 @@ import { captureConsole } from "../helpers/console.js";
 
 describe("kiosk-keyboard - unrecognized {token} keys", () => {
   it("does not type the literal braces for an unknown token", async () => {
-    // `{bcksp}` is a typo for `{backspace}`: previously typed "{bcksp}".
+    // `{bcksp}` is a typo for `{backspace}` (an unrecognized token).
     const { kb, input } = await setup([[{ value: "{bcksp}", label: "x" }]]);
     const warnings = await captureConsole("warn", () => {
       queryKey(kb, "{bcksp}").click();

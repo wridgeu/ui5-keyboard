@@ -1816,9 +1816,8 @@ export default class KioskKeyboard extends Control {
   /**
    * Runs composition middleware (CJK/dead-key buffers) for keys that affect a
    * composition (see `_keyAffectsComposition`). Returns `true` when the
-   * middleware consumed the key (caller should stop), mirroring the inline
-   * guard the single-tap path used before auto-repeat shared it. Lazily
-   * instantiates the middleware.
+   * middleware consumed the key (caller should stop). Lazily instantiates the
+   * middleware.
    */
   private _tryCompositionMiddleware(keyValue: string): boolean {
     if (!this._keyAffectsComposition(keyValue)) return false;
