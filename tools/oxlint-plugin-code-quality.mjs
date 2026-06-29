@@ -152,7 +152,7 @@ const hasFancyDash = (text) => text.includes(EM_DASH) || text.includes(EN_DASH);
  * Configurable via `checkStrings` and `checkComments` options (both default to
  * true).
  *
- * Auto-fix: replaces with `-` in strings, `--` in comments.
+ * Auto-fix: replaces with `-` in strings and comments.
  */
 const noEmDash = {
   meta: {
@@ -163,7 +163,7 @@ const noEmDash = {
     },
     messages: {
       emDashInString: "String contains an em-dash or en-dash. Use a regular dash (-) instead.",
-      emDashInComment: "Comment contains an em-dash or en-dash. Use -- instead.",
+      emDashInComment: "Comment contains an em-dash or en-dash. Use a regular dash (-) instead.",
     },
     schema: [
       {
@@ -221,7 +221,7 @@ const noEmDash = {
             fix(fixer) {
               // Replace only the content between delimiters to preserve
               // the original prefix (/** for JSDoc vs /* for block).
-              const fixed = comment.value.replace(FANCY_DASH_RE, "--");
+              const fixed = comment.value.replace(FANCY_DASH_RE, "-");
               if (comment.type === "Line") {
                 return fixer.replaceTextRange([comment.range[0] + 2, comment.range[1]], fixed);
               }
