@@ -1,4 +1,4 @@
-import { parseHotkey } from "./parse";
+import { parseHotkey, formatParsed } from "./parse";
 import type { Platform } from "../library";
 
 /**
@@ -146,7 +146,7 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
     return { valid: false, errors: [e instanceof Error ? e.message : String(e)], warnings };
   }
 
-  const normalized = [...parsed.modifiers, parsed.key].join("+");
+  const normalized = formatParsed(parsed);
 
   if (!KNOWN_KEYS.has(parsed.key)) {
     warnings.push(`Unknown key "${parsed.key}" - may not match keyboard events correctly`);

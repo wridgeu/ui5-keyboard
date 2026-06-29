@@ -98,9 +98,19 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
  * @since 0.1.0
  */
 export function normalizeHotkey(hotkey: string, platform?: Platform): string {
-  const parsed = parseHotkey(hotkey, platform);
-  const parts = [...parsed.modifiers, parsed.key];
-  return parts.join("+");
+  return formatParsed(parseHotkey(hotkey, platform));
+}
+
+/**
+ * Join a parsed hotkey's canonical modifiers and key into the normalized
+ * `"Mod1+Mod2+Key"` string used for matching and conflict detection.
+ *
+ * @param parsed - A parsed hotkey.
+ * @returns The canonical normalized hotkey string.
+ * @since 0.1.0
+ */
+export function formatParsed(parsed: ParsedHotkey): string {
+  return [...parsed.modifiers, parsed.key].join("+");
 }
 
 /**
@@ -152,7 +162,7 @@ export function convertToModFormat(hotkey: string, platform?: Platform): string 
   const p = platform ?? detectPlatform();
   const parsed = parseHotkey(hotkey, p);
 
-  const platformMod: CanonicalModifier = p === Platform.Mac ? "Meta" : "Control";
+  const platformMod = resolveModifier("Mod", p);
   const otherMod: CanonicalModifier = p === Platform.Mac ? "Control" : "Meta";
 
   // Only convert if the platform modifier is present and the other is not

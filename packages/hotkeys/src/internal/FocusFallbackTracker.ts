@@ -28,12 +28,12 @@ export default class FocusFallbackTracker {
   private _consumedBlurSeq = 0;
   private _genericRootIds = new Set<string>();
 
-  private readonly _focusInHandler = this._onFocusIn.bind(this);
-  private readonly _focusOutHandler = this._onFocusOut.bind(this);
+  private readonly _listenerAbort = new AbortController();
 
   constructor() {
-    document.addEventListener("focusin", this._focusInHandler, true);
-    document.addEventListener("focusout", this._focusOutHandler, true);
+    const { signal } = this._listenerAbort;
+    document.addEventListener("focusin", this._onFocusIn.bind(this), { capture: true, signal });
+    document.addEventListener("focusout", this._onFocusOut.bind(this), { capture: true, signal });
   }
 
   /**
@@ -62,8 +62,7 @@ export default class FocusFallbackTracker {
   }
 
   destroy(): void {
-    document.removeEventListener("focusin", this._focusInHandler, true);
-    document.removeEventListener("focusout", this._focusOutHandler, true);
+    this._listenerAbort.abort();
     this._lastFocusedElement = null;
     this._lastFocusedAt = 0;
     this._lastBlurredElement = null;
