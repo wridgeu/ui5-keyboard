@@ -586,9 +586,7 @@ export default class KioskKeyboard extends Control {
     return registryGetLocaleLayout();
   }
 
-  // --
-  // Static delegates - i18n (see internal/i18n-registry.ts)
-  // --
+  // Static delegates for i18n (see internal/i18n-registry.ts)
 
   /**
    * Set a custom i18n resolver callback for programmatic overrides.

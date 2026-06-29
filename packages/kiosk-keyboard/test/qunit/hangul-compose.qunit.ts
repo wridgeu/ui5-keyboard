@@ -11,7 +11,7 @@ function commonAfterEach() {
   sandbox.restore();
 }
 
-// --- hangul-compose middleware ---
+// hangul-compose middleware
 
 QUnit.module("hangul-compose middleware", {
   beforeEach() {
