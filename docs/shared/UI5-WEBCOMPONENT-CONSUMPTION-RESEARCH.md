@@ -63,16 +63,13 @@ And evaluate what is currently covered by this repository's demos.
   - host custom element in `sap.ui.core.HTML`
   - synchronize value/focus/events with a UI5 control used as integration target
 
-## What We Changed in This Repo
+## Repo Web-Component Setup
 
-- Removed deprecated `sap.ui.webc.main` dependencies/usages from app/library config and demo XML.
-- Replaced wrapper-based interop examples with:
-  - standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`, `sap.m.TextArea`) for inputIds targeting
-  - native UI5 Web Component input usage in XML (`xmlns:webc="@ui5/webcomponents/dist"`)
-  - custom-element bridge controls in `packages/demo-app/webapp/control/`
-- Kept `ui5-tooling-modules` middleware/task so npm web-component modules resolve correctly in the UI5 app.
-- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses auto-wrapping via CEM for `@ui5/webcomponents/dist/Input`. The manual bridge for `kiosk-keyboard-webc` was removed; the bridge pattern is documented as a reference in the demo-app README.
-- Updated interop e2e harness to avoid deprecated/global-core access patterns.
+- The repo uses standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`, `sap.m.TextArea`) for inputIds targeting and carries no `sap.ui.webc.main` dependency.
+- Interop examples use native UI5 Web Component input in XML (`xmlns:webc="@ui5/webcomponents/dist"`) alongside custom-element bridge controls in `packages/demo-app/webapp/control/`.
+- The `ui5-tooling-modules` middleware/task resolves npm web-component modules in the UI5 app.
+- Seamless Web Components (auto-generated wrappers from the Custom Elements Manifest) and manual `WebComponent.extend()` bridges coexist without conflict. The demo app uses auto-wrapping via CEM for `@ui5/webcomponents/dist/Input`; the `kiosk-keyboard-webc` bridge pattern is documented as a reference in the demo-app README.
+- The interop e2e harness avoids deprecated/global-core access patterns.
 
 ### Middleware Configuration for Seamless Web Components
 

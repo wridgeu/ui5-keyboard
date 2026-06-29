@@ -55,7 +55,7 @@ Visual tests use Playwright's built-in `toHaveScreenshot()` assertion. Baselines
 
 The pipeline is whatever Playwright does for `expect(locator).toHaveScreenshot()`:
 
-1. **Capture**: Playwright scrolls the target locator into view and screenshots **the element**, not the viewport. Element screenshots are captured in full even when the element is larger than the viewport, so there is no viewport-clipping problem and **no section isolation is needed** (this was the main complication under the old WebdriverIO setup).
+1. **Capture**: Playwright scrolls the target locator into view and screenshots **the element**, not the viewport. Element screenshots are captured in full even when the element is larger than the viewport, so there is no viewport-clipping problem and **no section isolation is needed**.
 2. **Compare**: The capture is compared against the committed baseline under `test/e2e/__baselines__/<project>/`. On mismatch the test fails and Playwright writes `actual`, `expected`, and `diff` PNGs into `test-results/`.
 3. **Report**: `playwright show-report` opens the HTML report with the three images side by side for every failed snapshot.
 
@@ -80,7 +80,7 @@ Within `playwright.config.ts`, projects share a single `webServer` and differ on
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
 - The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
-Because element screenshots capture overflow, the fixed-width container fixtures no longer need per-viewport gating: they run on every profile and are captured in full.
+Because element screenshots capture overflow, the fixed-width container fixtures run on every profile and are captured in full without per-viewport gating.
 
 Baselines are committed, one directory per Playwright project (via `snapshotPathTemplate: "{testDir}/__baselines__/{projectName}/{arg}{ext}"`):
 
@@ -192,7 +192,7 @@ Media features are emulated with Playwright's native `page.emulateMedia({ forced
 
 ### Device emulation
 
-Device coverage is expressed as Playwright **projects** (see Config files above) that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`. Media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly because `hasTouch`/`isMobile` make the emulated browser report as a touch device. All projects share their package's single `webServer`, so there are no per-device ports to allocate (unlike the old WebdriverIO matrix).
+Device coverage is expressed as Playwright **projects** (see Config files above) that set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`. Media queries like `(pointer: coarse)` and `(hover: none)` evaluate correctly because `hasTouch`/`isMobile` make the emulated browser report as a touch device. All projects share their package's single `webServer`, so there are no per-device ports to allocate.
 
 ### Troubleshooting
 

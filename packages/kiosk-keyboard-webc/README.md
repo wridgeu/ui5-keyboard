@@ -87,7 +87,7 @@ If your app also uses UI5 Web Components directly (e.g., `@ui5/webcomponents` bu
 
 The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Only the genuinely side-effectful modules are listed: theme/i18n asset registration (`Assets`, `generated/**`) and the convenience bundle entry (`bundle.esm`).
 
-> **Note:** All built-in layouts and their composition middleware (kana, Hangul) are pure data/factory modules that the registries (`core/layout-registry`, `core/middleware-registry`) statically import and reference. They are therefore always included in the bundle through normal tree-shaking, so no `sideEffects` marker is required. This also avoids the earlier side-effect-import registration scheme that the production bundle silently dropped (see issue #108).
+> **Note:** All built-in layouts and their composition middleware (kana, Hangul) are pure data/factory modules that the registries (`core/layout-registry`, `core/middleware-registry`) statically import and reference. They are therefore always included in the bundle through normal tree-shaking, so no `sideEffects` marker is required.
 
 In this monorepo, install all workspace dependencies once at the repository root:
 
@@ -562,9 +562,9 @@ document.body.appendChild(el);
 
 Some scripts require processing between key press and text insertion. For example, Japanese Kana needs dakuten/handakuten composition (ka + dakuten = ga), and Korean Hangul needs jamo-to-syllable composition (individual consonants and vowels combine into syllable blocks).
 
-Composition middleware handles this automatically. The built-in kana and Hangul middleware are **bundled with the component** — no import or configuration is needed. Each activates automatically when its associated layout (`ja-kana` / `ko-hangul`) is active and deactivates (committing any in-progress composition) on layout switch.
+Composition middleware handles this automatically. The built-in kana and Hangul middleware are **bundled with the component**: no import or configuration is needed. Each activates automatically when its associated layout (`ja-kana` / `ko-hangul`) is active and deactivates (committing any in-progress composition) on layout switch.
 
-The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factories as data**, so you can reuse or override a built-in on a specific element via the [`instanceMiddleware`](#per-instance-customization) property — importing them has no side effect on the bundled defaults.
+The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factories as data**, so you can reuse or override a built-in on a specific element via the [`instanceMiddleware`](#per-instance-customization) property; importing them has no side effect on the bundled defaults.
 
 ### Built-in Middleware
 

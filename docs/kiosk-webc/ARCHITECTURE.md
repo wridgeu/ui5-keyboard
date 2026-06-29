@@ -308,7 +308,7 @@ el.layout = "my-qwerty-fk";
 
 ### Layout Resolution
 
-- Built-in layouts are stored in a sealed module-level `Map`, populated by direct data imports of `layouts/*.ts` and never mutated again at runtime (the prior side-effect self-registration scheme was tree-shaken out; see #108)
+- Built-in layouts are stored in a sealed module-level `Map`, populated by direct data imports of `layouts/*.ts` and never mutated again at runtime
 - Per-element overrides flow through the `instanceLayouts` property (a plain `Record`), validated at assignment: must be a non-empty array of non-empty rows where each key has a string `value`
 - Resolution order: instance map → built-in map → default layout
 

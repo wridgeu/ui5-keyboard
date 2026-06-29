@@ -92,6 +92,9 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
  * normalizeHotkey("cmd+shift+s") // => "Shift+Meta+S" (on Mac)
  * normalizeHotkey("Mod+S")       // => "Control+S" (on Windows/Linux)
  *
+ * @param hotkey - The hotkey string to normalize.
+ * @param platform - Platform used to resolve the `Mod` pseudo-modifier. Defaults to the detected platform.
+ * @returns The canonical hotkey string.
  * @since 0.1.0
  */
 export function normalizeHotkey(hotkey: string, platform?: Platform): string {

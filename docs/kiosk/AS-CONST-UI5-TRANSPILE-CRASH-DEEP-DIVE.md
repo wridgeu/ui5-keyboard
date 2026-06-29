@@ -315,7 +315,7 @@ Consumers import the constant from that file. (The layout aggregation has since 
    - Cons: maintenance overhead; depends on external release cadence.
 
 5. **Split exports by file** (current approach).
-   - Pros: minimal runtime behavior change, robust, explicit.
+   - Pros: minimal runtime behavior change, explicit.
    - Cons: one extra file/import.
 
 ## Upstream Fix Proposal
