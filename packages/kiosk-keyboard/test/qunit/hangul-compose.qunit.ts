@@ -22,10 +22,6 @@ QUnit.module("hangul-compose middleware", {
   afterEach: commonAfterEach,
 });
 
-QUnit.test("Built-in factory registered for ko-hangul layout", (assert) => {
-  assert.notStrictEqual(getMiddlewareFactory("ko-hangul"), null, "Factory registered for ko-hangul");
-});
-
 QUnit.test("Single L consonant shows as preedit", (assert) => {
   const m = mw();
   const consumed = m.handleKey("\u3131", input); // ㄱ

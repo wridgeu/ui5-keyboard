@@ -438,42 +438,26 @@ QUnit.test("Devanagari characters return true", (assert) => {
   assert.strictEqual(isIndicGlyph("\u0965"), true, "\u0965 double danda");
 });
 
-QUnit.test("Bengali characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0985"), true, "\u0985 Bengali a");
-  assert.strictEqual(isIndicGlyph("\u0995"), true, "\u0995 Bengali ka");
-});
+QUnit.test("each Indic script's range returns true", (assert) => {
+  // One row per script range (with both 'a' and 'ka' where originally tested),
+  // so dropping an alternation member fails an identifiable script row.
+  const rows: [string, string][] = [
+    ["\u0985", "Bengali a"],
+    ["\u0995", "Bengali ka"],
+    ["\u0B85", "Tamil a"],
+    ["\u0B95", "Tamil ka"],
+    ["\u0C05", "Telugu a"],
+    ["\u0C85", "Kannada a"],
+    ["\u0D05", "Malayalam a"],
+    ["\u0D85", "Sinhala a"],
+    ["\u0A05", "Gurmukhi a"],
+    ["\u0A85", "Gujarati a"],
+    ["\u0B05", "Oriya a"],
+  ];
 
-QUnit.test("Tamil characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0B85"), true, "\u0B85 Tamil a");
-  assert.strictEqual(isIndicGlyph("\u0B95"), true, "\u0B95 Tamil ka");
-});
-
-QUnit.test("Telugu characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0C05"), true, "\u0C05 Telugu a");
-});
-
-QUnit.test("Kannada characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0C85"), true, "\u0C85 Kannada a");
-});
-
-QUnit.test("Malayalam characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0D05"), true, "\u0D05 Malayalam a");
-});
-
-QUnit.test("Sinhala characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0D85"), true, "\u0D85 Sinhala a");
-});
-
-QUnit.test("Gurmukhi characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0A05"), true, "\u0A05 Gurmukhi a");
-});
-
-QUnit.test("Gujarati characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0A85"), true, "\u0A85 Gujarati a");
-});
-
-QUnit.test("Oriya characters return true", (assert) => {
-  assert.strictEqual(isIndicGlyph("\u0B05"), true, "\u0B05 Oriya a");
+  rows.forEach(([codePoint, scriptName]) => {
+    assert.strictEqual(isIndicGlyph(codePoint), true, scriptName);
+  });
 });
 
 QUnit.test("Latin characters return false", (assert) => {

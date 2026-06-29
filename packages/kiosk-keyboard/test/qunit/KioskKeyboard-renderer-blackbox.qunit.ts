@@ -301,97 +301,105 @@ QUnit.test("Layout switch via {layout:numeric} changes rendered key matrix", asy
 // Icon + Label permutation matrix
 // ──────────────────────────────────────────────
 
-QUnit.test("icon omitted, label omitted: renders label from value", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "a" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
-  await placeAndWait(kb);
+type IconLabelCase = {
+  title: string;
+  keyDef: LayoutDefinition[number][number];
+  expectIcon: boolean;
+  expectLabel: boolean;
+  expectLabelText?: string;
+  expectDual: boolean;
+};
 
-  const keyEl = getRequiredKeyElement(kb, "a");
-  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "No icon element");
-  assert.ok(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "Label element present");
-  assert.strictEqual(keyEl.querySelector(`.${DOM.classes.keyLabel}`)!.textContent, "a", "Label text is 'a'");
-  assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
+const iconLabelCases: IconLabelCase[] = [
+  {
+    title: "icon omitted, label omitted: renders label from value",
+    keyDef: { value: "a" },
+    expectIcon: false,
+    expectLabel: true,
+    expectLabelText: "a",
+    expectDual: false,
+  },
+  {
+    title: "icon omitted, label set: renders custom label only",
+    keyDef: { value: "x", label: "Custom" },
+    expectIcon: false,
+    expectLabel: true,
+    expectLabelText: "Custom",
+    expectDual: false,
+  },
+  {
+    title: "icon omitted, label empty: renders blank key",
+    keyDef: { value: "x", label: "" },
+    expectIcon: false,
+    expectLabel: false,
+    expectDual: false,
+  },
+  {
+    title: "SAP icon set, label omitted: renders both (dual)",
+    keyDef: { value: "x", icon: "sap-icon://home" },
+    expectIcon: true,
+    expectLabel: true,
+    expectLabelText: "x",
+    expectDual: true,
+  },
+  {
+    title: "SAP icon + custom label: renders both (dual)",
+    keyDef: { value: "x", icon: "sap-icon://home", label: "Go" },
+    expectIcon: true,
+    expectLabel: true,
+    expectLabelText: "Go",
+    expectDual: true,
+  },
+  {
+    title: "SAP icon set, label empty: renders icon only",
+    keyDef: { value: "x", icon: "sap-icon://home", label: "" },
+    expectIcon: true,
+    expectLabel: false,
+    expectDual: false,
+  },
+  {
+    title: "icon empty, label omitted: renders label only (icon suppressed)",
+    keyDef: { value: "x", icon: "" },
+    expectIcon: false,
+    expectLabel: true,
+    expectDual: false,
+  },
+];
 
-  kb.destroy();
-});
+for (const { title, keyDef, expectIcon, expectLabel, expectLabelText, expectDual } of iconLabelCases) {
+  QUnit.test(title, async (assert) => {
+    const layout: LayoutDefinition = [[keyDef]];
+    const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
+    await placeAndWait(kb);
 
-QUnit.test("icon omitted, label set: renders custom label only", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", label: "Custom" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
-  await placeAndWait(kb);
+    const keyEl = getRequiredKeyElement(kb, keyDef.value);
+    const iconEl = keyEl.querySelector(`.${DOM.classes.keyIcon}`);
+    const labelEl = keyEl.querySelector(`.${DOM.classes.keyLabel}`);
 
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "No icon element");
-  assert.strictEqual(keyEl.querySelector(`.${DOM.classes.keyLabel}`)!.textContent, "Custom", "Custom label");
-  assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
+    if (expectIcon) {
+      assert.ok(iconEl, "Icon element present");
+    } else {
+      assert.notOk(iconEl, "No icon element");
+    }
 
-  kb.destroy();
-});
+    if (expectLabel) {
+      assert.ok(labelEl, "Label element present");
+      if (expectLabelText !== undefined) {
+        assert.strictEqual(labelEl!.textContent, expectLabelText, `Label text is '${expectLabelText}'`);
+      }
+    } else {
+      assert.notOk(labelEl, "No label element");
+    }
 
-QUnit.test("icon omitted, label empty: renders blank key", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", label: "" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
-  await placeAndWait(kb);
+    if (expectDual) {
+      assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
+    } else {
+      assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
+    }
 
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "No icon element");
-  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "No label element");
-
-  kb.destroy();
-});
-
-QUnit.test("SAP icon set, label omitted: renders both (dual)", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", icon: "sap-icon://home" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.ok(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "Icon element present");
-  assert.ok(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "Label element present");
-  assert.strictEqual(keyEl.querySelector(`.${DOM.classes.keyLabel}`)!.textContent, "x", "Label text is 'x'");
-  assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
-
-  kb.destroy();
-});
-
-QUnit.test("SAP icon + custom label: renders both (dual)", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", icon: "sap-icon://home", label: "Go" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.ok(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "Icon element present");
-  assert.strictEqual(keyEl.querySelector(`.${DOM.classes.keyLabel}`)!.textContent, "Go", "Custom label");
-  assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
-
-  kb.destroy();
-});
-
-QUnit.test("SAP icon set, label empty: renders icon only", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", icon: "sap-icon://home", label: "" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.ok(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "Icon element present");
-  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "No label element");
-  assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
-
-  kb.destroy();
-});
-
-QUnit.test("icon empty, label omitted: renders label only (icon suppressed)", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", icon: "" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.notOk(keyEl.querySelector(`.${DOM.classes.keyIcon}`), "No icon element");
-  assert.ok(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "Label element present");
-  assert.notOk(keyEl.classList.contains(DOM.classes.keyDual), "No dual class");
-
-  kb.destroy();
-});
+    kb.destroy();
+  });
+}
 
 QUnit.test("Unicode icon renders as text span with icon class", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "\u21E7", label: "Shift" }]];
@@ -561,37 +569,30 @@ QUnit.test("capsLockLabel: '' suppresses label, aria-label says Caps Lock", asyn
 // Title tooltip for truncated labels
 // ──────────────────────────────────────────────
 
-QUnit.test("multi-character label gets title attribute", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", label: "Custom" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
-  await placeAndWait(kb);
+QUnit.test("title attribute is present only for multi-character labels", async (assert) => {
+  const titleCases: { value: string; label?: string; title: string | null }[] = [
+    { value: "x", label: "Custom", title: "Custom" },
+    { value: "a", title: null },
+    { value: "x", label: "", title: null },
+    { value: "{layout:alpha}", label: "ローマ字", title: "ローマ字" },
+    { value: "x", label: "あ", title: null },
+  ];
 
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.strictEqual(keyEl.getAttribute("title"), "Custom", "title matches full label text");
+  for (const { value, label, title } of titleCases) {
+    const keyDef: LayoutDefinition[number][number] = label === undefined ? { value } : { value, label };
+    const layout: LayoutDefinition = [[keyDef]];
+    const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
+    await placeAndWait(kb);
 
-  kb.destroy();
-});
+    const keyEl = getRequiredKeyElement(kb, value);
+    assert.strictEqual(
+      keyEl.getAttribute("title"),
+      title,
+      `title ${title === null ? "absent" : `= ${title}`} for value=${JSON.stringify(value)} label=${JSON.stringify(label)}`,
+    );
 
-QUnit.test("single-glyph label does not get title attribute", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "a" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "a");
-  assert.notOk(keyEl.getAttribute("title"), "no title on single-glyph key");
-
-  kb.destroy();
-});
-
-QUnit.test("empty label does not get title attribute", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", label: "" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.notOk(keyEl.getAttribute("title"), "no title on empty-label key");
-
-  kb.destroy();
+    kb.destroy();
+  }
 });
 
 QUnit.test("special key with i18n label gets title (e.g. Enter)", async (assert) => {
@@ -603,28 +604,6 @@ QUnit.test("special key with i18n label gets title (e.g. Enter)", async (assert)
 
   const backspace = getRequiredKeyElement(kb, "{backspace}");
   assert.strictEqual(backspace.getAttribute("title"), "Backspace", "Backspace key has title");
-
-  kb.destroy();
-});
-
-QUnit.test("CJK multi-character label gets title", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "{layout:alpha}", label: "\u30ED\u30FC\u30DE\u5B57" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "{layout:alpha}");
-  assert.strictEqual(keyEl.getAttribute("title"), "\u30ED\u30FC\u30DE\u5B57", "CJK multi-char label gets title");
-
-  kb.destroy();
-});
-
-QUnit.test("CJK single glyph does not get title", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", label: "\u3042" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "x");
-  assert.notOk(keyEl.getAttribute("title"), "no title on single CJK glyph");
 
   kb.destroy();
 });

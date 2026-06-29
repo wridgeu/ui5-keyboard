@@ -53,26 +53,15 @@ function commonAfterEach() {
 
 QUnit.module("layout-registry - normalizeLowerString", { afterEach: commonAfterEach });
 
-QUnit.test("Rejects non-string input (number)", (assert) => {
+QUnit.test("Rejects non-string input (number, null, undefined)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 
-  assert.strictEqual(getRegisteredLayout(42 as unknown as string), undefined, "Numeric input rejected");
-  assert.ok(spy.called, "Warning logged for numeric input");
-  assert.ok(spy.firstCall.args[0].includes("expected a string"), "Warning message is about string type");
-});
-
-QUnit.test("Rejects non-string input (null)", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  assert.strictEqual(getRegisteredLayout(null as unknown as string), undefined, "null input rejected");
-  assert.ok(spy.called, "Warning logged for null input");
-});
-
-QUnit.test("Rejects non-string input (undefined)", (assert) => {
-  const spy = sandbox.spy(Log, "warning");
-
-  assert.strictEqual(getRegisteredLayout(undefined as unknown as string), undefined, "undefined input rejected");
-  assert.ok(spy.called, "Warning logged for undefined input");
+  for (const bad of [42, null, undefined]) {
+    const label = String(bad);
+    assert.strictEqual(getRegisteredLayout(bad as unknown as string), undefined, `${label} input rejected`);
+    assert.ok(spy.called, `Warning logged for ${label} input`);
+    assert.ok(spy.lastCall.args[0].includes("expected a string"), `Warning message for ${label} is about string type`);
+  }
 });
 
 QUnit.test("Rejects empty string", (assert) => {
@@ -129,30 +118,20 @@ QUnit.test("Accepts __proto__ / prototype / constructor in instance map", (asser
 
 QUnit.module("layout-registry - getLocaleLayout resolution", { afterEach: commonAfterEach });
 
-QUnit.test("Resolves de to qwertz-de via built-in locale mapping", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  assert.strictEqual(getLocaleLayout(), "qwertz-de", "German locale resolves to qwertz-de");
-});
+const BUILTIN_LOCALE_CASES: Array<[string, string]> = [
+  ["de", "qwertz-de"],
+  ["ja", "ja-romaji"],
+  ["ar", "arabic"],
+  ["ko", "ko-hangul"],
+  ["es", "qwerty-es"],
+];
 
-QUnit.test("Resolves ja to ja-romaji via built-in locale mapping", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("ja"));
-  assert.strictEqual(getLocaleLayout(), "ja-romaji", "Japanese locale resolves to ja-romaji");
-});
-
-QUnit.test("Resolves ar to arabic via built-in locale mapping", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("ar"));
-  assert.strictEqual(getLocaleLayout(), "arabic", "Arabic locale resolves to arabic");
-});
-
-QUnit.test("Resolves ko to ko-hangul via built-in locale mapping", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("ko"));
-  assert.strictEqual(getLocaleLayout(), "ko-hangul", "Korean locale resolves to ko-hangul");
-});
-
-QUnit.test("Resolves es to qwerty-es via built-in locale mapping", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("es"));
-  assert.strictEqual(getLocaleLayout(), "qwerty-es", "Spanish locale resolves to qwerty-es");
-});
+for (const [lang, expected] of BUILTIN_LOCALE_CASES) {
+  QUnit.test(`Resolves ${lang} to ${expected} via built-in locale mapping`, (assert) => {
+    sandbox.stub(Localization, "getLanguageTag").returns(langTag(lang));
+    assert.strictEqual(getLocaleLayout(), expected, `${lang} locale resolves to ${expected}`);
+  });
+}
 
 QUnit.test("Falls back to DEFAULT_LAYOUT when no mapping matches", (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("zh"));

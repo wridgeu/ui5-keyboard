@@ -168,7 +168,9 @@ QUnit.test("Inserts text and marks session dirty", (assert) => {
 QUnit.test("No-op when target element is null", (assert) => {
   const session = new TargetInputSession(() => null);
 
-  session.insertText("X"); // should not throw
+  // insertText returns void and there is no element to observe when the
+  // resolver yields null, so this can only be a no-throw smoke test.
+  session.insertText("X");
   assert.ok(true, "No error thrown when target element is null");
 });
 
@@ -176,8 +178,8 @@ QUnit.test("No-op when target has no resolvable DOM ref", (assert) => {
   const mock = makeMockElement(null);
   const session = new TargetInputSession(() => mock);
 
-  session.insertText("X"); // should not throw
-  assert.ok(true, "No error thrown when DOM ref is null");
+  session.insertText("X");
+  assert.strictEqual(mock.$fired.length, 0, "No events fired when DOM ref is null");
 });
 
 // ──────────────────────────────────────────────────
@@ -220,8 +222,8 @@ QUnit.test("No-op at position 0 - does not mark dirty", (assert) => {
 QUnit.test("No-op when target element is null", (assert) => {
   const session = new TargetInputSession(() => null);
 
-  session.handleBackspace(); // should not throw
-  assert.ok(true, "No error thrown when target is null");
+  const removed = session.handleBackspace();
+  assert.strictEqual(removed, false, "Returns false - nothing deleted when target is null");
 });
 
 // ──────────────────────────────────────────────────
@@ -339,7 +341,10 @@ QUnit.test("Unsupported key is silently ignored", (assert) => {
 QUnit.test("No-op when target element is null", (assert) => {
   const session = new TargetInputSession(() => null);
 
-  session.handleNavigationKey("Home"); // should not throw
+  // handleNavigationKey returns void and only mutates internal cursor state,
+  // which has no observable side channel when the resolver yields null, so
+  // this can only be a no-throw smoke test.
+  session.handleNavigationKey("Home");
   assert.ok(true, "No error thrown when target is null");
 });
 

@@ -296,10 +296,16 @@ QUnit.test("suppress is a no-op when shouldDeferToNative returns true", (assert)
 });
 
 QUnit.test("suppress is a no-op when active target is empty", (assert) => {
+  // The static suppressions map is shared across all tests, so assert on the
+  // before/after delta rather than an absolute size: the empty-target guard
+  // must not perform any ref-count bookkeeping.
+  const suppressions = (NativeKeyboardSuppression as unknown as { _suppressions: Map<string, unknown> })._suppressions;
+  const sizeBefore = suppressions.size;
+
   const suppression = new NativeKeyboardSuppression(makeHost(""));
 
   suppression.suppress();
-  assert.ok(true, "suppress did not throw for empty target");
+  assert.strictEqual(suppressions.size, sizeBefore, "suppress did no bookkeeping for empty target");
 
   suppression.destroy();
 });

@@ -373,82 +373,47 @@ QUnit.test("aria-controls survives re-render for a non-Control target", async (a
 // Static API: getKeyIcon
 // ──────────────────────────────────────────────
 
-QUnit.test('getKeyIcon: {shift} \u2192 "sap-icon://arrow-top"', (assert) => {
-  assert.strictEqual(KioskKeyboard.getKeyIcon("{shift}"), "sap-icon://arrow-top");
-});
+QUnit.test("getKeyIcon: maps icon keys and returns undefined for plain characters", (assert) => {
+  const cases: [string, string | undefined][] = [
+    ["{shift}", "sap-icon://arrow-top"],
+    ["{enter}", "sap-icon://accept"],
+    ["{backspace}", "sap-icon://arrow-left"],
+    ["a", undefined],
+    [" ", undefined],
+  ];
 
-QUnit.test('getKeyIcon: {enter} \u2192 "sap-icon://accept"', (assert) => {
-  assert.strictEqual(KioskKeyboard.getKeyIcon("{enter}"), "sap-icon://accept");
-});
-
-QUnit.test('getKeyIcon: {backspace} \u2192 "sap-icon://arrow-left"', (assert) => {
-  assert.strictEqual(KioskKeyboard.getKeyIcon("{backspace}"), "sap-icon://arrow-left");
-});
-
-QUnit.test('getKeyIcon: "a" \u2192 undefined', (assert) => {
-  assert.strictEqual(KioskKeyboard.getKeyIcon("a"), undefined);
-});
-
-QUnit.test('getKeyIcon: " " \u2192 undefined', (assert) => {
-  assert.strictEqual(KioskKeyboard.getKeyIcon(" "), undefined);
+  cases.forEach(([input, expected]) => {
+    assert.strictEqual(KioskKeyboard.getKeyIcon(input), expected, `getKeyIcon(${JSON.stringify(input)})`);
+  });
 });
 
 // ──────────────────────────────────────────────
 // Rendered labels for Keys (visible text or aria-label)
 // ──────────────────────────────────────────────
 
-QUnit.test('Rendered visible label: {backspace} \u2192 "Backspace"', async (assert) => {
+QUnit.test("Rendered visible labels for special and plain keys", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  assert.strictEqual(
-    getRequiredKeyElement(kb, "{backspace}").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "Backspace",
-  );
+  try {
+    const cases: [string, string][] = [
+      ["{backspace}", "Backspace"],
+      ["{enter}", "Enter"],
+      ["{shift}", "Shift"],
+      [" ", "Space"],
+      ["a", "a"],
+    ];
 
-  kb.destroy();
-});
-
-QUnit.test('Rendered visible label: {enter} \u2192 "Enter"', async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  assert.strictEqual(
-    getRequiredKeyElement(kb, "{enter}").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "Enter",
-  );
-
-  kb.destroy();
-});
-
-QUnit.test('Rendered visible label: {shift} \u2192 "Shift"', async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  assert.strictEqual(
-    getRequiredKeyElement(kb, "{shift}").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "Shift",
-  );
-
-  kb.destroy();
-});
-
-QUnit.test('Rendered visible label: " " \u2192 "Space"', async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  assert.strictEqual(getRequiredKeyElement(kb, " ").querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Space");
-
-  kb.destroy();
-});
-
-QUnit.test('Rendered visible label: "a" \u2192 "a"', async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  assert.strictEqual(getRequiredKeyElement(kb, "a").querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "a");
-
-  kb.destroy();
+    cases.forEach(([keyValue, expectedLabel]) => {
+      assert.strictEqual(
+        getRequiredKeyElement(kb, keyValue).querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
+        expectedLabel,
+        `key ${JSON.stringify(keyValue)} renders label "${expectedLabel}"`,
+      );
+    });
+  } finally {
+    kb.destroy();
+  }
 });
 
 QUnit.test('Rendered visible label after shift: "a" \u2192 "A", "1" \u2192 "!"', async (assert) => {

@@ -876,24 +876,22 @@ QUnit.test("setVisible(false) closes docked keyboard", async (assert) => {
 // applyFocusInfo preventScroll
 // ──────────────────────────────────────────────
 
-QUnit.test("applyFocusInfo with preventScroll: true does not throw", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
+[true, false].forEach((preventScroll) => {
+  QUnit.test(`applyFocusInfo fallback focuses the first key (preventScroll: ${preventScroll})`, async (assert) => {
+    const kb = new KioskKeyboard();
+    await placeAndWait(kb);
 
-  kb.applyFocusInfo({ preventScroll: true });
-  assert.ok(true, "No error with preventScroll: true");
+    // No lastFocusedKeyId -> fallback path focuses the first key.
+    kb.applyFocusInfo({ preventScroll });
 
-  kb.destroy();
-});
+    assert.strictEqual(
+      document.activeElement,
+      getFirstKeyElement(kb),
+      "Focus landed on the first key after applyFocusInfo fallback",
+    );
 
-QUnit.test("applyFocusInfo with preventScroll: false does not throw", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  kb.applyFocusInfo({ preventScroll: false });
-  assert.ok(true, "No error with preventScroll: false");
-
-  kb.destroy();
+    kb.destroy();
+  });
 });
 
 // ──────────────────────────────────────────────
