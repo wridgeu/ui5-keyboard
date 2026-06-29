@@ -212,7 +212,7 @@ forward slashes.
 
 **Root cause:** The `@ui5/webcomponents` team builds on Linux CI and has never
 encountered this. The fix would be `path.posix.join()` or a post-normalization
-in the analyzer. No upstream fix exists as of `@ui5/webcomponents-tools@2.22.0`.
+in the analyzer. No upstream fix exists in `@ui5/webcomponents-tools@2.22.0`.
 
 **Fix:** This package bundles the component as a single module, so the CEM analyzer
 never emits cross-module type-reference paths and `getTypeReferenceModulePath` is
@@ -240,9 +240,7 @@ this resolves through `"./*": "./dist/*"`, producing `dist/dist/KioskKeyboard.js
 has. Without it the middleware could not resolve the component module path, which
 manifested as a dev-server "hang".
 
-**Fix:** Added `"./dist/*": "./dist/*"` before `"./*": "./dist/*"`.
-
-**Status:** Fixed permanently.
+**Fix:** The exports map lists `"./dist/*": "./dist/*"` before `"./*": "./dist/*"`, so the identity mapping resolves the component module path (`kiosk-keyboard-webc/dist/KioskKeyboard.js`) instead of falling through to `dist/dist/KioskKeyboard.js`.
 
 ### Tag Scoping vs. a Canonical-Tag Bridge
 

@@ -184,7 +184,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
     this._dispatcher = null;
   }
 
-  /** Clear interceptor BEFORE callback (TanStack pattern - prevents race conditions). */
+  /** Clear the interceptor before invoking the callback to prevent re-entrant dispatch races. */
   private _stopAndRecord(hotkey: string): void {
     this._recording = false;
     this._dispatcher?.clearInterceptor(this);

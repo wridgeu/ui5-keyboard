@@ -9,11 +9,9 @@ export type InstanceMiddleware = ReadonlyMap<string, () => CompositionMiddleware
  * Built-in composition middleware factories keyed by layout name.
  *
  * Built eagerly from direct factory imports and sealed at module load: each
- * factory is genuinely referenced here, so a bundler cannot drop it. (The
- * prior side-effect-import self-registration scheme is the pattern that
- * broke in the webc sibling; see issue #108.) There is no public mutation
- * API: per-app middleware is supplied via the `instanceMiddleware` setting
- * on the control.
+ * factory is genuinely referenced here, so a bundler cannot drop it. There is
+ * no public mutation API: per-app middleware is supplied via the
+ * `instanceMiddleware` setting on the control.
  */
 const BUILTIN_FACTORIES: ReadonlyMap<string, () => CompositionMiddleware> = new Map([
   ["ja-kana", createKanaDakutenMiddleware],

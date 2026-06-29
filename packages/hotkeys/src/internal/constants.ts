@@ -3,23 +3,31 @@ import type { CanonicalModifier } from "../types";
 /**
  * The global scope identifier used as the bottom of the scope stack.
  * Use this constant instead of hardcoding `"__global__"`.
+ *
+ * @since 0.1.0
  */
 export const GLOBAL_SCOPE = "__global__";
 
 /**
  * Set of the four modifier key names as reported by `KeyboardEvent.key`.
  * Used to filter out modifier-only presses in event guards.
+ *
+ * @since 0.1.0
  */
 export const MODIFIER_KEYS: ReadonlySet<string> = new Set(["Control", "Shift", "Alt", "Meta"]);
 
 /**
  * Canonical modifier order for normalization: Control, Alt, Shift, Meta.
+ *
+ * @since 0.1.0
  */
 export const MODIFIER_ORDER: readonly CanonicalModifier[] = ["Control", "Alt", "Shift", "Meta"];
 
 /**
  * Maps common modifier aliases to their canonical form.
  * "Mod" is a pseudo-modifier resolved at runtime based on platform.
+ *
+ * @since 0.1.0
  */
 export const MODIFIER_ALIASES: Readonly<Record<string, CanonicalModifier | "Mod">> = {
   Control: "Control",
@@ -42,6 +50,8 @@ export const MODIFIER_ALIASES: Readonly<Record<string, CanonicalModifier | "Mod"
 
 /**
  * Maps common key name aliases to their canonical `event.key` values.
+ *
+ * @since 0.1.0
  */
 export const KEY_ALIASES: Readonly<Record<string, string>> = {
   Esc: "Escape",
@@ -79,6 +89,8 @@ export const KEY_ALIASES: Readonly<Record<string, string>> = {
 
 /**
  * macOS modifier display symbols (concatenated without separator).
+ *
+ * @since 0.1.0
  */
 export const MAC_MODIFIER_SYMBOLS: Readonly<Record<CanonicalModifier, string>> = {
   Control: "\u2303",
@@ -89,6 +101,8 @@ export const MAC_MODIFIER_SYMBOLS: Readonly<Record<CanonicalModifier, string>> =
 
 /**
  * Windows/Linux modifier display labels (joined with "+").
+ *
+ * @since 0.1.0
  */
 export const STANDARD_MODIFIER_LABELS: Readonly<Record<CanonicalModifier, string>> = {
   Control: "Ctrl",
@@ -99,6 +113,8 @@ export const STANDARD_MODIFIER_LABELS: Readonly<Record<CanonicalModifier, string
 
 /**
  * Display symbols for special keys.
+ *
+ * @since 0.1.0
  */
 export const KEY_DISPLAY_SYMBOLS: Readonly<Record<string, string>> = {
   ArrowUp: "\u2191",
@@ -119,6 +135,8 @@ export const KEY_DISPLAY_SYMBOLS: Readonly<Record<string, string>> = {
  * - Single letters are uppercased (a -> A).
  * - Known aliases are resolved (Esc -> Escape).
  * - Function keys are normalized (f5 -> F5).
+ *
+ * @since 0.1.0
  */
 export function normalizeKeyName(key: string): string {
   // Check aliases first

@@ -144,8 +144,7 @@ export function isBuiltInLayout(rawName: string): boolean {
 /**
  * Returns the layout name appropriate for the current browser locale.
  *
- * Uses `navigator.language` + `Intl.Locale` for BCP47 parsing (replaces
- * `sap/base/i18n/Localization.getLanguageTag()`).
+ * Uses `navigator.language` + `Intl.Locale` for BCP47 parsing.
  *
  * Resolution order:
  * 1. Exact BCP-47 match (e.g. "de-at"), instance map first then built-in

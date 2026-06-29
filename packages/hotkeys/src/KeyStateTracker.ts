@@ -108,7 +108,7 @@ export default class KeyStateTracker {
   processKeyUp(event: KeyboardEvent): void {
     const key = event.key;
 
-    // macOS stuck-key fix (from TanStack): When a modifier is released,
+    // macOS stuck-key fix: When a modifier is released,
     // clear all non-modifier keys. On macOS, Cmd+Tab swallows the Tab keyup,
     // leaving it permanently "stuck".
     if (this._platform === Platform.Mac && MODIFIER_KEYS.has(key)) {
