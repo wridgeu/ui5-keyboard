@@ -13,6 +13,7 @@ import { getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import type I18nBundle from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import type { I18nText } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
+import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 
 // Import generated i18n defaults (typed key constants with defaultText fallbacks)
 import * as I18N from "../generated/i18n/i18n-defaults.js";
@@ -26,7 +27,7 @@ let _bundle: I18nBundle | null = null;
 
 function _getLanguage(): string {
   try {
-    return new Intl.Locale(navigator.language).language;
+    return getLocale().getLanguage();
   } catch {
     return "en";
   }

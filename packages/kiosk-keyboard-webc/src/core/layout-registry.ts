@@ -1,3 +1,4 @@
+import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 import type { LayoutDefinition } from "../types.js";
 import DEFAULT_LAYOUT from "../layouts/default-layout.js";
 import qwerty from "../layouts/qwerty.js";
@@ -142,9 +143,12 @@ export function isBuiltInLayout(rawName: string): boolean {
 }
 
 /**
- * Returns the layout name appropriate for the current browser locale.
+ * Returns the layout name appropriate for the active locale.
  *
- * Uses `navigator.language` + `Intl.Locale` for BCP47 parsing.
+ * Resolves the locale through the framework's `getLocale()`, which honors a
+ * language configured on the UI5 Web Components runtime (e.g. via `setLanguage`)
+ * and falls back to the browser language. This is the same locale source the
+ * component's text i18n bundle uses.
  *
  * Resolution order:
  * 1. Exact BCP-47 match (e.g. "de-at"), instance map first then built-in
@@ -157,9 +161,9 @@ export function getLocaleLayout(
   instanceLayouts?: InstanceLayouts,
 ): string {
   try {
-    const locale = new Intl.Locale(navigator.language);
-    const lang = locale.language.toLowerCase();
-    const region = locale.region;
+    const locale = getLocale();
+    const lang = locale.getLanguage().toLowerCase();
+    const region = locale.getRegion();
 
     // Exact match: "de-at", "pt-br", etc.
     if (region) {
@@ -175,8 +179,8 @@ export function getLocaleLayout(
     const prefix = resolveLocaleMappedLayout(lang, instanceLocaleLayouts, instanceLayouts);
     if (prefix) return prefix;
   } catch {
-    // navigator.language can be empty or malformed in embedded contexts;
-    // Intl.Locale() throws RangeError for invalid BCP-47 tags.
+    // getLocale resolves the configured or browser locale; guard against a
+    // malformed configured language tag.
   }
 
   return DEFAULT_LAYOUT;

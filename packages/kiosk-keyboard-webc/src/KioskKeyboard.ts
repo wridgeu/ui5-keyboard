@@ -291,7 +291,7 @@ class KioskKeyboard extends UI5Element {
    * (key labels, ARIA labels, live region announcements). It receives:
    *
    * - `key` -- the i18n key (e.g. `"KEY_SHIFT"`, `"ARIA_KEYBOARD_OPENED"`)
-   * - `locale` -- the current browser locale language subtag (e.g. `"en"`, `"de"`, `"fr"`)
+   * - `locale` -- the active locale language subtag (e.g. `"en"`, `"de"`, `"fr"`)
    * - `defaultText` -- the text resolved from the built-in locale bundle
    *
    * Return a `string` to override that text, or `undefined` to keep the default.

@@ -1,4 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
+
+// Drive locale resolution through the framework's getLocale(). The same mock
+// pattern (controlling the UI5 WC dependency) is used in i18n.test.ts. getLocale
+// itself (configured-language vs browser fallback) is the framework's concern;
+// here we only assert that getLocaleLayout maps its language/region to a layout.
+const localeState = vi.hoisted(() => ({ language: "en", region: "", throws: false }));
+vi.mock("@ui5/webcomponents-base/dist/locale/getLocale.js", () => ({
+  default: () => {
+    if (localeState.throws) throw new Error("malformed locale");
+    return { getLanguage: () => localeState.language, getRegion: () => localeState.region };
+  },
+}));
+
 import {
   getRegisteredLayout,
   getLayoutOrDefault,
@@ -111,73 +124,99 @@ describe("layout-registry", () => {
   });
 
   describe("getLocaleLayout", () => {
-    function withNavigatorLanguage<T>(value: string, fn: () => T): T {
-      const original = navigator.language;
-      Object.defineProperty(navigator, "language", { value, configurable: true });
+    function withLocale<T>(language: string, region: string, fn: () => T): T {
+      const prevLang = localeState.language;
+      const prevRegion = localeState.region;
+      localeState.language = language;
+      localeState.region = region;
       try {
         return fn();
       } finally {
-        Object.defineProperty(navigator, "language", { value: original, configurable: true });
+        localeState.language = prevLang;
+        localeState.region = prevRegion;
       }
     }
 
-    it("returns default layout when navigator.language is malformed", () => {
-      withNavigatorLanguage("", () => {
+    it("returns default layout for an unmapped locale", () => {
+      withLocale("en", "", () => {
         expect(getLocaleLayout()).toBe("qwerty");
       });
     });
 
+    it("returns default layout when getLocale throws", () => {
+      localeState.throws = true;
+      try {
+        expect(getLocaleLayout()).toBe("qwerty");
+      } finally {
+        localeState.throws = false;
+      }
+    });
+
+    it("follows the framework-configured locale, not raw navigator.language", () => {
+      const originalNav = navigator.language;
+      Object.defineProperty(navigator, "language", { value: "en-US", configurable: true });
+      try {
+        // getLocale() reports German even though the browser language is en-US,
+        // so the layout follows the configured locale (qwertz-de, not qwerty).
+        withLocale("de", "", () => {
+          expect(getLocaleLayout()).toBe("qwertz-de");
+        });
+      } finally {
+        Object.defineProperty(navigator, "language", { value: originalNav, configurable: true });
+      }
+    });
+
     it("resolves ja-JP to ja-romaji via built-in locale mapping", () => {
-      withNavigatorLanguage("ja-JP", () => {
+      withLocale("ja", "JP", () => {
         expect(getLocaleLayout()).toBe("ja-romaji");
       });
     });
 
     it("resolves ar to arabic via built-in locale mapping", () => {
-      withNavigatorLanguage("ar", () => {
+      withLocale("ar", "", () => {
         expect(getLocaleLayout()).toBe("arabic");
       });
     });
 
     it("resolves ar-SA to arabic via language prefix", () => {
-      withNavigatorLanguage("ar-SA", () => {
+      withLocale("ar", "SA", () => {
         expect(getLocaleLayout()).toBe("arabic");
       });
     });
 
     it("resolves ko to ko-hangul via built-in locale mapping", () => {
-      withNavigatorLanguage("ko", () => {
+      withLocale("ko", "", () => {
         expect(getLocaleLayout()).toBe("ko-hangul");
       });
     });
 
     it("resolves ko-KR to ko-hangul via language prefix", () => {
-      withNavigatorLanguage("ko-KR", () => {
+      withLocale("ko", "KR", () => {
         expect(getLocaleLayout()).toBe("ko-hangul");
       });
     });
 
     it("resolves es to qwerty-es via built-in locale mapping", () => {
-      withNavigatorLanguage("es", () => {
+      withLocale("es", "", () => {
         expect(getLocaleLayout()).toBe("qwerty-es");
       });
     });
 
     it("resolves es-ES to qwerty-es via language prefix", () => {
-      withNavigatorLanguage("es-ES", () => {
+      withLocale("es", "ES", () => {
         expect(getLocaleLayout()).toBe("qwerty-es");
       });
     });
 
     it("instance locale map shadows built-in locale map", () => {
-      withNavigatorLanguage("de", () => {
+      withLocale("de", "", () => {
         const instanceLocale = new Map([["de", "qwerty"]]);
         expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
       });
     });
 
     it("instance locale map can resolve to instance-only layout", () => {
-      withNavigatorLanguage("xx", () => {
+      withLocale("xx", "", () => {
         const instanceLocale = new Map([["xx", "warehouse"]]);
         const instanceLayouts = new Map([["warehouse", CUSTOM_LAYOUT]]);
         expect(getLocaleLayout(instanceLocale, instanceLayouts)).toBe("warehouse");
@@ -185,14 +224,14 @@ describe("layout-registry", () => {
     });
 
     it("does not resolve mapping when target layout is not registered", () => {
-      withNavigatorLanguage("xx", () => {
+      withLocale("xx", "", () => {
         const instanceLocale = new Map([["xx", "missing-layout"]]);
         expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
       });
     });
 
     it("exact BCP-47 match takes precedence over language prefix", () => {
-      withNavigatorLanguage("de-CH", () => {
+      withLocale("de", "CH", () => {
         const instanceLocale = new Map([
           ["de", "qwertz-de"],
           ["de-ch", "qwerty"],
