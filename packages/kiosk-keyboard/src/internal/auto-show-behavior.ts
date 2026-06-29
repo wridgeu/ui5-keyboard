@@ -103,7 +103,7 @@ export default class AutoShowBehavior extends BaseObject {
     const ui5Control = this._host._resolveClaimableControl(target);
     if (!ui5Control) return;
 
-    // Focus landed on a claimable input -- cancel any pending close
+    // Focus landed on a claimable input, so cancel any pending close
     this.cancelPendingClose();
 
     this._host._setActiveTarget(ui5Control);

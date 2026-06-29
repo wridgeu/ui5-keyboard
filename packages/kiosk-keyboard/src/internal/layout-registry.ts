@@ -111,7 +111,7 @@ export function getLayoutOrDefault(sName: string, instanceLayouts?: InstanceLayo
 
 /**
  * Returns the names of all built-in layouts. Instance-only layouts are
- * intentionally not included here -- they are scoped to the control that
+ * intentionally not included here. They are scoped to the control that
  * declared them and are not exposed as a global view.
  */
 export function getRegisteredLayoutNames(): string[] {

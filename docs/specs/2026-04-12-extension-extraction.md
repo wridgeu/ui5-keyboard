@@ -15,7 +15,7 @@ Follows `sap.ui.table`'s Extension Object pattern adapted for this codebase:
 
 - Each extension is a plain class extending `sap.ui.base.Object` (provides the `destroy()` contract).
 - Constructor receives a `host: KioskKeyboard` reference, stored as `this._host`.
-- Extensions access the host's public getters and a small set of internal methods directly via the host reference (option A from the design discussion -- no callback injection).
+- Extensions access the host's public getters and a small set of internal methods directly via the host reference (option A from the design discussion: no callback injection).
 - KioskKeyboard holds named fields for type safety plus an `_extensions` array for lifecycle broadcasting.
 - Public API is unchanged. Consumers see the same properties, events, and methods on KioskKeyboard.
 
@@ -27,7 +27,7 @@ this._nativeKbSuppression = new NativeKeyboardSuppression(this);
 this._autoShowBehavior = new AutoShowBehavior(this);
 this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
 
-// onAfterRendering() -- optional chaining because not all extensions need this hook
+// onAfterRendering(): optional chaining because not all extensions need this hook
 for (const ext of this._extensions) ext.onAfterRendering?.();
 
 // exit()
@@ -64,14 +64,14 @@ class NativeKeyboardSuppression extends BaseObject {
 
 **State:**
 
-- `_suppressedInputId: string | null` -- which input this instance is currently suppressing
-- `static _suppressions: Map<string, { originalInputMode: string | null; refCount: number }>` -- shared across all instances
+- `_suppressedInputId: string | null`: which input this instance is currently suppressing
+- `static _suppressions: Map<string, { originalInputMode: string | null; refCount: number }>`: shared across all instances
 
 **Host dependencies (via `this._host`):**
 
-- `getMobileKeyboard()` -- property value for defer-to-native check
-- `getActiveTargetId()` -- which input to suppress (currently `_getActiveTargetId()`, needs to be exposed as internal API)
-- `getEffectiveResolver()` -- target resolver for locating native input DOM within composite controls (currently `_getEffectiveResolver()`)
+- `getMobileKeyboard()`: property value for defer-to-native check
+- `getActiveTargetId()`: which input to suppress (currently `_getActiveTargetId()`, needs to be exposed as internal API)
+- `getEffectiveResolver()`: target resolver for locating native input DOM within composite controls (currently `_getEffectiveResolver()`)
 
 **Call sites (unchanged orchestration on KioskKeyboard):**
 
@@ -118,28 +118,28 @@ class AutoShowBehavior extends BaseObject {
 
 **State:**
 
-- `_active: boolean` -- whether document listeners are attached
-- `_deferredCloseId: number | null` -- rAF handle for deferred close
-- `_boundFocusIn`, `_boundFocusOut` -- bound listener references
+- `_active: boolean`: whether document listeners are attached
+- `_deferredCloseId: number | null`: rAF handle for deferred close
+- `_boundFocusIn`, `_boundFocusOut`: bound listener references
 
 **Host dependencies (via `this._host`):**
 
-- `getDocked()`, `getVisible()`, `getEnabled()`, `getAutoShow()`, `getAutoType()` -- property getters
-- `getDomRef()` -- for participation check and "focus on keyboard" guard
-- `getControls()` -- to trigger controls setup on focusin
-- `resolveClaimableControl(target)` -- focus claim service (currently `_resolveClaimableControl`, needs to be exposed as internal API)
-- `wouldClaimInput(target)` -- fast-path check in focusout (currently `_wouldClaimInput`)
-- `setActiveTarget(control)` -- hub method (currently `_setActiveTarget`)
-- `show()`, `close()` -- public API
-- `getKeyboardType()`, `getKeyboardTypeSource()` -- for auto-type detection
-- `getEffectiveResolver()` -- for auto-type detection
-- `setupControls()` -- re-resolve controls on focusin
+- `getDocked()`, `getVisible()`, `getEnabled()`, `getAutoShow()`, `getAutoType()`: property getters
+- `getDomRef()`: for participation check and "focus on keyboard" guard
+- `getControls()`: to trigger controls setup on focusin
+- `resolveClaimableControl(target)`: focus claim service (currently `_resolveClaimableControl`, needs to be exposed as internal API)
+- `wouldClaimInput(target)`: fast-path check in focusout (currently `_wouldClaimInput`)
+- `setActiveTarget(control)`: hub method (currently `_setActiveTarget`)
+- `show()`, `close()`: public API
+- `getKeyboardType()`, `getKeyboardTypeSource()`: for auto-type detection
+- `getEffectiveResolver()`: for auto-type detection
+- `setupControls()`: re-resolve controls on focusin
 
 **Call sites (unchanged orchestration on KioskKeyboard):**
 
 - `setAutoShow()` calls `this._autoShowBehavior.enable()` / `.disable()`
 - `setDocked()` calls `.enable()` / `.disable()` on docked state transitions
-- `_setActiveTarget()` is still the hub -- AutoShowBehavior calls into it, not the other way around
+- `_setActiveTarget()` is still the hub: AutoShowBehavior calls into it, not the other way around
 
 **What moves out of KioskKeyboard:**
 
@@ -176,20 +176,20 @@ AutoShowBehavior needs access to several currently-private methods. These become
 These are already `private` in the TypeScript sense. Since extensions live in the same package and import KioskKeyboard, TypeScript's `private` visibility is the constraint. Options:
 
 1. Change from `private` to no modifier (package-level by convention, underscore signals internal).
-2. Keep `private` and use `// @ts-ignore` or cast -- fragile.
+2. Keep `private` and use `// @ts-ignore` or cast: fragile.
 3. Use a friend-class pattern with a symbol-keyed accessor.
 
 Option 1 is the simplest and matches UI5 convention where underscore-prefixed methods are internal-by-contract.
 
 ## Extraction Order
 
-1. **NativeKeyboardSuppression first** -- most self-contained, fewest host dependencies, lowest risk. Existing `inputmode.test.ts` validates behavior.
-2. **AutoShowBehavior second** -- larger surface, more host dependencies, benefits from NativeKeyboardSuppression already being extracted (cleaner `show()` orchestration). Existing `focus.test.ts` validates behavior.
+1. **NativeKeyboardSuppression first**: most self-contained, fewest host dependencies, lowest risk. Existing `inputmode.test.ts` validates behavior.
+2. **AutoShowBehavior second**: larger surface, more host dependencies, benefits from NativeKeyboardSuppression already being extracted (cleaner `show()` orchestration). Existing `focus.test.ts` validates behavior.
 
 Each extraction is independently committable and testable.
 
 ## Testing Strategy
 
-Existing integration tests (`inputmode.test.ts`, `focus.test.ts`) continue to work unchanged since the public API is preserved. No new unit tests are required for the extractions themselves -- the behavior is covered by the existing tests through the control's public surface.
+Existing integration tests (`inputmode.test.ts`, `focus.test.ts`) continue to work unchanged since the public API is preserved. No new unit tests are required for the extractions themselves: the behavior is covered by the existing tests through the control's public surface.
 
 If isolated unit testing of extensions becomes desirable later, the host reference can be stubbed since extensions only call public getters and a known set of internal methods.

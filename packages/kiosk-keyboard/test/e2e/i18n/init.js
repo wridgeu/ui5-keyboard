@@ -6,13 +6,13 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
     KioskKeyboard.setI18nResolver(null);
   };
 
-  // -- 1. Baseline --
+  // 1. Baseline
 
   const inputBaseline = new Input({ value: "Hello World", width: "300px" });
   inputBaseline.placeAt("input-baseline");
   new KioskKeyboard({ controls: [inputBaseline.getId()] }).placeAt("kb-baseline");
 
-  // -- 2. French resolver --
+  // 2. French resolver
 
   const frenchTexts = {
     KIOSK_KEYBOARD_LABEL: "Clavier virtuel",
@@ -47,7 +47,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
     press: () => resetI18n(),
   }).placeAt("controls-french");
 
-  // -- 3. Override existing English labels --
+  // 3. Override existing English labels
 
   const overrideTexts = {
     KIOSK_KEYBOARD_LABEL: "Touch Keyboard",
@@ -74,7 +74,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
     press: () => resetI18n(),
   }).placeAt("controls-override");
 
-  // -- 4. Programmatic resolver --
+  // 4. Programmatic resolver
 
   const inputHook = new Input({ value: "Hook demo", width: "300px" });
   inputHook.placeAt("input-hook");

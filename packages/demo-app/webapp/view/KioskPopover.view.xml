@@ -82,7 +82,7 @@
 
             <Panel headerText="E) Popover contentHeight (no keyboard CSS)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="The Popover has contentHeight: 15rem but no CSS on the keyboard. The Popover's intermediate wrapper divs have height: auto, so max-height: 100% cannot propagate. The keyboard renders at full size and overflows -- demonstrating the limitation documented in the README." />
+                    <Text text="The Popover has contentHeight: 15rem but no CSS on the keyboard. The Popover's intermediate wrapper divs have height: auto, so max-height: 100% cannot propagate. The keyboard renders at full size and overflows, demonstrating the limitation documented in the README." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Full Name" class="sapUiSmallMarginEnd" />
                         <Input id="inputE" placeholder="Jane Doe" width="14rem" />

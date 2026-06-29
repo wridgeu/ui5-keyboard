@@ -114,11 +114,11 @@ QUnit.test("Target switch resets shift regardless of current layout", async (ass
   assert.ok(isShiftActive(kb), "Shift active on base layout");
 
   // Switch to numeric layout (shift persists internally but is not
-  // observable -- numeric layout has no shift key)
+  // observable: numeric layout has no shift key)
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
 
-  // Switch target while on numeric layout -- shift must reset
+  // Switch target while on numeric layout: shift must reset
   input2.focus();
   await waitForRender();
 

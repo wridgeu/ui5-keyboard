@@ -16,7 +16,7 @@ const __dirname = import.meta.dirname;
 //
 // CI never built this bundle, so nothing caught it. This test runs the real
 // `vite build` (the same vite.config.ts that produces the published bundle) and
-// asserts the emitted code still contains the layouts and middleware -- it goes
+// asserts the emitted code still contains the layouts and middleware. It goes
 // red if a future change reintroduces droppable registration. Variable/function
 // names are mangled in the output, so every assertion is on a STRING LITERAL
 // that only survives if the corresponding source module survived tree-shaking.
@@ -69,7 +69,7 @@ describe("standalone bundle tree-shaking guard (issue #108)", () => {
     }
 
     // Composition middleware must be wired in too (it was previously never
-    // registered in production -- only tests imported it). These literals are
+    // registered in production: only tests imported it). These literals are
     // unique to the middleware modules: U+3071 ("ぱ") only appears in the
     // kana-dakuten map, and "LVT" is the hangul-compose phase label.
     expect(code, "kana-dakuten middleware missing from bundle").toContain("ぱ");

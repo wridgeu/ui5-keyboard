@@ -814,7 +814,7 @@ describe("kiosk-keyboard", () => {
       expect(detail.layout).to.equal("numeric");
       await nextRender();
 
-      // Step 3: return to base -- should be ja-kana, NOT ja-romaji
+      // Step 3: return to base; should be ja-kana, NOT ja-romaji
       const baseKey = queryKey(el, "{layout:base}");
       expect(baseKey, "base key should exist on numeric layout").to.not.be.null;
 
@@ -985,7 +985,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       expect(queryKey(el, "{layout:base}"), "special layout is shown after the user override").to.not.be.null;
 
-      // Refocus the SAME input -- the override must NOT be reverted.
+      // Refocus the SAME input: the override must NOT be reverted.
       input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
       input.focus();
       input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
@@ -2077,7 +2077,7 @@ describe("kiosk-keyboard", () => {
       // No minHeight is set on the root
       expect(root.style.minHeight).to.equal("");
 
-      // Switch layout -- keyboard remains within the fixed host
+      // Switch layout: keyboard remains within the fixed host
       el.layout = "numeric";
       await nextRender();
       await waitForResponsiveSync();
@@ -2133,7 +2133,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       await waitForResponsiveSync();
 
-      // Host auto-sizes to content -- no constraint detected
+      // Host auto-sizes to content: no constraint detected
       const root = rootDiv(el);
       expect(root.scrollHeight).to.be.at.most(el.clientHeight + 1, "no overflow in unconstrained host");
 

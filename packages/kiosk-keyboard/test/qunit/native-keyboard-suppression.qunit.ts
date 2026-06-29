@@ -121,7 +121,7 @@ QUnit.test("two instances suppress the same input, single restore keeps it suppr
     assert.strictEqual(input.getAttribute("inputmode"), "none", "still suppressed after B joins");
 
     a.restore();
-    assert.strictEqual(input.getAttribute("inputmode"), "none", "still suppressed -- B holds the ref");
+    assert.strictEqual(input.getAttribute("inputmode"), "none", "still suppressed: B holds the ref");
 
     b.restore();
     assert.strictEqual(input.getAttribute("inputmode"), null, "restored after both release");
@@ -286,7 +286,7 @@ QUnit.test("suppress is a no-op when shouldDeferToNative returns true", (assert)
     const suppression = new NativeKeyboardSuppression(makeHost(inputId, MobileKeyboard.Native));
 
     suppression.suppress();
-    assert.strictEqual(input.getAttribute("inputmode"), null, "inputmode not changed -- deferred to native");
+    assert.strictEqual(input.getAttribute("inputmode"), null, "inputmode not changed: deferred to native");
 
     suppression.destroy();
   } finally {

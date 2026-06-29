@@ -76,7 +76,7 @@ contract** rather than adding an action subsystem:
    key, not just custom ones. NOTE: relying on the i18n resolver alone does **not**
    cover custom tokens (the resolver is keyed for built-ins), so without
    `KeyDefinition.ariaLabel` an icon-only `{custom}` key would announce the raw
-   token -- the exact defect this pivot must avoid.
+   token: the exact defect this pivot must avoid.
 
 ### Trade-offs accepted (vs. the action subsystem)
 

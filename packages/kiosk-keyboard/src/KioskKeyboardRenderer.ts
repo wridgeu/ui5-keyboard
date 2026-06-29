@@ -256,7 +256,7 @@ const KioskKeyboardRenderer = {
 
     // Only set aria-label when there is no visible text label (WCAG 2.5.3).
     // When capsLockLabel provides visible text, that text IS the accessible
-    // name -- adding aria-label would mismatch it.
+    // name, so adding aria-label would mismatch it.
     if (!label) {
       if (bIsShiftKey && _isCapsLock()) {
         rm.attr("aria-label", getText("ARIA_CAPS_LOCK", "Caps Lock"));
@@ -270,7 +270,7 @@ const KioskKeyboardRenderer = {
   resolveKeyIcon(oControl: KioskKeyboard, key: KeyDefinition): string {
     const { _isCapsLock } = oControl._getRendererApi();
 
-    // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
+    // CapsLock state is evaluated first; capsLockIcon is independent of icon: ""
     if (key.value === "{shift}" && _isCapsLock()) {
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {

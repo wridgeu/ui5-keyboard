@@ -158,7 +158,7 @@ export interface KeyDefinition {
 
   /**
    * Icon to show on the `{shift}` key when Caps Lock is active.
-   * Evaluated independently of {@link icon} -- setting `icon` to `""`
+   * Evaluated independently of {@link icon}. Setting `icon` to `""`
    * does not suppress `capsLockIcon`.
    *
    * Accepts the same values as `icon` (SAP icon URI or Unicode/emoji).
@@ -301,7 +301,7 @@ export type KeyRow = KeyDefinition[];
  */
 export type LayoutDefinition = KeyRow[];
 
-// -- i18n resolver type --
+// i18n resolver type
 
 /**
  * Resolver callback for programmatic i18n overrides.

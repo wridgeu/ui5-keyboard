@@ -1,10 +1,10 @@
-// Main entry point -- defines the component class.
+// Main entry point: defines the component class.
 //
 // The built-in layouts and composition middleware are pulled into the module
 // graph as genuine value imports by their registries (core/layout-registry.js
 // and core/middleware-registry.js, which build their maps from direct imports).
-// They are therefore bundled wherever this entry is -- including the
-// ui5-tooling-modules wrapper that resolves the main entry from the CEM -- and
+// They are therefore bundled wherever this entry is (including the
+// ui5-tooling-modules wrapper that resolves the main entry from the CEM) and
 // cannot be dropped by tree-shaking. Side-effect-only imports would be.
 
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
@@ -95,10 +95,10 @@ function isInvalidEnumValue(propName: string, value: string, validValues: Readon
 /** Who last set keyboardType. "auto:VALUE" = set by _setKeyboardTypeInternal for VALUE. */
 type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
 
-/** Why _targetElement was set -- drives focusout cleanup policy. */
+/** Why _targetElement was set: drives focusout cleanup policy. */
 type TargetSource = "autoShow" | "explicit";
 
-/** Why _currentLayout was last changed -- drives _getResolvedLayout bypass. */
+/** Why _currentLayout was last changed: drives _getResolvedLayout bypass. */
 type LayoutSource = "user" | "external";
 
 /** Display and ARIA labels for built-in special keys. */
@@ -290,9 +290,9 @@ class KioskKeyboard extends UI5Element {
    * The resolver is called for every translatable text the keyboard renders
    * (key labels, ARIA labels, live region announcements). It receives:
    *
-   * - `key` -- the i18n key (e.g. `"KEY_SHIFT"`, `"ARIA_KEYBOARD_OPENED"`)
-   * - `locale` -- the active locale language subtag (e.g. `"en"`, `"de"`, `"fr"`)
-   * - `defaultText` -- the text resolved from the built-in locale bundle
+   * - `key`: the i18n key (e.g. `"KEY_SHIFT"`, `"ARIA_KEYBOARD_OPENED"`)
+   * - `locale`: the active locale language subtag (e.g. `"en"`, `"de"`, `"fr"`)
+   * - `defaultText`: the text resolved from the built-in locale bundle
    *
    * Return a `string` to override that text, or `undefined` to keep the default.
    *
@@ -302,7 +302,7 @@ class KioskKeyboard extends UI5Element {
    * If the resolver throws, the error is logged and the default text is used.
    * Pass `null` to clear a previously set resolver.
    *
-   * Example (the `@example` tag is intentionally avoided -- it is rejected by
+   * Example (the `@example` tag is intentionally avoided: it is rejected by
    * the CEM dev-mode validation; see docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md):
    * ```ts
    * // Add French translations
@@ -446,7 +446,7 @@ class KioskKeyboard extends UI5Element {
    * supply a custom layout, or to override a built-in (e.g. swap
    * the German layout) without affecting other elements.
    *
-   * Programmatic only -- this property accepts a JS object (not a
+   * Programmatic only: this property accepts a JS object (not a
    * stringifiable attribute), so it cannot be set via HTML markup.
    *
    * @default null
@@ -462,7 +462,7 @@ class KioskKeyboard extends UI5Element {
    * are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are layout
    * names.
    *
-   * Programmatic only -- accepts a JS object (`Record<string, string>`).
+   * Programmatic only: accepts a JS object (`Record<string, string>`).
    *
    * @default null
    * @public
@@ -474,7 +474,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * Per-instance composition middleware overrides keyed by layout name.
    *
-   * Programmatic only -- accepts a JS object whose values are factory
+   * Programmatic only: accepts a JS object whose values are factory
    * functions returning a `CompositionMiddleware`.
    *
    * @default null
@@ -1169,7 +1169,7 @@ class KioskKeyboard extends UI5Element {
       return { value: raw, sap: false };
     };
 
-    // CapsLock state is evaluated first -- capsLockIcon is independent of icon: ""
+    // CapsLock state is evaluated first; capsLockIcon is independent of icon: ""
     if (key.value === "{shift}" && this._capsLock) {
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {

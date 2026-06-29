@@ -37,9 +37,9 @@ const NAV_KEYS: ReadonlySet<string> = new Set([
  *
  * Content-driven so custom layouts get correct kinds automatically.
  *
- * - `"fkey"` -- all keys are function keys (F1, F2, ... pattern)
- * - `"nav"` -- all keys are known navigation keys (arrows, Home/End, PgUp/PgDn)
- * - `undefined` -- everything else (character rows, mixed rows, custom fkey rows)
+ * - `"fkey"`: all keys are function keys (F1, F2, ... pattern)
+ * - `"nav"`: all keys are known navigation keys (arrows, Home/End, PgUp/PgDn)
+ * - `undefined`: everything else (character rows, mixed rows, custom fkey rows)
  */
 export function classifyRow(row: ReadonlyArray<{ value: string }>): "fkey" | "nav" | undefined {
   if (row.length === 0) return undefined;

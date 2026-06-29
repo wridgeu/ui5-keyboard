@@ -322,7 +322,7 @@ QUnit.test("autoType refocus on the same input preserves a user {layout:*} overr
   await waitForRender();
   assert.strictEqual(getRowKeyValues(kb, 0)[0], "1", "User switch to numeric lands (row 0 starts at '1')");
 
-  // Refocus the SAME input (blur then focus) -- a caret reposition, not a new
+  // Refocus the SAME input (blur then focus) is a caret reposition, not a new
   // editing context. The user's override must survive.
   inputDom.blur();
   inputDom.focus();

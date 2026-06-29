@@ -103,7 +103,7 @@ export class ResponsiveSizingController {
    *
    * Width responsiveness is handled purely by CSS @container queries.
    *
-   * Height: applied in all browsers -- detects external height constraints
+   * Height: applied in all browsers. Detects external height constraints
    * (host height < natural content height) and applies compact layout.
    *
    * Called from scheduleClassUpdate() (coalesced from ResizeObserver via rAF)

@@ -91,7 +91,7 @@ export interface KeyDefinition {
 
   /**
    * Icon to show on the `{shift}` key when Caps Lock is active.
-   * Evaluated independently of {@link icon} -- setting `icon` to `""`
+   * Evaluated independently of {@link icon}. Setting `icon` to `""`
    * does not suppress `capsLockIcon`.
    * Accepts SAP icon URIs or Unicode/emoji. Defaults to `sap-icon://locked`.
    * Only meaningful on keys with `value: "{shift}"`.

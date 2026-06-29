@@ -115,7 +115,7 @@ export default class KioskI18nExtensibility extends BaseController {
     this.getRouter().navTo(Scope.KioskHub);
   }
 
-  // -- i18n mode helpers --
+  // i18n mode helpers
 
   private _resetI18n(): void {
     KioskKeyboard.setI18nResolver(null);
@@ -141,7 +141,7 @@ export default class KioskI18nExtensibility extends BaseController {
     });
   }
 
-  // -- ARIA Inspector --
+  // ARIA Inspector
 
   private _updateAriaInspector(): void {
     const keyboard = this.byId("i18nKeyboard") as KioskKeyboard | undefined;
@@ -168,7 +168,7 @@ export default class KioskI18nExtensibility extends BaseController {
     );
   }
 
-  // -- Route lifecycle --
+  // Route lifecycle
 
   private _onPatternMatched(_event: Route$PatternMatchedEvent): void {
     this._active = true;
