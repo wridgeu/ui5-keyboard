@@ -130,7 +130,7 @@ export default class ResponsiveSizingController extends BaseObject {
     this._observedDom = null;
   }
 
-  destroy(): void {
+  override destroy(): void {
     this._teardown();
     super.destroy();
   }

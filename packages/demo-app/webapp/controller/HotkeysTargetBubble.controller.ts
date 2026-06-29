@@ -32,7 +32,7 @@ export default class HotkeysTargetBubble extends BaseController {
   private _boundOuterTarget: HTMLElement | null = null;
   private _boundInnerTarget: HTMLElement | null = null;
 
-  onInit(): void {
+  override onInit(): void {
     this._manager = this.getTypedComponent().getHotkeyManager();
 
     this._logModel = new JSONModel({ entries: [] as LogEntry[] });
@@ -54,7 +54,7 @@ export default class HotkeysTargetBubble extends BaseController {
     this.getRouter().navTo(Scope.HotkeysHub);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this.byId("outerTargetBox")?.removeEventDelegate(this._renderDelegate);
     this.byId("bubbleInput")?.removeEventDelegate(this._renderDelegate);
     this.getRouter().detachRouteMatched(this._onRouteMatched, this);

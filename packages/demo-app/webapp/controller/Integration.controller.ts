@@ -15,7 +15,7 @@ export default class Integration extends BaseController {
 
   private _hotkeys!: RegistrationGroup;
 
-  onInit(): void {
+  override onInit(): void {
     this.getView()!.setModel(new JSONModel({ lastKioskKey: "None" }), "integration");
 
     const manager = this.getTypedComponent().getHotkeyManager();
@@ -52,7 +52,7 @@ export default class Integration extends BaseController {
     this.getStateModel().setProperty("/lastAction", "Kiosk keyPress event");
   }
 
-  onExit(): void {
+  override onExit(): void {
     this._hotkeys.destroyAll();
   }
 }

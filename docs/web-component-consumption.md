@@ -146,12 +146,13 @@ subpath imports and pass any custom layouts through the per-element
 
 ```typescript
 import KioskKeyboard from "kiosk-keyboard-webc";
-import "kiosk-keyboard-webc/layouts/qwerty";
-import "kiosk-keyboard-webc/layouts/numeric";
+import qwerty from "kiosk-keyboard-webc/layouts/qwerty";
+import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
 const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = { "my-custom": myDefinition };
-el.layout = "my-custom";
+// Use a built-in as a base: prepend the shared F-key row to QWERTY.
+el.instanceLayouts = { "qwerty-fk": [fkeyRow, ...qwerty] };
+el.layout = "qwerty-fk";
 document.body.appendChild(el);
 ```
 

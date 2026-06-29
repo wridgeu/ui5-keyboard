@@ -636,7 +636,7 @@ export default class KioskKeyboard extends Control {
    * ManagedObject does not call `applySettings`. The locale default is
    * therefore also set in `init()`.
    */
-  applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
+  override applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
     // Pre-populate the internal Map caches before super.applySettings
     // runs so layout validation in setLayout() can honor instance
     // overrides regardless of property iteration order.
@@ -652,7 +652,7 @@ export default class KioskKeyboard extends Control {
     return super.applySettings(merged, oScope);
   }
 
-  init(): void {
+  override init(): void {
     KioskKeyboard._instances.add(this);
     this._shiftState = new ShiftState(() => this.invalidate());
     this._keyGridNav = new KeyGridNavigation(this.getId(), KIOSK_KEYBOARD_DOM);
@@ -724,7 +724,7 @@ export default class KioskKeyboard extends Control {
     this.invalidate();
   }
 
-  onAfterRendering(): void {
+  override onAfterRendering(): void {
     this._keyGridNav.setRootRef(this.getDomRef() as HTMLElement | null);
     this._syncDockedDomState();
 
@@ -755,7 +755,7 @@ export default class KioskKeyboard extends Control {
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this._open);
   }
 
-  exit(): void {
+  override exit(): void {
     if (this._middleware) {
       this._middleware.reset();
       this._middleware = null;
@@ -819,7 +819,7 @@ export default class KioskKeyboard extends Control {
    * `setVisible(true)` does not re-open a previously closed docked
    * keyboard; call `show()` explicitly after making it visible again.
    */
-  setVisible(isVisible: boolean): this {
+  override setVisible(isVisible: boolean): this {
     if (!isVisible) {
       this._redirectFocusToTargetIfOwned();
       // Close the docked keyboard - a hidden keyboard should not retain
@@ -1468,7 +1468,7 @@ export default class KioskKeyboard extends Control {
 
   // ── Focus management ──
 
-  getFocusDomRef(): globalThis.Element | null {
+  override getFocusDomRef(): globalThis.Element | null {
     if (!this.getEnabled() || this._getResolvedLayout().length === 0) {
       return null;
     }
@@ -1476,11 +1476,11 @@ export default class KioskKeyboard extends Control {
     return this._keyGridNav.getFocusableDomRef();
   }
 
-  getFocusInfo(): { id: string; lastFocusedKeyId: string | null } {
+  override getFocusInfo(): { id: string; lastFocusedKeyId: string | null } {
     return { id: this.getId(), lastFocusedKeyId: this._keyGridNav.getLastFocusedKeyId() };
   }
 
-  applyFocusInfo(oFocusInfo: { id?: string; preventScroll?: boolean; lastFocusedKeyId?: string }): this {
+  override applyFocusInfo(oFocusInfo: { id?: string; preventScroll?: boolean; lastFocusedKeyId?: string }): this {
     // Disabled keyboard: the renderer set all keys to tabindex="-1".
     // Do not restore focus - it would undo the renderer's decision.
     if (!this.getEnabled()) {
@@ -1521,7 +1521,7 @@ export default class KioskKeyboard extends Control {
 
   // ── Accessibility ──
 
-  getAccessibilityInfo(): {
+  override getAccessibilityInfo(): {
     role: string;
     type: string;
     description: string;

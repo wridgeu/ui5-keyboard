@@ -10,6 +10,7 @@
 
 - [Backward Compatibility](./history/BACKWARD-COMPATIBILITY.md) (rejected)
 - [Black-Box Test Plan](./history/BLACKBOX-TEST-PLAN.md)
+- [HotkeyManager Instance Lifecycle](./history/HOTKEYS-INSTANCE-LIFECYCLE.md)
 - [Centralized EventDispatcher & Suspend Guard](./history/implemented-proposals/HOTKEY-MANAGER-SUSPEND-GUARD.md)
 
 ## [Proposals](./proposals/)

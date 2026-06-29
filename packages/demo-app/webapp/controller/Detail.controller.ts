@@ -22,7 +22,7 @@ export default class Detail extends BaseController {
   private _recorder: HotkeyRecorder | null = null;
   private _dynamicHandle: HotkeyRegistrationHandle | null = null;
 
-  onInit(): void {
+  override onInit(): void {
     this._manager = this.getTypedComponent().getHotkeyManager();
     this._hotkeys = this._manager.createGroup();
     const stateModel = this.getStateModel();
@@ -98,7 +98,7 @@ export default class Detail extends BaseController {
     stateModel.setProperty("/isRecording", false);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this._destroyRecorder();
     // destroyAll() unregisters every handle in the group, including _dynamicHandle
     this._hotkeys.destroyAll();

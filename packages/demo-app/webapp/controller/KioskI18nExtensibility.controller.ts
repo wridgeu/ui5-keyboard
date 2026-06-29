@@ -52,7 +52,7 @@ export default class KioskI18nExtensibility extends BaseController {
   private _active = false;
   private _inspectorDelegate: { onAfterRendering: () => void } | null = null;
 
-  onInit(): void {
+  override onInit(): void {
     this.getView()!.setModel(
       new JSONModel({
         activeMode: "default",
@@ -79,7 +79,7 @@ export default class KioskI18nExtensibility extends BaseController {
     router.attachRouteMatched(this._onRouteMatched, this);
   }
 
-  onExit(): void {
+  override onExit(): void {
     const router = this.getRouter();
     router.getRoute(Scope.KioskI18nExtensibility)?.detachPatternMatched(this._onPatternMatched, this);
     router.detachRouteMatched(this._onRouteMatched, this);

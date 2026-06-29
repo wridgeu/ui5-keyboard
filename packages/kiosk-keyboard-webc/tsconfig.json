@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "composite": true,
+    "verbatimModuleSyntax": true,
     "strictPropertyInitialization": false,
     "jsx": "react-jsx",
     "experimentalDecorators": true,

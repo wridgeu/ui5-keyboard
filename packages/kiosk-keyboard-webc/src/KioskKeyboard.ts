@@ -219,7 +219,7 @@ class KioskKeyboard extends UI5Element {
    */
   static readonly DOM = KIOSK_KEYBOARD_DOM;
 
-  eventDetails!: {
+  override eventDetails!: {
     "key-press": KeyPressEventDetail;
     "after-open": OpenStateChangeEventDetail;
     "after-close": OpenStateChangeEventDetail;
@@ -695,7 +695,7 @@ class KioskKeyboard extends UI5Element {
 
   // ── Lifecycle ──
 
-  onEnterDOM(): void {
+  override onEnterDOM(): void {
     KioskKeyboard._instances.add(this);
     this._autoShow.register();
 
@@ -734,7 +734,7 @@ class KioskKeyboard extends UI5Element {
     this._responsiveSizing.setup();
   }
 
-  onExitDOM(): void {
+  override onExitDOM(): void {
     if (this._middleware) {
       this._middleware.reset();
       this._middleware = null;
@@ -767,7 +767,7 @@ class KioskKeyboard extends UI5Element {
     this._keyGridNav.setLastFocusedKeyId(null);
   }
 
-  onAfterRendering(): void {
+  override onAfterRendering(): void {
     // Announce pending live region text (from show/close/shift). Queue is
     // drained sequentially with a small gap so AT clients pick up each entry.
     this._announcements.flush();
@@ -782,7 +782,7 @@ class KioskKeyboard extends UI5Element {
     if (root) this._responsiveSizing.syncObserverTargets(root);
   }
 
-  onInvalidation(changeInfo: ChangeInfo): void {
+  override onInvalidation(changeInfo: ChangeInfo): void {
     const { name } = changeInfo;
 
     if (name === "layout") {

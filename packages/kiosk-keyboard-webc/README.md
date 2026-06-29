@@ -123,6 +123,9 @@ Recommended for plain HTML, React, Vue, Angular, and most non-UI5 apps.
 > [!NOTE]
 > The examples below use bare package specifiers (`kiosk-keyboard-webc/…`), which require a bundler (Vite, webpack, etc.) or an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap). For plain `<script>` usage without a build step, replace the specifier with the resolved path to `dist/kiosk-keyboard.bundle.js` (for example `./node_modules/kiosk-keyboard-webc/dist/kiosk-keyboard.bundle.js`).
 
+> [!NOTE]
+> The element is **client-only**: importing the bundle runs `customElements.define()` and registers the SAP font at module load, which throws during server-side rendering (Next.js, Nuxt, Analog). In an SSR framework, import it on the client only - e.g. Next.js `dynamic(() => import("kiosk-keyboard-webc/bundle"), { ssr: false })`, or import inside `useEffect` / `onMounted`.
+
 ```html
 <script type="module">
   import "kiosk-keyboard-webc/bundle";
@@ -511,7 +514,7 @@ keyboard.addEventListener("key-press", (e) => {
 > [!NOTE]
 > Layout-switch keys (`{layout:*}`) fire `key-press` with the wrapped form (`"{layout:numeric}"`, `"{layout:base}"`) so consumers can distinguish the layout-switch action from a literal text key. This is asymmetric with F-keys for historical reasons; consult `e.detail.key` directly.
 
-When `f-key-mode="Native"`, the synthetic `keydown` is dispatched to the target input **before** `key-press` fires. This means any global keyboard shortcut system listening on the document (for example, a hotkeys library) will also see the F-key event, independent of whether the `key-press` handler calls `preventDefault()`.
+When `f-key-mode="Native"`, the cancelable `key-press` event fires **first**; the synthetic `keydown` is dispatched to the target input only if no handler calls `preventDefault()`. This means a global keyboard shortcut system listening on the document (for example, a hotkeys library) sees the F-key event only when the `key-press` handler does not call `preventDefault()` - cancelling `key-press` suppresses the native dispatch entirely.
 
 To suppress the built-in F5 reload or F11 fullscreen actions specifically, call `preventDefault()` on the `key-press` event:
 

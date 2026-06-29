@@ -59,6 +59,7 @@ layouts/
   arabic.ts               Arabic layout
   ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
   qwerty-es.ts            Spanish QWERTY layout
+  symbol-common.ts        Shared punctuation/symbol row data (used by numeric, special)
 i18n/
   messagebundle.properties    Default (English) key/ARIA labels
   messagebundle_de.properties German translations
@@ -149,6 +150,7 @@ Internal reactive properties (no HTML attribute, trigger re-render):
 - `_currentLayout`: currently active layout name
 - `_shifted`: whether shift is active
 - `_capsLock`: whether caps lock is active
+- `_liveRegionText`: ARIA live-region announcement text
 
 ### Event Handling
 
@@ -423,7 +425,7 @@ Uses the UI5 Web Components i18n infrastructure:
 1. Source `.properties` files are processed by `@ui5/webcomponents-tools` into generated JSON loaders
 2. `Assets.ts` registers these loaders with the framework
 3. `initI18n()` loads the bundle asynchronously (fire-and-forget)
-4. `getText()` resolution order: UI5 bundle → custom resolver → English defaults
+4. `getText()` resolution order: custom resolver → UI5 bundle → English defaults
 
 The component is `languageAware: true`, so it re-renders on language change.
 
@@ -541,7 +543,8 @@ CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration 
   "./layouts/*": "dist/layouts/*.js", // layout-definition modules for custom composition
   "./middleware/*": "dist/middleware/*.js", // middleware-factory modules for custom composition
   "./customElements": "dist/custom-elements.json", // CEM for IDE/tooling integration
-  "./dist/*": "dist/*" // catch-all
+  "./dist/*": "dist/*", // identity export (avoids dist/dist double-resolution)
+  "./*": "dist/*" // catch-all: unmatched subpaths resolve into dist/
 }
 ```
 

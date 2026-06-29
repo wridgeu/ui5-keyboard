@@ -800,7 +800,7 @@ export default class HotkeyManager extends BaseObject {
    *
    * @since 0.1.0
    */
-  destroy(): void {
+  override destroy(): void {
     this._destroyed = true;
 
     // Destroy the dispatcher first - removes all DOM listeners, invalidates

@@ -61,12 +61,20 @@ layouts/
   arabic.ts               Arabic layout
   ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
   qwerty-es.ts            Spanish QWERTY layout
+  symbol-common.ts        Shared punctuation/symbol row data (used by numeric, special)
+  default-layout.ts       Default layout name constant: "qwerty"
 themes/
   base/
     KioskKeyboard.less    Base styles using SAP LESS parameters
     library.source.less   Base library entry point
   sap_horizon/
     library.source.less   Horizon theme (imports base + theme globals)
+  sap_horizon_dark/
+    library.source.less   Horizon Dark theme entry point
+  sap_horizon_hcb/
+    library.source.less   Horizon High Contrast Black entry point
+  sap_horizon_hcw/
+    library.source.less   Horizon High Contrast White entry point
 ```
 
 ## UI5 Integration
@@ -522,6 +530,12 @@ themes/
     library.source.less                 Imports KioskKeyboard.less
   sap_horizon/
     library.source.less                 Imports base + SAP Horizon theme globals
+  sap_horizon_dark/
+    library.source.less                 Imports base + Horizon Dark theme globals
+  sap_horizon_hcb/
+    library.source.less                 Imports base + Horizon HCB theme globals
+  sap_horizon_hcw/
+    library.source.less                 Imports base + Horizon HCW theme globals
 ```
 
 `@container` at-rules are written directly in the LESS file. The vendored LESS 1.6.3 parser in `less-openui5` does not recognize `@container` natively, so a local `patch-package` patch adds it to the parser's recognized directive list (see `patches/less-openui5+0.11.6.patch`).
@@ -663,12 +677,20 @@ packages/kiosk-keyboard/
       arabic.ts               Arabic layout
       ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
       qwerty-es.ts            Spanish QWERTY layout
+      symbol-common.ts        Shared punctuation/symbol row data (used by numeric, special)
+      default-layout.ts       Default layout name constant: "qwerty"
     themes/
       base/
         KioskKeyboard.less    Base styles (SAP LESS parameters)
         library.source.less   Base entry point
       sap_horizon/
         library.source.less   Horizon theme entry point
+      sap_horizon_dark/
+        library.source.less   Horizon Dark theme entry point
+      sap_horizon_hcb/
+        library.source.less   Horizon High Contrast Black entry point
+      sap_horizon_hcw/
+        library.source.less   Horizon High Contrast White entry point
     manifest.json             Library manifest (v2.0.0)
     .library                  UI5 library metadata
   test/qunit/

@@ -26,7 +26,7 @@ type AlertButton$DemoAlertEvent = UI5Event<AlertButtonDemoAlertEventParameters>;
 export default class KioskInputIds extends BaseController {
   private static readonly _MODEL_NAME = "inputIds";
 
-  onInit(): void {
+  override onInit(): void {
     this.getView()!.setModel(
       new JSONModel({
         kioskCurrentTarget: "None",
@@ -49,7 +49,7 @@ export default class KioskInputIds extends BaseController {
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this.getRouter().detachRouteMatched(this._onRouteMatched, this);
     this._setRouteActive(false);
   }

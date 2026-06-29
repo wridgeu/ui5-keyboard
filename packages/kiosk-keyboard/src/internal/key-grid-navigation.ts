@@ -167,7 +167,7 @@ export default class KeyGridNavigation extends EventProvider {
     this._lastFocusedKeyId = next.id;
   }
 
-  destroy(): void {
+  override destroy(): void {
     this._rootRef = null;
     this._lastFocusedKeyId = null;
     super.destroy();

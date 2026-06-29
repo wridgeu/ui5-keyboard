@@ -15,7 +15,7 @@ export default class HotkeysConflict extends BaseController {
   private _manager!: HotkeyManager;
   private _conflictHandles: HotkeyRegistrationHandle[] = [];
 
-  onInit(): void {
+  override onInit(): void {
     this._manager = this.getTypedComponent().getHotkeyManager();
     const stateModel = this.getStateModel();
     stateModel.setProperty(
@@ -55,7 +55,7 @@ export default class HotkeysConflict extends BaseController {
     stateModel.setProperty("/conflictState", "Information");
   }
 
-  onExit(): void {
+  override onExit(): void {
     this._clearConflictHandles();
   }
 

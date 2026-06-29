@@ -14,9 +14,9 @@ runs:
   steps:
     - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
-        # Node 24 (>= 24.14) bundles npm >= 11.11, which enforces the
-        # min-release-age supply-chain cooldown (root .npmrc) and meets the
-        # engines npm floor. Do not drop below Node 24.
+        # Pins Node 24; setup-node resolves the latest 24.x patch, whose bundled
+        # npm meets the engines npm floor (>= 11.10.0) required by the
+        # min-release-age supply-chain cooldown (root .npmrc). Do not drop below Node 24.
         node-version: 24
         cache: npm
         registry-url: ${{ inputs.registry-url }}

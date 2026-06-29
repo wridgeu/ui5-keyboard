@@ -116,7 +116,7 @@ const CUSTOM_LAYOUTS: Record<string, LayoutDefinition> = {
  * @namespace demo.hotkeys.controller
  */
 export default class KioskCustomLayouts extends BaseController {
-  onInit(): void {
+  override onInit(): void {
     const kb = this.byId("customKeyboard") as KioskKeyboard;
     kb.setInstanceLayouts(CUSTOM_LAYOUTS);
 

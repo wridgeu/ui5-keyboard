@@ -13,7 +13,7 @@ export default class HotkeysSequences extends BaseController {
   private _hotkeys!: RegistrationGroup;
   private _pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
-  onInit(): void {
+  override onInit(): void {
     this._hotkeys = this.getTypedComponent().getHotkeyManager().createGroup();
 
     const stateModel = this.getStateModel();
@@ -46,7 +46,7 @@ export default class HotkeysSequences extends BaseController {
     this.getRouter().navTo(Scope.HotkeysHub);
   }
 
-  onExit(): void {
+  override onExit(): void {
     this._hotkeys.destroyAll();
     if (this._pendingTimer) {
       clearTimeout(this._pendingTimer);
