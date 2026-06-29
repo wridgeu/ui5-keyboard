@@ -110,7 +110,7 @@ describe("isSingleGlyph", () => {
 });
 
 describe("isCJKGlyph", () => {
-  // --- positive: Japanese ---
+  // positive: Japanese
   it("returns true for hiragana", () => {
     expect(isCJKGlyph("\u3042")).toBe(true); // あ
     expect(isCJKGlyph("\u306C")).toBe(true); // ぬ
@@ -138,7 +138,7 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\u3000")).toBe(false);
   });
 
-  // --- positive: Chinese ---
+  // positive: Chinese
   it("returns true for CJK unified ideographs (Chinese)", () => {
     expect(isCJKGlyph("\u4E00")).toBe(true); // 一 (range start)
     expect(isCJKGlyph("\u9FFF")).toBe(true); // range end
@@ -172,7 +172,7 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\u319F")).toBe(true); // ㆟ (range end)
   });
 
-  // --- positive: Korean ---
+  // positive: Korean
   it("returns true for Hangul syllables", () => {
     expect(isCJKGlyph("\uAC00")).toBe(true); // 가 (first Hangul syllable)
     expect(isCJKGlyph("\uD7A3")).toBe(true); // 힣 (last Hangul syllable)
@@ -204,7 +204,7 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\uD7FB")).toBe(true); // ퟻ (last assigned)
   });
 
-  // --- positive: Bopomofo (Taiwanese phonetic) ---
+  // positive: Bopomofo (Taiwanese phonetic)
   it("returns true for Bopomofo", () => {
     expect(isCJKGlyph("\u3105")).toBe(true); // ㄅ
     expect(isCJKGlyph("\u312F")).toBe(true); // range end
@@ -212,7 +212,7 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\u31BF")).toBe(true); // Bopomofo Extended end
   });
 
-  // --- positive: Script_Extensions coverage ---
+  // positive: Script_Extensions coverage
   it("returns true for Kangxi Radicals", () => {
     expect(isCJKGlyph("\u2F00")).toBe(true); // ⼀ (radical one)
     expect(isCJKGlyph("\u2FD5")).toBe(true); // ⿕ (radical flute)
@@ -243,12 +243,12 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph("\uFFBE")).toBe(true); // ﾾ (halfwidth Hangul ieung)
   });
 
-  // --- positive: shared CJK punctuation (must NOT be claimed by Hangul) ---
+  // positive: shared CJK punctuation (must NOT be claimed by Hangul)
   it("returns true for katakana middle dot (shared CJK with Script_Extensions=Hangul)", () => {
     expect(isCJKGlyph("\u30FB")).toBe(true); // ・ katakana middle dot
   });
 
-  // --- negative: non-CJK scripts (false-positive guards) ---
+  // negative: non-CJK scripts (false-positive guards)
   it.each([
     ["A", "Latin"],
     ["z", "Latin"],
@@ -292,7 +292,7 @@ describe("isCJKGlyph", () => {
     expect(isCJKGlyph(ch)).toBe(false);
   });
 
-  // --- negative: edge cases ---
+  // negative: edge cases
   it("returns false for empty string", () => {
     expect(isCJKGlyph("")).toBe(false);
   });
@@ -314,7 +314,7 @@ describe("isCJKGlyph", () => {
 });
 
 describe("isIndicGlyph", () => {
-  // --- positive: Devanagari ---
+  // positive: Devanagari
   it("returns true for Devanagari characters", () => {
     expect(isIndicGlyph("\u0905")).toBe(true); // अ (a)
     expect(isIndicGlyph("\u0915")).toBe(true); // क (ka)
@@ -329,7 +329,7 @@ describe("isIndicGlyph", () => {
     expect(isIndicGlyph("\u096F")).toBe(true); // ९ (nine)
   });
 
-  // --- positive: Bengali ---
+  // positive: Bengali
   it("returns true for Bengali characters", () => {
     expect(isIndicGlyph("\u0985")).toBe(true); // অ (a)
     expect(isIndicGlyph("\u0995")).toBe(true); // ক (ka)
@@ -337,28 +337,28 @@ describe("isIndicGlyph", () => {
     expect(isIndicGlyph("\u09B9")).toBe(true); // হ (ha)
   });
 
-  // --- positive: Gurmukhi ---
+  // positive: Gurmukhi
   it("returns true for Gurmukhi characters", () => {
     expect(isIndicGlyph("\u0A05")).toBe(true); // ਅ (a)
     expect(isIndicGlyph("\u0A15")).toBe(true); // ਕ (ka)
     expect(isIndicGlyph("\u0A39")).toBe(true); // ਹ (ha)
   });
 
-  // --- positive: Gujarati ---
+  // positive: Gujarati
   it("returns true for Gujarati characters", () => {
     expect(isIndicGlyph("\u0A85")).toBe(true); // અ (a)
     expect(isIndicGlyph("\u0A95")).toBe(true); // ક (ka)
     expect(isIndicGlyph("\u0AB9")).toBe(true); // હ (ha)
   });
 
-  // --- positive: Oriya ---
+  // positive: Oriya
   it("returns true for Oriya characters", () => {
     expect(isIndicGlyph("\u0B05")).toBe(true); // ଅ (a)
     expect(isIndicGlyph("\u0B15")).toBe(true); // କ (ka)
     expect(isIndicGlyph("\u0B39")).toBe(true); // ହ (ha)
   });
 
-  // --- positive: Tamil ---
+  // positive: Tamil
   it("returns true for Tamil characters", () => {
     expect(isIndicGlyph("\u0B85")).toBe(true); // அ (a)
     expect(isIndicGlyph("\u0B95")).toBe(true); // க (ka)
@@ -366,35 +366,35 @@ describe("isIndicGlyph", () => {
     expect(isIndicGlyph("\u0BB9")).toBe(true); // ஹ (ha)
   });
 
-  // --- positive: Telugu ---
+  // positive: Telugu
   it("returns true for Telugu characters", () => {
     expect(isIndicGlyph("\u0C05")).toBe(true); // అ (a)
     expect(isIndicGlyph("\u0C15")).toBe(true); // క (ka)
     expect(isIndicGlyph("\u0C39")).toBe(true); // హ (ha)
   });
 
-  // --- positive: Kannada ---
+  // positive: Kannada
   it("returns true for Kannada characters", () => {
     expect(isIndicGlyph("\u0C85")).toBe(true); // ಅ (a)
     expect(isIndicGlyph("\u0C95")).toBe(true); // ಕ (ka)
     expect(isIndicGlyph("\u0CB9")).toBe(true); // ಹ (ha)
   });
 
-  // --- positive: Malayalam ---
+  // positive: Malayalam
   it("returns true for Malayalam characters", () => {
     expect(isIndicGlyph("\u0D05")).toBe(true); // അ (a)
     expect(isIndicGlyph("\u0D15")).toBe(true); // ക (ka)
     expect(isIndicGlyph("\u0D39")).toBe(true); // ഹ (ha)
   });
 
-  // --- positive: Sinhala ---
+  // positive: Sinhala
   it("returns true for Sinhala characters", () => {
     expect(isIndicGlyph("\u0D85")).toBe(true); // අ (a)
     expect(isIndicGlyph("\u0D9A")).toBe(true); // ක (ka)
     expect(isIndicGlyph("\u0DC4")).toBe(true); // හ (ha)
   });
 
-  // --- negative: non-Indic scripts (false-positive guards) ---
+  // negative: non-Indic scripts (false-positive guards)
   it.each([
     ["A", "Latin"],
     ["z", "Latin"],
@@ -420,7 +420,7 @@ describe("isIndicGlyph", () => {
     expect(isIndicGlyph(ch)).toBe(false);
   });
 
-  // --- negative: edge cases ---
+  // negative: edge cases
   it("returns false for empty string", () => {
     expect(isIndicGlyph("")).toBe(false);
   });
@@ -436,7 +436,7 @@ describe("isIndicGlyph", () => {
 });
 
 describe("isHangulGlyph", () => {
-  // --- positive: Hangul Compatibility Jamo (used by ko-hangul layout) ---
+  // positive: Hangul Compatibility Jamo (used by ko-hangul layout)
   it("returns true for Hangul Compatibility Jamo consonants", () => {
     expect(isHangulGlyph("\u3131")).toBe(true); // ㄱ (kiyeok)
     expect(isHangulGlyph("\u3134")).toBe(true); // ㄴ (nieun)
@@ -456,26 +456,26 @@ describe("isHangulGlyph", () => {
     expect(isHangulGlyph("\u3146")).toBe(true); // ㅆ (ssangsios)
   });
 
-  // --- positive: Hangul Syllables ---
+  // positive: Hangul Syllables
   it("returns true for Hangul syllables", () => {
     expect(isHangulGlyph("\uAC00")).toBe(true); // 가 (first syllable)
     expect(isHangulGlyph("\uD7A3")).toBe(true); // 힣 (last syllable)
     expect(isHangulGlyph("\uD55C")).toBe(true); // 한
   });
 
-  // --- positive: Hangul Jamo ---
+  // positive: Hangul Jamo
   it("returns true for Hangul Jamo (conjoining)", () => {
     expect(isHangulGlyph("\u1100")).toBe(true); // ᄀ (initial consonant)
     expect(isHangulGlyph("\u1161")).toBe(true); // ᅡ (medial vowel)
     expect(isHangulGlyph("\u11A8")).toBe(true); // ᆨ (final consonant)
   });
 
-  // --- positive: halfwidth Hangul ---
+  // positive: halfwidth Hangul
   it("returns true for halfwidth Hangul", () => {
     expect(isHangulGlyph("\uFFA1")).toBe(true); // ﾡ (halfwidth kiyeok)
   });
 
-  // --- negative: non-Hangul scripts ---
+  // negative: non-Hangul scripts
   it("returns false for Latin characters", () => {
     expect(isHangulGlyph("A")).toBe(false);
     expect(isHangulGlyph("1")).toBe(false);
@@ -500,7 +500,7 @@ describe("isHangulGlyph", () => {
     expect(isHangulGlyph("\u0627")).toBe(false); // ا
   });
 
-  // --- negative: shared CJK punctuation that has Script_Extensions=Hangul but Script=Common ---
+  // negative: shared CJK punctuation that has Script_Extensions=Hangul but Script=Common
   it("returns false for ideographic comma (shared CJK, not Hangul-exclusive)", () => {
     expect(isHangulGlyph("\u3001")).toBe(false); // 、
   });
@@ -528,7 +528,7 @@ describe("isHangulGlyph", () => {
 });
 
 describe("isArabicGlyph", () => {
-  // --- positive: Basic Arabic letters ---
+  // positive: Basic Arabic letters
   it("returns true for basic Arabic letters", () => {
     expect(isArabicGlyph("\u0627")).toBe(true); // ا (alef)
     expect(isArabicGlyph("\u0628")).toBe(true); // ب (ba)
@@ -544,7 +544,7 @@ describe("isArabicGlyph", () => {
     expect(isArabicGlyph("\u064A")).toBe(true); // ي (ya)
   });
 
-  // --- positive: Arabic diacritical marks ---
+  // positive: Arabic diacritical marks
   it("returns true for Arabic diacritical marks", () => {
     expect(isArabicGlyph("\u0650")).toBe(true); // ِ (kasra)
     expect(isArabicGlyph("\u064E")).toBe(true); // َ (fatha)
@@ -553,13 +553,13 @@ describe("isArabicGlyph", () => {
     expect(isArabicGlyph("\u0652")).toBe(true); // ْ (sukun)
   });
 
-  // --- positive: Arabic-Indic digits ---
+  // positive: Arabic-Indic digits
   it("returns true for Arabic-Indic digits", () => {
     expect(isArabicGlyph("\u0660")).toBe(true); // ٠ (zero)
     expect(isArabicGlyph("\u0669")).toBe(true); // ٩ (nine)
   });
 
-  // --- positive: Persian characters ---
+  // positive: Persian characters
   it("returns true for Persian (Farsi) characters", () => {
     expect(isArabicGlyph("\u067E")).toBe(true); // پ (pe)
     expect(isArabicGlyph("\u0686")).toBe(true); // چ (che)
@@ -567,7 +567,7 @@ describe("isArabicGlyph", () => {
     expect(isArabicGlyph("\u06AF")).toBe(true); // گ (gaf)
   });
 
-  // --- positive: Urdu characters ---
+  // positive: Urdu characters
   it("returns true for Urdu characters", () => {
     expect(isArabicGlyph("\u0679")).toBe(true); // ٹ (tte)
     expect(isArabicGlyph("\u0688")).toBe(true); // ڈ (ddal)
@@ -577,19 +577,19 @@ describe("isArabicGlyph", () => {
     expect(isArabicGlyph("\u06D2")).toBe(true); // ے (yeh barree)
   });
 
-  // --- positive: Arabic Presentation Forms-A ---
+  // positive: Arabic Presentation Forms-A
   it("returns true for Arabic Presentation Forms-A", () => {
     expect(isArabicGlyph("\uFB50")).toBe(true); // ﭐ (alef wasla isolated)
     expect(isArabicGlyph("\uFBD3")).toBe(true); // ﯓ (ng isolated)
   });
 
-  // --- positive: Arabic Presentation Forms-B ---
+  // positive: Arabic Presentation Forms-B
   it("returns true for Arabic Presentation Forms-B", () => {
     expect(isArabicGlyph("\uFE70")).toBe(true); // ﹰ (fathatan isolated)
     expect(isArabicGlyph("\uFEFC")).toBe(true); // ﻼ (lam alef final)
   });
 
-  // --- negative: non-Arabic scripts (false-positive guards) ---
+  // negative: non-Arabic scripts (false-positive guards)
   it.each([
     ["A", "Latin"],
     ["z", "Latin"],
@@ -608,7 +608,7 @@ describe("isArabicGlyph", () => {
     expect(isArabicGlyph(ch)).toBe(false);
   });
 
-  // --- negative: edge cases ---
+  // negative: edge cases
   it("returns false for empty string", () => {
     expect(isArabicGlyph("")).toBe(false);
   });

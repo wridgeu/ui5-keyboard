@@ -11,7 +11,7 @@ function commonAfterEach() {
   sandbox.restore();
 }
 
-// --- kana-dakuten middleware ---
+// kana-dakuten middleware
 
 QUnit.module("kana-dakuten middleware", {
   beforeEach() {

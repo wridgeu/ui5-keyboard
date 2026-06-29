@@ -1,6 +1,4 @@
-/* ============================= */
-/* KioskKeyboard base styles     */
-/* ============================= */
+/* KioskKeyboard base styles */
 
 /*
  * Public CSS Custom Properties API
@@ -100,9 +98,7 @@
  * consumer's value. The layer resolves it at step 4: unlayered beats
  * layered regardless of specificity. */
 @layer kiosk-keyboard {
-  /* ============================= */
-  /* Keyboard container            */
-  /* ============================= */
+  /* Keyboard container */
 
   .ui5KioskKeyboard {
     --ui5KioskKeyboard-padding: 0.75rem;
@@ -138,7 +134,7 @@
     --ui5KioskKeyboard-fkeyLabelSize: ~"clamp(0.5rem, calc(100cqi * 0.35), 0.7em)";
     --ui5KioskKeyboard-fkeyGap: 0.05em;
 
-    /* ---- Private styling aliases ---- */
+    /* Private styling aliases */
     --_ui5KioskKeyboard-padding: ~"var(--ui5KioskKeyboard-padding)";
     --_ui5KioskKeyboard-keyGap: ~"var(--ui5KioskKeyboard-keyGap)";
     --_ui5KioskKeyboard-keyHeight: ~"var(--ui5KioskKeyboard-keyHeight)";
@@ -160,7 +156,7 @@
     --_ui5KioskKeyboard-numpadMaxWidth: ~"var(--ui5KioskKeyboard-numpadMaxWidth)";
     --_ui5KioskKeyboard-numpadKeyMinWidth: ~"var(--ui5KioskKeyboard-numpadKeyMinWidth)";
 
-    /* ---- Base layout ---- */
+    /* Base layout */
     display: flex;
     flex-direction: column;
     gap: var(--_ui5KioskKeyboard-keyGap);
@@ -179,7 +175,7 @@
     container-type: inline-size;
     container-name: keyboard;
 
-    /* ---- Mode: Numpad (structural rules only; var defaults below) ---- */
+    /* Mode: Numpad (structural rules only; var defaults below) */
     &--numpad {
       max-width: var(--_ui5KioskKeyboard-numpadMaxWidth);
       --ui5KioskKeyboard-keyHeight: 3.5rem;
@@ -199,7 +195,7 @@
       --ui5KioskKeyboard-keyFontSize: 1.25rem;
     }
 
-    /* ---- Mode: Docked ---- */
+    /* Mode: Docked */
     &--docked {
       position: fixed;
       bottom: 0;
@@ -225,7 +221,7 @@
         visibility 0s linear 0.3s;
     }
 
-    /* ---- State: Disabled ---- */
+    /* State: Disabled */
     &--disabled {
       opacity: @sapUiContentDisabledOpacity;
       pointer-events: none;
@@ -287,9 +283,7 @@
     }
   }
 
-  /* ============================= */
-  /* Key                           */
-  /* ============================= */
+  /* Key */
 
   .ui5KioskKey {
     display: flex;
@@ -342,7 +336,7 @@
       box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
     }
 
-    /* ---- Width classes: proportional flex grow ---- */
+    /* Width classes: proportional flex grow */
     &--w125 {
       flex: 1.25 1 0;
     }
@@ -365,7 +359,7 @@
       flex: 6 1 0;
     }
 
-    /* ---- Label inside key ---- */
+    /* Label inside key */
     &__label {
       display: block;
       min-width: 0;
@@ -387,7 +381,7 @@
       font-size: ~"clamp(0.5rem, calc(100cqi * 0.35), 1em)";
     }
 
-    /* ---- Icon inside key ---- */
+    /* Icon inside key */
     /* The inherited font stack (@sapUiFontFamily) does not include the
        specialized Unicode arrow symbols used by navigation keys (U+21DE-U+21F2).
        Without explicit symbol font names the glyphs rely on the browser's
@@ -401,7 +395,7 @@
         @sapUiFontFamily, "Segoe UI Symbol", "Apple Symbols", "Noto Sans Symbols 2", "Noto Sans Symbols", sans-serif;
     }
 
-    /* ---- Dual icon + label ---- */
+    /* Dual icon + label */
     &--dual {
       flex-direction: ~"var(--ui5KioskKeyboard-dualDirection)";
       gap: ~"var(--ui5KioskKeyboard-dualGap)";
@@ -440,7 +434,7 @@
       font-size: ~"var(--ui5KioskKeyboard-fkeyIconSize)";
     }
 
-    /* ---- Variant: Modifier keys (Shift, layout switches) ---- */
+    /* Variant: Modifier keys (Shift, layout switches) */
     &--modifier {
       background: @sapUiButtonLiteBackground;
       color: @sapUiButtonLiteTextColor;
@@ -467,7 +461,7 @@
       }
     }
 
-    /* ---- Variant: Action keys (Enter, Backspace) ---- */
+    /* Variant: Action keys (Enter, Backspace) */
     &--action {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
@@ -497,7 +491,7 @@
       }
     }
 
-    /* ---- Variant: Active Shift indicator ----
+    /* Variant: Active Shift indicator
        Scoped as --modifier&--shiftActive (specificity 0,2,0) to always
        beat --modifier:active (0,1,1) regardless of source order.
        This ensures the toggled-on shift key keeps its emphasized
@@ -528,7 +522,7 @@
       }
     }
 
-    /* ---- Variant: Caps Lock indicator ---- */
+    /* Variant: Caps Lock indicator */
     &--capsLock {
       box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
       /* Only animate the ring; background/color snaps instantly via --shiftActive's transition: none. */
@@ -558,9 +552,7 @@
     }
   }
 
-  /* ============================= */
-  /* Width-responsive @container   */
-  /* ============================= */
+  /* Width-responsive @container */
 
   @container keyboard (max-width: 30rem) {
     .ui5KioskKey {
@@ -670,9 +662,7 @@
     font-family: ~"var(--ui5KioskKeyboard-arabicFontFamily, 'Segoe UI', 'Geeza Pro', 'Noto Sans Arabic', 'Noto Naskh Arabic', 'Tahoma', 'Arabic Typesetting', system-ui, sans-serif)";
   }
 
-  /* ============================= */
-  /* Compact mode                  */
-  /* ============================= */
+  /* Compact mode */
 
   .sapUiSizeCompact .ui5KioskKeyboard {
     --ui5KioskKeyboard-padding: 0.5rem;
@@ -687,17 +677,13 @@
     --ui5KioskKeyboard-keyFontSize: 1.125rem;
   }
 
-  /* ============================= */
-  /* RTL support                   */
-  /* ============================= */
+  /* RTL support */
 
   .sapUiRtl .ui5KioskKeyboard {
     direction: rtl;
   }
 
-  /* ============================= */
-  /* Accessibility                 */
-  /* ============================= */
+  /* Accessibility */
 
   @media (prefers-reduced-motion: reduce) {
     .ui5KioskKey,
