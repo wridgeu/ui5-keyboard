@@ -293,7 +293,7 @@ QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", as
   // or auto-detect) must invalidate any prior user layout pick, so the new
   // constraint context isn't silently overridden by stale state.
   // Distinguish numpad from numeric by the first key (numpad row 0 starts at
-  // "7", numeric at "1") -- an `includes('1')` check would match both.
+  // "7", numeric at "1"). An `includes('1')` check would match both.
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 

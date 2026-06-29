@@ -29,7 +29,7 @@ const koHangul: LayoutDefinition = [
     { value: "0", shiftValue: ")" },
     { value: "{backspace}", width: "1.5", type: "action" },
   ],
-  // Row 2: upper letter row (Q-P positions) -- consonants and vowels
+  // Row 2: upper letter row (Q-P positions), consonants and vowels
   [
     { value: "\u3142", shiftValue: "\u3143" }, // ㅂ → ㅃ (Q)
     { value: "\u3148", shiftValue: "\u3149" }, // ㅈ → ㅉ (W)
@@ -42,7 +42,7 @@ const koHangul: LayoutDefinition = [
     { value: "\u3150", shiftValue: "\u3152" }, // ㅐ → ㅒ (O)
     { value: "\u3154", shiftValue: "\u3156" }, // ㅔ → ㅖ (P)
   ],
-  // Row 3: home row (A-L positions) -- consonants and vowels
+  // Row 3: home row (A-L positions), consonants and vowels
   [
     { value: "\u3141" }, // ㅁ (A)
     { value: "\u3134" }, // ㄴ (S)

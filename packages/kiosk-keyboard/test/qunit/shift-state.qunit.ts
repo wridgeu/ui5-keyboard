@@ -55,8 +55,8 @@ QUnit.test("second click after timeout turns shift off, not caps lock", (assert)
     stub.returns(1000 + ShiftState.DOUBLE_CLICK_MS + 100);
     state.toggle(); // outside double-click window -> off
 
-    assert.strictEqual(state.isShifted, false, "not shifted -- second slow click turns off");
-    assert.strictEqual(state.isCapsLock, false, "not caps lock -- outside double-click window");
+    assert.strictEqual(state.isShifted, false, "not shifted: second slow click turns off");
+    assert.strictEqual(state.isCapsLock, false, "not caps lock: outside double-click window");
     assert.strictEqual(onChange.callCount, 2, "onChange fired for both transitions");
   } finally {
     stub.restore();
@@ -107,7 +107,7 @@ QUnit.test("toggle after autoRelease activates shift, not caps lock", (assert) =
   state.autoRelease(); // off (typed a character)
   state.toggle(); // should be shift, not caps lock
   assert.ok(state.isShifted, "shifted after toggle following autoRelease");
-  assert.strictEqual(state.isCapsLock, false, "not caps lock -- autoRelease closed the double-click window");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock: autoRelease closed the double-click window");
 });
 
 QUnit.test("autoRelease is a no-op (no onChange) when already off", (assert) => {
@@ -180,7 +180,7 @@ QUnit.test("syncFromPhysical: (false, false) from CapsLock returns to Off (fires
 QUnit.test("syncFromPhysical: CapsLock wins over Shift when both flags set", (assert) => {
   state.syncFromPhysical(true, true);
   assert.ok(state.isShifted, "shifted");
-  assert.ok(state.isCapsLock, "caps lock -- capsLock wins over shift");
+  assert.ok(state.isCapsLock, "caps lock: capsLock wins over shift");
   assert.strictEqual(onChange.callCount, 1, "onChange fired");
 });
 
@@ -201,5 +201,5 @@ QUnit.test("syncFromPhysical: resets double-click window so next toggle starts f
 
   state.toggle(); // should start fresh shift, not jump to caps lock
   assert.ok(state.isShifted, "shifted after toggle following sync");
-  assert.strictEqual(state.isCapsLock, false, "not caps lock -- double-click window was reset");
+  assert.strictEqual(state.isCapsLock, false, "not caps lock: double-click window was reset");
 });

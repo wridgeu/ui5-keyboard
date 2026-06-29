@@ -21,7 +21,7 @@ QUnit.module("i18n-registry", {
   },
 });
 
-// -- getText --
+// getText
 
 QUnit.test("getText returns base bundle text for known key", (assert) => {
   stubBaseBundle({ KIOSK_KEYBOARD_LABEL: "Virtuelle Tastatur" });
@@ -38,7 +38,7 @@ QUnit.test("getText returns fallback when no bundle available", (assert) => {
   assert.strictEqual(getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"), "Virtual Keyboard");
 });
 
-// -- resolver --
+// resolver
 
 QUnit.test("resolver overrides base bundle text", (assert) => {
   stubBaseBundle({ KIOSK_KEYBOARD_LABEL: "Virtual Keyboard" });

@@ -34,7 +34,7 @@ describe("kiosk-keyboard - instance overrides", () => {
     await nextRender();
 
     expect(readDataKeys(elOverride)).to.deep.equal([["ax", "bx"]]);
-    // The other element keeps the built-in qwerty -- the override never leaked.
+    // The other element keeps the built-in qwerty: the override never leaked.
     expect(readDataKeys(elDefault)).to.not.deep.equal([["ax", "bx"]]);
   });
 

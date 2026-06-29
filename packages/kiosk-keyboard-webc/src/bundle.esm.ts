@@ -1,4 +1,4 @@
-// ESM bundle entry -- imports Assets and the full entry (which includes all
+// ESM bundle entry: imports Assets and the full entry (which includes all
 // built-in layouts). Re-exports the component class and public types.
 import "./Assets.js";
 

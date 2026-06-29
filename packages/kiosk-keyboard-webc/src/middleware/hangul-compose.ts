@@ -118,15 +118,15 @@ function composeSyllable(l: number, v: number, t = 0): string {
  *
  * A syllable block is built from up to three components defined by the
  * Unicode Standard (UAX #15, Section 3.12):
- * - **L** -- Leading consonant (choseong, e.g. ㄱ)
- * - **V** -- Vowel (jungseong, e.g. ㅏ)
- * - **T** -- Trailing consonant (jongseong, e.g. ㄴ)
+ * - **L**: Leading consonant (choseong, e.g. ㄱ)
+ * - **V**: Vowel (jungseong, e.g. ㅏ)
+ * - **T**: Trailing consonant (jongseong, e.g. ㄴ)
  *
  * Phases track how far composition has progressed:
- * - `"empty"` -- No active composition.
- * - `"L"` -- Leading consonant entered, waiting for vowel.
- * - `"LV"` -- Leading + vowel entered (e.g. 가), waiting for trailing or next syllable.
- * - `"LVT"` -- Full syllable (e.g. 간). A following vowel triggers T-stealing:
+ * - `"empty"`: No active composition.
+ * - `"L"`: Leading consonant entered, waiting for vowel.
+ * - `"LV"`: Leading + vowel entered (e.g. 가), waiting for trailing or next syllable.
+ * - `"LVT"`: Full syllable (e.g. 간). A following vowel triggers T-stealing:
  *   the trailing consonant detaches and becomes the leading consonant of a
  *   new syllable (간 + ㅏ -> 가 + 나).
  */

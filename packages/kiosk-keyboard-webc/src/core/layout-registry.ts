@@ -124,7 +124,7 @@ export function getLayoutOrDefault(rawName: string, instanceLayouts?: InstanceLa
 
 /**
  * Returns the names of all built-in layouts. Instance-only layouts are
- * intentionally not included here -- they are scoped to the element that
+ * intentionally not included here. They are scoped to the element that
  * declared them and are not exposed as a global view.
  * @internal
  */

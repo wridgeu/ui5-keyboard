@@ -24,7 +24,7 @@ async function createKeyboard(layout: LayoutDefinition): Promise<KioskKeyboard> 
 }
 
 describe("icon + label rendering", () => {
-  // -- Permutation matrix --
+  // Permutation matrix
 
   const permutations: {
     name: string;
@@ -120,7 +120,7 @@ describe("icon + label rendering", () => {
     });
   }
 
-  // -- Unicode / emoji icons --
+  // Unicode / emoji icons
 
   it("Unicode icon renders as text span with icon class", async () => {
     const el = await createKeyboard([[{ value: "x", icon: "\u21E7", label: "Shift" }]]);
@@ -142,7 +142,7 @@ describe("icon + label rendering", () => {
     expect(iconEl!.textContent).to.equal("\uD83D\uDD0D");
   });
 
-  // -- Built-in special keys --
+  // Built-in special keys
 
   it("Shift key renders built-in icon + i18n label (dual)", async () => {
     const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25" }]]);
@@ -182,7 +182,7 @@ describe("icon + label rendering", () => {
     expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.false;
   });
 
-  // -- Special key label suppression --
+  // Special key label suppression
 
   it("Shift with label='' renders icon only (opt-out)", async () => {
     const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", label: "" }]]);
@@ -192,7 +192,7 @@ describe("icon + label rendering", () => {
     expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.false;
   });
 
-  // -- Accessibility --
+  // Accessibility
 
   it("icon-only key retains aria-label", async () => {
     const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", label: "" }]]);
@@ -228,7 +228,7 @@ describe("icon + label rendering", () => {
     expect(keyEl.getAttribute("aria-label")).to.be.null;
   });
 
-  // -- CapsLock property overrides --
+  // CapsLock property overrides
 
   it("capsLockLabel overrides visible label during caps lock", async () => {
     const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "CL" }]]);
@@ -280,7 +280,7 @@ describe("icon + label rendering", () => {
     expect(keyEl.getAttribute("aria-label")).to.match(/caps lock/i);
   });
 
-  // -- Title tooltip for truncated labels --
+  // Title tooltip for truncated labels
 
   const titleCases: {
     name: string;

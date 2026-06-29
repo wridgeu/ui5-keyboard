@@ -94,7 +94,7 @@ QUnit.test("Applies cqShort class when externally constrained (height between 12
   dom.style.height = "14rem";
   dom.style.overflow = "hidden";
 
-  // Constrained to 14rem -- within cqShort range (12rem < 14rem <= 16rem)
+  // Constrained to 14rem: within cqShort range (12rem < 14rem <= 16rem)
   await setMeasuredHeight(kb, dom, 14 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied at 14rem height");
@@ -114,7 +114,7 @@ QUnit.test("Applies cqTiny class when severely constrained (interior of <= 12rem
   dom.style.height = "10rem";
   dom.style.overflow = "hidden";
 
-  // Constrained to 10rem -- interior of the cqTiny range (well below the 12rem boundary).
+  // Constrained to 10rem: interior of the cqTiny range (well below the 12rem boundary).
   await setMeasuredHeight(kb, dom, 10 * remPx);
 
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny applied at 10rem height");

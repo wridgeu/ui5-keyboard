@@ -440,7 +440,7 @@ export default class HotkeyManager extends BaseObject {
     const normalized = resolveRequiredScope(scopeId);
 
     if (normalized === GLOBAL_SCOPE) {
-      throw new Error("Cannot push the global scope -- it is always at the bottom of the stack");
+      throw new Error("Cannot push the global scope: it is always at the bottom of the stack");
     }
 
     const top = this._scopeStack.at(-1);

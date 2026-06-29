@@ -46,7 +46,7 @@ async function renderControl<T extends { placeAt(id: string): void; destroy(): v
 }
 
 // ═══════════════════════════════════════════════════
-// resolveInputOrTextarea -- direct elements
+// resolveInputOrTextarea: direct elements
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - direct elements", {
@@ -82,7 +82,7 @@ QUnit.test("Returns null for undefined", (assert) => {
 });
 
 // ═══════════════════════════════════════════════════
-// resolveInputOrTextarea -- light DOM
+// resolveInputOrTextarea: light DOM
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - light DOM children", {
@@ -127,7 +127,7 @@ QUnit.test("Returns null when light DOM has no input or textarea", (assert) => {
 });
 
 // ═══════════════════════════════════════════════════
-// resolveInputOrTextarea -- shadow DOM
+// resolveInputOrTextarea: shadow DOM
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - shadow DOM", {
@@ -170,7 +170,7 @@ QUnit.test("Prefers light DOM input over shadow DOM input", (assert) => {
 });
 
 // ═══════════════════════════════════════════════════
-// resolveInputOrTextarea -- nested shadow DOM
+// resolveInputOrTextarea: nested shadow DOM
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - nested shadow DOM", {
@@ -281,7 +281,7 @@ QUnit.test("Passes the host element to the custom resolver", (assert) => {
 });
 
 // ═══════════════════════════════════════════════════
-// UI5 control integration -- real controls rendered
+// UI5 control integration: real controls rendered
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - UI5 sap.m.Input", {
@@ -310,7 +310,7 @@ QUnit.test("resolver finds <input> from the control root", async (assert) => {
 });
 
 // ═══════════════════════════════════════════════════
-// UI5 control integration -- sap.m.TextArea
+// UI5 control integration: sap.m.TextArea
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - UI5 sap.m.TextArea", {
@@ -339,7 +339,7 @@ QUnit.test("resolver finds <textarea> from the control root", async (assert) => 
 });
 
 // ═══════════════════════════════════════════════════
-// UI5 control integration -- sap.m.StepInput (composite)
+// UI5 control integration: sap.m.StepInput (composite)
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - UI5 sap.m.StepInput", {
@@ -367,7 +367,7 @@ QUnit.test("resolver finds <input> from the StepInput root", async (assert) => {
 });
 
 // ═══════════════════════════════════════════════════
-// UI5 control integration -- sap.ui.core.HTML
+// UI5 control integration: sap.ui.core.HTML
 // ═══════════════════════════════════════════════════
 
 QUnit.module("dom-resolution - UI5 sap.ui.core.HTML", {

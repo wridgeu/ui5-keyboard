@@ -216,7 +216,7 @@ Both packages undergo the same simplification: JS-driven width classes are remov
   /* Width-responsive container query rules.
      Imported via @import (inline) in library.source.less to bypass the
      LESS 1.6.3 parser which does not recognize @container at-rules.
-     Only CSS custom properties are used -- no LESS variables needed. */
+     Only CSS custom properties are used: no LESS variables needed. */
 
   @container keyboard (max-width: 30rem) {
     .ui5KioskKey {

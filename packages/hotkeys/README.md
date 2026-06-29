@@ -512,7 +512,7 @@ export default class Detail extends Controller {
       description: "Refresh",
     });
   }
-  // No onExit needed -- the extension handles cleanup
+  // No onExit needed: the extension handles cleanup
 }
 ```
 

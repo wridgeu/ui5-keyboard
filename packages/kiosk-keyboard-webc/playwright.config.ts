@@ -15,7 +15,7 @@ import path from "node:path";
  * Visual baselines live under test/e2e/__baselines__/<project>/, compared
  * against the pinned bundled chromium. They carry no platform suffix, so a
  * baseline is only valid for the OS it was generated on (font / anti-aliasing
- * rendering differs across platforms) -- regenerate on whatever platform runs
+ * rendering differs across platforms). Regenerate on whatever platform runs
  * the comparison. Update with `npm run test:e2e:update` (desktop) or the
  * per-device update scripts. The desktop project runs in CI via test:e2e:ci as
  * render smoke tests; pixel comparison is not gated (snapshots ignored).

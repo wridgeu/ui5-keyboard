@@ -15,7 +15,7 @@ import type { LayoutDefinition } from "../types";
  * @since 0.1.0
  */
 const jaKana: LayoutDefinition = [
-  // Row 1: number row -- kana base, small kana / を on shift
+  // Row 1: number row (kana base, small kana / を on shift)
   [
     { value: "\u306C" }, // ぬ (1)
     { value: "\u3075" }, // ふ (2)
