@@ -180,41 +180,28 @@ QUnit.test("F-key tap fires keyPress with shiftKey=true when shift active", asyn
 // Fn button on base layouts
 // ──────────────────────────────────────────────
 
-QUnit.test("QWERTY bottom row has Fn button that switches to fkeys", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwerty" });
-  await placeAndWait(kb);
+for (const baseLayout of ["qwerty", "qwertz-de"]) {
+  QUnit.test(`${baseLayout} bottom row has Fn button that switches to fkeys`, async (assert) => {
+    const kb = new KioskKeyboard({ layout: baseLayout });
+    await placeAndWait(kb);
 
-  const fnKey = getKeyElement(kb, "{layout:fkeys}");
-  assert.ok(fnKey, "Fn button exists on qwerty layout");
-  assert.strictEqual(fnKey!.textContent!.trim(), "Fn", "Fn button shows Fn label");
+    const fnKey = getKeyElement(kb, "{layout:fkeys}");
+    assert.ok(fnKey, `Fn button exists on ${baseLayout} layout`);
+    assert.strictEqual(fnKey!.textContent!.trim(), "Fn", "Fn button shows Fn label");
 
-  // Tap Fn to switch to fkeys layout
-  tapKey(kb, "{layout:fkeys}");
-  await waitForRender();
+    // Tap Fn to switch to fkeys layout
+    tapKey(kb, "{layout:fkeys}");
+    await waitForRender();
 
-  assert.strictEqual(kb.getLayout(), "fkeys", "Layout switched to fkeys");
+    assert.strictEqual(kb.getLayout(), "fkeys", "Layout switched to fkeys");
 
-  // Verify fkeys layout is rendered
-  const f1 = getKeyElement(kb, "{fkey:F1}");
-  assert.ok(f1, "F1 key visible after Fn tap");
+    // Verify fkeys layout is rendered
+    const f1 = getKeyElement(kb, "{fkey:F1}");
+    assert.ok(f1, "F1 key visible after Fn tap");
 
-  kb.destroy();
-});
-
-QUnit.test("QWERTZ-DE bottom row has Fn button that switches to fkeys", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwertz-de" });
-  await placeAndWait(kb);
-
-  const fnKey = getKeyElement(kb, "{layout:fkeys}");
-  assert.ok(fnKey, "Fn button exists on qwertz-de layout");
-
-  tapKey(kb, "{layout:fkeys}");
-  await waitForRender();
-
-  assert.strictEqual(kb.getLayout(), "fkeys", "Layout switched to fkeys");
-
-  kb.destroy();
-});
+    kb.destroy();
+  });
+}
 
 QUnit.test("ABC button on fkeys layout returns to base layout", async (assert) => {
   const kb = new KioskKeyboard({ layout: "qwerty" });

@@ -22,6 +22,25 @@ QUnit.test("Falls back to the raw value when there is no accessible name", (asse
   assert.strictEqual(getKeyAriaLabel(iconOnlyKey("⚙"), false, false), "⚙", "Returns the raw value");
 });
 
+QUnit.test("Per-key ariaLabel takes priority over the visible label", (assert) => {
+  assert.strictEqual(
+    getKeyAriaLabel({ value: "x", label: "", ariaLabel: "Custom" }, false, false),
+    "Custom",
+    "ariaLabel wins over both the suppressed label and the raw value",
+  );
+});
+
+QUnit.test("Icon-only special key resolves its i18n name without warning", (assert) => {
+  const spy = sandbox.spy(Log, "warning");
+
+  assert.strictEqual(
+    getKeyAriaLabel({ value: "{backspace}", label: "" }, false, false),
+    "Backspace",
+    "SPECIAL_KEY_I18N supplies the accessible name for an icon-only special key",
+  );
+  assert.notOk(spy.called, "The i18n entry resolves before the missing-name warning fires");
+});
+
 QUnit.test("Warns only once per key value across repeated calls (re-render safe)", (assert) => {
   const spy = sandbox.spy(Log, "warning");
 

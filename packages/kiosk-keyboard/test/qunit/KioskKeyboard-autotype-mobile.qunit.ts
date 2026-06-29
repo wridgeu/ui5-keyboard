@@ -2,6 +2,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
+import Control from "sap/ui/core/Control";
 import Device from "sap/ui/Device";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
@@ -51,114 +52,80 @@ QUnit.test("Default autoType is false", (assert) => {
   kb.destroy();
 });
 
-QUnit.test("autoType detects Number input and switches to Numpad", async (assert) => {
-  const input = new Input({ type: "Number" });
-  input.placeAt("qunit-fixture");
+type DetectCase = {
+  title: string;
+  make: () => Control;
+  prep?: (dom: HTMLElement) => void;
+  expected: string;
+  message: string;
+};
 
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
+const detectCases: DetectCase[] = [
+  {
+    title: "autoType detects Number input and switches to Numpad",
+    make: () => new Input({ type: "Number" }),
+    expected: "Numpad",
+    message: "Auto-detected Numpad for Number input",
+  },
+  {
+    title: "autoType detects Tel input and switches to Numpad",
+    make: () => new Input({ type: "Tel" }),
+    expected: "Numpad",
+    message: "Auto-detected Numpad for Tel input",
+  },
+  {
+    title: "autoType matches a mixed-case inputmode attribute (inputmode=Numeric)",
+    make: () => new Input(),
+    // inputmode is an enumerated HTML attribute matched case-insensitively.
+    prep: (dom) => dom.setAttribute("inputmode", "Numeric"),
+    expected: "Numpad",
+    message: "Auto-detected Numpad for inputmode=Numeric",
+  },
+  {
+    title: "autoType detects StepInput and switches to Numpad",
+    make: () => new StepInput(),
+    expected: "Numpad",
+    message: "Auto-detected Numpad for StepInput",
+  },
+  {
+    title: "autoType stays Full for regular text input",
+    make: () => new Input(),
+    expected: "Full",
+    message: "Stays Full for regular text input",
+  },
+  {
+    title: "autoType Email input stays Full",
+    make: () => new Input({ type: "Email" }),
+    expected: "Full",
+    message: "Email input keeps Full keyboard",
+  },
+];
+
+for (const { title, make, prep, expected, message } of detectCases) {
+  QUnit.test(title, async (assert) => {
+    const control = make();
+    control.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({
+      docked: true,
+      autoShow: true,
+      autoType: true,
+    });
+    await placeAndWait(kb);
+
+    try {
+      const inputDom = control.getFocusDomRef() as HTMLElement;
+      prep?.(inputDom);
+      inputDom.focus();
+      await nextUIUpdate();
+
+      assert.strictEqual(kb.getKeyboardType(), expected, message);
+    } finally {
+      control.destroy();
+      kb.destroy();
+    }
   });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for Number input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType detects Tel input and switches to Numpad", async (assert) => {
-  const input = new Input({ type: "Tel" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for Tel input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType matches a mixed-case inputmode attribute (inputmode=Numeric)", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  // inputmode is an enumerated HTML attribute matched case-insensitively.
-  inputDom.setAttribute("inputmode", "Numeric");
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for inputmode=Numeric");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType detects StepInput and switches to Numpad", async (assert) => {
-  const stepInput = new StepInput();
-  stepInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  try {
-    const inputDom = stepInput.getFocusDomRef() as HTMLElement;
-    inputDom.focus();
-    await nextUIUpdate();
-
-    assert.strictEqual(kb.getKeyboardType(), "Numpad", "Auto-detected Numpad for StepInput");
-  } finally {
-    stepInput.destroy();
-    kb.destroy();
-  }
-});
-
-QUnit.test("autoType stays Full for regular text input", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Stays Full for regular text input");
-
-  input.destroy();
-  kb.destroy();
-});
+}
 
 QUnit.test("autoType switches back from Numpad to Full when focus moves", async (assert) => {
   const numInput = new Input({ type: "Number" });
@@ -245,26 +212,6 @@ QUnit.test("autoType=false does not switch keyboardType on focus", async (assert
   assert.strictEqual(kb.getKeyboardType(), "Full", "autoType=false keeps Full for Number input");
 
   numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType Email input stays Full", async (assert) => {
-  const input = new Input({ type: "Email" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Email input keeps Full keyboard");
-
-  input.destroy();
   kb.destroy();
 });
 
@@ -547,69 +494,33 @@ QUnit.test("Native mode: programmatic show() does not open keyboard", async (ass
   kb.destroy();
 });
 
-QUnit.test("Auto mode still opens on desktop", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
+for (const { device, open } of [
+  { device: "desktop", open: true },
+  { device: "phone", open: false },
+  { device: "tablet", open: false },
+] as const) {
+  QUnit.test(`Auto mode ${open ? "still opens" : "defers"} on ${device}`, async (assert) => {
+    emulateDevice(device);
 
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: MobileKeyboard.Auto,
+    const input = new Input();
+    input.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({
+      docked: true,
+      autoShow: true,
+      mobileKeyboard: MobileKeyboard.Auto,
+    });
+    await placeAndWait(kb);
+
+    (input.getFocusDomRef() as HTMLElement).focus();
+    await nextUIUpdate();
+
+    assert.strictEqual(kb.isOpen(), open, `mobileKeyboard=Auto ${open ? "opens" : "defers"} on ${device}`);
+
+    input.destroy();
+    kb.destroy();
   });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.ok(kb.isOpen(), "mobileKeyboard=Auto still opens on desktop");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Auto mode defers on phone", async (assert) => {
-  emulateDevice("phone");
-
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: MobileKeyboard.Auto,
-  });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "mobileKeyboard=Auto defers on phone");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Auto mode defers on tablet (non-desktop)", async (assert) => {
-  emulateDevice("tablet");
-
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: MobileKeyboard.Auto,
-  });
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "mobileKeyboard=Auto defers on tablet without desktop flag");
-
-  input.destroy();
-  kb.destroy();
-});
+}
 
 QUnit.test("Auto mode: programmatic show() does not open on phone", async (assert) => {
   emulateDevice("phone");

@@ -103,7 +103,7 @@ QUnit.test("Applies cqShort class when externally constrained (height between 12
   kb.destroy();
 });
 
-QUnit.test("Applies cqTiny class when severely constrained (height <= 12rem)", async (assert) => {
+QUnit.test("Applies cqTiny class when severely constrained (interior of <= 12rem range)", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -111,12 +111,13 @@ QUnit.test("Applies cqTiny class when severely constrained (height <= 12rem)", a
   const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  dom.style.height = "12rem";
+  dom.style.height = "10rem";
   dom.style.overflow = "hidden";
 
-  await setMeasuredHeight(kb, dom, 12 * remPx);
+  // Constrained to 10rem -- interior of the cqTiny range (well below the 12rem boundary).
+  await setMeasuredHeight(kb, dom, 10 * remPx);
 
-  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny applied at 12rem height");
+  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny applied at 10rem height");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when cqTiny");
 
   kb.destroy();

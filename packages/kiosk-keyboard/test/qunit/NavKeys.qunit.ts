@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { FKeyMode } from "ui5/kiosk/library";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
 import type { LayoutDefinition } from "ui5/kiosk/types";
@@ -106,6 +107,37 @@ QUnit.test("ArrowLeft and ArrowRight move caret in target input", async (assert)
   tapKey(kb, "{fkey:ArrowRight}");
   await waitForRender();
   assert.strictEqual(dom.selectionStart, 4, "ArrowRight moves caret one position right");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("FKeyMode.None fires keyPress but suppresses built-in caret navigation", async (assert) => {
+  // Contrast with the default mode (see "ArrowLeft and ArrowRight move caret"),
+  // where the same tap moves the caret. FKeyMode.None returns early in
+  // FKeyController.handle, so the navigation action never runs.
+  const input = new Input({ value: "55555" });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
+  kb.setFKeyMode(FKeyMode.None);
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  input.focus();
+  await waitForRender();
+
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.setSelectionRange(3, 3);
+
+  let pressedKey = "";
+  kb.attachEvent("keyPress", (e: any) => {
+    pressedKey = e.getParameter("key");
+  });
+
+  tapKey(kb, "{fkey:ArrowLeft}");
+  await waitForRender();
+
+  assert.strictEqual(pressedKey, "ArrowLeft", "keyPress still fires the arrow key in FKeyMode.None");
+  assert.strictEqual(dom.selectionStart, 3, "Caret stays put because built-in navigation is suppressed");
 
   input.destroy();
   kb.destroy();

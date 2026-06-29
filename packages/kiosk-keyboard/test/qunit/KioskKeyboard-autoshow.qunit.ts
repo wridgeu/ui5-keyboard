@@ -225,12 +225,21 @@ QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) =
   await nextUIUpdate();
   assert.ok(kb.isOpen(), "Keyboard opened for input");
 
+  // Capture the rAF id the focusout handler schedules for the deferred close.
+  const rafSpy = sinon.spy(window, "requestAnimationFrame");
   dispatchNullRelatedFocusOut(input.getFocusDomRef() as HTMLElement);
+  const deferredCloseId = rafSpy.lastCall?.returnValue as number | undefined;
+  rafSpy.restore();
 
+  // The rAF callback self-guards, so a leaked frame would not throw; assert the
+  // pending frame is actually cancelled on destroy.
+  const cancelSpy = sinon.spy(window, "cancelAnimationFrame");
   kb.destroy();
-  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const cancelled = cancelSpy.calledWith(deferredCloseId as number);
+  cancelSpy.restore();
 
-  assert.ok(true, "No errors after destroy with deferred close pending");
+  assert.strictEqual(typeof deferredCloseId, "number", "focusout with null relatedTarget schedules a deferred close");
+  assert.ok(cancelled, "destroy cancels the pending deferred-close rAF");
 
   input.destroy();
 });

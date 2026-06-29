@@ -487,36 +487,59 @@ QUnit.test("controls auto-target does not trigger re-render", async (assert) => 
 // ──────────────────────────────────────────────
 
 QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
-  assert.expect(1);
+  assert.expect(4);
   const kb = new KioskKeyboard();
   kb.setDocked(true);
   await placeAndWait(kb);
 
+  // Spy the document listener seam so detachment is asserted directly, not via a
+  // no-throw smoke test (a leaked focus listener is otherwise unobservable).
+  const addSpy = sinon.spy(document, "addEventListener");
+  const removeSpy = sinon.spy(document, "removeEventListener");
+
   kb.setAutoShow(true);
+
+  const addedFocusIn = addSpy.getCalls().find((c) => c.args[0] === "focusin")?.args[1];
+  const addedFocusOut = addSpy.getCalls().find((c) => c.args[0] === "focusout")?.args[1];
+
   kb.destroy();
 
-  // If cleanup failed, the listener would throw on next focus event.
-  // Dispatch a focus event on an input to verify no errors.
-  const input = document.createElement("input");
-  document.body.appendChild(input);
-  input.focus();
-  input.blur();
-  document.body.removeChild(input);
+  const focusInDetached = removeSpy.getCalls().some((c) => c.args[0] === "focusin" && c.args[1] === addedFocusIn);
+  const focusOutDetached = removeSpy.getCalls().some((c) => c.args[0] === "focusout" && c.args[1] === addedFocusOut);
+  addSpy.restore();
+  removeSpy.restore();
 
-  assert.ok(true, "No errors after destroy with auto-show enabled");
+  assert.ok(addedFocusIn, "setAutoShow(true) attaches a document focusin listener");
+  assert.ok(addedFocusOut, "setAutoShow(true) attaches a document focusout listener");
+  assert.ok(focusInDetached, "destroy detaches the same focusin listener");
+  assert.ok(focusOutDetached, "destroy detaches the same focusout listener");
 });
 
 QUnit.test("exit() removes escape key listener", async (assert) => {
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
+
+  // Spy the document listener seam so detachment is asserted directly, not via a
+  // no-throw smoke test (a leaked keydown listener is otherwise unobservable).
+  const addSpy = sinon.spy(document, "addEventListener");
+  const removeSpy = sinon.spy(document, "removeEventListener");
+
   kb.show();
   assert.ok(kb.isOpen(), "Keyboard is open");
 
+  const escapeCall = addSpy.getCalls().find((c) => c.args[0] === "keydown" && c.args[2] === true);
+  const addedEscapeHandler = escapeCall?.args[1];
+
   kb.destroy();
 
-  // Dispatching Escape after destroy should not throw
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  assert.ok(true, "No errors dispatching Escape after destroy");
+  const detached = removeSpy
+    .getCalls()
+    .some((c) => c.args[0] === "keydown" && c.args[1] === addedEscapeHandler && c.args[2] === true);
+  addSpy.restore();
+  removeSpy.restore();
+
+  assert.ok(addedEscapeHandler, "show() attaches a capturing document keydown listener");
+  assert.ok(detached, "destroy detaches the same keydown listener (with capture flag)");
 });
 
 // ──────────────────────────────────────────────

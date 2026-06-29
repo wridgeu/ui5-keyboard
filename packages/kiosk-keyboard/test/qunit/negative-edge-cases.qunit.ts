@@ -337,7 +337,7 @@ QUnit.test("Key taps without target are no-ops", async (assert) => {
   tapKey(kb, "a");
   tapKey(kb, "b");
   tapKey(kb, "{backspace}");
-  assert.ok(true, "No errors when tapping keys without a target");
+  assert.strictEqual(kb.getActiveControl(), null, "Taps without a target did not spuriously establish one");
 
   kb.destroy();
 });
