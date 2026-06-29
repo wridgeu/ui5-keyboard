@@ -96,8 +96,8 @@ const noRedundantBooleanReturn = {
         if (!consequent || !alternate) return;
 
         if (isBooleanLiteral(consequent) && isBooleanLiteral(alternate)) {
-          // Same-value branches (e.g. both return true) are dead code --
-          // report without auto-fix so the developer can inspect manually.
+          // Same-value branches (e.g. both return true) are dead code. Report
+          // without auto-fix so the developer can inspect manually.
           if (consequent.value === alternate.value) {
             context.report({ node, messageId: "noRedundantBooleanReturn" });
             return;
@@ -163,7 +163,8 @@ const noEmDash = {
     },
     messages: {
       emDashInString: "String contains an em-dash or en-dash. Use a regular dash (-) instead.",
-      emDashInComment: "Comment contains an em-dash or en-dash. Use a regular dash (-) instead.",
+      emDashInComment:
+        "Comment contains an em-dash or en-dash. Rewrite the sentence so it reads cleanly (a colon, comma, or period usually works), or use a regular dash (-) instead.",
     },
     schema: [
       {
