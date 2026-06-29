@@ -9,14 +9,15 @@ import { KeyboardType } from "../library";
 
 /**
  * Resolves a CSS custom property holding a rem-based threshold to pixels.
- * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem` rem
- * when the property is unset or unparseable.
+ * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem * remPx`
+ * when the property is unset or unparseable. `remPx` is the px-per-rem factor,
+ * resolved once per pass so the root font-size is read only once.
  */
-function resolveRemThreshold(styles: CSSStyleDeclaration, prop: string, fallbackRem: number): number {
+function resolveRemThreshold(styles: CSSStyleDeclaration, prop: string, fallbackRem: number, remPx: number): number {
   const raw = styles.getPropertyValue(prop).trim();
-  if (!raw) return Rem.toPx(fallbackRem);
+  if (!raw) return fallbackRem * remPx;
   const value = Number.parseFloat(raw);
-  return Rem.toPx(Number.isNaN(value) ? fallbackRem : value);
+  return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
 }
 
 interface ResponsiveSizingHost {
@@ -112,8 +113,10 @@ export default class ResponsiveSizingController extends BaseObject {
       return;
     }
 
-    const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16);
-    const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12);
+    // px per rem, read once here (Rem.toPx(1) === the live root font-size).
+    const remPx = Rem.toPx(1);
+    const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
+    const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
     const isShort = renderedHeight <= shortThresh;
     const isTiny = renderedHeight <= tinyThresh;
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
