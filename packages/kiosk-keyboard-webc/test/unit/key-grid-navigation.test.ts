@@ -167,7 +167,7 @@ describe("KeyGridNavigation - column clamping on variable-width rows", () => {
     expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-2-8");
   });
 
-  it("ArrowUp clamps the column to the narrower target row", () => {
+  it("ArrowUp keeps the column when the target row is wide enough (no clamp)", () => {
     const g = grid();
     // row 1 col 9 -> row 0 (11 keys): no clamp needed, stays col 9
     g.press(g.keyAt(1, 9), "ArrowUp");

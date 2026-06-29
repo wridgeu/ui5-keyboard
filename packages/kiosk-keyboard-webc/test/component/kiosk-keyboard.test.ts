@@ -1848,28 +1848,19 @@ describe("kiosk-keyboard", () => {
   // ── Invalid value clamping ──
 
   describe("invalid value clamping", () => {
-    it("clamps invalid keyboardType to 'Full'", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      setInvalidValue(el, "keyboardType", "InvalidType");
-      await nextRender();
-      expect(el.keyboardType).to.equal("Full");
-    });
-
-    it("clamps invalid fKeyMode to 'Virtual'", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      setInvalidValue(el, "fKeyMode", "InvalidMode");
-      await nextRender();
-      expect(el.fKeyMode).to.equal("Virtual");
-    });
-
-    it("clamps invalid mobileKeyboard to 'Auto'", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      setInvalidValue(el, "mobileKeyboard", "InvalidValue");
-      await nextRender();
-      expect(el.mobileKeyboard).to.equal("Auto");
+    it("clamps invalid enum values back to their defaults", async () => {
+      const cases: [property: string, expectedDefault: string][] = [
+        ["keyboardType", "Full"],
+        ["fKeyMode", "Virtual"],
+        ["mobileKeyboard", "Auto"],
+      ];
+      for (const [property, expectedDefault] of cases) {
+        const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+        await nextRender();
+        setInvalidValue(el, property, "InvalidValue");
+        await nextRender();
+        expect((el as unknown as Record<string, unknown>)[property]).to.equal(expectedDefault);
+      }
     });
   });
 

@@ -63,8 +63,12 @@ describe("kiosk-keyboard - instance overrides", () => {
   });
 
   it("instance locale map can resolve to an instance-only layout name", async () => {
-    const original = navigator.language;
+    const originalLanguage = navigator.language;
+    const originalLanguages = navigator.languages;
+    // getLocale() reads the browser locale from navigator.languages[0] (falling
+    // back to navigator.language), so override both to "de".
     Object.defineProperty(navigator, "language", { value: "de", configurable: true });
+    Object.defineProperty(navigator, "languages", { value: ["de"], configurable: true });
     try {
       // Properties must be assigned before the element connects so onEnterDOM
       // sees them when it resolves _baseLayout.
@@ -79,7 +83,8 @@ describe("kiosk-keyboard - instance overrides", () => {
         el.remove();
       }
     } finally {
-      Object.defineProperty(navigator, "language", { value: original, configurable: true });
+      Object.defineProperty(navigator, "language", { value: originalLanguage, configurable: true });
+      Object.defineProperty(navigator, "languages", { value: originalLanguages, configurable: true });
     }
   });
 

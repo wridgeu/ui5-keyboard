@@ -8,33 +8,15 @@ describe("detectKeyboardType", () => {
     expect(detectKeyboardType(el)).toBe("Full");
   });
 
-  it("returns Numpad for type=number", () => {
+  it.each(["number", "tel"])("returns Numpad for type=%s", (type) => {
     const el = document.createElement("input");
-    el.type = "number";
+    el.type = type;
     expect(detectKeyboardType(el)).toBe("Numpad");
   });
 
-  it("returns Numpad for type=tel", () => {
+  it.each(["numeric", "decimal", "tel"])("returns Numpad for inputmode=%s", (mode) => {
     const el = document.createElement("input");
-    el.type = "tel";
-    expect(detectKeyboardType(el)).toBe("Numpad");
-  });
-
-  it("returns Numpad for inputmode=numeric", () => {
-    const el = document.createElement("input");
-    el.setAttribute("inputmode", "numeric");
-    expect(detectKeyboardType(el)).toBe("Numpad");
-  });
-
-  it("returns Numpad for inputmode=decimal", () => {
-    const el = document.createElement("input");
-    el.setAttribute("inputmode", "decimal");
-    expect(detectKeyboardType(el)).toBe("Numpad");
-  });
-
-  it("returns Numpad for inputmode=tel", () => {
-    const el = document.createElement("input");
-    el.setAttribute("inputmode", "tel");
+    el.setAttribute("inputmode", mode);
     expect(detectKeyboardType(el)).toBe("Numpad");
   });
 
@@ -64,15 +46,9 @@ describe("detectKeyboardType", () => {
     expect(detectKeyboardType(el)).toBe("Numpad");
   });
 
-  it("returns Full for inputmode=email", () => {
+  it.each(["email", "url"])("returns Full for inputmode=%s", (mode) => {
     const el = document.createElement("input");
-    el.setAttribute("inputmode", "email");
-    expect(detectKeyboardType(el)).toBe("Full");
-  });
-
-  it("returns Full for inputmode=url", () => {
-    const el = document.createElement("input");
-    el.setAttribute("inputmode", "url");
+    el.setAttribute("inputmode", mode);
     expect(detectKeyboardType(el)).toBe("Full");
   });
 

@@ -6,24 +6,14 @@ describe("arabic layout structure", () => {
     expect(arabic).toHaveLength(5);
   });
 
-  it("row 1 has 11 keys (10 digits + backspace)", () => {
-    expect(arabic[0]).toHaveLength(11);
-  });
-
-  it("row 2 has 11 keys (Arabic letters top row)", () => {
-    expect(arabic[1]).toHaveLength(11);
-  });
-
-  it("row 3 has 11 keys (Arabic letters home row)", () => {
-    expect(arabic[2]).toHaveLength(11);
-  });
-
-  it("row 4 has 11 keys (shift + 8 letters + enter)", () => {
-    expect(arabic[3]).toHaveLength(11);
-  });
-
-  it("row 5 has 5 keys (numeric switch + comma + space + period + fn)", () => {
-    expect(arabic[4]).toHaveLength(5);
+  it.each([
+    [0, 11, "row 1 has 11 keys (10 digits + backspace)"],
+    [1, 11, "row 2 has 11 keys (Arabic letters top row)"],
+    [2, 11, "row 3 has 11 keys (Arabic letters home row)"],
+    [3, 11, "row 4 has 11 keys (shift + 8 letters + enter)"],
+    [4, 5, "row 5 has 5 keys (numeric switch + comma + space + period + fn)"],
+  ] as [number, number, string][])("$2", (rowIndex, expectedLength) => {
+    expect(arabic[rowIndex]).toHaveLength(expectedLength);
   });
 
   it("digit row has Western Arabic numerals with Arabic-Indic shift values", () => {

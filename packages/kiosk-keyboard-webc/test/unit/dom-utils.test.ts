@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { resolveInputOrTextarea, resolveWithCustomResolver } from "../../src/core/dom-utils.js";
+import { classifyRow, resolveInputOrTextarea, resolveWithCustomResolver } from "../../src/core/dom-utils.js";
 
 describe("resolveInputOrTextarea", () => {
   it("returns native input directly", () => {
@@ -148,5 +148,23 @@ describe("resolveWithCustomResolver", () => {
 
     expect(result).toBe(input);
     expect(warnSpy).toHaveBeenCalledWith("[kiosk-keyboard] Custom target resolver threw:", expect.any(Error));
+  });
+});
+
+describe("classifyRow", () => {
+  it("returns 'fkey' for an all-function-key row", () => {
+    expect(classifyRow([{ value: "{fkey:F1}" }, { value: "{fkey:F2}" }, { value: "{fkey:F12}" }])).toBe("fkey");
+  });
+
+  it("returns 'nav' for an all-navigation-key row", () => {
+    expect(classifyRow([{ value: "{fkey:Home}" }, { value: "{fkey:End}" }, { value: "{fkey:ArrowLeft}" }])).toBe("nav");
+  });
+
+  it("returns undefined for an empty row", () => {
+    expect(classifyRow([])).toBeUndefined();
+  });
+
+  it("returns undefined for a mixed/character row", () => {
+    expect(classifyRow([{ value: "{fkey:F1}" }, { value: "a" }])).toBeUndefined();
   });
 });

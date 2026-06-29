@@ -6,24 +6,14 @@ describe("ja-kana layout structure", () => {
     expect(jaKana).toHaveLength(5);
   });
 
-  it("row 1 has 12 keys (10 kana + ほ + backspace)", () => {
-    expect(jaKana[0]).toHaveLength(12);
-  });
-
-  it("row 2 has 12 keys (10 kana + dakuten + handakuten)", () => {
-    expect(jaKana[1]).toHaveLength(12);
-  });
-
-  it("row 3 has 12 keys (10 kana + け + む)", () => {
-    expect(jaKana[2]).toHaveLength(12);
-  });
-
-  it("row 4 has 12 keys (shift + 9 kana + enter)", () => {
-    expect(jaKana[3]).toHaveLength(12);
-  });
-
-  it("row 5 has 7 keys", () => {
-    expect(jaKana[4]).toHaveLength(7);
+  it.each([
+    [0, 12, "row 1 has 12 keys (10 kana + ほ + backspace)"],
+    [1, 12, "row 2 has 12 keys (10 kana + dakuten + handakuten)"],
+    [2, 12, "row 3 has 12 keys (10 kana + け + む)"],
+    [3, 12, "row 4 has 12 keys (shift + 9 kana + enter)"],
+    [4, 7, "row 5 has 7 keys"],
+  ] as [number, number, string][])("$2", (rowIndex, expectedLength) => {
+    expect(jaKana[rowIndex]).toHaveLength(expectedLength);
   });
 
   it("all base-layer values are hiragana, special keys, or punctuation", () => {
@@ -41,7 +31,7 @@ describe("ja-kana layout structure", () => {
     }
   });
 
-  it("small kana shift variants are on the correct keys", () => {
+  it("shift-layer kana variants are on the correct keys", () => {
     const expectedShifts: Record<string, string> = {
       "\u3042": "\u3041", // あ → ぁ
       "\u3046": "\u3045", // う → ぅ

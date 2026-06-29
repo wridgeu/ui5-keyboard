@@ -6,24 +6,14 @@ describe("ko-hangul layout structure", () => {
     expect(koHangul).toHaveLength(5);
   });
 
-  it("row 1 has 11 keys (10 digits + backspace)", () => {
-    expect(koHangul[0]).toHaveLength(11);
-  });
-
-  it("row 2 has 10 keys (Q-P jamo)", () => {
-    expect(koHangul[1]).toHaveLength(10);
-  });
-
-  it("row 3 has 9 keys (A-L jamo)", () => {
-    expect(koHangul[2]).toHaveLength(9);
-  });
-
-  it("row 4 has 11 keys (shift + 7 jamo + , . + enter)", () => {
-    expect(koHangul[3]).toHaveLength(11);
-  });
-
-  it("row 5 has 5 keys", () => {
-    expect(koHangul[4]).toHaveLength(5);
+  it.each([
+    [0, 11, "row 1 has 11 keys (10 digits + backspace)"],
+    [1, 10, "row 2 has 10 keys (Q-P jamo)"],
+    [2, 9, "row 3 has 9 keys (A-L jamo)"],
+    [3, 11, "row 4 has 11 keys (shift + 7 jamo + , . + enter)"],
+    [4, 5, "row 5 has 5 keys"],
+  ] as [number, number, string][])("$2", (rowIndex, expectedLength) => {
+    expect(koHangul[rowIndex]).toHaveLength(expectedLength);
   });
 
   it("all jamo values are in the Hangul Compatibility Jamo range", () => {
@@ -50,29 +40,25 @@ describe("ko-hangul layout structure", () => {
     }
   });
 
-  it("tense consonant shift variants follow Dubeolsik standard", () => {
-    const expectedShifts: Record<string, string> = {
-      "\u3142": "\u3143", // ㅂ → ㅃ
-      "\u3148": "\u3149", // ㅈ → ㅉ
-      "\u3137": "\u3138", // ㄷ → ㄸ
-      "\u3131": "\u3132", // ㄱ → ㄲ
-      "\u3145": "\u3146", // ㅅ → ㅆ
-    };
-
-    const allKeys = koHangul.flat();
-    for (const [base, expectedTense] of Object.entries(expectedShifts)) {
-      const key = allKeys.find((k) => k.value === base);
-      expect(key, `key for ${base} should exist`).toBeDefined();
-      expect(key!.shiftValue, `shift of ${base} should be ${expectedTense}`).toBe(expectedTense);
-    }
-  });
-
-  it("vowel shift variants follow Dubeolsik standard", () => {
-    const expectedShifts: Record<string, string> = {
-      "\u3150": "\u3152", // ㅐ → ㅒ
-      "\u3154": "\u3156", // ㅔ → ㅖ
-    };
-
+  it.each([
+    [
+      "tense consonant shift variants follow Dubeolsik standard",
+      {
+        "\u3142": "\u3143", // ㅂ → ㅃ
+        "\u3148": "\u3149", // ㅈ → ㅉ
+        "\u3137": "\u3138", // ㄷ → ㄸ
+        "\u3131": "\u3132", // ㄱ → ㄲ
+        "\u3145": "\u3146", // ㅅ → ㅆ
+      },
+    ],
+    [
+      "vowel shift variants follow Dubeolsik standard",
+      {
+        "\u3150": "\u3152", // ㅐ → ㅒ
+        "\u3154": "\u3156", // ㅔ → ㅖ
+      },
+    ],
+  ] as const)("%s", (_label, expectedShifts) => {
     const allKeys = koHangul.flat();
     for (const [base, expectedShift] of Object.entries(expectedShifts)) {
       const key = allKeys.find((k) => k.value === base);
@@ -111,6 +97,7 @@ describe("ko-hangul layout structure", () => {
   it("has layout switches for numeric, qwerty (ABC), and fkeys", () => {
     const allKeys = koHangul.flat();
     expect(allKeys.find((k) => k.value === "{layout:numeric}")).toBeDefined();
+    expect(allKeys.find((k) => k.value === "{layout:qwerty}")).toBeDefined();
     expect(allKeys.find((k) => k.value === "{layout:fkeys}")).toBeDefined();
   });
 
