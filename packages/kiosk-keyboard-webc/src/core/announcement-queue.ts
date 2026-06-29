@@ -23,7 +23,7 @@ export class AnnouncementQueue {
   /** Pending live-region announcements (see class doc for why a queue). */
   private readonly _queue: string[] = [];
   private _flushPending = false;
-  private _timerId: number | null = null;
+  private _timerId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly _host: AnnouncementQueueHost) {}
 
@@ -54,7 +54,7 @@ export class AnnouncementQueue {
       const next = this._queue.shift();
       if (next !== undefined) this._host.setLiveRegionText(next);
       if (this._queue.length > 0) {
-        this._timerId = window.setTimeout(writeNext, AnnouncementQueue._INTERVAL_MS);
+        this._timerId = setTimeout(writeNext, AnnouncementQueue._INTERVAL_MS);
       } else {
         this._flushPending = false;
       }

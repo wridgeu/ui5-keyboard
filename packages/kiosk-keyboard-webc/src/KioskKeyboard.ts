@@ -1544,7 +1544,7 @@ class KioskKeyboard extends UI5Element {
   private static _coarsePointerQuery: MediaQueryList | null = null;
 
   private static _getCoarsePointerQuery(): MediaQueryList {
-    KioskKeyboard._coarsePointerQuery ??= window.matchMedia("(pointer: coarse)");
+    KioskKeyboard._coarsePointerQuery ??= matchMedia("(pointer: coarse)");
     return KioskKeyboard._coarsePointerQuery;
   }
 

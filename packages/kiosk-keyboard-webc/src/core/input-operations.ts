@@ -1,3 +1,4 @@
+import clamp from "@ui5/webcomponents-base/dist/util/clamp.js";
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme.js";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
@@ -13,7 +14,7 @@ function resolveCursor(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: Cur
 
 function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): number {
   const len = value.length;
-  const pos = Math.max(0, Math.min(caret, len));
+  const pos = clamp(caret, 0, len);
 
   const currentLineStart = value.lastIndexOf("\n", Math.max(0, pos - 1)) + 1;
   const currentLineEndRaw = value.indexOf("\n", pos);
