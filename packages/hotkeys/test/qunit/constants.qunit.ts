@@ -42,10 +42,11 @@ QUnit.test("Function key boundary validation (F1-F24 only)", (assert) => {
   assert.strictEqual(normalizeKeyName("F99"), "F99", "F99 passes through unchanged");
 });
 
-QUnit.test("Unknown keys are returned as-is", (assert) => {
+QUnit.test("Canonical key names are preserved", (assert) => {
   assert.strictEqual(normalizeKeyName("Escape"), "Escape");
   assert.strictEqual(normalizeKeyName("Enter"), "Enter");
   assert.strictEqual(normalizeKeyName("Tab"), "Tab");
+  assert.strictEqual(normalizeKeyName("NumpadDecimal"), "NumpadDecimal");
 });
 
 QUnit.test("Special characters are returned as-is", (assert) => {

@@ -27,12 +27,6 @@ QUnit.test("Simple key match", (assert) => {
   assert.ok(matchesKeyboardEvent(event, parsed));
 });
 
-QUnit.test("Ctrl+S matches on Windows", (assert) => {
-  const parsed = parseHotkey("Ctrl+S", Platform.Windows);
-  const event = mockKeyEvent({ key: "s", ctrlKey: true });
-  assert.ok(matchesKeyboardEvent(event, parsed));
-});
-
 QUnit.test("Case-insensitive letter matching", (assert) => {
   const parsed = parseHotkey("Ctrl+S", Platform.Windows);
   const eventLower = mockKeyEvent({ key: "s", ctrlKey: true });

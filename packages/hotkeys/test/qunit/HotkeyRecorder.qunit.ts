@@ -157,8 +157,7 @@ QUnit.test("Modifier+Backspace records as hotkey (not clear)", (assert) => {
 
   const recorder = createRecorder({
     onRecord: (hotkey) => {
-      assert.ok(hotkey.includes("Control"), "Hotkey includes Control modifier");
-      assert.ok(hotkey.includes("Backspace"), "Hotkey includes Backspace");
+      assert.strictEqual(hotkey, "Control+Backspace", "Modifier+Backspace records as canonical hotkey, not clear");
       done();
     },
   });
