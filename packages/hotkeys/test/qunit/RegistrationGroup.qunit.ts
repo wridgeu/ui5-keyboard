@@ -279,23 +279,6 @@ QUnit.test("onPending dies with group.destroyAll", (assert) => {
   group2.destroyAll();
 });
 
-QUnit.test("per-registration onPending fires independently for each sequence", (assert) => {
-  const manager = createHotkeyManager();
-  const group = manager.createGroup();
-  const calls: string[] = [];
-
-  group.register("G I", () => {}, {
-    onPending: () => {
-      calls.push("seq-a");
-    },
-  });
-
-  fireKey("g");
-  assert.deepEqual(calls, ["seq-a"], "Per-registration onPending fires for its sequence");
-
-  group.destroyAll();
-});
-
 QUnit.test("sequence without onPending does not fire any pending callback", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();

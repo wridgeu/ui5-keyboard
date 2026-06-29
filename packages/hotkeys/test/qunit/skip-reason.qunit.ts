@@ -38,15 +38,12 @@ const toInfo: Parameters<typeof recordSkip>[3] = (reg) => ({ id: reg.id });
 
 QUnit.module("skip-reason - recordSkip");
 
-QUnit.test("No-op when skipInfo is null", (assert) => {
-  recordSkip(null, UnhandledReason.Disabled, makeRegistration("a"), toInfo);
-  assert.ok(true, "No error thrown for null skipInfo");
-});
-
-QUnit.test("No-op when skipInfo is undefined", (assert) => {
-  recordSkip(undefined, UnhandledReason.Disabled, makeRegistration("a"), toInfo);
-  assert.ok(true, "No error thrown for undefined skipInfo");
-});
+[null, undefined].forEach((value) =>
+  QUnit.test(`No-op when skipInfo is ${value}`, (assert) => {
+    recordSkip(value, UnhandledReason.Disabled, makeRegistration("a"), toInfo);
+    assert.ok(true, "No error thrown");
+  }),
+);
 
 QUnit.test("Higher-priority reason overwrites lower", (assert) => {
   const skipInfo: SkipInfo = { reason: UnhandledReason.NoMatch };
@@ -81,12 +78,16 @@ QUnit.test("Equal-priority reason does not overwrite", (assert) => {
 });
 
 QUnit.test(
-  "Full ascending priority chain: NoMatch → RepeatIgnored → InputSuppressed → PopupSuppressed → Disabled",
+  "Full ascending priority chain: NoMatch → TargetMismatch → RepeatIgnored → InputSuppressed → PopupSuppressed → Disabled",
   (assert) => {
     const skipInfo: SkipInfo = { reason: UnhandledReason.NoMatch };
 
+    recordSkip(skipInfo, UnhandledReason.TargetMismatch, makeRegistration("target"), toInfo);
+    assert.strictEqual(skipInfo.reason, UnhandledReason.TargetMismatch, "NoMatch → TargetMismatch");
+    assert.strictEqual(skipInfo.registration?.id, "target", "Registration updated");
+
     recordSkip(skipInfo, UnhandledReason.RepeatIgnored, makeRegistration("repeat"), toInfo);
-    assert.strictEqual(skipInfo.reason, UnhandledReason.RepeatIgnored, "NoMatch → RepeatIgnored");
+    assert.strictEqual(skipInfo.reason, UnhandledReason.RepeatIgnored, "TargetMismatch → RepeatIgnored");
     assert.strictEqual(skipInfo.registration?.id, "repeat", "Registration updated");
 
     recordSkip(skipInfo, UnhandledReason.InputSuppressed, makeRegistration("input"), toInfo);

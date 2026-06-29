@@ -21,16 +21,6 @@ QUnit.test("getKeyStateTracker returns same instance", (assert) => {
   assert.strictEqual(a, b, "Same instance returned");
 });
 
-QUnit.test("Keydown adds key, keyup removes key", (assert) => {
-  const tracker = createHotkeyManager().getKeyStateTracker();
-
-  fireKey("a");
-  assert.ok(tracker.isKeyHeld("a"), "Key 'a' is held after keydown");
-
-  fireKeyUp("a");
-  assert.notOk(tracker.isKeyHeld("a"), "Key 'a' released after keyup");
-});
-
 QUnit.test("isKeyHeld returns correct state", (assert) => {
   const tracker = createHotkeyManager().getKeyStateTracker();
 

@@ -117,9 +117,6 @@ QUnit.test("Falls back to event.target when composedPath is unavailable", (asser
   const div = document.createElement("div");
   document.getElementById("qunit-fixture")!.appendChild(div);
 
-  const event = new Event("click", { bubbles: true });
-  div.dispatchEvent(event);
-
   // Simulate missing composedPath by creating a mock event object
   const mockEvent = {
     target: div,

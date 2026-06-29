@@ -66,6 +66,15 @@ QUnit.test("Route change resets previous scopes", (assert) => {
 
   router.fireRouteMatched("detail");
   assert.strictEqual(manager.getActiveScope(), "detail", "Active scope is 'detail' after second route change");
+
+  // With reset semantics the stack is [global, detail]; popping "detail" yields
+  // global. If the handler merely stacked scopes, "main" would remain underneath.
+  manager.popScope("detail");
+  assert.strictEqual(
+    manager.getActiveScope(),
+    GLOBAL_SCOPE,
+    "previous 'main' scope was reset, not stacked under 'detail'",
+  );
 });
 
 QUnit.test("Hotkey fires in correct route scope", (assert) => {

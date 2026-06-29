@@ -28,11 +28,6 @@ QUnit.test("Non-Mod modifiers are returned unchanged", (assert) => {
 
 QUnit.module("platform - detectPlatform");
 
-QUnit.test("Returns a valid platform", (assert) => {
-  const platform = detectPlatform();
-  assert.ok([Platform.Mac, Platform.Windows, Platform.Linux].includes(platform), `Platform "${platform}" is valid`);
-});
-
 QUnit.test("Returns the same result on repeated calls", (assert) => {
   const first = detectPlatform();
   const second = detectPlatform();

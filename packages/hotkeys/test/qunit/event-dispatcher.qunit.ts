@@ -97,11 +97,10 @@ QUnit.test("destroy() invalidates all guards", (assert) => {
 });
 
 QUnit.test("suspendDispatch on destroyed manager throws", (assert) => {
-  const ref = manager;
-  ref.destroy();
+  manager.destroy();
   assert.throws(
     () => {
-      ref.suspendDispatch("after-destroy");
+      manager.suspendDispatch("after-destroy");
     },
     /destroyed/i,
     "suspendDispatch() throws on a destroyed manager",
@@ -774,22 +773,6 @@ QUnit.test("Target-scoped: option governs bubbling, not callback event.stopPropa
   assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
 
   outer.remove();
-});
-
-// ──────────────────────────────────────────────
-// Destroyed dispatcher safety
-// ──────────────────────────────────────────────
-
-QUnit.test("Destroyed manager: suspendDispatch throws", (assert) => {
-  manager.destroy();
-
-  assert.throws(
-    () => {
-      manager.suspendDispatch("after-destroy");
-    },
-    /destroyed/i,
-    "suspendDispatch throws on destroyed manager",
-  );
 });
 
 // ──────────────────────────────────────────────

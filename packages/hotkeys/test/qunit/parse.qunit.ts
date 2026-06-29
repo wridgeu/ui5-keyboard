@@ -99,6 +99,10 @@ QUnit.test("Throws when multiple keys are provided (A++)", (assert) => {
   assert.throws(() => parseHotkey("A++", Platform.Windows), /multiple non-modifier keys/);
 });
 
+QUnit.test("Throws on multiple non-modifier keys (A+B)", (assert) => {
+  assert.throws(() => parseHotkey("A+B", Platform.Windows), /unexpected segment/);
+});
+
 QUnit.module("parse - normalizeHotkey");
 
 QUnit.test("Normalizes modifier order", (assert) => {

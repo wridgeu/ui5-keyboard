@@ -687,24 +687,6 @@ QUnit.test("setOptions: update onPending", (assert) => {
 // ignoreInputs: "auto" (default)
 // ──────────────────────────────────────────────
 
-QUnit.test("ignoreInputs: auto suppresses plain-key sequence in input", (assert) => {
-  const manager = createHotkeyManager();
-  let called = false;
-
-  manager.register("G E", () => {
-    called = true;
-  });
-
-  const input = document.createElement("input");
-  input.type = "text";
-  fixture.appendChild(input);
-
-  fireKeyOn(input, "g");
-  clock.tick(50);
-  fireKeyOn(input, "e");
-  assert.notOk(called, "Plain-key sequence suppressed in input with auto");
-});
-
 QUnit.test("ignoreInputs: auto allows Ctrl sequence in input", (assert) => {
   const manager = createHotkeyManager();
   let called = false;

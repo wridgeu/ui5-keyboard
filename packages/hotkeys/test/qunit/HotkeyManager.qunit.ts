@@ -346,6 +346,9 @@ QUnit.test("Conflict behavior: warn (default) allows both", (assert) => {
     firstCalled = true;
   });
 
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warningSpy = sandbox.spy(LogModule, "warning");
+
   // Second registration with same hotkey - should warn but succeed
   manager.register("Escape", () => {
     // This would fire if first-match-wins didn't apply
@@ -353,6 +356,10 @@ QUnit.test("Conflict behavior: warn (default) allows both", (assert) => {
 
   fireKey("Escape");
   assert.ok(firstCalled, "First registration fires (first-match-wins)");
+  assert.ok(
+    warningSpy.getCalls().some((c) => /already registered/.test(String(c.args[0]))),
+    "Default warn behavior logs a conflict warning",
+  );
 });
 
 QUnit.test("Conflict behavior: error throws", (assert) => {
@@ -431,11 +438,69 @@ QUnit.test("Conflict behavior: same key/scope on different targets does not conf
 // Input suppression (ignoreInputs: "auto")
 // ──────────────────────────────────────────────
 
-QUnit.test("auto ignoreInputs: single key suppressed in text input", (assert) => {
+const ignoreInputsCases: {
+  title: string;
+  hotkey: string;
+  ignoreInputs: boolean | "auto";
+  key: string;
+  init?: Partial<KeyboardEvent>;
+  expectCalled: boolean;
+}[] = [
+  { title: "auto suppresses single key in input", hotkey: "F5", ignoreInputs: "auto", key: "F5", expectCalled: false },
+  {
+    title: "auto allows Ctrl combo in input",
+    hotkey: "Ctrl+S",
+    ignoreInputs: "auto",
+    key: "s",
+    init: { ctrlKey: true },
+    expectCalled: true,
+  },
+  { title: "auto allows Escape in input", hotkey: "Escape", ignoreInputs: "auto", key: "Escape", expectCalled: true },
+  { title: "false allows single key in input", hotkey: "F5", ignoreInputs: false, key: "F5", expectCalled: true },
+  {
+    title: "true suppresses Ctrl combo in input",
+    hotkey: "Ctrl+S",
+    ignoreInputs: true,
+    key: "s",
+    init: { ctrlKey: true },
+    expectCalled: false,
+  },
+  {
+    title: "true suppresses Escape in input",
+    hotkey: "Escape",
+    ignoreInputs: true,
+    key: "Escape",
+    expectCalled: false,
+  },
+];
+
+ignoreInputsCases.forEach((tc) => {
+  QUnit.test(`ignoreInputs: ${tc.title}`, (assert) => {
+    const manager = createHotkeyManager();
+    let called = false;
+
+    manager.register(
+      tc.hotkey,
+      () => {
+        called = true;
+      },
+      { ignoreInputs: tc.ignoreInputs },
+    );
+
+    const input = document.createElement("input");
+    input.type = "text";
+    fixture.appendChild(input);
+
+    fireKeyOn(input, tc.key, tc.init);
+    assert.strictEqual(called, tc.expectCalled, tc.title);
+  });
+});
+
+QUnit.test("ignoreInputs defaults to 'auto' (single key suppressed in input)", (assert) => {
   const manager = createHotkeyManager();
   let called = false;
 
-  // F5 with default ignoreInputs: "auto" - should suppress in input
+  // No ignoreInputs option - should default to "auto" and suppress single-key F5
   manager.register("F5", () => {
     called = true;
   });
@@ -445,100 +510,7 @@ QUnit.test("auto ignoreInputs: single key suppressed in text input", (assert) =>
   fixture.appendChild(input);
 
   fireKeyOn(input, "F5");
-  assert.notOk(called, "Single-key F5 suppressed in text input");
-});
-
-QUnit.test("auto ignoreInputs: Ctrl combo fires in text input", (assert) => {
-  const manager = createHotkeyManager();
-  let called = false;
-
-  // Ctrl+S with default ignoreInputs: "auto" - should fire even in input
-  manager.register("Ctrl+S", () => {
-    called = true;
-  });
-
-  const input = document.createElement("input");
-  input.type = "text";
-  fixture.appendChild(input);
-
-  fireKeyOn(input, "s", { ctrlKey: true });
-  assert.ok(called, "Ctrl+S fires in text input (auto mode allows Ctrl combos)");
-});
-
-QUnit.test("auto ignoreInputs: Escape fires in text input", (assert) => {
-  const manager = createHotkeyManager();
-  let called = false;
-
-  manager.register("Escape", () => {
-    called = true;
-  });
-
-  const input = document.createElement("input");
-  input.type = "text";
-  fixture.appendChild(input);
-
-  fireKeyOn(input, "Escape");
-  assert.ok(called, "Escape fires in text input (auto mode allows Escape)");
-});
-
-QUnit.test("ignoreInputs: false allows single key in input", (assert) => {
-  const manager = createHotkeyManager();
-  let called = false;
-
-  manager.register(
-    "F5",
-    () => {
-      called = true;
-    },
-    { ignoreInputs: false },
-  );
-
-  const input = document.createElement("input");
-  input.type = "text";
-  fixture.appendChild(input);
-
-  fireKeyOn(input, "F5");
-  assert.ok(called, "F5 fires in input when ignoreInputs is false");
-});
-
-QUnit.test("ignoreInputs: true suppresses Ctrl combo in input", (assert) => {
-  const manager = createHotkeyManager();
-  let called = false;
-
-  manager.register(
-    "Ctrl+S",
-    () => {
-      called = true;
-    },
-    { ignoreInputs: true },
-  );
-
-  const input = document.createElement("input");
-  input.type = "text";
-  fixture.appendChild(input);
-
-  fireKeyOn(input, "s", { ctrlKey: true });
-  assert.notOk(called, "Ctrl+S suppressed in input when ignoreInputs is true (unlike auto)");
-});
-
-QUnit.test("ignoreInputs: true suppresses Escape in input", (assert) => {
-  const manager = createHotkeyManager();
-  let called = false;
-
-  manager.register(
-    "Escape",
-    () => {
-      called = true;
-    },
-    { ignoreInputs: true },
-  );
-
-  const input = document.createElement("input");
-  input.type = "text";
-  fixture.appendChild(input);
-
-  fireKeyOn(input, "Escape");
-  assert.notOk(called, "Escape suppressed in input when ignoreInputs is true (unlike auto)");
+  assert.notOk(called, "Default ignoreInputs resolves to 'auto' (single-key F5 suppressed)");
 });
 
 // ──────────────────────────────────────────────
@@ -823,12 +795,19 @@ QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => 
     firstCalled = true;
   });
 
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warningSpy = sandbox.spy(LogModule, "warning");
+
   // Second registration with "allow" - no warning, no error
   manager.register("Escape", () => {}, { conflictBehavior: ConflictBehavior.Allow });
 
   fireKey("Escape");
   assert.ok(firstCalled, "First registration fires (first-match-wins)");
   assert.strictEqual(manager.getRegistrations().length, 2, "Both registrations exist");
+  assert.notOk(
+    warningSpy.getCalls().some((c) => /already registered/.test(String(c.args[0]))),
+    "Allow logs no conflict warning",
+  );
 });
 
 // ──────────────────────────────────────────────
