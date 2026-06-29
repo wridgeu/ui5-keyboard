@@ -1,18 +1,22 @@
 import BaseObject from "sap/ui/base/Object";
 import ResizeHandler from "sap/ui/core/ResizeHandler";
+// sap/ui/dom/units/Rem is @ui5-restricted (sap.m); @openui5/types does not
+// expose it, so its type lives in restricted-modules.d.ts. toPx(rem) multiplies
+// the value by the live root font-size.
+import Rem from "sap/ui/dom/units/Rem";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract";
 import { KeyboardType } from "../library";
 
 /**
  * Resolves a CSS custom property holding a rem-based threshold to pixels.
- * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem * remPx`
+ * Accepts values like "16rem" or "20rem"; falls back to `fallbackRem` rem
  * when the property is unset or unparseable.
  */
-function resolveRemThreshold(styles: CSSStyleDeclaration, prop: string, fallbackRem: number, remPx: number): number {
+function resolveRemThreshold(styles: CSSStyleDeclaration, prop: string, fallbackRem: number): number {
   const raw = styles.getPropertyValue(prop).trim();
-  if (!raw) return fallbackRem * remPx;
+  if (!raw) return Rem.toPx(fallbackRem);
   const value = Number.parseFloat(raw);
-  return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
+  return Rem.toPx(Number.isNaN(value) ? fallbackRem : value);
 }
 
 interface ResponsiveSizingHost {
@@ -83,8 +87,7 @@ export default class ResponsiveSizingController extends BaseObject {
    * KioskKeyboard.container-queries.css), so no JS width measurement is needed.
    */
   private _applyClasses(dom: HTMLElement): void {
-    const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-    const cs = window.getComputedStyle(dom);
+    const cs = getComputedStyle(dom);
 
     // Height classes -- detect external height constraints by comparing the
     // keyboard's natural (unconstrained) content height against its rendered
@@ -109,8 +112,8 @@ export default class ResponsiveSizingController extends BaseObject {
       return;
     }
 
-    const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
-    const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
+    const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16);
+    const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12);
     const isShort = renderedHeight <= shortThresh;
     const isTiny = renderedHeight <= tinyThresh;
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
