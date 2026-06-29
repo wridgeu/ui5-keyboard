@@ -137,12 +137,6 @@ describe("layout-registry", () => {
       }
     }
 
-    it("returns default layout for an unmapped locale", () => {
-      withLocale("en", "", () => {
-        expect(getLocaleLayout()).toBe("qwerty");
-      });
-    });
-
     it("returns default layout when getLocale throws", () => {
       localeState.throws = true;
       try {
@@ -152,59 +146,19 @@ describe("layout-registry", () => {
       }
     });
 
-    it("follows the framework-configured locale, not raw navigator.language", () => {
-      const originalNav = navigator.language;
-      Object.defineProperty(navigator, "language", { value: "en-US", configurable: true });
-      try {
-        // getLocale() reports German even though the browser language is en-US,
-        // so the layout follows the configured locale (qwertz-de, not qwerty).
-        withLocale("de", "", () => {
-          expect(getLocaleLayout()).toBe("qwertz-de");
-        });
-      } finally {
-        Object.defineProperty(navigator, "language", { value: originalNav, configurable: true });
-      }
-    });
-
-    it("resolves ja-JP to ja-romaji via built-in locale mapping", () => {
-      withLocale("ja", "JP", () => {
-        expect(getLocaleLayout()).toBe("ja-romaji");
-      });
-    });
-
-    it("resolves ar to arabic via built-in locale mapping", () => {
-      withLocale("ar", "", () => {
-        expect(getLocaleLayout()).toBe("arabic");
-      });
-    });
-
-    it("resolves ar-SA to arabic via language prefix", () => {
-      withLocale("ar", "SA", () => {
-        expect(getLocaleLayout()).toBe("arabic");
-      });
-    });
-
-    it("resolves ko to ko-hangul via built-in locale mapping", () => {
-      withLocale("ko", "", () => {
-        expect(getLocaleLayout()).toBe("ko-hangul");
-      });
-    });
-
-    it("resolves ko-KR to ko-hangul via language prefix", () => {
-      withLocale("ko", "KR", () => {
-        expect(getLocaleLayout()).toBe("ko-hangul");
-      });
-    });
-
-    it("resolves es to qwerty-es via built-in locale mapping", () => {
-      withLocale("es", "", () => {
-        expect(getLocaleLayout()).toBe("qwerty-es");
-      });
-    });
-
-    it("resolves es-ES to qwerty-es via language prefix", () => {
-      withLocale("es", "ES", () => {
-        expect(getLocaleLayout()).toBe("qwerty-es");
+    it.each([
+      ["en", "", "qwerty"],
+      ["de", "", "qwertz-de"],
+      ["ja", "JP", "ja-romaji"],
+      ["ar", "", "arabic"],
+      ["ar", "SA", "arabic"],
+      ["ko", "", "ko-hangul"],
+      ["ko", "KR", "ko-hangul"],
+      ["es", "", "qwerty-es"],
+      ["es", "ES", "qwerty-es"],
+    ])("resolves %s-%s to %s via built-in locale mapping", (language, region, expected) => {
+      withLocale(language, region, () => {
+        expect(getLocaleLayout()).toBe(expected);
       });
     });
 

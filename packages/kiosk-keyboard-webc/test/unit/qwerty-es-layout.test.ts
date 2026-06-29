@@ -6,24 +6,14 @@ describe("qwerty-es layout structure", () => {
     expect(qwertyEs).toHaveLength(5);
   });
 
-  it("row 1 has 11 keys (10 digits + backspace)", () => {
-    expect(qwertyEs[0]).toHaveLength(11);
-  });
-
-  it("row 2 has 10 keys (Q-P)", () => {
-    expect(qwertyEs[1]).toHaveLength(10);
-  });
-
-  it("row 3 has 10 keys (A-L + ñ)", () => {
-    expect(qwertyEs[2]).toHaveLength(10);
-  });
-
-  it("row 4 has 9 keys (shift + Z-M + enter)", () => {
-    expect(qwertyEs[3]).toHaveLength(9);
-  });
-
-  it("row 5 has 6 keys", () => {
-    expect(qwertyEs[4]).toHaveLength(6);
+  it.each([
+    [0, 11, "row 1 has 11 keys (10 digits + backspace)"],
+    [1, 10, "row 2 has 10 keys (Q-P)"],
+    [2, 10, "row 3 has 10 keys (A-L + ñ)"],
+    [3, 9, "row 4 has 9 keys (shift + Z-M + enter)"],
+    [4, 6, "row 5 has 6 keys"],
+  ] as [number, number, string][])("$2", (rowIndex, expectedLength) => {
+    expect(qwertyEs[rowIndex]).toHaveLength(expectedLength);
   });
 
   it("has dedicated ñ key on the home row", () => {

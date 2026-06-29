@@ -92,17 +92,9 @@ describe("insertText", () => {
     expect(bubbled).toBe(true);
   });
 
-  it("returns null and does not modify a readOnly input", () => {
+  it.each(["readOnly", "disabled"] as const)("returns null and does not modify a %s input", (prop) => {
     const el = mockInput("abc", 1);
-    el.readOnly = true;
-    const result = insertText(el, "X");
-    expect(result).toBeNull();
-    expect(el.value).toBe("abc");
-  });
-
-  it("returns null and does not modify a disabled input", () => {
-    const el = mockInput("abc", 1);
-    el.disabled = true;
+    el[prop] = true;
     const result = insertText(el, "X");
     expect(result).toBeNull();
     expect(el.value).toBe("abc");
@@ -212,17 +204,9 @@ describe("handleBackspace", () => {
     expect(bubbled).toBe(true);
   });
 
-  it("returns null and does not modify a readOnly input", () => {
+  it.each(["readOnly", "disabled"] as const)("returns null and does not modify a %s input", (prop) => {
     const el = mockInput("abc", 2);
-    el.readOnly = true;
-    const result = handleBackspace(el);
-    expect(result).toBeNull();
-    expect(el.value).toBe("abc");
-  });
-
-  it("returns null and does not modify a disabled input", () => {
-    const el = mockInput("abc", 2);
-    el.disabled = true;
+    el[prop] = true;
     const result = handleBackspace(el);
     expect(result).toBeNull();
     expect(el.value).toBe("abc");

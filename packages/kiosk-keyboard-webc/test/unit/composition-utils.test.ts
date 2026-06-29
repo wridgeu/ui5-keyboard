@@ -49,11 +49,16 @@ describe("composition-utils", () => {
   describe("endComposition", () => {
     it("dispatches compositionend and commits preedit", () => {
       const spy = vi.fn();
+      let committed: string | null = null;
       input.addEventListener("compositionend", spy);
+      input.addEventListener("compositionend", (e) => {
+        committed = (e as CompositionEvent).data;
+      });
       startComposition(state, input);
-      updateComposition(state, input, "\u304C"); // が
+      updateComposition(state, input, "が"); // が
       endComposition(state, input);
-      expect(input.value).toBe("hello\u304C");
+      expect(input.value).toBe("helloが");
+      expect(committed).toBe("が");
       expect(spy).toHaveBeenCalledOnce();
     });
 

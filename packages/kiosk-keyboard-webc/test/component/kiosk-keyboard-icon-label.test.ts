@@ -1,7 +1,7 @@
 import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import type { LayoutDefinition } from "../../src/types.js";
+import type { KeyDefinition, LayoutDefinition } from "../../src/types.js";
 import { requireKey as queryKey } from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
 
@@ -26,72 +26,99 @@ async function createKeyboard(layout: LayoutDefinition): Promise<KioskKeyboard> 
 describe("icon + label rendering", () => {
   // -- Permutation matrix --
 
-  it("icon omitted, label omitted: renders label from value fallback", async () => {
-    const el = await createKeyboard([[{ value: "a" }]]);
-    const keyEl = queryKey(el, "a");
-    expect(queryKeyIcon(keyEl)).to.be.null;
-    expect(queryKeyLabel(keyEl)).to.exist;
-    expect(queryKeyLabel(keyEl)!.textContent).to.equal("a");
-    expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.false;
-  });
+  const permutations: {
+    name: string;
+    key: KeyDefinition;
+    expectIcon: false | "ui5-icon" | "span";
+    expectLabelText: string | null;
+    expectDual: boolean;
+  }[] = [
+    {
+      name: "icon omitted, label omitted: renders label from value fallback",
+      key: { value: "a" },
+      expectIcon: false,
+      expectLabelText: "a",
+      expectDual: false,
+    },
+    {
+      name: "icon omitted, label set: renders custom label only",
+      key: { value: "x", label: "Custom" },
+      expectIcon: false,
+      expectLabelText: "Custom",
+      expectDual: false,
+    },
+    {
+      name: "icon omitted, label empty: renders blank key",
+      key: { value: "x", label: "" },
+      expectIcon: false,
+      expectLabelText: null,
+      expectDual: false,
+    },
+    {
+      name: "SAP icon set, label omitted: renders both icon and value label (dual)",
+      key: { value: "x", icon: "sap-icon://home" },
+      expectIcon: "ui5-icon",
+      expectLabelText: "x",
+      expectDual: true,
+    },
+    {
+      name: "SAP icon set, label set: renders both icon and custom label (dual)",
+      key: { value: "x", icon: "sap-icon://home", label: "Go" },
+      expectIcon: "ui5-icon",
+      expectLabelText: "Go",
+      expectDual: true,
+    },
+    {
+      name: "SAP icon set, label empty: renders icon only",
+      key: { value: "x", icon: "sap-icon://home", label: "" },
+      expectIcon: "ui5-icon",
+      expectLabelText: null,
+      expectDual: false,
+    },
+    {
+      name: "icon empty string, label omitted: renders label only (icon suppressed)",
+      key: { value: "x", icon: "" },
+      expectIcon: false,
+      expectLabelText: "x",
+      expectDual: false,
+    },
+    {
+      name: "icon empty string, label empty: renders blank key",
+      key: { value: "x", icon: "", label: "" },
+      expectIcon: false,
+      expectLabelText: null,
+      expectDual: false,
+    },
+  ];
 
-  it("icon omitted, label set: renders custom label only", async () => {
-    const el = await createKeyboard([[{ value: "x", label: "Custom" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(queryKeyIcon(keyEl)).to.be.null;
-    expect(queryKeyLabel(keyEl)!.textContent).to.equal("Custom");
-    expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.false;
-  });
+  for (const { name, key, expectIcon, expectLabelText, expectDual } of permutations) {
+    it(name, async () => {
+      const el = await createKeyboard([[key]]);
+      const keyEl = queryKey(el, key.value);
+      const iconEl = queryKeyIcon(keyEl);
 
-  it("icon omitted, label empty: renders blank key", async () => {
-    const el = await createKeyboard([[{ value: "x", label: "" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(queryKeyIcon(keyEl)).to.be.null;
-    expect(queryKeyLabel(keyEl)).to.be.null;
-  });
+      if (expectIcon === false) {
+        expect(iconEl).to.be.null;
+      } else {
+        expect(iconEl).to.exist;
+        if (expectIcon === "ui5-icon") {
+          // SAP icon rendered via <ui5-icon mode="Decorative"> handles aria-hidden internally
+          expect(iconEl!.tagName.toLowerCase()).to.equal("ui5-icon");
+        } else {
+          expect(iconEl!.tagName.toLowerCase()).to.not.equal("ui5-icon");
+        }
+      }
 
-  it("SAP icon set, label omitted: renders both icon and value label (dual)", async () => {
-    const el = await createKeyboard([[{ value: "x", icon: "sap-icon://home" }]]);
-    const keyEl = queryKey(el, "x");
-    const iconEl = queryKeyIcon(keyEl);
-    expect(iconEl).to.exist;
-    // SAP icon rendered via <ui5-icon mode="Decorative"> handles aria-hidden internally
-    expect(iconEl!.tagName.toLowerCase()).to.equal("ui5-icon");
-    expect(queryKeyLabel(keyEl)).to.exist;
-    expect(queryKeyLabel(keyEl)!.textContent).to.equal("x");
-    expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.true;
-  });
+      if (expectLabelText === null) {
+        expect(queryKeyLabel(keyEl)).to.be.null;
+      } else {
+        expect(queryKeyLabel(keyEl)).to.exist;
+        expect(queryKeyLabel(keyEl)!.textContent).to.equal(expectLabelText);
+      }
 
-  it("SAP icon set, label set: renders both icon and custom label (dual)", async () => {
-    const el = await createKeyboard([[{ value: "x", icon: "sap-icon://home", label: "Go" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(queryKeyIcon(keyEl)).to.exist;
-    expect(queryKeyLabel(keyEl)!.textContent).to.equal("Go");
-    expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.true;
-  });
-
-  it("SAP icon set, label empty: renders icon only", async () => {
-    const el = await createKeyboard([[{ value: "x", icon: "sap-icon://home", label: "" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(queryKeyIcon(keyEl)).to.exist;
-    expect(queryKeyLabel(keyEl)).to.be.null;
-    expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.false;
-  });
-
-  it("icon empty string, label omitted: renders label only (icon suppressed)", async () => {
-    const el = await createKeyboard([[{ value: "x", icon: "" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(queryKeyIcon(keyEl)).to.be.null;
-    expect(queryKeyLabel(keyEl)!.textContent).to.equal("x");
-    expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.false;
-  });
-
-  it("icon empty string, label empty: renders blank key", async () => {
-    const el = await createKeyboard([[{ value: "x", icon: "", label: "" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(queryKeyIcon(keyEl)).to.be.null;
-    expect(queryKeyLabel(keyEl)).to.be.null;
-  });
+      expect(keyEl.classList.contains(DOM.classes.keyDual)).to.equal(expectDual);
+    });
+  }
 
   // -- Unicode / emoji icons --
 
@@ -255,41 +282,57 @@ describe("icon + label rendering", () => {
 
   // -- Title tooltip for truncated labels --
 
-  it("multi-character label gets title attribute", async () => {
-    const el = await createKeyboard([[{ value: "x", label: "Custom" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(keyEl.getAttribute("title")).to.equal("Custom");
-  });
+  const titleCases: {
+    name: string;
+    keyDef: KeyDefinition;
+    expectedTitle: string | null | RegExp;
+  }[] = [
+    {
+      name: "multi-character label gets title attribute",
+      keyDef: { value: "x", label: "Custom" },
+      expectedTitle: "Custom",
+    },
+    {
+      name: "single-glyph label does not get title attribute",
+      keyDef: { value: "a" },
+      expectedTitle: null,
+    },
+    {
+      name: "empty label does not get title attribute",
+      keyDef: { value: "x", label: "" },
+      expectedTitle: null,
+    },
+    {
+      name: "special key with i18n label gets title (e.g. Enter)",
+      keyDef: { value: "{enter}", type: "action", width: "2.25" },
+      expectedTitle: /enter/i,
+    },
+    {
+      name: "CJK multi-character label gets title",
+      keyDef: { value: "{layout:alpha}", label: "\u30ED\u30FC\u30DE\u5B57" },
+      expectedTitle: "\u30ED\u30FC\u30DE\u5B57",
+    },
+    {
+      name: "CJK single glyph does not get title",
+      keyDef: { value: "x", label: "\u3042" },
+      expectedTitle: null,
+    },
+  ];
 
-  it("single-glyph label does not get title attribute", async () => {
-    const el = await createKeyboard([[{ value: "a" }]]);
-    const keyEl = queryKey(el, "a");
-    expect(keyEl.getAttribute("title")).to.be.null;
-  });
-
-  it("empty label does not get title attribute", async () => {
-    const el = await createKeyboard([[{ value: "x", label: "" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(keyEl.getAttribute("title")).to.be.null;
-  });
-
-  it("special key with i18n label gets title (e.g. Enter)", async () => {
-    const el = await createKeyboard([[{ value: "{enter}", type: "action", width: "2.25" }]]);
-    const keyEl = queryKey(el, "{enter}");
-    expect(keyEl.getAttribute("title")).to.match(/enter/i);
-  });
-
-  it("CJK multi-character label gets title", async () => {
-    const el = await createKeyboard([[{ value: "{layout:alpha}", label: "\u30ED\u30FC\u30DE\u5B57" }]]);
-    const keyEl = queryKey(el, "{layout:alpha}");
-    expect(keyEl.getAttribute("title")).to.equal("\u30ED\u30FC\u30DE\u5B57");
-  });
-
-  it("CJK single glyph does not get title", async () => {
-    const el = await createKeyboard([[{ value: "x", label: "\u3042" }]]);
-    const keyEl = queryKey(el, "x");
-    expect(keyEl.getAttribute("title")).to.be.null;
-  });
+  for (const { name, keyDef, expectedTitle } of titleCases) {
+    it(name, async () => {
+      const el = await createKeyboard([[keyDef]]);
+      const keyEl = queryKey(el, keyDef.value);
+      const title = keyEl.getAttribute("title");
+      if (expectedTitle === null) {
+        expect(title).to.be.null;
+      } else if (expectedTitle instanceof RegExp) {
+        expect(title).to.match(expectedTitle);
+      } else {
+        expect(title).to.equal(expectedTitle);
+      }
+    });
+  }
 
   it("icon: '' + capsLockIcon shows icon only during caps lock", async () => {
     const el = await createKeyboard([

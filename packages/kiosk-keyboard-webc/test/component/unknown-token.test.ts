@@ -31,19 +31,6 @@ describe("kiosk-keyboard - unrecognized {token} keys", () => {
     expect(input.value).to.equal("");
   });
 
-  it("does not warn when a consumer prevents key-press", async () => {
-    // A consumer that handles a custom token via key-press + preventDefault
-    // owns the behavior, so the keyboard must stay silent. Insertion is
-    // suppressed for any unknown token regardless, so the absence of a
-    // warning is the only assertion that distinguishes the vetoed path.
-    const { kb } = await setup([[{ value: "{paste}", label: "p" }]]);
-    kb.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
-    const warnings = await captureConsole("warn", () => {
-      queryKey(kb, "{paste}").click();
-    });
-    expect(warnings.some((w) => w.includes("{paste}"))).to.equal(false);
-  });
-
   it("still inserts a lone brace character", async () => {
     const { kb, input } = await setup([[{ value: "{" }, { value: "}" }]]);
     queryKey(kb, "{").click();

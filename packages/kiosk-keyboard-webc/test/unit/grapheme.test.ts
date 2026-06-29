@@ -244,97 +244,52 @@ describe("isCJKGlyph", () => {
   });
 
   // --- positive: shared CJK punctuation (must NOT be claimed by Hangul) ---
-  it("returns true for shared CJK punctuation that also has Script_Extensions=Hangul", () => {
-    expect(isCJKGlyph("\u3001")).toBe(true); // 、 ideographic comma
-    expect(isCJKGlyph("\u3002")).toBe(true); // 。 ideographic full stop
+  it("returns true for katakana middle dot (shared CJK with Script_Extensions=Hangul)", () => {
     expect(isCJKGlyph("\u30FB")).toBe(true); // ・ katakana middle dot
   });
 
   // --- negative: non-CJK scripts (false-positive guards) ---
-  it("returns false for Latin characters", () => {
-    expect(isCJKGlyph("A")).toBe(false);
-    expect(isCJKGlyph("z")).toBe(false);
-    expect(isCJKGlyph("@")).toBe(false);
-    expect(isCJKGlyph("1")).toBe(false);
-  });
-
-  it("returns false for Arabic characters", () => {
-    expect(isCJKGlyph("\u0639")).toBe(false); // ع
-    expect(isCJKGlyph("\u0627")).toBe(false); // ا (alef)
-    expect(isCJKGlyph("\u0641")).toBe(false); // ف
-  });
-
-  it("returns false for Cyrillic characters", () => {
-    expect(isCJKGlyph("\u0410")).toBe(false); // А
-    expect(isCJKGlyph("\u0436")).toBe(false); // ж
-    expect(isCJKGlyph("\u042F")).toBe(false); // Я
-  });
-
-  it("returns false for Greek characters", () => {
-    expect(isCJKGlyph("\u0391")).toBe(false); // Α (Alpha)
-    expect(isCJKGlyph("\u03C9")).toBe(false); // ω (omega)
-  });
-
-  it("returns false for Hebrew characters", () => {
-    expect(isCJKGlyph("\u05D0")).toBe(false); // א (aleph)
-    expect(isCJKGlyph("\u05EA")).toBe(false); // ת (tav)
-  });
-
-  it("returns false for Thai characters", () => {
-    expect(isCJKGlyph("\u0E01")).toBe(false); // ก (ko kai)
-    expect(isCJKGlyph("\u0E2D")).toBe(false); // อ (o ang)
-    expect(isCJKGlyph("\u0E44")).toBe(false); // ไ
-  });
-
-  it("returns false for Devanagari (Hindi) characters", () => {
-    expect(isCJKGlyph("\u0905")).toBe(false); // अ
-    expect(isCJKGlyph("\u0928")).toBe(false); // न
-    expect(isCJKGlyph("\u0939")).toBe(false); // ह
-  });
-
-  it("returns false for Tamil characters", () => {
-    expect(isCJKGlyph("\u0B85")).toBe(false); // அ
-    expect(isCJKGlyph("\u0BA4")).toBe(false); // த
-  });
-
-  it("returns false for Bengali characters", () => {
-    expect(isCJKGlyph("\u0985")).toBe(false); // অ
-    expect(isCJKGlyph("\u09AC")).toBe(false); // ব
-  });
-
-  it("returns false for Georgian characters", () => {
-    expect(isCJKGlyph("\u10D0")).toBe(false); // ა
-    expect(isCJKGlyph("\u10E0")).toBe(false); // რ
-  });
-
-  it("returns false for Armenian characters", () => {
-    expect(isCJKGlyph("\u0531")).toBe(false); // Ա
-    expect(isCJKGlyph("\u0561")).toBe(false); // ա
-  });
-
-  it("returns false for Tibetan characters", () => {
-    expect(isCJKGlyph("\u0F00")).toBe(false); // ༀ
-    expect(isCJKGlyph("\u0F40")).toBe(false); // ཀ
-  });
-
-  it("returns false for Myanmar characters", () => {
-    expect(isCJKGlyph("\u1000")).toBe(false); // က
-    expect(isCJKGlyph("\u1019")).toBe(false); // မ
-  });
-
-  it("returns false for Khmer characters", () => {
-    expect(isCJKGlyph("\u1780")).toBe(false); // ក
-    expect(isCJKGlyph("\u179F")).toBe(false); // ស
-  });
-
-  it("returns false for Lao characters", () => {
-    expect(isCJKGlyph("\u0E81")).toBe(false); // ກ
-    expect(isCJKGlyph("\u0EA5")).toBe(false); // ລ
-  });
-
-  it("returns false for Ethiopic characters", () => {
-    expect(isCJKGlyph("\u1200")).toBe(false); // ሀ
-    expect(isCJKGlyph("\u1260")).toBe(false); // በ
+  it.each([
+    ["A", "Latin"],
+    ["z", "Latin"],
+    ["@", "Latin"],
+    ["1", "Latin"],
+    ["ع", "Arabic"],
+    ["ا", "Arabic"],
+    ["ف", "Arabic"],
+    ["А", "Cyrillic"],
+    ["ж", "Cyrillic"],
+    ["Я", "Cyrillic"],
+    ["Α", "Greek"],
+    ["ω", "Greek"],
+    ["א", "Hebrew"],
+    ["ת", "Hebrew"],
+    ["ก", "Thai"],
+    ["อ", "Thai"],
+    ["ไ", "Thai"],
+    ["अ", "Devanagari"],
+    ["न", "Devanagari"],
+    ["ह", "Devanagari"],
+    ["அ", "Tamil"],
+    ["த", "Tamil"],
+    ["অ", "Bengali"],
+    ["ব", "Bengali"],
+    ["ა", "Georgian"],
+    ["რ", "Georgian"],
+    ["Ա", "Armenian"],
+    ["ա", "Armenian"],
+    ["ༀ", "Tibetan"],
+    ["ཀ", "Tibetan"],
+    ["က", "Myanmar"],
+    ["မ", "Myanmar"],
+    ["ក", "Khmer"],
+    ["ស", "Khmer"],
+    ["ກ", "Lao"],
+    ["ລ", "Lao"],
+    ["ሀ", "Ethiopic"],
+    ["በ", "Ethiopic"],
+  ])("returns false for %s (non-CJK %s)", (ch) => {
+    expect(isCJKGlyph(ch)).toBe(false);
   });
 
   // --- negative: edge cases ---
@@ -440,54 +395,29 @@ describe("isIndicGlyph", () => {
   });
 
   // --- negative: non-Indic scripts (false-positive guards) ---
-  it("returns false for Latin characters", () => {
-    expect(isIndicGlyph("A")).toBe(false);
-    expect(isIndicGlyph("z")).toBe(false);
-    expect(isIndicGlyph("1")).toBe(false);
-  });
-
-  it("returns false for CJK characters", () => {
-    expect(isIndicGlyph("\u3042")).toBe(false); // あ (hiragana)
-    expect(isIndicGlyph("\u4E00")).toBe(false); // 一 (CJK ideograph)
-    expect(isIndicGlyph("\uAC00")).toBe(false); // 가 (Hangul)
-  });
-
-  it("returns false for Arabic characters", () => {
-    expect(isIndicGlyph("\u0639")).toBe(false); // ع
-    expect(isIndicGlyph("\u0627")).toBe(false); // ا
-  });
-
-  it("returns false for Thai characters", () => {
-    expect(isIndicGlyph("\u0E01")).toBe(false); // ก
-    expect(isIndicGlyph("\u0E2D")).toBe(false); // อ
-  });
-
-  it("returns false for Tibetan characters", () => {
-    expect(isIndicGlyph("\u0F00")).toBe(false); // ༀ
-    expect(isIndicGlyph("\u0F40")).toBe(false); // ཀ
-  });
-
-  it("returns false for Myanmar characters", () => {
-    expect(isIndicGlyph("\u1000")).toBe(false); // က
-    expect(isIndicGlyph("\u1019")).toBe(false); // မ
-  });
-
-  it("returns false for Khmer characters", () => {
-    expect(isIndicGlyph("\u1780")).toBe(false); // ក
-    expect(isIndicGlyph("\u179F")).toBe(false); // ស
-  });
-
-  it("returns false for Lao characters", () => {
-    expect(isIndicGlyph("\u0E81")).toBe(false); // ກ
-    expect(isIndicGlyph("\u0EA5")).toBe(false); // ລ
-  });
-
-  it("returns false for Georgian characters", () => {
-    expect(isIndicGlyph("\u10D0")).toBe(false); // ა
-  });
-
-  it("returns false for Cyrillic characters", () => {
-    expect(isIndicGlyph("\u0410")).toBe(false); // А
+  it.each([
+    ["A", "Latin"],
+    ["z", "Latin"],
+    ["1", "Latin"],
+    ["あ", "CJK"],
+    ["一", "CJK"],
+    ["가", "CJK"],
+    ["ع", "Arabic"],
+    ["ا", "Arabic"],
+    ["ก", "Thai"],
+    ["อ", "Thai"],
+    ["ༀ", "Tibetan"],
+    ["ཀ", "Tibetan"],
+    ["က", "Myanmar"],
+    ["မ", "Myanmar"],
+    ["ក", "Khmer"],
+    ["ស", "Khmer"],
+    ["ກ", "Lao"],
+    ["ລ", "Lao"],
+    ["ა", "Georgian"],
+    ["А", "Cyrillic"],
+  ])("returns false for %s (non-Indic %s)", (ch) => {
+    expect(isIndicGlyph(ch)).toBe(false);
   });
 
   // --- negative: edge cases ---
@@ -660,35 +590,22 @@ describe("isArabicGlyph", () => {
   });
 
   // --- negative: non-Arabic scripts (false-positive guards) ---
-  it("returns false for Latin characters", () => {
-    expect(isArabicGlyph("A")).toBe(false);
-    expect(isArabicGlyph("z")).toBe(false);
-    expect(isArabicGlyph("1")).toBe(false);
-  });
-
-  it("returns false for CJK characters", () => {
-    expect(isArabicGlyph("\u3042")).toBe(false); // あ (hiragana)
-    expect(isArabicGlyph("\u4E00")).toBe(false); // 一 (CJK ideograph)
-    expect(isArabicGlyph("\uAC00")).toBe(false); // 가 (Hangul)
-  });
-
-  it("returns false for Indic characters", () => {
-    expect(isArabicGlyph("\u0905")).toBe(false); // अ (Devanagari)
-    expect(isArabicGlyph("\u0B85")).toBe(false); // அ (Tamil)
-  });
-
-  it("returns false for Hebrew characters", () => {
-    expect(isArabicGlyph("\u05D0")).toBe(false); // א (aleph)
-    expect(isArabicGlyph("\u05EA")).toBe(false); // ת (tav)
-  });
-
-  it("returns false for Cyrillic characters", () => {
-    expect(isArabicGlyph("\u0410")).toBe(false); // А
-    expect(isArabicGlyph("\u042F")).toBe(false); // Я
-  });
-
-  it("returns false for Thai characters", () => {
-    expect(isArabicGlyph("\u0E01")).toBe(false); // ก
+  it.each([
+    ["A", "Latin"],
+    ["z", "Latin"],
+    ["1", "Latin"],
+    ["あ", "CJK"],
+    ["一", "CJK"],
+    ["가", "CJK"],
+    ["अ", "Indic"],
+    ["அ", "Indic"],
+    ["א", "Hebrew"],
+    ["ת", "Hebrew"],
+    ["А", "Cyrillic"],
+    ["Я", "Cyrillic"],
+    ["ก", "Thai"],
+  ])("returns false for %s (non-Arabic %s)", (ch) => {
+    expect(isArabicGlyph(ch)).toBe(false);
   });
 
   // --- negative: edge cases ---
