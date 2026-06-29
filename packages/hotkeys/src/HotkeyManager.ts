@@ -12,7 +12,7 @@ import { GLOBAL_SCOPE } from "./internal/constants";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { createIdGenerator } from "./internal/idgen";
-import { parseHotkey } from "./internal/parse";
+import { parseHotkey, formatParsed } from "./internal/parse";
 import RegistrationIndex from "./internal/registration-index";
 import ConflictResolver from "./internal/conflict-resolver";
 import HotkeyMatcher from "./internal/hotkey-matcher";
@@ -265,7 +265,7 @@ export default class HotkeyManager extends BaseObject {
 
     const resolved = resolveOptions(options);
     const parsedHotkey = parseHotkey(hotkey, this._platform);
-    const normalizedHotkey = [...parsedHotkey.modifiers, parsedHotkey.key].join("+");
+    const normalizedHotkey = formatParsed(parsedHotkey);
     const id = idGen.next();
 
     // Conflict detection within the same scope

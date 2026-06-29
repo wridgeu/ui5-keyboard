@@ -130,10 +130,8 @@ export default class EventDispatcher {
   private _lastAltLocation = 0;
   private _platform: Platform;
 
-  // Bound handlers for reliable addEventListener/removeEventListener pairing
-  private readonly _keydownHandler = this._onKeyDown.bind(this);
-  private readonly _keyupHandler = this._onKeyUp.bind(this);
-  private readonly _blurHandler = this._onBlur.bind(this);
+  // One controller detaches all window listeners atomically in destroy().
+  private readonly _listenerAbort = new AbortController();
 
   constructor(handler: HotkeyDispatchHandler, platform: Platform) {
     this._handler = handler;
@@ -143,9 +141,10 @@ export default class EventDispatcher {
     this._keyStateTracker = new KeyStateTracker(platform, INTERNAL_TOKEN);
 
     // Attach window listeners
-    window.addEventListener("keydown", this._keydownHandler, true);
-    window.addEventListener("keyup", this._keyupHandler, true);
-    window.addEventListener("blur", this._blurHandler);
+    const { signal } = this._listenerAbort;
+    window.addEventListener("keydown", this._onKeyDown.bind(this), { capture: true, signal });
+    window.addEventListener("keyup", this._onKeyUp.bind(this), { capture: true, signal });
+    window.addEventListener("blur", this._onBlur.bind(this), { signal });
   }
 
   /**
@@ -257,9 +256,7 @@ export default class EventDispatcher {
     this._destroyed = true;
 
     // Remove all DOM listeners first
-    window.removeEventListener("keydown", this._keydownHandler, true);
-    window.removeEventListener("keyup", this._keyupHandler, true);
-    window.removeEventListener("blur", this._blurHandler);
+    this._listenerAbort.abort();
 
     // Invalidate all outstanding guards
     for (const guard of this._guards) {
