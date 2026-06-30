@@ -55,6 +55,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # The kiosk interface is committed (see CONTRIBUTING.md "Generated files in
+      # version control"); regenerate it and fail on drift so the silent JSDoc-strip
+      # class (#142/#143/#149) is a red build, not a stripped diff in a commit.
+      - name: Verify generated interface is in sync
+        run: |
+          npm run generate -w packages/kiosk-keyboard
+          git diff --exit-code -- packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts
+
       # Verifies the load-bearing less-openui5 parser patch still produces the
       # @container/@layer at-rules the kiosk theme build depends on (the patch is
       # applied by postinstall during `npm ci` above).
