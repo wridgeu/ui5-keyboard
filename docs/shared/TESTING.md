@@ -223,3 +223,18 @@ npm run check:parallel        # Same gate, but with the concurrent multi-device 
 ```
 
 `npm run check` is exhaustive and uses the sequential device matrix to reduce peak machine load and port/contention flake. Use `npm run check:parallel` or `npm run test:e2e:all-devices` when you explicitly want the higher-pressure concurrent sweep.
+
+### Per-package commands
+
+```bash
+npm run test:hotkeys              # Hotkeys QUnit
+npm run test:kiosk                # Kiosk QUnit + desktop e2e
+npm run test:kiosk:e2e            # Kiosk desktop e2e only (no QUnit)
+npm run test:kiosk:e2e:flp        # FLP lifecycle e2e (SAPUI5 sandbox)
+npm run test:kiosk:e2e:docs       # Regenerate README kiosk screenshots
+npm run test:kiosk-webc           # Kiosk webc unit tests (Vitest)
+npm run test:kiosk-webc:component # Kiosk webc integration tests (Web Test Runner)
+npm run test:kiosk-webc:e2e       # Kiosk webc e2e (Playwright)
+npm run test:qunit                # All QUnit (hotkeys + kiosk)
+npm run test:coverage -w packages/kiosk-keyboard-webc # Coverage (webc only)
+```

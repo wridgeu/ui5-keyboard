@@ -159,7 +159,7 @@ From [GitHub Issue #2788](https://github.com/SAP/openui5/issues/2788):
 
 ### Shortcut Validation
 
-The `Shortcut` module validates key combinations with two regexes (one for the full string like `"Ctrl+Shift+S"`, one for the key part alone), and adapts `Ctrl` → `Cmd` on macOS. The allowed key set is `[a-z0-9.,\-*/=]`, `Plus`, `Tab`, `Space`, `Enter`, `Backspace`, `Home`, `Delete`, `End`, `Pageup`, `Pagedown`, `Escape`, the four arrows, and `F1`–`F12`.
+The `Shortcut` module validates key combinations with two regexes (one for the full string like `"Ctrl+Shift+S"`, one for the key part alone), and adapts `Ctrl` → `Cmd` on macOS. The allowed key set is `[a-z0-9.,\-*/=]`, `Plus`, `Tab`, `Space`, `Enter`, `Backspace`, `Home`, `Delete`, `End`, `Pageup`, `Pagedown`, `Escape`, the four arrows, and `F1` through `F12`.
 
 ## 7. UI5 Reserved / Disallowed Shortcuts
 
