@@ -107,7 +107,7 @@ The build produces two independent distribution formats:
 | **Individual ESM modules** | `tsc`        | `dist/KioskKeyboard.js`         | External (consumer provides) | Bundler-based apps (Vite, webpack, rollup, ui5-tooling-modules) |
 | **Standalone bundle**      | `vite build` | `dist/kiosk-keyboard.bundle.js` | Inlined                      | `<script>` tag, CDN, apps that cannot install peer deps         |
 
-The upstream `@ui5/webcomponents` packages only produce the individual ESM modules. The Vite build step for the standalone bundle is our addition, configured in `vite.config.ts` using Vite's library mode with `output.codeSplitting: false` (the Vite 8 / Rolldown replacement for the deprecated `inlineDynamicImports: true`) to produce a single self-contained file.
+The upstream `@ui5/webcomponents` packages only produce the individual ESM modules. The Vite build step for the standalone bundle is our addition, configured in `vite.config.ts` using Vite's library mode with `output.codeSplitting: false` (the Vite 8 / Rolldown replacement for the deprecated `inlineDynamicImports: true`) to produce a single self-contained file. The Vite config also sets `emptyOutDir: false` so the bundle step does not wipe the `tsc` output already written to `dist/`.
 
 ### Custom Elements Manifest (CEM)
 
