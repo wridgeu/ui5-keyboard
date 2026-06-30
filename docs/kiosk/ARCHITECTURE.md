@@ -33,7 +33,8 @@ init(): void {
 
 `KioskKeyboardRenderer` is a plain object (not a class) with `apiVersion: 4` (semantic rendering). This tells the framework the control's output depends only on its own properties, so re-rendering can be skipped when only the parent changes.
 
-> **Note:** The UI5 linter does not recognize `apiVersion: 4`. This is a known gap, but the renderer works correctly at runtime.
+> [!NOTE]
+> The UI5 linter does not recognize `apiVersion: 4`. This is a known gap, but the renderer works correctly at runtime.
 
 ## Control Architecture
 

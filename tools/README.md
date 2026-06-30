@@ -125,7 +125,7 @@ Prunes the self-hosted GitHub Pages demo dist (`packages/demo-app/dist`) after a
 - **Single theme**: keep `sap_horizon` (plus the required `base`); drop the unused `sap_hcb` / `sap_horizon_dark` / `_hcb` / `_hcw` variants.
 - **Library tree-shaking**: keep only the libraries the FLP + demo load at runtime; drop the specialist `sap.ui.*` sublibraries `sap.ushell` declares but a keyboard launchpad never loads (3D viewport, charts, rich-text, cards, ...).
 
-Run via `npm run build:pages` (through `build:demo:pages`) and the `deploy-pages` workflow. The KEEP/DROP lists are pinned to SAPUI5 1.144.0; revisit them on a framework bump.
+Run via `npm run build:pages` (through `build:demo:pages`) and the `deploy-pages` workflow. The KEEP/DROP lists are pinned to SAPUI5 1.149.0; revisit them on a framework bump.
 
 ## `tsconfig.json`
 

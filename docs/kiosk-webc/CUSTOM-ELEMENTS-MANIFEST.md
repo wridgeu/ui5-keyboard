@@ -125,7 +125,8 @@ docked = false;
 
 **Allowed field tags**: `public`, `protected`, `private`, `since`, `deprecated`, `formEvents`, `formProperty`, `default`
 
-Note: `@default` is required for public fields. The value comes from the tag, not from the initializer.
+> [!NOTE]
+> `@default` is required for public fields. The value comes from the tag, not from the initializer.
 
 ### Method JSDoc
 
@@ -141,7 +142,8 @@ Note: `@default` is required for public fields. The value comes from the tag, no
 
 **Allowed method tags**: `public`, `protected`, `private`, `since`, `deprecated`, `param`, `returns`, `override`
 
-**Important**: Method `@param` must NOT include a type annotation. The type is inferred from TypeScript:
+> [!IMPORTANT]
+> Method `@param` must NOT include a type annotation. The type is inferred from TypeScript:
 
 ```ts
 // WRONG: CEM validator rejects {type} on method params
@@ -179,7 +181,8 @@ Each `@event` decorator needs a JSDoc comment immediately before it with `@publi
 
 **Allowed event tags**: `public`, `protected`, `private`, `since`, `deprecated`, `param`, `native`, `allowPreventDefault`
 
-**Important**: Event `@param` MUST include a `{type}` annotation (opposite of method params). Without `@public`, events default to private and are filtered out.
+> [!IMPORTANT]
+> Event `@param` MUST include a `{type}` annotation (opposite of method params). Without `@public`, events default to private and are filtered out.
 
 ### Static Methods vs Static Fields
 

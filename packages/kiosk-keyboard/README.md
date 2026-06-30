@@ -2,7 +2,7 @@
   <a href="https://www.npmjs.com/package/ui5-lib-kiosk-keyboard"><img src="https://img.shields.io/npm/v/ui5-lib-kiosk-keyboard.svg" alt="npm"></a>
   <a href="https://npmx.dev/package/ui5-lib-kiosk-keyboard"><img src="https://img.shields.io/npm/v/ui5-lib-kiosk-keyboard?label=npmx.dev&color=0a0a0a" alt="npmx"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="https://openui5.org/"><img src="https://img.shields.io/badge/OpenUI5-1.144.0-green.svg" alt="UI5"></a>
+  <a href="https://openui5.org/"><img src="https://img.shields.io/badge/OpenUI5-1.136%20LTS-green.svg" alt="UI5"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-blue.svg" alt="TypeScript"></a>
 </p>
 
@@ -14,8 +14,8 @@ On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applicatio
 
 > [!IMPORTANT]
 > **UI5 compatibility**
-> Supported package baseline: UI5 1.144.0.
-> Lowest implementation floor: UI5 1.120, because the library uses `DataType.registerEnum()` and `Localization.getLanguageTag()` from 1.120.
+> Declared floor: UI5 1.136, a long-term-maintenance (LTS) release and the lowest version SAP's UI5 tooling accepts in `manifest.json`. The package is built, type-checked, and tested against 1.136.
+> True implementation floor: UI5 1.120. The library only uses APIs available since 1.120 (`DataType.registerEnum()`, `Localization.getLanguageTag()`, `Lib.init({ apiVersion: 2 })`), so apps pinned to an older LTS down to 1.120 work too.
 > `Lib.init()` is available from 1.118, so it does not raise the floor.
 
 A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virtual keyboard that types into any UI5 input control. Supports multiple layouts, Shift/Caps Lock, docked mode with auto-show, and integrates with SAP Horizon theming.
@@ -159,7 +159,7 @@ Before choosing a mode, declare the library dependency in your app `manifest.jso
 }
 ```
 
-Ensure your app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.120**, the implementation floor noted above.
+Ensure your app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.136**, the libraries' declared LTS floor. The code only needs 1.120, so an app pinned to an older LTS down to 1.120 also works.
 
 ### 1. Installed package + UI5 Tooling (default)
 
@@ -180,11 +180,11 @@ builder:
       - ui5.kiosk
 ```
 
-Notes:
-
-- Use the UI5 project name `ui5.kiosk` here, not the npm package name `ui5-lib-kiosk-keyboard`.
-- `includeDependency` is a build concern. `ui5 serve` can resolve the installed UI5 dependency without it.
-- The packaged build manifest exists so the distributable can be reused as a build result in dist-based setups instead of always rebuilding from source.
+> [!NOTE]
+>
+> - Use the UI5 project name `ui5.kiosk` here, not the npm package name `ui5-lib-kiosk-keyboard`.
+> - `includeDependency` is a build concern. `ui5 serve` can resolve the installed UI5 dependency without it.
+> - The packaged build manifest exists so the distributable can be reused as a build result in dist-based setups instead of always rebuilding from source.
 
 If you deploy the built app to a plain static server while bootstrapping UI5 from CDN, also map the library namespace to the copied `resources/` folder:
 
@@ -213,9 +213,9 @@ builder:
     - name: ui5-tooling-transpile-task
       afterTask: replaceVersion
       configuration:
-        transpileDependencies: true
+        transpileDependencies: true # source-mode only: transpiles the library's shipped src/*.ts (dist needs none)
         transformTypeScript:
-          allowDeclareFields: true
+          allowDeclareFields: true # match the library build; keeps the TS controls' typed class fields
 server:
   customMiddleware:
     - name: ui5-tooling-transpile-middleware
@@ -226,11 +226,11 @@ server:
           allowDeclareFields: true
 ```
 
-Notes:
-
-- Do not add `ui5.kiosk` under `framework.libraries`; this is a custom UI5 dependency, not a framework library.
-- Keep using the `manifest.json` dependency shown above.
-- If your app build should include the library resources in its own `dist/`, keep `builder.settings.includeDependency: [ui5.kiosk]` in addition to the transpile setup.
+> [!NOTE]
+>
+> - Do not add `ui5.kiosk` under `framework.libraries`; this is a custom UI5 dependency, not a framework library.
+> - Keep using the `manifest.json` dependency shown above.
+> - If your app build should include the library resources in its own `dist/`, keep `builder.settings.includeDependency: [ui5.kiosk]` in addition to the transpile setup.
 
 ### 3. Static middleware escape hatch
 
@@ -523,7 +523,8 @@ The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-c
 <!-- .myConstrainedKeyboard { height: 15rem; } -->
 ```
 
-> **Tip:** You can also fine-tune key sizes via `--ui5KioskKeyboard-keyHeight` and other [CSS custom properties](#public-css-custom-properties) to fit more content into a smaller container without relying solely on the automatic breakpoints.
+> [!TIP]
+> You can also fine-tune key sizes via `--ui5KioskKeyboard-keyHeight` and other [CSS custom properties](#public-css-custom-properties) to fit more content into a smaller container without relying solely on the automatic breakpoints.
 
 ### Custom Layouts
 
@@ -706,7 +707,8 @@ Set `fKeyMode="Native"` to opt into browser-style F-key handling.
 
 The component dispatches a synthetic `KeyboardEvent("keydown")` to the target input for all F-keys (F1-F12) and navigation keys (ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown). `keyPress` still fires afterward for compatibility.
 
-**Important:** browsers treat synthetic `KeyboardEvent` instances as untrusted (`isTrusted: false`) and block them from triggering security-sensitive browser actions such as page reload, fullscreen, or developer tools. A synthetic F5 keydown does **not** reload the page.
+> [!IMPORTANT]
+> Browsers treat synthetic `KeyboardEvent` instances as untrusted (`isTrusted: false`) and block them from triggering security-sensitive browser actions such as page reload, fullscreen, or developer tools. A synthetic F5 keydown does **not** reload the page.
 
 To work around this limitation, the component has built-in action handlers for exactly two keys:
 
@@ -1287,7 +1289,8 @@ The `mobileKeyboard` property controls whether the KioskKeyboard or the native o
 | `"Native"` | Always defer to the native keyboard; KioskKeyboard does not open on focus. | Desktop/mobile app where desktops have keyboards |
 | `"Auto"`   | Desktop browsers → use KioskKeyboard. Phone/tablet → defer to native.      | Kiosk terminal that also serves mobile visitors  |
 
-> **Note:** `"Auto"` relies on `sap/ui/Device` for device detection. Browsers cannot detect whether a physical keyboard is attached, so on any desktop browser, including a regular laptop, the virtual keyboard **will** appear. Use `"Native"` if that is not desired.
+> [!NOTE]
+> `"Auto"` relies on `sap/ui/Device` for device detection. Browsers cannot detect whether a physical keyboard is attached, so on any desktop browser, including a regular laptop, the virtual keyboard **will** appear. Use `"Native"` if that is not desired.
 
 ```xml
 <kiosk:KioskKeyboard docked="true" autoShow="true" mobileKeyboard="Auto" />
@@ -1638,7 +1641,8 @@ KeyName.PageUp; // "PageUp"
 KeyName.PageDown; // "PageDown"
 ```
 
-> **Note:** `KeyName` is not a UI5 DataType enum; it is a consumer convenience for type-safe comparisons in `keyPress` event handlers. Regular character keys fire their literal value (e.g. `"a"`, `"A"`, `"1"`) and are not covered by `KeyName`. Custom `{fkey:CustomAction}` keys fire their action name directly; use a string literal for those.
+> [!NOTE]
+> `KeyName` is not a UI5 DataType enum; it is a consumer convenience for type-safe comparisons in `keyPress` event handlers. Regular character keys fire their literal value (e.g. `"a"`, `"A"`, `"1"`) and are not covered by `KeyName`. Custom `{fkey:CustomAction}` keys fire their action name directly; use a string literal for those.
 
 ---
 

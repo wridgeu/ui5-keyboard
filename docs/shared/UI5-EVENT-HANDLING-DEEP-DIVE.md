@@ -171,7 +171,8 @@ These are **blocked by UI5's CommandExecution** and should also be warned about 
 - **UI5 framework-reserved:** `Ctrl+Alt+Shift+P` (Technical Info), `Ctrl+Alt+Shift+S` (Support Popup), `F6` (group navigation).
 - **Browser-functional (overridable but confusing):** `Ctrl+L`, `Ctrl+Q`, `Ctrl+0`, `Ctrl+-`, `Ctrl++`, `Ctrl+Shift+=`, `Tab` / `Shift+Tab`.
 
-> **Note:** `Ctrl+Alt+Shift+T` (UI5 Test Recorder) is handled by the framework at runtime but is **not** in `ShortcutHelper.js`'s `mDisallowedShortcuts` map, so CommandExecution does not block it during validation.
+> [!NOTE]
+> `Ctrl+Alt+Shift+T` (UI5 Test Recorder) is handled by the framework at runtime but is **not** in `ShortcutHelper.js`'s `mDisallowedShortcuts` map, so CommandExecution does not block it during validation.
 
 Additional rule: shortcuts with `Shift` + punctuation keys (`., - + = * /`) are blocked because Shift changes the meaning of these keys on many layouts.
 
