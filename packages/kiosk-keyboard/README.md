@@ -124,17 +124,16 @@ In this monorepo, dependencies are managed via npm workspaces (`npm install` at 
 
 The keyboard requires modern browser features for full functionality:
 
-| Feature               | Used for                 | Baseline                                |
-| --------------------- | ------------------------ | --------------------------------------- |
-| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+   |
-| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+   |
-| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+   |
-| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+    |
-| CSS `color-mix()`     | Theme-adaptive shadows   | Chrome 111+, Firefox 113+, Safari 16.2+ |
+| Feature               | Used for                 | Baseline                              |
+| --------------------- | ------------------------ | ------------------------------------- |
+| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+ |
+| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+ |
+| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+ |
+| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+  |
 
-All features are supported in browsers released since mid-2023. In older
+All features are supported in browsers released since 2023. In older
 browsers, the keyboard renders at full size without width-responsive font
-scaling. Shadow colors fall back to static `rgba()` values.
+scaling.
 
 ## Getting Started
 
@@ -1640,7 +1639,7 @@ import type { I18nResolver } from "ui5/kiosk/types";
 
 ## Library Enums & Constants
 
-The library exports frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`) are additionally registered via `DataType.registerEnum()` for XML view binding.
+The library exports TypeScript string enums and frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`) are string enums registered via `DataType.registerEnum()` for XML view binding; `KeyName` and `NativeDispatchableKeyNames` are frozen `const` objects.
 
 ```ts
 import { KeyboardLayout, KeyboardType, KeyName, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";

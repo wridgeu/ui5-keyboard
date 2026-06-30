@@ -344,14 +344,14 @@ They report the state transition itself, not animation completion.
 
 The static surface is read-only. Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties (see [Per-Instance Customization](#per-instance-customization)).
 
-| Method                                     | Description                                        |
-| ------------------------------------------ | -------------------------------------------------- |
-| `KioskKeyboard.getRegisteredLayout(name)`  | Returns a built-in layout definition by name.      |
-| `KioskKeyboard.getRegisteredLayoutNames()` | Returns all built-in layout names.                 |
-| `KioskKeyboard.isBuiltInLayout(name)`      | Checks if a layout is built-in.                    |
-| `KioskKeyboard.isSecondaryLayout(name)`    | Checks if a layout is secondary (non-alphabetic).  |
-| `KioskKeyboard.getLocaleLayout()`          | Returns the layout for the current browser locale. |
-| `KioskKeyboard.setI18nResolver(fn)`        | Sets a custom i18n resolver callback.              |
+| Method                                     | Description                                                                                                            |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `KioskKeyboard.getRegisteredLayout(name)`  | Returns a built-in layout definition by name.                                                                          |
+| `KioskKeyboard.getRegisteredLayoutNames()` | Returns all built-in layout names.                                                                                     |
+| `KioskKeyboard.isBuiltInLayout(name)`      | Checks if a layout is built-in.                                                                                        |
+| `KioskKeyboard.isSecondaryLayout(name)`    | Checks if a layout is secondary (non-alphabetic).                                                                      |
+| `KioskKeyboard.getLocaleLayout()`          | Returns the layout for the active UI5 Web Components locale (configured language, falling back to the browser locale). |
+| `KioskKeyboard.setI18nResolver(fn)`        | Sets a custom i18n resolver callback.                                                                                  |
 
 `KioskKeyboard.DOM` is a supported read-only DOM hook contract for tests and DOM assertions. Prefer it over hard-coded shadow selectors. Styling customizations should still use the documented host attributes and public `--kiosk-keyboard-*` CSS custom properties.
 
@@ -793,7 +793,7 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 
 ### Custom i18n Resolver
 
-Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from `navigator.language`), and the text resolved from the built-in bundle:
+Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from the configured UI5 Web Components locale via `getLocale()`), and the text resolved from the built-in bundle:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";

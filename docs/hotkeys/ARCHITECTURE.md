@@ -319,7 +319,7 @@ This lets both the library's callback and UI5's native dialog close behavior exe
 - Control -> `Ctrl`, Alt -> `Alt`, Shift -> `Shift`, Meta -> `Win`
 - Example: `"Mod+Shift+S"` on windows becomes `Ctrl+Shift+S`
 
-Special keys are also replaced with their display forms (arrow symbols, return symbol, etc.) on macOS.
+Special keys are also replaced with their display forms (arrow symbols, return symbol, etc.) on every platform, including Windows and Linux.
 
 ## Edge Cases
 

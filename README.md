@@ -161,7 +161,7 @@ In all 3 modes, keep the custom library declarations in your app `manifest.json`
 }
 ```
 
-Ensure the consuming app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.120** - the implementation floor for both libraries (they use `DataType.registerEnum()` / `Localization.getLanguageTag()`, available from 1.120).
+Ensure the consuming app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.144.0**, the floor both libraries declare in their `manifest.json` and are built, type-checked, and tested against.
 
 `ui5.hotkeys` is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
 

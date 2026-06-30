@@ -314,7 +314,7 @@ el.layout = "my-qwerty-fk";
 
 ### Locale Auto-Selection
 
-When no explicit `layout` is set, `getLocaleLayout()` uses `Intl.Locale(navigator.language)`:
+When no explicit `layout` is set, `getLocaleLayout()` resolves the locale through the framework's `getLocale()` (the language configured on the UI5 Web Components runtime, falling back to the browser language):
 
 1. Exact BCP-47 match (e.g., `"de-at"`)
 2. Language prefix (e.g., `"de"`)

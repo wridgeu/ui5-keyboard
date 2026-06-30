@@ -2,6 +2,7 @@
 
 **Issue:** [#76](https://github.com/wridgeu/ui5-keyboard/issues/76)
 **Date:** 2026-04-08
+**Status:** Implemented, with later revision. The per-instance isolation described here shipped (each component owns its `_middleware` instance with the commit/reset lifecycle below). The global registration API (`registerMiddleware`, `_registerMiddleware`, `_resetMiddleware`) was later removed: built-in middleware now lives in a sealed factory map exposed via `getMiddlewareFactory(layout, instanceFactories?)`, and per-app middleware is supplied through the `instanceMiddleware` control property rather than a registration call.
 
 ## Problem
 

@@ -176,7 +176,7 @@ The `kiosk-keyboard-webc` package exposes subpath imports for different consumpt
 
 | Entry                              | What it includes                                                    |
 | ---------------------------------- | ------------------------------------------------------------------- |
-| `kiosk-keyboard-webc`              | Component with all built-in layouts                                 |
+| `kiosk-keyboard-webc`              | Component with all built-in layouts and middleware                  |
 | `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
 | `kiosk-keyboard-webc/layouts/*`    | Individual layout-definition modules (data for custom composition)  |
 | `kiosk-keyboard-webc/middleware/*` | Individual middleware-factory modules (data for custom composition) |
