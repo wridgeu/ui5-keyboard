@@ -480,10 +480,11 @@ Keys use `flex: <grow> 1 0` for proportional sizing within rows. Width classes (
 
 Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted).
 
-**Width responsiveness** is handled entirely by CSS `@container` queries. The root `.ui5KioskKeyboard` element sets `container-name: keyboard; container-type: inline-size`. Two breakpoints exist:
+**Width responsiveness** is handled entirely by CSS `@container` queries. The root `.ui5KioskKeyboard` element sets `container-name: keyboard; container-type: inline-size`. Three breakpoints exist:
 
+- **35rem:** The F-key row switches to `flex-wrap: wrap` so the twelve function keys reflow into 2×6 instead of overflowing.
 - **30rem (narrow):** Caps `--ui5KioskKeyboard-keyFontSize` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
-- **20rem (compact):** Additionally reduces key inline padding for non-numpad keys and applies a tighter font-size cap of `0.875rem`.
+- **20rem (compact):** The navigation row also wraps (8 keys into 2×4), key inline padding is reduced for non-numpad keys, and a tighter font-size cap of `0.875rem` applies.
 
 No JavaScript is involved in width responsiveness.
 
