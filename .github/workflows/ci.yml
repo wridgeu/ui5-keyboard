@@ -61,7 +61,10 @@ jobs:
       - name: Verify generated interface is in sync
         run: |
           npm run generate -w packages/kiosk-keyboard
-          git diff --exit-code -- packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts
+          if ! git diff --exit-code -- packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts; then
+            echo "::error::KioskKeyboard.gen.d.ts is out of sync (see diff above). Run 'npm run generate -w packages/kiosk-keyboard' and commit the result."
+            exit 1
+          fi
 
       # Verifies the load-bearing less-openui5 parser patch still produces the
       # @container/@layer at-rules the kiosk theme build depends on (the patch is
