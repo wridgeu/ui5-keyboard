@@ -1,5 +1,4 @@
 import { defineConfig } from "@playwright/test";
-import path from "node:path";
 
 /**
  * Playwright e2e + visual regression config for kiosk-keyboard-webc.
@@ -84,7 +83,7 @@ export default defineConfig({
 
   webServer: {
     command: `vite --port ${PORT} --strictPort`,
-    cwd: path.resolve(__dirname),
+    cwd: __dirname,
     url: `http://localhost:${PORT}/test/pages/index.html`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

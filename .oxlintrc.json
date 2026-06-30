@@ -84,5 +84,5 @@
       }
     }
   ],
-  "ignorePatterns": ["dist/", "node_modules/", "**/*.js"]
+  "ignorePatterns": ["dist/", "node_modules/", "**/*.js", "**/*.gen.d.ts"]
 }
