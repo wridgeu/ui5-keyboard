@@ -27,3 +27,6 @@ server:
       configuration:
         transformTypeScript:
           allowDeclareFields: true
+        # We commit src/KioskKeyboard.gen.d.ts; match the verbose JSDoc `generate` emits
+        # so serve's watch-mode generator doesn't rewrite it in minimal (stripped) mode.
+        generateTsInterfacesJsDoc: verbose
