@@ -38,14 +38,7 @@ Full-size inline keyboard:
 
 ## Getting Started
 
-The three library packages are not yet published on npm. For local development, install once at the repository root and use the package READMEs for API details:
-
-```bash
-npm install
-```
-
-Once the packages are published, use the install commands below.
-For full API details, see:
+For full API details, see each package's README:
 
 - **[ui5-lib-hotkeys README](./packages/hotkeys/README.md)**
 - **[ui5-lib-kiosk-keyboard README](./packages/kiosk-keyboard/README.md)**
@@ -135,7 +128,6 @@ The web component variant (`kiosk-keyboard-webc`) provides the same virtual keyb
 - UI5 apps: resolve npm modules via `ui5-tooling-modules`, then choose CEM-driven wrapper consumption or a `WebComponent.extend()` bridge
 
 ```bash
-# once published
 npm install kiosk-keyboard-webc
 ```
 
