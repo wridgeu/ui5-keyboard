@@ -13,8 +13,17 @@ built on the UI5 Web Components framework (`UI5Element`). Unlike `@ui5/webcompon
 with a pluggable layout system: 12 built-in keyboard layouts bundled via direct
 imports, plus 2 shared building-block rows for composing custom variants.
 
-This "one component, many plugins" pattern is unusual in the web components ecosystem
-and surfaced several tooling limitations.
+This "one component, many plugins" pattern is unusual in the web components
+ecosystem and surfaced several tooling limitations. In the broader ecosystem
+(Lit, Shoelace, `@ui5/webcomponents`), tree-shaking happens at the **component
+level**: import Button but not Input. No library provides per-component plugin
+tree-shaking (e.g., import Button without its icon support). The CEM and UI5
+tooling were designed for that component-level pattern, not the plugin-level
+pattern, which is why:
+
+- The CEM has no concept of "optional side-effect imports"
+- The middleware loads everything the main entry imports
+- There is no way to express "this component works without these plugins" in the CEM
 
 ## Consumption Paths
 
@@ -60,17 +69,8 @@ For non-UI5 consumers:
 
 ## Build Pipeline
 
-The build produces two kinds of output:
-
-| Output                                              | Tool  | Purpose                                            |
-| --------------------------------------------------- | ----- | -------------------------------------------------- |
-| Individual ESM modules (`dist/*.js`)                | `tsc` | Consumed by `ui5-tooling-modules` and npm bundlers |
-| Standalone bundle (`dist/kiosk-keyboard.bundle.js`) | Vite  | Self-contained bundle for `<script>` tags          |
-
-Vite's `emptyOutDir: false` ensures the tsc output is not wiped. The Vite build
-sets `codeSplitting: false` so the bundle is a single file (under Vite 8 /
-Rolldown this is the supported single-file setting; `inlineDynamicImports: true`
-is deprecated).
+See [./BUILD-PIPELINE.md](./BUILD-PIPELINE.md) for the tsc + Vite build, the two
+distribution formats, and the `codeSplitting: false` rationale.
 
 ## Package Structure Alignment with `@ui5/webcomponents`
 
@@ -90,7 +90,7 @@ resolve through `"./*": "./dist/*"`, producing `dist/dist/KioskKeyboard.js`
 (double-dist, non-existent). The middleware constructs this path from the CEM's
 `declaration.module` field. See the "Exports Map Double-Dist" section below.
 
-## How Tag Scoping Works
+## Tag scoping and the manual bridge
 
 Tag scoping is a `ui5-tooling-modules` feature designed for **multi-version
 isolation**. On a Fiori Launchpad, multiple apps may load different versions of
@@ -116,12 +116,30 @@ runtime, the UI5 bridge calls `customElements.get("kiosk-keyboard")` to look up
 the constructor. If the component was only loaded through the middleware, only
 the scoped tag (`kiosk-keyboard-e24fedd4`) exists in the registry. The
 unscoped `kiosk-keyboard` was never defined. The bridge finds nothing, and the
-element stays unupgraded.
+element stays unupgraded. There is no middleware API to query "what is the
+scoped name for this tag?", so the bridge cannot dynamically discover the hash.
 
-There is no middleware API to query "what is the scoped name for this tag?" The
-bridge cannot dynamically discover the hash. This is why loading the standalone
-bundle outside the middleware is a necessity, not a preference: it registers the
-canonical unscoped tag so the manual bridge can find it.
+The middleware also intercepts _all_ imports from a `webComponentsPackage`. Once
+it detects the package via the `customElements` field, every
+`import "kiosk-keyboard-webc/..."` goes through its Rollup pipeline, which wraps
+the module in AMD, applies scoping, and generates its own wrapper. The
+`ui5.webComponentsPackage` flag is informational only; the middleware does not
+check it, and there is no per-package opt-out. A manual bridge in the same app
+must therefore load the web component outside the module system (via a
+`<script>` tag) so it registers the canonical unscoped tag without interception.
+
+**Resolution.** Two options:
+
+- **Disable scoping** (`pluginOptions.webcomponents.scoping: false`) for a
+  single-web-component consumer - what this demo does, on both the task and the
+  middleware config (the task config affects `ui5 build`, the middleware config
+  affects `ui5 serve`). The middleware then registers the canonical
+  `<kiosk-keyboard>`, the auto-generated wrapper resolves it, and no manual
+  bridge is needed.
+- **Keep scoping on** and load the standalone bundle from a path outside
+  `/resources/` (e.g., `webapp/lib/kiosk-keyboard.bundle.js`); the UI5 dev server
+  serves `webapp/` files at the root without middleware interception, and the
+  bundle registers the canonical unscoped tag for the bridge to find.
 
 **Coexistence.** Both the scoped and unscoped tags can coexist in the same page.
 They are separate entries in the `customElements` registry, each pointing to
@@ -130,9 +148,19 @@ same layout registry because it is a module-level singleton. Layout data is
 not tied to the tag name.
 
 The demo app's web component tooling page shows the actual registered tag name
-at runtime. Because this demo disables scoping (a single web-component package),
-you will see the canonical unscoped tag `<kiosk-keyboard>`. The manual bridge
-pattern is documented as a reference in the demo-app README.
+at runtime. Because this demo disables scoping, you will see the canonical
+unscoped tag `<kiosk-keyboard>`. The manual bridge pattern is documented as a
+reference in the demo-app README, including a minimal `WebComponent.extend()`
+code example.
+
+**Alternatives considered** (for the scoping-on coexistence case):
+
+- `pluginOptions.webcomponents.skip: true`: disables all webcomponent processing,
+  breaking the tooling-native path
+- `skipTransform` config: applies to module transformation, not webcomponent
+  processing
+- Separate `ui5.yaml` configs: possible but adds complexity
+- Removing `customElements` from `package.json`: breaks the tooling-native path
 
 ## Lean Consumption (Advanced)
 
@@ -197,30 +225,10 @@ registry: behavior lives in your event handler, the layout stays plain data.
 
 ### Windows Backslashes in CEM Type References
 
-**Problem:** The `@ui5/webcomponents-tools` CEM analyzer uses `path.join()` in
-`lib/cem/utils.mjs:169` for type reference module paths:
-
-```javascript
-path.join(path.dirname(modulePath), currentModuleSpecifier.text);
-```
-
-On Windows, this produces backslashes (e.g., `dist\\types.js`). The CEM spec
-itself does not mandate a separator format, but `ui5-tooling-modules` expects
-forward slashes for module path alias matching, and the de facto convention
-across the ecosystem (ES module specifiers, npm, @ui5/webcomponents) is
-forward slashes.
-
-**Root cause:** The `@ui5/webcomponents` team builds on Linux CI and has never
-encountered this. The fix would be `path.posix.join()` or a post-normalization
-in the analyzer. No upstream fix exists in `@ui5/webcomponents-tools@2.22.0`.
-
-**Fix:** This package bundles the component as a single module, so the CEM analyzer
-never emits cross-module type-reference paths and `getTypeReferenceModulePath` is
-never exercised. The backslash issue therefore does not arise here, and no
-path-normalization patch is required.
-
-**Status:** Not applicable to this package's single-module output. The upstream bug
-still exists for components with cross-module type references on Windows.
+Not applicable to this package: its single-module output never emits cross-module
+type-reference paths, so the `@ui5/webcomponents-tools` analyzer's `path.join()`
+backslash bug is never exercised. The upstream bug persists for components with
+cross-module type references on Windows.
 
 ### Exports Map Double-Dist Resolution
 
@@ -241,84 +249,6 @@ has. Without it the middleware could not resolve the component module path, whic
 manifested as a dev-server "hang".
 
 **Fix:** The exports map lists `"./dist/*": "./dist/*"` before `"./*": "./dist/*"`, so the identity mapping resolves the component module path (`kiosk-keyboard-webc/dist/KioskKeyboard.js`) instead of falling through to `dist/dist/KioskKeyboard.js`.
-
-### Tag Scoping vs. a Canonical-Tag Bridge
-
-**Problem:** By default the `ui5-tooling-modules` middleware applies tag scoping
-to `webComponentsPackage` imports. The scoped tag (e.g., `kiosk-keyboard-e24fedd4`)
-differs from the canonical tag (`kiosk-keyboard`), so a hand-written
-`WebComponent.extend()` bridge pinned to the canonical tag finds nothing registered.
-
-**Root cause:** Scoping is enabled by default for non-`ui5-`-prefixed web
-components, in both the build task and the dev-server middleware. The
-`pluginOptions.webcomponents.scoping: false` config disables it in either place
-(set it on the middleware config to affect `ui5 serve`, on the task config to
-affect `ui5 build`). A canonical-tag bridge only works when the unscoped tag is
-actually registered.
-
-**Resolution:** Two options.
-
-- **Disable scoping** (`pluginOptions.webcomponents.scoping: false`) for a
-  single-web-component consumer - what this demo does, on both the task and the
-  middleware. The middleware then registers the canonical `<kiosk-keyboard>`, the
-  auto-generated wrapper resolves it, and no manual bridge is needed.
-- **Keep scoping on** and load the standalone bundle from a path outside
-  `/resources/` (e.g., `webapp/lib/kiosk-keyboard.bundle.js`); the UI5 dev server
-  serves `webapp/` files at the root without middleware interception, and the
-  bundle registers the canonical unscoped tag for the bridge to find.
-
-**Note:** The manual bridge pattern is documented as a reference in the demo-app
-README, including a minimal `WebComponent.extend()` code example.
-
-### Middleware Always Intercepts `webComponentsPackage` Imports
-
-**Problem:** When both the tooling-native and manual bridge scenarios coexist
-in the same UI5 application, any `import "kiosk-keyboard-webc/..."` goes through
-the middleware's Rollup pipeline. The middleware wraps the module in AMD, applies
-scoping, and generates its own wrapper. There is no per-package opt-out.
-
-**Root cause:** The middleware detects packages by the `customElements` field in
-`package.json`. Once detected, ALL imports from that package are processed. The
-`ui5.webComponentsPackage` flag is informational only. The middleware does not
-check it.
-
-**Consequence:** A manual bridge in the same app must load the web component
-outside the module system (via `<script>` tag) to avoid middleware interception.
-This demo does not hit this case: it uses the tooling-native path with scoping
-disabled, so it needs neither a manual bridge nor a standalone bundle.
-
-**Alternatives considered:**
-
-- `pluginOptions.webcomponents.skip: true`: disables all webcomponent processing,
-  breaking the tooling-native path
-- `skipTransform` config: applies to module transformation, not webcomponent
-  processing
-- Separate `ui5.yaml` configs: possible but adds complexity
-- Removing `customElements` from `package.json`: breaks the tooling-native path
-
-**Status:** No upstream solution for the coexistence case. This demo sidesteps
-it by consuming a single web-component package with scoping disabled
-(tooling-native only, no manual bridge).
-
-## Web Component Design Principle
-
-In the broader web components ecosystem (Lit, Shoelace, @ui5/webcomponents),
-tree-shaking happens at the **component level**: import Button but not Input.
-No library provides per-component plugin tree-shaking (e.g., import Button
-without its icon support).
-
-Our kiosk keyboard is a single component with a plugin system (layouts and
-middleware). The CEM and UI5 tooling were designed for the component-level
-pattern, not the plugin-level pattern. This is why:
-
-- The CEM has no concept of "optional side-effect imports"
-- The middleware loads everything the main entry imports
-- There is no way to express "this component works without these plugins" in the CEM
-
-For lean consumption, consumers can import individual layouts via
-`kiosk-keyboard-webc/layouts/*` subpath imports. But the primary consumption
-model (main entry, tooling-native) always ships all built-in layouts. This
-matches the ecosystem convention.
 
 ## Future Considerations
 

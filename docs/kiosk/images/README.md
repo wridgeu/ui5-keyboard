@@ -15,10 +15,9 @@ npm run test:kiosk:e2e:docs
 
 What this does:
 
-1. Auto-starts a local UI5 server on port `8082` (if not already running).
+1. Auto-starts a local UI5 server on port `8085` (if not already running).
 2. Opens the visual test page for each theme.
-3. Captures:
-   - inline full-size keyboard (`kiosk-inline-wide-*.png`)
+3. Captures the inline full-size keyboard (`kiosk-inline-wide-*.png`).
 4. Writes files into this folder.
 
 ## Why Pointer Events Are Disabled During Capture

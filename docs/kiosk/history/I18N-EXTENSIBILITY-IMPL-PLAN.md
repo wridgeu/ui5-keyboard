@@ -63,7 +63,6 @@ All paths relative to `packages/kiosk-keyboard/`.
 | ----------------------------------------- | ------- | --------------------------------------------------------------------- |
 | `src/types.ts`                            | modify  | Export i18n config/hook/context types                                 |
 | `src/internal/i18n-registry.ts`           | **new** | Full resolution logic, config/hook storage, async loading, validation |
-| `src/internal/i18n.ts`                    | modify  | Thin facade: delegates to registry                                    |
 | `src/KioskKeyboard.ts`                    | modify  | Static facade methods + `onLocalizationChanged` hook                  |
 | `test/qunit/i18n-registry.qunit.ts`       | **new** | Registry unit tests                                                   |
 | `test/qunit/KioskKeyboard.qunit.ts`       | modify  | Integration tests for rendered labels/ARIA with i18n config           |
@@ -77,88 +76,11 @@ static methods.
 
 ## 3. Types
 
-Add to `src/types.ts`. Uses a discriminated union with `never` for
-compile-time `bundleName` xor `bundleUrl` enforcement, and `readonly`
-on all config properties to prevent mutation after handover.
-
-```ts
-/**
- * A single enhancement bundle descriptor.
- *
- * Exactly one of `bundleName` or `bundleUrl` is required.
- * `bundleName` follows the UI5 module-path convention
- * (e.g. `"my.app.i18n.kiosk"`).
- */
-export type KioskI18nEnhancement =
-  | {
-      readonly bundleName: string;
-      readonly bundleUrl?: never;
-      readonly supportedLocales?: readonly string[];
-      readonly fallbackLocale?: string;
-    }
-  | {
-      readonly bundleName?: never;
-      readonly bundleUrl: string;
-      readonly supportedLocales?: readonly string[];
-      readonly fallbackLocale?: string;
-    };
-
-/**
- * Configuration object for {@link KioskKeyboard.configureI18n}.
- */
-export interface KioskI18nConfig {
-  /**
-   * Locales that the enhancement bundles provide translations for.
-   * Applies as default `supportedLocales` for enhancement entries
-   * that do not declare their own.
-   *
-   * Does **not** reconfigure the base library bundle; its locale
-   * list is determined by shipped `.properties` files.
-   */
-  readonly supportedLocales?: readonly string[];
-
-  /**
-   * Default fallback locale for enhancement entries that do not
-   * declare their own.
-   */
-  readonly fallbackLocale?: string;
-
-  /**
-   * Additional resource bundles whose texts take precedence over
-   * the base library bundle.  Evaluated in array order; the last
-   * entry that provides a given key wins.
-   */
-  readonly enhanceWith?: readonly KioskI18nEnhancement[];
-}
-
-/**
- * Context passed to the i18n override hook.
- */
-export interface KioskI18nOverrideContext {
-  /** The message key (e.g. `"KIOSK_KEYBOARD_LABEL"`). */
-  readonly key: string;
-  /**
-   * Current locale string (BCP47 format, e.g. `"de"`, `"en-US"`).
-   * Derived via a version-safe utility; see implementation notes.
-   */
-  readonly locale: string;
-  /** Hardcoded fallback passed by the call site. */
-  readonly defaultText: string;
-  /**
-   * Text resolved through the full bundle chain
-   * (base + enhancements) *before* the hook runs.
-   */
-  readonly resolvedText: string;
-}
-
-/**
- * Override hook signature.
- *
- * Return a string to replace `resolvedText`.
- * Return `undefined` to keep the resolved text as-is.
- */
-export type KioskI18nOverrideHook = (ctx: KioskI18nOverrideContext) => string | undefined;
-```
+Add to `src/types.ts`: `KioskI18nEnhancement` (a single enhancement
+bundle descriptor), `KioskI18nConfig` (the `configureI18n` argument:
+`supportedLocales`, `fallbackLocale`, `enhanceWith`),
+`KioskI18nOverrideContext` (`key`, `locale`, `defaultText`,
+`resolvedText`), and the `KioskI18nOverrideHook` function signature.
 
 Design notes:
 
@@ -175,34 +97,16 @@ Design notes:
 ## 4. Internal Registry: `src/internal/i18n-registry.ts`
 
 Blueprint: `internal/layout-registry.ts`. Owns all resolution logic;
-`i18n.ts` becomes a thin import-stable facade.
+callers import `getText` directly from this module.
 
 ### 4.1 State
 
-```ts
-import ResourceBundle from "sap/base/i18n/ResourceBundle";
-import Lib from "sap/ui/core/Lib";
-import Log from "sap/base/Log";
-import type { KioskI18nConfig, KioskI18nOverrideContext, KioskI18nOverrideHook } from "../types";
-
-const LOG_COMPONENT = "ui5.kiosk.KioskKeyboard";
-
-/** Validated snapshot of the last configureI18n() call. */
-let activeConfig: KioskI18nConfig | null = null;
-
-/** Loaded enhancement ResourceBundle instances (null = not yet loaded). */
-let enhancementBundles: ResourceBundle[] | null = null;
-
-/**
- * Monotonically increasing counter.  Incremented on every config
- * change or locale reload.  Prevents stale async loads from
- * overwriting newer state.
- */
-let generation = 0;
-
-/** Consumer-supplied override hook (at most one). */
-let overrideHook: KioskI18nOverrideHook | null = null;
-```
+The registry holds module-scoped state: a validated snapshot of the last
+`configureI18n()` call, the loaded enhancement `ResourceBundle` instances
+(`null` while not yet loaded), a monotonically increasing generation
+counter (incremented on every config change or locale reload, to prevent
+stale async loads from overwriting newer state), and at most one
+consumer-supplied override hook.
 
 The registry imports `Localization` from `sap/base/i18n/Localization`
 for `getLanguageTag()` (used in the override hook context and reload
@@ -210,74 +114,18 @@ coalescing).
 
 ### 4.2 Exported Functions
 
-```ts
-// ── Public (delegated from KioskKeyboard static facade) ──
-export function configureI18n(config: KioskI18nConfig): Promise<void>;
-export function resetI18nConfiguration(): void;
-export function setI18nOverrideHook(hook: KioskI18nOverrideHook): void;
-export function clearI18nOverrideHook(): void;
-
-// ── Internal (consumed by i18n.ts facade) ──
-export function getText(key: string, fallback: string): string;
-
-// ── Internal (consumed by onLocalizationChanged) ──
-export function reloadBundles(): Promise<void>;
-```
+The registry exports the four public delegates (`configureI18n`,
+`resetI18nConfiguration`, `setI18nOverrideHook`, `clearI18nOverrideHook`),
+the synchronous `getText(key, fallback)` read consumed by callers, and
+`reloadBundles()` consumed by the `onLocalizationChanged` hook.
 
 ### 4.3 `getText`: Full Resolution Owned by Registry
 
-The registry owns the complete lookup. `i18n.ts` delegates entirely.
-`getText` is a **pure synchronous read**; it never triggers bundle
-loading. It reads whatever `enhancementBundles` are available (which
-may be `null` during the loading gap after `configureI18n` or a
-locale change).
-
-```ts
-export function getText(key: string, fallback: string): string {
-  // Base bundle (UI5 library bundle)
-  const bundle = Lib.getResourceBundleFor("ui5.kiosk");
-  const baseText = bundle ? (bundle.getText(key, undefined, true) ?? fallback) : fallback;
-
-  // Short-circuit: no config and no hook → zero overhead path
-  if (!activeConfig && !overrideHook) {
-    return baseText;
-  }
-
-  let resolved = baseText;
-
-  // Enhancement bundles (last entry wins) - only if already loaded
-  if (enhancementBundles) {
-    for (let i = enhancementBundles.length - 1; i >= 0; i--) {
-      const enhanced = enhancementBundles[i].getText(key, undefined, true);
-      if (enhanced != null) {
-        resolved = enhanced;
-        break;
-      }
-    }
-  }
-
-  // Override hook (final say)
-  if (overrideHook) {
-    const locale = getCurrentLocale();
-    const ctx: KioskI18nOverrideContext = {
-      key,
-      locale,
-      defaultText: fallback,
-      resolvedText: resolved,
-    };
-    try {
-      const hooked = overrideHook(ctx);
-      if (typeof hooked === "string") {
-        resolved = hooked;
-      }
-    } catch (e) {
-      Log.warning(`i18n override hook threw: ${e}`, undefined, LOG_COMPONENT);
-    }
-  }
-
-  return resolved;
-}
-```
+The registry owns the complete lookup. `getText` is a **pure synchronous
+read**; it never triggers bundle loading. It reads whatever
+`enhancementBundles` are available (which may be `null` during the loading
+gap after `configureI18n` or a locale change). When no config and no hook
+are active, it short-circuits to the base-bundle text (zero-overhead path).
 
 Resolution order matches the proposal:
 
@@ -310,17 +158,6 @@ After validation, store a **shallow copy** of the config (to prevent
 caller-side mutation), clear stale bundles, increment the generation
 counter, and trigger async bundle loading.
 
-```ts
-export function configureI18n(config: KioskI18nConfig): Promise<void> {
-  // ... validation (see above) ...
-
-  activeConfig = { ...config }; // shallow copy
-  enhancementBundles = null; // clear stale
-
-  return loadBundles();
-}
-```
-
 A deep freeze is unnecessary; `readonly` types guard TS consumers,
 and the layout-registry stores definitions by reference without
 freezing. Keeping the same pattern here avoids inconsistency.
@@ -336,51 +173,6 @@ protects JS consumers where the TS signature is not enforced.
 Bundles are created **eagerly** in `configureI18n()` and on locale
 change, using `ResourceBundle.create({ async: true })`. A monotonic
 generation counter prevents stale loads from overwriting newer state.
-
-```ts
-function loadBundles(): Promise<void> {
-  const entries = activeConfig?.enhanceWith;
-  if (!entries?.length) {
-    enhancementBundles = [];
-    return Promise.resolve();
-  }
-
-  const loadGeneration = ++generation;
-  const topSupportedLocales = activeConfig?.supportedLocales;
-  const topFallbackLocale = activeConfig?.fallbackLocale;
-
-  const promises = entries.map((entry) => {
-    const createParams: Record<string, unknown> = {
-      async: true,
-      supportedLocales: entry.supportedLocales ?? topSupportedLocales,
-      fallbackLocale: entry.fallbackLocale ?? topFallbackLocale,
-    };
-    // Build config conditionally to avoid passing undefined keys
-    if (entry.bundleName) {
-      createParams.bundleName = entry.bundleName;
-    } else {
-      createParams.url = entry.bundleUrl;
-    }
-
-    return (ResourceBundle.create(createParams) as Promise<ResourceBundle>).catch((e): null => {
-      Log.warning(
-        `Failed to create i18n enhancement bundle` + ` (${entry.bundleName ?? entry.bundleUrl}): ${e}`,
-        undefined,
-        LOG_COMPONENT,
-      );
-      return null; // failed bundle → excluded from chain
-    });
-  });
-
-  return Promise.all(promises).then((results) => {
-    // Guard: discard if a newer config/reload has started
-    if (loadGeneration !== generation) {
-      return;
-    }
-    enhancementBundles = results.filter((b): b is ResourceBundle => b !== null);
-  });
-}
-```
 
 Design choices:
 
@@ -417,173 +209,20 @@ they are independent concerns. FLP cleanup calls both explicitly.
 Increments the generation counter to invalidate any in-flight async
 loads from the previous config.
 
-```ts
-export function resetI18nConfiguration(): void {
-  activeConfig = null;
-  enhancementBundles = null;
-  generation++;
-}
-```
-
 ### 4.7 `reloadBundles`
 
 Exposed internally for the `onLocalizationChanged` hook. Clears the
 current enhancement cache and re-creates bundles for the new locale.
-
-```ts
-export function reloadBundles(): Promise<void> {
-  enhancementBundles = null;
-
-  if (!activeConfig?.enhanceWith?.length) {
-    return Promise.resolve();
-  }
-
-  return loadBundles();
-}
-```
-
 When no config is active, this is a no-op.
-
----
-
-## 5. Thin Facade: `src/internal/i18n.ts`
-
-```ts
-/**
- * Resolves an i18n key from the `ui5.kiosk` library resource bundle,
- * optionally enhanced by consumer-configured bundles and override hooks.
- *
- * Falls back to `sDefault` when the key is missing from all bundles.
- */
-export { getText } from "./i18n-registry";
-```
-
-The module keeps its existing path so all current callers
-(`KioskKeyboard.ts`, `KioskKeyboardRenderer.ts`) continue to import
-from `"./internal/i18n"` without changes. The registry owns the full
-implementation.
-
-The JSDoc on the re-export updates the description to reflect the new
-behavior while preserving import-site documentation for consumers of
-the internal module.
 
 ---
 
 ## 6. Static Facade on `KioskKeyboard`
 
-Add to `src/KioskKeyboard.ts`, in a new section header block after the
-layout-registry facade. All four methods invalidate live instances
-via `KioskKeyboard._instances`.
-
-```ts
-// ──────────────────────────────────────────────
-// Static delegates - i18n registry (see internal/i18n-registry.ts)
-// ──────────────────────────────────────────────
-
-/**
- * Configure i18n enhancement bundles and locale metadata.
- *
- * Enhancement bundles provide additional or overriding translations
- * for the keyboard's built-in text keys.  Useful for adding support
- * for locales not shipped with the library, or for tenant-specific
- * wording.
- *
- * Replaces any previous configuration (not incremental).
- *
- * Enhancement bundles are loaded asynchronously.  The returned
- * Promise resolves when all bundles are ready.  The control
- * renders immediately with base-bundle text, then re-renders
- * when enhancements are available.
- *
- * Call {@link resetI18nConfiguration} and
- * {@link clearI18nOverrideHook} in `Component.destroy()` to prevent
- * cross-app leakage in FLP scenarios.
- *
- * @param config  Enhancement bundle descriptors and locale metadata.
- * @returns Resolves when all enhancement bundles are loaded.
- * @since 1.x.0
- * @public
- * @static
- */
-static configureI18n(config: KioskI18nConfig): Promise<void> {
-  // Immediate invalidation - clears stale enhancement texts
-  KioskKeyboard._invalidateAllInstances();
-
-  const loaded = registryConfigureI18n(config);
-
-  // Deferred invalidation - picks up newly loaded enhancements
-  void loaded.then(() => KioskKeyboard._invalidateAllInstances());
-
-  return loaded;
-}
-
-/**
- * Reset i18n enhancement configuration to library defaults.
- *
- * Clears all enhancement bundles and cancels any in-flight bundle
- * loads.  Does not affect the override hook; call
- * {@link clearI18nOverrideHook} separately if needed.
- *
- * @since 1.x.0
- * @public
- * @static
- */
-static resetI18nConfiguration(): void {
-  registryResetI18n();
-  KioskKeyboard._invalidateAllInstances();
-}
-
-/**
- * Register a programmatic override hook for resolved i18n texts.
- *
- * The hook runs after the base bundle and all enhancement bundles
- * have been consulted.  Return a string to replace the resolved
- * text, or `undefined` to keep it.
- *
- * Only one hook is active at a time.  Calling this method again
- * replaces the previous hook.
- *
- * @param fn  The override function.
- * @since 1.x.0
- * @public
- * @static
- */
-static setI18nOverrideHook(fn: KioskI18nOverrideHook): void {
-  registrySetOverrideHook(fn);
-  KioskKeyboard._invalidateAllInstances();
-}
-
-/**
- * Remove the i18n override hook.
- *
- * @since 1.x.0
- * @public
- * @static
- */
-static clearI18nOverrideHook(): void {
-  registryClearOverrideHook();
-  KioskKeyboard._invalidateAllInstances();
-}
-
-/** Invalidate all living KioskKeyboard instances to pick up i18n changes. */
-private static _invalidateAllInstances(): void {
-  for (const instance of KioskKeyboard._instances) {
-    instance.invalidate();
-  }
-}
-```
-
-Import aliases follow the existing convention:
-
-```ts
-import {
-  configureI18n as registryConfigureI18n,
-  resetI18nConfiguration as registryResetI18n,
-  setI18nOverrideHook as registrySetOverrideHook,
-  clearI18nOverrideHook as registryClearOverrideHook,
-  reloadBundles as registryReloadBundles,
-} from "./internal/i18n-registry";
-```
+Add four static methods to `src/KioskKeyboard.ts`, delegating to the
+registry. All four invalidate live instances via `KioskKeyboard._instances`
+so labels stay visually consistent. Import aliases follow the existing
+convention (`configureI18n as registryConfigureI18n`, etc.).
 
 ### `configureI18n`: Double Invalidation
 
@@ -622,33 +261,11 @@ documented in the `Localization.setLanguage` API docs:
 > hook"_
 
 This hook is available since earliest UI5 versions, well before 1.118.
-It does **not** require importing `sap/base/i18n/Localization`.
-
-```ts
-// In KioskKeyboard.ts - instance method
-
-/**
- * Called by UI5 framework when the language/locale changes.
- * Re-creates enhancement bundles for the new locale and
- * triggers a re-render.
- *
- * Note: not formally typed on sap.ui.core.Control; this is
- * a convention-based lifecycle hook (duck typing).
- */
-onLocalizationChanged(): void {
-  // Trigger async reload of enhancement bundles.
-  // reloadBundles() is a no-op when no config is active.
-  void registryReloadBundles().then(() => {
-    // Guard: instance may have been destroyed during async gap
-    if (!this.bIsDestroyed) {
-      KioskKeyboard._invalidateAllInstances();
-    }
-  });
-
-  // Immediate invalidation so base-bundle text updates now
-  this.invalidate();
-}
-```
+It does **not** require importing `sap/base/i18n/Localization`. The hook
+triggers an async `reloadBundles()` (a no-op when no config is active)
+and an immediate `invalidate()` so base-bundle text updates now, with a
+guard that skips the deferred re-render if the instance was destroyed
+during the async gap.
 
 Advantages over `Localization.attachChange`:
 
@@ -673,32 +290,13 @@ language) but should be acknowledged in release notes.
 
 ### 7.2 FLP: Recommended Consumer Pattern
 
-```ts
-// Component.ts
-import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-
-export default class Component extends UIComponent {
-  async init(): Promise<void> {
-    super.init();
-    // Fire-and-forget is fine - the keyboard renders with base text
-    // immediately, then re-renders when enhancement bundles load.
-    KioskKeyboard.configureI18n({
-      enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
-    });
-
-    // Or await if guaranteed bundle availability matters:
-    // await KioskKeyboard.configureI18n({
-    //   enhanceWith: [{ bundleName: "my.app.i18n.kiosk" }],
-    // });
-  }
-
-  destroy(): void {
-    KioskKeyboard.clearI18nOverrideHook();
-    KioskKeyboard.resetI18nConfiguration();
-    super.destroy();
-  }
-}
-```
+Configure in the component's `init()` (fire-and-forget is fine; the
+keyboard renders with base text immediately, then re-renders when
+enhancement bundles load, or `await` if guaranteed availability matters),
+and clean up in `destroy()` by calling `clearI18nOverrideHook()` and
+`resetI18nConfiguration()` before `super.destroy()`. This prevents
+cross-app leakage in FLP scenarios where module-level state survives
+component teardown.
 
 ### 7.3 Library-Side Safety
 
@@ -801,19 +399,11 @@ JS consumers.
 
 The override hook context needs a `locale` string. Since the
 layout-registry already uses `Localization.getLanguageTag()` (1.120+),
-the library's effective minimum is already 1.120. Use the framework API:
-
-```ts
-import Localization from "sap/base/i18n/Localization";
-
-function getCurrentLocale(): string {
-  return Localization.getLanguageTag().toString();
-}
-```
-
-This uses the framework's configured language rather than
-`navigator.language`, ensuring the locale reflects `sap-language` URL
-parameters and explicit `Localization.setLanguage()` calls.
+the library's effective minimum is already 1.120. Resolve the locale via
+`Localization.getLanguageTag().toString()`. This uses the framework's
+configured language rather than `navigator.language`, ensuring the locale
+reflects `sap-language` URL parameters and explicit
+`Localization.setLanguage()` calls.
 
 ### 8.9 `loadBundles` Passes Conditional Properties
 
@@ -826,70 +416,13 @@ object in `loadBundles()` (section 4.5).
 
 ## 9. Testing
 
-### 9.1 New file: `test/qunit/i18n-registry.qunit.ts`
-
-Structure mirrors `layout-registry.qunit.ts`.
-
-```
-i18n-registry: configureI18n validation
-  ├─ Accepts valid config with enhanceWith
-  ├─ Accepts config without enhanceWith (locale-only)
-  ├─ Rejects non-object config (null, array, string)
-  ├─ Rejects enhancement entry with neither bundleName nor bundleUrl
-  ├─ Rejects enhancement entry with both bundleName and bundleUrl
-  ├─ Skips invalid entries, keeps valid ones
-  └─ Logs warning for invalid entries
-
-i18n-registry: async bundle loading
-  ├─ configureI18n returns a Promise that resolves after loading
-  ├─ getText returns base text while bundles are loading
-  ├─ getText returns enhanced text after Promise resolves
-  ├─ Rapid reconfiguration: only latest generation is stored
-  ├─ resetI18nConfiguration cancels in-flight loads (generation guard)
-  └─ reloadBundles re-creates bundles for current locale
-
-i18n-registry: enhancement bundle precedence
-  ├─ Base bundle text used when no enhancements configured
-  ├─ Single enhancement overrides base bundle text
-  ├─ Last enhancement wins when multiple provide same key
-  ├─ Enhancement that does not provide a key falls through to base
-  └─ Enhancement bundle error does not break resolution
-
-i18n-registry: override hook
-  ├─ Hook receives correct context (key, locale, defaultText, resolvedText)
-  ├─ Hook return replaces resolved text
-  ├─ Hook returning undefined keeps resolved text
-  ├─ Hook runs after enhancement resolution
-  ├─ Hook error is caught, resolved text used
-  ├─ setI18nOverrideHook replaces previous hook
-  ├─ setI18nOverrideHook rejects non-function (null, string, number)
-  └─ clearI18nOverrideHook removes hook
-
-i18n-registry: resetI18nConfiguration
-  ├─ Clears enhancement bundles
-  ├─ Does NOT clear override hook
-  ├─ Subsequent getText returns base bundle text only
-  ├─ Idempotent: double reset does not error
-  └─ New configureI18n after reset works correctly
-
-i18n-registry: KioskKeyboard facade
-  ├─ Static configureI18n returns Promise
-  ├─ Static configureI18n performs double invalidation (immediate + deferred)
-  ├─ Static resetI18nConfiguration clears config state
-  ├─ Static setI18nOverrideHook / clearI18nOverrideHook round-trip
-  ├─ getText reflects facade-configured enhancements (after await)
-  └─ All four methods invalidate live instances
-
-i18n-registry: onLocalizationChanged
-  ├─ Triggers bundle reload
-  ├─ Invalidates instance immediately
-  ├─ Re-renders with enhanced text after reload completes
-  └─ No-op when no config is active
-
-i18n-registry: FLP lifecycle simulation
-  ├─ Configure + hook in init, cleanup in destroy, next app sees defaults
-  └─ Override hook does not leak across simulated app sessions
-```
+A new `test/qunit/i18n-registry.qunit.ts` (structure mirroring
+`layout-registry.qunit.ts`) covers `configureI18n` validation, async
+bundle loading and generation-counter race safety, enhancement bundle
+precedence (last wins), the override hook (context, replace/keep, error
+handling, replacement, non-function rejection), `resetI18nConfiguration`,
+the `KioskKeyboard` static facade (including double invalidation),
+`onLocalizationChanged`, and FLP lifecycle simulation.
 
 ### 9.2 Integration Tests: Existing Files
 
@@ -944,52 +477,6 @@ add `resetI18nConfiguration()` + `clearI18nOverrideHook()` to
 
 ---
 
-## 10. Phased Rollout
-
-### Phase 1: Types and Skeleton
-
-- Add types to `src/types.ts`.
-- Add static methods on `KioskKeyboard` with no-op internals.
-- Wire empty `i18n-registry.ts` behind stable signatures.
-
-Exit criteria: build and typecheck pass; no behaviour regressions.
-
-### Phase 2: Registry Core
-
-- Implement config validation, async enhancement loading (with
-  generation counter), resolution chain, hook execution.
-- Make `i18n.ts` a thin re-export of the registry's `getText`.
-- Add registry unit tests (including async load tests).
-
-Exit criteria: `i18n-registry.qunit.ts` green.
-
-### Phase 3: Lifecycle Wiring
-
-- Implement `onLocalizationChanged` hook on `KioskKeyboard`.
-- Wire double invalidation in `configureI18n` facade (immediate +
-  deferred).
-- Instance invalidation on all four API calls.
-- Verify docked/open controls re-render safely.
-
-Exit criteria: integration tests for runtime language switch green.
-
-### Phase 4: Documentation
-
-- Update README with i18n extension API section and FLP cleanup
-  snippet.
-- Update `docs/kiosk/ARCHITECTURE.md` with `i18n-registry.ts`
-  module entry.
-
-Exit criteria: docs reviewed and aligned with final API names.
-
-### Phase 5: Hardening
-
-- Negative-path tests and regression sweep.
-- Map-safety tests (`__proto__`, `constructor`) where relevant.
-- Optional one-cycle experimental usage before marking stable.
-
----
-
 ## 11. What This Plan Does NOT Cover
 
 - **Proposal promotion**: the proposal has been moved to
@@ -1017,7 +504,7 @@ Decisions settled by comparing both plans:
 | Invalidate live instances on API calls?   | **Yes.** All four methods call `_invalidateAllInstances()`. Labels must be visually consistent.                                                                                                                                                                                     |
 | `enhanceWith` order semantics?            | **Last wins.** Given `[A, B]`, B's text is used if both provide the same key. Reverse iteration, break.                                                                                                                                                                             |
 | Language change mechanism?                | **`onLocalizationChanged` hook**: per-instance, 1.118 compatible, canonical UI5 control pattern. No static listener management.                                                                                                                                                     |
-| `getText` ownership?                      | **Registry owns full resolution.** `i18n.ts` is a thin re-export for import stability.                                                                                                                                                                                              |
+| `getText` ownership?                      | **Registry owns full resolution.** (The planned `i18n.ts` re-export facade was not shipped; callers import `i18n-registry.ts` directly. See the implementation note at the top.)                                                                                                    |
 | Standalone public re-export module?       | **No.** APIs live on `KioskKeyboard` only; no standalone import use case.                                                                                                                                                                                                           |
 | Replace vs merge on `configureI18n`?      | **Replace.** Simple mental model, no ordering ambiguity.                                                                                                                                                                                                                            |
 | Warning log component?                    | **`"ui5.kiosk.KioskKeyboard"`**: consistent with existing codebase convention.                                                                                                                                                                                                      |

@@ -57,5 +57,10 @@ exactly what `npm run generate` (kiosk-pinned `@ui5/ts-interface-generator@0.11.
 the version `pretypecheck`/CI uses) produces, confirmed by a 0-diff regen, so CI
 stays green and the artifact is correct. But two generator versions coexist (root
 `0.10.5`, kiosk-local `0.11.1`), and a commit made after a local serve/e2e run would
-strip the JSDoc. Worth the author confirming the serve path doesn't invoke a
-divergent generator. Out of scope for the migration's test integrity; CI-correct today.
+strip the JSDoc. Out of scope for the migration's test integrity; CI-correct today.
+
+**Resolved (2026-06-30):** root cause was the generator's JSDoc mode, not a divergent
+generator: the serve/watch path emitted the `minimal` JSDoc variant while `npm run generate`
+emitted `verbose`, so the committed verbose file looked "stripped" after a serve run. Fixed by
+pinning `--jsdoc verbose` in the `generate` script (commit `b736f832`), making the serve and
+generate outputs identical. The dirty-tree-after-serve symptom no longer occurs.

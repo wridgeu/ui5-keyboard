@@ -21,26 +21,7 @@ Reference for UI5 keyboard events, touch event simulation, pseudo events, and ho
 
 ## 1. Event Architecture Overview
 
-UI5 has a **layered event system** built on top of browser events:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  Layer 5: CommandExecution (manifest-declared)       │  sap/ui/core/CommandExecution
-│           Focus-dependent, scoped to control tree    │
-├─────────────────────────────────────────────────────┤
-│  Layer 4: Simulated Touch Events                    │  sap/ui/events/jquery/EventSimulation
-│           saptouchstart, saptouchend, saptouchmove  │  jQuery special events
-├─────────────────────────────────────────────────────┤
-│  Layer 3: PseudoEvents (51 semantic events)         │  sap/ui/events/PseudoEvents
-│           sapenter, sapnext, sapskipforward, etc.   │  on<eventName> only, no jQuery.on()
-├─────────────────────────────────────────────────────┤
-│  Layer 2: ControlEvents (26 browser events)         │  sap/ui/events/ControlEvents
-│           click, keydown, focusin, mousedown, etc.  │  Auto-delegated by UIArea
-├─────────────────────────────────────────────────────┤
-│  Layer 1: Native Browser Events                     │  DOM Level 3
-│           KeyboardEvent, MouseEvent, TouchEvent      │
-└─────────────────────────────────────────────────────┘
-```
+UI5 layers its event system on top of browser events: native DOM events (layer 1) feed UIArea-auto-delegated **ControlEvents** (layer 2, ~26 browser events), which are classified into semantic **PseudoEvents** (layer 3, `sapenter`, `sapnext`, etc.), with **simulated touch events** (layer 4, `saptouchstart`/`saptouchend`) and manifest-declared **CommandExecution** shortcuts (layer 5) on top.
 
 **UIArea** is the central dispatcher. It binds all ControlEvents on its root DOM element:
 
@@ -59,28 +40,14 @@ When an event fires, `_handleEvent()`:
 
 **Module:** `sap/ui/events/ControlEvents` (public since 1.58)
 
-The static `events` array contains 26 base browser events:
-
-```
-click        dblclick      contextmenu
-focusin      focusout
-keydown      keypress      keyup
-mousedown    mouseout      mouseover    mouseup
-select       selectstart
-dragstart    dragenter     dragover     dragleave    dragend    drop
-compositionstart    compositionend
-paste        cut           input        change
-```
-
-Controls implement `on<eventName>(oEvent)` methods to handle these. UIArea registers them once on its root DOM and dispatches via delegation.
+`ControlEvents.events` is an array of ~26 base browser events that UIArea registers once on its root DOM and dispatches to controls via `on<eventName>(oEvent)` methods. It covers the usual mouse/keyboard/focus/drag/clipboard events (`click`, `keydown`, `keyup`, `focusin`, `focusout`, `mousedown`, `input`, `change`, `compositionstart`/`compositionend`, etc.).
 
 **Not in this list:** `pointerdown`, `pointerup`, `pointermove`, `wheel`, `scroll`, `touchstart`, `touchend`. These must be registered explicitly via `attachBrowserEvent()` or `addEventListener()` in `onAfterRendering()`.
 
 **API:**
 
 - `ControlEvents.events`: the array of event names
-- `ControlEvents.bindAnyEvent(fn)`: bind callback for ALL events on `document`
-- `ControlEvents.unbindAnyEvent(fn)`: unbind callback
+- `ControlEvents.bindAnyEvent(fn)` / `unbindAnyEvent(fn)`: bind/unbind a callback for ALL events on `document`
 
 ## 3. PseudoEvents: Semantic Keyboard Events
 
@@ -93,89 +60,19 @@ Pseudo events are **semantically enriched keyboard events**. They:
 - Can ONLY be handled via `on<eventName>()` methods, **NOT** via `jQuery.on()`
 - Are checked via `event.getPseudoTypes()` and `event.isPseudoType(name)`
 
-### Complete List (51 events)
+There are 51 in total (the full list lives in the [PseudoEvents.js source](https://github.com/SAP/openui5/blob/master/src/sap.ui.core/src/sap/ui/events/PseudoEvents.js)). The ones relevant to these libraries:
 
-#### Arrow Navigation
+| Event                            | Key(s)                       | Notes                               |
+| -------------------------------- | ---------------------------- | ----------------------------------- |
+| `sapenter` / `sapselect`         | Enter (and Space for select) | Activation                          |
+| `sapspace`                       | Space                        |                                     |
+| `sapescape`                      | Escape                       |                                     |
+| `sapnext` / `sapprevious`        | Arrow keys (RTL-aware)       | Used by ItemNavigation (section 10) |
+| `saphome` / `sapend`             | Home / End                   |                                     |
+| `saptabnext` / `saptabprevious`  | Tab / Tab+Shift              |                                     |
+| `sapskipforward` / `sapskipback` | F6 / Shift+F6 (F6 nav)       | See section 5                       |
 
-| Event                            | Key        | Modifiers  |
-| -------------------------------- | ---------- | ---------- |
-| `sapdown` / `sapdownmodifiers`   | ArrowDown  | None / Any |
-| `sapup` / `sapupmodifiers`       | ArrowUp    | None / Any |
-| `sapleft` / `sapleftmodifiers`   | ArrowLeft  | None / Any |
-| `sapright` / `saprightmodifiers` | ArrowRight | None / Any |
-
-#### Page / Home / End
-
-| Event                                  | Key      | Modifiers  |
-| -------------------------------------- | -------- | ---------- |
-| `saphome` / `saphomemodifiers`         | Home     | None / Any |
-| `saptop`                               | Home     | Ctrl only  |
-| `sapend` / `sapendmodifiers`           | End      | None / Any |
-| `sapbottom`                            | End      | Ctrl only  |
-| `sappageup` / `sappageupmodifiers`     | PageUp   | None / Any |
-| `sappagedown` / `sappagedownmodifiers` | PageDown | None / Any |
-
-#### Selection / Action
-
-| Event                              | Key(s)         | Modifiers  |
-| ---------------------------------- | -------------- | ---------- |
-| `sapselect` / `sapselectmodifiers` | Enter OR Space | None / Any |
-| `sapspace` / `sapspacemodifiers`   | Space          | None / Any |
-| `sapenter` / `sapentermodifiers`   | Enter          | None / Any |
-
-#### Editing
-
-| Event                                    | Key       | Modifiers  |
-| ---------------------------------------- | --------- | ---------- |
-| `sapbackspace` / `sapbackspacemodifiers` | Backspace | None / Any |
-| `sapdelete` / `sapdeletemodifiers`       | Delete    | None / Any |
-
-#### Special
-
-| Event            | Key(s)    | Notes                |
-| ---------------- | --------- | -------------------- |
-| `sapescape`      | Escape    | No modifier variants |
-| `saptabnext`     | Tab       | No Shift             |
-| `saptabprevious` | Tab+Shift | Shift only           |
-
-#### Expand / Collapse (Tree)
-
-| Event                                  | Key       | Modifiers  |
-| -------------------------------------- | --------- | ---------- |
-| `sapexpand` / `sapexpandmodifiers`     | Numpad +  | None / Any |
-| `sapcollapse` / `sapcollapsemodifiers` | Numpad -  | None / Any |
-| `sapcollapseall`                       | Numpad \* | None       |
-
-#### Show / Hide (Dropdown)
-
-| Event     | Key(s)                       | Notes           |
-| --------- | ---------------------------- | --------------- |
-| `sapshow` | F4 (no mod) OR Alt+ArrowDown | Opens dropdown  |
-| `saphide` | Alt+ArrowUp                  | Closes dropdown |
-
-#### F6 Fast Navigation
-
-| Event            | Key(s)                       | Notes              |
-| ---------------- | ---------------------------- | ------------------ |
-| `sapskipforward` | F6 OR Ctrl+Alt+ArrowDown     | Forward group nav  |
-| `sapskipback`    | Shift+F6 OR Ctrl+Alt+ArrowUp | Backward group nav |
-
-#### RTL-Aware Semantic Events
-
-| Event                                  | LTR Keys              | RTL Keys              |
-| -------------------------------------- | --------------------- | --------------------- |
-| `sapnext` / `sapnextmodifiers`         | ArrowRight, ArrowDown | ArrowLeft, ArrowDown  |
-| `sapprevious` / `sappreviousmodifiers` | ArrowLeft, ArrowUp    | ArrowRight, ArrowUp   |
-| `sapincrease` / `sapincreasemodifiers` | ArrowRight, ArrowUp   | ArrowLeft, ArrowUp    |
-| `sapdecrease` / `sapdecreasemodifiers` | ArrowLeft, ArrowDown  | ArrowRight, ArrowDown |
-
-#### Miscellaneous
-
-| Event                   | Type     | Notes                                   |
-| ----------------------- | -------- | --------------------------------------- |
-| `sapminus`              | keypress | `-` character (experimental since 1.25) |
-| `sapplus`               | keypress | `+` character (experimental since 1.25) |
-| `sapdelayeddoubleclick` | click    | Two clicks 300-1300ms apart             |
+Each arrow/home/end/page/edit event also has a `...modifiers` variant that fires when any modifier is held. `sapminus` / `sapplus` are classified from `keypress` (experimental since 1.25) and are the only reason UI5 still reads `keypress` (see section 12).
 
 ## 4. EventSimulation: saptouchstart / saptouchend
 
@@ -183,16 +80,7 @@ Pseudo events are **semantically enriched keyboard events**. They:
 
 ### Status: NOT deprecated, still fully supported in OpenUI5 1.144.0
 
-These are **simulated unified touch events**, NOT pseudo events. They are created by `EventSimulation.js` as jQuery special events and dynamically added to `ControlEvents.events`.
-
-### How They Work
-
-The `_createSimulatedEvent()` function:
-
-1. Prefixes event names with `"sap"` → `saptouchstart`, `saptouchend`, `saptouchmove`, `saptouchcancel`
-2. Adds them to `ControlEvents.events` dynamically
-3. Registers jQuery special event handlers for binding/unbinding
-4. Creates corresponding pseudo-event entries
+These are **simulated unified touch events**, NOT pseudo events. `EventSimulation.js` creates them as jQuery special events (prefixing native names with `"sap"` → `saptouchstart`, `saptouchend`, `saptouchmove`, `saptouchcancel`), adds them to `ControlEvents.events` dynamically, and creates corresponding pseudo-event entries.
 
 ### Mouse-to-Touch Simulation (non-touch devices)
 
@@ -202,7 +90,7 @@ The `_createSimulatedEvent()` function:
 | `saptouchend`   | `mouseup`, `mouseout`    |
 | `saptouchmove`  | `mousemove`, `dragstart` |
 
-The `_handleMouseToTouchEvent()` function constructs synthetic touch objects with properties: `identifier`, `pageX`, `pageY`, `clientX`, `clientY`, `screenX`, `screenY`, `target`, `radiusX`, `radiusY`, `rotationAngle`.
+`_handleMouseToTouchEvent()` constructs synthetic touch objects with the usual coordinate/identifier/radius properties.
 
 ### Touch-to-Mouse Simulation (touch devices)
 
@@ -239,22 +127,7 @@ ontouchend(e) { handle(e); }
 
 **Module:** `sap/ui/events/F6Navigation` (internal but stable)
 
-F6 enables "fast navigation" between UI5 control groups.
-
-### How It Works
-
-- **F6** triggers `sapskipforward` pseudo event → jumps to next group
-- **Shift+F6** triggers `sapskipback` → jumps to previous group
-- Groups are marked with `data-sap-ui-fastnavgroup="true"` on DOM elements
-- Custom groups use `data-sap-ui-customfastnavgroup="true"` (fires `BeforeFastNavigationFocus` event)
-- Navigation cycles: after last group, wraps to first
-
-### Setting Up Groups
-
-```js
-// In control's renderer or onAfterRendering:
-this.data("sap-ui-fastnavgroup", "true", true); // CustomData approach
-```
+F6 enables "fast navigation" between UI5 control groups: **F6** triggers `sapskipforward` (jump to next group), **Shift+F6** triggers `sapskipback`. Groups are marked with `data-sap-ui-fastnavgroup="true"` on DOM elements (custom groups use `data-sap-ui-customfastnavgroup="true"` and fire `BeforeFastNavigationFocus`). Navigation cycles: after the last group it wraps to the first.
 
 ### Important for HotkeyManager
 
@@ -264,28 +137,7 @@ this.data("sap-ui-fastnavgroup", "true", true); // CustomData approach
 
 **Module:** `sap/ui/core/CommandExecution` (public since 1.70)
 
-UI5's official mechanism for application-level keyboard shortcuts.
-
-### Manifest Configuration
-
-```json
-{
-  "sap.ui5": {
-    "commands": {
-      "Save": { "shortcut": "Ctrl+S" },
-      "Refresh": { "shortcut": "Ctrl+Shift+R" }
-    }
-  }
-}
-```
-
-### XML View Usage
-
-```xml
-<core:CommandExecution command="Save" execute=".onSave" />
-<!-- Or shorthand: -->
-<Button press="cmd:Save" />
-```
+UI5's official mechanism for application-level keyboard shortcuts, declared in the manifest (`"sap.ui5".commands`) and wired in XML via `<core:CommandExecution command="Save" execute=".onSave" />` or the `press="cmd:Save"` shorthand.
 
 ### Three-State Model
 
@@ -307,123 +159,37 @@ From [GitHub Issue #2788](https://github.com/SAP/openui5/issues/2788):
 
 ### Shortcut Validation
 
-The `Shortcut` module validates key combinations using two regexes, one for the full shortcut string format and one for the key part alone:
-
-```
-// Full shortcut string (e.g. "Ctrl+Shift+S"):
-/^((Ctrl|Shift|Alt)\+){0,3}([a-z0-9\.,\-\*\/=]|Plus|Tab|Space|Enter|Backspace|Home|Delete|End|Pageup|Pagedown|Escape|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|F[1-9]|F1[0-2])$/i
-
-// Key part only (spec object validation):
-/^([a-z0-9\.,\-\*\/= +]|Tab|Enter|Backspace|Home|Delete|End|Pageup|Pagedown|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Escape|F[1-9]|F1[0-2])$/i
-```
-
-Platform adaptation: `Ctrl` → `Cmd` on macOS.
+The `Shortcut` module validates key combinations with two regexes (one for the full string like `"Ctrl+Shift+S"`, one for the key part alone), and adapts `Ctrl` → `Cmd` on macOS. The allowed key set is `[a-z0-9.,\-*/=]`, `Plus`, `Tab`, `Space`, `Enter`, `Backspace`, `Home`, `Delete`, `End`, `Pageup`, `Pagedown`, `Escape`, the four arrows, and `F1`–`F12`.
 
 ## 7. UI5 Reserved / Disallowed Shortcuts
 
 **Source:** `sap/ui/core/util/ShortcutHelper.js`, `mDisallowedShortcuts`
 
-These shortcuts are **blocked by UI5's CommandExecution** and should also be warned about by our HotkeyManager:
+These are **blocked by UI5's CommandExecution** and should also be warned about by our HotkeyManager. Three groups:
 
-### Browser-Reserved (Cannot Be Intercepted in Chrome)
-
-| Shortcut         | Reason                       |
-| ---------------- | ---------------------------- |
-| `Ctrl+N`         | New window                   |
-| `Ctrl+Shift+N`   | New incognito window         |
-| `Ctrl+T`         | New tab                      |
-| `Ctrl+Shift+T`   | Reopen last tab              |
-| `Ctrl+W`         | Close tab                    |
-| `Ctrl+Shift+W`   | Close window                 |
-| `Ctrl+Tab`       | Cycle through tabs           |
-| `Ctrl+Shift+Tab` | Cycle through tabs (reverse) |
-| `Ctrl+PageUp`    | Cycle through tabs           |
-| `Ctrl+PageDown`  | Cycle through tabs           |
-| `F11`            | Fullscreen                   |
-| `F12`            | Browser dev tools            |
-
-### UI5 Framework-Reserved
-
-| Shortcut           | Reason                          |
-| ------------------ | ------------------------------- |
-| `Ctrl+Alt+Shift+P` | UI5 Technical Info Dialog       |
-| `Ctrl+Alt+Shift+S` | UI5 Support Popup (Diagnostics) |
-| `F6`               | F6-based group navigation       |
+- **Browser-reserved (cannot be intercepted in Chrome):** `Ctrl+N`, `Ctrl+Shift+N`, `Ctrl+T`, `Ctrl+Shift+T`, `Ctrl+W`, `Ctrl+Shift+W`, `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+PageUp`, `Ctrl+PageDown`, `F11`, `F12`.
+- **UI5 framework-reserved:** `Ctrl+Alt+Shift+P` (Technical Info), `Ctrl+Alt+Shift+S` (Support Popup), `F6` (group navigation).
+- **Browser-functional (overridable but confusing):** `Ctrl+L`, `Ctrl+Q`, `Ctrl+0`, `Ctrl+-`, `Ctrl++`, `Ctrl+Shift+=`, `Tab` / `Shift+Tab`.
 
 > **Note:** `Ctrl+Alt+Shift+T` (UI5 Test Recorder) is handled by the framework at runtime but is **not** in `ShortcutHelper.js`'s `mDisallowedShortcuts` map, so CommandExecution does not block it during validation.
 
-### Browser Functional (Overridable But Confusing)
-
-| Shortcut            | Reason                         |
-| ------------------- | ------------------------------ |
-| `Ctrl+L`            | Jump to address bar            |
-| `Ctrl+Q`            | Quit Chrome (Mac)              |
-| `Ctrl+0`            | Reset zoom                     |
-| `Ctrl+-`            | Zoom out                       |
-| `Ctrl++`            | Zoom in                        |
-| `Ctrl+Shift+=`      | Cannot be handled consistently |
-| `Tab` / `Shift+Tab` | TAB-based keyboard navigation  |
-
-### Additional Validation Rule
-
-Shortcuts with `Shift` modifier + punctuation keys (`., - + = * /`) are blocked because Shift changes the meaning of these keys on many keyboard layouts.
+Additional rule: shortcuts with `Shift` + punctuation keys (`., - + = * /`) are blocked because Shift changes the meaning of these keys on many layouts.
 
 ## 8. SAP Fiori Elements Standard Shortcuts
 
-Applications should avoid conflicting with these standard Fiori Elements shortcuts:
-
-| Action              | Windows          | macOS           |
-| ------------------- | ---------------- | --------------- |
-| Save                | Ctrl+S           | Cmd+S           |
-| Create              | Ctrl+Enter       | Cmd+Enter       |
-| Create with Filters | Ctrl+Shift+Enter | Cmd+Shift+Enter |
-| Delete (page)       | Ctrl+Del         | Cmd+Fn+Delete   |
-| Delete (table)      | Ctrl+D           | Cmd+D           |
-| Edit page           | Ctrl+E           | Cmd+E           |
-| Export to Excel     | Ctrl+Shift+E     | Cmd+Shift+E     |
-| Go/Search           | Enter            | Enter           |
-| Open error list     | Ctrl+Shift+M     | Cmd+Shift+M     |
-| Cancel/Discard      | Esc              | Esc             |
-| Select row          | Shift+Space      | Shift+Space     |
-| Share               | Ctrl+Shift+S     | Cmd+Shift+S     |
-| Table settings      | Ctrl+,           | Ctrl+,          |
+Applications should avoid conflicting with Fiori Elements standards. The most common: Save (`Ctrl+S`), Create (`Ctrl+Enter`), Delete table row (`Ctrl+D`), Edit (`Ctrl+E`), Export to Excel (`Ctrl+Shift+E`), Go/Search (`Enter`), Cancel (`Esc`), Select row (`Shift+Space`), Table settings (`Ctrl+,`). On macOS `Ctrl` maps to `Cmd`. Full table in the [Fiori Elements keyboard shortcuts docs](https://github.com/SAP-docs/sapui5/blob/main/docs/06_SAP_Fiori_Elements/keyboard-shortcuts-0cd318c.md).
 
 ## 9. Focus Handling
 
-**Module:** `sap/ui/core/Element` provides five focus management methods:
+**Module:** `sap/ui/core/Element` provides `getFocusDomRef()`, `focus()`, `getFocusInfo()`, `applyFocusInfo(info)`, and `onfocusfail()`. Re-rendering destroys and recreates DOM nodes; without `getFocusInfo()`/`applyFocusInfo()`, focus is lost.
 
-| Method                 | Purpose                                                            |
-| ---------------------- | ------------------------------------------------------------------ |
-| `getFocusDomRef()`     | Returns the DOM node that should receive focus (default: root DOM) |
-| `focus()`              | Sets focus using `getFocusDomRef()`                                |
-| `getFocusInfo()`       | Serializes focus state to JSON before re-rendering                 |
-| `applyFocusInfo(info)` | Restores focus after re-rendering                                  |
-| `onfocusfail()`        | Redirects focus when element becomes disabled/hidden/destroyed     |
-
-Re-rendering destroys and recreates DOM nodes. Without `getFocusInfo()`/`applyFocusInfo()`, focus is lost.
-
-**KioskKeyboard implements both** (`getFocusInfo` and `applyFocusInfo`) to preserve the focused key across re-renders.
+**KioskKeyboard implements both** `getFocusInfo` and `applyFocusInfo` to preserve the focused key across re-renders.
 
 ## 10. ItemNavigation Delegate
 
 **Module:** `sap/ui/core/delegate/ItemNavigation` (public API)
 
-Provides arrow key, Home/End, PageUp/PageDown navigation for list-like controls using a **roving tabindex** pattern.
-
-### Keyboard Events Handled (via pseudo events)
-
-- `onsapnext` / `onsapprevious`: ArrowDown/Right / ArrowUp/Left
-- `onsaphome` / `onsapend`: Home / End
-- `onsappageup` / `onsappagedown`: PageUp / PageDown
-- `onkeyup` (F2): Toggle between action mode and navigation mode
-
-### Configuration
-
-- `setCycling(boolean)`: wrap at boundaries
-- `setColumns(n)`: grid/table layout
-- `setPageSize(n)`: enable PageUp/PageDown
-- `setTableMode(boolean)`: row/column grid navigation
-- `setDisabledModifiers(obj)`: selectively suppress modifier combos
+Provides arrow key, Home/End, PageUp/PageDown navigation for list-like controls using a **roving tabindex** pattern (handling `onsapnext`/`onsapprevious`/`onsaphome`/`onsapend`/`onsappageup`/`onsappagedown` and F2 to toggle action vs navigation mode). Configurable via `setCycling`, `setColumns`, `setPageSize`, `setTableMode`, `setDisabledModifiers`.
 
 ### Relevance to KioskKeyboard
 

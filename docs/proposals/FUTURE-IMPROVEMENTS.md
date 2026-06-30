@@ -1,18 +1,10 @@
 # Future Improvements
 
+> Status: Deferred
+
 Ideas that are not currently planned but may become relevant as the ecosystem evolves. Each entry links to the original issue for full context.
 
-## CSS `text-box-edge: ideographic-ink` for CJK Centering
-
-> [#52](https://github.com/wridgeu/ui5-keyboard/issues/52)
-
-The CSS Inline Layout Module Level 3 spec defines `text-box-edge: ideographic-ink`, which trims to the actual ink bounds of CJK characters. This would improve vertical centering of CJK glyph labels on kiosk keyboard keys.
-
-**Why not now:** No browser ships this value yet. The spec has open questions around which font in the cascade provides ideographic metrics and how to synthesize ideographic-over/under baselines.
-
-**When to revisit:** When Chromium or WebKit ships `ideographic-ink` behind a flag. At that point, a `@supports` guard can be added to both `kiosk-keyboard` (Less) and `kiosk-keyboard-webc` (CSS). Existing visual baselines should be re-verified before adoption.
-
-**Tracking:** [Chromium #365423076](https://issues.chromium.org/issues/365423076), [csswg-drafts #10928](https://github.com/w3c/csswg-drafts/issues/10928), [csswg-drafts #10850](https://github.com/w3c/csswg-drafts/issues/10850).
+The deferred CSS `text-box-edge: ideographic-ink` adoption for CJK centering (issue [#52](https://github.com/wridgeu/ui5-keyboard/issues/52)) is tracked under "What Remains" in [CJK-GLYPH-CENTERING.md](./CJK-GLYPH-CENTERING.md).
 
 ## Shared Internal Package for Cross-Package Utilities
 

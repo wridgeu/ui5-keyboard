@@ -87,23 +87,13 @@ Modules under `ui5/hotkeys/internal/*` and `ui5/kiosk/internal/*` are internal i
 
 Some non-`internal/*` modules are currently importable but non-stable. In `ui5.hotkeys`, this currently includes top-level utility/helper paths (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`). Unless explicitly listed in the stable API above, treat them as advanced/unsupported. Higher-level implementation modules (for example `SequenceManager`) are consumed via `HotkeyManager` and are not part of the supported direct import surface.
 
-For `ui5.kiosk`, the built-in layout-definition modules under `ui5/kiosk/layouts/*` are stable consumer imports - usable as a base layout or for composing custom variants. This covers the full layouts (e.g. `qwerty`, `numeric`, `ja-kana`) and the two shared row fragments:
-
-- `ui5/kiosk/layouts/fkey-row`
-- `ui5/kiosk/layouts/nav-row`
-
-The internal composition helpers `ui5/kiosk/layouts/symbol-common` and `ui5/kiosk/layouts/default-layout` are not part of the stable surface.
+For `ui5.kiosk`, `layouts/*` and `middleware/*` are stable consumer imports (listed under Stable Consumer API above); the internal composition helpers `ui5/kiosk/layouts/symbol-common` and `ui5/kiosk/layouts/default-layout` are not part of the stable surface.
 
 ### `kiosk-keyboard-webc`
 
 Modules under `core/*` (`shift-state`, `dom-utils`, `dom-contract`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
 
-The `layouts/*` directory contains built-in layout definitions. Each built-in layout module (e.g. `layouts/qwerty`, `layouts/ja-kana`) is a stable consumer import: consume a layout by name through the `layout` attribute, or import it directly to use as a base or pass via the per-instance `instanceLayouts` property. The two shared row fragments are stable for composing custom variant layouts:
-
-- `kiosk-keyboard-webc/layouts/fkey-row`
-- `kiosk-keyboard-webc/layouts/nav-row`
-
-The internal composition helpers `layouts/symbol-common` and `layouts/default-layout` are not part of the stable surface.
+For `kiosk-keyboard-webc`, `layouts/*` and `middleware/*` are stable consumer imports (listed under Stable Consumer API above); the internal composition helpers `layouts/symbol-common` and `layouts/default-layout` are not part of the stable surface.
 
 The `generated/*` directory (themes, i18n bundles) is build output and must never be imported directly.
 

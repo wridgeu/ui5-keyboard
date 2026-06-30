@@ -2,7 +2,7 @@
 
 **Issue:** [#78](https://github.com/wridgeu/ui5-keyboard/issues/78)
 **Date:** 2026-04-08
-**Status:** Approved
+**Status:** Implemented
 **Breaking:** Yes (no consumers yet)
 
 ## Problem

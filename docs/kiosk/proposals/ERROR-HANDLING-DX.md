@@ -34,8 +34,6 @@ policy for better developer experience (DX).
   - `setSelectionRange(...)` errors are swallowed (input type constraints)
 - `packages/kiosk-keyboard/src/KioskKeyboard.ts`
   - `focus({ preventScroll })` fallback to plain `focus()`
-- `packages/kiosk-keyboard/src/internal/grapheme.ts`
-  - `Intl.Segmenter` fallback path when unavailable/failing
 
 ## DX Risks
 
@@ -69,7 +67,7 @@ Examples:
 Examples:
 
 - DOM API support differences (`setSelectionRange`, `focus` options)
-- environment capability gaps (`Intl.Segmenter`)
+- environment capability gaps
 
 Rule: if fallback changes observable behavior in a way relevant to consumers,
 emit a one-time warning.

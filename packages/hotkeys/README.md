@@ -277,9 +277,7 @@ import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 
 `HotkeyRecorder` is exported as a type and returned by `manager.createRecorder()`; its constructor is internal. `manager.getKeyStateTracker()` returns a `KeyStateTrackerApi` (the read-only tracker interface in `ui5/hotkeys/types`); the backing `KeyStateTracker` class is constructed internally.
 
-Advanced modules are available but treated as implementation-oriented and may change without a semver-stable compatibility guarantee. In particular, anything under `ui5/hotkeys/internal/*` is internal-only. Non-stable top-level paths currently include re-export entry points (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`).
-
-The sections below also mention advanced helper modules such as `ui5/hotkeys/validate`, `ui5/hotkeys/parse`, `ui5/hotkeys/match`, and `ui5/hotkeys/platform`. They are available for power users, but they are not part of the semver-stable consumer contract. `ui5/hotkeys/format` is the supported exception.
+Advanced modules are available but may change without a semver-stable guarantee: anything under `ui5/hotkeys/internal/*` is internal-only, and the re-export entry points (`ui5/hotkeys/parse`, `ui5/hotkeys/match`, `ui5/hotkeys/platform`, `ui5/hotkeys/validate`, `ui5/hotkeys/constants`) are non-stable, with `ui5/hotkeys/format` the supported exception.
 
 ## HotkeyManager
 
@@ -471,52 +469,7 @@ Each lifecycle owner should create exactly one group and destroy it in its corre
 
 #### Reducing Boilerplate with a Controller Extension
 
-If multiple controllers repeat the same `createGroup` / `destroyAll` pattern, a UI5 `ControllerExtension` can encapsulate it once in your app:
-
-```ts
-// app/ext/HotkeyExtension.ts
-import ControllerExtension from "sap/ui/core/mvc/ControllerExtension";
-import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
-import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
-
-export default class HotkeyExtension extends ControllerExtension {
-  private _hotkeys!: RegistrationGroup;
-
-  static readonly overrides = {
-    onInit(this: HotkeyExtension) {
-      const manager = (this.base.getOwnerComponent() as any).getHotkeyManager() as HotkeyManager;
-      this._hotkeys = manager.createGroup();
-    },
-    onExit(this: HotkeyExtension) {
-      this._hotkeys.destroyAll();
-    },
-  };
-
-  getGroup(): RegistrationGroup {
-    return this._hotkeys;
-  }
-}
-```
-
-Controllers then use the extension as a member:
-
-```ts
-import HotkeyExtension from "app/ext/HotkeyExtension";
-
-export default class Detail extends Controller {
-  hotkeys = HotkeyExtension;
-
-  onInit() {
-    this.hotkeys.getGroup().register("F5", () => this.onRefresh(), {
-      scope: "detail",
-      description: "Refresh",
-    });
-  }
-  // No onExit needed: the extension handles cleanup
-}
-```
-
-This is an app-level pattern, not shipped by the library, so it adds no bundle cost to consumers who don't need it.
+If multiple controllers repeat the same `createGroup` / `destroyAll` pattern, wrap the registration in a UI5 `ControllerExtension` that creates the group in `onInit()` and calls `destroyAll()` in `onExit()`, so each controller reuses it without its own teardown code. This is an app-level pattern, not shipped by the library, so it adds no bundle cost to consumers who don't need it.
 
 #### Scope Stacking
 
@@ -664,10 +617,7 @@ manager.resetToGlobalScope();
 
 ### Router Integration
 
-Router integration is configured on a `RegistrationGroup` rather than on the manager directly. See [Router Integration (Group-Level)](#router-integration-group-level) for the setup pattern and examples.
-
-> [!IMPORTANT]
-> Dialog scopes still require manual `pushScope`/`popScope` since they are not route-based. See the [Popup Overlay Pattern](#popup-overlay-pattern) for an example.
+Router integration is configured on a `RegistrationGroup`, not on the manager. See [Router Integration (Group-Level)](#router-integration-group-level) for setup and examples.
 
 ### Unhandled Key Callback
 

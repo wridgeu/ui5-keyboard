@@ -4,6 +4,7 @@ These documents cover repository-wide proposals that are not part of the current
 
 - [CJK Glyph Centering](./CJK-GLYPH-CENTERING.md) (partially implemented, remaining work blocked)
 - [Custom Font Face](./CUSTOM-FONT-FACE.md)
+- [Future Improvements](./FUTURE-IMPROVEMENTS.md) (deferred ideas not currently planned)
 
 The following proposals were fully implemented and their documentation removed (the code is the source of truth):
 

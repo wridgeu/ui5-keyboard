@@ -1,5 +1,8 @@
 # Unified Registration API
 
+**Date:** 2026-04-08
+**Status:** Implemented
+
 Merge sequence registration into `register()` using space-separated hotkey strings,
 matching the conventions of [tinykeys](https://github.com/jamiebuilds/tinykeys) and
 [@github/hotkey](https://github.com/github/hotkey).

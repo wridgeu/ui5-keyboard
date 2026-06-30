@@ -110,12 +110,7 @@ Events are declared with `@event` from `event-strict.js`:
 
 ### TypeScript Configuration
 
-The framework requires specific TS settings:
-
-- `experimentalDecorators: true`: UI5 WC decorators are not TC39 decorators
-- `useDefineForClassFields: false`: avoids the class field initializer trap where `declare` would be needed for every property
-- `jsx: "react-jsx"` + `jsxImportSource: "@ui5/webcomponents-base"`: routes JSX to the UI5 WC Preact-based runtime
-- `strictPropertyInitialization: false`: framework-managed properties are initialized by the decorator system, not in the constructor
+The framework requires specific compiler flags (`experimentalDecorators`, `useDefineForClassFields`, the JSX runtime pair, `strictPropertyInitialization`). See [TypeScript Decorator Setup](./TYPESCRIPT-DECORATOR-SETUP.md) for the flags and why each is needed.
 
 ## Component Architecture
 
@@ -306,7 +301,7 @@ el.instanceLayouts = { "my-qwerty-fk": [fkeyRow, ...qwerty] };
 el.layout = "my-qwerty-fk";
 ```
 
-### Layout Resolution
+### Layout Resolution Order
 
 - Built-in layouts are stored in a sealed module-level `Map`, populated by direct data imports of `layouts/*.ts` and never mutated again at runtime
 - Per-element overrides flow through the `instanceLayouts` property (a plain `Record`), validated at assignment: must be a non-empty array of non-empty rows where each key has a string `value`
@@ -483,7 +478,7 @@ No JavaScript is involved in width responsiveness. The `min()` capping pattern e
 - `.kiosk-keyboard--cq-short` (host height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `.kiosk-keyboard--cq-tiny` (host height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
 
-Height classes live on the host element so that CSS rules use `:host(.kiosk-keyboard--cq-short)`. No specificity-lowering wrapper is needed: per [CSS Scoping Module Level 1 §3.3.1](https://www.w3.org/TR/css-scoping-1/#cascading) and [CSS Cascade Level 5 §6.1](https://www.w3.org/TR/css-cascade-5/#cascade-sort), the cascade "Context" step sits above "Specificity", so normal declarations from the outer document always win over normal `:host()` declarations in the shadow tree regardless of specificity. A consumer writing `kiosk-keyboard { --kiosk-keyboard-key-height: 3rem; }` from outside the shadow root overrides these defaults even without a matching class.
+Outer-document (consumer) styles always win over the shadow tree's `:host()` defaults regardless of specificity, because the cascade's "Context" step sits above "Specificity" (per [CSS Scoping Module Level 1 §3.3.1](https://www.w3.org/TR/css-scoping-1/#cascading)). Height classes therefore live on the host element so that CSS rules use `:host(.kiosk-keyboard--cq-short)` without any specificity-lowering wrapper, and consumer overrides land even without a matching class.
 
 A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host(.kiosk-keyboard--cq-short, .kiosk-keyboard--cq-tiny)` applies the most aggressive font-size cap of `0.75rem`.
 
@@ -520,18 +515,7 @@ Four Horizon variant bundles exist (required by the UI5 WC build tooling) but ar
 
 ## Build Pipeline
 
-```
-npm run generate     →  ui5nps generate (theme CSS modules, i18n JSON, i18n-defaults.ts)
-tsc                  →  TypeScript compilation (src/ → dist/)
-npm run build:bundle →  vite build (src/bundle.esm.ts → dist/kiosk-keyboard.bundle.js)
-npm run generateAPI  →  CEM generation + validation (also included in npm run build)
-```
-
-`npm run build` executes the full pipeline in order: `build:dev`, `build:bundle`, then `generateAPI`.
-
-The bundle step uses Vite (Rolldown) in library mode with `output.codeSplitting: false` (the Vite 8 / Rolldown replacement for the deprecated `inlineDynamicImports: true`) to produce a single self-contained file that inlines all UI5 WC framework dependencies.
-
-CEM generation (`generateAPI`) produces `custom-elements.json`, IDE integration files (VS Code, JetBrains), and validates the public API documentation. Running it directly is still useful when iterating only on API docs or manifest output. See [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md) for details.
+See [Build Pipeline](./BUILD-PIPELINE.md) for the generate/compile/bundle/CEM steps and the Vite bundling configuration.
 
 ### Package Exports
 
