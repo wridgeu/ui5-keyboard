@@ -214,9 +214,13 @@ The primary match uses `event.key`:
 
 When `event.key` does not match, the matcher falls back to `event.code`. This handles two specific cross-platform issues:
 
-**macOS Option+letter:** Pressing Option+D on macOS produces `event.key = "∂"` (partial derivative symbol), but `event.code = "KeyD"`. The code fallback allows Alt+D to match correctly.
+**macOS Option+letter:**
 
-**Shift+digit:** Pressing Shift+4 produces `event.key = "$"`, but `event.code = "Digit4"`. The code fallback allows Shift+4 to match correctly regardless of keyboard layout.
+Pressing Option+D on macOS produces `event.key = "∂"` (partial derivative symbol), but `event.code = "KeyD"`. The code fallback allows Alt+D to match correctly.
+
+**Shift+digit:**
+
+Pressing Shift+4 produces `event.key = "$"`, but `event.code = "Digit4"`. The code fallback allows Shift+4 to match correctly regardless of keyboard layout.
 
 ## Input Element Detection
 

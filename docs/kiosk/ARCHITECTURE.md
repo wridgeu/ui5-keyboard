@@ -504,7 +504,9 @@ Docked keyboards and numpad mode skip height class application (docked keyboards
 
 The public sizing variables deliberately separate normal and extra-narrow spacing. `--ui5KioskKeyboard-keyPaddingInline` keeps the default inline inset for regular widths, while `--ui5KioskKeyboard-keyPaddingInlineXs` is applied at the 20rem `@container` breakpoint for non-numpad keys. Its default (`min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)`) trims the stock padding from `0.25rem` to `0.125rem` so wide glyphs like `@`, `%`, and `&` get more horizontal breathing room on phone-sized rows without reducing key height or touch-target size. The `min(...)` form preserves any consumer override that is already smaller.
 
-**Consumer overrides:** For custom width breakpoints, consumers can write `@container keyboard (max-width: ...)` rules directly since the keyboard's root element sets `container-name: keyboard`.
+**Consumer overrides:**
+
+For custom width breakpoints, consumers can write `@container keyboard (max-width: ...)` rules directly since the keyboard's root element sets `container-name: keyboard`.
 
 ### Content Density
 

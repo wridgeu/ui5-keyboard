@@ -1034,7 +1034,9 @@ When `autoType="true"` (requires `autoShow="true"`), the keyboard inspects the f
 
 When the user tabs from a numeric input to a text input, the keyboard switches back to Full automatically.
 
-**Explicit override:** Setting `keyboardType` explicitly (via XML, constructor, or `setKeyboardType()`) disables auto-type detection. The keyboard respects the explicit type and never overrides it. Call `resetKeyboardType()` to re-enable auto-type. The `keyboardTypeChange` event reports whether a change was auto-detected via its `autoDetected` parameter.
+**Explicit override:**
+
+Setting `keyboardType` explicitly (via XML, constructor, or `setKeyboardType()`) disables auto-type detection. The keyboard respects the explicit type and never overrides it. Call `resetKeyboardType()` to re-enable auto-type. The `keyboardTypeChange` event reports whether a change was auto-detected via its `autoDetected` parameter.
 
 ---
 
@@ -1574,13 +1576,21 @@ KioskKeyboard.setI18nResolver((_key, _locale, resolvedText) => {
 KioskKeyboard.setI18nResolver(null);
 ```
 
-**Resolution order:** the library resolves each key from its built-in resource bundle first, then passes the result to the resolver. The resolver's return value (if not `undefined`) replaces the built-in text.
+**Resolution order:**
 
-**Locale reactivity:** when the UI5 locale changes at runtime (e.g. via `Localization.setLanguage()`), all live `KioskKeyboard` instances re-render and the resolver is called again with the new locale.
+The library resolves each key from its built-in resource bundle first, then passes the result to the resolver. The resolver's return value (if not `undefined`) replaces the built-in text.
 
-**Automatic cleanup:** the library automatically clears the resolver when the last live `KioskKeyboard` instance is destroyed. Explicit cleanup via `setI18nResolver(null)` is still recommended for apps that manage keyboard instances outside the normal view tree.
+**Locale reactivity:**
 
-**TypeScript types**: import the resolver type for type-safe usage:
+When the UI5 locale changes at runtime (e.g. via `Localization.setLanguage()`), all live `KioskKeyboard` instances re-render and the resolver is called again with the new locale.
+
+**Automatic cleanup:**
+
+The library automatically clears the resolver when the last live `KioskKeyboard` instance is destroyed. Explicit cleanup via `setI18nResolver(null)` is still recommended for apps that manage keyboard instances outside the normal view tree.
+
+**TypeScript types:**
+
+Import the resolver type for type-safe usage:
 
 ```ts
 import type { I18nResolver } from "ui5/kiosk/types";

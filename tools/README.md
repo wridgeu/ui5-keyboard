@@ -90,7 +90,7 @@ Run via `npm run test:packages:smoke`.
 ### Native alternatives considered (2026-06-11)
 
 - `check-package-smoke.mjs`: [publint](https://publint.dev/) validates `package.json` (`exports`, `files`, module formats) against the published file list, but does not rebuild the packages or assert that specific build artifacts (UI5 `build-manifest.json`, the WebC bundle) land in the tarball, which is what this script gates. [@arethetypeswrong/cli](https://github.com/arethetypeswrong/arethetypeswrong.github.io) checks type resolution only. Neither replaces the script; kept.
-- Demo WebC consumption: building `packages/demo-app` against the webc output exercises the `ui5-tooling-modules` path. No maintained generic tool covers this, so it is folded into this script (it was previously a separate `check-demo-webc-bundle.mjs`).
+- Demo WebC consumption: building `packages/demo-app` against the webc output exercises the `ui5-tooling-modules` path. No maintained generic tool covers this, so it is folded into this script.
 
 ## `check-twin-drift.mjs`
 

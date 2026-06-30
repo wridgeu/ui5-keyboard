@@ -4,11 +4,15 @@ Local patches applied via [patch-package](https://github.com/ds300/patch-package
 
 ## @ui5/webcomponents-tools+2.22.0
 
-Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling. (Bug 6 was removed earlier; see below.)
+Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling.
 
-**Pinned at 2.22.0:** the patch applies cleanly to the pristine `2.22.0` package as published on npm (patch-package requires the filename version to match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.22.0` bumps. The patch filename tracks the pinned version.
+**Pinned at 2.22.0:**
 
-**Note on upstream ownership:** `@ui5/webcomponents-tools` ships a bundled, patched copy of the community `@custom-elements-manifest/analyzer` under `lib/cem/patch/`. Bugs 1, 3, and 4 are in SAP's own `lib/cem/custom-elements-manifest.config.mjs` and can be filed directly against [UI5/webcomponents](https://github.com/UI5/webcomponents) (the SAP-owned org renamed to `UI5` in early 2026). Bugs 2 and 5 are in the bundled analyzer copy (`lib/cem/patch/@custom-elements-manifest/analyzer/`) which originates from [open-wc/custom-elements-manifest](https://github.com/open-wc/custom-elements-manifest). SAP can apply these to their bundled copy, but the root fix belongs in the community repo.
+The patch applies cleanly to the pristine `2.22.0` package as published on npm (patch-package requires the filename version to match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.22.0` bumps. The patch filename tracks the pinned version.
+
+**Note on upstream ownership:**
+
+`@ui5/webcomponents-tools` ships a bundled, patched copy of the community `@custom-elements-manifest/analyzer` under `lib/cem/patch/`. Bugs 1, 3, and 4 are in SAP's own `lib/cem/custom-elements-manifest.config.mjs` and can be filed directly against [UI5/webcomponents](https://github.com/UI5/webcomponents). Bugs 2 and 5 are in the bundled analyzer copy (`lib/cem/patch/@custom-elements-manifest/analyzer/`) which originates from [open-wc/custom-elements-manifest](https://github.com/open-wc/custom-elements-manifest). SAP can apply these to their bundled copy, but the root fix belongs in the community repo.
 
 ### Bug 1: `alphabetical-sort-plugin` sorts method parameters
 
@@ -62,9 +66,7 @@ The `handleParametersAndReturnType` function builds parameter objects from the T
 
 The `processClass` function looks up TypeScript AST nodes by `name` only. When a class has both a `static` and a non-static method with the same name, `find()` always returns the first match. The instance method's AST node is never found, so its parameters, return type, and JSDoc enrichment are skipped entirely.
 
-We originally exposed layout registry methods as both static and instance methods with the same name. This mirroring pattern triggered the bug. We have since removed the instance delegates to align with the UI5 Web Components convention, where registry operations are always static-only (see `DynamicDateRange.register()`, `TabContainer.registerTabStyles()`).
-
-While the flawed API design on our side surfaced this bug, the underlying issue in the CEM plugin is still a real defect: any component that legitimately has both a static and instance method with the same name (which TypeScript and JavaScript allow) will produce incorrect CEM output. The patch remains in place for correctness.
+The underlying issue in the CEM plugin is a real defect: any component that legitimately has both a static and instance method with the same name (which TypeScript and JavaScript allow) will produce incorrect CEM output. The patch remains in place for correctness.
 
 **Fix:** Add a `static` modifier check to the `find()` predicate.
 
@@ -121,11 +123,13 @@ The `getTypeReferenceModulePath` function uses `path.join()` and `path.dirname()
 
 The fix was to use `path.posix.join()` and `path.posix.dirname()` instead of the platform-dependent equivalents.
 
-**Why it was removed:** The class was flattened from a re-export pattern (`KioskKeyboard.ts` re-exporting from `KioskKeyboardCore.ts`) into a single file. This eliminated the cross-module type references that were the primary trigger for the path normalization issue. With all types defined in the same module, `getTypeReferenceModulePath` is no longer called for our component's type references, making the patch unnecessary. The upstream bug still exists for components that use cross-module type references on Windows, but it no longer affects this project.
+**Why it was removed:**
+
+The class was flattened from a re-export pattern (`KioskKeyboard.ts` re-exporting from `KioskKeyboardCore.ts`) into a single file. This eliminated the cross-module type references that were the primary trigger for the path normalization issue. With all types defined in the same module, `getTypeReferenceModulePath` is no longer called for our component's type references, making the patch unnecessary. The upstream bug still exists for components that use cross-module type references on Windows, but it no longer affects this project.
 
 ### Upstream
 
-Repository: https://github.com/UI5/webcomponents (was `SAP/ui5-webcomponents` before the early-2026 org rename).
+Repository: https://github.com/UI5/webcomponents.
 
 These patches should be removed once the upstream issues are resolved. As of `@ui5/webcomponents-tools@2.22.0` all five bugs are still present upstream.
 
@@ -151,11 +155,17 @@ The approach follows the modern LESS 4.x parser (PRs #4337, #4340, #4349, #4351)
 
 **Regression test:** `node patches/less-openui5-test.mjs` compiles a fixture with all directive types and verifies correct output.
 
-**Note:** `patch-package` only patches the hoisted `node_modules/less-openui5/`. The UI5 builder resolves additional nested copies under each `@ui5/cli` install (currently `packages/{demo-app,hotkeys,kiosk-keyboard}/node_modules/@ui5/cli/node_modules/less-openui5/`) that `patch-package` cannot reach. The `postinstall` script runs `patches/apply-nested.mjs` to sync the patched files into every nested copy it finds; it skips (with a warning) any nested copy whose version differs from the hoisted one. `npm dedupe` does not eliminate the duplication.
+**Note:**
 
-**Why not patch-package's native nested patches (verdict, 2026-06-11):** patch-package does support nested dependency patches via the `parent/child` syntax (`npx patch-package @ui5/cli/less-openui5`, producing a `@ui5+cli++less-openui5+<version>.patch` file), but that path resolves strictly relative to the directory patch-package runs in: it can only reach `node_modules/@ui5/cli/node_modules/less-openui5` under the invoking root. In this workspace there is no root-level `@ui5/cli`; npm hoists a separate copy under each of three workspace packages, and which workspaces carry one is an npm hoisting decision that can change across npm versions. Expressing that natively would require running patch-package once per workspace directory (a bespoke wrapper again, plus hard failures in workspaces without a nested copy). The dynamic-discovery script remains the smaller and more robust solution, so it is kept and hardened (version-mismatch skip-and-warn). `patches/less-openui5-test.mjs` loads every nested copy when present, so a broken nested sync fails `npm run test:patches` instead of a later theme build.
+`patch-package` only patches the hoisted `node_modules/less-openui5/`. The UI5 builder resolves additional nested copies under each `@ui5/cli` install (currently `packages/{demo-app,hotkeys,kiosk-keyboard}/node_modules/@ui5/cli/node_modules/less-openui5/`) that `patch-package` cannot reach. The `postinstall` script runs `patches/apply-nested.mjs` to sync the patched files into every nested copy it finds; it skips (with a warning) any nested copy whose version differs from the hoisted one. `npm dedupe` does not eliminate the duplication.
 
-> **Why only `@container` and `@layer`?** The vendored LESS 1.6.3 has other gaps compared to modern CSS (e.g., `&` is not resolved inside `:not()`, making nested selectors like `&--cq-short:not(&--numpad)` output invalid CSS). Patching the parent-selector resolution would require changes throughout the parser's selector compilation pipeline, significantly more invasive than adding two case labels to a switch statement. `@container` and `@layer` follow the existing directive pattern exactly, making them safe and minimal patches. For `&`-in-`:not()`, the workaround is writing the full class name instead. The full fix belongs in an upstream LESS version update.
+**Why not patch-package's native nested patches (verdict, 2026-06-11):**
+
+patch-package does support nested dependency patches via the `parent/child` syntax (`npx patch-package @ui5/cli/less-openui5`, producing a `@ui5+cli++less-openui5+<version>.patch` file), but that path resolves strictly relative to the directory patch-package runs in: it can only reach `node_modules/@ui5/cli/node_modules/less-openui5` under the invoking root. In this workspace there is no root-level `@ui5/cli`; npm hoists a separate copy under each of three workspace packages, and which workspaces carry one is an npm hoisting decision that can change across npm versions. Expressing that natively would require running patch-package once per workspace directory (a bespoke wrapper again, plus hard failures in workspaces without a nested copy). The dynamic-discovery script remains the smaller and more robust solution, so it is kept and hardened (version-mismatch skip-and-warn). `patches/less-openui5-test.mjs` loads every nested copy when present, so a broken nested sync fails `npm run test:patches` instead of a later theme build.
+
+> **Why only `@container` and `@layer`?**
+>
+> The vendored LESS 1.6.3 has other gaps compared to modern CSS (e.g., `&` is not resolved inside `:not()`, making nested selectors like `&--cq-short:not(&--numpad)` output invalid CSS). Patching the parent-selector resolution would require changes throughout the parser's selector compilation pipeline, significantly more invasive than adding two case labels to a switch statement. `@container` and `@layer` follow the existing directive pattern exactly, making them safe and minimal patches. For `&`-in-`:not()`, the workaround is writing the full class name instead. The full fix belongs in an upstream LESS version update.
 
 ### Upstream
 

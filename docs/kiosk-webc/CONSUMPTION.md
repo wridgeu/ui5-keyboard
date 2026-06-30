@@ -232,7 +232,9 @@ cross-module type references on Windows.
 
 ### Exports Map Double-Dist Resolution
 
-**Problem:** The middleware constructs the module path from the CEM:
+**Problem:**
+
+The middleware constructs the module path from the CEM:
 
 ```javascript
 // ui5-tooling-modules/lib/rollup-plugin-webcomponents.js:440-441
@@ -244,11 +246,15 @@ If the CEM says `module: "dist/KioskKeyboard.js"`, the constructed path is
 `kiosk-keyboard-webc/dist/KioskKeyboard.js`. Without `"./dist/*": "./dist/*"`,
 this resolves through `"./*": "./dist/*"`, producing `dist/dist/KioskKeyboard.js`.
 
-**Root cause:** The exports map lacked the identity mapping that `@ui5/webcomponents`
+**Root cause:**
+
+The exports map lacked the identity mapping that `@ui5/webcomponents`
 has. Without it the middleware could not resolve the component module path, which
 manifested as a dev-server "hang".
 
-**Fix:** The exports map lists `"./dist/*": "./dist/*"` before `"./*": "./dist/*"`, so the identity mapping resolves the component module path (`kiosk-keyboard-webc/dist/KioskKeyboard.js`) instead of falling through to `dist/dist/KioskKeyboard.js`.
+**Fix:**
+
+The exports map lists `"./dist/*": "./dist/*"` before `"./*": "./dist/*"`, so the identity mapping resolves the component module path (`kiosk-keyboard-webc/dist/KioskKeyboard.js`) instead of falling through to `dist/dist/KioskKeyboard.js`.
 
 ## Future Considerations
 

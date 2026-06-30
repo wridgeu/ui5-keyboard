@@ -486,7 +486,9 @@ Height thresholds are configurable via CSS custom properties: `--kiosk-keyboard-
 
 Docked keyboards and numpad mode skip height class application (docked keyboards are viewport-driven; numpads are already compact).
 
-**Consumer overrides:** All default values are declared on `:host` with standard specificity. Consumer selectors with at least one class always win. For custom width breakpoints, wrap the keyboard in a container element and write `@container` rules targeting the keyboard's own `container-name: keyboard`.
+**Consumer overrides:**
+
+All default values are declared on `:host` with standard specificity. Consumer selectors with at least one class always win. For custom width breakpoints, wrap the keyboard in a container element and write `@container` rules targeting the keyboard's own `container-name: keyboard`.
 
 ### Key Visual Variants
 

@@ -665,7 +665,9 @@ manager.register("Mod+S", () => savePanel(), {
 // Scopes still apply - both target and scope must match.
 ```
 
-> **Focus fallback (Escape only):** Some browsers and UI5 rendering transitions
+> **Focus fallback (Escape only):**
+>
+> Some browsers and UI5 rendering transitions
 > move focus to a generic root node (body, UIArea container) before dispatching
 > the `keydown` event. For `Escape`, the manager reconstructs the composed path
 > from the most recently focused element so that target-scoped registrations
