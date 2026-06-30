@@ -1,5 +1,4 @@
 import { defineConfig } from "@playwright/test";
-import path from "node:path";
 import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright.shared.js";
 
 /**
@@ -24,7 +23,7 @@ export default defineConfig({
   projects: [{ name: "desktop", use: { browserName: "chromium" } }],
   webServer: ui5ServeWebServer({
     port: PORT,
-    cwd: path.resolve(__dirname),
+    cwd: __dirname,
     urlPath: "/test-resources/ui5/kiosk/e2e/visual/index.html",
   }),
 });

@@ -1,26 +1,8 @@
-/**
- * Filter out auto-generated files that tools should not rewrite.
- * Matches the same patterns as the former micromatch globs:
- *   **\/*.gen.d.ts   and   **\/src/generated/**
- */
-function exclude(files) {
-  return files.filter((f) => !f.endsWith(".gen.d.ts") && !f.replace(/\\/g, "/").includes("/src/generated/"));
-}
-
 export default {
-  "*.{ts,js,mjs,cjs,json,yaml,yml,md,html,css,less}": (files) => {
-    const filtered = exclude(files);
-    if (!filtered.length) return [];
-    const quoted = filtered.map((f) => `"${f}"`).join(" ");
-    return `oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern ${quoted}`;
-  },
-  "*.{ts,js,mjs,cjs}": (files) => {
-    const filtered = exclude(files);
-    if (!filtered.length) return [];
-    const quoted = filtered.map((f) => `"${f}"`).join(" ");
-    // oxlint ignores all .js (TS-authored project), so a staged .js file selects
-    // no lintable files; --no-error-on-unmatched-pattern keeps that from failing
-    // the hook (mirrors the oxfmt invocation above).
-    return `oxlint --fix --no-error-on-unmatched-pattern ${quoted}`;
-  },
+  // oxfmt skips generated files via .oxfmtignore; oxlint via its ignorePatterns.
+  // --no-error-on-unmatched-pattern keeps a batch of only-ignored files (a staged
+  // .js, or a *.gen.d.ts) from failing the hook with "no files matched".
+  "*.{ts,js,mjs,cjs,json,yaml,yml,md,html,css,less}":
+    "oxfmt --ignore-path .oxfmtignore --no-error-on-unmatched-pattern",
+  "*.{ts,js,mjs,cjs}": "oxlint --fix --no-error-on-unmatched-pattern",
 };
