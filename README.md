@@ -20,7 +20,9 @@ This repository bundles two complementary capabilities (keyboard shortcut manage
 
 ## Live Demo
 
-The [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml) workflow publishes a self-hosted demo to GitHub Pages at **https://wridgeu.github.io/ui5-keyboard/** on pushes to `main` that touch deployable sources (docs- and test-only changes are skipped via `paths-ignore`). It serves a static Fiori Launchpad with two tiles: the SAPUI5 demo app (the `ui5.hotkeys` + `ui5.kiosk` controls) and the framework-less "Raw Web Components Demo". The site is fully self-hosted (the SAPUI5 runtime is bundled into the artifact, no external CDN). The workflow provisions GitHub Pages on its first run, so no manual repository setup is required.
+**[Try it live](https://wridgeu.github.io/ui5-keyboard/)**: a self-hosted Fiori Launchpad with two tiles, the SAPUI5 demo app (`ui5.hotkeys` + `ui5.kiosk`) and the framework-less Raw Web Components demo. The SAPUI5 runtime is bundled into the artifact, so there is no external CDN.
+
+[`deploy-pages.yml`](./.github/workflows/deploy-pages.yml) publishes it on pushes to `main` that touch deployable sources (docs and tests are skipped). It provisions GitHub Pages on first run, so no manual setup is needed.
 
 ## Kiosk Keyboard Theme Preview
 
