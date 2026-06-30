@@ -13,7 +13,7 @@
 //     runtime; drop the specialist libraries sap.ushell declares but a keyboard
 //     launchpad never loads (3D viewport, charts, rich-text, cards, ...).
 //
-// Run via `npm run build:pages`. Pinned to SAPUI5 1.144.0; revisit the keep/drop
+// Run via `npm run build:pages`. Pinned to SAPUI5 1.149.0; revisit the keep/drop
 // lists on a framework bump.
 
 import { existsSync, readdirSync, rmSync, statSync } from "node:fs";

@@ -20,7 +20,7 @@
     "ui5-lib-kiosk-keyboard": "*"
   },
   "devDependencies": {
-    "@openui5/types": "1.144.0",
+    "@openui5/types": "1.149.0",
     "@sap-ux/preview-middleware": "~1.0.10",
     "@ui5/cli": "~4.0.55",
     "@ui5/linter": "~1.21.1",
