@@ -168,7 +168,7 @@ Both UI5 libraries use standard UI5 lifecycle management (`destroy()`) and coexi
 
 ## Development
 
-Monorepo using npm workspaces. Requires Node >= 24. CI runs on Node 24 for OIDC-based npm provenance publishing.
+Monorepo using npm workspaces. Requires Node >= 24 and npm >= 11.10.0 for development (Node 24 ships a satisfying npm). CI runs on Node 24 for OIDC-based npm provenance publishing. Published packages support Node >= 20.19, so library consumers are not required to be on Node 24.
 
 ```bash
 npm install                 # Install all workspaces

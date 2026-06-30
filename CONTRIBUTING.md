@@ -11,7 +11,7 @@ npm install        # Installs all workspaces + applies dependency patches
 npm run build      # Builds library dist/ artifacts
 ```
 
-Requires **Node >= 24**. CI runs on Node 24.
+Requires **Node >= 24** and **npm >= 11.10.0** for development (Node 24 ships a satisfying npm). CI runs on Node 24. Published packages support Node >= 20.19, so library consumers are not required to be on Node 24.
 
 ## Reporting Issues
 
