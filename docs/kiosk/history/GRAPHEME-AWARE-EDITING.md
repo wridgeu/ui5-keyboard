@@ -167,7 +167,7 @@ ArrowUp/ArrowDown use `resolveVerticalCaret()` which operates on line boundaries
 
 - **`Intl.Segmenter` availability**: Fully supported in Chrome 87+ (2020), Edge 87+ (2020), Safari 15.4+ (2022), Firefox 125+ (2024). Since the kiosk keyboard targets embedded Chromium kiosks, this is a non-issue. OpenUI5 1.120+ already dropped IE11.
 - **Performance**: `Intl.Segmenter` is instantiated once at module level (singleton). Per-keystroke cost is segmenting the substring before the cursor, negligible for input field lengths.
-- **Fallback**: The implementation now uses a defensive fallback to single code-unit steps when `Intl.Segmenter` is unavailable or throws at runtime. This avoids module-init/runtime failures in constrained environments while preserving grapheme-aware behavior in modern browsers.
+- **No fallback**: `Intl.Segmenter` is instantiated once at module load with no guard, and no single-code-unit fallback is provided. Given the embedded-Chromium target above, a fallback would only add untested code paths for environments the library does not support.
 - **Selection deletion**: When there is an active selection (`start !== end`), backspace already correctly deletes the entire selection regardless of grapheme boundaries. No change needed for this path.
 
 ## Migration

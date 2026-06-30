@@ -3,11 +3,18 @@
 Based on the [I18N-EXTENSIBILITY proposal](./I18N-EXTENSIBILITY.md).
 Incorporates findings from a colleague's plan (merged and superseded).
 
-> **Implementation note:** This plan envisioned keeping `src/internal/i18n.ts`
-> as a thin re-export facade for import stability. During implementation the
-> facade was removed; `KioskKeyboard.ts` and `KioskKeyboardRenderer.ts`
-> import directly from `src/internal/i18n-registry.ts`. The public API is
-> unchanged: consumers use the static methods on `KioskKeyboard`.
+> **Implementation note:** This is the _original_ plan and was not updated to
+> match what shipped, so the API below is historical design intent, not the
+> shipped surface. The feature was scoped down substantially during
+> implementation: the four-method enhancement/override API described here
+> (`configureI18n`, `resetI18nConfiguration`, `setI18nOverrideHook`,
+> `clearI18nOverrideHook`) and the async enhancement-bundle machinery were not
+> built. What shipped is a single static method,
+> `KioskKeyboard.setI18nResolver(fn | null)`, backed by
+> `src/internal/i18n-registry.ts` (`getText` resolves base library bundle ->
+> resolver callback). The planned `src/internal/i18n.ts` re-export facade was
+> also dropped; `KioskKeyboard.ts` and `KioskKeyboardRenderer.ts` import the
+> registry directly.
 
 ---
 
