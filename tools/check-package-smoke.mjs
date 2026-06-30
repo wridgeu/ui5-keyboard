@@ -14,7 +14,12 @@ const packages = [
     name: "ui5-lib-kiosk-keyboard",
     dir: path.join(repoRoot, "packages", "kiosk-keyboard"),
     buildArgs: ["run", "build:kiosk"],
-    requiredFiles: ["README.md", "dist/.ui5/build-manifest.json", "dist/resources/ui5/kiosk/library.js"],
+    requiredFiles: [
+      "README.md",
+      "src/KioskKeyboard.gen.d.ts",
+      "dist/.ui5/build-manifest.json",
+      "dist/resources/ui5/kiosk/library.js",
+    ],
   },
   {
     name: "kiosk-keyboard-webc",
