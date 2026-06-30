@@ -1171,7 +1171,7 @@ At narrow key widths (at or below `7rem` per key), dual keys automatically hide 
 
 This behavior is driven by a CSS `@container` query on individual keys (`container-type: inline-size`). It applies only to dual keys (those with both icon and label).
 
-### Accessibility
+### Icon and label accessibility
 
 - **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
