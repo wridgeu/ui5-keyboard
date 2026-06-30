@@ -33,7 +33,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "clean": "rimraf dist",
-    "generate": "ts-interface-generator",
+    "generate": "ts-interface-generator --jsdoc verbose",
     "prebuild": "npm run generate",
     "build": "ui5 build --clean-dest --create-build-manifest",
     "prepublishOnly": "node ../../tools/copy-license.mjs && npm run build",
