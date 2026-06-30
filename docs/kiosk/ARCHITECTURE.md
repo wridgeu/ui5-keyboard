@@ -25,7 +25,7 @@ internal/key-grid-navigation.ts   Keyboard grid navigation delegate (arrow keys,
 internal/fkey-controller.ts       FKeyController: F-key dispatch (Virtual fires keyPress + caret nav; Native synthesizes keydown)
 internal/native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting across instances
 internal/auto-show-behavior.ts    Auto-show focus-in/out listeners, auto-type detection, deferred close
-internal/controls-delegation-controller.ts  ControlsDelegationController: reconciles the controls-aggregation focus delegates by resolved id
+internal/controls-delegation-controller.ts  ControlsDelegationController: reconciles the `controls`-property focus delegates by resolved id
 internal/responsive-sizing-controller.ts  ResponsiveSizingController: ResizeHandler-driven cqShort/cqTiny height classes
 internal/physical-key-highlight.ts  PhysicalKeyHighlight: mirrors the hardware keyboard onto on-screen keys, syncs shift/caps
 internal/backspace-repeat-behavior.ts  BackspaceRepeatBehavior: press-and-hold Backspace auto-repeat lifecycle
@@ -425,7 +425,7 @@ When the KioskKeyboard shows and `_nativeKbSuppression.shouldDeferToNative()` re
 State is tracked via:
 
 - Per instance: `_suppressedInputId` (which target this keyboard currently claims)
-- Shared across instances: static `_inputModeSuppressions` map keyed by target input ID with `{ originalInputMode, refCount }`
+- Shared across instances: static `_suppressions` map keyed by target input ID with `{ originalInputMode, refCount }`
 
 This makes suppression safe for multi-keyboard setups targeting the same input: each show/claim increments a ref-count, each close/destroy decrements it, and the original `inputmode` is restored only when the last claimant releases the input. When the target changes, the previous target is released before suppressing the new one.
 
@@ -607,7 +607,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode            |
 | `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                                |
 | `controls` with `autoShow`              | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`           |
-| `controls` aggregation churn            | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`              |
+| `controls` property churn               | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`              |
 | Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                                    |
 | Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                           |
 | Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                             |
@@ -646,7 +646,7 @@ packages/kiosk-keyboard/
       fkey-controller.ts      FKeyController (Virtual/Native F-key dispatch + caret nav)
       native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting
       auto-show-behavior.ts   Auto-show focus-in/out listeners, deferred close
-      controls-delegation-controller.ts  ControlsDelegationController (controls-aggregation delegate reconciliation)
+      controls-delegation-controller.ts  ControlsDelegationController (`controls`-property delegate reconciliation)
       responsive-sizing-controller.ts  ResponsiveSizingController (cqShort/cqTiny height classes)
       physical-key-highlight.ts  PhysicalKeyHighlight (hardware keyboard mirror)
       backspace-repeat-behavior.ts  BackspaceRepeatBehavior (press-and-hold delete)

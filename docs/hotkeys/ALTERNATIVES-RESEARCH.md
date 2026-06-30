@@ -49,7 +49,7 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 | 1   | Debug mode with console logging                      | Not implemented. Diagnostics rely on `sap/base/Log` warnings; no debug-mode toggle |
 | 2   | External conflict detection (browser/SAP blocklists) | Done. `validate.ts` with `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS`                   |
 | 3   | Hotkey validation API (`validateHotkey()`)           | Done. `validate.ts` with `validateHotkey`, `assertValidHotkey`, `checkHotkey`      |
-| 4   | Handle mutation (`setOptions()`)                     | Done. all fields except `scope` updatable                                          |
+| 4   | Handle mutation (`setOptions()`)                     | Done. all fields except `scope` and `conflictBehavior` updatable                   |
 | 5   | Type-safe hotkey strings                             | Done. `Hotkey` template literal union type                                         |
 | 6   | Multi-key sequences                                  | Done. separate `SequenceManager` class                                             |
 | 7   | Hotkey recording                                     | Done. `HotkeyRecorder` class                                                       |

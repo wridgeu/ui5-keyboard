@@ -85,7 +85,7 @@ export default class ResponsiveSizingController extends BaseObject {
    * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
    *
    * Width breakpoints are handled purely by CSS `@container` queries (see
-   * KioskKeyboard.container-queries.css), so no JS width measurement is needed.
+   * KioskKeyboard.less), so no JS width measurement is needed.
    */
   private _applyClasses(dom: HTMLElement): void {
     const cs = getComputedStyle(dom);

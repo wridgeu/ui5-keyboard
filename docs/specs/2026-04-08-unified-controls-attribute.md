@@ -68,10 +68,10 @@ controls = "";
 
 ### Active target getter (read-only)
 
-| Package       | Method                                                                 | Return type                                       |
-| ------------- | ---------------------------------------------------------------------- | ------------------------------------------------- |
-| UI5 control   | `getActiveControl(): Control \| null`                                  | `sap.ui.core.Control`                             |
-| Web component | `get activeElement(): HTMLInputElement \| HTMLTextAreaElement \| null` | `HTMLInputElement \| HTMLTextAreaElement \| null` |
+| Package       | Method                                                                      | Return type                                       |
+| ------------- | --------------------------------------------------------------------------- | ------------------------------------------------- |
+| UI5 control   | `getActiveControl(): Control \| null`                                       | `sap.ui.core.Control`                             |
+| Web component | `getActiveTargetElement(): HTMLInputElement \| HTMLTextAreaElement \| null` | `HTMLInputElement \| HTMLTextAreaElement \| null` |
 
 The naming reflects each package's abstraction level: "control" for UI5, "element" for the framework-agnostic web component.
 
