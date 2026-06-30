@@ -2,7 +2,7 @@
   <a href="https://www.npmjs.com/package/ui5-lib-hotkeys"><img src="https://img.shields.io/npm/v/ui5-lib-hotkeys.svg" alt="npm"></a>
   <a href="https://npmx.dev/package/ui5-lib-hotkeys"><img src="https://img.shields.io/npm/v/ui5-lib-hotkeys?label=npmx.dev&color=0a0a0a" alt="npmx"></a>
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="https://openui5.org/"><img src="https://img.shields.io/badge/OpenUI5-1.144.0-green.svg" alt="UI5"></a>
+  <a href="https://openui5.org/"><img src="https://img.shields.io/badge/OpenUI5-1.136%20LTS-green.svg" alt="UI5"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-blue.svg" alt="TypeScript"></a>
 </p>
 
@@ -14,8 +14,8 @@ Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications.
 
 > [!IMPORTANT]
 > **UI5 compatibility**
-> Supported package baseline: UI5 1.144.0.
-> Lowest implementation floor: UI5 1.120, because the library uses `DataType.registerEnum()` from 1.120.
+> Declared floor: UI5 1.136, a long-term-maintenance (LTS) release and the lowest version SAP's UI5 tooling accepts in `manifest.json`. The package is built, type-checked, and tested against 1.136.
+> True implementation floor: UI5 1.120. The library only uses APIs available since 1.120 (`DataType.registerEnum()`, `Lib.init({ apiVersion: 2 })`), so apps pinned to an older LTS down to 1.120 work too.
 > `Lib.init()` is available from 1.118, so it does not raise the floor.
 
 A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard shortcuts with scope-based activation, cross-platform modifier normalization, multi-key sequences, hotkey recording, and proper UI5 lifecycle integration.
@@ -122,7 +122,7 @@ Before choosing a mode, declare the library in your app `manifest.json`:
 }
 ```
 
-Ensure your app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.120**, the implementation floor noted above.
+Ensure your app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.136**, the libraries' declared LTS floor. The code only needs 1.120, so an app pinned to an older LTS down to 1.120 also works.
 
 ### 1. Installed package + UI5 Tooling (default)
 
@@ -143,11 +143,11 @@ builder:
       - ui5.hotkeys
 ```
 
-Notes:
-
-- Use the UI5 project name `ui5.hotkeys` here, not the npm package name `ui5-lib-hotkeys`.
-- `includeDependency` is a build concern. `ui5 serve` can resolve the installed UI5 dependency without it.
-- The packaged build manifest exists so the distributable can be reused as a build result in dist-based setups instead of always rebuilding from source.
+> [!NOTE]
+>
+> - Use the UI5 project name `ui5.hotkeys` here, not the npm package name `ui5-lib-hotkeys`.
+> - `includeDependency` is a build concern. `ui5 serve` can resolve the installed UI5 dependency without it.
+> - The packaged build manifest exists so the distributable can be reused as a build result in dist-based setups instead of always rebuilding from source.
 
 If you deploy the built app to a plain static server while bootstrapping UI5 from CDN, also map the library namespace to the copied `resources/` folder:
 
@@ -176,9 +176,9 @@ builder:
     - name: ui5-tooling-transpile-task
       afterTask: replaceVersion
       configuration:
-        transpileDependencies: true
+        transpileDependencies: true # source-mode only: transpiles the library's shipped src/*.ts (dist needs none)
         transformTypeScript:
-          allowDeclareFields: true
+          allowDeclareFields: true # match the library build; keeps the TS controls' typed class fields
 server:
   customMiddleware:
     - name: ui5-tooling-transpile-middleware
@@ -189,11 +189,11 @@ server:
           allowDeclareFields: true
 ```
 
-Notes:
-
-- No `framework.libraries` entry is required for `ui5.hotkeys`; this is a custom UI5 dependency, not a framework library.
-- Keep using the `manifest.json` dependency shown above.
-- If your app build should include the library resources in its own `dist/`, keep `builder.settings.includeDependency: [ui5.hotkeys]` in addition to the transpile setup.
+> [!NOTE]
+>
+> - No `framework.libraries` entry is required for `ui5.hotkeys`; this is a custom UI5 dependency, not a framework library.
+> - Keep using the `manifest.json` dependency shown above.
+> - If your app build should include the library resources in its own `dist/`, keep `builder.settings.includeDependency: [ui5.hotkeys]` in addition to the transpile setup.
 
 ### 3. Static middleware escape hatch
 

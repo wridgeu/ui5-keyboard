@@ -51,13 +51,13 @@ Both UI5-native libraries (`ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard`) ship:
 - the source UI5 project (`src/`, `ui5.yaml`) for source-first UI5 Tooling consumption
 - prebuilt `dist/resources/...` artifacts, typings, and `dist/.ui5/build-manifest.json` for direct dist serving and tooling reuse
 
-That enables 3 app-side consumption modes. No project shim is required.
+That enables three app-side consumption modes, no project shim required:
 
-1. **Installed package + UI5 Tooling** (default, recommended for runtime). Resolve the library from `node_modules`; add the UI5 project names (`ui5.hotkeys`, `ui5.kiosk`, as shown by `ui5 tree --flat`) to `builder.settings.includeDependency` if your app build should copy the resources into `dist/`. For CDN-bootstrapped static deployments, map the namespaces to the copied `resources/` via `data-sap-ui-resource-roots`.
-2. **Source package + UI5 Tooling transpilation** (monorepos, local development). Enable `ui5-tooling-transpile` with `transpileDependencies: true` in both the build task and the dev-server middleware.
-3. **Static middleware escape hatch**. Serve the dist `resources/` via `ui5-middleware-servestatic` without the dependency participating in your app's UI5 dependency resolution.
+1. **Installed package + UI5 Tooling** (default, recommended). Resolve the library from `node_modules`. Add the UI5 project name (`ui5.hotkeys`, `ui5.kiosk`) to `builder.settings.includeDependency` if your build should copy the resources into `dist/`; for CDN-bootstrapped static deploys, map the namespaces via `data-sap-ui-resource-roots`.
+2. **Source package + UI5 Tooling transpilation** (monorepos, local dev). Enable `ui5-tooling-transpile` with `transpileDependencies: true` in both the build task and the dev-server middleware.
+3. **Static middleware escape hatch**. Serve the dist `resources/` via `ui5-middleware-servestatic`, without the dependency joining your app's UI5 dependency resolution.
 
-The full per-package `ui5.yaml`, CDN, and middleware snippets live in the package READMEs ([hotkeys](./packages/hotkeys/README.md), [kiosk-keyboard](./packages/kiosk-keyboard/README.md)). Both libraries add no CSP requirements (no `eval`, inline script, or remote connections); under a strict Content-Security-Policy, self-hosting the copied `resources/` avoids any cross-origin `script-src` allowance.
+Per-package `ui5.yaml`, CDN, and middleware snippets are in the package READMEs ([hotkeys](./packages/hotkeys/README.md), [kiosk-keyboard](./packages/kiosk-keyboard/README.md)). Neither library needs CSP exceptions (no `eval`, inline script, or remote connections); under a strict Content-Security-Policy, self-hosting the copied `resources/` avoids any cross-origin `script-src` allowance.
 
 In all three modes, keep the custom library declarations in your app `manifest.json`:
 
@@ -74,7 +74,7 @@ In all three modes, keep the custom library declarations in your app `manifest.j
 }
 ```
 
-Ensure the consuming app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.144.0**, the floor both libraries declare in their `manifest.json` and are built, type-checked, and tested against.
+Ensure the consuming app's `minUI5Version` (under `sap.ui5.dependencies`) is at least **1.136**, an LTS release both libraries declare in their `manifest.json` and are built, type-checked, and tested against. The code only uses APIs available since **1.120**, so an app pinned to an older LTS down to 1.120 works too (see the package READMEs).
 
 `ui5.hotkeys` is lightweight (no CSS, no heavy dependencies) and best loaded eagerly at app startup.
 
