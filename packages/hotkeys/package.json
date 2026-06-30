@@ -42,7 +42,7 @@
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },
   "devDependencies": {
-    "@openui5/types": "1.144.0",
+    "@openui5/types": "1.136.18",
     "@ui5/cli": "~4.0.55",
     "@ui5/linter": "~1.21.1",
     "ui5-tooling-transpile": "~3.11.1"
