@@ -117,6 +117,8 @@ HotkeyManager.getInstance().register({
 });
 ```
 
+> Note: this example predates the instance-lifecycle change. The `getInstance()` singleton was later removed in favor of `new HotkeyManager()` owned by the component (see [HOTKEYS-INSTANCE-LIFECYCLE](../../hotkeys/history/HOTKEYS-INSTANCE-LIFECYCLE.md)), and `register()` now takes `(hotkey, handler, options)`.
+
 ## Handler change
 
 Current `_handleKeyAction` F-key block:

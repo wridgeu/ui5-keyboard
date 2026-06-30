@@ -40,37 +40,7 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 | Hotkey recording   | `HotkeyRecorder`                  | `HotkeyRecorder`                           |
 | Type safety        | Template literal union type       | Template literal union type (`Hotkey`)     |
 
-## 3. Implementation Status
-
-### Completed Features
-
-| #   | Feature                                              | Status                                                                             |
-| --- | ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 1   | Debug mode with console logging                      | Not implemented. Diagnostics rely on `sap/base/Log` warnings; no debug-mode toggle |
-| 2   | External conflict detection (browser/SAP blocklists) | Done. `validate.ts` with `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS`                   |
-| 3   | Hotkey validation API (`validateHotkey()`)           | Done. `validate.ts` with `validateHotkey`, `assertValidHotkey`, `checkHotkey`      |
-| 4   | Handle mutation (`setOptions()`)                     | Done. all fields except `scope` and `conflictBehavior` updatable                   |
-| 5   | Type-safe hotkey strings                             | Done. `Hotkey` template literal union type                                         |
-| 6   | Multi-key sequences                                  | Done. separate `SequenceManager` class                                             |
-| 7   | Hotkey recording                                     | Done. `HotkeyRecorder` class                                                       |
-| 8   | Key state tracking                                   | Done. `KeyStateTracker` class                                                      |
-| 9   | Disallowed shortcut warnings at registration time    | Done. logged via `_logValidationWarnings()` on register                            |
-| 10  | AltGr guard (Windows)                                | Done. tracks `event.location` for right-Alt                                        |
-| 11  | Target element binding                               | Done. `target` option with `composedPath()`-based matching (innermost wins)        |
-| 12  | Unhandled key callback                               | Done. `setUnhandledHandler()` with reason enum                                     |
-| 13  | Router integration                                   | Done. `enableRouterIntegration()` with `beforeRouteMatched`                        |
-| 14  | Dialog scope lifecycle                               | Done. manual `pushScope`/`popScope` for non-route scopes                           |
-
-### Remaining Ideas (Nice to Have)
-
-| #   | Feature                                                     | Effort | Impact |
-| --- | ----------------------------------------------------------- | ------ | ------ |
-| 1   | Visual devtools overlay (separate module)                   | High   | Medium |
-| 2   | `keyup` event support                                       | Low    | Low    |
-| 3   | `ShortcutHintsMixin` integration for UI5 controls           | Medium | Low    |
-| 4   | `requireReset` option (fire once, require full key release) | Low    | Low    |
-
-## 4. FLP & Standalone Compatibility
+## 3. FLP & Standalone Compatibility
 
 The library works in both standalone and FLP because:
 
@@ -79,7 +49,7 @@ The library works in both standalone and FLP because:
 - Lazy `sap.m` loading, no hard dependency
 - Scope stack is manual, not tied to FLP shell
 
-FLP-reserved shortcuts (F6, Shift+F6, Ctrl+0) are included in `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS` blocklists. Registration warnings are logged when these are used.
+FLP-reserved and browser shortcuts are tracked in the `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS` blocklists: `F6` is in both, `Shift+F6` is SAP-only, and `Ctrl+0` is browser-only. Registration warnings are logged when these are used.
 
 ## References
 

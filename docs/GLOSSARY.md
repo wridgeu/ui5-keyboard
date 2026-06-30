@@ -40,22 +40,6 @@ The EventDispatcher's pre-filter step (`_preFilterEvent`) checks for `event.isCo
 
 This pattern is used by `KeyboardDispatchGuard`, the handle returned from `HotkeyManager.suspendDispatch()`.
 
-### The problem it solves
-
-Without RAII guards, suspending and resuming dispatch would use paired start/stop calls:
-
-```ts
-// Fragile - easy to forget the resume call
-manager.suspendDispatch();
-try {
-  doSomething();
-} finally {
-  manager.resumeDispatch(); // What if someone else also suspended?
-}
-```
-
-This breaks down when multiple callers need to suspend independently (e.g., two nested dialogs). A boolean flag can be toggled by any caller, and the first one to resume accidentally enables dispatch while the second still expects it to be suspended.
-
 ### How the guard works
 
 ```ts
@@ -73,24 +57,6 @@ Key properties:
 - **Idempotent release**: Calling `guard.release()` twice is safe. The second call is a no-op.
 - **Invalidation on destroy**: When `HotkeyManager.destroy()` is called, all outstanding guards are invalidated (`isActive` set to `false`). No stale guards can interfere with a fresh manager instance.
 - **Observable state**: `guard.isActive` indicates whether the guard is still suspending dispatch. `manager.isDispatchSuspended()` indicates whether any guard is active.
-
-### Nested guards example
-
-```ts
-// Dialog opens - suspend dispatch
-const dialogGuard = manager.suspendDispatch("dialog");
-
-// Confirmation popover opens inside dialog - suspend again
-const popoverGuard = manager.suspendDispatch("confirmation");
-
-// User closes popover
-popoverGuard.release();
-// Still suspended - dialogGuard is active
-
-// User closes dialog
-dialogGuard.release();
-// Now dispatch resumes - both guards released
-```
 
 ### What happens during suspension
 

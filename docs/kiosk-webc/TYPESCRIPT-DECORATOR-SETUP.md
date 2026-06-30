@@ -79,7 +79,7 @@ Events are declared with the `event-strict` decorator and typed via `eventDetail
 @event("key-press", { bubbles: true, cancelable: true })
 @event("after-open", { bubbles: true })
 class KioskKeyboard extends UI5Element {
-  eventDetails!: {
+  override eventDetails!: {
     "key-press": KeyPressEventDetail;
     "after-open": OpenStateChangeEventDetail;
   };

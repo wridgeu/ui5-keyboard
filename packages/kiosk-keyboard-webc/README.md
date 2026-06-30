@@ -204,8 +204,6 @@ The demo app in this repository uses Path A (CEM-driven) for the `kiosk-keyboard
 
 For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events. Since UI5 >= 1.138, camelCase event names in `metadata.events` auto-convert to kebab-case DOM events (e.g. `keyPress` maps to `key-press`), so explicit `mapping: { to: "..." }` on events is not needed.
 
-See the demo-app README for a minimal bridge code example and scoping constraints.
-
 ```ts
 import WebComponent from "sap/ui/core/webc/WebComponent";
 import "kiosk-keyboard-webc/bundle";
@@ -216,7 +214,7 @@ const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
     properties: {
       layout: { type: "string", defaultValue: "", mapping: { type: "property", to: "layout" } },
       docked: { type: "boolean", defaultValue: false, mapping: { type: "property", to: "docked" } },
-      // ... see the demo-app README for the full bridge property mapping reference
+      // ... additional property/event/method/association mappings
     },
   },
 });
@@ -336,9 +334,6 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `insertText(text)`         | Inserts text at the caret of the active target (cursor-tracked, dispatches a native `input` event). No-op with no active target. Call from a `key-press` handler to implement a custom `{token}` key. |
 | `deleteBackward()`         | Deletes one grapheme before the caret of the active target. Returns whether anything was removed; no-op with no active target.                                                                        |
 | `getActiveTargetElement()` | Returns the resolved native input/textarea of the active target, or `null` (re-resolves each call). Mirrors the UI5 control's method of the same name.                                                |
-
-`after-open` and `after-close` fire synchronously when the `open` state flips.
-They report the state transition itself, not animation completion.
 
 ## Static API
 
@@ -670,23 +665,11 @@ kiosk-keyboard {
 }
 ```
 
-| Property                           | Default | Description                                                       |
-| ---------------------------------- | ------- | ----------------------------------------------------------------- |
-| `--kiosk-keyboard-dual-direction`  | `row`   | Flex direction (`row`, `column`, `row-reverse`, `column-reverse`) |
-| `--kiosk-keyboard-dual-icon-size`  | `1em`   | Icon font size in dual mode                                       |
-| `--kiosk-keyboard-dual-label-size` | `1em`   | Label font size in dual mode                                      |
-| `--kiosk-keyboard-dual-gap`        | `0.3em` | Gap between icon and label                                        |
+The `--kiosk-keyboard-dual-*` properties are documented in [Public CSS Custom Properties](#public-css-custom-properties).
 
 #### Navigation key overrides
 
-Navigation and function keys (`{fkey:*}`) default to column layout with scaled icons. These properties override the dual defaults for nav keys only:
-
-| Property                           | Default                                     | Description                                                |
-| ---------------------------------- | ------------------------------------------- | ---------------------------------------------------------- |
-| `--kiosk-keyboard-fkey-direction`  | `column`                                    | Flex direction for nav/function keys                       |
-| `--kiosk-keyboard-fkey-icon-size`  | `clamp(1em, 15cqi, 3em)`                    | Icon size, scales with key width via container query units |
-| `--kiosk-keyboard-fkey-label-size` | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Label size, scales responsively with key width             |
-| `--kiosk-keyboard-fkey-gap`        | `0.05em`                                    | Gap between icon and label                                 |
+Navigation and function keys (`{fkey:*}`) default to column layout with scaled icons. The `--kiosk-keyboard-fkey-*` properties (see [Public CSS Custom Properties](#public-css-custom-properties)) override the dual defaults for nav keys only:
 
 ```css
 /* Force nav keys to row layout (icon beside label, like other dual keys) */
@@ -968,130 +951,11 @@ kiosk-keyboard {
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Width-responsive font scaling uses CSS `@container` queries. At narrow widths (≤ 30 rem / ≤ 20 rem), `--kiosk-keyboard-key-font-size` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. In the extra-narrow `≤ 20rem` mode, non-numpad keys also switch from `--kiosk-keyboard-key-padding` to `--kiosk-keyboard-key-padding-xs`. The default reduces horizontal padding from `0.25rem` to `0.125rem` because wide glyphs such as `@`, `%`, and `&` become visually cramped before the touch target itself needs to shrink. The `min(...)` default keeps any smaller consumer override intact, while still letting consumers opt into a roomier or tighter compact mode explicitly. Height-responsive sizing detects when the host element's layout box is smaller than the keyboard's natural content height and reduces key height, gaps, and modifier font-size automatically.
+### Responsive Sizing
 
-### Custom Width Breakpoints
+The keyboard adapts to its container automatically. Width-responsive font scaling uses CSS `@container` queries (capped at narrow widths, though a smaller consumer override is preserved), and height-responsive scaling reduces key height, gaps, and modifier font-size when the host's layout box is smaller than the keyboard's natural content height. Override any `--kiosk-keyboard-*` property on the host or a parent (including the `--kiosk-keyboard-cq-*-threshold` height breakpoints) to tune this behavior. See the [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md) for default values, breakpoint thresholds, scaling factors, constrained-container patterns, and complex-script tuning.
 
-The keyboard responds to its container width via CSS container queries
-at 30rem (narrow) and 20rem (compact). To define custom breakpoints,
-wrap the keyboard in a container and override CSS custom properties at
-your chosen widths:
-
-```css
-.my-panel {
-  container-type: inline-size;
-}
-
-@container (max-width: 40rem) {
-  kiosk-keyboard.my-keyboard {
-    --kiosk-keyboard-key-font-size: 1rem;
-  }
-}
-
-@container (max-width: 25rem) {
-  kiosk-keyboard.my-keyboard {
-    --kiosk-keyboard-key-font-size: 0.875rem;
-    --kiosk-keyboard-key-padding: 0 0.125rem;
-  }
-}
-```
-
-Container queries let you set any CSS property at any number of
-breakpoints based on the keyboard's own width.
-
-#### Tuning for Complex-Script Layouts
-
-Layouts with visually complex glyphs (Arabic, Thai, Devanagari, CJK) may
-appear cramped at narrow widths because their characters need more
-horizontal space than Latin letters at the same font size. The built-in
-Arabic layout at phone-sm width (320 px) is a good reference case.
-
-Override `--kiosk-keyboard-key-font-size` on the host to tune readability
-for your target script and container width:
-
-```css
-/* Slightly reduce font size for the Arabic layout at narrow widths */
-kiosk-keyboard[layout="arabic"] {
-  --kiosk-keyboard-key-font-size: 0.85rem;
-}
-```
-
-At narrow widths, the responsive container queries cap font size via
-`min()` but cannot raise it above your value, so a smaller override is
-preserved. At desktop widths no cap applies and your value is used
-as-is. This approach works for any layout, including custom layouts
-supplied via `instanceLayouts`.
-
-The `--kiosk-keyboard-cq-*-threshold` variables control when height-responsive classes (`kiosk-keyboard--cq-short`, `kiosk-keyboard--cq-tiny`) activate. Override them to tune height breakpoints for your container:
-
-```css
-kiosk-keyboard {
-  --kiosk-keyboard-cq-short-threshold: 14rem;
-}
-```
-
-For troubleshooting, the host element (`<kiosk-keyboard>`) toggles internal classes `kiosk-keyboard--cq-short` and `kiosk-keyboard--cq-tiny`. They indicate when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--kiosk-keyboard-*` variables instead of targeting those classes from app CSS.
-
-#### Responsive Behavior Overview
-
-| Scenario                                                     | Detection                                                                  | Adapts automatically?      | Consumer CSS needed?                 |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------- | -------------------------- | ------------------------------------ |
-| **Width** (any container width)                              | CSS `@container` queries at 30rem / 20rem                                  | Yes                        | No                                   |
-| **Height** (flex/grid parent with fixed height)              | Host inherits constraint via `max-height: 100%; min-height: 0`             | Yes                        | No                                   |
-| **Height** (explicit constraint on host)                     | Host `max-height` or `height` limits `clientHeight`                        | Yes                        | No                                   |
-| **Height** (`height: auto` parent, unconstrained)            | `max-height: 100%` resolves to no constraint                               | Correctly stays full size  | No                                   |
-| **Height** (deeply nested ancestor constraint, no flex/grid) | Intermediate `height: auto` ancestors break `max-height: 100%` propagation | No                         | `max-height` or `height` on the host |
-| **Docked mode**                                              | Viewport-driven, fixed positioning                                         | Skipped (always full size) | No                                   |
-| **Compact density**                                          | `data-ui5-compact-size` attribute                                          | Yes                        | No                                   |
-
-Height-responsive classes (`kiosk-keyboard--cq-short` below 16rem, `kiosk-keyboard--cq-tiny` below 12rem) activate when the host element's layout box is smaller than the keyboard's natural content height. Both thresholds are configurable via `--kiosk-keyboard-cq-short-threshold` and `--kiosk-keyboard-cq-tiny-threshold`.
-
-#### Constrained Containers
-
-The host element sets `max-height: 100%; min-height: 0; overflow: hidden` by default, so placing the keyboard inside a flex or grid parent with a fixed height automatically triggers responsive scaling without any CSS on the keyboard itself.
-
-```html
-<!-- Automatic: flex parent constrains the host -->
-<div style="display: flex; flex-direction: column; height: 250px">
-  <kiosk-keyboard></kiosk-keyboard>
-</div>
-
-<!-- Automatic: grid parent constrains the host -->
-<div style="display: grid; grid-template-rows: 1fr; height: 250px">
-  <kiosk-keyboard></kiosk-keyboard>
-</div>
-
-<!-- Automatic: explicit constraint on the host -->
-<kiosk-keyboard style="max-height: 250px"></kiosk-keyboard>
-
-<!-- Manual CSS needed: height: auto ancestor chain breaks max-height: 100% propagation -->
-<div style="max-height: 250px; overflow: hidden">
-  <kiosk-keyboard style="max-height: inherit"></kiosk-keyboard>
-</div>
-```
-
-Consumer CSS overrides always win. The host's `max-height`, `min-height`, and `overflow` can be overridden from outside the shadow DOM without `!important`:
-
-```css
-kiosk-keyboard.my-keyboard {
-  max-height: none;
-  overflow: visible;
-}
-```
-
-Customization hooks: `::part()` selectors for structural changes, `--kiosk-keyboard-*` CSS custom properties for sizing and theming. See [CSS Parts](#css-parts) and [Public CSS Custom Properties](#public-css-custom-properties).
-
-Most runtime style changes are picked up automatically through rendering and `ResizeObserver`. If you change `--kiosk-keyboard-*` sizing variables at runtime within a fixed-height host, the rendered outer size may not change, so `ResizeObserver` will not fire. In that case, call `refreshResponsiveState()` after the style update to force a fresh responsive measurement.
-
-#### Label Sizing
-
-Key labels use three scaling tiers:
-
-| Tier                  | Applies to                                     | Scaling                                                                                                                                           |
-| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling, rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                              |
-| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, calc(100cqi * 0.35), 1em)`.                                                    |
-| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Defaults to the theme's base font-size (`--sapFontSize`). Scaled down in height-constrained containers via `--kiosk-keyboard-modifier-font-size`. |
+If you change `--kiosk-keyboard-*` sizing variables at runtime within a fixed-height host, the rendered outer size may not change, so `ResizeObserver` will not fire; call `refreshResponsiveState()` after the style update to force a fresh responsive measurement.
 
 Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stacking layer.
 

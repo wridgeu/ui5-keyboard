@@ -196,13 +196,7 @@ Device coverage is expressed as Playwright **projects** (see Config files above)
 
 ### Troubleshooting
 
-**Snapshot diff you didn't expect**: Open `npm run test:e2e:report` and compare the `actual`/`expected`/`diff` triplet. If the change is intentional, regenerate with the matching `*:update` script; if it's jitter on a known-unstable interactive snapshot, apply the `SOFT` per-assertion tolerance rather than relaxing the global threshold.
-
-**Snapshot missing for a project**: Playwright fails a snapshot assertion if no baseline exists for the current project. Run the project's `*:update` script (or `test:e2e:update:all`) to generate it, then commit the new `__baselines__/<project>/` files.
-
-**Baseline diffs after a Chromium bump**: Expected. Regenerate ALL baselines across both packages and all device projects, and review the diffs visually before committing.
-
-**Port conflicts**: Check the port map below. Kill stale processes on the conflicting port, or use `npm run test:e2e:all-devices:sequential` to avoid concurrent port pressure.
+**Jitter on a known-unstable interactive snapshot**: Apply the `SOFT` per-assertion tolerance (see Mismatch threshold above) rather than relaxing the global threshold.
 
 ## Port Map
 

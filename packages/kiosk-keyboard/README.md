@@ -847,7 +847,7 @@ keyboard.show(); // slides in
 keyboard.close(); // slides out
 ```
 
-Both `show()` and `close()` are idempotent; calling them multiple times has no effect. They fire `afterOpen` and `afterClose` immediately as state-change hooks (not after CSS transition completion).
+Both `show()` and `close()` are idempotent; calling them multiple times has no effect. They fire `afterOpen` and `afterClose` immediately.
 
 The docked keyboard uses `position: fixed` with `z-index: var(--ui5KioskKeyboard-dockedZIndex)` (default `100`) and a `box-shadow` for visual separation.
 
@@ -1007,7 +1007,6 @@ myHost.attachBrowserEvent("focusout", () => {
 - Do use `controls` for single or multi-field forms
 - Do call `setControls()` explicitly for custom/non-standard integrations
 - Don't rely on implicit auto-detection for arbitrary shadow-hosted inputs
-- Don't assume `afterOpen`/`afterClose` are CSS transition-end events
 
 ### 6. Troubleshooting
 
@@ -1398,8 +1397,6 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-indicFontFamily`     | _(not declared)_                                          | Override font stack for Indic glyph labels                   |
 | `--ui5KioskKeyboard-arabicFontFamily`    | _(not declared)_                                          | Override font stack for Arabic glyph labels                  |
 
-Override `--ui5KioskKeyboard-dockedZIndex` to adjust the docked keyboard's stacking layer.
-
 By default, the inline keyboard takes the full width of its container (`100%`). To prevent wide desktop containers from stretching the rows indefinitely, cap the width explicitly:
 
 ```css
@@ -1410,7 +1407,7 @@ By default, the inline keyboard takes the full width of its container (`100%`). 
 
 Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
 
-Responsive font scaling uses CSS `@container` queries on the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. At narrow widths (≤ 30 rem / ≤ 20 rem), `--ui5KioskKeyboard-keyFontSize` is capped to `1rem` / `0.875rem`, but a consumer-provided value that is already smaller than the cap is preserved. In the extra-narrow `≤ 20rem` mode, non-numpad keys also switch from `--ui5KioskKeyboard-keyPaddingInline` to `--ui5KioskKeyboard-keyPaddingInlineXs`. The default reduces horizontal padding from `0.25rem` to `0.125rem` because wide glyphs such as `@`, `%`, and `&` become visually cramped before the touch target itself needs to shrink. The `min(...)` default keeps any smaller consumer override intact, while still letting consumers opt into a roomier or tighter compact mode explicitly. Height-responsive sizing detects when the control's rendered DOM element is smaller than its natural content height and reduces key height, gaps, and modifier font-size automatically.
+Responsive font scaling uses CSS `@container` queries on the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. For the scaling factors, the narrow-width font caps and `min()` override behavior, the padding swap, and height-responsive sizing, see the [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md) and [Responsive Layout Patterns](../../docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md).
 
 ### Custom Width Breakpoints
 
@@ -1438,55 +1435,6 @@ This is more flexible than the threshold variables: you can
 set any property at any number of breakpoints.
 
 For a complete guide covering all built-in breakpoints, row wrapping behavior, and patterns for switching entire layouts per device size, see the [Responsive Layout Patterns](../../docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md) guide.
-
-#### Tuning for Complex-Script Layouts
-
-Layouts with visually complex glyphs (Arabic, Thai, Devanagari, CJK) may
-appear cramped at narrow widths because their characters need more
-horizontal space than Latin letters at the same font size. The built-in
-Arabic layout at phone-sm width (320 px) is a good reference case.
-
-Override `--ui5KioskKeyboard-keyFontSize` on the keyboard root to tune
-readability for your target script:
-
-```css
-/* Reduce font size for a keyboard displaying complex-script glyphs */
-.ui5KioskKeyboard {
-  --ui5KioskKeyboard-keyFontSize: 0.85rem;
-}
-```
-
-All component styles live inside `@layer kiosk-keyboard`, so any
-unlayered consumer CSS wins regardless of specificity, so no extra wrapper
-class is needed. At narrow widths, the responsive container queries cap
-font size via `min()` but cannot raise it above your value, so a smaller
-override is preserved. At desktop widths no cap applies and your value
-is used as-is. This approach works for any layout, including custom
-layouts supplied via `instanceLayouts`.
-
-For troubleshooting, the rendered root toggles internal classes such as `ui5KioskKeyboard--cqShort` and `ui5KioskKeyboard--cqTiny`. They explain when the responsive CSS variables take effect, but they are implementation details rather than public styling hooks; prefer overriding the documented `--ui5KioskKeyboard-*` variables instead of targeting those classes from app CSS.
-
-The height constraint must affect the **control's own rendered element**. A parent with `overflow: hidden` alone clips the visual rendering but does not shrink the control's layout box, so the keyboard will be clipped instead of adapting. Apply `max-height` directly to the keyboard's root element (via CSS targeting `.ui5KioskKeyboard`), or use a flex parent that propagates the constraint.
-
-Most styling updates are handled automatically through rendering and `ResizeHandler`. When you intentionally change `--ui5KioskKeyboard-*` sizing variables at runtime without changing the rendered outer box, call `refreshResponsiveState()` after the style update so height-responsive classes are recomputed from the live DOM.
-
-#### Label Sizing
-
-Key labels use three scaling tiers:
-
-| Tier                  | Applies to                                     | Scaling                                                                                                                                            |
-| --------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Glyph**             | Single-grapheme labels (`a`, `@`, `€`)         | No scaling, rendered at the key's font-size with `overflow: visible` so wide glyphs are not clipped.                                               |
-| **Multi**             | Multi-character labels (`F10`, `Home`, `PgUp`) | Scales proportionally to the key's inline width via `clamp(0.5rem, 100cqi × 0.35, 1em)`.                                                           |
-| **Modifier / Action** | Shift, Enter, Backspace, layout switches       | Defaults to the theme's base font-size (`@sapUiFontSize`). Scaled down in height-constrained containers via `--ui5KioskKeyboard-modifierFontSize`. |
-
-```css
-/* Example: larger keys for kiosk terminals */
-.ui5KioskKeyboard {
-  --ui5KioskKeyboard-keyHeight: 4rem;
-  --ui5KioskKeyboard-keyFontSize: 1.5rem;
-}
-```
 
 #### Key Types
 

@@ -127,32 +127,6 @@ Prunes the self-hosted GitHub Pages demo dist (`packages/demo-app/dist`) after a
 
 Run via `npm run build:pages` (through `build:demo:pages`) and the `deploy-pages` workflow. The KEEP/DROP lists are pinned to SAPUI5 1.144.0; revisit them on a framework bump.
 
-## Consumers
-
-### `oxlint-plugin-test-guardrails.mjs`
-
-| Consumer         | Integration                                      |
-| ---------------- | ------------------------------------------------ |
-| `.oxlintrc.json` | `jsPlugins` entry, rule overrides per test scope |
-
-### `oxlint-plugin-code-quality.mjs`
-
-| Consumer         | Integration                                     |
-| ---------------- | ----------------------------------------------- |
-| `.oxlintrc.json` | `jsPlugins` entry, global rules + test override |
-
-### `oxlint-plugin-comment-quality.mjs`
-
-| Consumer         | Integration                     |
-| ---------------- | ------------------------------- |
-| `.oxlintrc.json` | `jsPlugins` entry, global rules |
-
-### `run-npm.mjs`
-
-| Consumer                  | Integration                                |
-| ------------------------- | ------------------------------------------ |
-| `check-package-smoke.mjs` | Runs npm build/pack commands synchronously |
-
 ## `tsconfig.json`
 
 TypeScript configuration for the tools directory. Extends the root `tsconfig.json` with Node-appropriate module settings (`NodeNext`).

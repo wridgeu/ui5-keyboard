@@ -2,81 +2,6 @@
 
 This document describes the internal architecture, design decisions, and edge case handling of the `ui5.kiosk` library.
 
-## Module Overview
-
-```
-KioskKeyboard.ts          UI5 Control: state, event delegation, target input integration,
-                          locale detection, auto-type, mobile keyboard suppression
-KioskKeyboardRenderer.ts  Renderer object: flat DOM output, apiVersion 4
-library.ts                UI5 Lib.init(), enum registration
-                          (KeyboardLayout, KeyboardType, MobileKeyboard, FKeyMode),
-                          plus key-name constants (`KeyName`)
-types.ts                  KeyDefinition, KeyRow, LayoutDefinition, I18nResolver
-internal/types.ts         Internal contracts: TargetElement, SECONDARY_LAYOUTS set
-internal/layout-registry.ts  Layout registration/reset + locale-based layout resolution
-internal/dom.ts           Key element IDs, input guards, input/textarea resolver
-internal/dom-contract.ts  Zero-dep source of truth for CSS classes, data attributes, selectors
-internal/i18n-registry.ts i18n resolution: base bundle + optional I18nResolver callback
-internal/detect-keyboard-type.ts  Auto-type detection helpers
-internal/input-operations.ts      Target input text operations
-internal/target-input-session.ts  Per-target dirty/value/change handling
-internal/focus-claim-service.ts   Auto-show input claim logic
-internal/key-grid-navigation.ts   Keyboard grid navigation delegate (arrow keys, Home/End, row wrapping)
-internal/fkey-controller.ts       FKeyController: F-key dispatch (Virtual fires keyPress + caret nav; Native synthesizes keydown)
-internal/native-keyboard-suppression.ts  inputmode suppress/restore with ref-counting across instances
-internal/auto-show-behavior.ts    Auto-show focus-in/out listeners, auto-type detection, deferred close
-internal/controls-delegation-controller.ts  ControlsDelegationController: reconciles the `controls`-property focus delegates by resolved id
-internal/responsive-sizing-controller.ts  ResponsiveSizingController: ResizeHandler-driven cqShort/cqTiny height classes
-internal/physical-key-highlight.ts  PhysicalKeyHighlight: mirrors the hardware keyboard onto on-screen keys, syncs shift/caps
-internal/backspace-repeat-behavior.ts  BackspaceRepeatBehavior: press-and-hold Backspace auto-repeat lifecycle
-internal/auto-repeat.ts   Press-and-hold auto-repeat scheduler with accelerating cadence
-internal/shift-state.ts   Shift / Caps Lock state machine (single click, double-click caps, auto-release)
-internal/key-token.ts     Classifies a key's data-key value into its token kind (shift/backspace/enter/layout/fkey/char)
-internal/key-labels.ts    Resolves a key's display label for the current shift/caps state
-internal/key-icons.ts     Default special-key icons + icon URI validation
-internal/grapheme.ts      Grapheme-aware cursor utilities via Intl.Segmenter
-internal/composition-utils.ts  Composition-session helpers (preedit start/update/end) shared by middleware
-internal/middleware-registry.ts  Built-in composition-middleware factories keyed by layout + instance overrides
-internal/renderer-internal-api.ts  RendererInternalApi bridge type for renderer/test access to control helpers
-middleware/
-  hangul-compose.ts       Korean Hangul L/V/T syllable composition middleware
-  kana-dakuten.ts         Japanese kana dakuten/handakuten voicing middleware
-i18n/
-  messagebundle.properties    Default (English) key/ARIA labels
-  messagebundle_de.properties German translations
-  messagebundle_ja.properties Japanese translations
-  messagebundle_ar.properties Arabic translations
-layouts/
-  qwerty.ts               Standard QWERTY with number row and shift symbols
-  qwertz-de.ts            German QWERTZ with Umlaute (ä, ö, ü, ß)
-  numeric.ts              Number pad with basic operators
-  special.ts              Special characters and symbols
-  numpad.ts               Compact calculator-style keypad
-  fkeys.ts                Standalone function key layout (F1-F12)
-  nav.ts                  Standalone navigation layout (arrows + Home/End/Page)
-  fkey-row.ts             Shared F1-F12 row for consumer-composed *-fk variants
-  nav-row.ts              Shared navigation row for consumer-composed *-nav variants
-  ja-romaji.ts            Japanese Romaji layout
-  ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
-  arabic.ts               Arabic layout
-  ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
-  qwerty-es.ts            Spanish QWERTY layout
-  symbol-common.ts        Shared punctuation/symbol row data (used by numeric, special)
-  default-layout.ts       Default layout name constant: "qwerty"
-themes/
-  base/
-    KioskKeyboard.less    Base styles using SAP LESS parameters
-    library.source.less   Base library entry point
-  sap_horizon/
-    library.source.less   Horizon theme (imports base + theme globals)
-  sap_horizon_dark/
-    library.source.less   Horizon Dark theme entry point
-  sap_horizon_hcb/
-    library.source.less   Horizon High Contrast Black entry point
-  sap_horizon_hcw/
-    library.source.less   Horizon High Contrast White entry point
-```
-
 ## UI5 Integration
 
 ### Library Initialization
@@ -116,11 +41,7 @@ init(): void {
 
 The keyboard renders as a flat DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. There are no child UI5 controls; every key is a plain DOM element with `role="button"`.
 
-This design was chosen for:
-
-- **Performance**: No control overhead for 30-50 individual keys
-- **Simplicity**: One renderer, one invalidation cycle
-- **Event delegation**: A single set of `ontouchstart`/`ontouchend`/`onsapselect` handlers on the control root
+This avoids per-key control overhead for the 30-50 keys, keeps the control on one renderer and one invalidation cycle, and routes every key through a single set of `ontouchstart`/`ontouchend`/`onsapselect` handlers on the control root.
 
 ### Event Delegation
 
@@ -564,7 +485,7 @@ Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted)
 - **30rem (narrow):** Caps `--ui5KioskKeyboard-keyFontSize` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
 - **20rem (compact):** Additionally reduces key inline padding for non-numpad keys and applies a tighter font-size cap of `0.875rem`.
 
-No JavaScript is involved in width responsiveness. The `@container` rules are written directly in `KioskKeyboard.less`, enabled by a local `patch-package` patch that adds `@container` to the vendored LESS 1.6.3 parser's recognized directive list.
+No JavaScript is involved in width responsiveness.
 
 **Height responsiveness** uses JS (`sap/ui/core/ResizeHandler`, UI5's centralized resize handling) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 
@@ -581,7 +502,7 @@ Docked keyboards and numpad mode skip height class application (docked keyboards
 
 The public sizing variables deliberately separate normal and extra-narrow spacing. `--ui5KioskKeyboard-keyPaddingInline` keeps the default inline inset for regular widths, while `--ui5KioskKeyboard-keyPaddingInlineXs` is applied at the 20rem `@container` breakpoint for non-numpad keys. Its default (`min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)`) trims the stock padding from `0.25rem` to `0.125rem` so wide glyphs like `@`, `%`, and `&` get more horizontal breathing room on phone-sized rows without reducing key height or touch-target size. The `min(...)` form preserves any consumer override that is already smaller.
 
-**Consumer overrides:** All component styles live inside `@layer kiosk-keyboard`, so any unlayered consumer CSS wins regardless of specificity. For custom width breakpoints, consumers can write `@container keyboard (max-width: ...)` rules directly since the keyboard's root element sets `container-name: keyboard`.
+**Consumer overrides:** For custom width breakpoints, consumers can write `@container keyboard (max-width: ...)` rules directly since the keyboard's root element sets `container-name: keyboard`.
 
 ### Content Density
 

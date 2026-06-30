@@ -58,95 +58,13 @@ Both UI5-native libraries (`ui5-lib-hotkeys` and `ui5-lib-kiosk-keyboard`) ship:
 
 That enables 3 app-side consumption modes. No project shim is required.
 
-#### 1. Installed package + UI5 Tooling (default)
+1. **Installed package + UI5 Tooling** (default, recommended for runtime). Resolve the library from `node_modules`; add the UI5 project names (`ui5.hotkeys`, `ui5.kiosk`, as shown by `ui5 tree --flat`) to `builder.settings.includeDependency` if your app build should copy the resources into `dist/`. For CDN-bootstrapped static deployments, map the namespaces to the copied `resources/` via `data-sap-ui-resource-roots`.
+2. **Source package + UI5 Tooling transpilation** (monorepos, local development). Enable `ui5-tooling-transpile` with `transpileDependencies: true` in both the build task and the dev-server middleware.
+3. **Static middleware escape hatch**. Serve the dist `resources/` via `ui5-middleware-servestatic` without the dependency participating in your app's UI5 dependency resolution.
 
-Recommended for published/runtime usage.
+The full per-package `ui5.yaml`, CDN, and middleware snippets live in the package READMEs ([hotkeys](./packages/hotkeys/README.md), [kiosk-keyboard](./packages/kiosk-keyboard/README.md)). Both libraries add no CSP requirements (no `eval`, inline script, or remote connections); under a strict Content-Security-Policy, self-hosting the copied `resources/` avoids any cross-origin `script-src` allowance.
 
-Install the npm package, declare the library in `manifest.json`, and let UI5 Tooling resolve it from `node_modules`.
-
-If your app build should copy the custom-library resources into the app `dist/`, add the UI5 project names to `builder.settings.includeDependency`:
-
-```yaml
-builder:
-  settings:
-    includeDependency:
-      - ui5.hotkeys
-      - ui5.kiosk
-```
-
-Use the UI5 project names shown by `ui5 tree --flat` (`ui5.hotkeys`, `ui5.kiosk`), not the npm package names.
-
-If you deploy the built app to a plain static server while bootstrapping UI5 from CDN, map the custom-library namespaces to the copied `resources/` folders:
-
-```html
-<script
-  id="sap-ui-bootstrap"
-  src="https://sdk.openui5.org/resources/sap-ui-core.js"
-  data-sap-ui-resource-roots='{
-    "my.app": "./",
-    "ui5.hotkeys": "./resources/ui5/hotkeys/",
-    "ui5.kiosk": "./resources/ui5/kiosk/"
-  }'
-  data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
-  data-sap-ui-async="true"
-></script>
-```
-
-Under a strict Content-Security-Policy (common in kiosk deployments), allowlist the chosen UI5 origin in `script-src` - self-hosting the copied `resources/` avoids the cross-origin allowance. The libraries themselves add no CSP requirements (no `eval`, inline script, or remote connections).
-
-#### 2. Source package + UI5 Tooling transpilation
-
-Recommended for monorepos and local development when you want to work against the library source instead of the prebuilt distributable.
-
-Enable dependency transpilation in both the build task and dev server middleware:
-
-```yaml
-builder:
-  customTasks:
-    - name: ui5-tooling-transpile-task
-      afterTask: replaceVersion
-      configuration:
-        transpileDependencies: true
-        transformTypeScript:
-          allowDeclareFields: true
-server:
-  customMiddleware:
-    - name: ui5-tooling-transpile-middleware
-      afterMiddleware: compression
-      configuration:
-        transpileDependencies: true
-        transformTypeScript:
-          allowDeclareFields: true
-```
-
-No `framework.libraries` entry is required for these custom libraries; keep them in `manifest.json` and use `includeDependency` only when your app build should copy them into `dist/`.
-
-#### 3. Static middleware escape hatch
-
-Use this when you want explicit runtime serving from the dependency distributables and do not want the dependency to participate in your app's UI5 dependency resolution.
-
-```bash
-npm install -D ui5-middleware-servestatic
-```
-
-```yaml
-server:
-  customMiddleware:
-    - name: ui5-middleware-servestatic
-      afterMiddleware: compression
-      mountPath: /resources/ui5/hotkeys/
-      configuration:
-        npmPackagePath: ui5-lib-hotkeys/dist/resources/ui5/hotkeys
-    - name: ui5-middleware-servestatic
-      afterMiddleware: compression
-      mountPath: /resources/ui5/kiosk/
-      configuration:
-        npmPackagePath: ui5-lib-kiosk-keyboard/dist/resources/ui5/kiosk
-```
-
-This is mainly a dev-server/runtime option. If you also need those resources inside the app build output, prefer mode 1 with `includeDependency`, or copy the resources explicitly as part of deployment.
-
-In all 3 modes, keep the custom library declarations in your app `manifest.json`:
+In all three modes, keep the custom library declarations in your app `manifest.json`:
 
 ```json
 {
@@ -274,19 +192,7 @@ npm run build               # Build library dist/ artifacts (required before sta
 | `npm run start:kiosk:visual` | Kiosk visual test page (same server as kiosk) | 8082 |
 | `npm run start:kiosk-webc`   | Kiosk web component standalone demo (Vite)    | 8084 |
 
-### Port Map (Test Servers)
-
-The test runners start their own servers on fixed ports. These are not started manually but are useful to know when debugging port conflicts. The UI5 QUnit suites are served by `ui5 serve` (orchestrated by `start-server-and-test` and harvested by `ui5-test-runner`); the e2e/visual suites are served by each Playwright config's `webServer`:
-
-| Port | Purpose                   | Served / configured by                                                          |
-| ---- | ------------------------- | ------------------------------------------------------------------------------- |
-| 8081 | Hotkeys QUnit             | `ui5 serve` via `packages/hotkeys` `test:qunit` script (ui5-test-runner)        |
-| 8082 | Kiosk QUnit               | `ui5 serve` via `packages/kiosk-keyboard` `test:qunit` script (ui5-test-runner) |
-| 8083 | Kiosk FLP e2e             | `packages/kiosk-keyboard/playwright.flp.config.ts` `webServer` (FLP sandbox)    |
-| 8085 | Kiosk e2e / visual / docs | `packages/kiosk-keyboard/playwright.config.ts` (+ `playwright.docs.config.ts`)  |
-| 8086 | Kiosk webc e2e / visual   | `packages/kiosk-keyboard-webc/playwright.config.ts` `webServer` (Vite)          |
-
-The Playwright device matrix does not use per-device ports: every project (`desktop`, `phone-sm`, `phone-md`, `phone-lg`, `tablet`) runs against the single shared `webServer` for its package, varying only the emulated viewport and device scale factor.
+The test runners start their own servers on fixed ports (8081-8086) when debugging port conflicts. See the **Port Map** in [docs/shared/TESTING.md](./docs/shared/TESTING.md) for the full list and which config owns each port.
 
 ### Build
 
@@ -303,39 +209,14 @@ npm run clean              # Clean all dist outputs
 ### Test
 
 ```bash
-# Core test suite (QUnit + desktop e2e + Vitest + Web Test Runner)
-npm test                               # All core tests across all packages
-
-# Per-package
-npm run test:hotkeys                   # Hotkeys QUnit tests
-npm run test:kiosk                     # Kiosk QUnit + desktop e2e tests
-npm run test:kiosk:e2e                 # Kiosk desktop e2e only (no QUnit)
-npm run test:kiosk-webc                # Kiosk webc unit tests (Vitest)
-npm run test:kiosk-webc:component      # Kiosk webc integration tests (Web Test Runner)
-npm run test:kiosk-webc:e2e            # Kiosk webc e2e tests (Playwright)
-npm run test:qunit                     # All QUnit tests only (hotkeys + kiosk)
-
-# Multi-device e2e
-npm run test:e2e:all-devices           # All e2e across all device profiles (kiosk + webc, concurrent)
-npm run test:e2e:all-devices:sequential # Same matrix, but sequential for lower local CPU/RAM pressure
-npm run test:kiosk:e2e:flp             # FLP lifecycle e2e tests (SAPUI5 sandbox)
-
-# Contract / tooling smoke checks
-npm run test:packages:smoke             # Build + npm pack dry-run smoke for publishable packages, plus the demo WebC consumption build
-
-# Visual baseline management
-npm run test:kiosk:e2e:update          # Update kiosk desktop visual baselines
-npm run test:kiosk-webc:e2e:update     # Update webc desktop visual baselines
-npm run test:e2e:all-devices:sequential # Re-run the full desktop + responsive matrix before accepting new baselines
-npm run test:kiosk:e2e:docs            # Regenerate README kiosk screenshots
-
-# For per-profile baseline updates (phone-sm / phone-md / phone-lg / tablet),
-# use the package scripts documented in packages/kiosk-keyboard/README.md,
-# packages/kiosk-keyboard-webc/README.md, or docs/shared/TESTING.md.
-
-# Coverage (kiosk-keyboard-webc only)
-npm run test:coverage -w packages/kiosk-keyboard-webc
+npm test                          # Core suite across all packages (QUnit + desktop e2e + Vitest + Web Test Runner)
+npm run test:hotkeys              # Hotkeys QUnit
+npm run test:kiosk                # Kiosk QUnit + desktop e2e
+npm run test:kiosk-webc           # Kiosk webc unit tests (Vitest)
+npm run test:e2e:all-devices      # All e2e across the device matrix (kiosk + webc)
 ```
+
+The full per-package catalog (multi-device matrix, FLP lifecycle, smoke checks, visual-baseline management, coverage) and the e2e prerequisites are documented in [docs/shared/TESTING.md](./docs/shared/TESTING.md).
 
 ### Code Quality
 
@@ -373,9 +254,9 @@ ui5-keyboard/
 | [Glossary](./docs/GLOSSARY.md)                                                 | Shared terms and concepts across all packages         |
 | [API Stability Policy](./docs/shared/API-STABILITY.md)                         | Stable vs internal import boundaries                  |
 | [Multi-key Sequences](./docs/hotkeys/SEQUENCES.md)                             | Hotkeys sequence system design and rationale          |
-| [Web Component Consumption](./docs/web-component-consumption.md)               | Build pipeline, exports, tag scoping, and limitations |
+| [Web Component Consumption](./docs/kiosk-webc/CONSUMPTION.md)                  | Build pipeline, exports, tag scoping, and limitations |
 | [Consumption Research](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption comparison              |
-| [Docs Index](./docs/README.md)                                                 | Full index of all docs (incl. internal & historical)  |
+| [Docs Index](./docs/README.md)                                                 | Entry point to the per-area doc indexes               |
 | [Patches](./patches/README.md)                                                 | Local dependency patches applied via patch-package    |
 | [Tools](./tools/README.md)                                                     | Custom oxlint plugins, shared test infra, dev scripts |
 

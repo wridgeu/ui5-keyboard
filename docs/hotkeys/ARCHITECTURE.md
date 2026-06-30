@@ -4,36 +4,7 @@ This document describes the internal architecture, design decisions, and edge ca
 
 ## Module Overview
 
-The library is split into focused, single-responsibility modules:
-
-```
-HotkeyManager.ts     Central manager, scope stack, hotkey/sequence dispatch
-RegistrationGroup.ts Scoped batch registration with auto-cleanup
-internal/SequenceManager.ts Multi-key sequence matching (e.g., G then E)
-KeyStateTracker.ts   Held-key state tracking with macOS stuck-key fix
-HotkeyRecorder.ts    Keyboard shortcut recorder for settings UIs
-validate.ts          Hotkey validation + browser/SAP conflict blocklists
-types.ts             All TypeScript interfaces, types, and option defaults
-constants.ts         Key/modifier aliases, display symbols, normalization
-parse.ts             Hotkey string parsing ("Mod+Shift+S" -> structured object)
-match.ts             KeyboardEvent matching against parsed hotkeys
-internal/dom.ts      Input element detection (text fields, textareas, contentEditable)
-platform.ts          Platform detection (mac/windows/linux) and Mod resolution
-format.ts            Platform-aware display formatting helper
-library.ts           UI5 library entry point (Lib.init)
-internal/event-dispatcher.ts Centralized DOM listener + 7-step dispatch pipeline
-internal/dispatch-core.ts    Dispatch pipeline helpers and skip handling
-internal/internal-token.ts   Runtime instantiation guard for internal classes
-internal/scope.ts            Scope string resolution and validation
-internal/skip-reason.ts      Internal dispatch skip-reason types
-internal/idgen.ts            Internal registration ID generator
-internal/registration-index.ts Scope/target registration index (id-based)
-internal/hotkey-matcher.ts   Two-pass matching: targeted (innermost via composedPath) then untargeted
-internal/conflict-resolver.ts Duplicate-registration conflict detection/resolution during register()
-internal/resolve-enabled.ts  Resolves the `enabled` option (boolean or predicate) to a concrete boolean
-internal/runtime.ts          Lazy popup-open check (sap/m/InstanceManager)
-internal/FocusFallbackTracker.ts Document focus listeners + focus-path fallback for rerenders
-```
+The library is split into focused, single-responsibility modules. The full source tree, with a one-line description per module, is under [Project Layout](#project-layout).
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`). Their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
 

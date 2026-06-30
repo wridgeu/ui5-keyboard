@@ -2,6 +2,7 @@
 
 **Issue:** [#71](https://github.com/wridgeu/ui5-keyboard/issues/71)
 **Date:** 2026-04-12
+**Status:** Implemented
 
 ## Context
 
