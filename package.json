@@ -83,7 +83,7 @@
     "check": "npm run check:base && npm run test:e2e:all-devices:sequential",
     "check:parallel": "npm run check:base && npm run test:e2e:all-devices",
     "postinstall": "patch-package && node patches/apply-nested.mjs",
-    "prepare": "husky",
+    "prepare": "git config core.hooksPath .githooks || true",
     "commitlint": "commitlint --edit"
   },
   "devDependencies": {
@@ -98,7 +98,6 @@
     "@ui5/ts-interface-generator": "~0.11.1",
     "@ui5/webcomponents-tools": "2.22.0",
     "concurrently": "~10.0.0",
-    "husky": "~9.1.7",
     "less-openui5": "~0.11.6",
     "lint-staged": "~17.0.6",
     "oxfmt": "~0.52.0",

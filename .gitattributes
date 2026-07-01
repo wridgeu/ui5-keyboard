@@ -20,7 +20,7 @@
 *.patch text eol=lf
 
 # Shell scripts and hooks
-.husky/* text eol=lf
+.githooks/* text eol=lf
 
 # Binary assets - never normalize EOL or attempt text diffing
 *.png binary
