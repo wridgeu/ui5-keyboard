@@ -63,7 +63,7 @@ Versioning and changelogs are automated via [release-please](https://github.com/
 
 ## Code Quality
 
-Pre-commit hooks (husky + lint-staged) automatically format and lint staged files. The CI pipeline runs the same checks plus the full test suite.
+Git hooks run lint-staged and commitlint on staged files. They are wired natively through git's `core.hooksPath` (pointing at `.githooks/`), which the `prepare` script sets on `npm install`, so a fresh clone has no hooks until you run `npm install`. Bypass a hook with `git commit --no-verify`. CI runs the same checks plus the full test suite, so a skipped or missing local hook is still caught.
 
 ```bash
 npm run fmt           # Format all files (oxfmt)
