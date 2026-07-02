@@ -474,6 +474,8 @@ The `keyboardType` property provides a shortcut for common configurations:
 
 `keyboardType` is a _constraint on the default_ rather than a hard lock. A user-initiated `{layout:X}` tap (e.g. a custom `{layout:special}` key added through `instanceLayouts` on the numpad surface) takes precedence and shows the user's pick. A subsequent `{layout:base}` tap re-engages the `keyboardType` constraint and returns to the constrained default. `setLayout`, `setKeyboardType`, `resetKeyboardType`, and auto-type detection all clear the user pick.
 
+While the `Numpad`/`Numeric` constraint is active, a rendered layout drops its `{layout:base}` key where the key is useless: on the constrained layout itself (tapping it would re-render the same surface) and on a layout that also carries a `{layout:numpad}`/`{layout:numeric}` key matching the constraint (there "ABC" would sit dead next to a key reaching the same numbers surface, e.g. next to "123" on the numeric keyboard's symbols layout). Anywhere else the key stays, because it is the working return path described above - on the numpad's symbols layout, for example, "123" leads to the numeric layout, so `{layout:base}` is the only way back to the numpad.
+
 Programmatic base-layout helpers make layout round-trips explicit:
 
 ```ts

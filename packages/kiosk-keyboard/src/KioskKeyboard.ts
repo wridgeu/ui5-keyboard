@@ -1598,25 +1598,34 @@ export default class KioskKeyboard extends Control {
 
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
-    const resolved = registryGetLayoutOrDefault(this._resolvedLayoutName(), this._instanceLayoutsMap);
-    // On a Numpad/Numeric keyboard the base layout is never alphabetic, so a
-    // `{layout:base}` "ABC" key never reaches letters: pressing it resets
-    // `_layoutSource` and the keyboardType constraint re-resolves back to the
-    // forced numpad/numeric layout. Strip it whenever the base has no letters,
-    // regardless of `_layoutSource`. This covers not just the forced base
-    // surface but also the `special` symbols layout a user reaches via the
-    // "#+=" key, where the "ABC" key would otherwise render as a dead duplicate
-    // of the "123" ({layout:numeric}) key and yield no letters when tapped.
-    // Matches webc behavior.
+    const layoutName = this._resolvedLayoutName();
+    const resolved = registryGetLayoutOrDefault(layoutName, this._instanceLayoutsMap);
+    // Under the Numpad/Numeric keyboardType constraint a `{layout:base}` "ABC"
+    // key cannot render the base layout: tapping it resets `_layoutSource`, so
+    // the constraint re-resolves to the constrained numpad/numeric layout.
+    // That makes the key useless in exactly two places, where it is stripped
+    // from the rendered surface: on the constrained layout itself (a no-op
+    // there) and on a layout that also carries a `{layout:<constrained>}` key
+    // (a dead duplicate, e.g. "ABC" next to "123" on the numeric symbols
+    // layout). Anywhere else it stays: it is the working return path to the
+    // constrained surface (e.g. the numpad's symbols view, where "123" leads
+    // to numeric rather than back to the numpad, or the nav/fkeys layouts,
+    // whose only escape it is). Mirrors the webc twin.
     const kbType = this.getKeyboardType();
-    const baseHasNoLetters = kbType === KeyboardType.Numpad || kbType === KeyboardType.Numeric;
-    return baseHasNoLetters ? KioskKeyboard._stripDeadBaseSwitch(resolved) : resolved;
+    const constrainedName =
+      kbType === KeyboardType.Numpad ? "numpad" : kbType === KeyboardType.Numeric ? "numeric" : null;
+    if (constrainedName === null) return resolved;
+    const baseSwitchIsUseless =
+      layoutName === constrainedName ||
+      resolved.some((row) => row.some((key) => key.value === `{layout:${constrainedName}}`));
+    return baseSwitchIsUseless ? KioskKeyboard._stripDeadBaseSwitch(resolved) : resolved;
   }
 
-  // On a Numpad/Numeric keyboard `{layout:base}` can never reach letters, so its
-  // "ABC" key is always inert; strip it from the rendered surface so it never
-  // offers a letters switch that yields no letters. The built-in `numeric` and
-  // `special` layouts ship a `{layout:base}` "ABC" key via `symbolBottomRow`, so
+  // Drops `{layout:base}` "ABC" keys from a layout (and rows that become
+  // empty). Used where the switch is useless under the Numpad/Numeric
+  // constraint: a no-op on the constrained layout, or a duplicate of a
+  // `{layout:<constrained>}` key (see `_getResolvedLayout`). The built-in
+  // `numeric` and `special` layouts ship the key via `symbolBottomRow`, so
   // this strips a built-in key (plus any user-supplied `instanceLayouts`
   // override that adds one), not just overrides.
   private static _stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {

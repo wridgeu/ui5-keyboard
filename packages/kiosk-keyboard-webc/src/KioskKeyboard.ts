@@ -121,7 +121,11 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  */
 const warnedMissingLabels = new Set<string>();
 
-/** Drop `{layout:base}` keys from a layout (used when the switch would be a no-op). */
+/**
+ * Drop `{layout:base}` keys from a layout (dropping rows that become empty).
+ * Used where the switch is useless: a no-op on the constrained layout, or a
+ * duplicate of a `{layout:<constrained>}` key (see `_getResolvedLayout`).
+ */
 function stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
   let changed = false;
   const filtered = layout.map((row) => {
@@ -1037,17 +1041,26 @@ class KioskKeyboard extends UI5Element {
 
   _getResolvedLayout(): LayoutDefinition {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
-    const resolved = getLayoutOrDefault(this._resolvedLayoutName(), layoutsMap);
-    // On a Numpad/Numeric keyboard the base layout is never alphabetic, so a
-    // `{layout:base}` "ABC" key never reaches letters: pressing it resets
-    // `_layoutSource` and the keyboardType constraint re-resolves back to the
-    // forced numpad/numeric layout. Strip it whenever the base has no letters
-    // (not only on the auto-forced base surface), so it is also gone on the
-    // `special` symbols layout a user reaches via "#+=", where it would
-    // otherwise be a dead duplicate of the "123" ({layout:numeric}) key that
-    // yields no letters when tapped. Mirrors the kiosk twin.
-    const baseHasNoLetters = this.keyboardType === "Numpad" || this.keyboardType === "Numeric";
-    return baseHasNoLetters ? stripDeadBaseSwitch(resolved) : resolved;
+    const layoutName = this._resolvedLayoutName();
+    const resolved = getLayoutOrDefault(layoutName, layoutsMap);
+    // Under the Numpad/Numeric keyboardType constraint a `{layout:base}` "ABC"
+    // key cannot render the base layout: tapping it resets `_layoutSource`, so
+    // the constraint re-resolves to the constrained numpad/numeric layout.
+    // That makes the key useless in exactly two places, where it is stripped
+    // from the rendered surface: on the constrained layout itself (a no-op
+    // there) and on a layout that also carries a `{layout:<constrained>}` key
+    // (a dead duplicate, e.g. "ABC" next to "123" on the numeric symbols
+    // layout). Anywhere else it stays: it is the working return path to the
+    // constrained surface (e.g. the numpad's symbols view, where "123" leads
+    // to numeric rather than back to the numpad, or the nav/fkeys layouts,
+    // whose only escape it is). Mirrors the kiosk twin.
+    const constrainedName =
+      this.keyboardType === "Numpad" ? "numpad" : this.keyboardType === "Numeric" ? "numeric" : null;
+    if (constrainedName === null) return resolved;
+    const baseSwitchIsUseless =
+      layoutName === constrainedName ||
+      resolved.some((row) => row.some((key) => key.value === `{layout:${constrainedName}}`));
+    return baseSwitchIsUseless ? stripDeadBaseSwitch(resolved) : resolved;
   }
 
   // ── Memoized Map views of the instance-* properties ──

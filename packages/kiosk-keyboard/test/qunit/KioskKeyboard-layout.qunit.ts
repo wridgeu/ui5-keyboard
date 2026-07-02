@@ -179,6 +179,75 @@ QUnit.test("KeyboardType 'Full': the symbols layout keeps the ABC key (letters s
   kb.destroy();
 });
 
+QUnit.test(
+  "KeyboardType 'Numpad': a user-reached symbols layout keeps ABC as the return to the numpad",
+  async (assert) => {
+    // The "123" ({layout:numeric}) key on the symbols layout is a *user* pick of
+    // the numeric layout, not the numpad, so under Numpad the ABC ({layout:base})
+    // key is the only way back to the constrained numpad surface and must stay.
+    const customNumpad: LayoutDefinition = [
+      [{ value: "7" }, { value: "8" }, { value: "9" }],
+      [
+        { value: "{layout:special}", label: "#+=", type: "modifier" },
+        { value: "{enter}", type: "action" },
+      ],
+    ];
+    const kb = new KioskKeyboard({ instanceLayouts: { numpad: customNumpad } });
+    kb.setKeyboardType(KeyboardType.Numpad);
+    await placeAndWait(kb);
+
+    tapKey(kb, "{layout:special}");
+    await waitForRender();
+
+    let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("["), "Symbols layout is rendered");
+    assert.ok(keys.includes("{layout:base}"), "ABC stays: it is the only return path to the numpad");
+
+    tapKey(kb, "{layout:base}");
+    await waitForRender();
+
+    keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("{layout:special}"), "ABC re-engaged the constraint: the numpad override renders again");
+    assert.notOk(keys.includes("["), "Symbols layout left");
+
+    kb.destroy();
+  },
+);
+
+QUnit.test(
+  "KeyboardType 'Numeric': a layout without a '123' key keeps ABC as its only escape (nav)",
+  async (assert) => {
+    // The built-in nav layout's only route out is {layout:base} (its other switch
+    // goes deeper, to fkeys). Stripping it there would strand the user, so the
+    // strip may only remove ABC where a {layout:numeric} duplicate exists.
+    const customNumeric: LayoutDefinition = [
+      [{ value: "1" }, { value: "2" }, { value: "3" }],
+      [
+        { value: "{layout:nav}", label: "Nav", type: "modifier" },
+        { value: "{enter}", type: "action" },
+      ],
+    ];
+    const kb = new KioskKeyboard({ instanceLayouts: { numeric: customNumeric } });
+    kb.setKeyboardType(KeyboardType.Numeric);
+    await placeAndWait(kb);
+
+    tapKey(kb, "{layout:nav}");
+    await waitForRender();
+
+    let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("{layout:fkeys}"), "Nav layout is rendered");
+    assert.ok(keys.includes("{layout:base}"), "ABC stays: it is the nav layout's only way back");
+
+    tapKey(kb, "{layout:base}");
+    await waitForRender();
+
+    keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("{layout:nav}"), "ABC re-engaged the constraint: the numeric override renders again");
+
+    kb.destroy();
+  },
+);
+
 QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
