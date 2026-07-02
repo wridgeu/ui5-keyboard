@@ -132,6 +132,53 @@ QUnit.test("KeyboardType 'Numeric' filter applies to overridden numeric layout t
   kb.destroy();
 });
 
+QUnit.test(
+  "KeyboardType 'Numeric': the symbols layout reached via '#+=' also hides the dead ABC key",
+  async (assert) => {
+    // Regression (user feedback): tapping "#+=" ({layout:special}) sets
+    // _layoutSource="user", which used to un-gate the strip so the "ABC"
+    // ({layout:base}) key reappeared in the symbols view. On a Numeric keyboard
+    // {layout:base} can never reach letters (the constraint re-forces numeric),
+    // so "ABC" is a dead duplicate of the "123" ({layout:numeric}) key and must
+    // stay hidden in the symbols layout too.
+    const kb = new KioskKeyboard();
+    kb.setKeyboardType(KeyboardType.Numeric);
+    await placeAndWait(kb);
+
+    let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.notOk(keys.includes("{layout:base}"), "ABC hidden on the numeric base surface");
+
+    // Switch to the symbols layout the same way the user did in the report.
+    tapKey(kb, "{layout:special}");
+    await waitForRender();
+
+    keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("["), "Symbols layout is rendered (has '[')");
+    assert.ok(keys.includes("{layout:numeric}"), "Keeps the '123' key to return to numbers");
+    assert.notOk(keys.includes("{layout:base}"), "Dead ABC key is not rendered in the numeric symbols layout");
+
+    kb.destroy();
+  },
+);
+
+QUnit.test("KeyboardType 'Full': the symbols layout keeps the ABC key (letters stay reachable)", async (assert) => {
+  // Guard against over-stripping: on a full keyboard the base IS alphabetic, so
+  // "ABC" ({layout:base}) correctly returns to letters and must remain.
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  tapKey(kb, "{layout:numeric}");
+  await waitForRender();
+  tapKey(kb, "{layout:special}");
+  await waitForRender();
+
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.ok(keys.includes("["), "Symbols layout is rendered on the full keyboard");
+  assert.ok(keys.includes("{layout:base}"), "ABC key present so letters remain reachable");
+
+  kb.destroy();
+});
+
 QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

@@ -1038,10 +1038,16 @@ class KioskKeyboard extends UI5Element {
   _getResolvedLayout(): LayoutDefinition {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
     const resolved = getLayoutOrDefault(this._resolvedLayoutName(), layoutsMap);
-    // On the auto-forced numpad/numeric layout, `{layout:base}` would resolve
-    // back to the same auto-forced layout (handler sets `_layoutSource = "external"`,
-    // so the constraint re-applies). Strip it so the rendered surface matches behavior.
-    return this._autoForcedLayoutName() !== null ? stripDeadBaseSwitch(resolved) : resolved;
+    // On a Numpad/Numeric keyboard the base layout is never alphabetic, so a
+    // `{layout:base}` "ABC" key never reaches letters: pressing it resets
+    // `_layoutSource` and the keyboardType constraint re-resolves back to the
+    // forced numpad/numeric layout. Strip it whenever the base has no letters
+    // (not only on the auto-forced base surface), so it is also gone on the
+    // `special` symbols layout a user reaches via "#+=", where it would
+    // otherwise be a dead duplicate of the "123" ({layout:numeric}) key that
+    // yields no letters when tapped. Mirrors the kiosk twin.
+    const baseHasNoLetters = this.keyboardType === "Numpad" || this.keyboardType === "Numeric";
+    return baseHasNoLetters ? stripDeadBaseSwitch(resolved) : resolved;
   }
 
   // ── Memoized Map views of the instance-* properties ──
