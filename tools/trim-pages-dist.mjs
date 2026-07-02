@@ -29,7 +29,11 @@ if (!existsSync(resources)) {
 }
 
 // Top-level resources/sap/* libraries to keep; every other sap/* dir is dropped.
-const KEEP_SAP = new Set(["ui", "m", "ushell", "fe"]);
+// This is the exact set the running fiori2 FLP requests at runtime (verified by
+// loading the built flp.html headless): sap.ui, sap.m, sap.ushell, sap.fe, and
+// sap.f. sap.f is a declared sap.ushell dependency that its renderer loads
+// (sap/f/library.js); omitting it 404s the shell bootstrap, so it must stay.
+const KEEP_SAP = new Set(["ui", "m", "ushell", "fe", "f"]);
 // Specialist resources/sap/ui/* sublibraries the launchpad never loads.
 const DROP_SAP_UI = ["vk", "richtexteditor", "integration", "vbm", "mdc", "commons", "table", "test"];
 // Unused theme variants (the demo runs on sap_horizon; `base` is required).
