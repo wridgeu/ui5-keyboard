@@ -1,5 +1,5 @@
 {
-  "packages/hotkeys": "0.0.0",
-  "packages/kiosk-keyboard": "0.0.0",
-  "packages/kiosk-keyboard-webc": "0.0.0"
+  "packages/hotkeys": "1.0.0",
+  "packages/kiosk-keyboard": "1.0.0",
+  "packages/kiosk-keyboard-webc": "1.0.0"
 }

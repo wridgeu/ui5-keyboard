@@ -5,7 +5,7 @@
     "type": "library",
     "embeds": [],
     "applicationVersion": {
-      "version": "0.1.0"
+      "version": "1.0.0"
     },
     "title": "UI5 Hotkeys",
     "description": "Declarative keyboard shortcut management for SAPUI5/OpenUI5 applications",
@@ -39,7 +39,11 @@
       "content": {
         "controls": [],
         "elements": [],
-        "types": ["ui5.hotkeys.ConflictBehavior", "ui5.hotkeys.UnhandledReason", "ui5.hotkeys.Platform"],
+        "types": [
+          "ui5.hotkeys.ConflictBehavior",
+          "ui5.hotkeys.UnhandledReason",
+          "ui5.hotkeys.Platform"
+        ],
         "interfaces": []
       }
     }

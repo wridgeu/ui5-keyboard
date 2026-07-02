@@ -1,6 +1,6 @@
 {
   "name": "ui5-lib-kiosk-keyboard",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applications",
   "keywords": [
     "kiosk",
