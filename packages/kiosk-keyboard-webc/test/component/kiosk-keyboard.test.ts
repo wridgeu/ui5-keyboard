@@ -979,6 +979,28 @@ describe("kiosk-keyboard", () => {
       expect(queryKey(el, "{layout:base}"), "dead ABC key is not rendered on the numeric symbols layout").to.be.null;
     });
 
+    it("strips a mixed-case {layout:Base} dead key in Numeric mode (case-insensitive)", async () => {
+      // parseLayoutToken lowercases, so a consumer-authored mixed-case
+      // {layout:Base} dead duplicate is recognized and stripped like the
+      // canonical lowercase form; it must not linger as a misleading "ABC" key.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
+      el.instanceLayouts = {
+        special: [
+          [{ value: "[" }, { value: "{layout:numeric}", label: "123" }, { value: "{layout:Base}", label: "ABC" }],
+        ],
+      };
+      await nextRender();
+
+      const toSymbols = oneEvent(el, "layout-change");
+      queryKey(el, "{layout:special}")!.click();
+      await toSymbols;
+      await nextRender();
+
+      expect(queryKey(el, "{layout:numeric}"), "the '123' key remains the real way back to numbers").to.not.be.null;
+      expect(queryKey(el, "{layout:Base}"), "the mixed-case dead ABC key is stripped").to.be.null;
+      expect(queryKey(el, "{layout:base}"), "no lowercase base key either").to.be.null;
+    });
+
     it("Numpad: a user-reached symbols layout keeps the return key (relabeled) to the numpad", async () => {
       // The "123" ({layout:numeric}) key on the symbols layout is a *user* pick
       // of the numeric layout, not the numpad, so under Numpad the {layout:base}
@@ -1010,6 +1032,10 @@ describe("kiosk-keyboard", () => {
       expect(returnKey!.getAttribute("aria-label"), "its accessible name says it returns to numbers").to.equal(
         "Return to numbers",
       );
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyIcon}`),
+        "the kept return key renders a back icon, not a blank key",
+      ).to.not.be.null;
 
       const back = oneEvent(el, "layout-change");
       returnKey!.click();
@@ -1052,6 +1078,10 @@ describe("kiosk-keyboard", () => {
       expect(returnKey!.getAttribute("aria-label"), "its accessible name says it returns to numbers").to.equal(
         "Return to numbers",
       );
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyIcon}`),
+        "the kept return key renders a back icon, not a blank key",
+      ).to.not.be.null;
 
       const back = oneEvent(el, "layout-change");
       returnKey!.click();
@@ -1059,6 +1089,38 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       expect(queryKey(el, "{layout:special}"), "numeric surface is rendered again").to.not.be.null;
+    });
+
+    it("Numpad: a mixed-case {layout:BASE} key re-engages the constraint (twin parity)", async () => {
+      // {layout:base} is the base-return token regardless of case; {layout:BASE}
+      // must re-engage the keyboardType constraint and return to the numpad,
+      // matching the kiosk twin.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard> `);
+      await nextRender();
+
+      const toSpecial = document.createElement("div");
+      toSpecial.setAttribute("role", "button");
+      toSpecial.dataset.key = "{layout:special}";
+      rootDiv(el).appendChild(toSpecial);
+      const switched = oneEvent(el, "layout-change");
+      toSpecial.click();
+      await switched;
+      toSpecial.remove();
+      await nextRender();
+      expect(queryKey(el, "["), "user switch reached the symbols layout").to.not.be.null;
+
+      const back = document.createElement("div");
+      back.setAttribute("role", "button");
+      back.dataset.key = "{layout:BASE}";
+      rootDiv(el).appendChild(back);
+      const returned = oneEvent(el, "layout-change");
+      back.click();
+      await returned;
+      back.remove();
+      await nextRender();
+
+      expect(queryKey(el, "7"), "mixed-case {layout:BASE} returned to the numpad").to.not.be.null;
+      expect(queryKey(el, "["), "left the symbols layout").to.be.null;
     });
 
     it("preserves a user {layout:*} override when the same auto-detected input is refocused", async () => {

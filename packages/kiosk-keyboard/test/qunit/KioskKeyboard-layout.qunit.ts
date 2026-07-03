@@ -163,6 +163,31 @@ QUnit.test(
   },
 );
 
+QUnit.test(
+  "KeyboardType 'Numeric': a mixed-case {layout:Base} dead key is stripped (case-insensitive)",
+  async (assert) => {
+    // parseLayoutToken lowercases, so a consumer-authored mixed-case
+    // `{layout:Base}` dead duplicate is recognized and stripped just like the
+    // canonical lowercase form; it must not linger as a misleading "ABC" key.
+    const customSpecial: LayoutDefinition = [
+      [{ value: "[" }, { value: "{layout:numeric}", label: "123" }, { value: "{layout:Base}", label: "ABC" }],
+    ];
+    const kb = new KioskKeyboard({ instanceLayouts: { special: customSpecial } });
+    kb.setKeyboardType(KeyboardType.Numeric);
+    await placeAndWait(kb);
+
+    tapKey(kb, "{layout:special}");
+    await waitForRender();
+
+    const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("{layout:numeric}"), "the '123' key remains the real way back to numbers");
+    assert.notOk(keys.includes("{layout:Base}"), "the mixed-case dead ABC key is stripped");
+    assert.notOk(keys.includes("{layout:base}"), "no lowercase base key either");
+
+    kb.destroy();
+  },
+);
+
 QUnit.test("KeyboardType 'Full': the symbols layout keeps the ABC key (letters stay reachable)", async (assert) => {
   // Guard against over-stripping: on a full keyboard the base IS alphabetic, so
   // "ABC" ({layout:base}) correctly returns to letters and must remain.
@@ -221,6 +246,10 @@ QUnit.test(
       "Return to numbers",
       "its accessible name says it returns to numbers, not letters",
     );
+    assert.ok(
+      getKeyElement(kb, "{layout:base}")!.querySelector(`.${DOM.classes.keyIcon}`),
+      "the kept return key renders a back icon, not a blank key",
+    );
 
     tapKey(kb, "{layout:base}");
     await waitForRender();
@@ -268,6 +297,10 @@ QUnit.test(
       getKeyElement(kb, "{layout:base}")!.getAttribute("aria-label"),
       "Return to numbers",
       "its accessible name says it returns to numbers, not letters",
+    );
+    assert.ok(
+      getKeyElement(kb, "{layout:base}")!.querySelector(`.${DOM.classes.keyIcon}`),
+      "the kept return key renders a back icon, not a blank key",
     );
 
     tapKey(kb, "{layout:base}");
@@ -494,6 +527,42 @@ QUnit.test("resetKeyboardType round-trip lets the next keyboardType re-engage it
 
   kb.destroy();
 });
+
+QUnit.test(
+  "KeyboardType 'Numpad': a mixed-case {layout:BASE} key re-engages the constraint (twin parity)",
+  async (assert) => {
+    // {layout:base} is the base-return token regardless of case, matching the
+    // case-insensitive registry and the webc twin: {layout:BASE} must re-engage
+    // the keyboardType constraint (source "external"), not read as a user layout
+    // named "BASE".
+    const customNumpad: LayoutDefinition = [
+      [{ value: "7" }, { value: "8" }, { value: "9" }],
+      [
+        { value: "{layout:special}", label: "#+=", type: "modifier" },
+        { value: "{enter}", type: "action" },
+      ],
+    ];
+    const kb = new KioskKeyboard({ instanceLayouts: { numpad: customNumpad } });
+    kb.setKeyboardType(KeyboardType.Numpad);
+    await placeAndWait(kb);
+
+    tapKey(kb, "{layout:special}");
+    await waitForRender();
+    assert.ok(
+      Array.from(getKeyElements(kb)).some((k) => k.dataset.key === "["),
+      "user switch reached the symbols layout",
+    );
+
+    simulateTap(kb, createFakeKeyElement("{layout:BASE}", "fake-base-upper"));
+    await waitForRender();
+
+    const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+    assert.ok(keys.includes("7"), "mixed-case {layout:BASE} re-engaged the constraint: numpad renders");
+    assert.notOk(keys.includes("["), "left the symbols layout");
+
+    kb.destroy();
+  },
+);
 
 QUnit.test("Programmatic setLayout fires layoutChange when the layout actually changes", async (assert) => {
   // The layoutChange JSDoc documents firing for programmatic setLayout() too,

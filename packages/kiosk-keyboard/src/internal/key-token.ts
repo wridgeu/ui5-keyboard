@@ -25,9 +25,10 @@ export function classifyKeyToken(value: string): KeyTokenKind {
 export const LAYOUT_BASE = "base";
 
 /**
- * Target name of a `{layout:NAME}` value (trimmed), or `null` if not a layout
- * token. Sole owner of the `{layout:*}` name grammar; callers normalize case.
+ * Target name of a `{layout:NAME}` value, trimmed and lowercased to match the
+ * case-insensitive layout registry (or `null` if not a layout token). Sole
+ * owner of the `{layout:*}` name grammar.
  */
 export function parseLayoutToken(value: string): string | null {
-  return value.startsWith("{layout:") ? value.slice("{layout:".length, -1).trim() : null;
+  return value.startsWith("{layout:") ? value.slice("{layout:".length, -1).trim().toLowerCase() : null;
 }

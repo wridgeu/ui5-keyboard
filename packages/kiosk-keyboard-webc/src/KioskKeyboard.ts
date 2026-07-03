@@ -1438,9 +1438,9 @@ class KioskKeyboard extends UI5Element {
   }
 
   private _handleLayoutSwitch(value: string): void {
-    // Lowercase to match the case-insensitive registry, so a mixed-case name
-    // can't be recorded as a (corrupt) base layout.
-    const layoutName = (parseLayoutToken(value) ?? "").toLowerCase();
+    // parseLayoutToken lowercases to match the case-insensitive registry, so a
+    // mixed-case name can't be recorded as a (corrupt) base layout.
+    const layoutName = parseLayoutToken(value) ?? "";
     if (layoutName !== LAYOUT_BASE && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
