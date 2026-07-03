@@ -42,7 +42,7 @@
      from other dual keys, or set --kiosk-keyboard-dual-direction to force
      all dual keys (including nav) to the same direction. */
   --kiosk-keyboard-fkey-direction: column;
-  --kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 3em);
+  --kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 1.6em);
   --kiosk-keyboard-fkey-label-size: clamp(0.5rem, calc(100cqi * 0.35), 0.7em);
   --kiosk-keyboard-fkey-gap: 0.05em;
 
