@@ -79,8 +79,7 @@ const NAV_KEY_NAMES: ReadonlySet<string> = new Set([
 /**
  * Classifies a layout row by its content for CSS targeting via `data-row-kind`.
  *
- * Content-driven so custom layouts get correct kinds automatically. Reads the
- * parsed key action rather than re-matching the `{fkey:*}` token grammar.
+ * Content-driven so custom layouts get correct kinds automatically.
  *
  * - `"fkey"`: all keys are function keys (`{fkey:F1}`, `{fkey:F2}`, ...)
  * - `"nav"`: all keys are known navigation keys (arrows, Home/End, PgUp/PgDn)

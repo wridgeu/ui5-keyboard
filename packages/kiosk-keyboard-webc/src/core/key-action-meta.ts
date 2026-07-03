@@ -1,12 +1,7 @@
-// Canonical metadata for the built-in special keys, single-sourced across both
-// twins. Each twin adapts these to its own render path: the kiosk control builds
-// full `sap-icon://` URIs and resolves them through IconPool, while the web
-// component uses the bare icon names with its `@ui5/webcomponents-icons` imports.
-//
-// The caps-lock *label* i18n key is deliberately NOT here: it still diverges
-// between the twins (kiosk `ARIA_CAPS_LOCK`, webc `KEY_CAPS_LOCK`) and unifying
-// it is a semi-public change deferred to a follow-up. Only the caps-lock *icon*
-// name is shared.
+// Canonical special-key metadata shared by both twins. The kiosk control builds
+// `sap-icon://` URIs (IconPool) from these names; the web component uses the bare
+// names. The caps-lock label i18n key is omitted: it still diverges (kiosk
+// `ARIA_CAPS_LOCK`, webc `KEY_CAPS_LOCK`); only its icon name is shared.
 
 /** Bare SAP icon names for the built-in special keys (no `sap-icon://` prefix). */
 export const SPECIAL_KEY_ICON_NAMES = {

@@ -1886,11 +1886,9 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "layout": {
-        // `action.target` is already trimmed + lowercased; an empty target is a
-        // malformed `{layout:}` token and is ignored. `base` returns to the
-        // constrained default (re-engage keyboardType filtering); any other pick
-        // is user-driven and overrides the keyboardType constraint (webc parity).
         if (!action.target) return;
+        // `base` re-engages the keyboardType constraint; any other pick is
+        // user-driven and overrides it (webc parity).
         const name = action.target === LAYOUT_BASE ? this._baseLayout : action.target;
         const source = action.target === LAYOUT_BASE ? "external" : "user";
         this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");

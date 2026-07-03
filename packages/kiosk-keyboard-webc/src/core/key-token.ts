@@ -1,12 +1,7 @@
 /** The `{layout:base}` target name: switches back to the tracked base layout. */
 export const LAYOUT_BASE = "base";
 
-/**
- * What an on-screen key does, parsed once from its authored `value` string.
- * Every consumer (click/tap dispatch, composition, styling, physical-key
- * highlight) reads this typed result instead of re-parsing the brace-token
- * string, so the grammar lives in exactly one place.
- */
+/** What an on-screen key does, parsed from its authored `value` string. */
 export type KeyAction =
   | { kind: "char"; text: string }
   | { kind: "shift" }
