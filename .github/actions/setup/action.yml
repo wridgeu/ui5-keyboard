@@ -1,10 +1,8 @@
 name: Setup Node and install
 description: >
-  Shared job setup: Node 24 (npm download cache only when installing), UI5
-  framework resources cache, and npm ci (which applies the postinstall
-  patches), skipped entirely when the node_modules cache below hits. Checkout
-  stays in each job: a local composite action only resolves after the
-  repository is checked out.
+  Shared job setup: Node 24, UI5 framework cache, and npm ci (which applies the
+  postinstall patches), skipped when the node_modules cache hits. Checkout stays
+  in each job: a local composite action only resolves after checkout.
 
 inputs:
   registry-url:
@@ -14,22 +12,11 @@ inputs:
 runs:
   using: composite
   steps:
-    # Shares one `npm ci` result across all parallel jobs and runs: the first
-    # job on a changed key installs and saves the tree; everyone else restores
-    # it and skips `npm ci` entirely. The key hashes the package.json manifests
-    # because `npm ci` fails on manifest/lockfile drift - a check that must not
-    # be skipped on a cache hit - and `patches/` + `.npmrc` because postinstall
-    # (patch-package + apply-nested) bakes the patch files into the snapshot.
-    # Exact-match only, deliberately no restore-keys: a stale or partial
-    # node_modules must never suppress `npm ci`. Trade-offs, accepted:
-    # - On a cold key every parallel job tars the full tree in its post step
-    #   but only the first reservation's upload is kept, so the losers' archive
-    #   work is wasted (cold runs only). In exchange any green job can seed the
-    #   cache, so a partially red cold run does not stay cold forever.
-    # - Skipping `npm ci` also skips puppeteer's postinstall Chrome download
-    #   into ~/.cache/puppeteer; the CI unit job re-ensures the browser after
-    #   this action (see ci.yml).
-    # Runs before setup-node so its npm download cache can be skipped on a hit.
+    # Cache the install tree so a hit skips `npm ci`. Key on the manifests and
+    # lockfile (npm ci's drift check must not be bypassed on a hit) plus
+    # patches/ and .npmrc (postinstall bakes patches into the tree). Exact match
+    # only, no restore-keys: a partial tree must never suppress `npm ci`. Runs
+    # before setup-node so the ~/.npm cache below is gated on the same hit.
     - name: Cache node_modules
       id: node-modules
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
@@ -45,9 +32,8 @@ runs:
         # npm meets the engines npm floor (>= 11.10.0) required by the
         # min-release-age supply-chain cooldown (root .npmrc). Do not drop below Node 24.
         node-version: 24
-        # The ~/.npm download cache (~200 MB) only feeds `npm ci`; when the
-        # node_modules hit above means `npm ci` is skipped, skip this restore
-        # too (an empty `cache` input disables setup-node caching).
+        # ~/.npm only feeds `npm ci`; skip restoring it when the hit above
+        # skips `npm ci` (empty `cache` disables setup-node caching).
         cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
         registry-url: ${{ inputs.registry-url }}
 

@@ -960,12 +960,9 @@ describe("kiosk-keyboard", () => {
     });
 
     it("strips {layout:base} from the secondary layout in Numeric mode too", async () => {
-      // Regression (user feedback): on a Numeric keyboard the base layout is
-      // never alphabetic, so the "ABC" ({layout:base}) key never reaches letters
-      // - tapping it re-forces the numeric layout. It used to reappear on the
-      // user-reached 'special' symbols layout (where it is a dead duplicate of
-      // the "123" key), which confused users. It must be stripped there too; the
-      // "123" ({layout:numeric}) key is the real way back to numbers.
+      // Regression (user feedback): on a Numeric keyboard {layout:base} never
+      // reaches letters (it re-forces numeric), so on the user-reached symbols
+      // layout it is a dead duplicate of "123" ({layout:numeric}) and is stripped.
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
       await nextRender();
 
@@ -1002,11 +999,10 @@ describe("kiosk-keyboard", () => {
     });
 
     it("Numpad: a user-reached symbols layout keeps the return key (relabeled) to the numpad", async () => {
-      // The "123" ({layout:numeric}) key on the symbols layout is a *user* pick
-      // of the numeric layout, not the numpad, so under Numpad the {layout:base}
-      // key is the only way back to the constrained numpad surface and must stay.
-      // It is kept but relabeled: it returns to numbers, not letters, so it
-      // renders as a back icon ("Return to numbers"). Mirrors the kiosk twin.
+      // The symbols "123" ({layout:numeric}) reaches numeric, not numpad, so
+      // under Numpad {layout:base} is the only way back: kept but relabeled to a
+      // back icon, since it returns to numbers, not the letters "ABC" implies.
+      // Mirrors the kiosk twin.
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard> `);
       await nextRender();
 

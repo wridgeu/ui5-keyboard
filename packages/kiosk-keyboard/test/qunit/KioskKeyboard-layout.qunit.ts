@@ -137,12 +137,9 @@ QUnit.test("KeyboardType 'Numeric' filter applies to overridden numeric layout t
 QUnit.test(
   "KeyboardType 'Numeric': the symbols layout reached via '#+=' also hides the dead ABC key",
   async (assert) => {
-    // Regression (user feedback): tapping "#+=" ({layout:special}) sets
-    // _layoutSource="user", which used to un-gate the strip so the "ABC"
-    // ({layout:base}) key reappeared in the symbols view. On a Numeric keyboard
-    // {layout:base} can never reach letters (the constraint re-forces numeric),
-    // so "ABC" is a dead duplicate of the "123" ({layout:numeric}) key and must
-    // stay hidden in the symbols layout too.
+    // Regression (user feedback): a user tap on "#+=" set _layoutSource="user"
+    // and un-gated the strip, so the dead "ABC" ({layout:base}) reappeared next
+    // to "123" ({layout:numeric}) in the symbols view. It must stay hidden.
     const kb = new KioskKeyboard();
     kb.setKeyboardType(KeyboardType.Numeric);
     await placeAndWait(kb);
@@ -214,11 +211,9 @@ QUnit.test("KeyboardType 'Full': the symbols layout keeps the ABC key (letters s
 QUnit.test(
   "KeyboardType 'Numpad': a user-reached symbols layout keeps the return key (relabeled) to the numpad",
   async (assert) => {
-    // The "123" ({layout:numeric}) key on the symbols layout is a *user* pick of
-    // the numeric layout, not the numpad, so under Numpad the {layout:base} key
-    // is the only way back to the constrained numpad surface and must stay. It is
-    // kept but relabeled: it returns to numbers, not letters, so it renders as a
-    // back icon ("Return to numbers") rather than the misleading "ABC" text.
+    // The symbols "123" ({layout:numeric}) reaches numeric, not numpad, so under
+    // Numpad {layout:base} is the only way back: kept but relabeled to a back
+    // icon, since it returns to numbers, not the letters "ABC" implies.
     const customNumpad: LayoutDefinition = [
       [{ value: "7" }, { value: "8" }, { value: "9" }],
       [
@@ -266,11 +261,9 @@ QUnit.test(
 QUnit.test(
   "KeyboardType 'Numeric': a layout without a '123' key keeps the return key (relabeled) as its only escape (nav)",
   async (assert) => {
-    // The built-in nav layout's only route out is {layout:base} (its other switch
-    // goes deeper, to fkeys). Stripping it there would strand the user, so the
-    // strip may only remove it where a {layout:numeric} duplicate exists; here it
-    // is kept but relabeled to a back icon ("Return to numbers"), since under the
-    // constraint it returns to numbers rather than letters.
+    // The nav layout's only route out is {layout:base} (its other switch goes
+    // deeper, to fkeys), so it is kept (stripping would strand the user) but
+    // relabeled to a back icon, since it returns to numbers, not letters.
     const customNumeric: LayoutDefinition = [
       [{ value: "1" }, { value: "2" }, { value: "3" }],
       [
