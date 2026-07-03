@@ -1,0 +1,44 @@
+name: Prune PR caches
+
+# When a PR closes, the caches scoped to its merge ref (refs/pull/<n>/merge)
+# become dead weight against the repo's 10 GB Actions cache budget until
+# GitHub's 7-day unaccessed reaper removes them. The node_modules, npm, ui5,
+# puppeteer, and playwright caches a PR seeds are only reusable on that PR, so
+# delete them as soon as it closes to keep the reusable main-scoped caches from
+# being crowded out (see #158). This is a storage optimization only: a cache
+# miss costs a one-off cold install on the next run and never affects
+# correctness, so a failed prune is harmless.
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  prune:
+    # Fork PRs run with a read-only token that cannot delete caches; skip them.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    timeout-minutes: 5
+    steps:
+      # gh is preinstalled on the runner; the built-in `gh cache` avoids a
+      # third-party extension (no unpinned supply-chain surface). List the
+      # merge-ref caches by id and delete each; an empty list is a no-op.
+      - name: Delete caches scoped to the closed PR's merge ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        shell: bash
+        run: |
+          ids=$(gh cache list --repo "$REPO" --ref "$REF" --limit 100 --json id --jq '.[].id')
+          if [ -z "$ids" ]; then
+            echo "No caches scoped to $REF."
+            exit 0
+          fi
+          for id in $ids; do
+            echo "Deleting cache $id"
+            gh cache delete "$id" --repo "$REPO"
+          done
