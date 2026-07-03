@@ -47,3 +47,16 @@ QUnit.test("unrecognized full brace tokens are unknown; lone braces are char", (
   assert.deepEqual(parseKeyAction("{"), { kind: "char", text: "{" }, "lone open brace is a char");
   assert.deepEqual(parseKeyAction("}"), { kind: "char", text: "}" }, "lone close brace is a char");
 });
+
+QUnit.test("a token missing its closing brace is a char, not a truncated action", (assert) => {
+  assert.deepEqual(
+    parseKeyAction("{layout:base"),
+    { kind: "char", text: "{layout:base" },
+    "unterminated {layout: is literal, not a target losing its last char",
+  );
+  assert.deepEqual(
+    parseKeyAction("{fkey:F5"),
+    { kind: "char", text: "{fkey:F5" },
+    "unterminated {fkey: is literal, not a name losing its last char",
+  );
+});

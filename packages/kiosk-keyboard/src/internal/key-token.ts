@@ -24,16 +24,25 @@ export type KeyActionKind = KeyAction["kind"];
  * - `{fkey:NAME}`: `name` is trimmed but case-preserved (F-key names and the
  *   `KeyName` enum are case-significant).
  * - Any other fully brace-wrapped value is `unknown` (fires keyPress, inserts
- *   nothing); a lone `{` or `}` is a literal `char`.
+ *   nothing); a lone `{`/`}`, or a token missing its closing brace, is a literal
+ *   `char`.
  */
 export function parseKeyAction(value: string): KeyAction {
-  if (value === "{shift}") return { kind: "shift" };
-  if (value === "{backspace}") return { kind: "backspace" };
-  if (value === "{enter}") return { kind: "enter" };
-  if (value.startsWith("{layout:"))
-    return { kind: "layout", target: value.slice("{layout:".length, -1).trim().toLowerCase() };
-  if (value.startsWith("{fkey:")) return { kind: "fkey", name: value.slice("{fkey:".length, -1).trim() };
-  if (value.startsWith("{") && value.endsWith("}")) return { kind: "unknown", raw: value };
+  if (value.startsWith("{") && value.endsWith("}")) {
+    const body = value.slice(1, -1);
+    if (body === "shift") return { kind: "shift" };
+    if (body === "backspace") return { kind: "backspace" };
+    if (body === "enter") return { kind: "enter" };
+
+    const separator = body.indexOf(":");
+    if (separator !== -1) {
+      const prefix = body.slice(0, separator);
+      const arg = body.slice(separator + 1).trim();
+      if (prefix === "layout") return { kind: "layout", target: arg.toLowerCase() };
+      if (prefix === "fkey") return { kind: "fkey", name: arg };
+    }
+    return { kind: "unknown", raw: value };
+  }
   return { kind: "char", text: value };
 }
 

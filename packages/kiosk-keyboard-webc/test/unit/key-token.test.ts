@@ -35,4 +35,9 @@ describe("parseKeyAction", () => {
     expect(parseKeyAction("{")).toEqual({ kind: "char", text: "{" });
     expect(parseKeyAction("}")).toEqual({ kind: "char", text: "}" });
   });
+
+  it("treats a token missing its closing brace as a char, not a truncated action", () => {
+    expect(parseKeyAction("{layout:base")).toEqual({ kind: "char", text: "{layout:base" });
+    expect(parseKeyAction("{fkey:F5")).toEqual({ kind: "char", text: "{fkey:F5" });
+  });
 });
