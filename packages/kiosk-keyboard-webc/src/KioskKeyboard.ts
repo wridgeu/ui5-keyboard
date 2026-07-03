@@ -32,8 +32,9 @@ import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
-import { parseKeyAction, assertNever, parseLayoutToken, LAYOUT_BASE } from "./core/key-token.js";
+import { parseKeyAction, assertNever, LAYOUT_BASE } from "./core/key-token.js";
 import { SPECIAL_KEY_ICON_NAMES, SPECIAL_KEY_I18N_KEYS } from "./core/key-action-meta.js";
+import { constrainedLayoutName } from "./core/layout-constraint.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
@@ -136,7 +137,8 @@ function reconcileBaseSwitch(layout: LayoutDefinition, useless: boolean): Layout
   let changed = false;
   const next = layout.map((row) =>
     row.flatMap((key) => {
-      if (parseLayoutToken(key.value) !== LAYOUT_BASE) return [key];
+      const action = parseKeyAction(key.value);
+      if (!(action.kind === "layout" && action.target === LAYOUT_BASE)) return [key];
       changed = true;
       if (useless) return [];
       return [
@@ -1032,12 +1034,6 @@ class KioskKeyboard extends UI5Element {
    * The layout name forced by a non-user `keyboardType` of `Numpad`/`Numeric`,
    * or `null` when no such constraint applies (user pick, or a free type).
    */
-  private _autoForcedLayoutName(): "numpad" | "numeric" | null {
-    if (this._layoutSource === "user") return null;
-    if (this.keyboardType === "Numpad") return "numpad";
-    if (this.keyboardType === "Numeric") return "numeric";
-    return null;
-  }
 
   /**
    * The effective layout name for the current state: an explicit user switch
@@ -1051,7 +1047,8 @@ class KioskKeyboard extends UI5Element {
   private _resolvedLayoutName(): string {
     if (this._layoutSource === "user") return this._currentLayout;
     return (
-      this._autoForcedLayoutName() ?? (this._currentLayout || this._baseLayout || this.layout || this._localeLayout())
+      constrainedLayoutName(this.keyboardType) ??
+      (this._currentLayout || this._baseLayout || this.layout || this._localeLayout())
     );
   }
 
@@ -1059,15 +1056,19 @@ class KioskKeyboard extends UI5Element {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
     const layoutName = this._resolvedLayoutName();
     const resolved = getLayoutOrDefault(layoutName, layoutsMap);
-    const constrainedName =
-      this.keyboardType === "Numpad" ? "numpad" : this.keyboardType === "Numeric" ? "numeric" : null;
+    const constrainedName = constrainedLayoutName(this.keyboardType);
     if (constrainedName === null) return resolved;
     // The {layout:base} key can't reach letters under the constraint; it is a
     // dead duplicate when the constrained layout is showing or a sibling key
     // already reaches it, otherwise the only route back.
     const baseSwitchIsUseless =
       layoutName === constrainedName ||
-      resolved.some((row) => row.some((key) => parseLayoutToken(key.value) === constrainedName));
+      resolved.some((row) =>
+        row.some((key) => {
+          const action = parseKeyAction(key.value);
+          return action.kind === "layout" && action.target === constrainedName;
+        }),
+      );
     return reconcileBaseSwitch(resolved, baseSwitchIsUseless);
   }
 

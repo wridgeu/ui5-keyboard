@@ -85,7 +85,15 @@ const LAYOUTS = [
   "symbol-common",
 ];
 
-const CORE_MODULES = ["grapheme", "auto-repeat", "shift-state", "composition-utils", "key-token", "key-action-meta"];
+const CORE_MODULES = [
+  "grapheme",
+  "auto-repeat",
+  "shift-state",
+  "composition-utils",
+  "key-token",
+  "key-action-meta",
+  "layout-constraint",
+];
 
 // Same-named kiosk internal/ <-> webc core/ helpers that are deliberately NOT
 // byte-compared (framework-adapted; see the header comment). Together with
@@ -118,7 +126,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 22;
+const EXPECTED_PAIR_COUNT = 23;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or

@@ -44,7 +44,8 @@ import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
-import { parseKeyAction, assertNever, parseLayoutToken, LAYOUT_BASE } from "./internal/key-token";
+import { parseKeyAction, assertNever, LAYOUT_BASE } from "./internal/key-token";
+import { constrainedLayoutName } from "./internal/layout-constraint";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -1591,26 +1592,26 @@ export default class KioskKeyboard extends Control {
    */
   private _resolvedLayoutName(): string {
     if (this._layoutSource === "user") return this.getLayout();
-    const kbType = this.getKeyboardType();
-    if (kbType === KeyboardType.Numpad) return "numpad";
-    if (kbType === KeyboardType.Numeric) return "numeric";
-    return this.getLayout();
+    return constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout();
   }
 
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
     const layoutName = this._resolvedLayoutName();
     const resolved = registryGetLayoutOrDefault(layoutName, this._instanceLayoutsMap);
-    const kbType = this.getKeyboardType();
-    const constrainedName =
-      kbType === KeyboardType.Numpad ? "numpad" : kbType === KeyboardType.Numeric ? "numeric" : null;
+    const constrainedName = constrainedLayoutName(this.getKeyboardType());
     if (constrainedName === null) return resolved;
     // The {layout:base} key can't reach letters under the constraint; it is a
     // dead duplicate when the constrained layout is showing or a sibling key
     // already reaches it, otherwise the only route back.
     const baseSwitchIsUseless =
       layoutName === constrainedName ||
-      resolved.some((row) => row.some((key) => parseLayoutToken(key.value) === constrainedName));
+      resolved.some((row) =>
+        row.some((key) => {
+          const action = parseKeyAction(key.value);
+          return action.kind === "layout" && action.target === constrainedName;
+        }),
+      );
     return KioskKeyboard._reconcileBaseSwitch(resolved, baseSwitchIsUseless);
   }
 
@@ -1622,7 +1623,8 @@ export default class KioskKeyboard extends Control {
     let changed = false;
     const next = layout.map((row) =>
       row.flatMap((key) => {
-        if (parseLayoutToken(key.value) !== LAYOUT_BASE) return [key];
+        const action = parseKeyAction(key.value);
+        if (!(action.kind === "layout" && action.target === LAYOUT_BASE)) return [key];
         changed = true;
         if (useless) return [];
         return [
