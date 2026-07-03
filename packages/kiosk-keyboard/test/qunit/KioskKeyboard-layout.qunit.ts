@@ -163,9 +163,10 @@ QUnit.test(
 QUnit.test(
   "KeyboardType 'Numeric': a mixed-case {layout:Base} dead key is stripped (case-insensitive)",
   async (assert) => {
-    // parseLayoutToken lowercases, so a consumer-authored mixed-case
-    // `{layout:Base}` dead duplicate is recognized and stripped just like the
-    // canonical lowercase form; it must not linger as a misleading "ABC" key.
+    // parseKeyAction lowercases the layout target, so a consumer-authored
+    // mixed-case `{layout:Base}` dead duplicate is recognized and stripped just
+    // like the canonical lowercase form; it must not linger as a misleading
+    // "ABC" key.
     const customSpecial: LayoutDefinition = [
       [{ value: "[" }, { value: "{layout:numeric}", label: "123" }, { value: "{layout:Base}", label: "ABC" }],
     ];

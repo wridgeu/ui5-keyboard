@@ -977,9 +977,9 @@ describe("kiosk-keyboard", () => {
     });
 
     it("strips a mixed-case {layout:Base} dead key in Numeric mode (case-insensitive)", async () => {
-      // parseLayoutToken lowercases, so a consumer-authored mixed-case
-      // {layout:Base} dead duplicate is recognized and stripped like the
-      // canonical lowercase form; it must not linger as a misleading "ABC" key.
+      // parseKeyAction lowercases the layout target, so a consumer-authored
+      // mixed-case {layout:Base} dead duplicate is recognized and stripped like
+      // the canonical lowercase form; it must not linger as a misleading "ABC" key.
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
       el.instanceLayouts = {
         special: [

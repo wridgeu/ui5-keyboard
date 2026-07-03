@@ -50,21 +50,3 @@ export function parseKeyAction(value: string): KeyAction {
 export function assertNever(x: never): never {
   throw new Error(`Unhandled KeyAction: ${JSON.stringify(x)}`);
 }
-
-// ── Legacy adapters ───────────────────────────────
-// Thin wrappers over parseKeyAction, kept until their call sites migrate to the
-// typed action; removed once no caller remains.
-
-/** @deprecated Use {@link parseKeyAction}. */
-export type KeyTokenKind = KeyActionKind;
-
-/** @deprecated Use `parseKeyAction(value).kind`. */
-export function classifyKeyToken(value: string): KeyTokenKind {
-  return parseKeyAction(value).kind;
-}
-
-/** @deprecated Use `parseKeyAction(value)` and read `.target` on a `layout` action. */
-export function parseLayoutToken(value: string): string | null {
-  const action = parseKeyAction(value);
-  return action.kind === "layout" ? action.target : null;
-}

@@ -1,11 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseKeyAction, classifyKeyToken, parseLayoutToken, LAYOUT_BASE } from "../../src/core/key-token.js";
+import { parseKeyAction, LAYOUT_BASE } from "../../src/core/key-token.js";
 
 // Unit coverage for the sole brace-token parser. `parseKeyAction` turns a key's
 // authored `value` string into a typed KeyAction exactly once; every consumer
 // (dispatch, composition, styling, highlight) reads the typed result instead of
-// re-parsing the string. `classifyKeyToken` / `parseLayoutToken` are thin
-// adapters kept only until their call sites migrate.
+// re-parsing the string.
 
 describe("parseKeyAction", () => {
   it("parses exact-match action tokens", () => {
@@ -35,21 +34,5 @@ describe("parseKeyAction", () => {
     expect(parseKeyAction("{bcksp}")).toEqual({ kind: "unknown", raw: "{bcksp}" });
     expect(parseKeyAction("{")).toEqual({ kind: "char", text: "{" });
     expect(parseKeyAction("}")).toEqual({ kind: "char", text: "}" });
-  });
-});
-
-describe("legacy adapters", () => {
-  it("classifyKeyToken returns the KeyAction kind", () => {
-    expect(classifyKeyToken("{shift}")).toBe("shift");
-    expect(classifyKeyToken("{layout:x}")).toBe("layout");
-    expect(classifyKeyToken("{fkey:F1}")).toBe("fkey");
-    expect(classifyKeyToken("{bogus}")).toBe("unknown");
-    expect(classifyKeyToken("a")).toBe("char");
-  });
-
-  it("parseLayoutToken returns the layout target or null", () => {
-    expect(parseLayoutToken("{layout:Numeric}")).toBe("numeric");
-    expect(parseLayoutToken("{fkey:F1}")).toBeNull();
-    expect(parseLayoutToken("a")).toBeNull();
   });
 });
