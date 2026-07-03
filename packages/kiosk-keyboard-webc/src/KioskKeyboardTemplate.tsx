@@ -1,5 +1,6 @@
 import type KioskKeyboard from "./KioskKeyboard.js";
 import { classifyRow, keyElementId } from "./core/dom-utils.js";
+import { parseKeyAction } from "./core/key-token.js";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
 
 import { KIOSK_KEYBOARD_DOM } from "./core/dom-contract.js";
@@ -53,6 +54,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               const id = keyElementId(this._componentId, rowIndex, colIndex);
               const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;
               const isShift = key.value === "{shift}";
+              const isFkey = parseKeyAction(key.value).kind === "fkey";
               const resolved = this._resolveKeyIcon(key);
               const label = this._getKeyLabel(key);
               const hasIcon = resolved !== null;
@@ -77,14 +79,14 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                     [KIOSK_KEYBOARD_DOM.classes.key]: true,
                     [KIOSK_KEYBOARD_DOM.classes.keyModifier]: key.type === "modifier",
                     [KIOSK_KEYBOARD_DOM.classes.keyAction]: key.type === "action",
-                    [KIOSK_KEYBOARD_DOM.classes.keyFkey]: key.value.startsWith("{fkey:"),
+                    [KIOSK_KEYBOARD_DOM.classes.keyFkey]: isFkey,
                     [KIOSK_KEYBOARD_DOM.keyWidthClass(key.width ?? "")]: !!key.width,
                     [KIOSK_KEYBOARD_DOM.classes.keyShiftActive]: isShift && this._shifted,
                     [KIOSK_KEYBOARD_DOM.classes.keyCapsLock]: isShift && this._capsLock,
                     [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
                     [KIOSK_KEYBOARD_DOM.classes.keyDual]: isDual,
                   }}
-                  part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}${key.value.startsWith("{fkey:") ? " fkey" : ""}`}
+                  part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}${isFkey ? " fkey" : ""}`}
                   role="button"
                   tabindex={isFocusTarget ? 0 : -1}
                   data-key={key.value}

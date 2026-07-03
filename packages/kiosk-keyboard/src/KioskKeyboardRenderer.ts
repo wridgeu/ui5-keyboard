@@ -4,6 +4,7 @@ import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
 import { KEY_ID_SUFFIX_RE, classifyRow, keyElementId } from "./internal/dom";
+import { parseKeyAction } from "./internal/key-token";
 import { SPECIAL_KEY_ICONS, getKeyIcon, validateKeyIcon } from "./internal/key-icons";
 import { KeyboardType } from "./library";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./internal/grapheme";
@@ -205,7 +206,7 @@ const KioskKeyboardRenderer = {
     }
 
     // Function/navigation key class for targeted styling
-    if (key.value.startsWith("{fkey:")) {
+    if (parseKeyAction(key.value).kind === "fkey") {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyFkey);
     }
   },

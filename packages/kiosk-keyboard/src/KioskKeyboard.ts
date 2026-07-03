@@ -44,7 +44,7 @@ import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
-import { classifyKeyToken, parseLayoutToken, LAYOUT_BASE } from "./internal/key-token";
+import { parseKeyAction, classifyKeyToken, parseLayoutToken, LAYOUT_BASE } from "./internal/key-token";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -1817,11 +1817,8 @@ export default class KioskKeyboard extends Control {
    * and regular character keys, but not layout/fkey switches.
    */
   private _keyAffectsComposition(keyValue: string): boolean {
-    return (
-      keyValue === "{backspace}" ||
-      keyValue === "{enter}" ||
-      (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
-    );
+    const kind = parseKeyAction(keyValue).kind;
+    return kind !== "layout" && kind !== "fkey";
   }
 
   /**
