@@ -32,7 +32,7 @@ import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
-import { classifyKeyToken } from "./core/key-token.js";
+import { classifyKeyToken, parseLayoutToken, LAYOUT_BASE } from "./core/key-token.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
@@ -64,6 +64,7 @@ import "@ui5/webcomponents-icons/dist/arrow-top.js";
 import "@ui5/webcomponents-icons/dist/arrow-left.js";
 import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/locked.js";
+import "@ui5/webcomponents-icons/dist/nav-back.js";
 
 // ── Icon name map (used by the template to render <ui5-icon>) ──
 const ICON_MAP: Readonly<Record<string, string>> = {
@@ -73,6 +74,9 @@ const ICON_MAP: Readonly<Record<string, string>> = {
   "{backspace}": "arrow-left",
 };
 const SAP_ICON_PREFIX = "sap-icon://";
+
+/** Icon for a `{layout:base}` key kept under the Numpad/Numeric constraint. */
+const LAYOUT_RETURN_ICON = "sap-icon://nav-back";
 
 // ── Valid enum values for string properties (derived from enums) ──
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
@@ -122,18 +126,29 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
 const warnedMissingLabels = new Set<string>();
 
 /**
- * Drop `{layout:base}` keys from a layout (dropping rows that become empty).
- * Used where the switch is useless: a no-op on the constrained layout, or a
- * duplicate of a `{layout:<constrained>}` key (see `_getResolvedLayout`).
+ * Reshapes `{layout:base}` keys for a surface under the Numpad/Numeric
+ * constraint: drop them when `useless`, else relabel to a back icon (they return
+ * to numbers, not letters, so the built-in "ABC" label misleads). A caller-set
+ * `ariaLabel` wins. Non-mutating. Mirrors the kiosk twin.
  */
-function stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
+function reconcileBaseSwitch(layout: LayoutDefinition, useless: boolean): LayoutDefinition {
   let changed = false;
-  const filtered = layout.map((row) => {
-    const next = row.filter((key) => key.value !== "{layout:base}");
-    if (next.length !== row.length) changed = true;
-    return next;
-  });
-  return changed ? filtered.filter((row) => row.length > 0) : layout;
+  const next = layout.map((row) =>
+    row.flatMap((key) => {
+      if (parseLayoutToken(key.value) !== LAYOUT_BASE) return [key];
+      changed = true;
+      if (useless) return [];
+      return [
+        {
+          ...key,
+          label: "",
+          icon: LAYOUT_RETURN_ICON,
+          ariaLabel: key.ariaLabel ?? getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
+        },
+      ];
+    }),
+  );
+  return changed ? next.filter((row) => row.length > 0) : layout;
 }
 
 /**
@@ -1043,24 +1058,16 @@ class KioskKeyboard extends UI5Element {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
     const layoutName = this._resolvedLayoutName();
     const resolved = getLayoutOrDefault(layoutName, layoutsMap);
-    // Under the Numpad/Numeric keyboardType constraint a `{layout:base}` "ABC"
-    // key cannot render the base layout: tapping it resets `_layoutSource`, so
-    // the constraint re-resolves to the constrained numpad/numeric layout.
-    // That makes the key useless in exactly two places, where it is stripped
-    // from the rendered surface: on the constrained layout itself (a no-op
-    // there) and on a layout that also carries a `{layout:<constrained>}` key
-    // (a dead duplicate, e.g. "ABC" next to "123" on the numeric symbols
-    // layout). Anywhere else it stays: it is the working return path to the
-    // constrained surface (e.g. the numpad's symbols view, where "123" leads
-    // to numeric rather than back to the numpad, or the nav/fkeys layouts,
-    // whose only escape it is). Mirrors the kiosk twin.
     const constrainedName =
       this.keyboardType === "Numpad" ? "numpad" : this.keyboardType === "Numeric" ? "numeric" : null;
     if (constrainedName === null) return resolved;
+    // The {layout:base} key can't reach letters under the constraint; it is a
+    // dead duplicate when the constrained layout is showing or a sibling key
+    // already reaches it, otherwise the only route back.
     const baseSwitchIsUseless =
       layoutName === constrainedName ||
-      resolved.some((row) => row.some((key) => key.value === `{layout:${constrainedName}}`));
-    return baseSwitchIsUseless ? stripDeadBaseSwitch(resolved) : resolved;
+      resolved.some((row) => row.some((key) => parseLayoutToken(key.value) === constrainedName));
+    return reconcileBaseSwitch(resolved, baseSwitchIsUseless);
   }
 
   // ── Memoized Map views of the instance-* properties ──
@@ -1433,13 +1440,13 @@ class KioskKeyboard extends UI5Element {
   private _handleLayoutSwitch(value: string): void {
     // Lowercase to match the case-insensitive registry, so a mixed-case name
     // can't be recorded as a (corrupt) base layout.
-    const layoutName = value.slice("{layout:".length, -1).trim().toLowerCase();
-    if (layoutName !== "base" && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
+    const layoutName = (parseLayoutToken(value) ?? "").toLowerCase();
+    if (layoutName !== LAYOUT_BASE && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
     }
     const changed =
-      layoutName === "base"
+      layoutName === LAYOUT_BASE
         ? this._applyLayout(this._baseLayout || this.layout || this._localeLayout(), "external")
         : this._applyLayout(layoutName, "user");
     if (changed) {

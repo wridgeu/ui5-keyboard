@@ -16,6 +16,9 @@ export const SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
   "{enter}": "sap-icon://accept",
 };
 
+/** Icon for a `{layout:base}` key kept under the Numpad/Numeric constraint. */
+export const LAYOUT_RETURN_ICON = "sap-icon://nav-back";
+
 /**
  * Returns the default icon URI for a special key value, or undefined
  * if the key has no default icon.

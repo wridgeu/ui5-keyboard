@@ -26,6 +26,7 @@ import {
 } from "./internal/middleware-registry";
 import {
   SPECIAL_KEY_ICONS as DEFAULT_SPECIAL_KEY_ICONS,
+  LAYOUT_RETURN_ICON,
   getKeyIcon as iconsGetKeyIcon,
   clearIconWarnings as iconsClearWarnings,
 } from "./internal/key-icons";
@@ -43,7 +44,7 @@ import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
-import { classifyKeyToken } from "./internal/key-token";
+import { classifyKeyToken, parseLayoutToken, LAYOUT_BASE } from "./internal/key-token";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -1600,42 +1601,41 @@ export default class KioskKeyboard extends Control {
   private _getResolvedLayout(): LayoutDefinition {
     const layoutName = this._resolvedLayoutName();
     const resolved = registryGetLayoutOrDefault(layoutName, this._instanceLayoutsMap);
-    // Under the Numpad/Numeric keyboardType constraint a `{layout:base}` "ABC"
-    // key cannot render the base layout: tapping it resets `_layoutSource`, so
-    // the constraint re-resolves to the constrained numpad/numeric layout.
-    // That makes the key useless in exactly two places, where it is stripped
-    // from the rendered surface: on the constrained layout itself (a no-op
-    // there) and on a layout that also carries a `{layout:<constrained>}` key
-    // (a dead duplicate, e.g. "ABC" next to "123" on the numeric symbols
-    // layout). Anywhere else it stays: it is the working return path to the
-    // constrained surface (e.g. the numpad's symbols view, where "123" leads
-    // to numeric rather than back to the numpad, or the nav/fkeys layouts,
-    // whose only escape it is). Mirrors the webc twin.
     const kbType = this.getKeyboardType();
     const constrainedName =
       kbType === KeyboardType.Numpad ? "numpad" : kbType === KeyboardType.Numeric ? "numeric" : null;
     if (constrainedName === null) return resolved;
+    // The {layout:base} key can't reach letters under the constraint; it is a
+    // dead duplicate when the constrained layout is showing or a sibling key
+    // already reaches it, otherwise the only route back.
     const baseSwitchIsUseless =
       layoutName === constrainedName ||
-      resolved.some((row) => row.some((key) => key.value === `{layout:${constrainedName}}`));
-    return baseSwitchIsUseless ? KioskKeyboard._stripDeadBaseSwitch(resolved) : resolved;
+      resolved.some((row) => row.some((key) => parseLayoutToken(key.value) === constrainedName));
+    return KioskKeyboard._reconcileBaseSwitch(resolved, baseSwitchIsUseless);
   }
 
-  // Drops `{layout:base}` "ABC" keys from a layout (and rows that become
-  // empty). Used where the switch is useless under the Numpad/Numeric
-  // constraint: a no-op on the constrained layout, or a duplicate of a
-  // `{layout:<constrained>}` key (see `_getResolvedLayout`). The built-in
-  // `numeric` and `special` layouts ship the key via `symbolBottomRow`, so
-  // this strips a built-in key (plus any user-supplied `instanceLayouts`
-  // override that adds one), not just overrides.
-  private static _stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
+  // Reshapes `{layout:base}` keys for a surface under the Numpad/Numeric
+  // constraint: drop them when `useless`, else relabel to a back icon (they
+  // return to numbers, not letters, so the built-in "ABC" label misleads). A
+  // caller-set `ariaLabel` wins. Non-mutating. Mirrors the webc twin.
+  private static _reconcileBaseSwitch(layout: LayoutDefinition, useless: boolean): LayoutDefinition {
     let changed = false;
-    const filtered = layout.map((row) => {
-      const next = row.filter((key) => key.value !== "{layout:base}");
-      if (next.length !== row.length) changed = true;
-      return next;
-    });
-    return changed ? filtered.filter((row) => row.length > 0) : layout;
+    const next = layout.map((row) =>
+      row.flatMap((key) => {
+        if (parseLayoutToken(key.value) !== LAYOUT_BASE) return [key];
+        changed = true;
+        if (useless) return [];
+        return [
+          {
+            ...key,
+            label: "",
+            icon: LAYOUT_RETURN_ICON,
+            ariaLabel: key.ariaLabel ?? getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
+          },
+        ];
+      }),
+    );
+    return changed ? next.filter((row) => row.length > 0) : layout;
   }
 
   /**
@@ -1887,13 +1887,13 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "layout": {
-        const raw = keyValue.slice("{layout:".length, -1).trim();
+        const raw = parseLayoutToken(keyValue);
         if (!raw) return;
         // `{layout:base}` returns to the constrained default (re-engage
         // keyboardType filtering); any other pick is user-driven and overrides
         // the keyboardType constraint (webc parity).
-        const name = raw === "base" ? this._baseLayout : raw;
-        const source = raw === "base" ? "external" : "user";
+        const name = raw === LAYOUT_BASE ? this._baseLayout : raw;
+        const source = raw === LAYOUT_BASE ? "external" : "user";
         this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
         return;
       }

@@ -6,7 +6,9 @@ import Localization from "sap/base/i18n/Localization";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
+  getKeyElement,
   getKeyElements,
+  getRenderedKeyLabel,
   getRenderedLayoutKeys,
   getRowElements,
   getRowKeyValues,
@@ -175,16 +177,23 @@ QUnit.test("KeyboardType 'Full': the symbols layout keeps the ABC key (letters s
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
   assert.ok(keys.includes("["), "Symbols layout is rendered on the full keyboard");
   assert.ok(keys.includes("{layout:base}"), "ABC key present so letters remain reachable");
+  assert.strictEqual(
+    getRenderedKeyLabel(kb, "{layout:base}"),
+    "ABC",
+    "Full keeps the 'ABC' text: base is alphabetic, so the key is not relabeled",
+  );
 
   kb.destroy();
 });
 
 QUnit.test(
-  "KeyboardType 'Numpad': a user-reached symbols layout keeps ABC as the return to the numpad",
+  "KeyboardType 'Numpad': a user-reached symbols layout keeps the return key (relabeled) to the numpad",
   async (assert) => {
     // The "123" ({layout:numeric}) key on the symbols layout is a *user* pick of
-    // the numeric layout, not the numpad, so under Numpad the ABC ({layout:base})
-    // key is the only way back to the constrained numpad surface and must stay.
+    // the numeric layout, not the numpad, so under Numpad the {layout:base} key
+    // is the only way back to the constrained numpad surface and must stay. It is
+    // kept but relabeled: it returns to numbers, not letters, so it renders as a
+    // back icon ("Return to numbers") rather than the misleading "ABC" text.
     const customNumpad: LayoutDefinition = [
       [{ value: "7" }, { value: "8" }, { value: "9" }],
       [
@@ -201,25 +210,38 @@ QUnit.test(
 
     let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
     assert.ok(keys.includes("["), "Symbols layout is rendered");
-    assert.ok(keys.includes("{layout:base}"), "ABC stays: it is the only return path to the numpad");
+    assert.ok(keys.includes("{layout:base}"), "the return key stays: it is the only way back to the numpad");
+    assert.strictEqual(
+      getRenderedKeyLabel(kb, "{layout:base}"),
+      "",
+      "the kept return key drops the misleading 'ABC' text (rendered as a back icon)",
+    );
+    assert.strictEqual(
+      getKeyElement(kb, "{layout:base}")!.getAttribute("aria-label"),
+      "Return to numbers",
+      "its accessible name says it returns to numbers, not letters",
+    );
 
     tapKey(kb, "{layout:base}");
     await waitForRender();
 
     keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-    assert.ok(keys.includes("{layout:special}"), "ABC re-engaged the constraint: the numpad override renders again");
+    assert.ok(keys.includes("{layout:special}"), "the return key re-engaged the constraint: the numpad renders again");
     assert.notOk(keys.includes("["), "Symbols layout left");
+    assert.strictEqual(getRowKeyValues(kb, 0).length, 3, "back on the numpad surface (row 0 is 7/8/9), not numeric");
 
     kb.destroy();
   },
 );
 
 QUnit.test(
-  "KeyboardType 'Numeric': a layout without a '123' key keeps ABC as its only escape (nav)",
+  "KeyboardType 'Numeric': a layout without a '123' key keeps the return key (relabeled) as its only escape (nav)",
   async (assert) => {
     // The built-in nav layout's only route out is {layout:base} (its other switch
     // goes deeper, to fkeys). Stripping it there would strand the user, so the
-    // strip may only remove ABC where a {layout:numeric} duplicate exists.
+    // strip may only remove it where a {layout:numeric} duplicate exists; here it
+    // is kept but relabeled to a back icon ("Return to numbers"), since under the
+    // constraint it returns to numbers rather than letters.
     const customNumeric: LayoutDefinition = [
       [{ value: "1" }, { value: "2" }, { value: "3" }],
       [
@@ -236,7 +258,17 @@ QUnit.test(
 
     let keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
     assert.ok(keys.includes("{layout:fkeys}"), "Nav layout is rendered");
-    assert.ok(keys.includes("{layout:base}"), "ABC stays: it is the nav layout's only way back");
+    assert.ok(keys.includes("{layout:base}"), "the return key stays: it is the nav layout's only way back");
+    assert.strictEqual(
+      getRenderedKeyLabel(kb, "{layout:base}"),
+      "",
+      "the kept return key drops the misleading 'ABC' text (rendered as a back icon)",
+    );
+    assert.strictEqual(
+      getKeyElement(kb, "{layout:base}")!.getAttribute("aria-label"),
+      "Return to numbers",
+      "its accessible name says it returns to numbers, not letters",
+    );
 
     tapKey(kb, "{layout:base}");
     await waitForRender();

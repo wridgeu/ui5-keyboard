@@ -773,6 +773,10 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       expect(queryKey(el, "{layout:base}"), "ABC key present so letters remain reachable").to.not.be.null;
+      expect(
+        queryKey(el, "{layout:base}")!.textContent?.trim(),
+        "Full keeps the 'ABC' text: base is alphabetic, so the key is not relabeled",
+      ).to.equal("ABC");
     });
 
     it("clears caps lock when user switches layout via {layout:X} key", async () => {
@@ -975,11 +979,12 @@ describe("kiosk-keyboard", () => {
       expect(queryKey(el, "{layout:base}"), "dead ABC key is not rendered on the numeric symbols layout").to.be.null;
     });
 
-    it("Numpad: a user-reached symbols layout keeps ABC as the return to the numpad", async () => {
+    it("Numpad: a user-reached symbols layout keeps the return key (relabeled) to the numpad", async () => {
       // The "123" ({layout:numeric}) key on the symbols layout is a *user* pick
-      // of the numeric layout, not the numpad, so under Numpad the ABC
-      // ({layout:base}) key is the only way back to the constrained numpad
-      // surface and must stay. Mirrors the kiosk twin.
+      // of the numeric layout, not the numpad, so under Numpad the {layout:base}
+      // key is the only way back to the constrained numpad surface and must stay.
+      // It is kept but relabeled: it returns to numbers, not letters, so it
+      // renders as a back icon ("Return to numbers"). Mirrors the kiosk twin.
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard> `);
       await nextRender();
 
@@ -996,23 +1001,34 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       expect(queryKey(el, "["), "symbols layout is rendered").to.not.be.null;
-      expect(queryKey(el, "{layout:base}"), "ABC stays: it is the only return path to the numpad").to.not.be.null;
+      const returnKey = queryKey(el, "{layout:base}");
+      expect(returnKey, "the return key stays: it is the only way back to the numpad").to.not.be.null;
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyLabel}`),
+        "the kept return key drops the misleading 'ABC' text (rendered as a back icon)",
+      ).to.be.null;
+      expect(returnKey!.getAttribute("aria-label"), "its accessible name says it returns to numbers").to.equal(
+        "Return to numbers",
+      );
 
       const back = oneEvent(el, "layout-change");
-      queryKey(el, "{layout:base}")!.click();
+      returnKey!.click();
       await back;
       await nextRender();
 
       expect(queryKey(el, "7"), "numpad surface is rendered again").to.not.be.null;
       expect(queryKey(el, "["), "symbols layout left").to.be.null;
       expect(queryKey(el, "q"), "not the alphabetic base layout").to.be.null;
+      expect(queryKey(el, "{layout:special}"), "back on the numpad (ships no {layout:*}), not numeric").to.be.null;
     });
 
-    it("Numeric: a layout without a '123' key keeps ABC as its only escape (nav)", async () => {
+    it("Numeric: a layout without a '123' key keeps the return key (relabeled) as its only escape (nav)", async () => {
       // The built-in nav layout's only route out is {layout:base} (its other
-      // switch goes deeper, to fkeys). Stripping it there would strand the
-      // user, so the strip may only remove ABC where a {layout:numeric}
-      // duplicate exists. Mirrors the kiosk twin.
+      // switch goes deeper, to fkeys). Stripping it there would strand the user,
+      // so the strip may only remove it where a {layout:numeric} duplicate
+      // exists; here it is kept but relabeled to a back icon ("Return to
+      // numbers"), since under the constraint it returns to numbers rather than
+      // letters. Mirrors the kiosk twin.
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
       await nextRender();
 
@@ -1027,10 +1043,18 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       expect(queryKey(el, "{layout:fkeys}"), "nav layout is rendered").to.not.be.null;
-      expect(queryKey(el, "{layout:base}"), "ABC stays: it is the nav layout's only way back").to.not.be.null;
+      const returnKey = queryKey(el, "{layout:base}");
+      expect(returnKey, "the return key stays: it is the nav layout's only way back").to.not.be.null;
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyLabel}`),
+        "the kept return key drops the misleading 'ABC' text (rendered as a back icon)",
+      ).to.be.null;
+      expect(returnKey!.getAttribute("aria-label"), "its accessible name says it returns to numbers").to.equal(
+        "Return to numbers",
+      );
 
       const back = oneEvent(el, "layout-change");
-      queryKey(el, "{layout:base}")!.click();
+      returnKey!.click();
       await back;
       await nextRender();
 
