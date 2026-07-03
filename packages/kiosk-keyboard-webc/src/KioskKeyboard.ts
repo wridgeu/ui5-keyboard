@@ -33,6 +33,7 @@ import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
 import { parseKeyAction, assertNever, parseLayoutToken, LAYOUT_BASE } from "./core/key-token.js";
+import { SPECIAL_KEY_ICON_NAMES, SPECIAL_KEY_I18N_KEYS } from "./core/key-action-meta.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
@@ -68,15 +69,15 @@ import "@ui5/webcomponents-icons/dist/nav-back.js";
 
 // ── Icon name map (used by the template to render <ui5-icon>) ──
 const ICON_MAP: Readonly<Record<string, string>> = {
-  "{shift}": "arrow-top",
-  "{shift:capsLock}": "locked",
-  "{enter}": "accept",
-  "{backspace}": "arrow-left",
+  "{shift}": SPECIAL_KEY_ICON_NAMES.shift,
+  "{shift:capsLock}": SPECIAL_KEY_ICON_NAMES.capsLock,
+  "{enter}": SPECIAL_KEY_ICON_NAMES.enter,
+  "{backspace}": SPECIAL_KEY_ICON_NAMES.backspace,
 };
 const SAP_ICON_PREFIX = "sap-icon://";
 
 /** Icon for a `{layout:base}` key kept under the Numpad/Numeric constraint. */
-const LAYOUT_RETURN_ICON = "sap-icon://nav-back";
+const LAYOUT_RETURN_ICON = SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.layoutReturn;
 
 // ── Valid enum values for string properties (derived from enums) ──
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
@@ -107,10 +108,10 @@ type LayoutSource = "user" | "external";
 
 /** Display and ARIA labels for built-in special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
-  "{shift}": "KEY_SHIFT",
-  "{enter}": "KEY_ENTER",
-  "{backspace}": "KEY_BACKSPACE",
-  " ": "KEY_SPACE",
+  "{shift}": SPECIAL_KEY_I18N_KEYS.shift,
+  "{enter}": SPECIAL_KEY_I18N_KEYS.enter,
+  "{backspace}": SPECIAL_KEY_I18N_KEYS.backspace,
+  " ": SPECIAL_KEY_I18N_KEYS.space,
 };
 
 /**
