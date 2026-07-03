@@ -44,7 +44,7 @@ import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
-import { parseKeyAction, classifyKeyToken, parseLayoutToken, LAYOUT_BASE } from "./internal/key-token";
+import { parseKeyAction, assertNever, parseLayoutToken, LAYOUT_BASE } from "./internal/key-token";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -1859,11 +1859,11 @@ export default class KioskKeyboard extends Control {
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
     const shift = this._isShiftActive();
-    const kind = classifyKeyToken(keyValue);
+    const action = parseKeyAction(keyValue);
 
     // Shift toggles before composition: the middleware would otherwise treat
     // it as a composition-affecting key.
-    if (kind === "shift") {
+    if (action.kind === "shift") {
       this._toggleShift(el);
       return;
     }
@@ -1872,7 +1872,7 @@ export default class KioskKeyboard extends Control {
     // (but not layout/fkey) before default handling.
     if (this._tryCompositionMiddleware(keyValue)) return;
 
-    switch (kind) {
+    switch (action.kind) {
       case "backspace":
         this._performBackspaceDelete();
         return;
@@ -1884,23 +1884,22 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "layout": {
-        const raw = parseLayoutToken(keyValue);
-        if (!raw) return;
-        // `{layout:base}` returns to the constrained default (re-engage
-        // keyboardType filtering); any other pick is user-driven and overrides
-        // the keyboardType constraint (webc parity).
-        const name = raw === LAYOUT_BASE ? this._baseLayout : raw;
-        const source = raw === LAYOUT_BASE ? "external" : "user";
+        // `action.target` is already trimmed + lowercased; an empty target is a
+        // malformed `{layout:}` token and is ignored. `base` returns to the
+        // constrained default (re-engage keyboardType filtering); any other pick
+        // is user-driven and overrides the keyboardType constraint (webc parity).
+        if (!action.target) return;
+        const name = action.target === LAYOUT_BASE ? this._baseLayout : action.target;
+        const source = action.target === LAYOUT_BASE ? "external" : "user";
         this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
         return;
       }
 
       case "fkey": {
-        const fkeyName = keyValue.slice("{fkey:".length, -1);
         // Fire keyPress first so consumers can prevent all downstream action
         // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
-        if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) return;
-        this._fKeyController.handle(fkeyName, shift);
+        if (!this.fireKeyPress({ key: action.name, shiftKey: shift })) return;
+        this._fKeyController.handle(action.name, shift);
         return;
       }
 
@@ -1910,9 +1909,9 @@ export default class KioskKeyboard extends Control {
         // but do NOT insert the literal braces - that was a silent footgun (a
         // mistyped `{bcksp}`, or a custom `{paste}` key with no handler, typed
         // the text "{bcksp}" into the field).
-        if (this.fireKeyPress({ key: keyValue, shiftKey: shift })) {
+        if (this.fireKeyPress({ key: action.raw, shiftKey: shift })) {
           Log.warning(
-            `Unrecognized key token "${keyValue}": not a built-in special key. Ignoring (no text inserted).`,
+            `Unrecognized key token "${action.raw}": not a built-in special key. Ignoring (no text inserted).`,
             undefined,
             "ui5.kiosk.KioskKeyboard",
           );
@@ -1922,13 +1921,13 @@ export default class KioskKeyboard extends Control {
 
       case "char": {
         // Regular character - resolve shift value
-        let effective = keyValue;
+        let effective = action.text;
         if (shift) {
           const shiftValue = el.dataset.shiftValue;
           if (shiftValue) {
             effective = shiftValue;
-          } else if (keyValue.length === 1) {
-            effective = keyValue.toUpperCase();
+          } else if (action.text.length === 1) {
+            effective = action.text.toUpperCase();
           }
         }
 
@@ -1941,12 +1940,10 @@ export default class KioskKeyboard extends Control {
         return;
       }
 
-      default: {
-        // Exhaustiveness: every KeyTokenKind is handled above ({shift} returns
-        // earlier). A new kind added to classifyKeyToken fails to compile here.
-        const _exhaustive: never = kind;
-        return _exhaustive;
-      }
+      default:
+        // Exhaustiveness: every KeyAction kind is handled above ({shift} returns
+        // earlier). A new variant fails to compile at this assertNever.
+        return assertNever(action);
     }
   }
 

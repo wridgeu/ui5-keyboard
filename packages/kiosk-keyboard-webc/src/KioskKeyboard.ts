@@ -32,7 +32,7 @@ import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
-import { classifyKeyToken, parseLayoutToken, LAYOUT_BASE } from "./core/key-token.js";
+import { parseKeyAction, assertNever, parseLayoutToken, LAYOUT_BASE } from "./core/key-token.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
@@ -1254,24 +1254,24 @@ class KioskKeyboard extends UI5Element {
     // release click so lifting off does not delete one extra character.
     if (this._backspaceRepeat.consumeClick(value)) return;
 
-    const kind = classifyKeyToken(value);
+    const action = parseKeyAction(value);
 
     // Layout, F-key, and Shift each fire their own key-press and return early.
-    if (kind === "layout") {
+    if (action.kind === "layout") {
       // Fire cancelable key-press first so consumers can veto a layout switch
       // the same way they can veto any other key.
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
       if (!allowed) return;
-      this._handleLayoutSwitch(value);
+      this._handleLayoutSwitch(action.target);
       return;
     }
 
-    if (kind === "fkey") {
-      this._handleFKeyPress(value, shifted);
+    if (action.kind === "fkey") {
+      this._handleFKeyPress(action.name, shifted);
       return;
     }
 
-    if (kind === "shift") {
+    if (action.kind === "shift") {
       // Shift is handled separately: shiftKey reports the *resulting* state
       // (what shift will become after toggle), not the pre-toggle state.
       const nextShifted = !this._capsLock;
@@ -1299,7 +1299,7 @@ class KioskKeyboard extends UI5Element {
     // key-press + composition pass. `char` is the text that would be inserted;
     // `undefined` for keys that insert nothing (actions and unknown tokens). A
     // lone "{"/"}" matches only one end, so it stays a literal character.
-    const char = kind === "char" ? (shifted ? (shiftValue ?? value.toUpperCase()) : value) : undefined;
+    const char = action.kind === "char" ? (shifted ? (shiftValue ?? value.toUpperCase()) : value) : undefined;
 
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;
@@ -1313,13 +1313,13 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (kind === "backspace") {
+    if (action.kind === "backspace") {
       if (target) handleBackspace(target);
       this._autoReleaseShift();
       return;
     }
 
-    if (kind === "enter") {
+    if (action.kind === "enter") {
       if (target) {
         if (target instanceof HTMLTextAreaElement) {
           insertText(target, "\n");
@@ -1331,7 +1331,7 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (kind === "unknown") {
+    if (action.kind === "unknown") {
       // key-press already fired (with char: undefined); do NOT insert the
       // literal braces - that was a silent footgun (a mistyped `{bcksp}`, or a
       // custom `{paste}` key with no handler, typed the text "{bcksp}").
@@ -1342,7 +1342,7 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (kind === "char") {
+    if (action.kind === "char") {
       // Regular character key - dispatches "input" event (not "change", which
       // fires on blur, matching native keyboard behavior).
       if (target) {
@@ -1352,10 +1352,9 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Exhaustiveness: every KeyTokenKind is handled above. A new kind added to
-    // classifyKeyToken fails to compile here.
-    const _exhaustive: never = kind;
-    return _exhaustive;
+    // Exhaustiveness: every KeyAction kind is handled above. A new variant fails
+    // to compile at this assertNever.
+    return assertNever(action);
   }
 
   /**
@@ -1437,10 +1436,11 @@ class KioskKeyboard extends UI5Element {
     return changed;
   }
 
-  private _handleLayoutSwitch(value: string): void {
-    // parseLayoutToken lowercases to match the case-insensitive registry, so a
-    // mixed-case name can't be recorded as a (corrupt) base layout.
-    const layoutName = parseLayoutToken(value) ?? "";
+  private _handleLayoutSwitch(layoutName: string): void {
+    // `layoutName` arrives from parseKeyAction already trimmed + lowercased to
+    // match the case-insensitive registry, so a mixed-case name can't be
+    // recorded as a (corrupt) base layout. An empty name (malformed `{layout:}`)
+    // is not registered and falls through to the warning below.
     if (layoutName !== LAYOUT_BASE && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
@@ -1454,8 +1454,7 @@ class KioskKeyboard extends UI5Element {
     }
   }
 
-  private _handleFKeyPress(value: string, shifted: boolean): void {
-    const fkeyName = value.slice("{fkey:".length, -1);
+  private _handleFKeyPress(fkeyName: string, shifted: boolean): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
     if (!allowed) return;
     this._fKeyController.handle(fkeyName, shifted);
