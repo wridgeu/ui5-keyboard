@@ -34,7 +34,7 @@ import { ResponsiveSizingController } from "./core/responsive-sizing-controller.
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
 import { parseKeyAction, assertNever, LAYOUT_BASE } from "./core/key-token.js";
 import { SPECIAL_KEY_ICON_NAMES, SPECIAL_KEY_I18N_KEYS } from "./core/key-action-meta.js";
-import { constrainedLayoutName } from "./core/layout-constraint.js";
+import { constrainedLayoutName, reconcileBaseSwitch } from "./core/layout-constraint.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
@@ -126,33 +126,6 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  * because UI5 controls have a meaningful destroy boundary.
  */
 const warnedMissingLabels = new Set<string>();
-
-/**
- * Reshapes `{layout:base}` keys for a surface under the Numpad/Numeric
- * constraint: drop them when `useless`, else relabel to a back icon (they return
- * to numbers, not letters, so the built-in "ABC" label misleads). A caller-set
- * `ariaLabel` wins. Non-mutating. Mirrors the kiosk twin.
- */
-function reconcileBaseSwitch(layout: LayoutDefinition, useless: boolean): LayoutDefinition {
-  let changed = false;
-  const next = layout.map((row) =>
-    row.flatMap((key) => {
-      const action = parseKeyAction(key.value);
-      if (!(action.kind === "layout" && action.target === LAYOUT_BASE)) return [key];
-      changed = true;
-      if (useless) return [];
-      return [
-        {
-          ...key,
-          label: "",
-          icon: LAYOUT_RETURN_ICON,
-          ariaLabel: key.ariaLabel ?? getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
-        },
-      ];
-    }),
-  );
-  return changed ? next.filter((row) => row.length > 0) : layout;
-}
 
 /**
  * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
@@ -1058,18 +1031,10 @@ class KioskKeyboard extends UI5Element {
     const resolved = getLayoutOrDefault(layoutName, layoutsMap);
     const constrainedName = constrainedLayoutName(this.keyboardType);
     if (constrainedName === null) return resolved;
-    // The {layout:base} key can't reach letters under the constraint; it is a
-    // dead duplicate when the constrained layout is showing or a sibling key
-    // already reaches it, otherwise the only route back.
-    const baseSwitchIsUseless =
-      layoutName === constrainedName ||
-      resolved.some((row) =>
-        row.some((key) => {
-          const action = parseKeyAction(key.value);
-          return action.kind === "layout" && action.target === constrainedName;
-        }),
-      );
-    return reconcileBaseSwitch(resolved, baseSwitchIsUseless);
+    return reconcileBaseSwitch(resolved, layoutName, constrainedName, {
+      icon: LAYOUT_RETURN_ICON,
+      ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
+    });
   }
 
   // ── Memoized Map views of the instance-* properties ──
