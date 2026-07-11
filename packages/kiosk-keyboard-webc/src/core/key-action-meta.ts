@@ -19,3 +19,15 @@ export const SPECIAL_KEY_I18N_KEYS = {
   shift: "KEY_SHIFT",
   space: "KEY_SPACE",
 } as const;
+
+/** Fkey action names that classify a row as navigation (arrows, Home/End, PgUp/PgDn). */
+export const NAV_KEY_NAMES: ReadonlySet<string> = new Set([
+  "Home",
+  "End",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "PageUp",
+  "PageDown",
+]);

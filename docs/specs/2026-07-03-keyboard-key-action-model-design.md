@@ -219,18 +219,30 @@ export, so it satisfies CLAUDE.md section 4.
 
 ### 3.4 Physical-key highlight and row styling
 
-- **Highlight**: replace the diverged `KEY_TO_DATA_KEY` record (kiosk) / if-ladder (webc)
-  and the `` `{fkey:${key}}` `` reconstruction with two shared pure functions:
-  `physicalKeyToAction(e: KeyboardEvent): KeyAction | null` and, for the CSS-selector
-  lookup, a shared `dataKeyForAction(action)` that reconstructs the canonical `data-key`
-  string in one place. The case-sensitivity divergence (webc lowercases the event key,
-  kiosk does not) is resolved to one normalization inside `physicalKeyToAction`.
-- **Row styling**: `classifyRow` reads `parseKeyAction(k.value)` instead of its own regex +
-  `NAV_KEYS` set. An `"fkey"` row is `every(k => action.kind === "fkey")` with an
-  F-number test on `action.name`; `"nav"` is `every` fkey with `name` in the unified
-  native-key allowlist (the `NativeDispatchableKeyNames` enum vs webc's raw `Set`, folded
-  into one shared source in the core alongside the metadata of 3.2). The
-  `/^\{fkey:F\d+\}$/` regex and the duplicated `NAV_KEYS` set are deleted.
+- **Highlight — declined (evaluated 2026-07-11).** The proposed
+  `physicalKeyToAction(e: KeyboardEvent)` / `dataKeyForAction(action)` extraction was
+  assessed against the actual twins and declined. The two highlight files
+  (`internal/physical-key-highlight.ts`, `core/physical-key-highlight-controller.ts`) are
+  framework adapters of ~100 lines each, of which only ~8-11 are the token-mapping slice;
+  the rest stays framework-specific on `UNCHECKED_CORE_TWINS` (kiosk uses
+  `Element.addEventDelegate` keyed by control id and unwraps `.originalEvent` for
+  `getModifierState`; webc uses `AbortController`/`addEventListener` and reads
+  `getModifierState` directly). The `KeyboardEvent` premise does not hold — kiosk consumes a
+  UI5-wrapped event, not a raw DOM event. The `dataKeyForAction` "one canonical string"
+  premise does not hold either — kiosk feeds a three-way selector (`data-key`,
+  lowercased-char, `data-shift-value`) for a one-way class toggle, whereas webc needs a
+  lowercased data-key that is also written to host state for a template equality test; one
+  return value cannot serve both. And the case-sensitivity "resolution" is not
+  behavior-preserving (kiosk's `data-shift-value` fallback and webc's blur-clear +
+  template-state have no counterpart on the other side). Per CLAUDE.md section 2, ~8-11 lines
+  of already-behaviorally-diverged mapping is below the hoist threshold; duplicate it. If
+  drift recurs here, prefer a normalized-diff guardrail over extraction.
+- **Row styling — done.** `classifyRow` (in both `internal/dom.ts` and `core/dom-utils.ts`)
+  reads `parseKeyAction(k.value)`: an `"fkey"` row is `every` fkey with an F-number test on
+  `action.name`; `"nav"` is `every` fkey with `name` in `NAV_KEY_NAMES`, now a single
+  drift-checked source in `key-action-meta.ts` (was a duplicated per-twin `Set`). The
+  trivial `/^F\d+$/` F-number regex stays duplicated per twin (a regex below the hoist
+  threshold, CLAUDE.md section 2).
 
 ### 3.5 Layout-resolution cleanup (folded in)
 

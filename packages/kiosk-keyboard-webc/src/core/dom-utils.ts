@@ -1,4 +1,5 @@
 import { parseKeyAction } from "./key-token.js";
+import { NAV_KEY_NAMES } from "./key-action-meta.js";
 
 /**
  * Regex to extract row and column indices from a key element ID.
@@ -65,16 +66,6 @@ export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElem
 }
 
 const FKEY_FNUM_RE = /^F\d+$/;
-const NAV_KEY_NAMES: ReadonlySet<string> = new Set([
-  "Home",
-  "End",
-  "ArrowUp",
-  "ArrowDown",
-  "ArrowLeft",
-  "ArrowRight",
-  "PageUp",
-  "PageDown",
-]);
 
 /**
  * Classifies a layout row by its content for CSS targeting via `data-row-kind`.
