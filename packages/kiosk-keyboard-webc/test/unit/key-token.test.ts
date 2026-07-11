@@ -40,4 +40,10 @@ describe("parseKeyAction", () => {
     expect(parseKeyAction("{layout:base")).toEqual({ kind: "char", text: "{layout:base" });
     expect(parseKeyAction("{fkey:F5")).toEqual({ kind: "char", text: "{fkey:F5" });
   });
+
+  it("treats an empty {layout:} / {fkey:} arg as unknown, not an empty-target action", () => {
+    expect(parseKeyAction("{layout:}")).toEqual({ kind: "unknown", raw: "{layout:}" });
+    expect(parseKeyAction("{fkey:}")).toEqual({ kind: "unknown", raw: "{fkey:}" });
+    expect(parseKeyAction("{layout: }")).toEqual({ kind: "unknown", raw: "{layout: }" });
+  });
 });

@@ -1853,7 +1853,6 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "layout": {
-        if (!action.target) return;
         // `base` re-engages the keyboardType constraint; any other pick is
         // user-driven and overrides it (webc parity).
         const name = action.target === LAYOUT_BASE ? this._baseLayout : action.target;

@@ -20,9 +20,9 @@ export type KeyActionKind = KeyAction["kind"];
  *
  * - `{layout:NAME}`: `target` is trimmed and lowercased to match the
  *   case-insensitive layout registry (`base` is the sentinel that returns to the
- *   tracked base layout).
+ *   tracked base layout). An empty target (`{layout:}`) is `unknown`.
  * - `{fkey:NAME}`: `name` is trimmed but case-preserved (F-key names and the
- *   `KeyName` enum are case-significant).
+ *   `KeyName` enum are case-significant). An empty name (`{fkey:}`) is `unknown`.
  * - Any other fully brace-wrapped value is `unknown` (fires keyPress, inserts
  *   nothing); a lone `{`/`}`, or a token missing its closing brace, is a literal
  *   `char`.
@@ -38,8 +38,8 @@ export function parseKeyAction(value: string): KeyAction {
     if (separator !== -1) {
       const prefix = body.slice(0, separator);
       const arg = body.slice(separator + 1).trim();
-      if (prefix === "layout") return { kind: "layout", target: arg.toLowerCase() };
-      if (prefix === "fkey") return { kind: "fkey", name: arg };
+      if (prefix === "layout" && arg) return { kind: "layout", target: arg.toLowerCase() };
+      if (prefix === "fkey" && arg) return { kind: "fkey", name: arg };
     }
     return { kind: "unknown", raw: value };
   }

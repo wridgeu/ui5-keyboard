@@ -60,3 +60,13 @@ QUnit.test("a token missing its closing brace is a char, not a truncated action"
     "unterminated {fkey: is literal, not a name losing its last char",
   );
 });
+
+QUnit.test("an empty {layout:} / {fkey:} arg is unknown, not an empty-target action", (assert) => {
+  assert.deepEqual(parseKeyAction("{layout:}"), { kind: "unknown", raw: "{layout:}" }, "empty layout target");
+  assert.deepEqual(parseKeyAction("{fkey:}"), { kind: "unknown", raw: "{fkey:}" }, "empty fkey name");
+  assert.deepEqual(
+    parseKeyAction("{layout: }"),
+    { kind: "unknown", raw: "{layout: }" },
+    "whitespace-only layout target trims to empty and is unknown",
+  );
+});
