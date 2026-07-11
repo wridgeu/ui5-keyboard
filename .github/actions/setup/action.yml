@@ -12,11 +12,10 @@ inputs:
 runs:
   using: composite
   steps:
-    # Cache the install tree so a hit skips `npm ci`. Key on the manifests and
-    # lockfile (npm ci's drift check must not be bypassed on a hit) plus
-    # patches/ and .npmrc (postinstall bakes patches into the tree). Exact match
-    # only, no restore-keys: a partial tree must never suppress `npm ci`. Runs
-    # before setup-node so the ~/.npm cache below is gated on the same hit.
+    # Cache the install tree so a hit skips `npm ci`. Key on the lockfile,
+    # manifests, and postinstall inputs (.patch files, apply-nested.mjs, .npmrc).
+    # Exact match only, no restore-keys: a partial tree must never suppress
+    # `npm ci`. Before setup-node so the ~/.npm cache is gated on the same hit.
     - name: Cache node_modules
       id: node-modules
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
@@ -24,7 +23,7 @@ runs:
         path: |
           node_modules
           packages/*/node_modules
-        key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'package.json', 'packages/*/package.json', 'patches/**', '.npmrc') }}
+        key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'package.json', 'packages/*/package.json', 'patches/*.patch', 'patches/apply-nested.mjs', '.npmrc') }}
 
     - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
