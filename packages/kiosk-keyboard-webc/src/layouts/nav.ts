@@ -13,7 +13,7 @@ const nav: LayoutDefinition = [
   // Row 2: Left / Down / Right
   navRow.slice(5, 8),
   // Row 3: PgUp / PgDn / Enter
-  [...navRow.slice(3, 5), { value: "{enter}", type: "action" as const }],
+  [...navRow.slice(3, 5), { value: "{enter}", type: "action" }],
   // Row 4: layout controls
   [
     { value: "{layout:base}", label: "ABC", width: "1.5", type: "modifier" },
