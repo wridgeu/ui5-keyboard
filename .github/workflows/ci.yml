@@ -97,6 +97,12 @@ jobs:
 
       - uses: ./.github/actions/setup
 
+      # A node_modules cache hit skips `npm ci` (and puppeteer's postinstall),
+      # so re-run its installer: a no-op when the Chrome cache above is warm,
+      # a download when it was evicted independently.
+      - name: Ensure puppeteer Chrome
+        run: node node_modules/puppeteer/install.mjs
+
       - name: Cache Playwright browsers
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
@@ -106,8 +112,8 @@ jobs:
 
       # Installs the OS libraries chromium needs (shared by the web-test-runner
       # playwright chromium and the puppeteer QUnit backend) plus Playwright's
-      # chromium for the component suite. The puppeteer Chrome is fetched by
-      # npm ci above.
+      # chromium for the component suite. The puppeteer Chrome comes from
+      # npm ci's postinstall or the "Ensure puppeteer Chrome" step above.
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 

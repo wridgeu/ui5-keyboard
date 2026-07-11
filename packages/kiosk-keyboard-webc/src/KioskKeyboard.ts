@@ -32,7 +32,9 @@ import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
-import { classifyKeyToken } from "./core/key-token.js";
+import { parseKeyAction, assertNever, LAYOUT_BASE } from "./core/key-token.js";
+import { SPECIAL_KEY_ICON_NAMES, SPECIAL_KEY_I18N_KEYS } from "./core/key-action-meta.js";
+import { constrainedLayoutName, reconcileBaseSwitch } from "./core/layout-constraint.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
@@ -64,15 +66,19 @@ import "@ui5/webcomponents-icons/dist/arrow-top.js";
 import "@ui5/webcomponents-icons/dist/arrow-left.js";
 import "@ui5/webcomponents-icons/dist/accept.js";
 import "@ui5/webcomponents-icons/dist/locked.js";
+import "@ui5/webcomponents-icons/dist/nav-back.js";
 
 // ── Icon name map (used by the template to render <ui5-icon>) ──
 const ICON_MAP: Readonly<Record<string, string>> = {
-  "{shift}": "arrow-top",
-  "{shift:capsLock}": "locked",
-  "{enter}": "accept",
-  "{backspace}": "arrow-left",
+  "{shift}": SPECIAL_KEY_ICON_NAMES.shift,
+  "{shift:capsLock}": SPECIAL_KEY_ICON_NAMES.capsLock,
+  "{enter}": SPECIAL_KEY_ICON_NAMES.enter,
+  "{backspace}": SPECIAL_KEY_ICON_NAMES.backspace,
 };
 const SAP_ICON_PREFIX = "sap-icon://";
+
+/** Icon for a `{layout:base}` key kept under the Numpad/Numeric constraint. */
+const LAYOUT_RETURN_ICON = SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.layoutReturn;
 
 // ── Valid enum values for string properties (derived from enums) ──
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
@@ -103,10 +109,10 @@ type LayoutSource = "user" | "external";
 
 /** Display and ARIA labels for built-in special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
-  "{shift}": "KEY_SHIFT",
-  "{enter}": "KEY_ENTER",
-  "{backspace}": "KEY_BACKSPACE",
-  " ": "KEY_SPACE",
+  "{shift}": SPECIAL_KEY_I18N_KEYS.shift,
+  "{enter}": SPECIAL_KEY_I18N_KEYS.enter,
+  "{backspace}": SPECIAL_KEY_I18N_KEYS.backspace,
+  " ": SPECIAL_KEY_I18N_KEYS.space,
 };
 
 /**
@@ -120,17 +126,6 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  * because UI5 controls have a meaningful destroy boundary.
  */
 const warnedMissingLabels = new Set<string>();
-
-/** Drop `{layout:base}` keys from a layout (used when the switch would be a no-op). */
-function stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
-  let changed = false;
-  const filtered = layout.map((row) => {
-    const next = row.filter((key) => key.value !== "{layout:base}");
-    if (next.length !== row.length) changed = true;
-    return next;
-  });
-  return changed ? filtered.filter((row) => row.length > 0) : layout;
-}
 
 /**
  * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
@@ -1012,12 +1007,6 @@ class KioskKeyboard extends UI5Element {
    * The layout name forced by a non-user `keyboardType` of `Numpad`/`Numeric`,
    * or `null` when no such constraint applies (user pick, or a free type).
    */
-  private _autoForcedLayoutName(): "numpad" | "numeric" | null {
-    if (this._layoutSource === "user") return null;
-    if (this.keyboardType === "Numpad") return "numpad";
-    if (this.keyboardType === "Numeric") return "numeric";
-    return null;
-  }
 
   /**
    * The effective layout name for the current state: an explicit user switch
@@ -1031,17 +1020,21 @@ class KioskKeyboard extends UI5Element {
   private _resolvedLayoutName(): string {
     if (this._layoutSource === "user") return this._currentLayout;
     return (
-      this._autoForcedLayoutName() ?? (this._currentLayout || this._baseLayout || this.layout || this._localeLayout())
+      constrainedLayoutName(this.keyboardType) ??
+      (this._currentLayout || this._baseLayout || this.layout || this._localeLayout())
     );
   }
 
   _getResolvedLayout(): LayoutDefinition {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
-    const resolved = getLayoutOrDefault(this._resolvedLayoutName(), layoutsMap);
-    // On the auto-forced numpad/numeric layout, `{layout:base}` would resolve
-    // back to the same auto-forced layout (handler sets `_layoutSource = "external"`,
-    // so the constraint re-applies). Strip it so the rendered surface matches behavior.
-    return this._autoForcedLayoutName() !== null ? stripDeadBaseSwitch(resolved) : resolved;
+    const layoutName = this._resolvedLayoutName();
+    const resolved = getLayoutOrDefault(layoutName, layoutsMap);
+    const constrainedName = constrainedLayoutName(this.keyboardType);
+    if (constrainedName === null) return resolved;
+    return reconcileBaseSwitch(resolved, layoutName, constrainedName, {
+      icon: LAYOUT_RETURN_ICON,
+      ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
+    });
   }
 
   // ── Memoized Map views of the instance-* properties ──
@@ -1228,24 +1221,24 @@ class KioskKeyboard extends UI5Element {
     // release click so lifting off does not delete one extra character.
     if (this._backspaceRepeat.consumeClick(value)) return;
 
-    const kind = classifyKeyToken(value);
+    const action = parseKeyAction(value);
 
     // Layout, F-key, and Shift each fire their own key-press and return early.
-    if (kind === "layout") {
+    if (action.kind === "layout") {
       // Fire cancelable key-press first so consumers can veto a layout switch
       // the same way they can veto any other key.
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
       if (!allowed) return;
-      this._handleLayoutSwitch(value);
+      this._handleLayoutSwitch(action.target);
       return;
     }
 
-    if (kind === "fkey") {
-      this._handleFKeyPress(value, shifted);
+    if (action.kind === "fkey") {
+      this._handleFKeyPress(action.name, shifted);
       return;
     }
 
-    if (kind === "shift") {
+    if (action.kind === "shift") {
       // Shift is handled separately: shiftKey reports the *resulting* state
       // (what shift will become after toggle), not the pre-toggle state.
       const nextShifted = !this._capsLock;
@@ -1273,7 +1266,7 @@ class KioskKeyboard extends UI5Element {
     // key-press + composition pass. `char` is the text that would be inserted;
     // `undefined` for keys that insert nothing (actions and unknown tokens). A
     // lone "{"/"}" matches only one end, so it stays a literal character.
-    const char = kind === "char" ? (shifted ? (shiftValue ?? value.toUpperCase()) : value) : undefined;
+    const char = action.kind === "char" ? (shifted ? (shiftValue ?? value.toUpperCase()) : value) : undefined;
 
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;
@@ -1287,13 +1280,13 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (kind === "backspace") {
+    if (action.kind === "backspace") {
       if (target) handleBackspace(target);
       this._autoReleaseShift();
       return;
     }
 
-    if (kind === "enter") {
+    if (action.kind === "enter") {
       if (target) {
         if (target instanceof HTMLTextAreaElement) {
           insertText(target, "\n");
@@ -1305,7 +1298,7 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (kind === "unknown") {
+    if (action.kind === "unknown") {
       // key-press already fired (with char: undefined); do NOT insert the
       // literal braces - that was a silent footgun (a mistyped `{bcksp}`, or a
       // custom `{paste}` key with no handler, typed the text "{bcksp}").
@@ -1316,7 +1309,7 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    if (kind === "char") {
+    if (action.kind === "char") {
       // Regular character key - dispatches "input" event (not "change", which
       // fires on blur, matching native keyboard behavior).
       if (target) {
@@ -1326,10 +1319,9 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Exhaustiveness: every KeyTokenKind is handled above. A new kind added to
-    // classifyKeyToken fails to compile here.
-    const _exhaustive: never = kind;
-    return _exhaustive;
+    // Exhaustiveness: every KeyAction kind is handled above. A new variant fails
+    // to compile at this assertNever.
+    return assertNever(action);
   }
 
   /**
@@ -1411,16 +1403,13 @@ class KioskKeyboard extends UI5Element {
     return changed;
   }
 
-  private _handleLayoutSwitch(value: string): void {
-    // Lowercase to match the case-insensitive registry, so a mixed-case name
-    // can't be recorded as a (corrupt) base layout.
-    const layoutName = value.slice("{layout:".length, -1).trim().toLowerCase();
-    if (layoutName !== "base" && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
+  private _handleLayoutSwitch(layoutName: string): void {
+    if (layoutName !== LAYOUT_BASE && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
     }
     const changed =
-      layoutName === "base"
+      layoutName === LAYOUT_BASE
         ? this._applyLayout(this._baseLayout || this.layout || this._localeLayout(), "external")
         : this._applyLayout(layoutName, "user");
     if (changed) {
@@ -1428,8 +1417,7 @@ class KioskKeyboard extends UI5Element {
     }
   }
 
-  private _handleFKeyPress(value: string, shifted: boolean): void {
-    const fkeyName = value.slice("{fkey:".length, -1);
+  private _handleFKeyPress(fkeyName: string, shifted: boolean): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
     if (!allowed) return;
     this._fKeyController.handle(fkeyName, shifted);

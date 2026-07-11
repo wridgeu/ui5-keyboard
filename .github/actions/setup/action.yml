@@ -1,8 +1,8 @@
 name: Setup Node and install
 description: >
-  Shared job setup: Node 24 with npm cache, UI5 framework resources cache, and
-  npm ci (which applies the postinstall patches). Checkout stays in each job:
-  a local composite action only resolves after the repository is checked out.
+  Shared job setup: Node 24, UI5 framework cache, and npm ci (which applies the
+  postinstall patches), skipped when the node_modules cache hits. Checkout stays
+  in each job: a local composite action only resolves after checkout.
 
 inputs:
   registry-url:
@@ -12,13 +12,28 @@ inputs:
 runs:
   using: composite
   steps:
+    # Cache the install tree so a hit skips `npm ci`. Key on the lockfile,
+    # manifests, and postinstall inputs (.patch files, apply-nested.mjs, .npmrc).
+    # Exact match only, no restore-keys: a partial tree must never suppress
+    # `npm ci`. Before setup-node so the ~/.npm cache is gated on the same hit.
+    - name: Cache node_modules
+      id: node-modules
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+        key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'package.json', 'packages/*/package.json', 'patches/*.patch', 'patches/apply-nested.mjs', '.npmrc') }}
+
     - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         # Pins Node 24; setup-node resolves the latest 24.x patch, whose bundled
         # npm meets the engines npm floor (>= 11.10.0) required by the
         # min-release-age supply-chain cooldown (root .npmrc). Do not drop below Node 24.
         node-version: 24
-        cache: npm
+        # ~/.npm only feeds `npm ci`; skip restoring it when the hit above
+        # skips `npm ci` (empty `cache` disables setup-node caching).
+        cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
         registry-url: ${{ inputs.registry-url }}
 
     - name: Cache UI5 framework resources
@@ -28,5 +43,6 @@ runs:
         key: ui5-${{ hashFiles('packages/*/ui5*.yaml') }}
         restore-keys: ui5-
 
-    - run: npm ci
+    - if: steps.node-modules.outputs.cache-hit != 'true'
+      run: npm ci
       shell: bash

@@ -1,13 +1,14 @@
 import Log from "sap/base/Log";
 import { getText } from "./i18n-registry";
+import { SPECIAL_KEY_I18N_KEYS } from "./key-action-meta";
 import type { KeyDefinition } from "../types";
 
 /** Map from special key value to [i18nKey, fallback]. */
 const SPECIAL_KEY_I18N: Record<string, [string, string]> = {
-  "{backspace}": ["KEY_BACKSPACE", "Backspace"],
-  "{enter}": ["KEY_ENTER", "Enter"],
-  "{shift}": ["KEY_SHIFT", "Shift"],
-  " ": ["KEY_SPACE", "Space"],
+  "{backspace}": [SPECIAL_KEY_I18N_KEYS.backspace, "Backspace"],
+  "{enter}": [SPECIAL_KEY_I18N_KEYS.enter, "Enter"],
+  "{shift}": [SPECIAL_KEY_I18N_KEYS.shift, "Shift"],
+  " ": [SPECIAL_KEY_I18N_KEYS.space, "Space"],
 };
 
 /**

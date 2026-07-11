@@ -73,6 +73,9 @@ sap.ui.define([], () => {
       "key-labels": {
         title: "QUnit tests for ui5.kiosk - key-labels",
       },
+      "key-token": {
+        title: "QUnit tests for ui5.kiosk - key-token parseKeyAction",
+      },
       "KioskKeyboard-layout": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Layout Management",
       },

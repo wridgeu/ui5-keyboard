@@ -1,5 +1,8 @@
 import IconPool from "sap/ui/core/IconPool";
 import Log from "sap/base/Log";
+import { SPECIAL_KEY_ICON_NAMES } from "./key-action-meta";
+
+const SAP_ICON_PREFIX = "sap-icon://";
 
 /**
  * Default special-key icons and icon URI validation.
@@ -10,11 +13,14 @@ import Log from "sap/base/Log";
 
 /** Default icons for special keys - used when the key has no explicit icon. */
 export const SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
-  "{backspace}": "sap-icon://arrow-left",
-  "{shift}": "sap-icon://arrow-top",
-  "{shift:capsLock}": "sap-icon://locked",
-  "{enter}": "sap-icon://accept",
+  "{backspace}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.backspace,
+  "{shift}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.shift,
+  "{shift:capsLock}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.capsLock,
+  "{enter}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.enter,
 };
+
+/** Icon for a `{layout:base}` key kept under the Numpad/Numeric constraint. */
+export const LAYOUT_RETURN_ICON = SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.layoutReturn;
 
 /**
  * Returns the default icon URI for a special key value, or undefined

@@ -209,12 +209,14 @@ Each key defines its value, optional display label, optional shift variant, widt
 _layoutSource   keyboardType    Resolved layout
 ─────────────   ────────────    ───────────────
 "user"          (any)           layouts[layout]   (user pick overrides the constraint)
-"external"      "Numpad"        layouts.numpad    (dead {layout:base} key stripped)
-"external"      "Numeric"       layouts.numeric   (dead {layout:base} key stripped)
+"external"      "Numpad"        layouts.numpad
+"external"      "Numeric"       layouts.numeric
 "external"      "Full"          layouts[layout]   (property-driven, default: qwerty)
 ```
 
 `keyboardType` acts as a constraint when the source is `"external"`; a user-driven pick overrides it.
+
+While the `Numpad`/`Numeric` constraint is active (regardless of source), the resolved layout reshapes a `{layout:base}` key before rendering. Where the key is useless it is dropped: on the constrained layout itself the key is a no-op (tapping it re-forces the same layout), and on a layout that also carries a `{layout:numpad}`/`{layout:numeric}` key matching the constraint it is a dead duplicate (e.g. "ABC" next to "123" on the numeric symbols layout). Where `{layout:base}` is instead the only route back to the constrained default (the numpad's symbols view, `nav`, `fkeys`), the key is kept but relabeled to a back icon (accessible name "Return to numbers"), since under the constraint it returns to the number surface rather than the alphabetic base.
 
 ### Layout Switching
 

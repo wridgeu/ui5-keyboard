@@ -756,6 +756,29 @@ describe("kiosk-keyboard", () => {
       expect(detail.layout).to.equal("numeric");
     });
 
+    it("Full keyboard: the symbols layout keeps the ABC key (letters stay reachable)", async () => {
+      // Guard against over-stripping: on a full keyboard the base IS alphabetic,
+      // so "ABC" ({layout:base}) correctly returns to letters and must remain.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      const toNumeric = oneEvent(el, "layout-change");
+      queryKey(el, "{layout:numeric}")!.click();
+      await toNumeric;
+      await nextRender();
+
+      const toSymbols = oneEvent(el, "layout-change");
+      queryKey(el, "{layout:special}")!.click();
+      await toSymbols;
+      await nextRender();
+
+      expect(queryKey(el, "{layout:base}"), "ABC key present so letters remain reachable").to.not.be.null;
+      expect(
+        queryKey(el, "{layout:base}")!.textContent?.trim(),
+        "Full keeps the 'ABC' text: base is alphabetic, so the key is not relabeled",
+      ).to.equal("ABC");
+    });
+
     it("clears caps lock when user switches layout via {layout:X} key", async () => {
       // Regression: caps-lock used to persist across user-initiated layout
       // switches because _handleLayoutSwitch did not reset shift state.
@@ -936,7 +959,10 @@ describe("kiosk-keyboard", () => {
       expect(queryKey(el, "{layout:special}"), "secondary-layout switch keys remain available").to.not.be.null;
     });
 
-    it("keeps {layout:base} on a secondary layout in Numeric mode (return path)", async () => {
+    it("strips {layout:base} from the secondary layout in Numeric mode too", async () => {
+      // Regression (user feedback): on a Numeric keyboard {layout:base} never
+      // reaches letters (it re-forces numeric), so on the user-reached symbols
+      // layout it is a dead duplicate of "123" ({layout:numeric}) and is stripped.
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
       await nextRender();
 
@@ -945,7 +971,152 @@ describe("kiosk-keyboard", () => {
       specialKey!.click();
       await nextRender();
 
-      expect(queryKey(el, "{layout:base}"), "ABC key remains on the secondary 'special' layout").to.not.be.null;
+      expect(queryKey(el, "["), "symbols layout is rendered").to.not.be.null;
+      expect(queryKey(el, "{layout:numeric}"), "the '123' key is the real return path to numbers").to.not.be.null;
+      expect(queryKey(el, "{layout:base}"), "dead ABC key is not rendered on the numeric symbols layout").to.be.null;
+    });
+
+    it("strips a mixed-case {layout:Base} dead key in Numeric mode (case-insensitive)", async () => {
+      // parseKeyAction lowercases the layout target, so a consumer-authored
+      // mixed-case {layout:Base} dead duplicate is recognized and stripped like
+      // the canonical lowercase form; it must not linger as a misleading "ABC" key.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
+      el.instanceLayouts = {
+        special: [
+          [{ value: "[" }, { value: "{layout:numeric}", label: "123" }, { value: "{layout:Base}", label: "ABC" }],
+        ],
+      };
+      await nextRender();
+
+      const toSymbols = oneEvent(el, "layout-change");
+      queryKey(el, "{layout:special}")!.click();
+      await toSymbols;
+      await nextRender();
+
+      expect(queryKey(el, "{layout:numeric}"), "the '123' key remains the real way back to numbers").to.not.be.null;
+      expect(queryKey(el, "{layout:Base}"), "the mixed-case dead ABC key is stripped").to.be.null;
+      expect(queryKey(el, "{layout:base}"), "no lowercase base key either").to.be.null;
+    });
+
+    it("Numpad: a user-reached symbols layout keeps the return key (relabeled) to the numpad", async () => {
+      // The symbols "123" ({layout:numeric}) reaches numeric, not numpad, so
+      // under Numpad {layout:base} is the only way back: kept but relabeled to a
+      // back icon, since it returns to numbers, not the letters "ABC" implies.
+      // Mirrors the kiosk twin.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard> `);
+      await nextRender();
+
+      // The built-in numpad ships no {layout:*} keys; reach the symbols layout
+      // the way a consumer's custom instanceLayouts switch key would.
+      const fakeKey = document.createElement("div");
+      fakeKey.setAttribute("role", "button");
+      fakeKey.dataset.key = "{layout:special}";
+      rootDiv(el).appendChild(fakeKey);
+      const switched = oneEvent(el, "layout-change");
+      fakeKey.click();
+      await switched;
+      fakeKey.remove();
+      await nextRender();
+
+      expect(queryKey(el, "["), "symbols layout is rendered").to.not.be.null;
+      const returnKey = queryKey(el, "{layout:base}");
+      expect(returnKey, "the return key stays: it is the only way back to the numpad").to.not.be.null;
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyLabel}`),
+        "the kept return key drops the misleading 'ABC' text (rendered as a back icon)",
+      ).to.be.null;
+      expect(returnKey!.getAttribute("aria-label"), "its accessible name says it returns to numbers").to.equal(
+        "Return to numbers",
+      );
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyIcon}`),
+        "the kept return key renders a back icon, not a blank key",
+      ).to.not.be.null;
+
+      const back = oneEvent(el, "layout-change");
+      returnKey!.click();
+      await back;
+      await nextRender();
+
+      expect(queryKey(el, "7"), "numpad surface is rendered again").to.not.be.null;
+      expect(queryKey(el, "["), "symbols layout left").to.be.null;
+      expect(queryKey(el, "q"), "not the alphabetic base layout").to.be.null;
+      expect(queryKey(el, "{layout:special}"), "back on the numpad (ships no {layout:*}), not numeric").to.be.null;
+    });
+
+    it("Numeric: a layout without a '123' key keeps the return key (relabeled) as its only escape (nav)", async () => {
+      // The built-in nav layout's only route out is {layout:base} (its other
+      // switch goes deeper, to fkeys). Stripping it there would strand the user,
+      // so the strip may only remove it where a {layout:numeric} duplicate
+      // exists; here it is kept but relabeled to a back icon ("Return to
+      // numbers"), since under the constraint it returns to numbers rather than
+      // letters. Mirrors the kiosk twin.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
+      await nextRender();
+
+      const fakeKey = document.createElement("div");
+      fakeKey.setAttribute("role", "button");
+      fakeKey.dataset.key = "{layout:nav}";
+      rootDiv(el).appendChild(fakeKey);
+      const switched = oneEvent(el, "layout-change");
+      fakeKey.click();
+      await switched;
+      fakeKey.remove();
+      await nextRender();
+
+      expect(queryKey(el, "{layout:fkeys}"), "nav layout is rendered").to.not.be.null;
+      const returnKey = queryKey(el, "{layout:base}");
+      expect(returnKey, "the return key stays: it is the nav layout's only way back").to.not.be.null;
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyLabel}`),
+        "the kept return key drops the misleading 'ABC' text (rendered as a back icon)",
+      ).to.be.null;
+      expect(returnKey!.getAttribute("aria-label"), "its accessible name says it returns to numbers").to.equal(
+        "Return to numbers",
+      );
+      expect(
+        returnKey!.querySelector(`.${DOM.classes.keyIcon}`),
+        "the kept return key renders a back icon, not a blank key",
+      ).to.not.be.null;
+
+      const back = oneEvent(el, "layout-change");
+      returnKey!.click();
+      await back;
+      await nextRender();
+
+      expect(queryKey(el, "{layout:special}"), "numeric surface is rendered again").to.not.be.null;
+    });
+
+    it("Numpad: a mixed-case {layout:BASE} key re-engages the constraint (twin parity)", async () => {
+      // {layout:base} is the base-return token regardless of case; {layout:BASE}
+      // must re-engage the keyboardType constraint and return to the numpad,
+      // matching the kiosk twin.
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard> `);
+      await nextRender();
+
+      const toSpecial = document.createElement("div");
+      toSpecial.setAttribute("role", "button");
+      toSpecial.dataset.key = "{layout:special}";
+      rootDiv(el).appendChild(toSpecial);
+      const switched = oneEvent(el, "layout-change");
+      toSpecial.click();
+      await switched;
+      toSpecial.remove();
+      await nextRender();
+      expect(queryKey(el, "["), "user switch reached the symbols layout").to.not.be.null;
+
+      const back = document.createElement("div");
+      back.setAttribute("role", "button");
+      back.dataset.key = "{layout:BASE}";
+      rootDiv(el).appendChild(back);
+      const returned = oneEvent(el, "layout-change");
+      back.click();
+      await returned;
+      back.remove();
+      await nextRender();
+
+      expect(queryKey(el, "7"), "mixed-case {layout:BASE} returned to the numpad").to.not.be.null;
+      expect(queryKey(el, "["), "left the symbols layout").to.be.null;
     });
 
     it("preserves a user {layout:*} override when the same auto-detected input is refocused", async () => {
@@ -973,7 +1144,9 @@ describe("kiosk-keyboard", () => {
       expect(queryKey(el, "{layout:base}"), "auto-forced numpad strips the ABC key").to.be.null;
 
       // User taps a {layout:special} key: a user-driven switch that overrides the
-      // keyboardType constraint. The special layout DOES render an ABC key.
+      // keyboardType constraint. The special layout's symbol keys (e.g. "[") mark
+      // that the override took effect; its ABC ({layout:base}) key is kept because
+      // under Numpad it is the only return path to the constrained surface.
       const fakeKey = document.createElement("div");
       fakeKey.setAttribute("role", "button");
       fakeKey.dataset.key = "{layout:special}";
@@ -983,7 +1156,8 @@ describe("kiosk-keyboard", () => {
       await switched;
       fakeKey.remove();
       await nextRender();
-      expect(queryKey(el, "{layout:base}"), "special layout is shown after the user override").to.not.be.null;
+      expect(queryKey(el, "["), "special layout is shown after the user override").to.not.be.null;
+      expect(queryKey(el, "{layout:base}"), "ABC kept as the return path to the numpad").to.not.be.null;
 
       // Refocus the SAME input: the override must NOT be reverted.
       input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
@@ -992,8 +1166,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       expect(el.keyboardType, "keyboardType unchanged by refocus").to.equal("Numpad");
-      expect(queryKey(el, "{layout:base}"), "user {layout:special} override survives refocusing the same input").to.not
-        .be.null;
+      expect(queryKey(el, "["), "user {layout:special} override survives refocusing the same input").to.not.be.null;
     });
   });
 

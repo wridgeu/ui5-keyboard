@@ -16,7 +16,7 @@
     "packages/hotkeys": {
       "release-type": "node",
       "package-name": "ui5-lib-hotkeys",
-      "release-as": "0.1.0",
+      "initial-version": "0.1.0",
       "include-component-in-tag": true,
       "extra-files": [
         {
@@ -29,7 +29,7 @@
     "packages/kiosk-keyboard": {
       "release-type": "node",
       "package-name": "ui5-lib-kiosk-keyboard",
-      "release-as": "0.1.0",
+      "initial-version": "0.1.0",
       "include-component-in-tag": true,
       "extra-files": [
         {
@@ -42,7 +42,7 @@
     "packages/kiosk-keyboard-webc": {
       "release-type": "node",
       "package-name": "kiosk-keyboard-webc",
-      "release-as": "0.1.0",
+      "initial-version": "0.1.0",
       "include-component-in-tag": true
     }
   }

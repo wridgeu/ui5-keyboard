@@ -26,6 +26,7 @@ import {
 } from "./internal/middleware-registry";
 import {
   SPECIAL_KEY_ICONS as DEFAULT_SPECIAL_KEY_ICONS,
+  LAYOUT_RETURN_ICON,
   getKeyIcon as iconsGetKeyIcon,
   clearIconWarnings as iconsClearWarnings,
 } from "./internal/key-icons";
@@ -43,7 +44,8 @@ import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
-import { classifyKeyToken } from "./internal/key-token";
+import { parseKeyAction, assertNever, LAYOUT_BASE } from "./internal/key-token";
+import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-constraint";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
@@ -1590,39 +1592,19 @@ export default class KioskKeyboard extends Control {
    */
   private _resolvedLayoutName(): string {
     if (this._layoutSource === "user") return this.getLayout();
-    const kbType = this.getKeyboardType();
-    if (kbType === KeyboardType.Numpad) return "numpad";
-    if (kbType === KeyboardType.Numeric) return "numeric";
-    return this.getLayout();
+    return constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout();
   }
 
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
-    const resolved = registryGetLayoutOrDefault(this._resolvedLayoutName(), this._instanceLayoutsMap);
-    // On the auto-forced numpad/numeric surface (the keyboardType constraint,
-    // not a user switch), a `{layout:base}` key would resolve back to the same
-    // forced layout, so strip it so the rendered surface matches the active
-    // behavior. Matches webc behavior.
-    const kbType = this.getKeyboardType();
-    const autoForced =
-      this._layoutSource !== "user" && (kbType === KeyboardType.Numpad || kbType === KeyboardType.Numeric);
-    return autoForced ? KioskKeyboard._stripDeadBaseSwitch(resolved) : resolved;
-  }
-
-  // The auto-forced numeric/numpad surface (keyboardType=Numeric|Numpad with
-  // `_layoutSource === "external"`) is "already at base", so a `{layout:base}` key
-  // there is inert. Strip it so the rendered surface matches the active behavior.
-  // The built-in `numeric` layout ships a `{layout:base}` "ABC" key via
-  // `symbolBottomRow`, so this strips a built-in key (plus any user-supplied
-  // `instanceLayouts` override that adds one), not just overrides.
-  private static _stripDeadBaseSwitch(layout: LayoutDefinition): LayoutDefinition {
-    let changed = false;
-    const filtered = layout.map((row) => {
-      const next = row.filter((key) => key.value !== "{layout:base}");
-      if (next.length !== row.length) changed = true;
-      return next;
+    const layoutName = this._resolvedLayoutName();
+    const resolved = registryGetLayoutOrDefault(layoutName, this._instanceLayoutsMap);
+    const constrainedName = constrainedLayoutName(this.getKeyboardType());
+    if (constrainedName === null) return resolved;
+    return reconcileBaseSwitch(resolved, layoutName, constrainedName, {
+      icon: LAYOUT_RETURN_ICON,
+      ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
     });
-    return changed ? filtered.filter((row) => row.length > 0) : layout;
   }
 
   /**
@@ -1804,11 +1786,8 @@ export default class KioskKeyboard extends Control {
    * and regular character keys, but not layout/fkey switches.
    */
   private _keyAffectsComposition(keyValue: string): boolean {
-    return (
-      keyValue === "{backspace}" ||
-      keyValue === "{enter}" ||
-      (!keyValue.startsWith("{layout:") && !keyValue.startsWith("{fkey:"))
-    );
+    const kind = parseKeyAction(keyValue).kind;
+    return kind !== "layout" && kind !== "fkey";
   }
 
   /**
@@ -1849,11 +1828,11 @@ export default class KioskKeyboard extends Control {
 
   private _handleKeyAction(keyValue: string, el: HTMLElement): void {
     const shift = this._isShiftActive();
-    const kind = classifyKeyToken(keyValue);
+    const action = parseKeyAction(keyValue);
 
     // Shift toggles before composition: the middleware would otherwise treat
     // it as a composition-affecting key.
-    if (kind === "shift") {
+    if (action.kind === "shift") {
       this._toggleShift(el);
       return;
     }
@@ -1862,7 +1841,7 @@ export default class KioskKeyboard extends Control {
     // (but not layout/fkey) before default handling.
     if (this._tryCompositionMiddleware(keyValue)) return;
 
-    switch (kind) {
+    switch (action.kind) {
       case "backspace":
         this._performBackspaceDelete();
         return;
@@ -1874,23 +1853,19 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "layout": {
-        const raw = keyValue.slice("{layout:".length, -1).trim();
-        if (!raw) return;
-        // `{layout:base}` returns to the constrained default (re-engage
-        // keyboardType filtering); any other pick is user-driven and overrides
-        // the keyboardType constraint (webc parity).
-        const name = raw === "base" ? this._baseLayout : raw;
-        const source = raw === "base" ? "external" : "user";
+        // `base` re-engages the keyboardType constraint; any other pick is
+        // user-driven and overrides it (webc parity).
+        const name = action.target === LAYOUT_BASE ? this._baseLayout : action.target;
+        const source = action.target === LAYOUT_BASE ? "external" : "user";
         this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
         return;
       }
 
       case "fkey": {
-        const fkeyName = keyValue.slice("{fkey:".length, -1);
         // Fire keyPress first so consumers can prevent all downstream action
         // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
-        if (!this.fireKeyPress({ key: fkeyName, shiftKey: shift })) return;
-        this._fKeyController.handle(fkeyName, shift);
+        if (!this.fireKeyPress({ key: action.name, shiftKey: shift })) return;
+        this._fKeyController.handle(action.name, shift);
         return;
       }
 
@@ -1900,9 +1875,9 @@ export default class KioskKeyboard extends Control {
         // but do NOT insert the literal braces - that was a silent footgun (a
         // mistyped `{bcksp}`, or a custom `{paste}` key with no handler, typed
         // the text "{bcksp}" into the field).
-        if (this.fireKeyPress({ key: keyValue, shiftKey: shift })) {
+        if (this.fireKeyPress({ key: action.raw, shiftKey: shift })) {
           Log.warning(
-            `Unrecognized key token "${keyValue}": not a built-in special key. Ignoring (no text inserted).`,
+            `Unrecognized key token "${action.raw}": not a built-in special key. Ignoring (no text inserted).`,
             undefined,
             "ui5.kiosk.KioskKeyboard",
           );
@@ -1912,13 +1887,13 @@ export default class KioskKeyboard extends Control {
 
       case "char": {
         // Regular character - resolve shift value
-        let effective = keyValue;
+        let effective = action.text;
         if (shift) {
           const shiftValue = el.dataset.shiftValue;
           if (shiftValue) {
             effective = shiftValue;
-          } else if (keyValue.length === 1) {
-            effective = keyValue.toUpperCase();
+          } else if (action.text.length === 1) {
+            effective = action.text.toUpperCase();
           }
         }
 
@@ -1931,12 +1906,10 @@ export default class KioskKeyboard extends Control {
         return;
       }
 
-      default: {
-        // Exhaustiveness: every KeyTokenKind is handled above ({shift} returns
-        // earlier). A new kind added to classifyKeyToken fails to compile here.
-        const _exhaustive: never = kind;
-        return _exhaustive;
-      }
+      default:
+        // Exhaustiveness: every KeyAction kind is handled above ({shift} returns
+        // earlier). A new variant fails to compile at this assertNever.
+        return assertNever(action);
     }
   }
 

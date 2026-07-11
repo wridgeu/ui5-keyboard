@@ -59,6 +59,24 @@ QUnit.test("keyPress still fires for an unrecognized token (consumers can handle
   kb.destroy();
 });
 
+QUnit.test("A handled token (keyPress preventDefault) is not warned", async (assert) => {
+  const warnSpy = sandbox.spy(Log, "warning");
+  // A consumer that handles a custom token via keyPress + preventDefault owns
+  // the behavior, so the keyboard must stay silent (no "unrecognized" warning).
+  // (Insertion is suppressed for any unknown token regardless, so the only
+  // assertion that distinguishes the vetoed path is the absence of a warning.)
+  const { kb, input } = await setup([[{ value: "{paste}", label: "p" }]]);
+  kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {
+    event.preventDefault();
+  });
+
+  tapKey(kb, "{paste}");
+  assert.notOk(warnSpy.called, "A handled token is not warned");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("A lone brace character is still inserted as a literal", async (assert) => {
   // A lone "{" or "}" only matches one end of the token shape, so it stays a
   // normal insertable character.
