@@ -3,6 +3,8 @@ import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
 import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey } from "./test-helpers";
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
+import { insertText } from "ui5/kiosk/internal/input-operations";
+import type { CompositionMiddleware } from "ui5/kiosk/types";
 
 // Integration coverage for the long-press accent-variant popup: a hold on a key
 // with variants opens a themed sap/m/Popover of sap/m/Button options in the
@@ -330,6 +332,126 @@ QUnit.test("a touch drag-release over an option commits that glyph", async (asse
   assert.notOk(variantPopup(kb).isOpen(), "popup dismissed after the drag-release commit");
   cleanup(kb, input);
   fixture.style.cssText = restoreFixture;
+});
+
+QUnit.module("KioskKeyboard accent-variant commit during composition", {
+  afterEach() {
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+/** Reach the private variant-commit entry point every commit path funnels through. */
+function commitVariant(kb: KioskKeyboard, glyph: string): void {
+  (kb as unknown as { _commitVariant(glyph: string): void })._commitVariant(glyph);
+}
+
+QUnit.test("committing a variant mid-composition finalizes the active composition first", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ controls: [input.getId()], layout: "ko-hangul" });
+  await placeAndWait(kb);
+  input.focus();
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.setSelectionRange(0, 0);
+
+  // Compose 가 through the real key path: ㄱ (leading) then ㅏ (vowel).
+  tapKey(kb, "ㄱ"); // ㄱ
+  tapKey(kb, "ㅏ"); // ㅏ
+  assert.strictEqual(input.getValue(), "가", "preedit shows 가 before the variant commit");
+
+  // Commit accent variant ä through the real commit path while 가 is still an
+  // in-progress preedit. This must finalize (keep) 가, drop the middleware, then
+  // insert ä after it.
+  commitVariant(kb, "ä"); // ä
+  assert.strictEqual(input.getValue(), "가ä", "variant commit finalizes 가, then appends ä");
+
+  // The next jamo must start a fresh syllable AFTER the accent, not reach back
+  // over it: ㄴ then ㅏ compose 나 following the accent.
+  tapKey(kb, "ㄴ"); // ㄴ
+  tapKey(kb, "ㅏ"); // ㅏ
+
+  assert.strictEqual(input.getValue(), "가ä나", "next jamo composes 나 after ä (가ä나)");
+  assert.strictEqual(dom.selectionStart, 3, "caret sits after 나");
+
+  input.destroy();
+  kb.destroy();
+});
+
+/**
+ * Test-only consumer composition middleware. Seeds a live preedit from the
+ * first single-char key it receives and joins every following key into the
+ * SAME run with a hyphen, re-rendered in place through the host insertText
+ * pipeline. A hyphen appears only between glyphs that entered the same buffer,
+ * so it is observable proof that a committed accent variant was routed into
+ * composition (seeding the buffer) rather than inserted literally beside it.
+ */
+function createJoinStubMiddleware(): CompositionMiddleware {
+  let buffer = "";
+  let start = 0;
+  let renderedLen = 0;
+  let active = false;
+
+  return {
+    handleKey(key, el): boolean {
+      if (key.length !== 1) return false;
+      if (!active) {
+        active = true;
+        start = el.selectionStart ?? el.value.length;
+        buffer = "";
+        renderedLen = 0;
+      }
+      buffer += key;
+      const rendered = buffer.split("").join("-");
+      insertText(el, rendered, [start, start + renderedLen]);
+      renderedLen = rendered.length;
+      return true;
+    },
+    commit(): string | null {
+      const text = active ? buffer : null;
+      active = false;
+      buffer = "";
+      renderedLen = 0;
+      return text;
+    },
+    reset(): void {
+      active = false;
+      buffer = "";
+      renderedLen = 0;
+    },
+  };
+}
+
+QUnit.test("a committed variant seeds the consumer's composition (Layer 2)", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    layout: "qwerty",
+    instanceMiddleware: { qwerty: createJoinStubMiddleware },
+  });
+  await placeAndWait(kb);
+  input.focus();
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.setSelectionRange(0, 0);
+
+  // Commit accent variant ä through the real popup-commit path. Layer 2 routes
+  // the glyph through the SAME composition pipeline a key press uses, so the
+  // consumer middleware seeds its buffer with ä rather than the control
+  // inserting ä literally beside the buffer.
+  commitVariant(kb, "ä");
+  assert.strictEqual(input.getValue(), "ä", "the variant seeded the preedit (single-glyph buffer renders as ä)");
+
+  // The next key joins the SAME buffer; the stub hyphen-joins buffer members, so
+  // ä and x are joined only because ä seeded the composition. On the pre-Layer-2
+  // flush path ä was inserted literally, x would seed a fresh buffer, and the
+  // value would be "äx" with no joining hyphen.
+  tapKey(kb, "x");
+  assert.strictEqual(input.getValue(), "ä-x", "the next key continues the ä-seeded composition (ä-x)");
+  assert.strictEqual(dom.selectionStart, 3, "caret sits after the joined run");
+
+  input.destroy();
+  kb.destroy();
 });
 
 /** Typed view of the control internals the popup tests reach into. */
