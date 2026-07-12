@@ -475,6 +475,8 @@ el.instanceLayouts = {
 };
 ```
 
+Because an explicit `variants` wins, declaring `variants: []` suppresses the popup on a single key the built-in table would otherwise cover — e.g. to skip a diacritic already reachable as its own dedicated key on the layout.
+
 ## Per-Instance Customization
 
 Every `<kiosk-keyboard>` accepts three programmatic-only properties that override the built-in registry for that element only: `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware`. Resolution order is **instance map → built-in**, so an entry on the element wins without mutating module-level state.
