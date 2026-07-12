@@ -520,3 +520,57 @@ QUnit.test("the popover density stays proportional to the keyboard key size", as
   release(kb, aKey);
   cleanup(kb, input);
 });
+
+QUnit.test("each option cell is sized to the anchor key's rendered footprint", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const root = kb.getDomRef() as HTMLElement;
+
+  // Compress the keyboard so its keys render well under the framework button
+  // min-width (~2.25rem/36px). The options must still match the key width, which
+  // proves the cells are sized to the key footprint and that the framework floor
+  // was cleared - not merely floored at that min-width as they were before.
+  root.style.width = "240px";
+  const aKey = getRequiredKeyElement(kb, "a");
+
+  await holdOpen(kb, aKey);
+  // Measure the anchor at open time: the popup sizes each option from the key's
+  // rect as rendered then (the held key carries its pressed transform), so the
+  // comparison must read the same footprint the sizing was derived from.
+  const keyRect = aKey.getBoundingClientRect();
+  const keyWidth = keyRect.width;
+  const keyHeight = keyRect.height;
+  assert.ok(keyWidth < 36, `keys compressed below the button min-width floor (${keyWidth.toFixed(1)}px)`);
+  const options = getOptions();
+  assert.ok(options.length > 0, "options rendered");
+  for (const option of options) {
+    const optionRect = option.getBoundingClientRect();
+    assert.ok(
+      Math.abs(optionRect.width - keyWidth) < 0.5,
+      `option '${glyphOf(option)}' width ${optionRect.width.toFixed(1)}px matches key width ${keyWidth.toFixed(1)}px`,
+    );
+    assert.ok(
+      Math.abs(optionRect.height - keyHeight) < 0.5,
+      `option '${glyphOf(option)}' height ${optionRect.height.toFixed(1)}px matches key height ${keyHeight.toFixed(1)}px`,
+    );
+  }
+  release(kb, aKey);
+  cleanup(kb, input);
+});
+
+QUnit.test("the popover content frame is flattened to the option-grid inset", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  const popup = getPopup();
+  assert.ok(popup, "popup open");
+
+  // The sap.m.Popover wraps the option grid in a content frame (base margin +
+  // Horizon padding on .sapMPopoverCont); the control flattens it so the grid's
+  // own 0.25rem inset is the only spacing rather than a doubled, oversized frame.
+  const cont = popup!.closest(".sapMPopover")!.querySelector<HTMLElement>(".sapMPopoverCont")!;
+  const style = getComputedStyle(cont);
+  assert.strictEqual(style.marginTop, "0px", "content frame margin flattened");
+  assert.strictEqual(style.paddingTop, "0px", "content frame padding flattened");
+  release(kb, aKey);
+  cleanup(kb, input);
+});

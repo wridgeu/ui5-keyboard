@@ -305,6 +305,14 @@ export default class VariantPopupBehavior {
     const gridDom = grid.getDomRef();
     if (gridDom instanceof HTMLElement) {
       this._gridDom = gridDom;
+      // Publish the anchor key's rendered footprint so the theme sizes each option
+      // to the key (consumed as width/min-width/height on the option buttons). The
+      // static-area popover does not inherit the keyboard's key-size tokens, so the
+      // measured values carry them across; glyph size keeps tracking the popover's
+      // inherited key density.
+      const keyRect = anchorKeyEl.getBoundingClientRect();
+      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyRect.width}px`);
+      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", `${keyRect.height}px`);
       gridDom.addEventListener("keydown", this._onKeydown);
     }
 

@@ -521,8 +521,14 @@ class KioskKeyboard extends UI5Element {
    * place so a move does not tear down and re-show the popover.
    */
   @property({ type: Object, noAttribute: true })
-  _variantPopup: { anchorKeyId: string; base: string; glyphs: string[]; activeIndex: number; label: string } | null =
-    null;
+  _variantPopup: {
+    anchorKeyId: string;
+    anchorKeyWidth: number;
+    base: string;
+    glyphs: string[];
+    activeIndex: number;
+    label: string;
+  } | null = null;
 
   // ── Backing field for the `open` getter/setter below.
   //    Direct writes intentionally bypass the setter when the host is being
@@ -1485,7 +1491,14 @@ class KioskKeyboard extends UI5Element {
     const base = upper && value.length === 1 ? value.toUpperCase() : value;
 
     const label = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}", String(glyphs.length), base);
-    this._variantPopup = { anchorKeyId: keyEl.id, base, glyphs, activeIndex: 0, label };
+    this._variantPopup = {
+      anchorKeyId: keyEl.id,
+      anchorKeyWidth: keyEl.getBoundingClientRect().width,
+      base,
+      glyphs,
+      activeIndex: 0,
+      label,
+    };
     this._announcements.announce(label);
     return true;
   }

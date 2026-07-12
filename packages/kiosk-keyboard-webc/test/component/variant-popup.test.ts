@@ -387,28 +387,24 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
   });
 
-  it("scales the option buttons from the keyboard's responsive key tokens", async () => {
+  it("scales the option glyph font-size from the key-font-size token", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));
 
-    // Drive the public responsive key tokens to distinct small values. The option
-    // button's box (min-width) and glyph (font-size) must resolve from those
-    // tokens (the framework way, via the cascade into the popover), not from a
-    // fixed size or an override, so the options stay proportional to the keys at
-    // every breakpoint.
-    kb.style.setProperty("--kiosk-keyboard-key-height", "17px");
+    // The option glyph's font-size must resolve from the public responsive
+    // key-font-size token (the framework way, via the cascade into the popover),
+    // not from a fixed size or an override, so the glyphs stay proportional to
+    // the keys at every breakpoint.
     kb.style.setProperty("--kiosk-keyboard-key-font-size", "9px");
     await renderFinished();
 
     const button = optionEls(kb)[0]!;
-    const cs = getComputedStyle(button);
-    expect(cs.minWidth, "option width tracks the key-height token").to.equal("17px");
-    expect(cs.fontSize, "option glyph tracks the key-font-size token").to.equal("9px");
+    expect(getComputedStyle(button).fontSize, "option glyph tracks the key-font-size token").to.equal("9px");
     pointerUp();
   });
 
   // The option button's height resolves from `--kiosk-keyboard-key-height`, so
-  // it shrinks with the responsive key size the same way min-width does.
+  // it shrinks with the responsive key size the same way the glyph font does.
   it("scales the option button height from the key-height token", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));
@@ -418,6 +414,41 @@ describe("kiosk-keyboard - accent-variant popup", () => {
 
     const button = optionEls(kb)[0]!;
     expect(getComputedStyle(button).height).to.equal("17px");
+    pointerUp();
+  });
+
+  // Each option's WIDTH matches the anchor key's rendered width, captured at
+  // open. A compressed keyboard makes the keys narrower than the key-height
+  // token (the old floor), so a match proves the option follows the real key
+  // footprint rather than the 48px height token.
+  it("sizes each option button to the anchor key's rendered width", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+
+    // Squeeze the keyboard so its keys render well below the key-height token.
+    // The anchor width is read at open, so this must run before holdOpen.
+    kb.style.width = "150px";
+    await renderFinished();
+
+    const aKey = requireKey(kb, "a");
+    await holdOpen(aKey);
+
+    const keyWidth = aKey.getBoundingClientRect().width;
+    // Self-guard: the compressed key must be narrower than the old key-height
+    // floor (48px), or matching it would prove nothing.
+    expect(keyWidth, "compressed key is narrower than the height token").to.be.below(48);
+
+    const optionWidth = optionEls(kb)[0]!.getBoundingClientRect().width;
+    expect(optionWidth).to.equal(keyWidth);
+    pointerUp();
+  });
+
+  it("shows the popover arrow so it points at the source key", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+
+    const popover = popoverEl(kb)!;
+    expect(popover.hideArrow, "arrow is restored, not hidden").to.equal(false);
+    expect(popover.hasAttribute("hide-arrow"), "no hide-arrow attribute set").to.equal(false);
     pointerUp();
   });
 });

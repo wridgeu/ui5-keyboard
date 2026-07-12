@@ -139,8 +139,8 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
           imperatively. The listbox below is our slotted content. */}
       {variantPopup ? (
         <ui5-popover
+          class={KIOSK_KEYBOARD_DOM.classes.variantPopupHost}
           placement="Top"
-          hideArrow
           preventInitialFocus
           preventFocusRestore
           accessibleName={variantPopup.label}
@@ -150,6 +150,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             part="variant-popup"
             role="toolbar"
             aria-label={variantPopup.label}
+            style={`--kiosk-keyboard-variant-option-width: ${variantPopup.anchorKeyWidth}px`}
             onClick={this._boundOnVariantClick}
             onKeyDown={this._boundOnVariantKeyDown}
           >
