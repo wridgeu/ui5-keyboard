@@ -56,7 +56,7 @@
      only tune the wrapping layout of the button row slotted inside it. */
   --kiosk-keyboard-variant-popup-gap: 0.25rem;
   --kiosk-keyboard-variant-popup-padding: 0.25rem;
-  --kiosk-keyboard-variant-popup-max-width: min(22rem, 92vw);
+  --kiosk-keyboard-variant-popup-max-width: 92vw;
   /* --kiosk-keyboard-key-border-color: unset by default.
      When set, applies a uniform border color to all key types
      (default, modifier, action). Useful for industrial/kiosk
@@ -836,10 +836,11 @@
   padding: var(--kiosk-keyboard-variant-popup-padding);
 }
 
-/* Scale the option buttons with the keyboard's responsive key size using the
-   keyboard's own key-size tokens, which cascade through the shadow tree into
-   the popover. Keeps the options proportional to the keys at every breakpoint;
-   the ui5-button owns its colours / borders / states. */
+/* Size each option to the anchor key's footprint: height from the key-height
+   token (cascaded through the shadow tree), width to the key's rendered width
+   (--kiosk-keyboard-variant-option-width, published on open). The options match
+   the keys at every breakpoint and stay in one row until it exceeds the popup's
+   max-width (92vw), then wrap. The ui5-button owns its colours / borders / states. */
 .kiosk-keyboard__variant-popup ui5-button {
   height: var(--kiosk-keyboard-key-height);
   width: var(--kiosk-keyboard-variant-option-width, var(--kiosk-keyboard-key-height));
