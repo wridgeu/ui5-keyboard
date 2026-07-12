@@ -580,6 +580,8 @@ const myLayout: LayoutDefinition = [
 ];
 ```
 
+Because an explicit `variants` wins, declaring `variants: []` suppresses the popup on a single key the built-in table would otherwise cover — e.g. to skip a diacritic already reachable as its own dedicated key on the layout.
+
 ---
 
 ## Composition Middleware
