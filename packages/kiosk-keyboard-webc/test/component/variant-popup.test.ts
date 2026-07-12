@@ -414,6 +414,10 @@ describe("kiosk-keyboard - accent-variant popup", () => {
 
     const button = optionEls(kb)[0]!;
     expect(getComputedStyle(button).height).to.equal("17px");
+    // The visible, bordered box is the internal `button` part; it must fill the
+    // host so the rendered cell — not just the host — matches the key height.
+    const innerButton = button.shadowRoot!.querySelector<HTMLElement>(".ui5-button-root")!;
+    expect(getComputedStyle(innerButton).height, "the visible inner button matches the key height").to.equal("17px");
     pointerUp();
   });
 

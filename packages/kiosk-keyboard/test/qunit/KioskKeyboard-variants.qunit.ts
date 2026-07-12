@@ -552,6 +552,13 @@ QUnit.test("each option cell is sized to the anchor key's rendered footprint", a
       Math.abs(optionRect.height - keyHeight) < 0.5,
       `option '${glyphOf(option)}' height ${optionRect.height.toFixed(1)}px matches key height ${keyHeight.toFixed(1)}px`,
     );
+    // The visible, bordered box is the sap.m.Button inner element; it must fill the
+    // sized outer button so the rendered cell — not just the outer box — is key-tall.
+    const inner = option.querySelector(".sapMBtnInner") as HTMLElement;
+    assert.ok(
+      Math.abs(inner.getBoundingClientRect().height - keyHeight) < 0.5,
+      `option '${glyphOf(option)}' visible inner ${inner.getBoundingClientRect().height.toFixed(1)}px matches key height ${keyHeight.toFixed(1)}px`,
+    );
   }
   release(kb, aKey);
   cleanup(kb, input);
