@@ -794,6 +794,25 @@
   width: var(--_ui5KioskKeyboard-variantOptionWidth, auto);
   min-width: var(--_ui5KioskKeyboard-variantOptionWidth, auto);
   height: var(--_ui5KioskKeyboard-variantOptionHeight, auto);
+  /* Drop the theme's 0.25rem block padding on the outer button (its clickable
+     hit-area inset). With the inner stretched to the full option height below,
+     that padding shrinks the block-axis content box, so the top-anchored inner
+     overflows past the bottom and the visible cell sits low in the popover
+     (uneven bottom gap). Zeroing it lets the inner fill the sized cell and
+     centre evenly. Horizontal padding is already 0 in the theme. */
+  padding-block: 0;
+}
+
+/* sap.m.Button's visible box is its inner element, which keeps the theme's own
+   button height and merely centres inside the sized outer button. Stretch it to
+   the option height so the rendered cell — not just its outer box — matches the
+   key height, and centre the glyph in the stretched box (its natural line box
+   would otherwise sit high, leaving uneven space at the bottom). */
+.ui5KioskVariantPopover .ui5KioskVariantPopup__option .sapMBtnInner {
+  height: var(--_ui5KioskKeyboard-variantOptionHeight, auto);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Flatten the sap.m.Popover content frame (base 0.4375em margin + Horizon

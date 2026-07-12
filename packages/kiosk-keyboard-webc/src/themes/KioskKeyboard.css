@@ -848,6 +848,14 @@
   font-size: var(--kiosk-keyboard-key-font-size);
 }
 
+/* ui5-button renders its visible, bordered box as the internal `button` part,
+   which keeps its own theme height and centres inside the host. Size it to the
+   key height directly (a percentage would resolve against the host's border-box
+   inset and fall short) so the rendered cell — not just the host — matches the key. */
+.kiosk-keyboard__variant-popup ui5-button::part(button) {
+  height: var(--kiosk-keyboard-key-height);
+}
+
 /* The ui5-popover wraps content in a 16px frame by default; the option row owns
    its own compact inset (--kiosk-keyboard-variant-popup-padding), so flatten the
    popover's content padding to keep the popup's spacing in step with the key gaps
