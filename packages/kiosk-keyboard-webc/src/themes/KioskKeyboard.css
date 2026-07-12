@@ -842,6 +842,15 @@
    the ui5-button owns its colours / borders / states. */
 .kiosk-keyboard__variant-popup ui5-button {
   height: var(--kiosk-keyboard-key-height);
-  min-width: var(--kiosk-keyboard-key-height);
+  width: var(--kiosk-keyboard-variant-option-width, var(--kiosk-keyboard-key-height));
+  min-width: var(--kiosk-keyboard-variant-option-width, var(--kiosk-keyboard-key-height));
   font-size: var(--kiosk-keyboard-key-font-size);
+}
+
+/* The ui5-popover wraps content in a 16px frame by default; the option row owns
+   its own compact inset (--kiosk-keyboard-variant-popup-padding), so flatten the
+   popover's content padding to keep the popup's spacing in step with the key gaps
+   instead of a doubled, oversized frame. */
+.kiosk-keyboard__variant-popup-host::part(content) {
+  padding: 0;
 }

@@ -760,12 +760,46 @@
      A themed `sap/m/Popover` hosting a wrapping `sap/m/FlexBox` of `sap/m/Button`
      options. The framework supplies the overlay (static-area rendering, z-index
      above the docked keyboard, arrow, shadow) and every option's background /
-     border / hover / focus / active styling, so the only style this control adds
-     is the grid's wrap bound and inter-option gap. `.ui5KioskVariantPopup` is the
-     FlexBox, already `display: flex` from the framework; it renders outside
-     `.ui5KioskKeyboard` (in the static area) and inherits nothing from it. */
+     border / hover / focus / active styling. Here the control adds the grid's
+     wrap bound, its inter-option gap, and a matching inset; the option-cell
+     sizing and the popover frame flatten live unlayered below (they override the
+     sap.m theme). `.ui5KioskVariantPopup` is the FlexBox, already `display: flex`
+     from the framework; it renders outside `.ui5KioskKeyboard` (in the static
+     area) and inherits nothing from it. */
   .ui5KioskVariantPopup {
     max-width: min(22rem, 92vw);
     gap: 0.25rem;
+    padding: 0.25rem;
   }
 } /* @layer kiosk-keyboard */
+
+/* Accent-variant popup overrides that must beat the (unlayered) sap.m theme.
+   The framework's `.sapMBtn` min-width and `.sapMPopoverCont` frame spacing are
+   declared outside any cascade layer, so a rule inside `@layer kiosk-keyboard`
+   (deliberately low-priority so consumer overrides win — see the layer note near
+   the top of this file) could never override them: unlayered normal declarations
+   beat layered ones at cascade step 4 regardless of specificity. These rules
+   therefore live unlayered and are scoped to `.ui5KioskVariantPopover` (the class
+   the control adds to its owned Popover) so they touch nothing else and win on
+   specificity without `!important`. */
+
+/* Size each option to the anchor key's rendered footprint. The key's width and
+   height are measured at open and published as --_ui5KioskKeyboard-variantOptionWidth
+   / -variantOptionHeight on the option grid; min-width clears the framework's
+   ~2.25rem button floor so the options stay exactly key-sized even when the
+   keyboard compresses keys below it. Glyph size still tracks the popover's
+   inherited key-size density. */
+.ui5KioskVariantPopover .ui5KioskVariantPopup__option {
+  width: var(--_ui5KioskKeyboard-variantOptionWidth, auto);
+  min-width: var(--_ui5KioskKeyboard-variantOptionWidth, auto);
+  height: var(--_ui5KioskKeyboard-variantOptionHeight, auto);
+}
+
+/* Flatten the sap.m.Popover content frame (base 0.4375em margin + Horizon
+   0.0625rem padding on `.sapMPopoverCont`) so the option grid's own 0.25rem inset
+   — matching the docked keyboard's key gaps — is the only spacing, rather than a
+   doubled, oversized frame. */
+.sapMPopover.ui5KioskVariantPopover .sapMPopoverCont {
+  margin: 0;
+  padding: 0;
+}

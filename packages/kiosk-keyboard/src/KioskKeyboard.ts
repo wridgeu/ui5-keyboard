@@ -1740,6 +1740,9 @@ export default class KioskKeyboard extends Control {
         verticalScrolling: false,
         horizontalScrolling: false,
       });
+      // Stable hook the theme uses to size the options to the anchor key and to
+      // flatten the framework content frame, scoped to this control's popover.
+      popover.addStyleClass(KIOSK_KEYBOARD_DOM.classes.variantPopover);
       this.setAggregation("_variantPopover", popover, true);
     }
     syncStyleClass("sapUiSizeCondensed", this, popover);
