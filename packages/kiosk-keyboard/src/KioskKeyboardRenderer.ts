@@ -249,6 +249,12 @@ const KioskKeyboardRenderer = {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.shiftValue, key.shiftValue);
     }
 
+    // Marker for the long-press / right-click accent-variant gate: a cheap
+    // dataset read lets the pointer handlers skip keys with no variants.
+    if (key.variants && key.variants.length > 0) {
+      rm.attr(KIOSK_KEYBOARD_DOM.attributes.hasVariants, "true");
+    }
+
     // Native tooltip for labels that may be truncated by text-overflow: ellipsis.
     // Single-glyph labels use text-overflow: clip and cannot truncate.
     if (label && !isSingleGlyph(label)) {

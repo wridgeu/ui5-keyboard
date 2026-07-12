@@ -50,6 +50,13 @@
   --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   --kiosk-keyboard-cq-short-threshold: 16rem;
   --kiosk-keyboard-cq-tiny-threshold: 12rem;
+
+  /* Accent-variant long-press popup. The floating container is a `ui5-popover`
+     (top-layer, unclipped) and the options are themed `ui5-button`s; these props
+     only tune the wrapping layout of the button row slotted inside it. */
+  --kiosk-keyboard-variant-popup-gap: 0.25rem;
+  --kiosk-keyboard-variant-popup-padding: 0.25rem;
+  --kiosk-keyboard-variant-popup-max-width: min(22rem, 92vw);
   /* --kiosk-keyboard-key-border-color: unset by default.
      When set, applies a uniform border color to all key types
      (default, modifier, action). Useful for industrial/kiosk
@@ -814,4 +821,27 @@
 
 .kiosk-key--fkey .kiosk-key__icon {
   font-size: var(--kiosk-keyboard-fkey-icon-size);
+}
+
+/* Accent-variant popup
+   The floating container is a `ui5-popover` (top-layer, unclipped) and the
+   options are themed `ui5-button`s that provide all of their own appearance
+   (background, border, hover, emphasized-active, focus). The only rule here is
+   the wrapping layout of the button row slotted into the popover. */
+.kiosk-keyboard__variant-popup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kiosk-keyboard-variant-popup-gap);
+  max-width: var(--kiosk-keyboard-variant-popup-max-width);
+  padding: var(--kiosk-keyboard-variant-popup-padding);
+}
+
+/* Scale the option buttons with the keyboard's responsive key size using the
+   keyboard's own key-size tokens, which cascade through the shadow tree into
+   the popover. Keeps the options proportional to the keys at every breakpoint;
+   the ui5-button owns its colours / borders / states. */
+.kiosk-keyboard__variant-popup ui5-button {
+  height: var(--kiosk-keyboard-key-height);
+  min-width: var(--kiosk-keyboard-key-height);
+  font-size: var(--kiosk-keyboard-key-font-size);
 }

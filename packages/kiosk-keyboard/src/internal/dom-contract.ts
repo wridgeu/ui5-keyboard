@@ -37,11 +37,14 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyIcon: "ui5KioskKey__icon",
     keyDual: "ui5KioskKey--dual",
     keyFkey: "ui5KioskKey--fkey",
+    variantPopup: "ui5KioskVariantPopup",
+    variantOption: "ui5KioskVariantPopup__option",
   }),
   attributes: Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
     rowKind: "data-row-kind",
+    hasVariants: "data-has-variants",
   }),
   selectors: Object.freeze({
     root: ".ui5KioskKeyboard",
@@ -50,6 +53,8 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     focusableKey: '.ui5KioskKey[tabindex="0"]',
     keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
     keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
+    variantPopup: ".ui5KioskVariantPopup",
+    variantOption: ".ui5KioskVariantPopup__option",
   }),
   keyboardTypeClass(type: string): string {
     return `ui5KioskKeyboard--${type.toLowerCase()}`;

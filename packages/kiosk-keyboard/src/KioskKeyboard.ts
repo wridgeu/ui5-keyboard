@@ -1,6 +1,9 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
+import syncStyleClass from "sap/ui/core/syncStyleClass";
+import Popover from "sap/m/Popover";
+import { PlacementType } from "sap/m/library";
 import { SECONDARY_LAYOUTS } from "./internal/types";
 import type { LayoutDefinition, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
@@ -9,7 +12,9 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
-import { resolveWithCustomResolver, isParticipating, type TargetResolverFn } from "./internal/dom";
+import { resolveWithCustomResolver, isParticipating, KEY_ID_SUFFIX_RE, type TargetResolverFn } from "./internal/dom";
+import { applyVariantDefaults, toShiftVariant, toShiftVariants } from "./internal/latin-variants";
+import VariantPopupBehavior from "./internal/variant-popup-behavior";
 import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
@@ -94,6 +99,8 @@ export default class KioskKeyboard extends Control {
   private _pressedKeyEl!: HTMLElement | null;
   /** Owns press-and-hold continuous delete on the Backspace key. */
   private _backspaceRepeat!: BackspaceRepeatBehavior;
+  /** Owns the long-press / right-click accent-variant popup. */
+  private _variantPopup!: VariantPopupBehavior;
   private _baseLayout!: string;
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
@@ -246,6 +253,27 @@ export default class KioskKeyboard extends Control {
         group: "Behavior",
       },
       /**
+       * When `true`, a built-in Latin-diacritics table is merged onto the
+       * resolved layout so every matching base letter (a, e, i, o, u, c, n,
+       * s, y, z, l, ...) gains a long-press / right-click accent-variant
+       * popup - making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
+       * from any Latin layout without editing layout data.
+       *
+       * A per-key `variants` declaration always wins over the default table.
+       * When Shift or Caps Lock is active, the popup surfaces the uppercase
+       * forms (including ẞ for ß). Default `false` (off).
+       *
+       * @example <caption>XML view</caption>
+       * <kiosk:KioskKeyboard accentVariants="true" controls="myInput" />
+       *
+       * @since 0.1.0
+       */
+      accentVariants: {
+        type: "boolean",
+        defaultValue: false,
+        group: "Behavior",
+      },
+      /**
        * Controls whether the KioskKeyboard or the native on-screen
        * keyboard is used.
        *
@@ -361,6 +389,19 @@ export default class KioskKeyboard extends Control {
         type: "object",
         defaultValue: null,
         group: "Behavior",
+      },
+    },
+    aggregations: {
+      /**
+       * Internal accent-variant popover, owned by the control and driven by
+       * `VariantPopupBehavior`. Hidden so consumers can neither inject nor clone
+       * it; created lazily on first open, reused across opens, and destroyed
+       * with the control.
+       */
+      _variantPopover: {
+        type: "sap.m.Popover",
+        multiple: false,
+        visibility: "hidden",
       },
     },
     associations: {
@@ -681,6 +722,21 @@ export default class KioskKeyboard extends Control {
       if (this._tryCompositionMiddleware("{backspace}")) return true;
       return this._performBackspaceDelete();
     });
+    this._variantPopup = new VariantPopupBehavior({
+      resolveVariants: (keyEl) => this._resolveKeyVariants(keyEl),
+      commitVariant: (glyph) => {
+        this._commitVariant(glyph);
+      },
+      announceOpen: (base, count) => {
+        this._announceLiveRegion(
+          getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", String(count)).replace("{1}", base),
+        );
+      },
+      announceDismiss: () => {
+        this._announceLiveRegion(getText("ARIA_VARIANTS_CLOSED", "Variants dismissed"));
+      },
+      getVariantPopover: () => this._getVariantPopover(),
+    });
     this._keyboardTypeSource = "unset";
     this._nativeKbSuppression = new NativeKeyboardSuppression(this);
     this._autoShowBehavior = new AutoShowBehavior(this);
@@ -774,6 +830,7 @@ export default class KioskKeyboard extends Control {
     this._controlsDelegation.teardown();
     this._physicalKeyHighlight.detach();
     this._responsiveSizing.destroy();
+    this._variantPopup.destroy();
     this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
     document.removeEventListener("keydown", this._boundEscapeKeydown, true);
@@ -1445,6 +1502,9 @@ export default class KioskKeyboard extends Control {
    */
   private _onDocumentEscapeKeydown(event: KeyboardEvent): void {
     if (event.key !== "Escape") return;
+    // An open accent-variant popup owns Escape: it dismisses only the popup,
+    // leaving the docked keyboard open.
+    if (this._variantPopup.isOpen()) return;
     if (!this.getDocked() || !this._open) return;
 
     const eventTarget = event.composedPath?.()[0] ?? event.target;
@@ -1600,11 +1660,79 @@ export default class KioskKeyboard extends Control {
     const layoutName = this._resolvedLayoutName();
     const resolved = registryGetLayoutOrDefault(layoutName, this._instanceLayoutsMap);
     const constrainedName = constrainedLayoutName(this.getKeyboardType());
-    if (constrainedName === null) return resolved;
-    return reconcileBaseSwitch(resolved, layoutName, constrainedName, {
-      icon: LAYOUT_RETURN_ICON,
-      ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
-    });
+    const base =
+      constrainedName === null
+        ? resolved
+        : reconcileBaseSwitch(resolved, layoutName, constrainedName, {
+            icon: LAYOUT_RETURN_ICON,
+            ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
+          });
+    // Opt-in Latin-diacritics: fill default variants onto matching base keys so
+    // umlauts/accents are reachable from any layout. Author-declared `variants`
+    // always win (applyVariantDefaults guarantees this).
+    return this.getAccentVariants() ? applyVariantDefaults(base) : base;
+  }
+
+  /**
+   * Resolves the effective, Shift/Caps-mapped variants for a rendered key from
+   * its grid position, or `null` when the key declares none. Used by the popup
+   * behavior to build the option listbox.
+   */
+  private _resolveKeyVariants(keyEl: HTMLElement): { base: string; glyphs: string[] } | null {
+    const match = keyEl.id.match(KEY_ID_SUFFIX_RE);
+    if (!match) return null;
+    const row = Number.parseInt(match[1]!, 10);
+    const col = Number.parseInt(match[2]!, 10);
+    const key = this._getResolvedLayout()[row]?.[col];
+    const variants = key?.variants;
+    if (!variants || variants.length === 0) return null;
+    const shift = this._isShiftActive();
+    return {
+      base: shift ? toShiftVariant(key.value) : key.value,
+      glyphs: shift ? toShiftVariants(variants) : [...variants],
+    };
+  }
+
+  /**
+   * Inserts a chosen accent variant through the same path a character key uses:
+   * fire the cancelable `keyPress` (a consumer `preventDefault()` vetoes the
+   * insert), insert at the caret, then auto-release one-shot Shift.
+   */
+  private _commitVariant(glyph: string): void {
+    const shift = this._isShiftActive();
+    if (this.fireKeyPress({ key: glyph, shiftKey: shift })) {
+      this._targetSession.insertText(glyph);
+    }
+    this._shiftState.autoRelease();
+  }
+
+  /**
+   * Returns the control-owned accent-variant Popover from the hidden
+   * `_variantPopover` aggregation, creating the reusable shell on first use.
+   * The shell holds only structural options; `VariantPopupBehavior` rebuilds its
+   * content, initial focus and aria-labelledby on every open. The framework
+   * auto-destroys it with the control (no manual teardown in `exit`). Each call
+   * mirrors the ambient content density, since a static-area popover cannot
+   * inherit density by DOM ancestry.
+   */
+  private _getVariantPopover(): Popover {
+    let popover = this.getAggregation("_variantPopover") as Popover | null;
+    if (!popover) {
+      // Derive a stable id from the control (as UI5 core controls id their own
+      // internal sub-controls, e.g. sap.m.Select's `<id>-list`), rather than an
+      // auto-generated `__popoverN`.
+      popover = new Popover(`${this.getId()}-variantPopover`, {
+        showHeader: false,
+        showArrow: true,
+        placement: PlacementType.VerticalPreferredTop,
+        verticalScrolling: false,
+        horizontalScrolling: false,
+      });
+      this.setAggregation("_variantPopover", popover, true);
+    }
+    syncStyleClass("sapUiSizeCondensed", this, popover);
+    syncStyleClass("sapUiSizeCompact", this, popover);
+    return popover;
   }
 
   /**
@@ -1652,6 +1780,7 @@ export default class KioskKeyboard extends Control {
    */
   private _clearPressedKeyState(): HTMLElement | null {
     this._backspaceRepeat.stop();
+    this._variantPopup.stop();
     const pressed = this._pressedKeyEl;
     this._pressedKeyEl = null;
     if (pressed) {
@@ -1678,6 +1807,12 @@ export default class KioskKeyboard extends Control {
 
     const el = this._resolveKeyElementFromEventTarget(event.target);
     if (el) {
+      // A press on any key while the accent popup is open dismisses it (the
+      // popup's options live in the static area, so a key press is always
+      // "outside"), then proceeds so the same tap also types the key. The
+      // framework autoClose does not fire for the keyboard's own keys because of
+      // the preventDefault above, so close it explicitly here.
+      this._variantPopup.dismissOpen();
       this._pressedKeyEl = el;
       el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
       // Safety net: if the window loses focus before touchend/touchcancel
@@ -1687,7 +1822,23 @@ export default class KioskKeyboard extends Control {
       // Press-and-hold Backspace deletes continuously; the behavior arms the
       // repeat and later tells ontouchend to suppress its trailing delete.
       this._backspaceRepeat.onPress(el, this.getEnabled());
+      // Press-and-hold a key with variants opens the accent popup; the behavior
+      // arms the hold and later tells ontouchend to suppress its trailing tap.
+      this._variantPopup.onPress(el, this.getEnabled());
     }
+  }
+
+  /**
+   * Opens the accent-variant popup on right-click (contextmenu) for keys that
+   * declare variants, so desktop users reach the popup without a long press.
+   */
+  oncontextmenu(event: Event): void {
+    if (!this.getEnabled()) return;
+    const el = this._resolveKeyElementFromEventTarget(event.target);
+    if (!el || el.dataset.hasVariants !== "true") return;
+    event.preventDefault();
+    this._clearPressedKeyState();
+    this._variantPopup.openFor(el);
   }
 
   /**
@@ -1714,6 +1865,10 @@ export default class KioskKeyboard extends Control {
     // A held Backspace already deleted via auto-repeat; skip the release delete
     // so lifting off does not remove one extra character.
     if (this._backspaceRepeat.shouldSuppressRelease(keyValue)) return;
+
+    // A hold that opened the accent-variant popup swallows its lift-off tap so
+    // it does not also insert the base glyph.
+    if (this._variantPopup.shouldSuppressRelease(keyValue)) return;
 
     this._handleKeyAction(keyValue, pressed);
   }

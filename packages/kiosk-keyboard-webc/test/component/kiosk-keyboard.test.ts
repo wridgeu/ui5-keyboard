@@ -2439,9 +2439,13 @@ describe("kiosk-keyboard", () => {
         "fkey",
         "key-label",
         "key-icon",
+        "variant-popup",
+        "variant-option",
       ]);
       expect(Object.isFrozen(DOM.parts)).to.be.true;
-      expect(DOM.exportParts).to.equal("keyboard, row, key, modifier, action, fkey, key-label, key-icon");
+      expect(DOM.exportParts).to.equal(
+        "keyboard, row, key, modifier, action, fkey, key-label, key-icon, variant-popup, variant-option",
+      );
     });
 
     it("all declared parts appear in rendered shadow DOM", async () => {
@@ -2456,7 +2460,10 @@ describe("kiosk-keyboard", () => {
         }
       }
 
-      for (const declared of DOM.parts) {
+      // The variant-popup / variant-option parts only render while the accent
+      // popup is open; they are covered in variant-popup.test.ts.
+      const alwaysRendered = DOM.parts.filter((p) => p !== "variant-popup" && p !== "variant-option");
+      for (const declared of alwaysRendered) {
         expect(renderedParts.has(declared), `part "${declared}" found in rendered DOM`).to.be.true;
       }
     });

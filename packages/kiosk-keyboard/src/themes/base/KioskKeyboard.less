@@ -43,6 +43,11 @@
  *   --ui5KioskKeyboard-dockedShadow     Shadow when docked
  *   --ui5KioskKeyboard-dockedZIndex     Z-index when docked (default: 100)
  *
+ * Accent-variant popup (long-press / right-click):
+ *   Rendered by a themed sap/m/Popover of sap/m/Buttons in the UI5 static area.
+ *   The framework theme owns its overlay chrome, z-index, and option styling;
+ *   there are no popup-specific CSS custom properties to override here.
+ *
  * Numpad mode:
  *   --ui5KioskKeyboard-numpadMaxWidth      Numpad container max-width (default: 20rem)
  *   --ui5KioskKeyboard-numpadKeyMinWidth   Numpad key min-width (default: 4rem)
@@ -749,5 +754,18 @@
       background: @sapUiButtonEmphasizedBackground;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
     }
+  }
+
+  /* Accent-variant popup.
+     A themed `sap/m/Popover` hosting a wrapping `sap/m/FlexBox` of `sap/m/Button`
+     options. The framework supplies the overlay (static-area rendering, z-index
+     above the docked keyboard, arrow, shadow) and every option's background /
+     border / hover / focus / active styling, so the only style this control adds
+     is the grid's wrap bound and inter-option gap. `.ui5KioskVariantPopup` is the
+     FlexBox, already `display: flex` from the framework; it renders outside
+     `.ui5KioskKeyboard` (in the static area) and inherits nothing from it. */
+  .ui5KioskVariantPopup {
+    max-width: min(22rem, 92vw);
+    gap: 0.25rem;
   }
 } /* @layer kiosk-keyboard */

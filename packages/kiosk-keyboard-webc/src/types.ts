@@ -127,6 +127,23 @@ export interface KeyDefinition {
    * keyboard logs a dev-time warning. Localizable by the consumer.
    */
   ariaLabel?: string;
+
+  /**
+   * Ordered alternate glyphs surfaced in a long-press / right-click popup
+   * (press-and-hold the key, or right-click, then pick a glyph). Mirrors the
+   * CLDR LDML Part 7 `longPress` model: the key's own {@link value} stays the
+   * tap default and is **not** repeated here. When Shift/Caps Lock is active
+   * the popup surfaces the uppercase forms.
+   *
+   * Purely additive and opt-in per key; keys without `variants` show no popup.
+   * The `accent-variants` attribute applies a built-in Latin-diacritics table
+   * (covering German ä/ö/ü/ß and more) to a layout; an explicit `variants` here
+   * always overrides the default.
+   *
+   * @example { value: "a", variants: ["ä", "à", "á", "â"] }
+   * @since 0.1.0
+   */
+  variants?: string[];
 }
 
 /** A single row of keys on the keyboard.
