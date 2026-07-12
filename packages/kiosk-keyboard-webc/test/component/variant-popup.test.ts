@@ -442,6 +442,29 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
   });
 
+  // On a wide keyboard the key is far wider than tall; the option still matches the
+  // full key width (not capped at the key height), so the cells stay proportional to
+  // the keys. The width is read at open.
+  it("sizes each option to the full key width even when the key is wide", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+
+    // A wide host with a short key-height makes the keys much wider than tall.
+    kb.style.width = "600px";
+    kb.style.setProperty("--kiosk-keyboard-key-height", "20px");
+    await renderFinished();
+
+    const aKey = requireKey(kb, "a");
+    await holdOpen(aKey);
+
+    const keyRect = aKey.getBoundingClientRect();
+    // Self-guard: the key must be wider than tall, or matching the width would prove nothing.
+    expect(keyRect.width, "wide key is wider than its height").to.be.above(keyRect.height);
+
+    const optionWidth = optionEls(kb)[0]!.getBoundingClientRect().width;
+    expect(optionWidth, "option matches the full key width, not capped at the key height").to.equal(keyRect.width);
+    pointerUp();
+  });
+
   it("shows the popover arrow so it points at the source key", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));

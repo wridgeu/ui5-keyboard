@@ -557,6 +557,36 @@ QUnit.test("each option cell is sized to the anchor key's rendered footprint", a
   cleanup(kb, input);
 });
 
+QUnit.test("each option cell matches the full key width on wide keyboards", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const root = kb.getDomRef() as HTMLElement;
+
+  // A wide keyboard with a short key-height makes keys far wider than tall; the
+  // option width must still match the full key width (not cap at the key height),
+  // so the cells stay proportional to the keys.
+  root.style.width = "900px";
+  root.style.setProperty("--ui5KioskKeyboard-keyHeight", "20px");
+  const aKey = getRequiredKeyElement(kb, "a");
+
+  await holdOpen(kb, aKey);
+  const keyRect = aKey.getBoundingClientRect();
+  assert.ok(
+    keyRect.width > keyRect.height,
+    `wide key is wider than tall (${keyRect.width.toFixed(1)} > ${keyRect.height.toFixed(1)})`,
+  );
+  const options = getOptions();
+  assert.ok(options.length > 0, "options rendered");
+  for (const option of options) {
+    const optionWidth = option.getBoundingClientRect().width;
+    assert.ok(
+      Math.abs(optionWidth - keyRect.width) < 0.5,
+      `option '${glyphOf(option)}' width ${optionWidth.toFixed(1)}px matches the wide key width ${keyRect.width.toFixed(1)}px`,
+    );
+  }
+  release(kb, aKey);
+  cleanup(kb, input);
+});
+
 QUnit.test("the popover content frame is flattened to the option-grid inset", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
