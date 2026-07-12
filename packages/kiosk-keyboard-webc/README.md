@@ -455,6 +455,26 @@ interface KeyDefinition {
 }
 ```
 
+## Accent variants (German umlauts)
+
+The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a German-locale page selects it automatically (`de` → `qwertz-de`). To reach accented letters from _any_ Latin layout, a key can carry a long-press popup of variants.
+
+**Long-press / right-click popup.** Press and hold a key (or right-click it) to open a popup of accent variants; tap, drag-and-release, or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms - including the capital sharp S **ẞ** for `s`/`ß`.
+
+**Built-in Latin-diacritics table.** The `accent-variants` attribute merges a batteries-included table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
+
+```html
+<kiosk-keyboard accent-variants controls="my-input"></kiosk-keyboard>
+```
+
+**Per-key `variants`.** Author or override the popup for a single key with the `variants` field on its `KeyDefinition` (supplied via `instanceLayouts`). An explicit `variants` always wins over the built-in table; the key's own `value` stays the tap default and is not repeated in the list:
+
+```ts
+el.instanceLayouts = {
+  "my-layout": [[{ value: "a", variants: ["ä", "à", "á", "â"] }, { value: "o", variants: ["ö", "ø"] }]],
+};
+```
+
 ## Per-Instance Customization
 
 Every `<kiosk-keyboard>` accepts three programmatic-only properties that override the built-in registry for that element only: `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware`. Resolution order is **instance map → built-in**, so an entry on the element wins without mutating module-level state.

@@ -560,6 +560,26 @@ const myLayout: LayoutDefinition = [
 | `type`          | `string` | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
 | `icon`          | `string` | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
 
+### Accent variants (German umlauts)
+
+The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a German-locale app selects it automatically (`de` → `qwertz-de`, see [Locale-Based Default Layout](#locale-based-default-layout)). To reach accented letters from _any_ Latin layout, a key can carry a long-press popup of variants.
+
+**Long-press / right-click popup.** Press and hold a key (or right-click it) to open a small popup of accent variants; tap or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms - including the capital sharp S **ẞ** for `s`/`ß`.
+
+**Built-in Latin-diacritics table.** Set the `accentVariants` property to merge a batteries-included table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
+
+```xml
+<kiosk:KioskKeyboard accentVariants="true" controls="myInput" />
+```
+
+**Per-key `variants`.** Author or override the popup for a single key with the `variants` field on its `KeyDefinition`. An explicit `variants` always wins over the built-in table; the key's own `value` stays the tap default and is not repeated in the list:
+
+```ts
+const myLayout: LayoutDefinition = [
+  [{ value: "a", variants: ["ä", "à", "á", "â"] }, { value: "o", variants: ["ö", "ø"] }],
+];
+```
+
 ---
 
 ## Composition Middleware

@@ -74,18 +74,28 @@ export function setI18nResolver(fn: I18nResolver | null): void {
  */
 type I18nKey = keyof typeof I18N;
 
+/** Fills `{0}`/`{1}`/… placeholders in a default text when no bundle is active. */
+function _formatMessage(text: string, args: (string | number)[]): string {
+  if (args.length === 0) return text;
+  return text.replace(/\{(\d+)\}/g, (match, index: string) => {
+    const value = args[Number(index)];
+    return value === undefined ? match : String(value);
+  });
+}
+
 function lookupI18nText(key: string): I18nText | undefined {
   return Object.hasOwn(I18N, key) ? I18N[key as I18nKey] : undefined;
 }
 
-export function getText(key: string, fallback: string): string {
+export function getText(key: string, fallback: string, ...args: (string | number)[]): string {
   const i18nText = lookupI18nText(key);
   const defaultText = i18nText?.defaultText ?? fallback;
 
-  // Try the UI5 WC i18n bundle first (locale-aware)
-  let resolved = defaultText;
+  // Try the UI5 WC i18n bundle first (locale-aware). The bundle runs
+  // MessageFormat, so `{0}`/`{1}` placeholders are filled from `args`.
+  let resolved = _formatMessage(defaultText, args);
   if (_bundle && i18nText) {
-    const bundleText = _bundle.getText(i18nText);
+    const bundleText = _bundle.getText(i18nText, ...args);
     // When no translation exists, the bundle returns the key identifier as-is.
     // Compare against the bundle's internal key, not the JS export name.
     if (bundleText && bundleText !== i18nText.key) {
@@ -93,11 +103,13 @@ export function getText(key: string, fallback: string): string {
     }
   }
 
-  // Apply resolver override if set
+  // Apply resolver override if set. The resolver receives no positional args, so
+  // any `{0}`/`{1}` placeholders in the string it returns are filled here — the
+  // same MessageFormat treatment the bundle/default paths above apply.
   if (_resolver) {
     try {
       const override = _resolver(key, _getLanguage(), resolved);
-      if (typeof override === "string") return override;
+      if (typeof override === "string") return _formatMessage(override, args);
     } catch (err) {
       console.warn("[kiosk-keyboard] i18n resolver threw:", err);
       return resolved;

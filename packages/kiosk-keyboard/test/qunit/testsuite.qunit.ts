@@ -76,6 +76,9 @@ sap.ui.define([], () => {
       "key-token": {
         title: "QUnit tests for ui5.kiosk - key-token parseKeyAction",
       },
+      "latin-variants": {
+        title: "QUnit tests for ui5.kiosk - latin-variants long-press table & helpers",
+      },
       "KioskKeyboard-layout": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Layout Management",
       },
@@ -123,6 +126,9 @@ sap.ui.define([], () => {
       },
       "keyboard-type-middleware": {
         title: "QUnit tests for ui5.kiosk - keyboardType vs composition middleware",
+      },
+      "KioskKeyboard-variants": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard accent-variant popup",
       },
     },
   };

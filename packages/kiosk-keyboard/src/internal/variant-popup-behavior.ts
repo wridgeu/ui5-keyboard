@@ -1,0 +1,460 @@
+import type Popover from "sap/m/Popover";
+import FlexBox from "sap/m/FlexBox";
+import Button from "sap/m/Button";
+import InvisibleText from "sap/ui/core/InvisibleText";
+import { FlexWrap, FlexRendertype, ButtonType } from "sap/m/library";
+import { AutoRepeater, type AutoRepeatTiming } from "./auto-repeat";
+import { KIOSK_KEYBOARD_DOM } from "./dom-contract";
+import { getText } from "./i18n-registry";
+
+/**
+ * Owns the press-and-hold / right-click accent-variant popup for the UI5
+ * control: the single-shot hold timer that opens it, the option grid hosted in a
+ * themed `sap/m/Popover`, the roving-tabindex keyboard navigation, and the touch
+ * drag-release tracking.
+ *
+ * The Popover is a fully themed framework overlay: it renders into the static
+ * area (unclipped, stacked above the docked keyboard), docks above the pressed
+ * key with collision flipping, draws its own arrow, and dismisses itself on an
+ * outside press (autoClose) or Escape. Its options are one `sap/m/Button` per
+ * glyph laid out in a wrapping `sap/m/FlexBox`, so the framework supplies every
+ * bit of background / border / hover / focus / active styling. The roving-active
+ * option is the `Emphasized` button and the sole tab stop; the arrow-key handler
+ * moves the type, the DOM focus, and the tab chain between the buttons.
+ *
+ * Mirrors the sibling backspace-hold delegate: `onPress` arms the gesture,
+ * `stop` cancels a pending (not-yet-fired) hold, and `shouldSuppressRelease`
+ * tells the release path to swallow the lift-off tap so it does not also insert
+ * the base glyph once the popup has opened. The actual insertion is the host's
+ * `commitVariant`, so the cursor-aware insert / cancelable key-press / Shift
+ * auto-release all stay on the control, exactly like a normal character key.
+ *
+ * The hold threshold is duplicated by hand in the sibling `kiosk-keyboard-webc`
+ * package (see `auto-repeat.ts`); only the wiring differs between the two.
+ */
+
+/**
+ * Hold threshold before the accent-variant popup opens (ms). Named on its own
+ * rather than borrowed from the backspace (450) or Shift double-click (400)
+ * timings it sits between, so the gesture's constant does not silently track an
+ * unrelated subsystem's number.
+ */
+export const VARIANT_HOLD_MS = 450;
+
+// Single-shot hold curve: the AutoRepeater fires once after the initial delay
+// (the callback returns `false` to stop), so no repeat cadence ever runs. Only
+// `initialDelayMs` is observable; the remaining fields satisfy the timing shape.
+const HOLD_TIMING: AutoRepeatTiming = {
+  initialDelayMs: VARIANT_HOLD_MS,
+  startIntervalMs: VARIANT_HOLD_MS,
+  minIntervalMs: VARIANT_HOLD_MS,
+  accelerationFactor: 1,
+};
+
+/**
+ * Derives a content-density class from the pressed key's current size, for the
+ * case the keyboard's context carries no density class to inherit: its own
+ * responsive scaling shrinks keys via container-query sizing, which sets no
+ * `sapUiSize*` class. Returns `""` at the default cozy key size. Applied only
+ * as a fallback after the framework density inheritance (see `adoptPopover`),
+ * and never overrides the button size directly.
+ */
+function variantDensityClass(keyEl: HTMLElement): string {
+  const rootFontPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const keyRem = keyEl.getBoundingClientRect().height / rootFontPx;
+  // A cozy button is ~2.5rem tall; once the keys shrink below the cozy touch
+  // target the popover switches to compact so it stays proportional to them.
+  return keyRem < 2.75 ? "sapUiSizeCompact" : "";
+}
+
+/** The effective variants surfaced for a key, already Shift/Caps-mapped. */
+export interface VariantResolution {
+  /** The tap-default glyph, shown only in the open announcement. */
+  base: string;
+  /** Ordered alternate glyphs presented as options. */
+  glyphs: string[];
+}
+
+/** Callbacks the popup behavior needs from the owning control. */
+export interface VariantPopupHost {
+  /**
+   * Effective variants for the pressed key, or `null` when it has none (the
+   * gesture gate). Both `base` and `glyphs` are already Shift/Caps-mapped.
+   */
+  resolveVariants(keyEl: HTMLElement): VariantResolution | null;
+  /**
+   * Insert the chosen glyph through the same cursor-aware path a character key
+   * uses (fires the cancelable key-press event first, then auto-releases Shift).
+   */
+  commitVariant(glyph: string): void;
+  /** Announce popup open ("N variants for {base}") through the live region. */
+  announceOpen(base: string, count: number): void;
+  /** Announce popup dismissal through the live region. */
+  announceDismiss(): void;
+  /**
+   * The control-owned accent-variant Popover, held in the control's hidden
+   * `_variantPopover` aggregation (lazily created on first call, reused across
+   * opens, auto-destroyed with the control). Returns it with the control's
+   * ambient content density synced on. The behavior rebuilds its content each
+   * open.
+   */
+  getVariantPopover(): Popover;
+}
+
+export default class VariantPopupBehavior {
+  private readonly _host: VariantPopupHost;
+  private readonly _repeater: AutoRepeater;
+  private readonly _onKeydown: (event: KeyboardEvent) => void;
+  private readonly _onDocTouchMove: (event: TouchEvent) => void;
+  private readonly _onDocTouchEnd: (event: TouchEvent) => void;
+  private readonly _onAfterClose: () => void;
+
+  /** The key whose hold is armed but has not yet opened the popup. */
+  private _armedKeyEl: HTMLElement | null = null;
+  /** The control-owned overlay while a popup session is open; `null` when closed. */
+  private _popover: Popover | null = null;
+  /** The Popover instance with `afterClose` wired on (attach-once guard). */
+  private _wiredPopover: Popover | null = null;
+  /** The accessible-name source referenced by the Popover's `aria-labelledby`. */
+  private _label: InvisibleText | null = null;
+  /** One themed button per glyph, in glyph order. */
+  private _buttons: Button[] = [];
+  /** The option grid's root element, host of the keyboard-navigation listener. */
+  private _gridDom: HTMLElement | null = null;
+  private _activeIndex = 0;
+  /** Whether the open popup lays out right-to-left (drives arrow direction). */
+  private _rtl = false;
+  /** The key the open popup belongs to; focus returns here on dismiss. */
+  private _anchorKeyEl: HTMLElement | null = null;
+  /**
+   * Set while the popup is open so the lift-off tap on the origin key is
+   * swallowed instead of inserting the base glyph. Gated by `_originKeyValue`
+   * and cleared on teardown, so an unrelated key's release is never swallowed.
+   */
+  private _consumeRelease = false;
+  /** `data-key` of the key the open popup belongs to; gates release suppression. */
+  private _originKeyValue: string | null = null;
+
+  constructor(host: VariantPopupHost) {
+    this._host = host;
+    this._repeater = new AutoRepeater(() => {
+      this._openArmed();
+      return false;
+    }, HOLD_TIMING);
+    this._onKeydown = (event) => this._handleKeydown(event);
+    this._onDocTouchMove = (event) => this._handleDocTouchMove(event);
+    this._onDocTouchEnd = (event) => this._handleDocTouchEnd(event);
+    // The framework closed the overlay (outside press / Escape): tear down and announce.
+    this._onAfterClose = () => this._dismiss(true);
+  }
+
+  /**
+   * Arm the hold when an enabled keyboard presses a key that declares variants.
+   * A no-op for any other key, while disabled, or while a popup is already open,
+   * so callers can forward every press.
+   */
+  onPress(keyEl: HTMLElement, enabled: boolean): void {
+    if (!enabled) return;
+    if (keyEl.dataset.hasVariants !== "true") return;
+    if (this.isOpen()) return;
+    this._armedKeyEl = keyEl;
+    this._repeater.start();
+  }
+
+  /**
+   * Opens the popup immediately for a key that declares variants (the
+   * right-click / context-menu path). A no-op for keys without variants.
+   */
+  openFor(keyEl: HTMLElement): void {
+    if (keyEl.dataset.hasVariants !== "true") return;
+    if (this.isOpen()) return;
+    this._repeater.stop();
+    this._armedKeyEl = keyEl;
+    this._openArmed();
+  }
+
+  /** Cancel a pending hold. Safe when idle. Does not close an already-open popup. */
+  stop(): void {
+    this._repeater.stop();
+    this._armedKeyEl = null;
+  }
+
+  /**
+   * Whether the release for `keyValue` must skip its default tap action because
+   * the hold already opened the popup on that same key. Reads and clears the
+   * one-shot flag, mirroring the backspace behavior's suppress-on-repeat.
+   */
+  shouldSuppressRelease(keyValue: string): boolean {
+    if (!this._consumeRelease || keyValue !== this._originKeyValue) return false;
+    this._consumeRelease = false;
+    return true;
+  }
+
+  isOpen(): boolean {
+    return this._popover !== null;
+  }
+
+  /**
+   * Closes an open popup without committing (inserting nothing), used when a
+   * fresh keyboard key press should dismiss it. Returns whether a popup was
+   * open. A no-op when closed.
+   */
+  dismissOpen(): boolean {
+    if (!this._popover) return false;
+    this._dismiss(true);
+    return true;
+  }
+
+  destroy(): void {
+    this._repeater.stop();
+    this._armedKeyEl = null;
+    // Release interaction state without closing (async) or destroying the
+    // Popover: the control auto-destroys the reused instance via its hidden
+    // `_variantPopover` aggregation on `exit`.
+    if (this._popover) {
+      this._teardownOpenState();
+      this._anchorKeyEl = null;
+      this._popover = null;
+    }
+    // The label is rendered into the static area (not a child), so release it.
+    this._label?.destroy();
+    this._label = null;
+  }
+
+  // ── Opening ──
+
+  private _openArmed(): void {
+    const keyEl = this._armedKeyEl;
+    this._armedKeyEl = null;
+    if (!keyEl || this.isOpen()) return;
+    const resolution = this._host.resolveVariants(keyEl);
+    if (!resolution || resolution.glyphs.length === 0) return;
+    this._open(keyEl, resolution);
+  }
+
+  private _open(anchorKeyEl: HTMLElement, { base, glyphs }: VariantResolution): void {
+    this._anchorKeyEl = anchorKeyEl;
+    this._consumeRelease = true;
+    this._originKeyValue = anchorKeyEl.dataset.key ?? null;
+    this._rtl = getComputedStyle(anchorKeyEl).direction === "rtl";
+    this._activeIndex = 0;
+
+    // The control owns the Popover in its hidden `_variantPopover` aggregation;
+    // reuse that single instance and rebuild its content each open. Wire the
+    // afterClose teardown once, on the persistent instance.
+    const popover = this._host.getVariantPopover();
+    if (this._wiredPopover !== popover) {
+      popover.attachAfterClose(this._onAfterClose);
+      this._wiredPopover = popover;
+    }
+    // Clear the previous session's content and label before rebuilding.
+    popover.destroyContent();
+    popover.removeAllAriaLabelledBy();
+    this._label?.destroy();
+    this._label = null;
+
+    this._buttons = glyphs.map((glyph, index) => {
+      const button = new Button({
+        text: glyph,
+        type: index === 0 ? ButtonType.Emphasized : ButtonType.Default,
+        press: () => this._commitIndex(index),
+      });
+      button.addStyleClass(KIOSK_KEYBOARD_DOM.classes.variantOption);
+      // Roving tab chain: only the active option is a tab stop (framework-honored
+      // flag the button renderer reads to emit tabindex="-1").
+      button._bExcludeFromTabChain = index !== 0;
+      return button;
+    });
+
+    const grid = new FlexBox({
+      wrap: FlexWrap.Wrap,
+      renderType: FlexRendertype.Bare,
+      items: this._buttons,
+    });
+    grid.addStyleClass(KIOSK_KEYBOARD_DOM.classes.variantPopup);
+    popover.addContent(grid);
+
+    // The localized "N variants for {base}" group name, referenced by the
+    // Popover's aria-labelledby so the option grid announces as a named group.
+    const label = new InvisibleText({
+      text: getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}")
+        .replace("{0}", String(glyphs.length))
+        .replace("{1}", base),
+    }).toStatic();
+    this._label = label;
+    popover.addAriaLabelledBy(label);
+    const firstButton = this._buttons[0];
+    if (firstButton) popover.setInitialFocus(firstButton);
+
+    // Reused instance: toggle (not add) so a later LTR open clears a prior RTL.
+    popover.toggleStyleClass("sapUiRtl", this._rtl);
+    // The control-owned getter syncs the ambient content density. When none is
+    // inherited, derive one from the current key size (the keyboard's own
+    // container-query scaling sets no density class to inherit).
+    if (!popover.hasStyleClass("sapUiSizeCompact") && !popover.hasStyleClass("sapUiSizeCondensed")) {
+      const derived = variantDensityClass(anchorKeyEl);
+      if (derived) popover.addStyleClass(derived);
+    }
+    this._popover = popover;
+
+    popover.openBy(anchorKeyEl);
+
+    // Keyboard navigation lives on the grid: it intercepts Arrow/Home/End/Enter/
+    // Space/Escape before the button's own key handling so it can rove focus and
+    // commit, and stops them from reaching the docked keyboard behind the popup.
+    const gridDom = grid.getDomRef();
+    if (gridDom instanceof HTMLElement) {
+      this._gridDom = gridDom;
+      gridDom.addEventListener("keydown", this._onKeydown);
+    }
+
+    // Seat the roving focus on the first option immediately (the Popover's own
+    // initialFocus runs after its open animation; this keeps focus inside the
+    // grid synchronously so arrow navigation works from the first keystroke).
+    this._buttons[0]?.focus();
+
+    // Touch drag-release: while the initiating finger is still down, track it so
+    // dragging onto an option and lifting commits it (mouse never fires these).
+    document.addEventListener("touchmove", this._onDocTouchMove, { passive: false });
+    document.addEventListener("touchend", this._onDocTouchEnd);
+
+    this._host.announceOpen(base, glyphs.length);
+  }
+
+  // ── Keyboard navigation ──
+
+  private _handleKeydown(event: KeyboardEvent): void {
+    switch (event.key) {
+      case "ArrowRight":
+        this._setActive(this._activeIndex + (this._rtl ? -1 : 1));
+        break;
+      case "ArrowLeft":
+        this._setActive(this._activeIndex + (this._rtl ? 1 : -1));
+        break;
+      case "ArrowDown":
+        this._setActive(this._activeIndex + 1);
+        break;
+      case "ArrowUp":
+        this._setActive(this._activeIndex - 1);
+        break;
+      case "Home":
+        this._setActive(0);
+        break;
+      case "End":
+        this._setActive(this._buttons.length - 1);
+        break;
+      case "Enter":
+      case " ":
+      case "Spacebar":
+        this._commitIndex(this._activeIndex);
+        break;
+      case "Escape":
+        this._cancel();
+        break;
+      default:
+        return;
+    }
+    // Owned here: keep the keystroke off the buttons' native activation and off
+    // the docked keyboard's document-level handlers behind the popup.
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  private _setActive(index: number): void {
+    const count = this._buttons.length;
+    if (count === 0) return;
+    const clamped = Math.max(0, Math.min(count - 1, index));
+    if (clamped === this._activeIndex) return;
+    const previous = this._buttons[this._activeIndex];
+    const next = this._buttons[clamped];
+    if (previous) {
+      previous.setType(ButtonType.Default);
+      previous._bExcludeFromTabChain = true;
+    }
+    if (next) {
+      next.setType(ButtonType.Emphasized);
+      next._bExcludeFromTabChain = false;
+      next.focus();
+    }
+    this._activeIndex = clamped;
+  }
+
+  // ── Touch drag-release ──
+
+  private _handleDocTouchMove(event: TouchEvent): void {
+    const index = this._optionIndexFromTouch(event);
+    if (index < 0) return;
+    event.preventDefault();
+    this._setActive(index);
+  }
+
+  private _handleDocTouchEnd(event: TouchEvent): void {
+    const index = this._optionIndexFromTouch(event);
+    // A drag that ends over an option commits it; a hold released in place
+    // (finger still on the origin key) leaves the popup open (sticky).
+    if (index >= 0) this._commitIndex(index);
+  }
+
+  private _optionIndexFromTouch(event: TouchEvent): number {
+    const touch = event.changedTouches[0] ?? event.touches[0];
+    if (!touch) return -1;
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const option = el?.closest(KIOSK_KEYBOARD_DOM.selectors.variantOption);
+    if (!(option instanceof HTMLElement)) return -1;
+    return this._buttons.findIndex((button) => button.getDomRef() === option);
+  }
+
+  // ── Commit / cancel / close ──
+
+  private _commitIndex(index: number): void {
+    const glyph = this._buttons[index]?.getText();
+    this._dismiss(false);
+    if (glyph !== undefined && glyph !== "") this._host.commitVariant(glyph);
+  }
+
+  private _cancel(): void {
+    this._dismiss(true);
+  }
+
+  /**
+   * Closes the popup (the control-owned Popover is reused, not destroyed) and
+   * restores focus. `announce` is false for a commit. Idempotent: clearing
+   * `_popover` before `close()` makes the `afterClose` re-entry a no-op, and a
+   * framework-initiated close (outside press / Escape) reaches here with
+   * `_popover` still set and runs the full teardown once.
+   */
+  private _dismiss(announce: boolean): void {
+    const popover = this._popover;
+    if (!popover) return;
+    const anchor = this._anchorKeyEl;
+    const hadFocus = popover.getDomRef()?.contains(document.activeElement) ?? false;
+
+    this._teardownOpenState();
+    this._anchorKeyEl = null;
+    this._popover = null;
+    // The content (grid/buttons) and label stay on the closed Popover for the
+    // close animation; they are torn down at the next `_open` (destroyContent /
+    // removeAllAriaLabelledBy / label destroy) and with the control on `exit`.
+    if (popover.isOpen()) popover.close();
+
+    // Restore focus to the origin key when focus was inside the popup (Escape,
+    // keyboard commit, click on an option). An outside press that moved focus
+    // elsewhere keeps it there.
+    if (hadFocus && anchor && document.contains(anchor)) {
+      anchor.focus();
+    }
+
+    if (announce) this._host.announceDismiss();
+  }
+
+  private _teardownOpenState(): void {
+    this._consumeRelease = false;
+    this._originKeyValue = null;
+    document.removeEventListener("touchmove", this._onDocTouchMove);
+    document.removeEventListener("touchend", this._onDocTouchEnd);
+    this._gridDom?.removeEventListener("keydown", this._onKeydown);
+    this._gridDom = null;
+    this._buttons = [];
+    this._activeIndex = 0;
+  }
+}

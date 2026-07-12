@@ -13,3 +13,15 @@ declare module "sap/ui/dom/units/Rem" {
   };
   export default Rem;
 }
+
+declare module "sap/m/Button" {
+  export default interface Button {
+    /**
+     * Framework-internal roving-tabindex flag. When `true`, `ButtonRenderer`
+     * emits `tabindex="-1"` so the button is kept out of the tab chain (the
+     * same mechanism `sap.m.GenericTile`/`HeaderContainer` use). The variant
+     * popup sets it so only the active option button is a tab stop.
+     */
+    _bExcludeFromTabChain: boolean;
+  }
+}

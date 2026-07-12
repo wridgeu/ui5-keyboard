@@ -10,7 +10,18 @@
  * single source of truth.
  */
 
-const _parts = Object.freeze(["keyboard", "row", "key", "modifier", "action", "fkey", "key-label", "key-icon"]);
+const _parts = Object.freeze([
+  "keyboard",
+  "row",
+  "key",
+  "modifier",
+  "action",
+  "fkey",
+  "key-label",
+  "key-icon",
+  "variant-popup",
+  "variant-option",
+]);
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({
   classes: Object.freeze({
@@ -43,11 +54,17 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyIcon: "kiosk-key__icon",
     keyDual: "kiosk-key--dual",
     liveRegion: "kiosk-keyboard__live-region",
+    variantPopup: "kiosk-keyboard__variant-popup",
+    variantOption: "kiosk-keyboard__variant-option",
   }),
   attributes: Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
     rowKind: "data-row-kind",
+    /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
+    hasVariants: "data-has-variants",
+    /** Zero-based index of a variant option within its popup. */
+    variantIndex: "data-index",
   }),
   selectors: Object.freeze({
     root: ".kiosk-keyboard",
@@ -57,6 +74,10 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     focusableKey: '.kiosk-key[tabindex="0"]',
     keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
     keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
+    variantPopover: "ui5-popover",
+    variantPopup: ".kiosk-keyboard__variant-popup",
+    variantOption: "ui5-button",
+    variantOptionByIndex: (index: number) => `ui5-button[data-index="${index}"]`,
   }),
   /** All CSS part names exposed by the component. */
   parts: _parts,

@@ -15,6 +15,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const isDockedHidden = this.docked && !this.open;
   const focusPos = this._getFocusPosition(layout);
   const kbType = this.keyboardType;
+  const variantPopup = this._variantPopup;
 
   return (
     <>
@@ -91,6 +92,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   tabindex={isFocusTarget ? 0 : -1}
                   data-key={key.value}
                   data-shift-value={key.shiftValue || undefined}
+                  data-has-variants={key.variants && key.variants.length > 0 ? "" : undefined}
                   aria-pressed={isShift ? this._shifted : undefined}
                   aria-disabled={this.disabled ? "true" : undefined}
                   title={hasLabel && !isSingleGlyphLabel ? label : undefined}
@@ -131,6 +133,40 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
           </div>
         ))}
       </div>
+      {/* Accent-variant popup. Hosted in a `ui5-popover` (top-layer, unclipped)
+          for placement, collision handling, outside-click / Escape dismissal,
+          and focus restore; onAfterRendering sets the opener and open state
+          imperatively. The listbox below is our slotted content. */}
+      {variantPopup ? (
+        <ui5-popover
+          placement="Top"
+          hideArrow
+          preventInitialFocus
+          preventFocusRestore
+          accessibleName={variantPopup.label}
+        >
+          <div
+            class={KIOSK_KEYBOARD_DOM.classes.variantPopup}
+            part="variant-popup"
+            role="toolbar"
+            aria-label={variantPopup.label}
+            onClick={this._boundOnVariantClick}
+            onKeyDown={this._boundOnVariantKeyDown}
+          >
+            {variantPopup.glyphs.map((glyph, index) => (
+              <ui5-button
+                key={`variant-${index}`}
+                part="variant-option"
+                data-index={index}
+                design={index === variantPopup.activeIndex ? "Emphasized" : "Default"}
+                tabindex={index === variantPopup.activeIndex ? 0 : -1}
+              >
+                {glyph}
+              </ui5-button>
+            ))}
+          </div>
+        </ui5-popover>
+      ) : null}
     </>
   );
 }

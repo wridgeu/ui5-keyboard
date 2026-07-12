@@ -84,6 +84,21 @@ declare module "./KioskKeyboard" {
         autoType?: boolean | PropertyBindingInfo | `{${string}}`;
 
         /**
+         * When `true`, a built-in Latin-diacritics table is merged onto the
+        resolved layout so every matching base letter (a, e, i, o, u, c, n,
+        s, y, z, l, ...) gains a long-press / right-click accent-variant
+        popup - making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
+        from any Latin layout without editing layout data.
+        
+        A per-key `variants` declaration always wins over the default table.
+        When Shift or Caps Lock is active, the popup surfaces the uppercase
+        forms (including ẞ for ß). Default `false` (off).
+         *
+         * @since 0.1.0
+         */
+        accentVariants?: boolean | PropertyBindingInfo | `{${string}}`;
+
+        /**
          * Controls whether the KioskKeyboard or the native on-screen
         keyboard is used.
         
@@ -450,6 +465,49 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
         setAutoType(autoType: boolean): this;
+
+        // property: accentVariants
+
+        /**
+         * Gets current value of property "accentVariants".
+         *
+         * When `true`, a built-in Latin-diacritics table is merged onto the
+        resolved layout so every matching base letter (a, e, i, o, u, c, n,
+        s, y, z, l, ...) gains a long-press / right-click accent-variant
+        popup - making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
+        from any Latin layout without editing layout data.
+        
+        A per-key `variants` declaration always wins over the default table.
+        When Shift or Caps Lock is active, the popup surfaces the uppercase
+        forms (including ẞ for ß). Default `false` (off).
+         *
+         * @since 0.1.0
+         * Default value is: false
+         * @returns Value of property "accentVariants"
+         */
+        getAccentVariants(): boolean;
+
+        /**
+         * Sets a new value for property "accentVariants".
+         *
+         * When `true`, a built-in Latin-diacritics table is merged onto the
+        resolved layout so every matching base letter (a, e, i, o, u, c, n,
+        s, y, z, l, ...) gains a long-press / right-click accent-variant
+        popup - making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
+        from any Latin layout without editing layout data.
+        
+        A per-key `variants` declaration always wins over the default table.
+        When Shift or Caps Lock is active, the popup surfaces the uppercase
+        forms (including ẞ for ß). Default `false` (off).
+         *
+         * @since 0.1.0
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * Default value is: false
+         * @param [accentVariants=false] New value for property "accentVariants"
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        setAccentVariants(accentVariants: boolean): this;
 
         // property: mobileKeyboard
 
