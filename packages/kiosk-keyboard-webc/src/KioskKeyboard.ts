@@ -1517,14 +1517,22 @@ class KioskKeyboard extends UI5Element {
   /**
    * Inserts a chosen variant through the same cursor-aware path a normal char
    * key uses: fires the cancelable `key-press` first (a consumer's
-   * preventDefault vetoes the insert), then inserts and auto-releases one-shot
-   * Shift. Always closes the popup and restores focus to the origin key.
+   * preventDefault vetoes the insert), routes the glyph through the composition
+   * middleware so a committed variant can seed or continue composition exactly
+   * like a pressed key, falls back to a literal insert when the middleware does
+   * not consume it, and auto-releases one-shot Shift. Always closes the popup
+   * and restores focus to the origin key.
    */
   private _commitVariant(glyph: string): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: glyph, shiftKey: this._shifted, char: glyph });
     if (allowed) {
       const target = this._resolveTarget();
-      if (target) insertText(target, glyph);
+      if (target) {
+        const middleware = this._ensureMiddleware();
+        if (!(middleware && middleware.handleKey(glyph, target))) {
+          insertText(target, glyph);
+        }
+      }
       this._autoReleaseShift();
     }
     this._closeVariantPopup();

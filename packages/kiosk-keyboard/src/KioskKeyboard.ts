@@ -1696,12 +1696,24 @@ export default class KioskKeyboard extends Control {
   /**
    * Inserts a chosen accent variant through the same path a character key uses:
    * fire the cancelable `keyPress` (a consumer `preventDefault()` vetoes the
-   * insert), insert at the caret, then auto-release one-shot Shift.
+   * insert), route the glyph through the layout's composition middleware, then
+   * auto-release one-shot Shift.
+   *
+   * Routing means "commit variant X" is identical to "press key X": a layout
+   * whose middleware composes the glyph seeds the composition with it, while a
+   * non-composition glyph finalizes any active preedit and falls back to a
+   * literal insert at the caret. Shift auto-releases exactly once on every
+   * branch - `_tryCompositionMiddleware` releases it when it consumes the glyph,
+   * otherwise the literal-insert and veto branches release it here.
    */
   private _commitVariant(glyph: string): void {
     const shift = this._isShiftActive();
     if (this.fireKeyPress({ key: glyph, shiftKey: shift })) {
-      this._targetSession.insertText(glyph);
+      if (!this._tryCompositionMiddleware(glyph)) {
+        this._targetSession.insertText(glyph);
+        this._shiftState.autoRelease();
+      }
+      return;
     }
     this._shiftState.autoRelease();
   }
