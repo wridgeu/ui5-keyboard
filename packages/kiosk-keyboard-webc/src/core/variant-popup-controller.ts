@@ -310,12 +310,6 @@ export class VariantPopupController {
     return true;
   }
 
-  /** Clears the click suppression once the popup has closed. */
-  private notifyClosed(): void {
-    this._suppressNextClick = false;
-    this._originValue = null;
-  }
-
   /**
    * Teardown shared by every dismissal path (commit, Escape, outside press):
    * clears the reactive state, clears the click suppression, announces
@@ -326,7 +320,8 @@ export class VariantPopupController {
     const state = this._host.getPopupState();
     if (!state) return;
     this._host.setPopupState(null);
-    this.notifyClosed();
+    this._suppressNextClick = false;
+    this._originValue = null;
     this._host.announceDismiss();
     this._host.focusKey(state.anchorKeyId);
   }
