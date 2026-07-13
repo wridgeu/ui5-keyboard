@@ -4,7 +4,7 @@ This document describes the internal architecture, design decisions, and edge ca
 
 ## Module Overview
 
-The library is split into focused, single-responsibility modules. The full source tree, with a one-line description per module, is under [Project Layout](#project-layout).
+The library is split into focused, single-responsibility modules. The primary source modules, each with a one-line description, are listed under [Project Layout](#project-layout).
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`). Their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
 

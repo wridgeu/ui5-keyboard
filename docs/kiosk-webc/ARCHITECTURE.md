@@ -40,6 +40,8 @@ core/
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
   responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host classes (cq-short/cq-tiny)
+  latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping (merged onto layouts when accent-variants is enabled)
+  variant-popup-controller.ts  VariantPopupController: long-press/right-click accent-variant popup orchestration (open, option sizing, commit through the composition path)
 middleware/
   kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
   hangul-compose.ts       Korean Hangul jamo composition middleware (ko-hangul layout)
@@ -126,19 +128,20 @@ This design was chosen for:
 
 ### Reactive Properties
 
-| Property          | Type    | Default     | Description                                               |
-| ----------------- | ------- | ----------- | --------------------------------------------------------- |
-| `layout`          | string  | `""`        | Layout name                                               |
-| `keyboard-type`   | string  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`                      |
-| `docked`          | boolean | `false`     | Fixed-position at viewport bottom                         |
-| `auto-show`       | boolean | `false`     | Auto open/close on input focus                            |
-| `auto-type`       | boolean | `false`     | Auto-detect keyboard type from input                      |
-| `disabled`        | boolean | `false`     | Disables key interaction                                  |
-| `controls`        | string  | `""`        | Comma-separated IDs for targeting and auto-show filtering |
-| `accessible-name` | string  | `""`        | Custom ARIA label                                         |
-| `mobile-keyboard` | string  | `"Auto"`    | `"Auto"`, `"Native"`, `"Custom"`                          |
-| `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`                         |
-| `open`            | boolean | `false`     | Opens/closes docked keyboard                              |
+| Property          | Type    | Default     | Description                                                              |
+| ----------------- | ------- | ----------- | ------------------------------------------------------------------------ |
+| `layout`          | string  | `""`        | Layout name                                                              |
+| `keyboard-type`   | string  | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`                                     |
+| `docked`          | boolean | `false`     | Fixed-position at viewport bottom                                        |
+| `auto-show`       | boolean | `false`     | Auto open/close on input focus                                           |
+| `auto-type`       | boolean | `false`     | Auto-detect keyboard type from input                                     |
+| `disabled`        | boolean | `false`     | Disables key interaction                                                 |
+| `controls`        | string  | `""`        | Comma-separated IDs for targeting and auto-show filtering                |
+| `accessible-name` | string  | `""`        | Custom ARIA label                                                        |
+| `mobile-keyboard` | string  | `"Auto"`    | `"Auto"`, `"Native"`, `"Custom"`                                         |
+| `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`                                        |
+| `open`            | boolean | `false`     | Opens/closes docked keyboard                                             |
+| `accent-variants` | boolean | `false`     | Built-in Latin-diacritics popup on Latin keys (long-press / right-click) |
 
 Internal reactive properties (no HTML attribute, trigger re-render):
 
