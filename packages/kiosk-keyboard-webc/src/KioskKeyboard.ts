@@ -28,7 +28,7 @@ import {
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
 import { applyVariantDefaults, toShiftVariant, toShiftVariants } from "./core/latin-variants.js";
-import { VariantPopupController } from "./core/variant-popup-controller.js";
+import { VariantPopupController, type VariantPopupState } from "./core/variant-popup-controller.js";
 import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
@@ -66,7 +66,6 @@ export type { KioskKeyboardDomContract } from "./core/dom-contract.js";
 import "@ui5/webcomponents/dist/Icon.js";
 import "@ui5/webcomponents/dist/Button.js";
 import "@ui5/webcomponents/dist/Popover.js";
-import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import "@ui5/webcomponents-icons/dist/arrow-top.js";
 import "@ui5/webcomponents-icons/dist/arrow-left.js";
 import "@ui5/webcomponents-icons/dist/accept.js";
@@ -521,14 +520,7 @@ class KioskKeyboard extends UI5Element {
    * place so a move does not tear down and re-show the popover.
    */
   @property({ type: Object, noAttribute: true })
-  _variantPopup: {
-    anchorKeyId: string;
-    anchorKeyWidth: number;
-    base: string;
-    glyphs: string[];
-    activeIndex: number;
-    label: string;
-  } | null = null;
+  _variantPopup: VariantPopupState | null = null;
 
   // ── Backing field for the `open` getter/setter below.
   //    Direct writes intentionally bypass the setter when the host is being
@@ -666,8 +658,22 @@ class KioskKeyboard extends UI5Element {
   private readonly _variantGesture = new VariantPopupController({
     getShadowRoot: () => this.shadowRoot,
     isDisabled: () => this.disabled,
-    openVariantPopup: (keyEl) => this._openVariantPopup(keyEl),
-    commitVariantAt: (x, y) => this._commitVariantAt(x, y),
+    isRtl: () => this.effectiveDir === "rtl",
+    resolveOpenState: (keyEl) => this._resolveVariantOpenState(keyEl),
+    getPopupState: () => this._variantPopup,
+    setPopupState: (state) => {
+      this._variantPopup = state;
+    },
+    insertVariant: (glyph) => this._insertVariant(glyph),
+    announce: (text) => {
+      this._announcements.announce(text);
+    },
+    announceDismiss: () => {
+      this._announcements.announce(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));
+    },
+    focusKey: (keyId) => {
+      this.shadowRoot?.getElementById(keyId)?.focus();
+    },
     notifyTouchCommit: () => {
       this._variantCommittedTouch = true;
     },
@@ -701,9 +707,8 @@ class KioskKeyboard extends UI5Element {
     if (this._variantPopup) return;
     this._keyGridNav.onKeyDown(e);
   };
-  readonly _boundOnVariantClick = this._onVariantClick.bind(this);
-  readonly _boundOnVariantKeyDown = this._onVariantKeyDown.bind(this);
-  private readonly _boundOnVariantPopupClose = (): void => this._onVariantPopupClose();
+  readonly _boundOnVariantClick = (e: Event): void => this._variantGesture.onOptionClick(e);
+  readonly _boundOnVariantKeyDown = (e: KeyboardEvent): void => this._variantGesture.onOptionKeydown(e);
 
   /**
    * Whether the docked keyboard panel is currently visible.
@@ -849,7 +854,7 @@ class KioskKeyboard extends UI5Element {
 
     // Open the accent-variant ui5-popover once its element and anchor key exist
     // in the freshly rendered shadow DOM (opener + open are set imperatively).
-    if (this._variantPopup) this._openVariantPopover();
+    if (this._variantPopup) this._variantGesture.openPopoverAfterRender();
   }
 
   override onInvalidation(changeInfo: ChangeInfo): void {
@@ -1306,7 +1311,7 @@ class KioskKeyboard extends UI5Element {
     // in the ui5-popover, so a key press is always "outside"), then proceeds so
     // the same tap also types the key. Runs after the trailing-click suppression
     // above so the click that opened the popup does not immediately close it.
-    if (this._variantPopup) this._closeVariantPopup();
+    if (this._variantPopup) this._variantGesture.close();
 
     const action = parseKeyAction(value);
 
@@ -1470,23 +1475,23 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Opens the accent-variant popup for `keyEl`, surfacing the uppercase forms
-   * (incl. `ẞ` for `ß`) while Shift/Caps is active. Returns whether it opened
-   * (false when the key has no effective variants). Called by the gesture
-   * controller on hold / right-click.
+   * Resolves the accent-variant popup state for `keyEl`, surfacing the
+   * uppercase forms (incl. `ẞ` for `ß`) while Shift/Caps is active. Returns
+   * `null` when disabled or the key has no effective variants. Called by the
+   * gesture controller on hold / right-click.
    */
-  private _openVariantPopup(keyEl: HTMLElement): boolean {
-    if (this.disabled) return false;
+  private _resolveVariantOpenState(keyEl: HTMLElement): VariantPopupState | null {
+    if (this.disabled) return null;
     const variants = this._variantsForKey(keyEl);
-    if (!variants || variants.length === 0) return false;
+    if (!variants || variants.length === 0) return null;
 
     const value = keyEl.dataset.key!;
     const upper = this._shifted; // isShifted is also true under Caps Lock
     const glyphs = upper ? toShiftVariants(variants) : [...variants];
     const base = upper ? toShiftVariant(value) : value;
-
     const label = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}", String(glyphs.length), base);
-    this._variantPopup = {
+
+    return {
       anchorKeyId: keyEl.id,
       anchorKeyWidth: keyEl.getBoundingClientRect().width,
       base,
@@ -1494,32 +1499,6 @@ class KioskKeyboard extends UI5Element {
       activeIndex: 0,
       label,
     };
-    this._announcements.announce(label);
-    return true;
-  }
-
-  private _variantPopupEl(): HTMLElement | null {
-    return this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantPopup) ?? null;
-  }
-
-  private _variantPopoverEl(): Popover | null {
-    return this.shadowRoot?.querySelector<Popover>(KIOSK_KEYBOARD_DOM.selectors.variantPopover) ?? null;
-  }
-
-  /**
-   * Commits the popup option under the given viewport coordinates (touch
-   * drag-release). Returns whether a variant was committed.
-   */
-  private _commitVariantAt(clientX: number, clientY: number): boolean {
-    const popup = this._variantPopupEl();
-    if (!popup || !this._variantPopup) return false;
-    const el = this.shadowRoot?.elementFromPoint(clientX, clientY) as HTMLElement | null;
-    const option = el?.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOption) ?? null;
-    if (!option || !popup.contains(option)) return false;
-    const glyph = this._variantPopup.glyphs[Number(option.dataset.index)];
-    if (glyph === undefined) return false;
-    this._commitVariant(glyph);
-    return true;
   }
 
   /**
@@ -1528,10 +1507,10 @@ class KioskKeyboard extends UI5Element {
    * preventDefault vetoes the insert), routes the glyph through the composition
    * middleware so a committed variant can seed or continue composition exactly
    * like a pressed key, falls back to a literal insert when the middleware does
-   * not consume it, and auto-releases one-shot Shift. Always closes the popup
-   * and restores focus to the origin key.
+   * not consume it, and auto-releases one-shot Shift. Called by the popup
+   * controller on commit.
    */
-  private _commitVariant(glyph: string): void {
+  private _insertVariant(glyph: string): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: glyph, shiftKey: this._shifted, char: glyph });
     if (allowed) {
       const target = this._resolveTarget();
@@ -1543,132 +1522,6 @@ class KioskKeyboard extends UI5Element {
       }
       this._autoReleaseShift();
     }
-    this._closeVariantPopup();
-  }
-
-  /** Closes the popover; its `close` event runs the shared teardown. */
-  private _closeVariantPopup(): void {
-    const popover = this._variantPopoverEl();
-    if (popover?.open) {
-      popover.open = false;
-    } else {
-      this._onVariantPopupClose();
-    }
-  }
-
-  /**
-   * Teardown shared by every dismissal path (commit, Escape, outside click):
-   * clears the reactive state, clears the gesture's click suppression, announces
-   * closure, and returns focus to the origin key. Bound to the popover's `close`
-   * event, so a framework-driven dismissal runs it too.
-   */
-  private _onVariantPopupClose(): void {
-    const popup = this._variantPopup;
-    if (!popup) return;
-    this._variantPopup = null;
-    this._variantGesture.notifyClosed();
-    this._announcements.announce(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));
-    this.shadowRoot?.getElementById(popup.anchorKeyId)?.focus();
-  }
-
-  /**
-   * Opens the ui5-popover once it and its anchor key exist in the rendered
-   * shadow DOM: sets the live opener element (a DOM ref across the shadow
-   * boundary), wires the one-shot `close` teardown, and moves focus to the
-   * active option so roving navigation starts inside the listbox.
-   */
-  private _openVariantPopover(): void {
-    const state = this._variantPopup;
-    if (!state) return;
-    const popover = this._variantPopoverEl();
-    if (!popover || popover.open) return;
-    const anchor = this.shadowRoot?.getElementById(state.anchorKeyId) ?? null;
-    if (!anchor) return;
-
-    popover.opener = anchor;
-    popover.addEventListener("close", this._boundOnVariantPopupClose, { once: true });
-    popover.open = true;
-
-    this._variantPopupEl()
-      ?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOptionByIndex(state.activeIndex))
-      ?.focus();
-  }
-
-  private _onVariantClick(e: Event): void {
-    const option = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOption);
-    if (!option) return;
-    const glyph = this._variantPopup?.glyphs[Number(option.dataset.index)];
-    if (glyph !== undefined) this._commitVariant(glyph);
-  }
-
-  /**
-   * Roving-tabindex keyboard navigation for the open popup (mirrors the key
-   * grid): arrows move the active option, Enter/Space commit, Escape dismisses.
-   */
-  private _onVariantKeyDown(e: KeyboardEvent): void {
-    const state = this._variantPopup;
-    if (!state) return;
-    const last = state.glyphs.length - 1;
-    let next = state.activeIndex;
-    // In RTL the options render right-to-left, so ArrowRight moves to the
-    // lower (visually next) index and ArrowLeft to the higher; Up/Down stay
-    // absolute. Mirrors the sibling kiosk-keyboard popup.
-    const rtl = this.effectiveDir === "rtl";
-    const clamp = (i: number): number => Math.max(0, Math.min(i, last));
-
-    switch (e.key) {
-      case "ArrowRight":
-        next = clamp(state.activeIndex + (rtl ? -1 : 1));
-        break;
-      case "ArrowLeft":
-        next = clamp(state.activeIndex + (rtl ? 1 : -1));
-        break;
-      case "ArrowDown":
-        next = Math.min(state.activeIndex + 1, last);
-        break;
-      case "ArrowUp":
-        next = Math.max(state.activeIndex - 1, 0);
-        break;
-      case "Home":
-        next = 0;
-        break;
-      case "End":
-        next = last;
-        break;
-      case "Enter":
-      case " ":
-        e.preventDefault();
-        this._commitVariant(state.glyphs[state.activeIndex]!);
-        return;
-      case "Escape":
-        // Dismiss only the popup; stop propagation so a docked keyboard's own
-        // Escape handler does not also close the keyboard.
-        e.preventDefault();
-        e.stopPropagation();
-        this._closeVariantPopup();
-        return;
-      default:
-        return;
-    }
-
-    e.preventDefault();
-    if (next === state.activeIndex) return;
-
-    const popup = this._variantPopupEl();
-    if (!popup) return;
-    const oldOption = popup.querySelector(KIOSK_KEYBOARD_DOM.selectors.variantOptionByIndex(state.activeIndex));
-    const newOption = popup.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOptionByIndex(next));
-    // Roving move without a re-render: the active option carries the Emphasized
-    // ui5-button design and the tab stop; the design change re-renders that
-    // button, which re-reads the freshly written host tabindex.
-    oldOption?.setAttribute("tabindex", "-1");
-    oldOption?.setAttribute("design", "Default");
-    if (newOption) {
-      newOption.setAttribute("tabindex", "0");
-      newOption.setAttribute("design", "Emphasized");
-      newOption.focus();
-    }
-    state.activeIndex = next; // in place: keeps state without a re-render
   }
 
   // ── Layout switch / F-key handling ──
@@ -1864,7 +1717,7 @@ class KioskKeyboard extends UI5Element {
     if (this._variantPopup) {
       e.stopImmediatePropagation();
       e.preventDefault();
-      this._closeVariantPopup();
+      this._variantGesture.close();
       return;
     }
     if (this._openValue) this.close();
