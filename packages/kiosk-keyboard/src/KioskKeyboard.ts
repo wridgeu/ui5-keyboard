@@ -727,10 +727,8 @@ export default class KioskKeyboard extends Control {
       commitVariant: (glyph) => {
         this._commitVariant(glyph);
       },
-      announceOpen: (base, count) => {
-        this._announceLiveRegion(
-          getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", String(count)).replace("{1}", base),
-        );
+      announceOpen: (label) => {
+        this._announceLiveRegion(label);
       },
       announceDismiss: () => {
         this._announceLiveRegion(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));

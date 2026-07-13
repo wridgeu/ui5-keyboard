@@ -87,8 +87,12 @@ export interface VariantPopupHost {
    * uses (fires the cancelable key-press event first, then auto-releases Shift).
    */
   commitVariant(glyph: string): void;
-  /** Announce popup open ("N variants for {base}") through the live region. */
-  announceOpen(base: string, count: number): void;
+  /**
+   * Announce popup open through the live region. Receives the pre-formatted
+   * "N variants for {base}" group name, built once and shared with the
+   * aria-labelledby InvisibleText.
+   */
+  announceOpen(label: string): void;
   /** Announce popup dismissal through the live region. */
   announceDismiss(): void;
   /**
@@ -280,13 +284,13 @@ export default class VariantPopupBehavior {
     grid.addStyleClass(KIOSK_KEYBOARD_DOM.classes.variantPopup);
     popover.addContent(grid);
 
-    // The localized "N variants for {base}" group name, referenced by the
-    // Popover's aria-labelledby so the option grid announces as a named group.
-    const label = new InvisibleText({
-      text: getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}")
-        .replace("{0}", String(glyphs.length))
-        .replace("{1}", base),
-    }).toStatic();
+    // The localized "N variants for {base}" group name, built once and shared by
+    // the Popover's aria-labelledby (via this InvisibleText) and the live-region
+    // open announcement, so the option grid announces as a named group.
+    const labelText = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}")
+      .replace("{0}", String(glyphs.length))
+      .replace("{1}", base);
+    const label = new InvisibleText({ text: labelText }).toStatic();
     this._label = label;
     popover.addAriaLabelledBy(label);
     const firstButton = this._buttons[0];
@@ -335,7 +339,7 @@ export default class VariantPopupBehavior {
     document.addEventListener("touchmove", this._onDocTouchMove, { passive: false });
     document.addEventListener("touchend", this._onDocTouchEnd);
 
-    this._host.announceOpen(base, glyphs.length);
+    this._host.announceOpen(labelText);
   }
 
   // ── Keyboard navigation ──
