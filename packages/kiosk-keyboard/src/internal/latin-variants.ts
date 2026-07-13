@@ -6,9 +6,10 @@
  * common first. The base letter is the tap default and is intentionally not
  * repeated in its own list. German ä/ö/ü/ß fall out as a subset (a/o/u/s).
  *
- * This module is framework-agnostic and byte-duplicated into the sibling
+ * This module is framework-agnostic and duplicated into the sibling
  * `kiosk-keyboard-webc` package (`src/core/latin-variants.ts`); the two copies
- * must stay in sync (enforced by tools/check-twin-drift.mjs).
+ * are kept in sync, byte-identical apart from the ESM `.js` import suffix
+ * (enforced by tools/check-twin-drift.mjs).
  */
 import type { LayoutDefinition } from "../types";
 

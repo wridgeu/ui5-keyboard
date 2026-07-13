@@ -776,7 +776,7 @@
 /* Accent-variant popup overrides that must beat the (unlayered) sap.m theme.
    The framework's `.sapMBtn` min-width and `.sapMPopoverCont` frame spacing are
    declared outside any cascade layer, so a rule inside `@layer kiosk-keyboard`
-   (deliberately low-priority so consumer overrides win — see the layer note near
+   (deliberately low-priority so consumer overrides win; see the layer note near
    the top of this file) could never override them: unlayered normal declarations
    beat layered ones at cascade step 4 regardless of specificity. These rules
    therefore live unlayered and are scoped to `.ui5KioskVariantPopover` (the class
@@ -805,7 +805,7 @@
 
 /* sap.m.Button's visible box is its inner element, which keeps the theme's own
    button height and merely centres inside the sized outer button. Stretch it to
-   the option height so the rendered cell — not just its outer box — matches the
+   the option height so the rendered cell (not just its outer box) matches the
    key height, and centre the glyph in the stretched box (its natural line box
    would otherwise sit high, leaving uneven space at the bottom). */
 .ui5KioskVariantPopover .ui5KioskVariantPopup__option .sapMBtnInner {
@@ -817,7 +817,7 @@
 
 /* Flatten the sap.m.Popover content frame (base 0.4375em margin + Horizon
    0.0625rem padding on `.sapMPopoverCont`) so the option grid's own 0.25rem inset
-   — matching the docked keyboard's key gaps — is the only spacing, rather than a
+   (matching the docked keyboard's key gaps) is the only spacing, rather than a
    doubled, oversized frame. */
 .sapMPopover.ui5KioskVariantPopover .sapMPopoverCont {
   margin: 0;

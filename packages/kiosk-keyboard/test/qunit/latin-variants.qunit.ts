@@ -29,7 +29,10 @@ QUnit.module("latin-variants - applyVariantDefaults");
 QUnit.test("fills default variants on matching character keys only", (assert) => {
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "b" }, { value: "1", shiftValue: "!" }],
-    [{ value: " ", type: "space" }, { value: "{backspace}", type: "action" }],
+    [
+      { value: " ", type: "space" },
+      { value: "{backspace}", type: "action" },
+    ],
   ];
   const out = applyVariantDefaults(layout);
   assert.deepEqual(out[0][0].variants, [...LATIN_DIACRITIC_VARIANTS.a], "a gets the default table entry");
@@ -45,7 +48,12 @@ QUnit.test("matches case-insensitively on the key value", (assert) => {
 });
 
 QUnit.test("never overrides author-declared variants (including an empty list)", (assert) => {
-  const out = applyVariantDefaults([[{ value: "a", variants: ["ä"] }, { value: "o", variants: [] }]]);
+  const out = applyVariantDefaults([
+    [
+      { value: "a", variants: ["ä"] },
+      { value: "o", variants: [] },
+    ],
+  ]);
   assert.deepEqual(out[0][0].variants, ["ä"], "explicit variants win over the default table");
   assert.deepEqual(out[0][1].variants, [], "explicit empty list is preserved (opt-out)");
 });

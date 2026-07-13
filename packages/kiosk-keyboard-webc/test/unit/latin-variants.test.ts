@@ -29,7 +29,10 @@ describe("applyVariantDefaults", () => {
   it("fills default variants on matching character keys only", () => {
     const layout: LayoutDefinition = [
       [{ value: "a" }, { value: "b" }, { value: "1", shiftValue: "!" }],
-      [{ value: " ", type: "space" }, { value: "{backspace}", type: "action" }],
+      [
+        { value: " ", type: "space" },
+        { value: "{backspace}", type: "action" },
+      ],
     ];
     const out = applyVariantDefaults(layout);
     expect(out[0][0].variants).toEqual([...LATIN_DIACRITIC_VARIANTS.a]);
@@ -45,7 +48,12 @@ describe("applyVariantDefaults", () => {
   });
 
   it("never overrides author-declared variants (including an empty list)", () => {
-    const out = applyVariantDefaults([[{ value: "a", variants: ["ä"] }, { value: "o", variants: [] }]]);
+    const out = applyVariantDefaults([
+      [
+        { value: "a", variants: ["ä"] },
+        { value: "o", variants: [] },
+      ],
+    ]);
     expect(out[0][0].variants).toEqual(["ä"]);
     expect(out[0][1].variants).toEqual([]);
   });

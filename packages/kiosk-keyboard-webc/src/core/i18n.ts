@@ -104,7 +104,7 @@ export function getText(key: string, fallback: string, ...args: (string | number
   }
 
   // Apply resolver override if set. The resolver receives no positional args, so
-  // any `{0}`/`{1}` placeholders in the string it returns are filled here — the
+  // any `{0}`/`{1}` placeholders in the string it returns are filled here, the
   // same MessageFormat treatment the bundle/default paths above apply.
   if (_resolver) {
     try {
