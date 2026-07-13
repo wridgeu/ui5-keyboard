@@ -1848,7 +1848,7 @@ export default class KioskKeyboard extends Control {
   oncontextmenu(event: Event): void {
     if (!this.getEnabled()) return;
     const el = this._resolveKeyElementFromEventTarget(event.target);
-    if (!el || el.dataset.hasVariants !== "true") return;
+    if (!el || !el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     event.preventDefault();
     this._clearPressedKeyState();
     this._variantPopup.openFor(el);

@@ -45,6 +45,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
     rowKind: "data-row-kind",
+    /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
   }),
   selectors: Object.freeze({
