@@ -577,13 +577,17 @@ packages/kiosk-keyboard/
       responsive-sizing-controller.ts  ResponsiveSizingController (cqShort/cqTiny height classes)
       physical-key-highlight.ts  PhysicalKeyHighlight (hardware keyboard mirror)
       backspace-repeat-behavior.ts  BackspaceRepeatBehavior (press-and-hold delete)
+      variant-popup-behavior.ts  VariantPopupBehavior (long-press / right-click accent-variant popup)
       auto-repeat.ts          Accelerating press-and-hold repeat scheduler
       shift-state.ts          Shift / Caps Lock state machine
       key-token.ts            data-key value classifier (token kind)
+      key-action-meta.ts      Canonical special-key metadata (shared icon names)
+      layout-constraint.ts    Numpad/Numeric constraint → layout name + {layout:base} reconciliation
       key-labels.ts           Key display label resolver (shift/caps aware)
       key-icons.ts            Default special-key icons + URI validation
       grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
       composition-utils.ts    Composition preedit start/update/end helpers
+      latin-variants.ts       Default Latin-diacritic long-press variant table + helpers (CLDR LDML)
       middleware-registry.ts  Built-in composition-middleware factories + instance overrides
       renderer-internal-api.ts  RendererInternalApi bridge type
     middleware/

@@ -97,9 +97,10 @@ Run via `npm run test:packages:smoke`.
 Drift check for the deliberately hand-duplicated kiosk twin modules
 (`packages/kiosk-keyboard/src` vs `packages/kiosk-keyboard-webc/src`).
 
-- Compares an explicit manifest of 21 pairs (all 16 `layouts/*` files plus the
-  `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`, and `key-token`
-  core helpers) after normalization: comments stripped
+- Compares an explicit manifest of 24 pairs (all 16 `layouts/*` files plus the
+  `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`, `key-token`,
+  `key-action-meta`, `layout-constraint`, and `latin-variants` core helpers)
+  after normalization: comments stripped
   (string-aware), relative `.js` import suffixes removed, whitespace collapsed
   outside string literals, logging idioms (`Log.warning` vs `console.warn`)
   equated.
