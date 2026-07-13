@@ -16,9 +16,6 @@ import type { LayoutDefinition } from "../types";
 /**
  * Ordered Latin-diacritic variants keyed by lowercase base letter. The base
  * letter itself is the tap default and is not included in its list.
- *
- * @public
- * @since 0.1.0
  */
 export const LATIN_DIACRITIC_VARIANTS: Readonly<Record<string, readonly string[]>> = {
   a: ["à", "á", "â", "ä", "æ", "ã", "å", "ā"],
@@ -39,9 +36,6 @@ export const LATIN_DIACRITIC_VARIANTS: Readonly<Record<string, readonly string[]
  * whose lowercased `value` is a base letter in `table`. Keys that already declare
  * `variants` are left untouched, so author intent always wins; keys whose value is
  * not a table entry (action tokens, digits, multi-glyph values) are never changed.
- *
- * @public
- * @since 0.1.0
  */
 export function applyVariantDefaults(
   layout: LayoutDefinition,
@@ -62,9 +56,6 @@ export function applyVariantDefaults(
  * with the one exception German casing needs: `ß` (ß) uppercases to `SS`,
  * but the on-screen popup must surface the capital sharp S `ẞ` (ẞ, standard
  * German orthography since 2017).
- *
- * @public
- * @since 0.1.0
  */
 export function toShiftVariant(glyph: string): string {
   if (glyph === "ß") return "ẞ";
@@ -74,9 +65,6 @@ export function toShiftVariant(glyph: string): string {
 /**
  * Returns the Shift/Caps forms of `variants`, order-preserving and de-duplicated
  * so a list that already contains an uppercase form does not repeat it.
- *
- * @public
- * @since 0.1.0
  */
 export function toShiftVariants(variants: readonly string[]): string[] {
   const seen = new Set<string>();
