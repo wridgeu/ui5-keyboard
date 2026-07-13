@@ -159,7 +159,7 @@ export default class VariantPopupBehavior {
    */
   onPress(keyEl: HTMLElement, enabled: boolean): void {
     if (!enabled) return;
-    if (keyEl.dataset.hasVariants !== "true") return;
+    if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     if (this.isOpen()) return;
     this._armedKeyEl = keyEl;
     this._repeater.start();
@@ -170,7 +170,7 @@ export default class VariantPopupBehavior {
    * right-click / context-menu path). A no-op for keys without variants.
    */
   openFor(keyEl: HTMLElement): void {
-    if (keyEl.dataset.hasVariants !== "true") return;
+    if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     if (this.isOpen()) return;
     this._repeater.stop();
     this._armedKeyEl = keyEl;

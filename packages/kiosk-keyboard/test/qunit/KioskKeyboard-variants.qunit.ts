@@ -106,8 +106,8 @@ QUnit.test("accentVariants marks matching keys with data-has-variants", async (a
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
   const bKey = getRequiredKeyElement(kb, "b");
-  assert.strictEqual(aKey.dataset.hasVariants, "true", "'a' has variants (ä/à/...)");
-  assert.strictEqual(bKey.dataset.hasVariants, undefined, "'b' has no default variants");
+  assert.strictEqual(aKey.hasAttribute(DOM.attributes.hasVariants), true, "'a' has variants (ä/à/...)");
+  assert.strictEqual(bKey.hasAttribute(DOM.attributes.hasVariants), false, "'b' has no default variants");
   cleanup(kb, input);
 });
 
@@ -116,7 +116,7 @@ QUnit.test("no data-has-variants when accentVariants is off", async (assert) => 
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
-  assert.strictEqual(getRequiredKeyElement(kb, "a").dataset.hasVariants, undefined, "off by default");
+  assert.strictEqual(getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants), false, "off by default");
   cleanup(kb, input);
 });
 
