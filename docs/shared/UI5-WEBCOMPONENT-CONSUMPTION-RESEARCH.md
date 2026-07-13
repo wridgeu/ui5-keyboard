@@ -27,8 +27,8 @@ flagged by the UI5 linter; do not use it for new development.
   controls in `packages/demo-app/webapp/control/`.
 - The `ui5-tooling-modules` middleware/task resolves npm web-component modules in
   the UI5 app.
-- Seamless Web Components (auto-generated wrappers from the Custom Elements
-  Manifest) and manual `WebComponent.extend()` bridges coexist without conflict.
+- Auto-generated wrappers from the Custom Elements Manifest (CEM-driven) and
+  manual `WebComponent.extend()` bridges coexist without conflict.
   The demo app uses auto-wrapping via CEM for `@ui5/webcomponents/dist/Input`; the
   `kiosk-keyboard-webc` bridge pattern is documented as a reference in the
   demo-app README.
@@ -39,7 +39,7 @@ flagged by the UI5 linter; do not use it for new development.
   visual regression and manual inspection. The main UI5 interop examples stay in
   `packages/demo-app`.
 
-## Middleware Configuration for Seamless Web Components
+## Middleware Configuration for CEM-Driven Web Components
 
 Framework version in `ui5.yaml` must be >= 1.120.0. The
 [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration)

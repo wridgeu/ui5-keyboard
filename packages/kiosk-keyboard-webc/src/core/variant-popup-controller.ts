@@ -2,7 +2,11 @@ import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import { AutoRepeater, type AutoRepeatTiming } from "./auto-repeat.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
 
-/** Press-and-hold threshold that opens the accent-variant popup (ms). */
+/**
+ * Press-and-hold threshold that opens the accent-variant popup (ms). Kept
+ * independent of the equal backspace-hold 450 so the two do not silently track
+ * each other.
+ */
 export const VARIANT_HOLD_MS = 450;
 
 // A single-shot hold timer: the AutoRepeater fires once after the initial delay
@@ -60,7 +64,7 @@ export interface VariantPopupControllerHost {
 }
 
 /**
- * Owns the accent-variant popup for the web component end to end: the
+ * Owns the accent-variant popup for the web component: the
  * press-and-hold / right-click gesture that opens it, the single-shot hold
  * timer, the roving-tabindex keyboard navigation and option-click commit, the
  * touch drag-release commit, and the popover DOM wiring (opener, one-shot

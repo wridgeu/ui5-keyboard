@@ -166,12 +166,12 @@ This package is not a native UI5 library, so the UI5-app story is different from
 
 For UI5 apps, make sure your app can resolve npm ESM packages via `ui5-tooling-modules` in `ui5.yaml`. There are two integration paths:
 
-#### 3a. Seamless Web Components (CEM-driven, recommended)
+#### 3a. Auto-Generated Wrapper (CEM-driven, recommended)
 
 Published builds include `dist/custom-elements.json` (the Custom Elements Manifest), and the package declares the `customElements` field in `package.json`. The `ui5-tooling-modules` middleware reads this manifest and auto-generates a `sap.ui.core.webc.WebComponent` wrapper at serve/build time. No manual wrapper code needed.
 
 ```yaml
-# ui5.yaml - config for seamless web component consumption
+# ui5.yaml - config for CEM-driven web component consumption
 builder:
   customTasks:
     - name: ui5-tooling-modules-task
@@ -199,7 +199,7 @@ Then use the component directly in XML views:
 
 In workspace development, run `npm run build` (or at least `npm run generateAPI`) in the webc package first so that `dist/custom-elements.json` exists. The CEM is produced by `generateAPI`; `npm run generate` only emits the CSS and i18n assets, not the manifest.
 
-The framework version declared in `ui5.yaml` must be >= 1.120.0 for the seamless web component transformation to activate. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
+The framework version declared in `ui5.yaml` must be >= 1.120.0 for the CEM-driven web component transformation to activate. The [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration) project is the official reference for the build-time configuration (`addToNamespace: true` on the task).
 
 `useRelativeModulePaths: true` is needed for dev serve. Without it, the middleware redirects module requests to a namespace-prefixed path (`demo/hotkeys/thirdparty/...`) that only exists after `ui5 build`. During dev serve, modules are stored under their original npm names and the redirect target does not resolve. This is intentional middleware design ([ui5-community/ui5-ecosystem-showcase#1049](https://github.com/ui5-community/ui5-ecosystem-showcase/issues/1049)); the namespace rewriting of entry-point modules is a build-only step. `useRelativeModulePaths: true` skips the redirect and serves modules at their npm paths directly. See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for a full path-mapping reference.
 
@@ -453,6 +453,7 @@ interface KeyDefinition {
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // SAP icon URI or Unicode char/emoji; renders inline with label when both present
   ariaLabel?: string; // Accessible name when the key has no visible label (icon-only); resolution: ariaLabel -> label -> built-in i18n. Set this for icon-only custom keys ({paste} etc.)
+  variants?: string[]; // Long-press / right-click accent-variant glyphs; overrides the built-in accent-variants table, [] suppresses the popup (e.g. ["ä", "à", "á", "â"])
 }
 ```
 
@@ -462,7 +463,7 @@ The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a G
 
 **Long-press / right-click popup.** Press and hold a key (or right-click it) to open a popup of accent variants; tap, drag-and-release, or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms, including the capital sharp S **ẞ** for `s`/`ß`.
 
-**Built-in Latin-diacritics table.** The `accent-variants` attribute merges a batteries-included table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
+**Built-in Latin-diacritics table.** The `accent-variants` attribute merges a broad Latin-diacritics table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
 
 ```html
 <kiosk-keyboard accent-variants controls="my-input"></kiosk-keyboard>
