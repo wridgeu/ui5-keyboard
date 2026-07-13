@@ -1,5 +1,4 @@
 import type Popover from "@ui5/webcomponents/dist/Popover.js";
-import { AutoRepeater, type AutoRepeatTiming } from "./auto-repeat.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
 
 /**
@@ -8,17 +7,6 @@ import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
  * each other.
  */
 export const VARIANT_HOLD_MS = 450;
-
-// A single-shot hold timer: the AutoRepeater fires once after the initial delay
-// and its callback returns `false`, so no repeat cadence follows. The other
-// fields never come into play (they only drive repeat ticks), but a full timing
-// object is required by the shared curve type.
-const VARIANT_HOLD_TIMING: AutoRepeatTiming = {
-  initialDelayMs: VARIANT_HOLD_MS,
-  startIntervalMs: VARIANT_HOLD_MS,
-  minIntervalMs: VARIANT_HOLD_MS,
-  accelerationFactor: 1,
-};
 
 /** Reactive accent-variant popup state the host template renders from. */
 export interface VariantPopupState {
@@ -80,7 +68,8 @@ export interface VariantPopupControllerHost {
  * hand (see the CLAUDE.md no-shared-core convention); only the wiring differs.
  */
 export class VariantPopupController {
-  private readonly _hold: AutoRepeater;
+  /** The pending single-shot hold timer that opens the popup, or `null` when unarmed. */
+  private _holdTimer: ReturnType<typeof setTimeout> | null = null;
   /**
    * Set once the hold (or right-click) opened a popup; swallows the single
    * trailing `click` the opening gesture produces on release so lifting off
@@ -114,11 +103,23 @@ export class VariantPopupController {
   /** One-shot teardown bound to the popover's `close` event on each open. */
   private readonly _onPopoverClose = (): void => this._teardown();
 
-  constructor(private readonly _host: VariantPopupControllerHost) {
-    this._hold = new AutoRepeater(() => {
+  constructor(private readonly _host: VariantPopupControllerHost) {}
+
+  /** Arm the single-shot hold: (re)schedule the open, cancelling any pending hold first. */
+  private _arm(): void {
+    this._clearHold();
+    this._holdTimer = setTimeout(() => {
+      this._holdTimer = null;
       this._openFromHold();
-      return false; // single-shot: open once, never repeat
-    }, VARIANT_HOLD_TIMING);
+    }, VARIANT_HOLD_MS);
+  }
+
+  /** Cancel a pending hold timer. Safe when none is armed. */
+  private _clearHold(): void {
+    if (this._holdTimer !== null) {
+      clearTimeout(this._holdTimer);
+      this._holdTimer = null;
+    }
   }
 
   /**
@@ -348,7 +349,7 @@ export class VariantPopupController {
     this._keyEl = keyEl;
     this._pointerId = e.pointerId;
     keyEl.addEventListener("pointerleave", this._onPointerLeave);
-    this._hold.start();
+    this._arm();
   }
 
   private _openFromHold(): void {
@@ -388,7 +389,7 @@ export class VariantPopupController {
   }
 
   private _cancelHold(): void {
-    this._hold.stop();
+    this._clearHold();
     if (this._keyEl) this._keyEl.removeEventListener("pointerleave", this._onPointerLeave);
     this._keyEl = null;
     this._pointerId = null;

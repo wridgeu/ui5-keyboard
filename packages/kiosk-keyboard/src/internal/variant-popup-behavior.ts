@@ -3,7 +3,6 @@ import FlexBox from "sap/m/FlexBox";
 import Button from "sap/m/Button";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import { FlexWrap, FlexRendertype, ButtonType } from "sap/m/library";
-import { AutoRepeater, type AutoRepeatTiming } from "./auto-repeat";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract";
 import { getText } from "./i18n-registry";
 
@@ -30,7 +29,7 @@ import { getText } from "./i18n-registry";
  * auto-release all stay on the control, exactly like a normal character key.
  *
  * The hold threshold is duplicated by hand in the sibling `kiosk-keyboard-webc`
- * package (see `auto-repeat.ts`); only the wiring differs between the two.
+ * package (see `variant-popup-controller.ts`); only the wiring differs between the two.
  */
 
 /**
@@ -39,16 +38,6 @@ import { getText } from "./i18n-registry";
  * each other.
  */
 export const VARIANT_HOLD_MS = 450;
-
-// Single-shot hold curve: the AutoRepeater fires once after the initial delay
-// (the callback returns `false` to stop), so no repeat cadence ever runs. Only
-// `initialDelayMs` is observable; the remaining fields satisfy the timing shape.
-const HOLD_TIMING: AutoRepeatTiming = {
-  initialDelayMs: VARIANT_HOLD_MS,
-  startIntervalMs: VARIANT_HOLD_MS,
-  minIntervalMs: VARIANT_HOLD_MS,
-  accelerationFactor: 1,
-};
 
 /**
  * Derives a content-density class from the anchor key's height, for the case
@@ -106,7 +95,8 @@ export interface VariantPopupHost {
 
 export default class VariantPopupBehavior {
   private readonly _host: VariantPopupHost;
-  private readonly _repeater: AutoRepeater;
+  /** The pending single-shot hold timer that opens the popup, or `null` when unarmed. */
+  private _holdTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly _onKeydown: (event: KeyboardEvent) => void;
   private readonly _onDocTouchMove: (event: TouchEvent) => void;
   private readonly _onDocTouchEnd: (event: TouchEvent) => void;
@@ -140,10 +130,6 @@ export default class VariantPopupBehavior {
 
   constructor(host: VariantPopupHost) {
     this._host = host;
-    this._repeater = new AutoRepeater(() => {
-      this._openArmed();
-      return false;
-    }, HOLD_TIMING);
     this._onKeydown = (event) => this._handleKeydown(event);
     this._onDocTouchMove = (event) => this._handleDocTouchMove(event);
     this._onDocTouchEnd = (event) => this._handleDocTouchEnd(event);
@@ -161,7 +147,7 @@ export default class VariantPopupBehavior {
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     if (this.isOpen()) return;
     this._armedKeyEl = keyEl;
-    this._repeater.start();
+    this._arm();
   }
 
   /**
@@ -171,14 +157,14 @@ export default class VariantPopupBehavior {
   openFor(keyEl: HTMLElement): void {
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     if (this.isOpen()) return;
-    this._repeater.stop();
+    this._clearHold();
     this._armedKeyEl = keyEl;
     this._openArmed();
   }
 
   /** Cancel a pending hold. Safe when idle. Does not close an already-open popup. */
   stop(): void {
-    this._repeater.stop();
+    this._clearHold();
     this._armedKeyEl = null;
   }
 
@@ -209,7 +195,7 @@ export default class VariantPopupBehavior {
   }
 
   destroy(): void {
-    this._repeater.stop();
+    this._clearHold();
     this._armedKeyEl = null;
     // Release interaction state without closing (async) or destroying the
     // Popover: the control auto-destroys the reused instance via its hidden
@@ -225,6 +211,23 @@ export default class VariantPopupBehavior {
   }
 
   // ── Opening ──
+
+  /** Arm the single-shot hold: (re)schedule the open, cancelling any pending hold first. */
+  private _arm(): void {
+    this._clearHold();
+    this._holdTimer = setTimeout(() => {
+      this._holdTimer = null;
+      this._openArmed();
+    }, VARIANT_HOLD_MS);
+  }
+
+  /** Cancel a pending hold timer. Safe when none is armed. */
+  private _clearHold(): void {
+    if (this._holdTimer !== null) {
+      clearTimeout(this._holdTimer);
+      this._holdTimer = null;
+    }
+  }
 
   private _openArmed(): void {
     const keyEl = this._armedKeyEl;

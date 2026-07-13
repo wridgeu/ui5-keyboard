@@ -283,6 +283,35 @@ QUnit.test("re-pressing the origin key while the popup is open closes it", async
   cleanup(kb, input);
 });
 
+QUnit.test(
+  "pressing a second variant key before the hold fires supersedes the first, not stacks it",
+  async (assert) => {
+    const { kb, input } = await makeKeyboard();
+    const aKey = getRequiredKeyElement(kb, "a");
+    const oKey = getRequiredKeyElement(kb, "o");
+
+    // Roll from 'a' onto 'o' (a second press before either release, e.g. multitouch)
+    // while 'a's hold is still pending. Arming 'o' must cancel 'a's hold, so the
+    // popup opens on 'o's own threshold - not early off a leaked 'a' timer.
+    press(kb, aKey);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    press(kb, oKey);
+
+    // Past 'a's threshold (from its press) but before 'o's: a leaked 'a' timer would
+    // open the popup here. It must stay closed until 'o's own hold elapses.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.strictEqual(getPopup(), null, "the superseded 'a' hold did not open a popup");
+
+    // Past 'o's own threshold: the popup opens once, and it belongs to 'o'.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.ok(getPopup(), "the popup opened on 'o's own hold");
+    assert.ok(getOptions().map(glyphOf).includes("ö"), "the open popup offers 'o's variants (ö)");
+
+    release(kb, oKey);
+    cleanup(kb, input);
+  },
+);
+
 QUnit.test("an outside press dismisses the popup without inserting", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
