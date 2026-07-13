@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import path from "node:path";
+import { generatedAssetsRedirect } from "./vite-generated-assets.mjs";
 
 const __dirname = import.meta.dirname;
 
@@ -14,6 +15,7 @@ const __dirname = import.meta.dirname;
 export default defineConfig({
   root: path.resolve(__dirname, "test/pages"),
   base: "./",
+  plugins: [generatedAssetsRedirect()],
   resolve: {
     // Single instance of the UI5 WC framework so setTheme() and the component
     // share one theme registry (mirrors vite.config.ts).

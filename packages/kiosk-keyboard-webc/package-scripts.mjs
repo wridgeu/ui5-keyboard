@@ -6,8 +6,10 @@
  *   - CSS:  src/themes/{theme}/parameters-bundle.css → src/generated/themes/{theme}/parameters-bundle.css.ts
  *   - i18n: src/i18n/messagebundle*.properties → src/generated/i18n/i18n-defaults.ts
  *   - i18n: src/i18n/messagebundle*.properties → dist/generated/assets/i18n/*.json
- *   - sync: dist/generated/assets → src/generated/assets (so source-based
- *           imports resolve the JSON theme/i18n assets without tsc)
+ *
+ * The generated json-imports load theme/i18n JSON via relative ../assets/ paths;
+ * Vite resolves those to dist/generated/assets (see vite-generated-assets.mjs),
+ * so the source tree keeps no copy of the generated assets.
  *
  * Entry point: `ui5nps generate` (called from `npm run generate`).
  *
@@ -32,7 +34,7 @@ const scripts = {
   },
 
   generate: {
-    default: "ui5nps generate.styles generate.i18n generate.jsonImports generate.syncAssets",
+    default: "ui5nps generate.styles generate.i18n generate.jsonImports",
     styles: {
       default: "ui5nps generate.styles.components generate.styles.themes",
       components: `ui5nps-script "${LIB}/css-processors/css-processor-components.mjs"`,
@@ -48,11 +50,6 @@ const scripts = {
       i18n: `ui5nps-script "${LIB}/generate-json-imports/i18n.js" src/i18n src/generated/json-imports`,
       themes: `ui5nps-script "${LIB}/generate-json-imports/themes.js" src/themes src/generated/json-imports`,
     },
-    // Sync JSON assets into src/generated/assets so that the generated
-    // json-imports (which use relative ../assets/ paths) resolve correctly
-    // when Vite serves from source. The upstream tools hardcode the JSON
-    // output to dist/generated/assets; this copies them to the source tree.
-    syncAssets: "node ./sync-generated-assets.mjs",
   },
 };
 
