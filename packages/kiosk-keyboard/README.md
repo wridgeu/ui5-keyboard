@@ -18,7 +18,7 @@ On-screen virtual keyboard control for SAPUI5/OpenUI5 kiosk and touch applicatio
 > True implementation floor: UI5 1.120. The library only uses APIs available since 1.120 (`DataType.registerEnum()`, `Localization.getLanguageTag()`, `Lib.init({ apiVersion: 2 })`), so apps pinned to an older LTS down to 1.120 work too.
 > `Lib.init()` is available from 1.118, so it does not raise the floor.
 
-A UI5 TypeScript library (`ui5.kiosk`) providing a fully themed, accessible virtual keyboard that types into any UI5 input control. Supports multiple layouts, Shift/Caps Lock, docked mode with auto-show, and integrates with SAP Horizon theming.
+A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual keyboard that types into any UI5 input control. Supports multiple layouts, Shift/Caps Lock, docked mode with auto-show, and integrates with SAP Horizon theming.
 
 ## Table of Contents
 
@@ -567,9 +567,9 @@ const myLayout: LayoutDefinition = [
 
 The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a German-locale app selects it automatically (`de` → `qwertz-de`, see [Locale-Based Default Layout](#locale-based-default-layout)). To reach accented letters from _any_ Latin layout, a key can carry a long-press popup of variants.
 
-**Long-press / right-click popup.** Press and hold a key (or right-click it) to open a small popup of accent variants; tap or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms, including the capital sharp S **ẞ** for `s`/`ß`.
+**Long-press / right-click popup.** Press and hold a key (or right-click it) to open a small popup of accent variants; tap, drag-and-release, or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms, including the capital sharp S **ẞ** for `s`/`ß`.
 
-**Built-in Latin-diacritics table.** Set the `accentVariants` property to merge a batteries-included table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
+**Built-in Latin-diacritics table.** Set the `accentVariants` property to merge a broad Latin-diacritics table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
 
 ```xml
 <kiosk:KioskKeyboard accentVariants="true" controls="myInput" />
@@ -945,7 +945,7 @@ Once an `<input>` or `<textarea>` receives focus, the keyboard uses `Element.clo
 | **Optional**    | `change` event                                                                                                    | Fired on Enter key (simulates form submit)                                    |
 | **Optional**    | `getType()` returning `"Number"` or `"Tel"`                                                                       | Auto-type numpad detection                                                    |
 
-All standard `sap.m` input controls (`Input`, `TextArea`, `SearchField`, `StepInput`) satisfy these requirements out of the box.
+All standard `sap.m` input controls (`Input`, `TextArea`, `SearchField`, `StepInput`) satisfy these requirements by default.
 
 **Working with custom controls or Web Components:**
 
@@ -1756,7 +1756,7 @@ npm run typecheck
 
 **Typing does not update the model/binding:**
 
-- The target control must support `setValue(string)` and fire `liveChange`. All standard `sap.m` input controls support this out of the box
+- The target control must support `setValue(string)` and fire `liveChange`. All standard `sap.m` input controls support this by default
 - For custom controls, ensure `getFocusDomRef()` returns the actual `<input>` or `<textarea>` element
 
 **Native keyboard appears alongside the virtual keyboard:**

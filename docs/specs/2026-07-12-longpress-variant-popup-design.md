@@ -171,7 +171,7 @@ the generator (never hand-edit), though a property on a plain interface likely p
 
 **Decision:** ship a **broad Latin-diacritics table** as a documented, opt-in named export; keep
 the built-in `qwerty.ts` pristine. The `variants[]` field is the extensibility primitive; the table
-is a batteries-included default that consumers enable explicitly. This keeps non-German kiosks
+is a broad opt-in default that consumers enable explicitly. This keeps non-German kiosks
 unsurprising, keeps built-in layout data pristine, is discoverable/documented, and still makes
 "accents/umlauts from any layout" a one-liner. German ä/ö/ü/ß are a natural subset.
 

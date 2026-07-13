@@ -13,7 +13,7 @@ import { getText } from "./i18n-registry";
  * themed `sap/m/Popover`, the roving-tabindex keyboard navigation, and the touch
  * drag-release tracking.
  *
- * The Popover is a fully themed framework overlay: it renders into the static
+ * The Popover is a themed framework overlay: it renders into the static
  * area (unclipped, stacked above the docked keyboard), docks above the pressed
  * key with collision flipping, draws its own arrow, and dismisses itself on an
  * outside press (autoClose) or Escape. Its options are one `sap/m/Button` per
@@ -34,10 +34,9 @@ import { getText } from "./i18n-registry";
  */
 
 /**
- * Hold threshold before the accent-variant popup opens (ms). Named on its own
- * rather than borrowed from the backspace (450) or Shift double-click (400)
- * timings it sits between, so the gesture's constant does not silently track an
- * unrelated subsystem's number.
+ * Press-and-hold threshold that opens the accent-variant popup (ms). Kept
+ * independent of the equal backspace-hold 450 so the two do not silently track
+ * each other.
  */
 export const VARIANT_HOLD_MS = 450;
 

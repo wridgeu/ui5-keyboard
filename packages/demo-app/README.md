@@ -92,7 +92,7 @@ Landing page linking to all kiosk demos.
 - Layout and F-key mode switching
 - Mobile keyboard behavior toggle (`Custom` / `Native` / `Auto`)
 - Inline numpad as non-docked secondary keyboard
-- `accentVariants` press-and-hold / right-click accent popup on any layout (hold a for à á â ä, s for ß, Shift+s for ẞ)
+- `accentVariants` press-and-hold / right-click accent popup on any letter key (hold a for à á â ä, s for ß, Shift+s for ẞ)
 
 ### Form Workflow (`#/kiosk/form-workflow`)
 

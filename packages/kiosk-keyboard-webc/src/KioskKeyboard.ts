@@ -516,7 +516,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * Open accent-variant popup state, or `null` when closed. Assigning a new
    * object opens/refreshes the popup (rAF-batched re-render renders the
-   * listbox JSX); `null` closes it. Roving navigation mutates `activeIndex` in
+   * toolbar JSX); `null` closes it. Roving navigation mutates `activeIndex` in
    * place so a move does not tear down and re-show the popover.
    */
   @property({ type: Object, noAttribute: true })
