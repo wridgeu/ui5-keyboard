@@ -432,12 +432,12 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     const aKey = requireKey(kb, "a");
     await holdOpen(aKey);
 
-    const keyWidth = aKey.getBoundingClientRect().width;
+    const keyWidth = aKey.offsetWidth;
     // Self-guard: the compressed key must be narrower than the old key-height
     // floor (48px), or matching it would prove nothing.
     expect(keyWidth, "compressed key is narrower than the height token").to.be.below(48);
 
-    const optionWidth = optionEls(kb)[0]!.getBoundingClientRect().width;
+    const optionWidth = optionEls(kb)[0]!.offsetWidth;
     expect(optionWidth).to.equal(keyWidth);
     pointerUp();
   });
@@ -456,12 +456,11 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     const aKey = requireKey(kb, "a");
     await holdOpen(aKey);
 
-    const keyRect = aKey.getBoundingClientRect();
     // Self-guard: the key must be wider than tall, or matching the width would prove nothing.
-    expect(keyRect.width, "wide key is wider than its height").to.be.above(keyRect.height);
+    expect(aKey.offsetWidth, "wide key is wider than its height").to.be.above(aKey.offsetHeight);
 
-    const optionWidth = optionEls(kb)[0]!.getBoundingClientRect().width;
-    expect(optionWidth, "option matches the full key width, not capped at the key height").to.equal(keyRect.width);
+    const optionWidth = optionEls(kb)[0]!.offsetWidth;
+    expect(optionWidth, "option matches the full key width, not capped at the key height").to.equal(aKey.offsetWidth);
     pointerUp();
   });
 
@@ -472,6 +471,23 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     const popover = popoverEl(kb)!;
     expect(popover.hideArrow, "arrow is restored, not hidden").to.equal(false);
     expect(popover.hasAttribute("hide-arrow"), "no hide-arrow attribute set").to.equal(false);
+    pointerUp();
+  });
+
+  it("sizes options to the key's resting width, not its pressed-scale transform", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    kb.style.width = "600px";
+    await renderFinished();
+
+    const aKey = requireKey(kb, "a");
+    // A pressed key carries a scale() transform: the rendered rect shrinks but the
+    // layout box (offsetWidth) does not. The option width is read from the layout
+    // box, so it stays key-wide.
+    aKey.style.transform = "scale(0.5)";
+    await holdOpen(aKey);
+
+    expect(aKey.getBoundingClientRect().width, "the transform shrank the rendered rect").to.be.below(aKey.offsetWidth);
+    expect(optionEls(kb)[0]!.offsetWidth, "option follows the resting key width").to.equal(aKey.offsetWidth);
     pointerUp();
   });
 });

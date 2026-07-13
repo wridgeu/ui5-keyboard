@@ -1493,7 +1493,10 @@ class KioskKeyboard extends UI5Element {
 
     return {
       anchorKeyId: keyEl.id,
-      anchorKeyWidth: keyEl.getBoundingClientRect().width,
+      // Keys are flex:1 1 0, so width (unlike height and font-size) has no token
+      // to cascade into the popover. offsetWidth gives the resting border-box,
+      // unaffected by the pressed scale() transform on the held key.
+      anchorKeyWidth: keyEl.offsetWidth,
       base,
       glyphs,
       activeIndex: 0,

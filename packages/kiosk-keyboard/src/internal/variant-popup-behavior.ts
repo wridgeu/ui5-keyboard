@@ -52,16 +52,16 @@ const HOLD_TIMING: AutoRepeatTiming = {
 };
 
 /**
- * Derives a content-density class from the pressed key's current size, for the
- * case the keyboard's context carries no density class to inherit: its own
+ * Derives a content-density class from the anchor key's height, for the case
+ * the keyboard's context carries no density class to inherit: its own
  * responsive scaling shrinks keys via container-query sizing, which sets no
  * `sapUiSize*` class. Returns `""` at the default cozy key size. Applied only
  * as a fallback after the framework density inheritance (see `adoptPopover`),
  * and never overrides the button size directly.
  */
-function variantDensityClass(keyEl: HTMLElement): string {
+function variantDensityClass(keyHeightPx: number): string {
   const rootFontPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-  const keyRem = keyEl.getBoundingClientRect().height / rootFontPx;
+  const keyRem = keyHeightPx / rootFontPx;
   // A cozy button is ~2.5rem tall; once the keys shrink below the cozy touch
   // target the popover switches to compact so it stays proportional to them.
   return keyRem < 2.75 ? "sapUiSizeCompact" : "";
@@ -239,6 +239,12 @@ export default class VariantPopupBehavior {
     this._rtl = getComputedStyle(anchorKeyEl).direction === "rtl";
     this._activeIndex = 0;
 
+    // Resting footprint of the anchor key. offsetWidth/offsetHeight give the
+    // layout border-box, unaffected by the pressed scale() transform on the held
+    // key. Keys are flex:1 1 0, so width has no size token to reuse.
+    const keyWidth = anchorKeyEl.offsetWidth;
+    const keyHeight = anchorKeyEl.offsetHeight;
+
     // The control owns the Popover in its hidden `_variantPopover` aggregation;
     // reuse that single instance and rebuild its content each open. Wire the
     // afterClose teardown once, on the persistent instance.
@@ -292,7 +298,7 @@ export default class VariantPopupBehavior {
     // inherited, derive one from the current key size (the keyboard's own
     // container-query scaling sets no density class to inherit).
     if (!popover.hasStyleClass("sapUiSizeCompact") && !popover.hasStyleClass("sapUiSizeCondensed")) {
-      const derived = variantDensityClass(anchorKeyEl);
+      const derived = variantDensityClass(keyHeight);
       if (derived) popover.addStyleClass(derived);
     }
     this._popover = popover;
@@ -305,14 +311,17 @@ export default class VariantPopupBehavior {
     const gridDom = grid.getDomRef();
     if (gridDom instanceof HTMLElement) {
       this._gridDom = gridDom;
-      // Publish the anchor key's rendered footprint so the theme sizes each option
-      // to the key (consumed as width/min-width/height on the option buttons). The
-      // static-area popover does not inherit the keyboard's key-size tokens, so the
-      // measured values carry them across; glyph size keeps tracking the popover's
-      // inherited key density.
-      const keyRect = anchorKeyEl.getBoundingClientRect();
-      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyRect.width}px`);
-      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", `${keyRect.height}px`);
+      // Size each option to the anchor key's footprint. The static-area popover
+      // inherits none of the keyboard's key-size tokens, so both dimensions are
+      // set on the option grid: width as the resting px, height as the
+      // key-height token value read off the keyboard root. Glyph size tracks the
+      // popover's inherited key density.
+      const keyboardRoot = anchorKeyEl.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
+      const heightToken = keyboardRoot
+        ? getComputedStyle(keyboardRoot).getPropertyValue("--ui5KioskKeyboard-keyHeight").trim()
+        : "";
+      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyWidth}px`);
+      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", heightToken || `${keyHeight}px`);
       gridDom.addEventListener("keydown", this._onKeydown);
     }
 

@@ -568,13 +568,12 @@ QUnit.test("each option cell is sized to the anchor key's rendered footprint", a
   const aKey = getRequiredKeyElement(kb, "a");
 
   await holdOpen(kb, aKey);
-  // Measure the anchor at open time: the popup sizes each option from the key's
-  // rect as rendered then (the held key carries its pressed transform), so the
-  // comparison must read the same footprint the sizing was derived from.
-  const keyRect = aKey.getBoundingClientRect();
-  const keyWidth = keyRect.width;
-  const keyHeight = keyRect.height;
-  assert.ok(keyWidth < 36, `keys compressed below the button min-width floor (${keyWidth.toFixed(1)}px)`);
+  // The options are sized to the anchor's resting footprint; offsetWidth /
+  // offsetHeight report the layout border-box, so the comparison holds
+  // regardless of the pressed transform the held key carries.
+  const keyWidth = aKey.offsetWidth;
+  const keyHeight = aKey.offsetHeight;
+  assert.ok(keyWidth < 36, `keys compressed below the button min-width floor (${keyWidth}px)`);
   const options = getOptions();
   assert.ok(options.length > 0, "options rendered");
   for (const option of options) {
@@ -611,20 +610,38 @@ QUnit.test("each option cell matches the full key width on wide keyboards", asyn
   const aKey = getRequiredKeyElement(kb, "a");
 
   await holdOpen(kb, aKey);
-  const keyRect = aKey.getBoundingClientRect();
-  assert.ok(
-    keyRect.width > keyRect.height,
-    `wide key is wider than tall (${keyRect.width.toFixed(1)} > ${keyRect.height.toFixed(1)})`,
-  );
+  const keyWidth = aKey.offsetWidth;
+  assert.ok(keyWidth > aKey.offsetHeight, `wide key is wider than tall (${keyWidth} > ${aKey.offsetHeight})`);
   const options = getOptions();
   assert.ok(options.length > 0, "options rendered");
   for (const option of options) {
     const optionWidth = option.getBoundingClientRect().width;
     assert.ok(
-      Math.abs(optionWidth - keyRect.width) < 0.5,
-      `option '${glyphOf(option)}' width ${optionWidth.toFixed(1)}px matches the wide key width ${keyRect.width.toFixed(1)}px`,
+      Math.abs(optionWidth - keyWidth) < 0.5,
+      `option '${glyphOf(option)}' width ${optionWidth.toFixed(1)}px matches the wide key width ${keyWidth}px`,
     );
   }
+  release(kb, aKey);
+  cleanup(kb, input);
+});
+
+QUnit.test("options follow the key's resting width, not its pressed-scale transform", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const root = kb.getDomRef() as HTMLElement;
+  root.style.width = "600px";
+  const aKey = getRequiredKeyElement(kb, "a");
+
+  // A pressed key carries a scale() transform: the rendered rect shrinks but the
+  // layout box (offsetWidth) does not. The options are sized from the layout box,
+  // so they stay key-wide.
+  aKey.style.transform = "scale(0.5)";
+  await holdOpen(kb, aKey);
+  assert.ok(aKey.getBoundingClientRect().width < aKey.offsetWidth, "the transform shrank the rendered rect");
+  const option = getOptions()[0]!;
+  assert.ok(
+    Math.abs(option.getBoundingClientRect().width - aKey.offsetWidth) < 0.5,
+    `option width ${option.getBoundingClientRect().width.toFixed(1)}px follows the resting key width ${aKey.offsetWidth}px`,
+  );
   release(kb, aKey);
   cleanup(kb, input);
 });
