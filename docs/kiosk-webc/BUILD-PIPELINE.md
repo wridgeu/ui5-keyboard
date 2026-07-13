@@ -64,17 +64,9 @@ SOURCE FILES                         GENERATED OUTPUT                          C
                                       Themes.ts                                registerI18nLoader() and
                                       (loader stubs with dynamic               registerThemePropertiesLoader()
                                        import() to JSON assets)                at module scope.
-
-5. syncAssets
-   dist/generated/assets/**           src/generated/assets/**                  The jsonImports files use
-                                      (mirror copy)                            relative paths like
-                                                                               "../assets/i18n/...json".
-                                                                               Vite dev server serves from
-                                                                               src/, so the JSON files
-                                                                               must exist there too.
 ```
 
-Steps 1-4 are standard UI5 Web Components framework requirements. Step 5 (`syncAssets`) is a local workaround because the upstream i18n tooling hardcodes JSON output to `dist/generated/assets/`, but the Vite dev server resolves imports from `src/`. The upstream framework does not need this step because it serves from `dist/`.
+Steps 1-4 are standard UI5 Web Components framework requirements. The generated json-imports (step 4) load their JSON through relative `../assets/` paths, but the upstream tooling emits those JSONs only to `dist/generated/assets/`. A small Vite plugin (`vite-generated-assets.mjs`, shared by `vite.config.ts` and `vite.demo.config.ts`) resolves those `../assets/` imports straight from `dist/generated/assets/`, so the source tree keeps no copy of the generated assets. The upstream framework does not need this because it serves from `dist/`.
 
 ### ui5nps script runner
 
@@ -83,7 +75,7 @@ The generate steps are orchestrated by `ui5nps`, a script runner provided by `@u
 ```javascript
 // package-scripts.mjs (simplified)
 generate: {
-  default: "ui5nps generate.styles generate.i18n generate.jsonImports generate.syncAssets",
+  default: "ui5nps generate.styles generate.i18n generate.jsonImports",
   styles: {
     components: `ui5nps-script "${LIB}/css-processors/css-processor-components.mjs"`,
     themes:     `ui5nps-script "${LIB}/css-processors/css-processor-themes.mjs"`,
