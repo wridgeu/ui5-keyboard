@@ -43,7 +43,7 @@
   "kioskDemoEntries": [
     {
       "title": "Docked Keyboard",
-      "description": "Auto-show, auto-type, layout switching, event log",
+      "description": "Auto-show, auto-type, layout switching, accent long-press, event log",
       "route": "kioskDocked"
     },
     {

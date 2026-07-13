@@ -358,17 +358,17 @@
         <div class="grid">
           <!-- 1. QWERTY with native input -->
           <div class="card">
-            <h2>QWERTY (native input)</h2>
+            <h2>QWERTY (native input · hold or right-click a key for accents)</h2>
             <div class="input-group">
               <label for="qwerty-input">Target Input</label>
               <input id="qwerty-input" type="text" placeholder="Type here…" />
             </div>
-            <kiosk-keyboard id="kb-qwerty" layout="qwerty" controls="qwerty-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-qwerty" layout="qwerty" controls="qwerty-input" accent-variants></kiosk-keyboard>
           </div>
 
           <!-- 2. QWERTZ-DE with ui5-input -->
           <div class="card">
-            <h2>QWERTZ-DE (ui5-input · hold a key for accents)</h2>
+            <h2>QWERTZ-DE (ui5-input · hold or right-click a key for accents)</h2>
             <div class="input-group">
               <ui5-label for="qwertz-input" show-colon>Target Input</ui5-label>
               <ui5-input id="qwertz-input" placeholder="Hier tippen…"></ui5-input>

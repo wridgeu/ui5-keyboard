@@ -42,7 +42,7 @@
 
             <Panel class="sapUiSmallMarginBottom" headerText="Docked Keyboard (tap any input)">
                 <VBox class="sapUiSmallMargin">
-                    <Text text="Tap an input field below. The keyboard slides up and auto-detects numpad for Number/Tel inputs." />
+                    <Text text="Tap an input field below. The keyboard slides up and auto-detects numpad for Number/Tel inputs. Press and hold a letter (or right-click) to open its accent variants, e.g. hold a for à á â ä." />
                     <Label text="Full Name" labelFor="nameInput" class="sapUiSmallMarginTop" />
                     <Input
                         id="nameInput"
@@ -115,6 +115,7 @@
                 docked="true"
                 autoShow="true"
                 autoType="true"
+                accentVariants="true"
                 controls="nameInput,emailInput,ageInput,phoneInput,notesInput"
                 enabled="{docked>/kioskEnabled}"
                 mobileKeyboard="{docked>/kioskMobileKeyboard}"
