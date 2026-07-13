@@ -256,7 +256,7 @@ export default class KioskKeyboard extends Control {
        * When `true`, a built-in Latin-diacritics table is merged onto the
        * resolved layout so every matching base letter (a, e, i, o, u, c, n,
        * s, y, z, l, ...) gains a long-press / right-click accent-variant
-       * popup - making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
+       * popup, making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
        * from any Latin layout without editing layout data.
        *
        * A per-key `variants` declaration always wins over the default table.
@@ -733,7 +733,7 @@ export default class KioskKeyboard extends Control {
         );
       },
       announceDismiss: () => {
-        this._announceLiveRegion(getText("ARIA_VARIANTS_CLOSED", "Variants dismissed"));
+        this._announceLiveRegion(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));
       },
       getVariantPopover: () => this._getVariantPopover(),
     });

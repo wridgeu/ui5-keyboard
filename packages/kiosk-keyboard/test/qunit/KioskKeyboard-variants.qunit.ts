@@ -334,6 +334,41 @@ QUnit.test("a touch drag-release over an option commits that glyph", async (asse
   fixture.style.cssText = restoreFixture;
 });
 
+QUnit.test("RTL reverses ArrowLeft/ArrowRight option navigation", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  // The popup reads the anchor key's writing direction at open, so force RTL on
+  // the keyboard root and the options lay out right-to-left.
+  kb.getDomRef()!.setAttribute("dir", "rtl");
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  release(kb, aKey);
+  // Options: à(0) á(1) â(2) ...; in RTL, ArrowLeft advances to the visually-next
+  // (higher-index) option, the mirror of LTR where ArrowLeft would stay at 0.
+  keydownOnPopup("ArrowLeft");
+  assert.strictEqual(document.activeElement, getOptions()[1], "RTL ArrowLeft moved to the next (higher-index) option");
+  keydownOnPopup("Enter");
+  assert.strictEqual(input.getValue(), "á", "the RTL-advanced option á is committed");
+  cleanup(kb, input);
+});
+
+QUnit.test("a consumer preventDefault on keyPress vetoes the variant insert", async (assert) => {
+  const { kb, input } = await makeKeyboard("z");
+  kb.attachKeyPress((e) => {
+    if (e.getParameter("key") === "ä") e.preventDefault();
+  });
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  release(kb, aKey);
+  // Move to ä (index 3) and commit; the consumer vetoes its insertion.
+  keydownOnPopup("ArrowRight");
+  keydownOnPopup("ArrowRight");
+  keydownOnPopup("ArrowRight");
+  keydownOnPopup("Enter");
+  assert.strictEqual(input.getValue(), "z", "the vetoed variant inserted nothing");
+  assert.notOk(variantPopup(kb).isOpen(), "the popup still closes after a veto");
+  cleanup(kb, input);
+});
+
 QUnit.module("KioskKeyboard accent-variant commit during composition", {
   afterEach() {
     const fixture = document.getElementById("qunit-fixture");
@@ -553,7 +588,7 @@ QUnit.test("each option cell is sized to the anchor key's rendered footprint", a
       `option '${glyphOf(option)}' height ${optionRect.height.toFixed(1)}px matches key height ${keyHeight.toFixed(1)}px`,
     );
     // The visible, bordered box is the sap.m.Button inner element; it must fill the
-    // sized outer button so the rendered cell — not just the outer box — is key-tall.
+    // sized outer button so the rendered cell (not just the outer box) is key-tall.
     const inner = option.querySelector(".sapMBtnInner") as HTMLElement;
     assert.ok(
       Math.abs(inner.getBoundingClientRect().height - keyHeight) < 0.5,

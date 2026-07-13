@@ -56,7 +56,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     liveRegion: "kiosk-keyboard__live-region",
     variantPopupHost: "kiosk-keyboard__variant-popup-host",
     variantPopup: "kiosk-keyboard__variant-popup",
-    variantOption: "kiosk-keyboard__variant-option",
   }),
   attributes: Object.freeze({
     key: "data-key",
@@ -64,8 +63,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rowKind: "data-row-kind",
     /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
-    /** Zero-based index of a variant option within its popup. */
-    variantIndex: "data-index",
   }),
   selectors: Object.freeze({
     root: ".kiosk-keyboard",

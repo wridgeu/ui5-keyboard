@@ -564,7 +564,7 @@ const myLayout: LayoutDefinition = [
 
 The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a German-locale app selects it automatically (`de` → `qwertz-de`, see [Locale-Based Default Layout](#locale-based-default-layout)). To reach accented letters from _any_ Latin layout, a key can carry a long-press popup of variants.
 
-**Long-press / right-click popup.** Press and hold a key (or right-click it) to open a small popup of accent variants; tap or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms - including the capital sharp S **ẞ** for `s`/`ß`.
+**Long-press / right-click popup.** Press and hold a key (or right-click it) to open a small popup of accent variants; tap or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms, including the capital sharp S **ẞ** for `s`/`ß`.
 
 **Built-in Latin-diacritics table.** Set the `accentVariants` property to merge a batteries-included table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
 
@@ -576,11 +576,14 @@ The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a G
 
 ```ts
 const myLayout: LayoutDefinition = [
-  [{ value: "a", variants: ["ä", "à", "á", "â"] }, { value: "o", variants: ["ö", "ø"] }],
+  [
+    { value: "a", variants: ["ä", "à", "á", "â"] },
+    { value: "o", variants: ["ö", "ø"] },
+  ],
 ];
 ```
 
-Because an explicit `variants` wins, declaring `variants: []` suppresses the popup on a single key the built-in table would otherwise cover — e.g. to skip a diacritic already reachable as its own dedicated key on the layout.
+Because an explicit `variants` wins, declaring `variants: []` suppresses the popup on a single key the built-in table would otherwise cover, e.g. to skip a diacritic already reachable as its own dedicated key on the layout.
 
 ---
 

@@ -27,7 +27,7 @@ import {
   isBuiltInLayout,
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
-import { applyVariantDefaults, toShiftVariants } from "./core/latin-variants.js";
+import { applyVariantDefaults, toShiftVariant, toShiftVariants } from "./core/latin-variants.js";
 import { VariantPopupController } from "./core/variant-popup-controller.js";
 import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
@@ -440,7 +440,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * Whether to fill the built-in Latin-diacritics table onto the resolved
    * layout so every matching Latin base key (a, e, o, u, s, c, n, …) exposes a
-   * long-press / right-click accent-variant popup — the umlauts and accents
+   * long-press / right-click accent-variant popup, so the umlauts and accents
    * become reachable from any layout without editing layout data.
    *
    * A per-key `variants` declared in the layout always wins over the table.
@@ -1079,11 +1079,6 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * The layout name forced by a non-user `keyboardType` of `Numpad`/`Numeric`,
-   * or `null` when no such constraint applies (user pick, or a free type).
-   */
-
-  /**
    * The effective layout name for the current state: an explicit user switch
    * (via a {layout:...} key) takes precedence, then the keyboardType
    * constraint (Numpad/Numeric force their layout), then the
@@ -1488,7 +1483,7 @@ class KioskKeyboard extends UI5Element {
     const value = keyEl.dataset.key!;
     const upper = this._shifted; // isShifted is also true under Caps Lock
     const glyphs = upper ? toShiftVariants(variants) : [...variants];
-    const base = upper && value.length === 1 ? value.toUpperCase() : value;
+    const base = upper ? toShiftVariant(value) : value;
 
     const label = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}", String(glyphs.length), base);
     this._variantPopup = {

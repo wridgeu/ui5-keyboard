@@ -1,11 +1,13 @@
-# Long-press accent/variant popup — design & implementation plan (#162)
+# Long-press accent/variant popup: design & implementation plan (#162)
 
 **Status:** proposal · **Date:** 2026-07-12 · **Issue:** #162 (German umlauts from any layout)
 
-This plan covers issue #162 task 1 (the `KeyDefinition.variants[]` long-press popup — the
+> **Update (as shipped):** the final implementation renders the overlay with the framework's own popup (`sap.m.Popover` in kiosk, `ui5-popover` in webc), not the self-owned body-level listbox that decision #4 and section 3.1 recommend below. The rest of the design (data model, gesture, insertion, ARIA, shift/ẞ) shipped as described.
+
+This plan covers issue #162 task 1 (the `KeyDefinition.variants[]` long-press popup, the
 primary fix), folds in task 2 (`ẞ`), and scopes task 3 (docs/demo). It maps the feature onto
 the current architecture of **both** twins (`kiosk-keyboard`, `kiosk-keyboard-webc`), names the
-one place the architecture must be *enhanced* (a floating overlay — neither control renders one
+one place the architecture must be _enhanced_ (a floating overlay; neither control renders one
 today), and lists the decisions that change what gets built.
 
 ---
@@ -13,14 +15,14 @@ today), and lists the decisions that change what gets built.
 ## 0. TL;DR
 
 - **Data model:** add optional `variants?: string[]` to `KeyDefinition` in both twins. Purely
-  additive; every existing layout keeps working. This is a trivial, natural fit — it sits beside
+  additive; every existing layout keeps working. This is a trivial, natural fit: it sits beside
   `shiftValue`/`shiftLabel` and mirrors the CLDR `longPress` model 1:1.
 - **Gesture:** reuse the existing `AutoRepeater` (the #109 backspace hold primitive) as a
   single-shot ~450 ms hold detector, wired through a new per-twin controller that mirrors the
   existing backspace-hold controller. No new timing engine.
 - **Insertion:** reuse the existing cursor-aware `insertText()` path unchanged. A chosen variant
   is inserted exactly like a normal character key.
-- **The one genuinely new thing** — and the only place that needs architectural *enhancement* —
+- **The one genuinely new thing** (and the only place that needs architectural _enhancement_)
   is **rendering a floating popup that escapes the keyboard's clipping box.** Neither control
   renders any overlay today, and **both** clip their content (`overflow: hidden` on the kiosk root
   and the webc `:host`; webc additionally traps `position: fixed` via `container-type`). This is
@@ -36,19 +38,19 @@ today), and lists the decisions that change what gets built.
 Confirmed against current code:
 
 - `layouts/qwertz-de.ts` (both twins, byte-identical) ships dedicated `ü/Ü ö/Ö ä/Ä` keys and
-  `ß → ?` on Shift (correct for physical DE keyboards — **do not change**).
+  `ß → ?` on Shift (correct for physical DE keyboards; **do not change**).
 - `de → qwertz-de` in both locale maps (`internal/layout-registry.ts`, `core/layout-registry.ts`);
   German-locale apps auto-select QWERTZ.
 - German bundle `messagebundle_de.properties` exists in both twins.
 - Grapheme-aware backspace already deletes umlauts correctly.
 
 **The gap:** on the default `qwerty` layout (name `"qwerty"`, from `layouts/default-layout.ts`),
-the `a/o/u/s` keys are bare `{ value: "…" }` — no umlaut access, no long-press, and `ẞ` is
+the `a/o/u/s` keys are bare `{ value: "…" }`: no umlaut access, no long-press, and `ẞ` is
 unreachable anywhere.
 
-## 2. Architecture fit — the three easy layers
+## 2. Architecture fit: the three easy layers
 
-### 2.1 Data model — `KeyDefinition.variants?: string[]` (trivial fit)
+### 2.1 Data model: `KeyDefinition.variants?: string[]` (trivial fit)
 
 `KeyDefinition` is duplicated per twin (`packages/kiosk-keyboard/src/types.ts:111`,
 `packages/kiosk-keyboard-webc/src/types.ts:59`). Add the optional field to **both**. Semantics
@@ -68,7 +70,7 @@ variants?: string[];
 Nothing else in the type system changes. `KeyRow`/`LayoutDefinition` are unaffected. Because this
 is additive and optional, the twin-drift guard and all existing layout tests stay green.
 
-### 2.2 Gesture/timing — reuse `AutoRepeater` (clean fit)
+### 2.2 Gesture/timing: reuse `AutoRepeater` (clean fit)
 
 `internal/auto-repeat.ts` / `core/auto-repeat.ts` expose an identical generic `AutoRepeater`
 (`initialDelayMs: 450`, then an accelerating repeat). For the popup we want **only the first
@@ -78,13 +80,14 @@ after one tick). Recommend the latter for symmetry with backspace and to inherit
 cancel/teardown discipline.
 
 The existing hold **wrappers are hardcoded to `{backspace}`** and are not reusable as-is:
-- kiosk `internal/backspace-repeat-behavior.ts` — `onPress` early-returns unless
+
+- kiosk `internal/backspace-repeat-behavior.ts`: `onPress` early-returns unless
   `keyEl.dataset.key === "{backspace}"`.
-- webc `core/backspace-repeat-controller.ts` — same gate in `_start`, plus a `consumeClick(value)`
+- webc `core/backspace-repeat-controller.ts`: same gate in `_start`, plus a `consumeClick(value)`
   one-shot that swallows the release click after a hold.
 
 So each twin gets a **new sibling controller** (`VariantPopupBehavior` / `VariantPopupController`)
-that mirrors the backspace one but gates on "*key has variants*" instead of `{backspace}`, and on
+that mirrors the backspace one but gates on "_key has variants_" instead of `{backspace}`, and on
 hold opens the popup instead of repeating. See §4.3.
 
 > **Timing collision to watch:** Shift double-click uses `DOUBLE_CLICK_MS = 400`, and backspace
@@ -93,7 +96,7 @@ hold opens the popup instead of repeating. See §4.3.
 > the constant explicit and documented (e.g. `VARIANT_HOLD_MS = 450`) rather than reusing another
 > subsystem's number by coincidence.
 
-### 2.3 Insertion — reuse `insertText()` (trivial fit)
+### 2.3 Insertion: reuse `insertText()` (trivial fit)
 
 On commit, call the existing public `insertText(glyph)` → `TargetInputSession.insertText` →
 `input-operations.insertText` (kiosk), or `insertText(target, glyph)` via `getActiveTargetElement()`
@@ -101,7 +104,7 @@ On commit, call the existing public `insertText(glyph)` → `TargetInputSession.
 caret math is hand-rolled. Fire the cancelable `key-press` event first for parity with the char
 branch, then `autoRelease()` Shift afterward.
 
-## 3. The crux — a clipping-escaping overlay (what needs *enhancement*)
+## 3. The crux: a clipping-escaping overlay (what needs _enhancement_)
 
 Neither control renders any transient overlay today; both are flat, renderer/template-driven
 trees. Adding a floating popup is the one net-new capability, and the two twins solve it
@@ -130,7 +133,7 @@ hosts:
   torn down in `_clearPressedKeyState`/`exit`). Lighter, fully under our control, no UI5 Popup
   semantics to fight. Cost: we own collision/edge-flip and z-index-above-docked ourselves.
 
-**Recommendation: (B)** — a self-owned, body-level, absolutely-positioned listbox. It keeps the
+**Recommendation: (B):** a self-owned, body-level, absolutely-positioned listbox. It keeps the
 control's rendering model intact (imperative DOM on top of a renderer tree, which the control
 already does for pressed/shift classes), avoids importing Popup focus semantics that fight our
 roving-tabindex, and matches the webc approach so the two twins stay conceptually parallel. Escape
@@ -148,29 +151,31 @@ in-flow descendant of `.kiosk-keyboard`; render it as a direct child of the shad
 the root `div`, inside the fragment) with its own stacking context and a z-index above docked, and
 relax/avoid containment on that subtree. Anchor via
 `shadowRoot.getElementById(anchorKeyId).getBoundingClientRect()` in `onAfterRendering`. Because it
-lives in shadow DOM, styling is exposed via **new `::part`s** (see §4.7) — this is the webc
+lives in shadow DOM, styling is exposed via **new `::part`s** (see §4.7); this is the webc
 per-key-styling story the roadmap already flags.
 
 > This is the deepest asymmetry between the twins and the highest-risk part of the estimate.
 > Prototype the escape-the-clip behavior in **each** twin first (a static popup that simply shows
-> over the number row near a screen edge) before wiring the gesture — de-risk positioning before
+> over the number row near a screen edge) before wiring the gesture: de-risk positioning before
 > behavior.
 
 ## 4. Component-by-component design
 
 ### 4.1 Types (both twins)
+
 Add `variants?: string[]` to `KeyDefinition` (§2.1). Regenerate kiosk `KioskKeyboard.gen.d.ts` via
-the generator (never hand-edit) — though a property on a plain interface likely produces no
+the generator (never hand-edit), though a property on a plain interface likely produces no
 `.gen.d.ts` delta, run `npm run generate` and commit any diff.
 
-### 4.2 Default Latin-diacritic variant table — and how it is enabled *(decided: §8)*
+### 4.2 Default Latin-diacritic variant table, and how it is enabled _(decided: §8)_
+
 **Decision:** ship a **broad Latin-diacritics table** as a documented, opt-in named export; keep
 the built-in `qwerty.ts` pristine. The `variants[]` field is the extensibility primitive; the table
 is a batteries-included default that consumers enable explicitly. This keeps non-German kiosks
 unsurprising, keeps built-in layout data pristine, is discoverable/documented, and still makes
 "accents/umlauts from any layout" a one-liner. German ä/ö/ü/ß are a natural subset.
 
-**The table** — mirror the iOS / Gboard / CLDR `longPress` lists (base char is the tap default and
+**The table**: mirror the iOS / Gboard / CLDR `longPress` lists (base char is the tap default and
 is **not** repeated; order = most-common first). Ship in both twins (duplicated per #105), keyed by
 lowercase base char:
 
@@ -184,28 +189,30 @@ export const LATIN_DIACRITIC_VARIANTS: Readonly<Record<string, readonly string[]
   l: ["ł"],
   n: ["ñ", "ń"],
   o: ["ô", "ö", "ò", "ó", "œ", "ø", "ō", "õ"],
-  s: ["ß", "ś", "š", "ẞ"],   // ß + the capital sharp-S ẞ (task 2) live here
+  s: ["ß", "ś", "š", "ẞ"], // ß + the capital sharp-S ẞ (task 2) live here
   u: ["û", "ü", "ù", "ú", "ū"],
   y: ["ÿ", "ý"],
   z: ["ž", "ź", "ż"],
 };
 ```
+
 (Exact glyph sets to be finalized against CLDR TR35 Part 7 during implementation; the shape is the
 contract.)
 
-**How it is enabled — DX:** a boolean-ish control property (working name `accentVariants` /
+**How it is enabled (DX):** a boolean-ish control property (working name `accentVariants` /
 `long-press-variants`, kiosk setting + webc attribute) that, when on, merges the table onto matching
-base keys at render time by matching `key.value` (lowercased) — so it works on **any** Latin layout
+base keys at render time by matching `key.value` (lowercased), so it works on **any** Latin layout
 (`qwerty`, `qwertz-de`, `qwerty-es`, …) with zero layout edits. Precedence: an **author-supplied
 `variants` on a key always wins** over the table; the table only fills keys that declare none. Power
 users can also import `LATIN_DIACRITIC_VARIANTS` and spread/trim it into custom layouts directly. The
 merge is a pure, unit-tested function (no test-only production exports, §4/§6).
 
 > Because the table now covers many base letters, `data-has-variants` (the pointer-gate marker,
-> §4.3) must reflect the **effective** variants after the merge, not just author-declared ones —
+> §4.3) must reflect the **effective** variants after the merge, not just author-declared ones:
 > compute it in the same render path that applies the table.
 
-### 4.3 Hold-gesture controller (per twin — mirror the backspace controller)
+### 4.3 Hold-gesture controller (per twin, mirror the backspace controller)
+
 - **kiosk** `internal/variant-popup-behavior.ts`: `onPress(keyEl, enabled)` gated on
   `keyEl` having variants; arms an `AutoRepeater`/`setTimeout` (~450 ms) whose fire opens the popup;
   `stop()`; `shouldSuppressRelease()` so the lift-off tap does **not** also insert the base glyph.
@@ -220,14 +227,15 @@ that declare `variants`, so the pointer gate is a cheap `dataset` read (mirrorin
 is surfaced as `data-shift-value`). Register the attribute name in the DOM contract (§4.8).
 
 **Optional within-twin refactor:** backspace-hold and variant-hold now share the
-pointerdown→arm→(pointerup/leave/blur)→cancel + suppress-release wiring. That is two consumers — the
-CLAUDE.md §2 threshold for *considering* extraction, not yet mandating it. Recommend keeping them
+pointerdown→arm→(pointerup/leave/blur)→cancel + suppress-release wiring. That is two consumers: the
+CLAUDE.md §2 threshold for _considering_ extraction, not yet mandating it. Recommend keeping them
 parallel for v1 (the gate + payload genuinely differ) and extracting a `HoldGesture` base **only**
 if a third hold gesture appears. Do **not** hoist across twins (#105).
 
-### 4.4 The popup — DOM, ARIA, navigation
-Neither twin has a `role="grid"`/`role="listbox"`/`aria-selected` precedent — the key grid is a
-roving-tabindex *button group*. The popup should be a real listbox:
+### 4.4 The popup: DOM, ARIA, navigation
+
+Neither twin has a `role="grid"`/`role="listbox"`/`aria-selected` precedent: the key grid is a
+roving-tabindex _button group_. The popup should be a real listbox:
 
 - Container `role="listbox"`, options `role="option"` with `aria-selected`, exactly one option
   `tabindex="0"` at a time.
@@ -241,21 +249,24 @@ roving-tabindex *button group*. The popup should be a real listbox:
 - Announce "N variants for {base}" / dismissal via the existing live region.
 
 ### 4.5 Shift / uppercase and `ẞ` (task 2 folds in)
+
 When Shift/Caps is active the popup surfaces uppercase forms. Author/table `variants` are lowercase
 glyphs; on Shift, uppercase each via `toLocaleUpperCase()`. Across the broad table this is almost
 uniformly correct (à→À, ñ→Ñ, ç→Ç, ø→Ø, œ→Œ, æ→Æ …). The one glyph that mis-maps is **`ß`**:
 `"ß".toUpperCase() === "SS"`, **not** `ẞ`. Special-case it so `s`/`ß` under Shift surfaces
-**`ẞ` (U+1E9E)** — this is exactly task 2, and it lands inside the popup's shift-mapping with a
+**`ẞ` (U+1E9E)**: this is exactly task 2, and it lands inside the popup's shift-mapping with a
 dedicated unit test (plus a table-wide test asserting every other entry round-trips through
 `toLocaleUpperCase` without collapsing/expanding length unexpectedly). Do **not** touch
 `qwertz-de.ts`'s `ß → ?` Shift value. The CapsLock-emits-`ẞ` rule stays a documented follow-up.
 
 ### 4.6 Insertion + base-tap suppression
+
 On commit: fire cancelable `key-press` → `insertText(glyph)` → `autoRelease()` Shift. On open,
 set the suppress-release/consume-click flag so lift-off doesn't also insert the base character. On
 cancel (Escape / drift-off / release outside), insert nothing and restore focus to the origin key.
 
-### 4.7 Styling — CSS vars + `::part`s
+### 4.7 Styling: CSS vars + `::part`s
+
 - **kiosk:** style inside `@layer kiosk-keyboard`; public vars `--ui5KioskKeyboard-variantPopup*`
   and private `--_ui5KioskKeyboard-variantPopup*`; reuse `@sapUi*` tokens (`@sapUiButtonBackground`,
   focus ring `@sapUiContentFocusColor`, `@sapUiContentShadowColor`); add matching
@@ -266,12 +277,15 @@ cancel (Escape / drift-off / release outside), insert nothing and restore focus 
   parts list so `exportParts` forwards them through nested hosts.
 
 ### 4.8 DOM-contract additions (both twins)
+
 Add to the frozen `KIOSK_KEYBOARD_DOM` single-source-of-truth (never hard-code strings): the popup
 container/option class names, the `data-has-variants` attribute, any new selectors, and (webc) the
 two new `part` names. Tests read `KioskKeyboard.DOM`.
 
-## 5. Interaction model *(decision, see §8)*
+## 5. Interaction model _(decision, see §8)_
+
 Two established gestures, different input modalities:
+
 - **Touch:** press-and-hold base key → popup → **drag onto** a variant → **release** to insert
   (phone muscle memory). Requires pointer tracking on the popup (the key's own `ontouchend` fires
   first and clears pressed state, so selection tracking must live on the popup DOM, not the key
@@ -279,12 +293,13 @@ Two established gestures, different input modalities:
 - **Desktop:** hold (or **right-click**, per the issue) → popup stays open ("sticky") → click an
   option (or arrow+Enter) to insert; Escape/click-away cancels.
 
-**Recommendation:** ship **both** — sticky popup as the base model (works for mouse, touch tap-tap,
+**Recommendation:** ship **both**: sticky popup as the base model (works for mouse, touch tap-tap,
 and keyboard/AT), plus drag-release as a touch enhancement. Right-click as an explicit desktop
 opener. Edge positioning: measure the popup, flip/clamp horizontally and vertically against the
 viewport so it never renders off-screen.
 
 ## 6. Test strategy (CLAUDE.md §3, §4, §7)
+
 Failing-first, both twins, no test-only production exports (assert through public API / DOM).
 
 - **Pure logic (unit):** variant→uppercase mapping incl. `ß → ẞ`; default table shape; hold-timer
@@ -296,34 +311,37 @@ Failing-first, both twins, no test-only production exports (assert through publi
   incl. `ẞ`. kiosk QUnit via the internals-cast pattern; webc `test/component/*.test.ts`.
 - **A11y:** listbox roles, roving tabindex, `aria-selected`, live-region announcement, focus
   restoration to origin key.
-- **Adversarial (§7):** this adds a new interactive surface and timing — write dated
-  `docs/specs/2026-07-…-variant-popup-adversarial-hypotheses.md` and *see each fail* (does the
+- **Adversarial (§7):** this adds a new interactive surface and timing; write dated
+  `docs/specs/2026-07-…-variant-popup-adversarial-hypotheses.md` and _see each fail_ (does the
   suite catch: popup never opens? wrong glyph inserted? base char double-inserted on commit? popup
   renders off-screen/clipped? arrows not routed to popup?).
 
 ## 7. Docs + demo (task 3)
+
 - **READMEs (both):** a "Long-press accent variants (incl. German umlauts)" section slots under the
-  existing *Layouts* / *Per-Instance Customization* headings — state that `qwertz-de` exists and `de`
+  existing _Layouts_ / _Per-Instance Customization_ headings: state that `qwertz-de` exists and `de`
   auto-detects it, how to enable the built-in Latin-diacritics table (`accentVariants` +
   `LATIN_DIACRITIC_VARIANTS`), and how to author/override `variants` per key. Answers both "does it
   support German?" and "does it support accents?".
-- **Demo:** webc `test/pages/index.html` already has QWERTZ-DE + locale-default panels — add a
-  long-press-on-default-layout scenario. UI5 `demo-app` has a `KioskCustomLayouts` view/controller —
+- **Demo:** webc `test/pages/index.html` already has QWERTZ-DE + locale-default panels; add a
+  long-press-on-default-layout scenario. UI5 `demo-app` has a `KioskCustomLayouts` view/controller:
   the natural home for a UI5-side variants demo.
 
 ## 8. Decisions (locked 2026-07-12)
+
 1. **Default variants: opt-in table, built-in `qwerty` stays pristine** (§4.2). ✅ decided.
-2. **Variant breadth: broad Latin-diacritics table shipped now** (§4.2) — not German-only; German
+2. **Variant breadth: broad Latin-diacritics table shipped now** (§4.2), not German-only; German
    ä/ö/ü/ß are a subset. ✅ decided (this is the one change from the initial recommendation).
 3. **Interaction model: sticky (base) + touch drag-release + desktop right-click** (§5). ✅ decided.
 4. **kiosk overlay host: self-owned body-level listbox**, not UI5 `Popup`, to keep the twins parallel
-   and avoid Popup focus fights (§3.1). Recommendation — open to revisit.
+   and avoid Popup focus fights (§3.1). Recommendation: open to revisit.
 5. **Delivery: staged** (§9). Recommendation.
 
 ## 9. Suggested sequencing
+
 1. **Foundation (low risk):** `variants?: string[]` type in both twins + DOM-contract entries +
    `data-has-variants` emission + regenerate `.gen.d.ts`. Tests: type/render presence.
-2. **Overlay spike (de-risk):** static, clip-escaping, edge-safe popup positioned over a key —
+2. **Overlay spike (de-risk):** static, clip-escaping, edge-safe popup positioned over a key:
    **each twin separately**. Proves §3 before any behavior.
 3. **Gesture + insertion:** per-twin hold controller, open on hold, commit via `insertText`,
    suppress base tap. Failing-first controller + integration tests.
@@ -335,10 +353,11 @@ Failing-first, both twins, no test-only production exports (assert through publi
 7. **Adversarial validation pass** (§6) before merge.
 
 ## 10. What this "breaks" / long-term
+
 - No breaking API change: `variants` is optional/additive; all existing layouts, tests, and the
   twin-drift guard stay green.
 - **Net-new capability, not a rewrite:** the control gains its first floating-overlay pattern. That
-  is the lasting architectural addition — once a clip-escaping, edge-safe, a11y-correct popup host
+  is the lasting architectural addition: once a clip-escaping, edge-safe, a11y-correct popup host
   exists per twin, future features (emoji picker, symbol fly-outs, autocomplete suggestions) can
   reuse it. That upside justifies building the overlay host properly now rather than a one-off.
 - Respects #105 (no shared core): logic is duplicated per twin, timing/labels kept in sync by hand,
