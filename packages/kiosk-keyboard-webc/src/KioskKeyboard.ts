@@ -1488,7 +1488,9 @@ class KioskKeyboard extends UI5Element {
     const value = keyEl.dataset.key!;
     const upper = this._shifted; // isShifted is also true under Caps Lock
     const glyphs = upper ? toShiftVariants(variants) : [...variants];
-    const base = upper ? toShiftVariant(value) : value;
+    // The shifted base is what the key itself types under Shift: an explicit
+    // shiftValue when the key declares one, else the uppercased value.
+    const base = upper ? (keyEl.dataset.shiftValue ?? toShiftVariant(value)) : value;
     const label = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}", String(glyphs.length), base);
 
     return {

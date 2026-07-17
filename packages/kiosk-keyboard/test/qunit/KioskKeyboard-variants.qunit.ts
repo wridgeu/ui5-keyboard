@@ -4,7 +4,8 @@ import Popover from "sap/m/Popover";
 import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey } from "./test-helpers";
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
 import { insertText } from "ui5/kiosk/internal/input-operations";
-import type { CompositionMiddleware } from "ui5/kiosk/types";
+import { getText } from "ui5/kiosk/internal/i18n-registry";
+import type { CompositionMiddleware, LayoutDefinition } from "ui5/kiosk/types";
 
 // Integration coverage for the long-press accent-variant popup: a hold on a key
 // with variants opens a themed sap/m/Popover of sap/m/Button options in the
@@ -209,6 +210,26 @@ QUnit.test("Shift surfaces the uppercase variants including ẞ for ß", async (
   const sharp = getOptions().find((o) => glyphOf(o) === "ẞ");
   tapOption(sharp!);
   assert.strictEqual(input.getValue(), "ẞ", "ẞ inserted");
+  cleanup(kb, input);
+});
+
+QUnit.test("the open announcement names the key's explicit shiftValue under Shift", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "1", shiftValue: "!", variants: ["¹", "½"] }, { value: "{shift}" }]];
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ controls: [input.getId()], instanceLayouts: { qwerty: layout }, layout: "qwerty" });
+  await placeAndWait(kb);
+  input.focus();
+
+  // Shift makes the key type its explicit shiftValue ("!"), so the popup must
+  // announce "!" rather than the uppercased raw value ("1").
+  tapKey(kb, "{shift}");
+  const oneKey = getRequiredKeyElement(kb, "1");
+  await holdOpen(kb, oneKey);
+
+  const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "!");
+  assert.strictEqual(kb.getDomRef("liveState")?.textContent, expected, "announced with the shiftValue as the base");
+  release(kb, oneKey);
   cleanup(kb, input);
 });
 

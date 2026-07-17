@@ -44,7 +44,10 @@ export function applyVariantDefaults(
   return layout.map((row) =>
     row.map((key) => {
       if (key.variants !== undefined) return key;
-      const variants = table[key.value.toLowerCase()];
+      const base = key.value.toLowerCase();
+      // Own properties only: a key valued `constructor` / `toString` must miss
+      // the table rather than resolve an inherited Object.prototype member.
+      const variants = Object.hasOwn(table, base) ? table[base] : undefined;
       if (!variants || variants.length === 0) return key;
       return { ...key, variants: [...variants] };
     }),
