@@ -86,6 +86,20 @@ export class VariantPopupController {
   private _pointerId: number | null = null;
   /** Whether the current gesture has already opened the popup. */
   private _opened = false;
+  /**
+   * Set while a commit is closing the popup, so the shared teardown announces a
+   * dismissal only for a genuine cancel (Escape, outside press, key press).
+   * Scoped to one popup session: every open clears it, so no close path can
+   * leave it stuck and silence later dismissals. Mirrors the sibling
+   * kiosk-keyboard package's `_dismiss(announce)` discriminator.
+   */
+  private _committing = false;
+  /**
+   * Set when the popup state changed in a way that must re-seat the roving DOM
+   * focus once the render lands (an open, or an arrow move). Consumed by
+   * `openPopoverAfterRender`, so an unrelated host re-render never steals focus.
+   */
+  private _focusPending = false;
 
   private readonly _onPointerDown = (e: Event): void => {
     if (e instanceof PointerEvent) this._start(e);
@@ -167,29 +181,41 @@ export class VariantPopupController {
   openFor(keyEl: HTMLElement): boolean {
     const state = this._host.resolveOpenState(keyEl);
     if (!state) return false;
+    this._committing = false;
     this._host.setPopupState(state);
+    this._focusPending = true;
     this._host.announce(state.label);
     return true;
   }
 
   /**
-   * Opens the popover once it and its anchor key exist in the rendered shadow
-   * DOM: sets the live opener element (a DOM ref across the shadow boundary),
-   * wires the one-shot `close` teardown, and moves focus to the active option
-   * so roving navigation starts inside the popup.
+   * Syncs the rendered popup to the reactive state, from the host's
+   * after-render hook: opens the popover once it and its anchor key exist in
+   * the shadow DOM (setting the live opener element, a DOM ref across the
+   * shadow boundary, and wiring the one-shot `close` teardown), then seats the
+   * roving DOM focus on the active option so keyboard navigation starts and
+   * stays inside the popup.
+   *
+   * Focus is the one thing the template cannot express, so it is applied here
+   * rather than at the keystroke: the option's Emphasized design and tab stop
+   * are template-bound to `activeIndex`, and only exist once the render lands.
    */
   openPopoverAfterRender(): void {
     const state = this._host.getPopupState();
     if (!state) return;
     const popover = this._popoverEl();
-    if (!popover || popover.open) return;
-    const anchor = this._host.getShadowRoot()?.getElementById(state.anchorKeyId) ?? null;
-    if (!anchor) return;
+    if (!popover) return;
 
-    popover.opener = anchor;
-    popover.addEventListener("close", this._onPopoverClose, { once: true });
-    popover.open = true;
+    if (!popover.open) {
+      const anchor = this._host.getShadowRoot()?.getElementById(state.anchorKeyId) ?? null;
+      if (!anchor) return;
+      popover.opener = anchor;
+      popover.addEventListener("close", this._onPopoverClose, { once: true });
+      popover.open = true;
+    }
 
+    if (!this._focusPending) return;
+    this._focusPending = false;
     this._popupEl()
       ?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOptionByIndex(state.activeIndex))
       ?.focus();
@@ -267,21 +293,11 @@ export class VariantPopupController {
     e.preventDefault();
     if (next === state.activeIndex) return;
 
-    const popup = this._popupEl();
-    if (!popup) return;
-    const oldOption = popup.querySelector(KIOSK_KEYBOARD_DOM.selectors.variantOptionByIndex(state.activeIndex));
-    const newOption = popup.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOptionByIndex(next));
-    // Roving move without a re-render: the active option carries the Emphasized
-    // ui5-button design and the tab stop; the design change re-renders that
-    // button, which re-reads the freshly written host tabindex.
-    oldOption?.setAttribute("tabindex", "-1");
-    oldOption?.setAttribute("design", "Default");
-    if (newOption) {
-      newOption.setAttribute("tabindex", "0");
-      newOption.setAttribute("design", "Emphasized");
-      newOption.focus();
-    }
-    state.activeIndex = next; // in place: keeps state without a re-render
+    // Move through the reactive state: the template binds each option's
+    // Emphasized design and tab stop to `activeIndex`, and `_focusPending` has
+    // the after-render hook follow up with the DOM focus.
+    this._host.setPopupState({ ...state, activeIndex: next });
+    this._focusPending = true;
   }
 
   // ── DOM queries (live; never snapshotted) ──
@@ -298,6 +314,7 @@ export class VariantPopupController {
 
   private _commit(glyph: string): void {
     this._host.insertVariant(glyph);
+    this._committing = true;
     this.close();
   }
 
@@ -320,25 +337,27 @@ export class VariantPopupController {
 
   /**
    * Teardown shared by every dismissal path (commit, Escape, outside press):
-   * clears the reactive state, clears the click suppression, announces
-   * closure, and returns focus to the origin key. Bound to the popover's
+   * clears the reactive state, clears the click suppression, announces a
+   * cancel, and returns focus to the origin key. Bound to the popover's
    * `close` event, so a framework-driven dismissal runs it too.
    */
   private _teardown(): void {
     const state = this._host.getPopupState();
     if (!state) return;
+    const committed = this._committing;
+    this._committing = false;
     // Read before the state write below un-renders the popup.
     const hadFocus = this._popupEl()?.contains(this._host.getShadowRoot()?.activeElement ?? null) ?? false;
     this._host.setPopupState(null);
+    this._focusPending = false;
     // Only drop the click suppression once the press that armed it has ended.
     // A commit or dismissal while that press is still down (a second finger
     // picking an option) leaves it armed, so the opening gesture's own trailing
     // click still does not type the base glyph; `consumeClick` spends it.
-    if (this._pointerId === null) {
-      this._suppressNextClick = false;
-      this._originValue = null;
-    }
-    this._host.announceDismiss();
+    if (this._pointerId === null) this._clearSuppression();
+    // A commit already spoke through the inserted glyph; only a cancel is a
+    // dismissal worth announcing.
+    if (!committed) this._host.announceDismiss();
     // Restore focus to the origin key only when focus was still inside the popup
     // (Escape, keyboard commit, option click). An outside press that moved focus
     // elsewhere keeps it there.
@@ -359,11 +378,17 @@ export class VariantPopupController {
     const keyEl = this._variantKey(e.target);
     if (!keyEl) return;
     // An open popup owns the gesture: a second press cannot re-anchor the live
-    // popover, and must not disarm the still-held opening gesture's suppression.
-    // The press still reaches `_onKeyClick`, which dismisses and types.
-    if (this._host.getPopupState()) return;
+    // popover, so arm nothing. The press still reaches `_onKeyClick`, which
+    // dismisses and types. Only the suppression needs settling: while the
+    // opening press is still down a second finger must not disarm it, but once
+    // that press has ended this is a new tap, which owes no release-swallow and
+    // must not have its click eaten by the previous gesture's.
+    if (this._host.getPopupState()) {
+      if (this._pointerId === null) this._clearSuppression();
+      return;
+    }
     this._cancelHold();
-    this._suppressNextClick = false;
+    this._clearSuppression();
     this._keyEl = keyEl;
     this._pointerId = e.pointerId;
     keyEl.addEventListener("pointerleave", this._onPointerLeave);
@@ -386,6 +411,12 @@ export class VariantPopupController {
     const keyEl = this._variantKey(e.target);
     if (!keyEl) return;
     e.preventDefault();
+    // An open popup owns the gesture, mirroring `_start` and the sibling
+    // kiosk-keyboard package's `openFor`. A ui5-popover exempts its own opener
+    // from the outside-press dismissal, so a repeated right-click on the origin
+    // key arrives with the popup live and would otherwise reset the roving
+    // selection under the user's focus.
+    if (this._host.getPopupState()) return;
     this._cancelHold();
     this.openFor(keyEl);
   }
@@ -407,13 +438,19 @@ export class VariantPopupController {
       // elsewhere leaves the popup open (sticky) and keeps the suppression so
       // the trailing origin-key click does not insert the base glyph.
       if (this._commitAt(e.clientX, e.clientY)) {
-        this._suppressNextClick = false;
+        this._clearSuppression();
         // A touch commit is trailed by a synthesized touchend on the host; a
         // mouse/pen release is not, so only touch needs the swallow signal.
         if (e.pointerType === "touch") this._host.notifyTouchCommit();
       }
     }
     this.stop();
+  }
+
+  /** Drop the pending release-swallow together with the key it is bound to. */
+  private _clearSuppression(): void {
+    this._suppressNextClick = false;
+    this._originValue = null;
   }
 
   private _cancelHold(): void {
