@@ -27,6 +27,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyCapsLock: "ui5KioskKey--capsLock",
     keyPressed: "ui5KioskKey--pressed",
     keyHighlight: "ui5KioskKey--highlight",
+    keyVariantAnchor: "ui5KioskKey--variantAnchor",
     keyLabel: "ui5KioskKey__label",
     keyLabelGlyph: "ui5KioskKey__label--glyph",
     keyLabelGlyphCjk: "ui5KioskKey__label--glyphCjk",

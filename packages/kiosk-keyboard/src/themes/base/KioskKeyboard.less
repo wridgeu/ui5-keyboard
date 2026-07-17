@@ -334,6 +334,20 @@
         transform 0.05s ease;
     }
 
+    /* Variant-popup anchor: the accent popup is a static-area sap.m.Popover
+       docked to the held key. The pressed scale() above shrinks the key's rect,
+       and when the press releases the rect grows back and the Popover's follow-of
+       re-docks it, shifting the popup sideways. While the key anchors an open
+       popup, hold its box at the resting size: drop the transform, instantly (no
+       transition) so openBy already measures the final box. Re-listed with
+       :active so it also wins over the pressed state under a real pointer, not
+       only the --pressed class; both tie the block above and win by source order. */
+    &--variantAnchor,
+    &--variantAnchor:active {
+      transform: none;
+      transition: none;
+    }
+
     &:focus-visible {
       outline: @sapUiContentFocusWidth @sapUiContentFocusStyle @sapUiContentFocusColor;
       outline-offset: 1px;
