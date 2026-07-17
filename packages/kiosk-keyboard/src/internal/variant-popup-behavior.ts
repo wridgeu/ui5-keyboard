@@ -387,11 +387,10 @@ export default class VariantPopupBehavior {
         break;
       case "Enter":
       case " ":
-      case "Spacebar":
         this._commitIndex(this._activeIndex);
         break;
       case "Escape":
-        this._cancel();
+        this._dismiss(true);
         break;
       default:
         return;
@@ -452,10 +451,6 @@ export default class VariantPopupBehavior {
     const glyph = this._buttons[index]?.getText();
     this._dismiss(false);
     if (glyph !== undefined && glyph !== "") this._host.commitVariant(glyph);
-  }
-
-  private _cancel(): void {
-    this._dismiss(true);
   }
 
   /**
