@@ -72,6 +72,24 @@ function pressKey(el: HTMLElement): void {
   el.click();
 }
 
+/**
+ * A realistic right-click: the pointer and mouse press the browser always fires
+ * before the `contextmenu` event, so the gesture sees the same sequence a user
+ * produces (a bare `contextmenu` never reaches the popover's outside-press
+ * listener).
+ */
+function rightClick(el: HTMLElement): void {
+  el.dispatchEvent(
+    new PointerEvent("pointerdown", { bubbles: true, composed: true, button: 2, buttons: 2, pointerId: 3 }),
+  );
+  el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, composed: true, button: 2, buttons: 2 }));
+  el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, composed: true }));
+}
+
+function liveRegionText(kb: KioskKeyboard): string {
+  return kb.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.liveRegion}`)?.textContent?.trim() ?? "";
+}
+
 /** Poll until the ui5-popover leaves the shadow root (its close is async). */
 async function waitForPopoverGone(kb: KioskKeyboard): Promise<void> {
   for (let i = 0; i < 100; i++) {
@@ -599,5 +617,73 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(aKey.getBoundingClientRect().width, "the transform shrank the rendered rect").to.be.below(aKey.offsetWidth);
     expect(optionEls(kb)[0]!.offsetWidth, "option follows the resting key width").to.equal(aKey.offsetWidth);
     pointerUp();
+  });
+
+  it("types the base glyph on a fresh tap after the opening gesture released off the popup", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+
+    // The opening gesture releases away from the origin key and away from every
+    // option: nothing commits and the popup stays open (sticky). No trailing
+    // click ever reaches the origin key, so its release-swallow goes unspent.
+    pointerUp();
+    await renderFinished();
+    expect(popupEl(kb), "the popup stayed open").to.exist;
+
+    // A fresh press on that key is a new gesture, not the opening gesture's
+    // lift-off: it must dismiss the popup and type the base glyph.
+    pressKey(requireKey(kb, "a"));
+    await renderFinished();
+    expect(input.value, "the fresh tap typed the base glyph").to.equal("a");
+    await waitForPopoverGone(kb);
+  });
+
+  it("keeps the roving selection when the origin key is right-clicked a second time", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    rightClick(aKey);
+    await renderFinished();
+
+    keyDown(popupEl(kb)!, "ArrowRight");
+    keyDown(popupEl(kb)!, "ArrowRight");
+    await renderFinished();
+
+    // A ui5-popover exempts its own opener from the outside-press dismissal, so
+    // a second right-click on the origin key arrives with the popup still live.
+    // It must not reset the roving selection out from under the user's focus.
+    rightClick(aKey);
+    await renderFinished();
+
+    keyDown(popupEl(kb)!, "Enter");
+    await renderFinished();
+    expect(input.value, "Enter committed the option the roving selection is on").to.equal("â");
+  });
+
+  it("does not announce a dismissal when an option commits", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+
+    optionEls(kb)[0]!.click(); // ä
+    await renderFinished();
+
+    expect(input.value, "the option click committed the variant").to.equal("ä");
+    expect(liveRegionText(kb), "a commit is not announced as a dismissal").to.not.equal(
+      getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
+    );
+    pointerUp();
+  });
+
+  it("announces dismissal when the popup closes without committing", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+    pointerUp();
+
+    keyDown(popupEl(kb)!, "Escape");
+    await renderFinished();
+
+    expect(input.value, "Escape committed nothing").to.equal("");
+    expect(liveRegionText(kb), "a real dismissal is still announced").to.equal(
+      getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
+    );
   });
 });
