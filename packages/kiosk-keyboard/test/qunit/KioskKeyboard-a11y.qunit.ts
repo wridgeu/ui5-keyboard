@@ -245,6 +245,40 @@ QUnit.test("ariaLabel + ariaLabelledBy coexist", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Root aria-label defers to ariaLabelledBy but honors an explicit ariaLabel", async (assert) => {
+  // No ariaLabelledBy: the default fallback names the group.
+  const kbDefault = new KioskKeyboard();
+  await placeAndWait(kbDefault);
+  assert.strictEqual(
+    kbDefault.getDomRef()!.getAttribute("aria-label"),
+    "Virtual Keyboard",
+    "default aria-label is present when nothing else names the group",
+  );
+  kbDefault.destroy();
+
+  const label = new InvisibleText({ text: "External label" });
+  label.placeAt("qunit-fixture");
+
+  // ariaLabelledBy set, no explicit ariaLabel: the default is suppressed so it
+  // does not compete with aria-labelledby (which wins per WAI-ARIA).
+  const kbLabelledBy = new KioskKeyboard();
+  kbLabelledBy.addAriaLabelledBy(label);
+  await placeAndWait(kbLabelledBy);
+  const domLabelledBy = kbLabelledBy.getDomRef()!;
+  assert.ok(domLabelledBy.getAttribute("aria-labelledby")?.includes(label.getId()), "aria-labelledby names the group");
+  assert.notOk(domLabelledBy.hasAttribute("aria-label"), "default aria-label is suppressed when ariaLabelledBy is set");
+  kbLabelledBy.destroy();
+
+  // An explicit ariaLabel is still honored even with ariaLabelledBy present.
+  const kbBoth = new KioskKeyboard({ ariaLabel: "PIN entry" });
+  kbBoth.addAriaLabelledBy(label);
+  await placeAndWait(kbBoth);
+  assert.strictEqual(kbBoth.getDomRef()!.getAttribute("aria-label"), "PIN entry", "explicit ariaLabel is preserved");
+  kbBoth.destroy();
+
+  label.destroy();
+});
+
 QUnit.test("removeAriaLabelledBy clears attribute after re-render", async (assert) => {
   const label = new InvisibleText({ text: "Removable label" });
   label.placeAt("qunit-fixture");
