@@ -3,6 +3,7 @@ import type { LayoutDefinition } from "../../src/types.js";
 import {
   LATIN_DIACRITIC_VARIANTS,
   applyVariantDefaults,
+  shiftedGlyph,
   toShiftVariant,
   toShiftVariants,
 } from "../../src/core/latin-variants.js";
@@ -88,5 +89,23 @@ describe("shift mapping", () => {
   it("preserves order and de-duplicates", () => {
     expect(toShiftVariants(["ß", "ś", "š"])).toEqual(["ẞ", "Ś", "Š"]);
     expect(toShiftVariants(["ä", "Ä"])).toEqual(["Ä"]);
+  });
+});
+
+describe("shiftedGlyph", () => {
+  it("CapsLock maps the base ß key to ẞ, bypassing its ? shiftValue (#169)", () => {
+    expect(shiftedGlyph("ß", "?", true)).toBe("ẞ");
+  });
+
+  it("Shift (no Caps) keeps an explicit shiftValue, even for ß", () => {
+    expect(shiftedGlyph("ß", "?", false)).toBe("?");
+    expect(shiftedGlyph("1", "!", false)).toBe("!");
+  });
+
+  it("a lone cased letter falls back to its uppercase; multi-char values are unchanged", () => {
+    expect(shiftedGlyph("a", undefined, false)).toBe("A");
+    expect(shiftedGlyph("a", undefined, true)).toBe("A");
+    expect(shiftedGlyph(" ", undefined, false)).toBe(" ");
+    expect(shiftedGlyph("abc", undefined, false)).toBe("abc");
   });
 });

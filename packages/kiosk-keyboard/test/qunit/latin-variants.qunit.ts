@@ -2,6 +2,7 @@ import type { LayoutDefinition } from "ui5/kiosk/types";
 import {
   LATIN_DIACRITIC_VARIANTS,
   applyVariantDefaults,
+  shiftedGlyph,
   toShiftVariant,
   toShiftVariants,
 } from "ui5/kiosk/internal/latin-variants";
@@ -88,4 +89,22 @@ QUnit.test("uppercases variants, mapping ß to the capital sharp S ẞ", (assert
 QUnit.test("toShiftVariants preserves order and de-duplicates", (assert) => {
   assert.deepEqual(toShiftVariants(["ß", "ś", "š"]), ["ẞ", "Ś", "Š"], "s-list uppercased with ẞ");
   assert.deepEqual(toShiftVariants(["ä", "Ä"]), ["Ä"], "already-uppercase form is not repeated");
+});
+
+QUnit.module("latin-variants - shiftedGlyph");
+
+QUnit.test("CapsLock maps the base ß key to ẞ, bypassing its ? shiftValue (#169)", (assert) => {
+  assert.strictEqual(shiftedGlyph("ß", "?", true), "ẞ", "Caps + ß -> ẞ, not ? and not SS");
+});
+
+QUnit.test("Shift (no Caps) keeps an explicit shiftValue, even for ß", (assert) => {
+  assert.strictEqual(shiftedGlyph("ß", "?", false), "?", "Shift + ß -> its physical ? symbol");
+  assert.strictEqual(shiftedGlyph("1", "!", false), "!", "explicit shiftValue wins");
+});
+
+QUnit.test("a lone cased letter falls back to its uppercase; multi-char values are unchanged", (assert) => {
+  assert.strictEqual(shiftedGlyph("a", undefined, false), "A", "a -> A");
+  assert.strictEqual(shiftedGlyph("a", undefined, true), "A", "Caps on a plain letter is unaffected");
+  assert.strictEqual(shiftedGlyph(" ", undefined, false), " ", "whitespace value is returned unchanged");
+  assert.strictEqual(shiftedGlyph("abc", undefined, false), "abc", "multi-char value with no shiftValue is unchanged");
 });

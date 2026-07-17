@@ -27,7 +27,7 @@ import {
   isBuiltInLayout,
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
-import { applyVariantDefaults, toShiftVariant, toShiftVariants } from "./core/latin-variants.js";
+import { applyVariantDefaults, shiftedGlyph, toShiftVariant, toShiftVariants } from "./core/latin-variants.js";
 import { VariantPopupController, type VariantPopupState } from "./core/variant-popup-controller.js";
 import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
@@ -1179,13 +1179,8 @@ class KioskKeyboard extends UI5Element {
     if (i18nKey) return getText(i18nKey, key.value);
 
     const base = key.value;
-    if (shift) {
-      // CapsLock means "uppercase mode": the ß key surfaces the capital sharp S
-      // ẞ (U+1E9E), not its physical "?" Shift symbol (#169).
-      if (this._capsLock && base === "ß") return toShiftVariant(base);
-      if (key.shiftValue) return key.shiftValue;
-      if (key.value.length === 1 && key.value.trim()) return key.value.toUpperCase();
-    }
+    // Shift/Caps form of the key (incl. CapsLock ß -> ẞ, #169).
+    if (shift) return shiftedGlyph(base, key.shiftValue, this._capsLock);
     return base;
   }
 
@@ -1361,16 +1356,9 @@ class KioskKeyboard extends UI5Element {
     // key-press + composition pass. `char` is the text that would be inserted;
     // `undefined` for keys that insert nothing (actions and unknown tokens). A
     // lone "{"/"}" matches only one end, so it stays a literal character.
-    // CapsLock means "uppercase mode": the ß key emits the capital sharp S ẞ
-    // (U+1E9E), bypassing its physical "?" shiftValue (#169).
+    // Its Shift/Caps form when shifted (incl. CapsLock ß -> ẞ, #169), else the base value.
     const char =
-      action.kind === "char"
-        ? shifted
-          ? this._capsLock && value === "ß"
-            ? toShiftVariant(value)
-            : (shiftValue ?? value.toUpperCase())
-          : value
-        : undefined;
+      action.kind === "char" ? (shifted ? shiftedGlyph(value, shiftValue, this._capsLock) : value) : undefined;
 
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;

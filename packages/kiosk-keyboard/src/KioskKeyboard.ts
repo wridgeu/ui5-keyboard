@@ -13,7 +13,7 @@ import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, isParticipating, KEY_ID_SUFFIX_RE, type TargetResolverFn } from "./internal/dom";
-import { applyVariantDefaults, toShiftVariant, toShiftVariants } from "./internal/latin-variants";
+import { applyVariantDefaults, shiftedGlyph, toShiftVariant, toShiftVariants } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
 import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
 import {
@@ -2085,22 +2085,8 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "char": {
-        // Regular character - resolve shift value
-        let effective = action.text;
-        if (shift) {
-          if (this._isCapsLock() && action.text === "ß") {
-            // CapsLock means "uppercase mode": the ß key emits the capital sharp
-            // S ẞ (U+1E9E), bypassing its physical "?" shiftValue (#169).
-            effective = toShiftVariant(action.text);
-          } else {
-            const shiftValue = el.dataset.shiftValue;
-            if (shiftValue) {
-              effective = shiftValue;
-            } else if (action.text.length === 1) {
-              effective = action.text.toUpperCase();
-            }
-          }
-        }
+        // Regular character - resolve its Shift/Caps form (incl. CapsLock ß -> ẞ, #169).
+        const effective = shift ? shiftedGlyph(action.text, el.dataset.shiftValue, this._isCapsLock()) : action.text;
 
         if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
           this._targetSession.insertText(effective);
