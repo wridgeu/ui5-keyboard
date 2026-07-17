@@ -809,7 +809,7 @@ QUnit.test("opening the variant popup keeps a docked auto-show keyboard open", a
 
   // The popup moved focus to its first option in the static area, firing a
   // focusout on the input; let the deferred (rAF) auto-show close run.
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
   assert.ok(kb.isOpen(), "docked keyboard stays open while the variant popup is open");
 
