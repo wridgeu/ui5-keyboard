@@ -130,6 +130,9 @@ sap.ui.define([], () => {
       "KioskKeyboard-variants": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard accent-variant popup",
       },
+      "KioskKeyboard-capslock-sharp-s": {
+        title: "QUnit tests for ui5.kiosk - CapsLock emits ẞ from the base ß key",
+      },
     },
   };
 });

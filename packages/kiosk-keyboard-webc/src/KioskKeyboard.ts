@@ -1180,6 +1180,9 @@ class KioskKeyboard extends UI5Element {
 
     const base = key.value;
     if (shift) {
+      // CapsLock means "uppercase mode": the ß key surfaces the capital sharp S
+      // ẞ (U+1E9E), not its physical "?" Shift symbol (#169).
+      if (this._capsLock && base === "ß") return toShiftVariant(base);
       if (key.shiftValue) return key.shiftValue;
       if (key.value.length === 1 && key.value.trim()) return key.value.toUpperCase();
     }
@@ -1358,7 +1361,16 @@ class KioskKeyboard extends UI5Element {
     // key-press + composition pass. `char` is the text that would be inserted;
     // `undefined` for keys that insert nothing (actions and unknown tokens). A
     // lone "{"/"}" matches only one end, so it stays a literal character.
-    const char = action.kind === "char" ? (shifted ? (shiftValue ?? value.toUpperCase()) : value) : undefined;
+    // CapsLock means "uppercase mode": the ß key emits the capital sharp S ẞ
+    // (U+1E9E), bypassing its physical "?" shiftValue (#169).
+    const char =
+      action.kind === "char"
+        ? shifted
+          ? this._capsLock && value === "ß"
+            ? toShiftVariant(value)
+            : (shiftValue ?? value.toUpperCase())
+          : value
+        : undefined;
 
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
     if (!allowed) return;
