@@ -2088,11 +2088,17 @@ export default class KioskKeyboard extends Control {
         // Regular character - resolve shift value
         let effective = action.text;
         if (shift) {
-          const shiftValue = el.dataset.shiftValue;
-          if (shiftValue) {
-            effective = shiftValue;
-          } else if (action.text.length === 1) {
-            effective = action.text.toUpperCase();
+          if (this._isCapsLock() && action.text === "ß") {
+            // CapsLock means "uppercase mode": the ß key emits the capital sharp
+            // S ẞ (U+1E9E), bypassing its physical "?" shiftValue (#169).
+            effective = toShiftVariant(action.text);
+          } else {
+            const shiftValue = el.dataset.shiftValue;
+            if (shiftValue) {
+              effective = shiftValue;
+            } else if (action.text.length === 1) {
+              effective = action.text.toUpperCase();
+            }
           }
         }
 

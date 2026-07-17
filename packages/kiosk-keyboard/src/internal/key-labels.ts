@@ -1,6 +1,7 @@
 import Log from "sap/base/Log";
 import { getText } from "./i18n-registry";
 import { SPECIAL_KEY_I18N_KEYS } from "./key-action-meta";
+import { toShiftVariant } from "./latin-variants";
 import type { KeyDefinition } from "../types";
 
 /** Map from special key value to [i18nKey, fallback]. */
@@ -38,6 +39,9 @@ export function getKeyLabel(key: KeyDefinition, shift: boolean, caps: boolean): 
   const base = key.value;
   if (!base) return "";
   if (shift) {
+    // CapsLock means "uppercase mode": the ß key surfaces the capital sharp S
+    // ẞ (U+1E9E), not its physical "?" Shift symbol (#169).
+    if (caps && base === "ß") return toShiftVariant(base);
     if (key.shiftValue) return key.shiftValue;
     if (key.value.length === 1 && key.value.trim()) return base.toUpperCase();
   }

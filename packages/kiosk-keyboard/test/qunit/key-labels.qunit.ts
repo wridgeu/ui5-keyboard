@@ -1,4 +1,4 @@
-import { getKeyAriaLabel, clearLabelWarnings } from "ui5/kiosk/internal/key-labels";
+import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "ui5/kiosk/internal/key-labels";
 import type { KeyDefinition } from "ui5/kiosk/types";
 import Log from "sap/base/Log";
 
@@ -68,4 +68,30 @@ QUnit.test("clearLabelWarnings resets the warned-once cache", (assert) => {
   getKeyAriaLabel(iconOnlyKey("⚙"), false, false);
 
   assert.strictEqual(spy.callCount, 2, "Warning fires again after the cache is cleared");
+});
+
+QUnit.module("key-labels - CapsLock surfaces ẞ on the base ß key (#169)");
+
+// The qwertz-de ß key: base "ß", explicit Shift symbol "?". Under one-shot Shift
+// the physical symbol wins; under CapsLock the semantic uppercase ẞ (U+1E9E) does.
+const sharpSKey: KeyDefinition = { value: "ß", shiftValue: "?" };
+
+QUnit.test("Base (no shift): the ß key shows ß", (assert) => {
+  assert.strictEqual(getKeyLabel(sharpSKey, false, false), "ß", "unshifted shows the base glyph");
+});
+
+QUnit.test("Shift only: the ß key shows its physical symbol ?", (assert) => {
+  assert.strictEqual(getKeyLabel(sharpSKey, true, false), "?", "one-shot Shift keeps the ? symbol (#162 invariant)");
+});
+
+QUnit.test("CapsLock: the ß key shows ẞ, not ? and not SS", (assert) => {
+  assert.strictEqual(getKeyLabel(sharpSKey, true, true), "ẞ", "CapsLock surfaces the capital sharp S");
+});
+
+QUnit.test("CapsLock: getKeyAriaLabel announces ẞ", (assert) => {
+  assert.strictEqual(getKeyAriaLabel(sharpSKey, true, true), "ẞ", "aria derives ẞ from the visible label");
+});
+
+QUnit.test("CapsLock on a plain letter is unchanged (a -> A)", (assert) => {
+  assert.strictEqual(getKeyLabel({ value: "a" }, true, true), "A", "only ß gets the special mapping");
 });
