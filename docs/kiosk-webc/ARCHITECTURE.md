@@ -149,6 +149,7 @@ Internal reactive properties (no HTML attribute, trigger re-render):
 - `_shifted`: whether shift is active
 - `_capsLock`: whether caps lock is active
 - `_liveRegionText`: ARIA live-region announcement text
+- `_variantPopup`: open accent-variant popup state (`null` when closed)
 
 ### Event Handling
 

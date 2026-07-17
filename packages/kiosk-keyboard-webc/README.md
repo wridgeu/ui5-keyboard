@@ -790,7 +790,7 @@ kb.setTargetResolver(null);
 
 The keyboard ships with English, German, Japanese, and Arabic translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
 
-Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls both visible labels for special keys (Shift, Enter, Backspace, Space), `aria-label` for icon-only keys (where `label=""`), the keyboard's `aria-label`, `aria-roledescription`, and live region announcements (shift/caps lock state changes, keyboard open/close).
+Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls both visible labels for special keys (Shift, Enter, Backspace, Space), `aria-label` for icon-only keys (where `label=""`), the keyboard's `aria-label`, `aria-roledescription`, and live region announcements (shift/caps lock state changes, keyboard open/close, accent-variant popup open/close).
 
 **Resource bundle keys:**
 
@@ -808,6 +808,9 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 | `ARIA_SHIFT_OFF`                 | Shift off               | ARIA live region announcement                                                   |
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`                                       |
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`                                      |
+| `ARIA_RETURN_TO_NUMBERS`         | Return to numbers       | Accessible name for the back key that returns to the numbers surface            |
+| `ARIA_VARIANTS_OPENED`           | {0} variants for {1}    | ARIA live region announcement when the accent-variant popup opens               |
+| `ARIA_VARIANTS_CLOSED`           | Variants closed         | ARIA live region announcement when the accent-variant popup is dismissed        |
 
 ### Custom i18n Resolver
 
@@ -871,16 +874,18 @@ To add a new locale to the library itself, create a properties file in `src/i18n
 
 The component exposes CSS shadow parts for structural styling from outside the shadow DOM. Use `::part()` selectors to customize elements that CSS custom properties alone cannot reach (e.g., changing `display`, adding borders to specific elements, or adjusting flex behavior).
 
-| Part        | Element                            | Description                                                                                                                                                      |
-| ----------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keyboard`  | Root container (`.kiosk-keyboard`) | The outermost keyboard wrapper                                                                                                                                   |
-| `row`       | Row container (`.kiosk-row`)       | Each row of keys                                                                                                                                                 |
-| `key`       | Every key element                  | All keys (regular, modifier, and action)                                                                                                                         |
-| `modifier`  | Modifier keys (Shift, 123, Fn)     | Combined with `key`: `part="key modifier"`                                                                                                                       |
-| `action`    | Action keys (Enter, Backspace)     | Combined with `key`: `part="key action"`                                                                                                                         |
-| `fkey`      | Function/navigation keys           | Combined with `key`: `part="key modifier fkey"`. Targets keys with `{fkey:*}` values (Home, End, PgUp, PgDn, Arrow keys) independently from other modifier keys. |
-| `key-label` | Text label inside a key            | The `<span>` rendering the key's text                                                                                                                            |
-| `key-icon`  | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons                                                                                                                        |
+| Part             | Element                            | Description                                                                                                                                                      |
+| ---------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keyboard`       | Root container (`.kiosk-keyboard`) | The outermost keyboard wrapper                                                                                                                                   |
+| `row`            | Row container (`.kiosk-row`)       | Each row of keys                                                                                                                                                 |
+| `key`            | Every key element                  | All keys (regular, modifier, and action)                                                                                                                         |
+| `modifier`       | Modifier keys (Shift, 123, Fn)     | Combined with `key`: `part="key modifier"`                                                                                                                       |
+| `action`         | Action keys (Enter, Backspace)     | Combined with `key`: `part="key action"`                                                                                                                         |
+| `fkey`           | Function/navigation keys           | Combined with `key`: `part="key modifier fkey"`. Targets keys with `{fkey:*}` values (Home, End, PgUp, PgDn, Arrow keys) independently from other modifier keys. |
+| `key-label`      | Text label inside a key            | The `<span>` rendering the key's text                                                                                                                            |
+| `key-icon`       | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons                                                                                                                        |
+| `variant-popup`  | Accent-variant option row          | The button toolbar slotted inside the long-press `ui5-popover`                                                                                                   |
+| `variant-option` | Each accent-variant option         | The `ui5-button` for a single variant glyph                                                                                                                      |
 
 ```css
 /* Example: round action keys and increase row gap */
@@ -907,7 +912,9 @@ The `KioskKeyboard.DOM.exportParts` constant provides a ready-to-use attribute v
 
 ```html
 <!-- Inside my-wrapper's shadow DOM template -->
-<kiosk-keyboard exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon"></kiosk-keyboard>
+<kiosk-keyboard
+  exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon, variant-popup, variant-option"
+></kiosk-keyboard>
 ```
 
 Or programmatically:
@@ -938,45 +945,48 @@ For the rationale behind default values, breakpoint thresholds, and scaling fact
 
 Override these on the `:host` or a parent element to customize appearance:
 
-| Property                                 | Default                                                   | Description                                                 |
-| ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
-| `--kiosk-keyboard-border`                | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)             |
-| `--kiosk-keyboard-border-radius`         | _(theme)_                                                 | Container border radius                                     |
-| `--kiosk-keyboard-padding`               | `0.75rem`                                                 | Container padding                                           |
-| `--kiosk-keyboard-key-gap`               | `0.375rem`                                                | Gap between keys                                            |
-| `--kiosk-keyboard-key-height`            | `3rem`                                                    | Key height                                                  |
-| `--kiosk-keyboard-key-font-size`         | `calc(var(--kiosk-keyboard-key-height) * 0.375)`          | Key font size (all key types in Numpad/Numeric)             |
-| `--kiosk-keyboard-key-padding-inline`    | `0.25rem`                                                 | Horizontal key padding                                      |
-| `--kiosk-keyboard-key-padding`           | `0 0.25rem`                                               | Full padding shorthand (uses padding-inline)                |
-| `--kiosk-keyboard-key-padding-inline-xs` | `min(var(--kiosk-keyboard-key-padding-inline), 0.125rem)` | Horizontal key padding in extra-narrow mode                 |
-| `--kiosk-keyboard-key-padding-xs`        | `0 var(--kiosk-keyboard-key-padding-inline-xs)`           | Full padding shorthand in extra-narrow mode                 |
-| `--kiosk-keyboard-key-shadow`            | _(subtle)_                                                | Box shadow for keys at rest                                 |
-| `--kiosk-keyboard-key-shadow-hover`      | _(subtle)_                                                | Box shadow for keys on hover                                |
-| `--kiosk-keyboard-key-border-color`      | _(not declared)_                                          | Override all key border colors when set                     |
-| `--kiosk-keyboard-max-width`             | `100%`                                                    | Max width for the default inline keyboard                   |
-| `--kiosk-keyboard-docked-max-width`      | `1024px`                                                  | Max width in docked mode                                    |
-| `--kiosk-keyboard-docked-shadow`         | _(subtle)_                                                | Box shadow for the docked container                         |
-| `--kiosk-keyboard-docked-z-index`        | `100`                                                     | Z-index for the docked keyboard                             |
-| `--kiosk-keyboard-modifier-font-size`    | `var(--sapFontSize, 0.875rem)`                            | Modifier / action key font size                             |
-| `--kiosk-keyboard-modifier-font-scale`   | `0.8`                                                     | Max modifier font as a fraction of key font                 |
-| `--kiosk-keyboard-modifier-shadow`       | _(subtle)_                                                | Box shadow for modifier keys at rest                        |
-| `--kiosk-keyboard-modifier-shadow-hover` | _(subtle)_                                                | Box shadow for modifier keys on hover                       |
-| `--kiosk-keyboard-numpad-max-width`      | `20rem`                                                   | Max width for numpad layout                                 |
-| `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                                    | Minimum key width in numpad layout                          |
-| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                                   | Height threshold for `kiosk-keyboard--cq-short` class       |
-| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                                   | Height threshold for `kiosk-keyboard--cq-tiny` class        |
-| `--kiosk-keyboard-dual-direction`        | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`) |
-| `--kiosk-keyboard-dual-icon-size`        | `1em`                                                     | Icon font size in dual mode                                 |
-| `--kiosk-keyboard-dual-label-size`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
-| `--kiosk-keyboard-dual-gap`              | `0.3em`                                                   | Gap between icon and label in dual mode                     |
-| `--kiosk-keyboard-fkey-direction`        | `column`                                                  | Flex direction for nav/function keys                        |
-| `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 3em)`                                  | Icon size for nav/function keys (scales with key width)     |
-| `--kiosk-keyboard-fkey-label-size`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`               | Label size for nav/function keys (responsive)               |
-| `--kiosk-keyboard-fkey-gap`              | `0.05em`                                                  | Gap between icon and label for nav/function keys            |
-| `--kiosk-keyboard-cjk-font-family`       | _(not declared)_                                          | Override font stack for CJK glyph labels                    |
-| `--kiosk-keyboard-hangul-font-family`    | _(not declared)_                                          | Override font stack for Hangul glyph labels                 |
-| `--kiosk-keyboard-indic-font-family`     | _(not declared)_                                          | Override font stack for Indic glyph labels                  |
-| `--kiosk-keyboard-arabic-font-family`    | _(not declared)_                                          | Override font stack for Arabic glyph labels                 |
+| Property                                   | Default                                                   | Description                                                 |
+| ------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------- |
+| `--kiosk-keyboard-border`                  | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)             |
+| `--kiosk-keyboard-border-radius`           | _(theme)_                                                 | Container border radius                                     |
+| `--kiosk-keyboard-padding`                 | `0.75rem`                                                 | Container padding                                           |
+| `--kiosk-keyboard-key-gap`                 | `0.375rem`                                                | Gap between keys                                            |
+| `--kiosk-keyboard-key-height`              | `3rem`                                                    | Key height                                                  |
+| `--kiosk-keyboard-key-font-size`           | `calc(var(--kiosk-keyboard-key-height) * 0.375)`          | Key font size (all key types in Numpad/Numeric)             |
+| `--kiosk-keyboard-key-padding-inline`      | `0.25rem`                                                 | Horizontal key padding                                      |
+| `--kiosk-keyboard-key-padding`             | `0 0.25rem`                                               | Full padding shorthand (uses padding-inline)                |
+| `--kiosk-keyboard-key-padding-inline-xs`   | `min(var(--kiosk-keyboard-key-padding-inline), 0.125rem)` | Horizontal key padding in extra-narrow mode                 |
+| `--kiosk-keyboard-key-padding-xs`          | `0 var(--kiosk-keyboard-key-padding-inline-xs)`           | Full padding shorthand in extra-narrow mode                 |
+| `--kiosk-keyboard-key-shadow`              | _(subtle)_                                                | Box shadow for keys at rest                                 |
+| `--kiosk-keyboard-key-shadow-hover`        | _(subtle)_                                                | Box shadow for keys on hover                                |
+| `--kiosk-keyboard-key-border-color`        | _(not declared)_                                          | Override all key border colors when set                     |
+| `--kiosk-keyboard-max-width`               | `100%`                                                    | Max width for the default inline keyboard                   |
+| `--kiosk-keyboard-docked-max-width`        | `1024px`                                                  | Max width in docked mode                                    |
+| `--kiosk-keyboard-docked-shadow`           | _(subtle)_                                                | Box shadow for the docked container                         |
+| `--kiosk-keyboard-docked-z-index`          | `100`                                                     | Z-index for the docked keyboard                             |
+| `--kiosk-keyboard-modifier-font-size`      | `var(--sapFontSize, 0.875rem)`                            | Modifier / action key font size                             |
+| `--kiosk-keyboard-modifier-font-scale`     | `0.8`                                                     | Max modifier font as a fraction of key font                 |
+| `--kiosk-keyboard-modifier-shadow`         | _(subtle)_                                                | Box shadow for modifier keys at rest                        |
+| `--kiosk-keyboard-modifier-shadow-hover`   | _(subtle)_                                                | Box shadow for modifier keys on hover                       |
+| `--kiosk-keyboard-numpad-max-width`        | `20rem`                                                   | Max width for numpad layout                                 |
+| `--kiosk-keyboard-numpad-key-min-width`    | `4rem`                                                    | Minimum key width in numpad layout                          |
+| `--kiosk-keyboard-cq-short-threshold`      | `16rem`                                                   | Height threshold for `kiosk-keyboard--cq-short` class       |
+| `--kiosk-keyboard-cq-tiny-threshold`       | `12rem`                                                   | Height threshold for `kiosk-keyboard--cq-tiny` class        |
+| `--kiosk-keyboard-dual-direction`          | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`) |
+| `--kiosk-keyboard-dual-icon-size`          | `1em`                                                     | Icon font size in dual mode                                 |
+| `--kiosk-keyboard-dual-label-size`         | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
+| `--kiosk-keyboard-dual-gap`                | `0.3em`                                                   | Gap between icon and label in dual mode                     |
+| `--kiosk-keyboard-fkey-direction`          | `column`                                                  | Flex direction for nav/function keys                        |
+| `--kiosk-keyboard-fkey-icon-size`          | `clamp(1em, 15cqi, 1.6em)`                                | Icon size for nav/function keys (scales with key width)     |
+| `--kiosk-keyboard-fkey-label-size`         | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`               | Label size for nav/function keys (responsive)               |
+| `--kiosk-keyboard-fkey-gap`                | `0.05em`                                                  | Gap between icon and label for nav/function keys            |
+| `--kiosk-keyboard-cjk-font-family`         | _(not declared)_                                          | Override font stack for CJK glyph labels                    |
+| `--kiosk-keyboard-hangul-font-family`      | _(not declared)_                                          | Override font stack for Hangul glyph labels                 |
+| `--kiosk-keyboard-indic-font-family`       | _(not declared)_                                          | Override font stack for Indic glyph labels                  |
+| `--kiosk-keyboard-arabic-font-family`      | _(not declared)_                                          | Override font stack for Arabic glyph labels                 |
+| `--kiosk-keyboard-variant-popup-gap`       | `0.25rem`                                                 | Gap between options in the accent-variant popup             |
+| `--kiosk-keyboard-variant-popup-padding`   | `0.25rem`                                                 | Padding around the accent-variant option row                |
+| `--kiosk-keyboard-variant-popup-max-width` | `92vw`                                                    | Max width before the accent-variant option row wraps        |
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 

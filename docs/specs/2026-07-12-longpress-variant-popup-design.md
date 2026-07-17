@@ -2,7 +2,7 @@
 
 **Status:** proposal · **Date:** 2026-07-12 · **Issue:** #162 (German umlauts from any layout)
 
-> **Update (as shipped):** the final implementation renders the overlay with the framework's own popup (`sap.m.Popover` in kiosk, `ui5-popover` in webc), not the self-owned body-level listbox that decision #4 and section 3.1 recommend below. The rest of the design (data model, gesture, insertion, ARIA, shift/ẞ) shipped as described.
+> **Update (as shipped):** the final implementation renders the overlay with the framework's own popup (`sap.m.Popover` in kiosk, `ui5-popover` in webc), not the self-owned body-level listbox that decision #4 and section 3.1 recommend below. The rest of the design (data model, insertion, shift/ẞ) shipped as described. Two details diverged from the sections below: the options ship as a `role="toolbar"` group of buttons, not the `role="listbox"` / `role="option"` / `aria-selected` grid of §4.4; and the single-shot hold uses a bare `setTimeout(VARIANT_HOLD_MS)`, not the `AutoRepeater` §2.2 recommends.
 
 This plan covers issue #162 task 1 (the `KeyDefinition.variants[]` long-press popup, the
 primary fix), folds in task 2 (`ẞ`), and scopes task 3 (docs/demo). It maps the feature onto
