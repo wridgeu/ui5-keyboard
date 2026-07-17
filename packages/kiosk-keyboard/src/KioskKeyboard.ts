@@ -1971,6 +1971,20 @@ export default class KioskKeyboard extends Control {
     return this._focusClaimService.resolveClaimableControl(target);
   }
 
+  /**
+   * Whether `node` is inside the control-owned accent-variant Popover, whose
+   * options render into the static area, outside the keyboard DOM. The docked
+   * auto-show close treats focus landing there as focus staying on the keyboard:
+   * the popover is the keyboard's own overlay, so opening it must not close a
+   * docked keyboard behind it.
+   */
+  _isNodeInVariantPopover(node: EventTarget | null): boolean {
+    if (!(node instanceof globalThis.Node)) return false;
+    const popover = this.getAggregation("_variantPopover") as Popover | null;
+    const dom = popover?.getDomRef();
+    return dom instanceof HTMLElement && dom.contains(node);
+  }
+
   // ── Private: pointer and key actions ──
 
   /**

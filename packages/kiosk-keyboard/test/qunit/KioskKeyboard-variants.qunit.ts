@@ -1,7 +1,8 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import { MobileKeyboard } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
-import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey } from "./test-helpers";
+import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey, waitForRender } from "./test-helpers";
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
 import { insertText } from "ui5/kiosk/internal/input-operations";
 import { getText } from "ui5/kiosk/internal/i18n-registry";
@@ -784,4 +785,52 @@ QUnit.test("the popover content frame is flattened to the option-grid inset", as
   assert.strictEqual(style.paddingTop, "0px", "content frame padding flattened");
   release(kb, aKey);
   cleanup(kb, input);
+});
+
+// ──────────────────────────────────────────────
+// Docked auto-show interaction
+// ──────────────────────────────────────────────
+
+QUnit.module("KioskKeyboard accent-variant popup + docked auto-show", {
+  afterEach() {
+    getPopup()?.remove();
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+/** rAF twice so the auto-show deferred (requestAnimationFrame) close would have run. */
+function nextFrames(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
+
+QUnit.test("opening the variant popup keeps the docked auto-show keyboard open", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    accentVariants: true,
+    mobileKeyboard: MobileKeyboard.Custom,
+    controls: [input.getId()],
+  });
+  await placeAndWait(kb);
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+  assert.ok(kb.isOpen(), "docked keyboard auto-showed on input focus");
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  assert.ok(getPopup(), "variant popup opened");
+
+  // The popup moved focus to its first option in the static area, firing a
+  // focusout on the input. Let the deferred (rAF) auto-show close run.
+  await nextFrames();
+
+  assert.ok(kb.isOpen(), "docked keyboard stays open while the variant popup is open");
+
+  release(kb, aKey);
+  input.destroy();
+  kb.destroy();
 });

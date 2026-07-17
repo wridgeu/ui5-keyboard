@@ -319,3 +319,38 @@ test.describe("ja-kana layout toggle", () => {
     expect(value).toBe("た");
   });
 });
+
+test.describe("docked keyboard + accent-variant popover", () => {
+  test("stays open while the accent-variant popover is open", async ({ page }) => {
+    // The shared page leaves accent variants off on the docked keyboard; enable
+    // them so its letter keys expose the long-press popover.
+    await page.evaluate(() => document.getElementById("kb-docked")!.setAttribute("accent-variants", ""));
+    await page.locator("#docked-input-name").locator("input").focus();
+    await waitForDockedOpen(page, "kb-docked");
+
+    // Open the popover through the right-click gesture (deterministic: no hold
+    // timer). It renders into the keyboard's own shadow-root ui5-popover and
+    // moves focus to its first option.
+    await page.evaluate(() => {
+      const key = document.getElementById("kb-docked")!.shadowRoot!.querySelector('[data-key="a"]') as HTMLElement;
+      key.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, composed: true, cancelable: true }));
+    });
+    await page.waitForFunction(
+      () => {
+        const pop = document.getElementById("kb-docked")!.shadowRoot!.querySelector("ui5-popover") as
+          | (HTMLElement & { open?: boolean })
+          | null;
+        return !!pop?.open;
+      },
+      null,
+      { timeout: 3_000 },
+    );
+
+    // Focus moved into the popover option, firing a focusout on the input. The
+    // docked auto-show must keep the keyboard open behind its own overlay.
+    const open = await page.evaluate(
+      () => (document.getElementById("kb-docked") as HTMLElement & { open: boolean }).open,
+    );
+    expect(open).toBe(true);
+  });
+});
