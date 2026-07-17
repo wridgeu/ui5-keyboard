@@ -93,6 +93,9 @@ export class VariantPopupController {
   private readonly _onPointerUp = (e: Event): void => {
     if (e instanceof PointerEvent) this._end(e);
   };
+  private readonly _onPointerCancel = (e: Event): void => {
+    if (e instanceof PointerEvent) this._abort(e);
+  };
   private readonly _onPointerLeave = (): void => {
     // Sliding off the key before the hold fires cancels it; after the popup is
     // open the leave listener is already removed so a drag onto the popup keeps
@@ -132,7 +135,7 @@ export class VariantPopupController {
     root.addEventListener("pointerdown", this._onPointerDown, { signal });
     root.addEventListener("contextmenu", this._onContextMenu, { signal });
     document.addEventListener("pointerup", this._onPointerUp, { signal });
-    document.addEventListener("pointercancel", this._onPointerUp, { signal });
+    document.addEventListener("pointercancel", this._onPointerCancel, { signal });
   }
 
   /** Cancel any in-flight hold and unbind the per-key leave listener. */
@@ -324,11 +327,22 @@ export class VariantPopupController {
   private _teardown(): void {
     const state = this._host.getPopupState();
     if (!state) return;
+    // Read before the state write below un-renders the popup.
+    const hadFocus = this._popupEl()?.contains(this._host.getShadowRoot()?.activeElement ?? null) ?? false;
     this._host.setPopupState(null);
-    this._suppressNextClick = false;
-    this._originValue = null;
+    // Only drop the click suppression once the press that armed it has ended.
+    // A commit or dismissal while that press is still down (a second finger
+    // picking an option) leaves it armed, so the opening gesture's own trailing
+    // click still does not type the base glyph; `consumeClick` spends it.
+    if (this._pointerId === null) {
+      this._suppressNextClick = false;
+      this._originValue = null;
+    }
     this._host.announceDismiss();
-    this._host.focusKey(state.anchorKeyId);
+    // Restore focus to the origin key only when focus was still inside the popup
+    // (Escape, keyboard commit, option click). An outside press that moved focus
+    // elsewhere keeps it there.
+    if (hadFocus) this._host.focusKey(state.anchorKeyId);
   }
 
   // ── Gesture detection ──
@@ -344,6 +358,10 @@ export class VariantPopupController {
     if (e.button > 0) return; // primary press only (0 for touch/pen/left mouse)
     const keyEl = this._variantKey(e.target);
     if (!keyEl) return;
+    // An open popup owns the gesture: a second press cannot re-anchor the live
+    // popover, and must not disarm the still-held opening gesture's suppression.
+    // The press still reaches `_onKeyClick`, which dismisses and types.
+    if (this._host.getPopupState()) return;
     this._cancelHold();
     this._suppressNextClick = false;
     this._keyEl = keyEl;
@@ -370,6 +388,16 @@ export class VariantPopupController {
     e.preventDefault();
     this._cancelHold();
     this.openFor(keyEl);
+  }
+
+  /**
+   * The browser took the gesture away (palm rejection, a system edge-swipe, a
+   * scroll takeover). It ends the hold without committing: the user never chose
+   * the option that happens to sit under the cancel coordinates.
+   */
+  private _abort(e: PointerEvent): void {
+    if (this._pointerId !== null && e.pointerId !== this._pointerId) return;
+    this.stop();
   }
 
   private _end(e: PointerEvent): void {

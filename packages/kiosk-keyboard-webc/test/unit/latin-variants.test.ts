@@ -68,6 +68,13 @@ describe("applyVariantDefaults", () => {
     const out = applyVariantDefaults([[{ value: "x" }]], { x: ["χ"] });
     expect(out[0][0].variants).toEqual(["χ"]);
   });
+
+  it("leaves keys named after Object.prototype members untouched", () => {
+    const out = applyVariantDefaults([[{ value: "constructor" }, { value: "toString" }, { value: "valueOf" }]]);
+    expect(out[0][0].variants).toBeUndefined();
+    expect(out[0][1].variants).toBeUndefined();
+    expect(out[0][2].variants).toBeUndefined();
+  });
 });
 
 describe("shift mapping", () => {

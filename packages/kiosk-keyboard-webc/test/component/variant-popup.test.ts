@@ -21,6 +21,12 @@ const VARIANT_LAYOUT: LayoutDefinition = [
   [{ value: "{shift}", type: "modifier" }],
 ];
 
+/** A key whose shifted glyph is an explicit `shiftValue`, not the uppercased value. */
+const SHIFT_VALUE_LAYOUT: LayoutDefinition = [
+  [{ value: "1", shiftValue: "!", variants: ["¹", "½"] }],
+  [{ value: "{shift}", type: "modifier" }],
+];
+
 function pointerDown(el: HTMLElement): void {
   el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true, button: 0, pointerId: 1 }));
 }
@@ -211,6 +217,69 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(input.value, "no second char from the key beneath").to.equal("à");
   });
 
+  it("does not type the base glyph when a commit lands while the origin key is still held", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    // Finger 1 holds 'a' open and stays down; a second finger picks an option.
+    await holdOpen(requireKey(kb, "a"));
+    optionEls(kb)[0]!.click(); // ä
+    expect(input.value, "the option click committed the variant").to.equal("ä");
+
+    // Finger 1 now lifts off 'a'. Its release belongs to the gesture that opened
+    // the popup, so it must stay swallowed even though the popup already closed.
+    pointerUp();
+    requireKey(kb, "a").click();
+    expect(input.value, "the origin key's release did not also type the base glyph").to.equal("ä");
+  });
+
+  it("keeps the origin key's release suppressed when a second variant key is pressed", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    // Finger 1 holds 'a' open and stays down; a second finger presses another
+    // variant key. That press must not disarm finger 1's pending release-swallow.
+    await holdOpen(requireKey(kb, "a"));
+    requireKey(kb, "s").dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, composed: true, button: 0, pointerId: 2 }),
+    );
+
+    pointerUp(); // finger 1 lifts off 'a'
+    requireKey(kb, "a").click();
+    expect(input.value, "the opening gesture's release is still swallowed").to.equal("");
+  });
+
+  it("commits nothing when the gesture is canceled over an option", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+
+    // The browser aborts the touch (palm rejection, system gesture) while the
+    // finger happens to rest over an option. A cancel must never commit input.
+    const option = optionEls(kb)[1]!; // à
+    const o = option.getBoundingClientRect();
+    document.dispatchEvent(
+      new PointerEvent("pointercancel", {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: o.left + o.width / 2,
+        clientY: o.top + o.height / 2,
+        bubbles: true,
+      }),
+    );
+    await renderFinished();
+    expect(input.value, "a canceled gesture committed nothing").to.equal("");
+  });
+
+  it("never shows one key's glyphs under a popover anchored to another", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    await holdOpen(aKey);
+    pointerUp(); // sticky: 'a' popup stays open, anchored to 'a'
+
+    // A hold on a second variant key cannot re-anchor the already-open popover,
+    // so it must not swap that popover's glyphs to the second key's either.
+    await holdOpen(requireKey(kb, "s"));
+    expect(popoverEl(kb)!.opener, "popover still anchored to 'a'").to.equal(aKey);
+    expect(optionGlyphs(kb), "the anchored key's own glyphs are shown").to.deep.equal(["ä", "à", "â"]);
+    pointerUp();
+  });
+
   it("does not leak click-suppression to a different key", async () => {
     const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));
@@ -317,6 +386,34 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(popupEl(kb)).to.not.exist;
   });
 
+  it("leaves focus where an outside press moved it", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+    pointerUp();
+
+    // The user clicks a field outside the popup: the press moves focus there and
+    // light-dismisses the popup. Focus belongs to what the user pressed, so the
+    // popup must not pull it back to the origin key on its way out.
+    input.focus();
+    await delay(50);
+    input.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, composed: true }));
+    await delay(300);
+    expect(popupEl(kb), "the outside press dismissed the popup").to.not.exist;
+    expect(document.activeElement, "focus stayed on the input the user pressed").to.equal(input);
+  });
+
+  it("restores focus to the origin key when Escape closes the popup", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    await holdOpen(aKey);
+    pointerUp();
+
+    // Focus was inside the popup, so it has nowhere to go but back to the key.
+    keyDown(popupEl(kb)!, "Escape");
+    await renderFinished();
+    expect(kb.shadowRoot!.activeElement, "focus returned to the origin key").to.equal(aKey);
+  });
+
   it("opens on right-click (contextmenu)", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     const aKey = requireKey(kb, "a");
@@ -334,6 +431,19 @@ describe("kiosk-keyboard - accent-variant popup", () => {
 
     await holdOpen(requireKey(kb, "s"));
     expect(optionGlyphs(kb)).to.deep.equal(["ẞ", "Ś"]);
+    pointerUp();
+  });
+
+  it("names the popup with the key's explicit shiftValue while Shift is active", async () => {
+    const { kb } = await setupWithLayout(SHIFT_VALUE_LAYOUT);
+    requireKey(kb, "{shift}").click();
+    await renderFinished();
+
+    // Shift makes the key type its explicit shiftValue ("!"), so the popup's
+    // accessible name must say "!" rather than the uppercased raw value ("1").
+    await holdOpen(requireKey(kb, "1"));
+    const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "!");
+    expect(popupEl(kb)!.getAttribute("aria-label")).to.equal(expected);
     pointerUp();
   });
 

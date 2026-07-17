@@ -1686,7 +1686,9 @@ export default class KioskKeyboard extends Control {
     if (!variants || variants.length === 0) return null;
     const shift = this._isShiftActive();
     return {
-      base: shift ? toShiftVariant(key.value) : key.value,
+      // The shifted base is what the key itself types under Shift: an explicit
+      // shiftValue when the key declares one, else the uppercased value.
+      base: shift ? (key.shiftValue ?? toShiftVariant(key.value)) : key.value,
       glyphs: shift ? toShiftVariants(variants) : [...variants],
     };
   }

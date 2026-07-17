@@ -69,6 +69,13 @@ QUnit.test("accepts a custom table", (assert) => {
   assert.deepEqual(out[0][0].variants, ["χ"], "custom table entry applied");
 });
 
+QUnit.test("leaves keys named after Object.prototype members untouched", (assert) => {
+  const out = applyVariantDefaults([[{ value: "constructor" }, { value: "toString" }, { value: "valueOf" }]]);
+  assert.strictEqual(out[0][0].variants, undefined, "'constructor' does not resolve Object.prototype.constructor");
+  assert.strictEqual(out[0][1].variants, undefined, "'toString' untouched");
+  assert.strictEqual(out[0][2].variants, undefined, "'valueOf' untouched");
+});
+
 QUnit.module("latin-variants - shift mapping");
 
 QUnit.test("uppercases variants, mapping ß to the capital sharp S ẞ", (assert) => {
