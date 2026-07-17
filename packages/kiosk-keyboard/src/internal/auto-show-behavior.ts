@@ -35,7 +35,7 @@ interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" 
   _syncControls(): void;
   _resolveClaimableControl(target: EventTarget | null): Control | null;
   _wouldClaimInput(target: EventTarget | null): boolean;
-  _isNodeInVariantPopover(node: EventTarget | null): boolean;
+  _isNodeInVariantPopover(node: Node | null): boolean;
   _getKeyboardTypeSource(): KeyboardTypeSource;
   _setKeyboardTypeSource(source: KeyboardTypeSource): void;
 }
@@ -150,9 +150,8 @@ export default class AutoShowBehavior extends BaseObject {
     // Fast path: focus moving to an input this keyboard would claim
     if (this._host._wouldClaimInput(related)) return;
 
-    // Fast path: focus moving into the keyboard's own accent-variant popover.
-    // Its options render into the static area (outside the keyboard DOM), so
-    // opening it must not close the docked keyboard behind it.
+    // Fast path: focus moving into the keyboard's own accent-variant popover,
+    // whose options render into the static area outside the keyboard DOM.
     if (this._host._isNodeInVariantPopover(related)) return;
 
     // Defer to next frame so activeElement has settled, then re-check.
