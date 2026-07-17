@@ -19,9 +19,9 @@ import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
  * the parent changes. Renders a flat DOM structure: rows of key divs with
  * role="button". No child UI5 controls - all keys are plain DOM via event delegation.
  *
- * Split into small hook methods following the InputBaseRenderer pattern so that
- * extending renderers can selectively override individual aspects (classes,
- * attributes, key content, etc.) without rewriting the entire renderer.
+ * Split into small per-concern methods (following the InputBaseRenderer style)
+ * so each aspect - root classes and attributes, row markup, key markup, key
+ * content - reads as a named unit instead of one long render().
  */
 const KioskKeyboardRenderer = {
   apiVersion: 4,
@@ -62,11 +62,19 @@ const KioskKeyboardRenderer = {
 
   /** ARIA/data attributes on the root `<div>`. */
   writeRootAttributes(rm: RenderManager, oControl: KioskKeyboard): void {
-    rm.accessibilityState(oControl, {
+    // aria-labelledby (auto-emitted from the association) wins over aria-label per
+    // WAI-ARIA: keep an explicit ariaLabel, but drop the default when labelledBy names the group.
+    const mAccessibility: { role: string; roledescription: string; label?: string } = {
       role: "group",
-      label: oControl.getAriaLabel() || getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
       roledescription: getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
-    });
+    };
+    const sExplicitLabel = oControl.getAriaLabel();
+    if (sExplicitLabel) {
+      mAccessibility.label = sExplicitLabel;
+    } else if (oControl.getAriaLabelledBy().length === 0) {
+      mAccessibility.label = getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard");
+    }
+    rm.accessibilityState(oControl, mAccessibility);
     // Single source of truth with the imperative path in `_setActiveTarget`,
     // which also writes `aria-controls` from `_getActiveTargetId()`. Using the
     // raw association id keeps the rendered and post-render values in sync even
@@ -78,7 +86,7 @@ const KioskKeyboardRenderer = {
     rm.attr("data-sap-ui-fastnavgroup", "true");
   },
 
-  /** The row loop - override to add toolbar, extra sections, etc. */
+  /** The row loop: renders each layout row in order. */
   renderContent(rm: RenderManager, oControl: KioskKeyboard): void {
     const { _getResolvedLayout } = oControl._getRendererApi();
     const layout = _getResolvedLayout();
@@ -295,10 +303,11 @@ const KioskKeyboardRenderer = {
     return validateKeyIcon(icon, "icon");
   },
 
-  /** Render the icon element inside a key. Overridable by subclasses. */
+  /** Render the icon element inside a key. */
   renderKeyIcon(rm: RenderManager, _oControl: KioskKeyboard, icon: string): void {
     if (IconPool.isIconURI(icon)) {
-      rm.icon(icon, ["sapUiIcon", KIOSK_KEYBOARD_DOM.classes.keyIcon], { "aria-hidden": "true" });
+      // rm.icon already adds the `sapUiIcon` class for icon URIs.
+      rm.icon(icon, [KIOSK_KEYBOARD_DOM.classes.keyIcon], { "aria-hidden": "true" });
     } else {
       // Unicode / emoji - render as text span with icon class
       rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyIcon).attr("aria-hidden", "true").openEnd();
@@ -307,7 +316,7 @@ const KioskKeyboardRenderer = {
     }
   },
 
-  /** Render the label element inside a key. Overridable by subclasses. */
+  /** Render the label element inside a key. */
   renderKeyLabel(rm: RenderManager, _oControl: KioskKeyboard, key: KeyDefinition, label: string): void {
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
     if (isSingleGlyph(label)) {
@@ -333,7 +342,7 @@ const KioskKeyboardRenderer = {
     rm.close("span");
   },
 
-  /** Icon and/or text inside the key. Overridable by subclasses. */
+  /** Icon and/or text inside the key. */
   renderKeyContent(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, icon: string, label: string): void {
     if (icon) {
       this.renderKeyIcon(rm, oControl, icon);

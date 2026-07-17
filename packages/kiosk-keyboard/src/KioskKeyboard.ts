@@ -792,6 +792,8 @@ export default class KioskKeyboard extends Control {
   }
 
   override onAfterRendering(): void {
+    // apiVersion 4 may skip this hook on a parent-only re-render; safe because
+    // each external sync below is idempotent and independently event/observer-driven.
     this._keyGridNav.setRootRef(this.getDomRef() as HTMLElement | null);
     this._syncDockedDomState();
 
@@ -1619,15 +1621,14 @@ export default class KioskKeyboard extends Control {
   /**
    * Returns the internal renderer API object.
    *
-   * Exposes the five private helpers the renderer and tests need, without
-   * an unsafe `as unknown as` cast. TypeScript structurally checks the
-   * returned object literal against {@link RendererInternalApi} - if any
-   * method is renamed or its signature changes, this line produces a
-   * compile error.
+   * Exposes the five private helpers the renderer needs, without an unsafe
+   * `as unknown as` cast. TypeScript structurally checks the returned object
+   * literal against {@link RendererInternalApi} - if any method is renamed or
+   * its signature changes, this line produces a compile error.
    *
    * The object is lazily created and cached per instance.
    *
-   * @internal Used by KioskKeyboardRenderer and test helpers only.
+   * @internal Used by KioskKeyboardRenderer only.
    */
   _getRendererApi(): RendererInternalApi {
     if (!this._rendererApi) {
