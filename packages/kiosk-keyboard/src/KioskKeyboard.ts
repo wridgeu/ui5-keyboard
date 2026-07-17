@@ -55,6 +55,19 @@ import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-co
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
 /**
+ * Whether a simulated touch event stands for a non-primary mouse button.
+ *
+ * UI5's EventSimulation binds the simulated touchstart/touchend to
+ * mousedown/mouseup for every button, so the right-click that opens the accent
+ * popup also reaches the touch handlers. The fixed event carries the original
+ * `button`; a genuine touch has none, so it reads as primary.
+ */
+function isSecondaryPress(event: Event): boolean {
+  const { button } = event as MouseEvent;
+  return typeof button === "number" && button > 0;
+}
+
+/**
  * On-screen virtual keyboard control for kiosk and touch applications.
  *
  * Renders an interactive keyboard that types into a target UI5 input control.
@@ -1820,6 +1833,12 @@ export default class KioskKeyboard extends Control {
     // (including gaps between keys), so the target input keeps focus.
     event.preventDefault();
 
+    // EventSimulation maps EVERY mouse button's mousedown onto this simulated
+    // touchstart, so only a primary press may drive a key: a right-click is the
+    // context-menu gesture (`oncontextmenu`), not a key press. A genuine touch
+    // carries no `button`, and so passes.
+    if (isSecondaryPress(event)) return;
+
     const el = this._resolveKeyElementFromEventTarget(event.target);
     if (el) {
       // A press on any key while the accent popup is open dismisses it (the
@@ -1865,6 +1884,10 @@ export default class KioskKeyboard extends Control {
    * event that jQuery's tap plugin depends on.
    */
   ontouchend(event: Event): void {
+    // The mirror of the ontouchstart filter: a non-primary release is not a key
+    // activation, and must not tear down a primary press that is still live.
+    if (isSecondaryPress(event)) return;
+
     const pressed = this._clearPressedKeyState();
 
     if (!this.getEnabled() || !pressed) return;

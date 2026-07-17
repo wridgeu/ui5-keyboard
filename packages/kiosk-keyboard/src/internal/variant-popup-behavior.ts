@@ -120,13 +120,19 @@ export default class VariantPopupBehavior {
   /** The key the open popup belongs to; focus returns here on dismiss. */
   private _anchorKeyEl: HTMLElement | null = null;
   /**
-   * Set while the popup is open so the lift-off tap on the origin key is
-   * swallowed instead of inserting the base glyph. Gated by `_originKeyValue`
-   * and cleared on teardown, so an unrelated key's release is never swallowed.
+   * Set while a press-opened popup owes its origin key a swallowed lift-off, so
+   * that tap does not also insert the base glyph. Gated by `_originKeyValue`,
+   * and spent by `shouldSuppressRelease`, so an unrelated key's release is never
+   * swallowed.
    */
   private _consumeRelease = false;
   /** `data-key` of the key the open popup belongs to; gates release suppression. */
   private _originKeyValue: string | null = null;
+  /**
+   * Whether the press that armed the gesture is still down. The right-click path
+   * opens with no press at all, and so owes no release.
+   */
+  private _pressLive = false;
 
   constructor(host: VariantPopupHost) {
     this._host = host;
@@ -146,6 +152,7 @@ export default class VariantPopupBehavior {
     if (!enabled) return;
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     if (this.isOpen()) return;
+    this._pressLive = true;
     this._armedKeyEl = keyEl;
     this._arm();
   }
@@ -166,6 +173,7 @@ export default class VariantPopupBehavior {
   stop(): void {
     this._clearHold();
     this._armedKeyEl = null;
+    this._pressLive = false;
   }
 
   /**
@@ -195,8 +203,7 @@ export default class VariantPopupBehavior {
   }
 
   destroy(): void {
-    this._clearHold();
-    this._armedKeyEl = null;
+    this.stop();
     // Release interaction state without closing (async) or destroying the
     // Popover: the control auto-destroys the reused instance via its hidden
     // `_variantPopover` aggregation on `exit`.
@@ -240,7 +247,8 @@ export default class VariantPopupBehavior {
 
   private _open(anchorKeyEl: HTMLElement, { base, glyphs }: VariantResolution): void {
     this._anchorKeyEl = anchorKeyEl;
-    this._consumeRelease = true;
+    // Only a press owes a lift-off; the right-click path has none to swallow.
+    this._consumeRelease = this._pressLive;
     this._originKeyValue = anchorKeyEl.dataset.key ?? null;
     this._rtl = getComputedStyle(anchorKeyEl).direction === "rtl";
     this._activeIndex = 0;
@@ -471,8 +479,14 @@ export default class VariantPopupBehavior {
   }
 
   private _teardownOpenState(): void {
-    this._consumeRelease = false;
-    this._originKeyValue = null;
+    // Only drop the release suppression once the press that armed it has ended.
+    // A commit or dismissal while that press is still down (a second finger
+    // picking an option) leaves it armed, so the opening gesture's own lift-off
+    // still does not insert the base glyph; `shouldSuppressRelease` spends it.
+    if (!this._pressLive) {
+      this._consumeRelease = false;
+      this._originKeyValue = null;
+    }
     document.removeEventListener("touchmove", this._onDocTouchMove);
     document.removeEventListener("touchend", this._onDocTouchEnd);
     this._gridDom?.removeEventListener("keydown", this._onKeydown);
