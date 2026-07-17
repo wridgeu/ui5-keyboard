@@ -80,3 +80,16 @@ export function toShiftVariants(variants: readonly string[]): string[] {
   }
   return out;
 }
+
+/**
+ * The Shift/Caps form of a single key's base `value`, given its optional explicit
+ * `shiftValue`. Under CapsLock the ß key resolves to the capital sharp S ẞ
+ * (U+1E9E), bypassing an explicit "?" shiftValue (CapsLock is uppercase-mode);
+ * otherwise an explicit shiftValue wins, and a lone cased character falls back to
+ * its uppercase. Multi-character values with no shiftValue are returned unchanged.
+ */
+export function shiftedGlyph(value: string, shiftValue: string | undefined, caps: boolean): string {
+  if (caps && value === "ß") return toShiftVariant(value);
+  if (shiftValue) return shiftValue;
+  return value.length === 1 && value.trim() ? value.toUpperCase() : value;
+}
