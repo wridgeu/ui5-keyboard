@@ -315,6 +315,13 @@ export default class VariantPopupBehavior {
     }
     this._popover = popover;
 
+    // Mark the anchor so its pressed scale() transform is neutralized while the
+    // popup is open. openBy measures this key's rect as the Popover's follow-of
+    // docking baseline; without this the rect shrinks under the pressed transform
+    // and then grows back when the press releases, and the follow-of re-docks the
+    // popup a few pixels sideways. The marker must be on before openBy so the
+    // baseline is already the resting box.
+    anchorKeyEl.classList.add(KIOSK_KEYBOARD_DOM.classes.keyVariantAnchor);
     popover.openBy(anchorKeyEl);
 
     // Keyboard navigation lives on the grid: it intercepts Arrow/Home/End/Enter/
@@ -465,6 +472,10 @@ export default class VariantPopupBehavior {
     if (!popover) return;
     const anchor = this._anchorKeyEl;
     const hadFocus = popover.getDomRef()?.contains(document.activeElement) ?? false;
+
+    // Restore the anchor key's normal pressed transform: the popup no longer
+    // docks to it, so its rect is free to change again.
+    anchor?.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyVariantAnchor);
 
     this._teardownOpenState();
     this._anchorKeyEl = null;

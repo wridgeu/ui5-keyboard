@@ -656,6 +656,36 @@ QUnit.test("the popover is owned in the hidden _variantPopover aggregation and r
   cleanup(kb, input);
 });
 
+QUnit.test("the held anchor key's pressed transform is neutralized while its popup is open", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+
+  await holdOpen(kb, aKey);
+  assert.ok(variantPopup(kb).isOpen(), "the variant popup opened on the hold");
+  assert.ok(aKey.classList.contains(DOM.classes.keyPressed), "the held anchor key still carries the pressed state");
+
+  // The popup is a static-area sap.m.Popover docked to this key via openBy. The
+  // pressed scale() shrinks the key's rect; when the press releases the rect
+  // grows back and the Popover's follow-of re-docks it, nudging the popup a few
+  // pixels sideways. Marking the anchor neutralizes that transform for as long
+  // as the popup is open, so the docking rect stays put across the release.
+  assert.ok(aKey.classList.contains(DOM.classes.keyVariantAnchor), "the anchor key is marked while its popup is open");
+  assert.strictEqual(
+    getComputedStyle(aKey).transform,
+    "none",
+    "the marked anchor carries no transform, so its rect is stable across the release",
+  );
+
+  release(kb, aKey);
+  keydownOnPopup("Escape");
+  assert.notOk(variantPopup(kb).isOpen(), "the popup dismissed");
+  assert.notOk(
+    aKey.classList.contains(DOM.classes.keyVariantAnchor),
+    "dismissing clears the anchor marker for the next open",
+  );
+  cleanup(kb, input);
+});
+
 QUnit.test("the popover density stays proportional to the keyboard key size", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const root = kb.getDomRef() as HTMLElement;
