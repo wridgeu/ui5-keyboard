@@ -357,7 +357,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
 
       const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "3").replace("{1}", "a");
       expect(expected).to.equal("3 accents (a)");
-      expect(popupEl(kb)!.getAttribute("aria-label")).to.equal(expected);
+      expect(popoverEl(kb)!.accessibleName).to.equal(expected);
       pointerUp();
     } finally {
       setI18nResolver(null);
@@ -461,7 +461,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     // accessible name must say "!" rather than the uppercased raw value ("1").
     await holdOpen(requireKey(kb, "1"));
     const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "!");
-    expect(popupEl(kb)!.getAttribute("aria-label")).to.equal(expected);
+    expect(popoverEl(kb)!.accessibleName).to.equal(expected);
     pointerUp();
   });
 
@@ -616,6 +616,31 @@ describe("kiosk-keyboard - accent-variant popup", () => {
 
     expect(aKey.getBoundingClientRect().width, "the transform shrank the rendered rect").to.be.below(aKey.offsetWidth);
     expect(optionEls(kb)[0]!.offsetWidth, "option follows the resting key width").to.equal(aKey.offsetWidth);
+    pointerUp();
+  });
+
+  it("passes an axe-core audit with the popup open", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    // The suite's other audit renders a plain keyboard and never opens the popup,
+    // so the popover's own tree would otherwise ship unaudited.
+    await holdOpen(requireKey(kb, "a"));
+    await expect(kb).to.be.accessible();
+    pointerUp();
+  });
+
+  it("groups the options as a toolbar named once, by the popover", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+
+    const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "3").replace("{1}", "a");
+    expect(popupEl(kb)!.getAttribute("role"), "the option container is a toolbar").to.equal("toolbar");
+    expect(popoverEl(kb)!.accessibleName, "the popover carries the group name").to.equal(expected);
+    // The popover is the single name source; naming the toolbar with the same
+    // text as well makes assistive technology announce it twice.
+    expect(popupEl(kb)!.hasAttribute("aria-label"), "the toolbar does not repeat the popover's name").to.equal(false);
+    for (const option of optionEls(kb)) {
+      expect(option.getAttribute("role"), "options stay framework buttons").to.not.equal("option");
+    }
     pointerUp();
   });
 

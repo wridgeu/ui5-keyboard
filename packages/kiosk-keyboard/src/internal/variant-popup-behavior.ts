@@ -115,7 +115,7 @@ export default class VariantPopupBehavior {
   /** The option grid's root element, host of the keyboard-navigation listener. */
   private _gridDom: HTMLElement | null = null;
   private _activeIndex = 0;
-  /** Whether the open popup lays out right-to-left (drives arrow direction). */
+  /** Whether the open popup lays out right-to-left; drives both the option order and the arrow polarity. */
   private _rtl = false;
   /** The key the open popup belongs to; focus returns here on dismiss. */
   private _anchorKeyEl: HTMLElement | null = null;
@@ -306,8 +306,6 @@ export default class VariantPopupBehavior {
     const firstButton = this._buttons[0];
     if (firstButton) popover.setInitialFocus(firstButton);
 
-    // Reused instance: toggle (not add) so a later LTR open clears a prior RTL.
-    popover.toggleStyleClass("sapUiRtl", this._rtl);
     // The control-owned getter syncs the ambient content density. When none is
     // inherited, derive one from the current key size (the keyboard's own
     // container-query scaling sets no density class to inherit).
@@ -336,6 +334,19 @@ export default class VariantPopupBehavior {
         : "";
       gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyWidth}px`);
       gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", heightToken || `${keyHeight}px`);
+      // Group the options for assistive technology, matching the sibling webc
+      // twin. `sap/m/FlexBox` exposes no role, and its renderer emits no
+      // accessibility state, so the role is set on the element here; the grid is
+      // rebuilt on every open and never re-rendered within a session. The
+      // Popover's `aria-labelledby` already names the group, so the toolbar
+      // itself needs no name.
+      gridDom.setAttribute("role", "toolbar");
+      // Mirror the option order from the same direction the arrow polarity reads,
+      // so ArrowLeft always moves focus visually leftward. The popover renders in
+      // the static area and inherits no direction from the keyboard, and UI5's own
+      // arrow remap keys on the page-global RTL config, which cannot see a `dir`
+      // applied locally to the keyboard.
+      gridDom.style.direction = this._rtl ? "rtl" : "ltr";
       gridDom.addEventListener("keydown", this._onKeydown);
     }
 

@@ -429,6 +429,26 @@ QUnit.test("a touch drag-release over an option commits that glyph", async (asse
   fixture.style.cssText = restoreFixture;
 });
 
+QUnit.test("the options are grouped as a toolbar named by the popover", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+
+  const popup = getPopup();
+  assert.strictEqual(popup!.getAttribute("role"), "toolbar", "the option container is a toolbar");
+  // The Popover is a role="dialog" overlay named through aria-labelledby; it is
+  // the single name source, so the toolbar carries no name of its own. Mirrors
+  // the sibling webc twin's dialog > toolbar > button[] shape.
+  const popover = popup!.closest(".sapMPopover");
+  const labelId = popover?.getAttribute("aria-labelledby");
+  assert.ok(labelId, "the popover is named through aria-labelledby");
+  assert.ok(document.getElementById(labelId!)?.textContent, "the name resolves to non-empty text");
+  assert.strictEqual(popup!.hasAttribute("aria-label"), false, "the toolbar does not repeat the popover's name");
+
+  release(kb, aKey);
+  cleanup(kb, input);
+});
+
 QUnit.test("RTL reverses ArrowLeft/ArrowRight option navigation", async (assert) => {
   const { kb, input } = await makeKeyboard();
   // The popup reads the anchor key's writing direction at open, so force RTL on
@@ -437,6 +457,13 @@ QUnit.test("RTL reverses ArrowLeft/ArrowRight option navigation", async (assert)
   const aKey = getRequiredKeyElement(kb, "a");
   await holdOpen(kb, aKey);
   release(kb, aKey);
+  // Layout and arrow polarity must come from the same source. Asserting only the
+  // focus move would pass with the options still laid out left-to-right, which
+  // would send ArrowLeft's focus visually rightward.
+  assert.ok(
+    getOptions()[1]!.getBoundingClientRect().left < getOptions()[0]!.getBoundingClientRect().left,
+    "the options lay out right-to-left (option 1 sits left of option 0)",
+  );
   // Options: à(0) á(1) â(2) ...; in RTL, ArrowLeft advances to the visually-next
   // (higher-index) option, the mirror of LTR where ArrowLeft would stay at 0.
   keydownOnPopup("ArrowLeft");

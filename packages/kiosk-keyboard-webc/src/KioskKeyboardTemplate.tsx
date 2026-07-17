@@ -149,7 +149,6 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             class={KIOSK_KEYBOARD_DOM.classes.variantPopup}
             part="variant-popup"
             role="toolbar"
-            aria-label={variantPopup.label}
             style={`--kiosk-keyboard-variant-option-width: ${variantPopup.anchorKeyWidth}px`}
             onClick={this._boundOnVariantClick}
             onKeyDown={this._boundOnVariantKeyDown}
