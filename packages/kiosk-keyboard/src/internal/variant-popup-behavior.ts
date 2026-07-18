@@ -184,6 +184,8 @@ export default class VariantPopupBehavior {
   openFor(keyEl: HTMLElement): void {
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     this._clearHold();
+    // This explicit gesture supersedes a re-anchor parked by an earlier hold.
+    this._pendingAnchorKeyEl = null;
     this._armedKeyEl = keyEl;
     this._openArmed();
   }
@@ -195,6 +197,16 @@ export default class VariantPopupBehavior {
     if (!pending || !document.contains(pending)) return;
     this._armedKeyEl = pending;
     this._openArmed();
+  }
+
+  /**
+   * Abandon a re-anchor parked by a hold that the gesture never completed (the
+   * browser cancelled the touch, or the window lost focus mid-press). Distinct
+   * from `stop()`, which also runs on a normal release, where a parked
+   * re-anchor must survive until the framework reports the close.
+   */
+  cancelPending(): void {
+    this._pendingAnchorKeyEl = null;
   }
 
   /** Cancel a pending hold. Safe when idle. Does not close an already-open popup. */

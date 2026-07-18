@@ -998,3 +998,82 @@ QUnit.test("a short tap on a second variant key still dismisses the popup and ty
 
   cleanup(kb, input);
 });
+
+QUnit.test("a drag-away release on a second variant key still dismisses the popup", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const oKey = getRequiredKeyElement(kb, "o");
+  const pKey = getRequiredKeyElement(kb, "p");
+
+  await holdOpen(kb, aKey);
+  release(kb, aKey); // sticky: the popup stays open, anchored to 'a'
+
+  // The press skipped the press-time dismissal in case it became a re-anchor.
+  // Dragging off the key and releasing elsewhere is a cancelled tap, not a
+  // re-anchor, so the release must still close the popup even though it lands
+  // on a different key than it started on.
+  press(kb, oKey);
+  release(kb, pKey);
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  assert.notOk(variantPopup(kb).isOpen(), "the drag-away release dismissed the popup");
+  assert.notOk(aKey.classList.contains(DOM.classes.keyVariantAnchor), "the first key is no longer the anchor");
+
+  cleanup(kb, input);
+});
+
+QUnit.test("a cancelled press mid-re-anchor does not open the parked popup", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const oKey = getRequiredKeyElement(kb, "o");
+
+  await holdOpen(kb, aKey);
+  release(kb, aKey); // sticky: the popup stays open, anchored to 'a'
+
+  // Let the hold park the re-anchor, then have the browser take the gesture
+  // away while the previous popup is still closing. The parked open belongs to
+  // a gesture that no longer exists, so it must not surface when the close lands.
+  press(kb, oKey);
+  await new Promise((resolve) => setTimeout(resolve, VARIANT_HOLD_MS + 40));
+  (kb as unknown as { ontouchcancel(): void }).ontouchcancel();
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  assert.notOk(variantPopup(kb).isOpen(), "the cancelled gesture opened nothing");
+  assert.notOk(oKey.classList.contains(DOM.classes.keyVariantAnchor), "the second key is not anchored");
+
+  cleanup(kb, input);
+});
+
+QUnit.test("a held Backspace that declares variants re-anchors instead of stranding the popup", async (assert) => {
+  // A consumer layout may declare variants on an action key. Holding it arms
+  // both the auto-repeat and the variant hold: the delete still repeats, and
+  // the popup follows the held key rather than staying on the previous anchor.
+  const layout: LayoutDefinition = [
+    [
+      { value: "a", variants: ["ä", "à"] },
+      { value: "{backspace}", type: "action", variants: ["x", "y"] },
+    ],
+  ];
+  const input = new Input({ value: "abc" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ controls: [input.getId()], instanceLayouts: { qwerty: layout }, layout: "qwerty" });
+  await placeAndWait(kb);
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(3, 3);
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  const backspaceKey = getRequiredKeyElement(kb, "{backspace}");
+  await holdOpen(kb, aKey);
+  release(kb, aKey); // sticky: the popup stays open, anchored to 'a'
+
+  await holdOpen(kb, backspaceKey);
+  release(kb, backspaceKey);
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  assert.notOk(aKey.classList.contains(DOM.classes.keyVariantAnchor), "the popup did not stay stranded on 'a'");
+  assert.ok(backspaceKey.classList.contains(DOM.classes.keyVariantAnchor), "it re-anchored to the held key");
+  assert.deepEqual(getOptions().map(glyphOf), ["x", "y"], "showing the held key's own variants");
+  assert.notStrictEqual(input.getValue(), "abc", "the held Backspace still deleted");
+
+  cleanup(kb, input);
+});
