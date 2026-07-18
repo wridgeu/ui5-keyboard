@@ -90,6 +90,26 @@ function liveRegionText(kb: KioskKeyboard): string {
   return kb.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.liveRegion}`)?.textContent?.trim() ?? "";
 }
 
+/** One render turn, for polling an asynchronous re-anchor. */
+async function aTick(): Promise<void> {
+  await delay(10);
+  await renderFinished();
+}
+
+/**
+ * The invariant a re-anchor must never break: whatever key the popover is
+ * anchored to, the options on show are that key's own variants. Tolerates the
+ * popover being absent, which is the gap between the two sessions.
+ */
+function assertGlyphsMatchOpener(kb: KioskKeyboard, aKey: HTMLElement, sKey: HTMLElement): void {
+  const opener = popoverEl(kb)?.opener;
+  if (opener === undefined) return;
+  const glyphs = optionGlyphs(kb);
+  if (glyphs.length === 0) return;
+  if (opener === aKey) expect(glyphs, "'a' opener shows 'a' glyphs").to.deep.equal(["ä", "à", "â"]);
+  if (opener === sKey) expect(glyphs, "'s' opener shows 's' glyphs").to.deep.equal(["ß", "ś"]);
+}
+
 /** Poll until the ui5-popover leaves the shadow root (its close is async). */
 async function waitForPopoverGone(kb: KioskKeyboard): Promise<void> {
   for (let i = 0; i < 100; i++) {
@@ -287,15 +307,40 @@ describe("kiosk-keyboard - accent-variant popup", () => {
   it("never shows one key's glyphs under a popover anchored to another", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     const aKey = requireKey(kb, "a");
+    const sKey = requireKey(kb, "s");
     await holdOpen(aKey);
     pointerUp(); // sticky: 'a' popup stays open, anchored to 'a'
 
-    // A hold on a second variant key cannot re-anchor the already-open popover,
-    // so it must not swap that popover's glyphs to the second key's either.
-    await holdOpen(requireKey(kb, "s"));
-    expect(popoverEl(kb)!.opener, "popover still anchored to 'a'").to.equal(aKey);
-    expect(optionGlyphs(kb), "the anchored key's own glyphs are shown").to.deep.equal(["ä", "à", "â"]);
+    // A hold on a second variant key re-anchors the popover. The glyphs and the
+    // opener move together: at no observed step may one key's glyphs sit under a
+    // popover anchored to the other.
+    await holdOpen(sKey);
+    for (let i = 0; i < 40 && popoverEl(kb)?.opener !== sKey; i++) {
+      assertGlyphsMatchOpener(kb, aKey, sKey);
+      await aTick();
+    }
+    assertGlyphsMatchOpener(kb, aKey, sKey);
+    expect(popoverEl(kb)!.opener, "popover re-anchored to 's'").to.equal(sKey);
+    expect(optionGlyphs(kb), "the re-anchored key's own glyphs are shown").to.deep.equal(["ß", "ś"]);
     pointerUp();
+  });
+
+  it("a right-click on a second variant key re-anchors the popover", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    const sKey = requireKey(kb, "s");
+
+    rightClick(aKey);
+    await renderFinished();
+    expect(optionGlyphs(kb), "popup opened on the first key").to.deep.equal(["ä", "à", "â"]);
+
+    rightClick(sKey);
+    for (let i = 0; i < 40 && popoverEl(kb)?.opener !== sKey; i++) {
+      assertGlyphsMatchOpener(kb, aKey, sKey);
+      await aTick();
+    }
+    expect(popoverEl(kb)!.opener, "popover re-anchored to 's'").to.equal(sKey);
+    expect(optionGlyphs(kb), "the second key's variants are offered").to.deep.equal(["ß", "ś"]);
   });
 
   it("does not leak click-suppression to a different key", async () => {

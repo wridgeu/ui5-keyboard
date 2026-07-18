@@ -100,6 +100,12 @@ export class VariantPopupController {
    * `openPopoverAfterRender`, so an unrelated host re-render never steals focus.
    */
   private _focusPending = false;
+  /**
+   * The key waiting to claim the popup while the previous session closes. The
+   * popover only takes a new opener on the render after it is un-rendered, so a
+   * re-anchor parks the new key here and opens it from the shared teardown.
+   */
+  private _pendingKeyEl: HTMLElement | null = null;
 
   private readonly _onPointerDown = (e: Event): void => {
     if (e instanceof PointerEvent) this._start(e);
@@ -185,6 +191,22 @@ export class VariantPopupController {
     this._host.setPopupState(state);
     this._focusPending = true;
     this._host.announce(state.label);
+    return true;
+  }
+
+  /**
+   * Opens `keyEl` once any live popup has closed. The popover only takes a new
+   * `opener` on the render that follows it being un-rendered, so overwriting the
+   * state while it is open would swap the glyphs under the previous anchor.
+   * Returns whether the key will open.
+   */
+  private _requestOpen(keyEl: HTMLElement): boolean {
+    const state = this._host.getPopupState();
+    if (!state) return this.openFor(keyEl);
+    if (state.anchorKeyId === keyEl.id) return false;
+    if (!this._host.resolveOpenState(keyEl)) return false;
+    this._pendingKeyEl = keyEl;
+    this.close();
     return true;
   }
 
@@ -362,6 +384,13 @@ export class VariantPopupController {
     // (Escape, keyboard commit, option click). An outside press that moved focus
     // elsewhere keeps it there.
     if (hadFocus) this._host.focusKey(state.anchorKeyId);
+
+    // Hand the popup to a key that asked for it while this one was closing. The
+    // state write above un-rendered the popover, so the next render builds one
+    // whose `open` is false and which therefore takes the new anchor as opener.
+    const pending = this._pendingKeyEl;
+    this._pendingKeyEl = null;
+    if (pending?.isConnected) this.openFor(pending);
   }
 
   // ── Gesture detection ──
@@ -377,13 +406,19 @@ export class VariantPopupController {
     if (e.button > 0) return; // primary press only (0 for touch/pen/left mouse)
     const keyEl = this._variantKey(e.target);
     if (!keyEl) return;
-    // An open popup owns the gesture: a second press cannot re-anchor the live
-    // popover, so arm nothing. The press still reaches `_onKeyClick`, which
-    // dismisses and types. Only the suppression needs settling: while the
-    // opening press is still down a second finger must not disarm it, but once
-    // that press has ended this is a new tap, which owes no release-swallow and
-    // must not have its click eaten by the previous gesture's.
-    if (this._host.getPopupState()) {
+    // A press that lands while a popup is open arms a re-anchor only when it is
+    // a fresh gesture on a different key: this press is an outside press, so the
+    // live popover dismisses itself well before the hold elapses, and the hold
+    // then opens on the new key. Two cases must not arm. The key that already
+    // owns the popup keeps it, so a repeat press does not restart the session
+    // under the user's focus. And a second finger landing while the opening
+    // press is still down is multi-touch, not a retarget: arming would disarm
+    // finger one's pending release-swallow. Either way the press still reaches
+    // `_onKeyClick`, which dismisses and types; only the suppression needs
+    // settling, since a tap after the opening press ended owes no
+    // release-swallow and must not have its click eaten by the previous one's.
+    const openAnchorKeyId = this._host.getPopupState()?.anchorKeyId;
+    if (openAnchorKeyId !== undefined && (openAnchorKeyId === keyEl.id || this._pointerId !== null)) {
       if (this._pointerId === null) this._clearSuppression();
       return;
     }
@@ -399,7 +434,7 @@ export class VariantPopupController {
     const keyEl = this._keyEl;
     if (!keyEl) return;
     keyEl.removeEventListener("pointerleave", this._onPointerLeave);
-    if (this.openFor(keyEl)) {
+    if (this._requestOpen(keyEl)) {
       this._opened = true;
       this._suppressNextClick = true;
       this._originValue = keyEl.dataset.key ?? null;
@@ -411,14 +446,12 @@ export class VariantPopupController {
     const keyEl = this._variantKey(e.target);
     if (!keyEl) return;
     e.preventDefault();
-    // An open popup owns the gesture, mirroring `_start` and the sibling
-    // kiosk-keyboard package's `openFor`. A ui5-popover exempts its own opener
-    // from the outside-press dismissal, so a repeated right-click on the origin
-    // key arrives with the popup live and would otherwise reset the roving
-    // selection under the user's focus.
-    if (this._host.getPopupState()) return;
+    // A ui5-popover exempts its own opener from the outside-press dismissal, so
+    // a repeated right-click on the origin key arrives with the popup live;
+    // `_requestOpen` keeps it, rather than resetting the roving selection under
+    // the user's focus. On another key it re-anchors.
     this._cancelHold();
-    this.openFor(keyEl);
+    this._requestOpen(keyEl);
   }
 
   /**
