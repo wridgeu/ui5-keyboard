@@ -881,11 +881,6 @@ const RETARGET_SETTLE_MS = 400;
 const aVariants = LATIN_DIACRITIC_VARIANTS.a!;
 const oVariants = LATIN_DIACRITIC_VARIANTS.o!;
 
-/** The Popover the control owns in its hidden `_variantPopover` aggregation. */
-function getVariantPopover(kb: KioskKeyboard): Popover {
-  return (kb as unknown as { getAggregation(name: string): Popover }).getAggregation("_variantPopover");
-}
-
 /**
  * Index of the option carrying the roving selection. `ButtonType.Emphasized`
  * renders as `sapMBtnInverted`.
@@ -936,7 +931,7 @@ QUnit.test("a re-targeted popup survives the previous session's afterClose", asy
 
   // The afterClose belonging to the dismissed session must not tear down the
   // session that replaced it on the reused Popover.
-  getVariantPopover(kb).fireAfterClose();
+  getPopover(kb)!.fireAfterClose();
 
   assert.ok(getPopup(), "the popup is still open after the stale afterClose");
   assert.deepEqual(getOptions().map(glyphOf), [...oVariants], "it still offers the second key's variants");
@@ -957,6 +952,49 @@ QUnit.test("a right-click on the key that already owns the popup keeps the rovin
   await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
 
   assert.strictEqual(activeOptionIndex(), 1, "re-gesturing the same key does not restart the session");
+
+  cleanup(kb, input);
+});
+
+QUnit.test("a hold on a second variant key keeps the first popup up until it opens", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const oKey = getRequiredKeyElement(kb, "o");
+
+  await holdOpen(kb, aKey);
+  release(kb, aKey); // sticky: the popup stays open, anchored to 'a'
+
+  // The retarget is one gesture: the first key's options stay on screen while
+  // the second key's hold runs, rather than blanking at press time.
+  press(kb, oKey);
+  assert.ok(variantPopup(kb).isOpen(), "the popup is still owned mid-hold, not dismissed at press time");
+  assert.deepEqual(getOptions().map(glyphOf), [...aVariants], "the first key's options are still up mid-hold");
+
+  await new Promise((resolve) => setTimeout(resolve, VARIANT_HOLD_MS + 40));
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  assert.deepEqual(getOptions().map(glyphOf), [...oVariants], "the hold re-anchored the popup to the second key");
+  assert.ok(oKey.classList.contains(DOM.classes.keyVariantAnchor), "the second key is the anchor");
+
+  release(kb, oKey);
+  cleanup(kb, input);
+});
+
+QUnit.test("a short tap on a second variant key still dismisses the popup and types", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const oKey = getRequiredKeyElement(kb, "o");
+
+  await holdOpen(kb, aKey);
+  release(kb, aKey); // sticky: the popup stays open, anchored to 'a'
+
+  // Too short to be a retarget: the tap dismisses the popup and types, as a tap
+  // on any other key does.
+  simulateTap(kb, oKey);
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  assert.strictEqual(input.getValue(), "o", "the dismissing tap also typed");
+  assert.notOk(variantPopup(kb).isOpen(), "the popup closed");
 
   cleanup(kb, input);
 });
