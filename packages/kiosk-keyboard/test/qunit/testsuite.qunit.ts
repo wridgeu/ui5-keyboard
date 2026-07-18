@@ -133,6 +133,9 @@ sap.ui.define([], () => {
       "KioskKeyboard-capslock-sharp-s": {
         title: "QUnit tests for ui5.kiosk - CapsLock emits ẞ from the base ß key",
       },
+      "KioskKeyboard-capslock-shiftvalue": {
+        title: "QUnit tests for ui5.kiosk - CapsLock is uppercase-mode, not a Shift alias",
+      },
     },
   };
 });

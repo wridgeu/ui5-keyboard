@@ -82,14 +82,27 @@ export function toShiftVariants(variants: readonly string[]): string[] {
 }
 
 /**
+ * Whether `glyph` carries case, i.e. has distinct lower and upper forms. Digits,
+ * punctuation and caseless scripts (kana, jamo, Arabic) are uncased.
+ */
+function isCased(glyph: string): boolean {
+  return glyph.toLowerCase() !== glyph.toUpperCase();
+}
+
+/**
  * The Shift/Caps form of a single key's base `value`, given its optional explicit
- * `shiftValue`. Under CapsLock the ß key resolves to the capital sharp S ẞ
- * (U+1E9E), bypassing an explicit "?" shiftValue (CapsLock is uppercase-mode);
- * otherwise an explicit shiftValue wins, and a lone cased character falls back to
- * its uppercase. Multi-character values with no shiftValue are returned unchanged.
+ * `shiftValue`. Shift types the explicit shiftValue verbatim. CapsLock is a case
+ * mode rather than a Shift alias: it uppercases the cased glyph the key
+ * contributes and ignores an uncased shiftValue, so a digit row stays on its
+ * digits and a caseless script is untouched. A lone cased character with no
+ * shiftValue falls back to its uppercase, ß to the capital sharp S ẞ (U+1E9E).
+ * Multi-character values with no shiftValue are returned unchanged.
  */
 export function shiftedGlyph(value: string, shiftValue: string | undefined, caps: boolean): string {
-  if (caps && value === "ß") return toShiftVariant(value);
+  if (caps) {
+    if (shiftValue && isCased(shiftValue)) return toShiftVariant(shiftValue);
+    return value.length === 1 && value.trim() ? toShiftVariant(value) : value;
+  }
   if (shiftValue) return shiftValue;
   return value.length === 1 && value.trim() ? value.toUpperCase() : value;
 }

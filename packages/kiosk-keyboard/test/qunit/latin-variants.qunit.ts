@@ -108,3 +108,20 @@ QUnit.test("a lone cased letter falls back to its uppercase; multi-char values a
   assert.strictEqual(shiftedGlyph(" ", undefined, false), " ", "whitespace value is returned unchanged");
   assert.strictEqual(shiftedGlyph("abc", undefined, false), "abc", "multi-char value with no shiftValue is unchanged");
 });
+
+QUnit.test("CapsLock ignores an uncased shiftValue and types the base (#176)", (assert) => {
+  assert.strictEqual(shiftedGlyph("1", "١", true), "1", "Caps + digit keeps the Latin digit, not the Arabic-Indic one");
+  assert.strictEqual(shiftedGlyph("1", "!", true), "1", "Caps + digit keeps the digit, not the symbol");
+  assert.strictEqual(shiftedGlyph(",", ";", true), ",", "Caps + punctuation keeps the base punctuation");
+  assert.strictEqual(shiftedGlyph("abc", undefined, true), "abc", "Caps on a multi-char value is unchanged");
+});
+
+QUnit.test("CapsLock uppercases a cased shiftValue (#176)", (assert) => {
+  assert.strictEqual(shiftedGlyph("e", "é", true), "É", "Caps + an accented-letter shiftValue uppercases it");
+  assert.strictEqual(shiftedGlyph("ü", "Ü", true), "Ü", "an already-uppercase shiftValue is preserved");
+});
+
+QUnit.test("CapsLock is a no-op in caseless scripts (#176)", (assert) => {
+  assert.strictEqual(shiftedGlyph("あ", "ぁ", true), "あ", "Caps + kana keeps the base kana");
+  assert.strictEqual(shiftedGlyph("ㅂ", "ㅃ", true), "ㅂ", "Caps + jamo keeps the base jamo");
+});
