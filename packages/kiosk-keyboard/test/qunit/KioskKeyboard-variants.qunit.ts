@@ -6,6 +6,7 @@ import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey, waitForRender
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
 import { insertText } from "ui5/kiosk/internal/input-operations";
 import { getText } from "ui5/kiosk/internal/i18n-registry";
+import { LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk/internal/latin-variants";
 import type { CompositionMiddleware, LayoutDefinition } from "ui5/kiosk/types";
 
 // Integration coverage for the long-press accent-variant popup: a hold on a key
@@ -866,5 +867,96 @@ QUnit.test("opening the variant popup keeps a docked auto-show keyboard open", a
   assert.ok(kb.isOpen(), "docked keyboard stays open while the variant popup is open");
 
   release(kb, aKey);
+  cleanup(kb, input);
+});
+
+// #175: a variant gesture on a second key re-anchors the popup rather than being
+// swallowed. The reused Popover hosts one session at a time, so the new anchor
+// claims it only after the framework has fired afterClose for the previous one;
+// the settle window below is real time (this suite forbids sinon fake timers) and
+// covers that close plus the Popover's own CLOSING poll.
+const RETARGET_SETTLE_MS = 400;
+
+/** The default table's variants for the two keys the re-anchor cases gesture on. */
+const aVariants = LATIN_DIACRITIC_VARIANTS.a!;
+const oVariants = LATIN_DIACRITIC_VARIANTS.o!;
+
+/** The Popover the control owns in its hidden `_variantPopover` aggregation. */
+function getVariantPopover(kb: KioskKeyboard): Popover {
+  return (kb as unknown as { getAggregation(name: string): Popover }).getAggregation("_variantPopover");
+}
+
+/**
+ * Index of the option carrying the roving selection. `ButtonType.Emphasized`
+ * renders as `sapMBtnInverted`.
+ */
+function activeOptionIndex(): number {
+  return getOptions().findIndex((option) => option.classList.contains("sapMBtnInverted"));
+}
+
+QUnit.module("KioskKeyboard accent-variant popup re-anchoring (#175)", {
+  afterEach() {
+    getPopup()?.remove();
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+QUnit.test("a right-click on a second variant key re-anchors the popup", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const oKey = getRequiredKeyElement(kb, "o");
+
+  rightClick(kb, aKey);
+  assert.deepEqual(getOptions().map(glyphOf), [...aVariants], "popup opened on the first key");
+
+  rightClick(kb, oKey);
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  assert.deepEqual(getOptions().map(glyphOf), [...oVariants], "the popup now offers the second key's variants");
+  assert.strictEqual(
+    document.querySelectorAll(DOM.selectors.variantPopup).length,
+    1,
+    "exactly one popup exists after the re-anchor",
+  );
+  assert.notOk(aKey.classList.contains(DOM.classes.keyVariantAnchor), "the first key is no longer the anchor");
+  assert.ok(oKey.classList.contains(DOM.classes.keyVariantAnchor), "the second key is the anchor");
+
+  cleanup(kb, input);
+});
+
+QUnit.test("a re-targeted popup survives the previous session's afterClose", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const oKey = getRequiredKeyElement(kb, "o");
+
+  rightClick(kb, aKey);
+  rightClick(kb, oKey);
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  // The afterClose belonging to the dismissed session must not tear down the
+  // session that replaced it on the reused Popover.
+  getVariantPopover(kb).fireAfterClose();
+
+  assert.ok(getPopup(), "the popup is still open after the stale afterClose");
+  assert.deepEqual(getOptions().map(glyphOf), [...oVariants], "it still offers the second key's variants");
+
+  cleanup(kb, input);
+});
+
+QUnit.test("a right-click on the key that already owns the popup keeps the roving selection", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+
+  rightClick(kb, aKey);
+  keydownOnPopup("ArrowRight");
+  await waitForRender();
+  assert.strictEqual(activeOptionIndex(), 1, "arrow moved the selection to the second option");
+
+  rightClick(kb, aKey);
+  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+
+  assert.strictEqual(activeOptionIndex(), 1, "re-gesturing the same key does not restart the session");
+
   cleanup(kb, input);
 });

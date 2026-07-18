@@ -133,14 +133,25 @@ export default class VariantPopupBehavior {
    * opens with no press at all, and so owes no release.
    */
   private _pressLive = false;
+  /**
+   * The key waiting to claim the popup while the previous session closes. The
+   * reused Popover hosts one session at a time, so a re-anchor parks the new key
+   * here and opens it from `afterClose`; opening synchronously would empty the
+   * still-visible overlay, whose content `_open` destroys and rebuilds.
+   */
+  private _pendingAnchorKeyEl: HTMLElement | null = null;
 
   constructor(host: VariantPopupHost) {
     this._host = host;
     this._onKeydown = (event) => this._handleKeydown(event);
     this._onDocTouchMove = (event) => this._handleDocTouchMove(event);
     this._onDocTouchEnd = (event) => this._handleDocTouchEnd(event);
-    // The framework closed the overlay (outside press / Escape): tear down and announce.
-    this._onAfterClose = () => this._dismiss(true);
+    // The framework closed the overlay (outside press / Escape): tear down and
+    // announce, then hand the Popover to a key that asked for it meanwhile.
+    this._onAfterClose = () => {
+      this._dismiss(true);
+      this._drainPending();
+    };
   }
 
   /**
@@ -159,13 +170,31 @@ export default class VariantPopupBehavior {
 
   /**
    * Opens the popup immediately for a key that declares variants (the
-   * right-click / context-menu path). A no-op for keys without variants.
+   * right-click / context-menu path). A no-op for keys without variants and for
+   * the key that already owns the popup, so a repeat gesture does not restart
+   * the session. On another key the popup re-anchors: the current session closes
+   * and the new key opens once the framework has fired `afterClose`.
    */
   openFor(keyEl: HTMLElement): void {
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
-    if (this.isOpen()) return;
+    if (this._popover) {
+      if (keyEl === this._anchorKeyEl) return;
+      this._clearHold();
+      this._pendingAnchorKeyEl = keyEl;
+      this._dismiss(true);
+      return;
+    }
     this._clearHold();
     this._armedKeyEl = keyEl;
+    this._openArmed();
+  }
+
+  /** Open the key parked by a re-anchor, now that the previous session has closed. */
+  private _drainPending(): void {
+    const pending = this._pendingAnchorKeyEl;
+    this._pendingAnchorKeyEl = null;
+    if (!pending || !document.contains(pending)) return;
+    this._armedKeyEl = pending;
     this._openArmed();
   }
 
@@ -187,8 +216,9 @@ export default class VariantPopupBehavior {
     return true;
   }
 
+  /** Stays true across a re-anchor, while the popup is between two keys. */
   isOpen(): boolean {
-    return this._popover !== null;
+    return this._popover !== null || this._pendingAnchorKeyEl !== null;
   }
 
   /**
@@ -197,6 +227,7 @@ export default class VariantPopupBehavior {
    * open. A no-op when closed.
    */
   dismissOpen(): boolean {
+    this._pendingAnchorKeyEl = null;
     if (!this._popover) return false;
     this._dismiss(true);
     return true;
@@ -204,6 +235,7 @@ export default class VariantPopupBehavior {
 
   destroy(): void {
     this.stop();
+    this._pendingAnchorKeyEl = null;
     // Release interaction state without closing (async) or destroying the
     // Popover: the control auto-destroys the reused instance via its hidden
     // `_variantPopover` aggregation on `exit`.
@@ -292,6 +324,44 @@ export default class VariantPopupBehavior {
       items: this._buttons,
     });
     grid.addStyleClass(KIOSK_KEYBOARD_DOM.classes.variantPopup);
+
+    // Publish the option footprint from the grid's own onAfterRendering, which
+    // Popup.open fires inline while rendering the content and before it positions
+    // the overlay. Sizing after openBy would leave the framework to dock, flip and
+    // point the arrow against theme-default button sizes, and re-dock only when
+    // the poll-based ResizeHandler catches up.
+    const keyboardRoot = anchorKeyEl.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
+    const heightToken = keyboardRoot
+      ? getComputedStyle(keyboardRoot).getPropertyValue("--ui5KioskKeyboard-keyHeight").trim()
+      : "";
+    grid.addEventDelegate(
+      {
+        onAfterRendering: () => {
+          const dom = grid.getDomRef();
+          if (!(dom instanceof HTMLElement)) return;
+          // Size each option to the anchor key's footprint. The static-area
+          // popover inherits none of the keyboard's key-size tokens, so both
+          // dimensions are set on the option grid: width as the resting px,
+          // height as the key-height token value read off the keyboard root.
+          // Glyph size tracks the popover's inherited key density.
+          dom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyWidth}px`);
+          dom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", heightToken || `${keyHeight}px`);
+          // Group the options for assistive technology, matching the sibling webc
+          // twin. `sap/m/FlexBox` exposes no role, and its renderer emits no
+          // accessibility state, so the role is set on the element here. The
+          // Popover's `aria-labelledby` already names the group, so the toolbar
+          // itself needs no name.
+          dom.setAttribute("role", "toolbar");
+          // Mirror the option order from the same direction the arrow polarity
+          // reads, so ArrowLeft always moves focus visually leftward. The popover
+          // renders in the static area and inherits no direction from the
+          // keyboard, and UI5's own arrow remap keys on the page-global RTL
+          // config, which cannot see a `dir` applied locally to the keyboard.
+          dom.style.direction = this._rtl ? "rtl" : "ltr";
+        },
+      },
+      this,
+    );
     popover.addContent(grid);
 
     // The localized "N variants for {base}" group name, built once and shared by
@@ -330,30 +400,6 @@ export default class VariantPopupBehavior {
     const gridDom = grid.getDomRef();
     if (gridDom instanceof HTMLElement) {
       this._gridDom = gridDom;
-      // Size each option to the anchor key's footprint. The static-area popover
-      // inherits none of the keyboard's key-size tokens, so both dimensions are
-      // set on the option grid: width as the resting px, height as the
-      // key-height token value read off the keyboard root. Glyph size tracks the
-      // popover's inherited key density.
-      const keyboardRoot = anchorKeyEl.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
-      const heightToken = keyboardRoot
-        ? getComputedStyle(keyboardRoot).getPropertyValue("--ui5KioskKeyboard-keyHeight").trim()
-        : "";
-      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyWidth}px`);
-      gridDom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", heightToken || `${keyHeight}px`);
-      // Group the options for assistive technology, matching the sibling webc
-      // twin. `sap/m/FlexBox` exposes no role, and its renderer emits no
-      // accessibility state, so the role is set on the element here; the grid is
-      // rebuilt on every open and never re-rendered within a session. The
-      // Popover's `aria-labelledby` already names the group, so the toolbar
-      // itself needs no name.
-      gridDom.setAttribute("role", "toolbar");
-      // Mirror the option order from the same direction the arrow polarity reads,
-      // so ArrowLeft always moves focus visually leftward. The popover renders in
-      // the static area and inherits no direction from the keyboard, and UI5's own
-      // arrow remap keys on the page-global RTL config, which cannot see a `dir`
-      // applied locally to the keyboard.
-      gridDom.style.direction = this._rtl ? "rtl" : "ltr";
       gridDom.addEventListener("keydown", this._onKeydown);
     }
 
