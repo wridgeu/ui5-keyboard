@@ -156,16 +156,22 @@ export default class VariantPopupBehavior {
 
   /**
    * Arm the hold when an enabled keyboard presses a key that declares variants.
-   * A no-op for any other key, while disabled, or while a popup is already open,
-   * so callers can forward every press.
+   * A no-op for any other key, while disabled, and for the key that already owns
+   * the popup, so callers can forward every press. A hold on a different variant
+   * key re-anchors when it elapses.
    */
   onPress(keyEl: HTMLElement, enabled: boolean): void {
     if (!enabled) return;
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
-    if (this.isOpen()) return;
+    if (this.isOpenFor(keyEl)) return;
     this._pressLive = true;
     this._armedKeyEl = keyEl;
     this._arm();
+  }
+
+  /** Whether the open popup belongs to `keyEl`. */
+  isOpenFor(keyEl: HTMLElement): boolean {
+    return this._popover !== null && this._anchorKeyEl === keyEl;
   }
 
   /**
@@ -177,13 +183,6 @@ export default class VariantPopupBehavior {
    */
   openFor(keyEl: HTMLElement): void {
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
-    if (this._popover) {
-      if (keyEl === this._anchorKeyEl) return;
-      this._clearHold();
-      this._pendingAnchorKeyEl = keyEl;
-      this._dismiss(true);
-      return;
-    }
     this._clearHold();
     this._armedKeyEl = keyEl;
     this._openArmed();
@@ -254,6 +253,8 @@ export default class VariantPopupBehavior {
   /** Arm the single-shot hold: (re)schedule the open, cancelling any pending hold first. */
   private _arm(): void {
     this._clearHold();
+    // A fresh hold supersedes a re-anchor parked by an earlier one.
+    this._pendingAnchorKeyEl = null;
     this._holdTimer = setTimeout(() => {
       this._holdTimer = null;
       this._openArmed();
@@ -271,7 +272,22 @@ export default class VariantPopupBehavior {
   private _openArmed(): void {
     const keyEl = this._armedKeyEl;
     this._armedKeyEl = null;
-    if (!keyEl || this.isOpen()) return;
+    if (!keyEl) return;
+    // A live popup on another key re-anchors instead of opening a second one.
+    // The reused Popover hosts one session at a time and `_open` destroys its
+    // content, so the new key waits for the framework to report the close;
+    // opening synchronously would empty the still-visible overlay.
+    if (this._popover) {
+      if (keyEl === this._anchorKeyEl) return;
+      this._clearHold();
+      // The deferred open still owes this press its swallowed lift-off, which
+      // may arrive before the close does.
+      this._consumeRelease = this._pressLive;
+      this._originKeyValue = keyEl.dataset.key ?? null;
+      this._pendingAnchorKeyEl = keyEl;
+      this._dismiss(true);
+      return;
+    }
     const resolution = this._host.resolveVariants(keyEl);
     if (!resolution || resolution.glyphs.length === 0) return;
     this._open(keyEl, resolution);

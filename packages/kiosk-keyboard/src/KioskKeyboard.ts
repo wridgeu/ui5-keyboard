@@ -1845,8 +1845,13 @@ export default class KioskKeyboard extends Control {
       // popup's options live in the static area, so a key press is always
       // "outside"), then proceeds so the same tap also types the key. The
       // framework autoClose does not fire for the keyboard's own keys because of
-      // the preventDefault above, so close it explicitly here.
-      this._variantPopup.dismissOpen();
+      // the preventDefault above, so close it explicitly here. A press on
+      // another key that has variants is the exception: it may become a
+      // re-anchor, so the options stay up until the hold either claims them or
+      // `ontouchend` dismisses them for a plain tap.
+      if (!el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) {
+        this._variantPopup.dismissOpen();
+      }
       this._pressedKeyEl = el;
       el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
       // Safety net: if the window loses focus before touchend/touchcancel
@@ -1907,6 +1912,11 @@ export default class KioskKeyboard extends Control {
     // A hold that opened the accent-variant popup swallows its lift-off tap so
     // it does not also insert the base glyph.
     if (this._variantPopup.shouldSuppressRelease(keyValue)) return;
+
+    // The press left an open popup alone in case it became a re-anchor. This
+    // release proves it was a plain tap, so dismiss and type, as a tap on any
+    // other key does. A no-op when nothing is open.
+    this._variantPopup.dismissOpen();
 
     this._handleKeyAction(keyValue, pressed);
   }
