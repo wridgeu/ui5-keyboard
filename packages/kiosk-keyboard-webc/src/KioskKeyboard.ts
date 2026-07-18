@@ -27,7 +27,7 @@ import {
   isBuiltInLayout,
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
-import { applyVariantDefaults, shiftedGlyph, toShiftVariant, toShiftVariants } from "./core/latin-variants.js";
+import { applyVariantDefaults, shiftedGlyph, toShiftVariants } from "./core/latin-variants.js";
 import { VariantPopupController, type VariantPopupState } from "./core/variant-popup-controller.js";
 import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
@@ -1167,7 +1167,8 @@ class KioskKeyboard extends UI5Element {
     }
 
     const shift = this._shifted;
-    if (shift && key.shiftLabel) return key.shiftLabel;
+    // shiftLabel names the Shift symbol, which CapsLock does not type.
+    if (shift && !this._capsLock && key.shiftLabel) return key.shiftLabel;
 
     // Explicit label takes priority over i18n
     if (key.label !== undefined) {
@@ -1179,7 +1180,8 @@ class KioskKeyboard extends UI5Element {
     if (i18nKey) return getText(i18nKey, key.value);
 
     const base = key.value;
-    // Shift/Caps form of the key (incl. CapsLock ß -> ẞ, #169).
+    // Shift/Caps form of the key: Shift types the shiftValue, CapsLock uppercases
+    // the base (incl. ß -> ẞ) and ignores an uncased shiftValue.
     if (shift) return shiftedGlyph(base, key.shiftValue, this._capsLock);
     return base;
   }
@@ -1488,9 +1490,8 @@ class KioskKeyboard extends UI5Element {
     const value = keyEl.dataset.key!;
     const upper = this._shifted; // isShifted is also true under Caps Lock
     const glyphs = upper ? toShiftVariants(variants) : [...variants];
-    // The shifted base is what the key itself types under Shift: an explicit
-    // shiftValue when the key declares one, else the uppercased value.
-    const base = upper ? (keyEl.dataset.shiftValue ?? toShiftVariant(value)) : value;
+    // The shifted base is what the key itself types under Shift or CapsLock.
+    const base = upper ? shiftedGlyph(value, keyEl.dataset.shiftValue, this._capsLock) : value;
     const label = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}", String(glyphs.length), base);
 
     return {

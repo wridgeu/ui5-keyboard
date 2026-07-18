@@ -108,4 +108,21 @@ describe("shiftedGlyph", () => {
     expect(shiftedGlyph(" ", undefined, false)).toBe(" ");
     expect(shiftedGlyph("abc", undefined, false)).toBe("abc");
   });
+
+  it("CapsLock ignores an uncased shiftValue and types the base (#176)", () => {
+    expect(shiftedGlyph("1", "١", true)).toBe("1");
+    expect(shiftedGlyph("1", "!", true)).toBe("1");
+    expect(shiftedGlyph(",", ";", true)).toBe(",");
+    expect(shiftedGlyph("abc", undefined, true)).toBe("abc");
+  });
+
+  it("CapsLock uppercases a cased shiftValue (#176)", () => {
+    expect(shiftedGlyph("e", "é", true)).toBe("É");
+    expect(shiftedGlyph("ü", "Ü", true)).toBe("Ü");
+  });
+
+  it("CapsLock is a no-op in caseless scripts (#176)", () => {
+    expect(shiftedGlyph("あ", "ぁ", true)).toBe("あ");
+    expect(shiftedGlyph("ㅂ", "ㅃ", true)).toBe("ㅂ");
+  });
 });

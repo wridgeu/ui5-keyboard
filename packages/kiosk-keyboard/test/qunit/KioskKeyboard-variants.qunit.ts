@@ -271,6 +271,28 @@ QUnit.test("the open announcement names the key's explicit shiftValue under Shif
   cleanup(kb, input);
 });
 
+QUnit.test("the open announcement names the base under CapsLock, not the shiftValue (#176)", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "1", shiftValue: "!", variants: ["¹", "½"] }, { value: "{shift}" }]];
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ controls: [input.getId()], instanceLayouts: { qwerty: layout }, layout: "qwerty" });
+  await placeAndWait(kb);
+  input.focus();
+
+  // CapsLock is uppercase-mode, so the key still types "1"; the popup must
+  // announce the base rather than the Shift symbol.
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  const oneKey = getRequiredKeyElement(kb, "1");
+  await holdOpen(kb, oneKey);
+
+  const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "1");
+  assert.strictEqual(kb.getDomRef("liveState")?.textContent, expected, "announced with the base as the glyph");
+  release(kb, oneKey);
+  cleanup(kb, input);
+});
+
 QUnit.test("right-click opens the popup on a key with variants", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");

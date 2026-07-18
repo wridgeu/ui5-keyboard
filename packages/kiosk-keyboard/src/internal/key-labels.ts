@@ -25,7 +25,8 @@ export function getKeyLabel(key: KeyDefinition, shift: boolean, caps: boolean): 
     return getText("ARIA_CAPS_LOCK", "Caps Lock");
   }
 
-  if (shift && key.shiftLabel) return key.shiftLabel;
+  // shiftLabel names the Shift symbol, which CapsLock does not type.
+  if (shift && !caps && key.shiftLabel) return key.shiftLabel;
 
   // Explicit label takes priority over i18n
   if (key.label !== undefined) {
@@ -38,7 +39,8 @@ export function getKeyLabel(key: KeyDefinition, shift: boolean, caps: boolean): 
 
   const base = key.value;
   if (!base) return "";
-  // Shift/Caps form of the key (incl. CapsLock ß -> ẞ, #169).
+  // Shift/Caps form of the key: Shift types the shiftValue, CapsLock uppercases
+  // the base (incl. ß -> ẞ) and ignores an uncased shiftValue.
   if (shift) return shiftedGlyph(base, key.shiftValue, caps);
   return base;
 }

@@ -13,7 +13,7 @@ import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, isParticipating, KEY_ID_SUFFIX_RE, type TargetResolverFn } from "./internal/dom";
-import { applyVariantDefaults, shiftedGlyph, toShiftVariant, toShiftVariants } from "./internal/latin-variants";
+import { applyVariantDefaults, shiftedGlyph, toShiftVariants } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
 import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
 import {
@@ -1700,9 +1700,8 @@ export default class KioskKeyboard extends Control {
     if (!variants || variants.length === 0) return null;
     const shift = this._isShiftActive();
     return {
-      // The shifted base is what the key itself types under Shift: an explicit
-      // shiftValue when the key declares one, else the uppercased value.
-      base: shift ? (key.shiftValue ?? toShiftVariant(key.value)) : key.value,
+      // The shifted base is what the key itself types under Shift or CapsLock.
+      base: shift ? shiftedGlyph(key.value, key.shiftValue, this._isCapsLock()) : key.value,
       glyphs: shift ? toShiftVariants(variants) : [...variants],
     };
   }
