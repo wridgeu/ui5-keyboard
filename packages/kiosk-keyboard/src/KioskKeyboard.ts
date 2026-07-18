@@ -754,6 +754,9 @@ export default class KioskKeyboard extends Control {
     this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
     this._boundClearPressedOnBlur = (): void => {
+      // The press ended outside the page, so a re-anchor its hold parked is
+      // abandoned rather than opened into a window the user has left.
+      this._variantPopup.cancelPending();
       this._clearPressedKeyState();
     };
     this._focusClaimService = new FocusClaimService(
@@ -1898,9 +1901,22 @@ export default class KioskKeyboard extends Control {
     if (!this.getEnabled() || !pressed) return;
 
     const el = this._resolveKeyElementFromEventTarget(event.target);
-    if (el !== pressed) return;
-
     const keyValue = pressed.dataset.key;
+
+    // A hold that opened (or re-anchored) the accent-variant popup owns this
+    // release: it swallows the lift-off tap so it does not also insert the base
+    // glyph, and the popup it just claimed must survive.
+    const variantOwnsRelease = keyValue !== undefined && this._variantPopup.shouldSuppressRelease(keyValue);
+
+    // Otherwise the press left an open popup alone only because the key might
+    // have become a re-anchor, and this release proves it was a plain gesture:
+    // dismiss, as a press on any other key would have at press time. Decided
+    // before the drag-away and Backspace returns below, so a release that lands
+    // on another key or is swallowed by auto-repeat still closes the popup. A
+    // no-op when nothing is open.
+    if (!variantOwnsRelease) this._variantPopup.dismissOpen();
+
+    if (el !== pressed) return;
     if (!keyValue) return;
 
     this._keyGridNav.setLastFocusedKeyId(pressed.id);
@@ -1909,19 +1925,15 @@ export default class KioskKeyboard extends Control {
     // so lifting off does not remove one extra character.
     if (this._backspaceRepeat.shouldSuppressRelease(keyValue)) return;
 
-    // A hold that opened the accent-variant popup swallows its lift-off tap so
-    // it does not also insert the base glyph.
-    if (this._variantPopup.shouldSuppressRelease(keyValue)) return;
-
-    // The press left an open popup alone in case it became a re-anchor. This
-    // release proves it was a plain tap, so dismiss and type, as a tap on any
-    // other key does. A no-op when nothing is open.
-    this._variantPopup.dismissOpen();
+    if (variantOwnsRelease) return;
 
     this._handleKeyAction(keyValue, pressed);
   }
 
   ontouchcancel(): void {
+    // The browser took the gesture away, so a re-anchor its hold parked is
+    // abandoned rather than opened when the previous popup finishes closing.
+    this._variantPopup.cancelPending();
     this._clearPressedKeyState();
   }
 
