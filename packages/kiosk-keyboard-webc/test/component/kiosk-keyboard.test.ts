@@ -1390,11 +1390,7 @@ describe("kiosk-keyboard", () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
       await nextRender();
       const shadow = getComputedStyle(el).getPropertyValue("--kiosk-keyboard-docked-shadow").trim();
-      // color-mix browsers: "... 20% ..." | fallback: "... 0.2)"
-      expect(shadow).to.satisfy(
-        (v: string) => v.includes("20%") || v.includes("0.2)"),
-        `docked shadow should use 20% opacity, got: ${shadow}`,
-      );
+      expect(shadow, `docked shadow should use 20% opacity, got: ${shadow}`).to.include("20%");
     });
   });
 
@@ -1827,6 +1823,18 @@ describe("kiosk-keyboard", () => {
         .false;
     });
 
+    it("marks the docked-hidden root inert so its tabbable key is not exposed inside an aria-hidden subtree", async () => {
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>`);
+      await nextRender();
+      const root = el.shadowRoot!.querySelector<HTMLElement>('[role="group"]')!;
+      expect(root.getAttribute("aria-hidden")).to.equal("true");
+      expect(root.inert).to.be.true;
+      el.open = true;
+      await nextRender();
+      expect(root.inert).to.be.false;
+      expect(root.getAttribute("aria-hidden")).to.be.null;
+    });
+
     it("live region content updates announce shift-on", async () => {
       // The structural test above proves the region escapes the aria-hidden
       // root; this proves it actually receives announcement text, catching a
@@ -1893,6 +1901,16 @@ describe("kiosk-keyboard", () => {
       expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
       for (const key of keys) {
         expect(key.getAttribute("aria-disabled")).to.equal("true");
+      }
+    });
+
+    it("a disabled keyboard exposes no tab stop", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" disabled></kiosk-keyboard> `);
+      await nextRender();
+      const keys = queryKeys(el);
+      expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
+      for (const key of keys) {
+        expect(key.getAttribute("tabindex")).to.equal("-1");
       }
     });
 

@@ -16,6 +16,7 @@ interface Grid {
   shadow: ShadowRoot;
   keyAt: (row: number, col: number) => HTMLElement;
   press: (el: HTMLElement, key: string, opts?: KeyboardEventInit) => KeyboardEvent;
+  release: (el: HTMLElement, key: string, opts?: KeyboardEventInit) => KeyboardEvent;
   tabbableIds: () => string[];
 }
 
@@ -24,8 +25,9 @@ interface Grid {
  * wires the navigator as the keydown handler, and exposes helpers to drive and
  * observe it through its public surface only.
  */
-function makeGrid(rowLens: number[] = ROW_LENS): Grid {
+function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
   const host = document.createElement("div");
+  host.setAttribute("dir", rtl ? "rtl" : "ltr");
   document.body.appendChild(host);
   const shadow = host.attachShadow({ mode: "open" });
 
@@ -49,9 +51,11 @@ function makeGrid(rowLens: number[] = ROW_LENS): Grid {
     getResolvedLayout: () => layout,
     getShadowRoot: () => shadow,
     getComponentId: () => COMPONENT_ID,
+    isRtl: () => rtl,
   };
   const nav = new KeyGridNavigation(hostBridge);
   shadow.addEventListener("keydown", (e) => nav.onKeyDown(e as KeyboardEvent));
+  shadow.addEventListener("keyup", (e) => nav.onKeyUp(e as KeyboardEvent));
 
   const keyAt = (row: number, col: number) => shadow.getElementById(`${COMPONENT_ID}-key-${row}-${col}`) as HTMLElement;
 
@@ -62,15 +66,21 @@ function makeGrid(rowLens: number[] = ROW_LENS): Grid {
     return ev;
   };
 
+  const release = (el: HTMLElement, key: string, opts: KeyboardEventInit = {}) => {
+    const ev = new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true, ...opts });
+    el.dispatchEvent(ev);
+    return ev;
+  };
+
   const tabbableIds = () =>
     Array.from(shadow.querySelectorAll<HTMLElement>('.kiosk-key[tabindex="0"]')).map((k) => k.id);
 
-  return { nav, shadow, keyAt, press, tabbableIds };
+  return { nav, shadow, keyAt, press, release, tabbableIds };
 }
 
 let grids: Grid[] = [];
-function grid(rowLens?: number[]): Grid {
-  const g = makeGrid(rowLens);
+function grid(rowLens?: number[], rtl?: boolean): Grid {
+  const g = makeGrid(rowLens, rtl);
   grids.push(g);
   return g;
 }
@@ -201,6 +211,33 @@ describe("KeyGridNavigation - Home / End", () => {
   });
 });
 
+describe("KeyGridNavigation - RTL horizontal arrows", () => {
+  it("ArrowLeft moves visually forward within the row", () => {
+    const g = grid(ROW_LENS, true);
+    g.press(g.keyAt(0, 0), "ArrowLeft");
+    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-1");
+  });
+
+  it("ArrowRight stays put at the first key of the grid", () => {
+    const g = grid(ROW_LENS, true);
+    const ev = g.press(g.keyAt(0, 0), "ArrowRight");
+    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it("ArrowRight at the start of a row continues onto the previous row", () => {
+    const g = grid(ROW_LENS, true);
+    g.press(g.keyAt(1, 0), "ArrowRight");
+    expect(g.nav.getLastFocusedKeyId()).toBe(`kb-key-0-${ROW_LENS[0]! - 1}`);
+  });
+
+  it("ArrowLeft at the end of a row continues onto the next row", () => {
+    const g = grid(ROW_LENS, true);
+    g.press(g.keyAt(0, ROW_LENS[0]! - 1), "ArrowLeft");
+    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-0");
+  });
+});
+
 describe("KeyGridNavigation - activation (Enter / Space)", () => {
   it("Enter activates the focused key without moving focus", () => {
     const g = grid();
@@ -213,13 +250,47 @@ describe("KeyGridNavigation - activation (Enter / Space)", () => {
     expect(g.nav.getLastFocusedKeyId()).toBeNull();
   });
 
-  it("Space activates the focused key", () => {
+  it("Space does not activate on press, but suppresses the page scroll", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    const ev = g.press(key, " ");
+    expect(onClick).not.toHaveBeenCalled();
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it("Space activates the focused key on release", () => {
     const g = grid();
     const key = g.keyAt(1, 2);
     const onClick = vi.fn();
     key.addEventListener("click", onClick);
     g.press(key, " ");
+    const ev = g.release(key, " ");
     expect(onClick).toHaveBeenCalledOnce();
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it("a held Space does not repeat-activate and yields one click on release", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.press(key, " ");
+    g.press(key, " ", { repeat: true });
+    g.press(key, " ", { repeat: true });
+    expect(onClick).not.toHaveBeenCalled();
+    g.release(key, " ");
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("a Space release with no matching press does not activate", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.release(key, " ");
+    expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does not activate when a modifier is held (Ctrl/Alt/Meta)", () => {

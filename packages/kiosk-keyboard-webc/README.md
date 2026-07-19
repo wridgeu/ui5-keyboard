@@ -85,7 +85,7 @@ If your app also uses UI5 Web Components directly (e.g., `@ui5/webcomponents` bu
 
 ### Tree-Shaking
 
-The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Only the genuinely side-effectful modules are listed: theme/i18n asset registration (`Assets`, `generated/**`) and the convenience bundle entry (`bundle.esm`).
+The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Only the genuinely side-effectful modules are listed: the component entry that registers the custom element (`KioskKeyboard`), theme/i18n asset registration (`Assets`, `generated/**`), and the convenience bundle entries (`bundle.esm`, `kiosk-keyboard.bundle`).
 
 > [!NOTE]
 > All built-in layouts and their composition middleware (kana, Hangul) are pure data/factory modules that the registries (`core/layout-registry`, `core/middleware-registry`) statically import and reference. They are therefore always included in the bundle through normal tree-shaking, so no `sideEffects` marker is required.
@@ -111,7 +111,7 @@ The keyboard requires modern browser features for full functionality:
 
 All features are supported in browsers released since mid-2023. In older
 browsers, the keyboard renders at full size without width-responsive font
-scaling. Shadow colors fall back to static `rgba()` values.
+scaling.
 
 ## Consumption Modes
 
@@ -1010,7 +1010,7 @@ Override `--kiosk-keyboard-docked-z-index` to adjust the docked keyboard's stack
 
 When `docked` is combined with `mobile-keyboard="Auto"` (the default), coarse-pointer devices defer to the native on-screen keyboard. Calling `show()` in that mode intentionally keeps the custom docked keyboard closed; use `mobile-keyboard="Custom"` if you want to force the component to open on touch devices.
 
-Shadow custom properties use static `rgba()` fallbacks by default and apply `color-mix()` theme-aware overrides only inside a guarded `@supports` block. Browsers that do not support `color-mix()` therefore keep the fallback shadows instead of dropping them. Consumers can override `--kiosk-keyboard-key-shadow` and related properties for full control.
+Shadow custom properties derive from the active SAP theme's `--sapContent_ShadowColor` via `color-mix()`. Consumers can override `--kiosk-keyboard-key-shadow` and related properties for full control.
 
 ### Compact Density
 
