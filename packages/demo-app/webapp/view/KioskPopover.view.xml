@@ -9,7 +9,7 @@
                 <VBox class="sapUiSmallMargin">
                     <Text text="The keyboard element gets height: 19rem via a CSS class. Full-size keys fit comfortably with no responsive breakpoints triggered." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Label text="Full Name (generous height)" labelFor="inputA" class="sapUiSmallMarginEnd" />
                         <Input id="inputA" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
@@ -28,7 +28,7 @@
                 <VBox class="sapUiSmallMargin">
                     <Text text="The keyboard element gets height: 15rem. This triggers the cqShort breakpoint and the keyboard automatically reduces key height to fit." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Label text="Full Name (compact height)" labelFor="inputB" class="sapUiSmallMarginEnd" />
                         <Input id="inputB" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
@@ -47,7 +47,7 @@
                 <VBox class="sapUiSmallMargin">
                     <Text text="Instead of constraining the height, reduce --ui5KioskKeyboard-keyHeight and --ui5KioskKeyboard-keyGap so the keyboard naturally fits in a smaller space." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Label text="Full Name (custom CSS variables)" labelFor="inputC" class="sapUiSmallMarginEnd" />
                         <Input id="inputC" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
@@ -65,7 +65,7 @@
                 <VBox class="sapUiSmallMargin">
                     <Text text="Remove the keyboard container border via --ui5KioskKeyboard-border: none so the keyboard blends seamlessly into the popover chrome." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Label text="Full Name (borderless)" labelFor="inputD" class="sapUiSmallMarginEnd" />
                         <Input id="inputD" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
@@ -84,7 +84,7 @@
                 <VBox class="sapUiSmallMargin">
                     <Text text="The Popover has contentHeight: 15rem but no CSS on the keyboard. The Popover's intermediate wrapper divs have height: auto, so max-height: 100% cannot propagate. The keyboard renders at full size and overflows, demonstrating the limitation documented in the README." />
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                        <Label text="Full Name" class="sapUiSmallMarginEnd" />
+                        <Label text="Full Name (popover contentHeight)" labelFor="inputE" class="sapUiSmallMarginEnd" />
                         <Input id="inputE" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
