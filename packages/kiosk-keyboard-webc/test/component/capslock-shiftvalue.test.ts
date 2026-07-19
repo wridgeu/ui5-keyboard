@@ -6,12 +6,10 @@ import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
 
 const DOM = KioskKeyboard.DOM;
 
-// #176: CapsLock is an uppercase mode, not a Shift alias. A key whose shiftValue
-// is uncased (the arabic layout's Arabic-Indic digit row, an ASCII symbol row)
-// keeps its base under CapsLock; a key whose shiftValue is a cased letter (the
-// qwerty-es accent keys) has that letter uppercased. One-shot Shift still types
-// the shiftValue verbatim in both cases (the #162 invariant), and each cap
-// tracks what it types.
+// #176: CapsLock is an uppercase mode, not a Shift alias. Integration cover for
+// the one thing the shiftedGlyph unit suite cannot show: the cap a key renders
+// and the character it emits agree. The layout pairs an uncased shiftValue (the
+// arabic digit row) with a cased one (a qwerty-es accent).
 const LAYOUT: LayoutDefinition = [
   [
     { value: "1", shiftValue: "١" },
@@ -53,17 +51,5 @@ describe("CapsLock is uppercase-mode, not a Shift alias (#176)", () => {
 
     requireKey(kb, "e").click();
     expect(input.value, "CapsLock + e inserts É, keeping accent access").to.equal("É");
-  });
-
-  it("Shift (one-shot) + a digit key still inserts its shiftValue (the #162 invariant)", async () => {
-    const { kb, input } = await setupWithLayout(LAYOUT);
-
-    requireKey(kb, "{shift}").click();
-    await renderFinished();
-
-    expect(labelOf(kb, "1"), "the cap shows the Arabic-Indic digit under Shift").to.equal("١");
-
-    requireKey(kb, "1").click();
-    expect(input.value, "one-shot Shift keeps the Arabic-Indic digit").to.equal("١");
   });
 });
