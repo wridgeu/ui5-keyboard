@@ -14,7 +14,9 @@ import type { KioskKeyboardDomContract } from "./dom-contract";
  * rather than onsapnext/onsapprevious, because the keyboard grid
  * needs different behavior for horizontal vs vertical navigation.
  * onsaphome/onsapend jump within the current row; onsaptop/onsapbottom
- * (Ctrl+Home / Ctrl+End) jump across the whole grid.
+ * (Ctrl+Home / Ctrl+End) jump across the whole grid. Horizontal movement is
+ * mirrored when the focused key renders right-to-left, so ArrowRight always
+ * moves focus visually right.
  *
  * The host control must call {@link setRootRef} after each re-render.
  */
@@ -117,12 +119,16 @@ export default class KeyGridNavigation extends EventProvider {
   private _handleNav(event: Event, dRow: number, dCol: number): boolean {
     const target = event.target as HTMLElement;
     if (!this._isKey(target)) return false;
-    this._move(target, dRow, dCol);
+    this._move(target, dRow, dCol !== 0 && this._isRtl(target) ? -dCol : dCol);
     return true;
   }
 
   private _isKey(el: HTMLElement): boolean {
     return el.classList.contains(this._dom.classes.key);
+  }
+
+  private _isRtl(el: HTMLElement): boolean {
+    return getComputedStyle(el).direction === "rtl";
   }
 
   private _move(current: HTMLElement, dRow: number, dCol: number): void {
