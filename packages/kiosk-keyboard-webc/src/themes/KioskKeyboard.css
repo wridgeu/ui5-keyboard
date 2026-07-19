@@ -182,14 +182,6 @@
   --kiosk-keyboard-padding: 0.25rem;
 }
 
-/* Mixed: narrow width (xs @container) + constrained height (JS class).
-   Applies the most aggressive font-size cap when both conditions are met. */
-@container keyboard (max-width: 20rem) {
-  :host(.kiosk-keyboard--cq-short, .kiosk-keyboard--cq-tiny) .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
-  }
-}
-
 /* Mode: Numpad */
 .kiosk-keyboard--numpad {
   max-width: var(--_kiosk-keyboard-numpad-max-width);
