@@ -179,3 +179,81 @@ QUnit.test("RTL: renders with direction ltr when not in RTL container", async (a
 
   kb.destroy();
 });
+
+QUnit.test("RTL: ArrowRight moves focus to the visually right (lower-index) key", async (assert) => {
+  const rtlContainer = document.createElement("div");
+  rtlContainer.className = "sapUiRtl";
+  rtlContainer.id = "rtl-nav-container";
+  document.getElementById("qunit-fixture")!.appendChild(rtlContainer);
+
+  const kb = new KioskKeyboard();
+  kb.placeAt("rtl-nav-container");
+  await nextUIUpdate();
+  await waitForRender();
+
+  const origin = document.getElementById(`${kb.getId()}-key-1-1`)!;
+  origin.setAttribute("tabindex", "0");
+  origin.focus();
+
+  origin.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
+
+  assert.strictEqual(
+    document.activeElement,
+    document.getElementById(`${kb.getId()}-key-1-0`),
+    "ArrowRight lands on the neighbour one column lower",
+  );
+
+  kb.destroy();
+});
+
+QUnit.test("RTL: ArrowLeft moves focus to the visually left (higher-index) key", async (assert) => {
+  const rtlContainer = document.createElement("div");
+  rtlContainer.className = "sapUiRtl";
+  rtlContainer.id = "rtl-nav-container";
+  document.getElementById("qunit-fixture")!.appendChild(rtlContainer);
+
+  const kb = new KioskKeyboard();
+  kb.placeAt("rtl-nav-container");
+  await nextUIUpdate();
+  await waitForRender();
+
+  const origin = document.getElementById(`${kb.getId()}-key-1-1`)!;
+  origin.setAttribute("tabindex", "0");
+  origin.focus();
+
+  origin.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", keyCode: 37, bubbles: true }));
+
+  assert.strictEqual(
+    document.activeElement,
+    document.getElementById(`${kb.getId()}-key-1-2`),
+    "ArrowLeft lands on the neighbour one column higher",
+  );
+
+  kb.destroy();
+});
+
+QUnit.test("LTR: horizontal arrow navigation is not mirrored", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const origin = document.getElementById(`${kb.getId()}-key-1-1`)!;
+  origin.setAttribute("tabindex", "0");
+  origin.focus();
+
+  origin.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
+  assert.strictEqual(
+    document.activeElement,
+    document.getElementById(`${kb.getId()}-key-1-2`),
+    "ArrowRight lands on the neighbour one column higher",
+  );
+
+  const back = document.getElementById(`${kb.getId()}-key-1-2`)!;
+  back.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", keyCode: 37, bubbles: true }));
+  assert.strictEqual(
+    document.activeElement,
+    document.getElementById(`${kb.getId()}-key-1-1`),
+    "ArrowLeft lands on the neighbour one column lower",
+  );
+
+  kb.destroy();
+});
