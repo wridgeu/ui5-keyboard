@@ -753,12 +753,8 @@ export default class KioskKeyboard extends Control {
     this._autoShowBehavior = new AutoShowBehavior(this);
     this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
     this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
-    this._boundClearPressedOnBlur = (): void => {
-      // The press ended outside the page, so a re-anchor its hold parked is
-      // abandoned rather than opened into a window the user has left.
-      this._variantPopup.cancelPending();
-      this._clearPressedKeyState();
-    };
+    // A press that ends outside the page abandons the gesture, like a cancel.
+    this._boundClearPressedOnBlur = (): void => this.ontouchcancel();
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
       () => this._controlsDelegation.getResolvedControlIds(),
@@ -1518,9 +1514,9 @@ export default class KioskKeyboard extends Control {
    */
   private _onDocumentEscapeKeydown(event: KeyboardEvent): void {
     if (event.key !== "Escape") return;
-    // An open accent-variant popup owns Escape: it dismisses only the popup,
-    // leaving the docked keyboard open.
-    if (this._variantPopup.isOpen()) return;
+    // An open accent-variant popup, or a re-anchor parked between two keys, owns
+    // Escape: it resolves the popup and leaves the docked keyboard open.
+    if (this._variantPopup.consumeEscape()) return;
     if (!this.getDocked() || !this._open) return;
 
     const eventTarget = event.composedPath?.()[0] ?? event.target;
@@ -1848,10 +1844,9 @@ export default class KioskKeyboard extends Control {
       // popup's options live in the static area, so a key press is always
       // "outside"), then proceeds so the same tap also types the key. The
       // framework autoClose does not fire for the keyboard's own keys because of
-      // the preventDefault above, so close it explicitly here. A press on
-      // another key that has variants is the exception: it may become a
-      // re-anchor, so the options stay up until the hold either claims them or
-      // `ontouchend` dismisses them for a plain tap.
+      // the preventDefault above, so close it explicitly here. A key that has
+      // variants may become a re-anchor, so its options stay up until the hold
+      // claims them or `ontouchend` dismisses them for a plain tap.
       if (!el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) {
         this._variantPopup.dismissOpen();
       }
@@ -1903,17 +1898,13 @@ export default class KioskKeyboard extends Control {
     const el = this._resolveKeyElementFromEventTarget(event.target);
     const keyValue = pressed.dataset.key;
 
-    // A hold that opened (or re-anchored) the accent-variant popup owns this
-    // release: it swallows the lift-off tap so it does not also insert the base
-    // glyph, and the popup it just claimed must survive.
+    // A hold that opened (or re-anchored) the popup owns this release: it
+    // swallows the lift-off so it does not also insert the base glyph.
     const variantOwnsRelease = keyValue !== undefined && this._variantPopup.shouldSuppressRelease(keyValue);
 
-    // Otherwise the press left an open popup alone only because the key might
-    // have become a re-anchor, and this release proves it was a plain gesture:
-    // dismiss, as a press on any other key would have at press time. Decided
-    // before the drag-away and Backspace returns below, so a release that lands
-    // on another key or is swallowed by auto-repeat still closes the popup. A
-    // no-op when nothing is open.
+    // Otherwise the gesture was a plain tap, so it dismisses as a press on any
+    // other key would have. Decided before the returns below, so a release that
+    // lands elsewhere or is swallowed by auto-repeat still closes the popup.
     if (!variantOwnsRelease) this._variantPopup.dismissOpen();
 
     if (el !== pressed) return;
@@ -1931,8 +1922,8 @@ export default class KioskKeyboard extends Control {
   }
 
   ontouchcancel(): void {
-    // The browser took the gesture away, so a re-anchor its hold parked is
-    // abandoned rather than opened when the previous popup finishes closing.
+    // The browser took the gesture away, so a re-anchor its hold parked must not
+    // surface when the previous popup finishes closing.
     this._variantPopup.cancelPending();
     this._clearPressedKeyState();
   }
