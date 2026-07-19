@@ -2,7 +2,6 @@ import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
-import type Select from "sap/m/Select";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -46,13 +45,6 @@ export default class KioskDocked extends BaseController {
     this._getViewModel().setProperty("/kioskLayout", layout);
   }
 
-  onLayoutChange(): void {
-    const select = this.byId("layoutSelect") as Select;
-    const layout = select.getSelectedKey();
-    const kb = this.byId("dockedKeyboard") as KioskKeyboard;
-    kb.setLayout(layout);
-  }
-
   onNavBack(): void {
     this._setKeyboardRouteActive(false);
     this.getRouter().navTo(Scope.KioskHub);
@@ -74,7 +66,6 @@ export default class KioskDocked extends BaseController {
 
     keyboard.close();
     keyboard.setAutoShow(false);
-    keyboard.setLayout("qwerty");
 
     const viewModel = this._getViewModel();
     viewModel.setProperty("/kioskEnabled", true);

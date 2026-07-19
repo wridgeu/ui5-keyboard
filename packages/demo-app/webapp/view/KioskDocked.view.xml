@@ -28,7 +28,7 @@
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Layout:" labelFor="layoutSelect" class="sapUiSmallMarginEnd" />
-                        <Select id="layoutSelect" change=".onLayoutChange" selectedKey="{docked>/kioskLayout}"
+                        <Select id="layoutSelect" selectedKey="{docked>/kioskLayout}"
                             items="{docked>/layouts}">
                             <core:Item key="{docked>key}" text="{docked>text}" />
                         </Select>
@@ -126,6 +126,7 @@
                 enabled="{docked>/kioskEnabled}"
                 mobileKeyboard="{docked>/kioskMobileKeyboard}"
                 fKeyMode="{docked>/kioskFKeyMode}"
+                layout="{docked>/kioskLayout}"
                 keyPress=".onKeyPress"
                 layoutChange=".onDockedLayoutChange" />
         </content>
