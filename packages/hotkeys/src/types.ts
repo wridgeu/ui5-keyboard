@@ -105,7 +105,7 @@ export type Hotkey =
   // The three-modifier tier leaves the key part open: enumerating keys here
   // would push the union near TypeScript's template-literal expansion cap.
   | `${Modifier}+${Modifier}+${Modifier}+${string}`
-  | (string & {}); // eslint-disable-line @typescript-eslint/ban-types -- intentional escape hatch
+  | (string & {});
 
 /**
  * Result of parsing a hotkey string into its constituent parts.

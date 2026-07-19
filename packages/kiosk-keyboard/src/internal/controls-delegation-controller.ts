@@ -83,13 +83,8 @@ export default class ControlsDelegationController {
   sync(): void {
     const ids = this._host.getControls();
     const nextByInputId = new Map<string, string>();
-    const nextCountsByControlId = new Map<string, number>();
-    const prevCountsByControlId = new Map<string, number>();
+    const prevControlIds = new Set(this._registeredControlById.values());
     const resolvedControlIds = new Set<string>();
-
-    for (const controlId of this._registeredControlById.values()) {
-      prevCountsByControlId.set(controlId, (prevCountsByControlId.get(controlId) ?? 0) + 1);
-    }
 
     // Resolve current IDs to canonical control IDs.
     for (const inputId of ids) {
@@ -98,7 +93,6 @@ export default class ControlsDelegationController {
 
       const controlId = control.getId();
       nextByInputId.set(inputId, controlId);
-      nextCountsByControlId.set(controlId, (nextCountsByControlId.get(controlId) ?? 0) + 1);
       resolvedControlIds.add(controlId);
     }
 
@@ -109,26 +103,26 @@ export default class ControlsDelegationController {
     if (this._isResolutionUnchanged(nextByInputId)) return;
 
     // Detach controls no longer referenced or whose instance changed.
-    for (const controlId of prevCountsByControlId.keys()) {
+    for (const controlId of prevControlIds) {
       const prev = this._delegatedInstances.get(controlId);
       if (!prev) continue;
       // Keep delegate if same controlId in next AND same Control instance
-      if (nextCountsByControlId.has(controlId) && Element.getElementById(controlId) === prev) continue;
+      if (resolvedControlIds.has(controlId) && Element.getElementById(controlId) === prev) continue;
       prev.removeEventDelegate(this._delegate);
     }
 
     // Attach controls newly referenced or whose instance changed.
-    for (const controlId of nextCountsByControlId.keys()) {
+    for (const controlId of resolvedControlIds) {
       const control = Element.getElementById(controlId);
       if (!(control instanceof Control)) continue;
       // Skip if same controlId in prev AND same Control instance
-      if (prevCountsByControlId.has(controlId) && this._delegatedInstances.get(controlId) === control) continue;
+      if (prevControlIds.has(controlId) && this._delegatedInstances.get(controlId) === control) continue;
       control.addEventDelegate(this._delegate);
     }
 
     // Rebuild instance tracking
     this._delegatedInstances = new Map();
-    for (const controlId of nextCountsByControlId.keys()) {
+    for (const controlId of resolvedControlIds) {
       const control = Element.getElementById(controlId);
       if (control instanceof Control) {
         this._delegatedInstances.set(controlId, control);

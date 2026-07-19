@@ -18,20 +18,17 @@ export default class KioskComponent extends BaseController {
   override onInit(): void {
     const stateModel = this.getStateModel();
 
-    // Lazily create the keyboard once - it lives in sap-ui-static
-    if (!this._keyboard) {
-      this._keyboard = new KioskKeyboard({
-        docked: true,
-        ariaLabel: "Component Keyboard",
-        keyPress: (event: KioskKeyboard$KeyPressEvent) => {
-          const key = event.getParameter("key") ?? "";
-          stateModel.setProperty("/kioskLastKey", key);
-        },
-        afterOpen: () => stateModel.setProperty("/kioskIsOpen", true),
-        afterClose: () => stateModel.setProperty("/kioskIsOpen", false),
-      });
-      this._keyboard.placeAt("sap-ui-static");
-    }
+    this._keyboard = new KioskKeyboard({
+      docked: true,
+      ariaLabel: "Component Keyboard",
+      keyPress: (event: KioskKeyboard$KeyPressEvent) => {
+        const key = event.getParameter("key") ?? "";
+        stateModel.setProperty("/kioskLastKey", key);
+      },
+      afterOpen: () => stateModel.setProperty("/kioskIsOpen", true),
+      afterClose: () => stateModel.setProperty("/kioskIsOpen", false),
+    });
+    this._keyboard.placeAt("sap-ui-static");
 
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }

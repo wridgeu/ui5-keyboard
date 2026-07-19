@@ -155,23 +155,6 @@ export default class KioskProgrammatic extends BaseController {
     MessageToast.show("qwerty-fk-nav-demo layout registered");
   }
 
-  private _hasInstanceLayout(kb: KioskKeyboard, name: string): boolean {
-    const map = kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null;
-    return map !== null && Object.hasOwn(map, name);
-  }
-
-  private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutDefinition): void {
-    const current = (kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null) ?? {};
-    kb.setInstanceLayouts({ ...current, [name]: def });
-  }
-
-  private _addLayoutOption(name: string): void {
-    const viewModel = this._getViewModel();
-    const layouts = viewModel.getProperty("/layouts") as { key: string; text: string }[];
-    if (layouts.some((entry) => entry.key === name)) return;
-    viewModel.setProperty("/layouts", [...layouts, { key: name, text: name }]);
-  }
-
   onUseQwertyFkNav(): void {
     const kb = this._getKeyboard();
     kb.resetKeyboardType();
@@ -198,6 +181,23 @@ export default class KioskProgrammatic extends BaseController {
   onNavBack(): void {
     this._setRouteActive(false);
     this.getRouter().navTo(Scope.KioskHub);
+  }
+
+  private _hasInstanceLayout(kb: KioskKeyboard, name: string): boolean {
+    const map = kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null;
+    return map !== null && Object.hasOwn(map, name);
+  }
+
+  private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutDefinition): void {
+    const current = (kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null) ?? {};
+    kb.setInstanceLayouts({ ...current, [name]: def });
+  }
+
+  private _addLayoutOption(name: string): void {
+    const viewModel = this._getViewModel();
+    const layouts = viewModel.getProperty("/layouts") as { key: string; text: string }[];
+    if (layouts.some((entry) => entry.key === name)) return;
+    viewModel.setProperty("/layouts", [...layouts, { key: name, text: name }]);
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
