@@ -783,9 +783,7 @@ import navRow from "ui5/kiosk/layouts/nav-row";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 
 // Define your custom base layout
-const azertyFr: LayoutDefinition = [
-  /* ... */
-];
+const azertyFr: LayoutDefinition = [/* ... */];
 
 // Compose variants with F-keys, nav, or both on top
 const azertyFrFk: LayoutDefinition = [fkeyRow, ...azertyFr];

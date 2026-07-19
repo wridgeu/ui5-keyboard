@@ -90,12 +90,8 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 // 1. Define a compact layout (fewer keys per row, adapted for narrow screens)
 const kanaCompact: LayoutDefinition = [
   // 10 keys per row instead of 12
-  [
-    /* ... hiragana row 1, 10 keys ... */
-  ],
-  [
-    /* ... hiragana row 2, 10 keys ... */
-  ],
+  [/* ... hiragana row 1, 10 keys ... */],
+  [/* ... hiragana row 2, 10 keys ... */],
   // ...
 ];
 
