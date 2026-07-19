@@ -40,12 +40,12 @@
                             <Button text="Use Qwerty FK+Nav" press=".onUseQwertyFkNav" />
                         </HBox>
                         <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                            <Label text="Layout:" class="sapUiSmallMarginEnd" />
+                            <Label text="Layout:" labelFor="layoutSelect" class="sapUiSmallMarginEnd" />
                             <Select id="layoutSelect" width="16rem" change=".onLayoutChange" />
                         </HBox>
                         <HBox alignItems="Center" class="sapUiSmallMarginTop">
-                            <Label text="Enabled:" class="sapUiSmallMarginEnd" />
-                            <Switch state="{programmatic>/kioskEnabled}" />
+                            <Label id="enabledLabel" text="Enabled:" class="sapUiSmallMarginEnd" />
+                            <Switch state="{programmatic>/kioskEnabled}" ariaLabelledBy="enabledLabel" />
                         </HBox>
                     </VBox>
                 </Panel>
@@ -55,6 +55,7 @@
                     </layoutData>
                     <Panel headerText="Target Input" class="sapUiSmallMarginBottom">
                         <VBox class="sapUiSmallMargin">
+                            <Label text="Input Field" labelFor="progInput" />
                             <Input id="progInput" placeholder="Type here..." width="100%" />
                         </VBox>
                     </Panel>
