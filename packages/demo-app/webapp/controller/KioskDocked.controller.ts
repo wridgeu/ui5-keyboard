@@ -1,6 +1,6 @@
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
+import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
@@ -38,11 +38,6 @@ export default class KioskDocked extends BaseController {
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
     this._getViewModel().setProperty("/kioskLastKey", this.formatKeyPress(event));
-  }
-
-  onDockedLayoutChange(event: KioskKeyboard$LayoutChangeEvent): void {
-    const layout = event.getParameter("layout") ?? "";
-    this._getViewModel().setProperty("/kioskLayout", layout);
   }
 
   onNavBack(): void {

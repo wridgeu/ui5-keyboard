@@ -127,8 +127,7 @@
                 mobileKeyboard="{docked>/kioskMobileKeyboard}"
                 fKeyMode="{docked>/kioskFKeyMode}"
                 layout="{docked>/kioskLayout}"
-                keyPress=".onKeyPress"
-                layoutChange=".onDockedLayoutChange" />
+                keyPress=".onKeyPress" />
         </content>
     </Page>
 </mvc:View>
