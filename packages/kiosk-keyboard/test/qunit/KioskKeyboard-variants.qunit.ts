@@ -888,7 +888,8 @@ async function settled(kb: KioskKeyboard): Promise<void> {
   await waitForRender();
 }
 
-/** The default table's variants for the keys the re-anchor cases gesture on. */
+/** Expected variants for the keys the re-anchor cases gesture on, spelled out so
+ * a bad edit to LATIN_DIACRITIC_VARIANTS fails here rather than agreeing with itself. */
 const aVariants = ["à", "á", "â", "ä", "æ", "ã", "å", "ā"];
 const oVariants = ["ô", "ö", "ò", "ó", "œ", "ø", "ō", "õ"];
 const eVariants = ["è", "é", "ê", "ë", "ē", "ė", "ę"];
