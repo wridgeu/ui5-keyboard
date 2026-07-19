@@ -39,10 +39,12 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
         aria-label={this._ariaLabel}
         aria-roledescription={this._roleDescription}
         aria-hidden={isDockedHidden ? "true" : undefined}
+        inert={isDockedHidden}
         aria-disabled={this.disabled ? "true" : undefined}
         onClick={this._boundOnKeyClick}
         onMouseDown={this._boundOnKeyMouseDown}
         onKeyDown={this._boundOnKeyDown}
+        onKeyUp={this._boundOnKeyUp}
       >
         {layout.map((row, rowIndex) => (
           <div
@@ -89,7 +91,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   }}
                   part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}${isFkey ? " fkey" : ""}`}
                   role="button"
-                  tabindex={isFocusTarget ? 0 : -1}
+                  tabindex={!this.disabled && isFocusTarget ? 0 : -1}
                   data-key={key.value}
                   data-shift-value={key.shiftValue || undefined}
                   data-has-variants={key.variants && key.variants.length > 0 ? "" : undefined}
