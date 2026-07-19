@@ -150,7 +150,7 @@ export default class HotkeysTargetBubble extends BaseController {
   }
 
   private _addLogEntry(event: string, detail: string, state: string): void {
-    const current = (this._logModel.getProperty("/entries") as LogEntry[]) ?? [];
+    const current = this._logModel.getProperty("/entries") as LogEntry[];
     const next = [{ time: this._formatTimestamp(new Date()), event, detail, state }, ...current].slice(
       0,
       HotkeysTargetBubble._MAX_LOG,

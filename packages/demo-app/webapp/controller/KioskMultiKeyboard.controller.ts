@@ -87,12 +87,12 @@ export default class KioskMultiKeyboard extends BaseController {
     this._closeSharedKeyboards();
   }
 
-  private _getSharedKeyboardA(): KioskKeyboard | null {
-    return (this.byId("sharedKeyboardA") as KioskKeyboard | undefined) ?? null;
+  private _getSharedKeyboardA(): KioskKeyboard | undefined {
+    return this.byId("sharedKeyboardA") as KioskKeyboard | undefined;
   }
 
-  private _getSharedKeyboardB(): KioskKeyboard | null {
-    return (this.byId("sharedKeyboardB") as KioskKeyboard | undefined) ?? null;
+  private _getSharedKeyboardB(): KioskKeyboard | undefined {
+    return this.byId("sharedKeyboardB") as KioskKeyboard | undefined;
   }
 
   private _closeSharedKeyboards(): void {

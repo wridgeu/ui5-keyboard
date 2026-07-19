@@ -28,7 +28,6 @@ async function waitForResponsiveSync(): Promise<void> {
 }
 
 /** Assign an invalid value to a typed property to test runtime validation/clamping. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setInvalidValue(target: any, property: string, value: string): void {
   target[property] = value;
 }

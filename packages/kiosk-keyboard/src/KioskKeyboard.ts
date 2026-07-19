@@ -1584,11 +1584,7 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
-    try {
-      element.focus({ preventScroll });
-    } catch {
-      element.focus();
-    }
+    element.focus({ preventScroll });
   }
 
   // ── Accessibility ──

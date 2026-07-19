@@ -102,13 +102,7 @@
   --_kiosk-keyboard-padding: var(--kiosk-keyboard-padding);
   --_kiosk-keyboard-key-gap: var(--kiosk-keyboard-key-gap);
   --_kiosk-keyboard-key-height: var(--kiosk-keyboard-key-height);
-  --_kiosk-keyboard-key-padding-inline: var(--kiosk-keyboard-key-padding-inline);
-  --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding, 0 var(--_kiosk-keyboard-key-padding-inline));
-  --_kiosk-keyboard-key-padding-inline-xs: var(--kiosk-keyboard-key-padding-inline-xs);
-  --_kiosk-keyboard-key-padding-xs: var(
-    --kiosk-keyboard-key-padding-xs,
-    0 var(--_kiosk-keyboard-key-padding-inline-xs)
-  );
+  --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding);
   --_kiosk-keyboard-key-font-base: var(--kiosk-keyboard-key-font-size);
   --_kiosk-keyboard-key-shadow: var(--kiosk-keyboard-key-shadow);
   --_kiosk-keyboard-key-shadow-hover: var(--kiosk-keyboard-key-shadow-hover);
@@ -152,10 +146,7 @@
 
 @container keyboard (max-width: 20rem) {
   .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-key {
-    --_kiosk-keyboard-key-padding: var(
-      --kiosk-keyboard-key-padding-xs,
-      0 min(var(--_kiosk-keyboard-key-padding-inline), var(--kiosk-keyboard-key-padding-inline-xs, 0.125rem))
-    );
+    --_kiosk-keyboard-key-padding: var(--kiosk-keyboard-key-padding-xs);
   }
 
   .kiosk-key {
@@ -287,7 +278,7 @@
   white-space: nowrap;
   container-type: inline-size;
 
-  /* Transitions are scoped to interactive states so that Lit re-renders
+  /* Transitions are scoped to interactive states so that Preact re-renders
      (e.g. layout switches) apply instantly instead of animating from the
      old styling. */
 
